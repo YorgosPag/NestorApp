@@ -14,11 +14,29 @@ export interface BaseContact {
   status: ContactStatus;
   tags?: string[];
   notes?: string;
-  customFields?: Record<string, any>;
+  customFields?: Record<string, unknown>;
   createdAt: FirestoreishTimestamp;
   updatedAt: FirestoreishTimestamp;
   createdBy?: string;
   lastModifiedBy?: string;
+  // 🏢 ENTERPRISE: Common display properties for all contact types (2026-01-19)
+  /** Computed display name - for UI consistency across contact types */
+  name?: string;
+  /** First name (individuals) or primary contact name (companies/services) */
+  firstName?: string;
+  /** Last name (individuals) */
+  lastName?: string;
+  /** Company name (for company contacts) */
+  companyName?: string;
+  /** Service name (for service contacts) */
+  serviceName?: string;
+  // 🏢 ENTERPRISE: Photo/Logo URL properties for useContactSubmission (2026-01-19)
+  /** Profile photo URL (for individuals) */
+  photoURL?: string;
+  /** Multiple photo URLs */
+  multiplePhotoURLs?: string[];
+  /** Logo URL (for companies/services) */
+  logoURL?: string;
 }
 
 // Interface για Φυσικά Πρόσωπα

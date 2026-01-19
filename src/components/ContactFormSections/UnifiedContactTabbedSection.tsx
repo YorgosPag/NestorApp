@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
@@ -13,6 +13,8 @@ import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicConta
 // 🏢 ENTERPRISE: File Management System (ADR-031)
 import { EntityFilesManager } from '@/components/shared/files';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext'; // 🏢 ENTERPRISE: Workspace context για company name display
+import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
 
@@ -97,6 +99,45 @@ export function UnifiedContactTabbedSection({
 
   // 🏢 ENTERPRISE: Get auth context for file management
   const { user } = useAuth();
+
+  // 🏢 ENTERPRISE: Get workspace context για company name display (ADR-032)
+  const { activeWorkspace } = useWorkspace();
+
+  // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)
+  const [companyDisplayName, setCompanyDisplayName] = useState<string | undefined>(undefined);
+
+  // 🏢 ENTERPRISE: Fetch company name when companyId changes
+  useEffect(() => {
+    const fetchCompanyName = async () => {
+      // 🏢 ENTERPRISE: Get companyId from user context (same as EntityFilesManager uses)
+      const companyId = user?.companyId;
+
+      if (!companyId) {
+        setCompanyDisplayName(undefined);
+        return;
+      }
+
+      try {
+        console.log(`[UnifiedContactTabbedSection] Fetching company name for ID: ${companyId}`);
+        const company = await getCompanyById(companyId);
+
+        if (company && company.type === 'company') {
+          // 🏢 ENTERPRISE: Use companyName or tradeName as fallback
+          const displayName = company.companyName || company.tradeName || companyId;
+          console.log(`[UnifiedContactTabbedSection] ✅ Company name fetched: ${displayName}`);
+          setCompanyDisplayName(displayName);
+        } else {
+          console.warn(`[UnifiedContactTabbedSection] ⚠️ Company not found, using ID: ${companyId}`);
+          setCompanyDisplayName(companyId); // Fallback to ID if company not found
+        }
+      } catch (error) {
+        console.error('[UnifiedContactTabbedSection] ❌ Failed to fetch company name:', error);
+        setCompanyDisplayName(companyId); // Fallback to ID on error
+      }
+    };
+
+    fetchCompanyName();
+  }, [user?.companyId]);
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
   const config = useMemo(() => getContactFormConfig(contactType), [contactType]);
@@ -287,6 +328,7 @@ export function UnifiedContactTabbedSection({
               category="documents"
               currentUserId={currentUserId}
               entityLabel={entityLabel}
+              companyName={companyDisplayName} // 🏢 ENTERPRISE: Pass company name from CompaniesService (ADR-031)
             />
           );
         }
@@ -312,6 +354,8 @@ export function UnifiedContactTabbedSection({
     handleProfilePhotoSelection, handleLogoChange, handleUploadedLogoURL,
     handleUploadedPhotoURL, setFormData, relationshipsMode, onPhotoClick,
     canonicalUploadContext,
+    companyDisplayName, // 🏢 ENTERPRISE: Re-render when company name is fetched (ADR-031)
+    user?.companyId, // 🏢 ENTERPRISE: Re-render when companyId changes
   ]);
 
   return (

@@ -49,13 +49,9 @@ export default function TokenInfoPage() {
     emailVerified: user.emailVerified,
     displayName: user.displayName,
     // These should be available from Firebase custom claims
-    // @ts-expect-error - Custom claims not in default User type
     globalRole: user.globalRole,
-    // @ts-expect-error - Custom claims not in default User type
     companyId: user.companyId,
-    // @ts-expect-error - Custom claims not in default User type
     permissions: user.permissions,
-    // @ts-expect-error - Custom claims not in default User type
     mfaEnrolled: user.mfaEnrolled,
   };
 
@@ -88,20 +84,16 @@ export default function TokenInfoPage() {
                 <li><strong>Email:</strong> {user.email}</li>
                 <li>
                   <strong>Global Role:</strong>{' '}
-                  {/* @ts-expect-error - Custom claims */}
                   <span className={user.globalRole === 'super_admin' ? 'text-green-600 font-bold' : 'text-red-600'}>
-                    {/* @ts-expect-error - Custom claims */}
                     {user.globalRole || '❌ MISSING!'}
                   </span>
                 </li>
                 <li>
                   <strong>Company ID:</strong>{' '}
-                  {/* @ts-expect-error - Custom claims */}
                   {user.companyId || '❌ MISSING!'}
                 </li>
                 <li>
                   <strong>Permissions Count:</strong>{' '}
-                  {/* @ts-expect-error - Custom claims */}
                   {user.permissions?.length || 0}
                 </li>
               </ul>

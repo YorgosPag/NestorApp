@@ -8,12 +8,19 @@
  * @standards ACID transactions, referential integrity, audit compliance
  * @author Enterprise Development Team
  * @date 2025-12-15
+ *
+ * 🏢 REFACTORED (2026-01-19): Fixed Firebase Admin SDK usage patterns
+ * - Changed from client SDK functions (collection, addDoc, getDocs) to Admin SDK methods
+ * - Admin SDK uses: database.collection().add(), database.runTransaction(), etc.
  */
 
 import { db, safeDbOperation } from '@/lib/firebase-admin';
+import type { Firestore, Transaction, FieldValue } from 'firebase-admin/firestore';
+import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import type {
   EntityType,
   RelationshipType,
+  RelationshipMetadata,
   EntityRelationship,
   RelationshipOperationResult,
   IntegrityValidationResult,
@@ -57,15 +64,28 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     const startTime = Date.now();
     const currentUser = await this.getCurrentUserId();
 
-    return await safeDbOperation(async (database) => {
-      const {
-        collection,
-        addDoc,
-        serverTimestamp,
-        runTransaction
-      } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback for failed operations
+    const defaultResult: RelationshipOperationResult = {
+      success: false,
+      entityId: parentId,
+      affectedRelationships: [],
+      metadata: {
+        operationType: 'CREATE',
+        timestamp: new Date(),
+        performedBy: currentUser,
+        cascadeCount: 0
+      },
+      errors: [{
+        code: 'DATABASE_UNAVAILABLE',
+        message: 'Database not available',
+        entityType: parentType,
+        entityId: parentId
+      }]
+    };
 
-      return await runTransaction(database, async (transaction) => {
+    return await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Use Admin SDK runTransaction method
+      return await database.runTransaction(async (_transaction: Transaction) => {
         try {
           // 1️⃣ ENTERPRISE VALIDATION
           if (!options.skipValidation) {
@@ -86,13 +106,13 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
             metadata: options.metadata
           };
 
-          const relationshipRef = await addDoc(
-            collection(database, this.RELATIONSHIPS_COLLECTION),
-            {
+          // 🏢 ENTERPRISE: Use Admin SDK add() method
+          const relationshipRef = await database
+            .collection(this.RELATIONSHIPS_COLLECTION)
+            .add({
               ...relationshipData,
-              createdAt: serverTimestamp()
-            }
-          );
+              createdAt: AdminFieldValue.serverTimestamp()
+            });
 
           const createdRelationship: EntityRelationship = {
             id: relationshipRef.id,
@@ -103,6 +123,15 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
 
           // 3️⃣ CREATE INVERSE RELATIONSHIP (if bidirectional)
           if (relationshipData.bidirectional) {
+            // 🏢 ENTERPRISE: Use customFields for extended metadata (inverseOf)
+            const inverseMetadata: RelationshipMetadata = {
+              ...options.metadata,
+              customFields: {
+                ...options.metadata?.customFields,
+                inverseOf: relationshipRef.id
+              }
+            };
+
             const inverseData: Omit<EntityRelationship, 'id'> = {
               parentType: childType,
               parentId: childId,
@@ -113,19 +142,16 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
               cascadeDelete: false, // Only primary relationship should cascade
               createdAt: new Date(),
               createdBy: currentUser,
-              metadata: {
-                ...options.metadata,
-                inverseOf: relationshipRef.id
-              }
+              metadata: inverseMetadata
             };
 
-            const inverseRef = await addDoc(
-              collection(database, this.RELATIONSHIPS_COLLECTION),
-              {
+            // 🏢 ENTERPRISE: Use Admin SDK add() method
+            const inverseRef = await database
+              .collection(this.RELATIONSHIPS_COLLECTION)
+              .add({
                 ...inverseData,
-                createdAt: serverTimestamp()
-              }
-            );
+                createdAt: AdminFieldValue.serverTimestamp()
+              });
 
             affectedRelationships.push({
               id: inverseRef.id,
@@ -184,7 +210,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
           } as RelationshipOperationResult;
         }
       });
-    });
+    }, defaultResult);
   }
 
   async removeRelationship(
@@ -193,25 +219,35 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
   ): Promise<RelationshipOperationResult> {
     const currentUser = await this.getCurrentUserId();
 
-    return await safeDbOperation(async (database) => {
-      const {
-        doc,
-        getDoc,
-        deleteDoc,
-        collection,
-        query,
-        where,
-        getDocs,
-        runTransaction
-      } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback for failed operations
+    const defaultResult: RelationshipOperationResult = {
+      success: false,
+      entityId: relationshipId,
+      affectedRelationships: [],
+      metadata: {
+        operationType: 'DELETE',
+        timestamp: new Date(),
+        performedBy: currentUser,
+        cascadeCount: 0
+      },
+      errors: [{
+        code: 'DATABASE_UNAVAILABLE',
+        message: 'Database not available',
+        entityType: 'contact' as EntityType,
+        entityId: relationshipId
+      }]
+    };
 
-      return await runTransaction(database, async (transaction) => {
+    return await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Use Admin SDK runTransaction method
+      return await database.runTransaction(async (_transaction: Transaction) => {
         try {
           // 1️⃣ GET RELATIONSHIP TO DELETE
-          const relationshipRef = doc(database, this.RELATIONSHIPS_COLLECTION, relationshipId);
-          const relationshipSnap = await getDoc(relationshipRef);
+          // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().doc()
+          const relationshipRef = database.collection(this.RELATIONSHIPS_COLLECTION).doc(relationshipId);
+          const relationshipSnap = await relationshipRef.get();
 
-          if (!relationshipSnap.exists()) {
+          if (!relationshipSnap.exists) {
             throw new Error(`Relationship ${relationshipId} not found`);
           }
 
@@ -235,17 +271,17 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
 
           // 3️⃣ FIND AND DELETE INVERSE RELATIONSHIPS
           if (relationship.bidirectional) {
-            const inverseQuery = query(
-              collection(database, this.RELATIONSHIPS_COLLECTION),
-              where('parentType', '==', relationship.childType),
-              where('parentId', '==', relationship.childId),
-              where('childType', '==', relationship.parentType),
-              where('childId', '==', relationship.parentId)
-            );
+            // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().where()
+            const inverseSnap = await database
+              .collection(this.RELATIONSHIPS_COLLECTION)
+              .where('parentType', '==', relationship.childType)
+              .where('parentId', '==', relationship.childId)
+              .where('childType', '==', relationship.parentType)
+              .where('childId', '==', relationship.parentId)
+              .get();
 
-            const inverseSnap = await getDocs(inverseQuery);
             for (const inverseDoc of inverseSnap.docs) {
-              await deleteDoc(inverseDoc.ref);
+              await inverseDoc.ref.delete();
               affectedRelationships.push({
                 id: inverseDoc.id,
                 ...inverseDoc.data()
@@ -254,7 +290,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
           }
 
           // 4️⃣ DELETE PRIMARY RELATIONSHIP
-          await deleteDoc(relationshipRef);
+          await relationshipRef.delete();
 
           // 5️⃣ AUDIT LOGGING
           await this.createAuditEntry({
@@ -283,10 +319,12 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
           } as RelationshipOperationResult;
 
         } catch (error) {
+          // 🏢 ENTERPRISE: Use 'contact' as fallback EntityType for error reporting
+          // This is safe because contact is the most generic entity type
           const relationshipError: RelationshipError = {
             code: 'RELATIONSHIP_REMOVAL_FAILED',
             message: error instanceof Error ? error.message : 'Unknown error',
-            entityType: 'unknown',
+            entityType: 'contact' as EntityType,
             entityId: relationshipId,
             field: 'relationship'
           };
@@ -305,7 +343,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
           } as RelationshipOperationResult;
         }
       });
-    });
+    }, defaultResult);
   }
 
   // ========================================
@@ -317,18 +355,22 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     parentId: string,
     childType: EntityType
   ): Promise<readonly TChild[]> {
-    return await safeDbOperation(async (database) => {
+    // 🏢 ENTERPRISE: Default fallback for empty children list
+    const fallback: readonly TChild[] = [];
+
+    return await safeDbOperation(async (database: Firestore) => {
       // 1️⃣ GET RELATIONSHIPS FROM ENTITY_RELATIONSHIPS TABLE
-      const relationshipsCollection = database.collection(this.RELATIONSHIPS_COLLECTION);
-      const relationshipsQuery = relationshipsCollection
+      // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().where().get()
+      const relationshipsSnap = await database
+        .collection(this.RELATIONSHIPS_COLLECTION)
         .where('parentType', '==', parentType)
         .where('parentId', '==', parentId)
-        .where('childType', '==', childType);
+        .where('childType', '==', childType)
+        .get();
 
-      const relationshipsSnap = await relationshipsQuery.get();
       const childIds = relationshipsSnap.docs.map(doc => {
         const data = doc.data();
-        return data.childId;
+        return data.childId as string;
       });
 
       // 2️⃣ FALLBACK: If no relationships found, try direct collection lookup
@@ -338,14 +380,16 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
 
         if (parentType === 'company' && childType === 'project') {
           // 📊 FALLBACK: Read directly from projects collection with companyId
-          const projectsCollection = database.collection('projects');
-          const projectsQuery = projectsCollection.where('companyId', '==', parentId);
+          const projectsSnap = await database
+            .collection('projects')
+            .where('companyId', '==', parentId)
+            .get();
 
-          const projectsSnap = await projectsQuery.get();
+          // 🏢 ENTERPRISE: Double type assertion for generic return type
           const projects = projectsSnap.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
-          })) as readonly TChild[];
+          })) as unknown as readonly TChild[];
 
           console.log(`✅ ENTERPRISE FALLBACK: Found ${projects.length} projects for company ${parentId} via direct lookup`);
           return projects;
@@ -353,14 +397,16 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
 
         if (parentType === 'building' && childType === 'unit') {
           // 🏢 FALLBACK: Read directly from units collection with buildingId
-          const unitsCollection = database.collection('units');
-          const unitsQuery = unitsCollection.where('buildingId', '==', parentId);
+          const unitsSnap = await database
+            .collection('units')
+            .where('buildingId', '==', parentId)
+            .get();
 
-          const unitsSnap = await unitsQuery.get();
+          // 🏢 ENTERPRISE: Double type assertion for generic return type
           const units = unitsSnap.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
-          })) as readonly TChild[];
+          })) as unknown as readonly TChild[];
 
           console.log(`✅ ENTERPRISE FALLBACK: Found ${units.length} units for building ${parentId} via direct lookup`);
           return units;
@@ -375,7 +421,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       console.log(`✅ ENTERPRISE: Found ${childIds.length} relationship records, fetching entities`);
       const entities = await this.batchGetEntities<TChild>(childType, childIds);
       return entities;
-    });
+    }, fallback);
   }
 
   async getParent<TParent>(
@@ -383,19 +429,18 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     childId: string,
     parentType: EntityType
   ): Promise<TParent | null> {
-    return await safeDbOperation(async (database) => {
-      const { collection, query, where, getDocs, limit } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback for when database is unavailable
+    const fallback: TParent | null = null;
 
-      // 1️⃣ GET RELATIONSHIP
-      const relationshipQuery = query(
-        collection(database, this.RELATIONSHIPS_COLLECTION),
-        where('childType', '==', childType),
-        where('childId', '==', childId),
-        where('parentType', '==', parentType),
-        limit(1)
-      );
-
-      const relationshipSnap = await getDocs(relationshipQuery);
+    return await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().where().limit().get()
+      const relationshipSnap = await database
+        .collection(this.RELATIONSHIPS_COLLECTION)
+        .where('childType', '==', childType)
+        .where('childId', '==', childId)
+        .where('parentType', '==', parentType)
+        .limit(1)
+        .get();
 
       if (relationshipSnap.empty) {
         return null;
@@ -404,9 +449,9 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       const relationship = relationshipSnap.docs[0].data();
 
       // 2️⃣ FETCH PARENT ENTITY
-      const parent = await this.getEntityById<TParent>(parentType, relationship.parentId);
+      const parent = await this.getEntityById<TParent>(parentType, relationship.parentId as string);
       return parent;
-    });
+    }, fallback);
   }
 
   async getEntityHierarchy(
@@ -414,7 +459,15 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     rootId: string,
     options: HierarchyQueryOptions = {}
   ): Promise<EntityHierarchyTree> {
-    return await safeDbOperation(async () => {
+    // 🏢 ENTERPRISE: Default fallback for empty hierarchy
+    const fallback: EntityHierarchyTree = {
+      entity: { type: rootType, id: rootId, name: 'Unknown', data: null },
+      children: new Map(),
+      relationships: [],
+      metadata: { totalDescendants: 0, depth: 0, lastModified: new Date() }
+    };
+
+    return await safeDbOperation(async (_database: Firestore) => {
       // 1️⃣ GET ROOT ENTITY
       const rootEntity = await this.getEntityById(rootType, rootId);
       if (!rootEntity) {
@@ -430,7 +483,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       );
 
       return hierarchy;
-    });
+    }, fallback);
   }
 
   // ========================================
@@ -438,13 +491,22 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
   // ========================================
 
   async validateIntegrity(): Promise<IntegrityValidationResult> {
-    const startTime = Date.now();
+    // 🏢 ENTERPRISE: Default fallback for validation result
+    const fallback: IntegrityValidationResult = {
+      isValid: false,
+      violations: [],
+      orphanedEntities: [],
+      circularReferences: [],
+      checkedAt: new Date(),
+      totalEntitiesChecked: 0
+    };
 
-    return await safeDbOperation(async (database) => {
-      const { collection, getDocs } = await import('firebase-admin/firestore');
+    return await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().get()
+      const relationshipsSnap = await database
+        .collection(this.RELATIONSHIPS_COLLECTION)
+        .get();
 
-      // 1️⃣ GET ALL RELATIONSHIPS
-      const relationshipsSnap = await getDocs(collection(database, this.RELATIONSHIPS_COLLECTION));
       const relationships = relationshipsSnap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -523,7 +585,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
         checkedAt: new Date(),
         totalEntitiesChecked: relationships.length
       } as IntegrityValidationResult;
-    });
+    }, fallback);
   }
 
   async repairIntegrityViolations(
@@ -584,42 +646,38 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     entityId: string,
     options: AuditQueryOptions = {}
   ): Promise<readonly RelationshipAuditEntry[]> {
-    return await safeDbOperation(async (database) => {
-      const {
-        collection,
-        query,
-        where,
-        orderBy,
-        limit,
-        getDocs
-      } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback for empty audit trail
+    const fallback: readonly RelationshipAuditEntry[] = [];
 
-      let auditQuery = query(
-        collection(database, this.AUDIT_COLLECTION),
-        where('entityType', '==', entityType),
-        where('entityId', '==', entityId)
-      );
+    return await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Admin SDK pattern - Build query with chained methods
+      let queryRef = database
+        .collection(this.AUDIT_COLLECTION)
+        .where('entityType', '==', entityType)
+        .where('entityId', '==', entityId);
 
-      if (options.operations) {
-        auditQuery = query(auditQuery, where('operation', 'in', options.operations));
+      if (options.operations && options.operations.length > 0) {
+        queryRef = queryRef.where('operation', 'in', options.operations);
       }
 
       if (options.performedBy) {
-        auditQuery = query(auditQuery, where('performedBy', '==', options.performedBy));
+        queryRef = queryRef.where('performedBy', '==', options.performedBy);
       }
 
-      auditQuery = query(auditQuery, orderBy('performedAt', 'desc'));
+      // 🏢 ENTERPRISE: Admin SDK requires ordering before limit
+      queryRef = queryRef.orderBy('performedAt', 'desc');
 
       if (options.limit) {
-        auditQuery = query(auditQuery, limit(options.limit));
+        queryRef = queryRef.limit(options.limit);
       }
 
-      const auditSnap = await getDocs(auditQuery);
+      const auditSnap = await queryRef.get();
+      // 🏢 ENTERPRISE: Double type assertion for interface return type
       return auditSnap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as readonly RelationshipAuditEntry[];
-    });
+      })) as unknown as readonly RelationshipAuditEntry[];
+    }, fallback);
   }
 
   // ========================================
@@ -705,15 +763,19 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
   }
 
   private async entityExists(entityType: EntityType, entityId: string): Promise<boolean> {
-    return await safeDbOperation(async (database) => {
-      const { doc, getDoc } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback - assume entity doesn't exist when DB unavailable
+    const fallback = false;
 
+    return await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().doc().get()
       const collectionName = this.getCollectionName(entityType);
-      const entityRef = doc(database, collectionName, entityId);
-      const entitySnap = await getDoc(entityRef);
+      const entitySnap = await database
+        .collection(collectionName)
+        .doc(entityId)
+        .get();
 
-      return entitySnap.exists();
-    });
+      return entitySnap.exists;
+    }, fallback);
   }
 
   private async relationshipExists(
@@ -722,21 +784,22 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     childType: EntityType,
     childId: string
   ): Promise<boolean> {
-    return await safeDbOperation(async (database) => {
-      const { collection, query, where, getDocs, limit } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback - assume relationship doesn't exist when DB unavailable
+    const fallback = false;
 
-      const relationshipQuery = query(
-        collection(database, this.RELATIONSHIPS_COLLECTION),
-        where('parentType', '==', parentType),
-        where('parentId', '==', parentId),
-        where('childType', '==', childType),
-        where('childId', '==', childId),
-        limit(1)
-      );
+    return await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().where().limit().get()
+      const relationshipSnap = await database
+        .collection(this.RELATIONSHIPS_COLLECTION)
+        .where('parentType', '==', parentType)
+        .where('parentId', '==', parentId)
+        .where('childType', '==', childType)
+        .where('childId', '==', childId)
+        .limit(1)
+        .get();
 
-      const relationshipSnap = await getDocs(relationshipQuery);
       return !relationshipSnap.empty;
-    });
+    }, fallback);
   }
 
   private getCollectionName(entityType: EntityType): string {
@@ -758,14 +821,18 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
   }
 
   private async getEntityById<T>(entityType: EntityType, entityId: string): Promise<T | null> {
-    return await safeDbOperation(async (database) => {
-      const { doc, getDoc } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback for entity not found
+    const fallback: T | null = null;
 
+    return await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().doc().get()
       const collectionName = this.getCollectionName(entityType);
-      const entityRef = doc(database, collectionName, entityId);
-      const entitySnap = await getDoc(entityRef);
+      const entitySnap = await database
+        .collection(collectionName)
+        .doc(entityId)
+        .get();
 
-      if (!entitySnap.exists()) {
+      if (!entitySnap.exists) {
         return null;
       }
 
@@ -773,7 +840,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
         id: entitySnap.id,
         ...entitySnap.data()
       } as T;
-    });
+    }, fallback);
   }
 
   private async batchGetEntities<T>(entityType: EntityType, entityIds: readonly string[]): Promise<readonly T[]> {
@@ -783,25 +850,29 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
 
     // 🏢 ENTERPRISE BATCHING: Handle Firestore's 10-item limit for 'in' queries
     const BATCH_SIZE = 10;
-    const batches: readonly string[][] = [];
+    const batches: string[][] = [];
 
     for (let i = 0; i < entityIds.length; i += BATCH_SIZE) {
       batches.push(entityIds.slice(i, i + BATCH_SIZE));
     }
 
-    return await safeDbOperation(async (database) => {
-      const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback for empty result
+    const fallback: readonly T[] = [];
 
+    return await safeDbOperation(async (database: Firestore) => {
       const entities: T[] = [];
       const collectionName = this.getCollectionName(entityType);
 
-      for (const batch of batches) {
-        const batchQuery = query(
-          collection(database, collectionName),
-          where('__name__', 'in', batch)
-        );
+      // 🏢 ENTERPRISE: Admin SDK pattern - Use FieldPath.documentId() for __name__ queries
+      const { FieldPath } = await import('firebase-admin/firestore');
 
-        const batchSnap = await getDocs(batchQuery);
+      for (const batch of batches) {
+        // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().where(FieldPath.documentId(), 'in', ids).get()
+        const batchSnap = await database
+          .collection(collectionName)
+          .where(FieldPath.documentId(), 'in', batch)
+          .get();
+
         batchSnap.docs.forEach(doc => {
           entities.push({
             id: doc.id,
@@ -811,20 +882,21 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       }
 
       return entities;
-    });
+    }, fallback);
   }
 
   private getEntityName(entity: unknown): string {
     // 🏷️ Extract display name from entity based on type
     const entityObj = entity as Record<string, unknown>;
 
+    // 🏢 ENTERPRISE: Use || for falsy check (handles empty strings too)
     return (
-      (entityObj.name as string) ??
-      (entityObj.companyName as string) ??
-      (entityObj.title as string) ??
+      (entityObj.name as string | undefined) ||
+      (entityObj.companyName as string | undefined) ||
+      (entityObj.title as string | undefined) ||
       (entityObj.firstName && entityObj.lastName
         ? `${entityObj.firstName} ${entityObj.lastName}`
-        : '') ??
+        : undefined) ||
       'Unnamed Entity'
     );
   }
@@ -896,21 +968,23 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     entityType: EntityType,
     entityId: string
   ): Promise<readonly EntityRelationship[]> {
-    return await safeDbOperation(async (database) => {
-      const { collection, query, where, getDocs } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback for empty relationships
+    const fallback: readonly EntityRelationship[] = [];
 
-      const relationshipQuery = query(
-        collection(database, this.RELATIONSHIPS_COLLECTION),
-        where('parentType', '==', entityType),
-        where('parentId', '==', entityId)
-      );
+    return await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().where().get()
+      const relationshipSnap = await database
+        .collection(this.RELATIONSHIPS_COLLECTION)
+        .where('parentType', '==', entityType)
+        .where('parentId', '==', entityId)
+        .get();
 
-      const relationshipSnap = await getDocs(relationshipQuery);
+      // 🏢 ENTERPRISE: Double type assertion for interface return type
       return relationshipSnap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as readonly EntityRelationship[];
-    });
+      })) as unknown as readonly EntityRelationship[];
+    }, fallback);
   }
 
   private async detectCircularReference(
@@ -958,14 +1032,16 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
   }
 
   private async createAuditEntry(entry: Omit<RelationshipAuditEntry, 'id'>): Promise<void> {
-    await safeDbOperation(async (database) => {
-      const { collection, addDoc, serverTimestamp } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback for void operations
+    const fallback: void = undefined;
 
-      await addDoc(collection(database, this.AUDIT_COLLECTION), {
+    await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().add() with AdminFieldValue
+      await database.collection(this.AUDIT_COLLECTION).add({
         ...entry,
-        performedAt: serverTimestamp()
+        performedAt: AdminFieldValue.serverTimestamp()
       });
-    });
+    }, fallback);
   }
 
   private async buildCascadeMap(
@@ -1031,14 +1107,22 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
   private async performCascadeDelete(
     entityType: EntityType,
     entityId: string,
-    options: CascadeDeleteOptions
+    _options: CascadeDeleteOptions
   ): Promise<CascadeDeleteResult> {
     const startTime = Date.now();
 
-    return await safeDbOperation(async (database) => {
-      const { doc, deleteDoc, runTransaction } = await import('firebase-admin/firestore');
+    // 🏢 ENTERPRISE: Default fallback for failed cascade delete
+    const fallback: CascadeDeleteResult = {
+      success: false,
+      deletedEntities: new Map(),
+      totalDeleted: 0,
+      skippedEntities: [],
+      executionTime: 0
+    };
 
-      return await runTransaction(database, async (transaction) => {
+    return await safeDbOperation(async (database: Firestore) => {
+      // 🏢 ENTERPRISE: Admin SDK pattern - database.runTransaction()
+      return await database.runTransaction(async (_transaction: Transaction) => {
         try {
           // 🗑️ Build cascade map
           const cascadeMap = await this.buildCascadeMap(entityType, entityId);
@@ -1052,9 +1136,12 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
 
             for (const idToDelete of idsToDelete) {
               try {
+                // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().doc().delete()
                 const collectionName = this.getCollectionName(currentType);
-                const entityRef = doc(database, collectionName, idToDelete);
-                await deleteDoc(entityRef);
+                await database
+                  .collection(collectionName)
+                  .doc(idToDelete)
+                  .delete();
               } catch (error) {
                 skippedEntities.push({
                   entityType: currentType,
@@ -1085,6 +1172,6 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
           } as CascadeDeleteResult;
         }
       });
-    });
+    }, fallback);
   }
 }

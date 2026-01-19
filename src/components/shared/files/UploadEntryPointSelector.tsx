@@ -1,0 +1,205 @@
+/**
+ * =============================================================================
+ * 🏢 ENTERPRISE: Upload Entry Point Selector
+ * =============================================================================
+ *
+ * UI για επιλογή τύπου εγγράφου πριν το upload.
+ * Enterprise pattern από Salesforce, Dynamics, SAP.
+ *
+ * @module components/shared/files/UploadEntryPointSelector
+ * @enterprise ADR-031 - Canonical File Storage System
+ *
+ * @example
+ * ```tsx
+ * <UploadEntryPointSelector
+ *   entityType="contact"
+ *   selectedEntryPointId={selected}
+ *   onSelect={(entryPoint) => setSelected(entryPoint.id)}
+ * />
+ * ```
+ */
+
+'use client';
+
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import type { EntityType } from '@/config/domain-constants';
+import type { UploadEntryPoint } from '@/config/upload-entry-points';
+import { getSortedEntryPoints } from '@/config/upload-entry-points';
+import * as LucideIcons from 'lucide-react';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface UploadEntryPointSelectorProps {
+  /** Entity type για filtering entry points */
+  entityType: EntityType;
+  /** Currently selected entry point ID */
+  selectedEntryPointId?: string;
+  /** Callback when entry point is selected */
+  onSelect: (entryPoint: UploadEntryPoint) => void;
+  /** Optional CSS class */
+  className?: string;
+  /** Display language */
+  language?: 'el' | 'en';
+  /** 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ) */
+  customTitle?: string;
+  /** 🏢 ENTERPRISE: Callback when custom title changes */
+  onCustomTitleChange?: (title: string) => void;
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Upload Entry Point Selector
+ *
+ * Displays available entry points για το συγκεκριμένο entity type.
+ * User selects τι τύπο εγγράφου θα ανεβάσει (ταυτότητα, φωτογραφία, κτλ).
+ */
+export function UploadEntryPointSelector({
+  entityType,
+  selectedEntryPointId,
+  onSelect,
+  className,
+  language = 'el',
+  customTitle = '',
+  onCustomTitleChange,
+}: UploadEntryPointSelectorProps) {
+  const iconSizes = useIconSizes();
+
+  // Get entry points for this entity type
+  const entryPoints = getSortedEntryPoints(entityType);
+
+  // Get selected entry point
+  const selectedEntryPoint = entryPoints.find((ep) => ep.id === selectedEntryPointId);
+
+  // If no entry points defined, return null
+  if (entryPoints.length === 0) {
+    return null;
+  }
+
+  // Get icon component from lucide-react
+  const getIcon = (iconName?: string) => {
+    if (!iconName) return LucideIcons.File;
+    // @ts-ignore - Dynamic icon lookup
+    return LucideIcons[iconName] || LucideIcons.File;
+  };
+
+  return (
+    <section className={cn('space-y-3', className)} role="radiogroup" aria-label="Επιλογή τύπου εγγράφου">
+      {/* Header */}
+      <header>
+        <h3 className="text-sm font-semibold text-foreground mb-1">
+          Τι τύπο εγγράφου θα ανεβάσετε;
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          Επιλέξτε την κατηγορία για αυτόματη ονοματολογία
+        </p>
+      </header>
+
+      {/* Entry Points Grid */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        {entryPoints.map((entryPoint) => {
+          const Icon = getIcon(entryPoint.icon);
+          const isSelected = selectedEntryPointId === entryPoint.id;
+
+          return (
+            <button
+              key={entryPoint.id}
+              type="button"
+              onClick={() => onSelect(entryPoint)}
+              className={cn(
+                'flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all',
+                'hover:shadow-md hover:scale-105',
+                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+                isSelected
+                  ? 'border-primary bg-primary/10 shadow-md scale-105'
+                  : 'border-border bg-card hover:border-primary/50'
+              )}
+              role="radio"
+              aria-checked={isSelected}
+              aria-label={entryPoint.label[language]}
+              title={entryPoint.description?.[language]}
+            >
+              {/* Icon */}
+              <div
+                className={cn(
+                  'flex items-center justify-center w-10 h-10 rounded-full',
+                  isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                )}
+              >
+                <Icon className={iconSizes.md} aria-hidden="true" />
+              </div>
+
+              {/* Label */}
+              <span
+                className={cn(
+                  'text-xs font-medium text-center leading-tight',
+                  isSelected ? 'text-primary' : 'text-foreground'
+                )}
+              >
+                {entryPoint.label[language]}
+              </span>
+
+              {/* Selected indicator */}
+              {isSelected && (
+                <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" aria-hidden="true" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Selected description */}
+      {selectedEntryPointId && (
+        <footer className="p-3 bg-muted/50 rounded-md border border-border">
+          {entryPoints
+            .filter((ep) => ep.id === selectedEntryPointId)
+            .map((ep) => (
+              <p key={ep.id} className="text-xs text-muted-foreground">
+                <strong className="text-foreground">{ep.label[language]}:</strong>{' '}
+                {ep.description?.[language] || 'Έγγραφο για αυτήν την κατηγορία'}
+              </p>
+            ))}
+        </footer>
+      )}
+
+      {/* 🏢 ENTERPRISE: Custom Title Input (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+          Displayed when selected entry point requires custom title */}
+      {selectedEntryPoint?.requiresCustomTitle && (
+        <div className="space-y-2">
+          <label htmlFor="custom-title" className="block text-sm font-medium text-foreground">
+            Τίτλος Εγγράφου <span className="text-destructive">*</span>
+          </label>
+          <input
+            id="custom-title"
+            type="text"
+            value={customTitle}
+            onChange={(e) => onCustomTitleChange?.(e.target.value)}
+            placeholder="π.χ. Πληρεξούσιο, Υπεύθυνη Δήλωση, κτλ."
+            required
+            className={cn(
+              'w-full px-3 py-2 rounded-md border bg-background text-foreground',
+              'placeholder:text-muted-foreground',
+              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+              'transition-colors',
+              customTitle.trim() === ''
+                ? 'border-destructive/50 focus:ring-destructive'
+                : 'border-border'
+            )}
+            aria-required="true"
+            aria-invalid={customTitle.trim() === ''}
+            aria-describedby="custom-title-hint"
+          />
+          <p id="custom-title-hint" className="text-xs text-muted-foreground">
+            Υποχρεωτικό πεδίο - Εισάγετε περιγραφικό τίτλο για το έγγραφο
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}

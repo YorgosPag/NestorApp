@@ -22,6 +22,18 @@ export interface Contact {
     totalValue?: number;
   }
   
+  /** 🏢 ENTERPRISE: Building types for construction industry */
+  export type BuildingType = 'residential' | 'commercial' | 'industrial' | 'mixed' | 'office' | 'warehouse';
+
+  /** 🏢 ENTERPRISE: Priority levels for building management */
+  export type BuildingPriority = 'low' | 'medium' | 'high' | 'critical';
+
+  /** 🏢 ENTERPRISE: Energy efficiency classes (EU standard) */
+  export type EnergyClass = 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
+
+  /** 🏢 ENTERPRISE: Renovation status */
+  export type RenovationStatus = 'none' | 'partial' | 'full' | 'planned';
+
   export interface Building {
     id: string;
     name: string;
@@ -44,6 +56,36 @@ export interface Contact {
     category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
     // 🏢 ENTERPRISE: Type-safe building features (keys, not strings)
     features?: BuildingFeatureKey[];
+
+    // 🏢 ENTERPRISE: Extended building fields for advanced filtering (2026-01-19)
+    /** Location (city/region) for filtering */
+    location?: string;
+    /** Building type classification */
+    type?: BuildingType;
+    /** Building priority level */
+    priority?: BuildingPriority;
+    /** Energy efficiency class */
+    energyClass?: EnergyClass;
+    /** Renovation status */
+    renovation?: RenovationStatus;
+    /** Total number of units */
+    totalUnits?: number;
+    /** Year of construction */
+    constructionYear?: number;
+
+    // 🏢 ENTERPRISE: Boolean amenity flags for filtering
+    /** Has parking facilities */
+    hasParking?: boolean;
+    /** Has elevator */
+    hasElevator?: boolean;
+    /** Has garden/outdoor space */
+    hasGarden?: boolean;
+    /** Has swimming pool */
+    hasPool?: boolean;
+    /** Wheelchair accessible */
+    accessibility?: boolean;
+    /** Furnished units available */
+    furnished?: boolean;
   }
   
   export interface Floor {

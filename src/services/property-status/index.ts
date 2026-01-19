@@ -11,6 +11,51 @@
  */
 
 // ============================================================================
+// INTERNAL IMPORTS (for local usage in this file)
+// ============================================================================
+
+// 🏢 ENTERPRISE: Import as local variables for use in convenience objects below
+import {
+  // Types
+  type EnhancedPropertyStatus as _EnhancedPropertyStatus,
+  type PropertyStatus as _PropertyStatus,
+
+  // Constants
+  ENHANCED_STATUS_LABELS as _ENHANCED_STATUS_LABELS,
+  ENHANCED_STATUS_COLORS as _ENHANCED_STATUS_COLORS,
+  STATUS_CATEGORIES as _STATUS_CATEGORIES,
+
+  // Functions
+  getEnhancedStatusLabel as _getEnhancedStatusLabel,
+  getEnhancedStatusColor as _getEnhancedStatusColor,
+  getStatusCategory as _getStatusCategory,
+  isPropertyAvailable as _isPropertyAvailable,
+  isPropertyCommitted as _isPropertyCommitted,
+  isPropertyOffMarket as _isPropertyOffMarket,
+  hasPropertyIssues as _hasPropertyIssues,
+  getAllEnhancedStatuses as _getAllEnhancedStatuses,
+} from '@/constants/property-statuses-enterprise';
+
+import {
+  PropertyStatusEngine as _PropertyStatusEngine,
+  propertyStatusEngine as _propertyStatusEngine,
+
+  // Types
+  type EnhancedProperty as _EnhancedProperty,
+
+  // Functions
+  validatePropertyStatus as _validatePropertyStatus,
+  canChangeStatus as _canChangeStatus,
+  getStatusSuggestions as _getStatusSuggestions,
+  getPropertyAnalytics as _getPropertyAnalytics
+} from './PropertyStatusEngine';
+
+import {
+  UnifiedPropertyStatusBadge as _UnifiedPropertyStatusBadge,
+  PropertyStatusSelector as _PropertyStatusSelector,
+} from '@/components/ui/property-status';
+
+// ============================================================================
 // STATUS TYPES & CONSTANTS
 // ============================================================================
 
@@ -93,64 +138,65 @@ export {
 
 /**
  * 🚀 Quick access to the most commonly used functions
+ * 🏢 ENTERPRISE: Renamed to PropertyStatusAPI to avoid conflict with PropertyStatus type
  */
-export const PropertyStatus = {
+export const PropertyStatusAPI = {
   // Main engine
-  engine: propertyStatusEngine,
+  engine: _propertyStatusEngine,
 
   // Quick functions
-  getLabel: getEnhancedStatusLabel,
-  getColor: getEnhancedStatusColor,
-  getCategory: getStatusCategory,
-  validate: validatePropertyStatus,
-  canChange: canChangeStatus,
-  suggest: getStatusSuggestions,
-  analyze: getPropertyAnalytics,
+  getLabel: _getEnhancedStatusLabel,
+  getColor: _getEnhancedStatusColor,
+  getCategory: _getStatusCategory,
+  validate: _validatePropertyStatus,
+  canChange: _canChangeStatus,
+  suggest: _getStatusSuggestions,
+  analyze: _getPropertyAnalytics,
 
   // Status checks
-  isAvailable: isPropertyAvailable,
-  isCommitted: isPropertyCommitted,
-  isOffMarket: isPropertyOffMarket,
-  hasIssues: hasPropertyIssues,
+  isAvailable: _isPropertyAvailable,
+  isCommitted: _isPropertyCommitted,
+  isOffMarket: _isPropertyOffMarket,
+  hasIssues: _hasPropertyIssues,
 
   // Data access
-  getAllStatuses: getAllEnhancedStatuses,
-  getCategories: () => STATUS_CATEGORIES,
-  getLabels: () => ENHANCED_STATUS_LABELS,
-  getColors: () => ENHANCED_STATUS_COLORS,
+  getAllStatuses: _getAllEnhancedStatuses,
+  getCategories: () => _STATUS_CATEGORIES,
+  getLabels: () => _ENHANCED_STATUS_LABELS,
+  getColors: () => _ENHANCED_STATUS_COLORS,
 };
 
 /**
  * 📊 Analytics & Reporting utilities
  */
 export const PropertyAnalytics = {
-  generate: getPropertyAnalytics,
-  engine: propertyStatusEngine,
+  generate: _getPropertyAnalytics,
+  engine: _propertyStatusEngine,
 
   // Helper functions for common analytics
-  getTotalsByStatus: (properties: EnhancedProperty[]) => {
-    const analytics = getPropertyAnalytics(properties);
+  getTotalsByStatus: (properties: _EnhancedProperty[]) => {
+    const analytics = _getPropertyAnalytics(properties);
     return analytics.byStatus;
   },
 
-  getTotalsByCategory: (properties: EnhancedProperty[]) => {
-    const analytics = getPropertyAnalytics(properties);
+  getTotalsByCategory: (properties: _EnhancedProperty[]) => {
+    const analytics = _getPropertyAnalytics(properties);
     return analytics.byCategory;
   },
 
-  getMarketOverview: (properties: EnhancedProperty[]) => {
-    const analytics = getPropertyAnalytics(properties);
+  getMarketOverview: (properties: _EnhancedProperty[]) => {
+    const analytics = _getPropertyAnalytics(properties);
     return {
       total: analytics.totalProperties,
       available: Object.entries(analytics.byStatus)
-        .filter(([status]) => isPropertyAvailable(status as EnhancedPropertyStatus))
-        .reduce((sum, [, count]) => sum + count, 0),
+        .filter(([status]) => _isPropertyAvailable(status as _EnhancedPropertyStatus))
+        .reduce((sum, [, count]) => sum + (count as number), 0),
       committed: Object.entries(analytics.byStatus)
-        .filter(([status]) => isPropertyCommitted(status as EnhancedPropertyStatus))
-        .reduce((sum, [, count]) => sum + count, 0),
+        .filter(([status]) => _isPropertyCommitted(status as _EnhancedPropertyStatus))
+        .reduce((sum, [, count]) => sum + (count as number), 0),
       offMarket: Object.entries(analytics.byStatus)
-        .filter(([status]) => isPropertyOffMarket(status as EnhancedPropertyStatus))
-        .reduce((sum, [, count]) => sum + count, 0),
+        .filter(([status]) => _isPropertyOffMarket(status as _EnhancedPropertyStatus))
+        .reduce((sum, [, count]) => sum + (count as number), 0),
       totalValue: analytics.totalValue,
       averagePrice: analytics.averagePrice,
     };
@@ -162,7 +208,7 @@ export const PropertyAnalytics = {
  */
 export const PropertyStatusDev = {
   // Create test properties
-  createTestProperty: (overrides: Partial<EnhancedProperty> = {}): EnhancedProperty => ({
+  createTestProperty: (overrides: Partial<_EnhancedProperty> = {}): _EnhancedProperty => ({
     id: `test-${Date.now()}`,
     status: 'for-sale',
     intent: 'sale',
@@ -179,13 +225,13 @@ export const PropertyStatusDev = {
   validateSystem: () => {
     console.group('🏢 Property Status System Validation');
 
-    console.log('✅ Available statuses:', getAllEnhancedStatuses().length);
-    console.log('✅ Status categories:', Object.keys(STATUS_CATEGORIES));
-    console.log('✅ Engine instance:', !!propertyStatusEngine);
+    console.log('✅ Available statuses:', _getAllEnhancedStatuses().length);
+    console.log('✅ Status categories:', Object.keys(_STATUS_CATEGORIES));
+    console.log('✅ Engine instance:', !!_propertyStatusEngine);
 
     // Test basic functionality
     const testProperty = PropertyStatusDev.createTestProperty();
-    const validation = validatePropertyStatus(testProperty);
+    const validation = _validatePropertyStatus(testProperty);
     console.log('✅ Test validation:', validation);
 
     console.groupEnd();
@@ -207,15 +253,15 @@ export const PROPERTY_STATUS_SYSTEM_BUILD = '2025-12-14';
 
 export default {
   // Main APIs
-  PropertyStatus,
+  PropertyStatusAPI,
   PropertyAnalytics,
 
   // Components
-  UnifiedPropertyStatusBadge,
-  PropertyStatusSelector,
+  UnifiedPropertyStatusBadge: _UnifiedPropertyStatusBadge,
+  PropertyStatusSelector: _PropertyStatusSelector,
 
   // Engine
-  propertyStatusEngine,
+  propertyStatusEngine: _propertyStatusEngine,
 
   // Development
   PropertyStatusDev,

@@ -140,12 +140,21 @@ export interface RelationshipAuditEntry {
   readonly relationshipsAfter?: readonly EntityRelationship[];
   readonly performedBy: string;
   readonly performedAt: Date;
-  readonly metadata: {
-    readonly userAgent?: string;
-    readonly ipAddress?: string;
-    readonly sessionId?: string;
-    readonly reason?: string;
-  };
+  readonly metadata: RelationshipAuditMetadata;
+}
+
+/**
+ * 🏢 ENTERPRISE: Extended audit metadata for relationship operations
+ * Supports additional fields for enterprise-grade audit trail
+ */
+export interface RelationshipAuditMetadata {
+  readonly userAgent?: string;
+  readonly ipAddress?: string;
+  readonly sessionId?: string;
+  readonly reason?: string;
+  // 🏢 ENTERPRISE: Extended audit fields (2026-01-19)
+  readonly targetEntity?: string;      // Format: "entityType:entityId"
+  readonly cascadeDeleted?: number;    // Count of cascaded entities deleted
 }
 
 // ============================================================================

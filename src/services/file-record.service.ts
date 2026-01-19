@@ -148,6 +148,7 @@ export class FileRecordService {
       revision: input.revision,
       ext,
       originalFilename: input.originalFilename,
+      customTitle: input.customTitle, // 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
     });
 
     const displayName = namingResult.displayName;
@@ -200,6 +201,7 @@ export class FileRecordService {
       ext,
       contentType: input.contentType,
       status: FILE_STATUS.PENDING,
+      isDeleted: false, // 🏢 ENTERPRISE: REQUIRED - Firestore queries with '!=' exclude docs without the field
       createdAt: new Date().toISOString(),
       createdBy: input.createdBy,
       ...(input.revision && { revision: input.revision }), // 🏢 ENTERPRISE: Only include if defined
@@ -261,13 +263,20 @@ export class FileRecordService {
     }
 
     // Update with final data
-    await updateDoc(docRef, {
+    // 🏢 ENTERPRISE: Build update object without undefined fields (Firestore rejects undefined)
+    const updateData: Record<string, unknown> = {
       status: FILE_STATUS.READY,
       sizeBytes: input.sizeBytes,
       downloadUrl: input.downloadUrl,
-      hash: input.hash,
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    // Only include hash if provided (optional field)
+    if (input.hash !== undefined) {
+      updateData.hash = input.hash;
+    }
+
+    await updateDoc(docRef, updateData);
 
     logger.info('FileRecord finalized successfully', {
       fileId: input.fileId,

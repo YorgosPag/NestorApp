@@ -21,6 +21,9 @@ export type { FilesListProps } from './FilesList';
 export { FileUploadZone } from './FileUploadZone';
 export type { FileUploadZoneProps } from './FileUploadZone';
 
+export { FilePathTree } from './FilePathTree';
+export type { FilePathTreeProps } from './FilePathTree';
+
 // Hooks
 export { useEntityFiles } from './hooks/useEntityFiles';
 export type {

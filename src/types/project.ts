@@ -2,6 +2,18 @@
 
 export type ProjectStatus = 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
 
+/** 🏢 ENTERPRISE: Project types for construction industry */
+export type ProjectType = 'residential' | 'commercial' | 'industrial' | 'mixed' | 'infrastructure' | 'renovation';
+
+/** 🏢 ENTERPRISE: Priority levels for project management */
+export type ProjectPriority = 'low' | 'medium' | 'high' | 'critical';
+
+/** 🏢 ENTERPRISE: Risk assessment levels */
+export type ProjectRiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+/** 🏢 ENTERPRISE: Complexity levels for project estimation */
+export type ProjectComplexity = 'simple' | 'moderate' | 'complex' | 'highly_complex';
+
 export interface Project {
   id: string;
   /** 🏢 ENTERPRISE: Human-readable project code (e.g., "PRJ-001") */
@@ -19,6 +31,44 @@ export interface Project {
   completionDate?: string;
   lastUpdate: string;
   totalArea: number;
+
+  // 🏢 ENTERPRISE: Extended project fields for advanced filtering (2026-01-19)
+  /** Project description for search and display */
+  description?: string;
+  /** Project location (city/region) for filtering */
+  location?: string;
+  /** Client/customer name */
+  client?: string;
+  /** Project type classification */
+  type?: ProjectType;
+  /** Project priority level */
+  priority?: ProjectPriority;
+  /** Risk assessment level */
+  riskLevel?: ProjectRiskLevel;
+  /** Project complexity level */
+  complexity?: ProjectComplexity;
+  /** Total budget in euros */
+  budget?: number;
+  /** Expected duration in months */
+  duration?: number;
+  /** Start year for year-based filtering */
+  startYear?: number;
+  /** Expected end date (ISO string) */
+  endDate?: string;
+
+  // 🏢 ENTERPRISE: Boolean feature flags for filtering
+  /** Has all required permits */
+  hasPermits?: boolean;
+  /** Has secured financing */
+  hasFinancing?: boolean;
+  /** Ecological/green building project */
+  isEcological?: boolean;
+  /** Uses subcontractors */
+  hasSubcontractors?: boolean;
+  /** Project is currently active */
+  isActive?: boolean;
+  /** Has reported issues */
+  hasIssues?: boolean;
 }
 
 export interface ProjectCustomer {

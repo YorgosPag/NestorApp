@@ -65,9 +65,24 @@ const AFO = {
   storage: 'filters.advancedOptions.storage',
   fireplace: 'filters.advancedOptions.fireplace',
   view: 'filters.advancedOptions.view',
-  pool: 'filters.advancedOptions.pool'
+  pool: 'filters.advancedOptions.pool',
+  // 🏢 ENTERPRISE: Contact-specific filter options (2026-01-19)
+  is_favorite_contacts: 'filters.advancedOptions.isFavoriteContacts',
+  has_email: 'filters.advancedOptions.hasEmail',
+  has_phone: 'filters.advancedOptions.hasPhone',
+  recent_activity: 'filters.advancedOptions.recentActivity'
 };
-const RL = {};
+// 🏢 ENTERPRISE: Range labels for unit count and area filters
+const RL = {
+  units_all: 'filters.ranges.unitsAll',
+  units_1_2: 'filters.ranges.units1to2',
+  units_3_5: 'filters.ranges.units3to5',
+  units_6_plus: 'filters.ranges.units6Plus',
+  areas_all: 'filters.ranges.areasAll',
+  area_up_to_100: 'filters.ranges.areaUpTo100',
+  area_101_300: 'filters.ranges.area101to300',
+  area_301_plus: 'filters.ranges.area301Plus'
+};
 const ECL = {};
 
 // 🏢 ENTERPRISE: Centralized filter labels - i18n translation keys

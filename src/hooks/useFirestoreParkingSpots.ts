@@ -58,6 +58,13 @@ export interface ParkingSpot {
   notes?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  // 🏢 ENTERPRISE: Extended properties for ParkingGeneralTab (2026-01-19)
+  /** Price in euros */
+  price?: number;
+  /** Project ID reference */
+  projectId?: string;
+  /** User who created this record */
+  createdBy?: string;
 }
 
 /**

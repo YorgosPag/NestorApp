@@ -58,9 +58,17 @@ export const COLLECTIONS = {
   ROLES: process.env.NEXT_PUBLIC_ROLES_COLLECTION || 'roles',
   PERMISSIONS: process.env.NEXT_PUBLIC_PERMISSIONS_COLLECTION || 'permissions',
 
+  // 🏢 WORKSPACES (ADR-032: Workspace-based Multi-Tenancy)
+  WORKSPACES: process.env.NEXT_PUBLIC_WORKSPACES_COLLECTION || 'workspaces',
+  WORKSPACE_MEMBERS: process.env.NEXT_PUBLIC_WORKSPACE_MEMBERS_COLLECTION || 'workspace_members',
+
   // 🔄 RELATIONSHIPS
   RELATIONSHIPS: process.env.NEXT_PUBLIC_RELATIONSHIPS_COLLECTION || 'relationships',
   CONTACT_RELATIONSHIPS: process.env.NEXT_PUBLIC_CONTACT_RELATIONSHIPS_COLLECTION || 'contact_relationships',
+
+  // 🔗 ASSOCIATIONS (ADR-032: Linking Model - ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+  CONTACT_LINKS: process.env.NEXT_PUBLIC_CONTACT_LINKS_COLLECTION || 'contact_links',
+  FILE_LINKS: process.env.NEXT_PUBLIC_FILE_LINKS_COLLECTION || 'file_links',
 
   // 📋 FORMS & SURVEYS
   FORMS: process.env.NEXT_PUBLIC_FORMS_COLLECTION || 'forms',

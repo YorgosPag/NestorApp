@@ -1593,7 +1593,10 @@ export const photoPreviewComponents = {
   colors: {
     emptyStateBackground: colors.background.secondary,
     emptyStateBorder: colors.border.primary,
-    withPhotoBorder: colors.primary['500']
+    withPhotoBorder: colors.primary['500'],
+    // 🏢 ENTERPRISE: Additional colors for migration-utilities (2026-01-19)
+    uploadingBackground: '#f8fafc', // Slate-50 - uploading state
+    errorBackground: colors.error['50'] // Error state background
   }
 } as const;
 

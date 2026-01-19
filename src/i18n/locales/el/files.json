@@ -1,29 +1,29 @@
 {
   "domains": {
-    "admin": "Διοικητικά",
-    "construction": "Κατασκευαστικά",
+    "admin": "Διαχείριση",
+    "construction": "Κατασκευή",
     "sales": "Πωλήσεις",
     "accounting": "Λογιστικά",
     "legal": "Νομικά",
     "financial": "Οικονομικά"
   },
   "categories": {
-    "photos": "Φωτογραφία",
-    "floorplans": "Κάτοψη",
-    "contracts": "Συμβόλαιο",
-    "invoices": "Τιμολόγιο",
-    "documents": "Έγγραφο",
-    "drawings": "Σχέδιο",
-    "reports": "Αναφορά",
-    "permits": "Άδεια"
+    "photos": "Φωτογραφίες",
+    "floorplans": "Κατόψεις",
+    "contracts": "Συμβόλαια",
+    "invoices": "Τιμολόγια",
+    "documents": "Έγγραφα",
+    "drawings": "Σχέδια",
+    "reports": "Αναφορές",
+    "permits": "Άδειες"
   },
   "entityTypes": {
-    "contact": "Επαφή",
-    "building": "Κτίριο",
-    "floor": "Όροφος",
-    "unit": "Μονάδα",
-    "project": "Έργο",
-    "company": "Εταιρεία"
+    "contact": "Επαφές",
+    "building": "Κτίρια",
+    "floor": "Όροφοι",
+    "unit": "Μονάδες",
+    "project": "Έργα",
+    "company": "Εταιρείες"
   },
   "purposes": {
     "profile": "Προφίλ",
@@ -66,7 +66,11 @@
     "refresh": "Ανανέωση",
     "fileManagementTools": "Εργαλεία Διαχείρισης Αρχείων",
     "errorLoading": "Σφάλμα φόρτωσης αρχείων",
-    "totalStorage": "Συνολικός χώρος"
+    "totalStorage": "Συνολικός χώρος",
+    "viewList": "Προβολή Λίστας",
+    "viewTree": "Προβολή Δέντρου",
+    "listView": "Λίστα",
+    "treeView": "Δέντρο"
   },
   "list": {
     "file": "Αρχείο",
@@ -95,5 +99,20 @@
     "errors": {
       "fileTooLarge": "Το αρχείο {{fileName}} είναι πολύ μεγάλο. Μέγιστο μέγεθος: {{maxSize}}"
     }
+  },
+  "pathSegments": {
+    "companies": "Εταιρείες",
+    "projects": "Έργα",
+    "entities": "Οντότητες",
+    "domains": "Τομείς",
+    "categories": "Κατηγορίες",
+    "files": "Αρχεία"
+  },
+  "tree": {
+    "title": "Δομή Αρχείων",
+    "expand": "Ανάπτυξη φακέλου",
+    "collapse": "Σύμπτυξη φακέλου",
+    "folder": "Φάκελος",
+    "file": "Αρχείο"
   }
 }

@@ -98,6 +98,10 @@ export interface FileDisplayNameInput {
 
   /** Original filename (for fallback) */
   originalFilename?: string;
+
+  /** 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+   * When provided, replaces category+purpose with this custom title */
+  customTitle?: string;
 }
 
 /**
@@ -225,15 +229,21 @@ function normalizeForSearch(str: string): string {
 export function buildFileDisplayName(input: FileDisplayNameInput): FileDisplayNameResult {
   const parts: string[] = [];
 
-  // 1. Category label (always first)
-  const categoryLabel = getCategoryLabel(input.category);
-  parts.push(categoryLabel);
+  // 🏢 ENTERPRISE: Custom title takes precedence (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+  if (input.customTitle && input.customTitle.trim() !== '') {
+    // Use custom title as the first part
+    parts.push(input.customTitle.trim());
+  } else {
+    // 1. Category label (always first)
+    const categoryLabel = getCategoryLabel(input.category);
+    parts.push(categoryLabel);
 
-  // 2. Purpose/descriptor if provided
-  if (input.purpose) {
-    // Capitalize first letter
-    const purposeLabel = input.purpose.charAt(0).toUpperCase() + input.purpose.slice(1);
-    parts[0] = `${categoryLabel} ${purposeLabel}`;
+    // 2. Purpose/descriptor if provided
+    if (input.purpose) {
+      // Capitalize first letter
+      const purposeLabel = input.purpose.charAt(0).toUpperCase() + input.purpose.slice(1);
+      parts[0] = `${categoryLabel} ${purposeLabel}`;
+    }
   }
 
   // 3. Entity label if provided

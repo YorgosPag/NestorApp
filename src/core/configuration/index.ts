@@ -27,6 +27,24 @@
  */
 
 // ============================================================================
+// INTERNAL IMPORTS (for local usage in convenience APIs below)
+// ============================================================================
+
+// 🏢 ENTERPRISE: Import as local variables for use in convenience objects
+import {
+  ConfigurationAPI as _ConfigurationAPI,
+  getConfigManager as _getConfigManager
+} from './enterprise-config-management';
+import {
+  ConfigurationTestingAPI as _ConfigurationTestingAPI,
+  type TestSuiteResult as _TestSuiteResult
+} from './testing-validation';
+import {
+  MigrationAPI as _MigrationAPI,
+  type MigrationResult as _MigrationResult
+} from './hardcoded-values-migration';
+
+// ============================================================================
 // 📊 CORE CONFIGURATION SYSTEM EXPORTS
 // ============================================================================
 
@@ -174,27 +192,27 @@ export const QuickConfigAPI = {
   /**
    * Get company email (αντικαθιστά hardcoded 'info@pagonis.gr')
    */
-  getCompanyEmail: ConfigurationAPI.getCompanyEmail,
+  getCompanyEmail: _ConfigurationAPI.getCompanyEmail,
 
   /**
    * Get company phone (αντικαθιστά hardcoded phone numbers)
    */
-  getCompanyPhone: ConfigurationAPI.getCompanyPhone,
+  getCompanyPhone: _ConfigurationAPI.getCompanyPhone,
 
   /**
    * Get app base URL (αντικαθιστά hardcoded 'https://nestor-app.vercel.app')
    */
-  getAppBaseUrl: ConfigurationAPI.getAppBaseUrl,
+  getAppBaseUrl: _ConfigurationAPI.getAppBaseUrl,
 
   /**
    * Get webhook URLs (αντικαθιστά hardcoded webhook endpoints)
    */
-  getWebhookUrls: ConfigurationAPI.getWebhookUrls,
+  getWebhookUrls: _ConfigurationAPI.getWebhookUrls,
 
   /**
    * Get API endpoints (αντικαθιστά hardcoded API URLs)
    */
-  getApiEndpoints: ConfigurationAPI.getApiEndpoints
+  getApiEndpoints: _ConfigurationAPI.getApiEndpoints
 } as const;
 
 // ============================================================================
@@ -205,7 +223,7 @@ export const QuickConfigAPI = {
  * Global Configuration Manager Instance
  * Singleton instance για global access
  */
-export const GlobalConfigManager = getConfigManager();
+export const GlobalConfigManager = _getConfigManager();
 
 // ============================================================================
 // 📋 CONFIGURATION STATUS CHECKER
@@ -221,7 +239,7 @@ export const ConfigurationHealthCheck = {
    */
   async isSystemHealthy(): Promise<boolean> {
     try {
-      const validation = await ConfigurationTestingAPI.executeQuickValidation();
+      const validation = await _ConfigurationTestingAPI.executeQuickValidation();
       return validation.isValid && validation.score >= 80;
     } catch {
       return false;
@@ -238,7 +256,7 @@ export const ConfigurationHealthCheck = {
     warnings: readonly string[];
   }> {
     try {
-      const validation = await ConfigurationTestingAPI.executeQuickValidation();
+      const validation = await _ConfigurationTestingAPI.executeQuickValidation();
       return {
         isHealthy: validation.isValid,
         score: validation.score,
@@ -259,8 +277,8 @@ export const ConfigurationHealthCheck = {
   /**
    * Perform full system test
    */
-  async performFullTest(): Promise<TestSuiteResult> {
-    return ConfigurationTestingAPI.executeFullSuite();
+  async performFullTest(): Promise<_TestSuiteResult> {
+    return _ConfigurationTestingAPI.executeFullSuite();
   }
 } as const;
 
@@ -275,18 +293,18 @@ export const MigrationUtils = {
   /**
    * Execute migration preview (dry run)
    */
-  previewMigration: (): Promise<MigrationResult> => MigrationAPI.executeDryRun(),
+  previewMigration: (): Promise<_MigrationResult> => _MigrationAPI.executeDryRun(),
 
   /**
    * Execute actual migration
    */
-  executeMigration: (createBackup: boolean = true): Promise<MigrationResult> =>
-    MigrationAPI.executeMigration({ createBackup }),
+  executeMigration: (createBackup: boolean = true): Promise<_MigrationResult> =>
+    _MigrationAPI.executeMigration({ createBackup }),
 
   /**
    * Rollback migration
    */
-  rollbackMigration: (backupId: string): Promise<boolean> => MigrationAPI.rollback(backupId)
+  rollbackMigration: (backupId: string): Promise<boolean> => _MigrationAPI.rollback(backupId)
 } as const;
 
 // ============================================================================
@@ -382,11 +400,11 @@ export const UsageExamples = {
 
     async function runTests() {
       // Quick validation
-      const validation = await ConfigurationTestingAPI.executeQuickValidation();
+      const validation = await _ConfigurationTestingAPI.executeQuickValidation();
       console.log('Validation score:', validation.score);
 
       // Full test suite
-      const fullTest = await ConfigurationTestingAPI.executeFullSuite();
+      const fullTest = await _ConfigurationTestingAPI.executeFullSuite();
       console.log('Test results:', fullTest);
 
       // Security audit
@@ -437,7 +455,7 @@ export const ConfigurationSystemInfo = {
 export default {
   // Core system
   manager: GlobalConfigManager,
-  api: ConfigurationAPI,
+  api: _ConfigurationAPI,
 
   // Quick access
   quick: QuickConfigAPI,
@@ -447,7 +465,7 @@ export default {
 
   // Health & testing
   health: ConfigurationHealthCheck,
-  testing: ConfigurationTestingAPI,
+  testing: _ConfigurationTestingAPI,
 
   // System info
   info: ConfigurationSystemInfo,

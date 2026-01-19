@@ -13,12 +13,8 @@ import {
   BUILDING_NAME_FILTER_LABELS
 } from '@/constants/property-statuses-enterprise';
 
-// 🏢 ENTERPRISE: Import centralized CompactToolbar labels from modal-select
-import {
-  getCompactToolbarSearchPlaceholders,
-  getCompactToolbarNewItemLabels,
-  getCompactToolbarTooltips
-} from '@/subapps/dxf-viewer/config/modal-select';
+// 🏢 ENTERPRISE: Import centralized CompactToolbar search placeholders from modal-select
+import { getCompactToolbarSearchPlaceholders } from '@/subapps/dxf-viewer/config/modal-select';
 
 // 🅿️ ENTERPRISE: Import parking labels
 import {
@@ -26,10 +22,8 @@ import {
   PARKING_STATUS_LABELS
 } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 
-// 🏢 ENTERPRISE: Get centralized labels ONCE - Smart Configuration Factory
+// 🏢 ENTERPRISE: Get centralized search placeholders
 const searchPlaceholders = getCompactToolbarSearchPlaceholders();
-const newItemLabels = getCompactToolbarNewItemLabels();
-const tooltips = getCompactToolbarTooltips();
 
 // 🏢 ENTERPRISE: Communications channel labels
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
@@ -73,9 +67,9 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
           id: 'type',
           label: 'toolbar.filters.categories.buildingType',
           options: [
-            { value: 'residential', label: PROPERTY_BUILDING_TYPE_LABELS.RESIDENTIAL },
-            { value: 'commercial', label: PROPERTY_BUILDING_TYPE_LABELS.COMMERCIAL },
-            { value: 'mixed', label: PROPERTY_BUILDING_TYPE_LABELS.MIXED }
+            { value: 'residential', label: PROPERTY_BUILDING_TYPE_LABELS.residential },
+            { value: 'commercial', label: PROPERTY_BUILDING_TYPE_LABELS.commercial },
+            { value: 'mixed', label: PROPERTY_BUILDING_TYPE_LABELS.mixed }
           ]
         }
       ];
@@ -85,9 +79,9 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
           id: 'type',
           label: 'toolbar.filters.categories.contactType',
           options: [
-            { value: 'customer', label: CONTACT_BUSINESS_TYPE_LABELS.CUSTOMER },
-            { value: 'supplier', label: CONTACT_BUSINESS_TYPE_LABELS.SUPPLIER },
-            { value: 'contractor', label: CONTACT_BUSINESS_TYPE_LABELS.CONTRACTOR }
+            { value: 'customer', label: CONTACT_BUSINESS_TYPE_LABELS.customer },
+            { value: 'supplier', label: CONTACT_BUSINESS_TYPE_LABELS.supplier },
+            { value: 'contractor', label: CONTACT_BUSINESS_TYPE_LABELS.contractor }
           ]
         }
       ];
@@ -161,6 +155,58 @@ function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'un
   ];
 }
 
+// 🏢 ENTERPRISE: Direct i18n key mappings for newItem labels per type
+const NEW_ITEM_LABELS_BY_TYPE: Record<string, string> = {
+  buildings: 'common.actions.newBuilding',
+  projects: 'common.actions.newProject',
+  contacts: 'common.actions.newContact',
+  units: 'common.actions.newUnit',
+  storages: 'common.actions.newStorage',
+  parking: 'common.actions.newParking',
+  communications: 'common.actions.newMessage'
+};
+
+// 🏢 ENTERPRISE: Direct i18n keys for entity-specific tooltips
+const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
+  buildings: 'common.tooltips.newBuildingShortcut',
+  projects: 'common.tooltips.newProjectShortcut',
+  contacts: 'common.tooltips.newContactShortcut',
+  units: 'common.tooltips.newUnitShortcut',
+  storages: 'common.tooltips.newStorageShortcut',
+  parking: 'common.tooltips.newParkingShortcut',
+  communications: 'common.tooltips.newMessageShortcut'
+};
+
+const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
+  buildings: 'toolbar.actions.buildings.edit',
+  projects: 'toolbar.actions.projects.edit',
+  contacts: 'common.tooltips.editContact',
+  units: 'toolbar.actions.units.edit',
+  storages: 'toolbar.actions.storage.edit',
+  parking: 'common.tooltips.editSelected',
+  communications: 'common.tooltips.editSelected'
+};
+
+const DELETE_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
+  buildings: 'toolbar.actions.buildings.delete',
+  projects: 'toolbar.actions.projects.delete',
+  contacts: 'common.tooltips.deleteContact',
+  units: 'toolbar.actions.units.delete',
+  storages: 'toolbar.actions.storage.delete',
+  parking: 'common.tooltips.deleteSelected',
+  communications: 'common.tooltips.deleteSelected'
+};
+
+const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
+  buildings: 'common.tooltips.shareBuilding',
+  projects: 'common.tooltips.shareProject',
+  contacts: 'common.tooltips.shareContact',
+  units: 'common.tooltips.shareUnit',
+  storages: 'common.tooltips.shareStorage',
+  parking: 'toolbar.labels.share',
+  communications: 'toolbar.labels.share'
+};
+
 // 🚀 ENTERPRISE: Smart Configuration Factory - No duplicated labels!
 function createToolbarConfig(
   type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking' | 'communications'
@@ -170,7 +216,7 @@ function createToolbarConfig(
 
     // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
     labels: {
-      newItem: newItemLabels[type],
+      newItem: NEW_ITEM_LABELS_BY_TYPE[type],
       editItem: 'toolbar.actions.edit',
       deleteItems: 'toolbar.actions.delete',
       filters: 'toolbar.actions.filters',
@@ -189,25 +235,25 @@ function createToolbarConfig(
       sorting: 'toolbar.actions.sorting'
     },
 
-    // 🏢 ENTERPRISE: 100% Centralized Tooltips - ZERO HARDCODED VALUES
+    // 🏢 ENTERPRISE: 100% Direct i18n keys - No external function dependency
     tooltips: {
-      newItem: tooltips[`new_${type.slice(0, -1)}_tooltip` as keyof typeof tooltips] || tooltips.new_building_tooltip,
-      editItem: tooltips[`edit_${type.slice(0, -1)}` as keyof typeof tooltips] || tooltips.edit_generic,
-      deleteItems: tooltips[`delete_${type.slice(0, -1)}` as keyof typeof tooltips] || tooltips.delete_generic,
-      filters: tooltips.filters,
-      favorites: tooltips.favorites,
-      archive: tooltips.archive,
-      export: tooltips.export,
-      import: tooltips.import,
-      refresh: tooltips.refresh,
-      preview: tooltips.preview,
-      copy: tooltips.copy,
-      share: tooltips[`share_${type.slice(0, -1)}` as keyof typeof tooltips] || tooltips.share_generic,
-      reports: tooltips.reports,
-      settings: tooltips.settings,
-      favoritesManagement: tooltips.favorites_management,
-      help: tooltips.help,
-      sorting: tooltips.sorting
+      newItem: NEW_ITEM_TOOLTIP_BY_TYPE[type],
+      editItem: EDIT_ITEM_TOOLTIP_BY_TYPE[type],
+      deleteItems: DELETE_ITEM_TOOLTIP_BY_TYPE[type],
+      filters: 'toolbar.tooltips.filters',
+      favorites: 'toolbar.tooltips.favorites',
+      archive: 'toolbar.tooltips.archive',
+      export: 'toolbar.tooltips.exportData',
+      import: 'toolbar.tooltips.importData',
+      refresh: 'toolbar.tooltips.refreshData',
+      preview: 'toolbar.tooltips.preview',
+      copy: 'toolbar.tooltips.copy',
+      share: SHARE_TOOLTIP_BY_TYPE[type],
+      reports: 'toolbar.tooltips.reports',
+      settings: 'toolbar.tooltips.settings',
+      favoritesManagement: 'toolbar.labels.favoritesManagement',
+      help: 'toolbar.tooltips.help',
+      sorting: 'toolbar.tooltips.sorting'
     },
 
     filterCategories: getFilterCategoriesForType(type),
@@ -285,20 +331,20 @@ export const communicationsConfig: CompactToolbarConfig = {
     newItem: '',
     editItem: '',
     deleteItems: '',
-    filters: tooltips.filters,
+    filters: 'toolbar.tooltips.filters',
     favorites: 'toolbar.communications.markAsImportant',
-    archive: tooltips.archive,
-    export: tooltips.export,
+    archive: 'toolbar.tooltips.archive',
+    export: 'toolbar.tooltips.exportData',
     import: '',
-    refresh: tooltips.refresh,
+    refresh: 'toolbar.tooltips.refreshData',
     preview: '',
     copy: '',
     share: '',
-    reports: tooltips.reports,
-    settings: tooltips.settings,
+    reports: 'toolbar.tooltips.reports',
+    settings: 'toolbar.tooltips.settings',
     favoritesManagement: '',
-    help: tooltips.help,
-    sorting: tooltips.sorting
+    help: 'toolbar.tooltips.help',
+    sorting: 'toolbar.tooltips.sorting'
   },
 
   filterCategories: getFilterCategoriesForType('communications'),

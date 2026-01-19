@@ -135,6 +135,13 @@ export const PROPERTY_FILTER_LABELS = {
   complexity: 'filters.fields.complexity',
   year_built: 'filters.fields.yearBuilt',
   property_type: 'filters.fields.propertyType',
+  // 🏢 ENTERPRISE: Additional field labels (2026-01-19)
+  contact_type: 'filters.fields.contactType',
+  units_count: 'filters.fields.unitsCount',
+  total_area: 'filters.fields.totalArea',
+  year_range: 'filters.fields.yearRange',
+  progress_range: 'filters.fields.progressRange',
+  start_year_range: 'filters.fields.startYearRange',
   // Checkbox labels
   has_parking: 'filters.checkboxes.hasParking',
   has_elevator: 'filters.checkboxes.hasElevator',
@@ -148,7 +155,10 @@ export const PROPERTY_FILTER_LABELS = {
   has_financing: 'filters.checkboxes.hasFinancing',
   has_subcontractors: 'filters.checkboxes.hasSubcontractors',
   has_issues: 'filters.checkboxes.hasIssues',
-  is_active: 'filters.checkboxes.isActive'
+  is_active: 'filters.checkboxes.isActive',
+  is_favorite: 'filters.checkboxes.isFavorite',
+  show_archived: 'filters.checkboxes.showArchived',
+  is_ecological: 'filters.checkboxes.isEcological'
 } as const;
 
 // 🏢 ENTERPRISE: Storage domain filter labels (unified from storage/constants.ts)

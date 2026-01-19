@@ -21,6 +21,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
 
 // ============================================================================
 // TYPES
@@ -48,21 +49,12 @@ export interface FilesListProps {
 // ============================================================================
 
 /**
- * Format file size για human-readable display
+ * 🏢 ENTERPRISE: Format file size using centralized utility
+ * Wrapper για undefined safety
  */
 function formatFileSize(bytes: number | undefined): string {
-  if (!bytes) return '0 B';
-
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
+  if (!bytes || bytes === 0) return formatFileSizeUtil(0); // Delegate to centralized utility
+  return formatFileSizeUtil(bytes);
 }
 
 /**
@@ -127,7 +119,7 @@ export function FilesList({
     if (!onDelete || !currentUserId) return;
 
     // Confirm delete
-    const confirmed = window.confirm(t('deleteConfirm'));
+    const confirmed = window.confirm(t('list.deleteConfirm'));
     if (!confirmed) return;
 
     try {
@@ -163,7 +155,7 @@ export function FilesList({
   // Loading state
   if (loading) {
     return (
-      <section className="space-y-3" role="status" aria-label={t('loadingFiles')}>
+      <section className="space-y-3" role="status" aria-label={t('list.loadingFiles')}>
         {[1, 2, 3].map((i) => (
           <div
             key={i}
@@ -189,10 +181,10 @@ export function FilesList({
       <section
         className={`p-8 text-center ${colors.bg.muted} ${quick.card}`}
         role="status"
-        aria-label={t('noFiles')}
+        aria-label={t('list.noFiles')}
       >
         <FileText className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.muted}`} />
-        <p className="text-sm text-muted-foreground">{t('noFilesDescription')}</p>
+        <p className="text-sm text-muted-foreground">{t('list.noFilesDescription')}</p>
       </section>
     );
   }
@@ -201,7 +193,7 @@ export function FilesList({
   return (
     <section className="space-y-3" role="region" aria-labelledby="files-list-heading">
       <h3 id="files-list-heading" className="sr-only">
-        {t('filesList')}
+        {t('list.filesList')}
       </h3>
 
       {files.map((file) => {
@@ -211,7 +203,7 @@ export function FilesList({
           <article
             key={file.id}
             className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-            aria-label={`${t('file')}: ${file.displayName}`}
+            aria-label={`${t('list.file')}: ${file.displayName}`}
           >
             {/* File info */}
             <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -251,18 +243,18 @@ export function FilesList({
             </div>
 
             {/* Actions */}
-            <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('fileActions')}>
+            <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
               {/* View */}
               {onView && file.downloadUrl && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={(e) => handleView(file, e)}
-                  aria-label={t('viewFile')}
-                  title={t('viewFile')}
+                  aria-label={t('list.viewFile')}
+                  title={t('list.viewFile')}
                 >
                   <Eye className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-                  {t('view')}
+                  {t('list.view')}
                 </Button>
               )}
 
@@ -272,11 +264,11 @@ export function FilesList({
                   variant="ghost"
                   size="sm"
                   onClick={(e) => handleDownload(file, e)}
-                  aria-label={t('downloadFile')}
-                  title={t('downloadFile')}
+                  aria-label={t('list.downloadFile')}
+                  title={t('list.downloadFile')}
                 >
                   <Download className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-                  {t('download')}
+                  {t('list.download')}
                 </Button>
               )}
 
@@ -287,8 +279,8 @@ export function FilesList({
                   size="icon"
                   onClick={(e) => handleDelete(file.id, e)}
                   className={`text-red-500 ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`}
-                  aria-label={t('deleteFile')}
-                  title={t('deleteFile')}
+                  aria-label={t('list.deleteFile')}
+                  title={t('list.deleteFile')}
                 >
                   <Trash2 className={iconSizes.sm} aria-hidden="true" />
                 </Button>

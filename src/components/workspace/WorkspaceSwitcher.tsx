@@ -1,0 +1,274 @@
+/**
+ * =============================================================================
+ * 🏢 ENTERPRISE: Workspace Switcher Component
+ * =============================================================================
+ *
+ * Dropdown UI για επιλογή active workspace.
+ * Displays available workspaces and allows switching.
+ *
+ * @module components/workspace/WorkspaceSwitcher
+ * @enterprise ADR-032 - Workspace-based Multi-Tenancy
+ *
+ * @example
+ * ```tsx
+ * import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
+ *
+ * <WorkspaceSwitcher />
+ * ```
+ */
+
+'use client';
+
+import React, { useState } from 'react';
+import { Building2, ChevronDown, Check, RefreshCw } from 'lucide-react';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { cn } from '@/lib/utils';
+import type { Workspace, WorkspaceType } from '@/types/workspace';
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
+export interface WorkspaceSwitcherProps {
+  /** Optional CSS class */
+  className?: string;
+  /** Show refresh button */
+  showRefresh?: boolean;
+}
+
+/**
+ * Workspace Switcher Component
+ *
+ * Dropdown για επιλογή active workspace.
+ */
+export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSwitcherProps) {
+  const iconSizes = useIconSizes();
+  const { activeWorkspace, availableWorkspaces, loading, switchWorkspace, refreshWorkspaces } =
+    useWorkspace();
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
+
+  // ==========================================================================
+  // HANDLERS
+  // ==========================================================================
+
+  const handleSelectWorkspace = async (workspace: Workspace) => {
+    if (workspace.id === activeWorkspace?.id) {
+      setIsOpen(false);
+      return;
+    }
+
+    try {
+      setSwitching(true);
+      await switchWorkspace(workspace.id);
+      setIsOpen(false);
+    } catch (error) {
+      console.error('[WorkspaceSwitcher] Failed to switch workspace:', error);
+      alert('Αποτυχία εναλλαγής workspace. Δοκιμάστε ξανά.');
+    } finally {
+      setSwitching(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await refreshWorkspaces();
+    } catch (error) {
+      console.error('[WorkspaceSwitcher] Failed to refresh workspaces:', error);
+    }
+  };
+
+  // ==========================================================================
+  // RENDER HELPERS
+  // ==========================================================================
+
+  const getWorkspaceIcon = (type: WorkspaceType) => {
+    switch (type) {
+      case 'company':
+        return <Building2 className={iconSizes.sm} aria-hidden="true" />;
+      case 'office_directory':
+        return <Building2 className={iconSizes.sm} aria-hidden="true" />;
+      case 'personal':
+        return <Building2 className={iconSizes.sm} aria-hidden="true" />;
+      default:
+        return <Building2 className={iconSizes.sm} aria-hidden="true" />;
+    }
+  };
+
+  const getWorkspaceTypeLabel = (type: WorkspaceType): string => {
+    switch (type) {
+      case 'company':
+        return 'Εταιρεία';
+      case 'office_directory':
+        return 'Κοινός Κατάλογος';
+      case 'personal':
+        return 'Προσωπικός';
+      default:
+        return type;
+    }
+  };
+
+  // ==========================================================================
+  // LOADING STATE
+  // ==========================================================================
+
+  if (loading) {
+    return (
+      <div className={cn('flex items-center gap-2 px-3 py-2', className)}>
+        <RefreshCw className={cn(iconSizes.sm, 'animate-spin')} aria-hidden="true" />
+        <span className="text-sm text-muted-foreground">Φόρτωση workspaces...</span>
+      </div>
+    );
+  }
+
+  // ==========================================================================
+  // NO WORKSPACES
+  // ==========================================================================
+
+  if (availableWorkspaces.length === 0) {
+    return (
+      <div className={cn('flex items-center gap-2 px-3 py-2', className)}>
+        <Building2 className={iconSizes.sm} aria-hidden="true" />
+        <span className="text-sm text-muted-foreground">Κανένα workspace</span>
+      </div>
+    );
+  }
+
+  // ==========================================================================
+  // RENDER DROPDOWN
+  // ==========================================================================
+
+  return (
+    <div className={cn('relative', className)}>
+      {/* Trigger Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={switching}
+        className={cn(
+          'flex items-center gap-2 px-3 py-2 rounded-md',
+          'bg-card border border-border',
+          'hover:bg-accent hover:text-accent-foreground',
+          'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+          'transition-colors',
+          switching && 'opacity-50 cursor-not-allowed'
+        )}
+        aria-label="Επιλογή workspace"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+      >
+        {/* Icon */}
+        {getWorkspaceIcon(activeWorkspace?.type || 'company')}
+
+        {/* Active Workspace Name */}
+        <span className="text-sm font-medium truncate max-w-[200px]">
+          {activeWorkspace?.displayName || 'Επιλέξτε workspace'}
+        </span>
+
+        {/* Chevron */}
+        <ChevronDown
+          className={cn(iconSizes.xs, 'transition-transform', isOpen && 'rotate-180')}
+          aria-hidden="true"
+        />
+      </button>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Menu */}
+          <div
+            className={cn(
+              'absolute top-full left-0 mt-2 z-50',
+              'w-[320px]',
+              'bg-card border border-border rounded-md shadow-lg',
+              'py-2'
+            )}
+            role="listbox"
+            aria-label="Διαθέσιμα workspaces"
+          >
+            {/* Header */}
+            <div className="px-3 py-2 flex items-center justify-between border-b border-border">
+              <span className="text-xs font-semibold text-muted-foreground uppercase">
+                Workspaces
+              </span>
+              {showRefresh && (
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="p-1 rounded hover:bg-accent"
+                  aria-label="Ανανέωση workspaces"
+                >
+                  <RefreshCw className={iconSizes.xs} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+
+            {/* Workspace List */}
+            <div className="max-h-[400px] overflow-y-auto">
+              {availableWorkspaces.map((workspace) => {
+                const isActive = workspace.id === activeWorkspace?.id;
+
+                return (
+                  <button
+                    key={workspace.id}
+                    type="button"
+                    onClick={() => handleSelectWorkspace(workspace)}
+                    disabled={switching}
+                    className={cn(
+                      'w-full px-3 py-2 flex items-center gap-3',
+                      'hover:bg-accent hover:text-accent-foreground',
+                      'transition-colors text-left',
+                      isActive && 'bg-accent/50',
+                      switching && 'opacity-50 cursor-not-allowed'
+                    )}
+                    role="option"
+                    aria-selected={isActive}
+                  >
+                    {/* Icon */}
+                    <div className="flex-shrink-0">{getWorkspaceIcon(workspace.type)}</div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">
+                          {workspace.displayName}
+                        </span>
+                        {isActive && (
+                          <Check className={iconSizes.xs} aria-hidden="true" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          {getWorkspaceTypeLabel(workspace.type)}
+                        </span>
+                        {workspace.status !== 'active' && (
+                          <span className="text-xs text-muted-foreground">
+                            ({workspace.status})
+                          </span>
+                        )}
+                      </div>
+                      {workspace.description && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          {workspace.description}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

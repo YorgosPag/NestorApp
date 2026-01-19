@@ -126,8 +126,14 @@ export interface UnifiedFormFieldProps {
   inputClassName?: string;
   labelClassName?: string;
 
-  // Additional props
-  [key: string]: unknown;
+  // 🏢 ENTERPRISE: Additional props for HTML input compatibility
+  // Note: Removed index signature to avoid TypeScript unknown inference issues
+  autoComplete?: string;
+  autoFocus?: boolean;
+  tabIndex?: number;
+  'aria-label'?: string;
+  'aria-describedby'?: string;
+  'data-testid'?: string;
 }
 
 export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>(({
@@ -170,6 +176,10 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
   className,
   inputClassName,
   labelClassName,
+  // 🏢 ENTERPRISE: HTML input attributes
+  autoComplete,
+  autoFocus,
+  tabIndex,
   ...props
 }, ref) => {
   const iconSizes = useIconSizes();
@@ -229,11 +239,38 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
   
   // Render input based on type
   const renderInput = () => {
+    // 🏢 ENTERPRISE: Properly typed base input props
+    const baseClassName = cn(
+      sizeVariants[size],
+      {
+        [`${getStatusBorder('error')} focus:${getStatusBorder('error').replace('border-', 'border-')} focus:ring-red-500`]: hasError,
+        [`${getStatusBorder('success')} focus:${getStatusBorder('success').replace('border-', 'border-')} focus:ring-green-500`]: isValid,
+        'cursor-not-allowed opacity-50': disabled,
+        'bg-muted': readOnly,
+      },
+      inputClassName
+    );
+
+    // Convert FormFieldValue to string for display
+    const stringValue = type === 'number'
+      ? (typeof value === 'number' ? value : undefined)
+      : formatValue(value);
+
+    // Common HTML attributes that are compatible with both Input and Textarea
+    const commonHtmlProps = {
+      autoComplete,
+      autoFocus,
+      tabIndex,
+      'aria-label': props['aria-label'],
+      'aria-describedby': props['aria-describedby'],
+      'data-testid': props['data-testid'],
+    };
+
     const baseInputProps = {
       id,
       name,
-      value: type === 'number' ? value : formatValue(value),
-      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => 
+      value: stringValue,
+      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
         handleChange(e.target.value),
       onBlur,
       onFocus,
@@ -241,17 +278,8 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
       readOnly,
       placeholder,
       required,
-      className: cn(
-        sizeVariants[size],
-        {
-          [`${getStatusBorder('error')} focus:${getStatusBorder('error').replace('border-', 'border-')} focus:ring-red-500`]: hasError,
-          [`${getStatusBorder('success')} focus:${getStatusBorder('success').replace('border-', 'border-')} focus:ring-green-500`]: isValid,
-          'cursor-not-allowed opacity-50': disabled,
-          'bg-muted': readOnly,
-        },
-        inputClassName
-      ),
-      ...props
+      className: baseClassName,
+      ...commonHtmlProps
     };
     
     switch (type) {
@@ -270,8 +298,8 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
         
       case 'select':
         return (
-          <Select 
-            value={value} 
+          <Select
+            value={typeof value === 'string' ? value : value?.toString()}
             onValueChange={handleChange}
             disabled={disabled || loading}
           >
@@ -313,7 +341,7 @@ export const UnifiedFormField = forwardRef<HTMLElement, UnifiedFormFieldProps>((
               size="sm"
               className={cn(
                 "absolute right-0 top-0 h-full px-3 py-2",
-                INTERACTIVE_PATTERNS.SUBTLE_TRANSPARENT
+                INTERACTIVE_PATTERNS.SUBTLE_HOVER
               )}
               onClick={() => setShowPassword(!showPassword)}
               disabled={disabled}

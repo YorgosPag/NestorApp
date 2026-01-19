@@ -8,6 +8,47 @@
 //
 // ============================================================================
 
+// ============================================================================
+// INTERNAL IMPORTS (for convenience objects below)
+// ============================================================================
+
+// 🏢 ENTERPRISE: Import as local variables for use in convenience objects
+import _EmailShareForm from './EmailShareForm';
+import {
+  TemplateSelector as _TemplateSelector,
+  CompactTemplateSelector as _CompactTemplateSelector
+} from './components/TemplateSelector';
+import {
+  RecipientsList as _RecipientsList,
+  CompactRecipientsList as _CompactRecipientsList
+} from './components/RecipientsList';
+import {
+  MessagePreview as _MessagePreview,
+  CompactMessagePreview as _CompactMessagePreview
+} from './components/MessagePreview';
+import {
+  ValidationErrors as _ValidationErrors,
+  CompactValidationErrors as _CompactValidationErrors,
+  FieldValidationError as _FieldValidationError,
+  SuccessMessage as _SuccessMessage
+} from './components/ValidationErrors';
+import {
+  useEmailValidation as _useEmailValidation,
+  useEnterpriseEmailValidation as _useEnterpriseEmailValidation,
+  useContactEmailValidation as _useContactEmailValidation,
+  useBulkEmailValidation as _useBulkEmailValidation
+} from './hooks/useEmailValidation';
+import {
+  useEmailForm as _useEmailForm,
+  useContactEmailForm as _useContactEmailForm,
+  useBulkEmailForm as _useBulkEmailForm,
+  usePropertyEmailForm as _usePropertyEmailForm
+} from './hooks/useEmailForm';
+
+// ============================================================================
+// PUBLIC EXPORTS
+// ============================================================================
+
 // Main Component
 export { default as EmailShareForm } from './EmailShareForm';
 export type { EmailShareFormProps } from './EmailShareForm';
@@ -71,13 +112,6 @@ export {
 } from './types';
 
 // ============================================================================
-// LEGACY COMPATIBILITY EXPORTS
-// ============================================================================
-
-// Legacy hook export για backward compatibility
-export { useEmailValidation as useEmailValidation } from './hooks/useEmailValidation';
-
-// ============================================================================
 // CONVENIENCE EXPORTS
 // ============================================================================
 
@@ -85,29 +119,29 @@ export { useEmailValidation as useEmailValidation } from './hooks/useEmailValida
  * 📦 All components bundle για easy importing
  */
 export const EmailSharingComponents = {
-  EmailShareForm,
-  TemplateSelector,
-  CompactTemplateSelector,
-  RecipientsList,
-  CompactRecipientsList,
-  MessagePreview,
-  CompactMessagePreview,
-  ValidationErrors,
-  CompactValidationErrors,
-  FieldValidationError,
-  SuccessMessage
+  EmailShareForm: _EmailShareForm,
+  TemplateSelector: _TemplateSelector,
+  CompactTemplateSelector: _CompactTemplateSelector,
+  RecipientsList: _RecipientsList,
+  CompactRecipientsList: _CompactRecipientsList,
+  MessagePreview: _MessagePreview,
+  CompactMessagePreview: _CompactMessagePreview,
+  ValidationErrors: _ValidationErrors,
+  CompactValidationErrors: _CompactValidationErrors,
+  FieldValidationError: _FieldValidationError,
+  SuccessMessage: _SuccessMessage
 };
 
 /**
  * 🎣 All hooks bundle για easy importing
  */
 export const EmailSharingHooks = {
-  useEmailValidation,
-  useEnterpriseEmailValidation,
-  useContactEmailValidation,
-  useBulkEmailValidation,
-  useEmailForm,
-  useContactEmailForm,
-  useBulkEmailForm,
-  usePropertyEmailForm
+  useEmailValidation: _useEmailValidation,
+  useEnterpriseEmailValidation: _useEnterpriseEmailValidation,
+  useContactEmailValidation: _useContactEmailValidation,
+  useBulkEmailValidation: _useBulkEmailValidation,
+  useEmailForm: _useEmailForm,
+  useContactEmailForm: _useContactEmailForm,
+  useBulkEmailForm: _useBulkEmailForm,
+  usePropertyEmailForm: _usePropertyEmailForm
 };

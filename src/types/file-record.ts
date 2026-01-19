@@ -242,6 +242,12 @@ export interface CreateFileRecordInput {
    */
   revision?: number;
 
+  /**
+   * 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+   * When provided, replaces category+purpose in display name
+   */
+  customTitle?: string;
+
   // =========================================================================
   // FILE METADATA
   // =========================================================================

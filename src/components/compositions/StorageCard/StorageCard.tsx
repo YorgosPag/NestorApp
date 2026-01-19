@@ -6,7 +6,6 @@ import { UnitBadge, CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Package, MapPin, Ruler, Thermometer, Shield, Edit, Trash2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { badgeVariants } from '@/components/ui/badge';
 import { formatPriceWithUnit } from '@/lib/intl-utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
@@ -26,24 +25,32 @@ interface StorageCardProps {
 }
 
 
-const defaultGetTypeIcon = (type: StorageType) => {
+// 🏢 ENTERPRISE: Complete type icon mapping for all StorageType values
+const defaultGetTypeIcon = (type: StorageType): React.ElementType => {
   const typeIcons: Record<StorageType, React.ElementType> = {
     'parking': Package,
     'storage': Package,
     'basement': Package,
     'garage': Package,
-    'warehouse': Package
+    'warehouse': Package,
+    // Extended types
+    'large': Package,
+    'small': Package,
+    'ground': Package,
+    'special': Package
   };
   return typeIcons[type] || Package;
 };
 
-const getStatusBadgeClass = (status: StorageStatus, colors: ReturnType<typeof useSemanticColors>) => {
+// 🏢 ENTERPRISE: Complete status class mapping for all StorageStatus values
+const getStatusBadgeClass = (status: StorageStatus, colors: ReturnType<typeof useSemanticColors>): string => {
   const statusClasses: Record<StorageStatus, string> = {
     'available': `${colors.bg.success} ${colors.text.success}`,
     'occupied': `${colors.bg.error} ${colors.text.error}`,
     'reserved': `${colors.bg.warning} ${colors.text.warning}`,
     'maintenance': `${colors.bg.muted} ${colors.text.muted}`,
-    'unavailable': `${colors.bg.muted} ${colors.text.muted}`
+    'unavailable': `${colors.bg.muted} ${colors.text.muted}`,
+    'sold': `${colors.bg.error} ${colors.text.error}`
   };
   return statusClasses[status] || `${colors.bg.muted} ${colors.text.muted}`;
 };
@@ -115,7 +122,8 @@ export function StorageCard({
         },
         {
           label: localizedGetTypeLabel(unit.type),
-          className: badgeVariants({ variant: 'outline', size: 'sm' })
+          // 🏢 ENTERPRISE: Using direct class instead of badgeVariants
+          className: 'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold'
         }
       ]}
       
@@ -177,28 +185,29 @@ export function StorageCard({
         },
 
         // Features & Amenities
+        // 🏢 ENTERPRISE: Using direct classes for amenity badges
         (unit.hasElectricity || unit.hasWater || unit.hasSecurity || unit.hasClimateControl) && {
           title: t('card.sections.amenities'),
           content: (
             <div className="flex flex-wrap gap-1">
               {unit.hasElectricity && (
-                <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-900">
                   {t('card.amenities.electricity')}
                 </span>
               )}
               {unit.hasWater && (
-                <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-900">
                   {t('card.amenities.water')}
                 </span>
               )}
               {unit.hasSecurity && (
-                <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-900">
                   <Shield className={`${iconSizes.xs} mr-1`} />
                   {t('card.amenities.security')}
                 </span>
               )}
               {unit.hasClimateControl && (
-                <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-900">
                   <Thermometer className={`${iconSizes.xs} mr-1`} />
                   {t('card.amenities.climate')}
                 </span>

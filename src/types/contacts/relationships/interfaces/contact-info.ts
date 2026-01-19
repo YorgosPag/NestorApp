@@ -33,8 +33,14 @@ export interface ProfessionalContactInfo {
   /** 🏢 Internal extension */
   extension?: string;
 
+  /** 🏢 Internal extension number (alias for extension) */
+  extensionNumber?: string;
+
   /** 🏢 Office/room number */
   officeNumber?: string;
+
+  /** 📍 Business address */
+  businessAddress?: string;
 
   /** 🏢 Floor/building location */
   officeLocation?: string;

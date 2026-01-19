@@ -177,7 +177,7 @@ export interface NavigationState {
  * Οι όροφοι είναι δομικοί κόμβοι - εμφανίζονται μόνο στο Building Detail View.
  * Ιεραρχία: Companies → Projects → Buildings → Units
  */
-export type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'units';
+export type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'units' | 'spaces';
 
 export interface NavigationActions {
   loadCompanies: () => Promise<void>;

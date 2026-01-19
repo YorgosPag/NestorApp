@@ -122,10 +122,12 @@ export const migrations: Migration[] = [
         state.text.general.fontWeight = toWeight(state.text.general.fontWeight);
       }
 
-      if (state.text?.specific) {
-        Object.keys(state.text.specific).forEach(mode => {
-          if (state.text.specific[mode]?.fontWeight) {
-            state.text.specific[mode].fontWeight = toWeight(state.text.specific[mode].fontWeight);
+      // 🏢 ENTERPRISE: Store reference to avoid TypeScript narrowing issues in callback
+      const textSpecific = state.text?.specific;
+      if (textSpecific) {
+        Object.keys(textSpecific).forEach(mode => {
+          if (textSpecific[mode]?.fontWeight) {
+            textSpecific[mode].fontWeight = toWeight(textSpecific[mode].fontWeight);
           }
         });
       }
@@ -158,10 +160,12 @@ export const migrations: Migration[] = [
         state.text.general.fontWeight = toWeightString(state.text.general.fontWeight);
       }
 
-      if (state.text?.specific) {
-        Object.keys(state.text.specific).forEach(mode => {
-          if (state.text.specific[mode]?.fontWeight) {
-            state.text.specific[mode].fontWeight = toWeightString(state.text.specific[mode].fontWeight);
+      // 🏢 ENTERPRISE: Store reference to avoid TypeScript narrowing issues in callback
+      const textSpecificRollback = state.text?.specific;
+      if (textSpecificRollback) {
+        Object.keys(textSpecificRollback).forEach(mode => {
+          if (textSpecificRollback[mode]?.fontWeight) {
+            textSpecificRollback[mode].fontWeight = toWeightString(textSpecificRollback[mode].fontWeight);
           }
         });
       }
@@ -236,21 +240,25 @@ export const migrations: Migration[] = [
       }
 
       // Fix grip.specific (all modes)
-      if (state.grip?.specific) {
-        Object.keys(state.grip.specific).forEach(mode => {
-          if (state.grip.specific[mode]?.colors) {
+      // 🏢 ENTERPRISE: Store reference to avoid TypeScript narrowing issues in forEach callback
+      const gripSpecific = state.grip?.specific;
+      if (gripSpecific) {
+        Object.keys(gripSpecific).forEach(mode => {
+          if (gripSpecific[mode]?.colors) {
             const defaults = mode === 'completion' ? COMPLETION_COLORS : DEFAULT_COLORS;
-            state.grip.specific[mode].colors = completeColors(state.grip.specific[mode].colors, defaults);
+            gripSpecific[mode].colors = completeColors(gripSpecific[mode].colors, defaults);
           }
         });
       }
 
       // Fix grip.overrides (all modes)
-      if (state.grip?.overrides) {
-        Object.keys(state.grip.overrides).forEach(mode => {
-          if (state.grip.overrides[mode]?.colors) {
+      // 🏢 ENTERPRISE: Store reference to avoid TypeScript narrowing issues in forEach callback
+      const gripOverrides = state.grip?.overrides;
+      if (gripOverrides) {
+        Object.keys(gripOverrides).forEach(mode => {
+          if (gripOverrides[mode]?.colors) {
             const defaults = mode === 'completion' ? COMPLETION_COLORS : DEFAULT_COLORS;
-            state.grip.overrides[mode].colors = completeColors(state.grip.overrides[mode].colors, defaults);
+            gripOverrides[mode].colors = completeColors(gripOverrides[mode].colors, defaults);
           }
         });
       }
