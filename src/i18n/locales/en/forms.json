@@ -311,7 +311,26 @@
     "invalidCode": "Code must be unique",
     "areaRequired": "Area must be greater than 0",
     "priceRequired": "Price must be greater than 0",
-    "confirmPassword": "Passwords do not match"
+    "confirmPassword": "Passwords do not match",
+    "entities": {
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required",
+      "companyNameRequired": "Company name is required",
+      "serviceNameRequired": "Service name is required",
+      "vatIndividualFormat": "VAT number must be 9 digits",
+      "vatCompanyFormat": "Company VAT number must be 9 digits",
+      "amkaFormat": "AMKA must be 11 digits"
+    },
+    "dates": {
+      "birthdateInvalid": "Invalid birth date",
+      "birthdateFutureError": "Birth date cannot be in the future",
+      "issueDateFutureError": "Issue date cannot be in the future",
+      "expiryAfterIssueError": "Expiry date must be after issue date",
+      "pastDateError": "Date cannot be in the past",
+      "dateComparisonError": "Invalid date comparison",
+      "maxYearsAgo": "Date must be within the last {years} years",
+      "maxYearsAhead": "Date must be within the next {years} years"
+    }
   },
   "actions": {
     "save": "Save",

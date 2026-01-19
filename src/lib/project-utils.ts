@@ -7,6 +7,8 @@ import { brandClasses } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { hardcodedColorValues } from '@/design-system/tokens/colors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+// 🏢 ENTERPRISE: i18n support for project status labels
+import i18n from '@/i18n/config';
 
 // ⚠️ DEPRECATED: Use formatCurrency from intl-utils.ts for enterprise currency formatting
 // 🔄 BACKWARD COMPATIBILITY: This function is maintained for legacy support
@@ -74,14 +76,33 @@ export const getProjectStatusColors = (colors?: ReturnType<typeof useSemanticCol
 // Legacy export για backward compatibility
 export const STATUS_COLORS: Record<string, string> = getProjectStatusColors();
 
+// 🏢 ENTERPRISE: i18n-enabled project status label getter
+const getProjectStatusLabel = (status: string): string => {
+    // Map underscore format to camelCase for i18n keys
+    const keyMap: Record<string, string> = {
+        'planning': 'planning',
+        'in_progress': 'inProgress',
+        'completed': 'completed',
+        'on_hold': 'onHold',
+        'cancelled': 'cancelled',
+        'default': 'unknown'
+    };
+    const key = keyMap[status];
+    if (key === 'unknown') {
+        return i18n.t('status.unknown', { ns: 'common' });
+    }
+    return key ? i18n.t(`status.${key}`, { ns: 'projects' }) : status;
+};
+
+// 🏢 ENTERPRISE: Dynamic STATUS_LABELS with i18n support
 export const STATUS_LABELS: Record<string, string> = {
-    // Project-specific statuses (non-property)
-    'planning': 'Σχεδιασμός',
-    'in_progress': 'Σε εξέλιξη',
-    'completed': 'Ολοκληρωμένο',
-    'on_hold': 'Σε αναμονή',
-    'cancelled': 'Ακυρωμένο',
-    'default': 'Άγνωστο',
+    // Project-specific statuses (non-property) - i18n enabled
+    get 'planning'() { return getProjectStatusLabel('planning'); },
+    get 'in_progress'() { return getProjectStatusLabel('in_progress'); },
+    get 'completed'() { return getProjectStatusLabel('completed'); },
+    get 'on_hold'() { return getProjectStatusLabel('on_hold'); },
+    get 'cancelled'() { return getProjectStatusLabel('cancelled'); },
+    get 'default'() { return getProjectStatusLabel('default'); },
 
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ: Property statuses από centralized constants
     'for-sale': PROPERTY_STATUS_LABELS['for-sale'],

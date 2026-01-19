@@ -77,7 +77,8 @@ export function useProjectStructure(
 
     } catch (e) {
       console.error("❌ [LazyLoad] Failed to fetch project structure:", e);
-      const errorMessage = e instanceof Error ? e.message : "Αποτυχία φόρτωσης δομής έργου.";
+      // 🌐 i18n: Error message converted to i18n key - 2026-01-18
+      const errorMessage = e instanceof Error ? e.message : "projects.structure.errors.loadFailed";
       if (mountedRef.current) {
         setError(errorMessage);
       }

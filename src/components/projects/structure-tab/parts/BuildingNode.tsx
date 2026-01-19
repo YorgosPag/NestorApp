@@ -10,6 +10,8 @@ import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/ef
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { BuildingModel } from '../types';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /** Unit model for type safety */
 interface UnitData {
@@ -20,6 +22,8 @@ interface UnitData {
 }
 
 export const BuildingNode = ({ building }: { building: BuildingModel }) => {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const [isExpanded, setIsExpanded] = useState(true);
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -36,7 +40,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
         className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border ${colors.bg.primary} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        {isExpanded ? 
+        {isExpanded ?
           <ChevronDown size={20} className={`${colors.text.muted}`} /> :
           <ChevronRight size={20} className={`${colors.text.muted}`} />
         }
@@ -44,15 +48,15 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
         <div className="flex-1">
           <div className={`font-semibold ${colors.text.foreground}`}>{building.name}</div>
           <div className={`text-sm ${colors.text.muted}`}>
-            {totalUnits} μονάδες • {totalArea.toFixed(1)} m² • {soldUnits}/{totalUnits} πωλημένες
+            {totalUnits} {t('structure.units')} • {totalArea.toFixed(1)} m² • {soldUnits}/{totalUnits} {t('structure.soldUnits')}
           </div>
         </div>
         <div className="text-right text-sm">
           <div className={`font-semibold ${colors.text.success}`}>
-            {totalUnits > 0 ? ((soldUnits / totalUnits) * 100).toFixed(1) : 0}% πωλήσεις
+            {totalUnits > 0 ? ((soldUnits / totalUnits) * 100).toFixed(1) : 0}% {t('structure.salesPercentage')}
           </div>
           <div className={`${colors.text.muted}`}>
-            {soldArea.toFixed(1)} m² πωληθέντα
+            {soldArea.toFixed(1)} m² {t('structure.soldArea')}
           </div>
         </div>
       </div>

@@ -1,0 +1,63 @@
+{
+  "domains": {
+    "admin": "Administrative",
+    "construction": "Construction",
+    "sales": "Sales",
+    "accounting": "Accounting",
+    "legal": "Legal",
+    "financial": "Financial"
+  },
+  "categories": {
+    "photos": "Photo",
+    "floorplans": "Floor Plan",
+    "contracts": "Contract",
+    "invoices": "Invoice",
+    "documents": "Document",
+    "drawings": "Drawing",
+    "reports": "Report",
+    "permits": "Permit"
+  },
+  "entityTypes": {
+    "contact": "Contact",
+    "building": "Building",
+    "floor": "Floor",
+    "unit": "Unit",
+    "project": "Project",
+    "company": "Company"
+  },
+  "purposes": {
+    "profile": "Profile",
+    "id": "ID",
+    "front": "Front View",
+    "back": "Back View",
+    "signed": "Signed",
+    "draft": "Draft"
+  },
+  "labels": {
+    "revision": "Version",
+    "uploadedAt": "Uploaded at",
+    "exportFilename": "Export filename"
+  },
+  "pdf": {
+    "title": "PDF Document",
+    "preview": "PDF preview",
+    "openInNewTab": "Open PDF in new tab"
+  },
+  "validation": {
+    "onlyPdfAllowed": "Only PDF files are allowed",
+    "fileTooLarge": "File is too large (maximum 50MB)",
+    "fileLargeWarning": "File is large and may take longer to upload",
+    "filenameSpecialChars": "Filename contains special characters that may cause problems"
+  },
+  "upload": {
+    "errors": {
+      "generic": "Error uploading file",
+      "unauthorized": "You do not have permission to upload files",
+      "cancelled": "Upload was cancelled",
+      "quotaExceeded": "Not enough storage space",
+      "urlFetch": "Error getting file URL",
+      "databaseUpdate": "Error updating database",
+      "unknown": "Unknown error while processing PDF"
+    }
+  }
+}

@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 /**
@@ -30,6 +31,9 @@ import type { Storage } from '@/types/storage/contracts';
 
 // 🏢 BADGE VARIANT MAPPING
 import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
+
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // =============================================================================
 // 🏢 TYPES
@@ -64,26 +68,26 @@ const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
 };
 
 // =============================================================================
-// 🏢 STATUS LABELS (Greek)
+// 🏢 STATUS LABELS (i18n keys)
 // =============================================================================
 
-const STATUS_LABELS: Record<string, string> = {
-  available: 'Διαθέσιμη',
-  occupied: 'Κατειλημμένη',
-  reserved: 'Κρατημένη',
-  maintenance: 'Συντήρηση',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  available: 'status.available',
+  occupied: 'status.occupied',
+  reserved: 'status.reserved',
+  maintenance: 'status.maintenance',
 };
 
 // =============================================================================
-// 🏢 TYPE LABELS (Greek)
+// 🏢 TYPE LABELS (i18n keys)
 // =============================================================================
 
-const TYPE_LABELS: Record<string, string> = {
-  large: 'Μεγάλη',
-  small: 'Μικρή',
-  basement: 'Υπόγεια',
-  ground: 'Ισόγεια',
-  special: 'Ειδική',
+const TYPE_LABEL_KEYS: Record<string, string> = {
+  large: 'types.large',
+  small: 'types.small',
+  basement: 'types.basement',
+  ground: 'types.ground',
+  special: 'types.special',
 };
 
 // =============================================================================
@@ -116,6 +120,8 @@ export function StorageListCard({
   compact = false,
   className,
 }: StorageListCardProps) {
+  const { t } = useTranslation('storage');
+
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
@@ -129,7 +135,7 @@ export function StorageListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
         iconColor: NAVIGATION_ENTITIES.area.color,
-        label: 'Εμβαδόν',
+        label: t('card.stats.area'),
         value: `${storage.area} m²`,
       });
     }
@@ -139,7 +145,7 @@ export function StorageListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.price.icon,
         iconColor: NAVIGATION_ENTITIES.price.color,
-        label: 'Τιμή',
+        label: t('card.stats.price'),
         value: formatCurrency(storage.price, 'EUR', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
@@ -153,28 +159,30 @@ export function StorageListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.floor.icon,
         iconColor: NAVIGATION_ENTITIES.floor.color,
-        label: 'Όροφος',
+        label: t('card.stats.floor'),
         value: storage.floor,
       });
     }
 
     return items;
-  }, [storage.area, storage.price, storage.floor]);
+  }, [storage.area, storage.price, storage.floor, t]);
 
   /** Build badges from status */
   const badges = useMemo(() => {
     const status = storage.status || 'available';
-    const statusLabel = STATUS_LABELS[status] || status;
+    const labelKey = STATUS_LABEL_KEYS[status] || 'status.unknown';
+    const statusLabel = t(labelKey);
     const variant = STATUS_BADGE_VARIANTS[status] || 'default';
 
     return [{ label: statusLabel, variant }];
-  }, [storage.status]);
+  }, [storage.status, t]);
 
   /** Get type label for subtitle */
   const typeLabel = useMemo(() => {
     const type = storage.type || 'small';
-    return TYPE_LABELS[type] || type;
-  }, [storage.type]);
+    const labelKey = TYPE_LABEL_KEYS[type] || 'types.unknown';
+    return t(labelKey);
+  }, [storage.type, t]);
 
   // ==========================================================================
   // 🏢 RENDER
@@ -193,7 +201,7 @@ export function StorageListCard({
       onToggleFavorite={onToggleFavorite}
       compact={compact}
       className={className}
-      aria-label={`Αποθήκη ${storage.name || storage.id}`}
+      aria-label={t('card.ariaLabel', { name: storage.name || storage.id })}
     />
   );
 }

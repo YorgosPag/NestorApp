@@ -108,6 +108,65 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📁 FILES COLLECTION - ENTERPRISE CANONICAL FILE STORAGE (ADR-031)
+    // =========================================================================
+    // This collection stores FileRecord metadata (Source of Truth for file uploads)
+    // Binary files are stored in Firebase Storage, metadata in Firestore
+    //
+    // Flow:
+    // 1. CREATE: Client creates pending record (status: pending)
+    // 2. Storage Upload: Binary uploaded to canonical path (Storage rules verify FileRecord)
+    // 3. UPDATE: Client finalizes record (status: ready)
+    // =========================================================================
+    match /files/{fileId} {
+
+      // 📖 READ: Users belonging to file's company (tenant isolation)
+      allow read: if isAuthenticated()
+                  && resource.data.keys().hasAny(['companyId'])
+                  && belongsToCompany(resource.data.companyId);
+
+      // ✍️ CREATE: Users can create pending FileRecord for their company
+      // 🔐 SECURITY: createdBy must match request.auth.uid
+      // 🔐 SECURITY: companyId must match user's company claim
+      // 🔐 SECURITY: status must be 'pending' (no direct 'ready' creation)
+      allow create: if isAuthenticated()
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.companyId == getUserCompanyId()
+                    && request.resource.data.status == 'pending'
+                    && resource == null; // Ensure document doesn't exist
+
+      // 📝 UPDATE: Only creator or company admin can finalize
+      // 🔐 SECURITY: Limited to specific fields for finalization
+      // 🔐 SECURITY: Can only transition pending → ready (or → failed)
+      allow update: if isAuthenticated()
+                    && resource.data.companyId == getUserCompanyId()
+                    && (
+                         // Creator can finalize
+                         resource.data.createdBy == request.auth.uid
+                         // OR company admin can finalize
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       )
+                    // Status transitions: pending → ready OR pending → failed
+                    && (
+                         (resource.data.status == 'pending' && request.resource.data.status == 'ready')
+                         || (resource.data.status == 'pending' && request.resource.data.status == 'failed')
+                       )
+                    // Prevent modification of immutable fields
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.storagePath == resource.data.storagePath;
+
+      // 🗑️ DELETE: Only creator or company admin
+      allow delete: if isAuthenticated()
+                    && resource.data.companyId == getUserCompanyId()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       );
+    }
+
+    // =========================================================================
     // 🏢 COMPANIES COLLECTION - READ-ONLY FOR AUTHENTICATED
     // =========================================================================
     match /companies/{companyId} {

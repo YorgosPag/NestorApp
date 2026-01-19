@@ -208,5 +208,95 @@
       "empty": "No projects found for the selected company.",
       "emptyHint": "Select a different company or add new projects."
     }
+  },
+  "importModal": {
+    "titleDxf": "Import DXF File",
+    "titleDxfPdf": "Import DXF / PDF File",
+    "fileLabelDxf": "DXF File",
+    "fileLabelDxfPdf": "DXF or PDF File",
+    "selectFile": "Select file",
+    "noFileSelected": "No file selected.",
+    "selectDxfOrPdf": "Select DXF file (floorplan) or PDF (background).",
+    "fileTypePdf": "📄 PDF file - Will load as background",
+    "fileTypeDxf": "📐 DXF file - Will load as floorplan",
+    "encoding": {
+      "label": "Character Encoding",
+      "hint": "Select Windows-1253 if Greek characters don't display correctly.",
+      "placeholder": "Select encoding"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "import": "Import",
+      "importing": "Importing..."
+    },
+    "errors": {
+      "importFailed": "Error during file import:"
+    }
+  },
+  "layerManager": {
+    "title": "Layer Manager",
+    "loading": "Loading layers...",
+    "createDialog": {
+      "title": "Create New Layer",
+      "nameLabel": "Layer Name",
+      "namePlaceholder": "e.g. Electrical elements",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "Layer description...",
+      "categoryLabel": "Category",
+      "colorLabel": "Color",
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "actions": {
+      "hide": "Hide",
+      "show": "Show",
+      "lock": "Lock",
+      "unlock": "Unlock",
+      "rename": "Rename",
+      "duplicate": "Duplicate",
+      "exportLayer": "Export Layer",
+      "delete": "Delete",
+      "exportAll": "Export all Layers",
+      "importLayers": "Import Layers",
+      "hideSystemLayers": "Hide System Layers",
+      "showSystemLayers": "Show System Layers"
+    },
+    "labels": {
+      "opacity": "Opacity:",
+      "moreElements": "+{count} more elements",
+      "noLayersFound": "No layers found",
+      "createNewOrChangeFilters": "Create a new layer or change the filters",
+      "searchLayers": "Search layers...",
+      "other": "Other"
+    },
+    "stats": {
+      "total": "Total:",
+      "visible": "Visible:",
+      "elements": "Elements:"
+    },
+    "sync": {
+      "status": "Sync Status:",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "lastSync": "Last Sync:",
+      "errors": "Errors:",
+      "connectedTooltip": "Connected - Real-time sync active",
+      "disconnectedTooltip": "Disconnected"
+    },
+    "badges": {
+      "system": "System"
+    },
+    "readOnly": {
+      "title": "Layers",
+      "viewModeOnly": "View mode only",
+      "canOnlyChangeVisibility": "You can only change visibility",
+      "connectedRealtime": "Connected - Real-time updates",
+      "disconnectedNoUpdates": "Disconnected - No updates",
+      "lastUpdate": "Last update:",
+      "visibleHidden": "Visible|Hidden",
+      "waitForAdmins": "Wait for layers to be created by administrators",
+      "checkConnection": "Check your connection",
+      "dbConnectionError": "Database connection error"
+    }
   }
 }

@@ -81,7 +81,8 @@ export function useProjectCustomers(
 
     } catch (e) {
       console.error("❌ [LazyLoad] Failed to fetch project customers:", e);
-      const errorMessage = e instanceof Error ? e.message : "Κρίσιμο σφάλμα φόρτωσης πελατών.";
+      // 🌐 i18n: Error message converted to i18n key - 2026-01-18
+      const errorMessage = e instanceof Error ? e.message : "projects.customers.errors.loadFailed";
       if (mountedRef.current) {
         setError(errorMessage);
       }

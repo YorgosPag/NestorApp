@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '@/components/navigation/config/navigation-entities';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ExtendedPropertyDetails, Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
@@ -22,9 +24,11 @@ interface PropertyMetaProps {
 export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) {
   const iconSizes = useIconSizes();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('properties');
 
   const handleEditClick = () => {
-    const newName = prompt("Εισάγετε νέο όνομα για το ακίνητο:", property.name);
+    const newName = prompt(t('meta.enterNewName'), property.name);
     if (newName && newName !== property.name) {
       onUpdateProperty(property.id, { name: newName });
     }
@@ -83,13 +87,13 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
             <div className="flex items-center gap-1">
               {/* 🏢 ENTERPRISE: Using centralized area icon/color */}
               <NAVIGATION_ENTITIES.area.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.area.color)} />
-              <span>{property.area}τμ</span>
+              <span>{property.area}{t('meta.sqm')}</span>
             </div>
           )}
           {property.rooms && (
             <div className="flex items-center gap-1">
               <NAVIGATION_ENTITIES.unit.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.unit.color)} />
-              <span>{property.rooms} δωμ.</span>
+              <span>{property.rooms} {t('meta.rooms')}</span>
             </div>
           )}
         </div>
@@ -100,7 +104,7 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
         <>
           <Separator />
           <div className="space-y-1">
-            <h4 className="text-xs font-medium">Περιγραφή</h4>
+            <h4 className="text-xs font-medium">{t('meta.description')}</h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {property.description}
             </p>
@@ -113,7 +117,7 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
         <>
           <Separator />
           <div className="space-y-2">
-            <h4 className="text-xs font-medium">Χαρακτηριστικά</h4>
+            <h4 className="text-xs font-medium">{t('meta.features')}</h4>
             <div className="flex flex-wrap gap-1">
               {property.features.map((feature, index) => (
                 <CommonBadge
@@ -138,7 +142,7 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
         </Button>
         <Button variant="outline" size="sm" className="flex-1" onClick={handleEditClick}>
           <NAVIGATION_ACTIONS.edit.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.edit.color, 'mr-1')} />
-          Επεξ.
+          {t('meta.edit')}
         </Button>
       </div>
     </div>

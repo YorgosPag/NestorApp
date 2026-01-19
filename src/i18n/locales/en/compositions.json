@@ -45,6 +45,33 @@
       "description": "Notification cards"
     }
   },
+  "notificationCard": {
+    "types": {
+      "info": "Information",
+      "warning": "Warning",
+      "error": "Error",
+      "success": "Success",
+      "reminder": "Reminder"
+    },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "priorityLabel": "Priority",
+    "read": "Read",
+    "new": "New",
+    "sections": {
+      "sender": "Sender",
+      "category": "Category",
+      "time": "Time"
+    },
+    "actions": {
+      "markAsRead": "Mark as read",
+      "view": "View",
+      "dismiss": "Dismiss"
+    }
+  },
   "toolbars": {
     "building": {
       "title": "BuildingToolbar",

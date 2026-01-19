@@ -1,4 +1,6 @@
 
+'use client';
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CustomerInfoCompact } from '@/components/shared/customer-info';
@@ -7,8 +9,12 @@ import { LoadingCard } from './parts/LoadingCard';
 import { ErrorCard } from './parts/ErrorCard';
 import { EmptyState } from './parts/EmptyState';
 import type { ProjectCustomersTabProps } from './types';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const { customers, loading, error } = useProjectCustomers(projectId);
 
   if (loading) {
@@ -26,21 +32,21 @@ export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Πελάτες Έργου ({customers.length})</CardTitle>
-        <CardDescription>Λίστα πελατών που έχουν αγοράσει ακίνητα σε αυτό το έργο.</CardDescription>
+        <CardTitle>{t('customers.titleWithCount', { count: customers.length })}</CardTitle>
+        <CardDescription>{t('customers.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
-        <div className="grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 pb-2 mb-4 border-b border-border text-sm font-medium text-muted-foreground">
-          <div>Ονοματεπώνυμο</div>
-          <div>Τηλέφωνο</div>
-          <div>Email</div>
-          <div className="text-right pr-3">Μονάδες</div>
-          <div className="text-right">Ενέργειες</div>
-        </div>
+        <header className="grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 pb-2 mb-4 border-b border-border text-sm font-medium text-muted-foreground">
+          <span>{t('customers.table.name')}</span>
+          <span>{t('customers.table.phone')}</span>
+          <span>{t('customers.table.email')}</span>
+          <span className="text-right pr-3">{t('customers.table.units')}</span>
+          <span className="text-right">{t('customers.table.actions')}</span>
+        </header>
 
         {/* Table Content */}
-        <section className="space-y-1" aria-label="Λίστα πελατών έργου">
+        <section className="space-y-1" aria-label={t('customers.listAriaLabel')}>
           {customers.map((customer) => (
             <CustomerInfoCompact
               key={customer.contactId}

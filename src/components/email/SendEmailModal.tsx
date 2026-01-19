@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 "use client";
 import { Mail, Send, X } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects";
+import { useTranslation } from 'react-i18next';
 
 interface SendEmailModalProps {
   lead: { id: string; fullName: string; email: string } | null;
@@ -17,6 +19,7 @@ interface SendEmailModalProps {
 }
 
 export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: SendEmailModalProps) {
+  const { t } = useTranslation('email');
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -34,8 +37,8 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: S
           <div className="flex items-center gap-3">
             <Mail className={`${iconSizes.lg} ${colors.text.info}`} />
             <div>
-              <h3 className="text-lg font-semibold">Αποστολή Email</h3>
-              <p className={`text-sm ${colors.text.muted}`}>Προς: {lead.fullName} ({lead.email})</p>
+              <h3 className="text-lg font-semibold">{t('modal.title')}</h3>
+              <p className={`text-sm ${colors.text.muted}`}>{t('modal.to')}: {lead.fullName} ({lead.email})</p>
             </div>
           </div>
           <button onClick={onClose} className={`p-1 ${HOVER_TEXT_EFFECTS.GRAY_600_TO_800} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>
@@ -45,7 +48,7 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: S
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
-            <label className={`block text-sm font-medium ${colors.text.secondary} mb-3`}>Επιλέξτε Τύπο Email</label>
+            <label className={`block text-sm font-medium ${colors.text.secondary} mb-3`}>{t('modal.selectType')}</label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {templates.map((template) => (
                 <button
@@ -67,7 +70,7 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: S
           </div>
 
           <div>
-            <label className={`block text-sm font-medium ${colors.text.secondary} mb-1`}>Θέμα Email *</label>
+            <label className={`block text-sm font-medium ${colors.text.secondary} mb-1`}>{t('modal.subjectLabel')}</label>
             <Input
               type="text"
               name="subject"
@@ -75,12 +78,12 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: S
               onChange={handleChange}
               required
               className="w-full"
-              placeholder="Εισάγετε θέμα email..."
+              placeholder={t('modal.subjectPlaceholder')}
             />
           </div>
 
           <div>
-            <label className={`block text-sm font-medium ${colors.text.secondary} mb-1`}>Περιεχόμενο Email *</label>
+            <label className={`block text-sm font-medium ${colors.text.secondary} mb-1`}>{t('modal.contentLabel')}</label>
             <Textarea
               name="message"
               value={formData.message}
@@ -88,7 +91,7 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: S
               required
               rows={12}
               className="w-full"
-              placeholder="Εισάγετε το περιεχόμενο του email..."
+              placeholder={t('modal.contentPlaceholder')}
             />
           </div>
 
@@ -99,10 +102,10 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: S
               className="flex-1 flex items-center justify-center gap-2"
             >
               <Send className={iconSizes.sm} />
-              {loading ? 'Αποστολή...' : 'Αποστολή Email'}
+              {loading ? t('modal.sending') : t('modal.send')}
             </Button>
             <Button type="button" onClick={onClose} variant="outline">
-              Άκυρο
+              {t('modal.cancel')}
             </Button>
           </div>
         </form>

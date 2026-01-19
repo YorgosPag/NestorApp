@@ -31,6 +31,26 @@ import type {
   FileUploadProgress,
 } from '../types/upload.types';
 import { UPLOAD_DEFAULTS, isFirebaseStorageError } from '../types/upload.types';
+// 🏢 ENTERPRISE: Canonical File Storage System imports
+import { FileRecordService } from '@/services/file-record.service';
+import {
+  ENTITY_TYPES,
+  FILE_DOMAINS,
+  FILE_CATEGORIES,
+  type EntityType,
+} from '@/config/domain-constants';
+import type { FileRecord } from '@/types/file-record';
+import { Logger, LogLevel, ConsoleOutput } from '@/subapps/dxf-viewer/settings/telemetry';
+
+// ============================================================================
+// MODULE LOGGER (for canonical flows only)
+// ============================================================================
+
+const canonicalLogger = new Logger({
+  prefix: 'CANONICAL_FLOORPLAN',
+  level: LogLevel.INFO,
+  output: new ConsoleOutput(),
+});
 
 // ============================================================================
 // CONSTANTS
@@ -400,6 +420,224 @@ export class PDFProcessor implements FileProcessor {
       console.error('❌ PDF_PROCESSOR: Error deleting PDF:', error);
       return false;
     }
+  }
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: CANONICAL FILE STORAGE SYSTEM
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Canonical floorplan upload
+   *
+   * Uses the new FileRecord system:
+   * 1. Creates pending FileRecord in Firestore
+   * 2. Uploads PDF to canonical path (IDs only)
+   * 3. Finalizes FileRecord with downloadUrl and sizeBytes
+   *
+   * @param file - PDF file to upload
+   * @param options - Canonical upload options
+   * @returns PDFUploadResult with FileRecord reference
+   *
+   * @example
+   * ```typescript
+   * const result = await pdfProcessor.uploadFloorplanCanonical(file, {
+   *   entityType: 'floor',
+   *   entityId: 'floor_123',
+   *   displayName: 'Κάτοψη 1ου Ορόφου - Κτίριο Α',
+   *   createdBy: 'user_abc',
+   *   companyId: 'company_xyz',
+   * });
+   * ```
+   */
+  async uploadFloorplanCanonical(
+    file: File,
+    options: {
+      /** Entity type (floor, building, unit, etc.) */
+      entityType: EntityType;
+      /** Entity ID this floorplan belongs to */
+      entityId: string;
+      /** User ID who is uploading */
+      createdBy: string;
+      /** Company ID for multi-tenant isolation (REQUIRED) */
+      companyId: string;
+      /** Project ID for project-scoped files (optional) */
+      projectId?: string;
+
+      // =========================================================================
+      // NAMING CONTEXT (for centralized display name generation)
+      // =========================================================================
+      /** Human-readable entity label (e.g., "Κτίριο Α") */
+      entityLabel?: string;
+      /** Additional descriptors (e.g., ["1ος Όροφος"]) */
+      descriptors?: string[];
+      /** Revision number for versioned files */
+      revision?: number;
+
+      /** Progress callback */
+      onProgress?: ProgressCallback;
+    }
+  ): Promise<PDFUploadResult & { fileRecord: FileRecord }> {
+    canonicalLogger.info('Starting upload with centralized naming', {
+      entityType: options.entityType,
+      entityId: options.entityId,
+      entityLabel: options.entityLabel,
+      fileSize: file.size,
+    });
+
+    // Step 1: Validate
+    const validation = this.validate(file);
+    if (!validation.isValid) {
+      canonicalLogger.error('Validation failed', { error: validation.error });
+      throw new Error(validation.error || 'PDF validation failed');
+    }
+    canonicalLogger.info('Validation passed');
+
+    options.onProgress?.({
+      progress: 5,
+      phase: 'validating',
+      message: 'Επικύρωση αρχείου...',
+    });
+
+    // Step A: Create pending FileRecord
+    // 🏢 ENTERPRISE: Using naming context - displayName generated centrally
+    const { fileId, storagePath, fileRecord } = await FileRecordService.createPendingFileRecord({
+      companyId: options.companyId,
+      projectId: options.projectId,
+      entityType: options.entityType,
+      entityId: options.entityId,
+      domain: FILE_DOMAINS.CONSTRUCTION,
+      category: FILE_CATEGORIES.FLOORPLANS,
+      // Naming context (centralized name generation)
+      entityLabel: options.entityLabel,
+      descriptors: options.descriptors,
+      revision: options.revision,
+      // File metadata
+      originalFilename: file.name,
+      ext: 'pdf',
+      contentType: file.type,
+      createdBy: options.createdBy,
+    });
+
+    canonicalLogger.info('Pending FileRecord created', {
+      fileId,
+      storagePath,
+    });
+
+    options.onProgress?.({
+      progress: 10,
+      phase: 'processing',
+      message: 'Προετοιμασία αποστολής...',
+    });
+
+    try {
+      // Step B: Upload binary to canonical path
+      canonicalLogger.info('Uploading to canonical path', { storagePath });
+
+      const uploadResult = await new Promise<{ url: string }>((resolve, reject) => {
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            const overallProgress = 10 + (progress * 0.8);
+
+            options.onProgress?.({
+              progress: Math.round(overallProgress),
+              phase: 'upload',
+              bytesTransferred: snapshot.bytesTransferred,
+              totalBytes: snapshot.totalBytes,
+              message: `Ανέβασμα... ${Math.round(progress)}%`,
+            });
+          },
+          (error) => {
+            canonicalLogger.error('Upload error', { error });
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve({ url: downloadURL });
+            } catch (error) {
+              reject(error);
+            }
+          }
+        );
+      });
+
+      canonicalLogger.info('Binary uploaded successfully');
+
+      // Step C: Finalize FileRecord
+      await FileRecordService.finalizeFileRecord({
+        fileId,
+        sizeBytes: file.size,
+        downloadUrl: uploadResult.url,
+      });
+
+      canonicalLogger.info('FileRecord finalized successfully');
+
+      options.onProgress?.({
+        progress: 100,
+        phase: 'complete',
+        message: 'Η κάτοψη ανέβηκε επιτυχώς!',
+      });
+
+      // Get updated FileRecord
+      const finalFileRecord = await FileRecordService.getFileRecord(fileId);
+
+      return {
+        url: uploadResult.url,
+        fileName: `${fileId}.pdf`,
+        fileSize: file.size,
+        mimeType: file.type,
+        storagePath,
+        pdfMetadata: {
+          originalName: file.name,
+          uploadedAt: new Date().toISOString(),
+          floorId: options.entityId,
+          buildingId: options.entityId, // For compatibility
+        },
+        fileRecord: finalFileRecord || fileRecord,
+      };
+    } catch (error) {
+      // Mark FileRecord as failed
+      canonicalLogger.error('Upload failed, marking FileRecord as failed');
+      await FileRecordService.markFileRecordFailed(
+        fileId,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Get floorplans for an entity from canonical storage
+   */
+  async getEntityFloorplans(
+    entityType: EntityType,
+    entityId: string
+  ): Promise<FileRecord[]> {
+    canonicalLogger.info('Getting floorplans', { entityType, entityId });
+
+    const files = await FileRecordService.getFilesByEntity(
+      entityType,
+      entityId,
+      {
+        domain: FILE_DOMAINS.CONSTRUCTION,
+        category: FILE_CATEGORIES.FLOORPLANS,
+      }
+    );
+
+    canonicalLogger.info('Floorplans retrieved', { count: files.length });
+    return files;
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Check if path is legacy floorplan path
+   */
+  isLegacyFloorplanPath(path: string): boolean {
+    return path.startsWith('floor-plans/') || path.includes('/floor-plans/');
   }
 }
 

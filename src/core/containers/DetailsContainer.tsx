@@ -1,8 +1,11 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
 import { Users } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface EmptyStateProps {
   icon?: React.ElementType;
@@ -12,15 +15,20 @@ interface EmptyStateProps {
 
 function DefaultEmptyState({
   icon: Icon = Users,
-  title = "Κάντε μια επιλογή",
-  description = "Επιλέξτε ένα στοιχείο από τη λίστα για να δείτε τις λεπτομέρειές του."
+  title,
+  description
 }: EmptyStateProps) {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('common');
+
+  // 🏢 ENTERPRISE: i18n-enabled default values
+  const displayTitle = title || t('emptyState.selectItem.title');
+  const displayDescription = description || t('emptyState.selectItem.description');
   return (
     <div className="flex-1 flex flex-col items-center justify-center bg-card border rounded-lg min-w-0 shadow-sm text-center p-8">
       <Icon className={`${iconSizes.xl4} text-muted-foreground mb-4`} />
-      <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-      <p className="text-muted-foreground">{description}</p>
+      <h2 className="text-xl font-semibold text-foreground">{displayTitle}</h2>
+      <p className="text-muted-foreground">{displayDescription}</p>
     </div>
   );
 }

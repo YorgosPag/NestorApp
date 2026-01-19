@@ -17,6 +17,7 @@ import { PropertyBadge } from '@/core/badges/UnifiedBadgeSystem';
 import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import {
   EnhancedPropertyStatus,
@@ -191,6 +192,8 @@ export function AnalyticsStatusBadge({
   percentage,
   ...props
 }: UnifiedPropertyStatusBadgeProps & { count?: number; percentage?: number }) {
+  const { t } = useTranslation('properties');
+
   return (
     <div className="flex items-center gap-3">
       <UnifiedPropertyStatusBadge status={status} {...props} />
@@ -198,7 +201,7 @@ export function AnalyticsStatusBadge({
       {(count !== undefined || percentage !== undefined) && (
         <div className="flex flex-col text-xs text-muted-foreground">
           {count !== undefined && (
-            <span className="font-medium">{count} ακίνητα</span>
+            <span className="font-medium">{t('statusSelector.countLabel', { count })}</span>
           )}
           {percentage !== undefined && (
             <span className="opacity-75">{percentage.toFixed(1)}%</span>
@@ -221,6 +224,7 @@ export function InteractiveStatusBadge({
   allowedTransitions?: EnhancedPropertyStatus[];
   onStatusChange?: (newStatus: EnhancedPropertyStatus) => void;
 }) {
+  const { t } = useTranslation('properties');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const [showTransitions, setShowTransitions] = React.useState(false);
@@ -238,7 +242,7 @@ export function InteractiveStatusBadge({
       {showTransitions && allowedTransitions.length > 0 && (
         <div className={`absolute top-full left-0 mt-2 ${colors.bg.primary} ${quick.card} shadow-lg p-3 z-20 min-w-48`}>
           <div className="text-xs font-medium text-muted-foreground mb-2">
-            Αλλαγή κατάστασης:
+            {t('statusSelector.changeStatus')}
           </div>
 
           <div className="space-y-1">

@@ -11,6 +11,8 @@ import { Skeleton } from '../ui/skeleton';
 import { VersionList } from './version-history/VersionList';
 import { VersionDetails } from './version-history/VersionDetails';
 import { BUILDING_IDS } from '@/config/building-ids-config';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Version interface instead of any
 interface FloorplanVersion {
@@ -69,6 +71,8 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
     const notifications = useNotifications();
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('properties');
     // 🏢 ENTERPRISE: Proper types instead of any
     const [versions, setVersions] = useState<FloorplanVersion[]>([]);
     const [selectedVersion, setSelectedVersion] = useState<FloorplanVersion | null>(null);
@@ -86,19 +90,19 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
     }, [isOpen, buildingId]);
 
     const handleRestore = async (versionId: string) => {
-        if (!confirm('Είστε σίγουροι ότι θέλετε να επαναφέρετε αυτή την έκδοση; Η τρέχουσα κατάσταση θα αποθηκευτεί ως νέα έκδοση.')) return;
-        notifications.info(`💬 Η έκδοση ${versionId} επαναφέρεται...`);
+        if (!confirm(t('versionHistory.restoreConfirm'))) return;
+        notifications.info(`💬 ${t('versionHistory.restoring', { versionId })}`);
         // In a real app, you would call the versioning system here.
         setTimeout(() => {
-             notifications.success('✅ Η έκδοση επαναφέρθηκε');
+             notifications.success(`✅ ${t('versionHistory.restored')}`);
              onClose();
         }, 1000);
     };
 
     const handleCreateMilestone = async () => {
-        const name = prompt('Όνομα οροσήμου:');
+        const name = prompt(t('versionHistory.milestoneName'));
         if (!name) return;
-        notifications.info(`🚯 Το ορόσημο "${name}" δημιουργείται...`);
+        notifications.info(`🚩 ${t('versionHistory.creatingMilestone', { name })}`);
     };
 
     if (!isOpen) return null;
@@ -107,9 +111,9 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className={`${colors.bg.primary} rounded-lg shadow-xl w-full max-w-5xl h-[80vh] flex flex-col`}>
                 <div className="p-6 border-b flex items-center justify-between shrink-0">
-                    <h2 className="text-2xl font-bold">Ιστορικό Εκδόσεων</h2>
+                    <h2 className="text-2xl font-bold">{t('versionHistory.title')}</h2>
                     <div className="flex items-center gap-4">
-                        <Button onClick={handleCreateMilestone}>Δημιουργία Οροσήμου</Button>
+                        <Button onClick={handleCreateMilestone}>{t('versionHistory.createMilestone')}</Button>
                         <Button variant="ghost" size="icon" onClick={onClose}>
                             <X className={iconSizes.md} />
                         </Button>

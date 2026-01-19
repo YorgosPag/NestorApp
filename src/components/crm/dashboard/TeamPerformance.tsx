@@ -5,10 +5,14 @@ import React from 'react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function TeamPerformance() {
     const colors = useSemanticColors();
     const { quick } = useBorderTokens();
+    // 🏢 ENTERPRISE: i18n support
+    const { t } = useTranslation('crm');
     // 🏢 ENTERPRISE: Configurable team performance data
     const getTeamData = () => {
         try {
@@ -32,13 +36,13 @@ export function TeamPerformance() {
     const team = getTeamData();
     return (
         <div className={`${colors.bg.primary} ${quick.card} p-6`}>
-            <h2 className="text-lg font-semibold mb-4">Απόδοση Ομάδας</h2>
+            <h2 className="text-lg font-semibold mb-4">{t('dashboard.teamPerformance.title')}</h2>
             <table className="w-full text-left">
                 <thead>
                     <tr className="border-b">
-                        <th className="p-2">Μέλος</th>
-                        <th className="p-2">Leads (Εβδομάδα)</th>
-                        <th className="p-2">Κλεισμένες Πωλήσεις</th>
+                        <th className="p-2">{t('dashboard.teamPerformance.columns.member')}</th>
+                        <th className="p-2">{t('dashboard.teamPerformance.columns.leadsWeek')}</th>
+                        <th className="p-2">{t('dashboard.teamPerformance.columns.closedSales')}</th>
                     </tr>
                 </thead>
                 <tbody>

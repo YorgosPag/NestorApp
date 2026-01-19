@@ -5,6 +5,8 @@ import { formatDate, formatCurrency } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
 import { Warehouse, MapPin, Calendar, User, Euro, Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StorageGeneralTabProps {
   storage: Storage;
@@ -12,112 +14,107 @@ interface StorageGeneralTabProps {
 
 export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('storage');
   return (
     <div className="p-6 space-y-6">
-      {/* Βασικές Πληροφορίες */}
+      {/* Basic Information */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Warehouse className={iconSizes.md} />
-          Βασικές Πληροφορίες
+          {t('general.basicInfo')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Όνομα Αποθήκης</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.name')}</label>
             <p className="mt-1 text-sm">{storage.name}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Τύπος</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.type')}</label>
             <p className="mt-1 text-sm">
-              {storage.type === 'large' ? 'Μεγάλη' :
-               storage.type === 'small' ? 'Μικρή' :
-               storage.type === 'basement' ? 'Υπόγεια' :
-               storage.type === 'ground' ? 'Ισόγεια' :
-               storage.type === 'special' ? 'Ειδική' : 'Άγνωστο'}
+              {t(`general.types.${storage.type}`, { defaultValue: t('general.unknown') })}
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Κατάσταση</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.status')}</label>
             <p className="mt-1 text-sm">
-              {storage.status === 'available' ? 'Διαθέσιμη' :
-               storage.status === 'occupied' ? 'Κατειλημμένη' :
-               storage.status === 'reserved' ? 'Κρατημένη' :
-               storage.status === 'maintenance' ? 'Συντήρηση' : 'Άγνωστη'}
+              {t(`general.statuses.${storage.status}`, { defaultValue: t('general.unknown') })}
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Επιφάνεια</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.area')}</label>
             <p className="mt-1 text-sm">{storage.area} m²</p>
           </div>
         </div>
       </section>
 
-      {/* Τοποθεσία */}
+      {/* Location */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <MapPin className={iconSizes.md} />
-          Τοποθεσία
+          {t('general.location')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Κτίριο</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.building')}</label>
             <p className="mt-1 text-sm">{storage.building}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Όροφος</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.floor')}</label>
             <p className="mt-1 text-sm">{storage.floor}</p>
           </div>
         </div>
       </section>
 
-      {/* Οικονομικά Στοιχεία */}
+      {/* Financial Information */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           {/* 🏢 ENTERPRISE: Using Euro icon for financial section */}
           <Euro className={iconSizes.md} />
-          Οικονομικά Στοιχεία
+          {t('general.financial')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Τιμή</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.price')}</label>
             <p className="mt-1 text-sm">
-              {storage.price ? formatCurrency(storage.price) : 'Δεν έχει οριστεί'}
+              {storage.price ? formatCurrency(storage.price) : t('general.notSet')}
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Τιμή ανά m²</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.pricePerSqm')}</label>
             <p className="mt-1 text-sm">
               {storage.price && storage.area
                 ? formatCurrency(storage.price / storage.area)
-                : 'Δεν υπολογίζεται'
+                : t('general.notCalculated')
               }
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Έργο</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.project')}</label>
             <p className="mt-1 text-sm">
-              {storage.projectId || 'Δεν έχει καθοριστεί'}
+              {storage.projectId || t('general.notAssigned')}
             </p>
           </div>
         </div>
       </section>
 
-      {/* Περιγραφή & Σημειώσεις */}
+      {/* Description & Notes */}
       {(storage.description || storage.notes) && (
         <section>
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <Layers className={iconSizes.md} />
-            Περιγραφή & Σημειώσεις
+            {t('general.descriptionNotes')}
           </h3>
           <div className="space-y-4">
             {storage.description && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Περιγραφή</label>
+                <label className="text-sm font-medium text-muted-foreground">{t('general.fields.description')}</label>
                 <p className="mt-1 text-sm">{storage.description}</p>
               </div>
             )}
             {storage.notes && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Σημειώσεις</label>
+                <label className="text-sm font-medium text-muted-foreground">{t('general.fields.notes')}</label>
                 <p className="mt-1 text-sm">{storage.notes}</p>
               </div>
             )}
@@ -125,16 +122,16 @@ export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
         </section>
       )}
 
-      {/* Στοιχεία Ενημέρωσης */}
+      {/* Update Information */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Calendar className={iconSizes.md} />
-          Στοιχεία Ενημέρωσης
+          {t('general.updateInfo')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {storage.lastUpdated && (
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Τελευταία Ενημέρωση</label>
+              <label className="text-sm font-medium text-muted-foreground">{t('general.fields.lastUpdated')}</label>
               <p className="mt-1 text-sm">{formatDate(
                 storage.lastUpdated instanceof Date
                   ? storage.lastUpdated.toISOString()
@@ -144,7 +141,7 @@ export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
           )}
           {storage.owner && (
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Ιδιοκτήτης</label>
+              <label className="text-sm font-medium text-muted-foreground">{t('general.fields.owner')}</label>
               <p className="mt-1 text-sm">{storage.owner}</p>
             </div>
           )}

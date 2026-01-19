@@ -8,6 +8,8 @@ import { formatDate } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { getStatusBadgeClass } from '@/lib/design-system';
 import { badgeVariants } from '@/components/ui/badge';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { 
   Clock, 
   Calendar, 
@@ -51,39 +53,6 @@ const getTaskTypeIcon = (type: string) => {
   return typeIcons[type] || AlertCircle;
 };
 
-const getTaskTypeLabel = (type: string) => {
-  const typeLabels: Record<string, string> = {
-    'call': 'Κλήση',
-    'email': 'Email',
-    'meeting': 'Συνάντηση',
-    'viewing': 'Προβολή',
-    'document': 'Έγγραφο',
-    'follow_up': 'Follow-up',
-    'other': 'Άλλο'
-  };
-  return typeLabels[type] || type;
-};
-
-const getTaskStatusLabel = (status: string) => {
-  const statusLabels: Record<string, string> = {
-    'pending': 'Εκκρεμεί',
-    'in_progress': 'Σε εξέλιξη',
-    'completed': 'Ολοκληρώθηκε',
-    'cancelled': 'Ακυρώθηκε'
-  };
-  return statusLabels[status] || status;
-};
-
-const getPriorityLabel = (priority: string) => {
-  const priorityLabels: Record<string, string> = {
-    'low': 'Χαμηλή',
-    'medium': 'Μεσαία',
-    'high': 'Υψηλή',
-    'urgent': 'Επείγουσα'
-  };
-  return priorityLabels[priority] || priority;
-};
-
 // 🏢 ENTERPRISE: Badge variant type for priority colors
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error' | 'purple' | 'light' | 'muted' | 'subtle';
 
@@ -100,16 +69,6 @@ const getPriorityColor = (priority: string): BadgeVariant => {
 /** Date value that could be string, Date, or Firestore Timestamp */
 type TaskDateValue = string | Date | { toDate: () => Date } | null | undefined;
 
-const formatTaskDate = (date: TaskDateValue) => {
-  if (!date) return 'Μη καθορισμένη';
-  const taskDate = typeof date === 'string'
-    ? new Date(date)
-    : (date && typeof date === 'object' && 'toDate' in date)
-      ? date.toDate()
-      : date as Date;
-  return formatDate(taskDate);
-};
-
 const isOverdue = (dueDate: TaskDateValue, status: string) => {
   if (!dueDate || status === 'completed' || status === 'cancelled') return false;
   const due = typeof dueDate === 'string'
@@ -120,11 +79,11 @@ const isOverdue = (dueDate: TaskDateValue, status: string) => {
   return due < new Date();
 };
 
-export function TaskCard({ 
-  task, 
-  onComplete, 
-  onEdit, 
-  onDelete, 
+export function TaskCard({
+  task,
+  onComplete,
+  onEdit,
+  onDelete,
   onView,
   isSelected = false,
   onSelectionChange,
@@ -133,6 +92,32 @@ export function TaskCard({
 }: TaskCardProps) {
   const iconSizes = useIconSizes();
   const [isFavorite, setIsFavorite] = useState(false);
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('tasks');
+
+  // 🏢 ENTERPRISE: Localized label functions
+  const getTaskTypeLabel = (type: string): string => {
+    return t(`types.${type}`, { defaultValue: t('types.other') });
+  };
+
+  const getTaskStatusLabel = (status: string): string => {
+    return t(`status.${status}`, { defaultValue: status });
+  };
+
+  const getPriorityLabel = (priority: string): string => {
+    return t(`priority.${priority}`, { defaultValue: priority });
+  };
+
+  // 🏢 ENTERPRISE: Localized date formatting
+  const formatLocalizedTaskDate = (date: TaskDateValue): string => {
+    if (!date) return t('card.notDefined');
+    const taskDate = typeof date === 'string'
+      ? new Date(date)
+      : (date && typeof date === 'object' && 'toDate' in date)
+        ? date.toDate()
+        : date as Date;
+    return formatDate(taskDate);
+  };
 
   const TaskTypeIcon = getTaskTypeIcon(task.type);
   const overdue = isOverdue(task.dueDate, task.status);
@@ -179,7 +164,7 @@ export function TaskCard({
           className: badgeVariants({ variant: 'outline', size: 'sm' })
         },
         {
-          label: `${getPriorityLabel(task.priority)} προτεραιότητα`,
+          label: `${getPriorityLabel(task.priority)} ${t('card.prioritySuffix')}`,
           className: badgeVariants({
             variant: getPriorityColor(task.priority),
             size: 'sm'
@@ -191,21 +176,21 @@ export function TaskCard({
       contentSections={[
         // Due date section
         task.dueDate && {
-          title: 'Ημερομηνία λήξης',
+          title: t('card.sections.dueDate'),
           content: (
             <div className={`flex items-center gap-2 text-sm ${
               overdue ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
             }`}>
               <Calendar className={iconSizes.sm} />
-              <span>{formatTaskDate(task.dueDate)}</span>
-              {overdue && <span className="text-xs font-medium">(Εκπρόθεσμη)</span>}
+              <span>{formatLocalizedTaskDate(task.dueDate)}</span>
+              {overdue && <span className="text-xs font-medium">({t('time.overdue')})</span>}
             </div>
           )
         },
         
         // Assignee section
         showAssignee && task.assignedTo && {
-          title: 'Ανατέθηκε σε',
+          title: t('card.sections.assignedTo'),
           content: (
             <div className="flex items-center gap-2 text-sm">
               <User className={`${iconSizes.sm} text-muted-foreground`} />
@@ -216,7 +201,7 @@ export function TaskCard({
         
         // Related entities
         (task.contactId || task.projectId || task.unitId) && {
-          title: 'Σχετικά',
+          title: t('card.sections.related'),
           content: (
             <div className="space-y-1 text-sm">
               {task.contactId && (
@@ -243,7 +228,7 @@ export function TaskCard({
         
         // Viewing details (for viewing tasks)
         task.type === 'viewing' && task.viewingDetails && {
-          title: 'Λεπτομέρειες προβολής',
+          title: t('card.sections.viewingDetails'),
           content: (
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
@@ -252,13 +237,13 @@ export function TaskCard({
               </div>
               {task.viewingDetails.units.length > 0 && (
                 <div>
-                  <span className="text-muted-foreground">Μονάδες: </span>
+                  <span className="text-muted-foreground">{t('card.viewing.units')}: </span>
                   <span>{task.viewingDetails.units.join(', ')}</span>
                 </div>
               )}
               {task.viewingDetails.attendees.length > 0 && (
                 <div>
-                  <span className="text-muted-foreground">Συμμετέχοντες: </span>
+                  <span className="text-muted-foreground">{t('card.viewing.attendees')}: </span>
                   <span>{task.viewingDetails.attendees.length}</span>
                 </div>
               )}
@@ -268,11 +253,11 @@ export function TaskCard({
         
         // Completion info
         task.status === 'completed' && task.completedAt && {
-          title: 'Ολοκληρώθηκε',
+          title: t('card.sections.completed'),
           content: (
             <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
               <CheckCircle className={iconSizes.sm} />
-              <span>{formatTaskDate(task.completedAt)}</span>
+              <span>{formatLocalizedTaskDate(task.completedAt)}</span>
             </div>
           )
         }
@@ -281,25 +266,25 @@ export function TaskCard({
       // Actions
       actions={[
         task.status !== 'completed' && onComplete && {
-          label: 'Ολοκλήρωση',
+          label: t('card.actions.complete'),
           icon: CheckCircle,
           onClick: () => onComplete(task.id!),
           variant: 'default' as const
         },
         onView && {
-          label: 'Προβολή',
+          label: t('card.actions.view'),
           icon: Eye,
           onClick: () => onView(task.id!),
           variant: 'outline' as const
         },
         onEdit && {
-          label: 'Επεξεργασία',
+          label: t('card.actions.edit'),
           icon: Edit,
           onClick: () => onEdit(task.id!),
           variant: 'ghost' as const
         },
         onDelete && {
-          label: 'Διαγραφή',
+          label: t('card.actions.delete'),
           icon: Trash2,
           onClick: () => onDelete(task.id!),
           variant: 'ghost' as const

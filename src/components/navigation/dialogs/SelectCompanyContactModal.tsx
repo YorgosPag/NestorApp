@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -19,6 +20,7 @@ import { SearchInput } from '@/components/ui/search';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '../../ui/effects';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded values
 import { NAVIGATION_ENTITIES } from '../config';
+import { useTranslation } from 'react-i18next';
 
 interface SelectCompanyContactModalProps {
   open: boolean;
@@ -34,6 +36,7 @@ export function SelectCompanyContactModal({
   onCompanySelected,
   existingCompanyIds = [],
 }: SelectCompanyContactModalProps) {
+  const { t } = useTranslation('contacts');
   // 🏢 ENTERPRISE: Icon from centralized config - ZERO hardcoded values
   const CompanyIcon = NAVIGATION_ENTITIES.company.icon;
 
@@ -99,7 +102,7 @@ export function SelectCompanyContactModal({
       setContacts(companyContacts);
       setFilteredContacts(companyContacts);
     } catch (err) {
-      setError('Σφάλμα φόρτωσης επαφών νομικών προσώπων');
+      setError(t('company.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -122,13 +125,13 @@ export function SelectCompanyContactModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CompanyIcon className={`h-5 w-5 ${NAVIGATION_ENTITIES.company.color}`} />
-            Επιλογή Εταιρείας
+            {t('company.selectTitle')}
           </DialogTitle>
           <DialogDescription>
-            Επιλέξτε μια εταιρεία από τις επαφές σας για προσθήκη στην πλοήγηση.
+            {t('company.selectDescription')}
             {existingCompanyIds.length > 0 && (
               <span className="text-muted-foreground block mt-1 text-sm">
-                Εμφανίζονται μόνο εταιρείες που δεν υπάρχουν ήδη στη λίστα ({existingCompanyIds.length} εταιρείες ήδη προστεθεί).
+                {t('company.existingInfo', { count: existingCompanyIds.length })}
               </span>
             )}
           </DialogDescription>
@@ -141,7 +144,7 @@ export function SelectCompanyContactModal({
             <div className="flex items-center gap-2 flex-shrink-0">
               <CompanyIcon className={`h-4 w-4 ${NAVIGATION_ENTITIES.company.color}`} />
               <span className="font-medium text-sm whitespace-nowrap">
-                Εταιρείες ({filteredContacts.length})
+                {t('company.companies', { count: filteredContacts.length })}
               </span>
             </div>
 
@@ -149,7 +152,7 @@ export function SelectCompanyContactModal({
             <SearchInput
               value={searchTerm}
               onChange={setSearchTerm}
-              placeholder="Αναζήτηση εταιρείας..."
+              placeholder={t('company.searchPlaceholder')}
               debounceMs={300}
               showClearButton={true}
               className="h-8 text-sm flex-1"
@@ -160,7 +163,7 @@ export function SelectCompanyContactModal({
           {isLoading && (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-              <span className="ml-2 text-sm text-gray-600">Φόρτωση εταιρειών...</span>
+              <span className="ml-2 text-sm text-gray-600">{t('company.loading')}</span>
             </div>
           )}
 
@@ -169,7 +172,7 @@ export function SelectCompanyContactModal({
             <div className="text-center py-8">
               <p className="text-red-500 mb-4">{error}</p>
               <Button onClick={loadCompanyContacts} variant="outline" size="sm">
-                Επανάληψη
+                {t('company.retry')}
               </Button>
             </div>
           )}
@@ -186,20 +189,20 @@ export function SelectCompanyContactModal({
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="h-6 w-6 text-green-500" />
-                            <p className="font-medium">Όλες οι εταιρείες έχουν προστεθεί!</p>
+                            <p className="font-medium">{t('company.allAdded')}</p>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Όλες οι {existingCompanyIds.length} διαθέσιμες εταιρείες βρίσκονται ήδη στη λίστα πλοήγησης.
+                            {t('company.allAddedDescription', { count: existingCompanyIds.length })}
                           </p>
                         </div>
                       ) : (
-                        <p>Δεν βρέθηκαν εταιρείες στις επαφές σας.</p>
+                        <p>{t('company.notFound')}</p>
                       )}
                     </div>
                   ) : (
                     <div>
                       <Search className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                      <p>Δεν βρέθηκαν εταιρείες για "{searchTerm}"</p>
+                      <p>{t('company.searchNotFound', { term: searchTerm })}</p>
                     </div>
                   )}
                 </div>
@@ -218,7 +221,7 @@ export function SelectCompanyContactModal({
                         </div>
                         {contact.type === 'company' && contact.vatNumber && (
                           <div className="text-sm text-gray-500 dark:text-muted-foreground">
-                            ΑΦΜ: {contact.vatNumber}
+                            {t('company.vatNumber')}: {contact.vatNumber}
                           </div>
                         )}
                         {contact.type === 'company' && contact.industry && (
@@ -228,7 +231,7 @@ export function SelectCompanyContactModal({
                         )}
                       </div>
                       <div className="text-xs text-gray-400 flex-shrink-0">
-                        Επιλογή →
+                        {t('company.select')} →
                       </div>
                     </div>
                   ))}
@@ -240,7 +243,7 @@ export function SelectCompanyContactModal({
 
         <div className="flex justify-end gap-2 pt-4 border-t">
           <Button variant="outline" onClick={handleClose}>
-            Ακύρωση
+            {t('company.cancel')}
           </Button>
         </div>
       </DialogContent>

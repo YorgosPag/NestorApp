@@ -15,6 +15,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Search,
   X,
@@ -192,7 +193,7 @@ const getContactById = async (id: string): Promise<ContactSummary | null> => {
 export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   value,
   onContactSelect,
-  placeholder = 'Αναζήτηση επαφής...',
+  placeholder,
   allowedContactTypes = ['individual', 'company', 'service'],
   excludeContactIds = [],
   readonly = false,
@@ -202,6 +203,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   className = '',
   maxResults = 50
 }) => {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -428,11 +430,11 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   const getContactTypeLabel = (type: ContactType) => {
     switch (type) {
       case 'company':
-        return 'Εταιρεία';
+        return t('contactTypes.company');
       case 'service':
-        return 'Υπηρεσία';
+        return t('contactTypes.service');
       default:
-        return 'Άτομο';
+        return t('contactTypes.individual');
     }
   };
 
@@ -589,7 +591,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               }}
               className="mt-2 text-sm"
             >
-              Αλλαγή επιλογής
+              {t('buttons.changeSelection')}
             </Button>
           )}
         </div>
@@ -603,7 +605,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               value={searchQuery}
               onChange={handleInputChange}
               onFocus={handleInputFocus}
-              placeholder={placeholder}
+              placeholder={placeholder ?? t('placeholders.searchContact')}
               className={`pl-10 pr-10 ${error ? quick.error : ''}`}
               disabled={readonly}
             />
@@ -636,7 +638,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                 {isSearching ? (
                   <div className="p-4 text-center text-muted-foreground">
                     <Loader2 className={`${iconSizes.lg} animate-spin mx-auto mb-2`} />
-                    <span className="text-sm">Αναζήτηση...</span>
+                    <span className="text-sm">{t('placeholders.searching')}</span>
                   </div>
                 ) : searchResults.length > 0 ? (
                   <div className="max-h-64 overflow-y-auto">
@@ -646,7 +648,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                   <div className="p-4 text-center text-muted-foreground">
                     <Search className={`${iconSizes.lg} mx-auto mb-2`} />
                     <span className="text-sm">
-                      {searchQuery ? 'Δεν βρέθηκαν αποτελέσματα' : 'Ξεκινήστε να πληκτρολογείτε για αναζήτηση'}
+                      {searchQuery ? t('placeholders.noResults') : t('placeholders.startTyping')}
                     </span>
                   </div>
                 )}
@@ -665,7 +667,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
       {/* Help Text */}
       {!readonly && !error && (
         <p className={`text-xs ${colors.text.muted}`}>
-          Χρησιμοποιήστε τα βελάκια ↑↓ για πλοήγηση και Enter για επιλογή
+          {t('placeholders.keyboardNav')}
         </p>
       )}
     </div>

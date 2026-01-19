@@ -220,16 +220,17 @@ export function validateAllPhotos(formData: ContactFormData): UploadValidationSu
         const isUploadingButNotComplete = photoSlot.isUploading && !hasValidUrl;
         const hasFileButNoUrl = (photoSlot.file || photoSlot.preview) && !hasValidUrl;
 
+        // 🌐 i18n: Error messages converted to i18n keys - 2026-01-18
         if (isUploadingButNotComplete || hasFileButNoUrl) {
           if (photoSlot.isUploading) {
             result.pendingUploads++;
-            result.errors.push(`Φωτογραφία ${index + 1}: Εκκρεμής upload`);
+            result.errors.push(`photo.validation.pendingUpload`);
           } else if (photoSlot.error) {
             result.failedUploads++;
-            result.errors.push(`Φωτογραφία ${index + 1}: ${photoSlot.error}`);
+            result.errors.push(`photo.validation.uploadError`);
           } else {
             result.pendingUploads++;
-            result.errors.push(`Φωτογραφία ${index + 1}: Upload δεν ξεκίνησε`);
+            result.errors.push(`photo.validation.uploadNotStarted`);
           }
         }
       }
@@ -243,12 +244,13 @@ export function validateAllPhotos(formData: ContactFormData): UploadValidationSu
       contactType: formData.type
     }, formData);
 
+    // 🌐 i18n: Error messages converted to i18n keys - 2026-01-18
     if (validation.isPending) {
       result.pendingUploads++;
-      result.errors.push(validation.errorMessage || 'Κύρια φωτογραφία: Εκκρεμής upload');
+      result.errors.push(validation.errorMessage || 'photo.validation.mainPending');
     } else if (validation.isFailed) {
       result.failedUploads++;
-      result.errors.push(validation.errorMessage || 'Κύρια φωτογραφία: Αποτυχία upload');
+      result.errors.push(validation.errorMessage || 'photo.validation.mainFailed');
     }
   }
 
@@ -261,10 +263,10 @@ export function validateAllPhotos(formData: ContactFormData): UploadValidationSu
 
     if (validation.isPending) {
       result.pendingUploads++;
-      result.errors.push(validation.errorMessage || 'Logo: Εκκρεμής upload');
+      result.errors.push(validation.errorMessage || 'photo.validation.logoPending');
     } else if (validation.isFailed) {
       result.failedUploads++;
-      result.errors.push(validation.errorMessage || 'Logo: Αποτυχία upload');
+      result.errors.push(validation.errorMessage || 'photo.validation.logoFailed');
     }
   }
 
@@ -279,10 +281,10 @@ export function validateAllPhotos(formData: ContactFormData): UploadValidationSu
 
     if (validation.isPending) {
       result.pendingUploads++;
-      result.errors.push(validation.errorMessage || 'Φωτογραφία εκπροσώπου: Εκκρεμής upload');
+      result.errors.push(validation.errorMessage || 'photo.validation.representativePending');
     } else if (validation.isFailed) {
       result.failedUploads++;
-      result.errors.push(validation.errorMessage || 'Φωτογραφία εκπροσώπου: Αποτυχία upload');
+      result.errors.push(validation.errorMessage || 'photo.validation.representativeFailed');
     }
   }
 
@@ -306,14 +308,15 @@ export function validateAllPhotos(formData: ContactFormData): UploadValidationSu
 
 /**
  * Get display name for photo type
+ * 🌐 i18n: Converted to i18n keys - 2026-01-18
  */
 function getPhotoDisplayName(photoType: PhotoType): string {
   switch (photoType) {
-    case 'logo': return 'Logo';
-    case 'representative': return 'Φωτογραφία εκπροσώπου';
-    case 'main': return 'Κύρια φωτογραφία';
-    case 'multiple': return 'Φωτογραφίες';
-    default: return 'Φωτογραφία';
+    case 'logo': return 'photo.types.logo';
+    case 'representative': return 'photo.types.representative';
+    case 'main': return 'photo.types.main';
+    case 'multiple': return 'photo.types.multiple';
+    default: return 'photo.types.default';
   }
 }
 

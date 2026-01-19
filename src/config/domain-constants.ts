@@ -102,9 +102,111 @@ export const ENTITY_TYPES = {
   UNIT: 'unit',
   /** Building entity */
   BUILDING: 'building',
+  /** Floor entity */
+  FLOOR: 'floor',
+  /** Storage unit entity */
+  STORAGE_UNIT: 'storage_unit',
+  /** Parking spot entity */
+  PARKING_SPOT: 'parking_spot',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];
+
+// ============================================================================
+// FILE STORAGE CONSTANTS - ENTERPRISE CANONICAL
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: File storage domains (business areas)
+ * @enterprise Used in FileRecord.domain for organizing files by business function
+ * @see local_ΔΙΚΑΙΩΜΑΤΑ.txt - Canonical File Storage System
+ */
+export const FILE_DOMAINS = {
+  /** Administrative documents (contacts, HR, general) */
+  ADMIN: 'admin',
+  /** Construction-related files (blueprints, progress, permits) */
+  CONSTRUCTION: 'construction',
+  /** Sales-related files (contracts, offers, brochures) */
+  SALES: 'sales',
+  /** Accounting files (invoices, receipts, financial) */
+  ACCOUNTING: 'accounting',
+  /** Legal documents (contracts, agreements, legal) */
+  LEGAL: 'legal',
+  /** Financial documents (financial reports, statements) */
+  FINANCIAL: 'financial',
+} as const;
+
+export type FileDomain = typeof FILE_DOMAINS[keyof typeof FILE_DOMAINS];
+
+/**
+ * 🏢 ENTERPRISE: File categories (content types)
+ * @enterprise Used in FileRecord.category for organizing files by type
+ */
+export const FILE_CATEGORIES = {
+  /** Photos and images */
+  PHOTOS: 'photos',
+  /** Floor plans (PDF, DXF) */
+  FLOORPLANS: 'floorplans',
+  /** General documents (PDF, DOC) */
+  DOCUMENTS: 'documents',
+  /** Invoices and billing */
+  INVOICES: 'invoices',
+  /** Contracts and agreements */
+  CONTRACTS: 'contracts',
+  /** Audio recordings */
+  AUDIO: 'audio',
+  /** Video files */
+  VIDEOS: 'videos',
+  /** Technical drawings (CAD) */
+  DRAWINGS: 'drawings',
+  /** Permits and certifications */
+  PERMITS: 'permits',
+} as const;
+
+export type FileCategory = typeof FILE_CATEGORIES[keyof typeof FILE_CATEGORIES];
+
+/**
+ * 🏢 ENTERPRISE: File processing status
+ * @enterprise Used in FileRecord.status for tracking upload state
+ */
+export const FILE_STATUS = {
+  /** Upload pending/in progress */
+  PENDING: 'pending',
+  /** File ready and available */
+  READY: 'ready',
+  /** Upload or processing failed */
+  FAILED: 'failed',
+} as const;
+
+export type FileStatus = typeof FILE_STATUS[keyof typeof FILE_STATUS];
+
+/**
+ * 🏢 ENTERPRISE: Storage path segments (for buildStoragePath)
+ * @enterprise ZERO hardcoded path strings - all segments from here
+ */
+export const STORAGE_PATH_SEGMENTS = {
+  /** Root companies folder */
+  COMPANIES: 'companies',
+  /** Projects subfolder */
+  PROJECTS: 'projects',
+  /** Entities subfolder */
+  ENTITIES: 'entities',
+  /** Domains subfolder */
+  DOMAINS: 'domains',
+  /** Categories subfolder */
+  CATEGORIES: 'categories',
+  /** Files subfolder */
+  FILES: 'files',
+} as const;
+
+// ============================================================================
+// 🚨 ENTERPRISE: NO HARDCODED LABELS IN CONSTANTS
+// ============================================================================
+// Labels/display names MUST come from i18n system, NOT from constants.
+// Use: i18n.t('files:domains.admin'), i18n.t('files:categories.photos'), etc.
+// See: src/i18n/locales/el/files.json, src/i18n/locales/en/files.json
+// ADR-030: Zero Hardcoded Values - Labels only via centralized i18n
+// ============================================================================
 
 // ============================================================================
 // MESSAGE STATUS VALUES

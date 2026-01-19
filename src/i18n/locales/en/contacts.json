@@ -137,6 +137,52 @@
       "new": "New Contact (Ctrl+N)",
       "edit": "Edit Selected (Ctrl+E)",
       "delete": "Delete Selected (Delete)"
+    },
+    "tabs": {
+      "actions": {
+        "newContact": "New Contact",
+        "newContactTooltip": "Add new contact",
+        "edit": "Edit",
+        "editTooltip": "Edit selected contact",
+        "delete": "Delete",
+        "deleteCount": "Delete {count} contact(s)",
+        "deleteSelected": "Delete selected contact",
+        "deleteSelectFirst": "Select a contact to delete",
+        "refresh": "Refresh",
+        "refreshTooltip": "Refresh contacts list"
+      },
+      "communication": {
+        "call": "Call",
+        "callTooltip": "Call selected contacts",
+        "email": "Email",
+        "emailTooltip": "Send email to selected contacts",
+        "sms": "SMS",
+        "smsTooltip": "Send SMS to selected contacts",
+        "selectForCommunication": "Select contacts for communication"
+      },
+      "management": {
+        "export": "Export",
+        "exportTooltip": "Export contacts list",
+        "import": "Import",
+        "importTooltip": "Import contacts from file",
+        "archive": "Archive",
+        "archiveCount": "Archive {count} contact(s)",
+        "archiveSelected": "Archive selected contact",
+        "archiveSelectFirst": "Select a contact to archive",
+        "help": "Help",
+        "helpTooltip": "Help and instructions"
+      },
+      "filters": {
+        "favorites": "Favorites",
+        "showAllContacts": "Show all contacts",
+        "filterFavoritesOnly": "Filter favorites only",
+        "archived": "Archived",
+        "showActiveContacts": "Show active contacts",
+        "filterArchivedOnly": "Filter archived only",
+        "sortAtoZ": "Sort A to Z",
+        "sortZtoA": "Sort Z to A",
+        "filterHint": "Use the header filters for more options"
+      }
     }
   },
   "dialog": {
@@ -157,7 +203,11 @@
     "addDescription": "Enter the basic details of the new contact.",
     "typeLabel": "Type",
     "updateContact": "Update Contact",
-    "saveContact": "Save Contact"
+    "saveContact": "Save Contact",
+    "fields": {
+      "phone": "Phone",
+      "notes": "Notes"
+    }
   },
   "relationships": {
     "types": {
@@ -232,7 +282,8 @@
       "errors": {
         "listError": "Relationship list error",
         "formError": "Form error",
-        "treeError": "Organization chart error"
+        "treeError": "Organization chart error",
+        "searchError": "Error searching contacts"
       },
       "newContact": {
         "note": "Note",
@@ -288,6 +339,267 @@
       "lastUpdated": "Last updated",
       "createdAt": "Created",
       "unknown": "Unknown"
+    }
+  },
+  "options": {
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other",
+      "preferNotToSay": "Prefer not to say"
+    },
+    "identity": {
+      "identityCard": "Identity Card",
+      "passport": "Passport",
+      "driversLicense": "Driver's License",
+      "other": "Other"
+    },
+    "gemiStatuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended",
+      "dissolution": "In Dissolution",
+      "dissolved": "Dissolved",
+      "bankruptcy": "Bankruptcy",
+      "liquidation": "Liquidation"
+    },
+    "serviceCategories": {
+      "ministry": "Ministry",
+      "region": "Region",
+      "municipality": "Municipality",
+      "publicEntity": "Public Entity",
+      "independentAuthority": "Independent Authority",
+      "university": "University",
+      "hospital": "Hospital",
+      "school": "School",
+      "other": "Other"
+    },
+    "legalStatuses": {
+      "npdd": "Public Law Legal Entity",
+      "npid": "Private Law Legal Entity",
+      "publicService": "Public Service",
+      "independentAuthority": "Independent Authority",
+      "decentralizedAdmin": "Decentralized Administration"
+    },
+    "activityTypes": {
+      "main": "Main Activity",
+      "secondary": "Secondary Activity"
+    },
+    "addressTypes": {
+      "headquarters": "Headquarters",
+      "branch": "Branch"
+    },
+    "shareholderTypes": {
+      "individual": "Individual",
+      "legal": "Legal Entity"
+    },
+    "currencies": {
+      "eur": "Euro (€)",
+      "usd": "US Dollar ($)",
+      "gbp": "British Pound (£)"
+    }
+  },
+  "communication": {
+    "phoneTypes": {
+      "mobile": "Mobile",
+      "home": "Home",
+      "work": "Work",
+      "fax": "Fax",
+      "other": "Other"
+    },
+    "emailTypes": {
+      "personal": "Personal",
+      "work": "Work",
+      "other": "Other"
+    },
+    "websiteTypes": {
+      "personal": "Personal",
+      "company": "Company",
+      "portfolio": "Portfolio",
+      "blog": "Blog",
+      "other": "Other"
+    },
+    "socialMediaTypes": {
+      "personal": "Personal",
+      "professional": "Professional",
+      "business": "Business",
+      "other": "Other"
+    },
+    "platforms": {
+      "linkedin": "LinkedIn",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "twitter": "Twitter/X",
+      "youtube": "YouTube",
+      "github": "GitHub",
+      "tiktok": "TikTok",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "other": "Other"
+    }
+  },
+  "identity": {
+    "types": {
+      "idCard": "ID Card",
+      "identityCard": "Identity Card",
+      "passport": "Passport",
+      "afm": "Tax ID (AFM)",
+      "amka": "Social Security (AMKA)",
+      "license": "License",
+      "driversLicense": "Driver's License",
+      "other": "Other"
+    }
+  },
+  "professional": {
+    "types": {
+      "companyPhone": "Company Phone",
+      "companyEmail": "Company Email",
+      "companyWebsite": "Company Website",
+      "linkedin": "LinkedIn",
+      "position": "Position",
+      "department": "Department",
+      "other": "Other"
+    },
+    "fields": {
+      "profession": "Profession",
+      "specialty": "Specialty",
+      "employer": "Employer",
+      "position": "Position"
+    }
+  },
+  "address": {
+    "types": {
+      "home": "Home",
+      "work": "Work",
+      "mailing": "Mailing",
+      "billing": "Billing",
+      "headquarters": "Headquarters",
+      "branch": "Branch",
+      "other": "Other"
+    },
+    "fields": {
+      "street": "Street",
+      "streetNumber": "Number",
+      "city": "City",
+      "postalCode": "Postal Code"
+    }
+  },
+  "individual": {
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "fatherName": "Father's Name",
+      "motherName": "Mother's Name",
+      "birthDate": "Birth Date",
+      "birthCountry": "Country of Birth",
+      "gender": "Gender",
+      "amka": "Social Security (AMKA)",
+      "documentType": "Document Type",
+      "documentIssuer": "Issuing Authority",
+      "documentNumber": "Document Number",
+      "documentIssueDate": "Issue Date",
+      "documentExpiryDate": "Expiry Date"
+    }
+  },
+  "company": {
+    "legalForms": {
+      "ae": "Société Anonyme (S.A.)",
+      "epe": "Limited Liability (Ltd.)",
+      "ee": "Limited Partnership",
+      "oe": "General Partnership",
+      "ikepe": "Private Capital Company (IKE)",
+      "ike": "Private Capital Company",
+      "mono": "Sole Proprietorship",
+      "smpc": "Social Cooperative Enterprise",
+      "other": "Other"
+    },
+    "positions": {
+      "ceo": "Chief Executive Officer",
+      "president": "President",
+      "manager": "Manager",
+      "legalRep": "Legal Representative",
+      "secretary": "Secretary"
+    },
+    "boardTypes": {
+      "generalAssembly": "General Assembly",
+      "boardDirectors": "Board of Directors",
+      "supervisoryBoard": "Supervisory Board"
+    },
+    "documentTypes": {
+      "certificate": "Certificate",
+      "announcement": "Announcement",
+      "registration": "Registration",
+      "amendment": "Amendment"
+    },
+    "fields": {
+      "companyName": "Company Name",
+      "tradeName": "Trade Name",
+      "legalForm": "Legal Form",
+      "gemiNumber": "GEMI Number",
+      "gemiStatus": "GEMI Status",
+      "chamber": "Chamber",
+      "activityCodeKad": "Activity Code (KAD)",
+      "activityDescription": "Activity Description",
+      "phoneCentral": "Central Phone",
+      "emailContact": "Contact Email",
+      "website": "Website"
+    }
+  },
+  "service": {
+    "fields": {
+      "legalStatus": "Legal Status",
+      "establishmentLaw": "Establishment Law",
+      "headTitle": "Head Title",
+      "headName": "Head Name",
+      "mainResponsibilities": "Main Responsibilities",
+      "citizenServices": "Citizen Services",
+      "onlineServices": "Online Services",
+      "serviceHours": "Service Hours"
+    }
+  },
+  "fields": {
+    "vatNumber": "VAT Number",
+    "taxOffice": "Tax Office",
+    "communication": "Communication"
+  },
+  "employment": {
+    "status": {
+      "fullTime": "Full Time",
+      "partTime": "Part Time",
+      "contract": "Contract",
+      "temporary": "Temporary",
+      "seasonal": "Seasonal",
+      "volunteer": "Volunteer",
+      "retired": "Retired",
+      "onLeave": "On Leave",
+      "terminated": "Terminated"
+    }
+  },
+  "businessTypes": {
+    "customer": "Customer",
+    "supplier": "Supplier",
+    "agent": "Agent",
+    "contractor": "Contractor"
+  },
+  "validation": {
+    "contactTypeRequired": "Contact type is required",
+    "individual": {
+      "firstNameRequired": "First name is required for individuals",
+      "lastNameRequired": "Last name is required for individuals"
+    },
+    "company": {
+      "nameRequired": "Company name is required for legal entities",
+      "vatRecommended": "VAT number is recommended for legal entities"
+    },
+    "service": {
+      "nameRequired": "Service name is required for public services",
+      "typeRequired": "Service type is required for public services"
+    },
+    "email": {
+      "invalid": "Invalid email address"
+    },
+    "phone": {
+      "invalidFormat": "Phone number may have invalid format"
     }
   }
 }

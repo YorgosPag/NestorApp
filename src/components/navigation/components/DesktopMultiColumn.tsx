@@ -251,49 +251,18 @@ export function DesktopMultiColumn({
   // 🏢 ENTERPRISE: canDeleteProject, canDeleteBuilding, canDeleteFloor αφαιρέθηκαν
   // Η αποσύνδεση (unlink) επιτρέπεται πάντα - χρησιμοποιεί το κεντρικοποιημένο EntityLinkingService
 
-  const showDeleteWarning = (itemType: string, dependentCount: number, dependentType: string) => {
-    let action: string;
-    let dependentAction: string;
+  // 🏢 ENTERPRISE: Type-safe dependency warning using i18n keys
+  type DependencyType = 'company' | 'project' | 'building';
 
-    // Για την κύρια ενέργεια (τι θέλω να κάνω)
-    if (itemType === 'εταιρεία') {
-      action = 'αφαιρέσετε';
-    } else {
-      action = 'αποσυνδέσετε';
-    }
+  const showDeleteWarning = (itemType: DependencyType, dependentCount: number) => {
+    // 🏢 ENTERPRISE: Use centralized i18n keys from dialogs.dependencies
+    const messageKey = {
+      company: 'dialogs.dependencies.cannotRemoveCompany',
+      project: 'dialogs.dependencies.cannotUnlinkProject',
+      building: 'dialogs.dependencies.cannotUnlinkBuilding'
+    }[itemType];
 
-    // Για την ενέργεια στα εξαρτημένα στοιχεία (τι πρέπει να κάνω πρώτα)
-    if (dependentType === 'έργα') {
-      // Τα έργα αποσυνδέονται από την εταιρεία
-      dependentAction = 'αποσυνδέσετε';
-    } else if (dependentType === 'κτίρια') {
-      // Τα κτίρια αποσυνδέονται από το έργο
-      dependentAction = 'αποσυνδέσετε';
-    } else if (dependentType === 'όροφοι') {
-      // Οι όροφοι αποσυνδέονται από το κτίριο
-      dependentAction = 'αποσυνδέσετε';
-    } else if (dependentType === 'μονάδες') {
-      // Οι μονάδες αποσυνδέονται από τον όροφο
-      dependentAction = 'αποσυνδέσετε';
-    } else {
-      dependentAction = 'αποσυνδέσετε';
-    }
-
-    // Κλίνω το gender για την/το/τον
-    let article: string;
-    if (itemType === 'εταιρεία') {
-      article = 'αυτή την';
-    } else if (itemType === 'έργο') {
-      article = 'αυτό το';
-    } else if (itemType === 'κτίριο') {
-      article = 'αυτό το';
-    } else if (itemType === 'όροφο') {
-      article = 'αυτόν τον';
-    } else {
-      article = 'αυτή τη';
-    }
-
-    warning(`Δεν μπορείτε να ${action} ${article} ${itemType} γιατί έχει ${dependentCount} ${dependentType}. Παρακαλούμε ${dependentAction} πρώτα τα ${dependentType}.`, {
+    warning(t(messageKey, { count: dependentCount }), {
       duration: 5000
     });
   };
@@ -307,7 +276,7 @@ export function DesktopMultiColumn({
       setConfirmDialogOpen(true);
     } else {
       const companyProjects = projects.filter(p => p.companyId === selectedCompany.id);
-      showDeleteWarning('εταιρεία', companyProjects.length, 'έργα');
+      showDeleteWarning('company', companyProjects.length);
     }
   };
 
@@ -383,7 +352,7 @@ export function DesktopMultiColumn({
     const buildingCount = getBuildingCount(selectedProject.id);
     if (buildingCount > 0) {
       // 🚫 ΜΠΛΟΚΑΡΙΣΜΑ: Δεν επιτρέπεται αποσύνδεση με κτίρια
-      showDeleteWarning('έργο', buildingCount, 'κτίρια');
+      showDeleteWarning('project', buildingCount);
       return;
     }
 
@@ -439,7 +408,7 @@ export function DesktopMultiColumn({
 
     if (totalUnits > 0) {
       // 🚫 ΜΠΛΟΚΑΡΙΣΜΑ: Δεν επιτρέπεται αποσύνδεση με μονάδες
-      showDeleteWarning('κτίριο', totalUnits, 'μονάδες');
+      showDeleteWarning('building', totalUnits);
       return;
     }
 

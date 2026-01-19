@@ -8,6 +8,8 @@ import { Filter } from 'lucide-react';
 import { PropertyViewerFilters, type FilterState } from '@/components/property-viewer/PropertyViewerFilters';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface FiltersPanelProps {
   filters: FilterState;
@@ -17,6 +19,8 @@ interface FiltersPanelProps {
 export function FiltersPanel({ filters, onFiltersChange }: FiltersPanelProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
 
   return (
     <div className="px-4 pt-4 shrink-0">
@@ -24,7 +28,7 @@ export function FiltersPanel({ filters, onFiltersChange }: FiltersPanelProps) {
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-start p-4 text-sm font-semibold">
             <Filter className={`${iconSizes.sm} mr-2`} />
-            Φίλτρα Αναζήτησης
+            {t('filters.searchFilters')}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>

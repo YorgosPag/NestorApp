@@ -13,10 +13,11 @@ import type { SearchConfig } from './types';
  * 🎯 ENTERPRISE SEARCH CONFIG
  * Single source of truth για όλες τις search configurations
  */
+// 🌐 i18n: All placeholders converted to i18n keys - 2026-01-18
 export const SEARCH_CONFIG: SearchConfig = {
   debounceDelay: 300,
   maxLength: 500,
-  placeholderDefault: 'Αναζήτηση...',
+  placeholderDefault: 'search.placeholders.default',
   iconSize: 4,
   iconPosition: 'left-3',
   paddingLeft: 'pl-11', // Consistent με existing implementations
@@ -26,26 +27,27 @@ export const SEARCH_CONFIG: SearchConfig = {
  * 🏗️ EXISTING PATTERNS MAPPING
  * Backward compatibility για τα υπάρχοντα patterns
  */
+// 🌐 i18n: All placeholders converted to i18n keys - 2026-01-18
 export const LEGACY_PATTERNS = {
   // Pattern από public-property-filters/parts/SearchField.tsx
   PROPERTY_SEARCH: {
     iconClasses: 'absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground',
     inputClasses: 'pl-9',
-    placeholder: 'Αναζήτηση ακινήτου...',
+    placeholder: 'search.placeholders.property',
   },
 
   // Pattern από navigation/dialogs/SelectCompanyContactModal.tsx
   COMPANY_SEARCH: {
     iconClasses: 'absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground',
     inputClasses: 'pl-11',
-    placeholder: 'Αναζήτηση εταιρείας...',
+    placeholder: 'search.placeholders.company',
   },
 
   // Pattern από header/search-bar.tsx
   HEADER_SEARCH: {
     iconClasses: 'absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground',
     inputClasses: 'pl-10',
-    placeholder: 'Αναζήτηση επαφών...',
+    placeholder: 'search.placeholders.contacts',
   },
 } as const;
 

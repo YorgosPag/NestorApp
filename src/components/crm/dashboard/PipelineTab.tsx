@@ -18,12 +18,16 @@ import { AddOpportunityDialog } from './dialogs/AddOpportunityDialog';
 import { EditOpportunityModal } from './EditOpportunityModal';
 import { OpportunityColumns } from './OpportunityColumns';
 import LeadsList from '@/components/leads/LeadsList';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
 export function PipelineTab() {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('crm');
   const {
     opportunities,
     loading,
@@ -47,18 +51,18 @@ export function PipelineTab() {
       <div className={`${colors.bg.primary} rounded-lg shadow`}>
         <div className="p-6 border-b">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Sales Pipeline</h2>
+            <h2 className="text-lg font-semibold">{t('pipeline.title')}</h2>
             <div className="flex items-center gap-3">
               <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'pipeline' ? 'list' : 'pipeline')}>
-                {viewMode === 'pipeline' ? 'Προβολή Λίστας' : 'Προβολή Pipeline'}
+                {viewMode === 'pipeline' ? t('pipeline.viewList') : t('pipeline.viewPipeline')}
               </Button>
               <Button variant="outline" size="sm" onClick={fetchOpportunities}>
                 <Filter className={`${iconSizes.sm} inline mr-1`} />
-                Ανανέωση
+                {t('pipeline.refresh')}
               </Button>
               <Button size="sm" onClick={() => setOpenAddDialog(true)}>
                 <Plus className={`${iconSizes.sm} mr-2`} />
-                Νέο Lead
+                {t('pipeline.newLead')}
               </Button>
             </div>
           </div>
@@ -69,24 +73,24 @@ export function PipelineTab() {
               <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                       <AnimatedSpinner size="large" className="mx-auto mb-2" />
-                      <p className={colors.text.secondary}>Φόρτωση pipeline...</p>
+                      <p className={colors.text.secondary}>{t('pipeline.loading')}</p>
                   </div>
               </div>
           ) : error ? (
               <div className={`${colors.bg.error} ${getStatusBorder('error')} rounded-lg p-4`}>
                   <p className="text-red-600">{error}</p>
-                  <button 
+                  <button
                   onClick={fetchOpportunities}
                   className={`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
                   >
-                  Δοκιμή ξανά
+                  {t('pipeline.retry')}
                   </button>
               </div>
           ) : opportunities.length === 0 ? (
               <div className="text-center py-12">
                   <User className={`${iconSizes.xl2} ${colors.text.muted} mx-auto mb-4`} />
-                  <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>Δεν υπάρχουν ευκαιρίες</h3>
-                  <p className={colors.text.secondary}>Προσθέστε την πρώτη σας ευκαιρία για να ξεκινήσετε!</p>
+                  <h3 className={`text-lg font-medium ${colors.text.primary} mb-2`}>{t('pipeline.empty.title')}</h3>
+                  <p className={colors.text.secondary}>{t('pipeline.empty.subtitle')}</p>
               </div>
           ) : (
             viewMode === 'pipeline' ? (

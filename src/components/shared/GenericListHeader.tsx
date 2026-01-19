@@ -19,6 +19,8 @@ import { SectionHeader } from '@/core/headers';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/ui/search'; // 🏢 Enterprise centralized search - Same as navigation modal
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPES (Backward Compatibility)
@@ -62,12 +64,17 @@ export function GenericListHeader({
     itemCount,
     searchTerm = '',
     onSearchChange,
-    searchPlaceholder = 'Αναζήτηση...',
+    searchPlaceholder,
     showToolbar = false,
     onToolbarToggle,
     hideSearch = false
 }: GenericListHeaderProps) {
     const iconSizes = useIconSizes();
+    // 🏢 ENTERPRISE: i18n support
+    const { t } = useTranslation('common');
+
+    // Use translation as default if placeholder not provided
+    const displayPlaceholder = searchPlaceholder ?? t('placeholders.search');
     return (
         <div className="p-3 border-b bg-card flex items-center gap-2">
             {/* Left: Unified Section Header */}
@@ -86,7 +93,7 @@ export function GenericListHeader({
                 <SearchInput
                     value={searchTerm}
                     onChange={onSearchChange}
-                    placeholder={searchPlaceholder} // 🏢 Dynamic placeholder based on entity
+                    placeholder={displayPlaceholder} // 🏢 Dynamic placeholder based on entity
                     debounceMs={0} // Instant για table headers
                     showClearButton={true}
                     className="h-8 text-sm flex-1" // Minimal overrides - let SearchInput handle focus ring
@@ -100,7 +107,7 @@ export function GenericListHeader({
                     size="sm"
                     variant={showToolbar ? "default" : "outline"}
                     className="h-8 px-2 flex-shrink-0 md:hidden"
-                    title="Εργαλειοθήκη"
+                    title={t('tooltips.toolbar')}
                     aria-label="Toggle toolbar"
                 >
                     <Settings className={iconSizes.xs} />

@@ -6,6 +6,8 @@ import { ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { parkingComponentsStyles } from './ParkingComponents.styles';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ParkingColumnHeaderProps {
   column: { key: string; label: string };
@@ -22,7 +24,13 @@ export function ParkingColumnHeader({
   onSort,
   onResizeStart
 }: ParkingColumnHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
+
+  // 🏢 ENTERPRISE: Translate label if it's an i18n key (contains '.')
+  const displayLabel = column.label.includes('.') ? t(column.label) : column.label;
+
   return (
     <div
       className="border-r last:border-r-0 whitespace-nowrap overflow-hidden relative"
@@ -34,7 +42,7 @@ export function ParkingColumnHeader({
         className="h-auto p-1 -ml-1"
         onClick={() => onSort(column.key)}
       >
-        <span>{column.label}</span>
+        <span>{displayLabel}</span>
         <ArrowUpDown className={cn(
           `ml-2 ${iconSizes.xs} transition-transform`,
           sortConfig?.key === column.key ? 'text-primary' : 'text-muted-foreground/50',

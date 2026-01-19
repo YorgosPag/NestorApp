@@ -8,6 +8,14 @@
 //
 // ============================================================================
 
+// 🏢 ENTERPRISE: i18n support for validation messages
+import i18n from '@/i18n/config';
+
+// 🏢 ENTERPRISE: Helper function to get translated validation message
+const t = (key: string): string => {
+  return i18n.t(`validation.${key}`, { ns: 'contacts' });
+};
+
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
@@ -236,34 +244,34 @@ export function validateContactData(contactData: ContactDataRecord): ValidationR
 
   // 🚨 REQUIRED FIELDS VALIDATION
   if (!contactData.type) {
-    errors.push('Contact type is required');
+    errors.push(t('contactTypeRequired'));
   }
 
   switch (contactData.type) {
     case 'individual':
       if (!contactData.firstName || contactData.firstName.trim() === '') {
-        errors.push('Το όνομα είναι υποχρεωτικό για φυσικά πρόσωπα');
+        errors.push(t('individual.firstNameRequired'));
       }
       if (!contactData.lastName || contactData.lastName.trim() === '') {
-        errors.push('Το επώνυμο είναι υποχρεωτικό για φυσικά πρόσωπα');
+        errors.push(t('individual.lastNameRequired'));
       }
       break;
 
     case 'company':
       if (!contactData.companyName || contactData.companyName.trim() === '') {
-        errors.push('Το όνομα εταιρείας είναι υποχρεωτικό για νομικά πρόσωπα');
+        errors.push(t('company.nameRequired'));
       }
       if (!contactData.vatNumber || contactData.vatNumber.trim() === '') {
-        warnings.push('Το ΑΦΜ συνιστάται για νομικά πρόσωπα');
+        warnings.push(t('company.vatRecommended'));
       }
       break;
 
     case 'service':
       if (!contactData.serviceName || contactData.serviceName.trim() === '') {
-        errors.push('Το όνομα υπηρεσίας είναι υποχρεωτικό για δημόσιες υπηρεσίες');
+        errors.push(t('service.nameRequired'));
       }
       if (!contactData.serviceType || contactData.serviceType.trim() === '') {
-        errors.push('Ο τύπος υπηρεσίας είναι υποχρεωτικός για δημόσιες υπηρεσίες');
+        errors.push(t('service.typeRequired'));
       }
       break;
   }
@@ -272,7 +280,7 @@ export function validateContactData(contactData: ContactDataRecord): ValidationR
   if (contactData.email && typeof contactData.email === 'string') {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(contactData.email)) {
-      errors.push('Μη έγκυρη διεύθυνση email');
+      errors.push(t('email.invalid'));
     }
   }
 
@@ -280,7 +288,7 @@ export function validateContactData(contactData: ContactDataRecord): ValidationR
   if (contactData.phone && typeof contactData.phone === 'string') {
     const phoneRegex = /^[\+]?[0-9\s\-\(\)]{8,15}$/;
     if (!phoneRegex.test(contactData.phone.replace(/\s/g, ''))) {
-      warnings.push('Το τηλέφωνο μπορεί να έχει μη έγκυρο format');
+      warnings.push(t('phone.invalidFormat'));
     }
   }
 

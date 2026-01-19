@@ -4,6 +4,8 @@ import React from 'react';
 import type { Property } from '@/types/property-viewer';
 import type { Connection, PropertyGroup } from '@/types/connections';
 import { useConnectionPanelState } from '@/hooks/useConnectionPanelState';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { ConnectionControls } from './connection-panel/ConnectionControls';
 import { GroupManager } from './connection-panel/GroupManager';
@@ -29,10 +31,12 @@ export function SimpleConnectionPanel(props: SimpleConnectionPanelProps) {
         clearConnections,
         deleteGroup
     } = useConnectionPanelState(props);
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('properties');
 
     return (
         <div className="space-y-4">
-            <h4 className="font-semibold text-sm">Συνδέσεις & Ομαδοποίηση</h4>
+            <h4 className="font-semibold text-sm">{t('connectionPanel.title')}</h4>
             
             <ConnectionControls 
                 connectionType={connectionType}

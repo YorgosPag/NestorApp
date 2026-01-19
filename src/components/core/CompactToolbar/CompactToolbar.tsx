@@ -203,7 +203,7 @@ export function CompactToolbar({
                     className="text-destructive"
                   >
                     <X className={`${iconSizes.sm} mr-2`} />
-                    Καθαρισμός όλων ({activeFilters.length})
+                    {t('toolbar.ui.clearAllCount', { count: activeFilters.length })}
                   </DropdownMenuItem>
                 </>
               )}
@@ -406,10 +406,10 @@ export function CompactToolbar({
 
         </div>
 
-        {/* Selection indicator */}
+        {/* 🏢 ENTERPRISE: Selection indicator with i18n */}
         {selectedItems.length > 0 && (
           <div className="text-xs text-muted-foreground whitespace-nowrap">
-            {selectedItems.length} επιλεγμένα
+            {t('toolbar.ui.itemsSelected', { count: selectedItems.length })}
           </div>
         )}
 

@@ -8,11 +8,71 @@
   },
   "floors": {
     "ground": "Ground Floor",
-    "basement": "Basement {number}",
+    "basement": "Basement",
+    "basement1": "Basement -1",
+    "basement2": "Basement -2",
+    "basement3": "Basement -3",
+    "basementMinus1": "Basement -1",
+    "basementMinus2": "Basement -2",
     "floor": "{number}th Floor",
+    "floor1": "1st Floor",
+    "floor2": "2nd Floor",
+    "floor3": "3rd Floor",
+    "floor4": "4th Floor",
+    "floor5": "5th Floor",
+    "floor6": "6th Floor",
+    "floor7": "7th Floor",
+    "floor8": "8th Floor",
+    "floor9": "9th Floor",
     "firstFloor": "1st Floor",
     "secondFloor": "2nd Floor",
-    "thirdFloor": "3rd Floor"
+    "thirdFloor": "3rd Floor",
+    "allFloors": "All Floors",
+    "other": "Other Floors"
+  },
+  "connections": {
+    "electrical": "Electrical",
+    "plumbing": "Plumbing",
+    "hvac": "HVAC",
+    "internet": "Internet",
+    "phone": "Phone"
+  },
+  "names": {
+    "buildingA": "Building A",
+    "buildingB": "Building B",
+    "buildingC": "Building C",
+    "buildingD": "Building D",
+    "buildingE": "Building E"
+  },
+  "toolbar": {
+    "newBuilding": "New Building",
+    "editBuilding": "Edit Building",
+    "deleteBuilding": "Delete Building",
+    "archive": "Archive",
+    "tooltips": {
+      "newBuilding": "Create new building (Ctrl+N)",
+      "editBuilding": "Edit selected building (Ctrl+E)",
+      "deleteBuilding": "Delete selected building",
+      "deleteBuildingMultiple": "Delete {count} selected buildings",
+      "exportData": "Export building data",
+      "importData": "Import building data",
+      "refreshData": "Refresh data",
+      "archiveSelected": "Archive selected building",
+      "addToFavorites": "Add to favorites",
+      "showHelp": "Show help"
+    },
+    "ui": {
+      "searchPlaceholder": "Search buildings...",
+      "statusLabel": "Building Status",
+      "typeLabel": "Building Type",
+      "sortingLabel": "Sort by",
+      "selectedBuildings": "{count} buildings selected",
+      "selectedOfTotal": "{selected} of {total} selected",
+      "buildingsCount": "{count} Buildings",
+      "selectActionForSelected": "Select action for selected items",
+      "clearAllCount": "Clear all ({count})",
+      "itemsSelected": "{count} selected"
+    }
   },
   "categories": {
     "residential": "Residential",
@@ -172,6 +232,18 @@
       "simple": "Simple",
       "complex": "Complex",
       "veryComplex": "Very Complex"
+    },
+    "sorting": {
+      "nameAZ": "Name A-Z",
+      "nameZA": "Name Z-A",
+      "ascending": "Ascending",
+      "descending": "Descending",
+      "byDate": "By Date",
+      "bySize": "By Size"
+    },
+    "building": {
+      "containsTower": "Contains Tower",
+      "containsComplex": "Contains Complex"
     },
     "sampleProjects": {
       "projectA": "Project A",
@@ -627,7 +699,31 @@
       "basicInfo": "Basic Info",
       "customer": "Customer",
       "floorplans": "Floor Plans",
-      "statistics": "Statistics"
+      "statistics": "Statistics",
+      "projectGeneral": "Project General",
+      "projectFloorplan": "Project Floor Plan",
+      "parkingFloorplan": "Parking Floor Plan",
+      "projectStructure": "Project Structure",
+      "buildingData": "Building Data",
+      "parking": "Parking Spaces",
+      "contributors": "Contributors",
+      "projectDocuments": "Project Documents",
+      "ika": "IKA"
+    },
+    "descriptions": {
+      "projectGeneral": "Basic information and project details",
+      "projectFloorplan": "Architectural floor plan and project drawings",
+      "parkingFloorplan": "Parking spaces layout and arrangement",
+      "projectStructure": "Organizational structure and project hierarchy",
+      "timeline": "Project timeline and milestones",
+      "customers": "Project customers and buyers",
+      "buildingData": "Technical specifications and building parameters",
+      "parking": "Parking space management and allocation",
+      "contributors": "Contributors, contractors and partners",
+      "projectDocuments": "Contracts, permits and legal documents",
+      "ika": "IKA data and insurance obligations",
+      "photos": "Progress and completed project photos",
+      "videos": "Presentation and documentation videos"
     },
     "general": {
       "header": {
@@ -1081,6 +1177,12 @@
   },
   "map": {
     "interactiveMap": "Interactive Map"
+  },
+  "floorplan": {
+    "titles": {
+      "project": "Project Floorplan",
+      "parking": "Parking Floorplan"
+    }
   },
   "analytics": {
     "costCategories": {

@@ -257,14 +257,14 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Customer ID</p>
+              <p className="text-sm text-muted-foreground">{t('customerTab.customerId')}</p>
               <p className={`font-mono text-xs bg-muted px-2 py-1 ${quick.input}`}>
                 {customerId}
               </p>
             </div>
             {unitPrice && (
               <div>
-                <p className="text-sm text-muted-foreground">Αξία Συναλλαγής</p>
+                <p className="text-sm text-muted-foreground">{t('customerTab.transactionValue')}</p>
                 <p className={`font-semibold ${colors.text.success}`}>
                   {formatCurrency(unitPrice)}
                 </p>
@@ -283,7 +283,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
               }}
             >
               <ExternalLink className={`${iconSizes.sm} mr-2`} />
-              Λίστα Επαφών
+              {t('customerTab.contactsList')}
             </Button>
 
             {customerInfo?.primaryPhone && (
@@ -296,7 +296,7 @@ function CustomerProfileSection({ customerId, unitPrice }: CustomerProfileSectio
                 }}
               >
                 <Phone className={`${iconSizes.sm} mr-2`} />
-                Κλήση
+                {t('customerTab.call')}
               </Button>
             )}
 
@@ -330,6 +330,8 @@ export function UnitCustomerTab({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook for main component
+  const { t } = useTranslation('units');
 
   // ========================================================================
   // ENTERPRISE VALIDATION: Unit Customer Checks
@@ -347,7 +349,7 @@ export function UnitCustomerTab({
       <div className="p-6 text-center">
         <User className={`${iconSizes.xl3} mx-auto text-muted-foreground mb-4`} />
         <p className="text-muted-foreground">
-          Δεν έχει επιλεχθεί μονάδα
+          {t('customerTab.noUnitSelected')}
         </p>
       </div>
     );
@@ -359,7 +361,7 @@ export function UnitCustomerTab({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
-            Διαθέσιμη Μονάδα
+            {t('customerTab.availableUnit')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -368,7 +370,7 @@ export function UnitCustomerTab({
               <UnitIcon className={`${iconSizes.xl} ${unitColor}`} />
             </div>
             <h3 className="font-semibold text-lg mb-2">
-              Η μονάδα "{selectedUnit.name}" είναι διαθέσιμη
+              {t('customerTab.unitAvailable', { name: selectedUnit.name })}
             </h3>
             <p className="text-muted-foreground mb-4">
               Status: <Badge variant="outline">{selectedUnit.status}</Badge>
@@ -376,7 +378,7 @@ export function UnitCustomerTab({
             <Button variant="outline" asChild>
               <a href="/crm/calendar">
                 <Calendar className={`${iconSizes.sm} mr-2`} />
-                Προγραμματισμός Ξενάγησης
+                {t('customerTab.scheduleViewing')}
               </a>
             </Button>
           </div>
@@ -391,38 +393,37 @@ export function UnitCustomerTab({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className={`${iconSizes.md} ${colors.text.warning}`} />
-            Πωλημένη Μονάδα χωρίς Πελάτη
+            {t('customerTab.soldWithoutCustomer')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert>
             <AlertTriangle className={iconSizes.sm} />
             <AlertDescription>
-              Η μονάδα έχει status "{selectedUnit.status}" αλλά δεν έχει συνδεδεμένο πελάτη.
-              Αυτό μπορεί να υποδηλώνει πρόβλημα στη βάση δεδομένων ή ότι η σύνδεση πελάτη δεν έχει ολοκληρωθεί.
+              {t('customerTab.soldWithoutCustomerWarning', { status: selectedUnit.status })}
             </AlertDescription>
           </Alert>
 
           <div className="mt-6 space-y-2">
             <p className="text-sm text-muted-foreground">
-              <strong>Status μονάδας:</strong> {selectedUnit.status}
+              <strong>{t('customerTab.unitStatus')}:</strong> {selectedUnit.status}
             </p>
             <p className="text-sm text-muted-foreground">
-              <strong>Ημερομηνία συναλλαγής:</strong> {
+              <strong>{t('customerTab.transactionDate')}:</strong> {
                 selectedUnit.saleDate
                   ? formatDate(selectedUnit.saleDate)
-                  : 'Άγνωστη'
+                  : t('customerTab.unknownDate')
               }
             </p>
             <p className="text-sm text-muted-foreground">
-              <strong>Πελάτης ID:</strong> {selectedUnit.soldTo || 'Δεν υπάρχει'}
+              <strong>{t('customerTab.customerId')}:</strong> {selectedUnit.soldTo || t('customerTab.customerIdMissing')}
             </p>
           </div>
 
           <div className="mt-6">
             <Button variant="outline" className="w-full">
               <FileText className={`${iconSizes.sm} mr-2`} />
-              Διαχείριση Συναλλαγής
+              {t('customerTab.manageTransaction')}
             </Button>
           </div>
         </CardContent>
@@ -442,24 +443,24 @@ export function UnitCustomerTab({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
-            Στοιχεία Συναλλαγής
+            {t('customerTab.transactionDetails')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Status Μονάδας</p>
+              <p className="text-sm text-muted-foreground">{t('customerTab.unitStatusLabel')}</p>
               <Badge
                 variant={selectedUnit.status === 'sold' ? 'destructive' : 'secondary'}
                 className="mt-1"
               >
-                {selectedUnit.status === 'sold' ? 'Πωλήθηκε' :
-                 selectedUnit.status === 'reserved' ? 'Κρατήθηκε' : 'Ενοικιάστηκε'}
+                {selectedUnit.status === 'sold' ? t('customerTab.statusSold') :
+                 selectedUnit.status === 'reserved' ? t('customerTab.statusReserved') : t('customerTab.statusRented')}
               </Badge>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">Ημερομηνία Συναλλαγής</p>
+              <p className="text-sm text-muted-foreground">{t('customerTab.transactionDateLabel')}</p>
               <p className="font-medium">
                 {selectedUnit.saleDate
                   ? formatDate(selectedUnit.saleDate, {
@@ -467,17 +468,17 @@ export function UnitCustomerTab({
                       month: 'long',
                       day: 'numeric'
                     })
-                  : 'Άγνωστη ημερομηνία'
+                  : t('customerTab.unknownDate')
                 }
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">Αξία Συναλλαγής</p>
+              <p className="text-sm text-muted-foreground">{t('customerTab.transactionValueLabel')}</p>
               <p className={`font-medium ${colors.text.success}`}>
                 {selectedUnit.price
                   ? formatCurrency(selectedUnit.price)
-                  : 'Μη διαθέσιμη'
+                  : t('customerTab.notAvailable')
                 }
               </p>
             </div>
@@ -498,7 +499,7 @@ export function UnitCustomerTab({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
-            Διαχείριση Σχέσης Ακινήτου
+            {t('customerTab.propertyRelations')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -507,9 +508,9 @@ export function UnitCustomerTab({
             <Button variant="outline" className="justify-start h-auto p-4">
               <FileText className={`${iconSizes.md} mr-3 ${colors.text.info}`} />
               <div className="text-left">
-                <div className="font-medium">Έγγραφα Συναλλαγής</div>
+                <div className="font-medium">{t('customerTab.transactionDocuments')}</div>
                 <div className="text-sm text-muted-foreground">
-                  Συμβόλαια, αποδείξεις, πιστοποιητικά
+                  {t('customerTab.transactionDocumentsDesc')}
                 </div>
               </div>
             </Button>
@@ -517,9 +518,9 @@ export function UnitCustomerTab({
             <Button variant="outline" className="justify-start h-auto p-4">
               <Calendar className={`${iconSizes.md} mr-3 ${colors.text.success}`} />
               <div className="text-left">
-                <div className="font-medium">Ιστορικό Συναλλαγών</div>
+                <div className="font-medium">{t('customerTab.transactionHistory')}</div>
                 <div className="text-sm text-muted-foreground">
-                  Χρονολόγιο πληρωμών και ενεργειών
+                  {t('customerTab.transactionHistoryDesc')}
                 </div>
               </div>
             </Button>
@@ -527,9 +528,9 @@ export function UnitCustomerTab({
             <Button variant="outline" className="justify-start h-auto p-4">
               <Phone className={`${iconSizes.md} mr-3 ${colors.text.accent}`} />
               <div className="text-left">
-                <div className="font-medium">Επικοινωνία</div>
+                <div className="font-medium">{t('customerTab.communication')}</div>
                 <div className="text-sm text-muted-foreground">
-                  Κλήσεις, emails, συναντήσεις
+                  {t('customerTab.communicationDesc')}
                 </div>
               </div>
             </Button>
@@ -537,9 +538,9 @@ export function UnitCustomerTab({
             <Button variant="outline" className="justify-start h-auto p-4">
               <UnitIcon className={`${iconSizes.md} mr-3 ${unitColor}`} />
               <div className="text-left">
-                <div className="font-medium">Άλλα Ακίνητα</div>
+                <div className="font-medium">{t('customerTab.otherProperties')}</div>
                 <div className="text-sm text-muted-foreground">
-                  Δείτε όλα τα ακίνητα του πελάτη
+                  {t('customerTab.otherPropertiesDesc')}
                 </div>
               </div>
             </Button>
@@ -553,7 +554,7 @@ export function UnitCustomerTab({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Phone className={`${iconSizes.md} ${colors.text.success}`} />
-            Γρήγορες Ενέργειες
+            {t('customerTab.quickActions')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -564,7 +565,7 @@ export function UnitCustomerTab({
               onClick={() => window.open(`tel:${selectedUnit.soldTo}`, '_self')}
             >
               <Phone className={`${iconSizes.sm} mr-2`} />
-              Άμεση Κλήση
+              {t('customerTab.directCall')}
             </Button>
 
             <Button
@@ -572,7 +573,7 @@ export function UnitCustomerTab({
               onClick={() => window.open(`/contacts?contactId=${selectedUnit.soldTo}`, '_blank')}
             >
               <User className={`${iconSizes.sm} mr-2`} />
-              Πλήρες Προφίλ
+              {t('customerTab.fullProfile')}
             </Button>
 
             <Button
@@ -583,7 +584,7 @@ export function UnitCustomerTab({
               }}
             >
               <Calendar className={`${iconSizes.sm} mr-2`} />
-              Προγραμματισμός
+              {t('customerTab.schedule')}
             </Button>
 
             <Button
@@ -594,7 +595,7 @@ export function UnitCustomerTab({
               }}
             >
               <FileText className={`${iconSizes.sm} mr-2`} />
-              Αναφορά
+              {t('customerTab.report')}
             </Button>
 
           </div>

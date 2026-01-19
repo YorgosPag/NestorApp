@@ -68,26 +68,18 @@ export const getStatusColor = (status: string) => {
 };
 
 // 🏢 ENTERPRISE: i18n-enabled status text function
+// 🌐 i18n: All fallbacks converted to i18n keys - 2026-01-18
 export const getStatusText = (status: string, t?: TranslateFunction) => {
-    // Use translation function if provided
-    if (t) {
-        const statusMap: Record<string, string> = {
-            'completed': 'tabs.timeline.status.completed',
-            'in-progress': 'tabs.timeline.status.inProgress',
-            'pending': 'tabs.timeline.status.pending',
-            'delayed': 'tabs.timeline.status.delayed'
-        };
-        const key = statusMap[status] || 'tabs.timeline.status.unknown';
-        return t(key);
-    }
-    // Fallback to hardcoded values (backward compatibility)
-    switch (status) {
-        case 'completed': return 'Ολοκληρώθηκε';
-        case 'in-progress': return 'Σε εξέλιξη';
-        case 'pending': return 'Εκκρεμεί';
-        case 'delayed': return 'Καθυστέρηση';
-        default: return 'Άγνωστο';
-    }
+    const statusMap: Record<string, string> = {
+        'completed': 'tabs.timeline.status.completed',
+        'in-progress': 'tabs.timeline.status.inProgress',
+        'pending': 'tabs.timeline.status.pending',
+        'delayed': 'tabs.timeline.status.delayed'
+    };
+    const key = statusMap[status] || 'tabs.timeline.status.unknown';
+
+    // Use translation function if provided, otherwise return the key
+    return t ? t(key) : key;
 };
 
 export const getTypeIcon = (type: string) => {

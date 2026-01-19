@@ -224,5 +224,95 @@
       "empty": "Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.",
       "emptyHint": "Επιλέξτε διαφορετική εταιρεία ή προσθέστε νέα έργα."
     }
+  },
+  "importModal": {
+    "titleDxf": "Εισαγωγή Αρχείου DXF",
+    "titleDxfPdf": "Εισαγωγή Αρχείου DXF / PDF",
+    "fileLabelDxf": "Αρχείο DXF",
+    "fileLabelDxfPdf": "Αρχείο DXF ή PDF",
+    "selectFile": "Επιλογή αρχείου",
+    "noFileSelected": "Δεν επιλέχθηκε κανένα αρχείο.",
+    "selectDxfOrPdf": "Επιλέξτε αρχείο DXF (κάτοψη) ή PDF (background).",
+    "fileTypePdf": "📄 PDF αρχείο - Θα φορτωθεί ως background",
+    "fileTypeDxf": "📐 DXF αρχείο - Θα φορτωθεί ως κάτοψη",
+    "encoding": {
+      "label": "Κωδικοποίηση Χαρακτήρων",
+      "hint": "Επιλέξτε Windows-1253 αν τα Ελληνικά δεν εμφανίζονται σωστά.",
+      "placeholder": "Επιλέξτε κωδικοποίηση"
+    },
+    "buttons": {
+      "cancel": "Ακύρωση",
+      "import": "Εισαγωγή",
+      "importing": "Εισαγωγή..."
+    },
+    "errors": {
+      "importFailed": "Σφάλμα κατά την εισαγωγή αρχείου:"
+    }
+  },
+  "layerManager": {
+    "title": "Διαχείριση Layers",
+    "loading": "Φόρτωση layers...",
+    "createDialog": {
+      "title": "Δημιουργία νέου Layer",
+      "nameLabel": "Όνομα Layer",
+      "namePlaceholder": "π.χ. Ηλεκτρολογικά στοιχεία",
+      "descriptionLabel": "Περιγραφή (προαιρετικό)",
+      "descriptionPlaceholder": "Περιγραφή του layer...",
+      "categoryLabel": "Κατηγορία",
+      "colorLabel": "Χρώμα",
+      "cancel": "Ακύρωση",
+      "create": "Δημιουργία"
+    },
+    "actions": {
+      "hide": "Απόκρυψη",
+      "show": "Εμφάνιση",
+      "lock": "Κλείδωμα",
+      "unlock": "Ξεκλείδωμα",
+      "rename": "Μετονομασία",
+      "duplicate": "Αντιγραφή",
+      "exportLayer": "Export Layer",
+      "delete": "Διαγραφή",
+      "exportAll": "Export όλα τα Layers",
+      "importLayers": "Import Layers",
+      "hideSystemLayers": "Απόκρυψη System Layers",
+      "showSystemLayers": "Εμφάνιση System Layers"
+    },
+    "labels": {
+      "opacity": "Διαφάνεια:",
+      "moreElements": "+{count} περισσότερα στοιχεία",
+      "noLayersFound": "Δεν βρέθηκαν layers",
+      "createNewOrChangeFilters": "Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα",
+      "searchLayers": "Αναζήτηση layers...",
+      "other": "Άλλα"
+    },
+    "stats": {
+      "total": "Σύνολο:",
+      "visible": "Ορατά:",
+      "elements": "Στοιχεία:"
+    },
+    "sync": {
+      "status": "Κατάσταση Sync:",
+      "connected": "Συνδεδεμένο",
+      "disconnected": "Αποσυνδεδεμένο",
+      "lastSync": "Τελευταία Sync:",
+      "errors": "Σφάλματα:",
+      "connectedTooltip": "Συνδεδεμένο - Real-time sync ενεργό",
+      "disconnectedTooltip": "Αποσυνδεδεμένο"
+    },
+    "badges": {
+      "system": "Σύστημα"
+    },
+    "readOnly": {
+      "title": "Layers",
+      "viewModeOnly": "Λειτουργία προβολής μόνο",
+      "canOnlyChangeVisibility": "Μπορείτε να αλλάξετε μόνο την ορατότητα",
+      "connectedRealtime": "Συνδεδεμένο - Ενημερώσεις σε πραγματικό χρόνο",
+      "disconnectedNoUpdates": "Αποσυνδεδεμένο - Δεν υπάρχουν ενημερώσεις",
+      "lastUpdate": "Τελευταία ενημέρωση:",
+      "visibleHidden": "Ορατό|Κρυφό",
+      "waitForAdmins": "Περιμένετε να δημιουργηθούν layers από τους διαχειριστές",
+      "checkConnection": "Ελέγξτε τη σύνδεσή σας",
+      "dbConnectionError": "Σφάλμα σύνδεσης με τη βάση δεδομένων"
+    }
   }
 }

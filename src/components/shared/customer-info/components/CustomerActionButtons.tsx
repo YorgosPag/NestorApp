@@ -29,6 +29,8 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type {
   CustomerActionButtonsProps,
@@ -39,141 +41,10 @@ import type {
 } from '../types/CustomerInfoTypes';
 
 // ============================================================================
-// ACTION DEFINITIONS
+// ACTION DEFINITIONS (moved inside component for i18n access)
 // ============================================================================
 
-/**
- * Κεντρικοποιημένες action definitions
- * Χρησιμοποιεί existing UI patterns για consistency
- */
-const createActionDefinitions = (
-  customerInfo: CustomerActionButtonsProps['customerInfo'],
-  context: CustomerInfoContext
-): Record<CustomerActionType, CustomerAction> => {
-  const { contactId, displayName, primaryPhone, primaryEmail } = customerInfo;
-
-  return {
-    view: {
-      type: 'view',
-      label: 'Προβολή',
-      icon: Eye,
-      variant: 'outline',
-      onClick: () => {
-        window.open(`/contacts?contactId=${contactId}`, '_blank');
-      },
-      tooltip: `Προβολή στοιχείων του ${displayName}`
-    },
-
-    call: {
-      type: 'call',
-      label: 'Κλήση',
-      icon: Phone,
-      variant: 'outline',
-      onClick: () => {
-        if (primaryPhone) {
-          const cleanPhone = primaryPhone.replace(/\s+/g, '');
-          window.open(`tel:${cleanPhone}`, '_self');
-        }
-      },
-      disabled: !primaryPhone,
-      tooltip: primaryPhone
-        ? `Κλήση στο ${primaryPhone}`
-        : 'Δεν είναι διαθέσιμο τηλέφωνο'
-    },
-
-    email: {
-      type: 'email',
-      label: 'Email',
-      icon: Mail,
-      variant: 'outline',
-      onClick: () => {
-        if (primaryEmail) {
-          window.open(
-            `mailto:${primaryEmail}?subject=Επικοινωνία από Nestor App&body=Αγαπητέ/ή ${displayName},`,
-            '_self'
-          );
-        }
-      },
-      disabled: !primaryEmail,
-      tooltip: primaryEmail
-        ? `Email στο ${primaryEmail}`
-        : 'Δεν είναι διαθέσιμο email'
-    },
-
-    message: {
-      type: 'message',
-      label: 'Μήνυμα',
-      icon: MessageSquare,
-      variant: 'outline',
-      onClick: () => {
-        if (primaryPhone) {
-          const cleanPhone = primaryPhone.replace(/\s+/g, '');
-          window.open(`sms:${cleanPhone}`, '_self');
-        }
-      },
-      disabled: !primaryPhone,
-      tooltip: primaryPhone
-        ? `SMS στο ${primaryPhone}`
-        : 'Δεν είναι διαθέσιμο τηλέφωνο για SMS'
-    },
-
-    edit: {
-      type: 'edit',
-      label: 'Επεξεργασία',
-      icon: Edit,
-      variant: 'outline',
-      onClick: () => {
-        window.open(`/contacts?contactId=${contactId}&edit=true`, '_blank');
-      },
-      tooltip: `Επεξεργασία στοιχείων του ${displayName}`
-    },
-
-    reassign: {
-      type: 'reassign',
-      label: context === 'unit' ? 'Αλλαγή Μονάδας' : 'Ανακατανομή',
-      icon: RefreshCw,
-      variant: 'outline',
-      onClick: () => {
-        console.log(`Reassign action για πελάτη ${contactId}`);
-        // TODO: Implement reassignment logic
-      },
-      tooltip: `Αλλαγή κατανομής για ${displayName}`
-    },
-
-    history: {
-      type: 'history',
-      label: 'Ιστορικό',
-      icon: History,
-      variant: 'ghost',
-      onClick: () => {
-        window.open(`/contacts?contactId=${contactId}&tab=history`, '_blank');
-      },
-      tooltip: `Προβολή ιστορικού του ${displayName}`
-    },
-
-    documents: {
-      type: 'documents',
-      label: 'Έγγραφα',
-      icon: FileText,
-      variant: 'ghost',
-      onClick: () => {
-        window.open(`/contacts?contactId=${contactId}&tab=documents`, '_blank');
-      },
-      tooltip: `Προβολή εγγράφων του ${displayName}`
-    },
-
-    notes: {
-      type: 'notes',
-      label: 'Σημειώσεις',
-      icon: StickyNote,
-      variant: 'ghost',
-      onClick: () => {
-        window.open(`/contacts?contactId=${contactId}&tab=notes`, '_blank');
-      },
-      tooltip: `Προβολή σημειώσεων για ${displayName}`
-    }
-  };
-};
+// 🏢 ENTERPRISE: Action definitions factory - accepts t() for i18n support
 
 /**
  * Default actions για κάθε context
@@ -210,15 +81,141 @@ export function CustomerActionButtons({
   iconsOnly = false
 }: CustomerActionButtonsProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
+
+  // ========================================================================
+  // ACTION DEFINITIONS (inside component for i18n access)
+  // ========================================================================
+
+  const createActionDefinitions = useMemo(() => {
+    const { contactId, displayName, primaryPhone, primaryEmail } = customerInfo;
+
+    return {
+      view: {
+        type: 'view' as const,
+        label: t('customerActions.view'),
+        icon: Eye,
+        variant: 'outline' as const,
+        onClick: () => {
+          window.open(`/contacts?contactId=${contactId}`, '_blank');
+        },
+        tooltip: t('customerActions.tooltips.viewDetails', { name: displayName })
+      },
+
+      call: {
+        type: 'call' as const,
+        label: t('customerActions.call'),
+        icon: Phone,
+        variant: 'outline' as const,
+        onClick: () => {
+          if (primaryPhone) {
+            const cleanPhone = primaryPhone.replace(/\s+/g, '');
+            window.open(`tel:${cleanPhone}`, '_self');
+          }
+        },
+        disabled: !primaryPhone,
+        tooltip: primaryPhone
+          ? t('customerActions.tooltips.callTo', { phone: primaryPhone })
+          : t('customerActions.tooltips.noPhone')
+      },
+
+      email: {
+        type: 'email' as const,
+        label: t('customerActions.email'),
+        icon: Mail,
+        variant: 'outline' as const,
+        onClick: () => {
+          if (primaryEmail) {
+            window.open(`mailto:${primaryEmail}`, '_self');
+          }
+        },
+        disabled: !primaryEmail,
+        tooltip: primaryEmail
+          ? t('customerActions.tooltips.emailTo', { email: primaryEmail })
+          : t('customerActions.tooltips.noEmail')
+      },
+
+      message: {
+        type: 'message' as const,
+        label: t('customerActions.message'),
+        icon: MessageSquare,
+        variant: 'outline' as const,
+        onClick: () => {
+          if (primaryPhone) {
+            const cleanPhone = primaryPhone.replace(/\s+/g, '');
+            window.open(`sms:${cleanPhone}`, '_self');
+          }
+        },
+        disabled: !primaryPhone,
+        tooltip: primaryPhone
+          ? t('customerActions.tooltips.smsTo', { phone: primaryPhone })
+          : t('customerActions.tooltips.noPhoneForSms')
+      },
+
+      edit: {
+        type: 'edit' as const,
+        label: t('customerActions.edit'),
+        icon: Edit,
+        variant: 'outline' as const,
+        onClick: () => {
+          window.open(`/contacts?contactId=${contactId}&edit=true`, '_blank');
+        },
+        tooltip: t('customerActions.tooltips.editDetails', { name: displayName })
+      },
+
+      reassign: {
+        type: 'reassign' as const,
+        label: context === 'unit' ? t('customerActions.changeUnit') : t('customerActions.reassign'),
+        icon: RefreshCw,
+        variant: 'outline' as const,
+        onClick: () => {
+          console.log(`Reassign action for customer ${contactId}`);
+          // TODO: Implement reassignment logic
+        },
+        tooltip: t('customerActions.tooltips.reassignFor', { name: displayName })
+      },
+
+      history: {
+        type: 'history' as const,
+        label: t('customerActions.history'),
+        icon: History,
+        variant: 'ghost' as const,
+        onClick: () => {
+          window.open(`/contacts?contactId=${contactId}&tab=history`, '_blank');
+        },
+        tooltip: t('customerActions.tooltips.viewHistory', { name: displayName })
+      },
+
+      documents: {
+        type: 'documents' as const,
+        label: t('customerActions.documents'),
+        icon: FileText,
+        variant: 'ghost' as const,
+        onClick: () => {
+          window.open(`/contacts?contactId=${contactId}&tab=documents`, '_blank');
+        },
+        tooltip: t('customerActions.tooltips.viewDocuments', { name: displayName })
+      },
+
+      notes: {
+        type: 'notes' as const,
+        label: t('customerActions.notes'),
+        icon: StickyNote,
+        variant: 'ghost' as const,
+        onClick: () => {
+          window.open(`/contacts?contactId=${contactId}&tab=notes`, '_blank');
+        },
+        tooltip: t('customerActions.tooltips.viewNotes', { name: displayName })
+      }
+    };
+  }, [customerInfo, context, t]);
 
   // ========================================================================
   // COMPUTED ACTIONS
   // ========================================================================
 
-  const actionDefinitions = useMemo(
-    () => createActionDefinitions(customerInfo, context),
-    [customerInfo, context]
-  );
+  const actionDefinitions = createActionDefinitions;
 
   const finalActions = useMemo(() => {
     // Use custom actions if provided, otherwise use context defaults
@@ -313,14 +310,14 @@ export function CustomerActionButtons({
           `}
         >
           <ArrowRight className={iconSize} />
-          {!iconsOnly && <span className="ml-1">Προβολή Πελάτη</span>}
+          {!iconsOnly && <span className="ml-1">{t('customerActions.viewCustomer')}</span>}
         </Button>
       </Link>
     );
   }
 
   return (
-    <nav className={containerClasses} role="group" aria-label="Ενέργειες πελάτη">
+    <nav className={containerClasses} role="group" aria-label={t('customerActions.aria.customerActions')}>
       {finalActions.map((action, index) => renderActionButton(action, index))}
     </nav>
   );

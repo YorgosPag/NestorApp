@@ -55,9 +55,10 @@ export async function getCompanies(limitCount: number = 50): Promise<Array<{id: 
 
     const snapshot = await getDocs(companiesQuery);
 
+    // 🌐 i18n: Fallback text converted to i18n key - 2026-01-18
     const companies = snapshot.docs.map(doc => ({
       id: doc.id,
-      name: doc.data().name || doc.data().personal?.firstName + ' ' + doc.data().personal?.lastName || 'Εταιρεία'
+      name: doc.data().name || doc.data().personal?.firstName + ' ' + doc.data().personal?.lastName || 'entities.company.unknown'
     }));
 
     console.log(`✅ Loaded ${companies.length} real companies from Firebase`);
@@ -85,9 +86,10 @@ export async function getProjectsList(limitCount: number = 50): Promise<Array<{i
 
     const snapshot = await getDocs(projectsQuery);
 
+    // 🌐 i18n: Fallback text converted to i18n key - 2026-01-18
     const projects = snapshot.docs.map(doc => ({
       id: doc.id,
-      name: doc.data().title || doc.data().name || 'Έργο'
+      name: doc.data().title || doc.data().name || 'entities.project.unknown'
     }));
 
     console.log(`✅ Loaded ${projects.length} real projects from Firebase`);

@@ -33,6 +33,8 @@ import communicationsService, {
 } from '../../lib/communications';
 import { MESSAGE_TYPES } from '../../lib/config/communications.config';
 import { toast } from 'sonner';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
  * Communications Integration Component
@@ -41,6 +43,8 @@ import { toast } from 'sonner';
 
 const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) => {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('communications');
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [channelsStatus, setChannelsStatus] = useState({});
   const [stats, setStats] = useState(null);
@@ -68,17 +72,17 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
       
       // Αρχικοποίηση communications service
       const initResult = await initializeCommunications();
-      
+
       if (initResult.success) {
         setInitialized(true);
-        toast.success('Communications system αρχικοποιήθηκε επιτυχώς');
+        toast.success(t('center.initSuccess'));
       } else {
-        toast.error('Σφάλμα κατά την αρχικοποίηση του communications system');
+        toast.error(t('center.initError'));
       }
-      
+
     } catch (error) {
       console.error('Error initializing communications:', error);
-      toast.error('Σφάλμα κατά την αρχικοποίηση');
+      toast.error(t('center.initErrorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -120,11 +124,11 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
         .map(([channel]) => channel);
 
       if (successfulChannels.length > 0) {
-        toast.success(`Επιτυχής σύνδεση: ${successfulChannels.join(', ')}`);
+        toast.success(t('center.channelsSuccess', { channels: successfulChannels.join(', ') }));
       }
-      
+
       if (failedChannels.length > 0) {
-        toast.error(`Αποτυχία σύνδεσης: ${failedChannels.join(', ')}`);
+        toast.error(t('center.channelsFailed', { channels: failedChannels.join(', ') }));
       }
 
       // Refresh channels status
@@ -132,7 +136,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
 
     } catch (error) {
       console.error('Error testing channels:', error);
-      toast.error('Σφάλμα κατά τον έλεγχο των channels');
+      toast.error(t('center.channelsTestError'));
     } finally {
       setTesting(false);
     }
@@ -143,7 +147,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
    */
   const handleRefresh = async () => {
     await loadData();
-    toast.success('Δεδομένα ανανεώθηκαν');
+    toast.success(t('center.dataRefreshed'));
   };
 
   /**
@@ -157,9 +161,9 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
   /**
    * Render channel status badge
    */
-  const renderChannelStatus = (channelName, status) => {
+  const renderChannelStatus = (channelName: string, status: { enabled: boolean; configured: boolean }) => {
     const isEnabled = status.enabled && status.configured;
-    
+
     return (
       <div key={channelName} className="flex items-center justify-between p-3 border rounded-lg">
         <div className="flex items-center gap-2">
@@ -169,7 +173,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
         <div className="flex items-center gap-2">
           <CommonBadge
             status="company"
-            customLabel={isEnabled ? 'Ενεργό' : 'Ανενεργό'}
+            customLabel={isEnabled ? t('center.channelStatus.active') : t('center.channelStatus.inactive')}
             variant={isEnabled ? "default" : "secondary"}
           />
           {isEnabled ? (
@@ -216,7 +220,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
             <RefreshCw className={`${iconSizes.lg} animate-spin mr-2`} />
-            Αρχικοποίηση Communications System...
+            {t('center.initLoading')}
           </div>
         </CardContent>
       </Card>
@@ -229,13 +233,13 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
         <CardContent className="p-6">
           <div className="text-center">
             <AlertCircle className={`${iconSizes.xl3} mx-auto mb-4 text-orange-500`} />
-            <h3 className="text-lg font-semibold mb-2">Communications System μη διαθέσιμο</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('center.unavailable')}</h3>
             <p className="text-gray-600 mb-4">
-              Υπήρξε πρόβλημα κατά την αρχικοποίηση του συστήματος επικοινωνιών.
+              {t('center.unavailableDesc')}
             </p>
             <Button onClick={initializeSystem}>
               <RefreshCw className={`${iconSizes.sm} mr-2`} />
-              Δοκιμή ξανά
+              {t('center.retry')}
             </Button>
           </div>
         </CardContent>
@@ -248,9 +252,9 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
       {/* Header με Actions */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Communications Center</h2>
+          <h2 className="text-2xl font-bold">{t('center.title')}</h2>
           <p className="text-gray-600">
-            Διαχείριση επικοινωνιών μέσω όλων των channels
+            {t('center.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -259,7 +263,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
             onClick={handleRefresh}
           >
             <RefreshCw className={`${iconSizes.sm} mr-2`} />
-            Refresh
+            {t('center.refresh')}
           </Button>
           <Button
             variant="outline"
@@ -271,13 +275,13 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
             ) : (
               <Activity className={`${iconSizes.sm} mr-2`} />
             )}
-            Test Channels
+            {t('center.testChannels')}
           </Button>
           <SendMessageModal
             trigger={
               <Button>
                 <Plus className={`${iconSizes.sm} mr-2`} />
-                Νέο Μήνυμα
+                {t('center.newMessage')}
               </Button>
             }
             leadData={leadData}
@@ -296,7 +300,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
               <div className="flex items-center gap-2">
                 <MessageSquare className={`${iconSizes.md} text-blue-600`} />
                 <div>
-                  <p className="text-sm text-gray-600">Συνολικά Μηνύματα</p>
+                  <p className="text-sm text-gray-600">{t('center.stats.totalMessages')}</p>
                   <p className="text-2xl font-bold">{stats.totalMessages}</p>
                 </div>
               </div>
@@ -308,7 +312,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
               <div className="flex items-center gap-2">
                 <Users className={`${iconSizes.md} text-green-600`} />
                 <div>
-                  <p className="text-sm text-gray-600">Εισερχόμενα</p>
+                  <p className="text-sm text-gray-600">{t('center.stats.inbound')}</p>
                   <p className="text-2xl font-bold">{stats.byDirection.inbound}</p>
                 </div>
               </div>
@@ -320,7 +324,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
               <div className="flex items-center gap-2">
                 <Send className={`${iconSizes.md} text-purple-600`} />
                 <div>
-                  <p className="text-sm text-gray-600">Εξερχόμενα</p>
+                  <p className="text-sm text-gray-600">{t('center.stats.outbound')}</p>
                   <p className="text-2xl font-bold">{stats.byDirection.outbound}</p>
                 </div>
               </div>
@@ -332,7 +336,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
               <div className="flex items-center gap-2">
                 <Clock className={`${iconSizes.md} text-orange-600`} />
                 <div>
-                  <p className="text-sm text-gray-600">Μέσος Χρόνος Απάντησης</p>
+                  <p className="text-sm text-gray-600">{t('center.stats.avgResponseTime')}</p>
                   <p className="text-2xl font-bold">{stats.responseTime.average}</p>
                 </div>
               </div>
@@ -346,15 +350,15 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="inbox">
             <MessageSquare className={`${iconSizes.sm} mr-2`} />
-            Inbox
+            {t('center.tabs.inbox')}
           </TabsTrigger>
           <TabsTrigger value="channels">
             <Settings className={`${iconSizes.sm} mr-2`} />
-            Channels
+            {t('center.tabs.channels')}
           </TabsTrigger>
           <TabsTrigger value="analytics">
             <BarChart3 className={`${iconSizes.sm} mr-2`} />
-            Analytics
+            {t('center.tabs.analytics')}
           </TabsTrigger>
         </TabsList>
 
@@ -368,7 +372,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
         <TabsContent value="channels" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Κατάσταση Channels</CardTitle>
+              <CardTitle>{t('center.channelsTab.title')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {Object.entries(channelsStatus).map(([channelName, status]) =>
@@ -383,7 +387,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
             {/* Messages by Channel */}
             <Card>
               <CardHeader>
-                <CardTitle>Μηνύματα ανά Channel</CardTitle>
+                <CardTitle>{t('center.analyticsTab.messagesByChannel')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {stats?.byChannel && Object.entries(stats.byChannel).map(([channel, count]) => (
@@ -405,16 +409,16 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
             {/* Response Time */}
             <Card>
               <CardHeader>
-                <CardTitle>Χρόνος Απάντησης</CardTitle>
+                <CardTitle>{t('center.analyticsTab.responseTime')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span>Μέσος όρος:</span>
+                    <span>{t('center.analyticsTab.average')}</span>
                     <span className="font-medium">{stats?.responseTime.average}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Διάμεσος:</span>
+                    <span>{t('center.analyticsTab.median')}</span>
                     <span className="font-medium">{stats?.responseTime.median}</span>
                   </div>
                 </div>

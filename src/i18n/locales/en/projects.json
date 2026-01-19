@@ -1,6 +1,19 @@
 {
   "title": "Projects",
   "description": "Manage projects and construction sites",
+  "status": {
+    "planning": "Planning",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "onHold": "On Hold",
+    "cancelled": "Cancelled",
+    "review": "Under Review",
+    "approved": "Approved"
+  },
+  "emptyState": {
+    "title": "Select a project",
+    "description": "Select a project from the list to view its details."
+  },
   "projectHeader": {
     "technicalIdLabel": "Technical ID (for support):",
     "copied": "Copied!",
@@ -16,7 +29,17 @@
     "titleWithCount": "Project Management ({count})",
     "subtitle": "Track and manage projects",
     "searchPlaceholder": "Search projects...",
-    "newProject": "New Project"
+    "newProject": "New Project",
+    "pageTitle": "Project Management",
+    "pageSubtitle": "Manage and track construction projects"
+  },
+  "timelineTab": {
+    "title": "Project Timeline: {name}",
+    "totalProgress": "Total Project Progress",
+    "buildingProgress": "Progress per Building",
+    "buildingA": "Building A",
+    "buildingB": "Building B",
+    "buildingC": "Building C"
   },
   "toolbar": {
     "new": "New Project",
@@ -36,6 +59,7 @@
     "filters": {
       "status": {
         "label": "Status",
+        "title": "Project status",
         "inProgress": "In Progress",
         "planning": "Planning",
         "completed": "Completed",
@@ -43,12 +67,14 @@
       },
       "type": {
         "label": "Type",
+        "title": "Project type",
         "residential": "Residential",
         "commercial": "Commercial",
         "infrastructure": "Infrastructure"
       },
       "sort": {
         "label": "Sort",
+        "title": "Sort projects",
         "ascending": "Ascending (A-Z)",
         "descending": "Descending (Z-A)",
         "byDate": "By start date",
@@ -155,5 +181,320 @@
     "detailsTitle": "Project Details",
     "editLabel": "Edit Project",
     "deleteLabel": "Delete Project"
+  },
+  "detailsHeader": {
+    "showProject": "Show Project",
+    "progressComplete": "{progress}% complete"
+  },
+  "listCard": {
+    "progress": "Progress",
+    "totalArea": "Total Area",
+    "value": "Value",
+    "ariaLabel": "Project {name}"
+  },
+  "filters": {
+    "toggleFilters": "Toggle filters"
+  },
+  "stats": {
+    "totalUnits": "Total Units",
+    "soldUnits": "Sold Units",
+    "totalAreaSold": "Total Area Sold"
+  },
+  "toolbarGroups": {
+    "actions": "Actions",
+    "importExport": "Import/Export",
+    "management": "Management",
+    "tools": "Tools",
+    "filters": "Filters"
+  },
+  "rowActions": {
+    "moreActions": "More actions",
+    "addToFavorites": "Add to favorites",
+    "removeFromFavorites": "Remove from favorites"
+  },
+  "progressBlock": {
+    "progress": "Progress"
+  },
+  "projectProgress": {
+    "label": "Project Progress"
+  },
+  "timeline": {
+    "deliveryToday": "Delivery today!",
+    "deliveryLabel": "Delivery:",
+    "daysDelayed": "{days} days delayed",
+    "daysRemaining": "{days} days remaining"
+  },
+  "structure": {
+    "noCustomer": "No customer registered",
+    "customer": "Customer",
+    "customerNotFound": "Customer (ID: {id}) - No data found",
+    "units": "units",
+    "soldUnits": "sold",
+    "totalArea": "Total Area",
+    "salesPercentage": "sales",
+    "soldArea": "sold",
+    "totalUnitsLabel": "Total Units",
+    "soldLabel": "Sold",
+    "salesPctLabel": "% Sales",
+    "error": "Error",
+    "loadingCustomers": "Loading customers list...",
+    "notFound": "Project structure not found.",
+    "buildings": "buildings",
+    "buildingsCount": "{count} buildings",
+    "unitsCount": "{count} units"
+  },
+  "buildings": {
+    "cardTitle": "Project Buildings",
+    "loading": "Loading buildings...",
+    "errorPrefix": "Error loading:",
+    "emptyTitle": "No buildings",
+    "emptyDescription": "No buildings linked to this project.",
+    "emptyAction": "Add from Buildings",
+    "viewBuilding": "View",
+    "unitsLabel": "units",
+    "soldLabel": "sold",
+    "areaLabel": "m²",
+    "viewAllStructure": "View Project Structure",
+    "clickToLoad": "Click to load buildings",
+    "retry": "Retry",
+    "linkedCount": "{count} buildings linked to this project",
+    "buildingName": "Building Name",
+    "unitsHeader": "Units",
+    "areaHeader": "Area",
+    "actionsHeader": "Actions",
+    "emptyListAriaLabel": "Empty buildings list",
+    "listAriaLabel": "Project buildings list"
+  },
+  "metrics": {
+    "area": "Area",
+    "value": "Value",
+    "totalValueTooltip": "Total project value"
+  },
+  "customers": {
+    "title": "Project Customers",
+    "titleWithCount": "Project Customers ({count})",
+    "loading": "Loading customers...",
+    "errorPrefix": "Error loading:",
+    "emptyTitle": "No customers",
+    "emptyDescription": "No customers registered for this project.",
+    "clickToLoad": "Click to load customers",
+    "retry": "Retry",
+    "description": "List of customers who have purchased properties in this project.",
+    "descriptionWithCount": "List of customers who have purchased units in this project ({count} customers).",
+    "emptyListAriaLabel": "Empty customer list",
+    "listAriaLabel": "Project customers list",
+    "table": {
+      "name": "Full Name",
+      "phone": "Phone",
+      "email": "Email",
+      "units": "Units",
+      "actions": "Actions"
+    }
+  },
+  "errors": {
+    "network": {
+      "title": "Connection Problem",
+      "subtitle": "Could not connect to the server"
+    },
+    "database": {
+      "title": "Database Problem",
+      "subtitle": "Temporary data issue"
+    },
+    "api": {
+      "title": "Server Error",
+      "subtitle": "The server is experiencing temporary problems"
+    },
+    "validation": {
+      "title": "Invalid Data",
+      "subtitle": "Please check the data and try again"
+    },
+    "unknown": {
+      "title": "Loading Error",
+      "subtitle": "An unexpected problem occurred"
+    },
+    "retryButton": "Try Again",
+    "supportMessage": "If the problem persists, contact support"
+  },
+  "financial": {
+    "grossExcludingStaircase": "Gross Excluding Staircase",
+    "areaReduced": "Area Reduced",
+    "actualBuildingArea": "Actual Building & Reduction Area",
+    "estimatedCost": "Estimated Project Cost",
+    "progressPercentage": "Project Progress Percentage",
+    "tooltips": {
+      "grossExcludingStaircase": "Total gross area excluding staircase.",
+      "areaReduced": "Additional area that is added or reduced.",
+      "actualBuildingArea": "Final actual building area including reduction.",
+      "estimatedCost": "Total estimated cost for project completion.",
+      "progressPercentage": "Calculated automatically: (Actual Value / Estimated Cost) * 100"
+    }
+  },
+  "ika": {
+    "workers": "Workers",
+    "timesheet": "Timesheet",
+    "stampsCalculation": "Stamps Calculation",
+    "apdPayments": "APD & Payments"
+  },
+  "parking": {
+    "searchPlaceholder": "Code, owner, property...",
+    "ownerFilterPlaceholder": "Filter by owner...",
+    "searchLabel": "Search",
+    "typeLabel": "Type",
+    "statusLabel": "Status",
+    "levelLabel": "Level",
+    "ownerLabel": "Owner",
+    "levels": {
+      "basement": "Basement",
+      "ground": "Ground Floor",
+      "first": "1st Floor"
+    },
+    "stats": {
+      "total": "Total",
+      "sold": "Sold",
+      "landowner": "Landowner",
+      "totalValue": "Total Value",
+      "area": "Area"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "floorPlan": "Floor Plan",
+      "delete": "Delete"
+    }
+  },
+  "search": {
+    "placeholder": "Search projects, titles...",
+    "allCompanies": "All companies",
+    "clear": "Clear"
+  },
+  "permits": {
+    "protocolPlaceholder": "Enter number...",
+    "authorityPlaceholder": "Enter authority..."
+  },
+  "plotZoning": {
+    "maxRoofHeight": "Max Roof Height",
+    "maxRoofSlope": "Max Roof Slope",
+    "plotArea": "Plot Area (P.A.)",
+    "insideLimits": "Inside Limits",
+    "insideZone": "Inside Zone",
+    "pilotis": "Pilotis",
+    "roof": "Roof"
+  },
+  "units": {
+    "sqm": "sq.m",
+    "linearMeters": "l.m.",
+    "percentage": "%"
+  },
+  "basicInfo": {
+    "title": "Basic Project Information",
+    "description": "General details and project description",
+    "projectTitle": "Project Title",
+    "licenseTitle": "License Title",
+    "company": "Company",
+    "projectDescription": "Project Description"
+  },
+  "permitsTab": {
+    "title": "Permits & Status",
+    "description": "Permit details and current project status",
+    "buildingBlock": "Building Block",
+    "protocolNumber": "Protocol Number",
+    "licenseNumber": "License Number",
+    "issuingAuthority": "Issuing Authority",
+    "projectStatus": "Project Status",
+    "options": "Options",
+    "showOnWeb": "Show on web",
+    "selectProject": "Select Project",
+    "statusConstructed": "Constructed",
+    "statusPlanning": "Planning",
+    "statusInProgress": "In Progress"
+  },
+  "videosTab": {
+    "title": "Project Videos",
+    "uploadVideo": "Upload Video",
+    "addVideo": "Add Video"
+  },
+  "contributorsTab": {
+    "title": "Project Contributors",
+    "description": "List of contributors and their contact information for the project.",
+    "addContributor": "Add Contributor",
+    "role": "Role",
+    "fullName": "Full Name",
+    "company": "Company",
+    "phone": "Phone",
+    "email": "Email",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "loadError": "Loading Error",
+    "loadErrorMessage": "Could not load contributors:"
+  },
+  "attachmentsTab": {
+    "title": "Attached Files",
+    "description": "Files and documents related to the project",
+    "projectMap": "Project Area Map",
+    "generalFloorPlan": "General Floor Plan",
+    "percentagesTable": "Percentages Table"
+  },
+  "editToolbar": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit"
+  },
+  "documentsTab": {
+    "contracts": "Contracts",
+    "miscellaneous": "Miscellaneous Documents"
+  },
+  "plotDataTab": {
+    "title": "Plot Building Terms"
+  },
+  "otherDataTab": {
+    "title": "Other Data",
+    "description": "Financial data and project progress tracking."
+  },
+  "statsGrid": {
+    "area": "Area",
+    "value": "Value"
+  },
+  "generalTab": {
+    "defaultDescription": "This is a complex of three five-storey buildings...",
+    "totalUnits": "Total Units",
+    "soldUnits": "Sold Units",
+    "totalSoldArea": "Total Sold Area",
+    "salesPercentage": "Sales Percentage",
+    "availableUnits": "{count} available",
+    "salesProgress": "Sales Progress",
+    "unitsProgress": "{sold} of {total} units",
+    "percentageComplete": "{percentage}% complete",
+    "tabs": {
+      "basicInfo": "Basic Information",
+      "structure": "Project Structure",
+      "location": "Location & Map",
+      "permits": "Permits & Status",
+      "attachments": "Attached Files"
+    }
+  },
+  "buildingDataTabs": {
+    "plotTerms": "Plot Building Terms",
+    "allowed": "Permitted",
+    "actual": "Actual",
+    "other": "Other Data"
+  },
+  "parkingManagement": {
+    "title": "Parking Spaces Management",
+    "columns": {
+      "code": "Code",
+      "type": "Type",
+      "property": "Property",
+      "level": "Level",
+      "area": "sq.m.",
+      "price": "Price",
+      "value": "Obj. Value",
+      "valueWithSyndicate": "Obj. Value With Co-ownership",
+      "status": "Status",
+      "owner": "Owner",
+      "floorPlan": "Floor Plan",
+      "registeredBy": "Registered By",
+      "actions": "Actions"
+    }
   }
 }

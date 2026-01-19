@@ -28,6 +28,8 @@ import { storage, db } from '@/lib/firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import { doc, updateDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: i18n support for PDF validation/upload messages
+import i18n from '@/i18n/config';
 
 /**
  * @deprecated Use UnifiedUploadService from '@/services/upload' instead
@@ -79,7 +81,7 @@ export function validatePDFFile(file: File): PDFValidationResult {
   if (file.type !== 'application/pdf') {
     return {
       isValid: false,
-      error: 'Μόνο αρχεία PDF επιτρέπονται'
+      error: i18n.t('validation.onlyPdfAllowed', { ns: 'files' })
     };
   }
 
@@ -88,20 +90,20 @@ export function validatePDFFile(file: File): PDFValidationResult {
   if (file.size > maxSize) {
     return {
       isValid: false,
-      error: 'Το αρχείο είναι πολύ μεγάλο (μέγιστο 50MB)'
+      error: i18n.t('validation.fileTooLarge', { ns: 'files' })
     };
   }
 
   // Check file size warnings
   const warningSize = 10 * 1024 * 1024; // 10MB
   if (file.size > warningSize) {
-    result.warnings?.push('Το αρχείο είναι μεγάλο και μπορεί να χρειαστεί περισσότερος χρόνος για upload');
+    result.warnings?.push(i18n.t('validation.fileLargeWarning', { ns: 'files' }));
   }
 
   // Check filename
   const validNamePattern = /^[a-zA-Z0-9._-]+\.pdf$/i;
   if (!validNamePattern.test(file.name)) {
-    result.warnings?.push('Το όνομα του αρχείου περιέχει ειδικούς χαρακτήρες που μπορεί να προκαλέσουν προβλήματα');
+    result.warnings?.push(i18n.t('validation.filenameSpecialChars', { ns: 'files' }));
   }
 
   return result;
@@ -151,18 +153,18 @@ export async function uploadPDFToStorage(
       },
       (error) => {
         // Error logging removed
-        
-        // Provide user-friendly error messages
-        let errorMessage = 'Σφάλμα κατά την αποστολή του αρχείου';
-        
+
+        // Provide user-friendly error messages (i18n)
+        let errorMessage = i18n.t('upload.errors.generic', { ns: 'files' });
+
         if (error.code === 'storage/unauthorized') {
-          errorMessage = 'Δεν έχετε δικαίωμα να ανεβάσετε αρχεία';
+          errorMessage = i18n.t('upload.errors.unauthorized', { ns: 'files' });
         } else if (error.code === 'storage/canceled') {
-          errorMessage = 'Η αποστολή ακυρώθηκε';
+          errorMessage = i18n.t('upload.errors.cancelled', { ns: 'files' });
         } else if (error.code === 'storage/quota-exceeded') {
-          errorMessage = 'Δεν υπάρχει αρκετός χώρος αποθήκευσης';
+          errorMessage = i18n.t('upload.errors.quotaExceeded', { ns: 'files' });
         }
-        
+
         reject(new Error(errorMessage));
       },
       async () => {
@@ -183,7 +185,7 @@ export async function uploadPDFToStorage(
           
           resolve(result);
         } catch (error) {
-          reject(new Error('Σφάλμα κατά τη λήψη URL αρχείου'));
+          reject(new Error(i18n.t('upload.errors.urlFetch', { ns: 'files' })));
         }
       }
     );
@@ -209,7 +211,7 @@ export async function updateFloorPDFInFirestore(
     });
   } catch (error) {
     // Error logging removed
-    throw new Error('Σφάλμα κατά την ενημέρωση βάσης δεδομένων');
+    throw new Error(i18n.t('upload.errors.databaseUpdate', { ns: 'files' }));
   }
 }
 
@@ -398,5 +400,5 @@ export function handlePDFError(error: unknown): string {
     return error;
   }
   
-  return 'Άγνωστο σφάλμα κατά τη διαχείριση του PDF';
+  return i18n.t('upload.errors.unknown', { ns: 'files' });
 }

@@ -15,6 +15,8 @@
 import React, { useState, useMemo } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Select,
   SelectContent,
@@ -143,6 +145,8 @@ export function PropertyStatusSelector({
 }: PropertyStatusSelectorProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
 
   // ========================================================================
   // STATE
@@ -187,13 +191,15 @@ export function PropertyStatusSelector({
       let description = '';
       let warning = '';
 
-      // Generate descriptions and warnings
+      // 🏢 ENTERPRISE: Get i18n keys and translate
       if (showDescriptions) {
-        description = generateStatusDescription(status);
+        const descKey = getStatusDescriptionKey(status);
+        description = descKey ? t(descKey) : '';
       }
 
       if (showValidation && !isAllowed) {
-        warning = generateValidationWarning(currentStatus, status, userRole);
+        const warnKey = getValidationWarningKey(currentStatus, status, userRole);
+        warning = warnKey ? t(warnKey) : '';
       }
 
       options.push({
@@ -214,18 +220,19 @@ export function PropertyStatusSelector({
       }
       return a.label.localeCompare(b.label);
     });
-  }, [currentStatus, allowedCategories, userRole, showDescriptions, showValidation]);
+  }, [currentStatus, allowedCategories, userRole, showDescriptions, showValidation, t]);
 
   /**
    * 📊 Group options by category
    */
   const groupedOptions = useMemo(() => {
-    if (!groupByCategory) return { 'Όλες οι Καταστάσεις': statusOptions };
+    if (!groupByCategory) return { [t('statusSelector.allStatuses')]: statusOptions };
 
     const groups: Record<string, StatusOption[]> = {};
 
     for (const option of statusOptions) {
-      const categoryLabel = getCategoryLabel(option.category);
+      const categoryKey = getCategoryKey(option.category);
+      const categoryLabel = t(categoryKey);
       if (!groups[categoryLabel]) {
         groups[categoryLabel] = [];
       }
@@ -233,7 +240,7 @@ export function PropertyStatusSelector({
     }
 
     return groups;
-  }, [statusOptions, groupByCategory]);
+  }, [statusOptions, groupByCategory, t]);
 
   // ========================================================================
   // EVENT HANDLERS
@@ -296,7 +303,7 @@ export function PropertyStatusSelector({
       setValidationMessage(null);
     } catch (error) {
       setValidationMessage(
-        error instanceof Error ? error.message : 'Σφάλμα κατά την αλλαγή κατάστασης'
+        error instanceof Error ? error.message : t('statusSelector.errors.changeError')
       );
     }
   };
@@ -320,7 +327,7 @@ export function PropertyStatusSelector({
 
       {/* Current Status Display */}
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium">Τρέχουσα Κατάσταση:</Label>
+        <Label className="text-sm font-medium">{t('statusSelector.currentStatus')}</Label>
         <UnifiedPropertyStatusBadge
           status={currentStatus}
           size={size}
@@ -330,7 +337,7 @@ export function PropertyStatusSelector({
 
       {/* Status Selector */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Αλλαγή Κατάστασης:</Label>
+        <Label className="text-sm font-medium">{t('statusSelector.changeStatus')}</Label>
 
         <Select
           value={selectedStatus || ''}
@@ -342,7 +349,7 @@ export function PropertyStatusSelector({
             size === 'sm' && 'h-8 text-sm',
             size === 'lg' && 'h-12 text-base'
           )}>
-            <SelectValue placeholder={placeholders?.selectNewStatus || "Επιλέξτε νέα κατάσταση..."} />
+            <SelectValue placeholder={placeholders?.selectNewStatus || t('statusSelector.selectPlaceholder')} />
           </SelectTrigger>
 
           <SelectContent className="max-h-80">
@@ -371,12 +378,12 @@ export function PropertyStatusSelector({
                       <div className="flex items-center gap-1">
                         {option.requiresApproval && (
                           <Badge variant="outline" className="text-xs">
-                            Έγκριση
+                            {t('statusSelector.badges.approval')}
                           </Badge>
                         )}
                         {!option.isAllowed && (
                           <Badge variant="destructive" className="text-xs">
-                            Μη διαθέσιμο
+                            {t('statusSelector.badges.notAvailable')}
                           </Badge>
                         )}
                       </div>
@@ -418,14 +425,14 @@ export function PropertyStatusSelector({
           <div className="flex items-center gap-2">
             <Info className={`${iconSizes.sm} text-blue-500`} />
             <Label className="text-sm font-medium">
-              Αιτιολογία Αλλαγής {requireReason && '*'}
+              {t('statusSelector.reasonLabel')} {requireReason && '*'}
             </Label>
           </div>
 
           <Textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Εισάγετε τον λόγο της αλλαγής..."
+            placeholder={t('statusSelector.reasonPlaceholder')}
             rows={3}
             className="resize-none"
           />
@@ -437,7 +444,7 @@ export function PropertyStatusSelector({
               size="sm"
               onClick={handleCancelChange}
             >
-              Ακύρωση
+              {t('statusSelector.buttons.cancel')}
             </Button>
 
             <Button
@@ -446,7 +453,7 @@ export function PropertyStatusSelector({
               disabled={requireReason && !reason.trim()}
             >
               <Check className={`${iconSizes.sm} mr-1`} />
-              Επιβεβαίωση
+              {t('statusSelector.buttons.confirm')}
             </Button>
           </div>
         </div>
@@ -460,7 +467,7 @@ export function PropertyStatusSelector({
           onClick={() => handleStatusSelect('for-sale')}
           disabled={!canChangeStatus(currentStatus, 'for-sale', userRole)}
         >
-          Προς Πώληση
+          {t('statusSelector.quickActions.forSale')}
         </Button>
 
         <Button
@@ -469,7 +476,7 @@ export function PropertyStatusSelector({
           onClick={() => handleStatusSelect('for-rent')}
           disabled={!canChangeStatus(currentStatus, 'for-rent', userRole)}
         >
-          Προς Ενοικίαση
+          {t('statusSelector.quickActions.forRent')}
         </Button>
 
         <Button
@@ -478,7 +485,7 @@ export function PropertyStatusSelector({
           onClick={() => handleStatusSelect('reserved')}
           disabled={!canChangeStatus(currentStatus, 'reserved', userRole)}
         >
-          Δέσμευση
+          {t('statusSelector.quickActions.reserve')}
         </Button>
       </div>
     </div>
@@ -489,43 +496,46 @@ export function PropertyStatusSelector({
 // HELPER FUNCTIONS
 // ============================================================================
 
-function getCategoryLabel(category: string): string {
-  const labels: Record<string, string> = {
-    'AVAILABLE': '🟢 Διαθέσιμα',
-    'COMMITTED': '🔒 Δεσμευμένα',
-    'OFF_MARKET': '⚪ Εκτός Αγοράς',
-    'IN_PROCESS': '🔧 Υπό Επεξεργασία',
-    'OTHER': '📋 Άλλα'
+// 🏢 ENTERPRISE: Returns i18n key for category label
+function getCategoryKey(category: string): string {
+  const keys: Record<string, string> = {
+    'AVAILABLE': 'statusSelector.categories.available',
+    'COMMITTED': 'statusSelector.categories.committed',
+    'OFF_MARKET': 'statusSelector.categories.offMarket',
+    'IN_PROCESS': 'statusSelector.categories.inProcess',
+    'OTHER': 'statusSelector.categories.other'
   };
-  return labels[category] || category;
+  return keys[category] || category;
 }
 
-function generateStatusDescription(status: EnhancedPropertyStatus): string {
-  const descriptions: Partial<Record<EnhancedPropertyStatus, string>> = {
-    'rental-only': 'Διαθέσιμο αποκλειστικά για μακροχρόνια ενοικίαση',
-    'reserved-pending': 'Δεσμευμένο με προκαταβολή, εκκρεμεί τελική συμφωνία',
-    'contract-signed': 'Συμβόλαια υπογεγραμμένα, εκκρεμεί μεταβίβαση',
-    'company-owned': 'Ιδιοκτησία εταιρείας, δεν διατίθεται προς πώληση',
-    'urgent-sale': 'Επείγουσα πώληση με ειδικούς όρους',
-    'under-renovation': 'Υπό ανακαίνιση, θα διατεθεί μετά την ολοκλήρωση'
+// 🏢 ENTERPRISE: Returns i18n key for status description
+function getStatusDescriptionKey(status: EnhancedPropertyStatus): string {
+  const keys: Partial<Record<EnhancedPropertyStatus, string>> = {
+    'rental-only': 'statusSelector.descriptions.rentalOnly',
+    'reserved-pending': 'statusSelector.descriptions.reservedPending',
+    'contract-signed': 'statusSelector.descriptions.contractSigned',
+    'company-owned': 'statusSelector.descriptions.companyOwned',
+    'urgent-sale': 'statusSelector.descriptions.urgentSale',
+    'under-renovation': 'statusSelector.descriptions.underRenovation'
   };
-  return descriptions[status] || '';
+  return keys[status] || '';
 }
 
-function generateValidationWarning(
+// 🏢 ENTERPRISE: Returns i18n key for validation warning
+function getValidationWarningKey(
   from: EnhancedPropertyStatus,
   to: EnhancedPropertyStatus,
   userRole: string
 ): string {
   if (from === 'sold') {
-    return 'Πωλημένο ακίνητο δεν μπορεί να αλλάξει κατάσταση';
+    return 'statusSelector.warnings.soldCannotChange';
   }
 
   if (userRole === 'agent' && to === 'company-owned') {
-    return 'Απαιτείται έγκριση manager για εταιρική κατάσταση';
+    return 'statusSelector.warnings.managerApprovalRequired';
   }
 
-  return 'Μη επιτρεπτή αλλαγή κατάστασης';
+  return 'statusSelector.warnings.notAllowed';
 }
 
 // ============================================================================

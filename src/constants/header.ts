@@ -2,21 +2,23 @@ import { Users, Building2, Landmark, Plus, Building } from "lucide-react"
 import type { QuickAction, Notification } from "@/types/header"
 import { NotificationType } from "@/types/header"
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+// Labels are translated at runtime by components using useTranslation
 export const quickActions: QuickAction[] = [
   {
-    label: "Νέο Φυσικό Πρόσωπο",
+    label: "header.quickActions.newIndividual",
     icon: Users,
     action: "/contacts/new/individual",
     shortcut: "F",
   },
   {
-    label: "Νέα Εταιρεία",
+    label: "header.quickActions.newCompany",
     icon: Building2,
     action: "/contacts/new/company",
     shortcut: "E",
   },
   {
-    label: "Νέα Υπηρεσία",
+    label: "header.quickActions.newService",
     icon: Landmark,
     action: "/contacts/new/service",
     shortcut: "Y",

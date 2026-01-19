@@ -128,10 +128,11 @@ async function fetchCustomerBasicInfo(contactId: string): Promise<CustomerBasicI
 
   } catch (error) {
     console.error(`❌ Failed to fetch customer basic info for ${contactId}:`, error);
+    // 🌐 i18n: Error message converted to i18n key - 2026-01-18
     throw new Error(
       error instanceof Error
         ? error.message
-        : 'Αδυναμία φόρτωσης στοιχείων πελάτη'
+        : 'contacts.customer.errors.loadFailed'
     );
   }
 }
@@ -176,10 +177,11 @@ async function fetchCustomerExtendedInfo(contactId: string): Promise<CustomerExt
 
   } catch (error) {
     console.error(`❌ Failed to fetch customer extended info for ${contactId}:`, error);
+    // 🌐 i18n: Error message converted to i18n key - 2026-01-18
     throw new Error(
       error instanceof Error
         ? error.message
-        : 'Αδυναμία φόρτωσης εκτεταμένων στοιχείων πελάτη'
+        : 'contacts.customer.errors.loadExtendedFailed'
     );
   }
 }
@@ -289,7 +291,7 @@ export function useCustomerInfo(
       });
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Άγνωστο σφάλμα';
+      const errorMessage = err instanceof Error ? err.message : 'common.errors.unknown';
       setError(errorMessage);
 
       // Cache error για short period
@@ -344,7 +346,7 @@ export function useCustomerInfo(
       });
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Άγνωστο σφάλμα';
+      const errorMessage = err instanceof Error ? err.message : 'common.errors.unknown';
       setExtendedError(errorMessage);
 
       // Cache error

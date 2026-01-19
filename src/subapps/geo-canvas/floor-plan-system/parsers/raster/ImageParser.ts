@@ -508,8 +508,10 @@ export class ImageParser {
    */
   async smartCompressContactPhoto(
     file: File,
-    usage: 'avatar' | 'list-item' | 'profile-modal' | 'print' = 'profile-modal'
+    usage?: 'avatar' | 'list-item' | 'profile-modal' | 'print' | 'company-logo' | 'business-card' | 'document-scan' | 'technical-drawing' | 'archive'
   ): Promise<{ blob: Blob; info: SmartCompressionInfo }> {
+    // Default to profile-modal for undefined or unsupported usage contexts
+    const effectiveUsage = usage ?? 'profile-modal';
     const img = await this.loadImage(file);
     const fileSize = file.size;
     const megabytes = fileSize / (1024 * 1024);
@@ -518,15 +520,24 @@ export class ImageParser {
     let strategy: string;
     let settings: { maxDimension: number; quality: number; size: 'avatar' | 'thumbnail' | 'profile' };
 
-    if (usage === 'avatar') {
+    if (effectiveUsage === 'avatar') {
       strategy = 'tiny-avatar';
       settings = { maxDimension: 150, quality: 0.75, size: 'avatar' as const };
-    } else if (usage === 'list-item') {
+    } else if (effectiveUsage === 'list-item') {
       strategy = 'list-thumbnail';
       settings = { maxDimension: 300, quality: 0.8, size: 'thumbnail' as const };
-    } else if (usage === 'print') {
+    } else if (effectiveUsage === 'print' || effectiveUsage === 'technical-drawing') {
       strategy = 'high-quality';
       settings = { maxDimension: 1200, quality: 0.9, size: 'profile' as const };
+    } else if (effectiveUsage === 'document-scan') {
+      strategy = 'document-quality';
+      settings = { maxDimension: 1000, quality: 0.88, size: 'profile' as const };
+    } else if (effectiveUsage === 'company-logo' || effectiveUsage === 'business-card') {
+      strategy = 'branding-quality';
+      settings = { maxDimension: 800, quality: 0.88, size: 'profile' as const };
+    } else if (effectiveUsage === 'archive') {
+      strategy = 'archive-quality';
+      settings = { maxDimension: 2000, quality: 0.95, size: 'profile' as const };
     } else {
       // profile-modal - adaptive based on original file size
       if (megabytes > 5) {
@@ -623,10 +634,11 @@ export async function compressContactPhoto(
 
 /**
  * Smart compress with automatic settings (static method)
+ * 🏢 ENTERPRISE: Extended to support all UsageContext values
  */
 export async function smartCompressContactPhoto(
   file: File,
-  usage: 'avatar' | 'list-item' | 'profile-modal' | 'print' = 'profile-modal'
+  usage?: 'avatar' | 'list-item' | 'profile-modal' | 'print' | 'company-logo' | 'business-card' | 'document-scan' | 'technical-drawing' | 'archive'
 ): Promise<{ blob: Blob; compressionInfo: SmartCompressionInfo }> {
   const parser = new ImageParser();
   const result = await parser.smartCompressContactPhoto(file, usage);

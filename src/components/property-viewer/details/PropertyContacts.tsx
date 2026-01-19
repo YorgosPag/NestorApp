@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { ExtendedPropertyDetails } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface PropertyContactsProps {
   owner: ExtendedPropertyDetails['owner'];
@@ -15,6 +17,8 @@ interface PropertyContactsProps {
 
 export function PropertyContacts({ owner, agent }: PropertyContactsProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
 
   return (
     <div className="space-y-3">
@@ -22,7 +26,7 @@ export function PropertyContacts({ owner, agent }: PropertyContactsProps) {
         <div className="space-y-1">
           <h4 className="text-xs font-medium flex items-center gap-1">
             <User className={iconSizes.xs} />
-            Ιδιοκτήτης
+            {t('contacts.owner')}
           </h4>
           <div className="space-y-1 pl-4">
             <p className="text-xs">{owner.name}</p>
@@ -48,7 +52,7 @@ export function PropertyContacts({ owner, agent }: PropertyContactsProps) {
         <div className="space-y-1">
           <h4 className="text-xs font-medium flex items-center gap-1">
             <User className={iconSizes.xs} />
-            Μεσίτης
+            {t('contacts.agent')}
           </h4>
           <div className="space-y-1 pl-4">
             <p className="text-xs">{agent.name}</p>

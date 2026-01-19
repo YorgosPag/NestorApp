@@ -1,9 +1,11 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 "use client";
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { FieldUpdate } from '../types';
+import { useTranslation } from 'react-i18next';
 
 interface BasicInfoFieldsProps {
   isEditing: boolean;
@@ -18,21 +20,23 @@ export function BasicInfoFields({
   orderValue,
   onChange,
 }: BasicInfoFieldsProps) {
+  const { t } = useTranslation('obligations');
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="space-y-2">
-        <Label htmlFor="section-number">Αριθμός Άρθρου</Label>
+        <Label htmlFor="section-number">{t('section.articleNumber')}</Label>
         <Input
           id="section-number"
           value={numberValue}
           onChange={(e) => onChange('number', e.target.value)}
           disabled={!isEditing}
-          placeholder="π.χ. 1, 1.1, A"
+          placeholder={t('section.articleNumberPlaceholder')}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="section-order">Σειρά</Label>
+        <Label htmlFor="section-order">{t('section.order')}</Label>
         <Input
           id="section-order"
           type="number"

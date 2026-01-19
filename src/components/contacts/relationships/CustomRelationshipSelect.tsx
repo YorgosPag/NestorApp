@@ -12,6 +12,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useEnterprisePortal, createPortalConfig } from '@/components/ui/enterprise-portal';
 import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Import relationship types
 import type { RelationshipType } from '@/types/contacts/relationships';
@@ -31,11 +33,16 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
   onValueChange,
   contactType,
   disabled = false,
-  placeholder = "Επιλέξτε τύπο σχέσης"
+  placeholder
 }) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
+
+  // Use translated placeholder as default
+  const displayPlaceholder = placeholder ?? t('relationships.form.placeholders.selectType');
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -159,7 +166,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
               <span className="text-foreground">{selectedConfig.label}</span>
             </>
           ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
+            <span className="text-muted-foreground">{displayPlaceholder}</span>
           )}
         </div>
         <ChevronDown className={`${iconSizes.sm} ${TRANSITION_PRESETS.STANDARD_TRANSFORM} ${isOpen ? 'rotate-180' : ''}`} />

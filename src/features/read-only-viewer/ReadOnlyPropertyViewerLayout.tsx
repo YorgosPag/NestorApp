@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import React from 'react';
@@ -12,6 +13,7 @@ import { PropertyHoverInfo } from '@/components/property-viewer/PropertyHoverInf
 import { FloorPlanViewer } from '@/components/property-viewer/FloorPlanViewer';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useTranslation } from 'react-i18next';
 
 export function ReadOnlyPropertyViewerLayout({
   isLoading,
@@ -26,6 +28,7 @@ export function ReadOnlyPropertyViewerLayout({
   handleUpdateProperty,
   ...viewerProps
 }: ReadOnlyPropertyViewerLayoutProps) {
+  const { t } = useTranslation('properties');
   const readOnlyViewerProps = buildReadOnlyViewerProps(viewerProps);
 
   return (
@@ -39,7 +42,7 @@ export function ReadOnlyPropertyViewerLayout({
             <div className="w-[320px] shrink-0 flex flex-col gap-4">
               <Card className="flex-1 flex flex-col min-h-0">
                 <CardHeader className="pb-4 shrink-0">
-                  <CardTitle className="text-base">Διαθέσιμα Ακίνητα</CardTitle>
+                  <CardTitle className="text-base">{t('viewer.availableProperties')}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                   <ScrollArea className="h-full">
@@ -58,7 +61,7 @@ export function ReadOnlyPropertyViewerLayout({
             <div className="w-[320px] shrink-0 flex flex-col gap-4">
               <Card className="flex-1 flex flex-col min-h-0">
                 <CardHeader className="py-3 px-4 shrink-0">
-                  <CardTitle className="text-sm">Λεπτομέρειες Ακινήτου</CardTitle>
+                  <CardTitle className="text-sm">{t('viewer.propertyDetails')}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-3 pt-0 flex-1 min-h-0">
                   <PropertyDetailsPanel
@@ -72,7 +75,7 @@ export function ReadOnlyPropertyViewerLayout({
               </Card>
               <Card className="h-[280px] shrink-0">
                 <CardHeader className="py-3 px-4">
-                  <CardTitle className="text-sm">Πληροφορίες Ακινήτου</CardTitle>
+                  <CardTitle className="text-sm">{t('viewer.propertyInfo')}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-3 pt-0 h-full">
                   <PropertyHoverInfo

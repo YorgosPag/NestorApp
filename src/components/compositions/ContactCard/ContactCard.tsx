@@ -9,6 +9,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Opportunity } from '@/types/crm';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
@@ -22,20 +24,6 @@ interface ContactCardProps {
   onSelectionChange?: () => void;
 }
 
-// 🏢 ENTERPRISE: Stage labels matching Opportunity type
-const getStageLabel = (stage: string) => {
-  const stageLabels: Record<string, string> = {
-    'initial_contact': 'Αρχική Επαφή',
-    'qualification': 'Αξιολόγηση',
-    'viewing': 'Επίσκεψη',
-    'proposal': 'Πρόταση',
-    'negotiation': 'Διαπραγμάτευση',
-    'contract': 'Συμβόλαιο',
-    'closed_won': 'Κλειστό - Κερδισμένο',
-    'closed_lost': 'Κλειστό - Χαμένο'
-  };
-  return stageLabels[stage] || stage;
-};
 
 // 🏢 ENTERPRISE: Stage-based styling
 const getStatusBadgeClass = (stage: string): string => {
@@ -70,6 +58,13 @@ export function ContactCard({
 }: ContactCardProps) {
   const iconSizes = useIconSizes();
   const [isFavorite, setIsFavorite] = useState(false);
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('crm');
+
+  // 🏢 ENTERPRISE: Localized stage label
+  const getStageLabel = (stage: string): string => {
+    return t(`opportunities.stages.${stage}`, { defaultValue: stage });
+  };
 
   return (
     <BaseCard
@@ -104,7 +99,7 @@ export function ContactCard({
       contentSections={[
         // Contact details
         {
-          title: 'Στοιχεία Επικοινωνίας',
+          title: t('contactCard.contactDetails'),
           content: (
             <div className="space-y-3">
               {lead.email && (
@@ -117,7 +112,7 @@ export function ContactCard({
                       rel="noopener noreferrer"
                       className={`text-sm font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
                       onClick={(e) => e.stopPropagation()}
-                      title={`Αποστολή email στο ${lead.email} μέσω Gmail`}
+                      title={t('contactCard.sendEmailTo', { email: lead.email })}
                     >
                       {lead.email}
                     </a>
@@ -133,11 +128,11 @@ export function ContactCard({
                       href={`tel:${lead.phone}`}
                       className={`text-sm font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}
                       onClick={(e) => e.stopPropagation()}
-                      title={`Κλήση στο ${lead.phone}`}
+                      title={t('contactCard.callTo', { phone: lead.phone })}
                     >
                       {lead.phone}
                     </a>
-                    <p className="text-xs text-muted-foreground">Τηλέφωνο</p>
+                    <p className="text-xs text-muted-foreground">{t('contactCard.phone')}</p>
                   </div>
                 </div>
               )}
@@ -147,7 +142,7 @@ export function ContactCard({
         
         // Lead source (if available)
         lead.source && {
-          title: 'Πηγή',
+          title: t('contactCard.source'),
           content: (
             <div className="text-sm">
               <CommonBadge
@@ -161,16 +156,16 @@ export function ContactCard({
         
         // Timeline
         {
-          title: 'Χρονολογία',
+          title: t('contactCard.timeline'),
           content: (
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Δημιουργία:</span>
+                <span className="text-muted-foreground">{t('contactCard.createdAt')}</span>
                 <span>{formatContactDate(lead.createdAt)}</span>
               </div>
               {lead.lastActivity && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Τελευταία δραστηριότητα:</span>
+                  <span className="text-muted-foreground">{t('contactCard.lastActivity')}</span>
                   <span>{formatContactDate(lead.lastActivity)}</span>
                 </div>
               )}
@@ -180,7 +175,7 @@ export function ContactCard({
         
         // Value/Budget (if available)
         lead.estimatedValue && {
-          title: 'Εκτιμώμενη Αξία',
+          title: t('contactCard.estimatedValue'),
           content: (
             <div className="text-lg font-semibold text-green-600 dark:text-green-400">
               €{typeof lead.estimatedValue === 'number' ? lead.estimatedValue.toLocaleString() : lead.estimatedValue}
@@ -190,7 +185,7 @@ export function ContactCard({
         
         // Notes (if available)
         lead.notes && {
-          title: 'Σημειώσεις',
+          title: t('contactCard.notes'),
           content: (
             <div className="text-sm text-muted-foreground">
               <p className="line-clamp-3">{lead.notes}</p>
@@ -210,21 +205,21 @@ export function ContactCard({
         }] : []),
         ...(onCall && lead.phone ? [{
           id: 'call',
-          label: 'Κλήση',
+          label: t('contactCard.actions.call'),
           icon: Phone,
           onClick: onCall,
           variant: 'outline' as const
         }] : []),
         ...(onMessage ? [{
           id: 'message',
-          label: 'Μήνυμα',
+          label: t('contactCard.actions.message'),
           icon: MessageSquare,
           onClick: onMessage,
           variant: 'ghost' as const
         }] : []),
         ...(onEdit ? [{
           id: 'edit',
-          label: 'Επεξεργασία',
+          label: t('contactCard.actions.edit'),
           icon: User,
           onClick: onEdit,
           variant: 'ghost' as const

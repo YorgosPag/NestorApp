@@ -11,6 +11,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -49,6 +51,9 @@ const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: Rea
 };
 
 export function ProjectStats({ projectId }: ProjectStatsProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
+  const colors = useSemanticColors();
   const [stats, setStats] = useState<StatsType | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -74,21 +79,21 @@ export function ProjectStats({ projectId }: ProjectStatsProps) {
         <StatCard
             icon={UnitIcon}
             value={loading ? '...' : stats?.totalUnits ?? 0}
-            label="Σύνολο Μονάδων"
+            label={t('stats.totalUnits')}
             loading={loading}
             colorClass={`${colors.bg.info} ${colors.text.inverted}`}
         />
-        <StatCard 
+        <StatCard
             icon={CheckCircle}
             value={loading ? '...' : stats?.soldUnits ?? 0}
-            label="Πωλημένες Μονάδες"
+            label={t('stats.soldUnits')}
             loading={loading}
             colorClass={`${colors.bg.success} ${colors.text.inverted}`}
         />
-        <StatCard 
+        <StatCard
             icon={Ruler}
             value={loading ? '...' : `${(stats?.totalSoldArea ?? 0).toLocaleString('el-GR')} m²`}
-            label="Συνολικό Εμβαδόν Πωληθέντων"
+            label={t('stats.totalAreaSold')}
             loading={loading}
             colorClass={`${colors.bg.accent} ${colors.text.inverted}`}
         />

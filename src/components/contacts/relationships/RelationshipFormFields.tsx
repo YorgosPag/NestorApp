@@ -357,32 +357,48 @@ export const RelationshipFormFields: React.FC<RelationshipFormFieldsProps> = ({
 
 /**
  * 🔍 Validate Relationship Form Data
+ * @param t - Translation function from useTranslation hook
  */
 export const validateRelationshipFormData = (
   data: RelationshipFormData,
-  config: RelationshipFormFieldsProps['fieldConfig'] = {}
+  config: RelationshipFormFieldsProps['fieldConfig'] = {},
+  t?: (key: string) => string
 ): Partial<Record<keyof RelationshipFormData, string>> => {
   const errors: Partial<Record<keyof RelationshipFormData, string>> = {};
 
+  // 🏢 ENTERPRISE: Use i18n keys for validation messages
+  const getValidationMessage = (key: string, fallback: string): string => {
+    return t ? t(key) : fallback;
+  };
+
   // Required field validation
   if (config?.required?.relationshipType && !data.relationshipType) {
-    errors.relationshipType = 'Η επιλογή τύπου σχέσης είναι υποχρεωτική';
+    errors.relationshipType = getValidationMessage(
+      'relationships.form.validation.relationshipTypeRequired',
+      'Relationship type is required'
+    );
   }
 
   if (config?.required?.position && !data.position?.trim()) {
-    errors.position = 'Η θέση είναι υποχρεωτική';
+    errors.position = getValidationMessage(
+      'relationships.form.validation.positionRequired',
+      'Position is required'
+    );
   }
 
   if (config?.required?.department && !data.department?.trim()) {
-    errors.department = 'Το τμήμα είναι υποχρεωτικό';
+    errors.department = getValidationMessage(
+      'relationships.form.validation.departmentRequired',
+      'Department is required'
+    );
   }
 
   // Email validation
   if (data.contactInfo?.businessEmail) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.contactInfo.businessEmail)) {
-      // Note: Θα επιστραφεί στο contactInfo error αλλά αυτό χρειάζεται βελτίωση
-      // για nested field errors στο μέλλον
+      // Note: Email validation error would be returned in contactInfo
+      // This needs improvement for nested field errors in the future
     }
   }
 

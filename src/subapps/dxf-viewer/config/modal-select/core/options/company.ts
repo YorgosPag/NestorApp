@@ -17,16 +17,16 @@
  * Labels are translated at runtime by GenericFormRenderer
  */
 export const MODAL_SELECT_LEGAL_FORMS = [
-  { value: 'ae', label: 'options.legalForms.ae' },
-  { value: 'epe', label: 'options.legalForms.epe' },
-  { value: 'ee', label: 'options.legalForms.ee' },
-  { value: 'oe', label: 'options.legalForms.oe' },
-  { value: 'ike', label: 'options.legalForms.ike' },
-  { value: 'syndicate', label: 'options.legalForms.syndicate' },
-  { value: 'sole_proprietorship', label: 'options.legalForms.soleProprietorship' },
-  { value: 'civil_partnership', label: 'options.legalForms.civilPartnership' },
-  { value: 'joint_venture', label: 'options.legalForms.jointVenture' },
-  { value: 'other', label: 'options.legalForms.other' }
+  { value: 'ae', label: 'contacts.company.legalForms.ae' },
+  { value: 'epe', label: 'contacts.company.legalForms.epe' },
+  { value: 'ee', label: 'contacts.company.legalForms.ee' },
+  { value: 'oe', label: 'contacts.company.legalForms.oe' },
+  { value: 'ike', label: 'contacts.company.legalForms.ike' },
+  { value: 'syndicate', label: 'contacts.company.legalForms.smpc' },
+  { value: 'sole_proprietorship', label: 'contacts.company.legalForms.mono' },
+  { value: 'civil_partnership', label: 'contacts.company.legalForms.other' },
+  { value: 'joint_venture', label: 'contacts.company.legalForms.other' },
+  { value: 'other', label: 'contacts.company.legalForms.other' }
 ] as const;
 
 /**
@@ -34,13 +34,13 @@ export const MODAL_SELECT_LEGAL_FORMS = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_GEMI_STATUSES = [
-  { value: 'active', label: 'options.gemiStatuses.active' },
-  { value: 'inactive', label: 'options.gemiStatuses.inactive' },
-  { value: 'suspended', label: 'options.gemiStatuses.suspended' },
-  { value: 'dissolution', label: 'options.gemiStatuses.dissolution' },
-  { value: 'dissolved', label: 'options.gemiStatuses.dissolved' },
-  { value: 'bankruptcy', label: 'options.gemiStatuses.bankruptcy' },
-  { value: 'liquidation', label: 'options.gemiStatuses.liquidation' }
+  { value: 'active', label: 'contacts.options.gemiStatuses.active' },
+  { value: 'inactive', label: 'contacts.options.gemiStatuses.inactive' },
+  { value: 'suspended', label: 'contacts.options.gemiStatuses.suspended' },
+  { value: 'dissolution', label: 'contacts.options.gemiStatuses.dissolution' },
+  { value: 'dissolved', label: 'contacts.options.gemiStatuses.dissolved' },
+  { value: 'bankruptcy', label: 'contacts.options.gemiStatuses.bankruptcy' },
+  { value: 'liquidation', label: 'contacts.options.gemiStatuses.liquidation' }
 ] as const;
 
 /**
@@ -48,15 +48,15 @@ export const MODAL_SELECT_GEMI_STATUSES = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_SERVICE_CATEGORIES = [
-  { value: 'ministry', label: 'options.serviceCategories.ministry' },
-  { value: 'region', label: 'options.serviceCategories.region' },
-  { value: 'municipality', label: 'options.serviceCategories.municipality' },
-  { value: 'public_entity', label: 'options.serviceCategories.publicEntity' },
-  { value: 'independent_authority', label: 'options.serviceCategories.independentAuthority' },
-  { value: 'university', label: 'options.serviceCategories.university' },
-  { value: 'hospital', label: 'options.serviceCategories.hospital' },
-  { value: 'school', label: 'options.serviceCategories.school' },
-  { value: 'other', label: 'options.serviceCategories.other' }
+  { value: 'ministry', label: 'contacts.options.serviceCategories.ministry' },
+  { value: 'region', label: 'contacts.options.serviceCategories.region' },
+  { value: 'municipality', label: 'contacts.options.serviceCategories.municipality' },
+  { value: 'public_entity', label: 'contacts.options.serviceCategories.publicEntity' },
+  { value: 'independent_authority', label: 'contacts.options.serviceCategories.independentAuthority' },
+  { value: 'university', label: 'contacts.options.serviceCategories.university' },
+  { value: 'hospital', label: 'contacts.options.serviceCategories.hospital' },
+  { value: 'school', label: 'contacts.options.serviceCategories.school' },
+  { value: 'other', label: 'contacts.options.serviceCategories.other' }
 ] as const;
 
 /**
@@ -64,11 +64,11 @@ export const MODAL_SELECT_SERVICE_CATEGORIES = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_LEGAL_STATUSES = [
-  { value: 'npdd', label: 'options.legalStatuses.npdd' },
-  { value: 'npid', label: 'options.legalStatuses.npid' },
-  { value: 'public_service', label: 'options.legalStatuses.publicService' },
-  { value: 'independent_authority', label: 'options.legalStatuses.independentAuthority' },
-  { value: 'decentralized_admin', label: 'options.legalStatuses.decentralizedAdmin' }
+  { value: 'npdd', label: 'contacts.options.legalStatuses.npdd' },
+  { value: 'npid', label: 'contacts.options.legalStatuses.npid' },
+  { value: 'public_service', label: 'contacts.options.legalStatuses.publicService' },
+  { value: 'independent_authority', label: 'contacts.options.legalStatuses.independentAuthority' },
+  { value: 'decentralized_admin', label: 'contacts.options.legalStatuses.decentralizedAdmin' }
 ] as const;
 
 /**
@@ -76,8 +76,8 @@ export const MODAL_SELECT_LEGAL_STATUSES = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_ACTIVITY_TYPES = [
-  { value: 'main', label: 'options.activityTypes.main' },
-  { value: 'secondary', label: 'options.activityTypes.secondary' }
+  { value: 'main', label: 'contacts.options.activityTypes.main' },
+  { value: 'secondary', label: 'contacts.options.activityTypes.secondary' }
 ] as const;
 
 /**
@@ -85,8 +85,8 @@ export const MODAL_SELECT_ACTIVITY_TYPES = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_ADDRESS_TYPES = [
-  { value: 'headquarters', label: 'options.addressTypes.headquarters' },
-  { value: 'branch', label: 'options.addressTypes.branch' }
+  { value: 'headquarters', label: 'contacts.options.addressTypes.headquarters' },
+  { value: 'branch', label: 'contacts.options.addressTypes.branch' }
 ] as const;
 
 /**
@@ -94,28 +94,30 @@ export const MODAL_SELECT_ADDRESS_TYPES = [
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_SHAREHOLDER_TYPES = [
-  { value: 'individual', label: 'options.shareholderTypes.individual' },
-  { value: 'legal', label: 'options.shareholderTypes.legal' }
+  { value: 'individual', label: 'contacts.options.shareholderTypes.individual' },
+  { value: 'legal', label: 'contacts.options.shareholderTypes.legal' }
 ] as const;
 
 // ====================================================================
 // 🏢 COMPANY GEMI HELP TEXTS - ENTERPRISE CENTRALIZED
+// 🌐 i18n: Uses keys from contacts.json namespace - 2026-01-18
 // ====================================================================
 
 /**
  * ✅ ENTERPRISE: Centralized Help Text System για ΓΕΜΗ Fields
  * Single Source of Truth για όλα τα help texts των company fields
  * Αντικαθιστά διάσπαρτα help strings σε όλη την εφαρμογή
+ * 🌐 i18n: All help texts converted to i18n keys
  */
 export const MODAL_SELECT_COMPANY_HELP_TEXTS = {
-  AFM: 'Το Α.Φ.Μ. (Αριθμός Φορολογικού Μητρώου) πρέπει να είναι 9 ψηφία',
-  DOY: 'Η Δ.Ο.Υ. (Δημόσια Οικονομική Υπηρεσία) στην οποία ανήκει η εταιρεία',
-  GEMI_NUMBER: 'Ο αριθμός Γ.Ε.ΜΗ. (Γενικό Εμπορικό Μητρώο) της εταιρείας',
-  LEGAL_FORM: 'Η νομική μορφή της εταιρείας σύμφωνα με το Ελληνικό νομικό σύστημα',
-  BUSINESS_NAME: 'Η επαγγελματική επωνυμία της εταιρείας',
-  TRADE_NAME: 'Το εμπορικό όνομα της εταιρείας (εάν διαφέρει από την επωνυμία)',
-  ACTIVITY_CODE: 'Ο κωδικός δραστηριότητας ΚΑΔ (Κλάδος Οικονομικής Δραστηριότητας)',
-  CAPITAL: 'Το μετοχικό κεφάλαιο της εταιρείας σε ευρώ'
+  AFM: 'contacts.company.helpTexts.afm',
+  DOY: 'contacts.company.helpTexts.doy',
+  GEMI_NUMBER: 'contacts.company.helpTexts.gemiNumber',
+  LEGAL_FORM: 'contacts.company.helpTexts.legalForm',
+  BUSINESS_NAME: 'contacts.company.helpTexts.businessName',
+  TRADE_NAME: 'contacts.company.helpTexts.tradeName',
+  ACTIVITY_CODE: 'contacts.company.helpTexts.activityCode',
+  CAPITAL: 'contacts.company.helpTexts.capital'
 } as const;
 
 // ====================================================================

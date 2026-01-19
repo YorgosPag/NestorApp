@@ -4,6 +4,8 @@ import { borderVariants } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: i18n support for default labels
+import i18n from '@/i18n/config';
 
 // 🏢 ENTERPRISE: Centralized Icons
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -41,7 +43,7 @@ export const getPropertyStatusConfig = (colors?: ReturnType<typeof useSemanticCo
         color: `${COLOR_BRIDGE.bg.warning} ${COLOR_BRIDGE.text.warning} ${borderVariants.status.warning.className}`,  // ✅ SEMANTIC: orange -> warning
     },
     default: {
-        label: 'Άγνωστο',
+        label: i18n.t('status.unknown', { ns: 'common' }),
         color: `bg-slate-50 text-slate-600 ${borderVariants.card.className}`,
     },
         } as const;
@@ -70,7 +72,7 @@ export const getPropertyStatusConfig = (colors?: ReturnType<typeof useSemanticCo
             color: `${colors.bg.warningSubtle} ${colors.text.warning} ${borderVariants.status.warning.className}`,
         },
         default: {
-            label: 'Άγνωστο',
+            label: i18n.t('status.unknown', { ns: 'common' }),
             color: `${colors.bg.muted} ${colors.text.muted} ${borderVariants.card.className}`,
         },
     } as const;

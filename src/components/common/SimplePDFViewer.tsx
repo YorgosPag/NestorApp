@@ -6,6 +6,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects/hover-effects';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface SimplePDFViewerProps {
   file: string;
@@ -16,18 +18,21 @@ interface SimplePDFViewerProps {
 export function SimplePDFViewer({
   file,
   className,
-  fallbackMessage = "PDF προεπισκόπηση"
+  fallbackMessage
 }: SimplePDFViewerProps) {
   const iconSizes = useIconSizes();
   const { createBorder, quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('files');
+
   return (
     <div className={`${colors.bg.secondary} ${quick.card} ${createBorder('medium', 'rgb(209 213 219)', 'dashed')} p-6 ${className}`}>
       <div className="text-center space-y-3">
         <FileText className={`${iconSizes.xl3} ${colors.text.muted} mx-auto`} />
         <div>
-          <h3 className={`font-medium ${colors.text.primary}`}>PDF Document</h3>
-          <p className={`text-sm ${colors.text.muted} mt-1`}>{fallbackMessage}</p>
+          <h3 className={`font-medium ${colors.text.primary}`}>{t('pdf.title')}</h3>
+          <p className={`text-sm ${colors.text.muted} mt-1`}>{fallbackMessage || t('pdf.preview')}</p>
           <a
             href={file}
             target="_blank"
@@ -35,7 +40,7 @@ export function SimplePDFViewer({
             className={`mt-3 inline-flex items-center gap-2 text-sm ${HOVER_TEXT_EFFECTS.BLUE} underline`}
           >
             <ExternalLink className={iconSizes.sm} />
-            Άνοιγμα PDF σε νέα καρτέλα
+            {t('pdf.openInNewTab')}
           </a>
         </div>
       </div>

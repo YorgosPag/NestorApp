@@ -5,6 +5,8 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
 import type { Connection, PropertyGroup } from '@/types/connections';
 
@@ -55,7 +57,9 @@ export function SidebarPanel({
   setIsConnecting,
 }: SidebarPanelProps) {
   const { radius } = useBorderTokens();
-  
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
+
   const safeFloorData = floorData || { id: '', name: '', level: 0, buildingId: '', properties: [] };
   const safeSelectedPolygonIds = Array.isArray(selectedPolygonIds) ? selectedPolygonIds : [];
   const selectedProperties = safeFloorData.properties.filter(p => safeSelectedPolygonIds.includes(p.id));
@@ -64,9 +68,9 @@ export function SidebarPanel({
     <div className="w-80 border-l bg-card flex flex-col">
       <Card className="border-none shadow-none">
         <CardHeader className="pb-2">
-          <h3 className="text-lg font-semibold">Επεξεργασία Κόμβων</h3>
+          <h3 className="text-lg font-semibold">{t('propertyEditor.nodeEditing')}</h3>
           <p className="text-sm text-muted-foreground">
-            {safeSelectedPolygonIds.length} επιλεγμένα ακίνητα
+            {t('propertyEditor.selectedProperties', { count: safeSelectedPolygonIds.length })}
           </p>
         </CardHeader>
         
@@ -89,14 +93,14 @@ export function SidebarPanel({
                       variant="outline"
                       onClick={() => onDuplicate(property.id)}
                     >
-                      Αντιγραφή
+                      {t('propertyEditor.copy')}
                     </Button>
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={onDelete}
                     >
-                      Διαγραφή
+                      {t('buttons.delete')}
                     </Button>
                   </div>
                 </div>
@@ -104,29 +108,29 @@ export function SidebarPanel({
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              <p>Επιλέξτε ακίνητα για επεξεργασία κόμβων</p>
+              <p>{t('propertyEditor.selectPropertiesToEdit')}</p>
             </div>
           )}
 
           {/* Layer Controls */}
           <div className="space-y-2">
-            <h4 className="font-medium">Επίπεδα</h4>
+            <h4 className="font-medium">{t('propertyEditor.layers')}</h4>
             <div className="text-sm text-muted-foreground">
-              Έλεγχος ορατότητας επιπέδων
+              {t('propertyEditor.layerVisibilityControl')}
             </div>
           </div>
 
           {/* Connection Controls */}
           {isConnecting && (
             <div className={`p-3 bg-blue-50 dark:bg-blue-950 ${radius.lg}`}>
-              <p className="text-sm">Επιλέξτε δύο ακίνητα για να τα συνδέσετε</p>
+              <p className="text-sm">{t('propertyEditor.selectTwoToConnect')}</p>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setIsConnecting(false)}
                 className="mt-2"
               >
-                Ακύρωση
+                {t('buttons.cancel')}
               </Button>
             </div>
           )}

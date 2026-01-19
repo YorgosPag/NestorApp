@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -19,6 +20,8 @@ import {
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -69,6 +72,7 @@ export function PropertyViewerWithLayers({
   onPropertySelect,
   onLayerVisibilityChange
 }: PropertyViewerWithLayersProps) {
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
   const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -130,22 +134,26 @@ export function PropertyViewerWithLayers({
       const canvas = document.querySelector('canvas') as HTMLCanvasElement;
       if (canvas) {
         const link = document.createElement('a');
-        link.download = `κάτοψη-${currentFloor?.name || 'floor'}.png`;
+        // 🏢 ENTERPRISE: i18n-enabled filename
+        link.download = `${t('viewer.download.filename')}-${currentFloor?.name || 'floor'}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
       } else {
         window.print();
       }
     } catch (error) {
-      console.error('Σφάλμα κατά τη φόρτωση:', error);
+      // 🏢 ENTERPRISE: i18n-enabled error message
+      console.error(t('viewer.errors.loadingError'), error);
       window.print();
     }
   };
 
   // Info handler
+  // 🏢 ENTERPRISE: i18n-enabled info message
   const handleShowInfo = () => {
     const visibleLayers = Object.values(layerVisibilityStates).filter(state => state.isVisible).length;
-    const info = `Πληροφορίες Ακινήτου:\nΌροφος: ${currentFloor?.name || 'Άγνωστος'}\nΑκίνητα: ${properties.length}\nZoom: ${zoomLevel}%\nOrατά Layers: ${visibleLayers}\nΚάτοψη PDF: ${pdfBackgroundUrl ? 'Διαθέσιμη' : 'Μη διαθέσιμη'}`;
+    const pdfStatus = pdfBackgroundUrl ? t('viewer.info.available') : t('viewer.info.notAvailable');
+    const info = `${t('viewer.info.title')}\n${t('viewer.info.floor')} ${currentFloor?.name || t('viewer.info.unknown')}\n${t('viewer.info.properties')} ${properties.length}\n${t('viewer.info.zoom')} ${zoomLevel}%\n${t('viewer.info.visibleLayers')} ${visibleLayers}\n${t('viewer.info.pdfFloorplan')} ${pdfStatus}`;
     alert(info);
   };
 
@@ -154,9 +162,9 @@ export function PropertyViewerWithLayers({
       <Card className={className}>
         <CardContent className="flex flex-col items-center justify-center h-96 text-center text-muted-foreground">
           <UnitIcon className={`${iconSizes.xl6} mb-4 opacity-50 ${unitColor}`} />
-          <h3 className="text-xl font-semibold mb-2">Δεν υπάρχει διαθέσιμη κάτοψη</h3>
+          <h3 className="text-xl font-semibold mb-2">{t('viewer.emptyState.noFloorplan')}</h3>
           <p className="text-sm max-w-sm">
-            Δεν υπάρχουν διαθέσιμα δεδομένα κάτοψης για αυτό το ακίνητο.
+            {t('viewer.emptyState.noFloorplanDescription')}
           </p>
         </CardContent>
       </Card>
@@ -211,21 +219,21 @@ export function PropertyViewerWithLayers({
                 
                 {/* Info and Download */}
                 <li className="flex items-center gap-1 bg-muted p-1 rounded-md">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleShowInfo}
-                    className={`${iconSizes.xl} p-0`} 
-                    aria-label="Πληροφορίες"
+                    className={`${iconSizes.xl} p-0`}
+                    aria-label={t('viewer.actions.info')}
                   >
                     <Info className={iconSizes.sm} />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleDownload} 
-                    className={`${iconSizes.xl} p-0`} 
-                    aria-label="Φόρτωση"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDownload}
+                    className={`${iconSizes.xl} p-0`}
+                    aria-label={t('viewer.actions.download')}
                   >
                     <Download className={iconSizes.sm} />
                   </Button>
@@ -236,13 +244,13 @@ export function PropertyViewerWithLayers({
               <section className="flex items-center gap-2 text-xs text-muted-foreground" aria-label="Status information">
                 <CommonBadge
                   status="units"
-                  customLabel={`${properties.length} Ακίνητα`}
+                  customLabel={t('viewer.badges.propertiesCount', { count: properties.length })}
                   variant="outline"
                   className="text-xs"
                 />
                 <CommonBadge
                   status="company"
-                  customLabel="Προβολή μόνο"
+                  customLabel={t('viewer.badges.viewOnly')}
                   variant="outline"
                   className="text-xs"
                 />
@@ -322,11 +330,11 @@ export function PropertyViewerWithLayers({
       <footer className={`px-4 py-2 bg-muted/30 ${getDirectionalBorder('muted', 'top')}`}>
         <div className="flex justify-between items-center text-xs text-muted-foreground">
           <div className="flex items-center gap-4">
-            <span>Όροφος: {currentFloor.name}</span>
-            <span>Zoom: {zoomLevel}%</span>
+            <span>{t('viewer.statusBar.floor')} {currentFloor.name}</span>
+            <span>{t('viewer.info.zoom')} {zoomLevel}%</span>
             {Object.keys(layerVisibilityStates).length > 0 && (
               <span>
-                Layers: {Object.values(layerVisibilityStates).filter(s => s.isVisible).length}/
+                {t('viewer.statusBar.layers')} {Object.values(layerVisibilityStates).filter(s => s.isVisible).length}/
                 {Object.keys(layerVisibilityStates).length}
               </span>
             )}
@@ -334,7 +342,7 @@ export function PropertyViewerWithLayers({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
               <div className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} />
-              <span>Ενημερώσεις σε πραγματικό χρόνο</span>
+              <span>{t('viewer.statusBar.realTimeUpdates')}</span>
             </div>
           </div>
         </div>

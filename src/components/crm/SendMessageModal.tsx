@@ -22,6 +22,8 @@ import {
   X
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent } from '../ui/card';
@@ -44,6 +46,8 @@ const SendMessageModal = ({
   onOpenChange
 }) => {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('crm');
   const [isOpen, setIsOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState(defaultChannel);
@@ -184,12 +188,12 @@ const SendMessageModal = ({
 
       // Validation
       if (!formData.to.trim()) {
-        toast.error('Παρακαλώ συμπληρώστε τον παραλήπτη');
+        toast.error(t('sendMessage.validation.recipientRequired'));
         return;
       }
 
       if (!formData.content.trim()) {
-        toast.error('Παρακαλώ συμπληρώστε το περιεχόμενο');
+        toast.error(t('sendMessage.validation.contentRequired'));
         return;
       }
 
@@ -238,7 +242,7 @@ const SendMessageModal = ({
       }
 
       if (result.success) {
-        toast.success(`Μήνυμα εστάλη επιτυχώς μέσω ${selectedChannel.toUpperCase()}`);
+        toast.success(t('sendMessage.toasts.success', { channel: selectedChannel.toUpperCase() }));
         
         // Reset form
         setFormData({
@@ -259,12 +263,12 @@ const SendMessageModal = ({
           onMessageSent(result);
         }
       } else {
-        toast.error(`Σφάλμα κατά την αποστολή: ${result.error}`);
+        toast.error(t('sendMessage.toasts.error', { error: result.error }));
       }
 
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Σφάλμα κατά την αποστολή μηνύματος');
+      toast.error(t('sendMessage.toasts.genericError'));
     } finally {
       setSending(false);
     }
@@ -317,7 +321,7 @@ const SendMessageModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className={iconSizes.md} />
-            Αποστολή Μηνύματος
+            {t('sendMessage.title')}
             {leadData && (
               <CommonBadge
                 status="contact"
@@ -331,10 +335,10 @@ const SendMessageModal = ({
         <div className="space-y-4">
           {/* Channel Selection */}
           <div className="space-y-2">
-            <Label>Επιλογή Channel</Label>
+            <Label>{t('sendMessage.selectChannel')}</Label>
             <Select value={selectedChannel} onValueChange={handleChannelChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Επιλέξτε channel" />
+                <SelectValue placeholder={t('sendMessage.selectChannelPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {availableChannels.map(channel => (
@@ -351,13 +355,13 @@ const SendMessageModal = ({
 
           {/* Template Selection */}
           <div className="space-y-2">
-            <Label>Template (Προαιρετικό)</Label>
+            <Label>{t('sendMessage.template')}</Label>
             <Select value={selectedTemplate || ''} onValueChange={setSelectedTemplate}>
               <SelectTrigger>
-                <SelectValue placeholder="Χωρίς template" />
+                <SelectValue placeholder={t('sendMessage.noTemplate')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Χωρίς template</SelectItem>
+                <SelectItem value="">{t('sendMessage.noTemplate')}</SelectItem>
                 {getAvailableTemplates().map(template => (
                   <SelectItem key={template.value} value={template.value}>
                     {template.label}
@@ -369,7 +373,7 @@ const SendMessageModal = ({
 
           {/* Recipient */}
           <div className="space-y-2">
-            <Label>Παραλήπτης</Label>
+            <Label>{t('sendMessage.recipient')}</Label>
             <Input
               value={formData.to}
               onChange={(e) => setFormData(prev => ({ ...prev, to: e.target.value }))}
@@ -384,22 +388,22 @@ const SendMessageModal = ({
           {/* Subject (για email) */}
           {selectedChannel === MESSAGE_TYPES.EMAIL && (
             <div className="space-y-2">
-              <Label>Θέμα</Label>
+              <Label>{t('sendMessage.subject')}</Label>
               <Input
                 value={formData.subject}
                 onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                placeholder="Θέμα μηνύματος"
+                placeholder={t('sendMessage.subjectPlaceholder')}
               />
             </div>
           )}
 
           {/* Content */}
           <div className="space-y-2">
-            <Label>Περιεχόμενο</Label>
+            <Label>{t('sendMessage.content')}</Label>
             <Textarea
               value={formData.content}
               onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-              placeholder="Γράψτε το μήνυμά σας εδώ..."
+              placeholder={t('sendMessage.contentPlaceholder')}
               rows={6}
             />
           </div>
@@ -409,12 +413,12 @@ const SendMessageModal = ({
             <Card>
               <CardContent className="pt-4">
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Template Variables</Label>
-                  
+                  <Label className="text-sm font-medium">{t('sendMessage.templateVariables')}</Label>
+
                   {/* Predefined variables */}
                   {leadData && (
                     <div className="space-y-2">
-                      <div className="text-xs text-gray-600">Διαθέσιμες μεταβλητές:</div>
+                      <div className="text-xs text-gray-600">{t('sendMessage.availableVariables')}</div>
                       <div className="flex flex-wrap gap-1">
                         <CommonBadge status="contact" customLabel="leadName" variant="outline" className="text-xs" />
                         <CommonBadge status="contact" customLabel="leadEmail" variant="outline" className="text-xs" />
@@ -430,13 +434,13 @@ const SendMessageModal = ({
                   {customVariables.map((variable, index) => (
                     <div key={index} className="flex items-center gap-2">
                       <Input
-                        placeholder="Όνομα μεταβλητής"
+                        placeholder={t('sendMessage.variableName')}
                         value={variable.key}
                         onChange={(e) => updateCustomVariable(index, 'key', e.target.value)}
                         className="flex-1"
                       />
                       <Input
-                        placeholder="Τιμή"
+                        placeholder={t('sendMessage.variableValue')}
                         value={variable.value}
                         onChange={(e) => updateCustomVariable(index, 'value', e.target.value)}
                         className="flex-1"
@@ -457,7 +461,7 @@ const SendMessageModal = ({
                     onClick={addCustomVariable}
                     className="w-full"
                   >
-                    Προσθήκη Μεταβλητής
+                    {t('sendMessage.addVariable')}
                   </Button>
                 </div>
               </CardContent>
@@ -473,7 +477,7 @@ const SendMessageModal = ({
                 if (onOpenChange) onOpenChange(false);
               }}
             >
-              Ακύρωση
+              {t('sendMessage.cancel')}
             </Button>
             <Button
               onClick={handleSend}
@@ -482,12 +486,12 @@ const SendMessageModal = ({
               {sending ? (
                 <>
                   <Loader2 className={`${iconSizes.sm} mr-2 animate-spin`} />
-                  Αποστολή...
+                  {t('sendMessage.sending')}
                 </>
               ) : (
                 <>
                   <Send className={`${iconSizes.sm} mr-2`} />
-                  Αποστολή
+                  {t('sendMessage.send')}
                 </>
               )}
             </Button>

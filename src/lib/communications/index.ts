@@ -145,7 +145,8 @@ export const sendAppointmentConfirmation = async (leadData: LeadData, appointmen
         leadName: leadData.fullName,
         date: appointmentData.date,
         time: appointmentData.time,
-        location: appointmentData.location || 'Γραφεία μας',
+        // 🌐 i18n: Converted to i18n key - 2026-01-18
+        location: appointmentData.location || 'communications.appointment.defaultLocation',
         companyName: process.env.NEXT_PUBLIC_COMPANY_NAME
       },
       entityType: 'lead',

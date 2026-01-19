@@ -6,6 +6,10 @@ import { CommonBadge } from '@/core/badges';
 import { HOVER_SHADOWS, HOVER_BACKGROUND_EFFECTS, GROUP_HOVER_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { Bell, AlertCircle, Info, CheckCircle, XCircle, Calendar, User, Eye, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { getStatusBadgeClass } from '@/lib/design-system';
+import { badgeVariants } from '@/components/ui/badge';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface NotificationData {
   id: string;
@@ -40,16 +44,7 @@ const getTypeIcon = (type: string) => {
   }
 };
 
-const getTypeLabel = (type: string) => {
-  const typeLabels: Record<string, string> = {
-    'info': 'Πληροφορία',
-    'warning': 'Προειδοποίηση',
-    'error': 'Σφάλμα',
-    'success': 'Επιτυχία',
-    'reminder': 'Υπενθύμιση'
-  };
-  return typeLabels[type] || type;
-};
+// Moved inside component to use i18n
 
 // 🏢 ENTERPRISE: Badge variant type for priority colors
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error' | 'purple' | 'light' | 'muted' | 'subtle';
@@ -63,16 +58,28 @@ const getPriorityColor = (priority: string = 'medium'): BadgeVariant => {
   }
 };
 
-export function NotificationCard({ 
-  notification, 
-  onMarkAsRead, 
-  onMarkAsUnread, 
-  onAction, 
+export function NotificationCard({
+  notification,
+  onMarkAsRead,
+  onMarkAsUnread,
+  onAction,
   onDismiss,
-  compact = false 
+  compact = false
 }: NotificationCardProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('compositions');
   const [isRead, setIsRead] = useState(notification.read);
+
+  // 🏢 ENTERPRISE: i18n-aware type label function
+  const getTypeLabel = (type: string) => {
+    return t(`notificationCard.types.${type}`, type);
+  };
+
+  // 🏢 ENTERPRISE: i18n-aware priority label
+  const getPriorityLabel = (priority: string) => {
+    return t(`notificationCard.priority.${priority}`, priority);
+  };
 
   const TypeIcon = getTypeIcon(notification.type);
 
@@ -165,17 +172,17 @@ export function NotificationCard({
           className: getStatusBadgeClass(notification.type)
         },
         notification.priority && notification.priority !== 'medium' && {
-          label: `${notification.priority === 'high' ? 'Υψηλή' : 'Χαμηλή'} Προτεραιότητα`,
+          label: `${getPriorityLabel(notification.priority)} ${t('notificationCard.priorityLabel')}`,
           className: badgeVariants({
             variant: getPriorityColor(notification.priority),
             size: 'sm'
           })
         },
         {
-          label: isRead ? 'Αναγνώστηκε' : 'Νέα',
-          className: badgeVariants({ 
+          label: isRead ? t('notificationCard.read') : t('notificationCard.new'),
+          className: badgeVariants({
             variant: isRead ? 'secondary' : 'info',
-            size: 'sm' 
+            size: 'sm'
           })
         }
       ].filter(Boolean)}
@@ -184,7 +191,7 @@ export function NotificationCard({
       contentSections={[
         // Sender info (if available)
         notification.sender && {
-          title: 'Αποστολέας',
+          title: t('notificationCard.sections.sender'),
           content: (
             <div className="flex items-center gap-2">
               <User className={`${iconSizes.sm} text-muted-foreground`} />
@@ -192,20 +199,20 @@ export function NotificationCard({
             </div>
           )
         },
-        
+
         // Category (if available)
         notification.category && {
-          title: 'Κατηγορία',
+          title: t('notificationCard.sections.category'),
           content: (
             <span className={badgeVariants({ variant: 'outline', size: 'sm' })}>
               {notification.category}
             </span>
           )
         },
-        
+
         // Time details
         {
-          title: 'Χρόνος',
+          title: t('notificationCard.sections.time'),
           content: (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className={iconSizes.sm} />
@@ -218,18 +225,18 @@ export function NotificationCard({
       // Actions
       actions={[
         !isRead && {
-          label: 'Επισήμανση ως αναγνωσμένο',
+          label: t('notificationCard.actions.markAsRead'),
           icon: Eye,
           onClick: () => handleToggleRead(),
           variant: 'outline' as const
         },
         notification.actionUrl && {
-          label: notification.actionLabel || 'Προβολή',
+          label: notification.actionLabel || t('notificationCard.actions.view'),
           onClick: handleAction,
           variant: 'default' as const
         },
         onDismiss && {
-          label: 'Απόρριψη',
+          label: t('notificationCard.actions.dismiss'),
           icon: X,
           onClick: () => onDismiss(notification.id),
           variant: 'ghost' as const

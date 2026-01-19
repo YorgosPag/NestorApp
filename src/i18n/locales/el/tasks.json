@@ -7,8 +7,10 @@
     "meeting": "Συνάντηση",
     "viewing": "Προβολή",
     "followup": "Παρακολούθηση",
+    "follow_up": "Παρακολούθηση",
     "research": "Έρευνα",
     "documentation": "Τεκμηρίωση",
+    "document": "Έγγραφο",
     "other": "Άλλο"
   },
   "status": {
@@ -34,6 +36,13 @@
       "estimatedTime": "Εκτιμώμενος χρόνος",
       "actualTime": "Πραγματικός χρόνος"
     },
+    "sections": {
+      "dueDate": "Ημερομηνία λήξης",
+      "assignedTo": "Ανατέθηκε σε",
+      "related": "Σχετικά",
+      "viewingDetails": "Λεπτομέρειες προβολής",
+      "completed": "Ολοκληρώθηκε"
+    },
     "viewing": {
       "location": "Τοποθεσία",
       "units": "Μονάδες",
@@ -47,7 +56,9 @@
       "delete": "Διαγραφή",
       "duplicate": "Αντιγραφή",
       "addToFavorites": "Προσθήκη στα αγαπημένα"
-    }
+    },
+    "notDefined": "Μη καθορισμένη",
+    "prioritySuffix": "προτεραιότητα"
   },
   "time": {
     "overdue": "Εκπρόθεσμη",

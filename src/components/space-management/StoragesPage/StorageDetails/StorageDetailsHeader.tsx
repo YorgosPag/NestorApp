@@ -9,23 +9,22 @@ import { cn } from '@/lib/utils';
 import type { Storage } from '@/types/storage/contracts';
 import type { UnitStatus } from '@/core/types/BadgeTypes';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StorageDetailsHeaderProps {
   storage: Storage;
 }
 
-function getTypeLabel(type: Storage['type']) {
-  switch (type) {
-    case 'large': return 'Μεγάλη';
-    case 'small': return 'Μικρή';
-    case 'basement': return 'Υπόγεια';
-    case 'ground': return 'Ισόγεια';
-    case 'special': return 'Ειδική';
-    default: return 'Άγνωστο';
-  }
-}
-
 export function StorageDetailsHeader({ storage }: StorageDetailsHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('storage');
+
+  // Helper function for type labels using i18n
+  const getTypeLabel = (type: Storage['type']) => {
+    return t(`general.types.${type}`, t('general.unknown'));
+  };
+
   return (
     <>
       {/* 🖥️ DESKTOP: Show full header with actions */}
@@ -35,19 +34,19 @@ export function StorageDetailsHeader({ storage }: StorageDetailsHeaderProps) {
           title={storage.name}
           actions={[
             {
-              label: 'Προβολή Αποθήκης',
+              label: t('header.viewStorage'),
               onClick: () => console.log('Show storage details'),
               icon: Eye,
               className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
             },
             {
-              label: 'Επεξεργασία',
+              label: t('header.edit'),
               onClick: () => console.log('Edit storage'),
               icon: Edit,
               variant: 'outline'
             },
             {
-              label: 'Εκτύπωση',
+              label: t('header.print'),
               onClick: () => console.log('Print storage details'),
               icon: FileText,
               variant: 'outline'
@@ -97,7 +96,7 @@ export function StorageDetailsHeader({ storage }: StorageDetailsHeaderProps) {
           <div className="mt-2 text-sm text-muted-foreground">
             <span>{storage.building} • {storage.floor}</span>
             {storage.owner && (
-              <span> • Ιδιοκτήτης: {storage.owner}</span>
+              <span> • {t('header.ownerLabel')} {storage.owner}</span>
             )}
           </div>
         </EntityDetailsHeader>

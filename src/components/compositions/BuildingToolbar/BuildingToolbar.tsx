@@ -220,12 +220,12 @@ export function BuildingToolbar({
     });
   }
   
-  // Title with selection info
+  // 🏢 ENTERPRISE: i18n for title with selection info
   const getTitle = () => {
     if (selectedCount > 0) {
-      return `${selectedCount} από ${totalCount} επιλεγμένα`;
+      return t('toolbar.ui.selectedOfTotal', { selected: selectedCount, total: totalCount });
     }
-    return `${totalCount} Κτίρια`;
+    return t('toolbar.ui.buildingsCount', { count: totalCount });
   };
   
   return (
@@ -233,10 +233,10 @@ export function BuildingToolbar({
       variant="default"
       position="sticky"
       title={getTitle()}
-      subtitle={selectedCount > 0 ? 'Επιλέξτε ενέργεια για τα επιλεγμένα στοιχεία' : undefined}
+      subtitle={selectedCount > 0 ? t('toolbar.ui.selectActionForSelected') : undefined}
       
       search={{
-        placeholder: 'Αναζήτηση κτιρίων...',
+        placeholder: t('toolbar.ui.searchPlaceholder'),
         value: searchValue,
         onChange: onSearchChange,
         onClear: () => onSearchChange?.(''),

@@ -3,8 +3,12 @@
 import React from 'react';
 import { Briefcase } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function HeaderTitle() {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   return (
     <div className="flex items-center gap-3">
@@ -12,9 +16,9 @@ export function HeaderTitle() {
         <Briefcase className={`${iconSizes.md} text-white`} />
       </div>
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Διαχείριση Έργων</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t('header.pageTitle')}</h1>
         <p className="text-sm text-muted-foreground">
-          Διαχείριση και παρακολούθηση κατασκευαστικών έργων
+          {t('header.pageSubtitle')}
         </p>
       </div>
     </div>

@@ -29,6 +29,8 @@ import { MODAL_FLEX_PATTERNS, getIconSize } from '../config/modal-layout';
 import { getSelectStyles, getEncodingOptions } from '../config/modal-select';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: File type detection
 type ImportFileType = 'dxf' | 'pdf' | null;
@@ -51,6 +53,8 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
     onPdfImport,
     allowPdf = true
 }) => {
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('dxf-viewer');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [fileType, setFileType] = useState<ImportFileType>(null);
     const [encoding, setEncoding] = useState('windows-1253');
@@ -109,7 +113,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
             setSelectedFile(null);
             setFileType(null);
         } catch (error) {
-            console.error('❌ Σφάλμα κατά την εισαγωγή αρχείου:', error);
+            console.error(`❌ ${t('importModal.errors.importFailed')}`, error);
         } finally {
             setIsLoading(false);
         }
@@ -129,17 +133,17 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
     // 🏢 ENTERPRISE: Get title based on supported file types
     const getModalTitle = (): string => {
         if (isPdfSupported) {
-            return 'Εισαγωγή Αρχείου DXF / PDF';
+            return t('importModal.titleDxfPdf');
         }
-        return 'Εισαγωγή Αρχείου DXF';
+        return t('importModal.titleDxf');
     };
 
     // 🏢 ENTERPRISE: Get file label based on supported types
     const getFileLabel = (): string => {
         if (isPdfSupported) {
-            return 'Αρχείο DXF ή PDF';
+            return t('importModal.fileLabelDxfPdf');
         }
-        return 'Αρχείο DXF';
+        return t('importModal.fileLabelDxf');
     };
 
     // 🏢 ENTERPRISE: Get icon based on file type
@@ -170,8 +174,8 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
                             required
                             description={!selectedFile
                                 ? (isPdfSupported
-                                    ? "Επιλέξτε αρχείο DXF (κάτοψη) ή PDF (background)."
-                                    : "Δεν επιλέχθηκε κανένα αρχείο.")
+                                    ? t('importModal.selectDxfOrPdf')
+                                    : t('importModal.noFileSelected'))
                                 : undefined}
                         >
                             {/* Hidden file input */}
@@ -193,15 +197,15 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
                                 className={getSelectStyles().trigger}
                             >
                                 {getFileIcon()}
-                                {selectedFile ? selectedFile.name : 'Επιλογή αρχείου'}
+                                {selectedFile ? selectedFile.name : t('importModal.selectFile')}
                             </Button>
 
                             {/* 🏢 ENTERPRISE: Show file type indicator */}
                             {selectedFile && fileType && (
                                 <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_SM} ${fileType === 'pdf' ? 'text-red-400' : 'text-blue-400'}`}>
                                     {fileType === 'pdf'
-                                        ? '📄 PDF αρχείο - Θα φορτωθεί ως background'
-                                        : '📐 DXF αρχείο - Θα φορτωθεί ως κάτοψη'}
+                                        ? t('importModal.fileTypePdf')
+                                        : t('importModal.fileTypeDxf')}
                                 </p>
                             )}
                         </ModalField>
@@ -209,13 +213,13 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
                         {/* 🏢 ENTERPRISE: Show encoding only for DXF files */}
                         {(fileType === 'dxf' || !selectedFile) && (
                             <ModalField
-                                label="Κωδικοποίηση Χαρακτήρων"
-                                description="Επιλέξτε Windows-1253 αν τα Ελληνικά δεν εμφανίζονται σωστά."
+                                label={t('importModal.encoding.label')}
+                                description={t('importModal.encoding.hint')}
                             >
                                 {/* Centralized Select Component */}
                                 <Select value={encoding} onValueChange={setEncoding} disabled={isLoading || fileType === 'pdf'}>
                                     <SelectTrigger className={getSelectStyles().trigger}>
-                                        <SelectValue placeholder="Επιλέξτε κωδικοποίηση" />
+                                        <SelectValue placeholder={t('importModal.encoding.placeholder')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {getEncodingOptions().map((option) => (
@@ -238,14 +242,14 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
                             onClick={handleClose}
                             disabled={isLoading}
                         >
-                            Ακύρωση
+                            {t('importModal.buttons.cancel')}
                         </Button>
                         <Button
                             type="submit"
                             form="dxf-import-form"
                             disabled={!selectedFile || !fileType || isLoading}
                         >
-                            {isLoading ? 'Εισαγωγή...' : 'Εισαγωγή'}
+                            {isLoading ? t('importModal.buttons.importing') : t('importModal.buttons.import')}
                         </Button>
                     </ModalActions>
                 </DialogFooter>

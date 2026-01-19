@@ -51,9 +51,10 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   // GLOBAL ROLES (Not project-scoped)
   // ===========================================================================
 
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   super_admin: {
-    name: 'Υπερ-Διαχειριστής',
-    description: 'Break-glass, system-wide access',
+    name: 'auth.roles.superAdmin.name',
+    description: 'auth.roles.superAdmin.description',
     permissions: [],  // Empty - handled via isBypass
     level: 0,
     isProjectRole: false,
@@ -61,8 +62,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   },
 
   company_admin: {
-    name: 'Διαχειριστής Εταιρείας',
-    description: 'Company-wide management',
+    name: 'auth.roles.companyAdmin.name',
+    description: 'auth.roles.companyAdmin.description',
     permissions: [
       'users:users:view',
       'users:users:manage',
@@ -87,8 +88,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   // ===========================================================================
 
   project_manager: {
-    name: 'Υπεύθυνος Έργου',
-    description: 'Full project management capabilities',
+    name: 'auth.roles.projectManager.name',
+    description: 'auth.roles.projectManager.description',
     permissions: [
       'projects:projects:view',
       'projects:projects:update',
@@ -112,8 +113,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   },
 
   architect: {
-    name: 'Αρχιτέκτονας',
-    description: 'Design and DXF access',
+    name: 'auth.roles.architect.name',
+    description: 'auth.roles.architect.description',
     permissions: [
       'dxf:files:view',
       'dxf:layers:view',
@@ -126,8 +127,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   },
 
   engineer: {
-    name: 'Μηχανικός',
-    description: 'Technical specifications access',
+    name: 'auth.roles.engineer.name',
+    description: 'auth.roles.engineer.description',
     permissions: [
       'dxf:files:view',
       'dxf:layers:view',
@@ -141,8 +142,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   },
 
   site_manager: {
-    name: 'Εργοταξιάρχης',
-    description: 'Site operations and progress tracking',
+    name: 'auth.roles.siteManager.name',
+    description: 'auth.roles.siteManager.description',
     permissions: [
       'photos:photos:upload',
       'progress:progress:update',
@@ -156,8 +157,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   },
 
   accountant: {
-    name: 'Λογιστής',
-    description: 'Financial operations',
+    name: 'auth.roles.accountant.name',
+    description: 'auth.roles.accountant.description',
     permissions: [
       'finance:invoices:view',
       'finance:invoices:update',
@@ -169,8 +170,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   },
 
   sales_agent: {
-    name: 'Πωλητής',
-    description: 'CRM and customer communications',
+    name: 'auth.roles.salesAgent.name',
+    description: 'auth.roles.salesAgent.description',
     permissions: [
       'crm:contacts:view',
       'crm:contacts:create',
@@ -187,8 +188,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   },
 
   data_entry: {
-    name: 'Καταχωρητής',
-    description: 'Basic data entry operations',
+    name: 'auth.roles.dataEntry.name',
+    description: 'auth.roles.dataEntry.description',
     permissions: [
       'projects:projects:view',
       'units:units:view',
@@ -201,8 +202,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   },
 
   vendor: {
-    name: 'Προμηθευτής',
-    description: 'External supplier access',
+    name: 'auth.roles.vendor.name',
+    description: 'auth.roles.vendor.description',
     permissions: [
       'orders:orders:view',
       'deliveries:deliveries:view',
@@ -214,8 +215,8 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
   },
 
   viewer: {
-    name: 'Θεατής',
-    description: 'Read-only access',
+    name: 'auth.roles.viewer.name',
+    description: 'auth.roles.viewer.description',
     permissions: [
       'projects:projects:view',
       'projects:floors:view',

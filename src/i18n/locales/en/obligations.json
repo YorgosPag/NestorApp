@@ -1,0 +1,101 @@
+{
+  "documentHeader": {
+    "defaultContractor": "CONTRACTOR COMPANY",
+    "companyType": "CONSTRUCTION TECHNICAL COMPANY",
+    "documentTitle": "SPECIFICATION OF OBLIGATIONS",
+    "defaultTitle": "New Specification of Obligations",
+    "defaultProjectName": "Project Name",
+    "fields": {
+      "location": "Location:",
+      "address": "Address:",
+      "plot": "Plot:",
+      "buildingPermit": "Building Permit:",
+      "owners": "Owners:",
+      "ownerDefault": "Owner {index}",
+      "status": "Status:"
+    }
+  },
+  "categories": {
+    "general": "General",
+    "construction": "Construction",
+    "materials": "Materials",
+    "systems": "Systems",
+    "finishes": "Finishes",
+    "installations": "Installations",
+    "safety": "Safety",
+    "environment": "Environment"
+  },
+  "newPage": {
+    "title": "New Specification of Obligations",
+    "subtitle": "Create a new specification of obligations with live preview",
+    "editOnly": "Edit only",
+    "splitView": "Split View",
+    "creating": "Creating...",
+    "create": "Create"
+  },
+  "basicInfo": {
+    "title": "Basic Information",
+    "company": "Contractor Company",
+    "required": "*",
+    "loadingCompanies": "Loading companies...",
+    "selectCompany": "Select company",
+    "project": "Project (Optional)",
+    "selectCompanyFirst": "First select a company",
+    "loadingProjects": "Loading projects...",
+    "selectProject": "Select project",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g. Specification of Obligations - Athanasiadis Plot",
+    "projectName": "Project Name",
+    "projectNamePlaceholder": "e.g. Thermi Extension"
+  },
+  "template": {
+    "title": "Template",
+    "useDefault": "Use default template",
+    "sections": "sections"
+  },
+  "structure": {
+    "title": "Structure & Content"
+  },
+  "preview": {
+    "title": "Live Preview",
+    "description": "See how the final document will look",
+    "unknownProject": "Unknown project",
+    "unknownContractor": "Unknown contractor"
+  },
+  "validation": {
+    "titleRequired": "Please enter a title",
+    "projectNameRequired": "Please enter a project name",
+    "createError": "Error creating the specification of obligations",
+    "document": {
+      "titleRequired": "Title is required",
+      "projectNameRequired": "Project name is required",
+      "contractorRequired": "Contractor company is required",
+      "ownersRequired": "At least one owner is required",
+      "noSections": "Document contains no sections"
+    },
+    "section": {
+      "prefix": "Section {index}",
+      "titleRequired": "Section title is required",
+      "numberRequired": "Section number is required",
+      "noContent": "Section has no content",
+      "contentTooShort": "Section content is too short"
+    },
+    "article": {
+      "prefix": "Article {index}",
+      "titleRequired": "Article title is required",
+      "numberRequired": "Article number is required",
+      "noContent": "Article has no content"
+    },
+    "paragraph": {
+      "prefix": "Paragraph {index}",
+      "contentRequired": "Paragraph content is required",
+      "numberRequired": "Paragraph number is required",
+      "contentTooShort": "Paragraph content is too short"
+    }
+  },
+  "aria": {
+    "editObligation": "Edit obligation",
+    "editForm": "Edit form",
+    "preview": "Preview"
+  }
+}

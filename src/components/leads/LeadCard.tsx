@@ -4,6 +4,8 @@ import type { Opportunity } from '@/types/crm';
 import { INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
 export function LeadCard({
@@ -25,6 +27,8 @@ export function LeadCard({
 }) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('crm');
 
   return (
     <article className={`${colors.bg.primary} border rounded-lg p-4 ${INTERACTIVE_PATTERNS.CARD_STANDARD}`} itemScope itemType="https://schema.org/Person">
@@ -59,26 +63,26 @@ export function LeadCard({
             )}
             <p className="flex items-center gap-2">
               <Calendar className={iconSizes.sm} />
-              <span>Δημιουργήθηκε: {formatDate(lead.createdAt)}</span>
+              <span>{t('leadCard.createdAt')}: {formatDate(lead.createdAt)}</span>
             </p>
           </address>
 
           {lead.notes && (
-            <aside className={`mt-2 p-2 ${colors.bg.secondary} rounded text-sm ${colors.text.muted}`} role="note" aria-label="Σημειώσεις Lead">
-              <strong>Σημειώσεις:</strong> {lead.notes}
+            <aside className={`mt-2 p-2 ${colors.bg.secondary} rounded text-sm ${colors.text.muted}`} role="note" aria-label={t('leadCard.notesLabel')}>
+              <strong>{t('leadCard.notes')}:</strong> {lead.notes}
             </aside>
           )}
         </section>
 
-        <nav className="flex flex-col gap-2 ml-4" aria-label="Ενέργειες για lead">
-          <section className="flex gap-2" aria-label="Πρωτεύουσες Ενέργειες">
+        <nav className="flex flex-col gap-2 ml-4" aria-label={t('leadCard.actionsLabel')}>
+          <section className="flex gap-2" aria-label={t('leadCard.primaryActions')}>
             <button
               onClick={() => onEmail(lead)}
               disabled={!lead.email}
               className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm ${
                 lead.email ? `${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}` : `${colors.text.muted} cursor-not-allowed`
               }`}
-              title={lead.email ? "Αποστολή Email" : "Δεν υπάρχει email"}
+              title={lead.email ? t('leadCard.sendEmail') : t('leadCard.noEmail')}
             >
               <Send className={iconSizes.sm} />
               Email
@@ -89,17 +93,17 @@ export function LeadCard({
               className={`flex items-center gap-1 px-3 py-1.5 ${colors.text.info} rounded text-sm ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
             >
               <Edit3 className={iconSizes.sm} />
-              Επεξεργασία
+              {t('leadCard.edit')}
             </button>
           </section>
 
-          <section className="flex gap-2" aria-label="Δευτερεύουσες Ενέργειες">
+          <section className="flex gap-2" aria-label={t('leadCard.secondaryActions')}>
             <button
               onClick={() => onView(lead.id!)}
               className={`flex items-center gap-1 px-3 py-1.5 ${colors.text.muted} rounded text-sm ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
             >
               <ExternalLink className={iconSizes.sm} />
-              Προφίλ
+              {t('leadCard.profile')}
             </button>
 
             <button
@@ -107,7 +111,7 @@ export function LeadCard({
               className={`flex items-center gap-1 px-3 py-1.5 ${colors.text.error} rounded text-sm ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER}`}
             >
               <Trash2 className={iconSizes.sm} />
-              Διαγραφή
+              {t('leadCard.delete')}
             </button>
           </section>
         </nav>

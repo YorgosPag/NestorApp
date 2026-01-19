@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react'; // TypeScript refresh
@@ -18,6 +19,8 @@ import {
 } from '@/components/generic/config/photo-config';
 import { useFocusTrap, announceToScreenReader } from '@/utils/accessibility';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -64,22 +67,23 @@ function createGalleryCounterBadge(currentIndex: number, totalPhotos: number) {
 
 /**
  * Δημιουργεί contact type badge με κεντρικοποιημένο badge system
+ * 🏢 ENTERPRISE: i18n-enabled with t function parameter
  */
-function createContactTypeBadge(contactType: Contact['type']) {
+function createContactTypeBadge(contactType: Contact['type'], t: (key: string) => string) {
   let label = '';
 
   switch (contactType) {
     case 'individual':
-      label = 'Φυσικό Πρόσωπο';
+      label = t('photoPreview.contactType.individual');
       break;
     case 'company':
-      label = 'Νομικό Πρόσωπο';
+      label = t('photoPreview.contactType.company');
       break;
     case 'service':
-      label = 'Δημόσια Υπηρεσία';
+      label = t('photoPreview.contactType.service');
       break;
     default:
-      label = 'Άγνωστος Τύπος';
+      label = t('photoPreview.contactType.unknown');
   }
 
   return BadgeFactory.createCommonBadge('info', {
@@ -91,12 +95,14 @@ function createContactTypeBadge(contactType: Contact['type']) {
 
 /**
  * Δημιουργεί κατάλληλο τίτλο για τη φωτογραφία βάσει τύπου και επαφής
+ * 🏢 ENTERPRISE: i18n-enabled with t function parameter
  */
 function generatePhotoTitle(
-  contact?: Contact,
+  contact: Contact | undefined,
   photoType: PhotoPreviewModalProps['photoType'] = 'avatar',
-  photoIndex?: number,
-  customTitle?: string
+  photoIndex: number | undefined,
+  customTitle: string | undefined,
+  t: (key: string, params?: Record<string, unknown>) => string
 ): string {
   // Αν υπάρχει custom τίτλος, χρησιμοποίησε αυτόν
   if (customTitle) {
@@ -108,15 +114,17 @@ function generatePhotoTitle(
     switch (photoType) {
       case 'avatar':
       case 'profile':
-        return 'Φωτογραφία Προφίλ';
+        return t('photoPreview.titles.profile');
       case 'logo':
-        return 'Λογότυπο';
+        return t('photoPreview.titles.logo');
       case 'representative':
-        return 'Φωτογραφία Εκπροσώπου';
+        return t('photoPreview.titles.representative');
       case 'gallery':
-        return photoIndex !== undefined ? `Φωτογραφία ${photoIndex + 1}` : 'Φωτογραφία';
+        return photoIndex !== undefined
+          ? t('photoPreview.titles.photoWithIndex', { index: photoIndex + 1 })
+          : t('photoPreview.titles.photo');
       default:
-        return 'Φωτογραφία';
+        return t('photoPreview.titles.photo');
     }
   }
 
@@ -196,6 +204,7 @@ export function PhotoPreviewModal({
   // ============================================================================
 
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('common');
   // State για zoom functionality (μελλοντική επέκταση)
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -313,7 +322,7 @@ export function PhotoPreviewModal({
 
   // Δημιουργούμε τον τίτλο
   const displayIndex = isGalleryMode ? currentIndex : photoIndex;
-  const title = generatePhotoTitle(contact, photoType, displayIndex, photoTitle);
+  const title = generatePhotoTitle(contact, photoType, displayIndex, photoTitle, t);
   const IconComponent = getPhotoTypeIcon(photoType);
 
   // Navigation handlers για gallery με accessibility announcements
@@ -615,7 +624,7 @@ export function PhotoPreviewModal({
           </header>
 
           {/* Δεύτερη σειρά: Κεντραρισμένα buttons με κοντά spacing */}
-          <nav className="flex items-center justify-center gap-1" role="toolbar" aria-label="Εργαλεία Φωτογραφίας">
+          <nav className="flex items-center justify-center gap-1" role="toolbar" aria-label={t('photoPreview.toolbar.ariaLabel')}>
             {/* Gallery Navigation */}
             {isGalleryMode && totalPhotos > 1 && (
               <>
@@ -623,8 +632,8 @@ export function PhotoPreviewModal({
                   variant="ghost"
                   size="sm"
                   onClick={handlePreviousPhoto}
-                  title="Προηγούμενη φωτογραφία"
-                  aria-label={`Προηγούμενη φωτογραφία (${currentIndex}/${totalPhotos})`}
+                  title={t('photoPreview.navigation.previous')}
+                  aria-label={t('photoPreview.navigation.previousAria', { current: currentIndex, total: totalPhotos })}
                   className="${iconSizes.xl} p-0"
                   disabled={currentIndex === 0}
                 >
@@ -635,8 +644,8 @@ export function PhotoPreviewModal({
                   variant="ghost"
                   size="sm"
                   onClick={handleNextPhoto}
-                  title="Επόμενη φωτογραφία"
-                  aria-label={`Επόμενη φωτογραφία (${currentIndex + 2}/${totalPhotos})`}
+                  title={t('photoPreview.navigation.next')}
+                  aria-label={t('photoPreview.navigation.nextAria', { current: currentIndex + 2, total: totalPhotos })}
                   className="${iconSizes.xl} p-0"
                   disabled={currentIndex === totalPhotos - 1}
                 >
@@ -652,7 +661,7 @@ export function PhotoPreviewModal({
               size="sm"
               onClick={handleZoomOut}
               disabled={zoom <= 0.25}
-              title="Μικρότερο"
+              title={t('photoPreview.zoom.out')}
               className="${iconSizes.xl} p-0"
             >
               <ZoomOut className={iconSizes.sm} />
@@ -663,7 +672,7 @@ export function PhotoPreviewModal({
               size="sm"
               onClick={handleZoomIn}
               disabled={zoom >= 8}
-              title="Μεγαλύτερο"
+              title={t('photoPreview.zoom.in')}
               className="${iconSizes.xl} p-0"
             >
               <ZoomIn className={iconSizes.sm} />
@@ -673,7 +682,7 @@ export function PhotoPreviewModal({
               variant="ghost"
               size="sm"
               onClick={handleRotate}
-              title="Περιστροφή"
+              title={t('photoPreview.actions.rotate')}
               className="${iconSizes.xl} p-0"
             >
               <RotateCw className={iconSizes.sm} />
@@ -683,7 +692,7 @@ export function PhotoPreviewModal({
               variant="ghost"
               size="sm"
               onClick={handleFitToView}
-              title="Fit to View"
+              title={t('photoPreview.zoom.fit')}
               className="${iconSizes.xl} p-0"
             >
               <Maximize2 className={iconSizes.sm} />
@@ -701,7 +710,7 @@ export function PhotoPreviewModal({
               variant="ghost"
               size="sm"
               onClick={handleDownload}
-              title="Λήψη"
+              title={t('photoPreview.actions.download')}
               className="${iconSizes.xl} p-0"
             >
               <Download className={iconSizes.sm} />
@@ -711,7 +720,7 @@ export function PhotoPreviewModal({
               variant="ghost"
               size="sm"
               onClick={() => onOpenChange(false)}
-              title="Κλείσιμο"
+              title={t('photoPreview.actions.close')}
               className="${iconSizes.xl} p-0"
             >
               <X className={iconSizes.sm} />
@@ -722,17 +731,26 @@ export function PhotoPreviewModal({
         {/* ♿ Hidden description για screen readers */}
         <div id="photo-preview-description" className="sr-only">
           {isGalleryMode
-            ? `Προβολή φωτογραφίας ${currentIndex + 1} από ${totalPhotos}. ${contact ? `Φωτογραφία από ${getContactDisplayName(contact)}.` : ''} Χρησιμοποιήστε τα βέλη για πλοήγηση.`
-            : `Προβολή φωτογραφίας. ${contact ? `Φωτογραφία από ${getContactDisplayName(contact)}.` : ''}`
+            ? t('photoPreview.screenReader.gallery', {
+                current: currentIndex + 1,
+                total: totalPhotos,
+                contactInfo: contact ? t('photoPreview.screenReader.photoFrom', { name: getContactDisplayName(contact) }) : ''
+              })
+            : t('photoPreview.screenReader.single', {
+                contactInfo: contact ? t('photoPreview.screenReader.photoFrom', { name: getContactDisplayName(contact) }) : ''
+              })
           }
         </div>
 
         {/* Photo Content */}
-        <main className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none`} role="main" aria-label="Εμφάνιση Φωτογραφίας">
+        <main className={`flex-1 flex items-center justify-center overflow-hidden ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-none`} role="main" aria-label={t('photoPreview.aria.displayPhoto')}>
           <figure className="relative w-full h-full flex items-center justify-center">
             <img
               src={currentPhoto}
-              alt={`${title}${isGalleryMode ? ` - Φωτογραφία ${currentIndex + 1} από ${totalPhotos}` : ''}`}
+              alt={isGalleryMode
+                ? t('photoPreview.alt.gallery', { title, current: currentIndex + 1, total: totalPhotos })
+                : t('photoPreview.alt.single', { title })
+              }
               className={`max-w-full max-h-full object-contain ${TRANSITION_PRESETS.FAST_TRANSFORM}`}
               style={{
                 transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom}) rotate(${rotation}deg)`,
@@ -766,11 +784,11 @@ export function PhotoPreviewModal({
         </main>
 
         {/* Footer Info - Contact Type και Zoom */}
-        <footer className={`flex items-center justify-between text-sm text-muted-foreground pt-2 border-t ${isMobile ? 'pb-safe pb-8' : 'pb-2'}`} role="contentinfo" aria-label="Πληροφορίες Φωτογραφίας">
-          <section className="flex items-center" role="region" aria-label="Τύπος Επαφής">
+        <footer className={`flex items-center justify-between text-sm text-muted-foreground pt-2 border-t ${isMobile ? 'pb-safe pb-8' : 'pb-2'}`} role="contentinfo" aria-label={t('photoPreview.aria.photoInfo')}>
+          <section className="flex items-center" role="region" aria-label={t('photoPreview.aria.contactType')}>
             {/* Μόνο η ετικέτα τύπου contact - όχι εικονίδιο και όνομα */}
             {contact?.type && (() => {
-              const contactTypeBadge = createContactTypeBadge(contact.type);
+              const contactTypeBadge = createContactTypeBadge(contact.type, t);
               return (
                 <Badge
                   variant={contactTypeBadge.variant}
@@ -781,8 +799,8 @@ export function PhotoPreviewModal({
               );
             })()}
           </section>
-          <aside className="text-xs" role="status" aria-label="Πληροφορίες Εστίασης">
-            Zoom: {Math.round(zoom * 100)}%
+          <aside className="text-xs" role="status" aria-label={t('photoPreview.aria.focusInfo')}>
+            {t('photoPreview.zoom.label')} {Math.round(zoom * 100)}%
           </aside>
         </footer>
       </DialogContent>

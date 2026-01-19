@@ -5,6 +5,8 @@
 import { ChevronsUpDown } from 'lucide-react';
 import type { Property } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface PropertyMultiLevelIndicatorProps {
   property: Property;
@@ -14,8 +16,16 @@ interface PropertyMultiLevelIndicatorProps {
 
 export function PropertyMultiLevelIndicator({ property, centroid, onNavigateLevels }: PropertyMultiLevelIndicatorProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
+
+  // Get translated floor label for SVG text
+  const groundFloor = t('multiLevelIndicator.groundFloor');
+  const firstFloor = t('multiLevelIndicator.firstFloor');
+  const floorLabel = property.name.includes(groundFloor) ? firstFloor : groundFloor;
+
   return (
-    <g 
+    <g
       className="multi-level-indicator cursor-pointer"
       onClick={(e) => {
         e.stopPropagation();
@@ -40,7 +50,7 @@ export function PropertyMultiLevelIndicator({ property, centroid, onNavigateLeve
         fill="white"
         className="font-bold pointer-events-none"
       >
-        {property.name.includes("Ισόγειο") ? "1ος Όροφος" : "Ισόγειο"}
+        {floorLabel}
       </text>
     </g>
   );

@@ -18,6 +18,8 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface TabContentProps {
   selectedItems?: string[];
@@ -45,6 +47,8 @@ export function ActionsTabContent({
   onEditProject,
   onDeleteProject
 }: TabContentProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   return (
@@ -56,7 +60,7 @@ export function ActionsTabContent({
         className="relative"
       >
         <Plus className={`${iconSizes.sm} mr-1`} />
-        Νέο Έργο
+        {t('toolbar.new')}
       </Button>
 
       <Button
@@ -66,7 +70,7 @@ export function ActionsTabContent({
         disabled={selectedItems.length !== 1}
       >
         <Edit className={`${iconSizes.sm} mr-1`} />
-        Επεξεργασία
+        {t('toolbar.edit')}
       </Button>
 
       <Button
@@ -76,7 +80,7 @@ export function ActionsTabContent({
         disabled={selectedItems.length === 0}
       >
         <Trash2 className={`${iconSizes.sm} mr-1`} />
-        Διαγραφή
+        {t('toolbar.delete')}
         {selectedItems.length > 0 && (
           <span className={`ml-1 ${colors.bg.primary} text-destructive px-1 rounded text-xs`}>
             {selectedItems.length}
@@ -89,11 +93,14 @@ export function ActionsTabContent({
 
 // 📂 Εισαγωγή/Εξαγωγή (Import/Export)
 export function ImportExportTabContent({ onExport }: TabContentProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
+  const iconSizes = useIconSizes();
   return (
     <>
       <Button variant="outline" size="sm" onClick={onExport}>
         <Download className={`${iconSizes.sm} mr-1`} />
-        Εξαγωγή
+        {t('toolbar.export')}
       </Button>
 
       <Button
@@ -102,7 +109,7 @@ export function ImportExportTabContent({ onExport }: TabContentProps) {
         onClick={() => console.log('Import projects...')}
       >
         <Upload className={`${iconSizes.sm} mr-1`} />
-        Εισαγωγή
+        {t('toolbar.import')}
       </Button>
     </>
   );
@@ -113,12 +120,14 @@ export function ManagementTabContent({
   selectedItems = [],
   onRefresh
 }: TabContentProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   return (
     <>
       <Button variant="outline" size="sm" onClick={onRefresh}>
         <RefreshCw className={`${iconSizes.sm} mr-1`} />
-        Ανανέωση
+        {t('toolbar.refresh')}
       </Button>
 
       <Button
@@ -128,7 +137,7 @@ export function ManagementTabContent({
         disabled={selectedItems.length === 0}
       >
         <Archive className={`${iconSizes.sm} mr-1`} />
-        Αρχειοθέτηση
+        {t('toolbar.archive')}
       </Button>
 
       <Button
@@ -138,7 +147,7 @@ export function ManagementTabContent({
         disabled={selectedItems.length === 0}
       >
         <Star className={`${iconSizes.sm} mr-1`} />
-        Αγαπημένα
+        {t('toolbar.favorite')}
       </Button>
 
       <Button
@@ -148,7 +157,7 @@ export function ManagementTabContent({
         disabled={selectedItems.length === 0}
       >
         <Share className={`${iconSizes.sm} mr-1`} />
-        Κοινοποίηση
+        {t('toolbar.share')}
       </Button>
     </>
   );
@@ -156,6 +165,8 @@ export function ManagementTabContent({
 
 // 🛠️ Εργαλεία (Tools)
 export function ToolsTabContent({ selectedItems = [] }: TabContentProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   return (
     <>
@@ -166,7 +177,7 @@ export function ToolsTabContent({ selectedItems = [] }: TabContentProps) {
         disabled={selectedItems.length === 0}
       >
         <MapPin className={`${iconSizes.sm} mr-1`} />
-        Χάρτης
+        {t('toolbar.mapView')}
       </Button>
 
       <Button
@@ -175,7 +186,7 @@ export function ToolsTabContent({ selectedItems = [] }: TabContentProps) {
         onClick={() => console.log('Show help...')}
       >
         <HelpCircle className={`${iconSizes.sm} mr-1`} />
-        Βοήθεια
+        {t('toolbar.help')}
       </Button>
     </>
   );
@@ -192,6 +203,8 @@ export function SearchFiltersTabContent({
   statusTabs = [],
   typeTabs = []
 }: TabContentProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
 
@@ -201,7 +214,7 @@ export function SearchFiltersTabContent({
       <div className="relative">
         <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`} />
         <Input
-          placeholder="Αναζήτηση έργων..."
+          placeholder={t('toolbar.search.placeholder')}
           value={searchTerm}
           onChange={(e) => onSearchChange?.(e.target.value)}
           className="pl-10 w-64"
@@ -212,11 +225,11 @@ export function SearchFiltersTabContent({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="relative">
-            Κατάσταση: {statusTabs.find(tab => tab.value === getCurrentStatusFilter?.())?.label || COMMON_FILTER_LABELS.ALL_STATUSES}
+            {t('toolbar.filters.status.label')}: {statusTabs.find(tab => tab.value === getCurrentStatusFilter?.())?.label || COMMON_FILTER_LABELS.ALL_STATUSES}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Κατάσταση έργου</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('toolbar.filters.status.title')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {statusTabs.map(({ value, label }) => (
             <DropdownMenuItem
@@ -234,11 +247,11 @@ export function SearchFiltersTabContent({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="relative">
-            Τύπος: {typeTabs.find(tab => tab.value === getCurrentTypeFilter?.())?.label || COMMON_FILTER_LABELS.ALL_TYPES}
+            {t('toolbar.filters.type.label')}: {typeTabs.find(tab => tab.value === getCurrentTypeFilter?.())?.label || COMMON_FILTER_LABELS.ALL_TYPES}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Τύπος έργου</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('toolbar.filters.type.title')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {typeTabs.map(({ value, label }) => (
             <DropdownMenuItem
@@ -257,27 +270,27 @@ export function SearchFiltersTabContent({
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="relative">
             <ArrowUpDown className={`${iconSizes.sm} mr-1`} />
-            Ταξινόμηση {sortDirection === 'asc' ? '↑' : '↓'}
+            {t('toolbar.filters.sort.label')} {sortDirection === 'asc' ? '↑' : '↓'}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Ταξινόμηση έργων</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('toolbar.filters.sort.title')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setSortDirection('asc')}>
-            Αύξουσα (A-Z)
+            {t('toolbar.filters.sort.ascending')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setSortDirection('desc')}>
-            Φθίνουσα (Z-A)
+            {t('toolbar.filters.sort.descending')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => console.log('Sort by date...')}>
-            Κατά ημερομηνία έναρξης
+            {t('toolbar.filters.sort.byDate')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => console.log('Sort by completion...')}>
-            Κατά πρόοδο
+            {t('toolbar.filters.sort.byCompletion')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => console.log('Sort by priority...')}>
-            Κατά προτεραιότητα
+            {t('toolbar.filters.sort.byPriority')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

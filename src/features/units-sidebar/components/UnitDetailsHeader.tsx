@@ -1,6 +1,8 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { PropertyBadge } from '@/core/badges';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
@@ -17,14 +19,16 @@ const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 // Removed hardcoded getStatusColor and getStatusLabel functions - using centralized UnitBadge instead
 
 export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
+  const { t } = useTranslation('units');
+
   // Empty State - No unit selected
   if (!unit) {
     return (
       <div className="hidden md:block">
         <EntityDetailsHeader
           icon={UnitIcon}
-          title="Επιλέξτε μια μονάδα"
-          subtitle="Δεν έχει επιλεγεί μονάδα"
+          title={t('details.selectUnit')}
+          subtitle={t('details.noUnitSelected')}
           variant="detailed"
           className="h-[81px] flex items-center"
         />
@@ -42,7 +46,7 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
           title={unit.name}
           actions={[
             {
-              label: 'Επίδειξη Μονάδας',
+              label: t('details.showUnit'),
               onClick: () => console.log('Show unit details'),
               icon: Eye,
               className: `bg-gradient-to-r from-blue-500 to-purple-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`

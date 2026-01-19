@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 /**
@@ -19,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CommonBadge } from '@/core/badges';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from 'react-i18next';
 
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import { CustomerActionButtons } from './CustomerActionButtons';
@@ -49,6 +51,7 @@ export function UnifiedCustomerCard({
   // HOOKS & STATE
   // ========================================================================
 
+  const { t } = useTranslation('contacts');
   const iconSizes = useIconSizes();
 
   const {
@@ -193,7 +196,7 @@ export function UnifiedCustomerCard({
         {showUnitsCount && extendedInfo.unitsCount > 0 && (
           <CommonBadge
             status="units"
-            customLabel={`${extendedInfo.unitsCount} μονάδα${extendedInfo.unitsCount !== 1 ? 'ες' : ''}`}
+            customLabel={t('customer.unitsCount', { count: extendedInfo.unitsCount })}
             variant="secondary"
           />
         )}
@@ -268,7 +271,7 @@ export function UnifiedCustomerCard({
               <Users className={iconSizes.sm} />
             </div>
             <div className="flex-1">
-              <p className={styles.title}>Σφάλμα φόρτωσης</p>
+              <p className={styles.title}>{t('customer.loadError')}</p>
               <p className={`${styles.subtitle} text-destructive/70`}>
                 {hasError}
               </p>

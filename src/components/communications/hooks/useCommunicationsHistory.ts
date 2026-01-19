@@ -24,7 +24,8 @@ export function useCommunicationsHistory(contactId?: string) {
         setError(null);
       }
     } catch (err) {
-      if (isMounted) setError('Σφάλμα κατά τη φόρτωση επικοινωνιών');
+      // 🌐 i18n: Error message converted to i18n key - 2026-01-18
+      if (isMounted) setError('communications.errors.loadFailed');
       // Error logging removed
     } finally {
       if (isMounted) setLoading(false);

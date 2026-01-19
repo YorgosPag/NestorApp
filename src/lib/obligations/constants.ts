@@ -1,5 +1,6 @@
 import { SectionCategory, ObligationStatus } from '@/types/obligations';
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const SECTION_CATEGORIES: Record<SectionCategory, {
   label: string;
   color: string;
@@ -7,52 +8,52 @@ export const SECTION_CATEGORIES: Record<SectionCategory, {
   description: string;
 }> = {
   general: {
-    label: 'Γενικά',
+    label: 'obligations.categories.general',
     color: '#6B7280',
     icon: 'FileText',
-    description: 'Γενικές πληροφορίες και όροι'
+    description: 'obligations.categories.generalDescription'
   },
   construction: {
-    label: 'Κατασκευή',
+    label: 'obligations.categories.construction',
     color: '#DC2626',
     icon: 'Hammer',
-    description: 'Όροι και προδιαγραφές κατασκευής'
+    description: 'obligations.categories.constructionDescription'
   },
   materials: {
-    label: 'Υλικά',
+    label: 'obligations.categories.materials',
     color: '#059669',
     icon: 'Package',
-    description: 'Προδιαγραφές υλικών και ποιότητας'
+    description: 'obligations.categories.materialsDescription'
   },
   systems: {
-    label: 'Συστήματα',
+    label: 'obligations.categories.systems',
     color: '#7C2D12',
     icon: 'Settings',
-    description: 'Μηχανολογικά και ηλεκτρολογικά συστήματα'
+    description: 'obligations.categories.systemsDescription'
   },
   finishes: {
-    label: 'Φινιρίσματα',
+    label: 'obligations.categories.finishes',
     color: '#7C3AED',
     icon: 'Palette',
-    description: 'Τελειώματα και εσωτερική διακόσμηση'
+    description: 'obligations.categories.finishesDescription'
   },
   installations: {
-    label: 'Εγκαταστάσεις',
+    label: 'obligations.categories.installations',
     color: '#B91C1C',
     icon: 'Zap',
-    description: 'Εγκαταστάσεις και δίκτυα'
+    description: 'obligations.categories.installationsDescription'
   },
   safety: {
-    label: 'Ασφάλεια',
+    label: 'obligations.categories.safety',
     color: '#DC2626',
     icon: 'Shield',
-    description: 'Όροι ασφαλείας και προστασίας'
+    description: 'obligations.categories.safetyDescription'
   },
   environment: {
-    label: 'Περιβάλλον',
+    label: 'obligations.categories.environment',
     color: '#16A34A',
     icon: 'Leaf',
-    description: 'Περιβαλλοντικοί όροι και βιωσιμότητα'
+    description: 'obligations.categories.environmentDescription'
   }
 };
 
@@ -60,38 +61,39 @@ import { QUALITY_THRESHOLD, PROGRESS_THRESHOLDS } from '@/core/configuration/bus
 
 export { QUALITY_THRESHOLD, PROGRESS_THRESHOLDS };
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const DEFAULT_SECTION_TEMPLATES = {
   general: {
-    title: 'Γενικοί Όροι',
-    content: 'Εισαγωγή γενικών όρων και προϋποθέσεων...'
+    title: 'obligations.templates.general.title',
+    content: 'obligations.templates.general.content'
   },
   construction: {
-    title: 'Κατασκευαστικές Προδιαγραφές',
-    content: 'Τεχνικές προδιαγραφές κατασκευής...'
+    title: 'obligations.templates.construction.title',
+    content: 'obligations.templates.construction.content'
   },
   materials: {
-    title: 'Προδιαγραφές Υλικών',
-    content: 'Ποιότητα και χαρακτηριστικά υλικών...'
+    title: 'obligations.templates.materials.title',
+    content: 'obligations.templates.materials.content'
   },
   systems: {
-    title: 'Συστήματα & Εγκαταστάσεις',
-    content: 'Μηχανολογικές και ηλεκτρολογικές εγκαταστάσεις...'
+    title: 'obligations.templates.systems.title',
+    content: 'obligations.templates.systems.content'
   },
   finishes: {
-    title: 'Φινιρίσματα & Τελειώματα',
-    content: 'Προδιαγραφές τελειωμάτων...'
+    title: 'obligations.templates.finishes.title',
+    content: 'obligations.templates.finishes.content'
   },
   installations: {
-    title: 'Ειδικές Εγκαταστάσεις',
-    content: 'Εγκαταστάσεις υγιεινής, κλιματισμού...'
+    title: 'obligations.templates.installations.title',
+    content: 'obligations.templates.installations.content'
   },
   safety: {
-    title: 'Ασφάλεια & Προστασία',
-    content: 'Μέτρα ασφαλείας και προστασίας...'
+    title: 'obligations.templates.safety.title',
+    content: 'obligations.templates.safety.content'
   },
   environment: {
-    title: 'Περιβαλλοντικοί Όροι',
-    content: 'Περιβαλλοντική συμμόρφωση...'
+    title: 'obligations.templates.environment.title',
+    content: 'obligations.templates.environment.content'
   }
 } as const;
 

@@ -2,10 +2,46 @@
   "overview": {
     "stats": {
       "newLeads": "New Leads",
-      "activeOpportunities": "Active Opportunities", 
+      "activeOpportunities": "Active Opportunities",
       "scheduledViewings": "Scheduled Viewings",
       "pendingTasks": "Pending Tasks"
     }
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "ariaLabel": "CRM Quick Actions",
+    "newEmail": "New Email",
+    "logCall": "Log Call",
+    "newAppointment": "New Appointment",
+    "newTask": "New Task"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "appointmentsFor": "Appointments for",
+    "today": "today",
+    "mock": {
+      "tourWithClient": "10:00 - Tour with G. Papadopoulos",
+      "tourLocation": "Project \"Centre\", Apartment A3",
+      "callWithCompany": "14:30 - Conference call with TechCorp",
+      "onlineMeeting": "Online Meeting"
+    }
+  },
+  "contactsList": {
+    "name": "Name",
+    "company": "Company",
+    "status": "Status",
+    "actions": "Actions",
+    "view": "View"
+  },
+  "contactsTab": {
+    "title": "Contacts",
+    "filters": {
+      "customers": "Customers",
+      "suppliers": "Suppliers",
+      "agents": "Agents"
+    },
+    "search": "Search contacts...",
+    "newContact": "New Contact"
   },
   "opportunities": {
     "unknownDate": "Unknown date",
@@ -15,6 +51,28 @@
       "warning": "This action cannot be undone.",
       "cancel": "Cancel",
       "confirm": "Delete"
+    },
+    "editModal": {
+      "title": "Edit Opportunity",
+      "labels": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "contactId": "Customer ID (soldTo)",
+        "contactIdPlaceholder": "Enter contact ID...",
+        "stage": "Stage",
+        "stagePlaceholder": "Select stage...",
+        "notes": "Notes"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving..."
+      },
+      "messages": {
+        "success": "Opportunity updated successfully!",
+        "error": "Could not update opportunity."
+      }
     },
     "stages": {
       "initial_contact": "Initial Contact",
@@ -45,6 +103,27 @@
       "tasks": "Tasks",
       "calendar": "Calendar",
       "communications": "Communications"
+    },
+    "communicationsArchive": {
+      "title": "Communication Archive"
+    },
+    "recentActivities": {
+      "title": "Recent Activity",
+      "emailFrom": "Email from {name}",
+      "callTo": "Call to {name}",
+      "noteFor": "Note for {name}",
+      "time": {
+        "minutesAgo": "{count} minutes ago",
+        "hoursAgo": "{count} hour ago"
+      }
+    },
+    "teamPerformance": {
+      "title": "Team Performance",
+      "columns": {
+        "member": "Member",
+        "leadsWeek": "Leads (Week)",
+        "closedSales": "Closed Sales"
+      }
     }
   },
   "tasks": {
@@ -222,6 +301,49 @@
       "subtitle": "Add your first lead to get started!"
     }
   },
+  "pipeline": {
+    "title": "Sales Pipeline",
+    "viewList": "List View",
+    "viewPipeline": "Pipeline View",
+    "refresh": "Refresh",
+    "newLead": "New Lead",
+    "loading": "Loading pipeline...",
+    "retry": "Try again",
+    "empty": {
+      "title": "No opportunities",
+      "subtitle": "Add your first opportunity to get started!"
+    }
+  },
+  "contactCard": {
+    "contactDetails": "Contact Details",
+    "sendEmailTo": "Send email to {email} via Gmail",
+    "callTo": "Call {phone}",
+    "phone": "Phone",
+    "source": "Source",
+    "timeline": "Timeline",
+    "createdAt": "Created:",
+    "lastActivity": "Last activity:",
+    "estimatedValue": "Estimated Value",
+    "notes": "Notes",
+    "actions": {
+      "call": "Call",
+      "message": "Message",
+      "edit": "Edit"
+    }
+  },
+  "leadCard": {
+    "createdAt": "Created",
+    "notes": "Notes",
+    "notesLabel": "Lead Notes",
+    "actionsLabel": "Lead actions",
+    "primaryActions": "Primary Actions",
+    "secondaryActions": "Secondary Actions",
+    "sendEmail": "Send Email",
+    "noEmail": "No email available",
+    "edit": "Edit",
+    "profile": "Profile",
+    "delete": "Delete"
+  },
   "errors": {
     "contactNotFound": "Contact not found",
     "invalidStage": "Invalid opportunity stage",
@@ -232,5 +354,34 @@
     "contactCreated": "Contact created successfully",
     "contactUpdated": "Contact updated successfully",
     "contactDeleted": "Contact deleted successfully"
+  },
+  "sendMessage": {
+    "title": "Send Message",
+    "selectChannel": "Select Channel",
+    "selectChannelPlaceholder": "Select channel",
+    "template": "Template (Optional)",
+    "noTemplate": "No template",
+    "recipient": "Recipient",
+    "subject": "Subject",
+    "subjectPlaceholder": "Message subject",
+    "content": "Content",
+    "contentPlaceholder": "Write your message here...",
+    "templateVariables": "Template Variables",
+    "availableVariables": "Available variables:",
+    "variableName": "Variable name",
+    "variableValue": "Value",
+    "addVariable": "Add Variable",
+    "cancel": "Cancel",
+    "send": "Send",
+    "sending": "Sending...",
+    "validation": {
+      "recipientRequired": "Please enter a recipient",
+      "contentRequired": "Please enter content"
+    },
+    "toasts": {
+      "success": "Message sent successfully via {channel}",
+      "error": "Error sending message: {error}",
+      "genericError": "Error sending message"
+    }
   }
 }

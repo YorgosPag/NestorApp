@@ -4,6 +4,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Save, X, Trash2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ActionsBarProps {
   isEditing: boolean;
@@ -23,35 +25,38 @@ export function ActionsBar({
   onClose,
 }: ActionsBarProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
+
   if (isEditing) {
     return (
       <div className="flex items-center gap-3 pt-4 border-t">
-        <Button 
-          onClick={onSave} 
+        <Button
+          onClick={onSave}
           disabled={!hasUnsavedChanges}
           className="flex items-center gap-2"
         >
           <Save className={iconSizes.sm} />
-          Αποθήκευση
+          {t('buttons.save')}
         </Button>
-        
-        <Button 
-          variant="outline" 
+
+        <Button
+          variant="outline"
           onClick={onCancel}
           className="flex items-center gap-2"
         >
           <X className={iconSizes.sm} />
-          Ακύρωση
+          {t('buttons.cancel')}
         </Button>
-        
+
         {onDelete && (
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             onClick={onDelete}
             className="flex items-center gap-2 ml-auto"
           >
             <Trash2 className={iconSizes.sm} />
-            Διαγραφή
+            {t('buttons.delete')}
           </Button>
         )}
       </div>
@@ -62,7 +67,7 @@ export function ActionsBar({
     return (
       <div className="flex items-center gap-3 pt-4 border-t">
         <Button variant="outline" onClick={onClose}>
-          Κλείσιμο
+          {t('buttons.close')}
         </Button>
       </div>
     );

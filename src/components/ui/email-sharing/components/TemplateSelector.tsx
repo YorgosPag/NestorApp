@@ -18,6 +18,7 @@ import { designSystem } from '@/lib/design-system';
 import { Palette } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Services & Types
 import { EmailTemplatesService } from '@/services/email-templates.service';
@@ -46,6 +47,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   disabled = false,
   show = true
 }) => {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -132,7 +134,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           designSystem.getTypographyClass('lg'),
           'mb-2',
           isSelected && `${colors.text.info}`
-        )} role="img" aria-label={`Εικονίδιο ${template.name}`}>
+        )} role="img" aria-label={t('email.templateIcon', { name: template.name })}>
           {template.icon}
         </figure>
 
@@ -158,7 +160,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
         {/* Selected Indicator */}
         {isSelected && (
-          <aside className={`absolute top-2 right-2 ${iconSizes.xs} ${colors.bg.info} ${radius.full} flex items-center justify-center`} role="status" aria-label="Επιλεγμένο">
+          <aside className={`absolute top-2 right-2 ${iconSizes.xs} ${colors.bg.info} ${radius.full} flex items-center justify-center`} role="status" aria-label={t('email.selected')}>
             <div className={`w-1.5 h-1.5 ${designSystem.getBackgroundColor('primary')} ${radius.full}`} />
           </aside>
         )}
@@ -171,7 +173,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   // ============================================================================
 
   return (
-    <section className="space-y-3" role="region" aria-label="Επιλογή Template Email">
+    <section className="space-y-3" role="region" aria-label={t('email.selectTemplate')}>
       {/* Header */}
       <Label className={designSystem.cn(
         "flex items-center gap-2",
@@ -182,11 +184,11 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           iconSizes.sm,
           disabled ? `${colors.text.disabled}` : `${colors.text.info}`
         )} />
-        Email Template
+        {t('email.template')}
       </Label>
 
       {/* Templates Grid */}
-      <nav className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" role="group" aria-label="Διαθέσιμα Templates">
+      <nav className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" role="group" aria-label={t('email.availableTemplates')}>
         {availableTemplates.map(renderTemplateButton)}
       </nav>
 
@@ -196,7 +198,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         'text-muted-foreground text-center',
         disabled && 'text-gray-400'
       )} role="note">
-        Επιλέξτε το κατάλληλο template για την αποστολή
+        {t('email.selectAppropriate')}
       </aside>
     </section>
   );

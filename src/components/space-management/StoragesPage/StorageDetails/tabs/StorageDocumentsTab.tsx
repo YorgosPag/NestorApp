@@ -6,6 +6,8 @@ import { formatDate, formatCurrency } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   FileText,
   Download,
@@ -48,15 +50,16 @@ function getDocumentIcon(type: Document['type']) {
   }
 }
 
-function getDocumentTypeLabel(type: Document['type']) {
+// Helper function to get document type label - uses i18n from component
+function getDocumentTypeLabelKey(type: Document['type']): string {
   switch (type) {
-    case 'contract': return 'Συμβόλαιο';
-    case 'lease': return 'Μίσθωση';
-    case 'inspection': return 'Επιθεώρηση';
-    case 'insurance': return 'Ασφάλιση';
-    case 'maintenance': return 'Συντήρηση';
-    case 'legal': return 'Νομικό';
-    default: return 'Έγγραφο';
+    case 'contract': return 'documents.types.contract';
+    case 'lease': return 'documents.types.lease';
+    case 'inspection': return 'documents.types.inspection';
+    case 'insurance': return 'documents.types.insurance';
+    case 'maintenance': return 'documents.types.maintenance';
+    case 'legal': return 'documents.types.legal';
+    default: return 'documents.types.document';
   }
 }
 
@@ -70,13 +73,14 @@ function getStatusColor(status: Document['status'], colors: ReturnType<typeof us
   }
 }
 
-function getStatusLabel(status: Document['status']) {
+// Helper function to get status label key - uses i18n from component
+function getStatusLabelKey(status: Document['status']): string {
   switch (status) {
-    case 'active': return 'Ενεργό';
-    case 'pending': return 'Εκκρεμές';
-    case 'expired': return 'Ληγμένο';
-    case 'draft': return 'Προσχέδιο';
-    default: return 'Άγνωστη';
+    case 'active': return 'documents.statuses.active';
+    case 'pending': return 'documents.statuses.pending';
+    case 'expired': return 'documents.statuses.expired';
+    case 'draft': return 'documents.statuses.draft';
+    default: return 'documents.statuses.unknown';
   }
 }
 
@@ -84,6 +88,8 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('storage');
 
   // Γεννάμε πραγματικά έγγραφα βάση των στοιχείων της αποθήκης
   const [documents] = useState<Document[]>([
@@ -149,24 +155,24 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <FileText className={iconSizes.md} />
-          Επισκόπηση Εγγράφων
+          {t('documents.overview')}
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.info}`}>{documents.length}</div>
-            <div className="text-sm text-muted-foreground">Συνολικά Έγγραφα</div>
+            <div className="text-sm text-muted-foreground">{t('documents.totalDocuments')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.success}`}>{activeDocuments.length}</div>
-            <div className="text-sm text-muted-foreground">Ενεργά</div>
+            <div className="text-sm text-muted-foreground">{t('documents.active')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.warning}`}>{pendingDocuments.length}</div>
-            <div className="text-sm text-muted-foreground">Εκκρεμή</div>
+            <div className="text-sm text-muted-foreground">{t('documents.pending')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.danger}`}>{expiredDocuments.length}</div>
-            <div className="text-sm text-muted-foreground">Ληγμένα</div>
+            <div className="text-sm text-muted-foreground">{t('documents.expired')}</div>
           </div>
         </div>
       </section>
@@ -175,22 +181,22 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Upload className={iconSizes.md} />
-          Μεταφόρτωση Εγγράφων
+          {t('documents.uploadTitle')}
         </h3>
         <div className="border border-dashed border-border rounded-lg p-6 text-center">
           <Upload className={`${iconSizes.xl} mx-auto mb-2 text-muted-foreground`} />
           <p className="text-sm text-muted-foreground mb-2">
-            Σύρετε και αφήστε εδώ τα έγγραφά σας ή κάντε κλικ για επιλογή
+            {t('documents.dropzoneHint')}
           </p>
           <Button variant="outline" size="sm">
-            Επιλογή Αρχείων
+            {t('documents.selectFiles')}
           </Button>
         </div>
       </section>
 
       {/* Λίστα Εγγράφων */}
       <section>
-        <h3 className="font-semibold mb-4">Έγγραφα Αποθήκης</h3>
+        <h3 className="font-semibold mb-4">{t('documents.storageDocuments')}</h3>
         <div className="space-y-3">
           {documents.map((doc) => {
             const IconComponent = getDocumentIcon(doc.type);
@@ -205,13 +211,13 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium truncate">{doc.name}</h4>
                         <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(doc.status, colors)}`}>
-                          {getStatusLabel(doc.status)}
+                          {t(getStatusLabelKey(doc.status))}
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <FileText className={iconSizes.xs} />
-                          {getDocumentTypeLabel(doc.type)}
+                          {t(getDocumentTypeLabelKey(doc.type))}
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className={iconSizes.xs} />
@@ -249,29 +255,26 @@ export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
 
       {/* Σχετικές Πληροφορίες */}
       <section>
-        <h3 className="font-semibold mb-4">Σχετικές Πληροφορίες</h3>
+        <h3 className="font-semibold mb-4">{t('documents.relatedInfo')}</h3>
         <div className={`bg-card ${quick.card} p-4`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <label className="font-medium text-muted-foreground">Αποθήκη:</label>
+              <label className="font-medium text-muted-foreground">{t('documents.fields.storage')}</label>
               <span className="ml-2">{storage.name} ({storage.area} m²)</span>
             </div>
             <div>
-              <label className="font-medium text-muted-foreground">Τοποθεσία:</label>
+              <label className="font-medium text-muted-foreground">{t('documents.fields.location')}</label>
               <span className="ml-2">{storage.building}, {storage.floor}</span>
             </div>
             <div>
-              <label className="font-medium text-muted-foreground">Κατάσταση:</label>
+              <label className="font-medium text-muted-foreground">{t('documents.fields.status')}</label>
               <span className="ml-2">
-                {storage.status === 'available' ? 'Διαθέσιμη' :
-                 storage.status === 'occupied' ? 'Κατειλημμένη' :
-                 storage.status === 'reserved' ? 'Κρατημένη' :
-                 storage.status === 'maintenance' ? 'Συντήρηση' : 'Άγνωστη'}
+                {t(`general.statuses.${storage.status}`)}
               </span>
             </div>
             {storage.price && (
               <div>
-                <label className="font-medium text-muted-foreground">Αξία:</label>
+                <label className="font-medium text-muted-foreground">{t('documents.fields.value')}</label>
                 <span className="ml-2">{formatCurrency(storage.price)}</span>
               </div>
             )}

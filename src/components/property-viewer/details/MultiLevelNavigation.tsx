@@ -8,6 +8,8 @@ import type { Property } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface MultiLevelNavigationProps {
   property: Property;
@@ -19,16 +21,19 @@ export function MultiLevelNavigation({ property, onSelectFloor, currentFloorId }
   const iconSizes = useIconSizes();
   const { getStatusBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
+
   if (!property.levels) return null;
 
   return (
     <div className={`${colors.bg.info} ${getStatusBorder('info')} p-3 space-y-2`}>
       <h4 className={`text-xs font-semibold ${colors.text.info} flex items-center gap-2`}>
         <ChevronsUpDown className={iconSizes.sm} />
-        Επίπεδα Ακινήτου
+        {t('multiLevel.title')}
       </h4>
       {property.levels.map((level) => (
-        <div 
+        <div
           key={level.floorId}
           className={cn(
             `p-2 ${radius.md} flex items-center justify-between transition-colors`,
@@ -37,7 +42,7 @@ export function MultiLevelNavigation({ property, onSelectFloor, currentFloorId }
         >
           <span className="text-sm font-medium">{level.name}</span>
           <Button size="sm" className="h-7 text-xs" onClick={() => onSelectFloor(level.floorId)}>
-            Μετάβαση
+            {t('multiLevel.goTo')}
           </Button>
         </div>
       ))}

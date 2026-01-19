@@ -6,12 +6,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { ContactsService } from '@/services/contacts.service';
-import { UNIT_SALE_STATUS_LABELS, UNIT_SALE_STATUS, COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -41,6 +43,8 @@ interface ContactLookup {
 export function SoldUnitsPreview() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('admin');
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +155,7 @@ export function SoldUnitsPreview() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Σύνολο Units</p>
+                <p className="text-sm text-muted-foreground">{t('units.total')}</p>
                 <p className="text-2xl font-bold">{units.length}</p>
               </div>
               <UnitIcon className={`${iconSizes.xl} ${unitColor}`} />
@@ -163,10 +167,10 @@ export function SoldUnitsPreview() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">{process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'} Units</p>
+                <p className="text-sm text-muted-foreground">{t('units.mainProjectUnits', { project: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project' })}</p>
                 <p className="text-2xl font-bold">{palaiologouUnits.length}</p>
               </div>
-              <Badge variant="outline">Πρωτ.</Badge>
+              <Badge variant="outline">{t('units.primary')}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -175,7 +179,7 @@ export function SoldUnitsPreview() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Sold χωρίς Customer</p>
+                <p className="text-sm text-muted-foreground">{t('units.soldNoCustomer')}</p>
                 <p className="text-2xl font-bold text-red-600">{soldUnitsWithoutCustomer.length}</p>
               </div>
               <Badge variant="destructive">❌</Badge>
@@ -187,7 +191,7 @@ export function SoldUnitsPreview() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Sold με Customer</p>
+                <p className="text-sm text-muted-foreground">{t('units.soldWithCustomer')}</p>
                 <p className="text-2xl font-bold text-green-600">{soldUnitsWithCustomer.length}</p>
               </div>
               <Badge variant="default">✅</Badge>
@@ -201,7 +205,7 @@ export function SoldUnitsPreview() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>
-              Units Overview {showAll ? '(Όλα)' : `(Έργο ${process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'})`}
+              {t('units.overview')} {showAll ? t('units.allLabel') : t('units.projectLabel', { project: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project' })}
             </CardTitle>
             <div className="flex gap-2">
               <Button
@@ -210,7 +214,7 @@ export function SoldUnitsPreview() {
                 onClick={() => setShowAll(!showAll)}
               >
                 {showAll ? <EyeOff className={`${iconSizes.sm} mr-2`} /> : <Eye className={`${iconSizes.sm} mr-2`} />}
-                {showAll ? `Μόνο ${process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'}` : COMMON_FILTER_LABELS.ALL_UNITS}
+                {showAll ? t('units.onlyProject', { project: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project' }) : t('units.allUnits')}
               </Button>
               <Button
                 variant="outline"
@@ -223,7 +227,7 @@ export function SoldUnitsPreview() {
                 ) : (
                   <RefreshCw className={`${iconSizes.sm} mr-2`} />
                 )}
-                Ανανέωση
+                {t('units.refresh')}
               </Button>
             </div>
           </div>
@@ -232,32 +236,32 @@ export function SoldUnitsPreview() {
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                <strong>Σφάλμα:</strong> {error}
+                <strong>{t('units.error')}</strong> {error}
               </AlertDescription>
             </Alert>
           )}
 
           {loading ? (
-            <div className="text-center py-8">Φόρτωση units...</div>
+            <div className="text-center py-8">{t('units.loading')}</div>
           ) : (
             <div className={`${quick.table} border max-h-96 overflow-auto`}>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Όνομα</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Customer (soldTo)</TableHead>
-                    <TableHead>Building</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead className="text-right">Τιμή</TableHead>
+                    <TableHead>{t('units.table.name')}</TableHead>
+                    <TableHead>{t('units.table.status')}</TableHead>
+                    <TableHead>{t('units.table.customer')}</TableHead>
+                    <TableHead>{t('units.table.building')}</TableHead>
+                    <TableHead>{t('units.table.project')}</TableHead>
+                    <TableHead className="text-right">{t('units.table.price')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {displayUnits.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        Δεν βρέθηκαν units
+                        {t('units.notFound')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -267,7 +271,7 @@ export function SoldUnitsPreview() {
                           {unit.id.substring(0, 8)}...
                         </TableCell>
                         <TableCell className="font-medium">
-                          {unit.name || 'Unnamed Unit'}
+                          {unit.name || t('units.unnamed')}
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -285,15 +289,15 @@ export function SoldUnitsPreview() {
                           {unit.soldTo && unit.soldTo !== UNIT_SALE_STATUS.NOT_SOLD ? (
                             <div className="space-y-1">
                               <Badge variant="default" className="text-xs">
-                                {contactLookup[unit.soldTo] || 'Loading...'}
+                                {contactLookup[unit.soldTo] || t('units.contactLoading')}
                               </Badge>
                               <div className="text-xs text-muted-foreground font-mono">
-                                ID: {unit.soldTo.substring(0, 8)}...
+                                {t('units.table.idLabel')}: {unit.soldTo.substring(0, 8)}...
                               </div>
                             </div>
                           ) : (
                             <Badge variant="outline" className="text-red-600">
-                              Χωρίς Customer
+                              {t('units.noCustomer')}
                             </Badge>
                           )}
                         </TableCell>
@@ -316,8 +320,8 @@ export function SoldUnitsPreview() {
 
           {/* Statistics */}
           <div className="mt-4 text-sm text-muted-foreground">
-            Εμφανίζονται {displayUnits.length} από {units.length} συνολικά units
-            {!showAll && ` (φιλτραρισμένα για έργο ${process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'})`}
+            {t('units.displaying', { displayed: displayUnits.length, total: units.length })}
+            {!showAll && ` ${t('units.filteredFor', { project: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project' })}`}
           </div>
         </CardContent>
       </Card>

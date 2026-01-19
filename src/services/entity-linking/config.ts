@@ -25,16 +25,17 @@ import type { EntityLinkingConfig, EntityRelationship, EntityType } from './type
  * - Which event to dispatch on success
  * - Human-readable labels for UI
  */
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const ENTITY_LINKING_CONFIG: EntityLinkingConfig = {
   'project-company': {
     collection: COLLECTIONS.PROJECTS,
     foreignKey: 'companyId',
     successEvent: REALTIME_EVENTS.NAVIGATION_REFRESH,
     labels: {
-      linkAction: 'Σύνδεση έργου με εταιρεία',
-      unlinkAction: 'Αποσύνδεση έργου από εταιρεία',
-      successMessage: 'Το έργο συνδέθηκε επιτυχώς με την εταιρεία!',
-      errorMessage: 'Αποτυχία σύνδεσης έργου',
+      linkAction: 'entityLinking.projectCompany.linkAction',
+      unlinkAction: 'entityLinking.projectCompany.unlinkAction',
+      successMessage: 'entityLinking.projectCompany.successMessage',
+      errorMessage: 'entityLinking.projectCompany.errorMessage',
     },
   },
 
@@ -43,10 +44,10 @@ export const ENTITY_LINKING_CONFIG: EntityLinkingConfig = {
     foreignKey: 'projectId',
     successEvent: REALTIME_EVENTS.NAVIGATION_REFRESH,
     labels: {
-      linkAction: 'Σύνδεση κτιρίου με έργο',
-      unlinkAction: 'Αποσύνδεση κτιρίου από έργο',
-      successMessage: 'Το κτίριο συνδέθηκε επιτυχώς με το έργο!',
-      errorMessage: 'Αποτυχία σύνδεσης κτιρίου',
+      linkAction: 'entityLinking.buildingProject.linkAction',
+      unlinkAction: 'entityLinking.buildingProject.unlinkAction',
+      successMessage: 'entityLinking.buildingProject.successMessage',
+      errorMessage: 'entityLinking.buildingProject.errorMessage',
     },
   },
 
@@ -55,10 +56,10 @@ export const ENTITY_LINKING_CONFIG: EntityLinkingConfig = {
     foreignKey: 'buildingId',
     successEvent: REALTIME_EVENTS.UNIT_BUILDING_LINKED,
     labels: {
-      linkAction: 'Σύνδεση μονάδας με κτίριο',
-      unlinkAction: 'Αποσύνδεση μονάδας από κτίριο',
-      successMessage: 'Η μονάδα συνδέθηκε επιτυχώς με το κτίριο!',
-      errorMessage: 'Αποτυχία σύνδεσης μονάδας',
+      linkAction: 'entityLinking.unitBuilding.linkAction',
+      unlinkAction: 'entityLinking.unitBuilding.unlinkAction',
+      successMessage: 'entityLinking.unitBuilding.successMessage',
+      errorMessage: 'entityLinking.unitBuilding.errorMessage',
     },
   },
 
@@ -67,10 +68,10 @@ export const ENTITY_LINKING_CONFIG: EntityLinkingConfig = {
     foreignKey: 'buildingId',
     successEvent: REALTIME_EVENTS.NAVIGATION_REFRESH,
     labels: {
-      linkAction: 'Σύνδεση ορόφου με κτίριο',
-      unlinkAction: 'Αποσύνδεση ορόφου από κτίριο',
-      successMessage: 'Ο όροφος συνδέθηκε επιτυχώς με το κτίριο!',
-      errorMessage: 'Αποτυχία σύνδεσης ορόφου',
+      linkAction: 'entityLinking.floorBuilding.linkAction',
+      unlinkAction: 'entityLinking.floorBuilding.unlinkAction',
+      successMessage: 'entityLinking.floorBuilding.successMessage',
+      errorMessage: 'entityLinking.floorBuilding.errorMessage',
     },
   },
 } as const;
@@ -165,13 +166,14 @@ export function getEntityApiEndpoint(entityType: EntityType): string {
 // 🏢 ENTERPRISE: Error Messages (Centralized)
 // ============================================================================
 
+// 🌐 i18n: Error messages converted to i18n keys - 2026-01-18
 export const ERROR_MESSAGES = {
-  ENTITY_NOT_FOUND: 'Η οντότητα δεν βρέθηκε',
-  PARENT_NOT_FOUND: 'Η γονική οντότητα δεν βρέθηκε',
-  INVALID_RELATIONSHIP: 'Μη έγκυρη σχέση οντοτήτων',
-  ALREADY_LINKED: 'Η οντότητα είναι ήδη συνδεδεμένη',
-  PERMISSION_DENIED: 'Δεν έχετε δικαίωμα για αυτή την ενέργεια',
-  NETWORK_ERROR: 'Σφάλμα δικτύου - Δοκιμάστε ξανά',
-  VALIDATION_ERROR: 'Τα δεδομένα δεν είναι έγκυρα',
-  UNKNOWN_ERROR: 'Άγνωστο σφάλμα - Επικοινωνήστε με υποστήριξη',
+  ENTITY_NOT_FOUND: 'entityLinking.errors.entityNotFound',
+  PARENT_NOT_FOUND: 'entityLinking.errors.parentNotFound',
+  INVALID_RELATIONSHIP: 'entityLinking.errors.invalidRelationship',
+  ALREADY_LINKED: 'entityLinking.errors.alreadyLinked',
+  PERMISSION_DENIED: 'entityLinking.errors.permissionDenied',
+  NETWORK_ERROR: 'entityLinking.errors.networkError',
+  VALIDATION_ERROR: 'entityLinking.errors.validationError',
+  UNKNOWN_ERROR: 'entityLinking.errors.unknownError',
 } as const;

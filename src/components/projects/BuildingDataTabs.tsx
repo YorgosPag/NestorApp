@@ -9,6 +9,8 @@ import { GeneralPlotDataTab, type PlotData } from './GeneralPlotDataTab';
 import { AllowedBuildingDataTab, type AllowedDataInput, type AllowedDataCalculated } from './AllowedBuildingDataTab';
 import { ActualBuildingDataTab, type ActualData, type CalculatedActualData } from './ActualBuildingDataTab';
 import { OtherDataTab } from './OtherDataTab';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface BuildingDataTabsProps {
   isEditing: boolean;
@@ -33,10 +35,13 @@ export function BuildingDataTabs({
   onAllowedDataChange,
   onActualDataChange,
 }: BuildingDataTabsProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
+
   const buildingTabs = [
     {
       id: 'general-plot-data',
-      label: 'Όροι Δόμησης Οικοπέδου',
+      label: t('buildingDataTabs.plotTerms'),
       icon: NAVIGATION_ENTITIES.building.icon,
       content: (
         <GeneralPlotDataTab
@@ -48,7 +53,7 @@ export function BuildingDataTabs({
     },
     {
       id: 'allowed-data',
-      label: 'Επιτρεπόμενα',
+      label: t('buildingDataTabs.allowed'),
       icon: CheckCircle,
       content: (
         <AllowedBuildingDataTab
@@ -61,7 +66,7 @@ export function BuildingDataTabs({
     },
     {
       id: 'actual-data',
-      label: 'Πραγματοποιούμενα',
+      label: t('buildingDataTabs.actual'),
       icon: Target,
       content: (
         <ActualBuildingDataTab
@@ -74,7 +79,7 @@ export function BuildingDataTabs({
     },
     {
       id: 'other-data',
-      label: 'Λοιπά Στοιχεία',
+      label: t('buildingDataTabs.other'),
       icon: MoreHorizontal,
       content: <OtherDataTab />,
     }

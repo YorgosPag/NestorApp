@@ -75,43 +75,39 @@ export interface TypeQuickFiltersProps {
 /**
  * Unit Type Options (για Μονάδες/Διαμερίσματα)
  * Icons follow enterprise standards (Zillow, Rightmove, JLL patterns)
+ * 🏢 ENTERPRISE: Labels and tooltips use i18n keys (filters.unitTypes.*)
  */
 export const UNIT_TYPE_OPTIONS: TypeFilterOption[] = [
-  { value: 'all', label: 'Όλες', icon: LayoutGrid, tooltip: 'Εμφάνιση όλων των τύπων' },
-  { value: 'studio', label: 'Studio', icon: BedSingle, tooltip: 'Studio / Γκαρσονιέρα' },
-  { value: 'apartment', label: 'Διαμέρισμα', icon: Building2, tooltip: 'Διαμέρισμα' },
-  { value: 'maisonette', label: 'Μεζονέτα', icon: NAVIGATION_ENTITIES.building.icon, tooltip: 'Μεζονέτα' },
-  { value: 'shop', label: 'Κατάστημα', icon: Store, tooltip: 'Κατάστημα' },
-  { value: 'office', label: 'Γραφείο', icon: Briefcase, tooltip: 'Γραφείο' },
+  { value: 'all', label: 'filters.unitTypes.all', icon: LayoutGrid, tooltip: 'filters.unitTypes.allTooltip' },
+  { value: 'studio', label: 'filters.unitTypes.studio', icon: BedSingle, tooltip: 'filters.unitTypes.studioTooltip' },
+  { value: 'apartment', label: 'filters.unitTypes.apartment', icon: Building2, tooltip: 'filters.unitTypes.apartmentTooltip' },
+  { value: 'maisonette', label: 'filters.unitTypes.maisonette', icon: NAVIGATION_ENTITIES.building.icon, tooltip: 'filters.unitTypes.maisonetteTooltip' },
+  { value: 'shop', label: 'filters.unitTypes.shop', icon: Store, tooltip: 'filters.unitTypes.shopTooltip' },
+  { value: 'office', label: 'filters.unitTypes.office', icon: Briefcase, tooltip: 'filters.unitTypes.officeTooltip' },
 ];
 
 /**
  * Contact Type Options (για Επαφές)
  * 🏢 ENTERPRISE: Using centralized NAVIGATION_ENTITIES for consistency
- * - individual: Φυσικό Πρόσωπο
- * - company: Νομικό Πρόσωπο / Εταιρεία
- * - service: Δημόσια Υπηρεσία
+ * 🏢 ENTERPRISE: Labels and tooltips use i18n keys (filters.contactTypes.*)
  */
 export const CONTACT_TYPE_OPTIONS: TypeFilterOption[] = [
-  { value: 'all', label: 'Όλες', icon: Users, tooltip: 'Εμφάνιση όλων των επαφών' },
-  { value: 'individual', label: 'Φυσικό', icon: NAVIGATION_ENTITIES.contactIndividual.icon, tooltip: NAVIGATION_ENTITIES.contactIndividual.label },
-  { value: 'company', label: 'Εταιρεία', icon: NAVIGATION_ENTITIES.contactCompany.icon, tooltip: NAVIGATION_ENTITIES.contactCompany.label },
-  { value: 'service', label: 'Υπηρεσία', icon: NAVIGATION_ENTITIES.contactService.icon, tooltip: NAVIGATION_ENTITIES.contactService.label },
+  { value: 'all', label: 'filters.contactTypes.all', icon: Users, tooltip: 'filters.contactTypes.allTooltip' },
+  { value: 'individual', label: 'filters.contactTypes.individual', icon: NAVIGATION_ENTITIES.contactIndividual.icon, tooltip: 'contacts.types.individual' },
+  { value: 'company', label: 'filters.contactTypes.company', icon: NAVIGATION_ENTITIES.contactCompany.icon, tooltip: 'contacts.types.company' },
+  { value: 'service', label: 'filters.contactTypes.service', icon: NAVIGATION_ENTITIES.contactService.icon, tooltip: 'contacts.types.service' },
 ];
 
 /**
  * Channel Type Options (για Communications)
  * 🏢 ENTERPRISE: Channels for filtering communications
- * - all: Όλα τα κανάλια
- * - email: Email
- * - sms: SMS
- * - telegram: Telegram
+ * 🏢 ENTERPRISE: Labels and tooltips use i18n keys (filters.channels.*)
  */
 export const CHANNEL_OPTIONS: TypeFilterOption[] = [
-  { value: 'all', label: 'Όλα', icon: LayoutGrid, tooltip: 'Εμφάνιση όλων των καναλιών' },
-  { value: 'email', label: 'Email', icon: Mail, tooltip: 'Email μηνύματα' },
-  { value: 'sms', label: 'SMS', icon: Phone, tooltip: 'SMS μηνύματα' },
-  { value: 'telegram', label: 'Telegram', icon: MessageSquare, tooltip: 'Telegram μηνύματα' },
+  { value: 'all', label: 'filters.channels.all', icon: LayoutGrid, tooltip: 'filters.channels.allTooltip' },
+  { value: 'email', label: 'filters.channels.email', icon: Mail, tooltip: 'filters.channels.emailTooltip' },
+  { value: 'sms', label: 'filters.channels.sms', icon: Phone, tooltip: 'filters.channels.smsTooltip' },
+  { value: 'telegram', label: 'filters.channels.telegram', icon: MessageSquare, tooltip: 'filters.channels.telegramTooltip' },
 ];
 
 // =============================================================================
@@ -182,6 +178,9 @@ export function TypeQuickFilters({
       {options.map((option) => {
         const Icon = option.icon;
         const active = isActive(option.value);
+        // 🏢 ENTERPRISE: Translate labels and tooltips via i18n
+        const translatedLabel = t(option.label);
+        const translatedTooltip = t(option.tooltip);
 
         return (
           <Tooltip key={option.value}>
@@ -202,7 +201,7 @@ export function TypeQuickFilters({
                       )
                 )}
                 aria-pressed={active}
-                aria-label={`${t('filters.filterBy')} ${option.tooltip}`}
+                aria-label={`${t('filters.filterBy')} ${translatedTooltip}`}
               >
                 <Icon
                   className={cn(
@@ -211,7 +210,7 @@ export function TypeQuickFilters({
                   )}
                 />
                 {!compact && (
-                  <span className="hidden sm:inline">{option.label}</span>
+                  <span className="hidden sm:inline">{translatedLabel}</span>
                 )}
                 {compact && option.value === 'all' && (
                   <span className="ml-1">{t('filters.all')}</span>
@@ -219,7 +218,7 @@ export function TypeQuickFilters({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              {option.tooltip}
+              {translatedTooltip}
             </TooltipContent>
           </Tooltip>
         );

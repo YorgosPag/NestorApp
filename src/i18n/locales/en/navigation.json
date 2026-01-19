@@ -10,6 +10,50 @@
       "navigateTo": "Navigate to {name}"
     }
   },
+  "mobile": {
+    "back": "Back",
+    "actionsLabel": "Building Actions"
+  },
+  "icons": {
+    "open": "Open",
+    "openInContacts": "Open in Contacts",
+    "openInProjects": "Open in Projects",
+    "openInBuildings": "Open in Buildings",
+    "ctrlClickNewTab": "(Ctrl+Click for new tab)"
+  },
+  "tree": {
+    "steps": {
+      "companies": "Select Company",
+      "projects": "Select Project",
+      "buildings": "Select Building",
+      "units": "Select Destination",
+      "default": "Navigation"
+    },
+    "descriptions": {
+      "companies": "Select a company to view its projects",
+      "projects": "Select a project to view the buildings",
+      "buildings": "Select a building to view the units",
+      "units": "Select the final destination",
+      "default": ""
+    },
+    "loading": "Loading data...",
+    "errorMessage": "Error: {error}",
+    "retry": "Retry",
+    "empty": {
+      "companies": "No companies found in the system.",
+      "projects": "No projects found for the selected company.",
+      "buildings": "No buildings found for the selected project."
+    },
+    "vatNumber": "VAT: {vatNumber}",
+    "buildingCount": "{count} buildings",
+    "destinations": {
+      "navigateTo": "Navigate to:",
+      "viewUnits": "View Units",
+      "unitsInBuilding": "{count} units in building",
+      "buildingDetails": "Building Details",
+      "projectDetails": "Project Details"
+    }
+  },
   "columns": {
     "companies": {
       "title": "Companies",
@@ -328,7 +372,8 @@
       "onHold": "On Hold",
       "residential": "Residential",
       "commercial": "Commercial",
-      "mixed": "Mixed"
+      "mixed": "Mixed",
+      "withoutBuildings": "Without buildings"
     },
     "buildings": {
       "typeLabel": "Building Type",
@@ -339,7 +384,8 @@
       "mixed": "Mixed",
       "floors1to3": "1-3 floors",
       "floors4to6": "4-6 floors",
-      "floors7plus": "7+ floors"
+      "floors7plus": "7+ floors",
+      "withoutUnits": "Without units"
     },
     "floors": {
       "typeLabel": "Floor Type",

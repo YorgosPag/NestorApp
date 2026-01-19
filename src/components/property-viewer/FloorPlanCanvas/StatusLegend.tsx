@@ -6,6 +6,8 @@ import { layoutUtilities, chartComponents, interactionUtilities } from '@/styles
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Import centralized status labels - ZERO HARDCODED VALUES
 import { PROPERTY_STATUS_LABELS } from '@/constants/property-statuses-enterprise';
@@ -27,6 +29,8 @@ export function StatusLegend({
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
   
   // ✅ CENTRALIZED: Using PROPERTY_STATUS_LABELS from central system - ZERO HARDCODED VALUES
   const statusItems = [
@@ -47,7 +51,7 @@ export function StatusLegend({
       style={interactionUtilities.nonInteractive}
     >
       <div className={`text-xs font-medium ${colors.text.primary} mb-2`}>
-        Κατάσταση Ακινήτων
+        {t('statusLegend.title')}
       </div>
       
       <div className="space-y-1">
@@ -68,12 +72,12 @@ export function StatusLegend({
       </div>
 
       <div className={`mt-2 pt-2 ${quick.separatorH} text-xs ${colors.text.muted}`}>
-        ακίνητα στον όροφο
+        {t('statusLegend.propertiesOnFloor')}
       </div>
 
       {validationErrors.length > 0 && (
         <div className="mt-2 pt-2 border-t ${getStatusBorder('error')}">
-          <div className={`text-xs font-medium ${colors.text.danger} mb-1`}>Errors:</div>
+          <div className={`text-xs font-medium ${colors.text.danger} mb-1`}>{t('statusLegend.errors')}</div>
           {validationErrors.slice(0, 3).map((error, index) => (
             <div key={index} className={`text-xs ${colors.text.danger}`}>
               {error.message.substring(0, 30)}...

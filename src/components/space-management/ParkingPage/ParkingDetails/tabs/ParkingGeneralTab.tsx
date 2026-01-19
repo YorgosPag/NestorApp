@@ -12,7 +12,8 @@ import { formatDate, formatCurrency } from '@/lib/intl-utils';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { Car, MapPin, Calendar, Euro, Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { PARKING_TYPE_LABELS, PARKING_STATUS_LABELS } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ParkingGeneralTabProps {
   parking: ParkingSpot;
@@ -20,107 +21,109 @@ interface ParkingGeneralTabProps {
 
 export function ParkingGeneralTab({ parking }: ParkingGeneralTabProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('parking');
 
-  // Get type label
+  // Get type label using i18n
   const getTypeLabel = (type: string | undefined): string => {
-    if (!type) return 'Άγνωστο';
-    return PARKING_TYPE_LABELS[type as keyof typeof PARKING_TYPE_LABELS] || type;
+    if (!type) return t('general.unknown');
+    return t(`general.types.${type}`, type);
   };
 
-  // Get status label
+  // Get status label using i18n
   const getStatusLabel = (status: string | undefined): string => {
-    if (!status) return 'Άγνωστη';
-    return PARKING_STATUS_LABELS[status as keyof typeof PARKING_STATUS_LABELS] || status;
+    if (!status) return t('general.unknown');
+    return t(`general.statuses.${status}`, status);
   };
 
   return (
     <div className="p-6 space-y-6">
-      {/* Βασικές Πληροφορίες */}
+      {/* Basic Information */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Car className={iconSizes.md} />
-          Βασικές Πληροφορίες
+          {t('general.basicInfo')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Κωδικός Θέσης</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.spotCode')}</label>
             <p className="mt-1 text-sm">{parking.number || 'N/A'}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Τύπος</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.type')}</label>
             <p className="mt-1 text-sm">{getTypeLabel(parking.type)}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Κατάσταση</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.status')}</label>
             <p className="mt-1 text-sm">{getStatusLabel(parking.status)}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Επιφάνεια</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.area')}</label>
             <p className="mt-1 text-sm">{parking.area ? `${parking.area} m²` : 'N/A'}</p>
           </div>
         </div>
       </section>
 
-      {/* Τοποθεσία */}
+      {/* Location */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <MapPin className={iconSizes.md} />
-          Τοποθεσία
+          {t('general.location')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Επίπεδο/Όροφος</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.floor')}</label>
             <p className="mt-1 text-sm">{parking.floor || 'N/A'}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Θέση</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.position')}</label>
             <p className="mt-1 text-sm">{parking.location || 'N/A'}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Κτίριο ID</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.buildingId')}</label>
             <p className="mt-1 text-sm font-mono text-xs">{parking.buildingId || 'N/A'}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Έργο ID</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.projectId')}</label>
             <p className="mt-1 text-sm font-mono text-xs">{parking.projectId || 'N/A'}</p>
           </div>
         </div>
       </section>
 
-      {/* Οικονομικά Στοιχεία */}
+      {/* Financial Information */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Euro className={iconSizes.md} />
-          Οικονομικά Στοιχεία
+          {t('general.financial')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Τιμή</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.price')}</label>
             <p className="mt-1 text-sm">
               {parking.price !== undefined && parking.price > 0
                 ? formatCurrency(parking.price)
                 : parking.price === 0
-                  ? 'Κοινόχρηστη (Δωρεάν)'
-                  : 'Δεν έχει οριστεί'}
+                  ? t('general.priceValues.shared')
+                  : t('general.priceValues.notSet')}
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground">Τιμή ανά m²</label>
+            <label className="text-sm font-medium text-muted-foreground">{t('general.fields.pricePerSqm')}</label>
             <p className="mt-1 text-sm">
               {parking.price && parking.area && parking.price > 0
                 ? formatCurrency(parking.price / parking.area)
-                : 'Δεν υπολογίζεται'}
+                : t('general.notCalculated')}
             </p>
           </div>
         </div>
       </section>
 
-      {/* Σημειώσεις */}
+      {/* Notes */}
       {parking.notes && (
         <section>
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <Layers className={iconSizes.md} />
-            Σημειώσεις
+            {t('general.notes')}
           </h3>
           <div>
             <p className="text-sm bg-muted/50 p-4 rounded-lg">{parking.notes}</p>
@@ -128,16 +131,16 @@ export function ParkingGeneralTab({ parking }: ParkingGeneralTabProps) {
         </section>
       )}
 
-      {/* Στοιχεία Ενημέρωσης */}
+      {/* Update Information */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Calendar className={iconSizes.md} />
-          Στοιχεία Ενημέρωσης
+          {t('general.updateInfo')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {parking.createdAt && (
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Δημιουργήθηκε</label>
+              <label className="text-sm font-medium text-muted-foreground">{t('general.fields.createdAt')}</label>
               <p className="mt-1 text-sm">{formatDate(
                 parking.createdAt instanceof Date
                   ? parking.createdAt.toISOString()
@@ -149,7 +152,7 @@ export function ParkingGeneralTab({ parking }: ParkingGeneralTabProps) {
           )}
           {parking.updatedAt && (
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Τελευταία Ενημέρωση</label>
+              <label className="text-sm font-medium text-muted-foreground">{t('general.fields.lastUpdated')}</label>
               <p className="mt-1 text-sm">{formatDate(
                 parking.updatedAt instanceof Date
                   ? parking.updatedAt.toISOString()
@@ -161,7 +164,7 @@ export function ParkingGeneralTab({ parking }: ParkingGeneralTabProps) {
           )}
           {parking.createdBy && (
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Δημιουργήθηκε από</label>
+              <label className="text-sm font-medium text-muted-foreground">{t('general.fields.createdBy')}</label>
               <p className="mt-1 text-sm">{parking.createdBy}</p>
             </div>
           )}

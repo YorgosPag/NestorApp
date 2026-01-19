@@ -9,6 +9,8 @@ import type { FilterState } from '@/types/property-viewer';
 import { useFilterState } from '@/hooks/useFilterState';
 import { FilterControls } from './filters/FilterControls';
 import { AdvancedFilters } from './filters/AdvancedFilters';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
 interface PropertyViewerFiltersProps {
@@ -18,6 +20,8 @@ interface PropertyViewerFiltersProps {
 
 export function PropertyViewerFilters({ filters, onFiltersChange }: PropertyViewerFiltersProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
   const {
     handleFilterChange,
     handleRangeChange,
@@ -42,7 +46,7 @@ export function PropertyViewerFilters({ filters, onFiltersChange }: PropertyView
           <div className="flex justify-end pt-2">
               <Button variant="ghost" size="sm" onClick={clearAllFilters}>
                   <RotateCcw className={`${iconSizes.sm} mr-2`} />
-                  Επαναφορά Φίλτρων
+                  {t('viewerFilters.resetFilters')}
               </Button>
           </div>
         )}

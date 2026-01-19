@@ -20,102 +20,104 @@ export interface ErrorMapping {
  * Error mapping registry
  * Format: "DOMAIN.ERROR_CODE" -> i18n configuration
  */
+// 🌐 i18n: All fallbacks converted to i18n keys - 2026-01-18
+// Fallbacks reference the same i18n keys for consistency
 const ERROR_MAPPINGS: Record<string, ErrorMapping> = {
   // Authentication errors
   'AUTH.INVALID_CREDENTIALS': {
     key: 'http.401',
     namespace: 'errors',
-    fallback: 'Μη έγκυρα διαπιστευτήρια'
+    fallback: 'errors.http.401'
   },
   'AUTH.TOKEN_EXPIRED': {
     key: 'auth.tokenExpired',
     namespace: 'errors',
-    fallback: 'Η συνεδρία έχει λήξει'
+    fallback: 'errors.auth.tokenExpired'
   },
   'AUTH.ACCESS_DENIED': {
     key: 'http.403',
     namespace: 'errors',
-    fallback: 'Απαγορευμένη πρόσβαση'
+    fallback: 'errors.http.403'
   },
 
   // DXF Viewer errors
   'DXF.FILE_PARSE_ERROR': {
     key: 'file.parseError',
     namespace: 'dxf-viewer',
-    fallback: 'Σφάλμα ανάλυσης αρχείου DXF'
+    fallback: 'dxf-viewer.file.parseError'
   },
   'DXF.LAYER_NOT_FOUND': {
     key: 'layers.notFound',
     namespace: 'dxf-viewer',
-    fallback: 'Το layer δεν βρέθηκε'
+    fallback: 'dxf-viewer.layers.notFound'
   },
   'DXF.STORAGE_QUOTA_EXCEEDED': {
     key: 'storage.quotaExceeded',
     namespace: 'errors',
-    fallback: 'Ο χώρος αποθήκευσης έχει εξαντληθεί'
+    fallback: 'errors.storage.quotaExceeded'
   },
   'DXF.STORAGE_ERROR': {
     key: 'storage.error',
     namespace: 'dxf-viewer',
-    fallback: 'Storage Γεμάτο'
+    fallback: 'dxf-viewer.storage.error'
   },
   'DXF.GENERIC_ERROR': {
     key: 'generic.error',
     namespace: 'dxf-viewer',
-    fallback: 'Σφάλμα DXF Viewer'
+    fallback: 'dxf-viewer.generic.error'
   },
 
   // Property management errors
   'PROPERTY.NOT_FOUND': {
     key: 'http.404',
     namespace: 'errors',
-    fallback: 'Το ακίνητο δεν βρέθηκε'
+    fallback: 'errors.http.404'
   },
   'PROPERTY.VALIDATION_FAILED': {
     key: 'validation.failed',
     namespace: 'forms',
-    fallback: 'Σφάλμα επικύρωσης δεδομένων'
+    fallback: 'forms.validation.failed'
   },
 
   // Network errors
   'NETWORK.CONNECTION_FAILED': {
     key: 'network.connectionFailed',
     namespace: 'errors',
-    fallback: 'Αποτυχία σύνδεσης'
+    fallback: 'errors.network.connectionFailed'
   },
   'NETWORK.TIMEOUT': {
     key: 'network.timeout',
     namespace: 'errors',
-    fallback: 'Λήξη χρονικού ορίου'
+    fallback: 'errors.network.timeout'
   },
 
   // Storage errors
   'STORAGE.FILE_TOO_LARGE': {
     key: 'file.tooLarge',
     namespace: 'errors',
-    fallback: 'Το αρχείο είναι πολύ μεγάλο'
+    fallback: 'errors.file.tooLarge'
   },
   'STORAGE.INSUFFICIENT_SPACE': {
     key: 'storage.insufficientSpace',
     namespace: 'errors',
-    fallback: 'Ανεπαρκής χώρος αποθήκευσης'
+    fallback: 'errors.storage.insufficientSpace'
   },
 
   // Form validation errors
   'VALIDATION.REQUIRED_FIELD': {
     key: 'validation.required',
     namespace: 'forms',
-    fallback: 'Αυτό το πεδίο είναι υποχρεωτικό'
+    fallback: 'forms.validation.required'
   },
   'VALIDATION.INVALID_EMAIL': {
     key: 'validation.invalidEmail',
     namespace: 'forms',
-    fallback: 'Μη έγκυρη διεύθυνση email'
+    fallback: 'forms.validation.invalidEmail'
   },
   'VALIDATION.PASSWORD_TOO_WEAK': {
     key: 'validation.passwordWeak',
     namespace: 'forms',
-    fallback: 'Ο κωδικός πρόσβασης είναι πολύ αδύναμος'
+    fallback: 'forms.validation.passwordWeak'
   },
 };
 
@@ -140,7 +142,7 @@ export function mapErrorToI18n(error: DomainError): ErrorMapping {
   return {
     key: 'general.unknown',
     namespace: 'errors',
-    fallback: 'Παρουσιάστηκε απροσδόκητο σφάλμα',
+    fallback: 'errors.general.unknown',
     context: error.context,
   };
 }

@@ -23,6 +23,8 @@ import React from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized types και styles
 import type { CommunicationConfig } from '../communication/types';
@@ -65,6 +67,8 @@ export function CommunicationEmptyState({
   onAddItem
 }: CommunicationEmptyStateProps): JSX.Element {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
   const IconComponent = config.icon;
 
   return (
@@ -84,7 +88,7 @@ export function CommunicationEmptyState({
           {config.emptyStateText}
         </p>
         <p className="text-sm mt-1 text-gray-500">
-          Προσθέστε τις πληροφορίες επικοινωνίας σας
+          {t('communication.addContactInfo')}
         </p>
       </section>
 
@@ -95,7 +99,7 @@ export function CommunicationEmptyState({
         onClick={onAddItem}
         disabled={disabled}
         className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
-        aria-label={`Προσθήκη νέου ${config.title.toLowerCase()}`}
+        aria-label={t('communication.addNew', { type: config.title.toLowerCase() })}
       >
         <Plus
           className={`${iconSizes.sm} mr-2`}

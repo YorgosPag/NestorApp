@@ -1,4 +1,4 @@
-
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import React from 'react';
@@ -16,6 +16,7 @@ import { Filter, X } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { SortToggleButton } from './SortToggleButton';
 import { RefreshButton } from './RefreshButton';
+import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Import centralized unit filter options - NO MORE HARDCODED VALUES
 import { getUnitFilterOptions } from '@/subapps/dxf-viewer/config/modal-select';
 
@@ -24,6 +25,7 @@ function UnitFiltersMenu({ activeFilters, onActiveFiltersChange }: {
   activeFilters: string[];
   onActiveFiltersChange: (filters: string[]) => void;
 }) {
+  const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
   const handleFilterChange = (filter: string, checked: boolean) => {
     onActiveFiltersChange(
@@ -36,7 +38,7 @@ function UnitFiltersMenu({ activeFilters, onActiveFiltersChange }: {
       <DropdownMenuTrigger asChild>
         <div>
           <ToolbarButton
-            tooltip="Φίλτρα και Προβολή"
+            tooltip={t('toolbar.filtersAndView')}
             badge={activeFilters.length > 0 ? activeFilters.length : undefined}
           >
             <Filter className={iconSizes.sm} />
@@ -44,7 +46,7 @@ function UnitFiltersMenu({ activeFilters, onActiveFiltersChange }: {
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Φίλτρα Μονάδων</DropdownMenuLabel>
+        <DropdownMenuLabel>{t('toolbar.unitFilters')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {getUnitFilterOptions().map(({ value, label }) => (
           <DropdownMenuCheckboxItem
@@ -58,7 +60,7 @@ function UnitFiltersMenu({ activeFilters, onActiveFiltersChange }: {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onActiveFiltersChange([])}>
           <X className={`${iconSizes.sm} mr-2`} />
-          Καθαρισμός Φίλτρων
+          {t('toolbar.clearFilters')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

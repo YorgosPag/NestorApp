@@ -10,6 +10,50 @@
       "navigateTo": "Μετάβαση σε {name}"
     }
   },
+  "mobile": {
+    "back": "Πίσω",
+    "actionsLabel": "Ενέργειες Κτιρίου"
+  },
+  "icons": {
+    "open": "Άνοιγμα",
+    "openInContacts": "Άνοιγμα στις Επαφές",
+    "openInProjects": "Άνοιγμα στα Έργα",
+    "openInBuildings": "Άνοιγμα στα Κτίρια",
+    "ctrlClickNewTab": "(Ctrl+Click για νέα καρτέλα)"
+  },
+  "tree": {
+    "steps": {
+      "companies": "Επιλέξτε Εταιρεία",
+      "projects": "Επιλέξτε Έργο",
+      "buildings": "Επιλέξτε Κτίριο",
+      "units": "Επιλέξτε Προορισμό",
+      "default": "Πλοήγηση"
+    },
+    "descriptions": {
+      "companies": "Επιλέξτε την εταιρεία για να δείτε τα έργα της",
+      "projects": "Επιλέξτε το έργο για να δείτε τα κτίρια",
+      "buildings": "Επιλέξτε το κτίριο για να δείτε τις μονάδες",
+      "units": "Επιλέξτε τον τελικό προορισμό",
+      "default": ""
+    },
+    "loading": "Φόρτωση δεδομένων...",
+    "errorMessage": "Σφάλμα: {error}",
+    "retry": "Ξαναδοκιμή",
+    "empty": {
+      "companies": "Δεν βρέθηκαν εταιρείες στο σύστημα.",
+      "projects": "Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.",
+      "buildings": "Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο."
+    },
+    "vatNumber": "ΑΦΜ: {vatNumber}",
+    "buildingCount": "{count} κτίρια",
+    "destinations": {
+      "navigateTo": "Μετάβαση σε:",
+      "viewUnits": "Προβολή Μονάδων",
+      "unitsInBuilding": "{count} μονάδες στο κτίριο",
+      "buildingDetails": "Λεπτομέρειες Κτιρίου",
+      "projectDetails": "Λεπτομέρειες Έργου"
+    }
+  },
   "columns": {
     "companies": {
       "title": "Εταιρείες",
@@ -328,7 +372,8 @@
       "onHold": "Αναστολή",
       "residential": "Κατοικίες",
       "commercial": "Εμπορικά",
-      "mixed": "Μεικτά"
+      "mixed": "Μεικτά",
+      "withoutBuildings": "Χωρίς κτίρια"
     },
     "buildings": {
       "typeLabel": "Τύπος Κτιρίου",
@@ -339,7 +384,8 @@
       "mixed": "Μεικτό",
       "floors1to3": "1-3 όροφοι",
       "floors4to6": "4-6 όροφοι",
-      "floors7plus": "7+ όροφοι"
+      "floors7plus": "7+ όροφοι",
+      "withoutUnits": "Χωρίς μονάδες"
     },
     "floors": {
       "typeLabel": "Τύπος Ορόφου",

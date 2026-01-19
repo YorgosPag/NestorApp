@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import React from 'react';
@@ -12,6 +13,7 @@ import {
   PHOTO_HOVER_EFFECTS
 } from '@/components/generic/config/photo-config';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -60,13 +62,14 @@ export function PhotoPreview({
   previewUrl,
   fileName,
   compact = false,
-  purpose = 'φωτογραφία',
+  purpose = 'photo',
   onRemove,
   onPreviewClick,
   disabled = false,
   hideRemoveButton = false,
   className = ''
 }: PhotoPreviewProps) {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -75,7 +78,7 @@ export function PhotoPreview({
   // ========================================================================
 
   const showRemoveButton = !hideRemoveButton && !disabled && onRemove;
-  const displayName = purpose === 'logo' ? 'λογότυπο' : 'φωτογραφία';
+  const displayName = purpose === 'logo' ? t('photo.logo') : t('photo.photo');
 
   // ========================================================================
   // HANDLERS
@@ -116,7 +119,7 @@ export function PhotoPreview({
         >
           <img
             src={previewUrl}
-            alt="Προεπισκόπηση"
+            alt={t('photo.preview')}
             className="w-full h-full object-contain rounded-lg"
           />
 
@@ -126,7 +129,7 @@ export function PhotoPreview({
               type="button"
               className={`absolute top-2 right-2 ${colors.bg.error} ${colors.text.error} rounded-full p-1.5 ${PHOTO_HOVER_EFFECTS.REMOVE_BUTTON} z-10`}
               onClick={handleRemoveClick}
-              title={`Αφαίρεση ${displayName}`}
+              title={t('photo.remove', { name: displayName })}
             >
               <X className={iconSizes.sm} />
             </button>
@@ -147,7 +150,7 @@ export function PhotoPreview({
       <div className={`${PHOTO_SIZES.THUMBNAIL} ${PHOTO_COLORS.PHOTO_BACKGROUND} rounded-lg overflow-hidden shadow-sm relative`}>
         <img
           src={previewUrl}
-          alt="Προεπισκόπηση"
+          alt={t('photo.preview')}
           className="w-full h-full object-contain"
         />
 
@@ -157,7 +160,7 @@ export function PhotoPreview({
             type="button"
             className={`absolute top-1 right-1 ${colors.bg.error} ${colors.text.error} rounded-full p-1 transition-colors z-10 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
             onClick={handleRemoveClick}
-            title={`Αφαίρεση ${displayName}`}
+            title={t('photo.remove', { name: displayName })}
           >
             <X className={iconSizes.xs} />
           </button>
@@ -167,11 +170,11 @@ export function PhotoPreview({
       <div className="text-left">
         <p className={`text-sm font-medium ${colors.text.success} flex items-center gap-1`}>
           <CheckCircle className={iconSizes.sm} />
-          {purpose === 'logo' ? 'Λογότυπο' : 'Φωτογραφία'} φορτώθηκε
+          {purpose === 'logo' ? t('photo.logoUploaded') : t('photo.photoUploaded')}
         </p>
         <p className={`text-xs ${colors.text.success}`}>{fileName}</p>
         {onPreviewClick && (
-          <p className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mt-1`}>Κάντε κλικ για αλλαγή</p>
+          <p className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mt-1`}>{t('photo.clickToChange')}</p>
         )}
       </div>
     </div>

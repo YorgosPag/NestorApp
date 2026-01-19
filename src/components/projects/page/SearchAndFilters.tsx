@@ -13,6 +13,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface SearchAndFiltersProps {
   searchTerm: string;
@@ -33,6 +35,8 @@ export function SearchAndFilters({
   filterStatus,
   setFilterStatus,
 }: SearchAndFiltersProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const hasActiveFilters =
     filterCompany !== 'all' ||
@@ -53,7 +57,7 @@ export function SearchAndFilters({
           <SearchInput
             value={searchTerm}
             onChange={setSearchTerm}
-            placeholder="Αναζήτηση έργων, τίτλων..."
+            placeholder={t('search.placeholder')}
             debounceMs={300}
           />
         </div>
@@ -63,12 +67,12 @@ export function SearchAndFilters({
             value={filterCompany}
             onChange={setFilterCompany}
             options={companies}
-            placeholder="Όλες οι εταιρείες"
+            placeholder={t('search.allCompanies')}
           />
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
               <X className={`${iconSizes.xs} mr-1`} />
-              Καθαρισμός
+              {t('search.clear')}
             </Button>
           )}
         </div>

@@ -24,6 +24,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Props interface for all tab contents
 interface ContactsTabContentProps {
@@ -53,6 +55,9 @@ export function ActionsTabContent({
   onArchiveContact,
   onRefresh
 }: ContactsTabContentProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
+
   const handleDeleteAction = () => {
     if (selectedItems.length > 0) {
       onDeleteContact?.(selectedItems);
@@ -71,11 +76,11 @@ export function ActionsTabContent({
               onClick={() => onNewContact?.()}
               disabled={false}
             >
-              Νέα Επαφή
+              {t('toolbar.tabs.actions.newContact')}
             </ToolbarAddButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Προσθήκη νέας επαφής</p>
+            <p>{t('toolbar.tabs.actions.newContactTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -88,11 +93,11 @@ export function ActionsTabContent({
               onClick={() => hasSelectedContact && onEditContact?.()}
               disabled={!hasSelectedContact}
             >
-              Επεξεργασία
+              {t('toolbar.tabs.actions.edit')}
             </ToolbarEditButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Επεξεργασία επιλεγμένης επαφής</p>
+            <p>{t('toolbar.tabs.actions.editTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -106,16 +111,16 @@ export function ActionsTabContent({
               disabled={selectedItems.length === 0 && !hasSelectedContact}
               badge={selectedItems.length > 0 ? selectedItems.length : undefined}
             >
-              Διαγραφή
+              {t('toolbar.tabs.actions.delete')}
             </ToolbarDeleteButton>
           </TooltipTrigger>
           <TooltipContent>
             <p>
               {selectedItems.length > 0
-                ? `Διαγραφή ${selectedItems.length} επαφής/ών`
+                ? t('toolbar.tabs.actions.deleteCount', { count: selectedItems.length })
                 : hasSelectedContact
-                  ? 'Διαγραφή επιλεγμένης επαφής'
-                  : 'Επιλέξτε επαφή για διαγραφή'}
+                  ? t('toolbar.tabs.actions.deleteSelected')
+                  : t('toolbar.tabs.actions.deleteSelectFirst')}
             </p>
           </TooltipContent>
         </Tooltip>
@@ -127,11 +132,11 @@ export function ActionsTabContent({
             <ToolbarRefreshButton
               onClick={() => onRefresh?.()}
             >
-              Ανανέωση
+              {t('toolbar.tabs.actions.refresh')}
             </ToolbarRefreshButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Ανανέωση λίστας επαφών</p>
+            <p>{t('toolbar.tabs.actions.refreshTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -144,6 +149,8 @@ export function CommunicationTabContent({
   selectedItems = []
 }: ContactsTabContentProps) {
   const { quick } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
 
   return (
     <>
@@ -156,11 +163,11 @@ export function CommunicationTabContent({
               }}
               disabled={selectedItems.length === 0}
             >
-              Κλήση
+              {t('toolbar.tabs.communication.call')}
             </ToolbarCallButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Κλήση επιλεγμένων επαφών</p>
+            <p>{t('toolbar.tabs.communication.callTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -174,11 +181,11 @@ export function CommunicationTabContent({
               }}
               disabled={selectedItems.length === 0}
             >
-              Email
+              {t('toolbar.tabs.communication.email')}
             </ToolbarEmailButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Αποστολή email στις επιλεγμένες επαφές</p>
+            <p>{t('toolbar.tabs.communication.emailTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -192,18 +199,18 @@ export function CommunicationTabContent({
               }}
               disabled={selectedItems.length === 0}
             >
-              SMS
+              {t('toolbar.tabs.communication.sms')}
             </ToolbarSMSButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Αποστολή SMS στις επιλεγμένες επαφές</p>
+            <p>{t('toolbar.tabs.communication.smsTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
 
       {selectedItems.length === 0 && (
         <div className={`text-center text-sm text-muted-foreground mt-4 p-4 ${quick.card} bg-muted/20 w-full`}>
-          Επιλέξτε επαφές για επικοινωνία
+          {t('toolbar.tabs.communication.selectForCommunication')}
         </div>
       )}
     </>
@@ -217,6 +224,9 @@ export function ManagementTabContent({
   onExport,
   onArchiveContact
 }: ContactsTabContentProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
+
   const handleArchiveAction = () => {
     if (selectedItems.length > 0) {
       onArchiveContact?.(selectedItems);
@@ -233,11 +243,11 @@ export function ManagementTabContent({
             <ToolbarExportButton
               onClick={() => onExport?.()}
             >
-              Εξαγωγή
+              {t('toolbar.tabs.management.export')}
             </ToolbarExportButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Εξαγωγή λίστας επαφών</p>
+            <p>{t('toolbar.tabs.management.exportTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -250,11 +260,11 @@ export function ManagementTabContent({
                 // Debug logging removed
               }}
             >
-              Εισαγωγή
+              {t('toolbar.tabs.management.import')}
             </ToolbarImportButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Εισαγωγή επαφών από αρχείο</p>
+            <p>{t('toolbar.tabs.management.importTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -268,16 +278,16 @@ export function ManagementTabContent({
               disabled={selectedItems.length === 0 && !hasSelectedContact}
               badge={selectedItems.length > 0 ? selectedItems.length : undefined}
             >
-              Αρχειοθέτηση
+              {t('toolbar.tabs.management.archive')}
             </ToolbarArchiveButton>
           </TooltipTrigger>
           <TooltipContent>
             <p>
               {selectedItems.length > 0
-                ? `Αρχειοθέτηση ${selectedItems.length} επαφής/ών`
+                ? t('toolbar.tabs.management.archiveCount', { count: selectedItems.length })
                 : hasSelectedContact
-                  ? 'Αρχειοθέτηση επιλεγμένης επαφής'
-                  : 'Επιλέξτε επαφή για αρχειοθέτηση'}
+                  ? t('toolbar.tabs.management.archiveSelected')
+                  : t('toolbar.tabs.management.archiveSelectFirst')}
             </p>
           </TooltipContent>
         </Tooltip>
@@ -291,11 +301,11 @@ export function ManagementTabContent({
                 // Debug logging removed
               }}
             >
-              Βοήθεια
+              {t('toolbar.tabs.management.help')}
             </ToolbarHelpButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Βοήθεια και οδηγίες</p>
+            <p>{t('toolbar.tabs.management.helpTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -313,6 +323,8 @@ export function FiltersTabContent({
   onToggleSort
 }: ContactsTabContentProps) {
   const { quick } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
 
   return (
     <>
@@ -323,11 +335,11 @@ export function FiltersTabContent({
               active={showOnlyFavorites}
               onClick={() => onToggleFavoritesFilter?.()}
             >
-              Αγαπημένα
+              {t('toolbar.tabs.filters.favorites')}
             </ToolbarFavoritesButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{showOnlyFavorites ? 'Εμφάνιση όλων των επαφών' : 'Φιλτράρισμα μόνο αγαπημένων'}</p>
+            <p>{showOnlyFavorites ? t('toolbar.tabs.filters.showAllContacts') : t('toolbar.tabs.filters.filterFavoritesOnly')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -339,11 +351,11 @@ export function FiltersTabContent({
               active={showArchivedContacts}
               onClick={() => onToggleArchivedFilter?.()}
             >
-              Αρχειοθετημένα
+              {t('toolbar.tabs.filters.archived')}
             </ToolbarArchivedFilterButton>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{showArchivedContacts ? 'Εμφάνιση ενεργών επαφών' : 'Φιλτράρισμα μόνο αρχειοθετημένων'}</p>
+            <p>{showArchivedContacts ? t('toolbar.tabs.filters.showActiveContacts') : t('toolbar.tabs.filters.filterArchivedOnly')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -357,13 +369,13 @@ export function FiltersTabContent({
             />
           </TooltipTrigger>
           <TooltipContent>
-            <p>{sortDirection === 'asc' ? 'Ταξινόμηση από Α έως Ω' : 'Ταξινόμηση από Ω έως Α'}</p>
+            <p>{sortDirection === 'asc' ? t('toolbar.tabs.filters.sortAtoZ') : t('toolbar.tabs.filters.sortZtoA')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
 
       <div className={`text-center text-sm text-muted-foreground mt-4 p-4 ${quick.card} bg-blue-50/50 w-full`}>
-        💡 Χρησιμοποιήστε τα φίλτρα στο header για περισσότερες επιλογές
+        💡 {t('toolbar.tabs.filters.filterHint')}
       </div>
     </>
   );

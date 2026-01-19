@@ -203,7 +203,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
 
   // Download backup codes
   const handleDownloadBackupCodes = () => {
-    const content = `Nestor Pagonis - Backup Codes\n${'='.repeat(40)}\n\n${backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}\n\nΣημαντικό: Κάθε κωδικός μπορεί να χρησιμοποιηθεί μόνο μία φορά.\nΑποθηκεύστε αυτά τα αντίγραφα σε ασφαλές μέρος.\n\nGenerated: ${new Date().toISOString()}`;
+    const content = `Nestor Pagonis - Backup Codes\n${'='.repeat(40)}\n\n${backupCodes.map((code, i) => `${i + 1}. ${code}`).join('\n')}\n\n${t('twoFactor.backupFileNote')}\n\nGenerated: ${new Date().toISOString()}`;
 
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -283,7 +283,7 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
         {qrCodeDataUrl && (
           <img
             src={qrCodeDataUrl}
-            alt="QR Code για authenticator app"
+            alt={t('twoFactor.qrCodeAlt')}
             className={cn(borders.radiusClass.md, 'bg-white p-2')}
             width={200}
             height={200}

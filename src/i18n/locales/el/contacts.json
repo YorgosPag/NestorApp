@@ -137,6 +137,52 @@
       "new": "Νέα Επαφή (Ctrl+N)",
       "edit": "Επεξεργασία Επιλεγμένης (Ctrl+E)",
       "delete": "Διαγραφή Επιλεγμένης (Delete)"
+    },
+    "tabs": {
+      "actions": {
+        "newContact": "Νέα Επαφή",
+        "newContactTooltip": "Προσθήκη νέας επαφής",
+        "edit": "Επεξεργασία",
+        "editTooltip": "Επεξεργασία επιλεγμένης επαφής",
+        "delete": "Διαγραφή",
+        "deleteCount": "Διαγραφή {count} επαφής/ών",
+        "deleteSelected": "Διαγραφή επιλεγμένης επαφής",
+        "deleteSelectFirst": "Επιλέξτε επαφή για διαγραφή",
+        "refresh": "Ανανέωση",
+        "refreshTooltip": "Ανανέωση λίστας επαφών"
+      },
+      "communication": {
+        "call": "Κλήση",
+        "callTooltip": "Κλήση επιλεγμένων επαφών",
+        "email": "Email",
+        "emailTooltip": "Αποστολή email στις επιλεγμένες επαφές",
+        "sms": "SMS",
+        "smsTooltip": "Αποστολή SMS στις επιλεγμένες επαφές",
+        "selectForCommunication": "Επιλέξτε επαφές για επικοινωνία"
+      },
+      "management": {
+        "export": "Εξαγωγή",
+        "exportTooltip": "Εξαγωγή λίστας επαφών",
+        "import": "Εισαγωγή",
+        "importTooltip": "Εισαγωγή επαφών από αρχείο",
+        "archive": "Αρχειοθέτηση",
+        "archiveCount": "Αρχειοθέτηση {count} επαφής/ών",
+        "archiveSelected": "Αρχειοθέτηση επιλεγμένης επαφής",
+        "archiveSelectFirst": "Επιλέξτε επαφή για αρχειοθέτηση",
+        "help": "Βοήθεια",
+        "helpTooltip": "Βοήθεια και οδηγίες"
+      },
+      "filters": {
+        "favorites": "Αγαπημένα",
+        "showAllContacts": "Εμφάνιση όλων των επαφών",
+        "filterFavoritesOnly": "Φιλτράρισμα μόνο αγαπημένων",
+        "archived": "Αρχειοθετημένα",
+        "showActiveContacts": "Εμφάνιση ενεργών επαφών",
+        "filterArchivedOnly": "Φιλτράρισμα μόνο αρχειοθετημένων",
+        "sortAtoZ": "Ταξινόμηση από Α έως Ω",
+        "sortZtoA": "Ταξινόμηση από Ω έως Α",
+        "filterHint": "Χρησιμοποιήστε τα φίλτρα στο header για περισσότερες επιλογές"
+      }
     }
   },
   "dialog": {
@@ -157,7 +203,11 @@
     "addDescription": "Καταχωρήστε τα βασικά στοιχεία της νέας επαφής.",
     "typeLabel": "Τύπος",
     "updateContact": "Ενημέρωση Επαφής",
-    "saveContact": "Αποθήκευση Επαφής"
+    "saveContact": "Αποθήκευση Επαφής",
+    "fields": {
+      "phone": "Τηλέφωνο",
+      "notes": "Σημειώσεις"
+    }
   },
   "relationships": {
     "types": {
@@ -232,7 +282,8 @@
       "errors": {
         "listError": "Σφάλμα λίστας σχέσεων",
         "formError": "Σφάλμα φόρμας",
-        "treeError": "Σφάλμα οργανωσιακού διαγράμματος"
+        "treeError": "Σφάλμα οργανωσιακού διαγράμματος",
+        "searchError": "Σφάλμα κατά την αναζήτηση επαφών"
       },
       "newContact": {
         "note": "Σημείωση",
@@ -288,6 +339,267 @@
       "lastUpdated": "Τελευταία ενημέρωση",
       "createdAt": "Δημιουργήθηκε",
       "unknown": "Άγνωστη"
+    }
+  },
+  "options": {
+    "gender": {
+      "male": "Άνδρας",
+      "female": "Γυναίκα",
+      "other": "Άλλο",
+      "preferNotToSay": "Προτιμώ να μην απαντήσω"
+    },
+    "identity": {
+      "identityCard": "Δελτίο Ταυτότητας",
+      "passport": "Διαβατήριο",
+      "driversLicense": "Δίπλωμα Οδήγησης",
+      "other": "Άλλο"
+    },
+    "gemiStatuses": {
+      "active": "Ενεργή",
+      "inactive": "Ανενεργή",
+      "suspended": "Αναστολή",
+      "dissolution": "Σε Διαδικασία Λύσης",
+      "dissolved": "Λύση",
+      "bankruptcy": "Πτώχευση",
+      "liquidation": "Εκκαθάριση"
+    },
+    "serviceCategories": {
+      "ministry": "Υπουργείο",
+      "region": "Περιφέρεια",
+      "municipality": "Δήμος",
+      "publicEntity": "Δημόσιος Φορέας",
+      "independentAuthority": "Ανεξάρτητη Αρχή",
+      "university": "Πανεπιστήμιο",
+      "hospital": "Νοσοκομείο",
+      "school": "Σχολείο",
+      "other": "Άλλο"
+    },
+    "legalStatuses": {
+      "npdd": "Ν.Π.Δ.Δ.",
+      "npid": "Ν.Π.Ι.Δ.",
+      "publicService": "Δημόσια Υπηρεσία",
+      "independentAuthority": "Ανεξάρτητη Αρχή",
+      "decentralizedAdmin": "Αποκεντρωμένη Διοίκηση"
+    },
+    "activityTypes": {
+      "main": "Κύρια Δραστηριότητα",
+      "secondary": "Δευτερεύουσα Δραστηριότητα"
+    },
+    "addressTypes": {
+      "headquarters": "Έδρα",
+      "branch": "Υποκατάστημα"
+    },
+    "shareholderTypes": {
+      "individual": "Φυσικό Πρόσωπο",
+      "legal": "Νομικό Πρόσωπο"
+    },
+    "currencies": {
+      "eur": "Ευρώ (€)",
+      "usd": "Δολάριο ΗΠΑ ($)",
+      "gbp": "Λίρα Στερλίνα (£)"
+    }
+  },
+  "communication": {
+    "phoneTypes": {
+      "mobile": "Κινητό",
+      "home": "Οικίας",
+      "work": "Εργασίας",
+      "fax": "Fax",
+      "other": "Άλλο"
+    },
+    "emailTypes": {
+      "personal": "Προσωπικό",
+      "work": "Εργασίας",
+      "other": "Άλλο"
+    },
+    "websiteTypes": {
+      "personal": "Προσωπικό",
+      "company": "Εταιρικό",
+      "portfolio": "Portfolio",
+      "blog": "Blog",
+      "other": "Άλλο"
+    },
+    "socialMediaTypes": {
+      "personal": "Προσωπικό",
+      "professional": "Επαγγελματικό",
+      "business": "Επιχειρηματικό",
+      "other": "Άλλο"
+    },
+    "platforms": {
+      "linkedin": "LinkedIn",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "twitter": "Twitter/X",
+      "youtube": "YouTube",
+      "github": "GitHub",
+      "tiktok": "TikTok",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "other": "Άλλο"
+    }
+  },
+  "identity": {
+    "types": {
+      "idCard": "Ταυτότητα",
+      "identityCard": "Δελτίο Ταυτότητας",
+      "passport": "Διαβατήριο",
+      "afm": "ΑΦΜ",
+      "amka": "ΑΜΚΑ",
+      "license": "Άδεια",
+      "driversLicense": "Δίπλωμα Οδήγησης",
+      "other": "Άλλο"
+    }
+  },
+  "professional": {
+    "types": {
+      "companyPhone": "Τηλέφωνο Εταιρείας",
+      "companyEmail": "Email Εταιρείας",
+      "companyWebsite": "Ιστοσελίδα Εταιρείας",
+      "linkedin": "LinkedIn",
+      "position": "Θέση",
+      "department": "Τμήμα",
+      "other": "Άλλο"
+    },
+    "fields": {
+      "profession": "Επάγγελμα",
+      "specialty": "Ειδικότητα",
+      "employer": "Εργοδότης",
+      "position": "Θέση"
+    }
+  },
+  "address": {
+    "types": {
+      "home": "Οικίας",
+      "work": "Εργασίας",
+      "mailing": "Αλληλογραφίας",
+      "billing": "Τιμολόγησης",
+      "headquarters": "Έδρα",
+      "branch": "Υποκατάστημα",
+      "other": "Άλλο"
+    },
+    "fields": {
+      "street": "Οδός",
+      "streetNumber": "Αριθμός",
+      "city": "Πόλη",
+      "postalCode": "Τ.Κ."
+    }
+  },
+  "individual": {
+    "fields": {
+      "firstName": "Όνομα",
+      "lastName": "Επώνυμο",
+      "fatherName": "Όνομα Πατέρα",
+      "motherName": "Όνομα Μητέρας",
+      "birthDate": "Ημερομηνία Γέννησης",
+      "birthCountry": "Χώρα Γέννησης",
+      "gender": "Φύλο",
+      "amka": "ΑΜΚΑ",
+      "documentType": "Τύπος Εγγράφου",
+      "documentIssuer": "Αρχή Έκδοσης",
+      "documentNumber": "Αριθμός Εγγράφου",
+      "documentIssueDate": "Ημ/νία Έκδοσης",
+      "documentExpiryDate": "Ημ/νία Λήξης"
+    }
+  },
+  "company": {
+    "legalForms": {
+      "ae": "Ανώνυμη Εταιρεία (Α.Ε.)",
+      "epe": "Εταιρεία Περιορισμένης Ευθύνης (Ε.Π.Ε.)",
+      "ee": "Ετερόρρυθμη Εταιρεία (Ε.Ε.)",
+      "oe": "Ομόρρυθμη Εταιρεία (Ο.Ε.)",
+      "ikepe": "Ιδιωτική Κεφαλαιουχική Εταιρεία (Ι.Κ.Ε.)",
+      "ike": "Ι.Κ.Ε.",
+      "mono": "Ατομική Επιχείρηση",
+      "smpc": "Κοινωνική Συνεταιριστική Επιχείρηση",
+      "other": "Άλλη"
+    },
+    "positions": {
+      "ceo": "Διευθύνων Σύμβουλος",
+      "president": "Πρόεδρος",
+      "manager": "Διευθυντής",
+      "legalRep": "Νόμιμος Εκπρόσωπος",
+      "secretary": "Γραμματέας"
+    },
+    "boardTypes": {
+      "generalAssembly": "Γενική Συνέλευση",
+      "boardDirectors": "Διοικητικό Συμβούλιο",
+      "supervisoryBoard": "Εποπτικό Συμβούλιο"
+    },
+    "documentTypes": {
+      "certificate": "Πιστοποιητικό",
+      "announcement": "Ανακοίνωση",
+      "registration": "Εγγραφή",
+      "amendment": "Τροποποίηση"
+    },
+    "fields": {
+      "companyName": "Επωνυμία",
+      "tradeName": "Διακριτικός Τίτλος",
+      "legalForm": "Νομική Μορφή",
+      "gemiNumber": "Αριθμός ΓΕΜΗ",
+      "gemiStatus": "Κατάσταση ΓΕΜΗ",
+      "chamber": "Επιμελητήριο",
+      "activityCodeKad": "Κωδικός Δραστηριότητας (ΚΑΔ)",
+      "activityDescription": "Περιγραφή Δραστηριότητας",
+      "phoneCentral": "Κεντρικό Τηλέφωνο",
+      "emailContact": "Email Επικοινωνίας",
+      "website": "Ιστοσελίδα"
+    }
+  },
+  "service": {
+    "fields": {
+      "legalStatus": "Νομικό Καθεστώς",
+      "establishmentLaw": "Ιδρυτικός Νόμος",
+      "headTitle": "Τίτλος Προϊσταμένου",
+      "headName": "Όνομα Προϊσταμένου",
+      "mainResponsibilities": "Κύριες Αρμοδιότητες",
+      "citizenServices": "Υπηρεσίες Πολιτών",
+      "onlineServices": "Ηλεκτρονικές Υπηρεσίες",
+      "serviceHours": "Ωράριο Λειτουργίας"
+    }
+  },
+  "fields": {
+    "vatNumber": "ΑΦΜ",
+    "taxOffice": "Δ.Ο.Υ.",
+    "communication": "Επικοινωνία"
+  },
+  "employment": {
+    "status": {
+      "fullTime": "Πλήρους Απασχόλησης",
+      "partTime": "Μερικής Απασχόλησης",
+      "contract": "Συμβόλαιο",
+      "temporary": "Προσωρινή",
+      "seasonal": "Εποχιακή",
+      "volunteer": "Εθελοντής",
+      "retired": "Συνταξιούχος",
+      "onLeave": "Σε Άδεια",
+      "terminated": "Λήξη Συνεργασίας"
+    }
+  },
+  "businessTypes": {
+    "customer": "Πελάτης",
+    "supplier": "Προμηθευτής",
+    "agent": "Αντιπρόσωπος",
+    "contractor": "Εργολάβος"
+  },
+  "validation": {
+    "contactTypeRequired": "Ο τύπος επαφής είναι υποχρεωτικός",
+    "individual": {
+      "firstNameRequired": "Το όνομα είναι υποχρεωτικό για φυσικά πρόσωπα",
+      "lastNameRequired": "Το επώνυμο είναι υποχρεωτικό για φυσικά πρόσωπα"
+    },
+    "company": {
+      "nameRequired": "Το όνομα εταιρείας είναι υποχρεωτικό για νομικά πρόσωπα",
+      "vatRecommended": "Το ΑΦΜ συνιστάται για νομικά πρόσωπα"
+    },
+    "service": {
+      "nameRequired": "Το όνομα υπηρεσίας είναι υποχρεωτικό για δημόσιες υπηρεσίες",
+      "typeRequired": "Ο τύπος υπηρεσίας είναι υποχρεωτικός για δημόσιες υπηρεσίες"
+    },
+    "email": {
+      "invalid": "Μη έγκυρη διεύθυνση email"
+    },
+    "phone": {
+      "invalidFormat": "Το τηλέφωνο μπορεί να έχει μη έγκυρο format"
     }
   }
 }

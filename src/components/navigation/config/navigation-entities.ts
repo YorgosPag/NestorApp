@@ -145,6 +145,9 @@ export type NavigationActionsConfig = {
  * Centralized configuration για όλα τα navigation entities.
  * ZERO hardcoded values σε components - όλα από εδώ.
  *
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+ * Labels are translated at runtime by components using useTranslation
+ *
  * @enterprise Fortune 500 compliant
  * @pattern Single Source of Truth
  */
@@ -152,114 +155,114 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
   company: {
     icon: Factory,
     color: 'text-blue-600',
-    label: 'Εταιρεία',
-    pluralLabel: 'Εταιρείες',
-    description: 'Εταιρεία στο σύστημα'
+    label: 'navigation.entities.company.label',
+    pluralLabel: 'navigation.entities.company.plural',
+    description: 'navigation.entities.company.description'
   },
   project: {
     icon: Construction,
     color: 'text-green-600',
-    label: 'Έργο',
-    pluralLabel: 'Έργα',
-    description: 'Κατασκευαστικό έργο'
+    label: 'navigation.entities.project.label',
+    pluralLabel: 'navigation.entities.project.plural',
+    description: 'navigation.entities.project.description'
   },
   building: {
     icon: Building,
     color: 'text-purple-600',
-    label: 'Κτίριο',
-    pluralLabel: 'Κτίρια',
-    description: 'Κτίριο σε έργο'
+    label: 'navigation.entities.building.label',
+    pluralLabel: 'navigation.entities.building.plural',
+    description: 'navigation.entities.building.description'
   },
   unit: {
     icon: Home,
     color: 'text-teal-600',
-    label: 'Μονάδα',
-    pluralLabel: 'Μονάδες',
-    description: 'Ακίνητη μονάδα'
+    label: 'navigation.entities.unit.label',
+    pluralLabel: 'navigation.entities.unit.plural',
+    description: 'navigation.entities.unit.description'
   },
   floor: {
     icon: Layers,
     color: 'text-orange-600',
-    label: 'Όροφος',
-    pluralLabel: 'Όροφοι',
-    description: 'Όροφος κτιρίου'
+    label: 'navigation.entities.floor.label',
+    pluralLabel: 'navigation.entities.floor.plural',
+    description: 'navigation.entities.floor.description'
   },
   parking: {
     icon: Car,
     color: 'text-amber-600',
-    label: 'Πάρκινγκ',
-    pluralLabel: 'Θέσεις Πάρκινγκ',
-    description: 'Θέση στάθμευσης'
+    label: 'navigation.entities.parking.label',
+    pluralLabel: 'navigation.entities.parking.plural',
+    description: 'navigation.entities.parking.description'
   },
   storage: {
     icon: Package,
     color: 'text-indigo-600',
-    label: 'Αποθήκη',
-    pluralLabel: 'Αποθήκες',
-    description: 'Χώρος αποθήκευσης'
+    label: 'navigation.entities.storage.label',
+    pluralLabel: 'navigation.entities.storage.plural',
+    description: 'navigation.entities.storage.description'
   },
   location: {
     icon: MapPin,
     color: 'text-red-600',
-    label: 'Τοποθεσία',
-    pluralLabel: 'Τοποθεσίες',
-    description: 'Γεωγραφική τοποθεσία'
+    label: 'navigation.entities.location.label',
+    pluralLabel: 'navigation.entities.location.plural',
+    description: 'navigation.entities.location.description'
   },
   area: {
     icon: Ruler,
     color: 'text-pink-600',
-    label: 'Εμβαδόν',
-    pluralLabel: 'Εμβαδά',
-    description: 'Τετραγωνικά μέτρα'
+    label: 'navigation.entities.area.label',
+    pluralLabel: 'navigation.entities.area.plural',
+    description: 'navigation.entities.area.description'
   },
   price: {
     icon: Euro,
     color: 'text-emerald-600',
-    label: 'Τιμή',
-    pluralLabel: 'Τιμές',
-    description: 'Τιμή σε ευρώ'
+    label: 'navigation.entities.price.label',
+    pluralLabel: 'navigation.entities.price.plural',
+    description: 'navigation.entities.price.description'
   },
   phone: {
     icon: Phone,
     color: 'text-sky-600',
-    label: 'Τηλέφωνο',
-    pluralLabel: 'Τηλέφωνα',
-    description: 'Αριθμός τηλεφώνου'
+    label: 'navigation.entities.phone.label',
+    pluralLabel: 'navigation.entities.phone.plural',
+    description: 'navigation.entities.phone.description'
   },
   email: {
     icon: Mail,
     color: 'text-rose-600',
-    label: 'Email',
-    pluralLabel: 'Emails',
-    description: 'Διεύθυνση email'
+    label: 'navigation.entities.email.label',
+    pluralLabel: 'navigation.entities.email.plural',
+    description: 'navigation.entities.email.description'
   },
   vat: {
     icon: Receipt,
     color: 'text-slate-600',
-    label: 'ΑΦΜ',
-    pluralLabel: 'ΑΦΜ',
-    description: 'Αριθμός Φορολογικού Μητρώου'
+    label: 'navigation.entities.vat.label',
+    pluralLabel: 'navigation.entities.vat.plural',
+    description: 'navigation.entities.vat.description'
   },
   contactIndividual: {
     icon: User,
     color: 'text-blue-600',
-    label: 'Φυσικό Πρόσωπο',
-    pluralLabel: 'Φυσικά Πρόσωπα',
-    description: 'Επαφή φυσικού προσώπου'
+    label: 'navigation.entities.contactIndividual.label',
+    pluralLabel: 'navigation.entities.contactIndividual.plural',
+    description: 'navigation.entities.contactIndividual.description'
   },
   contactCompany: {
     icon: Factory,
     color: 'text-blue-600',  // 🏢 ENTERPRISE: Same as company entity for consistency
-    label: 'Εταιρεία',
-    pluralLabel: 'Εταιρείες',
-    description: 'Επαφή νομικού προσώπου/εταιρείας'
+    label: 'navigation.entities.contactCompany.label',
+    pluralLabel: 'navigation.entities.contactCompany.plural',
+    description: 'navigation.entities.contactCompany.description'
   },
   contactService: {
     icon: Landmark,
     color: 'text-amber-600',
-    label: 'Υπηρεσία',
-    pluralLabel: 'Υπηρεσίες',
-    description: 'Δημόσια υπηρεσία'
+    label: 'navigation.entities.contactService.label',
+    pluralLabel: 'navigation.entities.contactService.plural',
+    description: 'navigation.entities.contactService.description'
   }
 } as const;
 
@@ -269,6 +272,9 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
  * Centralized configuration για όλες τις navigation actions.
  * ZERO hardcoded action icons σε components - όλα από εδώ.
  *
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+ * Labels are translated at runtime by components using useTranslation
+ *
  * @enterprise Fortune 500 compliant
  * @pattern Single Source of Truth
  */
@@ -276,56 +282,56 @@ export const NAVIGATION_ACTIONS: NavigationActionsConfig = {
   delete: {
     icon: Trash2,
     color: 'text-destructive',
-    label: 'Διαγραφή',
-    description: 'Αφαίρεση από τη λίστα πλοήγησης'
+    label: 'navigation.actions.delete.label',
+    description: 'navigation.actions.delete.description'
   },
   unlink: {
     icon: Unlink2,
     color: 'text-orange-500',
-    label: 'Αποσύνδεση',
-    description: 'Αποσύνδεση σχέσης μεταξύ entities'
+    label: 'navigation.actions.unlink.label',
+    description: 'navigation.actions.unlink.description'
   },
   add: {
     icon: Plus,
     color: 'text-green-600',
-    label: 'Προσθήκη',
-    description: 'Προσθήκη νέου στοιχείου'
+    label: 'navigation.actions.add.label',
+    description: 'navigation.actions.add.description'
   },
   link: {
     icon: Link2,
     color: 'text-blue-600',
-    label: 'Σύνδεση',
-    description: 'Σύνδεση με υπάρχον στοιχείο'
+    label: 'navigation.actions.link.label',
+    description: 'navigation.actions.link.description'
   },
   actions: {
     icon: MapPin,
     color: 'text-red-600',
-    label: 'Ενέργειες',
-    description: 'Διαθέσιμες ενέργειες'
+    label: 'navigation.actions.actions.label',
+    description: 'navigation.actions.actions.description'
   },
   view: {
     icon: Eye,
     color: 'text-cyan-600',
-    label: 'Προβολή',
-    description: 'Προβολή στοιχείου'
+    label: 'navigation.actions.view.label',
+    description: 'navigation.actions.view.description'
   },
   edit: {
     icon: Pencil,
     color: 'text-cyan-600',
-    label: 'Επεξεργασία',
-    description: 'Επεξεργασία στοιχείου'
+    label: 'navigation.actions.edit.label',
+    description: 'navigation.actions.edit.description'
   },
   share: {
     icon: Share2,
     color: 'text-violet-600',
-    label: 'Κοινοποίηση',
-    description: 'Κοινοποίηση στοιχείου'
+    label: 'navigation.actions.share.label',
+    description: 'navigation.actions.share.description'
   },
   filter: {
     icon: Filter,
     color: 'text-orange-500',
-    label: 'Φίλτρα',
-    description: 'Φιλτράρισμα στοιχείων'
+    label: 'navigation.actions.filter.label',
+    description: 'navigation.actions.filter.description'
   }
 } as const;
 

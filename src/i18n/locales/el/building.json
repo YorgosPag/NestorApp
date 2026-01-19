@@ -8,11 +8,71 @@
   },
   "floors": {
     "ground": "Ισόγειο",
-    "basement": "Υπόγειο {number}",
+    "basement": "Υπόγειο",
+    "basement1": "Υπόγειο -1",
+    "basement2": "Υπόγειο -2",
+    "basement3": "Υπόγειο -3",
+    "basementMinus1": "Υπόγειο -1",
+    "basementMinus2": "Υπόγειο -2",
     "floor": "{number}ος όροφος",
+    "floor1": "1ος Όροφος",
+    "floor2": "2ος Όροφος",
+    "floor3": "3ος Όροφος",
+    "floor4": "4ος Όροφος",
+    "floor5": "5ος Όροφος",
+    "floor6": "6ος Όροφος",
+    "floor7": "7ος Όροφος",
+    "floor8": "8ος Όροφος",
+    "floor9": "9ος Όροφος",
     "firstFloor": "1ος όροφος",
     "secondFloor": "2ος όροφος",
-    "thirdFloor": "3ος όροφος"
+    "thirdFloor": "3ος όροφος",
+    "allFloors": "Όλοι οι Όροφοι",
+    "other": "Άλλοι Όροφοι"
+  },
+  "connections": {
+    "electrical": "Ηλεκτρολογικά",
+    "plumbing": "Υδραυλικά",
+    "hvac": "Κλιματισμός",
+    "internet": "Internet",
+    "phone": "Τηλέφωνο"
+  },
+  "names": {
+    "buildingA": "Κτίριο Α",
+    "buildingB": "Κτίριο Β",
+    "buildingC": "Κτίριο Γ",
+    "buildingD": "Κτίριο Δ",
+    "buildingE": "Κτίριο Ε"
+  },
+  "toolbar": {
+    "newBuilding": "Νέο Κτίριο",
+    "editBuilding": "Επεξεργασία Κτιρίου",
+    "deleteBuilding": "Διαγραφή Κτιρίου",
+    "archive": "Αρχειοθέτηση",
+    "tooltips": {
+      "newBuilding": "Δημιουργία νέου κτιρίου (Ctrl+N)",
+      "editBuilding": "Επεξεργασία επιλεγμένου κτιρίου (Ctrl+E)",
+      "deleteBuilding": "Διαγραφή επιλεγμένου κτιρίου",
+      "deleteBuildingMultiple": "Διαγραφή {count} επιλεγμένων κτιρίων",
+      "exportData": "Εξαγωγή δεδομένων κτιρίου",
+      "importData": "Εισαγωγή δεδομένων κτιρίου",
+      "refreshData": "Ανανέωση δεδομένων",
+      "archiveSelected": "Αρχειοθέτηση επιλεγμένου κτιρίου",
+      "addToFavorites": "Προσθήκη στα αγαπημένα",
+      "showHelp": "Εμφάνιση βοήθειας"
+    },
+    "ui": {
+      "searchPlaceholder": "Αναζήτηση κτιρίων...",
+      "statusLabel": "Κατάσταση Κτιρίου",
+      "typeLabel": "Τύπος Κτιρίου",
+      "sortingLabel": "Ταξινόμηση κατά",
+      "selectedBuildings": "{count} κτίρια επιλεγμένα",
+      "selectedOfTotal": "{selected} από {total} επιλεγμένα",
+      "buildingsCount": "{count} Κτίρια",
+      "selectActionForSelected": "Επιλέξτε ενέργεια για τα επιλεγμένα στοιχεία",
+      "clearAllCount": "Καθαρισμός όλων ({count})",
+      "itemsSelected": "{count} επιλεγμένα"
+    }
   },
   "categories": {
     "residential": "Κατοικίες",
@@ -172,6 +232,18 @@
       "simple": "Απλή",
       "complex": "Πολύπλοκη",
       "veryComplex": "Πολύ Πολύπλοκη"
+    },
+    "sorting": {
+      "nameAZ": "Όνομα Α-Ω",
+      "nameZA": "Όνομα Ω-Α",
+      "ascending": "Αύξουσα",
+      "descending": "Φθίνουσα",
+      "byDate": "Κατά Ημερομηνία",
+      "bySize": "Κατά Μέγεθος"
+    },
+    "building": {
+      "containsTower": "Περιέχει Tower",
+      "containsComplex": "Περιέχει Complex"
     },
     "sampleProjects": {
       "projectA": "Έργο Α",
@@ -627,7 +699,31 @@
       "basicInfo": "Βασικές Πληροφορίες",
       "customer": "Πελάτης",
       "floorplans": "Κατόψεις",
-      "statistics": "Στατιστικά"
+      "statistics": "Στατιστικά",
+      "projectGeneral": "Γενικά Έργου",
+      "projectFloorplan": "Κάτοψη Έργου",
+      "parkingFloorplan": "Κάτοψη Θ.Σ.",
+      "projectStructure": "Δομή Έργου",
+      "buildingData": "Στοιχεία Δόμησης",
+      "parking": "Θέσεις Στάθμευσης",
+      "contributors": "Συντελεστές",
+      "projectDocuments": "Έγγραφα Έργου",
+      "ika": "IKA"
+    },
+    "descriptions": {
+      "projectGeneral": "Βασικές πληροφορίες και στοιχεία του έργου",
+      "projectFloorplan": "Αρχιτεκτονική κάτοψη και σχέδια του έργου",
+      "parkingFloorplan": "Κάτοψη και διάταξη θέσεων στάθμευσης",
+      "projectStructure": "Οργανωτική δομή και ιεραρχία του έργου",
+      "timeline": "Χρονοδιάγραμμα και ορόσημα του έργου",
+      "customers": "Πελάτες και αγοραστές του έργου",
+      "buildingData": "Τεχνικά στοιχεία και παράμετροι δόμησης",
+      "parking": "Διαχείριση και κατανομή θέσεων στάθμευσης",
+      "contributors": "Συντελεστές, εργολάβοι και συνεργάτες",
+      "projectDocuments": "Συμβάσεις, άδειες και νομικά έγγραφα",
+      "ika": "Στοιχεία IKA και ασφαλιστικές υποχρεώσεις",
+      "photos": "Φωτογραφίες προόδου και ολοκληρωμένου έργου",
+      "videos": "Βίντεο παρουσίασης και τεκμηρίωσης του έργου"
     },
     "general": {
       "header": {
@@ -1081,6 +1177,12 @@
   },
   "map": {
     "interactiveMap": "Διαδραστικός Χάρτης"
+  },
+  "floorplan": {
+    "titles": {
+      "project": "Κάτοψη Έργου",
+      "parking": "Κάτοψη Θέσεων Στάθμευσης"
+    }
   },
   "analytics": {
     "costCategories": {

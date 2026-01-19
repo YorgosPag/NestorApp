@@ -39,5 +39,9 @@
     "title": "Recent Activities",
     "subtitle": "Latest actions in the system",
     "viewAll": "View all"
+  },
+  "upcomingMeetings": {
+    "title": "Upcoming Meetings",
+    "viewCalendar": "View calendar"
   }
 }

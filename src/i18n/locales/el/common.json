@@ -9,30 +9,79 @@
     "export": "Εξαγωγή",
     "import": "Εισαγωγή",
     "refresh": "Ανανέωση",
-    "close": "Κλείσιμο"
+    "close": "Κλείσιμο",
+    "changeSelection": "Αλλαγή επιλογής",
+    "clearAll": "Διαγραφή όλων",
+    "clearAllCount": "Καθαρισμός ({count})"
+  },
+  "header": {
+    "notifications": {
+      "title": "Ειδοποιήσεις",
+      "clearAll": "Διαγραφή όλων"
+    },
+    "searchBar": {
+      "placeholder": "Αναζήτηση επαφών... (⌘K)"
+    }
+  },
+  "storage": {
+    "title": "Χώρος Αποθήκευσης",
+    "used": "Χρησιμοποιημένος",
+    "availableSpace": "Έχετε {size} διαθέσιμο χώρο για επαφές και αρχεία"
+  },
+  "contactTypes": {
+    "company": "Εταιρεία",
+    "service": "Δημόσια Υπηρεσία",
+    "individual": "Φυσικό Πρόσωπο",
+    "contact": "Επαφή"
   },
   "status": {
     "loading": "Φόρτωση...",
     "error": "Σφάλμα",
     "success": "Επιτυχία",
+    "warning": "Προειδοποίηση",
+    "info": "Ενημέρωση",
     "pending": "Εκκρεμεί",
-    "completed": "Ολοκληρώθηκε"
+    "completed": "Ολοκληρώθηκε",
+    "unknown": "Άγνωστο"
+  },
+  "toast": {
+    "success": "Επιτυχία",
+    "error": "Σφάλμα",
+    "warning": "Προειδοποίηση",
+    "info": "Ενημέρωση",
+    "loading": "Φόρτωση..."
   },
   "placeholders": {
     "search": "Αναζήτηση...",
+    "searching": "Αναζήτηση...",
+    "noResults": "Δεν βρέθηκαν αποτελέσματα",
+    "startTyping": "Ξεκινήστε να πληκτρολογείτε για αναζήτηση",
+    "keyboardNav": "Χρησιμοποιήστε τα βελάκια ↑↓ για πλοήγηση και Enter για επιλογή",
     "searchProperty": "Αναζήτηση ακινήτου...",
     "searchCompany": "Αναζήτηση εταιρείας...",
     "searchUnits": "Αναζήτηση μονάδων...",
     "searchBuildings": "Αναζήτηση κτιρίων...",
     "searchProjects": "Αναζήτηση έργων...",
     "searchContacts": "Αναζήτηση επαφών...",
+    "searchContact": "Αναζήτηση επαφής...",
     "selectOption": "Επιλέξτε μια επιλογή",
     "enterText": "Εισάγετε κείμενο",
     "clickToEdit": "Κλικ για επεξεργασία..."
   },
   "labels": {
     "search": "Αναζήτηση",
-    "searchCompany": "Αναζήτηση Εταιρείας"
+    "searchCompany": "Αναζήτηση Εταιρείας",
+    "clearSearch": "Καθαρισμός αναζήτησης",
+    "contact": "Επαφή"
+  },
+  "clickableField": {
+    "sendEmail": "Αποστολή email στο {value} μέσω Gmail",
+    "call": "Κλήση στο {value}",
+    "openWebsite": "Άνοιγμα ιστοσελίδας {value}"
+  },
+  "dropdown": {
+    "clearSelection": "Καθαρισμός επιλογής",
+    "totalContacts": "{count} συνολικές επαφές - χρησιμοποιήστε scroll ή αναζήτηση για πλοήγηση"
   },
   "navigation": {
     "home": "Αρχική",
@@ -46,7 +95,87 @@
     "delete": "Διαγραφή",
     "edit": "Επεξεργασία",
     "close": "Κλείσιμο",
-    "confirm": "Επιβεβαίωση"
+    "confirm": "Επιβεβαίωση",
+    "export": "Εξαγωγή",
+    "import": "Εισαγωγή",
+    "refresh": "Ανανέωση",
+    "newBuilding": "Νέο Κτίριο",
+    "newProject": "Νέο Έργο",
+    "newContact": "Νέα Επαφή",
+    "newUnit": "Νέα Μονάδα",
+    "newStorage": "Νέα Αποθήκη",
+    "newParking": "Νέα Θέση Στάθμευσης"
+  },
+  "unitStatus": {
+    "sold": "Πωλήθηκε",
+    "reserved": "Κρατήθηκε",
+    "rented": "Ενοικιάστηκε"
+  },
+  "customerActions": {
+    "view": "Προβολή",
+    "viewCustomer": "Προβολή Πελάτη",
+    "call": "Κλήση",
+    "email": "Email",
+    "message": "Μήνυμα",
+    "edit": "Επεξεργασία",
+    "reassign": "Ανακατανομή",
+    "changeUnit": "Αλλαγή Μονάδας",
+    "history": "Ιστορικό",
+    "documents": "Έγγραφα",
+    "notes": "Σημειώσεις",
+    "sendEmail": "Αποστολή Email",
+    "tooltips": {
+      "viewDetails": "Προβολή στοιχείων του {name}",
+      "callTo": "Κλήση στο {phone}",
+      "noPhone": "Δεν είναι διαθέσιμο τηλέφωνο",
+      "emailTo": "Email στο {email}",
+      "noEmail": "Δεν είναι διαθέσιμο email",
+      "smsTo": "SMS στο {phone}",
+      "noPhoneForSms": "Δεν είναι διαθέσιμο τηλέφωνο για SMS",
+      "editDetails": "Επεξεργασία στοιχείων του {name}",
+      "reassignFor": "Αλλαγή κατανομής για {name}",
+      "viewHistory": "Προβολή ιστορικού του {name}",
+      "viewDocuments": "Προβολή εγγράφων του {name}",
+      "viewNotes": "Προβολή σημειώσεων για {name}"
+    },
+    "states": {
+      "unknownCustomer": "Άγνωστος πελάτης",
+      "loadingError": "Σφάλμα φόρτωσης",
+      "noCustomer": "Δεν υπάρχει πελάτης",
+      "customerNotFound": "Πελάτης ID: {id} (δεν βρέθηκε)",
+      "unknownDate": "Άγνωστη ημερομηνία"
+    },
+    "labels": {
+      "customer": "Πελάτης"
+    },
+    "aria": {
+      "customerActions": "Ενέργειες πελάτη",
+      "customerDetails": "Στοιχεία πελάτη: {name}"
+    }
+  },
+  "richText": {
+    "bold": "Έντονα (Ctrl+B)",
+    "italic": "Πλάγια (Ctrl+I)",
+    "underline": "Υπογράμμιση (Ctrl+U)",
+    "preview": "Προεπισκόπηση"
+  },
+  "tooltips": {
+    "newBuildingShortcut": "Νέο Κτίριο (Ctrl+N)",
+    "newProjectShortcut": "Νέο Έργο (Ctrl+N)",
+    "newContactShortcut": "Νέα Επαφή (Ctrl+N)",
+    "newUnitShortcut": "Νέα Μονάδα (Ctrl+N)",
+    "newStorageShortcut": "Νέα Αποθήκη (Ctrl+N)",
+    "editContact": "Επεξεργασία επιλεγμένης επαφής",
+    "editSelected": "Επεξεργασία επιλεγμένου στοιχείου",
+    "deleteContact": "Διαγραφή επιλεγμένης επαφής",
+    "deleteSelected": "Διαγραφή επιλεγμένων στοιχείων",
+    "shareBuilding": "Κοινοποίηση κτιρίου",
+    "shareProject": "Κοινοποίηση έργου",
+    "shareContact": "Κοινοποίηση επαφής",
+    "shareUnit": "Κοινοποίηση μονάδας",
+    "shareStorage": "Κοινοποίηση αποθήκης",
+    "bulkActions": "Μαζικές ενέργειες για επιλεγμένα στοιχεία",
+    "toolbar": "Εργαλειοθήκη"
   },
   "favorites": {
     "add": "Προσθήκη στα αγαπημένα",
@@ -68,7 +197,9 @@
     "copied": "Αντιγράφηκε!",
     "shareError": "Αποτυχία κοινοποίησης μέσω {platform}: {error}",
     "viewMore": "Δείτε περισσότερα στο {company}!",
-    "sqm": "τ.μ."
+    "sqm": "τ.μ.",
+    "propertiesTeaser": "Δείτε αυτά τα ενδιαφέροντα ακίνητα από την {company}!",
+    "propertiesTitle": "{company} - Ακίνητα"
   },
   "loading": {
     "ariaLabel": "Φόρτωση σελίδας",
@@ -275,14 +406,109 @@
   "photos": {
     "addPhoto": "Προσθήκη Φωτογραφίας",
     "galleryLabel": "Γκαλερί φωτογραφιών",
-    "uploadPlaceholder": "Σύρετε και αποθέστε φωτογραφίες ή κάντε κλικ για επιλογή"
+    "uploadPlaceholder": "Σύρετε και αποθέστε φωτογραφίες ή κάντε κλικ για επιλογή",
+    "management": {
+      "title": "Διαχείριση Φωτογραφιών",
+      "gallery": "Γκαλερί Φωτογραφιών",
+      "logo": "Λογότυπο",
+      "photosCount": "Φωτογραφίες ({used}/{max})",
+      "photoNumber": "Φωτογραφία {number}",
+      "addMore": "Προσθήκη {count} ακόμη",
+      "addMorePhotos": "Προσθήκη {count} ακόμη φωτογραφίες",
+      "profileSelection": "Επιλογή Φωτογραφίας Προφίλ",
+      "profileOptions": "Επιλογές Φωτογραφίες Προφίλ",
+      "selectAsProfile": "Επιλογή φωτογραφίας {number} ως προφίλ",
+      "emptySlot": "Κενό σλοτ",
+      "emptySlotNumber": "Κενό {number}"
+    }
+  },
+  "communication": {
+    "addContactInfo": "Προσθέστε τις πληροφορίες επικοινωνίας σας",
+    "addNew": "Προσθήκη νέου {type}"
+  },
+  "obligations": {
+    "noSections": "Δεν υπάρχουν ενότητες",
+    "startByAddingSection": "Ξεκινήστε προσθέτοντας την πρώτη ενότητα της συγγραφής υποχρεώσεων",
+    "addSection": "Προσθήκη Ενότητας"
+  },
+  "propertyViewer": {
+    "title": "Ευρετήριο Ακινήτων",
+    "subtitle": "Οπτική διαχείριση και ανάλυση ακινήτων σε κάτοψη.",
+    "newProperty": "Νέο Ακίνητο"
+  },
+  "propertyEditor": {
+    "nodeEditing": "Επεξεργασία Κόμβων",
+    "selectedProperties": "{count} επιλεγμένα ακίνητα",
+    "copy": "Αντιγραφή",
+    "selectPropertiesToEdit": "Επιλέξτε ακίνητα για επεξεργασία κόμβων",
+    "layers": "Επίπεδα",
+    "layerVisibilityControl": "Έλεγχος ορατότητας επιπέδων",
+    "selectTwoToConnect": "Επιλέξτε δύο ακίνητα για να τα συνδέσετε"
+  },
+  "groups": {
+    "title": "Ομάδες",
+    "deleteGroup": "Διαγραφή Ομάδας",
+    "deleteGroupAria": "Διαγραφή ομάδας {name}"
+  },
+  "layerManager": {
+    "title": "Layers Διαχείρισης",
+    "itemCount": "{count} στοιχεία",
+    "searchPlaceholder": "Αναζήτηση layer...",
+    "searchAriaLabel": "Αναζήτηση Layer",
+    "typeFilterAriaLabel": "Φίλτρο τύπου",
+    "typePlaceholder": "Τύπος",
+    "statusFilterAriaLabel": "Φίλτρο κατάστασης",
+    "statusPlaceholder": "Κατάσταση",
+    "showAll": "Εμφάνιση Όλων",
+    "hideAll": "Απόκρυψη Όλων",
+    "noLayersFound": "Δεν βρέθηκαν layers",
+    "noResultsFor": "Δεν βρέθηκαν αποτελέσματα για \"{{query}}\"",
+    "tryChangingFilters": "Δοκιμάστε να αλλάξετε τα φίλτρα"
   },
   "filters": {
+    "searchFilters": "Φίλτρα Αναζήτησης",
     "typeLabel": "Τύπος:",
     "typeAriaLabel": "Φίλτρα τύπου",
     "filterBy": "Φιλτράρισμα:",
     "all": "Όλες",
     "showAll": "Εμφάνιση όλων",
+    "allTypes": "Όλοι οι Τύποι",
+    "allStatuses": "Όλες οι Καταστάσεις",
+    "allFloors": "Όλοι οι Όροφοι",
+    "allUnits": "Όλες οι Μονάδες",
+    "allAreas": "Όλες οι Περιοχές",
+    "allProjects": "Όλα τα Έργα",
+    "allLocations": "Όλες οι Τοποθεσίες",
+    "allCompanies": "Όλες οι Εταιρείες",
+    "allClients": "Όλοι οι Πελάτες",
+    "allPriorities": "Όλες οι Προτεραιότητες",
+    "allEnergyClasses": "Όλες οι Ενεργειακές Κλάσεις",
+    "allRenovations": "Όλες οι Ανακαινίσεις",
+    "allRiskLevels": "Όλα τα Επίπεδα Κινδύνου",
+    "allComplexities": "Όλες οι Πολυπλοκότητες",
+    "allBuildings": "Όλα τα Κτίρια",
+    "status": {
+      "available": "Διαθέσιμο",
+      "sold": "Πωλημένο",
+      "reserved": "Κρατημένο",
+      "maintenance": "Συντήρηση",
+      "occupied": "Κατειλημμένο",
+      "planning": "Σχεδιασμός",
+      "inProgress": "Σε Εξέλιξη",
+      "completed": "Ολοκληρωμένο",
+      "onHold": "Σε Αναμονή",
+      "active": "Ενεργό",
+      "inactive": "Ανενεργό",
+      "archived": "Αρχειοθετημένο",
+      "lead": "Lead",
+      "pending": "Εκκρεμεί",
+      "construction": "Υπό Κατασκευή"
+    },
+    "fields": {
+      "search": "Αναζήτηση",
+      "priceRange": "Εύρος Τιμής",
+      "areaRange": "Εύρος Επιφάνειας"
+    },
     "unitTypes": {
       "ariaLabel": "Φίλτρα τύπου μονάδας",
       "all": "Όλες",
@@ -305,6 +531,17 @@
       "individual": "Φυσικό",
       "company": "Εταιρεία",
       "service": "Υπηρεσία"
+    },
+    "channels": {
+      "ariaLabel": "Φίλτρα καναλιών",
+      "all": "Όλα",
+      "allTooltip": "Εμφάνιση όλων των καναλιών",
+      "email": "Email",
+      "emailTooltip": "Email μηνύματα",
+      "sms": "SMS",
+      "smsTooltip": "SMS μηνύματα",
+      "telegram": "Telegram",
+      "telegramTooltip": "Telegram μηνύματα"
     }
   },
   "sharing": {
@@ -357,7 +594,17 @@
     "compactEmailLabel": "Compact Email {number}",
     "compactInputsLabel": "Compact Email Inputs"
   },
+  "email": {
+    "template": "Email Template",
+    "templateIcon": "Εικονίδιο {name}",
+    "selected": "Επιλεγμένο",
+    "selectTemplate": "Επιλογή Template Email",
+    "availableTemplates": "Διαθέσιμα Templates",
+    "selectAppropriate": "Επιλέξτε το κατάλληλο template για την αποστολή"
+  },
   "twoFactor": {
+    "qrCodeAlt": "QR Code για authenticator app",
+    "backupFileNote": "Σημαντικό: Κάθε κωδικός μπορεί να χρησιμοποιηθεί μόνο μία φορά.\nΑποθηκεύστε αυτά τα αντίγραφα σε ασφαλές μέρος.",
     "description": "Προστατεύστε τον λογαριασμό σας με επιπλέον επίπεδο ασφάλειας χρησιμοποιώντας εφαρμογή επαλήθευσης όπως το Google Authenticator.",
     "enableButton": "Ενεργοποίηση Επαλήθευσης Δύο Παραγόντων",
     "scanQrCode": "Σαρώστε τον κωδικό QR με την εφαρμογή επαλήθευσης",
@@ -386,6 +633,447 @@
       "invalidCodeLength": "Ο κωδικός πρέπει να είναι 6 ψηφία",
       "verifyFailed": "Μη έγκυρος κωδικός επαλήθευσης",
       "disableFailed": "Αποτυχία απενεργοποίησης 2FA"
+    }
+  },
+  "priority": {
+    "high": "Υψηλή",
+    "medium": "Μέτρια",
+    "low": "Χαμηλή",
+    "urgent": "Επείγουσα",
+    "critical": "Κρίσιμη",
+    "none": "Καμία",
+    "empty": "Κενό",
+    "warning": "Προειδοποίηση",
+    "attention": "Προσοχή",
+    "success": "Επιτυχία",
+    "info": "Πληροφορία"
+  },
+  "recordState": {
+    "new": "Νέο",
+    "updated": "Ενημερωμένο",
+    "deleted": "Διαγραμμένο"
+  },
+  "entityType": {
+    "company": "Εταιρεία",
+    "main": "Κύριο",
+    "secondary": "Δευτερεύον"
+  },
+  "countries": {
+    "greece": "Ελλάδα",
+    "cyprus": "Κύπρος",
+    "usa": "ΗΠΑ",
+    "germany": "Γερμανία",
+    "france": "Γαλλία",
+    "italy": "Ιταλία",
+    "spain": "Ισπανία",
+    "uk": "Ηνωμένο Βασίλειο",
+    "australia": "Αυστραλία",
+    "canada": "Καναδάς",
+    "other": "Άλλη"
+  },
+  "units": {
+    "millimeters": "Χιλιοστά",
+    "centimeters": "Εκατοστά",
+    "meters": "Μέτρα",
+    "inches": "Ίντσες",
+    "feet": "Πόδια"
+  },
+  "trends": {
+    "increase": "Αύξηση",
+    "decrease": "Μείωση",
+    "stable": "Σταθερό",
+    "improvement": "Βελτίωση",
+    "new": "Νέο",
+    "updated": "Ενημερωμένο"
+  },
+  "boolean": {
+    "yes": "Ναι",
+    "no": "Όχι"
+  },
+  "documentStatus": {
+    "draft": "Πρόχειρο",
+    "completed": "Ολοκληρωμένο",
+    "approved": "Εγκεκριμένο"
+  },
+  "availability": {
+    "unavailable": "Μη διαθέσιμο",
+    "available": "Διαθέσιμο",
+    "occupied": "Κατειλημμένο"
+  },
+  "quickAdd": {
+    "tooltip": "Προσθήκη Επαφής",
+    "menuTitle": "Νέα Επαφή",
+    "importFromFile": "Εισαγωγή από αρχείο",
+    "voiceInput": "Φωνητική εισαγωγή"
+  },
+  "dropdowns": {
+    "select": "Επιλέξτε...",
+    "selectCompany": "Επιλέξτε Εταιρεία",
+    "selectProject": "Επιλέξτε Έργο",
+    "selectBuilding": "Επιλέξτε Κτίριο",
+    "selectUnit": "Επιλέξτε Μονάδα",
+    "selectClient": "Επιλέξτε Πελάτη",
+    "selectContact": "Επιλέξτε Επαφή",
+    "selectFile": "Επιλέξτε Αρχείο",
+    "selectEncoding": "Επιλέξτε Κωδικοποίηση",
+    "selectFloor": "Επιλέξτε Όροφο",
+    "selectType": "Επιλέξτε Τύπο",
+    "selectStatus": "Επιλέξτε Κατάσταση",
+    "selectStage": "Επιλέξτε Στάδιο"
+  },
+  "spaces": {
+    "title": "Χώροι",
+    "subtitle": "Φυσικοί χώροι - Τι υπάρχει και πού βρίσκεται",
+    "overview": "Επισκόπηση Φυσικών Χώρων",
+    "stats": {
+      "totalSpaces": "Συνολικοί Χώροι",
+      "allPhysicalSpaces": "Όλοι οι φυσικοί χώροι",
+      "apartments": "Διαμερίσματα",
+      "residentialSpaces": "Κατοικήσιμοι χώροι",
+      "storageUnits": "Αποθήκες",
+      "storageSpaces": "Χώροι αποθήκευσης",
+      "parkingSpaces": "Θέσεις Στάθμευσης",
+      "parkingAreas": "Χώροι parking",
+      "stable": "Σταθερό"
+    },
+    "cards": {
+      "apartments": {
+        "title": "Διαμερίσματα",
+        "description": "Κατοικήσιμοι χώροι σε όλα τα κτίρια",
+        "details": "Διαμερίσματα, μεζονέτες, γκαρσονιέρες"
+      },
+      "storage": {
+        "title": "Αποθήκες",
+        "description": "Χώροι αποθήκευσης και αποθηκών",
+        "details": "Πωλήσιμες και κοινόχρηστες"
+      },
+      "parking": {
+        "title": "Θέσεις Στάθμευσης",
+        "description": "Θέσεις parking εσωτερικές και εξωτερικές",
+        "details": "Υπόγεια, σκεπαστά, υπαίθρια"
+      },
+      "common": {
+        "title": "Κοινόχρηστοι Χώροι",
+        "description": "Κοινές εστίες, διάδρομοι, υπηρεσίες",
+        "details": "Κοινόχρηστοι και υπηρεσιών"
+      }
+    },
+    "info": {
+      "title": "Φυσικοί Χώροι",
+      "description": "Εδώ βλέπετε όλους τους φυσικούς χώρους που υπάρχουν στα κτίρια. Δεν περιλαμβάνονται στοιχεία πώλησης - μόνο η φυσική κατανομή και τοποθεσία."
+    },
+    "commonSpaces": {
+      "title": "Επισκόπηση Κοινόχρηστων Χώρων",
+      "subtitle": "Κοινόχρηστοι χώροι - Κοινές περιοχές κτιρίων",
+      "headerTitle": "Κοινόχρηστοι Χώροι",
+      "headerSubtitle": "Κοινές εστίες - Φυσικοί χώροι κοινής χρήσης",
+      "stats": {
+        "commonSpaces": "Κοινόχρηστοι Χώροι",
+        "allCommonSpaces": "Όλοι οι κοινόχρηστοι χώροι",
+        "recreationSpaces": "Χώροι Αναψυχής",
+        "recreationDesc": "Κοινές εστίες, λάντζες",
+        "serviceSpaces": "Χώροι Υπηρεσιών",
+        "serviceDesc": "Τεχνικοί, διαχείρισης",
+        "outdoorSpaces": "Εξωτερικοί Χώροι",
+        "outdoorDesc": "Κήποι, αυλές, ταράτσες",
+        "stable": "Σταθερό"
+      },
+      "cards": {
+        "lounges": {
+          "title": "Εστίες & Λάντζες",
+          "description": "Χώροι συνάντησης και αναψυχής",
+          "details": "Κοινές εστίες, λάντζες, καθιστικά"
+        },
+        "gyms": {
+          "title": "Γυμναστήρια & Spa",
+          "description": "Χώροι άθλησης και ευεξίας",
+          "details": "Γυμναστήρια, σάουνες, spa"
+        },
+        "technical": {
+          "title": "Τεχνικοί Χώροι",
+          "description": "Χώροι μηχανολογικών εγκαταστάσεων",
+          "details": "Λεβητοστάσια, μηχανολογικά"
+        },
+        "outdoor": {
+          "title": "Εξωτερικοί Χώροι",
+          "description": "Κήποι, αυλές, ταράτσες",
+          "details": "Κοινόχρηστοι εξωτερικοί χώροι"
+        }
+      },
+      "sections": {
+        "indoor": {
+          "title": "Εσωτερικοί Κοινόχρηστοι",
+          "commonLounges": "Κοινές εστίες",
+          "businessCenters": "Business centers",
+          "gyms": "Γυμναστήρια",
+          "commonRooms": "Κοινές αίθουσες"
+        },
+        "outdoorTechnical": {
+          "title": "Εξωτερικοί & Τεχνικοί",
+          "sharedGardens": "Κοινόχρηστοι κήποι",
+          "terraces": "Ταράτσες - αυλές",
+          "boilerRooms": "Λεβητοστάσια",
+          "mechanical": "Μηχανολογικά"
+        },
+        "spaces": "{count} χώροι"
+      },
+      "info": {
+        "title": "Κοινόχρηστοι Χώροι",
+        "description": "Εδώ βλέπετε όλους τους κοινόχρηστους χώρους που υπάρχουν στα κτίρια. Περιλαμβάνονται εστίες, τεχνικοί χώροι, κήποι και λοιπές κοινές περιοχές."
+      }
+    }
+  },
+  "sales": {
+    "title": "Πωλήσεις",
+    "subtitle": "Πωλήσιμα ακίνητα - Τι πωλείται και σε ποιον",
+    "overview": "Επισκόπηση Πωλήσεων",
+    "stats": {
+      "totalSaleable": "Συνολικά Πωλήσιμα",
+      "allAvailableProperties": "Όλα τα διαθέσιμα ακίνητα",
+      "available": "Διαθέσιμα",
+      "forSale": "Προς πώληση",
+      "sold": "Πωλημένα",
+      "completedSales": "Ολοκληρωμένες πωλήσεις",
+      "totalValue": "Συνολική Αξία",
+      "portfolioValue": "Αξία portfolio",
+      "increase": "Αύξηση",
+      "decrease": "Μείωση"
+    },
+    "sections": {
+      "availableForSale": "Διαθέσιμα προς Πώληση",
+      "soldProperties": "Πωλημένα Ακίνητα"
+    },
+    "cards": {
+      "apartments": {
+        "title": "Διαθέσιμα Διαμερίσματα",
+        "description": "Διαμερίσματα, μεζονέτες και γκαρσονιέρες προς πώληση"
+      },
+      "storage": {
+        "title": "Διαθέσιμες Αποθήκες",
+        "description": "Αποθήκες και χώροι αποθήκευσης προς πώληση"
+      },
+      "parking": {
+        "title": "Διαθέσιμα Parking",
+        "description": "Θέσεις στάθμευσης υπόγειες και εξωτερικές"
+      },
+      "completedSales": {
+        "title": "Ολοκληρωμένες Πωλήσεις",
+        "apartmentsSold": "{count} πωληθέντα",
+        "storageSold": "{count} πωληθείσες",
+        "parkingSold": "{count} πωληθέντα",
+        "totalLabel": "Συνολικά",
+        "totalProperties": "{count} ακίνητα",
+        "totalValueLabel": "Συνολική αξία"
+      }
+    },
+    "info": {
+      "title": "Πωλήσιμα Ακίνητα",
+      "description": "Εδώ βλέπετε όλα τα ακίνητα που έχουν ενεργοποιηθεί για πώληση. Περιλαμβάνονται τιμές, αγοραστές, συμβόλαια και ιστορικό πωλήσεων."
+    },
+    "sold": {
+      "title": "Πωλημένα Ακίνητα",
+      "subtitle": "Ολοκληρωμένες πωλήσεις - Ιστορικό & στατιστικά",
+      "overview": "Πωλημένα Ακίνητα - Επισκόπηση",
+      "stats": {
+        "totalSales": "Συνολικές Πωλήσεις",
+        "completedSales": "Ολοκληρωμένες πωλήσεις",
+        "totalRevenue": "Συνολικά Έσοδα",
+        "totalSalesValue": "Συνολική αξία πωλήσεων",
+        "avgSaleTime": "Μέσος Χρόνος Πώλησης",
+        "marketAverage": "Μέσος όρος στην αγορά",
+        "salesThisYear": "Πωλήσεις {year}",
+        "yearToDate": "Φέτος μέχρι σήμερα",
+        "improvement": "Βελτίωση"
+      },
+      "cards": {
+        "apartments": {
+          "title": "Διαμερίσματα",
+          "description": "Πωλημένα διαμερίσματα & μεζονέτες"
+        },
+        "storage": {
+          "title": "Αποθήκες",
+          "description": "Πωλημένες αποθήκες & κελάρια"
+        },
+        "parking": {
+          "title": "Θέσεις Στάθμευσης",
+          "description": "Πωλημένες θέσεις parking"
+        },
+        "totalRevenue": "Συνολικά έσοδα",
+        "avgPrice": "Μέση τιμή",
+        "avgTime": "Μέσος χρόνος"
+      },
+      "performance": {
+        "title": "Απόδοση ανά Έτος",
+        "yearToDate": "{year} (μέχρι σήμερα)",
+        "sales": "{count} πωλήσεις",
+        "revenue": "Έσοδα",
+        "avgPrice": "Μέση τιμή"
+      },
+      "marketInsights": {
+        "title": "Market Insights",
+        "topBuyerCategories": "Top Κατηγορίες Αγοραστών",
+        "privateInvestors": "Ιδιώτες επενδυτές",
+        "developmentCompanies": "Εταιρείες ανάπτυξης",
+        "familiesOwnerOccupied": "Οικογένειες (owner-occupied)",
+        "ofTotal": "{percent}% του συνόλου",
+        "performanceMetrics": "Performance Metrics",
+        "successRate": "Success Rate (λιστάρισμα → πώληση)",
+        "avgDiscount": "Μέσο discount από αρχική τιμή",
+        "fastestSale": "Ταχύτερη πώληση",
+        "slowestSale": "Αργότερη πώληση",
+        "days": "{count} ημέρες",
+        "months": "{count} μήνες"
+      },
+      "info": {
+        "title": "Πωλημένα Ακίνητα",
+        "description": "Εδώ βλέπετε όλες τις ολοκληρωμένες πωλήσεις ακινήτων. Περιλαμβάνονται στατιστικά πωλήσεων, έσοδα, buyer profiles και performance metrics."
+      }
+    },
+    "available": {
+      "title": "Διαθέσιμα Διαμερίσματα",
+      "subtitle": "Διαμερίσματα προς πώληση - Ενεργές καταχωρήσεις",
+      "overview": "Διαθέσιμα Διαμερίσματα - Επισκόπηση",
+      "stats": {
+        "availableApartments": "Διαθέσιμα Διαμερίσματα",
+        "forSaleNow": "Προς πώληση τώρα",
+        "avgPrice": "Μέση Τιμή",
+        "avgPriceDesc": "Μέσος όρος τιμής",
+        "interest": "Ενδιαφέρον",
+        "activeViews": "Ενεργές προβολές",
+        "avgTime": "Μέσος Χρόνος",
+        "onMarket": "Στην αγορά"
+      },
+      "types": {
+        "studios": {
+          "title": "Γκαρσονιέρες",
+          "description": "Διαμερίσματα ενός δωματίου"
+        },
+        "oneBedroom": {
+          "title": "Δυάρια",
+          "description": "Διαμερίσματα δύο δωματίων"
+        },
+        "twoBedroom": {
+          "title": "Τριάρια+",
+          "description": "Διαμερίσματα τριών+ δωματίων"
+        },
+        "avgPrice": "Μέση τιμή",
+        "sqmRange": "Εύρος τ.μ.",
+        "activeViews": "Ενεργές προβολές"
+      },
+      "priceRanges": {
+        "title": "Κλιμάκια Τιμών",
+        "available": "{count} διαθέσιμα",
+        "range1Desc": "Γκαρσονιέρες και μικρά δυάρια",
+        "range2Desc": "Δυάρια και μικρά τριάρια",
+        "range3Desc": "Μεγάλα τριάρια, τετράρια, μεζονέτες"
+      },
+      "activity": {
+        "title": "Ενδιαφέρον & Δραστηριότητα",
+        "activeVisits": "Ενεργές επισκέψεις",
+        "requests": "{count} αιτήματα",
+        "scheduledVisits": "Προγραμματισμένες επισκέψεις",
+        "appointments": "{count} ραντεβού",
+        "offersUnderReview": "Προσφορές υπό εξέταση",
+        "offers": "{count} προσφορές",
+        "hotProperties": "Hot Properties (>{count} προβολές/εβδομάδα)",
+        "properties": "{count} ακίνητα"
+      },
+      "info": {
+        "title": "Διαθέσιμα Διαμερίσματα",
+        "description": "Εδώ βλέπετε όλα τα διαμερίσματα που είναι ενεργά προς πώληση. Περιλαμβάνονται τιμές, ενδιαφέρον αγοραστών και στατιστικά πωλήσεων."
+      }
+    }
+  },
+  "photoPreview": {
+    "toolbar": {
+      "ariaLabel": "Εργαλεία Φωτογραφίας"
+    },
+    "navigation": {
+      "previous": "Προηγούμενη φωτογραφία",
+      "previousAria": "Προηγούμενη φωτογραφία ({current}/{total})",
+      "next": "Επόμενη φωτογραφία",
+      "nextAria": "Επόμενη φωτογραφία ({current}/{total})"
+    },
+    "zoom": {
+      "out": "Μικρότερο",
+      "in": "Μεγαλύτερο",
+      "fit": "Προσαρμογή στο πλαίσιο",
+      "label": "Zoom:"
+    },
+    "actions": {
+      "rotate": "Περιστροφή",
+      "download": "Λήψη",
+      "close": "Κλείσιμο"
+    },
+    "aria": {
+      "displayPhoto": "Εμφάνιση Φωτογραφίας",
+      "photoInfo": "Πληροφορίες Φωτογραφίας",
+      "contactType": "Τύπος Επαφής",
+      "focusInfo": "Πληροφορίες Εστίασης"
+    },
+    "titles": {
+      "profile": "Φωτογραφία Προφίλ",
+      "logo": "Λογότυπο",
+      "representative": "Φωτογραφία Εκπροσώπου",
+      "photo": "Φωτογραφία",
+      "photoWithIndex": "Φωτογραφία {index}"
+    },
+    "contactType": {
+      "individual": "Φυσικό Πρόσωπο",
+      "company": "Νομικό Πρόσωπο",
+      "service": "Δημόσια Υπηρεσία",
+      "unknown": "Άγνωστος Τύπος"
+    },
+    "screenReader": {
+      "gallery": "Προβολή φωτογραφίας {current} από {total}. {contactInfo}Χρησιμοποιήστε τα βέλη για πλοήγηση.",
+      "single": "Προβολή φωτογραφίας. {contactInfo}",
+      "photoFrom": "Φωτογραφία από {name}."
+    },
+    "alt": {
+      "gallery": "{title} - Φωτογραφία {current} από {total}",
+      "single": "{title}"
+    }
+  },
+  "progress": {
+    "label": "Πρόοδος"
+  },
+  "emptyState": {
+    "selectItem": {
+      "title": "Κάντε μια επιλογή",
+      "description": "Επιλέξτε ένα στοιχείο από τη λίστα για να δείτε τις λεπτομέρειές του."
+    }
+  },
+  "headerActions": {
+    "dashboard": "Dashboard",
+    "toggleDashboard": "Εμφάνιση/Απόκρυψη Dashboard",
+    "createNew": "Νέο {entity}",
+    "createTooltip": "Δημιουργία νέου {entity}",
+    "entities": {
+      "project": "Έργο",
+      "building": "Κτίριο",
+      "contact": "Επαφή",
+      "unit": "Μονάδα"
+    }
+  },
+  "viewMode": {
+    "list": "Λίστα",
+    "grid": "Πλέγμα",
+    "byType": "Κατά Τύπο",
+    "byStatus": "Κατά Κατάσταση",
+    "mobile": {
+      "list": "Προβολή λίστας",
+      "grid": "Προβολή πλέγματος",
+      "byType": "Ομαδοποίηση κατά τύπο",
+      "byStatus": "Ομαδοποίηση κατά κατάσταση"
+    }
+  },
+  "search": {
+    "placeholder": {
+      "default": "Αναζήτηση...",
+      "contacts": "Αναζήτηση επαφών...",
+      "projects": "Αναζήτηση έργων...",
+      "buildings": "Αναζήτηση κτιρίων...",
+      "files": "Αναζήτηση αρχείων..."
     }
   }
 }

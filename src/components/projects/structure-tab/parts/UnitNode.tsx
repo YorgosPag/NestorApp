@@ -12,12 +12,16 @@ import { HOVER_SHADOWS } from '@/components/ui/effects';
 
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 const unitColor = NAVIGATION_ENTITIES.unit.color;
 
 export const UnitNode = ({ unit }: { unit: UnitModel }) => {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const showCustomerInfo = unit.status === 'sold' || unit.status === 'reserved' || unit.status === 'rented';
@@ -57,7 +61,7 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
               <div className={`${colors.bg.success} p-3 ${quick.card}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <User size={16} className={`${colors.text.success}`} />
-                  <span className={`font-medium ${colors.text.success}`}>Πελάτης</span>
+                  <span className={`font-medium ${colors.text.success}`}>{t('structure.customer')}</span>
                 </div>
                 <div className="ml-6">
                   <div className={`font-medium ${colors.text.foreground}`}>
@@ -75,9 +79,9 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
                 <div className="flex items-center gap-2">
                   <User size={16} className={`${colors.text.warning}`} />
                   <span className={`${colors.text.warning}`}>
-                    {unit.soldTo ? 
-                      `Πελάτης (ID: ${unit.soldTo}) - Δεν βρέθηκαν στοιχεία` : 
-                      'Δεν έχει καταχωρηθεί πελάτης'
+                    {unit.soldTo
+                      ? t('structure.customerNotFound', { id: unit.soldTo })
+                      : t('structure.noCustomer')
                     }
                   </span>
                 </div>

@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import React from 'react';
@@ -8,6 +9,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from 'react-i18next';
 
 import { UnitsList } from '@/components/units/UnitsList';
 // 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
@@ -35,6 +37,7 @@ export function UnitsSidebar({
   onAssignmentSuccess,
 }: UnitsSidebarProps) {
   // 🗨️ ENTERPRISE: Centralized systems
+  const { t } = useTranslation('units');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const emptyStateMessages = useEmptyStateMessages();
@@ -112,20 +115,20 @@ export function UnitsSidebar({
       <MobileDetailsSlideIn
         isOpen={!!selectedUnit}
         onClose={() => onSelectUnit(null)}
-        title={selectedUnit?.title || 'Λεπτομέρειες Μονάδας'}
+        title={selectedUnit?.title || t('mobile.unitDetails')}
         actionButtons={
           <>
             <button
               onClick={() => {/* TODO: Edit unit handler */}}
               className={`p-2 rounded-md ${quick.input} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-              aria-label="Επεξεργασία Μονάδας"
+              aria-label={t('mobile.editUnit')}
             >
               <Edit className={iconSizes.sm} />
             </button>
             <button
               onClick={() => {/* TODO: Delete unit handler */}}
               className={`p-2 rounded-md ${quick.error} ${colors.bg.primary} text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
-              aria-label="Διαγραφή Μονάδας"
+              aria-label={t('mobile.deleteUnit')}
             >
               <Trash2 className={iconSizes.sm} />
             </button>

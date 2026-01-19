@@ -4,6 +4,8 @@ import React, { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GeneralPlotFormFields } from './GeneralPlotFormFields';
 import { PlotZoningSelectors } from './PlotZoningSelectors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export interface PlotData {
     sdNoSocial: number;
@@ -29,7 +31,8 @@ interface GeneralPlotDataTabProps {
 }
 
 export function GeneralPlotDataTab({ plotData, onPlotDataChange, isEditing }: GeneralPlotDataTabProps) {
-    
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('projects');
     const formRef = useRef<HTMLDivElement>(null);
 
     const handleEnterNavigation = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -54,7 +57,7 @@ export function GeneralPlotDataTab({ plotData, onPlotDataChange, isEditing }: Ge
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="text-lg text-center">Όροι Δόμησης Οικοπέδου</CardTitle>
+                <CardTitle className="text-lg text-center">{t('plotDataTab.title')}</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4" ref={formRef}>

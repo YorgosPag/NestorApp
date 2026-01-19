@@ -1,6 +1,8 @@
 import React from 'react';
 import { User, Building2, Landmark } from 'lucide-react';
 import type { ContactType } from '@/types/contacts';
+// 🏢 ENTERPRISE: i18n support for contact type labels
+import i18n from '@/i18n/config';
 
 /**
  * Get the appropriate icon component for a contact type
@@ -18,11 +20,10 @@ export const getTypeIcon = (type: ContactType, className: string = "h-4 w-4") =>
   }
 };
 
-export const getTypeLabel = (type: ContactType) => {
-  switch (type) {
-    case 'individual': return 'Φυσικό Πρόσωπο';
-    case 'company': return 'Εταιρεία';
-    case 'service': return 'Δημόσια Υπηρεσία';
-    default: return 'Επαφή';
-  }
+// 🏢 ENTERPRISE: i18n-enabled contact type labels
+export const getTypeLabel = (type: ContactType): string => {
+  const key = type === 'individual' || type === 'company' || type === 'service'
+    ? `types.${type}`
+    : 'types.individual'; // fallback
+  return i18n.t(key, { ns: 'contacts' });
 };

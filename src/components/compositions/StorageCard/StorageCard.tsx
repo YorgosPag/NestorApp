@@ -9,6 +9,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { badgeVariants } from '@/components/ui/badge';
 import { formatPriceWithUnit } from '@/lib/intl-utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 
 interface StorageCardProps {
@@ -23,27 +25,6 @@ interface StorageCardProps {
   getTypeLabel?: (type: StorageType) => string;
 }
 
-const defaultGetStatusLabel = (status: StorageStatus) => {
-  const statusLabels: Record<StorageStatus, string> = {
-    'available': 'Διαθέσιμο',
-    'occupied': 'Κατειλημμένο',
-    'reserved': 'Δεσμευμένο',
-    'maintenance': 'Συντήρηση',
-    'unavailable': 'Μη Διαθέσιμο'
-  };
-  return statusLabels[status] || status;
-};
-
-const defaultGetTypeLabel = (type: StorageType) => {
-  const typeLabels: Record<StorageType, string> = {
-    'parking': 'Πάρκινγκ',
-    'storage': 'Αποθήκη',
-    'basement': 'Υπόγειο',
-    'garage': 'Γκαράζ',
-    'warehouse': 'Αποθήκευση'
-  };
-  return typeLabels[type] || type;
-};
 
 const defaultGetTypeIcon = (type: StorageType) => {
   const typeIcons: Record<StorageType, React.ElementType> = {
@@ -74,31 +55,42 @@ export function StorageCard({
   onEdit,
   onDelete,
   getStatusColor,
-  getStatusLabel = defaultGetStatusLabel,
+  getStatusLabel,
   getTypeIcon = defaultGetTypeIcon,
-  getTypeLabel = defaultGetTypeLabel
+  getTypeLabel
 }: StorageCardProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const [isFavorite, setIsFavorite] = useState(false);
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('storage');
+
+  // 🏢 ENTERPRISE: Localized label functions
+  const localizedGetStatusLabel = (status: StorageStatus): string => {
+    return getStatusLabel?.(status) ?? t(`card.status.${status}`, { defaultValue: status });
+  };
+
+  const localizedGetTypeLabel = (type: StorageType): string => {
+    return getTypeLabel?.(type) ?? t(`card.types.${type}`, { defaultValue: type });
+  };
 
   const TypeIcon = getTypeIcon(unit.type);
 
   const formatArea = (area?: number) => {
-    if (!area) return 'Μη καθορισμένο';
+    if (!area) return t('card.notDefined');
     return `${area} m²`;
   };
 
   const formatPrice = (price?: number) => {
-    if (!price) return 'Δωρεάν';
-    return formatPriceWithUnit(price, 'μήνα');
+    if (!price) return t('card.free');
+    return formatPriceWithUnit(price, t('card.perMonth'));
   };
 
   return (
     <BaseCard
       // Βασικές ιδιότητες
       title={unit.identifier || unit.name}
-      subtitle={`${getTypeLabel(unit.type)} ${unit.floor ? `• ${unit.floor}ος όροφος` : ''}`}
+      subtitle={`${localizedGetTypeLabel(unit.type)} ${unit.floor ? `• ${t('card.floor', { floor: unit.floor })}` : ''}`}
       
       // Header configuration
       headerConfig={{
@@ -118,11 +110,11 @@ export function StorageCard({
       // Status badges
       statusBadges={[
         {
-          label: getStatusLabel(unit.status),
+          label: localizedGetStatusLabel(unit.status),
           className: getStatusBadgeClass(unit.status, colors)
         },
         {
-          label: getTypeLabel(unit.type),
+          label: localizedGetTypeLabel(unit.type),
           className: badgeVariants({ variant: 'outline', size: 'sm' })
         }
       ]}
@@ -131,7 +123,7 @@ export function StorageCard({
       contentSections={[
         // Location details
         (unit.building || unit.section) && {
-          title: 'Τοποθεσία',
+          title: t('card.sections.location'),
           content: (
             <div className="space-y-1">
               {unit.building && (
@@ -142,26 +134,26 @@ export function StorageCard({
               )}
               {unit.section && (
                 <p className="text-sm text-muted-foreground ml-6">
-                  Τμήμα: {unit.section}
+                  {t('card.sections.section')}: {unit.section}
                 </p>
               )}
               {unit.floor && (
                 <p className="text-sm text-muted-foreground ml-6">
-                  Όροφος: {unit.floor}
+                  {t('card.sections.floor')}: {unit.floor}
                 </p>
               )}
             </div>
           )
         },
-        
+
         // Specifications
         {
-          title: 'Προδιαγραφές',
+          title: t('card.sections.specs'),
           content: (
             <div className="space-y-2">
               {unit.area && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Εμβαδόν:</span>
+                  <span className="text-muted-foreground">{t('card.sections.area')}:</span>
                   <span className="font-medium flex items-center gap-1">
                     <Ruler className={iconSizes.xs} />
                     {formatArea(unit.area)}
@@ -170,64 +162,64 @@ export function StorageCard({
               )}
               {unit.dimensions && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Διαστάσεις:</span>
+                  <span className="text-muted-foreground">{t('card.sections.dimensions')}:</span>
                   <span className="font-medium">{unit.dimensions}</span>
                 </div>
               )}
               {unit.height && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Ύψος:</span>
+                  <span className="text-muted-foreground">{t('card.sections.height')}:</span>
                   <span className="font-medium">{unit.height}m</span>
                 </div>
               )}
             </div>
           )
         },
-        
+
         // Features & Amenities
         (unit.hasElectricity || unit.hasWater || unit.hasSecurity || unit.hasClimateControl) && {
-          title: 'Παροχές',
+          title: t('card.sections.amenities'),
           content: (
             <div className="flex flex-wrap gap-1">
               {unit.hasElectricity && (
                 <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
-                  Ρεύμα
+                  {t('card.amenities.electricity')}
                 </span>
               )}
               {unit.hasWater && (
                 <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
-                  Νερό
+                  {t('card.amenities.water')}
                 </span>
               )}
               {unit.hasSecurity && (
                 <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
                   <Shield className={`${iconSizes.xs} mr-1`} />
-                  Ασφάλεια
+                  {t('card.amenities.security')}
                 </span>
               )}
               {unit.hasClimateControl && (
                 <span className={badgeVariants({ variant: 'secondary', size: 'sm' })}>
                   <Thermometer className={`${iconSizes.xs} mr-1`} />
-                  Κλιματισμός
+                  {t('card.amenities.climate')}
                 </span>
               )}
             </div>
           )
         },
-        
+
         // Pricing
         unit.price && {
-          title: 'Τιμή',
+          title: t('card.sections.price'),
           content: (
             <div className={`text-lg font-semibold ${colors.text.success}`}>
               {formatPrice(unit.price)}
             </div>
           )
         },
-        
+
         // Description/Notes
         unit.description && {
-          title: 'Περιγραφή',
+          title: t('card.sections.description'),
           content: (
             <p className="text-sm text-muted-foreground line-clamp-3">
               {unit.description}
@@ -239,13 +231,13 @@ export function StorageCard({
       // Actions
       actions={[
         {
-          label: 'Επεξεργασία',
+          label: t('card.actions.edit'),
           icon: Edit,
           onClick: onEdit,
           variant: 'outline'
         },
         {
-          label: 'Διαγραφή',
+          label: t('card.actions.delete'),
           icon: Trash2,
           onClick: onDelete,
           variant: 'ghost'

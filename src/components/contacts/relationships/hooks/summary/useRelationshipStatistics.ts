@@ -85,29 +85,30 @@ export function useRelationshipStatistics(
   // DASHBOARD STATS GENERATION
   // ============================================================================
 
+  // 🌐 i18n: All dashboard stat titles converted to i18n keys - 2026-01-18
   const dashboardStats: DashboardStat[] = useMemo(() => {
     return [
       // 🔝 Πάνω σειρά (4 κάρτες) - Βασικά Στοιχεία
       {
-        title: "Σύνολο Σχέσεων",
+        title: "relationships.stats.totalRelationships",
         value: stats.total,
         icon: Users,
         color: "blue"
       },
       {
-        title: "Εργαζόμενοι",
+        title: "relationships.stats.employees",
         value: stats.employees,
         icon: Briefcase,
         color: "green"
       },
       {
-        title: "Μέτοχοι/Εταίροι",
+        title: "relationships.stats.shareholders",
         value: stats.shareholders,
         icon: Award,
         color: "purple"
       },
       {
-        title: "Σύμβουλοι",
+        title: "relationships.stats.consultants",
         value: stats.consultants,
         icon: Zap,
         color: "orange"
@@ -115,25 +116,25 @@ export function useRelationshipStatistics(
 
       // 🔽 Κάτω σειρά (4 κάρτες) - Λεπτομέρειες
       {
-        title: "Διευθυντικά Στελέχη",
+        title: "relationships.stats.management",
         value: stats.management.total,
         icon: UserCheck,
         color: "indigo"
       },
       {
-        title: "Πρόσφατες Σχέσεις",
+        title: "relationships.stats.recent",
         value: stats.recent,
         icon: Calendar,
         color: "pink"
       },
       {
-        title: "Κύριες Σχέσεις",
+        title: "relationships.stats.key",
         value: stats.key,
         icon: Star,
         color: "yellow"
       },
       {
-        title: "Τμήματα",
+        title: "relationships.stats.departments",
         value: stats.departments,
         icon: Target,
         color: "cyan"

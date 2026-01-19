@@ -13,39 +13,44 @@ import { EntityDetailsHeader } from '@/core/entity-headers';
 import { UnitBadge, CommonBadge } from '@/core/badges/UnifiedBadgeSystem';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
-import { PARKING_TYPE_LABELS } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ParkingDetailsHeaderProps {
   parking: ParkingSpot;
 }
 
-function getTypeLabel(type: string): string {
-  return PARKING_TYPE_LABELS[type as keyof typeof PARKING_TYPE_LABELS] || type || 'Άγνωστο';
-}
-
 export function ParkingDetailsHeader({ parking }: ParkingDetailsHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('parking');
+
+  // Helper function for type labels using i18n
+  const getTypeLabel = (type: string) => {
+    return t(`general.types.${type}`, t('general.unknown'));
+  };
+
   return (
     <>
       {/* 🖥️ DESKTOP: Show full header with actions */}
       <div className="hidden md:block">
         <EntityDetailsHeader
           icon={Car}
-          title={parking.number || 'Θέση Στάθμευσης'}
+          title={parking.number || t('header.viewParking')}
           actions={[
             {
-              label: 'Προβολή Θέσης',
+              label: t('header.viewParking'),
               onClick: () => console.log('Show parking details'),
               icon: Eye,
               className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
             },
             {
-              label: 'Επεξεργασία',
+              label: t('header.edit'),
               onClick: () => console.log('Edit parking'),
               icon: Edit,
               variant: 'outline'
             },
             {
-              label: 'Εκτύπωση',
+              label: t('header.print'),
               onClick: () => console.log('Print parking details'),
               icon: FileText,
               variant: 'outline'

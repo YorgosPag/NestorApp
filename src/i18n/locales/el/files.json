@@ -1,0 +1,63 @@
+{
+  "domains": {
+    "admin": "Διοικητικά",
+    "construction": "Κατασκευαστικά",
+    "sales": "Πωλήσεις",
+    "accounting": "Λογιστικά",
+    "legal": "Νομικά",
+    "financial": "Οικονομικά"
+  },
+  "categories": {
+    "photos": "Φωτογραφία",
+    "floorplans": "Κάτοψη",
+    "contracts": "Συμβόλαιο",
+    "invoices": "Τιμολόγιο",
+    "documents": "Έγγραφο",
+    "drawings": "Σχέδιο",
+    "reports": "Αναφορά",
+    "permits": "Άδεια"
+  },
+  "entityTypes": {
+    "contact": "Επαφή",
+    "building": "Κτίριο",
+    "floor": "Όροφος",
+    "unit": "Μονάδα",
+    "project": "Έργο",
+    "company": "Εταιρεία"
+  },
+  "purposes": {
+    "profile": "Προφίλ",
+    "id": "Ταυτότητα",
+    "front": "Μπροστινή Όψη",
+    "back": "Πίσω Όψη",
+    "signed": "Υπογεγραμμένο",
+    "draft": "Πρόχειρο"
+  },
+  "labels": {
+    "revision": "Έκδοση",
+    "uploadedAt": "Ανέβηκε",
+    "exportFilename": "Όνομα αρχείου εξαγωγής"
+  },
+  "pdf": {
+    "title": "Έγγραφο PDF",
+    "preview": "PDF προεπισκόπηση",
+    "openInNewTab": "Άνοιγμα PDF σε νέα καρτέλα"
+  },
+  "validation": {
+    "onlyPdfAllowed": "Μόνο αρχεία PDF επιτρέπονται",
+    "fileTooLarge": "Το αρχείο είναι πολύ μεγάλο (μέγιστο 50MB)",
+    "fileLargeWarning": "Το αρχείο είναι μεγάλο και μπορεί να χρειαστεί περισσότερος χρόνος για upload",
+    "filenameSpecialChars": "Το όνομα του αρχείου περιέχει ειδικούς χαρακτήρες που μπορεί να προκαλέσουν προβλήματα"
+  },
+  "upload": {
+    "errors": {
+      "generic": "Σφάλμα κατά την αποστολή του αρχείου",
+      "unauthorized": "Δεν έχετε δικαίωμα να ανεβάσετε αρχεία",
+      "cancelled": "Η αποστολή ακυρώθηκε",
+      "quotaExceeded": "Δεν υπάρχει αρκετός χώρος αποθήκευσης",
+      "urlFetch": "Σφάλμα κατά τη λήψη URL αρχείου",
+      "databaseUpdate": "Σφάλμα κατά την ενημέρωση βάσης δεδομένων",
+      "unknown": "Άγνωστο σφάλμα κατά τη διαχείριση του PDF"
+    }
+  }
+}

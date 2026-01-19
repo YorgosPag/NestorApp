@@ -23,6 +23,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPES
@@ -70,17 +71,7 @@ function getContactIcon(type: string) {
   }
 }
 
-function getContactTypeLabel(type: string) {
-  switch (type) {
-    case 'company':
-      return 'Εταιρεία';
-    case 'service':
-      return 'Υπηρεσία';
-    case 'individual':
-    default:
-      return 'Άτομο';
-  }
-}
+// 🏢 ENTERPRISE: Contact type label function moved inside component for i18n access
 
 // ============================================================================
 // COMPONENT
@@ -92,16 +83,26 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   searchResults,
   onSearch,
   isSearching,
-  label = "Επαφή",
-  placeholder = "Αναζήτηση επαφής...",
+  label,
+  placeholder,
   required = false,
   error,
   className,
   readonly = false
 }) => {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+
+  // 🏢 ENTERPRISE: i18n-aware contact type label function
+  const getContactTypeLabel = (type: string): string => {
+    return t(`contactTypes.${type}`, type);
+  };
+
+  // 🏢 ENTERPRISE: Use translations for default values
+  const displayLabel = label ?? t('labels.contact');
+  const displayPlaceholder = placeholder ?? t('placeholders.searchContacts');
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -276,9 +277,9 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   return (
     <div className={cn("space-y-2", className)}>
       {/* Label */}
-      {label && (
+      {displayLabel && (
         <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-          {label}{required && '*'}
+          {displayLabel}{required && '*'}
         </label>
       )}
 
@@ -307,7 +308,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                   </Badge>
                 </>
               ) : (
-                <span className="text-muted-foreground">{placeholder}</span>
+                <span className="text-muted-foreground">{displayPlaceholder}</span>
               )}
             </div>
 
@@ -321,7 +322,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                     INTERACTIVE_PATTERNS.SUBTLE_HOVER,
                     TRANSITION_PRESETS.STANDARD_COLORS
                   )}
-                  title="Καθαρισμός επιλογής"
+                  title={t('dropdown.clearSelection')}
                 >
                   <X className={iconSizes.xs} />
                 </button>
@@ -352,7 +353,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
                 ref={inputRef}
                 value={searchQuery}
                 onChange={handleSearchChange}
-                placeholder="Αναζήτηση επαφών..."
+                placeholder={t('placeholders.searchContacts')}
                 className="pl-8"
               />
             </div>
@@ -367,14 +368,14 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
             {isSearching ? (
               <div className="p-4 text-center text-muted-foreground">
                 <Loader2 className={`${iconSizes.lg} mx-auto mb-2 animate-spin`} />
-                <span className="text-sm">Αναζήτηση...</span>
+                <span className="text-sm">{t('placeholders.searching')}</span>
               </div>
             ) : searchResults.length > 0 ? (
               <>
                 {searchResults.map((contact, index) => renderContactItem(contact, index))}
                 {searchResults.length > 15 && (
                   <div className="p-3 text-center text-xs text-muted-foreground bg-muted/50 border-t border-border sticky bottom-0">
-                    {searchResults.length} συνολικές επαφές - χρησιμοποιήστε scroll ή αναζήτηση για πλοήγηση
+                    {t('dropdown.totalContacts', { count: searchResults.length })}
                   </div>
                 )}
               </>
@@ -382,7 +383,7 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
               <div className="p-4 text-center text-muted-foreground">
                 <Search className={`${iconSizes.lg} mx-auto mb-2`} />
                 <span className="text-sm">
-                  {searchQuery ? 'Δεν βρέθηκαν αποτελέσματα' : 'Ξεκινήστε να πληκτρολογείτε για αναζήτηση'}
+                  {searchQuery ? t('placeholders.noResults') : t('placeholders.startTyping')}
                 </span>
               </div>
             )}

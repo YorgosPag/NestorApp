@@ -11,6 +11,8 @@ import { useProjectStructure } from '../../structure-tab/hooks/useProjectStructu
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ZERO any)
@@ -32,26 +34,6 @@ interface BuildingSummary {
 }
 
 // ============================================================================
-// 🏢 ENTERPRISE: Centralized Labels (ZERO hardcoded strings)
-// ============================================================================
-
-const LABELS = {
-  CARD_TITLE: 'Κτίρια Έργου',
-  LOADING: 'Φόρτωση κτιρίων...',
-  ERROR_PREFIX: 'Σφάλμα κατά τη φόρτωση:',
-  EMPTY_TITLE: 'Δεν υπάρχουν κτίρια',
-  EMPTY_DESCRIPTION: 'Δεν έχουν συνδεθεί κτίρια με αυτό το έργο.',
-  EMPTY_ACTION: 'Προσθήκη από Κτίρια',
-  VIEW_BUILDING: 'Προβολή',
-  UNITS_LABEL: 'μονάδες',
-  SOLD_LABEL: 'πωλημένες',
-  AREA_LABEL: 'm²',
-  VIEW_ALL_STRUCTURE: 'Προβολή Δομής Έργου',
-  CLICK_TO_LOAD: 'Κάντε κλικ για φόρτωση κτιρίων',
-  RETRY: 'Επανάληψη',
-} as const;
-
-// ============================================================================
 // 🏢 ENTERPRISE: Component
 // ============================================================================
 
@@ -66,6 +48,8 @@ const LABELS = {
  * - Data is cached after first fetch
  */
 export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: ProjectBuildingsCardProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const router = useRouter();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -112,12 +96,12 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-              {LABELS.CARD_TITLE}
+              {t('buildings.cardTitle')}
             </span>
             <ChevronRight className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
           <CardDescription>
-            {LABELS.CLICK_TO_LOAD}
+            {t('buildings.clickToLoad')}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -135,7 +119,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-              {LABELS.CARD_TITLE}
+              {t('buildings.cardTitle')}
             </span>
             <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
@@ -143,7 +127,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
         <CardContent>
           <section className="flex items-center justify-center gap-2 py-8" aria-busy="true">
             <Loader2 className={cn(iconSizes.md, 'animate-spin', colors.text.muted)} />
-            <span className={colors.text.muted}>{LABELS.LOADING}</span>
+            <span className={colors.text.muted}>{t('buildings.loading')}</span>
           </section>
         </CardContent>
       </Card>
@@ -161,7 +145,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-              {LABELS.CARD_TITLE}
+              {t('buildings.cardTitle')}
             </span>
             <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
@@ -169,9 +153,9 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
         <CardContent>
           <section className="flex flex-col items-center justify-center gap-3 py-8" aria-live="polite">
             <AlertCircle className={cn(iconSizes.lg, 'text-destructive')} />
-            <span className="text-destructive text-sm">{LABELS.ERROR_PREFIX} {error}</span>
+            <span className="text-destructive text-sm">{t('buildings.errorPrefix')} {error}</span>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
-              {LABELS.RETRY}
+              {t('buildings.retry')}
             </Button>
           </section>
         </CardContent>
@@ -190,23 +174,23 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-              {LABELS.CARD_TITLE}
+              {t('buildings.cardTitle')}
             </span>
             <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <section className="text-center py-8" aria-label="Κενή λίστα κτιρίων">
+          <section className="text-center py-8" aria-label={t('buildings.emptyListAriaLabel')}>
             <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xl3, 'mx-auto mb-4', NAVIGATION_ENTITIES.building.color)} />
             <p className={cn('text-sm font-medium', colors.text.foreground)}>
-              {LABELS.EMPTY_TITLE}
+              {t('buildings.emptyTitle')}
             </p>
             <p className={cn('text-sm mt-1 mb-4', colors.text.muted)}>
-              {LABELS.EMPTY_DESCRIPTION}
+              {t('buildings.emptyDescription')}
             </p>
             <Button variant="outline" size="sm" onClick={handleAddBuilding}>
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color, 'mr-2')} />
-              {LABELS.EMPTY_ACTION}
+              {t('buildings.emptyAction')}
             </Button>
           </section>
         </CardContent>
@@ -224,25 +208,25 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2">
             <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-            {LABELS.CARD_TITLE}
+            {t('buildings.cardTitle')}
           </span>
           <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
         </CardTitle>
         <CardDescription>
-          {buildings.length} κτίρια συνδεδεμένα με αυτό το έργο
+          {t('buildings.linkedCount', { count: buildings.length })}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
         <header className="grid grid-cols-[2fr_1fr_1fr_auto] gap-3 pb-2 mb-3 border-b border-border text-sm font-medium text-muted-foreground">
-          <span>Όνομα Κτιρίου</span>
-          <span className="text-right">Μονάδες</span>
-          <span className="text-right">Εμβαδόν</span>
-          <span className="text-right">Ενέργειες</span>
+          <span>{t('buildings.buildingName')}</span>
+          <span className="text-right">{t('buildings.unitsHeader')}</span>
+          <span className="text-right">{t('buildings.areaHeader')}</span>
+          <span className="text-right">{t('buildings.actionsHeader')}</span>
         </header>
 
         {/* Buildings List */}
-        <section className="space-y-2" aria-label="Λίστα κτιρίων έργου">
+        <section className="space-y-2" aria-label={t('buildings.listAriaLabel')}>
           {buildings.map((building) => (
             <article
               key={building.id}
@@ -258,13 +242,13 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
               </div>
               <div className="text-right text-sm">
                 <span className="font-medium">{building.unitsCount}</span>
-                <span className={cn('ml-1', colors.text.muted)}>{LABELS.UNITS_LABEL}</span>
+                <span className={cn('ml-1', colors.text.muted)}>{t('buildings.unitsLabel')}</span>
                 <div className={cn('text-xs', colors.text.muted)}>
-                  {building.soldUnits} {LABELS.SOLD_LABEL}
+                  {building.soldUnits} {t('buildings.soldLabel')}
                 </div>
               </div>
               <div className={cn('text-right text-sm', colors.text.muted)}>
-                {building.totalArea.toLocaleString('el-GR', { maximumFractionDigits: 1 })} {LABELS.AREA_LABEL}
+                {building.totalArea.toLocaleString('el-GR', { maximumFractionDigits: 1 })} {t('buildings.areaLabel')}
               </div>
               <div className="text-right">
                 <Button
@@ -276,7 +260,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
                   }}
                 >
                   <ExternalLink className={iconSizes.sm} />
-                  <span className="sr-only">{LABELS.VIEW_BUILDING}</span>
+                  <span className="sr-only">{t('buildings.viewBuilding')}</span>
                 </Button>
               </div>
             </article>

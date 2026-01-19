@@ -6,8 +6,12 @@ import { ParkingTableToolbar } from './ParkingTableToolbar';
 import { ParkingSpotTable } from './ParkingSpotTable';
 import { OverflowContainer } from './OverflowContainer';
 import { useParkingData } from '@/hooks/useParkingData';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function ParkingTab() {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const {
     parkingSpots,
     selectedSpots,
@@ -30,7 +34,7 @@ export function ParkingTab() {
     <div className="space-y-6 min-w-0">
       <Card className="min-w-0">
         <CardHeader>
-          <CardTitle className="text-lg">Διαχείριση Θέσεων Στάθμευσης</CardTitle>
+          <CardTitle className="text-lg">{t('parkingManagement.title')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 w-full max-w-full overflow-x-auto">
           <ParkingTableToolbar

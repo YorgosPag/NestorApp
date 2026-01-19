@@ -51,17 +51,19 @@ export interface ParkingSpot {
   export type ParkingSpotType = 'underground' | 'covered' | 'open';
   export type ParkingSpotStatus = 'sold' | 'owner' | 'available' | 'reserved';
   
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   export const PARKING_TYPE_LABELS: Record<ParkingSpotType, string> = {
-    underground: 'Υπόγεια',
-    covered: 'Σκεπαστή',
-    open: 'Υπαίθρια'
+    underground: 'parking.types.underground',
+    covered: 'parking.types.covered',
+    open: 'parking.types.open'
   };
-  
+
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   export const PARKING_STATUS_LABELS: Record<ParkingSpotStatus, string> = {
-    sold: 'Πουλημένο',
-    owner: 'Οικοπεδούχου',
-    available: 'Διαθέσιμο',
-    reserved: 'Κρατημένο'
+    sold: 'parking.status.sold',
+    owner: 'parking.status.owner',
+    available: 'parking.status.available',
+    reserved: 'parking.status.reserved'
   };
 
   // 🗑️ REMOVED: PARKING_FILTER_LABELS - Use @/constants/property-statuses-enterprise

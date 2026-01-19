@@ -51,37 +51,40 @@ export interface PeriodConfig {
  *
  * ΣΗΜΑΝΤΙΚΟ: Αυτή είναι η ΜΟΝΑΔΙΚΗ πηγή αλήθειας για τις περιόδους!
  * Οποιαδήποτε αλλαγή στις περιόδους πρέπει να γίνεται ΕΔΩ και μόνο εδώ.
+ *
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+ * Labels are translated at runtime by components using useTranslation
  */
 export const PERIOD_SELECTOR_PERIODS: PeriodConfig[] = [
   {
     id: 'day',
-    label: 'Ημέρα',
+    label: 'common.periods.day',
     value: 'day',
-    description: 'Προβολή δεδομένων για σήμερα',
+    description: 'common.periods.dayDescription',
     order: 1,
     enabled: true,
   },
   {
     id: 'week',
-    label: 'Εβδομάδα',
+    label: 'common.periods.week',
     value: 'week',
-    description: 'Προβολή δεδομένων για την τρέχουσα εβδομάδα',
+    description: 'common.periods.weekDescription',
     order: 2,
     enabled: true,
   },
   {
     id: 'month',
-    label: 'Μήνας',
+    label: 'common.periods.month',
     value: 'month',
-    description: 'Προβολή δεδομένων για τον τρέχοντα μήνα',
+    description: 'common.periods.monthDescription',
     order: 3,
     enabled: true,
   },
   {
     id: 'year',
-    label: 'Έτος',
+    label: 'common.periods.year',
     value: 'year',
-    description: 'Προβολή δεδομένων για το τρέχον έτος',
+    description: 'common.periods.yearDescription',
     order: 4,
     enabled: true,
   }

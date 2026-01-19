@@ -1,8 +1,12 @@
+'use client';
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw, Database, Wifi, Server, AlertCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ErrorStateProps {
   error: string;
@@ -12,6 +16,8 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({ error, errorType, canRetry = true, onRetry }: ErrorStateProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
 
   // 🔒 ENTERPRISE: Icon mapping based on error type
@@ -30,33 +36,33 @@ export function ErrorState({ error, errorType, canRetry = true, onRetry }: Error
     }
   };
 
-  // 🔒 ENTERPRISE: Context-aware error messages
+  // 🔒 ENTERPRISE: Context-aware error messages using i18n
   const getErrorContext = () => {
     switch (errorType) {
       case 'NETWORK_ERROR':
         return {
-          title: 'Πρόβλημα Σύνδεσης',
-          subtitle: 'Δεν ήταν δυνατή η σύνδεση με τον διακομιστή'
+          title: t('errors.network.title'),
+          subtitle: t('errors.network.subtitle')
         };
       case 'DATABASE_ERROR':
         return {
-          title: 'Πρόβλημα Βάσης Δεδομένων',
-          subtitle: 'Προσωρινό πρόβλημα με τα δεδομένα'
+          title: t('errors.database.title'),
+          subtitle: t('errors.database.subtitle')
         };
       case 'API_ERROR':
         return {
-          title: 'Σφάλμα Διακομιστή',
-          subtitle: 'Ο διακομιστής αντιμετωπίζει προσωρινά προβλήματα'
+          title: t('errors.api.title'),
+          subtitle: t('errors.api.subtitle')
         };
       case 'VALIDATION_ERROR':
         return {
-          title: 'Μη Έγκυρα Δεδομένα',
-          subtitle: 'Παρακαλώ ελέγξτε τα δεδομένα και προσπαθήστε ξανά'
+          title: t('errors.validation.title'),
+          subtitle: t('errors.validation.subtitle')
         };
       default:
         return {
-          title: 'Σφάλμα Φόρτωσης',
-          subtitle: 'Παρουσιάστηκε απρόσμενο πρόβλημα'
+          title: t('errors.unknown.title'),
+          subtitle: t('errors.unknown.subtitle')
         };
     }
   };
@@ -66,7 +72,7 @@ export function ErrorState({ error, errorType, canRetry = true, onRetry }: Error
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Πελάτες Έργου</CardTitle>
+        <CardTitle>{t('customers.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="text-center py-8">
@@ -93,11 +99,11 @@ export function ErrorState({ error, errorType, canRetry = true, onRetry }: Error
                 className="inline-flex items-center"
               >
                 <RefreshCw className={`${iconSizes.sm} mr-2`} />
-                Προσπάθεια Ξανά
+                {t('errors.retryButton')}
               </Button>
 
               <p className="text-xs text-muted-foreground">
-                Αν το πρόβλημα συνεχίζεται, επικοινωνήστε με την υποστήριξη
+                {t('errors.supportMessage')}
               </p>
             </div>
           )}

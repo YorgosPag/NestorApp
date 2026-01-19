@@ -5,6 +5,8 @@ import { ContactBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import type { ContactStatus } from '@/core/types/BadgeTypes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Typed contact interface for demo data
 interface DemoContact {
@@ -14,6 +16,8 @@ interface DemoContact {
 }
 
 export function ContactsList() {
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('crm');
     const contacts: DemoContact[] = [
         { name: 'Γιώργος Παπαδόπουλος', company: 'Tech Solutions', status: 'active' },
         { name: 'Μαρία Ιωάννου', company: 'Creative Designs', status: 'active' },
@@ -25,10 +29,10 @@ export function ContactsList() {
             <table className="w-full text-left">
                 <thead>
                     <tr className="border-b">
-                        <th className="p-3">Όνομα</th>
-                        <th className="p-3">Εταιρεία</th>
-                        <th className="p-3">Κατάσταση</th>
-                        <th className="p-3">Ενέργειες</th>
+                        <th className="p-3">{t('contactsList.name')}</th>
+                        <th className="p-3">{t('contactsList.company')}</th>
+                        <th className="p-3">{t('contactsList.status')}</th>
+                        <th className="p-3">{t('contactsList.actions')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -43,7 +47,7 @@ export function ContactsList() {
                                 />
                             </td>
                             <td className="p-3">
-                                <Button variant="ghost" size="sm" className={`text-blue-600 ${HOVER_TEXT_EFFECTS.BLUE}`}>Προβολή</Button>
+                                <Button variant="ghost" size="sm" className={`text-blue-600 ${HOVER_TEXT_EFFECTS.BLUE}`}>{t('contactsList.view')}</Button>
                             </td>
                         </tr>
                     ))}

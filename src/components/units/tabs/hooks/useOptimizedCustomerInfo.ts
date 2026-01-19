@@ -256,13 +256,14 @@ export function useOptimizedCustomerInfo(
 // HELPER FUNCTIONS
 // ============================================================================
 
+// 🌐 i18n: Fallback text converted to i18n key - 2026-01-18
 function getDisplayName(contact: ContactData): string {
   if (contact.displayName) return contact.displayName;
   if (contact.name) return contact.name;
   if (contact.firstName || contact.lastName) {
     return [contact.firstName, contact.lastName].filter(Boolean).join(' ');
   }
-  return 'Άγνωστος πελάτης';
+  return 'contacts.customer.unknownCustomer';
 }
 
 function getPrimaryPhone(contact: ContactData): string | null {
