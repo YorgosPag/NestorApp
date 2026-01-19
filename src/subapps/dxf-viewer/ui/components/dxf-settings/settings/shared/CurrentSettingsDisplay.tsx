@@ -7,11 +7,13 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Lucide icons replacing emojis
-import { ClipboardList, Minus, Type } from 'lucide-react';
+import { ClipboardList, Minus, Type, Grid } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized Checkbox component (Radix)
 import { Checkbox } from '@/components/ui/checkbox';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface LineSettings {
   lineType: LineType;
@@ -62,6 +64,7 @@ export function CurrentSettingsDisplay({
   gripSettings,
   className = ''
 }: CurrentSettingsDisplayProps) {
+  const { t } = useTranslation('dxf-viewer');
   const { getStatusBorder, radius } = useBorderTokens();  // ✅ ENTERPRISE: Added radius
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();  // ✅ ENTERPRISE: Centralized icon sizes
@@ -93,7 +96,7 @@ export function CurrentSettingsDisplay({
         />
         <label htmlFor="show-settings-details" className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.CURSOR.POINTER}`}>
           <ClipboardList className={iconSizes.sm} />
-          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info}`}>Τρέχουσες Ρυθμίσεις</span>
+          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info}`}>{t('currentSettings.title')}</span>
         </label>
       </div>
 
@@ -103,15 +106,15 @@ export function CurrentSettingsDisplay({
             <div>
               <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.ROUNDED.TOP_LG} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <Minus className={iconSizes.sm} />
-                <span>Γραμμή</span>
+                <span>{t('currentSettings.line')}</span>
               </div>
               <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Τύπος:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.type')}</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineType}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Χρώμα:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.color')}</span>
                   <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {lineSettings.color}
                     <div
@@ -120,27 +123,27 @@ export function CurrentSettingsDisplay({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Πάχος:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.width')}</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineWidth}px</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Διαφάνεια:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.opacity')}</span>
                   <span className={`${colors.text.primary} font-mono`}>{Math.round(lineSettings.opacity * 100)}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Κλίμακα:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.scale')}</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.dashScale || 1.0}x</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Μετατόπιση:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.offset')}</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.dashOffset || 0}px</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Άκρα:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.lineCap')}</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineCap || 'butt'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Συνδέσεις:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.lineJoin')}</span>
                   <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineJoin || 'miter'}</span>
                 </div>
               </div>
@@ -151,11 +154,11 @@ export function CurrentSettingsDisplay({
             <div>
               <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.success} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.ROUNDED.TOP_LG} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <Type className={iconSizes.sm} />
-                <span>Κείμενο</span>
+                <span>{t('currentSettings.text')}</span>
               </div>
               <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Χρώμα:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.color')}</span>
                   <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {effectiveTextSettings.color}
                     <div
@@ -164,27 +167,27 @@ export function CurrentSettingsDisplay({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Μέγεθος:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.fontSize')}</span>
                   <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.fontSize}px</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Γραμματοσειρά:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.fontFamily')}</span>
                   <span className={`${colors.text.primary} font-mono ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>{effectiveTextSettings.fontFamily}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Στυλ:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.style')}</span>
                   <span className={`${colors.text.primary} font-mono`}>
-                    {effectiveTextSettings.isBold && 'Β'}{effectiveTextSettings.isItalic && 'Ι'}{effectiveTextSettings.isUnderline && 'Υ'}
-                    {!effectiveTextSettings.isBold && !effectiveTextSettings.isItalic && !effectiveTextSettings.isUnderline && 'Κανονικό'}
+                    {effectiveTextSettings.isBold && 'B'}{effectiveTextSettings.isItalic && 'I'}{effectiveTextSettings.isUnderline && 'U'}
+                    {!effectiveTextSettings.isBold && !effectiveTextSettings.isItalic && !effectiveTextSettings.isUnderline && t('currentSettings.labels.normal')}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Εκθέτης:</span>
-                  <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.isSuperscript ? 'Ναι' : 'Όχι'}</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.superscript')}</span>
+                  <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.isSuperscript ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Δείκτης:</span>
-                  <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.isSubscript ? 'Ναι' : 'Όχι'}</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.subscript')}</span>
+                  <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.isSubscript ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
                 </div>
               </div>
             </div>
@@ -192,28 +195,29 @@ export function CurrentSettingsDisplay({
 
           {activeTab === 'grips' && (
             <div>
-              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.warning} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.ROUNDED.TOP_LG} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
-                🔺 Grips
+              <div className={`${PANEL_LAYOUT.SPACING.STANDARD} ${colors.bg.secondary} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.warning} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.ROUNDED.TOP_LG} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+                <Grid className={iconSizes.sm} />
+                <span>{t('currentSettings.grips')}</span>
               </div>
               <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Ενεργά:</span>
-                  <span className={`${colors.text.primary} font-mono`}>{gripSettings.showGrips ? 'Ναι' : 'Όχι'}</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.visible')}</span>
+                  <span className={`${colors.text.primary} font-mono`}>{gripSettings.showGrips ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Μέγεθος:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.size')}</span>
                   <span className={`${colors.text.primary} font-mono`}>{gripSettings.gripSize}px</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Σχήμα:</span>
-                  <span className={`${colors.text.primary} font-mono`}>{gripSettings.gripShape === 'square' ? 'Τετράγωνο' : 'Κύκλος'}</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.shape')}</span>
+                  <span className={`${colors.text.primary} font-mono`}>{gripSettings.gripShape}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Γέμισμα:</span>
-                  <span className={`${colors.text.primary} font-mono`}>{gripSettings.showFill ? 'Ναι' : 'Όχι'}</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.fill')}</span>
+                  <span className={`${colors.text.primary} font-mono`}>{gripSettings.showFill ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Χρώμα Cold:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.coldColor')}</span>
                   <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {gripSettings.colors.cold}
                     <div
@@ -222,7 +226,7 @@ export function CurrentSettingsDisplay({
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={`${colors.text.muted}`}>Χρώμα Warm:</span>
+                  <span className={`${colors.text.muted}`}>{t('currentSettings.labels.warmColor')}</span>
                   <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {gripSettings.colors.warm}
                     <div
@@ -236,7 +240,7 @@ export function CurrentSettingsDisplay({
 
           {!activeTab && (
             <div className={`text-center ${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.PADDING.TOP_LG} ${PANEL_LAYOUT.PADDING.BOTTOM_LG}`}>
-              Επιλέξτε μια καρτέλα (Γραμμές, Κείμενο ή Grips) για να δείτε τις τρέχουσες ρυθμίσεις
+              {t('currentSettings.selectTab')}
             </div>
           )}
         </div>

@@ -8,6 +8,9 @@ import { FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
 import type { IndividualFieldConfig, IndividualSectionConfig } from '@/config/individual-config';
 import { getIconComponent } from './utils/IconMapping';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'react-i18next';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -61,7 +64,8 @@ function renderInputField(
   field: IndividualFieldConfig,
   formData: IndividualFormData,
   onChange: InputChangeHandler,
-  disabled: boolean
+  disabled: boolean,
+  t: TFunction // 🏢 ENTERPRISE: i18n translation function
 ): React.ReactNode {
   const value = formData[field.id] ?? '';
 
@@ -75,7 +79,7 @@ function renderInputField(
       onChange={onChange}
       disabled={disabled}
       required={field.required}
-      placeholder={field.placeholder}
+      placeholder={field.placeholder ? t(field.placeholder) : undefined} // 🏢 ENTERPRISE: Translate placeholder if exists
       maxLength={field.maxLength}
       className={field.className}
     />
@@ -113,7 +117,8 @@ function renderSelectField(
   field: IndividualFieldConfig,
   formData: IndividualFormData,
   onSelectChange: SelectChangeHandler,
-  disabled: boolean
+  disabled: boolean,
+  t: TFunction // 🏢 ENTERPRISE: i18n translation function
 ): React.ReactNode {
   const currentValue = formData[field.id];
   const valueStr = currentValue !== null && currentValue !== undefined ? String(currentValue) : (field.defaultValue ?? '');
@@ -127,7 +132,7 @@ function renderSelectField(
       required={field.required}
     >
       <SelectTrigger>
-        <SelectValue placeholder={field.placeholder || `Επιλέξτε ${field.label}`} />
+        <SelectValue placeholder={field.placeholder ? t(field.placeholder) : `${t('common.select')} ${t(field.label)}`} />
       </SelectTrigger>
       <SelectContent>
         {field.options?.map((option) => (
@@ -149,6 +154,7 @@ function renderField(
   onChange: InputChangeHandler,
   onSelectChange: SelectChangeHandler,
   disabled: boolean,
+  t: TFunction, // 🏢 ENTERPRISE: i18n translation function
   customRenderers?: Record<string, CustomFieldRenderer>
 ): React.ReactNode {
   // Check for custom renderer first
@@ -163,14 +169,14 @@ function renderField(
     case 'tel':
     case 'date':
     case 'number':
-      return renderInputField(field, formData, onChange, disabled);
+      return renderInputField(field, formData, onChange, disabled, t);
     case 'textarea':
       return renderTextareaField(field, formData, onChange, disabled);
     case 'select':
-      return renderSelectField(field, formData, onSelectChange, disabled);
+      return renderSelectField(field, formData, onSelectChange, disabled, t);
     default:
       console.warn(`Unknown field type: ${field.type} for field ${field.id}`);
-      return renderInputField(field, formData, onChange, disabled);
+      return renderInputField(field, formData, onChange, disabled, t);
   }
 }
 
@@ -192,6 +198,9 @@ export function IndividualFormRenderer({
   disabled = false,
   customRenderers
 }: IndividualFormRendererProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
+
   if (!sections || sections.length === 0) {
     console.warn('IndividualFormRenderer: No sections provided');
     return null;
@@ -217,14 +226,14 @@ export function IndividualFormRenderer({
               section.fields.map((field) => (
                 <FormField
                   key={field.id}
-                  label={field.label}
+                  label={t(field.label)} // 🏢 ENTERPRISE: Translate field label
                   htmlFor={field.id}
                   required={field.required}
-                  helpText={field.helpText}
+                  helpText={field.helpText ? t(field.helpText) : undefined} // 🏢 ENTERPRISE: Translate helpText if exists
                   className={section.id === 'communication' ? "w-full max-w-none block" : "w-full"}
                 >
                   <FormInput>
-                    {renderField(field, formData, onChange, onSelectChange, disabled, customRenderers)}
+                    {renderField(field, formData, onChange, onSelectChange, disabled, t, customRenderers)}
                   </FormInput>
                 </FormField>
               ))

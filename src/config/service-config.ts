@@ -54,28 +54,29 @@ const serviceFieldLabels = getServiceFieldLabels();
 /**
  * Βασικά Στοιχεία Δημόσιας Υπηρεσίας
  * ✅ ENTERPRISE: Using centralized service field labels
+ * 🌐 i18n: All placeholders and helpTexts converted to i18n keys - 2026-01-19
  */
 const basicInfoSection: ServiceSectionConfig = (() => {
   const fieldLabels = serviceFieldLabels;
   return {
     id: 'basicInfo',
-    title: fieldLabels.basic_info_section,
+    title: 'contacts.service.sections.basicInfo.title',
     icon: 'landmark',
   fields: [
     {
       id: 'name',
       type: 'input',
       label: fieldLabels.service_name,
-      placeholder: 'π.χ. Δήμος Αθηναίων',
+      placeholder: 'contacts.service.fields.name.placeholder',
       required: true,
-      helpText: 'Η επίσημη επωνυμία του δημόσιου φορέα'
+      helpText: 'contacts.service.fields.name.helpText'
     },
     {
       id: 'shortName',
       type: 'input',
       label: fieldLabels.short_name,
-      placeholder: 'π.χ. Δ.Α.',
-      helpText: 'Συντομογραφία ή ακρωνύμιο της υπηρεσίας'
+      placeholder: 'contacts.service.fields.shortName.placeholder',
+      helpText: 'contacts.service.fields.shortName.helpText'
     },
     {
       id: 'category',
@@ -91,8 +92,8 @@ const basicInfoSection: ServiceSectionConfig = (() => {
       id: 'supervisionMinistry',
       type: 'input',
       label: fieldLabels.supervision_ministry,
-      placeholder: 'π.χ. Υπουργείο Εσωτερικών',
-      helpText: 'Το υπουργείο που εποπτεύει την υπηρεσία'
+      placeholder: 'contacts.service.fields.supervisionMinistry.placeholder',
+      helpText: 'contacts.service.fields.supervisionMinistry.helpText'
     }
   ]
   };

@@ -10,6 +10,9 @@ import { ContactRelationshipManager } from '@/components/contacts/relationships/
 import { RelationshipsSummary } from '@/components/contacts/relationships/RelationshipsSummary';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
 import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicContactArrays';
+// 🏢 ENTERPRISE: File Management System (ADR-031)
+import { EntityFilesManager } from '@/components/shared/files';
+import { useAuth } from '@/auth/contexts/AuthContext';
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
 
@@ -91,6 +94,9 @@ export function UnifiedContactTabbedSection({
   onPhotoClick,
   canonicalUploadContext,
 }: UnifiedContactTabbedSectionProps) {
+
+  // 🏢 ENTERPRISE: Get auth context for file management
+  const { user } = useAuth();
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
   const config = useMemo(() => getContactFormConfig(contactType), [contactType]);
@@ -242,6 +248,46 @@ export function UnifiedContactTabbedSection({
                 />
               )}
             </RelationshipProvider>
+          );
+        },
+
+        // 🏢 ENTERPRISE: Custom renderer for files tab - ADR-031 Canonical File Storage
+        files: () => {
+          const contactId = formData.id;
+          const currentUserId = user?.uid;
+          const companyId = user?.companyId;
+
+          // Don't render if no contact ID (new contact) or no user
+          if (!contactId || !currentUserId || !companyId) {
+            return (
+              <div className="p-8 text-center text-muted-foreground">
+                <p>Το Files tab θα είναι διαθέσιμο αφού αποθηκεύσετε την επαφή.</p>
+              </div>
+            );
+          }
+
+          // Get entity label for display names
+          let entityLabel = '';
+          if (contactType === 'individual') {
+            const firstName = (formData.firstName as string) || '';
+            const lastName = (formData.lastName as string) || '';
+            entityLabel = `${firstName} ${lastName}`.trim();
+          } else if (contactType === 'company') {
+            entityLabel = (formData.companyName as string) || (formData.tradeName as string) || '';
+          } else if (contactType === 'service') {
+            entityLabel = (formData.serviceName as string) || (formData.name as string) || '';
+          }
+
+          return (
+            <EntityFilesManager
+              entityType="contact"
+              entityId={contactId}
+              companyId={companyId}
+              domain="admin"
+              category="documents"
+              currentUserId={currentUserId}
+              entityLabel={entityLabel}
+            />
           );
         }
       }

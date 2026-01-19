@@ -210,7 +210,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
             <button
               key={status}
               onClick={() => onStatusChange(status)}
-              title={STATUS_LABELS[status]}
+              title={t(STATUS_LABELS[status])}
               className={`${iconSizes.lg} ${quick.button} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']}`}
               style={getStatusColorButtonStyles(
                 status as PropertyStatus,
@@ -233,7 +233,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               <button
                 key={kind}
                 onClick={() => onKindChange(kind)}
-                title={KIND_LABELS[kind]}
+                title={t(KIND_LABELS[kind])}
                 className={`
                   ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
                   flex items-center justify-center

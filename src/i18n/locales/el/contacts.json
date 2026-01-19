@@ -1,4 +1,24 @@
 {
+  "common": {
+    "select": "Επιλέξτε",
+    "fields": {
+      "street": {
+        "placeholder": "π.χ. Λεωφόρος Αθηνών",
+        "helpText": "Η οδός κατοικίας"
+      },
+      "streetNumber": {
+        "placeholder": "π.χ. 123",
+        "helpText": "Ο αριθμός της οδού"
+      },
+      "city": {
+        "placeholder": "π.χ. Αθήνα",
+        "helpText": "Η πόλη κατοικίας"
+      },
+      "postalCode": {
+        "helpText": "Ο ταχυδρομικός κώδικας (5 ψηφία)"
+      }
+    }
+  },
   "emptyState": {
     "title": "Επιλέξτε μια επαφή",
     "description": "Επιλέξτε μια επαφή από τη λίστα για να δείτε τις λεπτομέρειές της."
@@ -400,6 +420,13 @@
     }
   },
   "communication": {
+    "sections": {
+      "phones": "Τηλέφωνα",
+      "emails": "E-mails",
+      "websites": "Ιστοσελίδες",
+      "socialMedia": "Social Media",
+      "identity": "Ταυτότητα"
+    },
     "phoneTypes": {
       "mobile": "Κινητό",
       "home": "Οικίας",
@@ -436,6 +463,39 @@
       "whatsapp": "WhatsApp",
       "telegram": "Telegram",
       "other": "Άλλο"
+    },
+    "placeholders": {
+      "phone": "π.χ. 6981890123",
+      "phoneLabel": "π.χ. Προσωπικό κινητό",
+      "email": "π.χ. email@example.com",
+      "emailLabel": "π.χ. Προσωπικό email",
+      "website": "π.χ. https://example.com",
+      "websiteLabel": "π.χ. Προσωπική ιστοσελίδα",
+      "username": "π.χ. @username",
+      "socialLabel": "π.χ. Προσωπικό προφίλ"
+    },
+    "emptyStates": {
+      "phones": "Δεν έχουν προστεθεί τηλέφωνα",
+      "emails": "Δεν έχουν προστεθεί e-mails",
+      "websites": "Δεν έχουν προστεθεί ιστοσελίδες",
+      "socialMedia": "Δεν έχουν προστεθεί social media"
+    },
+    "buttons": {
+      "addPhone": "Προσθήκη Τηλεφώνου",
+      "addEmail": "Προσθήκη E-mail",
+      "addWebsite": "Προσθήκη Ιστοσελίδας",
+      "addSocial": "Προσθήκη Social Media"
+    },
+    "tableHeaders": {
+      "type": "Τύπος",
+      "countryCode": "Κωδικός",
+      "number": "Αριθμός",
+      "label": "Ετικέτα",
+      "actions": "Ενέργειες",
+      "email": "Διεύθυνση E-mail",
+      "url": "URL",
+      "platform": "Πλατφόρμα",
+      "username": "Username"
     }
   },
   "identity": {
@@ -484,23 +544,6 @@
       "postalCode": "Τ.Κ."
     }
   },
-  "individual": {
-    "fields": {
-      "firstName": "Όνομα",
-      "lastName": "Επώνυμο",
-      "fatherName": "Όνομα Πατέρα",
-      "motherName": "Όνομα Μητέρας",
-      "birthDate": "Ημερομηνία Γέννησης",
-      "birthCountry": "Χώρα Γέννησης",
-      "gender": "Φύλο",
-      "amka": "ΑΜΚΑ",
-      "documentType": "Τύπος Εγγράφου",
-      "documentIssuer": "Αρχή Έκδοσης",
-      "documentNumber": "Αριθμός Εγγράφου",
-      "documentIssueDate": "Ημ/νία Έκδοσης",
-      "documentExpiryDate": "Ημ/νία Λήξης"
-    }
-  },
   "company": {
     "legalForms": {
       "ae": "Ανώνυμη Εταιρεία (Α.Ε.)",
@@ -546,15 +589,110 @@
     }
   },
   "service": {
+    "sections": {
+      "basicInfo": {
+        "title": "Βασικά Στοιχεία"
+      },
+      "administrative": {
+        "title": "Διοικητικά Στοιχεία"
+      },
+      "contact": {
+        "title": "Στοιχεία Επικοινωνίας"
+      },
+      "services": {
+        "title": "Αρμοδιότητες & Υπηρεσίες"
+      },
+      "logo": {
+        "title": "Λογότυπο & Επικοινωνία"
+      },
+      "relationships": {
+        "title": "Σχέσεις"
+      }
+    },
     "fields": {
-      "legalStatus": "Νομικό Καθεστώς",
-      "establishmentLaw": "Ιδρυτικός Νόμος",
-      "headTitle": "Τίτλος Προϊσταμένου",
-      "headName": "Όνομα Προϊσταμένου",
-      "mainResponsibilities": "Κύριες Αρμοδιότητες",
-      "citizenServices": "Υπηρεσίες Πολιτών",
-      "onlineServices": "Ηλεκτρονικές Υπηρεσίες",
-      "serviceHours": "Ωράριο Λειτουργίας"
+      "name": {
+        "label": "Όνομα Υπηρεσίας",
+        "placeholder": "π.χ. Δήμος Αθηναίων",
+        "helpText": "Η επίσημη επωνυμία του δημόσιου φορέα"
+      },
+      "shortName": {
+        "label": "Σύντομο Όνομα",
+        "placeholder": "π.χ. Δ.Α.",
+        "helpText": "Συντομογραφία ή ακρωνύμιο της υπηρεσίας"
+      },
+      "category": {
+        "label": "Κατηγορία"
+      },
+      "supervisionMinistry": {
+        "label": "Υπουργείο Εποπτείας",
+        "placeholder": "π.χ. Υπουργείο Εσωτερικών",
+        "helpText": "Το υπουργείο που εποπτεύει την υπηρεσία"
+      },
+      "legalStatus": {
+        "label": "Νομικό Καθεστώς"
+      },
+      "establishmentLaw": {
+        "label": "Ιδρυτικός Νόμος",
+        "placeholder": "π.χ. Ν. 3852/2010",
+        "helpText": "Ο νόμος ίδρυσης της δημόσιας υπηρεσίας"
+      },
+      "headTitle": {
+        "label": "Τίτλος Προϊσταμένου",
+        "placeholder": "π.χ. Δήμαρχος, Γενικός Γραμματέας",
+        "helpText": "Ο θεσμικός τίτλος του επικεφαλής της υπηρεσίας"
+      },
+      "headName": {
+        "label": "Όνομα Προϊσταμένου",
+        "placeholder": "π.χ. Ιωάννης Παπαδόπουλος",
+        "helpText": "Το ονοματεπώνυμο του επικεφαλής"
+      },
+      "mainResponsibilities": {
+        "label": "Κύριες Αρμοδιότητες",
+        "placeholder": "Περιγράψτε τις κύριες αρμοδιότητες της υπηρεσίας...",
+        "helpText": "Οι βασικές αρμοδιότητες και αποστολή της υπηρεσίας"
+      },
+      "citizenServices": {
+        "label": "Υπηρεσίες Πολιτών",
+        "placeholder": "Αναφέρετε τις υπηρεσίες προς τους πολίτες...",
+        "helpText": "Οι υπηρεσίες που παρέχονται στους πολίτες"
+      },
+      "onlineServices": {
+        "label": "Ηλεκτρονικές Υπηρεσίες",
+        "helpText": "Σύνδεσμος προς ηλεκτρονικές υπηρεσίες (π.χ. gov.gr)"
+      },
+      "serviceHours": {
+        "label": "Ωράριο Λειτουργίας",
+        "placeholder": "π.χ. Δευτέρα-Παρασκευή 08:00-14:00",
+        "helpText": "Το ωράριο εξυπηρέτησης του κοινού"
+      },
+      "phone": {
+        "helpText": "Το κεντρικό τηλέφωνο της υπηρεσίας"
+      },
+      "email": {
+        "helpText": "Το επίσημο email επικοινωνίας"
+      },
+      "website": {
+        "helpText": "Η επίσημη ιστοσελίδα της υπηρεσίας"
+      }
+    }
+  },
+  "common": {
+    "fields": {
+      "street": {
+        "placeholder": "π.χ. Λεωφόρος Αθηνών",
+        "helpText": "Το όνομα της οδού"
+      },
+      "streetNumber": {
+        "placeholder": "π.χ. 123",
+        "helpText": "Ο αριθμός της οδού"
+      },
+      "city": {
+        "placeholder": "π.χ. Αθήνα",
+        "helpText": "Η πόλη όπου βρίσκεται η υπηρεσία"
+      },
+      "postalCode": {
+        "helpText": "Ο ταχυδρομικός κώδικας (5 ψηφία)"
+      }
     }
   },
   "fields": {
@@ -600,6 +738,103 @@
     },
     "phone": {
       "invalidFormat": "Το τηλέφωνο μπορεί να έχει μη έγκυρο format"
+    }
+  },
+  "individual": {
+    "sections": {
+      "basicInfo": {
+        "title": "Βασικά Στοιχεία",
+        "description": "Βασικές πληροφορίες της επαφής"
+      },
+      "identity": {
+        "title": "Ταυτότητα & ΑΦΜ",
+        "description": "Στοιχεία ταυτότητας και φορολογικά"
+      },
+      "professional": {
+        "title": "Επαγγελματικά Στοιχεία",
+        "description": "Πληροφορίες εργασίας και επαγγέλματος"
+      },
+      "address": {
+        "title": "Διεύθυνση Κατοικίας",
+        "description": "Στοιχεία διεύθυνσης"
+      },
+      "communication": {
+        "title": "Επικοινωνία",
+        "description": "Στοιχεία επικοινωνίας και κοινωνικά δίκτυα"
+      },
+      "photo": {
+        "title": "Φωτογραφία",
+        "description": "Φωτογραφία προφίλ της επαφής"
+      },
+      "relationships": {
+        "title": "Σχέσεις",
+        "description": "Διαχείριση σχέσεων με άλλες επαφές"
+      },
+      "files": {
+        "title": "Αρχεία",
+        "description": "Διαχείριση αρχείων και εγγράφων της επαφής"
+      }
+    },
+    "fields": {
+      "firstName": "Όνομα",
+      "lastName": "Επώνυμο",
+      "fatherName": "Όνομα Πατέρα",
+      "motherName": "Όνομα Μητέρας",
+      "birthDate": "Ημερομηνία Γέννησης",
+      "birthCountry": "Χώρα Γέννησης",
+      "gender": "Φύλο",
+      "amka": "ΑΜΚΑ",
+      "documentType": "Τύπος Εγγράφου",
+      "documentIssuer": "Αρχή Έκδοσης",
+      "documentNumber": "Αριθμός Εγγράφου",
+      "documentIssueDate": "Ημ/νία Έκδοσης",
+      "documentExpiryDate": "Ημ/νία Λήξης",
+      "vatNumber": "ΑΦΜ",
+      "taxOffice": "Δ.Ο.Υ.",
+      "profession": "Επάγγελμα",
+      "specialty": "Ειδικότητα",
+      "employer": "Εργοδότης",
+      "position": "Θέση",
+      "street": "Οδός",
+      "streetNumber": "Αριθμός",
+      "city": "Πόλη",
+      "postalCode": "Τ.Κ."
+    },
+    "helpTexts": {
+      "firstName": "Το όνομα του φυσικού προσώπου",
+      "lastName": "Το επώνυμο του φυσικού προσώπου",
+      "fatherName": "Το όνομα του πατέρα",
+      "motherName": "Το όνομα της μητέρας",
+      "birthDate": "Η ημερομηνία γέννησης",
+      "birthCountry": "Η χώρα γέννησης",
+      "gender": "Το φύλο της επαφής",
+      "amka": "Αριθμός Μητρώου Κοινωνικής Ασφάλισης (11 ψηφία)",
+      "documentType": "Τύπος του εγγράφου ταυτοποίησης",
+      "documentIssuer": "Η αρχή που εξέδωσε το έγγραφο",
+      "documentNumber": "Αριθμός του εγγράφου ταυτοποίησης",
+      "documentIssueDate": "Ημερομηνία έκδοσης του εγγράφου",
+      "documentExpiryDate": "Ημερομηνία λήξης του εγγράφου",
+      "vatNumber": "Αριθμός Φορολογικού Μητρώου (9 ψηφία)",
+      "taxOffice": "Η ΔΟΥ στην οποία ανήκει",
+      "profession": "Το επάγγελμα της επαφής",
+      "specialty": "Η ειδικότητα στο επάγγελμα",
+      "employer": "Ο εργοδότης",
+      "position": "Η θέση εργασίας",
+      "street": "Η οδός κατοικίας",
+      "streetNumber": "Ο αριθμός της οδού",
+      "city": "Η πόλη κατοικίας",
+      "postalCode": "Ο ταχυδρομικός κώδικας (5 ψηφία)"
+    },
+    "placeholders": {
+      "documentIssuer": "π.χ. Αστυνομία Αττικής",
+      "taxOffice": "π.χ. Δ.Ο.Υ. Αθηνών",
+      "profession": "π.χ. Μηχανικός",
+      "specialty": "π.χ. Πολιτικός Μηχανικός",
+      "employer": "π.χ. XYZ Α.Ε.",
+      "position": "π.χ. Υπεύθυνος Έργου",
+      "street": "π.χ. Λεωφόρος Αθηνών",
+      "streetNumber": "π.χ. 123",
+      "city": "π.χ. Αθήνα"
     }
   }
 }

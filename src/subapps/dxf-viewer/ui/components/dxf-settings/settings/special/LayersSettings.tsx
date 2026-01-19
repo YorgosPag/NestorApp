@@ -28,11 +28,11 @@ export const LayersSettings: React.FC<LayersSettingsProps> = () => {
 
   // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ: Χρησιμοποιούμε τα centralized constants αντί για διάσπαρτα
   const presetColors = [
-    { name: PROPERTY_STATUS_LABELS['for-sale'], color: PROPERTY_STATUS_COLORS['for-sale'] },
-    { name: PROPERTY_STATUS_LABELS['for-rent'], color: PROPERTY_STATUS_COLORS['for-rent'] },
-    { name: PROPERTY_STATUS_LABELS['reserved'], color: PROPERTY_STATUS_COLORS['reserved'] },
-    { name: PROPERTY_STATUS_LABELS['sold'], color: PROPERTY_STATUS_COLORS['sold'] },
-    { name: PROPERTY_STATUS_LABELS['landowner'], color: PROPERTY_STATUS_COLORS['landowner'] }
+    { name: t(PROPERTY_STATUS_LABELS['for-sale']), color: PROPERTY_STATUS_COLORS['for-sale'] },
+    { name: t(PROPERTY_STATUS_LABELS['for-rent']), color: PROPERTY_STATUS_COLORS['for-rent'] },
+    { name: t(PROPERTY_STATUS_LABELS['reserved']), color: PROPERTY_STATUS_COLORS['reserved'] },
+    { name: t(PROPERTY_STATUS_LABELS['sold']), color: PROPERTY_STATUS_COLORS['sold'] },
+    { name: t(PROPERTY_STATUS_LABELS['landowner']), color: PROPERTY_STATUS_COLORS['landowner'] }
   ];
 
   // 🎨 ENTERPRISE DYNAMIC STYLING - NO INLINE STYLES (CLAUDE.md compliant)

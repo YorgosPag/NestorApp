@@ -64,8 +64,8 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   const filteredOverlays = overlays.filter(overlay => {
     const query = searchQuery.toLowerCase();
     const label = overlay.label?.toLowerCase() || '';
-    const status = STATUS_LABELS[overlay.status || 'for-sale'].toLowerCase();
-    const kind = KIND_LABELS[overlay.kind].toLowerCase();
+    const status = t(STATUS_LABELS[overlay.status || 'for-sale']).toLowerCase();
+    const kind = t(KIND_LABELS[overlay.kind]).toLowerCase();
     return label.includes(query) || status.includes(query) || kind.includes(query);
   });
 
@@ -157,7 +157,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                     />
                     <div className={`flex-1 ${PANEL_LAYOUT.MIN_WIDTH['0']} ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
                       <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
-                        {STATUS_LABELS[overlay.status || 'for-sale']} {KIND_LABELS[overlay.kind]}
+                        {t(STATUS_LABELS[overlay.status || 'for-sale'])} {t(KIND_LABELS[overlay.kind])}
                       </div>
                       <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
                         {overlay.label || `Overlay ${overlay.id.slice(0, 6)}`}

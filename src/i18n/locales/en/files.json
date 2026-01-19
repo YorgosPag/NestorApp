@@ -59,5 +59,41 @@
       "databaseUpdate": "Error updating database",
       "unknown": "Unknown error while processing PDF"
     }
+  },
+  "manager": {
+    "filesTitle": "Files",
+    "addFiles": "Add Files",
+    "refresh": "Refresh",
+    "fileManagementTools": "File Management Tools",
+    "errorLoading": "Error loading files",
+    "totalStorage": "Total storage"
+  },
+  "list": {
+    "file": "File",
+    "filesList": "Files List",
+    "view": "View",
+    "download": "Download",
+    "deleteFile": "Delete",
+    "viewFile": "View file",
+    "downloadFile": "Download file",
+    "deleteConfirm": "Are you sure you want to delete this file?",
+    "loadingFiles": "Loading files...",
+    "noFiles": "No files",
+    "noFilesDescription": "Add files using the Add Files button",
+    "fileActions": "File actions"
+  },
+  "uploadZone": {
+    "uploadZone": "File upload zone",
+    "fileInput": "Select files",
+    "clickToSelect": "Click to select",
+    "orDragAndDrop": "or drag and drop here",
+    "fileTypesHint": "Supported types: Images, PDF, Word, Excel",
+    "maxSize": "Maximum size: {{size}}",
+    "selectFiles": "Select Files",
+    "selectFilesButton": "Select files button",
+    "uploading": "Uploading...",
+    "errors": {
+      "fileTooLarge": "File {{fileName}} is too large. Maximum size: {{maxSize}}"
+    }
   }
 }

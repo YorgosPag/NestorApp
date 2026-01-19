@@ -68,7 +68,7 @@ export function CommunicationEmptyState({
 }: CommunicationEmptyStateProps): JSX.Element {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n support
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('contacts');
   const IconComponent = config.icon;
 
   return (
@@ -85,7 +85,7 @@ export function CommunicationEmptyState({
           aria-hidden="true"
         />
         <p className="font-medium text-gray-700">
-          {config.emptyStateText}
+          {t(config.emptyStateText)}
         </p>
         <p className="text-sm mt-1 text-gray-500">
           {t('communication.addContactInfo')}
@@ -105,7 +105,7 @@ export function CommunicationEmptyState({
           className={`${iconSizes.sm} mr-2`}
           aria-hidden="true"
         />
-        {config.addButtonText}
+        {t(config.addButtonText)}
       </Button>
     </>
   );

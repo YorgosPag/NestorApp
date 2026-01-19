@@ -528,6 +528,16 @@
     "objectSnap": "Enable/Disable Object Snap (F3)",
     "basicFunctions": "Enable basic functions"
   },
+  "autoSave": {
+    "title": "Auto-save",
+    "saving": "Saving...",
+    "error": "Save error",
+    "lastSaved": "Last saved:",
+    "waiting": "Waiting for changes...",
+    "activeFor": "Auto-save active for:",
+    "savingAllSettings": "Saving all DXF settings...",
+    "errorSavingSettings": "Error saving settings"
+  },
   "layerManager": {
     "title": "Layer Manager",
     "loading": "Loading layers...",
@@ -807,6 +817,7 @@
     }
   },
   "crosshairSettings": {
+    "title": "Crosshair Settings",
     "tabs": {
       "appearance": "Appearance",
       "behavior": "Behavior"
@@ -1013,6 +1024,50 @@
   "dxfSettings": {
     "title": "DXF Settings"
   },
+  "currentSettings": {
+    "title": "Current Settings",
+    "line": "Line",
+    "text": "Text",
+    "grips": "Grips",
+    "selectTab": "Select a tab (Lines, Text or Grips) to view current settings",
+    "labels": {
+      "type": "Type:",
+      "color": "Color:",
+      "width": "Width:",
+      "opacity": "Opacity:",
+      "scale": "Scale:",
+      "offset": "Offset:",
+      "lineCap": "Line Cap:",
+      "lineJoin": "Line Join:",
+      "fontSize": "Font Size:",
+      "fontFamily": "Font Family:",
+      "style": "Style:",
+      "normal": "Normal",
+      "superscript": "Superscript:",
+      "subscript": "Subscript:",
+      "yes": "Yes",
+      "no": "No",
+      "visible": "Visible:",
+      "size": "Size:",
+      "shape": "Shape:",
+      "fill": "Fill:",
+      "coldColor": "Cold:",
+      "warmColor": "Warm:",
+      "hotColor": "Hot:"
+    }
+  },
+  "settings": {
+    "general": "General Settings",
+    "specific": "Specific Settings",
+    "tabs": {
+      "drawing": "Drawing",
+      "measurements": "Measurements",
+      "draft": "Draft",
+      "completion": "Completion",
+      "hover": "Hover",
+      "selection": "Selection"
+    }
+  },
   "overlayProperties": {
     "title": "Overlay Properties",
     "selectOverlay": "Select an overlay to view its properties.",
@@ -1025,17 +1080,32 @@
     "geometry": "Geometry",
     "points": "Points:",
     "area": "Area:",
-    "perimeter": "Perimeter:"
+    "perimeter": "Perimeter:",
+    "kindLabels": {
+      "unit": "Unit",
+      "parking": "Parking",
+      "storage": "Storage",
+      "footprint": "Footprint"
+    }
   },
   "entitiesSettings": {
     "moreOptions": "More options",
+    "overrideGlobalSettings": "Use specific settings",
     "overrideDescriptions": {
-      "lineDraft": "Use special line settings for preview",
-      "textDraft": "Use special text settings for preview",
-      "gripsDraft": "Use special grips settings for preview",
-      "lineHover": "Use special line settings for hover",
-      "lineSelection": "Use special line settings for selection",
-      "lineCompletion": "Use special line settings for completion"
+      "lineDraft": "Use specific line settings for draft",
+      "textDraft": "Use specific text settings for draft",
+      "gripsDraft": "Use specific grips settings for draft",
+      "lineHover": "Use specific line settings for hover",
+      "lineSelection": "Use specific line settings for selection",
+      "lineCompletion": "Use specific line settings for completion"
+    },
+    "statusLabels": {
+      "general": "General Settings",
+      "specificDraft": "Specific Draft Settings",
+      "specificHover": "Specific Hover Settings",
+      "specificSelection": "Specific Selection Settings",
+      "specificCompletion": "Specific Completion Settings",
+      "specific": "Specific Settings"
     },
     "toolSettings": {
       "title": "Settings {tool}",

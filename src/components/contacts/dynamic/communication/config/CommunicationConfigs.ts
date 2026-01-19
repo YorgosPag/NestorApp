@@ -45,7 +45,7 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   phone: {
     type: 'phone',
-    title: 'contacts.communication.sections.phones',
+    title: 'communication.sections.phones',
     icon: NAVIGATION_ENTITIES.phone.icon,
     fields: { primary: 'number', secondary: 'countryCode' },
     types: [
@@ -56,18 +56,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: PHONE_TYPE_LABELS.other }
     ],
     defaultType: 'mobile',
-    placeholder: 'contacts.communication.placeholders.phone',
-    labelPlaceholder: 'contacts.communication.placeholders.phoneLabel',
+    placeholder: 'communication.placeholders.phone',
+    labelPlaceholder: 'communication.placeholders.phoneLabel',
     supportsPrimary: true,
-    emptyStateText: 'contacts.communication.emptyStates.phones',
-    addButtonText: 'contacts.communication.buttons.addPhone'
+    emptyStateText: 'communication.emptyStates.phones',
+    addButtonText: 'communication.buttons.addPhone'
   },
 
   // === E-MAILS ===
   // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   email: {
     type: 'email',
-    title: 'contacts.communication.sections.emails',
+    title: 'communication.sections.emails',
     icon: NAVIGATION_ENTITIES.email.icon,
     fields: { primary: 'email' },
     types: [
@@ -76,18 +76,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: EMAIL_TYPE_LABELS.other }
     ],
     defaultType: 'personal',
-    placeholder: 'contacts.communication.placeholders.email',
-    labelPlaceholder: 'contacts.communication.placeholders.emailLabel',
+    placeholder: 'communication.placeholders.email',
+    labelPlaceholder: 'communication.placeholders.emailLabel',
     supportsPrimary: true,
-    emptyStateText: 'contacts.communication.emptyStates.emails',
-    addButtonText: 'contacts.communication.buttons.addEmail'
+    emptyStateText: 'communication.emptyStates.emails',
+    addButtonText: 'communication.buttons.addEmail'
   },
 
   // === ΙΣΤΟΣΕΛΙΔΕΣ ===
   // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   website: {
     type: 'website',
-    title: 'contacts.communication.sections.websites',
+    title: 'communication.sections.websites',
     icon: Globe,
     fields: { primary: 'url' },
     types: [
@@ -98,18 +98,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: WEBSITE_TYPE_LABELS.other }
     ],
     defaultType: 'personal',
-    placeholder: 'contacts.communication.placeholders.website',
-    labelPlaceholder: 'contacts.communication.placeholders.websiteLabel',
+    placeholder: 'communication.placeholders.website',
+    labelPlaceholder: 'communication.placeholders.websiteLabel',
     supportsPrimary: false,
-    emptyStateText: 'contacts.communication.emptyStates.websites',
-    addButtonText: 'contacts.communication.buttons.addWebsite'
+    emptyStateText: 'communication.emptyStates.websites',
+    addButtonText: 'communication.buttons.addWebsite'
   },
 
   // === SOCIAL MEDIA ===
   // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   social: {
     type: 'social',
-    title: 'contacts.communication.sections.socialMedia',
+    title: 'communication.sections.socialMedia',
     icon: Globe,
     fields: { primary: 'username', secondary: 'platform' },
     // 🎯 ΤΥΠΟΙ ΧΡΗΣΗΣ για το "Τύπος" dropdown
@@ -133,18 +133,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: SOCIAL_PLATFORM_LABELS.other }
     ],
     defaultType: 'personal',
-    placeholder: 'contacts.communication.placeholders.username',
-    labelPlaceholder: 'contacts.communication.placeholders.socialLabel',
+    placeholder: 'communication.placeholders.username',
+    labelPlaceholder: 'communication.placeholders.socialLabel',
     supportsPrimary: false,
-    emptyStateText: 'contacts.communication.emptyStates.socialMedia',
-    addButtonText: 'contacts.communication.buttons.addSocial'
+    emptyStateText: 'communication.emptyStates.socialMedia',
+    addButtonText: 'communication.buttons.addSocial'
   },
 
   // === ΤΑΥΤΟΤΗΤΑ & ΑΦΜ ===
   // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   identity: {
     type: 'identity',
-    title: 'contacts.communication.sections.identity',
+    title: 'communication.sections.identity',
     icon: User,
     fields: { primary: 'number', secondary: 'type' },
     types: [
@@ -156,18 +156,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: IDENTITY_TYPE_LABELS.other }
     ],
     defaultType: 'id_card',
-    placeholder: 'contacts.communication.placeholders.documentNumber',
-    labelPlaceholder: 'contacts.communication.placeholders.identityLabel',
+    placeholder: 'communication.placeholders.documentNumber',
+    labelPlaceholder: 'communication.placeholders.identityLabel',
     supportsPrimary: true,
-    emptyStateText: 'contacts.communication.emptyStates.identity',
-    addButtonText: 'contacts.communication.buttons.addIdentity'
+    emptyStateText: 'communication.emptyStates.identity',
+    addButtonText: 'communication.buttons.addIdentity'
   },
 
   // === ΕΠΑΓΓΕΛΜΑΤΙΚΑ ===
   // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   professional: {
     type: 'professional',
-    title: 'contacts.communication.sections.professional',
+    title: 'communication.sections.professional',
     icon: Briefcase,
     fields: { primary: 'value', secondary: 'type' },
     types: [
@@ -180,18 +180,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: PROFESSIONAL_TYPE_LABELS.other }
     ],
     defaultType: 'company_phone',
-    placeholder: 'contacts.communication.placeholders.value',
-    labelPlaceholder: 'contacts.communication.placeholders.professionalLabel',
+    placeholder: 'communication.placeholders.value',
+    labelPlaceholder: 'communication.placeholders.professionalLabel',
     supportsPrimary: true,
-    emptyStateText: 'contacts.communication.emptyStates.professional',
-    addButtonText: 'contacts.communication.buttons.addProfessional'
+    emptyStateText: 'communication.emptyStates.professional',
+    addButtonText: 'communication.buttons.addProfessional'
   },
 
   // === ΔΙΕΥΘΥΝΣΕΙΣ ===
   // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   address: {
     type: 'address',
-    title: 'contacts.communication.sections.addresses',
+    title: 'communication.sections.addresses',
     icon: NAVIGATION_ENTITIES.location.icon,
     fields: { primary: 'address', secondary: 'type' },
     types: [
@@ -202,11 +202,11 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: ADDRESS_TYPE_LABELS.other }
     ],
     defaultType: 'home',
-    placeholder: 'contacts.communication.placeholders.address',
-    labelPlaceholder: 'contacts.communication.placeholders.addressLabel',
+    placeholder: 'communication.placeholders.address',
+    labelPlaceholder: 'communication.placeholders.addressLabel',
     supportsPrimary: true,
-    emptyStateText: 'contacts.communication.emptyStates.addresses',
-    addButtonText: 'contacts.communication.buttons.addAddress'
+    emptyStateText: 'communication.emptyStates.addresses',
+    addButtonText: 'communication.buttons.addAddress'
   }
 };
 

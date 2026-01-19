@@ -8,6 +8,8 @@ import { getIconComponent } from './utils/IconMapping';
 import { ServiceFormRenderer } from './ServiceFormRenderer';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { ServiceSectionConfig } from '@/config/service-config';
+// 🏢 ENTERPRISE: i18n support for tab labels
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // INTERFACES
@@ -63,6 +65,7 @@ export interface ServiceFormTabRendererProps {
 
 /**
  * Creates service form tabs from configuration sections
+ * 🔧 FIX: Now accepts t function parameter for translating tab labels (2026-01-19)
  */
 function createServiceFormTabsFromConfig(
   sections: ServiceSectionConfig[],
@@ -70,20 +73,37 @@ function createServiceFormTabsFromConfig(
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
+  t: (key: string) => string,
   onPhotosChange?: (photos: PhotoSlot[]) => void,
   customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>
 ) {
   return sections.map(section => {
     // ========================================================================
-    // SMART LABEL LOGIC για relationships tab
+    // SMART LABEL LOGIC για relationships tab + i18n translation
     // ========================================================================
 
+    // 🔧 FIX: Translate section title if it's an i18n key
     let displayLabel = section.title;
+
+    // Check if it looks like an i18n key (contains dots and starts with 'contacts.')
+    if (displayLabel.includes('.') && displayLabel.startsWith('contacts.')) {
+      // Remove 'contacts.' prefix since we're already in contacts namespace
+      const key = displayLabel.replace('contacts.', '');
+      const translated = t(key);
+
+      // Use translation if found, otherwise use the key without prefix
+      if (translated && translated !== key && !translated.startsWith('contacts.')) {
+        displayLabel = translated;
+      } else {
+        // Fallback: use key without 'contacts.' prefix
+        displayLabel = key;
+      }
+    }
 
     // Αν είναι relationships section και υπάρχει custom renderer, προσθέτουμε indicator
     if (section.id === 'relationships' && customRenderers?.relationships) {
       // Προσθέτουμε ένα visual indicator που δείχνει ότι υπάρχει ενεργό content
-      displayLabel = `${section.title} 🔗`;
+      displayLabel = `${displayLabel} 🔗`;
     }
 
     return {
@@ -91,6 +111,9 @@ function createServiceFormTabsFromConfig(
       label: displayLabel,
       icon: getIconComponent(section.icon),
     content: (() => {
+      // 🔍 DEBUG: Log which section we're rendering
+      console.log('🔍 ServiceFormTabRenderer: Rendering section:', section.id, 'Title:', section.title);
+
       // Check for custom renderer FIRST (but exclude logo and relationships which have special logic)
       if (customRenderers?.[section.id] && section.id !== 'logo' && section.id !== 'relationships') {
         console.log('🔧 DEBUG: Using service custom renderer for section:', section.id);
@@ -105,6 +128,11 @@ function createServiceFormTabsFromConfig(
 
       if (section.id === 'logo') {
         // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload (1 slot)
+        console.log('🖼️ DEBUG: Rendering LOGO section with MultiplePhotosUpload', {
+          photos: formData.multiplePhotos,
+          onPhotosChange: !!onPhotosChange,
+          disabled
+        });
         return (
           <div className="flex flex-col items-center space-y-4 p-6 min-h-[360px]">
             <MultiplePhotosUpload
@@ -116,6 +144,7 @@ function createServiceFormTabsFromConfig(
               purpose="logo" // For services
               contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
               compact={true} // Use compact mode for better layout
+              showPhotosWhenDisabled={true} // 🔧 FIX: Show upload slot even in disabled/read-only mode (2026-01-19)
               className=""
             />
           </div>
@@ -179,6 +208,9 @@ export function ServiceFormTabRenderer({
   onPhotosChange,
   customRenderers
 }: ServiceFormTabRendererProps) {
+  // 🏢 ENTERPRISE: i18n hook for translating tab labels
+  const { t } = useTranslation('contacts');
+
   if (!sections || sections.length === 0) {
     console.warn('ServiceFormTabRenderer: No sections provided');
     return null;
@@ -191,6 +223,7 @@ export function ServiceFormTabRenderer({
     onChange,
     onSelectChange,
     disabled,
+    t,
     onPhotosChange,
     customRenderers
   );

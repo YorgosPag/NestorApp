@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // 🏢 ENTERPRISE: New modular hooks
 import { useResponsiveLayout, useCommunicationOperations } from './hooks';
@@ -53,6 +55,8 @@ export function UniversalCommunicationManager({
   onChange
 }: UniversalCommunicationManagerProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
 
   // 🏢 ENTERPRISE: Modular hooks (extracted)
   const { isDesktop } = useResponsiveLayout();
@@ -122,7 +126,7 @@ export function UniversalCommunicationManager({
       {/* Header */}
       <header className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <IconComponent className={iconSizes.sm} />
-        <h3 id="comm-manager-title">{config.title}</h3>
+        <h3 id="comm-manager-title">{t(config.title)}</h3>
       </header>
 
       {/* 🏢 ENTERPRISE: Conditional rendering με extracted layout components */}

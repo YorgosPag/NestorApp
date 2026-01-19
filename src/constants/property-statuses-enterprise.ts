@@ -753,53 +753,53 @@ export const PROPERTY_BUILDING_TYPE_LABELS = {
 // Phone Types
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PHONE_TYPE_LABELS = {
-  mobile: 'contacts.communication.phoneTypes.mobile',
-  home: 'contacts.communication.phoneTypes.home',
-  work: 'contacts.communication.phoneTypes.work',
-  fax: 'contacts.communication.phoneTypes.fax',
-  other: 'contacts.communication.phoneTypes.other'
+  mobile: 'communication.phoneTypes.mobile',
+  home: 'communication.phoneTypes.home',
+  work: 'communication.phoneTypes.work',
+  fax: 'communication.phoneTypes.fax',
+  other: 'communication.phoneTypes.other'
 } as const;
 
 // Email Types
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const EMAIL_TYPE_LABELS = {
-  personal: 'contacts.communication.emailTypes.personal',
-  work: 'contacts.communication.emailTypes.work',
-  other: 'contacts.communication.emailTypes.other'
+  personal: 'communication.emailTypes.personal',
+  work: 'communication.emailTypes.work',
+  other: 'communication.emailTypes.other'
 } as const;
 
 // Website Types
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const WEBSITE_TYPE_LABELS = {
-  personal: 'contacts.communication.websiteTypes.personal',
-  company: 'contacts.communication.websiteTypes.company',
-  portfolio: 'contacts.communication.websiteTypes.portfolio',
-  blog: 'contacts.communication.websiteTypes.blog',
-  other: 'contacts.communication.websiteTypes.other'
+  personal: 'communication.websiteTypes.personal',
+  company: 'communication.websiteTypes.company',
+  portfolio: 'communication.websiteTypes.portfolio',
+  blog: 'communication.websiteTypes.blog',
+  other: 'communication.websiteTypes.other'
 } as const;
 
 // Social Media Types (usage context)
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const SOCIAL_MEDIA_TYPE_LABELS = {
-  personal: 'contacts.communication.socialMediaTypes.personal',
-  professional: 'contacts.communication.socialMediaTypes.professional',
-  business: 'contacts.communication.socialMediaTypes.business',
-  other: 'contacts.communication.socialMediaTypes.other'
+  personal: 'communication.socialMediaTypes.personal',
+  professional: 'communication.socialMediaTypes.professional',
+  business: 'communication.socialMediaTypes.business',
+  other: 'communication.socialMediaTypes.other'
 } as const;
 
 // Social Media Platforms
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const SOCIAL_PLATFORM_LABELS = {
-  linkedin: 'contacts.communication.platforms.linkedin',
-  facebook: 'contacts.communication.platforms.facebook',
-  instagram: 'contacts.communication.platforms.instagram',
-  twitter: 'contacts.communication.platforms.twitter',
-  youtube: 'contacts.communication.platforms.youtube',
-  github: 'contacts.communication.platforms.github',
-  tiktok: 'contacts.communication.platforms.tiktok',
-  whatsapp: 'contacts.communication.platforms.whatsapp',
-  telegram: 'contacts.communication.platforms.telegram',
-  other: 'contacts.communication.platforms.other'
+  linkedin: 'communication.platforms.linkedin',
+  facebook: 'communication.platforms.facebook',
+  instagram: 'communication.platforms.instagram',
+  twitter: 'communication.platforms.twitter',
+  youtube: 'communication.platforms.youtube',
+  github: 'communication.platforms.github',
+  tiktok: 'communication.platforms.tiktok',
+  whatsapp: 'communication.platforms.whatsapp',
+  telegram: 'communication.platforms.telegram',
+  other: 'communication.platforms.other'
 } as const;
 
 // Identity Document Types - Comprehensive Options
@@ -1452,13 +1452,13 @@ export const DXF_UTILITY_TOOL_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const PERSONAL_INFO_FIELD_LABELS = {
-  FIRST_NAME: 'contacts.individual.fields.firstName',
-  LAST_NAME: 'contacts.individual.fields.lastName',
-  FATHER_NAME: 'contacts.individual.fields.fatherName',
-  MOTHER_NAME: 'contacts.individual.fields.motherName',
-  BIRTH_DATE: 'contacts.individual.fields.birthDate',
-  BIRTH_COUNTRY: 'contacts.individual.fields.birthCountry',
-  GENDER: 'contacts.individual.fields.gender'
+  FIRST_NAME: 'individual.fields.firstName',
+  LAST_NAME: 'individual.fields.lastName',
+  FATHER_NAME: 'individual.fields.fatherName',
+  MOTHER_NAME: 'individual.fields.motherName',
+  BIRTH_DATE: 'individual.fields.birthDate',
+  BIRTH_COUNTRY: 'individual.fields.birthCountry',
+  GENDER: 'individual.fields.gender'
 } as const;
 
 /**
@@ -1466,12 +1466,12 @@ export const PERSONAL_INFO_FIELD_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const IDENTITY_DOCUMENT_FIELD_LABELS = {
-  AMKA: 'contacts.individual.fields.amka',
-  DOCUMENT_TYPE: 'contacts.individual.fields.documentType',
-  DOCUMENT_ISSUER: 'contacts.individual.fields.documentIssuer',
-  DOCUMENT_NUMBER: 'contacts.individual.fields.documentNumber',
-  DOCUMENT_ISSUE_DATE: 'contacts.individual.fields.documentIssueDate',
-  DOCUMENT_EXPIRY_DATE: 'contacts.individual.fields.documentExpiryDate'
+  AMKA: 'individual.fields.amka',
+  DOCUMENT_TYPE: 'individual.fields.documentType',
+  DOCUMENT_ISSUER: 'individual.fields.documentIssuer',
+  DOCUMENT_NUMBER: 'individual.fields.documentNumber',
+  DOCUMENT_ISSUE_DATE: 'individual.fields.documentIssueDate',
+  DOCUMENT_EXPIRY_DATE: 'individual.fields.documentExpiryDate'
 } as const;
 
 /**
@@ -1479,8 +1479,8 @@ export const IDENTITY_DOCUMENT_FIELD_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const TAX_INFO_FIELD_LABELS = {
-  VAT_NUMBER: 'contacts.fields.vatNumber',
-  TAX_OFFICE: 'contacts.fields.taxOffice'
+  VAT_NUMBER: 'individual.fields.vatNumber',
+  TAX_OFFICE: 'individual.fields.taxOffice'
 } as const;
 
 /**
@@ -1488,10 +1488,10 @@ export const TAX_INFO_FIELD_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const PROFESSIONAL_INFO_FIELD_LABELS = {
-  PROFESSION: 'contacts.professional.fields.profession',
-  SPECIALTY: 'contacts.professional.fields.specialty',
-  EMPLOYER: 'contacts.professional.fields.employer',
-  POSITION: 'contacts.professional.fields.position'
+  PROFESSION: 'individual.fields.profession',
+  SPECIALTY: 'individual.fields.specialty',
+  EMPLOYER: 'individual.fields.employer',
+  POSITION: 'individual.fields.position'
 } as const;
 
 /**
@@ -1499,10 +1499,10 @@ export const PROFESSIONAL_INFO_FIELD_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const ADDRESS_INFO_FIELD_LABELS = {
-  STREET: 'contacts.address.fields.street',
-  STREET_NUMBER: 'contacts.address.fields.streetNumber',
-  CITY: 'contacts.address.fields.city',
-  POSTAL_CODE: 'contacts.address.fields.postalCode'
+  STREET: 'individual.fields.street',
+  STREET_NUMBER: 'individual.fields.streetNumber',
+  CITY: 'individual.fields.city',
+  POSTAL_CODE: 'individual.fields.postalCode'
 } as const;
 
 /**
@@ -1510,7 +1510,7 @@ export const ADDRESS_INFO_FIELD_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const CONTACT_INFO_FIELD_LABELS = {
-  COMMUNICATION: 'contacts.fields.communication'
+  COMMUNICATION: 'fields.communication'
 } as const;
 
 // ============================================================================
@@ -1632,23 +1632,25 @@ export const COMPANY_GEMI_STATUS_OPTIONS = {
 /**
  * Service Administrative Information Field Labels
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+ * 🔧 FIX: Added .label suffix to match nested translation structure
  */
 export const SERVICE_ADMINISTRATIVE_INFO_LABELS = {
-  LEGAL_STATUS: 'contacts.service.fields.legalStatus',
-  ESTABLISHMENT_LAW: 'contacts.service.fields.establishmentLaw',
-  HEAD_TITLE: 'contacts.service.fields.headTitle',
-  HEAD_NAME: 'contacts.service.fields.headName'
+  LEGAL_STATUS: 'contacts.service.fields.legalStatus.label',
+  ESTABLISHMENT_LAW: 'contacts.service.fields.establishmentLaw.label',
+  HEAD_TITLE: 'contacts.service.fields.headTitle.label',
+  HEAD_NAME: 'contacts.service.fields.headName.label'
 } as const;
 
 /**
  * Service Responsibilities Field Labels
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+ * 🔧 FIX: Added .label suffix to match nested translation structure
  */
 export const SERVICE_RESPONSIBILITIES_LABELS = {
-  MAIN_RESPONSIBILITIES: 'contacts.service.fields.mainResponsibilities',
-  CITIZEN_SERVICES: 'contacts.service.fields.citizenServices',
-  ONLINE_SERVICES: 'contacts.service.fields.onlineServices',
-  SERVICE_HOURS: 'contacts.service.fields.serviceHours'
+  MAIN_RESPONSIBILITIES: 'contacts.service.fields.mainResponsibilities.label',
+  CITIZEN_SERVICES: 'contacts.service.fields.citizenServices.label',
+  ONLINE_SERVICES: 'contacts.service.fields.onlineServices.label',
+  SERVICE_HOURS: 'contacts.service.fields.serviceHours.label'
 } as const;
 
 // ============================================================================

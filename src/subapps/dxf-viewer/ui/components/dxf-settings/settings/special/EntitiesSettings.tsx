@@ -493,22 +493,22 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: draftSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateDraftSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων γραμμής για προσχεδίαση",
-                statusText: draftSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Draft' : 'Γενικές Ρυθμίσεις'
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.lineDraft'),
+                statusText: draftSettings.overrideGlobalSettings ? t('entitiesSettings.statusLabels.specificDraft') : t('entitiesSettings.statusLabels.general')
               },
               text: {
                 checked: specificTextSettings.overrideGlobalSettings,
                 onChange: (checked) => updateSpecificTextSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων κειμένου για προσχεδίαση"
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.textDraft')
               },
               grips: {
                 checked: specificGripSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateSpecificGripSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων grips για προσχεδίαση",
-                statusText: specificGripSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις' : 'Γενικές Ρυθμίσεις'
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.gripsDraft'),
+                statusText: specificGripSettings.overrideGlobalSettings ? t('entitiesSettings.statusLabels.specific') : t('entitiesSettings.statusLabels.general')
               }
             }}
           />
@@ -539,9 +539,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: hoverSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateHoverSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων γραμμής για hover",
-                statusText: hoverSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Hover' : 'Γενικές Ρυθμίσεις'
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.lineHover'),
+                statusText: hoverSettings.overrideGlobalSettings ? t('entitiesSettings.statusLabels.specificHover') : t('entitiesSettings.statusLabels.general')
               }
             }}
           />
@@ -572,9 +572,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: selectionSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateSelectionSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων γραμμής για επιλογή",
-                statusText: selectionSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Selection' : 'Γενικές Ρυθμίσεις'
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.lineSelection'),
+                statusText: selectionSettings.overrideGlobalSettings ? t('entitiesSettings.statusLabels.specificSelection') : t('entitiesSettings.statusLabels.general')
               }
             }}
           />
@@ -606,9 +606,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: completionSettings.overrideGlobalSettings,
                 onChange: (checked) => updateCompletionSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων γραμμής για ολοκλήρωση",
-                statusText: completionSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Completion' : 'Γενικές Ρυθμίσεις'
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.lineCompletion'),
+                statusText: completionSettings.overrideGlobalSettings ? t('entitiesSettings.statusLabels.specificCompletion') : t('entitiesSettings.statusLabels.general')
               }
             }}
           />

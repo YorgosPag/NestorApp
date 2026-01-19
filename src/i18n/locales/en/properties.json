@@ -643,7 +643,8 @@
       "storages": "Storages",
       "total": "Total",
       "available": "Available",
-      "sold": "Sold"
+      "sold": "Sold",
+      "unitStatus": "Unit Status"
     },
     "labels": {
       "sold": "Sold",

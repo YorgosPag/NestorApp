@@ -1,4 +1,24 @@
 {
+  "common": {
+    "select": "Select",
+    "fields": {
+      "street": {
+        "placeholder": "e.g. Athens Avenue",
+        "helpText": "Street address"
+      },
+      "streetNumber": {
+        "placeholder": "e.g. 123",
+        "helpText": "Street number"
+      },
+      "city": {
+        "placeholder": "e.g. Athens",
+        "helpText": "City"
+      },
+      "postalCode": {
+        "helpText": "Postal code (5 digits)"
+      }
+    }
+  },
   "emptyState": {
     "title": "Select a contact",
     "description": "Select a contact from the list to view its details."
@@ -400,6 +420,13 @@
     }
   },
   "communication": {
+    "sections": {
+      "phones": "Phones",
+      "emails": "Emails",
+      "websites": "Websites",
+      "socialMedia": "Social Media",
+      "identity": "Identity"
+    },
     "phoneTypes": {
       "mobile": "Mobile",
       "home": "Home",
@@ -436,6 +463,39 @@
       "whatsapp": "WhatsApp",
       "telegram": "Telegram",
       "other": "Other"
+    },
+    "placeholders": {
+      "phone": "e.g. 6981890123",
+      "phoneLabel": "e.g. Personal mobile",
+      "email": "e.g. email@example.com",
+      "emailLabel": "e.g. Personal email",
+      "website": "e.g. https://example.com",
+      "websiteLabel": "e.g. Personal website",
+      "username": "e.g. @username",
+      "socialLabel": "e.g. Personal profile"
+    },
+    "emptyStates": {
+      "phones": "No phones added",
+      "emails": "No emails added",
+      "websites": "No websites added",
+      "socialMedia": "No social media added"
+    },
+    "buttons": {
+      "addPhone": "Add Phone",
+      "addEmail": "Add Email",
+      "addWebsite": "Add Website",
+      "addSocial": "Add Social Media"
+    },
+    "tableHeaders": {
+      "type": "Type",
+      "countryCode": "Code",
+      "number": "Number",
+      "label": "Label",
+      "actions": "Actions",
+      "email": "Email Address",
+      "url": "URL",
+      "platform": "Platform",
+      "username": "Username"
     }
   },
   "identity": {
@@ -484,23 +544,6 @@
       "postalCode": "Postal Code"
     }
   },
-  "individual": {
-    "fields": {
-      "firstName": "First Name",
-      "lastName": "Last Name",
-      "fatherName": "Father's Name",
-      "motherName": "Mother's Name",
-      "birthDate": "Birth Date",
-      "birthCountry": "Country of Birth",
-      "gender": "Gender",
-      "amka": "Social Security (AMKA)",
-      "documentType": "Document Type",
-      "documentIssuer": "Issuing Authority",
-      "documentNumber": "Document Number",
-      "documentIssueDate": "Issue Date",
-      "documentExpiryDate": "Expiry Date"
-    }
-  },
   "company": {
     "legalForms": {
       "ae": "Société Anonyme (S.A.)",
@@ -546,15 +589,110 @@
     }
   },
   "service": {
+    "sections": {
+      "basicInfo": {
+        "title": "Basic Information"
+      },
+      "administrative": {
+        "title": "Administrative Information"
+      },
+      "contact": {
+        "title": "Contact Information"
+      },
+      "services": {
+        "title": "Responsibilities & Services"
+      },
+      "logo": {
+        "title": "Logo & Communication"
+      },
+      "relationships": {
+        "title": "Relationships"
+      }
+    },
     "fields": {
-      "legalStatus": "Legal Status",
-      "establishmentLaw": "Establishment Law",
-      "headTitle": "Head Title",
-      "headName": "Head Name",
-      "mainResponsibilities": "Main Responsibilities",
-      "citizenServices": "Citizen Services",
-      "onlineServices": "Online Services",
-      "serviceHours": "Service Hours"
+      "name": {
+        "label": "Service Name",
+        "placeholder": "e.g. City of Athens",
+        "helpText": "The official name of the public service"
+      },
+      "shortName": {
+        "label": "Short Name",
+        "placeholder": "e.g. C.A.",
+        "helpText": "Abbreviation or acronym of the service"
+      },
+      "category": {
+        "label": "Category"
+      },
+      "supervisionMinistry": {
+        "label": "Supervision Ministry",
+        "placeholder": "e.g. Ministry of Interior",
+        "helpText": "The supervising ministry"
+      },
+      "legalStatus": {
+        "label": "Legal Status"
+      },
+      "establishmentLaw": {
+        "label": "Establishment Law",
+        "placeholder": "e.g. Law 3852/2010",
+        "helpText": "The founding law of the public service"
+      },
+      "headTitle": {
+        "label": "Head Title",
+        "placeholder": "e.g. Mayor, General Secretary",
+        "helpText": "The institutional title of the head of service"
+      },
+      "headName": {
+        "label": "Head Name",
+        "placeholder": "e.g. John Smith",
+        "helpText": "The full name of the head"
+      },
+      "mainResponsibilities": {
+        "label": "Main Responsibilities",
+        "placeholder": "Describe the main responsibilities of the service...",
+        "helpText": "The core responsibilities and mission of the service"
+      },
+      "citizenServices": {
+        "label": "Citizen Services",
+        "placeholder": "List the services provided to citizens...",
+        "helpText": "The services provided to citizens"
+      },
+      "onlineServices": {
+        "label": "Online Services",
+        "helpText": "Link to online services (e.g. gov portal)"
+      },
+      "serviceHours": {
+        "label": "Service Hours",
+        "placeholder": "e.g. Monday-Friday 08:00-14:00",
+        "helpText": "The public service hours"
+      },
+      "phone": {
+        "helpText": "The central phone number of the service"
+      },
+      "email": {
+        "helpText": "The official contact email"
+      },
+      "website": {
+        "helpText": "The official website of the service"
+      }
+    }
+  },
+  "common": {
+    "fields": {
+      "street": {
+        "placeholder": "e.g. Main Street",
+        "helpText": "The street name"
+      },
+      "streetNumber": {
+        "placeholder": "e.g. 123",
+        "helpText": "The street number"
+      },
+      "city": {
+        "placeholder": "e.g. Athens",
+        "helpText": "The city where the service is located"
+      },
+      "postalCode": {
+        "helpText": "The postal code (5 digits)"
+      }
     }
   },
   "fields": {
@@ -600,6 +738,103 @@
     },
     "phone": {
       "invalidFormat": "Phone number may have invalid format"
+    }
+  },
+  "individual": {
+    "sections": {
+      "basicInfo": {
+        "title": "Basic Info",
+        "description": "Basic contact information"
+      },
+      "identity": {
+        "title": "Identity & Tax",
+        "description": "Identity and tax information"
+      },
+      "professional": {
+        "title": "Professional Info",
+        "description": "Work and profession information"
+      },
+      "address": {
+        "title": "Home Address",
+        "description": "Address details"
+      },
+      "communication": {
+        "title": "Communication",
+        "description": "Contact details and social media"
+      },
+      "photo": {
+        "title": "Photo",
+        "description": "Contact profile photo"
+      },
+      "relationships": {
+        "title": "Relationships",
+        "description": "Manage relationships with other contacts"
+      },
+      "files": {
+        "title": "Files",
+        "description": "Manage contact files and documents"
+      }
+    },
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "fatherName": "Father's Name",
+      "motherName": "Mother's Name",
+      "birthDate": "Birth Date",
+      "birthCountry": "Country of Birth",
+      "gender": "Gender",
+      "amka": "AMKA",
+      "documentType": "Document Type",
+      "documentIssuer": "Issuing Authority",
+      "documentNumber": "Document Number",
+      "documentIssueDate": "Issue Date",
+      "documentExpiryDate": "Expiry Date",
+      "vatNumber": "VAT Number",
+      "taxOffice": "Tax Office",
+      "profession": "Profession",
+      "specialty": "Specialty",
+      "employer": "Employer",
+      "position": "Position",
+      "street": "Street",
+      "streetNumber": "Number",
+      "city": "City",
+      "postalCode": "Postal Code"
+    },
+    "helpTexts": {
+      "firstName": "The first name of the individual",
+      "lastName": "The last name of the individual",
+      "fatherName": "Father's name",
+      "motherName": "Mother's name",
+      "birthDate": "Date of birth",
+      "birthCountry": "Country of birth",
+      "gender": "Contact's gender",
+      "amka": "Social Security Number (11 digits)",
+      "documentType": "Type of identification document",
+      "documentIssuer": "Authority that issued the document",
+      "documentNumber": "Identification document number",
+      "documentIssueDate": "Document issue date",
+      "documentExpiryDate": "Document expiry date",
+      "vatNumber": "Tax Identification Number (9 digits)",
+      "taxOffice": "Tax office",
+      "profession": "Contact's profession",
+      "specialty": "Professional specialty",
+      "employer": "Employer",
+      "position": "Work position",
+      "street": "Residential street",
+      "streetNumber": "Street number",
+      "city": "Residential city",
+      "postalCode": "Postal code (5 digits)"
+    },
+    "placeholders": {
+      "documentIssuer": "e.g. Athens Police",
+      "taxOffice": "e.g. Athens Tax Office",
+      "profession": "e.g. Engineer",
+      "specialty": "e.g. Civil Engineer",
+      "employer": "e.g. XYZ Inc.",
+      "position": "e.g. Project Manager",
+      "street": "e.g. Athens Avenue",
+      "streetNumber": "e.g. 123",
+      "city": "e.g. Athens"
     }
   }
 }

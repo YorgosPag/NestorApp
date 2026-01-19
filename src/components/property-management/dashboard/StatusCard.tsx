@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Activity } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from 'react-i18next';
 
 interface StatusCardProps {
     statsByStatus: Record<string, number>;
@@ -14,6 +15,7 @@ interface StatusCardProps {
 export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
+    const { t } = useTranslation('properties');
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'sold': return colors.bg.success;
@@ -27,7 +29,7 @@ export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Κατάσταση Μονάδων</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard.cards.unitStatus')}</CardTitle>
                 <Activity className={`${iconSizes.sm} text-muted-foreground`} />
             </CardHeader>
             <CardContent>

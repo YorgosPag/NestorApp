@@ -24,6 +24,8 @@ import { CursorSettings } from '../settings/special/CursorSettings';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 /**
  * CursorCategory - Cursor settings category with sub-tabs
@@ -82,6 +84,7 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
   className = '',
   defaultTab = 'crosshair'
 }) => {
+  const { t } = useTranslation('dxf-viewer');
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   // ============================================================================
   // HOOKS
@@ -97,13 +100,13 @@ export const CursorCategory: React.FC<CursorCategoryProps> = ({
   const cursorTabs: TabDefinition[] = [
     {
       id: 'crosshair',
-      label: 'Ρυθμίσεις Σταυρονήματος',
+      label: t('crosshairSettings.title'),
       icon: Crosshair,
       content: null, // Content rendered separately below
     },
     {
       id: 'cursor',
-      label: 'Ρυθμίσεις Κέρσορα',
+      label: t('cursorSettings.title'),
       icon: MousePointer2,
       content: null, // Content rendered separately below
     },

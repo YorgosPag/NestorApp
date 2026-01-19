@@ -262,20 +262,6 @@ service firebase.storage {
     //
     // ⚠️ LEGACY: Will be migrated to canonical path
     // Keep for reading existing files, restrict new writes
-    //
-    // 🏢 ADR-031 ROLLOUT PLAN:
-    // -------------------------
-    // CURRENT STATE: Write enabled for backward compatibility
-    // SOFT BLOCK: Code-level block via FILE_STORAGE_FLAGS.BLOCK_LEGACY_WRITES
-    //
-    // MIGRATION STEPS:
-    // 1. ✅ Canonical pipeline implemented (TabbedAddNewContactDialog)
-    // 2. ⏳ Set NEXT_PUBLIC_BLOCK_LEGACY_WRITES=true when all users have companyId claim
-    // 3. ⏳ After 30 days monitoring, change rules to:
-    //    allow write: if false; // Block new uploads
-    // 4. ⏳ After migration complete, remove this rule block entirely
-    //
-    // RISK: Users without companyId claim cannot upload until migration complete
     // =========================================================================
 
     match /contacts/photos/{fileName} {
@@ -285,8 +271,7 @@ service firebase.storage {
       allow read: if isAuthenticated();
 
       // ✍️ WRITE: Authenticated users (temporary - new uploads should use canonical)
-      // 🚨 DEPRECATION: This will be blocked after NEXT_PUBLIC_BLOCK_LEGACY_WRITES=true
-      // See ADR-031 rollout plan above
+      // Will be removed after migration
       allow write: if isAuthenticated()
                    && isValidFileSize()
                    && isImageType();

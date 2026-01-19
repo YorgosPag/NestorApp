@@ -98,7 +98,7 @@ export default function AvailableStoragePage() {
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                        <Warehouse className={`${iconSizes.sm} text-orange-500`} />
+                        <Warehouse className={`${iconSizes.sm} ${colors.text.warning}`} />
                       </div>
                       <h3 className="font-medium">{t('availableStorage.types.large.basement')}</h3>
                       <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
@@ -108,7 +108,7 @@ export default function AvailableStoragePage() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t('availableStorage.labels.avgPrice')}</span>
-                        <span className="text-green-600 font-medium">€68K</span>
+                        <span className={`${colors.text.success} font-medium`}>€68K</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t('availableStorage.labels.sqmRange')}</span>
@@ -120,7 +120,7 @@ export default function AvailableStoragePage() {
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
-                        <Warehouse className={`${iconSizes.sm} text-blue-500`} />
+                        <Warehouse className={`${iconSizes.sm} ${colors.text.info}`} />
                       </div>
                       <h3 className="font-medium">{t('availableStorage.types.large.groundFloor')}</h3>
                       <span className={`ml-auto ${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
@@ -130,7 +130,7 @@ export default function AvailableStoragePage() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t('availableStorage.labels.avgPrice')}</span>
-                        <span className="text-green-600 font-medium">€85K</span>
+                        <span className={`${colors.text.success} font-medium`}>€85K</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t('availableStorage.labels.sqmRange')}</span>
@@ -152,7 +152,7 @@ export default function AvailableStoragePage() {
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
-                        <Archive className={`${iconSizes.sm} text-purple-500`} />
+                        <Archive className={`${iconSizes.sm} ${colors.text.primary}`} />
                       </div>
                       <h3 className="font-medium">{t('availableStorage.types.small.basement')}</h3>
                       <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
@@ -162,7 +162,7 @@ export default function AvailableStoragePage() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t('availableStorage.labels.avgPrice')}</span>
-                        <span className="text-green-600 font-medium">€28K</span>
+                        <span className={`${colors.text.success} font-medium`}>€28K</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t('availableStorage.labels.sqmRange')}</span>
@@ -174,7 +174,7 @@ export default function AvailableStoragePage() {
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
                       <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
-                        <Archive className={`${iconSizes.sm} text-green-500`} />
+                        <Archive className={`${iconSizes.sm} ${colors.text.success}`} />
                       </div>
                       <h3 className="font-medium">{t('availableStorage.types.small.groundFloor')}</h3>
                       <span className={`ml-auto ${colors.bg.success}/20 ${colors.text.success} px-2 py-1 rounded text-sm font-medium`}>
@@ -184,7 +184,7 @@ export default function AvailableStoragePage() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t('availableStorage.labels.avgPrice')}</span>
-                        <span className="text-green-600 font-medium">€35K</span>
+                        <span className={`${colors.text.success} font-medium`}>€35K</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">{t('availableStorage.labels.sqmRange')}</span>
@@ -210,28 +210,28 @@ export default function AvailableStoragePage() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">{t('availableStorage.analysis.economy')}</span>
                       <div className="text-right">
-                        <div className="font-medium text-green-600">{t('availableStorage.analysis.storages', { count: 34 })}</div>
+                        <div className={`font-medium ${colors.text.success}`}>{t('availableStorage.analysis.storages', { count: 34 })}</div>
                         <div className="text-xs text-muted-foreground">€18K - €29K</div>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">{t('availableStorage.analysis.medium')}</span>
                       <div className="text-right">
-                        <div className="font-medium text-blue-600">{t('availableStorage.analysis.storages', { count: 38 })}</div>
+                        <div className={`font-medium ${colors.text.info}`}>{t('availableStorage.analysis.storages', { count: 38 })}</div>
                         <div className="text-xs text-muted-foreground">€35K - €58K</div>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">{t('availableStorage.analysis.premium')}</span>
                       <div className="text-right">
-                        <div className="font-medium text-purple-600">{t('availableStorage.analysis.storages', { count: 17 })}</div>
+                        <div className={`font-medium ${colors.text.primary}`}>{t('availableStorage.analysis.storages', { count: 17 })}</div>
                         <div className="text-xs text-muted-foreground">€65K - €125K</div>
                       </div>
                     </div>
                     <div className="border-t pt-3 mt-3">
                       <div className="flex justify-between items-center font-semibold">
                         <span>{t('availableStorage.analysis.avgPricePerSqm')}</span>
-                        <span className="text-green-600">€1,450/{t('common.sqm')}</span>
+                        <span className={colors.text.success}>€1,450/{t('common.sqm')}</span>
                       </div>
                     </div>
                   </div>
@@ -249,15 +249,15 @@ export default function AvailableStoragePage() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">{t('availableStorage.analysis.activeViews')}</span>
-                      <span className="font-medium text-blue-600">{t('availableStorage.analysis.views', { count: 23 })}</span>
+                      <span className={`font-medium ${colors.text.info}`}>{t('availableStorage.analysis.views', { count: 23 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">{t('availableStorage.analysis.visitRequests')}</span>
-                      <span className="font-medium text-green-600">{t('availableStorage.analysis.requests', { count: 8 })}</span>
+                      <span className={`font-medium ${colors.text.success}`}>{t('availableStorage.analysis.requests', { count: 8 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">{t('availableStorage.analysis.underNegotiation')}</span>
-                      <span className="font-medium text-orange-600">{t('availableStorage.analysis.storages', { count: 5 })}</span>
+                      <span className={`font-medium ${colors.text.warning}`}>{t('availableStorage.analysis.storages', { count: 5 })}</span>
                     </div>
                     <div className="border-t pt-3 mt-3">
                       <div className="space-y-2">

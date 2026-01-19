@@ -212,7 +212,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                 <button
                   key={status}
                   onClick={() => props.onStatusChange(status)}
-                  title={STATUS_LABELS[status]}
+                  title={t(STATUS_LABELS[status])}
                   className={`${iconSizes.lg} ${quick.button} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']}`}
                   style={getStatusColorButtonStyles(
                     status as PropertyStatus,
@@ -235,7 +235,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                   <ToolButton
                     key={kind}
                     onClick={() => props.onKindChange(kind)}
-                    title={KIND_LABELS[kind]}
+                    title={t(KIND_LABELS[kind])}
                     icon={Icon}
                     isActive={props.currentKind === kind}
                     size="xs"

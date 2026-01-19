@@ -178,10 +178,18 @@ export class FileRecordService {
     });
 
     // Create FileRecord document
+    // 🏢 ENTERPRISE: Validate REQUIRED fields before creating object
+    if (!input.companyId) {
+      throw new Error('companyId is REQUIRED for creating FileRecord');
+    }
+    if (!input.createdBy) {
+      throw new Error('createdBy is REQUIRED for creating FileRecord');
+    }
+
     const fileRecord: FileRecord = {
       id: fileId,
-      companyId: input.companyId,
-      projectId: input.projectId,
+      companyId: input.companyId, // 🏢 REQUIRED for multi-tenant isolation
+      ...(input.projectId && { projectId: input.projectId }), // 🏢 ENTERPRISE: Only include if defined (Firestore rejects undefined)
       entityType: input.entityType,
       entityId: input.entityId,
       domain: input.domain,
@@ -194,21 +202,31 @@ export class FileRecordService {
       status: FILE_STATUS.PENDING,
       createdAt: new Date().toISOString(),
       createdBy: input.createdBy,
-      revision: input.revision, // Store revision in record for versioning
+      ...(input.revision && { revision: input.revision }), // 🏢 ENTERPRISE: Only include if defined
     };
 
     // Write to Firestore
     const docRef = doc(db, COLLECTIONS.FILES, fileId);
-    await setDoc(docRef, {
+    const docData = {
       ...fileRecord,
       createdAt: serverTimestamp(), // Use server timestamp for consistency
-    });
+    };
 
-    logger.info('Pending FileRecord created', {
-      fileId,
-      storagePath,
-      displayName,
-    });
+    try {
+      await setDoc(docRef, docData);
+
+      logger.info('Pending FileRecord created', {
+        fileId,
+        storagePath,
+        displayName,
+      });
+    } catch (error) {
+      logger.error('Failed to write FileRecord to Firestore', {
+        fileId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error; // Re-throw to stop upload pipeline
+    }
 
     return {
       fileId,
@@ -328,6 +346,7 @@ export class FileRecordService {
       domain?: FileDomain;
       category?: FileCategory;
       includeDeleted?: boolean;
+      companyId?: string; // 🏢 ENTERPRISE: Required for Firestore Rules query authorization
     }
   ): Promise<FileRecord[]> {
     const constraints = [
@@ -335,6 +354,12 @@ export class FileRecordService {
       where('entityId', '==', entityId),
       where('status', '==', FILE_STATUS.READY),
     ];
+
+    // 🏢 ENTERPRISE: Add companyId constraint for Firestore Rules authorization
+    // This enables query execution - without it, Firestore Rules block the query
+    if (options?.companyId) {
+      constraints.push(where('companyId', '==', options.companyId));
+    }
 
     if (options?.domain) {
       constraints.push(where('domain', '==', options.domain));

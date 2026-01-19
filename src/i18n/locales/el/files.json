@@ -59,5 +59,41 @@
       "databaseUpdate": "Σφάλμα κατά την ενημέρωση βάσης δεδομένων",
       "unknown": "Άγνωστο σφάλμα κατά τη διαχείριση του PDF"
     }
+  },
+  "manager": {
+    "filesTitle": "Αρχεία",
+    "addFiles": "Προσθήκη Αρχείων",
+    "refresh": "Ανανέωση",
+    "fileManagementTools": "Εργαλεία Διαχείρισης Αρχείων",
+    "errorLoading": "Σφάλμα φόρτωσης αρχείων",
+    "totalStorage": "Συνολικός χώρος"
+  },
+  "list": {
+    "file": "Αρχείο",
+    "filesList": "Λίστα Αρχείων",
+    "view": "Προβολή",
+    "download": "Λήψη",
+    "deleteFile": "Διαγραφή",
+    "viewFile": "Προβολή αρχείου",
+    "downloadFile": "Λήψη αρχείου",
+    "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το αρχείο;",
+    "loadingFiles": "Φόρτωση αρχείων...",
+    "noFiles": "Δεν υπάρχουν αρχεία",
+    "noFilesDescription": "Προσθέστε αρχεία χρησιμοποιώντας το κουμπί Προσθήκη Αρχείων",
+    "fileActions": "Ενέργειες αρχείου"
+  },
+  "uploadZone": {
+    "uploadZone": "Ζώνη μεταφόρτωσης αρχείων",
+    "fileInput": "Επιλογή αρχείων",
+    "clickToSelect": "Κάντε κλικ για επιλογή",
+    "orDragAndDrop": "ή σύρετε και αποθέστε εδώ",
+    "fileTypesHint": "Υποστηριζόμενοι τύποι: Εικόνες, PDF, Word, Excel",
+    "maxSize": "Μέγιστο μέγεθος: {{size}}",
+    "selectFiles": "Επιλογή Αρχείων",
+    "selectFilesButton": "Κουμπί επιλογής αρχείων",
+    "uploading": "Μεταφόρτωση σε εξέλιξη...",
+    "errors": {
+      "fileTooLarge": "Το αρχείο {{fileName}} είναι πολύ μεγάλο. Μέγιστο μέγεθος: {{maxSize}}"
+    }
   }
 }

@@ -121,11 +121,11 @@ export default function SalesPage() {
                   {/* Available Storage */}
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-orange-500/10 rounded-lg">
-                        <Package className={`${iconSizes.sm} text-orange-500`} />
+                      <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
+                        <Package className={`${iconSizes.sm} ${colors.text.warning}`} />
                       </div>
                       <h3 className="font-medium">{t('sales.cards.storage.title')}</h3>
-                      <span className="ml-auto bg-orange-500/20 text-orange-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`ml-auto ${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
                         89
                       </span>
                     </div>
@@ -137,11 +137,11 @@ export default function SalesPage() {
                   {/* Available Parking */}
                   <div className={`p-4 bg-card ${quick.card} hover:bg-accent/50 transition-colors cursor-pointer`}>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <Car className={`${iconSizes.sm} text-blue-500`} />
+                      <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
+                        <Car className={`${iconSizes.sm} ${colors.text.info}`} />
                       </div>
                       <h3 className="font-medium">{t('sales.cards.parking.title')}</h3>
-                      <span className="ml-auto bg-blue-500/20 text-blue-500 px-2 py-1 rounded text-sm font-medium">
+                      <span className={`ml-auto ${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
                         93
                       </span>
                     </div>
@@ -161,8 +161,8 @@ export default function SalesPage() {
 
                 <div className={`p-6 bg-card ${quick.card}`}>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-green-500/10 rounded-lg">
-                      <CheckCircle className={`${iconSizes.md} text-green-500`} />
+                    <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
+                      <CheckCircle className={`${iconSizes.md} ${colors.text.success}`} />
                     </div>
                     <h3 className="font-semibold">{t('sales.cards.completedSales.title')}</h3>
                   </div>
@@ -177,7 +177,7 @@ export default function SalesPage() {
                       <span className="font-medium">{t('sales.cards.completedSales.storageSold', { count: 235 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Parking</span>
+                      <span className="text-sm text-muted-foreground">{t('sales.sold.cards.parking.title')}</span>
                       <span className="font-medium">{t('sales.cards.completedSales.parkingSold', { count: 344 })}</span>
                     </div>
                     <div className="border-t pt-3 mt-3">

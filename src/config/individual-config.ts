@@ -121,9 +121,9 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'basicInfo',
-    title: 'contacts.individual.sections.basicInfo.title',
+    title: 'individual.sections.basicInfo.title',
     icon: 'user',
-    description: 'contacts.individual.sections.basicInfo.description',
+    description: 'individual.sections.basicInfo.description',
     order: 1,
     fields: [
       {
@@ -131,7 +131,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: PERSONAL_INFO_FIELD_LABELS.FIRST_NAME,
         type: 'input',
         required: true,
-        helpText: 'contacts.individual.fields.firstName.helpText',
+        helpText: 'individual.helpTexts.firstName',
         icon: 'user',
       },
       {
@@ -139,28 +139,28 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: PERSONAL_INFO_FIELD_LABELS.LAST_NAME,
         type: 'input',
         required: true,
-        helpText: 'contacts.individual.fields.lastName.helpText',
+        helpText: 'individual.helpTexts.lastName',
         icon: 'user',
       },
       {
         id: 'fatherName',
         label: PERSONAL_INFO_FIELD_LABELS.FATHER_NAME,
         type: 'input',
-        helpText: 'contacts.individual.fields.fatherName.helpText',
+        helpText: 'individual.helpTexts.fatherName',
         icon: 'user-check',
       },
       {
         id: 'motherName',
         label: PERSONAL_INFO_FIELD_LABELS.MOTHER_NAME,
         type: 'input',
-        helpText: 'contacts.individual.fields.motherName.helpText',
+        helpText: 'individual.helpTexts.motherName',
         icon: 'user-check',
       },
       {
         id: 'birthDate',
         label: PERSONAL_INFO_FIELD_LABELS.BIRTH_DATE,
         type: 'date',
-        helpText: 'contacts.individual.fields.birthDate.helpText',
+        helpText: 'individual.helpTexts.birthDate',
         icon: 'cake',
       },
       {
@@ -168,7 +168,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: PERSONAL_INFO_FIELD_LABELS.BIRTH_COUNTRY,
         type: 'select',
         options: BIRTH_COUNTRY_OPTIONS,
-        helpText: 'contacts.individual.fields.birthCountry.helpText',
+        helpText: 'individual.helpTexts.birthCountry',
         icon: 'globe',
       },
       {
@@ -176,7 +176,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: PERSONAL_INFO_FIELD_LABELS.GENDER,
         type: 'select',
         options: GENDER_OPTIONS,
-        helpText: 'contacts.individual.fields.gender.helpText',
+        helpText: 'individual.helpTexts.gender',
         icon: '⚧️',
       },
       {
@@ -185,7 +185,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         maxLength: 11,
         placeholder: '12345678901',
-        helpText: 'contacts.individual.fields.amka.helpText',
+        helpText: 'individual.helpTexts.amka',
         icon: 'badge',
       },
     ],
@@ -196,9 +196,9 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'identity',
-    title: 'contacts.individual.sections.identity.title',
+    title: 'individual.sections.identity.title',
     icon: 'credit-card',
-    description: 'contacts.individual.sections.identity.description',
+    description: 'individual.sections.identity.description',
     order: 2,
     fields: [
       {
@@ -206,36 +206,36 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: IDENTITY_DOCUMENT_FIELD_LABELS.DOCUMENT_TYPE,
         type: 'select',
         options: DOCUMENT_TYPE_OPTIONS,
-        helpText: 'contacts.individual.fields.documentType.helpText',
+        helpText: 'individual.helpTexts.documentType',
         icon: 'clipboard',
       },
       {
         id: 'documentIssuer',
         label: IDENTITY_DOCUMENT_FIELD_LABELS.DOCUMENT_ISSUER,
         type: 'input',
-        placeholder: 'contacts.individual.fields.documentIssuer.placeholder',
-        helpText: 'contacts.individual.fields.documentIssuer.helpText',
+        placeholder: 'individual.placeholders.documentIssuer',
+        helpText: 'individual.helpTexts.documentIssuer',
         icon: 'landmark',
       },
       {
         id: 'documentNumber',
         label: IDENTITY_DOCUMENT_FIELD_LABELS.DOCUMENT_NUMBER,
         type: 'input',
-        helpText: 'contacts.individual.fields.documentNumber.helpText',
+        helpText: 'individual.helpTexts.documentNumber',
         icon: 'hash',
       },
       {
         id: 'documentIssueDate',
         label: IDENTITY_DOCUMENT_FIELD_LABELS.DOCUMENT_ISSUE_DATE,
         type: 'date',
-        helpText: 'contacts.individual.fields.documentIssueDate.helpText',
+        helpText: 'individual.helpTexts.documentIssueDate',
         icon: '📅',
       },
       {
         id: 'documentExpiryDate',
         label: IDENTITY_DOCUMENT_FIELD_LABELS.DOCUMENT_EXPIRY_DATE,
         type: 'date',
-        helpText: 'contacts.individual.fields.documentExpiryDate.helpText',
+        helpText: 'individual.helpTexts.documentExpiryDate',
         icon: '⏰',
       },
       {
@@ -244,15 +244,15 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         maxLength: 9,
         placeholder: '123456789',
-        helpText: 'contacts.individual.fields.vatNumber.helpText',
+        helpText: 'individual.helpTexts.vatNumber',
         icon: 'dollar-sign',
       },
       {
         id: 'taxOffice',
         label: TAX_INFO_FIELD_LABELS.TAX_OFFICE,
         type: 'input',
-        placeholder: 'contacts.individual.fields.taxOffice.placeholder',
-        helpText: 'contacts.individual.fields.taxOffice.helpText',
+        placeholder: 'individual.placeholders.taxOffice',
+        helpText: 'individual.helpTexts.taxOffice',
         icon: 'building',
       },
     ],
@@ -263,41 +263,41 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'professional',
-    title: 'contacts.individual.sections.professional.title',
+    title: 'individual.sections.professional.title',
     icon: 'briefcase',
-    description: 'contacts.individual.sections.professional.description',
+    description: 'individual.sections.professional.description',
     order: 3,
     fields: [
       {
         id: 'profession',
         label: PROFESSIONAL_INFO_FIELD_LABELS.PROFESSION,
         type: 'input',
-        placeholder: 'contacts.individual.fields.profession.placeholder',
-        helpText: 'contacts.individual.fields.profession.helpText',
+        placeholder: 'individual.placeholders.profession',
+        helpText: 'individual.helpTexts.profession',
         icon: 'wrench',
       },
       {
         id: 'specialty',
         label: PROFESSIONAL_INFO_FIELD_LABELS.SPECIALTY,
         type: 'input',
-        placeholder: 'contacts.individual.fields.specialty.placeholder',
-        helpText: 'contacts.individual.fields.specialty.helpText',
+        placeholder: 'individual.placeholders.specialty',
+        helpText: 'individual.helpTexts.specialty',
         icon: 'target',
       },
       {
         id: 'employer',
         label: PROFESSIONAL_INFO_FIELD_LABELS.EMPLOYER,
         type: 'input',
-        placeholder: 'contacts.individual.fields.employer.placeholder',
-        helpText: 'contacts.individual.fields.employer.helpText',
+        placeholder: 'individual.placeholders.employer',
+        helpText: 'individual.helpTexts.employer',
         icon: 'factory',
       },
       {
         id: 'position',
         label: PROFESSIONAL_INFO_FIELD_LABELS.POSITION,
         type: 'input',
-        placeholder: 'contacts.individual.fields.position.placeholder',
-        helpText: 'contacts.individual.fields.position.helpText',
+        placeholder: 'individual.placeholders.position',
+        helpText: 'individual.helpTexts.position',
         icon: 'briefcase',
       },
     ],
@@ -308,33 +308,33 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'address',
-    title: 'contacts.individual.sections.address.title',
+    title: 'individual.sections.address.title',
     icon: 'map-pin',
-    description: 'contacts.individual.sections.address.description',
+    description: 'individual.sections.address.description',
     order: 4,
     fields: [
       {
         id: 'street',
         label: ADDRESS_INFO_FIELD_LABELS.STREET,
         type: 'input',
-        placeholder: 'contacts.common.fields.street.placeholder',
-        helpText: 'contacts.common.fields.street.helpText',
+        placeholder: 'individual.placeholders.street',
+        helpText: 'individual.helpTexts.street',
         icon: 'map-pin',
       },
       {
         id: 'streetNumber',
         label: ADDRESS_INFO_FIELD_LABELS.STREET_NUMBER,
         type: 'input',
-        placeholder: 'contacts.common.fields.streetNumber.placeholder',
-        helpText: 'contacts.common.fields.streetNumber.helpText',
+        placeholder: 'individual.placeholders.streetNumber',
+        helpText: 'individual.helpTexts.streetNumber',
         icon: 'hash',
       },
       {
         id: 'city',
         label: ADDRESS_INFO_FIELD_LABELS.CITY,
         type: 'input',
-        placeholder: 'contacts.common.fields.city.placeholder',
-        helpText: 'contacts.common.fields.city.helpText',
+        placeholder: 'individual.placeholders.city',
+        helpText: 'individual.helpTexts.city',
         icon: 'building',
       },
       {
@@ -343,7 +343,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         placeholder: '12345',
         maxLength: 5,
-        helpText: 'contacts.common.fields.postalCode.helpText',
+        helpText: 'individual.helpTexts.postalCode',
         icon: 'mail',
       },
     ],
@@ -354,9 +354,9 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'communication',
-    title: 'contacts.individual.sections.communication.title',
+    title: 'individual.sections.communication.title',
     icon: 'smartphone',
-    description: 'contacts.individual.sections.communication.description',
+    description: 'individual.sections.communication.description',
     order: 5,
     fields: [
       // 🎯 DUMMY FIELD για custom renderer triggering
@@ -375,9 +375,9 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'photo',
-    title: 'contacts.individual.sections.photo.title',
+    title: 'individual.sections.photo.title',
     icon: 'camera',
-    description: 'contacts.individual.sections.photo.description',
+    description: 'individual.sections.photo.description',
     order: 6,
     fields: [
       // Αφαιρέθηκε το textarea field για σημειώσεις φωτογραφίας
@@ -389,13 +389,34 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'relationships',
-    title: 'contacts.individual.sections.relationships.title',
+    title: 'individual.sections.relationships.title',
     icon: 'users',
-    description: 'contacts.individual.sections.relationships.description',
+    description: 'individual.sections.relationships.description',
     order: 7,
     fields: [
       // Fields are handled by ContactRelationshipManager component
       // No individual fields needed as this is a complex UI component
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 8. ΑΡΧΕΙΑ - 🏢 ENTERPRISE FILE MANAGEMENT (ADR-031)
+  // -------------------------------------------------------------------------
+  {
+    id: 'files',
+    title: 'individual.sections.files.title',
+    icon: 'file-text',
+    description: 'individual.sections.files.description',
+    order: 8,
+    fields: [
+      // 🎯 DUMMY FIELD για custom renderer triggering
+      // Fields are handled by EntityFilesManager component
+      {
+        id: 'files',
+        label: 'contacts.individual.sections.files.title',
+        type: 'input'
+        // Dummy field - actual UI rendered by EntityFilesManager
+      }
     ],
   },
 ];

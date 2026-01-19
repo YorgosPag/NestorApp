@@ -121,9 +121,18 @@ service cloud.firestore {
     match /files/{fileId} {
 
       // 📖 READ: Users belonging to file's company (tenant isolation)
+      // 🏢 ENTERPRISE: Allow company members OR creator (for pending files during upload)
+      // This enables both:
+      // - Storage Rules to validate uploads via firestore.get() (pending files)
+      // - Users to list/view ready files from their company
       allow read: if isAuthenticated()
                   && resource.data.keys().hasAny(['companyId'])
-                  && belongsToCompany(resource.data.companyId);
+                  && (
+                       // Company members can read all files from their company
+                       belongsToCompany(resource.data.companyId)
+                       // OR super_admin can read everything
+                       || isSuperAdminOnly()
+                     );
 
       // ✍️ CREATE: Users can create pending FileRecord for their company
       // 🔐 SECURITY: createdBy must match request.auth.uid

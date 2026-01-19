@@ -316,9 +316,12 @@
   },
   "contactCard": {
     "contactDetails": "Contact Details",
+    "fullName": "Full name",
+    "email": "Email",
     "sendEmailTo": "Send email to {email} via Gmail",
     "callTo": "Call {phone}",
     "phone": "Phone",
+    "status": "Status",
     "source": "Source",
     "timeline": "Timeline",
     "createdAt": "Created:",

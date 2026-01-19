@@ -92,19 +92,20 @@ export const MODAL_SELECT_COMPANY_FIELD_LABELS = {
  * Service Form Field Labels (i18n Keys) - Centralized από service-config.ts
  * ✅ ENTERPRISE: Single source of truth για όλα τα service form i18n keys
  * ✅ ENTERPRISE: Use useFormLabels().getServiceLabel(key) to translate
+ * 🔧 FIX: Updated to use contacts.service.fields.* keys with .label suffix (2026-01-19)
  */
 export const MODAL_SELECT_SERVICE_FIELD_LABELS = {
-  // Basic Info - i18n keys
-  service_name: 'service.serviceName',
-  short_name: 'service.shortName',
-  category: 'service.category',
-  supervision_ministry: 'service.supervisionMinistry',
+  // Basic Info - i18n keys (updated to match contacts.json structure)
+  service_name: 'contacts.service.fields.name.label',
+  short_name: 'contacts.service.fields.shortName.label',
+  category: 'contacts.service.fields.category.label',
+  supervision_ministry: 'contacts.service.fields.supervisionMinistry.label',
 
-  // Administrative - i18n keys
-  legal_status: 'service.legalStatus',
-  establishment_law: 'service.establishmentLaw',
-  head_title: 'service.headTitle',
-  head_name: 'service.headName',
+  // Administrative - i18n keys (updated to match contacts.json structure)
+  legal_status: 'contacts.service.fields.legalStatus.label',
+  establishment_law: 'contacts.service.fields.establishmentLaw.label',
+  head_title: 'contacts.service.fields.headTitle.label',
+  head_name: 'contacts.service.fields.headName.label',
 
   // Contact Info - i18n keys (reuse company keys)
   street: 'company.street',
@@ -115,11 +116,11 @@ export const MODAL_SELECT_SERVICE_FIELD_LABELS = {
   email: 'labels.email',
   website: 'service.website',
 
-  // Responsibilities & Services - i18n keys
-  main_responsibilities: 'service.mainResponsibilities',
-  citizen_services: 'service.citizenServices',
-  online_services: 'service.onlineServices',
-  service_hours: 'service.serviceHours',
+  // Responsibilities & Services - i18n keys (updated to match contacts.json structure)
+  main_responsibilities: 'contacts.service.fields.mainResponsibilities.label',
+  citizen_services: 'contacts.service.fields.citizenServices.label',
+  online_services: 'contacts.service.fields.onlineServices.label',
+  service_hours: 'contacts.service.fields.serviceHours.label',
 
   // Sections - i18n keys
   basic_info_section: 'sections.basicInfo',

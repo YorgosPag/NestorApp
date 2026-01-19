@@ -162,7 +162,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
                     <div
                       className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass(String(STATUS_COLORS[status] || ''))}`}
                     />
-                    {STATUS_LABELS[status]}
+                    {t(STATUS_LABELS[status])}
                   </div>
                 </SelectItem>
               ))}
@@ -177,7 +177,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
             <SelectTrigger className={PANEL_LAYOUT.HEIGHT.XL}><SelectValue /></SelectTrigger>
             <SelectContent>
               {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => (
-                <SelectItem key={kind} value={kind}>{KIND_LABELS[kind]}</SelectItem>
+                <SelectItem key={kind} value={kind}>{t(KIND_LABELS[kind])}</SelectItem>
               ))}
             </SelectContent>
           </Select>

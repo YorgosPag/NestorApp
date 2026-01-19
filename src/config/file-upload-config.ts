@@ -122,3 +122,34 @@ export const UPLOAD_PHASES = {
 } as const;
 
 export type UploadPhase = typeof UPLOAD_PHASES[keyof typeof UPLOAD_PHASES];
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Build accept string from file type configurations
+ * Eliminates hardcoded accept strings in components
+ *
+ * @param types - Array of file types to accept
+ * @returns Accept string for HTML input element (e.g., "image/*,.pdf,.doc,.docx")
+ */
+export function buildAcceptString(types: FileType[]): string {
+  const mimeTypes = new Set<string>();
+  const extensions = new Set<string>();
+
+  types.forEach(type => {
+    const config = FILE_TYPE_CONFIG[type];
+    config.mimeTypes.forEach(mime => mimeTypes.add(mime));
+    config.extensions.forEach(ext => extensions.add(ext));
+  });
+
+  // Combine mime types and extensions
+  return [...Array.from(mimeTypes), ...Array.from(extensions)].join(',');
+}
+
+/**
+ * 🏢 ENTERPRISE: Get default accept string for documents
+ * Common use case: images + PDFs + Office documents
+ */
+export const DEFAULT_DOCUMENT_ACCEPT = buildAcceptString(['image', 'pdf', 'document']);

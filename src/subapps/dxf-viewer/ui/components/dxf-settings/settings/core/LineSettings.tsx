@@ -87,7 +87,11 @@ import {
   DASH_OFFSET_RANGE,
   OPACITY_RANGE,
   TEMPLATE_LABELS,
-  getTemplatesByCategory
+  getTemplatesByCategory,
+  getLineTypeLabel,
+  getLineCapLabel,
+  getLineJoinLabel,
+  getTemplateCategoryLabel
 } from '../../../../../contexts/LineConstants';
 import type { LineType, LineCapStyle, LineJoinStyle } from '../../../../../settings-core/types';
 import type { TemplateCategory } from '../../../../../contexts/LineSettingsContext';
@@ -302,29 +306,29 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
 
   // ===== SELECT OPTIONS (ADR-001: Radix Select Pattern) =====
 
-  // Line Type Options
-  const lineTypeOptions = Object.entries(LINE_TYPE_LABELS).map(([value, label]) => ({
-    value: value as LineType,
-    label: label as string
+  // Line Type Options - 🏢 ENTERPRISE: Using i18n functions
+  const lineTypeOptions = (['solid', 'dashed', 'dotted', 'dash-dot', 'dash-dot-dot'] as LineType[]).map(type => ({
+    value: type,
+    label: getLineTypeLabel(type, t)
   }));
 
-  // Line Cap Options
-  const lineCapOptions = Object.entries(LINE_CAP_LABELS).map(([value, label]) => ({
-    value: value as LineCapStyle,
-    label: label as string
+  // Line Cap Options - 🏢 ENTERPRISE: Using i18n functions
+  const lineCapOptions = (['butt', 'round', 'square'] as LineCapStyle[]).map(cap => ({
+    value: cap,
+    label: getLineCapLabel(cap, t)
   }));
 
-  // Line Join Options
-  const lineJoinOptions = Object.entries(LINE_JOIN_LABELS).map(([value, label]) => ({
-    value: value as LineJoinStyle,
-    label: label as string
+  // Line Join Options - 🏢 ENTERPRISE: Using i18n functions
+  const lineJoinOptions = (['miter', 'round', 'bevel'] as LineJoinStyle[]).map(join => ({
+    value: join,
+    label: getLineJoinLabel(join, t)
   }));
 
-  // Template Options (Grouped by category) - ADR-001 Radix SelectGroup pattern
+  // Template Options (Grouped by category) - ADR-001 Radix SelectGroup pattern - 🏢 ENTERPRISE: Using i18n functions
   const templateGroupedOptions = [
     {
       category: 'engineering',
-      categoryLabel: TEMPLATE_LABELS.engineering,
+      categoryLabel: getTemplateCategoryLabel('engineering', t),
       options: getTemplatesByCategory('engineering').map(t => ({
         value: t.name,
         label: t.name,
@@ -333,7 +337,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     },
     {
       category: 'architectural',
-      categoryLabel: TEMPLATE_LABELS.architectural,
+      categoryLabel: getTemplateCategoryLabel('architectural', t),
       options: getTemplatesByCategory('architectural').map(t => ({
         value: t.name,
         label: t.name,
@@ -342,7 +346,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
     },
     {
       category: 'electrical',
-      categoryLabel: TEMPLATE_LABELS.electrical,
+      categoryLabel: getTemplateCategoryLabel('electrical', t),
       options: getTemplatesByCategory('electrical').map(t => ({
         value: t.name,
         label: t.name,

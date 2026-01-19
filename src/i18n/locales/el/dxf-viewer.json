@@ -573,7 +573,7 @@
     }
   },
   "overlayList": {
-    "title": "Overlays",
+    "title": "Περιοχές",
     "search": "Αναζήτηση...",
     "deleteConfirm": "Διαγραφή overlay;",
     "notFound": "Δεν βρέθηκαν overlays",
@@ -664,6 +664,7 @@
     }
   },
   "crosshairSettings": {
+    "title": "Ρυθμίσεις Σταυρονήματος",
     "tabs": {
       "appearance": "Εμφάνιση",
       "behavior": "Συμπεριφορά"
@@ -870,6 +871,50 @@
   "dxfSettings": {
     "title": "Ρυθμίσεις DXF"
   },
+  "currentSettings": {
+    "title": "Τρέχουσες Ρυθμίσεις",
+    "line": "Γραμμή",
+    "text": "Κείμενο",
+    "grips": "Grips",
+    "selectTab": "Επιλέξτε μια καρτέλα (Γραμμές, Κείμενο ή Grips) για να δείτε τις τρέχουσες ρυθμίσεις",
+    "labels": {
+      "type": "Τύπος:",
+      "color": "Χρώμα:",
+      "width": "Πάχος:",
+      "opacity": "Διαφάνεια:",
+      "scale": "Κλίμακα:",
+      "offset": "Μετατόπιση:",
+      "lineCap": "Άκρα:",
+      "lineJoin": "Συνδέσεις:",
+      "fontSize": "Μέγεθος:",
+      "fontFamily": "Γραμματοσειρά:",
+      "style": "Στυλ:",
+      "normal": "Κανονικό",
+      "superscript": "Εκθέτης:",
+      "subscript": "Δείκτης:",
+      "yes": "Ναι",
+      "no": "Όχι",
+      "visible": "Εμφάνιση:",
+      "size": "Μέγεθος:",
+      "shape": "Σχήμα:",
+      "fill": "Γέμισμα:",
+      "coldColor": "Ψυχρό:",
+      "warmColor": "Ζεστό:",
+      "hotColor": "Θερμό:"
+    }
+  },
+  "settings": {
+    "general": "Γενικές Ρυθμίσεις",
+    "specific": "Ειδικές Ρυθμίσεις",
+    "tabs": {
+      "drawing": "Σχεδίαση",
+      "measurements": "Μετρήσεις",
+      "draft": "Προσχέδιο",
+      "completion": "Ολοκλήρωση",
+      "hover": "Hover",
+      "selection": "Επιλογή"
+    }
+  },
   "overlayProperties": {
     "title": "Ιδιότητες Overlay",
     "selectOverlay": "Επιλέξτε ένα overlay για να δείτε τις ιδιότητές του.",
@@ -882,17 +927,32 @@
     "geometry": "Γεωμετρία",
     "points": "Σημεία:",
     "area": "Εμβαδόν:",
-    "perimeter": "Περίμετρος:"
+    "perimeter": "Περίμετρος:",
+    "kindLabels": {
+      "unit": "Μονάδα",
+      "parking": "Parking",
+      "storage": "Αποθήκη",
+      "footprint": "Αποτύπωμα"
+    }
   },
   "entitiesSettings": {
     "moreOptions": "Περισσότερες επιλογές",
+    "overrideGlobalSettings": "Χρήση ειδικών ρυθμίσεων",
     "overrideDescriptions": {
-      "lineDraft": "Χρήση ειδικών ρυθμίσεων γραμμής για προεπισκόπηση",
-      "textDraft": "Χρήση ειδικών ρυθμίσεων κειμένου για προεπισκόπηση",
-      "gripsDraft": "Χρήση ειδικών ρυθμίσεων grips για προεπισκόπηση",
+      "lineDraft": "Χρήση ειδικών ρυθμίσεων γραμμής για προσχεδίαση",
+      "textDraft": "Χρήση ειδικών ρυθμίσεων κειμένου για προσχεδίαση",
+      "gripsDraft": "Χρήση ειδικών ρυθμίσεων grips για προσχεδίαση",
       "lineHover": "Χρήση ειδικών ρυθμίσεων γραμμής για hover",
       "lineSelection": "Χρήση ειδικών ρυθμίσεων γραμμής για επιλογή",
       "lineCompletion": "Χρήση ειδικών ρυθμίσεων γραμμής για ολοκλήρωση"
+    },
+    "statusLabels": {
+      "general": "Γενικές Ρυθμίσεις",
+      "specificDraft": "Ειδικές Ρυθμίσεις Draft",
+      "specificHover": "Ειδικές Ρυθμίσεις Hover",
+      "specificSelection": "Ειδικές Ρυθμίσεις Selection",
+      "specificCompletion": "Ειδικές Ρυθμίσεις Completion",
+      "specific": "Ειδικές Ρυθμίσεις"
     },
     "toolSettings": {
       "title": "Ρυθμίσεις {tool}",
@@ -974,6 +1034,16 @@
         "hint": "Στο επόμενο βήμα μπορείτε να επιλέξετε δύο σημεία στο σχέδιο που αντιστοιχούν σε αυτή την απόσταση."
       }
     }
+  },
+  "autoSave": {
+    "title": "Αυτόματη αποθήκευση",
+    "saving": "Αποθήκευση...",
+    "error": "Σφάλμα αποθήκευσης",
+    "lastSaved": "Τελευταία:",
+    "waiting": "Αναμονή αλλαγών...",
+    "activeFor": "Αυτόματη αποθήκευση ενεργή για:",
+    "savingAllSettings": "Αποθήκευση όλων των ρυθμίσεων DXF...",
+    "errorSavingSettings": "Σφάλμα αποθήκευσης ρυθμίσεων"
   },
   "layerManager": {
     "title": "Διαχείριση Layers",

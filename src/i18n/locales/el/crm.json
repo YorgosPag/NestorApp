@@ -315,10 +315,13 @@
     }
   },
   "contactCard": {
-    "contactDetails": "Στοιχεία Επικοινωνίας",
+    "contactDetails": "Στοιχεία Επαφής",
+    "fullName": "Πλήρες όνομα",
+    "email": "Email",
     "sendEmailTo": "Αποστολή email στο {email} μέσω Gmail",
     "callTo": "Κλήση στο {phone}",
     "phone": "Τηλέφωνο",
+    "status": "Κατάσταση",
     "source": "Πηγή",
     "timeline": "Χρονολογία",
     "createdAt": "Δημιουργία:",
