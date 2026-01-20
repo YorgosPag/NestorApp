@@ -21,7 +21,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Play, Check, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Play, Check, Image as ImageIcon, AlertCircle, Film } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -58,20 +58,20 @@ export interface MediaCardProps {
 
 const CARD_SIZES = {
   sm: {
-    container: 'w-32 h-32',
-    image: 'h-24',
+    container: 'w-full min-h-[140px]',
+    image: 'aspect-[4/3]',
     text: 'text-xs',
     icon: 'w-8 h-8',
   },
   md: {
-    container: 'w-40 h-48',
-    image: 'h-32',
+    container: 'w-full min-h-[180px]',
+    image: 'aspect-[4/3]',
     text: 'text-sm',
     icon: 'w-10 h-10',
   },
   lg: {
-    container: 'w-52 h-60',
-    image: 'h-40',
+    container: 'w-full min-h-[220px]',
+    image: 'aspect-[4/3]',
     text: 'text-sm',
     icon: 'w-12 h-12',
   },
@@ -216,63 +216,86 @@ export function MediaCard({
 
       {/* Thumbnail Container */}
       <figure className={cn('relative w-full overflow-hidden bg-muted', sizeConfig.image)}>
-        {/* Loading Skeleton */}
-        {!imageLoaded && !imageError && (
-          <div
-            className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center"
-            aria-hidden="true"
-          >
-            <ImageIcon className={cn(sizeConfig.icon, 'text-muted-foreground/30')} />
-          </div>
-        )}
-
-        {/* Error State */}
-        {imageError && (
-          <div
-            className="absolute inset-0 bg-muted flex flex-col items-center justify-center gap-1"
-            aria-label={t('media.loadError')}
-          >
-            <AlertCircle className={cn(iconSizes.lg, 'text-muted-foreground/50')} />
-            <span className="text-xs text-muted-foreground">{t('media.loadError')}</span>
-          </div>
-        )}
-
-        {/* Actual Image */}
-        {file.downloadUrl && !imageError && (
-          <img
-            src={file.downloadUrl}
-            alt={file.displayName}
-            loading="lazy"
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-            className={cn(
-              'w-full h-full object-cover',
-              'transition-opacity duration-300',
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            )}
-          />
-        )}
-
-        {/* Video Play Indicator */}
-        {isVideo && imageLoaded && !imageError && (
+        {/* Video Placeholder - Videos don't have image thumbnails */}
+        {isVideo ? (
           <div
             className={cn(
-              'absolute inset-0 flex items-center justify-center',
-              'bg-black/30 transition-opacity duration-200',
-              'group-hover:bg-black/40'
+              'absolute inset-0 flex flex-col items-center justify-center',
+              'bg-gradient-to-br from-slate-700 to-slate-900'
             )}
-            aria-hidden="true"
+            aria-label={t('media.video')}
           >
+            {/* Video Icon Background */}
             <div
               className={cn(
-                'rounded-full bg-white/90 flex items-center justify-center',
-                sizeConfig.icon,
-                HOVER_SHADOWS.SUBTLE
+                'rounded-full bg-white/10 flex items-center justify-center mb-2',
+                size === 'sm' ? 'w-10 h-10' : size === 'md' ? 'w-14 h-14' : 'w-16 h-16'
               )}
             >
-              <Play className="w-1/2 h-1/2 text-primary ml-0.5" fill="currentColor" />
+              <Film
+                className={cn(
+                  'text-white/70',
+                  size === 'sm' ? 'w-5 h-5' : size === 'md' ? 'w-7 h-7' : 'w-8 h-8'
+                )}
+              />
+            </div>
+            {/* Play Button Overlay */}
+            <div
+              className={cn(
+                'absolute inset-0 flex items-center justify-center',
+                'bg-black/20 hover:bg-black/30 transition-colors duration-200'
+              )}
+            >
+              <div
+                className={cn(
+                  'rounded-full bg-white/90 flex items-center justify-center shadow-lg',
+                  sizeConfig.icon,
+                  HOVER_SHADOWS.SUBTLE
+                )}
+              >
+                <Play className="w-1/2 h-1/2 text-primary ml-0.5" fill="currentColor" />
+              </div>
             </div>
           </div>
+        ) : (
+          <>
+            {/* Loading Skeleton - Images Only */}
+            {!imageLoaded && !imageError && (
+              <div
+                className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center"
+                aria-hidden="true"
+              >
+                <ImageIcon className={cn(sizeConfig.icon, 'text-muted-foreground/30')} />
+              </div>
+            )}
+
+            {/* Error State - Images Only */}
+            {imageError && (
+              <div
+                className="absolute inset-0 bg-muted flex flex-col items-center justify-center gap-1"
+                aria-label={t('media.loadError')}
+              >
+                <AlertCircle className={cn(iconSizes.lg, 'text-muted-foreground/50')} />
+                <span className="text-xs text-muted-foreground">{t('media.loadError')}</span>
+              </div>
+            )}
+
+            {/* Actual Image - Images Only */}
+            {file.downloadUrl && !imageError && (
+              <img
+                src={file.downloadUrl}
+                alt={file.displayName}
+                loading="lazy"
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                className={cn(
+                  'w-full h-full object-cover',
+                  'transition-opacity duration-300',
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                )}
+              />
+            )}
+          </>
         )}
       </figure>
 

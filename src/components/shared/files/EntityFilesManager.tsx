@@ -25,7 +25,7 @@
 'use client';
 
 import React, { useCallback, useState, useMemo } from 'react';
-import { FileText, Upload, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2 } from 'lucide-react';
+import { FileText, Upload, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2, Grid3X3, Image as ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -140,7 +140,11 @@ export function EntityFilesManager({
 
   const [uploading, setUploading] = useState(false);
   const [showUploadZone, setShowUploadZone] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'tree'>('list');
+  // 🏢 ENTERPRISE: View mode with Gallery support (Procore/BIM360/Google Drive pattern)
+  // Default to 'gallery' for media files, 'list' for documents
+  const [viewMode, setViewMode] = useState<'list' | 'tree' | 'gallery'>(
+    displayStyle === 'media-gallery' ? 'gallery' : 'list'
+  );
   const [activeTab, setActiveTab] = useState<'files' | 'trash'>('files'); // 🗑️ ENTERPRISE: Procore/BIM360 pattern
   const [treeViewMode, setTreeViewMode] = useState<'business' | 'technical'>('business'); // 🏢 ENTERPRISE: Business View (default) vs Technical View
   const [selectedEntryPoint, setSelectedEntryPoint] = useState<UploadEntryPoint | null>(null);
@@ -564,29 +568,43 @@ export function EntityFilesManager({
             {activeTab === 'files' && (
               <>
                 <div className="flex gap-1 border rounded-md p-1" role="group" aria-label="View mode">
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                aria-label={t('manager.viewList')}
-                aria-pressed={viewMode === 'list'}
-                title={t('manager.viewList')}
-                className={cn('px-2', viewMode === 'list' && 'bg-primary text-primary-foreground')}
-              >
-                <List className={iconSizes.sm} aria-hidden="true" />
-              </Button>
-              <Button
-                variant={viewMode === 'tree' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('tree')}
-                aria-label={t('manager.viewTree')}
-                aria-pressed={viewMode === 'tree'}
-                title={t('manager.viewTree')}
-                className={cn('px-2', viewMode === 'tree' && 'bg-primary text-primary-foreground')}
-              >
-                <Network className={iconSizes.sm} aria-hidden="true" />
-              </Button>
-            </div>
+                  {/* 🏢 ENTERPRISE: Gallery view for media files (Procore/BIM360 pattern) */}
+                  {displayStyle === 'media-gallery' && (
+                    <Button
+                      variant={viewMode === 'gallery' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('gallery')}
+                      aria-label={t('manager.viewGallery')}
+                      aria-pressed={viewMode === 'gallery'}
+                      title={t('manager.viewGalleryTooltip')}
+                      className={cn('px-2', viewMode === 'gallery' && 'bg-primary text-primary-foreground')}
+                    >
+                      <Grid3X3 className={iconSizes.sm} aria-hidden="true" />
+                    </Button>
+                  )}
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    aria-label={t('manager.viewList')}
+                    aria-pressed={viewMode === 'list'}
+                    title={t('manager.viewList')}
+                    className={cn('px-2', viewMode === 'list' && 'bg-primary text-primary-foreground')}
+                  >
+                    <List className={iconSizes.sm} aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'tree' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('tree')}
+                    aria-label={t('manager.viewTree')}
+                    aria-pressed={viewMode === 'tree'}
+                    title={t('manager.viewTree')}
+                    className={cn('px-2', viewMode === 'tree' && 'bg-primary text-primary-foreground')}
+                  >
+                    <Network className={iconSizes.sm} aria-hidden="true" />
+                  </Button>
+                </div>
 
             {/* Tree view mode toggle (Business vs Technical) - Only visible when viewMode === 'tree' */}
             {viewMode === 'tree' && (
@@ -727,13 +745,13 @@ export function EntityFilesManager({
               </div>
             )}
 
-            {/* Files display (list, tree, or media gallery) */}
-            {displayStyle === 'media-gallery' ? (
+            {/* Files display (gallery, list, or tree) - Based on viewMode state */}
+            {viewMode === 'gallery' ? (
               /* 🏢 ENTERPRISE: Media Gallery View (Procore/BIM360/Autodesk pattern) */
               <MediaGallery
                 files={filteredFiles}
                 initialViewMode="grid"
-                showToolbar={true}
+                showToolbar={false}
                 enableSelection={true}
                 cardSize="md"
                 onDelete={async (filesToDelete) => {

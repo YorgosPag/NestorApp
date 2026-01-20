@@ -97,6 +97,8 @@
     "technicalView": "Technical View",
     "businessViewTooltip": "Business View - User-friendly display",
     "technicalViewTooltip": "Technical View - Full path with IDs",
+    "viewGallery": "Gallery View",
+    "viewGalleryTooltip": "Gallery View - Thumbnail grid for photos/videos",
     "refreshTooltip": "Refresh file list",
     "addFilesTooltip": "Upload new files",
     "belongsTo": "Belongs to",

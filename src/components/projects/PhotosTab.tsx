@@ -21,6 +21,7 @@
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { DEFAULT_PHOTO_ACCEPT } from '@/config/file-upload-config';
 import type { Project } from '@/types/project';
 
 // =============================================================================
@@ -77,6 +78,7 @@ export function PhotosTab({ project, data }: PhotosTabProps) {
       purpose="photo"
       entryPointCategoryFilter="photos"
       displayStyle="media-gallery"
+      acceptedTypes={DEFAULT_PHOTO_ACCEPT}
     />
   );
 }

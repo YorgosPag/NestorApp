@@ -385,9 +385,12 @@ export function MediaGallery({
         aria-label={t('media.mediaItems')}
         className={cn(
           gallery.state.viewMode === 'grid'
-            ? 'grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+            ? 'grid gap-3 auto-rows-fr'
             : 'flex flex-col gap-2'
         )}
+        style={gallery.state.viewMode === 'grid' ? {
+          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))'
+        } : undefined}
       >
         {gallery.sortedFiles.map((file, index) => (
           <MediaCard

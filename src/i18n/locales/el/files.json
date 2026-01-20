@@ -97,6 +97,8 @@
     "technicalView": "Τεχνική Προβολή",
     "businessViewTooltip": "Επιχειρηματική Προβολή - Φιλική προς το χρήστη εμφάνιση",
     "technicalViewTooltip": "Τεχνική Προβολή - Πλήρης διαδρομή με IDs",
+    "viewGallery": "Προβολή Συλλογής",
+    "viewGalleryTooltip": "Προβολή Συλλογής - Πλέγμα μικρογραφιών φωτογραφιών/βίντεο",
     "refreshTooltip": "Ανανέωση λίστας αρχείων",
     "addFilesTooltip": "Ανέβασμα νέων αρχείων",
     "belongsTo": "Ανήκει στο",
