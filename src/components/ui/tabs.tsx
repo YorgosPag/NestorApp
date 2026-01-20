@@ -56,6 +56,8 @@ const TabsContent = React.forwardRef<
     className={cn(
       "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       "data-[state=inactive]:hidden",
+      // 🏢 ENTERPRISE: flex-1 allows content to expand to full available height
+      "flex-1 flex flex-col min-h-0",
       className
     )}
     {...props}

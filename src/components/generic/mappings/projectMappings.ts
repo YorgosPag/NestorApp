@@ -31,6 +31,7 @@ import { ProjectTimelineTab } from '@/components/projects/ProjectTimelineTab';
 import { ProjectCustomersTab } from '@/components/projects/customers-tab';
 import { ProjectStructureTab } from '@/components/projects/tabs/ProjectStructureTab';
 import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTab';
+import { ProjectFloorplanTab } from '@/components/projects/tabs/ProjectFloorplanTab';
 
 // ============================================================================
 // PROJECT COMPONENT MAPPING
@@ -48,6 +49,10 @@ export const PROJECT_COMPONENT_MAPPING = {
   'ProjectTimelineTab': ProjectTimelineTab,
   'ProjectCustomersTab': ProjectCustomersTab,
   'ProjectStructureTab': ProjectStructureTab,
+  // 🏢 ENTERPRISE: ProjectFloorplanTab uses centralized EntityFilesManager pattern
+  // Same storage structure as Photos, Videos, Documents (ADR-033)
+  'ProjectFloorplanTab': ProjectFloorplanTab,
+  // 🔄 LEGACY: FloorplanViewerTab kept for backward compatibility
   'FloorplanViewerTab': FloorplanViewerTab,
 } as const;
 

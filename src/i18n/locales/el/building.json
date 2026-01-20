@@ -870,11 +870,18 @@
       "addFloorplan": "Προσθήκη Κάτοψης",
       "editFloorplan": "Επεξεργασία Κάτοψης",
       "loading": "Φόρτωση κάτοψης...",
+      "loadingScene": "Φόρτωση σχεδίου...",
+      "processing": "Επεξεργασία κάτοψης...",
       "pdfAlt": "PDF Κάτοψη: {fileName}",
+      "canvasAlt": "Τεχνική κάτοψη DXF",
+      "uploadFirst": "Ανεβάστε Κάτοψη",
       "noFloorplan": {
         "title": "Δεν υπάρχει κάτοψη",
         "description": "Πατήστε \"Προσθήκη Κάτοψης\" για να φορτώσετε κάτοψη"
-      }
+      },
+      "noProject": "Δεν επιλέχθηκε έργο",
+      "processingInProgress": "Η επεξεργασία είναι σε εξέλιξη...",
+      "loadError": "Αποτυχία φόρτωσης κάτοψης"
     },
     "timeline": {
       "header": {

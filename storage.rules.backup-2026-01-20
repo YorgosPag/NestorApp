@@ -174,33 +174,46 @@ service firebase.storage {
 
     match /companies/{companyId}/projects/{projectId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{fileName} {
 
-      // 📖 READ: Company-scoped access with project isolation
-      // 🏢 ENTERPRISE: Multi-tenant isolation by companyId + projectId
-      // Security Model: Custom claims validation (companyId from auth token)
-      // - Company members can read files from their company
-      // - Super admins can read any file
-      // NOTE: Removed Firestore lookups (isFileCreator, hasReadyFileRecord) due to
-      // cross-service consistency issues causing permission failures (2026-01-20)
-      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      // 📖 READ: Ownership Principle + Company Access
+      // 🏢 ENTERPRISE: Pattern SAP / Salesforce / Google Drive / Microsoft OneDrive
+      // Priority 1: Creator can ALWAYS read their files (no claims required)
+      // Priority 2: Company members can read 'ready' files
+      // Priority 3: Super admin can read anything
+      allow read: if isFileCreator(extractFileId(fileName))
+                  || ((belongsToCompany(companyId) || isSuperAdmin()) && hasReadyFileRecord(extractFileId(fileName)));
 
-      // ✍️ WRITE: Company-scoped + validation
-      // 🏢 ENTERPRISE: Multi-tenant isolation via custom claims
-      // Security Model:
-      // 1. belongsToCompany() validates companyId custom claim matches path
-      // 2. isSuperAdmin() allows system-wide access for admins
-      // 3. File validation (size, content type)
-      // NOTE: Removed Firestore lookups (hasPendingFileRecord, fileRecordMatchesPath,
-      // storagePathEquals) due to unreliable cross-service consistency (2026-01-20)
-      // Client-side validation in useFloorplanUpload.ts handles pre-flight checks
+      // ✍️ WRITE: HARDENED with Firestore validation + STRICT storagePath match
+      // 🏢 ENTERPRISE: Step A (createPendingFileRecord) MUST complete before Step B (upload)
+      // This prevents unauthorized file uploads without a valid FileRecord
       allow write: if (belongsToCompany(companyId) || isSuperAdmin())
                    && isValidFileSize()
-                   && isAllowedContentType();
+                   && isAllowedContentType()
+                   // 🔐 SECURITY: Verify pending FileRecord exists
+                   && hasPendingFileRecord(extractFileId(fileName))
+                   // 🔐 SECURITY: Verify path matches FileRecord fields (WITH projectId)
+                   && fileRecordMatchesPathWithProject(
+                        extractFileId(fileName),
+                        companyId,
+                        projectId,
+                        entityType,
+                        entityId,
+                        domain,
+                        category
+                      )
+                   // 🔐 SECURITY: STRICT storagePath equality (1:1 match with FileRecord.storagePath)
+                   && storagePathEquals(
+                        extractFileId(fileName),
+                        'companies/' + companyId + '/projects/' + projectId + '/entities/' + entityType + '/' + entityId + '/domains/' + domain + '/categories/' + category + '/files/' + fileName
+                      );
 
-      // 🗑️ DELETE: Company-scoped access
-      // 🏢 ENTERPRISE: Multi-tenant isolation
-      // NOTE: Removed Firestore lookup (hasFileRecordWithPath) - client handles
-      // FileRecord cleanup separately from Storage deletion
-      allow delete: if (belongsToCompany(companyId) || isSuperAdmin());
+      // 🗑️ DELETE: HARDENED - requires existing FileRecord with STRICT storagePath match
+      // 🏢 ENTERPRISE: Not just company membership, but exact path ownership
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin())
+                    && hasFileRecordWithPath(
+                         extractFileId(fileName),
+                         companyId,
+                         'companies/' + companyId + '/projects/' + projectId + '/entities/' + entityType + '/' + entityId + '/domains/' + domain + '/categories/' + category + '/files/' + fileName
+                       );
     }
 
     // =========================================================================
