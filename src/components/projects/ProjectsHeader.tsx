@@ -25,8 +25,6 @@ interface ProjectsHeaderProps {
   setViewMode: (mode: 'list' | 'byType' | 'byStatus') => void;
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
-  searchTerm?: string;
-  setSearchTerm?: (term: string) => void;
   onNewProject?: () => void;
   // Mobile-only filter toggle
   showFilters?: boolean;
@@ -43,8 +41,6 @@ export function ProjectsHeader({
   setViewMode,
   showDashboard,
   setShowDashboard,
-  searchTerm,
-  setSearchTerm,
   onNewProject,
   showFilters,
   setShowFilters,
@@ -72,11 +68,6 @@ export function ProjectsHeader({
         subtitle: t('header.subtitle')
       }}
       breadcrumb={<NavigationBreadcrumb />}
-      search={searchTerm !== undefined && setSearchTerm ? {
-        value: searchTerm,
-        onChange: setSearchTerm,
-        placeholder: t('header.searchPlaceholder')
-      } : undefined}
       actions={{
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),

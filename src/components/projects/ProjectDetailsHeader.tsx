@@ -39,15 +39,7 @@ export function ProjectDetailsHeader({ project }: ProjectDetailsHeaderProps) {
                         }
                     ]}
                     variant="detailed"
-                >
-                    {/* Centralized ProjectBadge Components */}
-                    <div className="flex gap-2 mt-2">
-                        <ProjectBadge status={project.status} size="sm" />
-                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
-                            {t('detailsHeader.progressComplete', { progress: project.progress })}
-                        </span>
-                    </div>
-                </EntityDetailsHeader>
+                />
             </div>
 
             {/* 📱 MOBILE: Hidden (no header duplication) */}

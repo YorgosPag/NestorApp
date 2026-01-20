@@ -1,16 +1,20 @@
 /**
  * 🏗️ PROJECT STRUCTURE ENDPOINT
  *
- * Returns complete project structure: Project → Buildings → Units
+ * Returns complete project structure: Project → Buildings → (Units | Storage | Parking)
  *
  * @module api/projects/structure/[projectId]
- * @version 2.0.0
- * @updated 2026-01-15 - AUTHZ PHASE 2: Added RBAC protection
+ * @version 3.0.0
+ * @updated 2026-01-21 - Added Storage and Parking to building hierarchy
  *
  * 🔒 SECURITY:
  * - Permission: projects:projects:view
  * - Tenant isolation: Verifies project ownership
- * - Filters buildings and units by companyId
+ * - Filters buildings, units, storage, and parking by companyId
+ *
+ * 🏢 ARCHITECTURE (from BuildingSpacesTabs):
+ * ❌ NO: Parking/Storage as "attachments" or children of Units
+ * ✅ YES: Parking/Storage/Units as equal parallel categories in Building context
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -28,6 +32,8 @@ type StructureSuccess = {
     project: Record<string, unknown> & { id: string; name?: string };
     buildings: Array<{
       units: Array<{ id: string }>;
+      storages: Array<{ id: string; name?: string }>;
+      parkingSpots: Array<{ id: string; code?: string }>;
       id: string;
       name?: string;
     }>;
@@ -36,6 +42,8 @@ type StructureSuccess = {
   summary: {
     buildingsCount: number;
     totalUnits: number;
+    totalStorages: number;
+    totalParkingSpots: number;
   };
 };
 
@@ -118,12 +126,13 @@ export async function GET(
         const buildings = [];
 
         // ============================================================================
-        // STEP 3: GET UNITS FOR EACH BUILDING (Admin SDK + Tenant Filter)
+        // STEP 3: GET UNITS, STORAGE, PARKING FOR EACH BUILDING
         // ============================================================================
 
         for (const buildingDoc of buildingsSnapshot.docs) {
           const building = { id: buildingDoc.id, ...buildingDoc.data() } as Record<string, unknown> & { id: string; name?: string };
 
+          // 🏠 UNITS
           console.log(`🏠 Fetching units for buildingId: ${building.id}`);
           const unitsSnapshot = await adminDb
             .collection(COLLECTIONS.UNITS)
@@ -136,8 +145,46 @@ export async function GET(
             ...unitDoc.data()
           }));
 
-          console.log(`🏠 Building ${building.id}: Found ${units.length} units`);
-          buildings.push({ ...building, units });
+          // 📦 STORAGE - Query by buildingId (from migration 006)
+          console.log(`📦 Fetching storage for buildingId: ${building.id}`);
+          const storageSnapshot = await adminDb
+            .collection(COLLECTIONS.STORAGE)
+            .where('buildingId', '==', building.id)
+            .get();
+
+          const storages = storageSnapshot.docs.map(storageDoc => {
+            const data = storageDoc.data();
+            return {
+              id: storageDoc.id,
+              name: data.name || data.code || `Storage ${storageDoc.id.slice(-4)}`,
+              type: data.type,
+              status: data.status,
+              area: data.area,
+              floor: data.floor
+            };
+          });
+
+          // 🚗 PARKING - Query by buildingId
+          console.log(`🚗 Fetching parking for buildingId: ${building.id}`);
+          const parkingSnapshot = await adminDb
+            .collection(COLLECTIONS.PARKING_SPACES)
+            .where('buildingId', '==', building.id)
+            .get();
+
+          const parkingSpots = parkingSnapshot.docs.map(parkingDoc => {
+            const data = parkingDoc.data();
+            return {
+              id: parkingDoc.id,
+              code: data.code || data.number || `P${parkingDoc.id.slice(-4)}`,
+              type: data.type,
+              status: data.status,
+              level: data.level,
+              area: data.area
+            };
+          });
+
+          console.log(`🏢 Building ${building.id}: ${units.length} units, ${storages.length} storages, ${parkingSpots.length} parking`);
+          buildings.push({ ...building, units, storages, parkingSpots });
         }
 
         const structure = {
@@ -146,7 +193,9 @@ export async function GET(
         };
 
         const totalUnits = buildings.reduce((sum, b) => sum + b.units.length, 0);
-        console.log(`✅ [Projects/Structure] Complete: ${buildings.length} buildings, ${totalUnits} total units`);
+        const totalStorages = buildings.reduce((sum, b) => sum + b.storages.length, 0);
+        const totalParkingSpots = buildings.reduce((sum, b) => sum + b.parkingSpots.length, 0);
+        console.log(`✅ [Projects/Structure] Complete: ${buildings.length} buildings, ${totalUnits} units, ${totalStorages} storages, ${totalParkingSpots} parking`);
 
         return NextResponse.json({
           success: true,
@@ -154,7 +203,9 @@ export async function GET(
           projectId,
           summary: {
             buildingsCount: buildings.length,
-            totalUnits
+            totalUnits,
+            totalStorages,
+            totalParkingSpots
           }
         });
 

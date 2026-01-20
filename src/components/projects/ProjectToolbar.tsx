@@ -24,8 +24,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 interface ProjectToolbarProps {
   selectedItems?: number[];
   onSelectionChange?: (items: number[]) => void;
-  searchTerm?: string;
-  onSearchChange?: (term: string) => void;
   activeFilters?: string[];
   onFiltersChange?: (filters: string[]) => void;
   onNewProject?: () => void;
@@ -38,8 +36,6 @@ interface ProjectToolbarProps {
 export function ProjectToolbar({
   selectedItems = [],
   onSelectionChange,
-  searchTerm = '',
-  onSearchChange,
   activeFilters = [],
   onFiltersChange,
   onNewProject,
@@ -151,8 +147,6 @@ export function ProjectToolbar({
       icon: Search,
       content: (
         <SearchFiltersTabContent
-          searchTerm={searchTerm}
-          onSearchChange={onSearchChange}
           activeFilters={activeFilters}
           onFiltersChange={onFiltersChange}
           getCurrentStatusFilter={getCurrentStatusFilter}

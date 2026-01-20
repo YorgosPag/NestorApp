@@ -4,10 +4,9 @@ import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Plus, Edit, Trash2, Download, Upload, RefreshCw,
-  Archive, Star, Share, MapPin, HelpCircle, Search, ArrowUpDown
+  Archive, Star, Share, MapPin, HelpCircle, ArrowUpDown
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -192,10 +191,8 @@ export function ToolsTabContent({ selectedItems = [] }: TabContentProps) {
   );
 }
 
-// 🔍 Αναζήτηση/Φίλτρα (Search/Filters)
+// 🔍 Φίλτρα (Filters)
 export function SearchFiltersTabContent({
-  searchTerm = '',
-  onSearchChange,
   getCurrentStatusFilter,
   getCurrentTypeFilter,
   handleStatusChange,
@@ -210,17 +207,6 @@ export function SearchFiltersTabContent({
 
   return (
     <>
-      {/* Search Input */}
-      <div className="relative">
-        <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`} />
-        <Input
-          placeholder={t('toolbar.search.placeholder')}
-          value={searchTerm}
-          onChange={(e) => onSearchChange?.(e.target.value)}
-          className="pl-10 w-64"
-        />
-      </div>
-
       {/* Status Filter Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

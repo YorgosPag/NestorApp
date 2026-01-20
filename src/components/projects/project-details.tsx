@@ -71,7 +71,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
           data={project!}
           componentMapping={PROJECT_COMPONENT_MAPPING}
           defaultTab="general"
-          theme="default"
+          theme="clean"
           // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
           translationNamespace="building"
           globalProps={{

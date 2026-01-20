@@ -53,12 +53,7 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
             }
           ]}
           variant="detailed"
-        >
-          {/* Centralized PropertyBadge Component - Property.status uses PropertyStatus */}
-          <div className="flex gap-2 mt-2">
-            <PropertyBadge status={unit.status as PropertyStatus} size="sm" />
-          </div>
-        </EntityDetailsHeader>
+        />
       </div>
 
       {/* 📱 MOBILE: Hidden (no header duplication) */}

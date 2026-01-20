@@ -188,8 +188,6 @@ export function ProjectsPageContent() {
             setViewMode={setViewMode}
             showDashboard={showDashboard}
             setShowDashboard={setShowDashboard}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
             onNewProject={() => console.log('Add new project')}
             showFilters={showFilters}
             setShowFilters={setShowFilters}

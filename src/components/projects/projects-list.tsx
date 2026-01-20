@@ -29,7 +29,6 @@ export function ProjectsList({
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
   const [favorites, setFavorites] = useState<number[]>([1]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [showToolbar, setShowToolbar] = useState(false);
 
   const toggleFavorite = (projectId: number) => {
@@ -50,9 +49,6 @@ export function ProjectsList({
         icon={Briefcase}
         entityName={t('list.entityName')}
         itemCount={displayProjects.length}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder={t('list.searchPlaceholder')}
         showToolbar={showToolbar}
         onToolbarToggle={setShowToolbar}
       />

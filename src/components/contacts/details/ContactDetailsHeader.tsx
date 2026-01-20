@@ -240,23 +240,10 @@ export function ContactDetailsHeader({
             }] : [])
           ]}
           variant="detailed"
-        >
-          {/* Centralized ContactBadge Components */}
-          <div className="flex gap-2 mt-2">
-            <ContactBadge status={type} variant="outline" size="sm" />
-            {status && <ContactBadge status={status} size="sm" />}
-          </div>
-        </EntityDetailsHeader>
+        />
       </div>
 
-      {/* 📱 MOBILE: Show only badges (no header duplication) */}
-      <div className="md:hidden p-4">
-        <div className="flex gap-2">
-          {/* 🏢 ENTERPRISE: ContactType badge uses status prop - type is valid ContactType */}
-          <ContactBadge status={type} variant="outline" size="sm" />
-          {status && <ContactBadge status={status} size="sm" />}
-        </div>
-      </div>
+      {/* 📱 MOBILE: Hidden (no header duplication) */}
 
       {/* ✅ PhotoPreviewModal τώρα global - δεν χρειάζεται εδώ */}
     </>
