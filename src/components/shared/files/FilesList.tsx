@@ -21,6 +21,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFileDisplayName } from '@/hooks/useFileDisplayName'; // 🏢 ENTERPRISE: Runtime i18n translation
 import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
 
 // ============================================================================
@@ -108,6 +109,7 @@ export function FilesList({
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const { t } = useTranslation('files');
+  const translateDisplayName = useFileDisplayName(); // 🏢 ENTERPRISE: Runtime i18n translation
 
   // =========================================================================
   // HANDLERS
@@ -203,7 +205,7 @@ export function FilesList({
           <article
             key={file.id}
             className={`flex items-center justify-between p-3 bg-card ${quick.card} border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-            aria-label={`${t('list.file')}: ${file.displayName}`}
+            aria-label={`${t('list.file')}: ${translateDisplayName(file)}`}
           >
             {/* File info */}
             <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -217,9 +219,9 @@ export function FilesList({
 
               {/* Details */}
               <div className="flex-1 min-w-0">
-                {/* Display name */}
+                {/* Display name - 🏢 ENTERPRISE: Runtime i18n translation */}
                 <p className="text-sm font-medium text-foreground truncate">
-                  {file.displayName}
+                  {translateDisplayName(file)}
                 </p>
 
                 {/* Metadata */}

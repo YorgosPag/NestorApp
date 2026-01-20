@@ -35,6 +35,8 @@ export interface Contact {
   export type RenovationStatus = 'none' | 'partial' | 'full' | 'planned';
 
   export interface Building {
+    // 🏢 ENTERPRISE: Index signature for SelectedItemBase compatibility (2026-01-20)
+    [key: string]: unknown;
     id: string;
     name: string;
     projectId: string; // References Project

@@ -5,6 +5,8 @@
  * Single Source of Truth για όλα τα badge types
  */
 
+import type { ReactNode } from 'react';
+
 // ===== CORE BADGE TYPES =====
 
 export type BadgeVariant =
@@ -153,7 +155,8 @@ export interface BadgeFactoryOptions {
   size?: BadgeSize;
   className?: string;
   showIcon?: boolean;
-  customLabel?: string;
+  /** Custom label - can be string or ReactNode for complex labels */
+  customLabel?: string | ReactNode;
 }
 
 // ===== STATUS TRANSITION TYPES =====

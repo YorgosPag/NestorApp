@@ -149,6 +149,7 @@ export class FileRecordService {
       ext,
       originalFilename: input.originalFilename,
       customTitle: input.customTitle, // 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+      language: 'el', // 🏢 ENTERPRISE: Always use Greek for stored displayNames to ensure consistency
     });
 
     const displayName = namingResult.displayName;
@@ -204,7 +205,13 @@ export class FileRecordService {
       isDeleted: false, // 🏢 ENTERPRISE: REQUIRED - Firestore queries with '!=' exclude docs without the field
       createdAt: new Date().toISOString(),
       createdBy: input.createdBy,
-      ...(input.revision && { revision: input.revision }), // 🏢 ENTERPRISE: Only include if defined
+      // 🏢 ENTERPRISE: Store naming metadata for runtime i18n translation
+      ...(input.purpose && { purpose: input.purpose }),
+      ...(input.entityLabel && { entityLabel: input.entityLabel }),
+      ...(input.descriptors && { descriptors: input.descriptors }),
+      ...(input.occurredAt && { occurredAt: input.occurredAt }),
+      ...(input.revision && { revision: input.revision }),
+      ...(input.customTitle && { customTitle: input.customTitle }),
     };
 
     // Write to Firestore

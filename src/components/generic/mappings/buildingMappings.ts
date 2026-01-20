@@ -15,6 +15,9 @@
  * @module components/generic/mappings/buildingMappings
  */
 
+import type { ComponentType } from 'react';
+import type { TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
+
 // ============================================================================
 // BUILDING-SPECIFIC COMPONENTS
 // ============================================================================
@@ -36,27 +39,28 @@ import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTa
 
 // ============================================================================
 // BUILDING COMPONENT MAPPING
+// 🏢 ENTERPRISE: Explicit type for UniversalTabsRenderer compatibility
 // ============================================================================
 
-export const BUILDING_COMPONENT_MAPPING = {
-  'GeneralTabContent': GeneralTabContent,
-  'TimelineTabContent': TimelineTabContent,
-  'AnalyticsTabContent': AnalyticsTabContent,
-  'PhotosTabContent': PhotosTabContent,
-  'VideosTabContent': VideosTabContent,
-  'PlaceholderTab': PlaceholderTab,
-  'FloorplanViewerTab': FloorplanViewerTab,
-  'StorageTab': StorageTab,
-  'BuildingCustomersTab': BuildingCustomersTab,
+export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabComponentProps>> = {
+  'GeneralTabContent': GeneralTabContent as ComponentType<TabComponentProps>,
+  'TimelineTabContent': TimelineTabContent as ComponentType<TabComponentProps>,
+  'AnalyticsTabContent': AnalyticsTabContent as ComponentType<TabComponentProps>,
+  'PhotosTabContent': PhotosTabContent as ComponentType<TabComponentProps>,
+  'VideosTabContent': VideosTabContent as ComponentType<TabComponentProps>,
+  'PlaceholderTab': PlaceholderTab as ComponentType<TabComponentProps>,
+  'FloorplanViewerTab': FloorplanViewerTab as ComponentType<TabComponentProps>,
+  'StorageTab': StorageTab as ComponentType<TabComponentProps>,
+  'BuildingCustomersTab': BuildingCustomersTab as ComponentType<TabComponentProps>,
 
   // 🏢 ENTERPRISE: Unified Factory aliases - same components, different names
-  'BuildingGeneralTab': GeneralTabContent,
-  'BuildingFloorsTab': TimelineTabContent,
-  'BuildingFloorplansTab': FloorplanViewerTab,
-  'BuildingDocumentsTab': PlaceholderTab,
-  'BuildingPhotosTab': PhotosTabContent,
-  'BuildingActivityTab': AnalyticsTabContent,
-} as const;
+  'BuildingGeneralTab': GeneralTabContent as ComponentType<TabComponentProps>,
+  'BuildingFloorsTab': TimelineTabContent as ComponentType<TabComponentProps>,
+  'BuildingFloorplansTab': FloorplanViewerTab as ComponentType<TabComponentProps>,
+  'BuildingDocumentsTab': PlaceholderTab as ComponentType<TabComponentProps>,
+  'BuildingPhotosTab': PhotosTabContent as ComponentType<TabComponentProps>,
+  'BuildingActivityTab': AnalyticsTabContent as ComponentType<TabComponentProps>,
+};
 
 // ============================================================================
 // TYPE DEFINITIONS

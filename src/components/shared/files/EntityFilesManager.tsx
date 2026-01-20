@@ -25,7 +25,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { FileText, Upload, RefreshCw, List, Network, Eye, Code } from 'lucide-react';
+import { FileText, Upload, RefreshCw, List, Network, Eye, Code, ArrowUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -319,7 +319,7 @@ export function EntityFilesManager({
             {/* 🏢 ENTERPRISE: Workspace info display (ADR-032) */}
             {activeWorkspace && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Ανήκει στο:</span>
+                <span>{t('manager.belongsTo')}:</span>
                 <span className="font-medium text-foreground">{activeWorkspace.displayName}</span>
               </div>
             )}
@@ -334,6 +334,7 @@ export function EntityFilesManager({
                 onClick={() => setViewMode('list')}
                 aria-label={t('manager.viewList')}
                 aria-pressed={viewMode === 'list'}
+                title={t('manager.viewList')}
                 className={cn('px-2', viewMode === 'list' && 'bg-primary text-primary-foreground')}
               >
                 <List className={iconSizes.sm} aria-hidden="true" />
@@ -344,6 +345,7 @@ export function EntityFilesManager({
                 onClick={() => setViewMode('tree')}
                 aria-label={t('manager.viewTree')}
                 aria-pressed={viewMode === 'tree'}
+                title={t('manager.viewTree')}
                 className={cn('px-2', viewMode === 'tree' && 'bg-primary text-primary-foreground')}
               >
                 <Network className={iconSizes.sm} aria-hidden="true" />
@@ -357,10 +359,10 @@ export function EntityFilesManager({
                   variant={treeViewMode === 'business' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setTreeViewMode('business')}
-                  aria-label="Business View"
+                  aria-label={t('manager.businessView')}
                   aria-pressed={treeViewMode === 'business'}
                   className={cn('px-2', treeViewMode === 'business' && 'bg-primary text-primary-foreground')}
-                  title="Business View - User-friendly display"
+                  title={t('manager.businessViewTooltip')}
                 >
                   <Eye className={iconSizes.sm} aria-hidden="true" />
                 </Button>
@@ -368,10 +370,10 @@ export function EntityFilesManager({
                   variant={treeViewMode === 'technical' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setTreeViewMode('technical')}
-                  aria-label="Technical View"
+                  aria-label={t('manager.technicalView')}
                   aria-pressed={treeViewMode === 'technical'}
                   className={cn('px-2', treeViewMode === 'technical' && 'bg-primary text-primary-foreground')}
-                  title="Technical View - Full path with IDs"
+                  title={t('manager.technicalViewTooltip')}
                 >
                   <Code className={iconSizes.sm} aria-hidden="true" />
                 </Button>
@@ -385,6 +387,7 @@ export function EntityFilesManager({
               onClick={() => setShowUploadZone(!showUploadZone)}
               disabled={uploading}
               aria-label={t('manager.addFiles')}
+              title={t('manager.addFilesTooltip')}
             >
               <Upload className={`${iconSizes.sm} mr-2`} aria-hidden="true" />
               {t('manager.addFiles')}
@@ -397,6 +400,7 @@ export function EntityFilesManager({
               onClick={() => refetch()}
               disabled={loading || uploading}
               aria-label={t('manager.refresh')}
+              title={t('manager.refreshTooltip')}
             >
               <RefreshCw className={`${iconSizes.sm} ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
             </Button>
@@ -431,8 +435,9 @@ export function EntityFilesManager({
                     uploading={uploading}
                   />
                 ) : (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    ⬆️ Εισάγετε τίτλο για να συνεχίσετε με το upload
+                  <div className="p-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                    <ArrowUp className={iconSizes.sm} aria-hidden="true" />
+                    {t('manager.enterTitleToContinue')}
                   </div>
                 )}
               </>
@@ -440,8 +445,9 @@ export function EntityFilesManager({
 
             {/* Hint when no entry point selected */}
             {!selectedEntryPoint && (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                ⬆️ Επιλέξτε πρώτα τον τύπο του εγγράφου
+              <div className="p-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <ArrowUp className={iconSizes.sm} aria-hidden="true" />
+                {t('manager.selectDocumentType')}
               </div>
             )}
           </div>

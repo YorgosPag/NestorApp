@@ -77,7 +77,7 @@ export interface UniversalTabConfig {
 // ============================================================================
 
 /** Generic tab component props interface */
-interface TabComponentProps {
+export interface TabComponentProps {
   data?: unknown;
   project?: unknown;
   building?: unknown;

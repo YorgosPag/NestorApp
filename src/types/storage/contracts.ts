@@ -35,11 +35,11 @@ export interface Storage {
 export interface StorageUnit {
   id: string;
   code: string;
-  type: 'storage' | 'parking';
+  type: StorageType;
   floor: string;
   area: number; // in square meters
   price: number; // in euros
-  status: 'available' | 'sold' | 'reserved' | 'maintenance';
+  status: StorageStatus;
   description: string;
   building: string;
   project: string;

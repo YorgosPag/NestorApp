@@ -11,6 +11,7 @@ import { BuildingsListHeader } from './BuildingsList/BuildingsListHeader';
 // [ENTERPRISE] Using centralized domain card
 import { BuildingListCard } from '@/domain';
 import { CompactToolbar, buildingsConfig } from '@/components/core/CompactToolbar';
+import type { SortField } from '@/components/core/CompactToolbar/types';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -29,7 +30,7 @@ export function BuildingsList({
   // [ENTERPRISE] i18n hook for translations
   const { t } = useTranslation('building');
   const [favorites, setFavorites] = useState<string[]>(['1']);
-  const [sortBy, setSortBy] = useState<'name' | 'progress' | 'value' | 'area' | 'date'>('name');
+  const [sortBy, setSortBy] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);

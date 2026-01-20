@@ -28,10 +28,20 @@
   "purposes": {
     "profile": "Profile",
     "id": "ID",
+    "tax": "Tax ID",
+    "address": "Address",
+    "phone": "Phone",
     "front": "Front View",
     "back": "Back View",
     "signed": "Signed",
-    "draft": "Draft"
+    "draft": "Draft",
+    "generic": "Generic",
+    "permit": "Permit",
+    "floorplan": "Floor Plan",
+    "exterior": "Exterior",
+    "interior": "Interior",
+    "contract": "Contract",
+    "report": "Report"
   },
   "labels": {
     "revision": "Version",
@@ -50,6 +60,13 @@
     "filenameSpecialChars": "Filename contains special characters that may cause problems"
   },
   "upload": {
+    "typeQuestion": "What type of document will you upload?",
+    "categoryHint": "Select category for automatic naming",
+    "documentForCategory": "Document for this category",
+    "documentTitle": "Document Title",
+    "customTitlePlaceholder": "e.g. Power of Attorney, Affidavit, etc.",
+    "customTitleHint": "Required field - Enter a descriptive title for the document",
+    "selectDocumentType": "Select document type",
     "errors": {
       "generic": "Error uploading file",
       "unauthorized": "You do not have permission to upload files",
@@ -70,7 +87,16 @@
     "viewList": "List View",
     "viewTree": "Tree View",
     "listView": "List",
-    "treeView": "Tree"
+    "treeView": "Tree",
+    "businessView": "Business View",
+    "technicalView": "Technical View",
+    "businessViewTooltip": "Business View - User-friendly display",
+    "technicalViewTooltip": "Technical View - Full path with IDs",
+    "refreshTooltip": "Refresh file list",
+    "addFilesTooltip": "Upload new files",
+    "belongsTo": "Belongs to",
+    "selectDocumentType": "Select document type first",
+    "enterTitleToContinue": "Enter title to continue with upload"
   },
   "list": {
     "file": "File",
@@ -114,5 +140,28 @@
     "collapse": "Collapse folder",
     "folder": "Folder",
     "file": "File"
+  },
+  "technical": {
+    "storagePath": "Storage path",
+    "copyPath": "Copy path",
+    "pathCopied": "Path copied",
+    "pathUnavailable": "Unavailable",
+    "details": "Details",
+    "unavailable": "Unavailable"
+  },
+  "inspector": {
+    "title": "File Details",
+    "description": "View metadata and technical information",
+    "storagePath": "Storage Path",
+    "fileSize": "File Size",
+    "contentType": "Content Type",
+    "createdAt": "Created At",
+    "createdBy": "Created By",
+    "company": "Company",
+    "domain": "Domain",
+    "category": "Category",
+    "status": "Status",
+    "downloadUrl": "Download URL",
+    "viewFile": "View File"
   }
 }

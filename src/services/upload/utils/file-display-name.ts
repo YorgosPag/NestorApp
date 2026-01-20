@@ -45,16 +45,25 @@ import { loadNamespace } from '@/i18n/lazy-config';
  * This should be called at app startup or before first use
  */
 export async function ensureFilesNamespaceLoaded(): Promise<void> {
-  const lang = i18n.language === 'en' ? 'en' : 'el';
-  await loadNamespace('files', lang);
+  // 🏢 ENTERPRISE: Load BOTH languages to ensure translations are available
+  // regardless of current UI language during upload
+  await Promise.all([
+    loadNamespace('files', 'el'),
+    loadNamespace('files', 'en'),
+  ]);
 }
 
 /**
  * Get translation from files namespace with fallback
+ *
+ * @param key - Translation key (e.g., "categories.photos")
+ * @param fallback - Fallback value if translation not found
+ * @param language - Language code ('el' or 'en'). Defaults to 'el' for storage consistency
  */
-function getFileTranslation(key: string, fallback: string): string {
-  // Try to get from i18n, fallback to key if not found
-  const result = i18n.t(`files:${key}`, { defaultValue: fallback });
+function getFileTranslation(key: string, fallback: string, language: 'el' | 'en' = 'el'): string {
+  // 🏢 ENTERPRISE: Always use Greek ('el') for stored displayNames to ensure consistency
+  // Runtime translation happens in UI via useFileDisplayName hook
+  const result = i18n.t(`files:${key}`, { defaultValue: fallback, lng: language });
   return typeof result === 'string' ? result : fallback;
 }
 
@@ -102,6 +111,10 @@ export interface FileDisplayNameInput {
   /** 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
    * When provided, replaces category+purpose with this custom title */
   customTitle?: string;
+
+  /** 🏢 ENTERPRISE: Language for display name ('el' or 'en')
+   * @default 'el' - Always use Greek for stored displayNames to ensure consistency */
+  language?: 'el' | 'en';
 }
 
 /**
@@ -125,29 +138,29 @@ export interface FileDisplayNameResult {
 /**
  * Get label for domain from i18n (files:domains.{domain})
  */
-function getDomainLabel(domain: string): string {
-  return getFileTranslation(`domains.${domain}`, domain);
+function getDomainLabel(domain: string, language: 'el' | 'en' = 'el'): string {
+  return getFileTranslation(`domains.${domain}`, domain, language);
 }
 
 /**
  * Get label for category from i18n (files:categories.{category})
  */
-function getCategoryLabel(category: string): string {
-  return getFileTranslation(`categories.${category}`, category);
+function getCategoryLabel(category: string, language: 'el' | 'en' = 'el'): string {
+  return getFileTranslation(`categories.${category}`, category, language);
 }
 
 /**
  * Get label for entity type from i18n (files:entityTypes.{entityType})
  */
-function getEntityTypeLabel(entityType: string): string {
-  return getFileTranslation(`entityTypes.${entityType}`, entityType);
+function getEntityTypeLabel(entityType: string, language: 'el' | 'en' = 'el'): string {
+  return getFileTranslation(`entityTypes.${entityType}`, entityType, language);
 }
 
 /**
  * Get label for purpose from i18n (files:purposes.{purpose})
  */
-function getPurposeLabel(purpose: string): string {
-  return getFileTranslation(`purposes.${purpose}`, purpose);
+function getPurposeLabel(purpose: string, language: 'el' | 'en' = 'el'): string {
+  return getFileTranslation(`purposes.${purpose}`, purpose, language);
 }
 
 // ============================================================================
@@ -228,6 +241,8 @@ function normalizeForSearch(str: string): string {
  */
 export function buildFileDisplayName(input: FileDisplayNameInput): FileDisplayNameResult {
   const parts: string[] = [];
+  // 🏢 ENTERPRISE: Always use Greek ('el') for stored displayNames to ensure consistency
+  const language = input.language || 'el';
 
   // 🏢 ENTERPRISE: Custom title takes precedence (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
   if (input.customTitle && input.customTitle.trim() !== '') {
@@ -235,13 +250,13 @@ export function buildFileDisplayName(input: FileDisplayNameInput): FileDisplayNa
     parts.push(input.customTitle.trim());
   } else {
     // 1. Category label (always first)
-    const categoryLabel = getCategoryLabel(input.category);
+    const categoryLabel = getCategoryLabel(input.category, language);
     parts.push(categoryLabel);
 
     // 2. Purpose/descriptor if provided
     if (input.purpose) {
-      // Capitalize first letter
-      const purposeLabel = input.purpose.charAt(0).toUpperCase() + input.purpose.slice(1);
+      // 🏢 ENTERPRISE: Use i18n for purpose labels (not raw purpose string)
+      const purposeLabel = getPurposeLabel(input.purpose, language);
       parts[0] = `${categoryLabel} ${purposeLabel}`;
     }
   }
@@ -356,6 +371,61 @@ export function buildContractDisplayName(
     revision,
     ext,
   });
+}
+
+// ============================================================================
+// RUNTIME DISPLAY NAME (for UI with current language)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Runtime translation of file display names
+ *
+ * ⚠️ DEPRECATED: Use `useFileDisplayName()` hook instead!
+ *
+ * This function is DEPRECATED because it uses the global i18n instance,
+ * which doesn't react to language changes in React components.
+ *
+ * For React components, use the `useFileDisplayName()` hook from
+ * `@/hooks/useFileDisplayName` which properly reacts to language changes.
+ *
+ * This function is kept only for backwards compatibility with non-React code.
+ *
+ * @deprecated Use `useFileDisplayName()` hook for React components
+ * @see {@link useFileDisplayName} - React hook for runtime translation
+ */
+export function buildDisplayNameFromRecord(fileRecord: {
+  category?: string;
+  purpose?: string;
+  displayName: string;
+}): string {
+  // 🚨 DEPRECATED: This uses global i18n, which doesn't react to language changes
+  // Use useFileDisplayName() hook in React components instead!
+
+  // If no category metadata, return stored displayName as fallback
+  if (!fileRecord.category) {
+    return fileRecord.displayName;
+  }
+
+  // Extract parts from original displayName
+  const parts = fileRecord.displayName.split(' - ');
+
+  if (parts.length === 0) {
+    return fileRecord.displayName;
+  }
+
+  // Translate category
+  const categoryLabel = getCategoryLabel(fileRecord.category);
+
+  let firstPart = categoryLabel;
+  if (fileRecord.purpose) {
+    const purposeLabel = getPurposeLabel(fileRecord.purpose);
+    firstPart = `${categoryLabel} ${purposeLabel}`;
+  }
+
+  // Replace first part, keep rest as-is
+  const translatedParts = [firstPart, ...parts.slice(1)];
+
+  return translatedParts.join(' - ');
 }
 
 // ============================================================================

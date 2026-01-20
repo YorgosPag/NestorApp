@@ -24,6 +24,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { EntityType } from '@/config/domain-constants';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import { getSortedEntryPoints } from '@/config/upload-entry-points';
@@ -70,6 +71,7 @@ export function UploadEntryPointSelector({
   onCustomTitleChange,
 }: UploadEntryPointSelectorProps) {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('files');
 
   // Get entry points for this entity type
   const entryPoints = getSortedEntryPoints(entityType);
@@ -90,14 +92,14 @@ export function UploadEntryPointSelector({
   };
 
   return (
-    <section className={cn('space-y-3', className)} role="radiogroup" aria-label="Επιλογή τύπου εγγράφου">
+    <section className={cn('space-y-3', className)} role="radiogroup" aria-label={t('upload.selectDocumentType')}>
       {/* Header */}
       <header>
         <h3 className="text-sm font-semibold text-foreground mb-1">
-          Τι τύπο εγγράφου θα ανεβάσετε;
+          {t('upload.typeQuestion')}
         </h3>
         <p className="text-xs text-muted-foreground">
-          Επιλέξτε την κατηγορία για αυτόματη ονοματολογία
+          {t('upload.categoryHint')}
         </p>
       </header>
 
@@ -162,7 +164,7 @@ export function UploadEntryPointSelector({
             .map((ep) => (
               <p key={ep.id} className="text-xs text-muted-foreground">
                 <strong className="text-foreground">{ep.label[language]}:</strong>{' '}
-                {ep.description?.[language] || 'Έγγραφο για αυτήν την κατηγορία'}
+                {ep.description?.[language] || t('upload.documentForCategory')}
               </p>
             ))}
         </footer>
@@ -173,14 +175,14 @@ export function UploadEntryPointSelector({
       {selectedEntryPoint?.requiresCustomTitle && (
         <div className="space-y-2">
           <label htmlFor="custom-title" className="block text-sm font-medium text-foreground">
-            Τίτλος Εγγράφου <span className="text-destructive">*</span>
+            {t('upload.documentTitle')} <span className="text-destructive">*</span>
           </label>
           <input
             id="custom-title"
             type="text"
             value={customTitle}
             onChange={(e) => onCustomTitleChange?.(e.target.value)}
-            placeholder="π.χ. Πληρεξούσιο, Υπεύθυνη Δήλωση, κτλ."
+            placeholder={t('upload.customTitlePlaceholder')}
             required
             className={cn(
               'w-full px-3 py-2 rounded-md border bg-background text-foreground',
@@ -196,7 +198,7 @@ export function UploadEntryPointSelector({
             aria-describedby="custom-title-hint"
           />
           <p id="custom-title-hint" className="text-xs text-muted-foreground">
-            Υποχρεωτικό πεδίο - Εισάγετε περιγραφικό τίτλο για το έγγραφο
+            {t('upload.customTitleHint')}
           </p>
         </div>
       )}

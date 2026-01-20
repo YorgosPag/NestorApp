@@ -19,9 +19,12 @@ import { formatPrice, formatArea, getPricePerSqm } from './StorageCardUtils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
+// 🏢 ENTERPRISE: Import StorageType for proper typing
+import type { StorageType } from '@/types/storage';
+
 interface StorageCardContentProps {
     unit: StorageUnit;
-    getTypeIcon: (type: 'storage' | 'parking') => React.ElementType;
+    getTypeIcon: (type: StorageType) => React.ElementType;
 }
 
 export function StorageCardContent({ unit, getTypeIcon }: StorageCardContentProps) {

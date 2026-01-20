@@ -28,10 +28,11 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Copy, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useFileDisplayName } from '@/hooks/useFileDisplayName'; // 🏢 ENTERPRISE: Runtime i18n translation
 import type { FileRecord } from '@/types/file-record';
 import {
   buildFilePathTree,
@@ -41,6 +42,9 @@ import {
   type FileNode,
 } from './utils/file-path-tree';
 import { formatFileSize } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
+import { copyToClipboard } from '@/lib/share-utils'; // 🏢 ENTERPRISE: Centralized clipboard utility
+import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized notification system
+import { FileInspector } from './FileInspector'; // 🏢 ENTERPRISE: On-demand metadata inspector (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2)
 
 // ============================================================================
 // CONSTANTS
@@ -194,6 +198,11 @@ export function FilePathTree({
 }: FilePathTreeProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
+  const translateDisplayName = useFileDisplayName(); // 🏢 ENTERPRISE: Runtime i18n translation
+  const { success, error } = useNotifications(); // 🏢 ENTERPRISE: Centralized toast notifications (ADR-031)
+
+  // 🏢 ENTERPRISE: Inspector state (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2 - On-demand metadata)
+  const [inspectedFile, setInspectedFile] = useState<FileRecord | null>(null);
 
   // Build tree structure from files
   const initialTree = useMemo(() => {
@@ -232,6 +241,56 @@ export function FilePathTree({
     },
     [onFileSelect]
   );
+
+  /**
+   * 🏢 ENTERPRISE: Handle copy storage path to clipboard (Technical View only)
+   * ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2: Copy χωρίς inline display (on-demand)
+   */
+  const handleCopyPath = useCallback(
+    async (fileRecord: FileRecord, event: React.MouseEvent) => {
+      // Prevent file selection when clicking copy button
+      event.stopPropagation();
+
+      const storagePath = fileRecord.storagePath;
+      if (!storagePath) {
+        error(t('technical.pathUnavailable'));
+        return;
+      }
+
+      try {
+        const copied = await copyToClipboard(storagePath);
+        if (copied) {
+          success(t('technical.pathCopied'));
+        } else {
+          error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
+        }
+      } catch (err) {
+        console.error('[FilePathTree] Failed to copy path:', err);
+        error(t('copy.copyError', { ns: 'common', defaultValue: 'Copy failed' }));
+      }
+    },
+    [success, error, t]
+  );
+
+  /**
+   * 🏢 ENTERPRISE: Handle open inspector (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2)
+   * Opens on-demand metadata inspector for file details
+   */
+  const handleOpenInspector = useCallback(
+    (fileRecord: FileRecord, event: React.MouseEvent) => {
+      // Prevent file selection when clicking details button
+      event.stopPropagation();
+      setInspectedFile(fileRecord);
+    },
+    []
+  );
+
+  /**
+   * 🏢 ENTERPRISE: Handle close inspector
+   */
+  const handleCloseInspector = useCallback(() => {
+    setInspectedFile(null);
+  }, []);
 
   // =========================================================================
   // RENDER HELPERS
@@ -385,39 +444,84 @@ export function FilePathTree({
 
   /**
    * Render a file node (leaf)
+   * ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2: Clean list, on-demand inspector (NO inline paths)
    */
   const renderFileNode = useCallback(
     (node: FileNode, depth: number): React.ReactNode => {
+      const showTechnicalActions = viewMode === 'technical';
+
       return (
         <li key={node.id} className="list-none">
-          <button
-            type="button"
-            onClick={() => handleFileSelect(node.fileRecord)}
+          {/* 🏢 ENTERPRISE: Clean file row (1 row per file - NO inline paths) */}
+          <div
             className={cn(
-              'flex items-center gap-2 w-full py-1 px-2 rounded transition-colors',
-              'hover:bg-accent/50 text-left',
-              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
-              getFileIndentClass(depth) // 🏢 ENTERPRISE: Centralized indentation with extra offset (no inline styles)
+              'flex items-center gap-2 w-full py-1 px-2 rounded transition-colors group',
+              'hover:bg-accent/50',
+              getFileIndentClass(depth) // 🏢 ENTERPRISE: Centralized indentation (no inline styles)
             )}
-            aria-label={`${t('tree.file')}: ${node.label}`}
           >
             {/* File icon */}
             <FileText className={cn(iconSizes.sm, 'flex-shrink-0 text-primary')} aria-hidden="true" />
 
-            {/* File name */}
-            <span className="text-sm truncate">{node.label}</span>
+            {/* File name (clickable) - 🏢 ENTERPRISE: Runtime i18n translation */}
+            <button
+              type="button"
+              onClick={() => handleFileSelect(node.fileRecord)}
+              className={cn(
+                'flex-1 text-left text-sm truncate',
+                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 rounded'
+              )}
+              aria-label={`${t('tree.file')}: ${translateDisplayName(node.fileRecord)}`}
+            >
+              {translateDisplayName(node.fileRecord)}
+            </button>
 
             {/* File size */}
             {node.fileRecord.sizeBytes && (
-              <span className="ml-auto text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {formatFileSize(node.fileRecord.sizeBytes)}
               </span>
             )}
-          </button>
+
+            {/* 🏢 TECHNICAL VIEW: On-demand actions (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2) */}
+            {showTechnicalActions && (
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Copy Path button (NO inline display) */}
+                <button
+                  type="button"
+                  onClick={(e) => handleCopyPath(node.fileRecord, e)}
+                  className={cn(
+                    'p-1.5 rounded transition-colors',
+                    'hover:bg-muted text-muted-foreground hover:text-foreground',
+                    'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
+                  )}
+                  aria-label={t('technical.copyPath')}
+                  title={t('technical.copyPath')}
+                >
+                  <Copy className={iconSizes.xs} aria-hidden="true" />
+                </button>
+
+                {/* Details button (opens Inspector) */}
+                <button
+                  type="button"
+                  onClick={(e) => handleOpenInspector(node.fileRecord, e)}
+                  className={cn(
+                    'p-1.5 rounded transition-colors',
+                    'hover:bg-muted text-muted-foreground hover:text-foreground',
+                    'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
+                  )}
+                  aria-label={t('technical.details')}
+                  title={t('technical.details')}
+                >
+                  <Info className={iconSizes.xs} aria-hidden="true" />
+                </button>
+              </div>
+            )}
+          </div>
         </li>
       );
     },
-    [iconSizes, t, handleFileSelect]
+    [iconSizes, t, handleFileSelect, handleCopyPath, handleOpenInspector, viewMode, translateDisplayName] // 🏢 CRITICAL: Must include translateDisplayName!
   );
 
   // =========================================================================
@@ -433,31 +537,43 @@ export function FilePathTree({
   }
 
   return (
-    <nav
-      className={cn('rounded-lg border bg-card', className)}
-      aria-label={t('tree.title')}
-    >
-      <header className="px-4 py-2 border-b bg-muted/50">
-        <h3 className="text-sm font-semibold">{t('tree.title')}</h3>
-      </header>
+    <>
+      <nav
+        className={cn('rounded-lg border bg-card', className)}
+        aria-label={t('tree.title')}
+      >
+        <header className="px-4 py-2 border-b bg-muted/50">
+          <h3 className="text-sm font-semibold">{t('tree.title')}</h3>
+        </header>
 
-      {/* Tree container */}
-      {/* 🏢 ENTERPRISE: Using standard Tailwind class instead of arbitrary value */}
-      <div className="p-2 max-h-96 overflow-y-auto">
-        <ul className="m-0 p-0" role="tree">
-          {tree.type === 'root' &&
-            tree.children.map((child) => {
-              if (child.type === 'folder') {
-                return renderFolderNode(child, 0);
-              }
-              if (child.type === 'file') {
-                return renderFileNode(child, 0);
-              }
-              return null;
-            })}
-        </ul>
-      </div>
-    </nav>
+        {/* Tree container */}
+        {/* 🏢 ENTERPRISE: Using standard Tailwind class instead of arbitrary value */}
+        <div className="p-2 max-h-96 overflow-y-auto">
+          <ul className="m-0 p-0" role="tree">
+            {tree.type === 'root' &&
+              tree.children.map((child) => {
+                if (child.type === 'folder') {
+                  return renderFolderNode(child, 0);
+                }
+                if (child.type === 'file') {
+                  return renderFileNode(child, 0);
+                }
+                return null;
+              })}
+          </ul>
+        </div>
+      </nav>
+
+      {/* 🏢 ENTERPRISE: On-demand File Inspector (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ #2) */}
+      {inspectedFile && (
+        <FileInspector
+          file={inspectedFile}
+          open={!!inspectedFile}
+          onClose={handleCloseInspector}
+          companyName={companyName}
+        />
+      )}
+    </>
   );
 }
 

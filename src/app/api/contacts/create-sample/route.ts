@@ -111,7 +111,8 @@ function generateEnterpriseSecureId(): string {
   const SECURE_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789' as const;
 
   // 🔐 ENTERPRISE: Use crypto-secure random generation
-  const secureRandomBytes = typeof crypto !== 'undefined' && crypto.getRandomValues
+  const hasCrypto = typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function';
+  const secureRandomBytes = hasCrypto
     ? new Uint32Array(FIRESTORE_ID_LENGTH)
     : null;
 
@@ -129,6 +130,31 @@ function generateEnterpriseSecureId(): string {
   ).join('');
 }
 
+/** 🏢 ENTERPRISE: Discriminated union response types */
+interface CreateSampleSuccessResponse {
+  success: true;
+  message: string;
+  contacts: ReadonlyArray<{
+    readonly id: string;
+    readonly name: string;
+    readonly phone: string;
+    readonly email: string;
+    readonly city: string;
+    readonly profession: string;
+  }>;
+  contactsCount: number;
+  updatedUnits: number;
+  mapping: Record<string, string>;
+}
+
+interface CreateSampleErrorResponse {
+  success: false;
+  error: string;
+  details?: string;
+}
+
+type CreateSampleResponse = CreateSampleSuccessResponse | CreateSampleErrorResponse;
+
 /**
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
  * @security Admin SDK + withAuth + requiredGlobalRoles: super_admin
@@ -136,7 +162,7 @@ function generateEnterpriseSecureId(): string {
  */
 
 export async function POST(request: NextRequest) {
-  const handler = withAuth(
+  const handler = withAuth<CreateSampleResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         console.log('📇 Creating real contacts with proper random IDs...');
@@ -144,6 +170,7 @@ export async function POST(request: NextRequest) {
 
     if (!adminDb) {
       return NextResponse.json({
+        success: false,
         error: 'Firebase Admin SDK not initialized'
       }, { status: 500 });
     }
