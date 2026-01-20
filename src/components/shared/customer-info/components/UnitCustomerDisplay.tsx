@@ -27,6 +27,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { formatDate } from '@/lib/intl-utils'; // ✅ Using centralized function
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import type { Property } from '@/types/property-viewer';
@@ -60,6 +62,8 @@ export function UnitCustomerDisplay({
   className = ''
 }: UnitCustomerDisplayProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
 
   // ========================================================================
   // ENTERPRISE LOGIC: Real Database Checks
@@ -141,7 +145,7 @@ export function UnitCustomerDisplay({
       <div className={`flex items-center ${styles.gap} text-destructive ${className}`}>
         <User className={`${styles.iconSize}`} />
         <span className={styles.text}>
-          Σφάλμα φόρτωσης πελάτη
+          {t('customerActions.states.loadingError')}
         </span>
       </div>
     );
@@ -156,7 +160,7 @@ export function UnitCustomerDisplay({
       <div className={`flex items-center ${styles.gap} text-muted-foreground ${className}`}>
         <User className={`${styles.iconSize}`} />
         <span className={styles.text}>
-          Πελάτης ID: {unit.soldTo} (δεν βρέθηκε)
+          {t('customerActions.states.customerNotFound', { id: unit.soldTo })}
         </span>
       </div>
     );
@@ -166,9 +170,9 @@ export function UnitCustomerDisplay({
   // RENDER VARIANTS
   // ========================================================================
 
-  const customerName = customerInfo.displayName || 'Άγνωστος πελάτης';
-  const statusText = unit.status === 'sold' ? 'Πωλήθηκε' :
-                    unit.status === 'reserved' ? 'Κρατήθηκε' : 'Ενοικιάστηκε';
+  const customerName = customerInfo.displayName || t('customerActions.states.unknownCustomer');
+  const statusText = unit.status === 'sold' ? t('unitStatus.sold') :
+                    unit.status === 'reserved' ? t('unitStatus.reserved') : t('unitStatus.rented');
 
   // COMPACT VARIANT (για inline display)
   if (variant === 'compact') {
@@ -196,7 +200,7 @@ export function UnitCustomerDisplay({
               {customerName}
             </div>
             <div className="text-xs text-muted-foreground">
-              {statusText} • {unit.saleDate ? formatDate(new Date(unit.saleDate)) : 'Άγνωστη ημερομηνία'}
+              {statusText} • {unit.saleDate ? formatDate(new Date(unit.saleDate)) : t('customerActions.states.unknownDate')}
             </div>
           </div>
         </div>
@@ -209,7 +213,7 @@ export function UnitCustomerDisplay({
               size="sm"
               className={`${styles.buttonSize} p-0`}
               onClick={() => window.open(`/contacts?contactId=${unit.soldTo}`, '_blank')}
-              title="Προβολή στοιχείων πελάτη"
+              title={t('customerActions.tooltips.viewDetails', { name: customerName })}
             >
               <Eye className={styles.iconSize} />
             </Button>
@@ -224,7 +228,7 @@ export function UnitCustomerDisplay({
                   const cleanPhone = customerInfo.primaryPhone!.replace(/\s+/g, '');
                   window.open(`tel:${cleanPhone}`, '_self');
                 }}
-                title={`Κλήση: ${customerInfo.primaryPhone}`}
+                title={t('customerActions.tooltips.callTo', { phone: customerInfo.primaryPhone })}
               >
                 <Phone className={styles.iconSize} />
               </Button>
@@ -237,7 +241,7 @@ export function UnitCustomerDisplay({
                 size="sm"
                 className={`${styles.buttonSize} p-0`}
                 onClick={() => window.open(`mailto:${customerInfo.primaryEmail}`, '_self')}
-                title={`Email: ${customerInfo.primaryEmail}`}
+                title={t('customerActions.tooltips.emailTo', { email: customerInfo.primaryEmail })}
               >
                 <Mail className={styles.iconSize} />
               </Button>
@@ -256,7 +260,7 @@ export function UnitCustomerDisplay({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <User className={`${styles.iconSize} text-green-600`} />
-              <span className={`${styles.text} font-semibold`}>Πελάτης</span>
+              <span className={`${styles.text} font-semibold`}>{t('customerActions.labels.customer')}</span>
               <Badge variant="outline">{statusText}</Badge>
             </div>
           </div>
@@ -291,7 +295,7 @@ export function UnitCustomerDisplay({
                   onClick={() => window.open(`/contacts?contactId=${unit.soldTo}`, '_blank')}
                 >
                   <Eye className={`${iconSizes.xs} mr-1`} />
-                  Προβολή
+                  {t('customerActions.view')}
                 </Button>
 
                 {customerInfo.primaryPhone && (
@@ -304,7 +308,7 @@ export function UnitCustomerDisplay({
                     }}
                   >
                     <Phone className={`${iconSizes.xs} mr-1`} />
-                    Κλήση
+                    {t('customerActions.call')}
                   </Button>
                 )}
               </div>

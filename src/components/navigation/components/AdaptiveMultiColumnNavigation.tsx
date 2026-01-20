@@ -5,6 +5,8 @@
  * Clean orchestrator using modular components and hooks
  * Desktop: Multi-column layout (Finder-style)
  * Mobile: Drill-down navigation with back stack
+ *
+ * 🏢 ENTERPRISE: i18n support
  */
 import React, { Suspense } from 'react';
 import { useNavigation } from '../core/NavigationContext';
@@ -14,6 +16,8 @@ import { MobileNavigation } from './MobileNavigation';
 import { DesktopMultiColumn } from './DesktopMultiColumn';
 import { ContextualNavigationHandler } from '../core/ContextualNavigationHandler';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface AdaptiveMultiColumnNavigationProps {
   className?: string;
@@ -21,6 +25,8 @@ interface AdaptiveMultiColumnNavigationProps {
 
 export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumnNavigationProps) {
   const { loading, error, companies } = useNavigation();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('navigation');
 
   // Navigation handlers hook
   const {
@@ -47,12 +53,12 @@ export function AdaptiveMultiColumnNavigation({ className }: AdaptiveMultiColumn
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-500 dark:text-red-400 mb-4">Σφάλμα: {error}</p>
+        <p className="text-red-500 dark:text-red-400 mb-4">{t('page.error')}: {error}</p>
         <button
           onClick={() => window.location.reload()}
           className={`px-4 py-2 text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
         >
-          Ξαναδοκιμή
+          {t('page.retry')}
         </button>
       </div>
     );

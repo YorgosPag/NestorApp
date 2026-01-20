@@ -16,6 +16,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 import {
   getCalibrationOverlayContainerStyles,
   getCalibrationDebugPanelStyles,
@@ -51,6 +53,8 @@ export default function CoordinateCalibrationOverlay({
   const iconSizes = useIconSizes();
   const { getElementBorder, quick } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   const [clickTests, setClickTests] = useState<ClickTest[]>([]);
   const [showDetails, setShowDetails] = useState(true);
   const clickIdRef = useRef(0);
@@ -107,7 +111,7 @@ export default function CoordinateCalibrationOverlay({
       <div style={getCalibrationDebugPanelStyles()}>
         <header className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
           <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.cyanAccent}`}>🔧 Καλιμπράρισμα Συντεταγμένων</h3>
-          <button onClick={() => onToggle?.(false)} className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${PANEL_LAYOUT.TYPOGRAPHY.XL}`} title="Κλείσιμο">×</button>
+          <button onClick={() => onToggle?.(false)} className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${PANEL_LAYOUT.TYPOGRAPHY.XL}`} title={t('calibration.close')}>×</button>
         </header>
         <section className={PANEL_LAYOUT.SPACING.GAP_MD}>
           {/* ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CoordinateTransforms */}

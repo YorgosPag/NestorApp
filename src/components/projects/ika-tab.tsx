@@ -8,30 +8,35 @@ import { WorkersTabContent } from './ika/WorkersTabContent';
 import { TimesheetTabContent } from './ika/TimesheetTabContent';
 import { StampsCalculationTabContent } from './ika/StampsCalculationTabContent';
 import { ApdPaymentsTabContent } from './ika/ApdPaymentsTabContent';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function IkaTab() {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
+
   const ikaTabs = [
     {
       id: 'workers',
-      label: 'Εργατοτεχνίτες',
+      label: t('ika.workers'),
       icon: Users,
       content: <WorkersTabContent />,
     },
     {
       id: 'timesheet',
-      label: 'Παρουσιολόγιο',
+      label: t('ika.timesheet'),
       icon: Clock,
       content: <TimesheetTabContent />,
     },
     {
       id: 'stamps-calculation',
-      label: 'Υπολογισμός Ενσήμων',
+      label: t('ika.stampsCalculation'),
       icon: Calculator,
       content: <StampsCalculationTabContent />,
     },
     {
       id: 'apd-payments',
-      label: 'ΑΠΔ & Πληρωμές',
+      label: t('ika.apdPayments'),
       icon: CreditCard,
       content: <ApdPaymentsTabContent />,
     }

@@ -9,6 +9,8 @@ import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { getUnitsByOwner } from '@/services/units.service';
 import type { Property } from '@/types/property-viewer';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -50,6 +52,8 @@ const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: Rea
 };
 
 export function CustomerStats({ contactId }: CustomerStatsProps) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('contacts');
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -91,26 +95,26 @@ export function CustomerStats({ contactId }: CustomerStatsProps) {
 
   return (
     <div>
-        <h4 className="text-sm font-semibold mb-2">Στατιστικά Ιδιοκτησίας</h4>
+        <h4 className="text-sm font-semibold mb-2">{t('stats.title')}</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <StatCard 
+            <StatCard
                 icon={UnitIcon}
                 value={stats.unitsCount}
-                label="Αριθμός Μονάδων"
+                label={t('stats.unitsCount')}
                 loading={false}
                 colorClass="bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300"
             />
-             <StatCard 
+             <StatCard
                 icon={Ruler}
                 value={`${formatNumber(stats.totalArea)} m²`}
-                label="Συνολικό Εμβαδόν"
+                label={t('stats.totalArea')}
                 loading={false}
                 colorClass="bg-purple-50 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300"
             />
-             <StatCard 
+             <StatCard
                 icon={Euro}
                 value={formatCurrency(stats.totalValue)}
-                label="Συνολική Αξία"
+                label={t('stats.totalValue')}
                 loading={false}
                 colorClass="bg-green-50 text-green-800 dark:bg-green-950/50 dark:text-green-300"
             />

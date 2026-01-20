@@ -34,8 +34,8 @@ import { UNIFIED_STATUS_FILTER_LABELS, PROPERTY_BUILDING_TYPE_LABELS } from '@/c
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface BuildingToolbarProps {
-  selectedItems?: number[];
-  onSelectionChange?: (items: number[]) => void;
+  selectedItems?: string[];
+  onSelectionChange?: (items: string[]) => void;
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
   activeFilters?: string[];

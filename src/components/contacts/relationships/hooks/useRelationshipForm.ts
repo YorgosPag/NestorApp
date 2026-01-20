@@ -72,18 +72,19 @@ export const useRelationshipForm = (
 
   /**
    * 🔍 Validate form data before submission using centralized validation service
+   * 🌐 i18n: All validation messages converted to i18n keys - 2026-01-18
    */
   const validateFormData = async (): Promise<string | null> => {
     if (!contactId || contactId === 'new-contact') {
-      return 'Αποθηκεύστε πρώτα την επαφή για να προσθέσετε σχέσεις';
+      return 'relationships.validation.saveContactFirst';
     }
 
     if (!formData.targetContactId) {
-      return 'Παρακαλώ επιλέξτε μια επαφή';
+      return 'relationships.validation.selectContact';
     }
 
     if (!formData.relationshipType) {
-      return 'Παρακαλώ επιλέξτε τύπο σχέσης';
+      return 'relationships.validation.selectType';
     }
 
     // 🏢 Business Logic Validation using CENTRALIZED RelationshipValidationService
@@ -101,11 +102,11 @@ export const useRelationshipForm = (
       ]);
 
       if (!targetContact) {
-        return 'Η επιλεγμένη επαφή δεν βρέθηκε';
+        return 'relationships.validation.targetNotFound';
       }
 
       if (!sourceContact) {
-        return 'Σφάλμα φόρτωσης της επαφής προέλευσης';
+        return 'relationships.validation.sourceLoadError';
       }
 
       // 🔧 FIX: Contact object uses 'type' field, not 'contactType'
@@ -168,7 +169,7 @@ export const useRelationshipForm = (
           return duplicateError.message;
         }
 
-        return 'Η σχέση υπάρχει ήδη. Παρακαλώ επιλέξτε διαφορετικό τύπο σχέσης ή επαφή.';
+        return 'relationships.validation.duplicateRelationship';
       }
 
     } catch (error) {
@@ -179,7 +180,7 @@ export const useRelationshipForm = (
         return error.message;
       }
 
-      return 'Σφάλμα ελέγχου επαφής. Παρακαλώ δοκιμάστε ξανά.';
+      return 'relationships.validation.checkError';
     }
 
     console.log('✅ CENTRALIZED VALIDATION: All business rules passed, relationship is valid');
@@ -263,8 +264,8 @@ export const useRelationshipForm = (
 
       // Show success message
       const message = editingId
-        ? 'Η σχέση ενημερώθηκε επιτυχώς!'
-        : 'Η σχέση δημιουργήθηκε επιτυχώς! Μην ξεχάσετε να πατήσετε "Ενημέρωση Επαφής" για οριστική αποθήκευση.';
+        ? 'relationships.status.updateSuccess'
+        : 'relationships.status.createSuccess';
 
       setSuccessMessage(message);
       console.log('✅ SUCCESS:', message);
@@ -314,8 +315,8 @@ export const useRelationshipForm = (
 
         // Show success message instead of error
         const message = editingId
-          ? 'Η σχέση ενημερώθηκε επιτυχώς!'
-          : 'Η σχέση δημιουργήθηκε επιτυχώς! Μην ξεχάσετε να πατήσετε "Ενημέρωση Επαφής" για οριστική αποθήκευση.';
+          ? 'relationships.status.updateSuccess'
+          : 'relationships.status.createSuccess';
 
         setSuccessMessage(message);
         resetForm();
@@ -339,11 +340,11 @@ export const useRelationshipForm = (
 
       // Handle actual errors
       if (err instanceof Error && err.message.includes('already exists')) {
-        setError('Αυτή η σχέση υπάρχει ήδη. Παρακαλώ επιλέξτε διαφορετικό τύπο σχέσης ή επαφή.');
+        setError('relationships.errors.alreadyExists');
       } else if (err instanceof Error && err.message.includes('not found')) {
-        setError('Μία ή περισσότερες από τις επαφές δεν βρέθηκαν. Παρακαλώ ελέγξτε τα στοιχεία.');
+        setError('relationships.errors.contactsNotFound');
       } else {
-        setError('Σφάλμα αποθήκευσης σχέσης. Παρακαλώ δοκιμάστε ξανά.');
+        setError('relationships.errors.saveFailed');
       }
     } finally {
       setLoading(false);

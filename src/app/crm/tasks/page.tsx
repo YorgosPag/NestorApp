@@ -1,11 +1,12 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Clock, 
-  Plus, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Clock,
+  Plus,
+  AlertTriangle,
+  CheckCircle,
   TrendingUp,
   Calendar
 } from 'lucide-react';
@@ -17,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from 'react-i18next';
 
 // 🏢 ENTERPRISE: Task statistics interface
 interface TaskStats {
@@ -29,6 +31,7 @@ interface TaskStats {
 }
 
 export default function CrmTasksPage() {
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -58,12 +61,12 @@ export default function CrmTasksPage() {
   };
 
   const statsCards = [
-    { title: 'Συνολικές Εργασίες', value: stats?.total || 0, icon: Clock, color: 'blue', description: 'Όλες οι εργασίες' },
-    { title: 'Εκκρεμείς', value: stats?.pending || 0, icon: AlertTriangle, color: 'yellow', description: 'Προς εκτέλεση' },
-    { title: 'Εκπρόθεσμες', value: stats?.overdue || 0, icon: AlertTriangle, color: 'red', description: 'Πέρασε η ημερομηνία' },
-    { title: 'Ολοκληρωμένες', value: stats?.completed || 0, icon: CheckCircle, color: 'green', description: 'Έχουν ολοκληρωθεί' },
-    { title: 'Σήμερα', value: stats?.dueToday || 0, icon: Calendar, color: 'purple', description: 'Με deadline σήμερα' },
-    { title: 'Αυτή την εβδομάδα', value: stats?.dueThisWeek || 0, icon: TrendingUp, color: 'indigo', description: 'Με deadline εντός εβδομάδας' }
+    { title: t('tasks.stats.total'), value: stats?.total || 0, icon: Clock, color: 'blue', description: t('tasks.stats.totalDesc') },
+    { title: t('tasks.stats.pending'), value: stats?.pending || 0, icon: AlertTriangle, color: 'yellow', description: t('tasks.stats.pendingDesc') },
+    { title: t('tasks.stats.overdue'), value: stats?.overdue || 0, icon: AlertTriangle, color: 'red', description: t('tasks.stats.overdueDesc') },
+    { title: t('tasks.stats.completed'), value: stats?.completed || 0, icon: CheckCircle, color: 'green', description: t('tasks.stats.completedDesc') },
+    { title: t('tasks.stats.today'), value: stats?.dueToday || 0, icon: Calendar, color: 'purple', description: t('tasks.stats.todayDesc') },
+    { title: t('tasks.stats.thisWeek'), value: stats?.dueThisWeek || 0, icon: TrendingUp, color: 'indigo', description: t('tasks.stats.thisWeekDesc') }
   ];
 
   const getColorClasses = (color: string) => {
@@ -89,14 +92,14 @@ export default function CrmTasksPage() {
               <div className="flex items-center gap-3">
                 <Clock className={`${iconSizes.lg} ${colors.text.info}`} />
                 <div>
-                  <h1 className="text-2xl font-bold ${colors.text.foreground}">Εργασίες</h1>
-                  <p className="${colors.text.muted} mt-1">Διαχείριση εργασιών και υπενθυμίσεων</p>
+                  <h1 className="text-2xl font-bold ${colors.text.foreground}">{t('tasks.title')}</h1>
+                  <p className="${colors.text.muted} mt-1">{t('tasks.description')}</p>
                 </div>
               </div>
-              
+
               <Button onClick={() => setShowCreateModal(true)}>
                 <Plus className={`${iconSizes.sm} mr-2`} />
-                Νέα Εργασία
+                {t('tasks.newTask')}
               </Button>
             </div>
           </div>

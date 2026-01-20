@@ -14,309 +14,320 @@
 /**
  * Navigation Level Titles - Centralized από NavigationCardToolbar.tsx
  * ✅ ENTERPRISE: Single source of truth για όλους τους navigation level titles
+ * 🌐 i18n: Uses keys from navigation.json namespace
  */
 export const MODAL_SELECT_NAVIGATION_LEVEL_TITLES = {
-  companies: 'Εταιρείες',
-  projects: 'Έργα',
-  buildings: 'Κτίρια',
-  floors: 'Όροφοι',
-  units: 'Μονάδες'
+  companies: 'entities.company.title',
+  projects: 'entities.project.title',
+  buildings: 'entities.building.title',
+  floors: 'entities.floor.title',
+  units: 'entities.unit.title'
 } as const;
 
 /**
  * Navigation Base Labels - Centralized από NavigationCardToolbar.tsx
  * ✅ ENTERPRISE: Single source of truth για όλα τα base navigation labels
+ * 🌐 i18n: Uses keys from navigation.json namespace
  */
 export const MODAL_SELECT_NAVIGATION_BASE_LABELS = {
   // Action Labels
-  add: 'Προσθήκη',
-  connect: 'Σύνδεση',
-  edit: 'Επεξεργασία',
-  remove: 'Αφαίρεση',
-  disconnect: 'Αποσύνδεση',
-  filters: 'Φίλτρα',
-  favorites: 'Αγαπημένα',
-  archive: 'Αρχείο',
-  export: 'Εξαγωγή',
-  import: 'Εισαγωγή',
-  refresh: 'Ανανέωση',
-  preview: 'Προεπισκόπηση',
-  copy: 'Αντιγραφή',
-  share: 'Διαμοιρασμός',
-  reports: 'Αναφορές',
-  settings: 'Ρυθμίσεις',
-  favorites_management: 'Διαχείριση Αγαπημένων',
-  help: 'Βοήθεια',
-  sorting: 'Ταξινόμηση',
+  add: 'toolbar.labels.link',
+  connect: 'toolbar.labels.link',
+  edit: 'common.actions.edit',
+  remove: 'toolbar.labels.remove',
+  disconnect: 'toolbar.labels.unlink',
+  filters: 'toolbar.labels.filters',
+  favorites: 'toolbar.labels.favorites',
+  archive: 'toolbar.labels.archive',
+  export: 'common.actions.export',
+  import: 'common.actions.import',
+  refresh: 'common.actions.refresh',
+  preview: 'toolbar.labels.preview',
+  copy: 'toolbar.labels.copy',
+  share: 'toolbar.labels.share',
+  reports: 'toolbar.labels.reports',
+  settings: 'toolbar.labels.settings',
+  favorites_management: 'toolbar.labels.favoritesManagement',
+  help: 'toolbar.labels.help',
+  sorting: 'toolbar.labels.sorting',
 
   // Tooltip Labels
-  filtering: 'Φιλτράρισμα',
-  archiving: 'Αρχειοθέτηση',
-  export_data: 'Εξαγωγή δεδομένων',
-  import_data: 'Εισαγωγή δεδομένων',
-  refresh_data: 'Ανανέωση δεδομένων'
+  filtering: 'toolbar.tooltips.filters',
+  archiving: 'toolbar.tooltips.archive',
+  export_data: 'toolbar.tooltips.exportData',
+  import_data: 'toolbar.tooltips.importData',
+  refresh_data: 'toolbar.tooltips.refreshData'
 } as const;
 
 /**
  * Navigation Search Placeholders - Centralized από NavigationCardToolbar.tsx
  * ✅ ENTERPRISE: Single source of truth για όλα τα search placeholders
+ * 🌐 i18n: Uses keys from navigation.json namespace
  */
 export const MODAL_SELECT_NAVIGATION_SEARCH_PLACEHOLDERS = {
-  companies: 'Αναζήτηση εταιρείας...',
-  projects: 'Αναζήτηση έργου...',
-  buildings: 'Αναζήτηση κτιρίου...',
-  floors: 'Αναζήτηση ορόφου...',
-  units: 'Αναζήτηση μονάδας...'
+  companies: 'toolbar.search.company',
+  projects: 'toolbar.search.project',
+  buildings: 'toolbar.search.building',
+  floors: 'toolbar.search.floor',
+  units: 'toolbar.search.unit'
 } as const;
 
 /**
  * Navigation Tooltip Labels - Centralized από NavigationCardToolbar.tsx
  * ✅ ENTERPRISE: Single source of truth για όλα τα navigation tooltips
+ * 🌐 i18n: Uses keys from navigation.json namespace
  */
 export const MODAL_SELECT_NAVIGATION_TOOLTIPS = {
   // Companies Tooltips
-  add_company: 'Προσθήκη νέας εταιρείας',
-  edit_company: 'Επεξεργασία εταιρείας',
-  remove_company: 'Αφαίρεση εταιρείας',
+  add_company: 'toolbar.actions.companies.new',
+  edit_company: 'toolbar.actions.companies.edit',
+  remove_company: 'toolbar.actions.companies.delete',
 
   // Projects Tooltips
-  connect_project: 'Σύνδεση έργου με επιλεγμένη εταιρεία',
-  edit_project: 'Επεξεργασία έργου',
-  disconnect_project: 'Αποσύνδεση έργου',
+  connect_project: 'toolbar.actions.projects.new',
+  edit_project: 'toolbar.actions.projects.edit',
+  disconnect_project: 'toolbar.actions.projects.delete',
 
   // Buildings Tooltips
-  connect_building: 'Σύνδεση κτιρίου με επιλεγμένο έργο',
-  edit_building: 'Επεξεργασία κτιρίου',
-  disconnect_building: 'Αποσύνδεση κτιρίου',
+  connect_building: 'toolbar.actions.buildings.new',
+  edit_building: 'toolbar.actions.buildings.edit',
+  disconnect_building: 'toolbar.actions.buildings.delete',
 
   // Floors Tooltips
-  connect_floor: 'Σύνδεση ορόφου με επιλεγμένο κτίριο',
-  edit_floor: 'Επεξεργασία ορόφου',
-  disconnect_floor: 'Αποσύνδεση ορόφου',
+  connect_floor: 'toolbar.actions.floors.new',
+  edit_floor: 'toolbar.actions.floors.edit',
+  disconnect_floor: 'toolbar.actions.floors.delete',
 
   // Units Tooltips
-  connect_unit: 'Σύνδεση μονάδας με επιλεγμένο όροφο',
-  edit_unit: 'Επεξεργασία μονάδας',
-  disconnect_unit: 'Αποσύνδεση μονάδας'
+  connect_unit: 'toolbar.actions.units.new',
+  edit_unit: 'toolbar.actions.units.edit',
+  disconnect_unit: 'toolbar.actions.units.delete'
 } as const;
 
 /**
  * Navigation Filter Categories - Centralized από NavigationCardToolbar.tsx
  * ✅ ENTERPRISE: Single source of truth για όλες τις filter κατηγορίες
+ * 🌐 i18n: Uses keys from navigation.json namespace
  */
 export const MODAL_SELECT_NAVIGATION_FILTER_CATEGORIES = {
   // Companies Filters
-  company_type_label: 'Τύπος Εταιρείας',
-  company_construction: 'Κατασκευαστική',
-  company_development: 'Αναπτυξιακή',
-  company_investment: 'Επενδυτική',
-  company_management: 'Διαχειριστική',
-  company_status_label: 'Κατάσταση',
-  company_active: 'Ενεργές',
-  company_with_projects: 'Με έργα',
-  company_without_projects: 'Χωρίς έργα',
-  project_without_buildings: 'Χωρίς κτίρια',
-  building_without_units: 'Χωρίς μονάδες',
+  company_type_label: 'filters.companies.typeLabel',
+  company_construction: 'filters.companies.construction',
+  company_development: 'filters.companies.development',
+  company_investment: 'filters.companies.investment',
+  company_management: 'filters.companies.management',
+  company_status_label: 'filters.companies.statusLabel',
+  company_active: 'filters.companies.active',
+  company_with_projects: 'filters.companies.withProjects',
+  company_without_projects: 'filters.companies.withoutProjects',
+  project_without_buildings: 'filters.projects.withoutBuildings',
+  building_without_units: 'filters.buildings.withoutUnits',
 
   // Projects Filters
-  project_status_label: 'Κατάσταση Έργου',
-  project_planning: 'Σχεδίαση',
-  project_construction: 'Κατασκευή',
-  project_completed: 'Ολοκληρωμένα',
-  project_on_hold: 'Αναστολή',
-  project_type_label: 'Τύπος Έργου',
-  project_residential: 'Κατοικίες',
-  project_commercial: 'Εμπορικά',
-  project_mixed: 'Μεικτά',
+  project_status_label: 'filters.projects.statusLabel',
+  project_planning: 'filters.projects.planning',
+  project_construction: 'filters.projects.construction',
+  project_completed: 'filters.projects.completed',
+  project_on_hold: 'filters.projects.onHold',
+  project_type_label: 'filters.projects.typeLabel',
+  project_residential: 'filters.projects.residential',
+  project_commercial: 'filters.projects.commercial',
+  project_mixed: 'filters.projects.mixed',
 
   // Buildings Filters
-  building_type_label: 'Τύπος Κτιρίου',
-  building_residential: 'Κατοικίες',
-  building_commercial: 'Εμπορικό',
-  building_office: 'Γραφεία',
-  building_mixed: 'Μεικτό',
-  building_floors_label: 'Αριθμός Ορόφων',
-  building_floors_1_3: '1-3 όροφοι',
-  building_floors_4_6: '4-6 όροφοι',
-  building_floors_7_plus: '7+ όροφοι',
+  building_type_label: 'filters.buildings.typeLabel',
+  building_residential: 'filters.buildings.residential',
+  building_commercial: 'filters.buildings.commercial',
+  building_office: 'filters.buildings.office',
+  building_mixed: 'filters.buildings.mixed',
+  building_floors_label: 'filters.buildings.floorsLabel',
+  building_floors_1_3: 'filters.buildings.floors1to3',
+  building_floors_4_6: 'filters.buildings.floors4to6',
+  building_floors_7_plus: 'filters.buildings.floors7plus',
 
   // Floors Filters
-  floor_type_label: 'Τύπος Ορόφου',
-  floor_basement: 'Υπόγειο',
-  floor_ground: 'Ισόγειο',
-  floor_floor: 'Όροφος',
-  floor_penthouse: 'Ρετιρέ',
-  floor_units_label: 'Αριθμός Μονάδων',
-  floor_units_1_2: '1-2 μονάδες',
-  floor_units_3_5: '3-5 μονάδες',
-  floor_units_6_plus: '6+ μονάδες',
+  floor_type_label: 'filters.floors.typeLabel',
+  floor_basement: 'filters.floors.basement',
+  floor_ground: 'filters.floors.ground',
+  floor_floor: 'filters.floors.floor',
+  floor_penthouse: 'filters.floors.penthouse',
+  floor_units_label: 'filters.floors.unitsLabel',
+  floor_units_1_2: 'filters.floors.units1to2',
+  floor_units_3_5: 'filters.floors.units3to5',
+  floor_units_6_plus: 'filters.floors.units6plus',
 
   // Units Filters
-  unit_type_label: 'Τύπος Μονάδας',
-  unit_apartment: 'Διαμέρισμα',
-  unit_office: 'Γραφείο',
-  unit_shop: 'Κατάστημα',
-  unit_storage: 'Αποθήκη',
-  unit_parking: 'Θέση Στάθμευσης',
-  unit_status_label: 'Κατάσταση',
-  unit_available: 'Διαθέσιμη',
-  unit_occupied: 'Κατειλημμένη',
-  unit_reserved: 'Κρατημένη',
-  unit_maintenance: 'Συντήρηση',
-  unit_rooms_label: 'Αριθμός Δωματίων',
-  unit_1_room: '1 δωμάτιο',
-  unit_2_rooms: '2 δωμάτια',
-  unit_3_rooms: '3 δωμάτια',
-  unit_4_plus_rooms: '4+ δωμάτια'
+  unit_type_label: 'filters.units.typeLabel',
+  unit_apartment: 'filters.units.apartment',
+  unit_office: 'filters.units.office',
+  unit_shop: 'filters.units.shop',
+  unit_storage: 'filters.units.storage',
+  unit_parking: 'filters.units.parking',
+  unit_status_label: 'filters.units.statusLabel',
+  unit_available: 'filters.units.available',
+  unit_occupied: 'filters.units.occupied',
+  unit_reserved: 'filters.units.reserved',
+  unit_maintenance: 'filters.units.maintenance',
+  unit_rooms_label: 'filters.units.roomsLabel',
+  unit_1_room: 'filters.units.rooms1',
+  unit_2_rooms: 'filters.units.rooms2',
+  unit_3_rooms: 'filters.units.rooms3',
+  unit_4_plus_rooms: 'filters.units.rooms4plus'
 } as const;
 
 /**
  * Navigation Sort Options - Centralized από NavigationCardToolbar.tsx
  * ✅ ENTERPRISE: Single source of truth για όλες τις sort επιλογές
+ * 🌐 i18n: Uses keys from navigation.json namespace
  */
 export const MODAL_SELECT_NAVIGATION_SORT_OPTIONS = {
   // Common Sort Options
-  name_asc: 'Όνομα (Α-Ω)',
-  name_desc: 'Όνομα (Ω-Α)',
-  date_asc: 'Παλαιότερα πρώτα',
-  date_desc: 'Νεότερα πρώτα',
-  companies_date_asc: 'Παλαιότερες πρώτα',
-  companies_date_desc: 'Νεότερες πρώτα',
+  name_asc: 'toolbar.sort.nameAsc',
+  name_desc: 'toolbar.sort.nameDesc',
+  date_asc: 'toolbar.sort.dateOldest',
+  date_desc: 'toolbar.sort.dateNewest',
+  companies_date_asc: 'toolbar.sort.dateOldest',
+  companies_date_desc: 'toolbar.sort.dateNewest',
 
   // Projects Sort Options
-  progress_asc: 'Πρόοδος (Λίγη-Πολλή)',
-  progress_desc: 'Πρόοδος (Πολλή-Λίγη)',
+  progress_asc: 'toolbar.sort.progressLow',
+  progress_desc: 'toolbar.sort.progressHigh',
 
   // Buildings & Floors Sort Options
-  area_asc: 'Εμβαδόν (Μικρό-Μεγάλο)',
-  area_desc: 'Εμβαδόν (Μεγάλο-Μικρό)',
+  area_asc: 'toolbar.sort.areaSmall',
+  area_desc: 'toolbar.sort.areaLarge',
 
   // Units Sort Options
-  rooms_asc: 'Δωμάτια (Λίγα-Πολλά)',
-  rooms_desc: 'Δωμάτια (Πολλά-Λίγα)'
+  rooms_asc: 'toolbar.sort.roomsFew',
+  rooms_desc: 'toolbar.sort.roomsMany'
 } as const;
 
 /**
  * Compact Toolbar Search Placeholders - Centralized από CompactToolbar/configs.ts
  * ✅ ENTERPRISE: Single source of truth για όλα τα compact toolbar search placeholders
+ * 🏢 ENTERPRISE: Now uses i18n keys - translations in building.json
  */
 export const MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
-  buildings: 'Αναζήτηση κτιρίων...',
-  projects: 'Αναζήτηση έργων...',
-  contacts: 'Αναζήτηση επαφών...',
-  units: 'Αναζήτηση μονάδων...',
-  storages: 'Αναζήτηση αποθηκών...',
-  parking: 'Αναζήτηση θέσεων στάθμευσης...'
+  buildings: 'toolbar.search.placeholder',
+  projects: 'toolbar.search.placeholder',
+  contacts: 'toolbar.search.placeholder',
+  units: 'toolbar.search.placeholder',
+  storages: 'toolbar.search.placeholder',
+  parking: 'toolbar.search.placeholder',
+  communications: 'toolbar.search.placeholder'
 } as const;
 
 /**
  * Compact Toolbar New Item Labels - Centralized από CompactToolbar/configs.ts
  * ✅ ENTERPRISE: Single source of truth για όλα τα "New Item" labels
+ * 🌐 i18n: Uses keys from common.json namespace
  */
 export const MODAL_SELECT_COMPACT_TOOLBAR_NEW_ITEM_LABELS = {
-  new_building: 'Νέο Κτίριο',
-  new_project: 'Νέο Έργο',
-  new_contact: 'Νέα Επαφή',
-  new_unit: 'Νέα Μονάδα',
-  new_storage: 'Νέα Αποθήκη',
-  parking: 'Νέα Θέση Στάθμευσης'
+  new_building: 'common.actions.newBuilding',
+  new_project: 'common.actions.newProject',
+  new_contact: 'common.actions.newContact',
+  new_unit: 'common.actions.newUnit',
+  new_storage: 'common.actions.newStorage',
+  parking: 'common.actions.newParking'
 } as const;
 
 /**
  * Compact Toolbar Context Labels - Centralized από CompactToolbar/configs.ts
  * ✅ ENTERPRISE: Single source of truth για όλα τα context-specific labels
+ * 🌐 i18n: Uses keys from navigation.json and common.json namespaces
  */
 export const MODAL_SELECT_COMPACT_TOOLBAR_CONTEXT_LABELS = {
   // Buildings Context
-  favorites_feminine: 'Αγαπημένα', // For buildings
-  favorites_feminine_plural: 'Αγαπημένες', // For contacts/units/storages
+  favorites_feminine: 'toolbar.labels.favorites',
+  favorites_feminine_plural: 'toolbar.labels.favorites',
 
   // Sorting Context
-  sorting_buildings: 'Ταξινόμηση κτιρίων',
-  sorting_projects: 'Ταξινόμηση έργων',
-  sorting_contacts: 'Ταξινόμηση επαφών',
-  sorting_units: 'Ταξινόμηση μονάδων',
-  sorting_storages: 'Ταξινόμηση αποθηκών',
+  sorting_buildings: 'toolbar.tooltips.sorting',
+  sorting_projects: 'toolbar.tooltips.sorting',
+  sorting_contacts: 'toolbar.tooltips.sorting',
+  sorting_units: 'toolbar.tooltips.sorting',
+  sorting_storages: 'toolbar.tooltips.sorting',
 
   // Management Labels
-  favorites_management: 'Διαχείριση αγαπημένων',
+  favorites_management: 'toolbar.labels.favoritesManagement',
 
   // Action Labels που δεν υπάρχουν στα navigation labels
-  share_alt: 'Κοινοποίηση', // Alternative to 'Διαμοιρασμός'
-  delete_items: 'Διαγραφή'
+  share_alt: 'toolbar.labels.share',
+  delete_items: 'common.actions.delete'
 } as const;
 
 /**
  * Compact Toolbar Detailed Tooltips - Centralized από CompactToolbar/configs.ts
  * ✅ ENTERPRISE: Single source of truth για όλα τα detailed tooltips
  * 🏢 ENTERPRISE: Extended με ΟΛΑ τα tooltips για 100% κεντρικοποίηση
+ * 🌐 i18n: Uses keys from navigation.json and common.json namespaces
  */
 export const MODAL_SELECT_COMPACT_TOOLBAR_TOOLTIPS = {
   // ========================================================================
   // 🆕 NEW ITEM TOOLTIPS (Context-specific)
   // ========================================================================
-  new_building_tooltip: 'Νέο Κτίριο (Ctrl+N)',
-  new_project_tooltip: 'Νέο Έργο (Ctrl+N)',
-  new_contact_tooltip: 'Νέα Επαφή (Ctrl+N)',
-  new_unit_tooltip: 'Νέα Μονάδα (Ctrl+N)',
-  new_storage_tooltip: 'Νέα Αποθήκη (Ctrl+N)',
+  new_building_tooltip: 'common.tooltips.newBuildingShortcut',
+  new_project_tooltip: 'common.tooltips.newProjectShortcut',
+  new_contact_tooltip: 'common.tooltips.newContactShortcut',
+  new_unit_tooltip: 'common.tooltips.newUnitShortcut',
+  new_storage_tooltip: 'common.tooltips.newStorageShortcut',
 
   // ========================================================================
   // ✏️ EDIT TOOLTIPS (Context-specific)
   // ========================================================================
-  edit_building: 'Επεξεργασία επιλεγμένου κτιρίου',
-  edit_project: 'Επεξεργασία επιλεγμένου έργου',
-  edit_contact: 'Επεξεργασία επιλεγμένης επαφής',
-  edit_unit: 'Επεξεργασία επιλεγμένης μονάδας',
-  edit_storage: 'Επεξεργασία επιλεγμένης αποθήκης',
-  edit_generic: 'Επεξεργασία επιλεγμένου στοιχείου',
+  edit_building: 'toolbar.actions.buildings.edit',
+  edit_project: 'toolbar.actions.projects.edit',
+  edit_contact: 'common.tooltips.editContact',
+  edit_unit: 'toolbar.actions.units.edit',
+  edit_storage: 'toolbar.actions.storage.edit',
+  edit_generic: 'common.tooltips.editSelected',
 
   // ========================================================================
   // 🗑️ DELETE TOOLTIPS (Context-specific)
   // ========================================================================
-  delete_building: 'Διαγραφή επιλεγμένου κτιρίου',
-  delete_project: 'Διαγραφή επιλεγμένου έργου',
-  delete_contact: 'Διαγραφή επιλεγμένης επαφής',
-  delete_unit: 'Διαγραφή επιλεγμένης μονάδας',
-  delete_storage: 'Διαγραφή επιλεγμένης αποθήκης',
-  delete_generic: 'Διαγραφή επιλεγμένων στοιχείων',
+  delete_building: 'toolbar.actions.buildings.delete',
+  delete_project: 'toolbar.actions.projects.delete',
+  delete_contact: 'common.tooltips.deleteContact',
+  delete_unit: 'toolbar.actions.units.delete',
+  delete_storage: 'toolbar.actions.storage.delete',
+  delete_generic: 'common.tooltips.deleteSelected',
 
   // ========================================================================
   // 📤 SHARE TOOLTIPS (Context-specific)
   // ========================================================================
-  share_building: 'Κοινοποίηση κτιρίου',
-  share_project: 'Κοινοποίηση έργου',
-  share_contact: 'Κοινοποίηση επαφής',
-  share_unit: 'Κοινοποίηση μονάδας',
-  share_storage: 'Κοινοποίηση αποθήκης',
-  share_generic: 'Κοινοποίηση',
+  share_building: 'common.tooltips.shareBuilding',
+  share_project: 'common.tooltips.shareProject',
+  share_contact: 'common.tooltips.shareContact',
+  share_unit: 'common.tooltips.shareUnit',
+  share_storage: 'common.tooltips.shareStorage',
+  share_generic: 'toolbar.labels.share',
 
   // ========================================================================
   // 🔧 COMMON ACTION TOOLTIPS (Generic - used across all entity types)
   // ========================================================================
-  filters: 'Εμφάνιση φίλτρων',
-  favorites: 'Προσθήκη στα αγαπημένα',
-  archive: 'Αρχειοθέτηση επιλεγμένων',
-  export: 'Εξαγωγή δεδομένων',
-  import: 'Εισαγωγή δεδομένων',
-  refresh: 'Ανανέωση δεδομένων (F5)',
-  preview: 'Προεπισκόπηση',
-  copy: 'Αντιγραφή επιλεγμένων',
-  reports: 'Δημιουργία αναφορών',
-  settings: 'Ρυθμίσεις',
-  help: 'Βοήθεια και οδηγίες (F1)',
-  sorting: 'Ταξινόμηση στοιχείων',
+  filters: 'toolbar.tooltips.filters',
+  favorites: 'toolbar.tooltips.favorites',
+  archive: 'toolbar.tooltips.archive',
+  export: 'toolbar.tooltips.exportData',
+  import: 'toolbar.tooltips.importData',
+  refresh: 'toolbar.tooltips.refreshData',
+  preview: 'toolbar.tooltips.preview',
+  copy: 'toolbar.tooltips.copy',
+  reports: 'toolbar.tooltips.reports',
+  settings: 'toolbar.tooltips.settings',
+  help: 'toolbar.tooltips.help',
+  sorting: 'toolbar.tooltips.sorting',
 
   // ========================================================================
   // ⭐ FAVORITES MANAGEMENT TOOLTIPS
   // ========================================================================
-  manage_favorites: 'Διαχείριση αγαπημένων στοιχείων',
-  favorites_management: 'Διαχείριση αγαπημένων',
+  manage_favorites: 'toolbar.tooltips.favoritesManagement',
+  favorites_management: 'toolbar.labels.favoritesManagement',
 
   // ========================================================================
   // 📦 BULK ACTION TOOLTIPS
   // ========================================================================
-  bulk_actions: 'Μαζικές ενέργειες για επιλεγμένα στοιχεία'
+  bulk_actions: 'common.tooltips.bulkActions'
 } as const;
 
 // ====================================================================

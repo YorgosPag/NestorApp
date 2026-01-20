@@ -1,17 +1,20 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from 'react-i18next';
 
 export function BuyerMismatchAlert() {
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
 
   return (
     <Alert variant="destructive">
       <AlertCircle className={iconSizes.sm} />
-      <AlertTitle>Προειδοποίηση</AlertTitle>
+      <AlertTitle>{t('alerts.warning')}</AlertTitle>
       <AlertDescription>
-        Αναντιστοιχία αγοραστή. Το ID του πελάτη δεν βρέθηκε στις επαφές.
+        {t('alerts.buyerMismatch')}
       </AlertDescription>
     </Alert>
   );

@@ -1,0 +1,96 @@
+{
+  "units": {
+    "total": "Σύνολο Units",
+    "primary": "Πρωτ.",
+    "soldNoCustomer": "Sold χωρίς Customer",
+    "soldWithCustomer": "Sold με Customer",
+    "overview": "Units Overview",
+    "allLabel": "(Όλα)",
+    "projectLabel": "(Έργο {project})",
+    "onlyProject": "Μόνο {project}",
+    "refresh": "Ανανέωση",
+    "error": "Σφάλμα:",
+    "loading": "Φόρτωση units...",
+    "notFound": "Δεν βρέθηκαν units",
+    "unnamed": "Χωρίς Όνομα",
+    "noCustomer": "Χωρίς Customer",
+    "displaying": "Εμφανίζονται {displayed} από {total} συνολικά units",
+    "filteredFor": "(φιλτραρισμένα για έργο {project})",
+    "table": {
+      "name": "Όνομα",
+      "price": "Τιμή",
+      "status": "Κατάσταση",
+      "customer": "Πελάτης (soldTo)",
+      "building": "Κτίριο",
+      "project": "Έργο",
+      "idLabel": "ID"
+    },
+    "mainProjectUnits": "Units {project}",
+    "allUnits": "Όλα τα Units",
+    "contactLoading": "Φόρτωση..."
+  },
+  "link": {
+    "title": "Σύνδεση Πωληθέντων Μονάδων με Πελάτες",
+    "description": "Αυτό το εργαλείο συνδέει μονάδες με status 'sold' με τους αντίστοιχους πελάτες, με βάση το πεδίο soldTo που περιέχει contact ID.",
+    "loading": "Συνδέω μονάδες με πελάτες...",
+    "button": "Σύνδεση Sold Units με Contacts",
+    "error": "Σφάλμα:",
+    "success": "Επιτυχία!",
+    "result": "{linkedUnits} μονάδες συνδέθηκαν με πελάτες",
+    "results": "Αποτελέσματα Σύνδεσης",
+    "unitLabel": "Μονάδα",
+    "howItWorks": "Πώς λειτουργεί:",
+    "step1": "Βρίσκει όλα τα units με status 'sold' που δεν έχουν soldTo field",
+    "step2": "Συλλέγει όλους τους διαθέσιμους πελάτες από τη βάση contacts",
+    "step3": "Συνδέει αυτόματα τα sold units με υπάρχοντες πελάτες",
+    "step4": "Μετά τη σύνδεση, οι πελάτες θα εμφανίζονται στο tab 'Πελάτες Έργου'",
+    "note": "Σημείωση:",
+    "warning": "Αυτή η λειτουργία κάνει πραγματικές αλλαγές στη βάση δεδομένων. Σιγουρέψου ότι έχεις backup πριν προχωρήσεις."
+  },
+  "claimsRepair": {
+    "title": "Διόρθωση Claims - Μόνο Super Admin",
+    "description": "Ορισμός custom claims για χρήστες με ελλιπή companyId ή globalRole.",
+    "fields": {
+      "uid": {
+        "label": "User UID",
+        "placeholder": "Firebase Auth UID"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "user@example.com"
+      },
+      "companyId": {
+        "label": "Company ID",
+        "placeholder": "company-uuid"
+      },
+      "globalRole": {
+        "label": "Global Role",
+        "placeholder": "Επιλέξτε ρόλο"
+      }
+    },
+    "actions": {
+      "submit": "Ορισμός Claims",
+      "submitting": "Ορισμός Claims..."
+    },
+    "help": {
+      "title": "Πώς να Χρησιμοποιήσετε",
+      "step1": "Λάβετε το Firebase UID του χρήστη από το Firebase Console",
+      "step2": "Εισάγετε τη διεύθυνση email του για επαλήθευση",
+      "step3": "Εισάγετε το σωστό Company ID",
+      "step4": "Επιλέξτε το κατάλληλο Global Role",
+      "step5": "Κάντε κλικ στο \"Ορισμός Claims\"",
+      "step6": "Ο χρήστης πρέπει να αποσυνδεθεί/συνδεθεί για ανανέωση του token"
+    },
+    "security": {
+      "title": "Χαρακτηριστικά Ασφαλείας",
+      "feature1": "ΧΩΡΙΣ έκθεση token - χρησιμοποιεί authenticated session",
+      "feature2": "Αυτόματη καταγραφή ελέγχου",
+      "feature3": "Κεντρικοποιημένος χειρισμός σφαλμάτων",
+      "feature4": "Πρόσβαση μόνο από Super Admin"
+    },
+    "notice": {
+      "title": "Σημείωση",
+      "body": "Η refreshToken() επηρεάζει μόνο ΤΗ ΔΙΚΗ ΣΑΣ (super_admin) session. Ο επηρεασμένος χρήστης πρέπει να αποσυνδεθεί/συνδεθεί ξεχωριστά για φόρτωση των νέων claims."
+    }
+  }
+}

@@ -182,8 +182,8 @@ async function handleCreateRelationship(request: NextRequest, ctx: AuthContext):
       errors: [{
         code: 'INTERNAL_SERVER_ERROR',
         message: errorMessage,
-        entityType: 'unknown',
-        entityId: 'unknown'
+        entityType: 'company' as const, // 🏢 ENTERPRISE: Default fallback entity type
+        entityId: 'error'
       }]
     };
 

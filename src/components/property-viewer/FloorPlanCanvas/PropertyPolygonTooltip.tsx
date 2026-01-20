@@ -3,6 +3,8 @@
 'use client';
 
 import type { Property } from '@/types/property-viewer';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface PropertyPolygonTooltipProps {
   property: Property;
@@ -10,6 +12,9 @@ interface PropertyPolygonTooltipProps {
 }
 
 export function PropertyPolygonTooltip({ property, centroid }: PropertyPolygonTooltipProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
+
   return (
     <g className="hover-tooltip">
       <rect
@@ -61,7 +66,7 @@ export function PropertyPolygonTooltip({ property, centroid }: PropertyPolygonTo
           fill="#6b7280"
           className="pointer-events-none select-none"
         >
-          {property.area}τμ
+          {property.area}{t('tooltip.sqm')}
         </text>
       )}
     </g>

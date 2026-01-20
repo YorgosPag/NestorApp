@@ -30,20 +30,11 @@ export const getStatusColor = (status: StorageStatus, colors?: ReturnType<typeof
 };
 
 // 🏢 ENTERPRISE: i18n-enabled status label function
+// 🌐 i18n: All fallbacks converted to i18n keys - 2026-01-18
 export const getStatusLabel = (status: StorageStatus, t?: TranslateFunction) => {
-    // Use translation function if provided
-    if (t) {
-      const key = `pages.storage.statusLabels.${status}`;
-      return t(key);
-    }
-    // Fallback to hardcoded values (backward compatibility)
-    switch (status) {
-      case 'available': return 'Διαθέσιμο';
-      case 'sold': return 'Πωλήθηκε';
-      case 'reserved': return 'Κρατημένο';
-      case 'maintenance': return 'Συντήρηση';
-      default: return status;
-    }
+    const key = `pages.storage.statusLabels.${status}`;
+    // Return translated value if t function provided, otherwise return the key
+    return t ? t(key) : key;
 };
 
 export const getTypeIcon = (type: StorageType) => {
@@ -51,14 +42,11 @@ export const getTypeIcon = (type: StorageType) => {
 };
 
 // 🏢 ENTERPRISE: i18n-enabled type label function
+// 🌐 i18n: All fallbacks converted to i18n keys - 2026-01-18
 export const getTypeLabel = (type: StorageType, t?: TranslateFunction) => {
-    // Use translation function if provided
-    if (t) {
-      const key = `pages.storage.typeLabels.${type}`;
-      return t(key);
-    }
-    // Fallback to hardcoded values (backward compatibility)
-    return type === 'storage' ? 'Αποθήκη' : 'Θέση Στάθμευσης';
+    const key = `pages.storage.typeLabels.${type}`;
+    // Return translated value if t function provided, otherwise return the key
+    return t ? t(key) : key;
 };
 
 export const filterUnits = (

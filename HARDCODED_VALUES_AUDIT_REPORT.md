@@ -95,7 +95,6 @@ const sampleProjects = [
 | `src/app/api/debug-companies/route.ts` | Firebase Doc Query | `'kGKmSIbhoRlDdrtDnUgD'` |
 | `src/app/api/debug-companies/route.ts` | Firestore Where | `where('companyId', '==', 'kGKmSIbhoRlDdrtDnUgD')` |
 | `src/app/api/fix-companies/route.ts` | Doc ID Check | `doc.id === '5djayaxc0X33wsE8T2uY'` |
-| `src/app/api/analyze-companies/route.ts` | Multiple Hardcoded | Company mappings & project connections |
 
 ---
 

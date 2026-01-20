@@ -24,13 +24,17 @@ import { StatCard } from './parts/StatCard';
 import { ProjectCustomersTable } from './parts/ProjectCustomersTable';
 import { ProjectBuildingsCard } from './parts/ProjectBuildingsCard';
 import type { GeneralProjectTabProps } from './types';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const [isEditing, setIsEditing] = useState(false);
   const [projectData, setProjectData] = useState({
     name: project.name,
     licenseTitle: project.title,
-    description: 'Πρόκειται για ένα συγκρότημα τριών πενταόροφων κτιρίων...',
+    description: t('generalTab.defaultDescription'),
     buildingBlock: '10',
     protocolNumber: '',
     licenseNumber: '5142/24-10-2001',
@@ -89,31 +93,31 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         <StatCard
           icon={UnitIcon}
           value={loadingStats ? '...' : stats?.totalUnits ?? 0}
-          label="Σύνολο Μονάδων"
+          label={t('generalTab.totalUnits')}
           loading={loadingStats}
           colorClass="bg-blue-600 text-white"
         />
-        <StatCard 
+        <StatCard
           icon={CheckCircle}
           value={loadingStats ? '...' : stats?.soldUnits ?? 0}
-          label="Πωλημένες Μονάδες"
+          label={t('generalTab.soldUnits')}
           loading={loadingStats}
           colorClass="bg-green-600 text-white"
         />
-        <StatCard 
+        <StatCard
           icon={Ruler}
           value={loadingStats ? '...' : `${(stats?.totalSoldArea ?? 0).toLocaleString('el-GR')} m²`}
-          label="Συνολικό Εμβαδόν Πωληθέντων"
+          label={t('generalTab.totalSoldArea')}
           loading={loadingStats}
           colorClass="bg-purple-600 text-white"
         />
-        <StatCard 
+        <StatCard
           icon={TrendingUp}
           value={loadingStats ? '...' : `${salesPercentage.toFixed(1)}%`}
-          label="Ποσοστό Πωλήσεων"
+          label={t('generalTab.salesPercentage')}
           loading={loadingStats}
           colorClass="bg-orange-600 text-white"
-          subtitle={loadingStats ? '' : `${availableUnits} διαθέσιμες`}
+          subtitle={loadingStats ? '' : t('generalTab.availableUnits', { count: availableUnits })}
         />
       </div>
 
@@ -122,18 +126,18 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
           <CardContent className="pt-6">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Πρόοδος Πωλήσεων</span>
-                <span>{stats.soldUnits} από {stats.totalUnits} μονάδες</span>
+                <span>{t('generalTab.salesProgress')}</span>
+                <span>{t('generalTab.unitsProgress', { sold: stats.soldUnits, total: stats.totalUnits })}</span>
               </div>
               <ThemeProgressBar
                 progress={salesPercentage}
-                label="Πρόοδος Πωλήσεων"
+                label={t('generalTab.salesProgress')}
                 size="md"
                 showPercentage={false}
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>0%</span>
-                <span>{salesPercentage.toFixed(1)}% ολοκληρωμένο</span>
+                <span>{t('generalTab.percentageComplete', { percentage: salesPercentage.toFixed(1) })}</span>
                 <span>100%</span>
               </div>
             </div>
@@ -143,11 +147,11 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
 
       <Tabs defaultValue="basic-info" className="w-full">
         <TabsList className="flex flex-wrap gap-2 w-full h-auto min-h-fit">
-          <TabsTrigger value="basic-info" className={themeConfig.tabTrigger}>Βασικές Πληροφορίες</TabsTrigger>
-          <TabsTrigger value="structure" className={themeConfig.tabTrigger}>Δομή Έργου</TabsTrigger>
-          <TabsTrigger value="location" className={themeConfig.tabTrigger}>Τοποθεσία & Χάρτης</TabsTrigger>
-          <TabsTrigger value="permits" className={themeConfig.tabTrigger}>Άδειες & Κατάσταση</TabsTrigger>
-          <TabsTrigger value="attachments" className={themeConfig.tabTrigger}>Συνημμένα Αρχεία</TabsTrigger>
+          <TabsTrigger value="basic-info" className={themeConfig.tabTrigger}>{t('generalTab.tabs.basicInfo')}</TabsTrigger>
+          <TabsTrigger value="structure" className={themeConfig.tabTrigger}>{t('generalTab.tabs.structure')}</TabsTrigger>
+          <TabsTrigger value="location" className={themeConfig.tabTrigger}>{t('generalTab.tabs.location')}</TabsTrigger>
+          <TabsTrigger value="permits" className={themeConfig.tabTrigger}>{t('generalTab.tabs.permits')}</TabsTrigger>
+          <TabsTrigger value="attachments" className={themeConfig.tabTrigger}>{t('generalTab.tabs.attachments')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic-info" className="pt-4">

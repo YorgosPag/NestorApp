@@ -296,8 +296,4 @@ export function useDynamicPositioning(position: { top: string; left: string }) {
  */
 export default useMapStyles;
 
-// ============================================================================
-// 🧪 TYPE EXPORTS για EXTERNAL USAGE
-// ============================================================================
-
-export type { MapStyleClasses, MapStyleConfig };
+// Types already exported inline above

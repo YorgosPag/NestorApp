@@ -17,16 +17,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { fetchNotifications } from '@/services/notificationService';
+import type { Notification } from '@/types/notification';
 
 // Response types for type-safe withAuth
-interface NotificationItem {
-  id: string;
-  userId: string;
-  title: string;
-  body: string;
-  seen: boolean;
-  timestamp: string;
-  [key: string]: unknown;
+// 🏢 ENTERPRISE: NotificationItem extends Notification for API responses
+interface NotificationItem extends Notification {
+  // Already has all properties from Notification
 }
 
 type NotificationsListSuccess = {
@@ -66,7 +62,8 @@ export async function GET(request: NextRequest) {
           unseenOnly
         });
 
-        const unseenCount = items.filter((item: NotificationItem) => !item.seen).length;
+        // 🏢 ENTERPRISE: Count unseen using delivery.state
+        const unseenCount = items.filter((item: Notification) => item.delivery.state !== 'seen').length;
 
         console.log(`✅ [Notifications/List] Complete: ${items.length} notifications (${unseenCount} unseen)`);
 

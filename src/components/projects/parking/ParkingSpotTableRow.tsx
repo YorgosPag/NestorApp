@@ -19,6 +19,8 @@ import { getParkingTypeLabel, getParkingStatusLabel, getParkingStatusColor } fro
 import { formatNumber } from '@/lib/intl-utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import styles from '@/components/ui/table/EnterpriseTable.module.css';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ParkingSpotTableRowProps {
   spot: ParkingSpot;
@@ -39,6 +41,8 @@ export function ParkingSpotTableRow({
   onView,
   onViewFloorPlan,
 }: ParkingSpotTableRowProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
 
   const handleSelect = () => {
@@ -142,19 +146,19 @@ export function ParkingSpotTableRow({
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => onView(spot)}>
               <Eye className={`${iconSizes.sm} mr-2`} />
-              Προβολή
+              {t('parking.actions.view')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(spot)}>
               <Pencil className={`${iconSizes.sm} mr-2`} />
-              Επεξεργασία
+              {t('parking.actions.edit')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onViewFloorPlan(spot)}>
               <Map className={`${iconSizes.sm} mr-2`} />
-              Κάτοψη
+              {t('parking.actions.floorPlan')}
             </DropdownMenuItem>
             <DropdownMenuItem className="text-destructive">
               <Trash2 className={`${iconSizes.sm} mr-2`} />
-              Διαγραφή
+              {t('parking.actions.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

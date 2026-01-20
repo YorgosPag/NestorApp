@@ -4,6 +4,8 @@
  */
 
 import { getAllActiveCompanies } from '@/services/companies.service';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type {
   NavigationCompany,
   NavigationProject,
@@ -75,28 +77,32 @@ export class NavigationApiService {
         return [];
       }
 
-      // 🚀 PERFORMANCE: Single API call - NO cascade!
-      const projectsResponse = await fetch(`/api/projects/by-company/${companyId}`);
-      if (!projectsResponse.ok) {
-        console.warn(`Failed to load projects for company ${companyId}`);
-        return [];
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface ProjectsApiResponse {
+        projects: Array<{
+          id: string;
+          name?: string;
+          projectCode?: string | null;
+          status?: string;
+        }>;
       }
 
-      const projectsResult = await projectsResponse.json();
-      if (!projectsResult.success || !projectsResult.data?.projects) {
+      const projectsResult = await apiClient.get<ProjectsApiResponse>(`/api/projects/by-company/${companyId}`);
+
+      if (!projectsResult?.projects) {
         return [];
       }
 
       // 🚀 ENTERPRISE PHASE 2: Return projects WITHOUT buildings/floors/units
       // Buildings/floors/units will be loaded ON-DEMAND (Phase 3: Lazy Loading)
-      const projects: NavigationProject[] = projectsResult.data.projects.map(
-        (project: Record<string, unknown>) => ({
-          id: project.id as string,
-          name: project.name as string || 'Unnamed Project',
+      const projects: NavigationProject[] = projectsResult.projects.map(
+        (project) => ({
+          id: project.id,
+          name: project.name || 'Unnamed Project',
           company: '', // Will be filled by caller if needed
           companyId,
-          projectCode: project.projectCode as string | null || null,
-          status: project.status as string || 'unknown',
+          projectCode: project.projectCode || null,
+          status: project.status || 'unknown',
           // 🚀 PERFORMANCE: Empty arrays - loaded on-demand
           buildings: []
         })
@@ -116,21 +122,20 @@ export class NavigationApiService {
    */
   static async loadBuildingsForProject(projectId: string): Promise<NavigationBuilding[]> {
     try {
-      const buildingsResponse = await fetch(`/api/buildings?projectId=${projectId}`);
-      if (!buildingsResponse.ok) {
-        console.warn(`Failed to load buildings for project ${projectId}`);
-        return [];
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface BuildingsApiResponse {
+        buildings: Array<{
+          id: string;
+          name?: string;
+        }>;
       }
 
-      const buildingsResult = await buildingsResponse.json();
-      if (!buildingsResult.success) {
-        return [];
-      }
+      const buildingsResult = await apiClient.get<BuildingsApiResponse>(`/api/buildings?projectId=${projectId}`);
 
       // Return buildings with empty floors (loaded on-demand)
-      return (buildingsResult.buildings || []).map((building: Record<string, unknown>) => ({
-        id: building.id as string,
-        name: building.name as string || 'Unnamed Building',
+      return (buildingsResult?.buildings || []).map((building) => ({
+        id: building.id,
+        name: building.name || 'Unnamed Building',
         floors: [] // Loaded on-demand
       }));
 
@@ -146,23 +151,30 @@ export class NavigationApiService {
    */
   static async loadFloorsForBuilding(buildingId: string): Promise<NavigationFloor[]> {
     try {
-      const floorsResponse = await fetch(`/api/floors?buildingId=${buildingId}`);
-      if (!floorsResponse.ok) {
-        console.warn(`Failed to load floors for building ${buildingId}`);
-        return [];
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface FloorsApiResponse {
+        floors?: Array<{
+          id: string;
+          name?: string;
+          number?: number;
+        }>;
+        data?: {
+          floors?: Array<{
+            id: string;
+            name?: string;
+            number?: number;
+          }>;
+        };
       }
 
-      const floorsResult = await floorsResponse.json();
-      if (!floorsResult.success) {
-        return [];
-      }
+      const floorsResult = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${buildingId}`);
 
-      const floors = floorsResult.data?.floors || floorsResult.floors || [];
+      const floors = floorsResult?.data?.floors || floorsResult?.floors || [];
 
-      return floors.map((floor: Record<string, unknown>) => ({
-        id: floor.id as string,
-        name: floor.name as string || 'Unnamed Floor',
-        number: floor.number as number || 0,
+      return floors.map((floor) => ({
+        id: floor.id,
+        name: floor.name || 'Unnamed Floor',
+        number: floor.number || 0,
         units: [] // Loaded on-demand
       }));
 
@@ -178,21 +190,21 @@ export class NavigationApiService {
    */
   static async loadUnitsForFloor(floorId: string, buildingId: string): Promise<NavigationUnit[]> {
     try {
-      const unitsResponse = await fetch(`/api/units?floorId=${floorId}&buildingId=${buildingId}`);
-      if (!unitsResponse.ok) {
-        console.warn(`Failed to load units for floor ${floorId}`);
-        return [];
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface UnitsApiResponse {
+        units: Array<{
+          id: string;
+          name?: string;
+          type?: string;
+        }>;
       }
 
-      const unitsResult = await unitsResponse.json();
-      if (!unitsResult.success) {
-        return [];
-      }
+      const unitsResult = await apiClient.get<UnitsApiResponse>(`/api/units?floorId=${floorId}&buildingId=${buildingId}`);
 
-      return (unitsResult.units || []).map((unit: Record<string, unknown>) => ({
-        id: unit.id as string,
-        name: unit.name as string || 'Unnamed Unit',
-        type: unit.type as string || 'unknown'
+      return (unitsResult?.units || []).map((unit) => ({
+        id: unit.id,
+        name: unit.name || 'Unnamed Unit',
+        type: unit.type || 'unknown'
       }));
 
     } catch (error) {
@@ -206,21 +218,21 @@ export class NavigationApiService {
    */
   static async loadUnitsForBuilding(buildingId: string): Promise<NavigationUnit[]> {
     try {
-      const unitsResponse = await fetch(`/api/units?buildingId=${buildingId}`);
-      if (!unitsResponse.ok) {
-        console.warn(`Failed to load units for building ${buildingId}`);
-        return [];
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface UnitsApiResponse {
+        units: Array<{
+          id: string;
+          name?: string;
+          type?: string;
+        }>;
       }
 
-      const unitsResult = await unitsResponse.json();
-      if (!unitsResult.success) {
-        return [];
-      }
+      const unitsResult = await apiClient.get<UnitsApiResponse>(`/api/units?buildingId=${buildingId}`);
 
-      return (unitsResult.units || []).map((unit: Record<string, unknown>) => ({
-        id: unit.id as string,
-        name: unit.name as string || 'Unnamed Unit',
-        type: unit.type as string || 'unknown'
+      return (unitsResult?.units || []).map((unit) => ({
+        id: unit.id,
+        name: unit.name || 'Unnamed Unit',
+        type: unit.type || 'unknown'
       }));
 
     } catch (error) {

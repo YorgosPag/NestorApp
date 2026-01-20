@@ -9,7 +9,8 @@ import {
   Package,
   ParkingCircle,
   Folder,
-  ChevronDown
+  ChevronDown,
+  Home
 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useProjectHierarchy } from '../contexts/ProjectHierarchyContext';

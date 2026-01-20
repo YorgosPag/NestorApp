@@ -7,8 +7,10 @@
     "meeting": "Συνάντηση",
     "viewing": "Προβολή",
     "followup": "Παρακολούθηση",
+    "follow_up": "Παρακολούθηση",
     "research": "Έρευνα",
     "documentation": "Τεκμηρίωση",
+    "document": "Έγγραφο",
     "other": "Άλλο"
   },
   "status": {
@@ -34,6 +36,13 @@
       "estimatedTime": "Εκτιμώμενος χρόνος",
       "actualTime": "Πραγματικός χρόνος"
     },
+    "sections": {
+      "dueDate": "Ημερομηνία λήξης",
+      "assignedTo": "Ανατέθηκε σε",
+      "related": "Σχετικά",
+      "viewingDetails": "Λεπτομέρειες προβολής",
+      "completed": "Ολοκληρώθηκε"
+    },
     "viewing": {
       "location": "Τοποθεσία",
       "units": "Μονάδες",
@@ -47,7 +56,9 @@
       "delete": "Διαγραφή",
       "duplicate": "Αντιγραφή",
       "addToFavorites": "Προσθήκη στα αγαπημένα"
-    }
+    },
+    "notDefined": "Μη καθορισμένη",
+    "prioritySuffix": "προτεραιότητα"
   },
   "time": {
     "overdue": "Εκπρόθεσμη",
@@ -55,9 +66,9 @@
     "tomorrow": "Αύριο",
     "thisWeek": "Αυτή την εβδομάδα",
     "nextWeek": "Επόμενη εβδομάδα",
-    "daysAgo": "πριν {{count}} ημέρες",
-    "hoursAgo": "πριν {{count}} ώρες",
-    "minutesAgo": "πριν {{count}} λεπτά",
+    "daysAgo": "πριν {count} ημέρες",
+    "hoursAgo": "πριν {count} ώρες",
+    "minutesAgo": "πριν {count} λεπτά",
     "justNow": "Μόλις τώρα"
   },
   "form": {
@@ -97,9 +108,9 @@
   },
   "notifications": {
     "reminder": "Υπενθύμιση εργασίας",
-    "overdue": "Η εργασία '{{title}}' είναι εκπρόθεσμη",
-    "assigned": "Σας ανατέθηκε νέα εργασία: {{title}}",
-    "completed": "Η εργασία '{{title}}' ολοκληρώθηκε",
-    "dueSoon": "Η εργασία '{{title}}' λήγει σε {{time}}"
+    "overdue": "Η εργασία '{title}' είναι εκπρόθεσμη",
+    "assigned": "Σας ανατέθηκε νέα εργασία: {title}",
+    "completed": "Η εργασία '{title}' ολοκληρώθηκε",
+    "dueSoon": "Η εργασία '{title}' λήγει σε {time}"
   }
 }

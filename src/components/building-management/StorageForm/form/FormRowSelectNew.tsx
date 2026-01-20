@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { UnifiedFormField } from '@/components/core/FormFields/FormField';
+import { UnifiedFormField, type FormFieldValue } from '@/components/core/FormFields/FormField';
 import { DROPDOWN_PLACEHOLDERS } from '@/constants/property-statuses-enterprise';
 
 interface Props {
   label: string;
   value: string;
   options: string[] | { value: string; label: string }[];
-  onChange: (value: string) => void;
+  onChange: (value: FormFieldValue) => void;
   required?: boolean;
   disabled?: boolean;
   placeholder?: string;
@@ -47,11 +47,11 @@ export function FormRowSelectNew({
       placeholder={placeholder}
       required={required}
       disabled={disabled}
-      helperText={helper}
+      helpText={helper}
       error={error}
       options={selectOptions}
       variant="default"
-      size="default"
+      size="md"
     />
   );
 }

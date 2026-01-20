@@ -22,9 +22,10 @@ export function useSectionEditorState(
     setHasUnsavedChanges(false);
   }, [editedSection, onSave]);
 
+  // 🌐 i18n: Confirm message converted to i18n key - 2026-01-18
   const handleCancel = useCallback(() => {
     if (hasUnsavedChanges) {
-      const confirmLeave = window.confirm("Έχετε μη αποθηκευμένες αλλαγές. Θέλετε να συνεχίσετε χωρίς αποθήκευση;");
+      const confirmLeave = window.confirm("obligations.editor.confirmLeave");
       if (!confirmLeave) return;
     }
     setEditedSection(initial);

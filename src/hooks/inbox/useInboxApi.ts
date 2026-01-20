@@ -14,8 +14,9 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { auth } from '@/lib/firebase';
 import { useAuth } from '@/auth/hooks/useAuth';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import {
   INBOX_POLL_MS,
   THREAD_POLL_MS,
@@ -129,25 +130,8 @@ interface SendMessageResponse {
 }
 
 // ============================================================================
-// AUTH HELPER
+// NOTE: Auth is handled by apiClient automatically
 // ============================================================================
-
-/**
- * Get Authorization header with Bearer token
- * @enterprise Centralized token retrieval
- */
-async function getAuthHeader(): Promise<Record<string, string>> {
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
-    throw new Error('User not authenticated');
-  }
-
-  const token = await currentUser.getIdToken();
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-}
 
 // ============================================================================
 // useConversations HOOK
@@ -205,39 +189,32 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
       }
       setError(null);
 
-      const headers = await getAuthHeader();
-
       const params = new URLSearchParams();
       params.set('page', String(pageNum));
       params.set('pageSize', String(pageSize));
       if (status) params.set('status', status);
       if (channel) params.set('channel', channel);
 
-      const response = await fetch(`/api/conversations?${params.toString()}`, {
-        method: 'GET',
-        headers,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface ConversationsApiResponse {
+        data: ConversationsResponse;
       }
 
-      const data: { data: ConversationsResponse } = await response.json();
+      const result = await apiClient.get<ConversationsApiResponse>(`/api/conversations?${params.toString()}`);
 
       // 🏢 ENTERPRISE: Null safety check (Defense-in-Depth)
-      if (!data || !data.data || !Array.isArray(data.data.conversations)) {
+      if (!result || !result.data || !Array.isArray(result.data.conversations)) {
         throw new Error('Invalid API response format');
       }
 
       if (mountedRef.current) {
         if (append) {
-          setConversations(prev => [...prev, ...data.data.conversations]);
+          setConversations(prev => [...prev, ...result.data.conversations]);
         } else {
-          setConversations(data.data.conversations);
+          setConversations(result.data.conversations);
         }
-        setTotalCount(data.data.totalCount ?? 0);
-        setHasMore(data.data.hasMore ?? false);
+        setTotalCount(result.data.totalCount ?? 0);
+        setHasMore(result.data.hasMore ?? false);
         setCurrentPage(pageNum);
       }
     } catch (err) {
@@ -390,34 +367,27 @@ export function useConversationMessages(
       }
       setError(null);
 
-      const headers = await getAuthHeader();
-
       const params = new URLSearchParams();
       params.set('page', String(pageNum));
       params.set('pageSize', String(pageSize));
       params.set('order', order);
 
-      const response = await fetch(`/api/conversations/${conversationId}/messages?${params.toString()}`, {
-        method: 'GET',
-        headers,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface MessagesApiResponse {
+        data: MessagesResponse;
       }
 
-      const data: { data: MessagesResponse } = await response.json();
+      const result = await apiClient.get<MessagesApiResponse>(`/api/conversations/${conversationId}/messages?${params.toString()}`);
 
       if (mountedRef.current) {
         if (append) {
           // Prepend for "load earlier" functionality
-          setMessages(prev => [...data.data.messages, ...prev]);
+          setMessages(prev => [...result.data.messages, ...prev]);
         } else {
-          setMessages(data.data.messages);
+          setMessages(result.data.messages);
         }
-        setTotalCount(data.data.totalCount);
-        setHasMore(data.data.hasMore);
+        setTotalCount(result.data.totalCount);
+        setHasMore(result.data.hasMore);
         setCurrentPage(pageNum);
       }
     } catch (err) {
@@ -526,21 +496,17 @@ export function useSendMessage(conversationId: string | null): UseSendMessageRes
       setSending(true);
       setError(null);
 
-      const headers = await getAuthHeader();
-
-      const response = await fetch(`/api/conversations/${conversationId}/send`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(options),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface SendMessageApiResponse {
+        data: SendMessageResponse;
       }
 
-      const data: { data: SendMessageResponse } = await response.json();
-      return data.data;
+      const result = await apiClient.post<SendMessageApiResponse>(
+        `/api/conversations/${conversationId}/send`,
+        options
+      );
+
+      return result?.data ?? null;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
       setError(errorMessage);

@@ -62,6 +62,7 @@ export class EnterpriseContactSaver {
                           formData.city || formData.postalCode;
 
     if (hasAddressData) {
+      // 🌐 i18n: Labels converted to i18n keys - 2026-01-18
       const primaryAddress: AddressInfo = {
         street: formData.street || '',
         number: formData.streetNumber || '', // Note: flat uses streetNumber, array uses number
@@ -70,7 +71,7 @@ export class EnterpriseContactSaver {
         country: 'GR', // Default to Greece
         type: this.getAddressTypeForContactType(formData.type),
         isPrimary: true,
-        label: 'Κύρια Διεύθυνση'
+        label: 'contacts.address.primary'
       };
 
       enterpriseData.addresses = [primaryAddress];
@@ -170,17 +171,18 @@ export class EnterpriseContactSaver {
 
   /**
    * Get appropriate website label based on contact type
+   * 🌐 i18n: Labels converted to i18n keys - 2026-01-18
    */
   private static getWebsiteLabelForContactType(contactType: string): string {
     switch (contactType) {
       case 'individual':
-        return 'Προσωπική Ιστοσελίδα';
+        return 'contacts.website.personal';
       case 'company':
-        return 'Εταιρική Ιστοσελίδα';
+        return 'contacts.website.company';
       case 'service':
-        return 'Επίσημη Ιστοσελίδα';
+        return 'contacts.website.official';
       default:
-        return 'Ιστοσελίδα';
+        return 'contacts.website.default';
     }
   }
 

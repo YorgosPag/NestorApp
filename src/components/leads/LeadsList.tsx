@@ -66,7 +66,7 @@ export default function LeadsList({ refreshTrigger }: { refreshTrigger?: number 
     <>
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Leads ({leads.length})</h3>
+          <h3 className="text-lg font-semibold">{t('leads.title')} ({leads.length})</h3>
           <button onClick={fetchLeads} className={`text-sm ${HOVER_TEXT_EFFECTS.BLUE}`}>{t('leads.refresh')}</button>
         </div>
 

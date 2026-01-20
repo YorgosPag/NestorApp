@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 import React from 'react';
 import { Layers, Eye, EyeOff, MoreVertical } from 'lucide-react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -7,8 +8,11 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { LayerListProps } from './types';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerListProps) {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -30,8 +34,8 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
     return (
       <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
         <Layers className={`${iconSizes.xl} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${PANEL_LAYOUT.OPACITY['50']}`} />
-        <p className={PANEL_LAYOUT.TYPOGRAPHY.SM}>Δεν βρέθηκαν layers</p>
-        <p className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα</p>
+        <p className={PANEL_LAYOUT.TYPOGRAPHY.SM}>{t('layerManager.labels.noLayersFound')}</p>
+        <p className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('layerManager.labels.createNewOrChangeFilters')}</p>
       </div>
     );
   }
@@ -55,15 +59,15 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
               <button
                 onClick={() => onToggleVisibility?.(layer.id)}
                 className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-                title={layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}
+                title={layer.visible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}
               >
                 {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
               </button>
-              
+
               <button
                 onClick={() => onLayerAction?.(layer.id, 'menu')}
                 className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-                title="Περισσότερες επιλογές"
+                title={t('layerManager.labels.moreOptions')}
               >
                 <MoreVertical className={iconSizes.xs} />
               </button>

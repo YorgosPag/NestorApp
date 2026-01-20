@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Folder, Eye } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectAttachmentsTabProps {
     data: {
@@ -18,6 +20,8 @@ interface ProjectAttachmentsTabProps {
 }
 
 export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabProps) {
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const handleFileSelect = (field: string) => {
         // This would open a file dialog in a real application
@@ -29,15 +33,15 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
             <CardHeader className="pb-4">
                 <div className="flex items-center gap-2">
                     <Folder className={`${iconSizes.md} text-primary`} />
-                    <CardTitle className="text-lg">Συνημμένα Αρχεία</CardTitle>
+                    <CardTitle className="text-lg">{t('attachmentsTab.title')}</CardTitle>
                 </div>
                 <CardDescription>
-                    Αρχεία και έγγραφα που σχετίζονται με το έργο
+                    {t('attachmentsTab.description')}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="mapPath" className="text-sm font-medium">Χάρτης Περιοχής Έργου</Label>
+                    <Label htmlFor="mapPath" className="text-sm font-medium">{t('attachmentsTab.projectMap')}</Label>
                     <div className="flex items-center gap-2">
                         <Input
                             id="mapPath"
@@ -45,17 +49,17 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                             value={data.mapPath}
                             className="h-10 bg-muted/30"
                         />
-                        <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0" onClick={() => handleFileSelect('mapPath')}>
+                        <Button variant="outline" size="icon" className={`${iconSizes['2xl']} shrink-0`} onClick={() => handleFileSelect('mapPath')}>
                             <Folder className={iconSizes.sm} />
                         </Button>
-                        <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0">
+                        <Button variant="outline" size="icon" className={`${iconSizes['2xl']} shrink-0`}>
                             <Eye className={iconSizes.sm} />
                         </Button>
                     </div>
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="floorPlanPath" className="text-sm font-medium">Γενική Κάτοψη Έργου</Label>
+                    <Label htmlFor="floorPlanPath" className="text-sm font-medium">{t('attachmentsTab.generalFloorPlan')}</Label>
                     <div className="flex items-center gap-2">
                         <Input
                             id="floorPlanPath"
@@ -63,17 +67,17 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                             value={data.floorPlanPath}
                             className="h-10 bg-muted/30"
                         />
-                         <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0" onClick={() => handleFileSelect('floorPlanPath')}>
+                         <Button variant="outline" size="icon" className={`${iconSizes['2xl']} shrink-0`} onClick={() => handleFileSelect('floorPlanPath')}>
                             <Folder className={iconSizes.sm} />
                         </Button>
-                        <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0">
+                        <Button variant="outline" size="icon" className={`${iconSizes['2xl']} shrink-0`}>
                             <Eye className={iconSizes.sm} />
                         </Button>
                     </div>
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="percentagesPath" className="text-sm font-medium">Πίνακας Ποσοστών</Label>
+                    <Label htmlFor="percentagesPath" className="text-sm font-medium">{t('attachmentsTab.percentagesTable')}</Label>
                     <div className="flex items-center gap-2">
                         <Input
                             id="percentagesPath"
@@ -81,10 +85,10 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                             value={data.percentagesPath}
                             className="h-10 bg-muted/30"
                         />
-                         <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0" onClick={() => handleFileSelect('percentagesPath')}>
+                         <Button variant="outline" size="icon" className={`${iconSizes['2xl']} shrink-0`} onClick={() => handleFileSelect('percentagesPath')}>
                             <Folder className={iconSizes.sm} />
                         </Button>
-                        <Button variant="outline" size="icon" className="${iconSizes['2xl']} shrink-0">
+                        <Button variant="outline" size="icon" className={`${iconSizes['2xl']} shrink-0`}>
                             <Eye className={iconSizes.sm} />
                         </Button>
                     </div>

@@ -33,6 +33,9 @@ import { PROJECT_STATUS_LABELS } from '@/types/project';
 // 🏢 BADGE VARIANT MAPPING
 import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
 
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
 // =============================================================================
 // 🏢 TYPES
 // =============================================================================
@@ -96,6 +99,9 @@ export function ProjectListCard({
   compact = false,
   className,
 }: ProjectListCardProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
+
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
@@ -104,32 +110,32 @@ export function ProjectListCard({
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    // Progress
+    // Progress - 🏢 ENTERPRISE: i18n label
     if (project.progress !== undefined) {
       items.push({
         icon: TrendingUp,
-        label: 'Πρόοδος',
+        label: t('listCard.progress'),
         value: `${project.progress}%`,
         valueColor: project.progress >= 80 ? 'text-green-600 dark:text-green-400' : undefined,
       });
     }
 
-    // Total Area - 🏢 ENTERPRISE: Using centralized area icon/color
+    // Total Area - 🏢 ENTERPRISE: Using centralized area icon/color + i18n label
     if (project.totalArea) {
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
         iconColor: NAVIGATION_ENTITIES.area.color,
-        label: 'Συν. Εμβαδόν',
+        label: t('listCard.totalArea'),
         value: `${formatNumber(project.totalArea)} m²`,
       });
     }
 
-    // Total Value - 🏢 ENTERPRISE: Using centralized price icon/color
+    // Total Value - 🏢 ENTERPRISE: Using centralized price icon/color + i18n label
     if (project.totalValue && project.totalValue > 0) {
       items.push({
         icon: NAVIGATION_ENTITIES.price.icon,
         iconColor: NAVIGATION_ENTITIES.price.color,
-        label: 'Αξία',
+        label: t('listCard.value'),
         value: formatCurrency(project.totalValue, 'EUR', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
@@ -139,7 +145,7 @@ export function ProjectListCard({
     }
 
     return items;
-  }, [project.progress, project.totalArea, project.totalValue]);
+  }, [project.progress, project.totalArea, project.totalValue, t]);
 
   /** Build badges from status */
   const badges = useMemo(() => {
@@ -175,7 +181,7 @@ export function ProjectListCard({
       onToggleFavorite={onToggleFavorite}
       compact={compact}
       className={className}
-      aria-label={`Έργο ${project.name || project.title || project.id}`}
+      aria-label={t('listCard.ariaLabel', { name: project.name || project.title || project.id })}
     />
   );
 }

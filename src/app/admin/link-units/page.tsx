@@ -20,7 +20,8 @@ export default function LinkUnitsPage() {
   const { quick } = useBorderTokens();
 
   // Get current project name from centralized configuration
-  const currentProjectName = companyConfig?.currentProject?.name || 'έργου';
+  // 🏢 ENTERPRISE: Use company name as fallback (currentProject not in CompanyConfiguration)
+  const currentProjectName = companyConfig?.name || 'έργου';
 
   return (
     <div className={`min-h-screen ${colors.bg.primary} p-6`}>

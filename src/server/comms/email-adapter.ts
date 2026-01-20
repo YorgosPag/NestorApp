@@ -142,14 +142,22 @@ export class EmailAdapter {
       const { doc, getDoc, updateDoc, Timestamp } = firestoreHelpers;
 
       // Get job from Firestore
-      const jobDoc = await getDoc(doc(database, 'communications', jobId));
-      if (!jobDoc.exists()) {
+      // 🏢 ENTERPRISE: Use collection helper to get collection ref first
+      const communicationsRef = database.collection('communications');
+      const jobDoc = await getDoc(doc(communicationsRef, jobId));
+      if (!jobDoc.exists) {
         console.error(`❌ Email job ${jobId} not found`);
         return false;
       }
 
       const jobData = jobDoc.data();
-      
+
+      // 🏢 ENTERPRISE: Null check for jobData
+      if (!jobData) {
+        console.error(`❌ Email job ${jobId} has no data`);
+        return false;
+      }
+
       // Validate job data
       if (jobData.status !== 'pending') {
         console.log(`ℹ️ Email job ${jobId} already processed (status: ${jobData.status})`);

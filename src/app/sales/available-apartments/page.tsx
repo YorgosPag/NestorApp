@@ -15,63 +15,67 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PageContainer } from '@/core/containers';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 const unitColor = NAVIGATION_ENTITIES.unit.color;
 
-// Placeholder stats for Available Apartments
-const availableStats: DashboardStat[] = [
-  {
-    title: 'Διαθέσιμα Διαμερίσματα',
-    value: '142',
-    description: 'Προς πώληση τώρα',
-    icon: NAVIGATION_ENTITIES.unit.icon,
-    color: 'blue',
-    trend: { value: -8, label: 'Μείωση' }
-  },
-  {
-    title: 'Μέση Τιμή',
-    value: '€385K',
-    description: 'Μέσος όρος τιμής',
-    icon: DollarSign,
-    color: 'green',
-    trend: { value: 12, label: 'Αύξηση' }
-  },
-  {
-    title: 'Ενδιαφέρον',
-    value: '67',
-    description: 'Ενεργές προβολές',
-    icon: Eye,
-    color: 'purple',
-    trend: { value: 23, label: 'Αύξηση' }
-  },
-  {
-    title: 'Μέσος Χρόνος',
-    value: '4.2 μήνες',
-    description: 'Στην αγορά',
-    icon: Calendar,
-    color: 'orange',
-    trend: { value: -15, label: 'Μείωση' }
-  }
-];
-
 export default function AvailableApartmentsPage() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
+
+  // Placeholder stats for Available Apartments - inside component for i18n access
+  const availableStats: DashboardStat[] = [
+    {
+      title: t('sales.available.stats.availableApartments'),
+      value: '142',
+      description: t('sales.available.stats.forSaleNow'),
+      icon: NAVIGATION_ENTITIES.unit.icon,
+      color: 'blue',
+      trend: { value: -8, label: t('sales.stats.decrease') }
+    },
+    {
+      title: t('sales.available.stats.avgPrice'),
+      value: '€385K',
+      description: t('sales.available.stats.avgPriceDesc'),
+      icon: DollarSign,
+      color: 'green',
+      trend: { value: 12, label: t('sales.stats.increase') }
+    },
+    {
+      title: t('sales.available.stats.interest'),
+      value: '67',
+      description: t('sales.available.stats.activeViews'),
+      icon: Eye,
+      color: 'purple',
+      trend: { value: 23, label: t('sales.stats.increase') }
+    },
+    {
+      title: t('sales.available.stats.avgTime'),
+      value: '4.2 μήνες',
+      description: t('sales.available.stats.onMarket'),
+      icon: Calendar,
+      color: 'orange',
+      trend: { value: -15, label: t('sales.stats.decrease') }
+    }
+  ];
   return (
     <TooltipProvider>
-      <PageContainer fullScreen ariaLabel="Διαθέσιμα Διαμερίσματα">
+      <PageContainer fullScreen ariaLabel={t('sales.available.title')}>
         {/* Header */}
           <div className={`border-b ${colors.bg.primary}/95 backdrop-blur supports-[backdrop-filter]:${colors.bg.primary}/60`}>
             <div className="flex h-14 items-center px-4">
               <div className="flex items-center gap-2">
                 <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
-                <h1 className="text-lg font-semibold">Διαθέσιμα Διαμερίσματα</h1>
+                <h1 className="text-lg font-semibold">{t('sales.available.title')}</h1>
               </div>
               <div className={`ml-auto text-sm ${colors.text.muted}`}>
-                Διαμερίσματα προς πώληση - Ενεργές καταχωρήσεις
+                {t('sales.available.subtitle')}
               </div>
             </div>
           </div>
@@ -79,7 +83,7 @@ export default function AvailableApartmentsPage() {
           {/* Dashboard Stats - Scrollable Content Area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             <UnifiedDashboard
-              title="Διαθέσιμα Διαμερίσματα - Επισκόπηση"
+              title={t('sales.available.overview')}
               stats={availableStats}
               variant="modern"
             />
@@ -92,23 +96,23 @@ export default function AvailableApartmentsPage() {
                   <div className={`p-2 ${colors.bg.info}/10 rounded-lg`}>
                     <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
                   </div>
-                  <h3 className="font-semibold">Γκαρσονιέρες</h3>
+                  <h3 className="font-semibold">{t('sales.available.types.studios.title')}</h3>
                 </div>
                 <p className={`text-sm ${colors.text.muted} mb-2`}>
-                  Διαμερίσματα ενός δωματίου
+                  {t('sales.available.types.studios.description')}
                 </p>
                 <div className="text-2xl font-bold">34</div>
                 <div className="space-y-2 mt-3">
                   <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>Μέση τιμή</span>
+                    <span className={colors.text.muted}>{t('sales.available.types.avgPrice')}</span>
                     <span className={`${colors.text.success} font-medium`}>€185K</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>Εύρος τ.μ.</span>
+                    <span className={colors.text.muted}>{t('sales.available.types.sqmRange')}</span>
                     <span>25-45 τ.μ.</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>Ενεργές προβολές</span>
+                    <span className={colors.text.muted}>{t('sales.available.types.activeViews')}</span>
                     <span className={`${colors.text.warning} font-medium`}>12</span>
                   </div>
                 </div>
@@ -120,23 +124,23 @@ export default function AvailableApartmentsPage() {
                   <div className={`p-2 ${colors.bg.success}/10 rounded-lg`}>
                     <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
                   </div>
-                  <h3 className="font-semibold">Δυάρια</h3>
+                  <h3 className="font-semibold">{t('sales.available.types.oneBedroom.title')}</h3>
                 </div>
                 <p className={`text-sm ${colors.text.muted} mb-2`}>
-                  Διαμερίσματα δύο δωματίων
+                  {t('sales.available.types.oneBedroom.description')}
                 </p>
                 <div className="text-2xl font-bold">67</div>
                 <div className="space-y-2 mt-3">
                   <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>Μέση τιμή</span>
+                    <span className={colors.text.muted}>{t('sales.available.types.avgPrice')}</span>
                     <span className={`${colors.text.success} font-medium`}>€295K</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>Εύρος τ.μ.</span>
+                    <span className={colors.text.muted}>{t('sales.available.types.sqmRange')}</span>
                     <span>55-85 τ.μ.</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>Ενεργές προβολές</span>
+                    <span className={colors.text.muted}>{t('sales.available.types.activeViews')}</span>
                     <span className={`${colors.text.warning} font-medium`}>31</span>
                   </div>
                 </div>
@@ -148,23 +152,23 @@ export default function AvailableApartmentsPage() {
                   <div className={`p-2 ${colors.bg.warning}/10 rounded-lg`}>
                     <UnitIcon className={`${iconSizes.md} ${unitColor}`} />
                   </div>
-                  <h3 className="font-semibold">Τριάρια+</h3>
+                  <h3 className="font-semibold">{t('sales.available.types.twoBedroom.title')}</h3>
                 </div>
                 <p className={`text-sm ${colors.text.muted} mb-2`}>
-                  Διαμερίσματα τριών+ δωματίων
+                  {t('sales.available.types.twoBedroom.description')}
                 </p>
                 <div className="text-2xl font-bold">41</div>
                 <div className="space-y-2 mt-3">
                   <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>Μέση τιμή</span>
+                    <span className={colors.text.muted}>{t('sales.available.types.avgPrice')}</span>
                     <span className={`${colors.text.success} font-medium`}>€485K</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>Εύρος τ.μ.</span>
+                    <span className={colors.text.muted}>{t('sales.available.types.sqmRange')}</span>
                     <span>90-150 τ.μ.</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className={colors.text.muted}>Ενεργές προβολές</span>
+                    <span className={colors.text.muted}>{t('sales.available.types.activeViews')}</span>
                     <span className={`${colors.text.warning} font-medium`}>24</span>
                   </div>
                 </div>
@@ -177,7 +181,7 @@ export default function AvailableApartmentsPage() {
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <DollarSign className={iconSizes.md} />
-                  Κλιμάκια Τιμών
+                  {t('sales.available.priceRanges.title')}
                 </h2>
 
                 <div className="space-y-3">
@@ -185,11 +189,11 @@ export default function AvailableApartmentsPage() {
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">€100K - €250K</span>
                       <span className={`${colors.bg.success}/20 ${colors.text.success} px-2 py-1 rounded text-sm font-medium`}>
-                        42 διαθέσιμα
+                        {t('sales.available.priceRanges.available', { count: 42 })}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Γκαρσονιέρες και μικρά δυάρια
+                      {t('sales.available.priceRanges.range1Desc')}
                     </p>
                   </div>
 
@@ -197,11 +201,11 @@ export default function AvailableApartmentsPage() {
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">€250K - €400K</span>
                       <span className={`${colors.bg.info}/20 ${colors.text.info} px-2 py-1 rounded text-sm font-medium`}>
-                        67 διαθέσιμα
+                        {t('sales.available.priceRanges.available', { count: 67 })}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Δυάρια και μικρά τριάρια
+                      {t('sales.available.priceRanges.range2Desc')}
                     </p>
                   </div>
 
@@ -209,11 +213,11 @@ export default function AvailableApartmentsPage() {
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">€400K+</span>
                       <span className={`${colors.bg.warning}/20 ${colors.text.warning} px-2 py-1 rounded text-sm font-medium`}>
-                        33 διαθέσιμα
+                        {t('sales.available.priceRanges.available', { count: 33 })}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Μεγάλα τριάρια, τετράρια, μεζονέτες
+                      {t('sales.available.priceRanges.range3Desc')}
                     </p>
                   </div>
                 </div>
@@ -223,7 +227,7 @@ export default function AvailableApartmentsPage() {
               <div className="space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <Eye className={iconSizes.md} />
-                  Ενδιαφέρον & Δραστηριότητα
+                  {t('sales.available.activity.title')}
                 </h2>
 
                 <div className={`p-6 bg-card ${quick.card}`}>
@@ -231,31 +235,31 @@ export default function AvailableApartmentsPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
                         <Users className={iconSizes.sm} />
-                        Ενεργές επισκέψεις
+                        {t('sales.available.activity.activeVisits')}
                       </span>
-                      <span className={`font-medium ${colors.text.success}`}>127 αιτήματα</span>
+                      <span className={`font-medium ${colors.text.success}`}>{t('sales.available.activity.requests', { count: 127 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
                         <Calendar className={iconSizes.sm} />
-                        Προγραμματισμένες επισκέψεις
+                        {t('sales.available.activity.scheduledVisits')}
                       </span>
-                      <span className={`font-medium ${colors.text.info}`}>34 ραντεβού</span>
+                      <span className={`font-medium ${colors.text.info}`}>{t('sales.available.activity.appointments', { count: 34 })}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground flex items-center gap-2">
                         <DollarSign className={iconSizes.sm} />
-                        Προσφορές υπό εξέταση
+                        {t('sales.available.activity.offersUnderReview')}
                       </span>
-                      <span className={`font-medium ${colors.text.warning}`}>18 προσφορές</span>
+                      <span className={`font-medium ${colors.text.warning}`}>{t('sales.available.activity.offers', { count: 18 })}</span>
                     </div>
                     <div className="border-t pt-3 mt-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground flex items-center gap-2">
                           <TrendingUp className={iconSizes.sm} />
-                          Hot Properties ({'>'}5 προβολές/εβδομάδα)
+                          {t('sales.available.activity.hotProperties', { count: 5 })}
                         </span>
-                        <span className={`font-semibold ${colors.text.error}`}>23 ακίνητα</span>
+                        <span className={`font-semibold ${colors.text.error}`}>{t('sales.available.activity.properties', { count: 23 })}</span>
                       </div>
                     </div>
                   </div>
@@ -267,11 +271,10 @@ export default function AvailableApartmentsPage() {
             <div className={`p-4 bg-muted/50 ${quick.card}`}>
               <div className="flex items-center gap-2 text-sm">
                 <UnitIcon className={`${iconSizes.sm} ${unitColor}`} />
-                <span className="font-medium">Διαθέσιμα Διαμερίσματα</span>
+                <span className="font-medium">{t('sales.available.info.title')}</span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Εδώ βλέπετε όλα τα διαμερίσματα που είναι ενεργά προς πώληση.
-                Περιλαμβάνονται τιμές, ενδιαφέρον αγοραστών και στατιστικά πωλήσεων.
+                {t('sales.available.info.description')}
               </p>
             </div>
           </div>

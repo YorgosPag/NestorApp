@@ -21,6 +21,8 @@ import { useDxfSettings } from '../../settings-provider';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { zIndex as enterpriseZIndex } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 import {
   centralizedAutoSaveStatusStyles,
   getStatusColorStyles,
@@ -51,6 +53,7 @@ function useDxfSettingsSafe() {
 }
 
 export function CentralizedAutoSaveStatus() {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -123,20 +126,20 @@ export function CentralizedAutoSaveStatus() {
 
   const getStatusMessage = () => {
     if (isAutoSaving) {
-      return `Αποθήκευση...`;
+      return t('autoSave.saving');
     }
 
     if (settings.saveStatus === 'saved') {
-      return `Αυτόματη αποθήκευση`;
+      return t('autoSave.title');
     }
 
     if (settings.saveStatus === 'error') {
-      return `Σφάλμα αποθήκευσης`;
+      return t('autoSave.error');
     }
 
     return hasUnsavedChanges
-      ? `Αναμονή αλλαγών...`
-      : `Αυτόματη αποθήκευση`;
+      ? t('autoSave.waiting')
+      : t('autoSave.title');
   };
 
   const getStatusColor = () => {
@@ -185,7 +188,7 @@ export function CentralizedAutoSaveStatus() {
 
         {settings.lastSaved && settings.saveStatus === 'saved' && (
           <time className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`} style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
-            Τελευταία: {formatLastSaveTime(settings.lastSaved)}
+            {t('autoSave.lastSaved')} {formatLastSaveTime(settings.lastSaved)}
           </time>
         )}
       </article>
@@ -225,8 +228,10 @@ export function CentralizedAutoSaveStatus() {
  * Compact version
  */
 export function CentralizedAutoSaveStatusCompact() {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { radius } = useBorderTokens();
   const dxfSettings = useDxfSettingsSafe();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -272,16 +277,16 @@ export function CentralizedAutoSaveStatusCompact() {
 
   const getTooltip = () => {
     if (isAutoSaving) {
-      return 'Αποθήκευση όλων των ρυθμίσεων DXF...';
+      return t('autoSave.savingAllSettings');
     }
 
     if (settings.saveStatus === 'error') {
-      return 'Σφάλμα αποθήκευσης ρυθμίσεων';
+      return t('autoSave.errorSavingSettings');
     }
 
     // Δείχνουμε λίστα με όλα τα ενεργά συστήματα
     const systems = ['Γραμμές', 'Κείμενο', 'Grips', 'Κέρσορας', 'Grid', 'Χάρακες'];
-    return `Αυτόματη αποθήκευση ενεργή για: ${systems.join(', ')}`;
+    return `${t('autoSave.activeFor')} ${systems.join(', ')}`;
   };
 
   // ✅ ENTERPRISE: Dynamic z-index for compact version using centralized values

@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import {
@@ -12,6 +13,7 @@ import {
 import { Filter, X } from 'lucide-react';
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Import centralized unit filter options - NO MORE HARDCODED VALUES
 import { getUnitFilterOptions } from '@/subapps/dxf-viewer/config/modal-select';
 
@@ -21,6 +23,7 @@ interface Props {
 }
 
 export function ProjectFiltersMenu({ activeFilters, onActiveFiltersChange }: Props) {
+  const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
   const handleFilterChange = (filter: string, checked: boolean) => {
     onActiveFiltersChange(
@@ -33,7 +36,7 @@ export function ProjectFiltersMenu({ activeFilters, onActiveFiltersChange }: Pro
       <DropdownMenuTrigger asChild>
         <div>
           <ToolbarButton
-            tooltip="Φίλτρα και Προβολή"
+            tooltip={t('toolbar.filtersAndView')}
             badge={activeFilters.length > 0 ? activeFilters.length : undefined}
           >
             <Filter className={iconSizes.sm} />
@@ -41,7 +44,7 @@ export function ProjectFiltersMenu({ activeFilters, onActiveFiltersChange }: Pro
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Φίλτρα Μονάδων</DropdownMenuLabel>
+        <DropdownMenuLabel>{t('toolbar.unitFilters')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {getUnitFilterOptions().map(({ value, label }) => (
           <DropdownMenuCheckboxItem
@@ -55,7 +58,7 @@ export function ProjectFiltersMenu({ activeFilters, onActiveFiltersChange }: Pro
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onActiveFiltersChange([])}>
           <X className={`${iconSizes.sm} mr-2`} />
-          Καθαρισμός Φίλτρων
+          {t('toolbar.clearFilters')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

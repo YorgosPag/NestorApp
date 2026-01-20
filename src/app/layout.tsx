@@ -10,6 +10,7 @@ import { NotificationProvider } from "../providers/NotificationProvider";
 import { SharedPropertiesProvider } from "@/contexts/SharedPropertiesProvider";
 import { AuthProvider, UserRoleProvider } from "@/auth";
 import { FloorplanProvider } from "@/contexts/FloorplanContext";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext"; // 🏢 ENTERPRISE: Workspace-based Multi-Tenancy (ADR-032)
 import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 // 🏢 ENTERPRISE: Performance Monitor moved to DXF Viewer only (Bentley/Autodesk pattern)
@@ -75,34 +76,39 @@ export default function RootLayout({
           <I18nProvider>
             <AuthProvider>
               <UserRoleProvider>
-                <FloorplanProvider>
-                {/* 🏢 ENTERPRISE: Κεντρικοποιημένο Notification System */}
-                <NotificationProvider>
-                  <SharedPropertiesProvider>
-                    {/* 🏢 ENTERPRISE: ConditionalAppShell handles layout based on route type
-                        - Auth routes (/login): Standalone layout (no sidebar/header)
-                        - App routes: Full layout (sidebar + header + content) */}
-                    <ConditionalAppShell>
-                      {children}
-                    </ConditionalAppShell>
-                  </SharedPropertiesProvider>
+                {/* 🏢 ENTERPRISE: Workspace-based Multi-Tenancy (ADR-032)
+                    Placed after Auth/UserRole providers (requires userId for queries)
+                    Provides active workspace context to all app components */}
+                <WorkspaceProvider>
+                  <FloorplanProvider>
+                  {/* 🏢 ENTERPRISE: Κεντρικοποιημένο Notification System */}
+                  <NotificationProvider>
+                    <SharedPropertiesProvider>
+                      {/* 🏢 ENTERPRISE: ConditionalAppShell handles layout based on route type
+                          - Auth routes (/login): Standalone layout (no sidebar/header)
+                          - App routes: Full layout (sidebar + header + content) */}
+                      <ConditionalAppShell>
+                        {children}
+                      </ConditionalAppShell>
+                    </SharedPropertiesProvider>
 
-                {/* ✅ Notification Drawer - Outside all containers for proper z-index */}
-                <NotificationDrawer />
+                  {/* ✅ Notification Drawer - Outside all containers for proper z-index */}
+                  <NotificationDrawer />
 
-                {/* 🔧 TEMPORARY: Both toast systems until migration completes - Client-side only */}
-                <ToasterClient />
+                  {/* 🔧 TEMPORARY: Both toast systems until migration completes - Client-side only */}
+                  <ToasterClient />
 
-                {/* 🚨 GLOBAL ERROR TRACKER SETUP */}
-                <GlobalErrorSetup />
+                  {/* 🚨 GLOBAL ERROR TRACKER SETUP */}
+                  <GlobalErrorSetup />
 
-                {/* 🏢 ENTERPRISE: Performance Monitor moved to DXF Viewer only
-                    Following Bentley/Autodesk pattern - design tools only, not globally
-                    Toggle available in DXF Viewer status bar */}
+                  {/* 🏢 ENTERPRISE: Performance Monitor moved to DXF Viewer only
+                      Following Bentley/Autodesk pattern - design tools only, not globally
+                      Toggle available in DXF Viewer status bar */}
 
-                {/* ✅ το κεντρικοποιημένο NotificationProvider (sonner-based) */}
-                </NotificationProvider>
-                </FloorplanProvider>
+                  {/* ✅ το κεντρικοποιημένο NotificationProvider (sonner-based) */}
+                  </NotificationProvider>
+                  </FloorplanProvider>
+                </WorkspaceProvider>
               </UserRoleProvider>
             </AuthProvider>
           </I18nProvider>

@@ -47,30 +47,31 @@ export const CONTACT_COLORS = {
   },
 } as const;
 
-// 🏷️ CONTACT LABELS - Κεντρικοποιημένα labels στα ελληνικά
+// 🏷️ CONTACT LABELS - Κεντρικοποιημένα i18n keys για labels
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const CONTACT_LABELS = {
   [CONTACT_TYPES.INDIVIDUAL]: {
-    singular: 'Φυσικό Πρόσωπο',
-    plural: 'Φυσικά Πρόσωπα',
-    short: 'Φυσικό',
+    singular: 'contacts.types.individual.singular',
+    plural: 'contacts.types.individual.plural',
+    short: 'contacts.types.individual.short',
     emoji: '👤',
   },
   [CONTACT_TYPES.COMPANY]: {
-    singular: 'Εταιρεία',
-    plural: 'Εταιρείες',
-    short: 'Εταιρεία',
+    singular: 'contacts.types.company.singular',
+    plural: 'contacts.types.company.plural',
+    short: 'contacts.types.company.short',
     emoji: '🏢',
     // Alternative labels
     alt: {
-      singular: 'Νομικό Πρόσωπο',
-      plural: 'Νομικά Πρόσωπα',
-      short: 'Νομικό',
+      singular: 'contacts.types.company.altSingular',
+      plural: 'contacts.types.company.altPlural',
+      short: 'contacts.types.company.altShort',
     }
   },
   [CONTACT_TYPES.SERVICE]: {
-    singular: 'Δημόσια Υπηρεσία',
-    plural: 'Δημόσιες Υπηρεσίες',
-    short: 'Υπηρεσία',
+    singular: 'contacts.types.service.singular',
+    plural: 'contacts.types.service.plural',
+    short: 'contacts.types.service.short',
     emoji: '🏛️',
   },
 } as const;

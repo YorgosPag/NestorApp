@@ -10,6 +10,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useProjectCustomers } from '../../customers-tab/hooks/useProjectCustomers';
 import type { ProjectCustomersTableProps } from "../types";
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Extended Props Type
@@ -19,20 +21,6 @@ interface ExtendedProjectCustomersTableProps extends ProjectCustomersTableProps 
   /** Whether to start expanded (load immediately) @default false for lazy loading */
   defaultExpanded?: boolean;
 }
-
-// ============================================================================
-// 🏢 ENTERPRISE: Centralized Labels
-// ============================================================================
-
-const LABELS = {
-  CARD_TITLE: 'Πελάτες Έργου',
-  LOADING: 'Φόρτωση πελατών...',
-  ERROR_PREFIX: 'Σφάλμα κατά τη φόρτωση:',
-  EMPTY_TITLE: 'Δεν υπάρχουν πελάτες',
-  EMPTY_DESCRIPTION: 'Δεν υπάρχουν καταχωρημένοι πελάτες για αυτό το έργο.',
-  CLICK_TO_LOAD: 'Κάντε κλικ για φόρτωση πελατών',
-  RETRY: 'Επανάληψη',
-} as const;
 
 // ============================================================================
 // 🏢 ENTERPRISE: Component
@@ -49,6 +37,8 @@ const LABELS = {
  * - Data is cached after first fetch
  */
 export function ProjectCustomersTable({ projectId, defaultExpanded = false }: ExtendedProjectCustomersTableProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -76,12 +66,12 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Users className={iconSizes.md} />
-              {LABELS.CARD_TITLE}
+              {t('customers.title')}
             </span>
             <ChevronRight className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
           <CardDescription>
-            {LABELS.CLICK_TO_LOAD}
+            {t('customers.clickToLoad')}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -99,7 +89,7 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Users className={iconSizes.md} />
-              {LABELS.CARD_TITLE}
+              {t('customers.title')}
             </span>
             <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
@@ -107,7 +97,7 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
         <CardContent>
           <section className="flex items-center justify-center gap-2 py-8" aria-busy="true">
             <Loader2 className={cn(iconSizes.md, 'animate-spin', colors.text.muted)} />
-            <span className={colors.text.muted}>{LABELS.LOADING}</span>
+            <span className={colors.text.muted}>{t('customers.loading')}</span>
           </section>
         </CardContent>
       </Card>
@@ -125,7 +115,7 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Users className={iconSizes.md} />
-              {LABELS.CARD_TITLE}
+              {t('customers.title')}
             </span>
             <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
@@ -133,9 +123,9 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
         <CardContent>
           <section className="flex flex-col items-center justify-center gap-3 py-8" aria-live="polite">
             <AlertCircle className={cn(iconSizes.lg, 'text-destructive')} />
-            <span className="text-destructive text-sm">{LABELS.ERROR_PREFIX} {error}</span>
+            <span className="text-destructive text-sm">{t('customers.errorPrefix')} {error}</span>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
-              {LABELS.RETRY}
+              {t('customers.retry')}
             </Button>
           </section>
         </CardContent>
@@ -154,19 +144,19 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Users className={iconSizes.md} />
-              {LABELS.CARD_TITLE}
+              {t('customers.title')}
             </span>
             <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <section className="text-center py-8" aria-label="Κενή λίστα πελατών">
+          <section className="text-center py-8" aria-label={t('customers.emptyListAriaLabel')}>
             <Users className={cn(iconSizes.xl3, 'mx-auto mb-4', colors.text.muted)} />
             <p className={cn('text-sm font-medium', colors.text.foreground)}>
-              {LABELS.EMPTY_TITLE}
+              {t('customers.emptyTitle')}
             </p>
             <p className={cn('text-sm mt-1', colors.text.muted)}>
-              {LABELS.EMPTY_DESCRIPTION}
+              {t('customers.emptyDescription')}
             </p>
           </section>
         </CardContent>
@@ -184,26 +174,26 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2">
             <Users className={iconSizes.md} />
-            {LABELS.CARD_TITLE}
+            {t('customers.title')}
           </span>
           <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
         </CardTitle>
         <CardDescription>
-          Λίστα των πελατών που έχουν αγοράσει μονάδες σε αυτό το έργο ({customers.length} πελάτες).
+          {t('customers.descriptionWithCount', { count: customers.length })}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
         <header className="grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 pb-2 mb-4 border-b border-border text-sm font-medium text-muted-foreground">
-          <span>Ονοματεπώνυμο</span>
-          <span>Τηλέφωνο</span>
-          <span>Email</span>
-          <span className="text-right pr-3">Μονάδες</span>
-          <span className="text-right">Ενέργειες</span>
+          <span>{t('customers.table.name')}</span>
+          <span>{t('customers.table.phone')}</span>
+          <span>{t('customers.table.email')}</span>
+          <span className="text-right pr-3">{t('customers.table.units')}</span>
+          <span className="text-right">{t('customers.table.actions')}</span>
         </header>
 
         {/* Table Content */}
-        <section className="space-y-1" aria-label="Λίστα πελατών έργου">
+        <section className="space-y-1" aria-label={t('customers.listAriaLabel')}>
           {customers.map((customer) => (
             <CustomerInfoCompact
               key={customer.contactId}

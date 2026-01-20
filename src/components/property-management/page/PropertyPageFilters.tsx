@@ -16,6 +16,8 @@ import {
   LEGACY_STATUS_MAPPING,
   STORAGE_LABELS
 } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface PropertyPageFiltersProps {
   searchTerm: string;
@@ -68,6 +70,8 @@ export function PropertyPageFilters({
   filterBuilding,
   setFilterBuilding
 }: PropertyPageFiltersProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
 
   return (
@@ -75,16 +79,16 @@ export function PropertyPageFilters({
       <LabeledInput
         id="search"
         icon={<Search className={iconSizes.sm} />}
-        label="Αναζήτηση"
+        label={t('pageFilters.search.label')}
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="Αναζήτηση κωδικού, αγοραστή..."
+        placeholder={t('pageFilters.search.placeholder')}
         className="lg:col-span-1"
       />
       <LabeledSelect
         id="type-filter"
         icon={<NAVIGATION_ENTITIES.unit.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.unit.color)} />}
-        label="Τύπος"
+        label={t('pageFilters.type.label')}
         value={filterType}
         onValueChange={setFilterType}
         options={typeOptions}
@@ -92,7 +96,7 @@ export function PropertyPageFilters({
       <LabeledSelect
         id="status-filter"
         icon={<Activity className={iconSizes.xs} />}
-        label="Κατάσταση"
+        label={t('pageFilters.status.label')}
         value={filterStatus}
         onValueChange={setFilterStatus}
         options={statusOptions}
@@ -100,7 +104,7 @@ export function PropertyPageFilters({
       <LabeledSelect
         id="floor-filter"
         icon={<MapPin className={iconSizes.xs} />}
-        label="Όροφος"
+        label={t('pageFilters.floor.label')}
         value={filterFloor}
         onValueChange={setFilterFloor}
         options={floorOptions}
@@ -108,7 +112,7 @@ export function PropertyPageFilters({
       <LabeledSelect
         id="building-filter"
         icon={<NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />}
-        label="Κτίριο"
+        label={t('pageFilters.building.label')}
         value={filterBuilding}
         onValueChange={setFilterBuilding}
         options={buildingOptions}

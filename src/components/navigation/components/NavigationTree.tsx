@@ -15,6 +15,8 @@ import { useNavigation } from '../core/NavigationContext';
 import { NAVIGATION_ENTITIES } from '../config';
 import { NavigationButton } from './NavigationButton';
 import { NavigationBreadcrumb } from './NavigationBreadcrumb';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface NavigationTreeProps {
   className?: string;
@@ -43,32 +45,21 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
     getBuildingsForProject
   } = useNavigation();
 
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('navigation');
+
   /**
-   * 🏢 ENTERPRISE (Επιλογή Α): Τίτλοι χωρίς 'floors' level
+   * 🏢 ENTERPRISE (Επιλογή Α): Τίτλοι χωρίς 'floors' level - i18n aware
    */
   const getStepTitle = () => {
-    switch (currentLevel) {
-      case 'companies': return 'Επιλέξτε Εταιρεία';
-      case 'projects': return 'Επιλέξτε Έργο';
-      case 'buildings': return 'Επιλέξτε Κτίριο';
-      // 🏢 ENTERPRISE: 'floors' case αφαιρέθηκε (Επιλογή Α)
-      case 'units': return 'Επιλέξτε Προορισμό';
-      default: return 'Πλοήγηση';
-    }
+    return t(`tree.steps.${currentLevel}`, t('tree.steps.default'));
   };
 
   /**
-   * 🏢 ENTERPRISE (Επιλογή Α): Περιγραφές χωρίς 'floors' level
+   * 🏢 ENTERPRISE (Επιλογή Α): Περιγραφές χωρίς 'floors' level - i18n aware
    */
   const getStepDescription = () => {
-    switch (currentLevel) {
-      case 'companies': return 'Επιλέξτε την εταιρεία για να δείτε τα έργα της';
-      case 'projects': return 'Επιλέξτε το έργο για να δείτε τα κτίρια';
-      case 'buildings': return 'Επιλέξτε το κτίριο για να δείτε τις μονάδες';
-      // 🏢 ENTERPRISE: 'floors' case αφαιρέθηκε (Επιλογή Α)
-      case 'units': return 'Επιλέξτε τον τελικό προορισμό';
-      default: return '';
-    }
+    return t(`tree.descriptions.${currentLevel}`, t('tree.descriptions.default'));
   };
 
   const handleNavigateToPage = (type: 'properties' | 'projects' | 'buildings' | 'floorplan') => {
@@ -110,7 +101,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
     return (
       <div className={`text-center py-8 ${className || ''}`}>
         <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p className="text-gray-500 dark:text-muted-foreground">Φόρτωση δεδομένων...</p>
+        <p className="text-gray-500 dark:text-muted-foreground">{t('tree.loading')}</p>
       </div>
     );
   }
@@ -118,7 +109,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
   if (error) {
     return (
       <div className={`text-center py-8 ${className || ''}`}>
-        <p className="text-red-500 dark:text-red-400 mb-4">Σφάλμα: {error}</p>
+        <p className="text-red-500 dark:text-red-400 mb-4">{t('tree.errorMessage', { error })}</p>
         <button
           onClick={loadCompanies}
           className={cn(
@@ -126,7 +117,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
             HOVER_BACKGROUND_EFFECTS.BLUE
           )}
         >
-          Ξαναδοκιμή
+          {t('tree.retry')}
         </button>
       </div>
     );
@@ -153,7 +144,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
           <>
             {companies.length === 0 ? (
               <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
-                Δεν βρέθηκαν εταιρείες στο σύστημα.
+                {t('tree.empty.companies')}
               </div>
             ) : (
               companies.map(company => (
@@ -164,7 +155,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                   iconColor={NAVIGATION_ENTITIES.company.color}
                   title={company.companyName}
                   subtitle={company.industry}
-                  extraInfo={company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined}
+                  extraInfo={company.vatNumber ? t('tree.vatNumber', { vatNumber: company.vatNumber }) : undefined}
                   isSelected={selectedCompany?.id === company.id}
                 />
               ))
@@ -177,7 +168,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
           <>
             {projects.length === 0 ? (
               <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
-                Δεν βρέθηκαν έργα για την επιλεγμένη εταιρεία.
+                {t('tree.empty.projects')}
               </div>
             ) : (
               projects.map(project => (
@@ -187,7 +178,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                   icon={NAVIGATION_ENTITIES.project.icon}
                   iconColor={NAVIGATION_ENTITIES.project.color}
                   title={project.name}
-                  subtitle={`${getBuildingCount(project.id)} κτίρια`}
+                  subtitle={t('tree.buildingCount', { count: getBuildingCount(project.id) })}
                   isSelected={selectedProject?.id === project.id}
                 />
               ))
@@ -200,7 +191,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
           <>
             {projectBuildings.length === 0 ? (
               <div className="text-gray-500 dark:text-muted-foreground text-center py-8">
-                Δεν βρέθηκαν κτίρια για το επιλεγμένο έργο.
+                {t('tree.empty.buildings')}
               </div>
             ) : (
               /* 🏢 ENTERPRISE: Buildings display without floor count (Επιλογή Α) */
@@ -227,17 +218,17 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
 
         {/* Final Destinations - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
         {currentLevel === 'units' && selectedBuilding && (
-          <nav className="space-y-3" aria-label="Τελικοί Προορισμοί">
+          <nav className="space-y-3" aria-label={t('tree.steps.units')}>
             <p className="text-sm font-medium text-gray-900 dark:text-foreground mb-3">
-              Μετάβαση σε:
+              {t('tree.destinations.navigateTo')}
             </p>
 
             <NavigationButton
               onClick={() => handleNavigateToPage('properties')}
               icon={NAVIGATION_ENTITIES.unit.icon}
               iconColor={NAVIGATION_ENTITIES.unit.color}
-              title="Προβολή Μονάδων"
-              subtitle={`${buildingUnits.length} μονάδες στο κτίριο`}
+              title={t('tree.destinations.viewUnits')}
+              subtitle={t('tree.destinations.unitsInBuilding', { count: buildingUnits.length })}
               variant="compact"
             />
 
@@ -245,7 +236,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
               onClick={() => handleNavigateToPage('buildings')}
               icon={NAVIGATION_ENTITIES.building.icon}
               iconColor={NAVIGATION_ENTITIES.building.color}
-              title="Λεπτομέρειες Κτιρίου"
+              title={t('tree.destinations.buildingDetails')}
               subtitle={selectedBuilding.name}
               variant="compact"
             />
@@ -255,7 +246,7 @@ export function NavigationTree({ className, onNavigateToPage }: NavigationTreePr
                 onClick={() => handleNavigateToPage('projects')}
                 icon={NAVIGATION_ENTITIES.project.icon}
                 iconColor={NAVIGATION_ENTITIES.project.color}
-                title="Λεπτομέρειες Έργου"
+                title={t('tree.destinations.projectDetails')}
                 subtitle={selectedProject.name}
                 variant="compact"
               />

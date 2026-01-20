@@ -59,7 +59,7 @@ export default function LeadProfilePage() {
     return (
       <div className={`min-h-screen ${colors.bg.secondary} flex items-center justify-center`}>
         <div className="text-center">
-          <AnimatedSpinner size="large" variant="info" className="mx-auto mb-2" />
+          <AnimatedSpinner size="large" className="mx-auto mb-2" />
           <p className={`${colors.text.muted}`}>Φόρτωση lead...</p>
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function LeadProfilePage() {
             <p className={`${colors.text.error} mb-4`}>{leadError || 'Το lead δεν βρέθηκε'}</p>
             <button
               onClick={() => router.push('/crm/leads')}
-              className={`px-4 py-2 ${colors.bg.info} ${colors.text.onInfo} rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+              className={`px-4 py-2 ${colors.bg.info} text-white rounded-lg ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
             >
               Επιστροφή στα Leads
             </button>
@@ -135,7 +135,7 @@ export default function LeadProfilePage() {
       </main>
 
       <SendEmailModal
-        lead={lead}
+        lead={lead ? { id: lead.id || '', fullName: lead.fullName || '', email: lead.email || '' } : null}
         isOpen={showEmailModal}
         onClose={() => setShowEmailModal(false)}
         onEmailSent={() => console.log('Email sent')}

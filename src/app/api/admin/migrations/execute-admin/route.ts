@@ -114,9 +114,13 @@ async function handleAdminSdkMigration(
       .where('status', '==', 'active')
       .get();
 
-    const companies = companiesSnapshot.docs.map(doc => ({
+    // 🏢 ENTERPRISE: Type-safe company/project data
+    interface CompanyData { id: string; companyName?: string; }
+    interface ProjectData { id: string; name?: string; company?: string; companyId?: string; }
+
+    const companies: CompanyData[] = companiesSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      companyName: doc.data().companyName as string | undefined
     }));
 
     console.log(`   Found ${companies.length} active companies`);
@@ -124,9 +128,11 @@ async function handleAdminSdkMigration(
     // Step 2: Fetch all projects
     console.log('📋 Step 2: Fetching projects...');
     const projectsSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
-    const projects = projectsSnapshot.docs.map(doc => ({
+    const projects: ProjectData[] = projectsSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      name: doc.data().name as string | undefined,
+      company: doc.data().company as string | undefined,
+      companyId: doc.data().companyId as string | undefined
     }));
 
     console.log(`   Found ${projects.length} projects`);
@@ -188,9 +194,11 @@ async function handleAdminSdkMigration(
     // Step 5: Verification
     console.log('📋 Step 5: Verifying migration results...');
     const verificationSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).get();
-    const updatedProjects = verificationSnapshot.docs.map(doc => ({
+    const updatedProjects: ProjectData[] = verificationSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      name: doc.data().name as string | undefined,
+      company: doc.data().company as string | undefined,
+      companyId: doc.data().companyId as string | undefined
     }));
 
     let validProjects = 0;

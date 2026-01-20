@@ -300,11 +300,20 @@ export class SearchEngine {
             );
 
           case 'range':
+            // 🏢 ENTERPRISE: Type guard for range filter value
+            if (filter.value === null || typeof filter.value !== 'object' || !('min' in filter.value) || !('max' in filter.value)) {
+              return true;
+            }
+            const rangeValue = filter.value as { min: number; max: number };
             const numValue = Number(item.metadata?.[filter.id]);
-            return numValue >= filter.value.min && numValue <= filter.value.max;
+            return numValue >= rangeValue.min && numValue <= rangeValue.max;
 
           case 'date':
-            const itemDate = new Date(item.metadata?.[filter.id]);
+            // 🏢 ENTERPRISE: Type guard for date filter value
+            if (filter.value === null || typeof filter.value !== 'string') {
+              return true;
+            }
+            const itemDate = new Date(item.metadata?.[filter.id] as string | number);
             const filterDate = new Date(filter.value);
             return itemDate >= filterDate;
 
@@ -312,6 +321,10 @@ export class SearchEngine {
             return Boolean(item.metadata?.[filter.id]) === filter.value;
 
           case 'text':
+            // 🏢 ENTERPRISE: Type guard for text filter value
+            if (filter.value === null || typeof filter.value !== 'string') {
+              return true;
+            }
             const searchText = this.buildSearchableText(item).toLowerCase();
             return searchText.includes(filter.value.toLowerCase());
 
@@ -351,6 +364,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
   className = ''
 }) => {
   const { isDark } = useTheme();
+  const iconSizes = useIconSizes(); // 🏢 ENTERPRISE: Add missing hook
   const [focused, setFocused] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -469,9 +483,11 @@ const Filter: React.FC<FilterProps> = ({
   const renderFilter = () => {
     switch (config.type) {
       case 'select':
+        // 🏢 ENTERPRISE: Type-safe string value extraction
+        const selectVal = typeof value === 'string' ? value : '';
         return (
           <Select
-            value={value || ''}
+            value={selectVal}
             onValueChange={(val) => onChange(val || null)}
           >
             <SelectTrigger className={searchSystemClasses.filter.select}>
@@ -516,6 +532,10 @@ const Filter: React.FC<FilterProps> = ({
         );
 
       case 'range':
+        // 🏢 ENTERPRISE: Type-safe range value extraction
+        const rangeVal = (value !== null && typeof value === 'object' && 'min' in value && 'max' in value)
+          ? value as { min: number; max: number }
+          : { min: config.min || 0, max: config.max || 100 };
         return (
           <div className={searchSystemClasses.filter.rangeContainer}>
             <input
@@ -523,10 +543,10 @@ const Filter: React.FC<FilterProps> = ({
               min={config.min}
               max={config.max}
               step={config.step}
-              value={value?.min || config.min || 0}
+              value={rangeVal.min}
               onChange={(e) => onChange({
-                ...value,
-                min: Number(e.target.value)
+                min: Number(e.target.value),
+                max: rangeVal.max
               })}
               className={searchSystemClasses.filter.rangeInput}
             />
@@ -536,9 +556,9 @@ const Filter: React.FC<FilterProps> = ({
               min={config.min}
               max={config.max}
               step={config.step}
-              value={value?.max || config.max || 100}
+              value={rangeVal.max}
               onChange={(e) => onChange({
-                ...value,
+                min: rangeVal.min,
                 max: Number(e.target.value)
               })}
               className={searchSystemClasses.filter.rangeInput}
@@ -547,10 +567,12 @@ const Filter: React.FC<FilterProps> = ({
         );
 
       case 'date':
+        // 🏢 ENTERPRISE: Type-safe date value extraction
+        const dateVal = typeof value === 'string' ? value : '';
         return (
           <input
             type="date"
-            value={value || ''}
+            value={dateVal}
             onChange={(e) => onChange(e.target.value || null)}
             className={searchSystemClasses.filter.input}
           />
@@ -570,10 +592,12 @@ const Filter: React.FC<FilterProps> = ({
         );
 
       case 'text':
+        // 🏢 ENTERPRISE: Type-safe text value extraction
+        const textVal = typeof value === 'string' ? value : '';
         return (
           <input
             type="text"
-            value={value || ''}
+            value={textVal}
             onChange={(e) => onChange(e.target.value || null)}
             placeholder={config.placeholder}
             className={searchSystemClasses.filter.input}
@@ -777,11 +801,13 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
           !(Array.isArray(filterValue) && filterValue.length === 0)) {
 
         let label = filter.label;
-        if (filter.type === 'range' && filterValue.min !== undefined && filterValue.max !== undefined) {
-          label = `${filter.label}: ${filterValue.min} - ${filterValue.max}`;
+        // 🏢 ENTERPRISE: Type-safe filter value access
+        if (filter.type === 'range' && filterValue !== null && typeof filterValue === 'object' && 'min' in filterValue && 'max' in filterValue) {
+          const rangeFilterVal = filterValue as { min: number; max: number };
+          label = `${filter.label}: ${rangeFilterVal.min} - ${rangeFilterVal.max}`;
         } else if (filter.type === 'multiselect' && Array.isArray(filterValue)) {
           label = `${filter.label}: ${filterValue.length} selected`;
-        } else {
+        } else if (typeof filterValue === 'string' || typeof filterValue === 'number' || typeof filterValue === 'boolean') {
           label = `${filter.label}: ${filterValue}`;
         }
 

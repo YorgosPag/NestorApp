@@ -1,12 +1,13 @@
 'use client';
-import React, { createContext, useCallback, useEffect } from 'react';
+import React, { createContext, useCallback, useEffect, type Dispatch, type SetStateAction } from 'react';
 import type {
   ConstraintsSettings,
   OrthoConstraintSettings,
   PolarConstraintSettings,
   ConstraintDefinition,
   ConstraintResult,
-  ConstraintContextData
+  ConstraintContextData,
+  ConstraintContext
 } from './config';
 import {
   DEFAULT_ORTHO_SETTINGS,

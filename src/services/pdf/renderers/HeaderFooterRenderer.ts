@@ -1,5 +1,5 @@
 import type { IPDFDoc, IHeaderFooterRenderer, Margins } from '../contracts';
-import { COLORS, LINE_WIDTHS, FONTS, FONT_SIZES } from '../layout';
+import { COLORS, LINE_WIDTHS, FONTS, FONT_SIZES, FONT_STYLES } from '../layout';
 
 export class HeaderFooterRenderer implements IHeaderFooterRenderer {
   addHeader(doc: IPDFDoc, margins: Margins, contentWidth: number): void {

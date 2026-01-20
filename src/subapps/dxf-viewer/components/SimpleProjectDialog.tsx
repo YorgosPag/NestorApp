@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Triangle, Building2, Folder, Building as BuildingIcon } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import {
   Select,
   SelectContent,
@@ -145,13 +147,19 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     }
   };
 
-  // Auto-load companies when dialog opens
+  // 🏢 ENTERPRISE: Auto-load companies when dialog opens
+  // CRITICAL: Include error in dependencies to prevent infinite loop on authentication errors
   useEffect(() => {
-    if (isOpen && (!companies || companies.length === 0)) {
-
+    // Only attempt to load if:
+    // 1. Dialog is open
+    // 2. No companies loaded yet
+    // 3. Not currently loading
+    // 4. No previous error (prevents infinite retry loop)
+    if (isOpen && (!companies || companies.length === 0) && !loading && !error) {
+      console.log('🔄 [SimpleProjectDialog] Loading companies - dialog opened');
       loadCompanies();
     }
-  }, [isOpen, companies.length, loadCompanies]);
+  }, [isOpen, companies?.length, loading, error, loadCompanies]);
 
   // Reset selection when dialog closes
   useEffect(() => {
@@ -249,33 +257,30 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
   const loadUnitsForBuilding = async (buildingId: string) => {
     try {
+      console.log(`🔄 [SimpleProjectDialog] Loading units for building: ${buildingId}`);
 
-      // Fetch units from API
-      const response = await fetch('/api/units');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch units: ${response.statusText}`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface UnitsApiResponse {
+        units: Unit[];
+        count: number;
       }
-      
-      const result = await response.json();
-      if (result.success) {
 
-        // Filter units that belong to the selected building
-        const buildingUnits = result.units.filter((unit: Unit) =>
-          unit.buildingId === buildingId || unit.building === buildingId
-        );
-        
-        setUnits(buildingUnits);
+      const result = await apiClient.get<UnitsApiResponse>('/api/units');
 
-        if (buildingUnits.length === 0) {
+      // Filter units that belong to the selected building
+      const buildingUnits = (result?.units || []).filter((unit: Unit) =>
+        unit.buildingId === buildingId || unit.building === buildingId
+      );
 
-          const allBuildingIds = [...new Set(result.units.map((u: Unit) => u.buildingId))];
+      setUnits(buildingUnits);
+      console.log(`✅ [SimpleProjectDialog] Loaded ${buildingUnits.length} units for building`);
 
-        }
-      } else {
-        throw new Error(result.error || 'Failed to fetch units');
+      if (buildingUnits.length === 0) {
+        const allBuildingIds = [...new Set((result?.units || []).map((u: Unit) => u.buildingId))];
+        console.log(`⚠️ [SimpleProjectDialog] No units found. Available building IDs:`, allBuildingIds);
       }
     } catch (error) {
-      console.error('❌ Error loading units for building:', error);
+      console.error('❌ [SimpleProjectDialog] Error loading units for building:', error);
       setUnits([]);
     }
   };

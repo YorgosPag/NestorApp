@@ -10,6 +10,8 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ConfigurationAPI } from '@/core/configuration';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
  * 🏢 ENTERPRISE: Database-driven contributor data (NO MORE HARDCODED VALUES)
@@ -57,6 +59,8 @@ const useContributors = () => {
 };
 
 export function ContributorsTab() {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const { contributors, isLoading, error } = useContributors();
@@ -65,10 +69,10 @@ export function ContributorsTab() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Σφάλμα φόρτωσης</CardTitle>
+          <CardTitle>{t('contributorsTab.loadError')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Δεν ήταν δυνατή η φόρτωση των συνεργατών: {error}</p>
+          <p>{t('contributorsTab.loadErrorMessage')} {error}</p>
         </CardContent>
       </Card>
     );
@@ -80,26 +84,26 @@ export function ContributorsTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Συντελεστές Έργου</CardTitle>
-              <CardDescription>Λίστα με τους συντελεστές και τις επαφές τους για το έργο.</CardDescription>
+              <CardTitle className="text-lg">{t('contributorsTab.title')}</CardTitle>
+              <CardDescription>{t('contributorsTab.description')}</CardDescription>
             </div>
             <Button>
               <Plus className={`mr-2 ${iconSizes.sm}`} />
-              Προσθήκη Συντελεστή
+              {t('contributorsTab.addContributor')}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="${quick.table}">
+          <div className={quick.table}>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ρόλος</TableHead>
-                  <TableHead>Ονοματεπώνυμο</TableHead>
-                  <TableHead>Εταιρεία</TableHead>
-                  <TableHead>Τηλέφωνο</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead className="text-right">Ενέργειες</TableHead>
+                  <TableHead>{t('contributorsTab.role')}</TableHead>
+                  <TableHead>{t('contributorsTab.fullName')}</TableHead>
+                  <TableHead>{t('contributorsTab.company')}</TableHead>
+                  <TableHead>{t('contributorsTab.phone')}</TableHead>
+                  <TableHead>{t('contributorsTab.email')}</TableHead>
+                  <TableHead className="text-right">{t('contributorsTab.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -120,7 +124,7 @@ export function ContributorsTab() {
                               <Pencil className={`${iconSizes.sm} text-blue-600`} />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Επεξεργασία</TooltipContent>
+                          <TooltipContent>{t('contributorsTab.edit')}</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -128,7 +132,7 @@ export function ContributorsTab() {
                               <Trash2 className={`${iconSizes.sm} text-red-600`} />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Διαγραφή</TooltipContent>
+                          <TooltipContent>{t('contributorsTab.delete')}</TooltipContent>
                         </Tooltip>
                       </div>
                     </TableCell>

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CommonBadge } from '@/core/badges';
 import { Search, X } from 'lucide-react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -257,12 +258,13 @@ export function BaseToolbar({
 
 // Search component
 function ToolbarSearchComponent({ search, compact }: { search: ToolbarSearch; compact?: boolean }) {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   return (
     <div className="relative">
       <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${iconSizes.sm} text-muted-foreground`} />
       <Input
-        placeholder={search.placeholder || 'Αναζήτηση...'}
+        placeholder={search.placeholder || t('placeholders.search')}
         value={search.value || ''}
         onChange={(e) => search.onChange?.(e.target.value)}
         disabled={search.disabled}
@@ -296,6 +298,8 @@ function ToolbarFiltersComponent({
   onClearAll?: () => void;
 }) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook for clear all button
+  const { t } = useTranslation('common');
   return (
     <div className="flex items-center gap-2">
       {filters.map((filter) => (
@@ -345,7 +349,7 @@ function ToolbarFiltersComponent({
         )
       ))}
       
-      {/* Clear all filters */}
+      {/* 🏢 ENTERPRISE: Clear all filters with i18n */}
       {activeCount > 0 && onClearAll && (
         <Button
           variant="ghost"
@@ -353,7 +357,7 @@ function ToolbarFiltersComponent({
           onClick={onClearAll}
         >
           <X className={`${iconSizes.sm} mr-1`} />
-          Καθαρισμός ({activeCount})
+          {t('buttons.clearAllCount', { count: activeCount })}
         </Button>
       )}
     </div>

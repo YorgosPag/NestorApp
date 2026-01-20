@@ -120,3 +120,89 @@ export const convertMarkdownToHtml = (markdown: string): string => {
     .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
     .replace(/\*(.*)\*/gim, '<em>$1</em>');
 };
+
+// ============================================================================
+// 🏢 ENTERPRISE: STATUS & DATE UTILITIES (2026-01-20)
+// ============================================================================
+
+type ObligationStatus = 'draft' | 'completed' | 'approved' | 'in_progress' | 'pending';
+
+/**
+ * Get human-readable label for obligation status
+ */
+export const getStatusLabel = (status: ObligationStatus | string): string => {
+  const labels: Record<string, string> = {
+    draft: 'Πρόχειρο',
+    completed: 'Ολοκληρωμένο',
+    approved: 'Εγκεκριμένο',
+    in_progress: 'Σε εξέλιξη',
+    pending: 'Εκκρεμεί'
+  };
+  return labels[status] || status;
+};
+
+/**
+ * Get color class for obligation status
+ */
+export const getStatusColor = (status: ObligationStatus | string): string => {
+  const colors: Record<string, string> = {
+    draft: 'bg-gray-100 text-gray-800',
+    completed: 'bg-green-100 text-green-800',
+    approved: 'bg-blue-100 text-blue-800',
+    in_progress: 'bg-yellow-100 text-yellow-800',
+    pending: 'bg-orange-100 text-orange-800'
+  };
+  return colors[status] || 'bg-gray-100 text-gray-800';
+};
+
+/**
+ * Get icon name for obligation status
+ */
+export const getStatusIcon = (status: ObligationStatus | string): string => {
+  const icons: Record<string, string> = {
+    draft: 'FileEdit',
+    completed: 'CheckCircle',
+    approved: 'ShieldCheck',
+    in_progress: 'Clock',
+    pending: 'AlertCircle'
+  };
+  return icons[status] || 'File';
+};
+
+/**
+ * Format date in Greek locale (full format)
+ */
+export const formatDate = (date: Date | string | number): string => {
+  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+  return d.toLocaleDateString('el-GR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+/**
+ * Format date in short format (DD/MM/YYYY)
+ */
+export const formatShortDate = (date: Date | string | number): string => {
+  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+  return d.toLocaleDateString('el-GR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+};
+
+/**
+ * Format date with time
+ */
+export const formatDateTime = (date: Date | string | number): string => {
+  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+  return d.toLocaleDateString('el-GR', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};

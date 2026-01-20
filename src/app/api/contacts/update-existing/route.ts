@@ -10,6 +10,25 @@ interface ContactAssignment {
   role: string;
 }
 
+/** 🏢 ENTERPRISE: Discriminated union response types */
+interface UpdateContactsSuccessResponse {
+  success: true;
+  message: string;
+  updatedContacts: string[];
+  contactsCount: number;
+  requestedCount: number;
+  errors?: { contactId: string; error: string }[];
+  tenantId: string;
+}
+
+interface UpdateContactsErrorResponse {
+  success: false;
+  error: string;
+  details?: string;
+}
+
+type UpdateContactsResponse = UpdateContactsSuccessResponse | UpdateContactsErrorResponse;
+
 /**
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection + tenant isolation
  * @security Admin SDK + withAuth + requiredGlobalRoles: super_admin + Tenant Isolation
@@ -17,7 +36,7 @@ interface ContactAssignment {
  */
 
 export async function POST(request: NextRequest) {
-  const handler = withAuth(
+  const handler = withAuth<UpdateContactsResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         const { contactAssignments } = await req.json();

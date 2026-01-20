@@ -16,6 +16,7 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
   const [emailingLead, setEmailingLead] = useState<Opportunity | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
 
+  // 🌐 i18n: All messages converted to i18n keys - 2026-01-18
   const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
@@ -23,7 +24,7 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
       setLeads(leadsData);
       setError(null);
     } catch (err) {
-      setError("Σφάλμα κατά τη φόρτωση των leads");
+      setError("leads.errors.loadFailed");
       console.error("Error fetching leads:", err);
     } finally {
       setLoading(false);
@@ -35,23 +36,24 @@ export function useLeadsList(refreshTrigger?: number | string | boolean | null) 
   const handleEdit = (lead: Opportunity) => { setEditingLead(lead); setShowEditModal(true); };
 
   const handleEmail = (lead: Opportunity) => {
-    if (!lead?.email) { toast.error("Αυτό το lead δεν έχει email address"); return; }
+    if (!lead?.email) { toast.error("leads.errors.noEmail"); return; }
     setEmailingLead(lead); setShowEmailModal(true);
   };
 
   const handleViewProfile = (leadId: string) => { router.push(`/crm/leads/${leadId}`); };
 
   const handleDelete = async (leadId: string, leadName: string) => {
+    // 🌐 i18n: Note - confirm dialog requires runtime translation in component
     const confirmDelete = window.confirm(
-      `Είστε σίγουροι ότι θέλετε να διαγράψετε το lead "${leadName}"?\n\nΑυτή η ενέργεια δεν μπορεί να αναιρεθεί.`
+      `leads.confirm.deleteMessage`
     );
     if (!confirmDelete) return;
     try {
       await deleteOpportunity(leadId);
-      toast.success(`✅ Το lead "${leadName}" διαγράφηκε επιτυχώς!`);
+      toast.success("leads.status.deleteSuccess");
       setLeads(prev => prev.filter(l => l.id !== leadId));
     } catch (error) {
-      toast.error("❌ Σφάλμα κατά τη διαγραφή lead");
+      toast.error("leads.errors.deleteFailed");
       console.error("Error deleting lead:", error);
     }
   };

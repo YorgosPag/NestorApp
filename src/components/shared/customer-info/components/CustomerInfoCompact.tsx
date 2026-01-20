@@ -17,6 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import { CustomerActionButtons } from './CustomerActionButtons';
@@ -48,6 +50,8 @@ export function CustomerInfoCompact({
   // ========================================================================
 
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
   const {
     customerInfo,
     loading,
@@ -67,7 +71,7 @@ export function CustomerInfoCompact({
   // Χρησιμοποίησε customerData αν υπάρχουν, αλλιώς fetched data
   const displayInfo = customerData ? {
     contactId,
-    displayName: customerData.displayName || customerData.name || 'Άγνωστος πελάτης',
+    displayName: customerData.displayName || customerData.name || t('customerActions.states.unknownCustomer'),
     primaryPhone: customerData.primaryPhone || customerData.phone || null,
     primaryEmail: customerData.primaryEmail || customerData.email || null,
     avatarUrl: customerData.avatarUrl,
@@ -131,7 +135,7 @@ export function CustomerInfoCompact({
       return (
         <div className="min-w-0 flex-1">
           <p className={`${styles.text} font-medium text-foreground truncate`}>
-            {displayInfo?.displayName || 'Άγνωστος πελάτης'}
+            {displayInfo?.displayName || t('customerActions.states.unknownCustomer')}
           </p>
         </div>
       );
@@ -175,7 +179,7 @@ export function CustomerInfoCompact({
           context={context}
           actions={quickActions.map(type => ({
             type: type as Parameters<typeof CustomerActionButtons>[0]['actions'][0]['type'],
-            label: type === 'view' ? 'Προβολή' : 'Κλήση',
+            label: type === 'view' ? t('customerActions.view') : t('customerActions.call'),
             icon: type === 'view' ? Eye : Phone,
             variant: 'ghost' as const,
             onClick: () => {
@@ -260,7 +264,7 @@ export function CustomerInfoCompact({
             <div className={`${styles.avatar} bg-destructive/10 rounded-full shrink-0 flex items-center justify-center`}>
               <User className={iconSizes.xs} />
             </div>
-            <span className={`${styles.text} font-medium truncate`}>Σφάλμα φόρτωσης</span>
+            <span className={`${styles.text} font-medium truncate`}>{t('customerActions.states.loadingError')}</span>
           </div>
           <span className={`${styles.subtext} text-destructive/70 truncate`}>—</span>
           <span className={`${styles.subtext} text-destructive/70 truncate`}>—</span>
@@ -282,7 +286,7 @@ export function CustomerInfoCompact({
         </div>
         <div className="flex-1">
           <p className={`${styles.text} font-medium truncate`}>
-            Σφάλμα φόρτωσης
+            {t('customerActions.states.loadingError')}
           </p>
           <p className={`${styles.subtext} text-destructive/70 truncate`}>
             {hasError}
@@ -307,7 +311,7 @@ export function CustomerInfoCompact({
             <div className={`${styles.avatar} bg-muted rounded-full shrink-0 flex items-center justify-center`}>
               <User className={iconSizes.xs} />
             </div>
-            <span className={`${styles.text} truncate`}>Δεν υπάρχει πελάτης</span>
+            <span className={`${styles.text} truncate`}>{t('customerActions.states.noCustomer')}</span>
           </div>
           <span>—</span>
           <span>—</span>
@@ -329,7 +333,7 @@ export function CustomerInfoCompact({
         </div>
         <div className="flex-1">
           <p className={`${styles.text} truncate`}>
-            Δεν υπάρχει πελάτης
+            {t('customerActions.states.noCustomer')}
           </p>
         </div>
       </div>
@@ -346,13 +350,13 @@ export function CustomerInfoCompact({
         className={`grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 items-center py-3 px-1 ${className}`}
         style={containerStyle}
         role="article"
-        aria-label={`Στοιχεία πελάτη: ${displayInfo.displayName}`}
+        aria-label={t('customerActions.aria.customerDetails', { name: displayInfo.displayName })}
       >
         {/* Column 1: Avatar + Name (2fr - wider for names) */}
         <div className="flex items-center gap-3 min-w-0">
           {renderAvatar()}
           <span className={`${styles.text} font-medium text-foreground truncate`}>
-            {displayInfo?.displayName || 'Άγνωστος πελάτης'}
+            {displayInfo?.displayName || t('customerActions.states.unknownCustomer')}
           </span>
         </div>
 
@@ -401,7 +405,7 @@ export function CustomerInfoCompact({
                 size="sm"
                 className="${iconSizes.xl} p-0"
                 onClick={() => window.open(`/contacts?contactId=${contactId}`, '_blank')}
-                title="Προβολή πελάτη"
+                title={t('customerActions.viewCustomer')}
               >
                 <Eye className={iconSizes.sm} />
               </Button>
@@ -416,7 +420,7 @@ export function CustomerInfoCompact({
                     const cleanPhone = displayInfo.primaryPhone!.replace(/\s+/g, '');
                     window.open(`tel:${cleanPhone}`, '_self');
                   }}
-                  title="Κλήση"
+                  title={t('customerActions.call')}
                 >
                   <Phone className={iconSizes.sm} />
                 </Button>
@@ -431,7 +435,7 @@ export function CustomerInfoCompact({
                   onClick={() => {
                     window.open(`mailto:${displayInfo.primaryEmail}`, '_self');
                   }}
-                  title="Αποστολή Email"
+                  title={t('customerActions.sendEmail')}
                 >
                   <Mail className={iconSizes.sm} />
                 </Button>
@@ -456,7 +460,7 @@ export function CustomerInfoCompact({
       `}
       style={containerStyle}
       role="article"
-      aria-label={`Στοιχεία πελάτη: ${displayInfo.displayName}`}
+      aria-label={t('customerActions.aria.customerDetails', { name: displayInfo.displayName })}
     >
       {renderAvatar()}
       {renderContactDetails()}

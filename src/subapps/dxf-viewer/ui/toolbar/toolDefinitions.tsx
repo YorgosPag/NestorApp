@@ -105,9 +105,18 @@ const AngleConstraintIconAdapter: React.ComponentType<React.SVGProps<SVGSVGEleme
   />
 );
 
+// 🏢 ENTERPRISE: Tool group i18n keys for dynamic translation
+export const DXF_TOOL_GROUP_KEYS = {
+  SELECTION: 'toolGroups.selection',
+  DRAWING: 'toolGroups.drawing',
+  TOOLS: 'toolGroups.tools',
+  MEASUREMENTS: 'toolGroups.measurements',
+  ZOOM: 'toolGroups.zoom'
+} as const;
+
 export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
   {
-    name: 'Επιλογή',
+    name: DXF_TOOL_GROUP_KEYS.SELECTION,
     tools: [
       // ✅ CENTRALIZED: Using DXF_SELECTION_TOOL_LABELS from central system - ZERO HARDCODED VALUES
       { id: 'select' as ToolType, icon: MousePointer, label: DXF_SELECTION_TOOL_LABELS.SELECT, hotkey: 'S' },
@@ -115,7 +124,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
     ]
   },
   {
-    name: 'Σχεδίαση',
+    name: DXF_TOOL_GROUP_KEYS.DRAWING,
     tools: [
       // ✅ CENTRALIZED: Using DXF_DRAWING_TOOL_LABELS from central system - ZERO HARDCODED VALUES
       { id: 'line' as ToolType, icon: Minus, label: DXF_DRAWING_TOOL_LABELS.LINE, hotkey: 'L' },
@@ -142,7 +151,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
     ]
   },
   {
-    name: 'Εργαλεία',
+    name: DXF_TOOL_GROUP_KEYS.TOOLS,
     tools: [
       // ✅ CENTRALIZED: Using DXF_EDITING_TOOL_LABELS from central system - ZERO HARDCODED VALUES
       { id: 'grip-edit' as ToolType, icon: Edit, label: DXF_EDITING_TOOL_LABELS.GRIP_EDIT, hotkey: 'G' },
@@ -152,7 +161,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
     ]
   },
   {
-    name: 'Μετρήσεις',
+    name: DXF_TOOL_GROUP_KEYS.MEASUREMENTS,
     tools: [
       // ✅ CENTRALIZED: Using DXF_MEASUREMENT_TOOL_LABELS from central system - ZERO HARDCODED VALUES
       { id: 'measure-distance' as ToolType, icon: Ruler, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_DISTANCE, hotkey: 'D' },
@@ -174,7 +183,7 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
     ]
   },
   {
-    name: 'Εστίαση',
+    name: DXF_TOOL_GROUP_KEYS.ZOOM,
     tools: [
       // ✅ CENTRALIZED: Using DXF_ZOOM_TOOL_LABELS from central system - ZERO HARDCODED VALUES
       { id: 'zoom-in' as ToolType, icon: ZoomIn, label: DXF_ZOOM_TOOL_LABELS.ZOOM_IN, hotkey: '+' },
@@ -219,18 +228,20 @@ export const createActionButtons = (props: {
     active: props.showCursorSettings,
     onClick: () => props.onAction('toggle-cursor-settings')
   },
-  { 
-    id: 'grid', 
-    icon: Grid, 
-    label: props.showGrid ? 'Απόκρυψη Πλέγματος' : 'Εμφάνιση Πλέγματος', 
+  {
+    id: 'grid',
+    icon: Grid,
+    // 🏢 ENTERPRISE: i18n key - translated in ActionButton component
+    label: props.showGrid ? 'actionButtons.hideGrid' : 'actionButtons.showGrid',
     hotkey: 'G',
     active: props.showGrid,
     onClick: () => props.onAction('grid')
   },
   {
-    id: 'autocrop', 
-    icon: Crop, 
-    label: props.autoCrop ? 'Auto-Crop ON' : 'Auto-Crop OFF', 
+    id: 'autocrop',
+    icon: Crop,
+    // 🏢 ENTERPRISE: i18n key - translated in ActionButton component
+    label: props.autoCrop ? 'actionButtons.autoCropOn' : 'actionButtons.autoCropOff',
     hotkey: 'A',
     active: props.autoCrop,
     onClick: () => props.onAction('autocrop')

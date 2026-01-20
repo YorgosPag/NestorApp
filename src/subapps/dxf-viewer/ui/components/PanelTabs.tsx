@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
@@ -57,7 +58,7 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
     },
     {
       id: 'colors',
-      label: isCollapsed ? '' : 'Ρυθμίσεις DXF',
+      label: isCollapsed ? '' : t('dxfSettings.title'),
       icon: Settings,
       content: null,
       disabled: disabledPanels['colors'],

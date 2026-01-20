@@ -2,6 +2,8 @@
 import { useState, useCallback } from "react";
 import toast from "react-hot-toast";
 import { emailTemplates, getTemplateContent } from "../utils/emailTemplates";
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 type Lead = { id: string; fullName: string; email: string };
 
@@ -44,20 +46,13 @@ export function useSendEmailModal(lead?: Lead, onClose?: () => void, onEmailSent
     category?: string;
   }) => {
     try {
-      const response = await fetch('/api/communications/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailPayload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface EmailApiResponse {
+        success: boolean;
+        messageId?: string;
       }
 
-      const result = await response.json();
+      const result = await apiClient.post<EmailApiResponse>('/api/communications/email', emailPayload);
       console.log('✅ Email queued successfully:', result);
       return { success: true, data: result };
 
@@ -70,18 +65,19 @@ export function useSendEmailModal(lead?: Lead, onClose?: () => void, onEmailSent
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
-    if (!formData.subject.trim()) { 
-      toast.error("Παρακαλώ εισάγετε θέμα email"); 
-      return; 
+    // 🌐 i18n: Validation messages converted to i18n keys - 2026-01-18
+    // Note: Components using this hook should translate these keys with t()
+    if (!formData.subject.trim()) {
+      toast.error("email.validation.subjectRequired");
+      return;
     }
-    if (!formData.message.trim()) { 
-      toast.error("Παρακαλώ εισάγετε περιεχόμενο email"); 
-      return; 
+    if (!formData.message.trim()) {
+      toast.error("email.validation.messageRequired");
+      return;
     }
-    if (!lead?.email) { 
-      toast.error("Το lead δεν έχει email"); 
-      return; 
+    if (!lead?.email) {
+      toast.error("email.validation.leadNoEmail");
+      return;
     }
 
     setLoading(true);
@@ -102,7 +98,7 @@ export function useSendEmailModal(lead?: Lead, onClose?: () => void, onEmailSent
       const result = await sendEmailViaAPI(emailPayload);
       
       if (result.success) {
-        toast.success("✅ Email στάλθηκε επιτυχώς!");
+        toast.success("email.status.sentSuccess");
         
         // Reset form
         setFormData({
@@ -117,8 +113,9 @@ export function useSendEmailModal(lead?: Lead, onClose?: () => void, onEmailSent
       }
       
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Άγνωστο σφάλμα";
-      toast.error(`❌ Σφάλμα αποστολής email: ${errorMessage}`);
+      // 🌐 i18n: Error messages converted to i18n keys - 2026-01-18
+      const errorMessage = error instanceof Error ? error.message : "email.errors.unknown";
+      toast.error(`email.errors.sendFailed`);
       console.error("Email send error:", error);
     } finally {
       setLoading(false);

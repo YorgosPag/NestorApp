@@ -137,11 +137,11 @@ export async function GET(request: NextRequest) {
           });
         } else {
           return NextResponse.json({
-            success: true,
+            success: true as const,
             floors,
             stats: {
               totalFloors: floors.length,
-              buildingId
+              buildingId: buildingId ?? undefined  // 🏢 ENTERPRISE: undefined for optional fields
             }
           });
         }

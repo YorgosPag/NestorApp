@@ -16,6 +16,8 @@ import { PropertyHoverLocation } from '@/features/property-hover/components/Prop
 import { PropertyHoverPriceArea } from '@/features/property-hover/components/PropertyHoverPriceArea';
 import { PropertyHoverDescription } from '@/features/property-hover/components/PropertyHoverDescription';
 import { PropertyHoverInstruction } from '@/features/property-hover/components/PropertyHoverInstruction';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { formatFloorLabel } from '@/lib/intl-utils';
 import { formatPricePerSqm } from '@/components/building-management/BuildingCard/BuildingCardUtils';
@@ -30,7 +32,7 @@ interface PropertyHoverInfoProps {
 function PropertyHoverContent({ property }: { property: Property }) {
   const colors = useSemanticColors();
   const statusConfig = getPropertyStatusConfig(colors);
-  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || statusConfig['Άγνωστο'];
+  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || statusConfig['unknown'];
 
   return (
     <div className="space-y-3 p-1 animate-fade-in">
@@ -77,15 +79,17 @@ function PropertyHoverContent({ property }: { property: Property }) {
 export function PropertyHoverInfo({ propertyId, properties }: PropertyHoverInfoProps) {
   const iconSizes = useIconSizes();
   const property = useHoveredProperty(propertyId, properties);
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
 
   if (!propertyId) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
         <MousePointer className={`${iconSizes.md} mb-2`} />
-        <p className="text-xs text-center">Περάστε το ποντίκι</p>
-        <p className="text-xs text-center">πάνω από ένα ακίνητο</p>
-        <p className="text-xs text-center mt-1 text-muted-foreground/70">στην κάτοψη για να δείτε</p>
-        <p className="text-xs text-center text-muted-foreground/70">γρήγορες πληροφορίες</p>
+        <p className="text-xs text-center">{t('hoverInfo.hoverMouse')}</p>
+        <p className="text-xs text-center">{t('hoverInfo.overProperty')}</p>
+        <p className="text-xs text-center mt-1 text-muted-foreground/70">{t('hoverInfo.onFloorPlanToSee')}</p>
+        <p className="text-xs text-center text-muted-foreground/70">{t('hoverInfo.quickInfo')}</p>
       </div>
     );
   }
@@ -94,8 +98,8 @@ export function PropertyHoverInfo({ propertyId, properties }: PropertyHoverInfoP
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
         <UnitIcon className={`${iconSizes.md} mb-2 ${unitColor}`} />
-        <p className="text-xs text-center">Δεν βρέθηκαν στοιχεία</p>
-        <p className="text-xs text-center">για αυτό το ακίνητο</p>
+        <p className="text-xs text-center">{t('hoverInfo.noDataFound')}</p>
+        <p className="text-xs text-center">{t('hoverInfo.forThisProperty')}</p>
       </div>
     );
   }

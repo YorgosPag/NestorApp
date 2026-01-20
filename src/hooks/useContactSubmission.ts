@@ -62,10 +62,11 @@ interface NotificationService {
  * @param notifications - Notification service για user feedback
  * @returns true if valid, false if invalid
  */
+// 🌐 i18n: All validation messages converted to i18n keys - 2026-01-18
 function validateIndividualContact(formData: ContactFormData, notifications: NotificationService): boolean {
   // 🔧 Βασικά πεδία (υπάρχουν ήδη)
   if (!formData.firstName.trim() || !formData.lastName.trim()) {
-    notifications.error("Συμπληρώστε όνομα και επώνυμο.");
+    notifications.error("validation.contacts.individual.nameRequired");
     return false;
   }
 
@@ -76,7 +77,7 @@ function validateIndividualContact(formData: ContactFormData, notifications: Not
   if (formData.birthDate && formData.birthDate.trim() !== '') {
     if (!isDatePastOrToday(formData.birthDate)) {
       notifications.error(
-        "📅 Η ημερομηνία γέννησης δεν μπορεί να είναι μελλοντική. Παρακαλώ ελέγξτε την ημερομηνία.",
+        "validation.contacts.individual.birthDateFuture",
         {
           duration: 6000
         }
@@ -89,7 +90,7 @@ function validateIndividualContact(formData: ContactFormData, notifications: Not
   if (formData.documentIssueDate && formData.documentIssueDate.trim() !== '') {
     if (!isDatePastOrToday(formData.documentIssueDate)) {
       notifications.error(
-        "🆔 Η ημερομηνία έκδοσης εγγράφου δεν μπορεί να είναι μελλοντική. Παρακαλώ επιλέξτε σωστή ημερομηνία.",
+        "validation.contacts.individual.documentIssueDateFuture",
         {
           duration: 6000
         }
@@ -106,7 +107,7 @@ function validateIndividualContact(formData: ContactFormData, notifications: Not
 
   if (!documentDatesValidation.isValid && documentDatesValidation.error) {
     notifications.error(
-      `⚠️ ${documentDatesValidation.error} Παρακαλώ ελέγξτε τις ημερομηνίες.`,
+      "validation.contacts.individual.documentDatesInvalid",
       {
         duration: 6000
       }
@@ -129,7 +130,7 @@ function validateCompanyContact(formData: ContactFormData, notifications: Notifi
   const vatNumber = formData.companyVatNumber?.trim() || formData.vatNumber?.trim() || '';
 
   if (!formData.companyName.trim() || !vatNumber) {
-    notifications.error("Συμπληρώστε επωνυμία και ΑΦΜ εταιρείας.");
+    notifications.error("validation.contacts.company.nameAndVatRequired");
     return false;
   }
   return true;
@@ -147,7 +148,7 @@ function validateServiceContact(formData: ContactFormData, notifications: Notifi
   const serviceName = formData.serviceName?.trim() || formData.name?.trim() || '';
 
   if (!serviceName) {
-    notifications.error("Συμπληρώστε όνομα υπηρεσίας.");
+    notifications.error("validation.contacts.service.nameRequired");
     return false;
   }
   return true;
@@ -209,7 +210,7 @@ export function useContactSubmission({
         return validateServiceContact(formData, notifications);
 
       default:
-        notifications.error("Άγνωστος τύπος επαφής.");
+        notifications.error("validation.contacts.unknownType");
         console.error('❌ SUBMISSION: Unknown contact type:', formData.type);
         return false;
     }
@@ -246,8 +247,8 @@ export function useContactSubmission({
       // If we have failed uploads, block immediately
       if (uploadValidation.failedUploads > 0) {
         console.error('🚫 SUBMISSION BLOCKED: Failed uploads detected:', uploadValidation);
-        const errorMessage = `Υπάρχουν αποτυχημένες φωτογραφίες (${uploadValidation.failedUploads} αποτυχίες)`;
-        notifications.error(errorMessage);
+        // 🌐 i18n key with count interpolation
+        notifications.error("contacts.submission.failedUploads");
         return;
       }
 
@@ -258,8 +259,9 @@ export function useContactSubmission({
           errors: uploadValidation.errors
         });
 
+        // 🌐 i18n key with count interpolation
         notifications.info(
-          `⏳ Περιμένετε να ολοκληρωθούν τα uploads... (${uploadValidation.pendingUploads} εκκρεμής)`,
+          "contacts.submission.pendingUploads",
           { duration: 3000 }
         );
 
@@ -372,13 +374,13 @@ export function useContactSubmission({
 
         // Update existing contact
         await ContactsService.updateContact(editContact.id, contactData);
-        notifications.success("Η επαφή ενημερώθηκε επιτυχώς.");
+        notifications.success("contacts.submission.updateSuccess");
 
       } else {
         // Create new contact
         console.log('🆕 SUBMISSION: Creating new contact');
         await ContactsService.createContact(contactData);
-        notifications.success("Η νέα επαφή δημιουργήθηκε επιτυχώς.");
+        notifications.success("contacts.submission.createSuccess");
       }
 
       // Success callbacks
@@ -423,22 +425,20 @@ export function useContactSubmission({
         const existingContactId = contactIdMatch ? contactIdMatch[1] : null;
 
         // Smart user notification με actionable information
+        // 🌐 i18n: Duplicate prevention messages
         if (confidence >= 95) {
           notifications.error(
-            "🚨 Η επαφή αυτή υπάρχει ήδη στο σύστημα. " +
-            "Παρακαλούμε ελέγξτε τη λίστα επαφών πριν δημιουργήσετε νέα.",
+            "contacts.duplicate.exactMatch",
             { duration: 8000 }
           );
         } else if (confidence >= 80) {
           notifications.warning(
-            "⚠️ Εντοπίστηκε παρόμοια επαφή στο σύστημα. " +
-            "Παρακαλούμε επαληθεύστε ότι δεν δημιουργείτε διπλή καταχώρηση.",
+            "contacts.duplicate.similarMatch",
             { duration: 6000 }
           );
         } else {
           notifications.info(
-            "ℹ️ Πιθανή διπλή προσπάθεια δημιουργίας επαφής. " +
-            "Παρακαλούμε περιμένετε λίγα δευτερόλεπτα και δοκιμάστε ξανά.",
+            "contacts.duplicate.possibleMatch",
             { duration: 5000 }
           );
         }
@@ -452,9 +452,10 @@ export function useContactSubmission({
 
       } else {
         // 🏢 STANDARD ERROR HANDLING για other errors
+        // 🌐 i18n: Generic error messages
         const userErrorMessage = editContact
-          ? "Δεν ήταν δυνατή η ενημέρωση της επαφής."
-          : "Δεν ήταν δυνατή η δημιουργία της επαφής.";
+          ? "contacts.submission.updateError"
+          : "contacts.submission.createError";
 
         notifications.error(userErrorMessage);
 
@@ -487,19 +488,20 @@ export function useContactSubmission({
     const isUploading = uploadValidation.pendingUploads > 0;
     const hasFailed = uploadValidation.failedUploads > 0;
 
-    let buttonText = editContact ? 'Ενημέρωση Επαφής' : 'Δημιουργία Επαφής';
+    // 🌐 i18n: Button text converted to i18n keys - 2026-01-18
+    let buttonText = editContact ? 'contacts.button.update' : 'contacts.button.create';
     let statusMessage: string | undefined;
 
     if (loading) {
-      buttonText = editContact ? 'Ενημερώνεται...' : 'Δημιουργείται...';
+      buttonText = editContact ? 'contacts.button.updating' : 'contacts.button.creating';
     } else if (isUploading) {
-      buttonText = `Περιμένετε uploads (${uploadValidation.pendingUploads}/${uploadValidation.totalSlots})`;
-      statusMessage = `Περιμένετε να ολοκληρωθούν όλες οι φωτογραφίες πριν την αποθήκευση`;
+      buttonText = 'contacts.button.waitingUploads';
+      statusMessage = 'contacts.status.waitingPhotos';
     } else if (hasFailed) {
-      buttonText = 'Υπάρχουν αποτυχημένες φωτογραφίες';
-      statusMessage = 'Διορθώστε τις αποτυχημένες φωτογραφίες πριν την αποθήκευση';
+      buttonText = 'contacts.button.failedPhotos';
+      statusMessage = 'contacts.status.fixPhotos';
     } else if (!isValidForm) {
-      buttonText = 'Συμπληρώστε τα απαιτούμενα πεδία';
+      buttonText = 'contacts.button.fillRequired';
     }
 
     const canSubmit = !loading && uploadValidation.isValid && isValidForm;

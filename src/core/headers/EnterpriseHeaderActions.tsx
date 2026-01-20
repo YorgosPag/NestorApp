@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 // ============================================================================
 // ENTERPRISE HEADER ACTIONS - CENTRALIZED COMPONENT
 // ============================================================================
@@ -28,6 +29,7 @@ import { BarChart3, Plus, LucideIcon } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { GRADIENT_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -38,6 +40,18 @@ import { GRADIENT_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effe
  *
  * Configurable props for different entity types and use cases
  */
+// 🏢 ENTERPRISE: Component type with static factory methods
+interface EnterpriseHeaderActionsComponent extends React.FC<EnterpriseHeaderActionsProps> {
+  /** Projects header actions factory */
+  forProjects: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
+  /** Buildings header actions factory */
+  forBuildings: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
+  /** Contacts header actions factory */
+  forContacts: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
+  /** Units header actions factory */
+  forUnits: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
+}
+
 export interface EnterpriseHeaderActionsProps {
   /** Dashboard toggle state */
   showDashboard: boolean;
@@ -77,27 +91,21 @@ export interface EnterpriseHeaderActionsProps {
 }
 
 // ============================================================================
-// UTILITY FUNCTIONS
+// ENTITY TYPE KEYS (i18n)
 // ============================================================================
 
-/**
- * 🎯 Generate create button text based on entity type
- */
-function generateCreateButtonText(entityType: string): string {
-  // Capitalize first letter and add "Νέο"
-  const capitalizedEntity = entityType.charAt(0).toUpperCase() + entityType.slice(1);
-  return `Νέο ${capitalizedEntity}`;
-}
-
-/**
- * 🎯 Generate default tooltips
- */
-function generateTooltips(entityType: string) {
-  return {
-    dashboard: 'Εμφάνιση/Απόκρυψη Dashboard',
-    create: `Δημιουργία νέου ${entityType}`
-  };
-}
+// 🏢 ENTERPRISE: Maps entity type identifiers to i18n keys
+const ENTITY_TYPE_KEYS: Record<string, string> = {
+  'project': 'headerActions.entities.project',
+  'building': 'headerActions.entities.building',
+  'contact': 'headerActions.entities.contact',
+  'unit': 'headerActions.entities.unit',
+  // Legacy Greek identifiers for backward compatibility
+  'έργο': 'headerActions.entities.project',
+  'κτίριο': 'headerActions.entities.building',
+  'επαφή': 'headerActions.entities.contact',
+  'μονάδα': 'headerActions.entities.unit',
+};
 
 // ============================================================================
 // MAIN COMPONENT
@@ -110,24 +118,24 @@ function generateTooltips(entityType: string) {
  * HeaderActions components across the application
  *
  * @example
- * // Projects page usage
+ * // Projects page usage (language-neutral identifier)
  * <EnterpriseHeaderActions
  *   showDashboard={showDashboard}
  *   setShowDashboard={setShowDashboard}
- *   entityType="έργο"
+ *   entityType="project"
  *   onCreateNew={handleCreateProject}
  * />
  *
  * @example
- * // Buildings page usage
+ * // Buildings page usage (language-neutral identifier)
  * <EnterpriseHeaderActions
  *   showDashboard={showDashboard}
  *   setShowDashboard={setShowDashboard}
- *   entityType="κτίριο"
+ *   entityType="building"
  *   onCreateNew={handleCreateBuilding}
  * />
  */
-export const EnterpriseHeaderActions: React.FC<EnterpriseHeaderActionsProps> = ({
+const EnterpriseHeaderActionsBase: React.FC<EnterpriseHeaderActionsProps> = ({
   showDashboard,
   setShowDashboard,
   entityType,
@@ -142,15 +150,21 @@ export const EnterpriseHeaderActions: React.FC<EnterpriseHeaderActionsProps> = (
   additionalActions
 }) => {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('common');
 
   // ============================================================================
-  // COMPUTED VALUES
+  // COMPUTED VALUES (i18n)
   // ============================================================================
 
-  const defaultTooltips = generateTooltips(entityType);
-  const createButtonText = customCreateText || generateCreateButtonText(entityType);
-  const finalDashboardTooltip = dashboardTooltip || defaultTooltips.dashboard;
-  const finalCreateTooltip = createTooltip || defaultTooltips.create;
+  // 🏢 ENTERPRISE: Get entity label from i18n
+  const entityLabelKey = ENTITY_TYPE_KEYS[entityType] || 'headerActions.entities.project';
+  const entityLabel = t(entityLabelKey);
+
+  // 🏢 ENTERPRISE: Generate i18n-enabled button text and tooltips
+  const dashboardLabel = t('headerActions.dashboard');
+  const createButtonText = customCreateText || t('headerActions.createNew', { entity: entityLabel });
+  const finalDashboardTooltip = dashboardTooltip || t('headerActions.toggleDashboard');
+  const finalCreateTooltip = createTooltip || t('headerActions.createTooltip', { entity: entityLabel });
 
   // ============================================================================
   // EVENT HANDLERS
@@ -181,7 +195,7 @@ export const EnterpriseHeaderActions: React.FC<EnterpriseHeaderActionsProps> = (
               aria-label={finalDashboardTooltip}
             >
               <BarChart3 className={`${iconSizes.sm} mr-2`} />
-              Dashboard
+              {dashboardLabel}
             </Button>
           </TooltipTrigger>
           <TooltipContent>{finalDashboardTooltip}</TooltipContent>
@@ -218,30 +232,31 @@ export const EnterpriseHeaderActions: React.FC<EnterpriseHeaderActionsProps> = (
 /**
  * 🏢 Convenience factory functions for common use cases
  */
+// 🏢 ENTERPRISE: Factory functions with language-neutral entity identifiers
 export const EnterpriseHeaderActionsFactories = {
   /**
    * Projects header actions factory
    */
   forProjects: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) =>
-    <EnterpriseHeaderActions {...props} entityType="έργο" />,
+    <EnterpriseHeaderActions {...props} entityType="project" />,
 
   /**
    * Buildings header actions factory
    */
   forBuildings: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) =>
-    <EnterpriseHeaderActions {...props} entityType="κτίριο" />,
+    <EnterpriseHeaderActions {...props} entityType="building" />,
 
   /**
    * Contacts header actions factory
    */
   forContacts: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) =>
-    <EnterpriseHeaderActions {...props} entityType="επαφή" />,
+    <EnterpriseHeaderActions {...props} entityType="contact" />,
 
   /**
    * Units header actions factory
    */
   forUnits: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) =>
-    <EnterpriseHeaderActions {...props} entityType="μονάδα" />
+    <EnterpriseHeaderActions {...props} entityType="unit" />
 };
 
 // Factory methods available as separate exports
@@ -249,6 +264,15 @@ export const EnterpriseHeaderActionsFactories = {
 // ============================================================================
 // EXPORTS
 // ============================================================================
+
+// 🏢 ENTERPRISE: Create component with static factory methods
+// This enables: EnterpriseHeaderActions.forProjects(...) usage
+export const EnterpriseHeaderActions = Object.assign(EnterpriseHeaderActionsBase, {
+  forProjects: EnterpriseHeaderActionsFactories.forProjects,
+  forBuildings: EnterpriseHeaderActionsFactories.forBuildings,
+  forContacts: EnterpriseHeaderActionsFactories.forContacts,
+  forUnits: EnterpriseHeaderActionsFactories.forUnits,
+}) as EnterpriseHeaderActionsComponent;
 
 export default EnterpriseHeaderActions;
 

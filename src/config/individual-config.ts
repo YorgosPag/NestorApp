@@ -113,15 +113,17 @@ export const BIRTH_COUNTRY_OPTIONS: SelectOption[] =
 // INDIVIDUAL SECTIONS CONFIGURATION
 // ============================================================================
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+// Labels are translated at runtime by components using useTranslation
 export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   // 1. ΒΑΣΙΚΑ ΣΤΟΙΧΕΙΑ
   // -------------------------------------------------------------------------
   {
     id: 'basicInfo',
-    title: 'Βασικά Στοιχεία',
+    title: 'individual.sections.basicInfo.title',
     icon: 'user',
-    description: 'Βασικές προσωπικές πληροφορίες',
+    description: 'individual.sections.basicInfo.description',
     order: 1,
     fields: [
       {
@@ -129,7 +131,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: PERSONAL_INFO_FIELD_LABELS.FIRST_NAME,
         type: 'input',
         required: true,
-        helpText: 'Το βαπτιστικό όνομα',
+        helpText: 'individual.helpTexts.firstName',
         icon: 'user',
       },
       {
@@ -137,28 +139,28 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: PERSONAL_INFO_FIELD_LABELS.LAST_NAME,
         type: 'input',
         required: true,
-        helpText: 'Το οικογενειακό όνομα',
+        helpText: 'individual.helpTexts.lastName',
         icon: 'user',
       },
       {
         id: 'fatherName',
         label: PERSONAL_INFO_FIELD_LABELS.FATHER_NAME,
         type: 'input',
-        helpText: 'Το όνομα του πατέρα',
+        helpText: 'individual.helpTexts.fatherName',
         icon: 'user-check',
       },
       {
         id: 'motherName',
         label: PERSONAL_INFO_FIELD_LABELS.MOTHER_NAME,
         type: 'input',
-        helpText: 'Το όνομα της μητέρας',
+        helpText: 'individual.helpTexts.motherName',
         icon: 'user-check',
       },
       {
         id: 'birthDate',
         label: PERSONAL_INFO_FIELD_LABELS.BIRTH_DATE,
         type: 'date',
-        helpText: 'ΗΗ/ΜΜ/ΕΕΕΕ',
+        helpText: 'individual.helpTexts.birthDate',
         icon: 'cake',
       },
       {
@@ -166,7 +168,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: PERSONAL_INFO_FIELD_LABELS.BIRTH_COUNTRY,
         type: 'select',
         options: BIRTH_COUNTRY_OPTIONS,
-        helpText: 'Η χώρα όπου γεννήθηκε',
+        helpText: 'individual.helpTexts.birthCountry',
         icon: 'globe',
       },
       {
@@ -174,7 +176,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: PERSONAL_INFO_FIELD_LABELS.GENDER,
         type: 'select',
         options: GENDER_OPTIONS,
-        helpText: 'Επιλογή φύλου',
+        helpText: 'individual.helpTexts.gender',
         icon: '⚧️',
       },
       {
@@ -183,7 +185,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         maxLength: 11,
         placeholder: '12345678901',
-        helpText: 'Αριθμός Μητρώου Κοινωνικής Ασφάλισης (11 ψηφία)',
+        helpText: 'individual.helpTexts.amka',
         icon: 'badge',
       },
     ],
@@ -194,9 +196,9 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'identity',
-    title: 'Ταυτότητα & ΑΦΜ',
+    title: 'individual.sections.identity.title',
     icon: 'credit-card',
-    description: 'Στοιχεία ταυτότητας και φορολογικά στοιχεία',
+    description: 'individual.sections.identity.description',
     order: 2,
     fields: [
       {
@@ -204,36 +206,36 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: IDENTITY_DOCUMENT_FIELD_LABELS.DOCUMENT_TYPE,
         type: 'select',
         options: DOCUMENT_TYPE_OPTIONS,
-        helpText: 'Επιλέξτε τον τύπο του εγγράφου ταυτότητας',
+        helpText: 'individual.helpTexts.documentType',
         icon: 'clipboard',
       },
       {
         id: 'documentIssuer',
         label: IDENTITY_DOCUMENT_FIELD_LABELS.DOCUMENT_ISSUER,
         type: 'input',
-        placeholder: 'π.χ. ΑΤ Αθηνών',
-        helpText: 'Η αρχή που εξέδωσε το έγγραφο',
+        placeholder: 'individual.placeholders.documentIssuer',
+        helpText: 'individual.helpTexts.documentIssuer',
         icon: 'landmark',
       },
       {
         id: 'documentNumber',
         label: IDENTITY_DOCUMENT_FIELD_LABELS.DOCUMENT_NUMBER,
         type: 'input',
-        helpText: 'Ο αριθμός του εγγράφου ταυτότητας',
+        helpText: 'individual.helpTexts.documentNumber',
         icon: 'hash',
       },
       {
         id: 'documentIssueDate',
         label: IDENTITY_DOCUMENT_FIELD_LABELS.DOCUMENT_ISSUE_DATE,
         type: 'date',
-        helpText: 'Πότε εκδόθηκε το έγγραφο',
+        helpText: 'individual.helpTexts.documentIssueDate',
         icon: '📅',
       },
       {
         id: 'documentExpiryDate',
         label: IDENTITY_DOCUMENT_FIELD_LABELS.DOCUMENT_EXPIRY_DATE,
         type: 'date',
-        helpText: 'Πότε λήγει το έγγραφο',
+        helpText: 'individual.helpTexts.documentExpiryDate',
         icon: '⏰',
       },
       {
@@ -242,15 +244,15 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         maxLength: 9,
         placeholder: '123456789',
-        helpText: 'Αριθμός Φορολογικού Μητρώου (9 ψηφία)',
+        helpText: 'individual.helpTexts.vatNumber',
         icon: 'dollar-sign',
       },
       {
         id: 'taxOffice',
         label: TAX_INFO_FIELD_LABELS.TAX_OFFICE,
         type: 'input',
-        placeholder: 'π.χ. ΔΟΥ Αθηνών',
-        helpText: 'Δημόσια Οικονομική Υπηρεσία',
+        placeholder: 'individual.placeholders.taxOffice',
+        helpText: 'individual.helpTexts.taxOffice',
         icon: 'building',
       },
     ],
@@ -261,41 +263,41 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'professional',
-    title: 'Επαγγελματικά Στοιχεία',
+    title: 'individual.sections.professional.title',
     icon: 'briefcase',
-    description: 'Πληροφορίες σχετικά με την εργασία και το επάγγελμα',
+    description: 'individual.sections.professional.description',
     order: 3,
     fields: [
       {
         id: 'profession',
         label: PROFESSIONAL_INFO_FIELD_LABELS.PROFESSION,
         type: 'input',
-        placeholder: 'π.χ. Μηχανικός, Δικηγόρος, Γιατρός',
-        helpText: 'Το κύριο επάγγελμα',
+        placeholder: 'individual.placeholders.profession',
+        helpText: 'individual.helpTexts.profession',
         icon: 'wrench',
       },
       {
         id: 'specialty',
         label: PROFESSIONAL_INFO_FIELD_LABELS.SPECIALTY,
         type: 'input',
-        placeholder: 'π.χ. Πολιτικός Μηχανικός, Καρδιολόγος',
-        helpText: 'Ειδίκευση στον τομέα εργασίας',
+        placeholder: 'individual.placeholders.specialty',
+        helpText: 'individual.helpTexts.specialty',
         icon: 'target',
       },
       {
         id: 'employer',
         label: PROFESSIONAL_INFO_FIELD_LABELS.EMPLOYER,
         type: 'input',
-        placeholder: 'π.χ. ΟΤΕ Α.Ε., Δημοτική Επιχείρηση',
-        helpText: 'Η επιχείρηση ή οργανισμός εργασίας',
+        placeholder: 'individual.placeholders.employer',
+        helpText: 'individual.helpTexts.employer',
         icon: 'factory',
       },
       {
         id: 'position',
         label: PROFESSIONAL_INFO_FIELD_LABELS.POSITION,
         type: 'input',
-        placeholder: 'π.χ. Διευθυντής, Υπάλληλος, Σύμβουλος',
-        helpText: 'Η θέση ή ο ρόλος στην εργασία',
+        placeholder: 'individual.placeholders.position',
+        helpText: 'individual.helpTexts.position',
         icon: 'briefcase',
       },
     ],
@@ -306,33 +308,33 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'address',
-    title: 'Διεύθυνση Κατοικίας',
+    title: 'individual.sections.address.title',
     icon: 'map-pin',
-    description: 'Στοιχεία διεύθυνσης κατοικίας',
+    description: 'individual.sections.address.description',
     order: 4,
     fields: [
       {
         id: 'street',
         label: ADDRESS_INFO_FIELD_LABELS.STREET,
         type: 'input',
-        placeholder: 'π.χ. Βασιλίσσης Σοφίας',
-        helpText: 'Όνομα οδού χωρίς αριθμό',
+        placeholder: 'individual.placeholders.street',
+        helpText: 'individual.helpTexts.street',
         icon: 'map-pin',
       },
       {
         id: 'streetNumber',
         label: ADDRESS_INFO_FIELD_LABELS.STREET_NUMBER,
         type: 'input',
-        placeholder: 'π.χ. 125',
-        helpText: 'Αριθμός οδού (μπορεί να περιλαμβάνει γράμματα π.χ. 25Α)',
+        placeholder: 'individual.placeholders.streetNumber',
+        helpText: 'individual.helpTexts.streetNumber',
         icon: 'hash',
       },
       {
         id: 'city',
         label: ADDRESS_INFO_FIELD_LABELS.CITY,
         type: 'input',
-        placeholder: 'π.χ. Αθήνα, Θεσσαλονίκη',
-        helpText: 'Πόλη κατοικίας',
+        placeholder: 'individual.placeholders.city',
+        helpText: 'individual.helpTexts.city',
         icon: 'building',
       },
       {
@@ -341,7 +343,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         type: 'input',
         placeholder: '12345',
         maxLength: 5,
-        helpText: 'Ταχυδρομικός κώδικας (5 ψηφία)',
+        helpText: 'individual.helpTexts.postalCode',
         icon: 'mail',
       },
     ],
@@ -352,9 +354,9 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'communication',
-    title: 'Επικοινωνία & Social Media',
+    title: 'individual.sections.communication.title',
     icon: 'smartphone',
-    description: 'Δυναμική διαχείριση τηλεφώνων, emails, ιστοσελίδων και social media',
+    description: 'individual.sections.communication.description',
     order: 5,
     fields: [
       // 🎯 DUMMY FIELD για custom renderer triggering
@@ -373,9 +375,9 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'photo',
-    title: 'Φωτογραφία',
+    title: 'individual.sections.photo.title',
     icon: 'camera',
-    description: 'Upload φωτογραφιών για το προφίλ του ατόμου',
+    description: 'individual.sections.photo.description',
     order: 6,
     fields: [
       // Αφαιρέθηκε το textarea field για σημειώσεις φωτογραφίας
@@ -387,13 +389,34 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   // -------------------------------------------------------------------------
   {
     id: 'relationships',
-    title: 'Σχέσεις',
+    title: 'individual.sections.relationships.title',
     icon: 'users',
-    description: 'Διαχείριση επαγγελματικών σχέσεων και οργανωτικής ιεραρχίας',
+    description: 'individual.sections.relationships.description',
     order: 7,
     fields: [
       // Fields are handled by ContactRelationshipManager component
       // No individual fields needed as this is a complex UI component
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 8. ΑΡΧΕΙΑ - 🏢 ENTERPRISE FILE MANAGEMENT (ADR-031)
+  // -------------------------------------------------------------------------
+  {
+    id: 'files',
+    title: 'individual.sections.files.title',
+    icon: 'file-text',
+    description: 'individual.sections.files.description',
+    order: 8,
+    fields: [
+      // 🎯 DUMMY FIELD για custom renderer triggering
+      // Fields are handled by EntityFilesManager component
+      {
+        id: 'files',
+        label: 'contacts.individual.sections.files.title',
+        type: 'input'
+        // Dummy field - actual UI rendered by EntityFilesManager
+      }
     ],
   },
 ];

@@ -89,7 +89,8 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
 
   // 🏢 ENTERPRISE: All hooks MUST be called before any early returns (React Rules of Hooks)
   // Helper για τα colors ανά τύπο - memoized για performance
-  const getColoredSettings = React.useCallback((baseSettings: Record<string, unknown>) => {
+  // 🏢 ENTERPRISE FIX: Generic function to preserve type information
+  const getColoredSettings = React.useCallback(<T extends { color?: string }>(baseSettings: T): T => {
     switch (config.type) {
       case 'hover':
         return { ...baseSettings, color: UI_COLORS.ORANGE };

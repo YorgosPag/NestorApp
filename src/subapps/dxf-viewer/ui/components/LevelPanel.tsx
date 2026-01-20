@@ -1,9 +1,11 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_LEVEL_PANEL = false;
 
 import React, { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Trash2, Plus, Edit, MousePointer, Pen, Move, Info, Shapes } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
@@ -77,6 +79,7 @@ export function LevelPanel({
   onLayersMerge,
   onColorGroupsMerge
 }: LevelPanelProps = {}) {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
 
   const {
@@ -141,7 +144,7 @@ export function LevelPanel({
   const handleAddLevel = async () => {
     if (isAdding) return;
 
-    const safeName = newLevelName.trim() || `Επίπεδο ${levels.length + 1}`;
+    const safeName = newLevelName.trim() || t('panels.levels.defaultLevelName', { number: levels.length + 1 });
 
     try {
       setIsAdding(true);
@@ -159,7 +162,7 @@ export function LevelPanel({
 
   const handleRename = (levelId: string) => {
     if (!editingName.trim()) {
-      notifications.warning("Το όνομα δεν μπορεί να είναι κενό.");
+      notifications.warning(t('panels.levels.emptyNameWarning'));
       return;
     }
     renameLevel(levelId, editingName);
@@ -263,7 +266,7 @@ export function LevelPanel({
       {/* ✅ ENTERPRISE: Αφαίρεση περιττού wrapper - justify-between χωρίς νόημα με 1 child (ADR-003) */}
       <h3 className={PANEL_TOKENS.LEVEL_PANEL.HEADER.TEXT}>
         <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.HEADER.ICON} />
-        Επίπεδα Έργου
+        {t('panels.levels.projectLevels')}
       </h3>
 
       {Array.isArray(levels) && levels.length > 0 ? (
@@ -305,11 +308,11 @@ export function LevelPanel({
                           detail: { levelId: level.id, origin: 'card' }
                         }));
                       }}
-                      aria-label={`Επιλογή επιπέδου ${level.name}`}
+                      aria-label={t('panels.levels.selectLevel', { name: level.name })}
                     >
                       <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{level.name}</div>
                       <div className={`${PANEL_TOKENS.TABS.TAB_LABEL.SIZE} ${PANEL_LAYOUT.OPACITY['75']}`}>
-                        {hasContent ? `${scene.entities.length} στοιχεία` : 'Κενό επίπεδο'}
+                        {hasContent ? t('panels.levels.elementsCount', { count: scene.entities.length }) : t('panels.levels.emptyLevel')}
                       </div>
                     </button>
                   )}
@@ -321,7 +324,7 @@ export function LevelPanel({
                           startEditing(level);
                         }}
                         className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.EDIT}
-                        title="Μετονομασία επιπέδου"
+                        title={t('panels.levels.renameLevel')}
                       >
                         <Edit className={iconSizes.sm} />
                     </button>
@@ -332,7 +335,7 @@ export function LevelPanel({
                           handleDeleteLevel(level.id);
                         }}
                         className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.DELETE}
-                        title="Διαγραφή επιπέδου"
+                        title={t('panels.levels.deleteLevel')}
                       >
                         <Trash2 className={iconSizes.sm} />
                       </button>
@@ -346,7 +349,7 @@ export function LevelPanel({
       ) : (
         <div className={PANEL_TOKENS.LEVEL_PANEL.EMPTY_STATE.CONTAINER}>
           <NAVIGATION_ENTITIES.building.icon className={PANEL_TOKENS.LEVEL_PANEL.EMPTY_STATE.ICON} />
-          <p>Δεν υπάρχουν επίπεδα</p>
+          <p>{t('panels.levels.noLevels')}</p>
         </div>
       )}
 
@@ -357,7 +360,7 @@ export function LevelPanel({
             value={newLevelName}
             onChange={(e) => setNewLevelName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddLevel()}
-            placeholder="Όνομα νέου επιπέδου..."
+            placeholder={t('panels.levels.newLevelPlaceholder')}
             disabled={isAdding}
             className={PANEL_TOKENS.LEVEL_PANEL.ADD_INPUT.BASE}
           />

@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { GripVertical, ChevronRight, ChevronDown, Hash, Plus, Edit3, Save, X, Trash2 } from 'lucide-react';
+import { useTranslation } from '@/i18n';
+import { GripVertical, ChevronRight, ChevronDown, Hash, Plus, Save, X, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ObligationArticle } from '@/types/obligations';
 import { ParagraphItem } from './ParagraphItem';
@@ -42,6 +43,7 @@ export function ArticleItem({
   activeItemId,
 }: ArticleItemProps) {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('obligations');
 
   return (
     <div
@@ -70,20 +72,20 @@ export function ArticleItem({
               <Input
                 value={article.title}
                 onChange={(e) => handlers.updateArticle(sectionId, article.id, { title: e.target.value })}
-                placeholder="Τίτλος άρθρου..."
+                placeholder={t('article.titlePlaceholder')}
                 className="text-sm font-medium"
               />
               <Textarea
                 value={article.content}
                 onChange={(e) => handlers.updateArticle(sectionId, article.id, { content: e.target.value })}
-                placeholder="Περιεχόμενο άρθρου..."
+                placeholder={t('article.contentPlaceholder')}
                 rows={2}
                 className="text-sm"
               />
             </div>
           ) : (
             <div className="cursor-pointer" onClick={() => handlers.startEditing('article', article.id)}>
-              <div className="font-medium text-sm">{article.title || <span className="text-muted-foreground italic">Χωρίς τίτλο</span>}</div>
+              <div className="font-medium text-sm">{article.title || <span className="text-muted-foreground italic">{t('article.noTitle')}</span>}</div>
               {article.content && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{article.content}</div>}
             </div>
           )}
@@ -97,7 +99,7 @@ export function ArticleItem({
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => handlers.addParagraph(sectionId, article.id)} className="h-7 px-2" title="Προσθήκη παραγράφου"><Plus className={iconSizes.xs} /></Button>
+                <Button variant="ghost" size="sm" onClick={() => handlers.addParagraph(sectionId, article.id)} className="h-7 px-2" title={t('article.addParagraph')}><Plus className={iconSizes.xs} /></Button>
                 <Button variant="ghost" size="sm" onClick={() => handlers.deleteArticle(sectionId, article.id)} className="h-7 px-2 text-destructive hover:text-destructive/80"><Trash2 className={iconSizes.xs} /></Button>
               </>
             )}

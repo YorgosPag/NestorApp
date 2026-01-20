@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 /**
  * ============================================================================
  * 🪝 REACT HOOK ΓΙΑ ENTERPRISE MESSAGES SYSTEM
@@ -5,12 +6,15 @@
  *
  * PROFESSIONAL REACT INTEGRATION ΓΙΑ CENTRALIZED MESSAGES
  *
+ * 🏢 ENTERPRISE: Now uses i18n system instead of hardcoded strings!
+ *
  * Features:
  * - Type-safe message access
  * - Performance optimized με useMemo
  * - Consistent API για όλα τα components
  * - Zero re-renders με proper caching
  * - Enterprise-grade patterns
+ * - Full i18n support (multi-language)
  *
  * Usage Example:
  * ```tsx
@@ -33,7 +37,10 @@
  */
 
 import { useMemo } from 'react';
-import { getMessagesManager, Messages, type EnterpriseMessages } from '@/core/configuration/enterprise-messages-system';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
+// Legacy imports kept for type compatibility
+import type { EnterpriseMessages } from '@/core/configuration/enterprise-messages-system';
 
 // ============================================================================
 // 🎯 HOOK INTERFACE - TYPE-SAFE RETURNS
@@ -148,124 +155,157 @@ export interface UseEnterpriseMessagesReturn {
 /**
  * Enterprise Messages Hook
  *
+ * 🏢 ENTERPRISE: Now uses i18n system for multi-language support!
  * Παρέχει type-safe access σε όλα τα centralized messages
  * με optimized performance και consistent API
  */
 export function useEnterpriseMessages(): UseEnterpriseMessagesReturn {
-  const messagesManager = getMessagesManager();
+  const { t } = useTranslation('common');
 
   // ============================================================================
-  // 🚀 MEMOIZED MESSAGE ACCESS - PERFORMANCE OPTIMIZED
+  // 🚀 MEMOIZED MESSAGE ACCESS - i18n ENABLED
   // ============================================================================
 
   return useMemo(() => {
-    const allMessages = messagesManager.getAllMessages();
-
     return {
-      // 🏠 Empty States - Pre-computed για performance
+      // 🏠 Empty States - i18n enabled
       emptyState: {
-        contact: allMessages.emptyStates.contact,
-        project: allMessages.emptyStates.project,
-        building: allMessages.emptyStates.building,
-        storage: allMessages.emptyStates.storage,
-        unit: allMessages.emptyStates.unit,
-        property: allMessages.emptyStates.property,
-        generic: allMessages.emptyStates.generic,
+        contact: {
+          title: t('emptyState.contact.title'),
+          description: t('emptyState.contact.description'),
+        },
+        project: {
+          title: t('emptyState.project.title'),
+          description: t('emptyState.project.description'),
+        },
+        building: {
+          title: t('emptyState.building.title'),
+          description: t('emptyState.building.description'),
+        },
+        storage: {
+          title: t('emptyState.storage.title'),
+          description: t('emptyState.storage.description'),
+        },
+        unit: {
+          title: t('emptyState.unit.title'),
+          description: t('emptyState.unit.description'),
+        },
+        property: {
+          title: t('emptyState.property.title'),
+          description: t('emptyState.property.description'),
+        },
+        generic: {
+          title: t('emptyState.generic.title'),
+          description: t('emptyState.generic.description'),
+        },
       },
 
-      // 🔘 Actions - Pre-computed
+      // 🔘 Actions - i18n enabled
       action: {
-        save: allMessages.actions.buttons.save,
-        cancel: allMessages.actions.buttons.cancel,
-        delete: allMessages.actions.buttons.delete,
-        edit: allMessages.actions.buttons.edit,
-        create: allMessages.actions.buttons.create,
-        close: allMessages.actions.buttons.close,
-        confirm: allMessages.actions.buttons.confirm,
-        back: allMessages.actions.buttons.back,
-        next: allMessages.actions.buttons.next,
-        finish: allMessages.actions.buttons.finish,
+        save: t('actions.save'),
+        cancel: t('actions.cancel'),
+        delete: t('actions.delete'),
+        edit: t('actions.edit'),
+        create: t('actions.create'),
+        close: t('actions.close'),
+        confirm: t('actions.confirm'),
+        back: t('actions.back'),
+        next: t('actions.next'),
+        finish: t('actions.finish'),
       },
 
-      // ✅ Validation - Mixed static και functions
+      // ✅ Validation - i18n enabled with functions
       validation: {
-        required: allMessages.validation.required,
-        email: allMessages.validation.invalid.email,
-        phone: allMessages.validation.invalid.phone,
-        url: allMessages.validation.invalid.url,
-        date: allMessages.validation.invalid.date,
-        number: allMessages.validation.invalid.number,
-        minLength: allMessages.validation.limits.minLength,
-        maxLength: allMessages.validation.limits.maxLength,
-        fileSize: allMessages.validation.limits.fileSize,
+        required: t('validationMessages.required'),
+        email: t('validationMessages.email'),
+        phone: t('validationMessages.phone'),
+        url: t('validationMessages.url'),
+        date: t('validationMessages.date'),
+        number: t('validationMessages.number'),
+        minLength: (min: number) => t('validationMessages.minLength', { min }),
+        maxLength: (max: number) => t('validationMessages.maxLength', { max }),
+        fileSize: (max: string) => t('validationMessages.fileSize', { max }),
       },
 
-      // 🔄 Loading - Pre-computed
+      // 🔄 Loading - i18n enabled
       loading: {
-        generic: allMessages.actions.loading.generic,
-        saving: allMessages.actions.loading.saving,
-        loading: allMessages.actions.loading.loading,
-        deleting: allMessages.actions.loading.deleting,
-        uploading: allMessages.actions.loading.uploading,
+        generic: t('loadingStates.generic'),
+        saving: t('loadingStates.saving'),
+        loading: t('loadingStates.loading'),
+        deleting: t('loadingStates.deleting'),
+        uploading: t('loadingStates.uploading'),
       },
 
-      // 📝 Confirmations - Pre-computed
+      // 📝 Confirmations - i18n enabled
       confirmation: {
-        delete: allMessages.actions.confirmations.delete,
-        discard: allMessages.actions.confirmations.discard,
-        overwrite: allMessages.actions.confirmations.overwrite,
-        logout: allMessages.actions.confirmations.logout,
+        delete: t('confirmations.delete'),
+        discard: t('confirmations.discard'),
+        overwrite: t('confirmations.overwrite'),
+        logout: t('confirmations.logout'),
       },
 
-      // 🧭 Navigation - Pre-computed structure
+      // 🧭 Navigation - i18n enabled
       navigation: {
         breadcrumbs: {
-          home: allMessages.navigation.breadcrumbs.home,
-          contacts: allMessages.navigation.breadcrumbs.contacts,
-          projects: allMessages.navigation.breadcrumbs.projects,
-          buildings: allMessages.navigation.breadcrumbs.buildings,
-          units: allMessages.navigation.breadcrumbs.units,
-          storages: allMessages.navigation.breadcrumbs.storages,
-          details: allMessages.navigation.breadcrumbs.details,
+          home: t('navigation.home'),
+          contacts: t('navigation.contacts', { defaultValue: 'Επαφές' }),
+          projects: t('navigation.projects', { defaultValue: 'Έργα' }),
+          buildings: t('navigation.buildings', { defaultValue: 'Κτίρια' }),
+          units: t('navigation.units', { defaultValue: 'Μονάδες' }),
+          storages: t('navigation.storages', { defaultValue: 'Αποθήκες' }),
+          details: t('navigation.details', { defaultValue: 'Λεπτομέρειες' }),
         },
         menu: {
-          dashboard: allMessages.navigation.menu.dashboard,
-          settings: allMessages.navigation.menu.settings,
-          help: allMessages.navigation.menu.help,
-          profile: allMessages.navigation.menu.profile,
-          logout: allMessages.navigation.menu.logout,
+          dashboard: t('headerActions.dashboard'),
+          settings: t('userMenu.settings'),
+          help: t('userMenu.help'),
+          profile: t('userMenu.profile'),
+          logout: t('userMenu.logout'),
         },
       },
 
-      // 📊 Status - Pre-computed structure
+      // 📊 Status - i18n enabled
       status: {
         states: {
-          active: allMessages.status.states.active,
-          inactive: allMessages.status.states.inactive,
-          pending: allMessages.status.states.pending,
-          completed: allMessages.status.states.completed,
-          cancelled: allMessages.status.states.cancelled,
-          draft: allMessages.status.states.draft,
+          active: t('filters.status.active'),
+          inactive: t('filters.status.inactive'),
+          pending: t('filters.status.pending'),
+          completed: t('filters.status.completed'),
+          cancelled: t('status.completed', { defaultValue: 'Ακυρωμένο' }),
+          draft: t('documentStatus.draft'),
         },
         notifications: {
-          success: allMessages.status.notifications.success,
-          error: allMessages.status.notifications.error,
-          warning: allMessages.status.notifications.warning,
-          info: allMessages.status.notifications.info,
+          success: t('toast.success'),
+          error: t('toast.error'),
+          warning: t('toast.warning'),
+          info: t('toast.info'),
         },
       },
 
-      // 🔧 Utility Methods - Type-safe helpers
-      getEmptyStateFor: (entityType) => {
-        return allMessages.emptyStates[entityType];
-      },
+      // 🔧 Utility Methods - i18n enabled helpers
+      getEmptyStateFor: (entityType) => ({
+        title: t(`emptyState.${entityType}.title`),
+        description: t(`emptyState.${entityType}.description`),
+      }),
 
       getActionButton: (action) => {
-        return allMessages.actions.buttons[action];
+        const buttonKeys: Record<string, string> = {
+          save: 'actions.save',
+          cancel: 'actions.cancel',
+          delete: 'actions.delete',
+          edit: 'actions.edit',
+          create: 'actions.create',
+          close: 'actions.close',
+          confirm: 'actions.confirm',
+          back: 'actions.back',
+          next: 'actions.next',
+          finish: 'actions.finish',
+        };
+        return t(buttonKeys[action] || `actions.${action}`);
       },
 
     } as const;
-  }, [messagesManager]); // Dependency μόνο ο manager (σταθερός)
+  }, [t]); // Dependency on t function for language changes
 }
 
 // ============================================================================

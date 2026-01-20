@@ -1,0 +1,373 @@
+rules_version = '2';
+
+// =============================================================================
+// 🔒 ENTERPRISE FIREBASE STORAGE SECURITY RULES
+// =============================================================================
+//
+// 🎯 ΣΤΡΑΤΗΓΙΚΗ: Least privilege - explicit allow per path pattern
+// 🛡️ ΑΡΧΗ: Authentication required + path-based authorization
+// 📋 ADR-031: Canonical File Storage System
+//
+// PATH SCHEME (IDs only, no Greek names):
+// /companies/{companyId}/projects/{projectId}/entities/{entityType}/{entityId}/
+//   domains/{domain}/categories/{category}/files/{fileId}.{ext}
+//
+// LEGACY PATHS (temporary backward compatibility):
+// /contacts/photos/{filename}
+// /floor-plans/{buildingId}/{floorId}/{filename}
+//
+// =============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // =========================================================================
+    // 🚫 DEFAULT DENY-ALL RULE
+    // =========================================================================
+    // Any path not explicitly allowed is DENIED
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // 🔐 HELPER FUNCTIONS
+    // =========================================================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user owns the resource (by UID in path or metadata)
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Get user's companyId from custom claims
+    function getUserCompanyId() {
+      return request.auth.token.companyId;
+    }
+
+    // Check if user belongs to the specified company
+    function belongsToCompany(companyId) {
+      return isAuthenticated() && getUserCompanyId() == companyId;
+    }
+
+    // Check if user is internal (has globalRole claim)
+    function isInternalUser() {
+      return isAuthenticated() &&
+             request.auth.token.globalRole in ['super_admin', 'company_admin', 'internal_user'];
+    }
+
+    // Check if user is super_admin (system-wide access)
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.globalRole == 'super_admin';
+    }
+
+    // Validate file size (max 50MB)
+    function isValidFileSize() {
+      return request.resource.size < 50 * 1024 * 1024;
+    }
+
+    // Validate image file type
+    function isImageType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Validate PDF file type
+    function isPDFType() {
+      return request.resource.contentType == 'application/pdf';
+    }
+
+    // Validate allowed content types
+    function isAllowedContentType() {
+      return request.resource.contentType.matches('image/.*') ||
+             request.resource.contentType == 'application/pdf' ||
+             request.resource.contentType == 'application/octet-stream' ||
+             request.resource.contentType.matches('application/.*');
+    }
+
+    // =========================================================================
+    // 🔐 FIRESTORE INTEGRATION HELPERS (Storage Rules v2)
+    // =========================================================================
+    // These helpers validate Storage writes against Firestore FileRecord documents
+
+    // Extract fileId from fileName (format: "fileId.ext")
+    // Example: "file_abc123.jpg" → "file_abc123"
+    function extractFileId(fileName) {
+      return fileName.split('.')[0];
+    }
+
+    // Get FileRecord document path for validation
+    function getFileRecordPath(fileId) {
+      return /databases/(default)/documents/files/$(fileId);
+    }
+
+    // Check if FileRecord exists with status 'pending'
+    // ENTERPRISE: Only allow write if pending record exists (Step A must complete before Step B)
+    function hasPendingFileRecord(fileId) {
+      return firestore.exists(getFileRecordPath(fileId)) &&
+             firestore.get(getFileRecordPath(fileId)).data.status == 'pending';
+    }
+
+    // Validate FileRecord fields match storage path segments (WITHOUT projectId)
+    // ENTERPRISE: Ensures file is uploaded to correct location
+    function fileRecordMatchesPathSimple(fileId, companyId, entityType, entityId, domain, category) {
+      let record = firestore.get(getFileRecordPath(fileId)).data;
+      return record.companyId == companyId &&
+             record.entityType == entityType &&
+             record.entityId == entityId &&
+             record.domain == domain &&
+             record.category == category &&
+             // 🔐 ENTERPRISE: projectId must be null/undefined for simplified path
+             (record.projectId == null || !('projectId' in record));
+    }
+
+    // Validate FileRecord fields match storage path segments (WITH projectId)
+    // 🏢 ENTERPRISE: STRICT path matching including projectId
+    function fileRecordMatchesPathWithProject(fileId, companyId, projectId, entityType, entityId, domain, category) {
+      let record = firestore.get(getFileRecordPath(fileId)).data;
+      return record.companyId == companyId &&
+             record.projectId == projectId &&
+             record.entityType == entityType &&
+             record.entityId == entityId &&
+             record.domain == domain &&
+             record.category == category;
+    }
+
+    // 🔐 ENTERPRISE: Strict storagePath validation (generic)
+    // Compares FileRecord.storagePath with the expected path
+    // NOTE: expectedPath must be constructed at the rule level due to 7-arg limit
+    function storagePathEquals(fileId, expectedPath) {
+      let record = firestore.get(getFileRecordPath(fileId)).data;
+      return record.storagePath == expectedPath;
+    }
+
+    // Check if FileRecord exists and storagePath matches (for delete operations)
+    // 🏢 ENTERPRISE: Delete requires existing FileRecord with matching storagePath
+    function hasFileRecordWithPath(fileId, companyId, expectedPath) {
+      return firestore.exists(getFileRecordPath(fileId)) &&
+             firestore.get(getFileRecordPath(fileId)).data.companyId == companyId &&
+             firestore.get(getFileRecordPath(fileId)).data.storagePath == expectedPath;
+    }
+
+    // Check if FileRecord status is 'ready' (for secure reads)
+    function hasReadyFileRecord(fileId) {
+      return firestore.exists(getFileRecordPath(fileId)) &&
+             firestore.get(getFileRecordPath(fileId)).data.status == 'ready';
+    }
+
+    // 🏢 ENTERPRISE: Ownership Principle - Creator can ALWAYS access their files
+    // Pattern: SAP / Salesforce / Google Drive / Microsoft OneDrive
+    // If you created it, you can read it - no claims required
+    function isFileCreator(fileId) {
+      return firestore.exists(getFileRecordPath(fileId)) &&
+             firestore.get(getFileRecordPath(fileId)).data.createdBy == request.auth.uid;
+    }
+
+    // =========================================================================
+    // 🏢 CANONICAL ENTERPRISE PATH (NEW UPLOADS)
+    // =========================================================================
+    // Path: /companies/{companyId}/projects/{projectId}/entities/{entityType}/{entityId}/
+    //       domains/{domain}/categories/{category}/files/{fileId}.{ext}
+    //
+    // Authorization: User must belong to company OR be super_admin
+    // =========================================================================
+
+    match /companies/{companyId}/projects/{projectId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{fileName} {
+
+      // 📖 READ: Ownership Principle + Company Access
+      // 🏢 ENTERPRISE: Pattern SAP / Salesforce / Google Drive / Microsoft OneDrive
+      // Priority 1: Creator can ALWAYS read their files (no claims required)
+      // Priority 2: Company members can read 'ready' files
+      // Priority 3: Super admin can read anything
+      allow read: if isFileCreator(extractFileId(fileName))
+                  || ((belongsToCompany(companyId) || isSuperAdmin()) && hasReadyFileRecord(extractFileId(fileName)));
+
+      // ✍️ WRITE: HARDENED with Firestore validation + STRICT storagePath match
+      // 🏢 ENTERPRISE: Step A (createPendingFileRecord) MUST complete before Step B (upload)
+      // This prevents unauthorized file uploads without a valid FileRecord
+      allow write: if (belongsToCompany(companyId) || isSuperAdmin())
+                   && isValidFileSize()
+                   && isAllowedContentType()
+                   // 🔐 SECURITY: Verify pending FileRecord exists
+                   && hasPendingFileRecord(extractFileId(fileName))
+                   // 🔐 SECURITY: Verify path matches FileRecord fields (WITH projectId)
+                   && fileRecordMatchesPathWithProject(
+                        extractFileId(fileName),
+                        companyId,
+                        projectId,
+                        entityType,
+                        entityId,
+                        domain,
+                        category
+                      )
+                   // 🔐 SECURITY: STRICT storagePath equality (1:1 match with FileRecord.storagePath)
+                   && storagePathEquals(
+                        extractFileId(fileName),
+                        'companies/' + companyId + '/projects/' + projectId + '/entities/' + entityType + '/' + entityId + '/domains/' + domain + '/categories/' + category + '/files/' + fileName
+                      );
+
+      // 🗑️ DELETE: HARDENED - requires existing FileRecord with STRICT storagePath match
+      // 🏢 ENTERPRISE: Not just company membership, but exact path ownership
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin())
+                    && hasFileRecordWithPath(
+                         extractFileId(fileName),
+                         companyId,
+                         'companies/' + companyId + '/projects/' + projectId + '/entities/' + entityType + '/' + entityId + '/domains/' + domain + '/categories/' + category + '/files/' + fileName
+                       );
+    }
+
+    // =========================================================================
+    // 🏢 SIMPLIFIED ENTERPRISE PATH (without project scope)
+    // =========================================================================
+    // Path: /companies/{companyId}/entities/{entityType}/{entityId}/
+    //       domains/{domain}/categories/{category}/files/{fileId}.{ext}
+    //
+    // For files not associated with a specific project
+    // =========================================================================
+
+    match /companies/{companyId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{fileName} {
+
+      // 📖 READ: Ownership Principle + Company Access
+      // 🏢 ENTERPRISE: Pattern SAP / Salesforce / Google Drive / Microsoft OneDrive
+      // Priority 1: Creator can ALWAYS read their files (no claims required)
+      // Priority 2: Company members can read 'ready' files
+      // Priority 3: Super admin can read anything
+      allow read: if isFileCreator(extractFileId(fileName))
+                  || ((belongsToCompany(companyId) || isSuperAdmin()) && hasReadyFileRecord(extractFileId(fileName)));
+
+      // ✍️ WRITE: HARDENED with Firestore validation + STRICT storagePath match
+      // 🏢 ENTERPRISE: Same security as project-scoped path
+      allow write: if (belongsToCompany(companyId) || isSuperAdmin())
+                   && isValidFileSize()
+                   && isAllowedContentType()
+                   // 🔐 SECURITY: Verify pending FileRecord exists
+                   && hasPendingFileRecord(extractFileId(fileName))
+                   // 🔐 SECURITY: Verify path matches FileRecord fields (WITHOUT projectId)
+                   && fileRecordMatchesPathSimple(
+                        extractFileId(fileName),
+                        companyId,
+                        entityType,
+                        entityId,
+                        domain,
+                        category
+                      )
+                   // 🔐 SECURITY: STRICT storagePath equality (1:1 match with FileRecord.storagePath)
+                   && storagePathEquals(
+                        extractFileId(fileName),
+                        'companies/' + companyId + '/entities/' + entityType + '/' + entityId + '/domains/' + domain + '/categories/' + category + '/files/' + fileName
+                      );
+
+      // 🗑️ DELETE: HARDENED - requires existing FileRecord with STRICT storagePath match
+      // 🏢 ENTERPRISE: Not just company membership, but exact path ownership
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin())
+                    && hasFileRecordWithPath(
+                         extractFileId(fileName),
+                         companyId,
+                         'companies/' + companyId + '/entities/' + entityType + '/' + entityId + '/domains/' + domain + '/categories/' + category + '/files/' + fileName
+                       );
+    }
+
+    // =========================================================================
+    // 📸 LEGACY: CONTACT PHOTOS (Backward Compatibility)
+    // =========================================================================
+    // Path: /contacts/photos/{filename}
+    //
+    // ⚠️ LEGACY: Will be migrated to canonical path
+    // Keep for reading existing files, restrict new writes
+    // =========================================================================
+
+    match /contacts/photos/{fileName} {
+
+      // 📖 READ: Any authenticated user (for profile display)
+      // TODO: Restrict to internal users after migration
+      allow read: if isAuthenticated();
+
+      // ✍️ WRITE: Authenticated users (temporary - new uploads should use canonical)
+      // Will be removed after migration
+      allow write: if isAuthenticated()
+                   && isValidFileSize()
+                   && isImageType();
+
+      // 🗑️ DELETE: Authenticated users
+      allow delete: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 🏗️ LEGACY: FLOOR PLANS (Backward Compatibility)
+    // =========================================================================
+    // Path: /floor-plans/{buildingId}/{floorId}/{filename}
+    //
+    // ⚠️ LEGACY: Will be migrated to canonical path
+    // =========================================================================
+
+    match /floor-plans/{buildingId}/{floorId}/{fileName} {
+
+      // 📖 READ: Any authenticated user
+      allow read: if isAuthenticated();
+
+      // ✍️ WRITE: Authenticated users (internal)
+      allow write: if isAuthenticated()
+                   && isValidFileSize()
+                   && (isPDFType() || request.resource.contentType == 'application/octet-stream');
+
+      // 🗑️ DELETE: Authenticated users
+      allow delete: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 🏢 LEGACY: COMPANY LOGOS
+    // =========================================================================
+    // Path: /companies/logos/{filename}
+    // =========================================================================
+
+    match /companies/logos/{fileName} {
+
+      allow read: if isAuthenticated();
+
+      allow write: if isAuthenticated()
+                   && isValidFileSize()
+                   && isImageType();
+
+      allow delete: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 🎨 CAD FILES (DXF/Technical Drawings)
+    // =========================================================================
+    // Path: /cad/{userId}/{fileId}/{filename}
+    // Ownership-based access for CAD files
+    // =========================================================================
+
+    match /cad/{userId}/{fileId}/{fileName} {
+
+      // 📖 READ: Owner or super_admin
+      allow read: if isOwner(userId) || isSuperAdmin();
+
+      // ✍️ WRITE: Owner only
+      allow write: if isOwner(userId)
+                   && isValidFileSize();
+
+      // 🗑️ DELETE: Owner or super_admin
+      allow delete: if isOwner(userId) || isSuperAdmin();
+    }
+
+    // =========================================================================
+    // 📄 TEMPORARY UPLOADS (for processing)
+    // =========================================================================
+    // Path: /temp/{userId}/{filename}
+    // Short-lived uploads that will be moved to canonical path
+    // =========================================================================
+
+    match /temp/{userId}/{fileName} {
+
+      // Only owner can access their temp files
+      allow read, write: if isOwner(userId)
+                         && isValidFileSize();
+
+      allow delete: if isOwner(userId);
+    }
+
+  }
+}

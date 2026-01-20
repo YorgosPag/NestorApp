@@ -5,6 +5,8 @@ import React from 'react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectHeaderProps {
   name: string;
@@ -13,6 +15,8 @@ interface ProjectHeaderProps {
 }
 
 export function ProjectHeader({ name, buildingsCount, totalUnits }: ProjectHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const colors = useSemanticColors();
 
   return (
@@ -21,7 +25,7 @@ export function ProjectHeader({ name, buildingsCount, totalUnits }: ProjectHeade
       <div>
         <div className="font-semibold text-foreground">{name}</div>
         <div className="text-sm text-muted-foreground">
-          {buildingsCount} κτίρια • {totalUnits} μονάδες
+          {t('structure.buildingsCount', { count: buildingsCount })} • {t('structure.unitsCount', { count: totalUnits })}
         </div>
       </div>
     </div>

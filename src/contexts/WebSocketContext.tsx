@@ -378,6 +378,8 @@ export function WebSocketDebugPanel() {
   const { connectionState, getStats, reconnect } = useWebSocket();
   const [stats, setStats] = useState<WebSocketStats | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   useEffect(() => {
     if (isOpen) {

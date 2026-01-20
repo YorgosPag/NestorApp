@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 /**
  * 🏗️ FIRESTORE PROJECTS HOOK
@@ -7,8 +9,8 @@ import { useState, useEffect, useRef } from 'react';
  * Option A Architecture: Διαχωρισμένο από /api/audit/bootstrap
  *
  * @module hooks/useFirestoreProjects
- * @version 2.0.0
- * @enterprise Phase 3 - Data Architecture Separation
+ * @version 3.0.0
+ * @enterprise Phase 4 - Authenticated API Client + Auth-Ready Gating
  */
 
 export interface FirestoreProject {
@@ -29,21 +31,20 @@ export interface FirestoreProject {
 }
 
 // ============================================================================
-// API RESPONSE TYPE
+// API RESPONSE TYPE - UNWRAPPED DATA
 // ============================================================================
 
-interface ProjectListResponse {
-  success: boolean;
-  data?: {
-    projects: FirestoreProject[];
-    count: number;
-    loadedAt: string;
-    source: 'cache' | 'firestore';
-  };
-  error?: {
-    code: string;
-    message: string;
-  };
+/**
+ * 🏢 ENTERPRISE: Response data type (apiClient returns unwrapped data)
+ *
+ * The endpoint returns: { success: true, data: { projects, count, ... } }
+ * But apiClient.get() unwraps it and returns just the data object.
+ */
+interface ProjectListData {
+  projects: FirestoreProject[];
+  count: number;
+  loadedAt: string;
+  source: 'cache' | 'firestore';
 }
 
 // ============================================================================
@@ -51,6 +52,9 @@ interface ProjectListResponse {
 // ============================================================================
 
 export function useFirestoreProjects() {
+  // 🔐 ENTERPRISE: Wait for auth state before making API calls
+  const { user, loading: authLoading } = useAuth();
+
   const [projects, setProjects] = useState<FirestoreProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +64,19 @@ export function useFirestoreProjects() {
 
   useEffect(() => {
     async function fetchProjects() {
+      // 🔐 AUTH-READY GATING - Wait for authentication
+      if (authLoading) {
+        console.log('⏳ [useFirestoreProjects] Waiting for auth state...');
+        return;
+      }
+
+      if (!user) {
+        // User not authenticated - cannot proceed
+        setLoading(false);
+        setError('User not authenticated');
+        return;
+      }
+
       // Cancel any in-flight request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -75,13 +92,9 @@ export function useFirestoreProjects() {
 
         console.log('🏗️ [useFirestoreProjects] Fetching from /api/projects/list...');
 
-        const response = await fetch('/api/projects/list', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
-        });
+        // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + unwrap)
+        // apiClient.get() returns unwrapped data (not { success, data })
+        const result = await apiClient.get<ProjectListData>('/api/projects/list');
 
         // Check if request was aborted
         if (controller.signal.aborted) {
@@ -89,24 +102,14 @@ export function useFirestoreProjects() {
           return;
         }
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // 🏢 ENTERPRISE: Validate unwrapped data
+        if (!result || !result.projects) {
+          throw new Error('Invalid response format from API');
         }
 
-        const result: ProjectListResponse = await response.json();
+        console.log(`✅ [useFirestoreProjects] Loaded ${result.count} projects (source: ${result.source})`);
 
-        // Check if request was aborted after parsing
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        if (!result.success || !result.data) {
-          throw new Error(result.error?.message || 'Unknown API error');
-        }
-
-        console.log(`✅ [useFirestoreProjects] Loaded ${result.data.count} projects (source: ${result.data.source})`);
-
-        setProjects(result.data.projects);
+        setProjects(result.projects);
 
       } catch (err) {
         // Ignore abort errors
@@ -147,7 +150,7 @@ export function useFirestoreProjects() {
         abortControllerRef.current.abort();
       }
     };
-  }, []);
+  }, [authLoading, user]); // Re-fetch when auth state changes
 
   return { projects, loading, error };
 }

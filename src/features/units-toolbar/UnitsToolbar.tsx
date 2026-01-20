@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 import React from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -14,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { BulkAssignToolbar } from './BulkAssignToolbar';
 import { useUnitsToolbarState } from './hooks/useUnitsToolbarState';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from 'react-i18next';
 
 export function UnitsToolbar({
   selectedUnitIds,
@@ -28,6 +30,7 @@ export function UnitsToolbar({
   onAssignmentSuccess: () => void;
   totalUnits: number;
 }) {
+  const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -56,8 +59,8 @@ export function UnitsToolbar({
             />
             <Label htmlFor="select-all-units" className="text-xs font-normal">
               {selectedUnitIds.length > 0
-                ? `${selectedUnitIds.length} επιλεγμένα`
-                : 'Επιλογή όλων'}
+                ? t('toolbar.selectedCount', { count: selectedUnitIds.length })
+                : t('toolbar.selectAll')}
             </Label>
           </div>
 
@@ -70,7 +73,7 @@ export function UnitsToolbar({
           <QuickSearch
             searchTerm={searchTerm}
             onSearchChange={handleSearch}
-            placeholder="Γρήγορη αναζήτηση μονάδων..."
+            placeholder={t('toolbar.quickSearchPlaceholder')}
           />
 
           <div className={`w-px h-6 ${quick.separatorV} mx-1`} />
@@ -90,7 +93,7 @@ export function UnitsToolbar({
 
           <div className="flex items-center gap-1">
             <ToolbarButton
-              tooltip="Προχωρημένα Εργαλεία"
+              tooltip={t('toolbar.advancedTools')}
               onClick={toggleAdvancedMode}
               variant={isAdvancedMode ? 'default' : 'ghost'}
               className={
@@ -101,7 +104,7 @@ export function UnitsToolbar({
             >
               <Zap className={iconSizes.sm} />
             </ToolbarButton>
-            <ToolbarButton tooltip="Βοήθεια και Οδηγίες (F1)">
+            <ToolbarButton tooltip={t('toolbar.helpAndGuides')}>
               <HelpCircle className={iconSizes.sm} />
             </ToolbarButton>
           </div>

@@ -1,9 +1,12 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 // SpecificSettingsPanel.tsx - Specific settings panel router (extracted from DxfSettingsPanel)
 // STATUS: ACTIVE - Phase 3 Step 3.8
 // PURPOSE: Router for all 7 Specific Settings categories with lazy loading
 
 import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { PANEL_TOKENS, PanelTokenUtils, PANEL_LAYOUT } from '../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -103,6 +106,9 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
   className = '',
   defaultCategory = 'selection'
 }) => {
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
+
   // ============================================================================
   // STATE
   // ============================================================================
@@ -110,51 +116,51 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
   const [activeCategory, setActiveCategory] = useState<ColorCategory>(defaultCategory);
 
   // ============================================================================
-  // CATEGORY CONFIGURATION
+  // CATEGORY CONFIGURATION - Using i18n keys
   // ============================================================================
 
   const categories: CategoryConfig[] = [
     {
       id: 'selection',
-      title: 'Επιλογή (Selection)',
-      description: 'Ρυθμίσεις επιλογής αντικειμένων',
+      title: t('specificSettings.categories.selection.title'),
+      description: t('specificSettings.categories.selection.description'),
       icon: <SelectionIcon />
     },
     {
       id: 'cursor',
-      title: 'Κέρσορας (Cursor)',
-      description: 'Ρυθμίσεις κέρσορα και σταυρονήματος',
+      title: t('specificSettings.categories.cursor.title'),
+      description: t('specificSettings.categories.cursor.description'),
       icon: <CrosshairIcon />
     },
     {
       id: 'grid',
-      title: 'Πλέγμα & Χάρακες (Grid & Rulers)',
-      description: 'Ρυθμίσεις πλέγματος και χαράκων',
+      title: t('specificSettings.categories.grid.title'),
+      description: t('specificSettings.categories.grid.description'),
       icon: <GridIcon />
     },
     {
       id: 'layers',
-      title: 'Επίπεδα (Layers)',
-      description: 'Ρυθμίσεις επιπέδων',
+      title: t('specificSettings.categories.layers.title'),
+      description: t('specificSettings.categories.layers.description'),
       icon: <LayersIcon />
     },
     {
       id: 'entities',
-      title: 'Οντότητες (Entities)',
-      description: 'Ρυθμίσεις οντοτήτων DXF',
+      title: t('specificSettings.categories.entities.title'),
+      description: t('specificSettings.categories.entities.description'),
       icon: <EntitiesIcon />
     },
     {
       id: 'grips',
-      title: 'Grips',
-      description: 'Ρυθμίσεις grips (σύντομα)',
+      title: t('specificSettings.categories.grips.title'),
+      description: t('specificSettings.categories.grips.description'),
       icon: <GripsIcon />,
       comingSoon: true
     },
     {
       id: 'lighting',
-      title: 'Φωτισμός (Lighting)',
-      description: 'Ρυθμίσεις φωτισμού (σύντομα)',
+      title: t('specificSettings.categories.lighting.title'),
+      description: t('specificSettings.categories.lighting.description'),
       icon: <LightingIcon />,
       comingSoon: true
     }
@@ -218,7 +224,7 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
       <Suspense
         fallback={
           <div className={PANEL_TOKENS.SPECIFIC_SETTINGS.FALLBACK_CONTENT.BASE}>
-            Φόρτωση...
+            {t('specificSettings.loading')}
           </div>
         }
       >

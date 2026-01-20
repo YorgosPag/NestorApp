@@ -2,10 +2,12 @@
 
 import React, { useState, useCallback } from 'react';
 import { Users, Edit, Check, X } from 'lucide-react';
-import { useEmptyStateMessages, useActionMessages } from '@/hooks/useEnterpriseMessages';
+import { useActionMessages } from '@/hooks/useEnterpriseMessages';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { Button } from '@/components/ui/button';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Contact, IndividualContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes'; // 🏢 ENTERPRISE: Type-safe form data
 
@@ -38,8 +40,10 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
   const [editedData, setEditedData] = useState<Partial<ContactFormData>>({});
   const photoModal = useGlobalPhotoPreview();
 
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
+
   // 🗨️ ENTERPRISE: Centralized systems
-  const emptyStateMessages = useEmptyStateMessages();
   const actionMessages = useActionMessages();
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
@@ -162,7 +166,8 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
         }
         emptyStateProps={{
           icon: Users,
-          ...emptyStateMessages.contact
+          title: t('emptyState.title'),
+          description: t('emptyState.description')
         }}
       >
         {/* 🎯 EDIT MODE TOOLBAR - Μόνο για Mobile (Desktop κουμπιά στην επικεφαλίδα) */}

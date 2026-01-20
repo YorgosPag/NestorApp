@@ -53,8 +53,9 @@ interface CRMMessageInput {
 }
 
 /**
- * Stores a message record in the Firestore COLLECTIONS.COMMUNICATIONS collection.
+ * Stores a message record in the Firestore COLLECTIONS.MESSAGES collection.
  * @deprecated Use storeMessageInCRM from crm/store.ts instead (enterprise conversation model)
+ * 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
  */
 export async function storeMessageInCRM(message: CRMMessageInput, direction: 'inbound' | 'outbound') {
   if (!isFirebaseAvailable()) {
@@ -94,7 +95,8 @@ export async function storeMessageInCRM(message: CRMMessageInput, direction: 'in
       updatedAt: Timestamp.now()
     };
 
-    const docRef = await database.collection(COLLECTIONS.COMMUNICATIONS).add(messageRecord);
+    // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
+    const docRef = await database.collection(COLLECTIONS.MESSAGES).add(messageRecord);
     console.log(`✅ Message stored in CRM with ID: ${docRef.id}`);
     return docRef;
 

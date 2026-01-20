@@ -54,28 +54,29 @@ const serviceFieldLabels = getServiceFieldLabels();
 /**
  * Βασικά Στοιχεία Δημόσιας Υπηρεσίας
  * ✅ ENTERPRISE: Using centralized service field labels
+ * 🌐 i18n: All placeholders and helpTexts converted to i18n keys - 2026-01-19
  */
 const basicInfoSection: ServiceSectionConfig = (() => {
   const fieldLabels = serviceFieldLabels;
   return {
     id: 'basicInfo',
-    title: fieldLabels.basic_info_section,
+    title: 'contacts.service.sections.basicInfo.title',
     icon: 'landmark',
   fields: [
     {
       id: 'name',
       type: 'input',
       label: fieldLabels.service_name,
-      placeholder: 'π.χ. Δήμος Αθηναίων',
+      placeholder: 'contacts.service.fields.name.placeholder',
       required: true,
-      helpText: 'Η επίσημη επωνυμία του δημόσιου φορέα'
+      helpText: 'contacts.service.fields.name.helpText'
     },
     {
       id: 'shortName',
       type: 'input',
       label: fieldLabels.short_name,
-      placeholder: 'π.χ. Δ.Α.',
-      helpText: 'Συντομογραφία ή ακρωνύμιο της υπηρεσίας'
+      placeholder: 'contacts.service.fields.shortName.placeholder',
+      helpText: 'contacts.service.fields.shortName.helpText'
     },
     {
       id: 'category',
@@ -91,8 +92,8 @@ const basicInfoSection: ServiceSectionConfig = (() => {
       id: 'supervisionMinistry',
       type: 'input',
       label: fieldLabels.supervision_ministry,
-      placeholder: 'π.χ. Υπουργείο Εσωτερικών',
-      helpText: 'Το υπουργείο που εποπτεύει την υπηρεσία'
+      placeholder: 'contacts.service.fields.supervisionMinistry.placeholder',
+      helpText: 'contacts.service.fields.supervisionMinistry.helpText'
     }
   ]
   };
@@ -100,10 +101,11 @@ const basicInfoSection: ServiceSectionConfig = (() => {
 
 /**
  * Διοικητικά Στοιχεία
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 const administrativeSection: ServiceSectionConfig = {
   id: 'administrative',
-  title: 'Διοικητικά Στοιχεία',
+  title: 'contacts.service.sections.administrative.title',
   icon: 'shield',
   fields: [
     {
@@ -120,57 +122,58 @@ const administrativeSection: ServiceSectionConfig = {
       id: 'establishmentLaw',
       type: 'input',
       label: SERVICE_ADMINISTRATIVE_INFO_LABELS.ESTABLISHMENT_LAW,
-      placeholder: 'π.χ. Ν. 3852/2010',
-      helpText: 'Ο νόμος που ίδρυσε ή διέπει την υπηρεσία'
+      placeholder: 'contacts.service.fields.establishmentLaw.placeholder',
+      helpText: 'contacts.service.fields.establishmentLaw.helpText'
     },
     {
       id: 'headTitle',
       type: 'input',
       label: SERVICE_ADMINISTRATIVE_INFO_LABELS.HEAD_TITLE,
-      placeholder: 'π.χ. Δήμαρχος, Γενικός Διευθυντής',
-      helpText: 'Ο τίτλος του υψηλότερου ιεραρχικά υπευθύνου'
+      placeholder: 'contacts.service.fields.headTitle.placeholder',
+      helpText: 'contacts.service.fields.headTitle.helpText'
     },
     {
       id: 'headName',
       type: 'input',
       label: SERVICE_ADMINISTRATIVE_INFO_LABELS.HEAD_NAME,
-      placeholder: 'Πλήρες όνομα',
-      helpText: 'Το όνομα του προϊσταμένου της υπηρεσίας'
+      placeholder: 'contacts.service.fields.headName.placeholder',
+      helpText: 'contacts.service.fields.headName.helpText'
     }
   ]
 };
 
 /**
  * Στοιχεία Επικοινωνίας
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 const contactSection: ServiceSectionConfig = {
   id: 'contact',
-  title: 'Στοιχεία Επικοινωνίας',
+  title: 'contacts.service.sections.contact.title',
   icon: 'phone',
   fields: [
     {
       id: 'street',
       type: 'input',
       label: ADDRESS_INFO_FIELD_LABELS.STREET,
-      placeholder: 'π.χ. Βασιλίσσης Σοφίας',
+      placeholder: 'contacts.common.fields.street.placeholder',
       required: true,
-      helpText: 'Όνομα οδού χωρίς αριθμό'
+      helpText: 'contacts.common.fields.street.helpText'
     },
     {
       id: 'streetNumber',
       type: 'input',
       label: ADDRESS_INFO_FIELD_LABELS.STREET_NUMBER,
-      placeholder: 'π.χ. 125',
+      placeholder: 'contacts.common.fields.streetNumber.placeholder',
       required: true,
-      helpText: 'Αριθμός οδού (μπορεί να περιλαμβάνει γράμματα π.χ. 25Α)'
+      helpText: 'contacts.common.fields.streetNumber.helpText'
     },
     {
       id: 'city',
       type: 'input',
       label: ADDRESS_INFO_FIELD_LABELS.CITY,
-      placeholder: 'π.χ. Θεσσαλονίκη',
+      placeholder: 'contacts.common.fields.city.placeholder',
       required: true,
-      helpText: 'Πόλη ή δήμος'
+      helpText: 'contacts.common.fields.city.helpText'
     },
     {
       id: 'postalCode',
@@ -179,78 +182,80 @@ const contactSection: ServiceSectionConfig = {
       placeholder: '12345',
       maxLength: 5,
       required: true,
-      helpText: 'Ταχυδρομικός κώδικας (5 ψηφία)'
+      helpText: 'contacts.common.fields.postalCode.helpText'
     },
     {
       id: 'phone',
       type: 'tel',
       label: COMPANY_CONTACT_INFO_LABELS.PHONE_CENTRAL,
       placeholder: '2101234567',
-      helpText: 'Κεντρικό τηλέφωνο της υπηρεσίας'
+      helpText: 'contacts.service.fields.phone.helpText'
     },
     {
       id: 'email',
       type: 'email',
       label: COMPANY_CONTACT_INFO_LABELS.EMAIL_CONTACT,
       placeholder: 'info@service.gov.gr',
-      helpText: 'Κεντρικό email της υπηρεσίας'
+      helpText: 'contacts.service.fields.email.helpText'
     },
     {
       id: 'website',
       type: 'url',
       label: COMPANY_CONTACT_INFO_LABELS.WEBSITE,
       placeholder: 'https://www.service.gov.gr',
-      helpText: 'Επίσημη ιστοσελίδα της υπηρεσίας'
+      helpText: 'contacts.service.fields.website.helpText'
     }
   ]
 };
 
 /**
  * Αρμοδιότητες & Υπηρεσίες
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 const servicesSection: ServiceSectionConfig = {
   id: 'services',
-  title: 'Αρμοδιότητες & Υπηρεσίες',
+  title: 'contacts.service.sections.services.title',
   icon: 'clipboard-list',
   fields: [
     {
       id: 'mainResponsibilities',
       type: 'textarea',
       label: SERVICE_RESPONSIBILITIES_LABELS.MAIN_RESPONSIBILITIES,
-      placeholder: 'Περιγράψτε τις κύριες αρμοδιότητες της υπηρεσίας...',
+      placeholder: 'contacts.service.fields.mainResponsibilities.placeholder',
       required: true,
-      helpText: 'Οι βασικές αρμοδιότητες και υποχρεώσεις της υπηρεσίας'
+      helpText: 'contacts.service.fields.mainResponsibilities.helpText'
     },
     {
       id: 'citizenServices',
       type: 'textarea',
       label: SERVICE_RESPONSIBILITIES_LABELS.CITIZEN_SERVICES,
-      placeholder: 'Περιγράψτε τις υπηρεσίες που προσφέρονται στους πολίτες...',
-      helpText: 'Συγκεκριμένες υπηρεσίες που μπορούν να λάβουν οι πολίτες'
+      placeholder: 'contacts.service.fields.citizenServices.placeholder',
+      helpText: 'contacts.service.fields.citizenServices.helpText'
     },
     {
       id: 'onlineServices',
       type: 'input',
       label: SERVICE_RESPONSIBILITIES_LABELS.ONLINE_SERVICES,
       placeholder: 'https://gov.gr-connect',
-      helpText: 'Link για ηλεκτρονικές υπηρεσίες (gov.gr, κλπ)'
+      helpText: 'contacts.service.fields.onlineServices.helpText'
     },
     {
       id: 'serviceHours',
       type: 'input',
       label: SERVICE_RESPONSIBILITIES_LABELS.SERVICE_HOURS,
-      placeholder: 'π.χ. Δευτέρα-Παρασκευή 08:00-14:00',
-      helpText: 'Ώρες εξυπηρέτησης κοινού'
+      placeholder: 'contacts.service.fields.serviceHours.placeholder',
+      helpText: 'contacts.service.fields.serviceHours.helpText'
     }
   ]
 };
 
 /**
  * Λογότυπο & Επικοινωνία
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 const logoSection: ServiceSectionConfig = {
   id: 'logo',
-  title: 'Λογότυπο',
+  title: 'contacts.service.sections.logo.title',
   icon: 'image',
   fields: [
     // Removed description field - λογότυπο θα renderάρεται χωρίς επιπλέον fields
@@ -266,10 +271,11 @@ const logoSection: ServiceSectionConfig = {
  */
 // -------------------------------------------------------------------------
 // 6. ΣΧΕΣΕΙΣ - 🏢 ENTERPRISE RELATIONSHIP MANAGEMENT
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 // -------------------------------------------------------------------------
 const relationshipsSection: ServiceSectionConfig = {
   id: 'relationships',
-  title: 'Υπάλληλοι & Οργάνωση',
+  title: 'contacts.service.sections.relationships.title',
   icon: 'users',
   fields: [
     // Fields are handled by ContactRelationshipManager component

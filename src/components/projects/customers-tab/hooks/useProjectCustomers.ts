@@ -1,5 +1,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { ProjectCustomer } from "@/types/project";
 import type { UseProjectCustomersState } from "../types";
 
@@ -57,42 +59,30 @@ export function useProjectCustomers(
     try {
       console.log(`🔄 [LazyLoad] Fetching project customers for projectId: ${projectId}`);
 
-      const response = await fetch(`/api/projects/${projectId}/customers`);
-
-      if (!response.ok) {
-        // 🎯 ENTERPRISE ERROR HANDLING: Handle both JSON and HTML error responses
-        const contentType = response.headers.get('Content-Type') || '';
-
-        if (contentType.includes('application/json')) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-        } else {
-          // HTML error page received (Next.js development error)
-          console.error('🚨 [LazyLoad] Received HTML instead of JSON');
-          throw new Error(`API Error: Server returned HTML error page (Status: ${response.status})`);
-        }
+      // 🏢 ENTERPRISE: Type-safe API response with automatic authentication
+      interface ProjectCustomersApiResponse {
+        customers?: ProjectCustomer[];
       }
 
-      const result = await response.json();
-
-      if (result.success === false) {
-        throw new Error(result.message || result.error || 'Enterprise API returned error status');
-      }
+      const result = await apiClient.get<ProjectCustomersApiResponse | ProjectCustomer[]>(`/api/projects/${projectId}/customers`);
 
       // 🎯 ENTERPRISE: Handle both old format (direct array) and new format (with customers property)
-      const customersData = result.customers || result;
+      const customersData = Array.isArray(result)
+        ? result
+        : (result as ProjectCustomersApiResponse)?.customers || [];
 
-      console.log(`✅ [LazyLoad] Project customers loaded: ${Array.isArray(customersData) ? customersData.length : 0} customers`);
+      console.log(`✅ [LazyLoad] Project customers loaded: ${customersData.length} customers`);
 
       if (mountedRef.current) {
-        setCustomers(Array.isArray(customersData) ? customersData : []);
+        setCustomers(customersData);
         setIsFetched(true);
         hasFetchedRef.current = true;
       }
 
     } catch (e) {
       console.error("❌ [LazyLoad] Failed to fetch project customers:", e);
-      const errorMessage = e instanceof Error ? e.message : "Κρίσιμο σφάλμα φόρτωσης πελατών.";
+      // 🌐 i18n: Error message converted to i18n key - 2026-01-18
+      const errorMessage = e instanceof Error ? e.message : "projects.customers.errors.loadFailed";
       if (mountedRef.current) {
         setError(errorMessage);
       }

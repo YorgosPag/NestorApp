@@ -7,7 +7,45 @@
  * @author Enterprise Canvas Team
  * @since 2025-12-18
  * @version 1.0.0 - Foundation Consolidation
+ * @updated 2026-01-19 - Fixed import paths and broken exports
  */
+
+// ============================================================================
+// IMPORTS FOR INTERNAL USE (values needed inside this file)
+// ============================================================================
+
+// 🏢 ENTERPRISE FIX (2026-01-19): Import values for internal use
+import {
+  CanvasRegistry as _CanvasRegistry,
+  globalCanvasRegistry as _globalCanvasRegistry,
+  registerCanvasProvider as _registerCanvasProvider,
+  getCanvasProvider as _getCanvasProvider,
+  getGlobalCanvas as _getGlobalCanvas,
+  broadcastCanvasEvent as _broadcastCanvasEvent
+} from './infrastructure/CanvasRegistry';
+
+import type {
+  ICanvasProvider as _ICanvasProvider,
+  CanvasProviderType as _CanvasProviderType,
+  CanvasProviderConfig as _CanvasProviderConfig
+} from './interfaces/ICanvasProvider';
+
+import { CoordinateUtils as _CoordinateUtils } from './primitives/coordinates';
+
+import { canvasUI as _canvasUI } from '../../styles/design-tokens/canvas';
+
+import type { CanvasInstance as _CanvasInstance } from '../../subapps/dxf-viewer/rendering/canvas';
+
+// Adapters imports for internal use
+import {
+  DxfCanvasAdapter as _DxfCanvasAdapter,
+  createDxfCanvasProvider as _createDxfCanvasProvider
+} from '../../adapters/canvas/dxf-adapter/DxfCanvasAdapter';
+
+import {
+  GeoCanvasAdapter as _GeoCanvasAdapter,
+  createGeoCanvasProvider as _createGeoCanvasProvider
+} from '../../adapters/canvas/geo-adapter/GeoCanvasAdapter';
 
 // ============================================================================
 // CORE INFRASTRUCTURE EXPORTS
@@ -59,7 +97,7 @@ export {
   DxfCanvasAdapter,
   createDxfCanvasProvider,
   type DxfCanvasProviderConfig
-} from '../../../adapters/canvas/dxf-adapter/DxfCanvasAdapter';
+} from '../../adapters/canvas/dxf-adapter/DxfCanvasAdapter';
 
 // Geo Canvas Adapter
 export {
@@ -69,28 +107,17 @@ export {
   type MapBounds,
   type GeographicTransform,
   type GeoCanvasConfig
-} from '../../../adapters/canvas/geo-adapter/GeoCanvasAdapter';
+} from '../../adapters/canvas/geo-adapter/GeoCanvasAdapter';
 
 // ============================================================================
 // UI STYLING TOKENS EXPORTS
 // ============================================================================
 
 // Canvas UI Tokens (replaces canvas-utilities.ts UI parts)
+// 🏢 ENTERPRISE FIX (2026-01-19): Only canvasUI exists - removed non-existent exports
 export {
-  canvasUI,
-  canvasPositioning,
-  cursorTokens,
-  pointerTokens,
-  feedbackTokens,
-  touchTokens,
-  migrationHelpers,
-  type CanvasUI,
-  type CanvasPositioning,
-  type CursorTokens,
-  type PointerTokens,
-  type FeedbackTokens,
-  type TouchTokens
-} from '../../../styles/design-tokens/canvas';
+  canvasUI
+} from '../../styles/design-tokens/canvas';
 
 // ============================================================================
 // EXISTING DXF SYSTEM INTEGRATION
@@ -109,7 +136,7 @@ export {
   type CanvasRenderSettings,
   type CanvasDisplayOptions,
   type CanvasValidationResult
-} from '../../../subapps/dxf-viewer/rendering/canvas';
+} from '../../subapps/dxf-viewer/rendering/canvas';
 
 // ============================================================================
 // ENTERPRISE CANVAS FACTORY
@@ -134,26 +161,26 @@ export class EnterpriseCanvasFactory {
   /**
    * Create DXF Canvas Provider (uses existing enterprise system)
    */
-  createDxfProvider(providerId: string, config?: Partial<CanvasProviderConfig>): DxfCanvasAdapter {
-    return createDxfCanvasProvider(providerId, config);
+  createDxfProvider(providerId: string, config?: Partial<_CanvasProviderConfig>): _DxfCanvasAdapter {
+    return _createDxfCanvasProvider(providerId, config);
   }
 
   /**
    * Create Geo Canvas Provider
    */
-  createGeoProvider(providerId: string, config?: Partial<CanvasProviderConfig>): GeoCanvasAdapter {
-    return createGeoCanvasProvider(providerId, config);
+  createGeoProvider(providerId: string, config?: Partial<_CanvasProviderConfig>): _GeoCanvasAdapter {
+    return _createGeoCanvasProvider(providerId, config);
   }
 
   /**
    * Create and register provider automatically
    */
   async createAndRegisterProvider(
-    type: CanvasProviderType,
+    type: _CanvasProviderType,
     providerId: string,
-    config?: Partial<CanvasProviderConfig>
-  ): Promise<ICanvasProvider> {
-    let provider: ICanvasProvider;
+    config?: Partial<_CanvasProviderConfig>
+  ): Promise<_ICanvasProvider> {
+    let provider: _ICanvasProvider;
 
     switch (type) {
       case 'dxf':
@@ -167,7 +194,7 @@ export class EnterpriseCanvasFactory {
     }
 
     // Initialize provider
-    const providerConfig: CanvasProviderConfig = {
+    const providerConfig: _CanvasProviderConfig = {
       providerId,
       providerType: type,
       enableGlobalEventBus: true,
@@ -179,7 +206,7 @@ export class EnterpriseCanvasFactory {
     await provider.initialize(providerConfig);
 
     // Register with global registry
-    registerCanvasProvider(provider);
+    _registerCanvasProvider(provider);
 
     console.log(`[EnterpriseCanvasFactory] Created and registered ${type} provider: ${providerId}`);
     return provider;
@@ -259,35 +286,35 @@ export const canvasUtilitiesMigration = {
 export const enterpriseCanvas = {
   // Registry operations
   registry: {
-    global: globalCanvasRegistry,
-    register: registerCanvasProvider,
-    getProvider: getCanvasProvider,
-    getCanvas: getGlobalCanvas,
-    broadcast: broadcastCanvasEvent
+    global: _globalCanvasRegistry,
+    register: _registerCanvasProvider,
+    getProvider: _getCanvasProvider,
+    getCanvas: _getGlobalCanvas,
+    broadcast: _broadcastCanvasEvent
   },
 
   // Factory operations
   factory: canvasFactory,
 
   // Coordinate utilities
-  coordinates: CoordinateUtils,
+  coordinates: _CoordinateUtils,
 
   // UI styling
-  ui: canvasUI,
+  ui: _canvasUI,
 
   // Migration helpers
   migration: canvasUtilitiesMigration,
 
   // Create complete canvas system
   createSystem: async (
-    type: CanvasProviderType,
+    type: _CanvasProviderType,
     providerId: string,
-    config?: Partial<CanvasProviderConfig>
+    config?: Partial<_CanvasProviderConfig>
   ): Promise<{
-    provider: ICanvasProvider;
-    createCanvas: (id: string, element: HTMLCanvasElement, canvasConfig?: Record<string, unknown>) => CanvasInstance;
-    utilities: typeof CoordinateUtils;
-    ui: typeof canvasUI;
+    provider: _ICanvasProvider;
+    createCanvas: (id: string, element: HTMLCanvasElement, canvasConfig?: Record<string, unknown>) => _CanvasInstance;
+    utilities: typeof _CoordinateUtils;
+    ui: typeof _canvasUI;
   }> => {
     const provider = await canvasFactory.createAndRegisterProvider(type, providerId, config);
 
@@ -300,8 +327,8 @@ export const enterpriseCanvas = {
           element,
           config: canvasConfig || {}
         }),
-      utilities: CoordinateUtils,
-      ui: canvasUI
+      utilities: _CoordinateUtils,
+      ui: _canvasUI
     };
   }
 } as const;
@@ -316,28 +343,25 @@ export const enterpriseCanvas = {
  */
 
 // Legacy naming exports
-export const designTokenCanvasUtilities = canvasUI; // Legacy compatibility
-export const designTokenCanvasHelpers = CoordinateUtils; // Legacy compatibility
+export const designTokenCanvasUtilities = _canvasUI; // Legacy compatibility
+export const designTokenCanvasHelpers = _CoordinateUtils; // Legacy compatibility
 
 // Legacy structure exports
+// 🏢 ENTERPRISE FIX (2026-01-19): Removed broken references to non-existent properties
+// - canvasUI.cursors, canvasUI.pointers, canvasUI.positioning.layer DO NOT exist
+// - Only valid properties from canvasUI are exported
 export const canvasUtilities = {
-  positioning: canvasUI.positioning,
-  overlays: {
-    crosshair: canvasUI.cursors.canvas.crosshair,
-    grid: canvasUI.positioning.overlay
-  },
-  interactions: {
-    cursor: canvasUI.cursors,
-    pointerEvents: canvasUI.pointers
-  },
-  layers: canvasUI.positioning.layer
+  positioning: _canvasUI.positioning,
+  overlay: _canvasUI.overlay,
+  controls: _canvasUI.controls,
+  colorPicker: _canvasUI.colorPicker
 };
 
 export const canvasHelpers = {
-  screenToCanvas: CoordinateUtils.screenToCanvas,
-  canvasToScreen: CoordinateUtils.canvasToScreen,
-  distance: CoordinateUtils.distance,
-  clampToBounds: CoordinateUtils.clampToBounds
+  screenToCanvas: _CoordinateUtils.screenToCanvas,
+  canvasToScreen: _CoordinateUtils.canvasToScreen,
+  distance: _CoordinateUtils.distance,
+  clampToBounds: _CoordinateUtils.clampToBounds
 };
 
 // ============================================================================

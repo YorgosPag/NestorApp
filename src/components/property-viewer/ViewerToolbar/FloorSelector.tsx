@@ -5,6 +5,8 @@ import { CommonBadge } from "@/core/badges";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Property } from '@/types/property-viewer';
 import { DROPDOWN_PLACEHOLDERS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface FloorData {
     id: string;
@@ -22,6 +24,9 @@ interface FloorSelectorProps {
 }
 
 export function FloorSelector({ currentFloor, floors, onSelectFloor }: FloorSelectorProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
+
   if (!currentFloor) {
     return (
       <div className="flex items-center gap-4">
@@ -61,7 +66,7 @@ export function FloorSelector({ currentFloor, floors, onSelectFloor }: FloorSele
         
         <CommonBadge
           status="property"
-          customLabel={`${currentFloor.properties.length} ακίνητα`}
+          customLabel={t('floorSelector.propertiesCount', { count: currentFloor.properties.length })}
           variant="outline"
           className="text-xs"
         />

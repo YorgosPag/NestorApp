@@ -2,19 +2,77 @@
   "overview": {
     "stats": {
       "newLeads": "Νέα Leads",
-      "activeOpportunities": "Ενεργές Ευκαιρίες", 
+      "activeOpportunities": "Ενεργές Ευκαιρίες",
       "scheduledViewings": "Προγραμματισμένες Ξεναγήσεις",
       "pendingTasks": "Εκκρεμείς Εργασίες"
     }
+  },
+  "quickActions": {
+    "title": "Γρήγορες Ενέργειες",
+    "ariaLabel": "Γρήγορες ενέργειες CRM",
+    "newEmail": "Νέο Email",
+    "logCall": "Καταγραφή Κλήσης",
+    "newAppointment": "Νέο Ραντεβού",
+    "newTask": "Νέα Εργασία"
+  },
+  "calendar": {
+    "title": "Ημερολόγιο",
+    "appointmentsFor": "Ραντεβού για",
+    "today": "σήμερα",
+    "mock": {
+      "tourWithClient": "10:00 - Ξενάγηση με Γ. Παπαδόπουλο",
+      "tourLocation": "Έργο \"Κέντρο\", Διαμέρισμα Α3",
+      "callWithCompany": "14:30 - Τηλεδιάσκεψη με TechCorp",
+      "onlineMeeting": "Διαδικτυακή Συνάντηση"
+    }
+  },
+  "contactsList": {
+    "name": "Όνομα",
+    "company": "Εταιρεία",
+    "status": "Κατάσταση",
+    "actions": "Ενέργειες",
+    "view": "Προβολή"
+  },
+  "contactsTab": {
+    "title": "Επαφές",
+    "filters": {
+      "customers": "Πελάτες",
+      "suppliers": "Προμηθευτές",
+      "agents": "Μεσίτες"
+    },
+    "search": "Αναζήτηση επαφών...",
+    "newContact": "Νέα Επαφή"
   },
   "opportunities": {
     "unknownDate": "Άγνωστη ημερομηνία",
     "deleteDialog": {
       "title": "Επιβεβαίωση Διαγραφής",
-      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε την ευκαιρία \"{{name}}\";",
+      "message": "Είστε σίγουροι ότι θέλετε να διαγράψετε την ευκαιρία \"{name}\";",
       "warning": "Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
       "cancel": "Ακύρωση",
       "confirm": "Διαγραφή"
+    },
+    "editModal": {
+      "title": "Επεξεργασία Ευκαιρίας",
+      "labels": {
+        "name": "Όνομα",
+        "email": "Email",
+        "phone": "Τηλέφωνο",
+        "contactId": "ID Πελάτη (soldTo)",
+        "contactIdPlaceholder": "Εισάγετε το ID της επαφής...",
+        "stage": "Στάδιο",
+        "stagePlaceholder": "Επιλογή σταδίου...",
+        "notes": "Σημειώσεις"
+      },
+      "buttons": {
+        "cancel": "Ακύρωση",
+        "save": "Αποθήκευση",
+        "saving": "Αποθήκευση..."
+      },
+      "messages": {
+        "success": "Η ευκαιρία ενημερώθηκε επιτυχώς!",
+        "error": "Δεν ήταν δυνατή η ενημέρωση της ευκαιρίας."
+      }
     },
     "stages": {
       "initial_contact": "Αρχική Επαφή",
@@ -45,6 +103,27 @@
       "tasks": "Εργασίες",
       "calendar": "Ημερολόγιο",
       "communications": "Επικοινωνίες"
+    },
+    "communicationsArchive": {
+      "title": "Αρχείο Επικοινωνίας"
+    },
+    "recentActivities": {
+      "title": "Πρόσφατη Δραστηριότητα",
+      "emailFrom": "Email από {name}",
+      "callTo": "Κλήση σε {name}",
+      "noteFor": "Σημείωση για {name}",
+      "time": {
+        "minutesAgo": "{count} λεπτά πριν",
+        "hoursAgo": "{count} ώρα πριν"
+      }
+    },
+    "teamPerformance": {
+      "title": "Απόδοση Ομάδας",
+      "columns": {
+        "member": "Μέλος",
+        "leadsWeek": "Leads (Εβδομάδα)",
+        "closedSales": "Κλεισμένες Πωλήσεις"
+      }
     }
   },
   "tasks": {
@@ -95,26 +174,32 @@
       "delete": "Διαγραφή"
     },
     "messages": {
-      "completed": "✅ Η εργασία \"{{title}}\" ολοκληρώθηκε!",
-      "deleted": "✅ Η εργασία \"{{title}}\" διαγράφηκε!",
+      "completed": "✅ Η εργασία \"{title}\" ολοκληρώθηκε!",
+      "deleted": "✅ Η εργασία \"{title}\" διαγράφηκε!",
       "completeError": "❌ Σφάλμα κατά την ολοκλήρωση εργασίας",
       "deleteError": "❌ Σφάλμα κατά τη διαγραφή εργασίας",
       "loadError": "Σφάλμα κατά τη φόρτωση εργασιών",
-      "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε την εργασία \"{{title}}\"?"
+      "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε την εργασία \"{title}\"?"
     }
   },
   "inbox": {
-    "title": "Unified Inbox",
+    "title": "Ενοποιημένα Εισερχόμενα",
     "historyTitle": "Ιστορικό Επικοινωνιών",
     "selectContactTitle": "Επιλογή Επαφής",
     "loading": "Φόρτωση μηνυμάτων...",
     "loadingConversations": "Φόρτωση συνομιλιών...",
-    "messagesCount": "{{count}} μηνύματα",
-    "conversationsCount": "{{count}} συνομιλίες",
+    "messagesCount": "{count} μηνύματα",
+    "conversationsCount": "{count} συνομιλίες",
     "noMessages": "Δεν βρέθηκαν μηνύματα",
     "noConversations": "Δεν βρέθηκαν συνομιλίες",
     "search": "Αναζήτηση μηνυμάτων...",
+    "dashboard": {
+      "total": "Σύνολο",
+      "active": "Ενεργές",
+      "unread": "Μη Αναγνωσμένα"
+    },
     "filters": {
+      "title": "Φίλτρα",
       "all": "Όλα",
       "channel": "Κανάλι",
       "direction": "Κατεύθυνση",
@@ -126,13 +211,13 @@
     },
     "time": {
       "now": "Τώρα",
-      "hoursAgo": "{{hours}}ω",
+      "hoursAgo": "{hours}ω",
       "yesterday": "Χθες"
     },
     "message": {
       "from": "Από",
       "to": "Προς",
-      "attachments": "{{count}} συνημμένα"
+      "attachments": "{count} συνημμένα"
     },
     "tabs": {
       "conversations": "Συνομιλίες",
@@ -150,7 +235,7 @@
       "noMessages": "Δεν υπάρχουν μηνύματα σε αυτή τη συνομιλία",
       "selectConversation": "Επιλέξτε μια συνομιλία για να δείτε τα μηνύματα",
       "participants": "Συμμετέχοντες",
-      "unread": "{{count}} αδιάβαστα"
+      "unread": "{count} αδιάβαστα"
     },
     "composer": {
       "placeholder": "Γράψτε το μήνυμά σας...",
@@ -168,7 +253,7 @@
     },
     "pagination": {
       "loadMore": "Φόρτωση περισσότερων",
-      "page": "Σελίδα {{current}} από {{total}}"
+      "page": "Σελίδα {current} από {total}"
     },
     "errors": {
       "loadFailed": "Αποτυχία φόρτωσης",
@@ -191,13 +276,13 @@
       "lastUpdated": "Τελευταία Ενημέρωση",
       "participants": "Συμμετέχοντες",
       "conversationOpened": "Έναρξη Συνομιλίας",
-      "conversationOpenedDesc": "Ξεκίνησε νέα συνομιλία μέσω {{channel}}",
+      "conversationOpenedDesc": "Ξεκίνησε νέα συνομιλία μέσω {channel}",
       "conversationClosed": "Κλείσιμο Συνομιλίας",
       "conversationClosedDesc": "Η συνομιλία έκλεισε",
       "messageReceived": "Λήψη Μηνύματος",
       "messageSent": "Αποστολή Μηνύματος",
       "agentAssigned": "Ανάθεση Πράκτορα",
-      "agentAssignedDesc": "Η συνομιλία ανατέθηκε στον {{agent}}",
+      "agentAssignedDesc": "Η συνομιλία ανατέθηκε στον {agent}",
       "system": "Σύστημα",
       "unknown": "Άγνωστος",
       "statusCompleted": "Ολοκληρώθηκε",
@@ -216,6 +301,52 @@
       "subtitle": "Προσθέστε το πρώτο σας lead για να ξεκινήσετε!"
     }
   },
+  "pipeline": {
+    "title": "Sales Pipeline",
+    "viewList": "Προβολή Λίστας",
+    "viewPipeline": "Προβολή Pipeline",
+    "refresh": "Ανανέωση",
+    "newLead": "Νέο Lead",
+    "loading": "Φόρτωση pipeline...",
+    "retry": "Δοκιμή ξανά",
+    "empty": {
+      "title": "Δεν υπάρχουν ευκαιρίες",
+      "subtitle": "Προσθέστε την πρώτη σας ευκαιρία για να ξεκινήσετε!"
+    }
+  },
+  "contactCard": {
+    "contactDetails": "Στοιχεία Επαφής",
+    "fullName": "Πλήρες όνομα",
+    "email": "Email",
+    "sendEmailTo": "Αποστολή email στο {email} μέσω Gmail",
+    "callTo": "Κλήση στο {phone}",
+    "phone": "Τηλέφωνο",
+    "status": "Κατάσταση",
+    "source": "Πηγή",
+    "timeline": "Χρονολογία",
+    "createdAt": "Δημιουργία:",
+    "lastActivity": "Τελευταία δραστηριότητα:",
+    "estimatedValue": "Εκτιμώμενη Αξία",
+    "notes": "Σημειώσεις",
+    "actions": {
+      "call": "Κλήση",
+      "message": "Μήνυμα",
+      "edit": "Επεξεργασία"
+    }
+  },
+  "leadCard": {
+    "createdAt": "Δημιουργήθηκε",
+    "notes": "Σημειώσεις",
+    "notesLabel": "Σημειώσεις Lead",
+    "actionsLabel": "Ενέργειες για lead",
+    "primaryActions": "Πρωτεύουσες Ενέργειες",
+    "secondaryActions": "Δευτερεύουσες Ενέργειες",
+    "sendEmail": "Αποστολή Email",
+    "noEmail": "Δεν υπάρχει email",
+    "edit": "Επεξεργασία",
+    "profile": "Προφίλ",
+    "delete": "Διαγραφή"
+  },
   "errors": {
     "contactNotFound": "Η επαφή δεν βρέθηκε",
     "invalidStage": "Μη έγκυρο στάδιο ευκαιρίας",
@@ -226,5 +357,34 @@
     "contactCreated": "Η επαφή δημιουργήθηκε επιτυχώς",
     "contactUpdated": "Η επαφή ενημερώθηκε επιτυχώς",
     "contactDeleted": "Η επαφή διαγράφηκε επιτυχώς"
+  },
+  "sendMessage": {
+    "title": "Αποστολή Μηνύματος",
+    "selectChannel": "Επιλογή Channel",
+    "selectChannelPlaceholder": "Επιλέξτε channel",
+    "template": "Template (Προαιρετικό)",
+    "noTemplate": "Χωρίς template",
+    "recipient": "Παραλήπτης",
+    "subject": "Θέμα",
+    "subjectPlaceholder": "Θέμα μηνύματος",
+    "content": "Περιεχόμενο",
+    "contentPlaceholder": "Γράψτε το μήνυμά σας εδώ...",
+    "templateVariables": "Template Variables",
+    "availableVariables": "Διαθέσιμες μεταβλητές:",
+    "variableName": "Όνομα μεταβλητής",
+    "variableValue": "Τιμή",
+    "addVariable": "Προσθήκη Μεταβλητής",
+    "cancel": "Ακύρωση",
+    "send": "Αποστολή",
+    "sending": "Αποστολή...",
+    "validation": {
+      "recipientRequired": "Παρακαλώ συμπληρώστε τον παραλήπτη",
+      "contentRequired": "Παρακαλώ συμπληρώστε το περιεχόμενο"
+    },
+    "toasts": {
+      "success": "Μήνυμα εστάλη επιτυχώς μέσω {channel}",
+      "error": "Σφάλμα κατά την αποστολή: {error}",
+      "genericError": "Σφάλμα κατά την αποστολή μηνύματος"
+    }
   }
 }

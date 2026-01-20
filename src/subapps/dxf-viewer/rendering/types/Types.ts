@@ -19,6 +19,12 @@ export interface Point2D {
   y: number;
 }
 
+// ===== DRAWING PHASE TYPE =====
+/**
+ * Drawing phase για dynamic input system
+ */
+export type Phase = 'first-point' | 'second-point' | 'continuous';
+
 export interface Point3D extends Point2D {
   z: number;
 }

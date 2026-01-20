@@ -118,7 +118,10 @@ export function extractMultiplePhotoURLs(formData: Record<string, unknown>): str
   return _extractMultiplePhotoURLs(formData);
 }
 
-export function validateUploadState(formData: Record<string, unknown>): unknown {
+// 🏢 ENTERPRISE: Import UploadValidationResult type for proper return typing
+import type { UploadValidationResult } from './validators/upload-state';
+
+export function validateUploadState(formData: Record<string, unknown>): UploadValidationResult {
   console.warn('⚠️ validateUploadState is deprecated. Use validators from modular structure instead.');
   return _validateUploadState(formData);
 }

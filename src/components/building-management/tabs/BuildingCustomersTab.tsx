@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { CustomerInfoCompact } from '@/components/shared/customer-info';
 import { Users } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { ProjectCustomer } from "@/types/project";
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -27,13 +29,15 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/buildings/${buildingId}/customers`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch customers: ${response.status}`);
+        // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+        interface BuildingCustomersApiResponse {
+          customers: ProjectCustomer[];
         }
-        const data = await response.json();
+
+        const data = await apiClient.get<BuildingCustomersApiResponse>(`/api/buildings/${buildingId}/customers`);
+
         if (mounted) {
-          setCustomers(data.customers || []);
+          setCustomers(data?.customers || []);
         }
       } catch (e) {
         console.error("Failed to fetch building customers:", e);
@@ -45,7 +49,7 @@ export function BuildingCustomersTab({ buildingId }: BuildingCustomersTabProps) 
       }
     })();
     return () => { mounted = false; };
-  }, [buildingId]);
+  }, [buildingId, t]);
 
   if (loading) {
     return (

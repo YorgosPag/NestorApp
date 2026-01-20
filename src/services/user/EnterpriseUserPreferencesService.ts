@@ -683,16 +683,3 @@ class EnterpriseUserPreferencesService {
 
 export const userPreferencesService = new EnterpriseUserPreferencesService();
 export default userPreferencesService;
-
-// Export types για external usage
-export type {
-  UserPreferences,
-  PropertyViewerPreferences,
-  PropertyViewerFilters,
-  PropertyViewerStats,
-  EditorToolPreferences,
-  DisplayPreferences,
-  NotificationPreferences,
-  EnterpriseUserPreferencesConfig,
-  CompanyDefaultPreferencesConfig
-};

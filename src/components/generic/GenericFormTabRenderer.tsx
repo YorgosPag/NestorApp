@@ -8,6 +8,8 @@ import { getIconComponent } from './utils/IconMapping';
 import { GenericFormRenderer } from './GenericFormRenderer';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { SectionConfig } from '@/config/company-gemi';
+// 🏢 ENTERPRISE: i18n support for tab labels
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // INTERFACES
@@ -51,7 +53,27 @@ export interface GenericFormTabRendererProps {
 // ============================================================================
 
 /**
+ * 🏢 ENTERPRISE: Translate i18n key to localized string
+ * Keys containing '.' are treated as i18n keys (e.g., 'sections.basicInfoGemi')
+ */
+function translateLabel(text: string, t: (key: string) => string): string {
+  if (!text) return '';
+  // i18n keys contain dots
+  if (text.includes('.')) {
+    const translated = t(text);
+    // If translation returns the key itself, extract the last part as fallback
+    if (translated === text) {
+      const parts = text.split('.');
+      return parts[parts.length - 1];
+    }
+    return translated;
+  }
+  return text;
+}
+
+/**
  * Creates form tabs from configuration sections
+ * 🏢 ENTERPRISE: Now accepts translate function for i18n support
  */
 function createFormTabsFromConfig(
   sections: SectionConfig[],
@@ -59,20 +81,21 @@ function createFormTabsFromConfig(
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
+  t: (key: string) => string,
   onPhotosChange?: (photos: PhotoSlotData[]) => void,
   customRenderers?: Record<string, unknown>
 ) {
   return sections.map(section => {
     // ========================================================================
-    // SMART LABEL LOGIC για relationships tab
+    // 🏢 ENTERPRISE: Translate section title using i18n
     // ========================================================================
 
-    let displayLabel = section.title;
+    let displayLabel = translateLabel(section.title, t);
 
     // Αν είναι relationships section και υπάρχει custom renderer, προσθέτουμε indicator
     if (section.id === 'relationships' && customRenderers?.relationships) {
       // Προσθέτουμε ένα visual indicator που δείχνει ότι υπάρχει ενεργό content
-      displayLabel = `${section.title} 🔗`;
+      displayLabel = `${displayLabel} 🔗`;
     }
 
     return {
@@ -171,18 +194,22 @@ export function GenericFormTabRenderer({
   onPhotosChange,
   customRenderers
 }: GenericFormTabRendererProps) {
+  // 🏢 ENTERPRISE: i18n support for tab labels
+  const { t } = useTranslation('forms');
+
   if (!sections || sections.length === 0) {
     console.warn('GenericFormTabRenderer: No sections provided');
     return null;
   }
 
-  // Create tabs from sections
+  // Create tabs from sections - 🏢 ENTERPRISE: Pass translate function
   const tabs = createFormTabsFromConfig(
     sections,
     formData,
     onChange,
     onSelectChange,
     disabled,
+    t,
     onPhotosChange,
     customRenderers
   );

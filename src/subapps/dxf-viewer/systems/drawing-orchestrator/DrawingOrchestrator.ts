@@ -7,7 +7,7 @@ import { useCallback, useRef } from 'react';
 import { useUnifiedDrawing } from '../../hooks/drawing/useUnifiedDrawing';
 import { useDynamicInputHandler } from '../dynamic-input/hooks/useDynamicInputHandler';
 import type { DrawingTool } from '../../hooks/drawing/useUnifiedDrawing';
-import type { Point2D, AnySceneEntity, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D, AnySceneEntity, ViewTransform, Entity } from '../../rendering/types/Types';
 
 interface DrawingOrchestratorOptions {
   activeTool: string;

@@ -6,18 +6,23 @@ import { TabsOnlyTriggers } from "@/components/ui/navigation/TabsComponents";
 import { FileText, File } from 'lucide-react';
 import { ContractsTabContent } from './documents/ContractsTabContent';
 import { MiscellaneousTabContent } from './documents/MiscellaneousTabContent';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function DocumentsProjectTab() {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
+
   const documentTabs = [
     {
       id: 'contracts',
-      label: 'Συμβόλαια',
+      label: t('documentsTab.contracts'),
       icon: FileText,
       content: <ContractsTabContent />,
     },
     {
       id: 'miscellaneous',
-      label: 'Διάφορα Έγγραφα',
+      label: t('documentsTab.miscellaneous'),
       icon: File,
       content: <MiscellaneousTabContent />,
     }

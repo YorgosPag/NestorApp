@@ -27,6 +27,22 @@ export interface UsePhotoUploadLogicProps {
   photoIndex?: number;
   /** 🔥 RESTORED: Custom filename override */
   customFileName?: string;
+
+  // =========================================================================
+  // 🏢 CANONICAL PIPELINE FIELDS (ADR-031)
+  // =========================================================================
+  // If provided, the upload will use the canonical pipeline
+  // (createPendingFileRecord → upload → finalize).
+  // =========================================================================
+
+  /** 🏢 CANONICAL: Contact ID for FileRecord linkage */
+  contactId?: string;
+  /** 🏢 CANONICAL: Company ID for multi-tenant isolation */
+  companyId?: string;
+  /** 🏢 CANONICAL: User ID who is uploading */
+  createdBy?: string;
+  /** 🏢 CANONICAL: Contact name for display name generation */
+  contactName?: string;
 }
 
 export interface PhotoUploadHandlers {
@@ -68,7 +84,12 @@ export function usePhotoUploadLogic({
   purpose = 'photo',
   contactData,
   photoIndex,
-  customFileName
+  customFileName,
+  // 🏢 CANONICAL: New fields for canonical pipeline
+  contactId,
+  companyId,
+  createdBy,
+  contactName
 }: UsePhotoUploadLogicProps): PhotoUploadHandlers {
 
   // ========================================================================
@@ -89,9 +110,15 @@ export function usePhotoUploadLogic({
       // 🔥 RESTORED: Pass FileNamingService options
       contactData,
       photoIndex,
-      fileName: customFileName
+      fileName: customFileName,
+      // 🏢 CANONICAL: Pass canonical fields if available (ADR-031)
+      // If all three are provided, uploadPhoto will route to canonical pipeline
+      contactId,
+      companyId,
+      createdBy,
+      contactName: contactName || (contactData?.name as string),
     });
-  }, [purpose, contactData, photoIndex, customFileName]);
+  }, [purpose, contactData, photoIndex, customFileName, contactId, companyId, createdBy, contactName]);
 
   // ========================================================================
   // FILE SELECTION LOGIC

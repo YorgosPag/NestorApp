@@ -13,6 +13,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { DXF_LAYER_CATEGORY_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { 
   Layers, 
   Eye, 
@@ -97,6 +99,8 @@ interface CreateLayerDialogProps {
 function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDialogProps) {
   const iconSizes = useIconSizes();
   const { radius } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('dxf-viewer');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<LayerCategory>('annotations');
@@ -124,33 +128,33 @@ function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDia
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Δημιουργία νέου Layer</DialogTitle>
+          <DialogTitle>{t('layerManager.createDialog.title')}</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div>
-            <Label htmlFor="layer-name">Όνομα Layer</Label>
+            <Label htmlFor="layer-name">{t('layerManager.createDialog.nameLabel')}</Label>
             <Input
               id="layer-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="π.χ. Ηλεκτρολογικά στοιχεία"
+              placeholder={t('layerManager.createDialog.namePlaceholder')}
             />
           </div>
-          
+
           <div>
-            <Label htmlFor="layer-description">Περιγραφή (προαιρετικό)</Label>
+            <Label htmlFor="layer-description">{t('layerManager.createDialog.descriptionLabel')}</Label>
             <Textarea
               id="layer-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Περιγραφή του layer..."
+              placeholder={t('layerManager.createDialog.descriptionPlaceholder')}
               rows={2}
             />
           </div>
-          
+
           <div>
-            <Label htmlFor="layer-category">Κατηγορία</Label>
+            <Label htmlFor="layer-category">{t('layerManager.createDialog.categoryLabel')}</Label>
             <Select value={category} onValueChange={(value) => setCategory(value as LayerCategory)}>
               <SelectTrigger>
                 <SelectValue />
@@ -171,7 +175,7 @@ function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDia
           </div>
           
           <div>
-            <Label htmlFor="layer-color">Χρώμα</Label>
+            <Label htmlFor="layer-color">{t('layerManager.createDialog.colorLabel')}</Label>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -189,13 +193,13 @@ function CreateLayerDialog({ open, onOpenChange, onCreateLayer }: CreateLayerDia
             </div>
           </div>
         </div>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Ακύρωση
+            {t('layerManager.createDialog.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={!name.trim()}>
-            Δημιουργία
+            {t('layerManager.createDialog.create')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -232,6 +236,8 @@ function LayerItem({
 }: LayerItemProps) {
   const iconSizes = useIconSizes();
   const { radius } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('dxf-viewer');
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameName, setRenameName] = useState(layer.name);
   
@@ -323,11 +329,11 @@ function LayerItem({
               size="sm"
               className={`${iconSizes.md} p-0`}
               onClick={onToggleVisibility}
-              title={layer.isVisible ? 'Απόκρυψη' : 'Εμφάνιση'}
+              title={layer.isVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}
             >
               {layer.isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
             </Button>
-            
+
             {/* Lock */}
             <Button
               variant="ghost"
@@ -335,7 +341,7 @@ function LayerItem({
               className={`${iconSizes.md} p-0`}
               onClick={onToggleLock}
               disabled={layer.isSystem}
-              title={layer.isLocked ? 'Ξεκλείδωμα' : 'Κλείδωμα'}
+              title={layer.isLocked ? t('layerManager.actions.unlock') : t('layerManager.actions.lock')}
             >
               {layer.isLocked ? <Lock className={iconSizes.xs} /> : <Unlock className={iconSizes.xs} />}
             </Button>
@@ -352,25 +358,25 @@ function LayerItem({
                   <>
                     <DropdownMenuItem onClick={() => setIsRenaming(true)}>
                       <Type className={`${iconSizes.xs} mr-2`} />
-                      Μετονομασία
+                      {t('layerManager.actions.rename')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={onDuplicate}>
                       <Copy className={`${iconSizes.xs} mr-2`} />
-                      Αντιγραφή
+                      {t('layerManager.actions.duplicate')}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
                 )}
                 <DropdownMenuItem>
                   <Download className={`${iconSizes.xs} mr-2`} />
-                  Export Layer
+                  {t('layerManager.actions.exportLayer')}
                 </DropdownMenuItem>
                 {!layer.isSystem && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={onDelete} className="text-destructive">
                       <Trash2 className={`${iconSizes.xs} mr-2`} />
-                      Διαγραφή
+                      {t('layerManager.actions.delete')}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -381,7 +387,7 @@ function LayerItem({
 
         {/* Opacity Slider */}
         <div className="mt-2 flex items-center gap-2">
-          <span className="text-xs text-muted-foreground w-16">Διαφάνεια:</span>
+          <span className="text-xs text-muted-foreground w-16">{t('layerManager.labels.opacity')}</span>
           <Slider
             value={[layer.opacity * 100]}
             onValueChange={([value]) => onOpacityChange(value / 100)}
@@ -421,7 +427,7 @@ function LayerItem({
                 ))}
                 {layer.elements.length > 5 && (
                   <p className="text-xs text-muted-foreground">
-                    +{layer.elements.length - 5} περισσότερα στοιχεία
+                    {t('layerManager.labels.moreElements', { count: layer.elements.length - 5 })}
                   </p>
                 )}
               </div>
@@ -450,6 +456,8 @@ export function AdminLayerManager({
 }: AdminLayerManagerProps) {
   const iconSizes = useIconSizes();
   const { radius } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('dxf-viewer');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set());
@@ -613,7 +621,7 @@ export function AdminLayerManager({
       <Card className={className}>
         <CardContent className="p-4">
           <div className="flex items-center justify-center">
-            <span className="text-sm text-muted-foreground">Φόρτωση layers...</span>
+            <span className="text-sm text-muted-foreground">{t('layerManager.loading')}</span>
           </div>
         </CardContent>
       </Card>
@@ -627,13 +635,13 @@ export function AdminLayerManager({
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
               <Layers className={iconSizes.sm} />
-              Layer Manager
+              {t('layerManager.title')}
               {showSyncStatus && (
                 <div className="flex items-center gap-1">
                   {syncState.isConnected ? (
-                    <div className={`${iconSizes.xs} bg-green-500 ${radius.full}`} title="Συνδεδεμένο - Real-time sync ενεργό" />
+                    <div className={`${iconSizes.xs} bg-green-500 ${radius.full}`} title={t('layerManager.sync.connectedTooltip')} />
                   ) : (
-                    <div className={`${iconSizes.xs} bg-red-500 ${radius.full}`} title="Αποσυνδεδεμένο" />
+                    <div className={`${iconSizes.xs} bg-red-500 ${radius.full}`} title={t('layerManager.sync.disconnectedTooltip')} />
                   )}
                   {syncState.pendingOperations > 0 && (
                     <CommonBadge
@@ -666,15 +674,15 @@ export function AdminLayerManager({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem>
                     <Download className={`${iconSizes.xs} mr-2`} />
-                    Export όλα τα Layers
+                    {t('layerManager.actions.exportAll')}
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Upload className={`${iconSizes.xs} mr-2`} />
-                    Import Layers
+                    {t('layerManager.actions.importLayers')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setShowSystemLayers(!showSystemLayers)}>
-                    {showSystemLayers ? 'Απόκρυψη' : 'Εμφάνιση'} System Layers
+                    {showSystemLayers ? t('layerManager.actions.hideSystemLayers') : t('layerManager.actions.showSystemLayers')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -688,7 +696,7 @@ export function AdminLayerManager({
             <div className="relative">
               <Search className={`absolute left-2 top-2.5 ${iconSizes.xs} text-muted-foreground`} />
               <Input
-                placeholder="Αναζήτηση layers..."
+                placeholder={t('layerManager.labels.searchLayers')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-7 h-8 text-sm"
@@ -724,29 +732,29 @@ export function AdminLayerManager({
 
           {/* Layer Statistics with Sync Info */}
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Σύνολο: {state.layers.length}</span>
-            <span>Ορατά: {state.layers.filter(l => l.isVisible).length}</span>
-            <span>Στοιχεία: {state.layers.reduce((acc, l) => acc + l.elements.length, 0)}</span>
+            <span>{t('layerManager.stats.total')} {state.layers.length}</span>
+            <span>{t('layerManager.stats.visible')} {state.layers.filter(l => l.isVisible).length}</span>
+            <span>{t('layerManager.stats.elements')} {state.layers.reduce((acc, l) => acc + l.elements.length, 0)}</span>
           </div>
           
           {/* Sync Status Info */}
           {showSyncStatus && enableRealTimeSync && (
             <div className="text-xs text-muted-foreground">
               <div className="flex justify-between items-center">
-                <span>Sync Status:</span>
+                <span>{t('layerManager.sync.status')}</span>
                 <span className={syncState.isConnected ? 'text-green-600' : 'text-red-600'}>
-                  {syncState.isConnected ? 'Συνδεδεμένο' : 'Αποσυνδεδεμένο'}
+                  {syncState.isConnected ? t('layerManager.sync.connected') : t('layerManager.sync.disconnected')}
                 </span>
               </div>
               {syncState.lastSyncTime && (
                 <div className="flex justify-between items-center">
-                  <span>Τελευταία Sync:</span>
+                  <span>{t('layerManager.sync.lastSync')}</span>
                   <span>{new Date(syncState.lastSyncTime).toLocaleTimeString('el-GR')}</span>
                 </div>
               )}
               {syncState.errors.length > 0 && (
                 <div className="text-destructive text-xs mt-1">
-                  Σφάλματα: {syncState.errors.length}
+                  {t('layerManager.sync.errors')} {syncState.errors.length}
                 </div>
               )}
             </div>
@@ -768,7 +776,7 @@ export function AdminLayerManager({
                         {getCategoryInfo(category).name}
                       </>
                     )}
-                    {category === 'other' && 'Άλλα'}
+                    {category === 'other' && t('layerManager.labels.other')}
                     <CommonBadge
                       status="company"
                       customLabel={layers.length.toString()}
@@ -799,8 +807,8 @@ export function AdminLayerManager({
               {filteredLayers.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Layers className={`${iconSizes.xl} mx-auto mb-2 opacity-50`} />
-                  <p className="text-sm">Δεν βρέθηκαν layers</p>
-                  <p className="text-xs">Δημιουργήστε ένα νέο layer ή αλλάξτε τα φίλτρα</p>
+                  <p className="text-sm">{t('layerManager.labels.noLayersFound')}</p>
+                  <p className="text-xs">{t('layerManager.labels.createNewOrChangeFilters')}</p>
                 </div>
               )}
             </div>

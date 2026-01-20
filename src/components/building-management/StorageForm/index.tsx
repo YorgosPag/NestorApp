@@ -49,7 +49,6 @@ export function StorageForm({ unit, building, onSave, onCancel, formType }: Stor
     unit,
     building,
     onSave,
-    onCancel,
     formType,
   });
   

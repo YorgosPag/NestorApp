@@ -97,7 +97,7 @@ export function ProjectsHeader({
                 ? `bg-primary text-primary-foreground ${getStatusBorder('default')}`
                 : `${colors.bg.primary} ${quick.card} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`
             }`}
-            aria-label="Toggle filters"
+            aria-label={t('filters.toggleFilters')}
           >
             <Filter className={iconSizes.sm} />
           </button>

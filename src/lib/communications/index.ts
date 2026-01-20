@@ -102,12 +102,12 @@ export const sendTemplateMessage = (templateData: TemplateSendInput): Promise<Se
  * Helper functions για CRM integration
  */
 export const sendWelcomeMessage = (leadData: LeadData, channel: Channel = 'email'): Promise<SendResult> => {
-  const to = channel === 'email' ? leadData.email : leadData.phone;
+  const to = (channel === 'email' ? leadData.email : leadData.phone) || '';
   return communicationsService.sendTemplateMessage({
     templateType: 'welcome',
     channel,
     to,
-    variables: { leadName: leadData.fullName, companyName: process.env.NEXT_PUBLIC_COMPANY_NAME },
+    variables: { leadName: leadData.fullName || '', companyName: process.env.NEXT_PUBLIC_COMPANY_NAME || '' },
     entityType: 'lead',
     entityId: leadData.id,
     metadata: { automatedMessage: true, trigger: 'new_lead' },
@@ -119,7 +119,7 @@ export const sendFollowUpMessage = (
   channel: Channel,
   customContent: string | null = null
 ): Promise<SendResult> => {
-  const to = channel === 'email' ? leadData.email : leadData.phone;
+  const to = (channel === 'email' ? leadData.email : leadData.phone) || '';
   if (customContent) {
     return communicationsService.sendMessage({ channel, to, content: customContent, entityType: 'lead', entityId: leadData.id });
   }
@@ -127,7 +127,7 @@ export const sendFollowUpMessage = (
     templateType: 'follow_up',
     channel,
     to,
-    variables: { leadName: leadData.fullName, companyName: process.env.NEXT_PUBLIC_COMPANY_NAME },
+    variables: { leadName: leadData.fullName || '', companyName: process.env.NEXT_PUBLIC_COMPANY_NAME || '' },
     entityType: 'lead',
     entityId: leadData.id,
     metadata: { automatedMessage: false, trigger: 'manual_follow_up' },
@@ -140,13 +140,14 @@ export const sendAppointmentConfirmation = async (leadData: LeadData, appointmen
     const appointmentMessage: TemplateSendInput = {
       templateType: 'appointment',
       channel,
-      to: channel === 'email' ? leadData.email : leadData.phone,
+      to: (channel === 'email' ? leadData.email : leadData.phone) || '',
       variables: {
-        leadName: leadData.fullName,
+        leadName: leadData.fullName || '',
         date: appointmentData.date,
         time: appointmentData.time,
-        location: appointmentData.location || 'Γραφεία μας',
-        companyName: process.env.NEXT_PUBLIC_COMPANY_NAME
+        // 🌐 i18n: Converted to i18n key - 2026-01-18
+        location: appointmentData.location || 'communications.appointment.defaultLocation',
+        companyName: process.env.NEXT_PUBLIC_COMPANY_NAME || ''
       },
       entityType: 'lead',
       entityId: leadData.id,

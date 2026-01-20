@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { FilterState } from '@/types/property-viewer';
-import { PRICE_MAX, AREA_MAX } from '../constants';
+import { PRICE_MAX, AREA_MAX } from '@/components/public-property-filters/constants';
 
 export function usePublicPropertyFilterHandlers(
   filters: FilterState,

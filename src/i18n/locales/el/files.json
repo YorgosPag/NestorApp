@@ -1,0 +1,210 @@
+{
+  "domains": {
+    "admin": "Διαχείριση",
+    "construction": "Κατασκευή",
+    "sales": "Πωλήσεις",
+    "accounting": "Λογιστικά",
+    "legal": "Νομικά",
+    "financial": "Οικονομικά"
+  },
+  "categories": {
+    "photos": "Φωτογραφίες",
+    "floorplans": "Κατόψεις",
+    "contracts": "Συμβόλαια",
+    "invoices": "Τιμολόγια",
+    "documents": "Έγγραφα",
+    "drawings": "Σχέδια",
+    "reports": "Αναφορές",
+    "permits": "Άδειες"
+  },
+  "entityTypes": {
+    "contact": "Επαφές",
+    "building": "Κτίρια",
+    "floor": "Όροφοι",
+    "unit": "Μονάδες",
+    "project": "Έργα",
+    "company": "Εταιρείες"
+  },
+  "purposes": {
+    "profile": "Προφίλ",
+    "id": "Ταυτότητα",
+    "tax": "ΑΦΜ",
+    "address": "Διεύθυνση",
+    "phone": "Τηλέφωνο",
+    "front": "Μπροστινή Όψη",
+    "back": "Πίσω Όψη",
+    "signed": "Υπογεγραμμένο",
+    "draft": "Πρόχειρο",
+    "generic": "Γενικό",
+    "permit": "Άδεια",
+    "floorplan": "Κάτοψη",
+    "exterior": "Εξωτερικό",
+    "interior": "Εσωτερικό",
+    "contract": "Συμβόλαιο",
+    "report": "Αναφορά"
+  },
+  "labels": {
+    "revision": "Έκδοση",
+    "uploadedAt": "Ανέβηκε",
+    "exportFilename": "Όνομα αρχείου εξαγωγής"
+  },
+  "pdf": {
+    "title": "Έγγραφο PDF",
+    "preview": "PDF προεπισκόπηση",
+    "openInNewTab": "Άνοιγμα PDF σε νέα καρτέλα"
+  },
+  "validation": {
+    "onlyPdfAllowed": "Μόνο αρχεία PDF επιτρέπονται",
+    "fileTooLarge": "Το αρχείο είναι πολύ μεγάλο (μέγιστο 50MB)",
+    "fileLargeWarning": "Το αρχείο είναι μεγάλο και μπορεί να χρειαστεί περισσότερος χρόνος για upload",
+    "filenameSpecialChars": "Το όνομα του αρχείου περιέχει ειδικούς χαρακτήρες που μπορεί να προκαλέσουν προβλήματα"
+  },
+  "upload": {
+    "typeQuestion": "Τι τύπο εγγράφου θα ανεβάσετε;",
+    "categoryHint": "Επιλέξτε την κατηγορία για αυτόματη ονοματολογία",
+    "documentForCategory": "Έγγραφο για αυτήν την κατηγορία",
+    "documentTitle": "Τίτλος Εγγράφου",
+    "customTitlePlaceholder": "π.χ. Πληρεξούσιο, Υπεύθυνη Δήλωση, κτλ.",
+    "customTitleHint": "Υποχρεωτικό πεδίο - Εισάγετε περιγραφικό τίτλο για το έγγραφο",
+    "selectDocumentType": "Επιλογή τύπου εγγράφου",
+    "errors": {
+      "generic": "Σφάλμα κατά την αποστολή του αρχείου",
+      "unauthorized": "Δεν έχετε δικαίωμα να ανεβάσετε αρχεία",
+      "cancelled": "Η αποστολή ακυρώθηκε",
+      "quotaExceeded": "Δεν υπάρχει αρκετός χώρος αποθήκευσης",
+      "urlFetch": "Σφάλμα κατά τη λήψη URL αρχείου",
+      "databaseUpdate": "Σφάλμα κατά την ενημέρωση βάσης δεδομένων",
+      "unknown": "Άγνωστο σφάλμα κατά τη διαχείριση του PDF"
+    }
+  },
+  "manager": {
+    "filesTitle": "Αρχεία",
+    "addFiles": "Προσθήκη Αρχείων",
+    "refresh": "Ανανέωση",
+    "fileManagementTools": "Εργαλεία Διαχείρισης Αρχείων",
+    "errorLoading": "Σφάλμα φόρτωσης αρχείων",
+    "totalStorage": "Συνολικός χώρος",
+    "viewList": "Προβολή Λίστας",
+    "viewTree": "Προβολή Δέντρου",
+    "listView": "Λίστα",
+    "treeView": "Δέντρο",
+    "businessView": "Επιχειρηματική Προβολή",
+    "technicalView": "Τεχνική Προβολή",
+    "businessViewTooltip": "Επιχειρηματική Προβολή - Φιλική προς το χρήστη εμφάνιση",
+    "technicalViewTooltip": "Τεχνική Προβολή - Πλήρης διαδρομή με IDs",
+    "refreshTooltip": "Ανανέωση λίστας αρχείων",
+    "addFilesTooltip": "Ανέβασμα νέων αρχείων",
+    "belongsTo": "Ανήκει στο",
+    "selectDocumentType": "Επιλέξτε πρώτα τον τύπο του εγγράφου",
+    "enterTitleToContinue": "Εισάγετε τίτλο για να συνεχίσετε με το upload"
+  },
+  "list": {
+    "file": "Αρχείο",
+    "filesList": "Λίστα Αρχείων",
+    "view": "Προβολή",
+    "download": "Λήψη",
+    "delete": "Κάδος",
+    "cancel": "Ακύρωση",
+    "deleteFile": "Μετακίνηση στον Κάδο",
+    "viewFile": "Προβολή αρχείου",
+    "downloadFile": "Λήψη αρχείου",
+    "deleteConfirm": "Το αρχείο θα μετακινηθεί στον Κάδο. Μπορείτε να το επαναφέρετε μέσα σε 30 ημέρες.",
+    "deleteSuccess": "Το αρχείο μετακινήθηκε στον Κάδο",
+    "deleteError": "Αποτυχία μετακίνησης στον Κάδο",
+    "loadingFiles": "Φόρτωση αρχείων...",
+    "noFiles": "Δεν υπάρχουν αρχεία",
+    "noFilesDescription": "Προσθέστε αρχεία χρησιμοποιώντας το κουμπί Προσθήκη Αρχείων",
+    "fileActions": "Ενέργειες αρχείου"
+  },
+  "trash": {
+    "title": "Κάδος Ανακύκλωσης",
+    "description": "Αρχεία που διαγράφηκαν τις τελευταίες 30 ημέρες",
+    "emptyTrash": "Άδειασμα Κάδου",
+    "emptyTrashConfirm": "Είστε σίγουροι; Αυτή η ενέργεια θα διαγράψει οριστικά όλα τα αρχεία.",
+    "restore": "Επαναφορά",
+    "restoreFile": "Επαναφορά Αρχείου",
+    "restoreConfirm": "Θέλετε να επαναφέρετε αυτό το αρχείο;",
+    "restoreSuccess": "Το αρχείο επαναφέρθηκε επιτυχώς",
+    "restoreError": "Αποτυχία επαναφοράς αρχείου",
+    "permanentDelete": "Οριστική Διαγραφή",
+    "permanentDeleteConfirm": "Είστε σίγουροι; Το αρχείο θα διαγραφεί οριστικά και δεν μπορεί να ανακτηθεί.",
+    "permanentDeleteSuccess": "Το αρχείο διαγράφηκε οριστικά",
+    "permanentDeleteError": "Αποτυχία οριστικής διαγραφής",
+    "expiresIn": "Λήγει σε",
+    "days": "ημέρες",
+    "expired": "Έληξε",
+    "noTrashedFiles": "Ο Κάδος είναι άδειος",
+    "noTrashedFilesDescription": "Τα αρχεία που διαγράφετε εμφανίζονται εδώ για 30 ημέρες",
+    "trashedAt": "Διαγράφηκε στις",
+    "trashedBy": "Διαγράφηκε από",
+    "purgeAt": "Οριστική διαγραφή στις",
+    "holdActive": "Ενεργό Hold",
+    "holdLegal": "Νομικό Hold",
+    "holdRegulatory": "Κανονιστικό Hold",
+    "holdAdmin": "Διοικητικό Hold",
+    "cannotTrashWithHold": "Δεν μπορείτε να διαγράψετε αρχείο με ενεργό hold",
+    "stats": {
+      "totalFiles": "Σύνολο αρχείων",
+      "totalSize": "Συνολικός χώρος",
+      "expiringInWeek": "Λήγουν σε 7 ημέρες"
+    }
+  },
+  "uploadZone": {
+    "uploadZone": "Ζώνη μεταφόρτωσης αρχείων",
+    "fileInput": "Επιλογή αρχείων",
+    "clickToSelect": "Κάντε κλικ για επιλογή",
+    "orDragAndDrop": "ή σύρετε και αποθέστε εδώ",
+    "fileTypesHint": "Υποστηριζόμενοι τύποι: Εικόνες, PDF, Word, Excel",
+    "maxSize": "Μέγιστο μέγεθος: {{size}}",
+    "selectFiles": "Επιλογή Αρχείων",
+    "selectFilesButton": "Κουμπί επιλογής αρχείων",
+    "uploading": "Μεταφόρτωση σε εξέλιξη...",
+    "errors": {
+      "fileTooLarge": "Το αρχείο {{fileName}} είναι πολύ μεγάλο. Μέγιστο μέγεθος: {{maxSize}}"
+    }
+  },
+  "pathSegments": {
+    "companies": "Εταιρείες",
+    "projects": "Έργα",
+    "entities": "Οντότητες",
+    "domains": "Τομείς",
+    "categories": "Κατηγορίες",
+    "files": "Αρχεία"
+  },
+  "tree": {
+    "title": "Δομή Αρχείων",
+    "expand": "Ανάπτυξη φακέλου",
+    "collapse": "Σύμπτυξη φακέλου",
+    "folder": "Φάκελος",
+    "file": "Αρχείο"
+  },
+  "technical": {
+    "storagePath": "Διαδρομή αποθήκευσης",
+    "copyPath": "Αντιγραφή διαδρομής",
+    "pathCopied": "Η διαδρομή αντιγράφηκε",
+    "pathUnavailable": "Μη διαθέσιμη",
+    "details": "Λεπτομέρειες",
+    "unavailable": "Μη διαθέσιμο"
+  },
+  "inspector": {
+    "title": "Λεπτομέρειες Αρχείου",
+    "description": "Προβολή μεταδεδομένων και τεχνικών πληροφοριών",
+    "storagePath": "Διαδρομή Αποθήκευσης",
+    "fileSize": "Μέγεθος Αρχείου",
+    "contentType": "Τύπος Περιεχομένου",
+    "createdAt": "Ημερομηνία Δημιουργίας",
+    "createdBy": "Δημιουργήθηκε Από",
+    "company": "Εταιρεία",
+    "domain": "Τομέας",
+    "category": "Κατηγορία",
+    "status": "Κατάσταση",
+    "downloadUrl": "Σύνδεσμος Λήψης",
+    "viewFile": "Προβολή Αρχείου"
+  },
+  "search": {
+    "placeholder": "Αναζήτηση αρχείων...",
+    "results": "{{count}} από {{total}} αρχεία",
+    "noResults": "Δεν βρέθηκαν αρχεία",
+    "clearSearch": "Καθαρισμός αναζήτησης"
+  }
+}

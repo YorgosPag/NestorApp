@@ -27,7 +27,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { adminDb, ensureAdminInitialized, getAdminInitializationStatus } from '@/lib/firebaseAdmin';
-import { withErrorHandling, apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import type { CompanyContact } from '@/types/contacts';
@@ -140,8 +140,8 @@ export const dynamic = 'force-dynamic';
  * - Single-tenant view (user sees only their company data)
  */
 export async function GET(request: NextRequest) {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<BootstrapResponse>> => {
+  const handler = withAuth<ApiSuccessResponse<BootstrapResponse>>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleAuditBootstrap(req, ctx);
     },
     { permissions: 'projects:projects:view' }
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
   return handler(request);
 }
 
-async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Promise<NextResponse<BootstrapResponse>> {
+async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ApiSuccessResponse<BootstrapResponse>>> {
   const startTime = Date.now();
   console.log(`🚀 [Bootstrap] Audit bootstrap load for user ${ctx.email} (company: ${ctx.companyId})...`);
 
@@ -179,11 +179,17 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   console.log('✅ [Bootstrap] Firebase Admin SDK validated');
 
   // ============================================================================
-  // 1. CHECK CACHE FIRST (PER-COMPANY CACHE KEY)
+  // 1. CHECK CACHE FIRST (ROLE-BASED CACHE KEY)
   // ============================================================================
 
-  // 🔒 TENANT ISOLATION: Cache key includes companyId for tenant separation
-  const tenantCacheKey = `${CACHE_KEY}:${ctx.companyId}`;
+  // 🏢 ENTERPRISE RBAC: Different cache keys for admins vs regular users
+  // - Admins see ALL navigation_companies → cache key: 'api:audit:bootstrap:admin'
+  // - Regular users see only their company → cache key: 'api:audit:bootstrap:tenant:{companyId}'
+  const isAdmin = ctx.globalRole === 'super_admin' || ctx.globalRole === 'company_admin';
+  const tenantCacheKey = isAdmin
+    ? `${CACHE_KEY}:admin`
+    : `${CACHE_KEY}:tenant:${ctx.companyId}`;
+
   const cache = EnterpriseAPICache.getInstance();
   const cachedData = cache.get<BootstrapResponse>(tenantCacheKey);
 
@@ -191,56 +197,146 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
     const duration = Date.now() - startTime;
     console.log(`⚡ [Bootstrap] CACHE HIT (tenant: ${ctx.companyId}) - ${cachedData.companies.length} companies, ${cachedData.projects.length} projects in ${duration}ms`);
 
-    return NextResponse.json({
-      ...cachedData,
-      source: 'cache',
-      cached: true
-    } as BootstrapResponse);
+    // 🏢 ENTERPRISE: Return standard apiSuccess format
+    return apiSuccess<BootstrapResponse>(
+      {
+        ...cachedData,
+        source: 'cache' as const,
+        cached: true
+      },
+      `Bootstrap data loaded from cache in ${duration}ms`
+    );
   }
 
-  console.log(`🔍 [Bootstrap] Cache miss (tenant: ${ctx.companyId}) - Fetching from Firestore...`);
+  console.log(`🔍 [Bootstrap] Cache miss (tenant: ${ctx.companyId}, role: ${ctx.globalRole}) - Fetching from Firestore...`);
 
   // ============================================================================
-  // 2. FETCH USER'S COMPANY (TENANT ISOLATION)
+  // 2. FETCH COMPANIES - HYBRID APPROACH (ENTERPRISE)
+  // ============================================================================
+  // 🏢 HYBRID APPROACH (SAP/Salesforce pattern):
+  // - super_admin / company_admin → Load from navigation_companies (multi-company view)
+  // - internal_user → Tenant Isolation (single-company view)
   // ============================================================================
 
-  let companiesSnapshot: FirebaseFirestore.QuerySnapshot;
+  // Note: isAdmin already defined above for cache key selection
+  let companyIds: string[] = [];
+  const companyMap = new Map<string, { id: string; name: string }>();
 
   try {
-    // 🔒 TENANT ISOLATION: Fetch ONLY the user's company
-    // Enterprise pattern: Single-tenant view (user sees only their organization)
-    companiesSnapshot = await adminDb
-      .collection(COLLECTIONS.CONTACTS)
-      .where('type', '==', 'company')
-      .where('status', '==', 'active')
-      .get();
+    if (isAdmin) {
+      // =========================================================================
+      // 🔓 ADMIN MODE: Load from navigation_companies (multi-company view)
+      // =========================================================================
+      console.log(`👑 [Bootstrap] Admin mode (${ctx.globalRole}) - Loading from navigation_companies...`);
 
-    // Filter to user's company only (in-memory filter after fetch for type safety)
-    const userCompanyDocs = companiesSnapshot.docs.filter(doc => doc.id === ctx.companyId);
+      // Step 1: Get all navigation company IDs
+      const navCompaniesSnapshot = await adminDb
+        .collection(COLLECTIONS.NAVIGATION)
+        .get();
 
-    if (userCompanyDocs.length === 0) {
-      console.warn(`⚠️ [Bootstrap] User's company ${ctx.companyId} not found in database`);
-      // Return empty result (tenant has no data yet)
-      return NextResponse.json({
-        companies: [],
-        projects: [],
-        loadedAt: new Date().toISOString(),
-        source: 'firestore',
-        cached: false
-      } as BootstrapResponse);
+      if (navCompaniesSnapshot.empty) {
+        console.warn('⚠️ [Bootstrap] No navigation companies found - admin has no companies configured');
+        return apiSuccess<BootstrapResponse>(
+          {
+            companies: [],
+            projects: [],
+            loadedAt: new Date().toISOString(),
+            source: 'firestore' as const,
+            cached: false
+          },
+          'No navigation companies configured - use + button to add companies'
+        );
+      }
+
+      // Extract contactIds from navigation_companies
+      const navContactIds: string[] = [];
+      navCompaniesSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.contactId) {
+          navContactIds.push(data.contactId);
+        }
+      });
+
+      console.log(`📋 [Bootstrap] Found ${navContactIds.length} navigation companies`);
+
+      // Step 2: Fetch company details from contacts collection
+      if (navContactIds.length > 0) {
+        // Chunk for Firestore 'in' limit
+        const contactChunks = chunkArray(navContactIds, FIRESTORE_IN_LIMIT);
+
+        for (const chunk of contactChunks) {
+          const contactsSnapshot = await adminDb
+            .collection(COLLECTIONS.CONTACTS)
+            .where('__name__', 'in', chunk)
+            .where('type', '==', 'company')
+            .get();
+
+          contactsSnapshot.docs.forEach(doc => {
+            const data = doc.data() as Partial<CompanyContact>;
+            companyMap.set(doc.id, {
+              id: doc.id,
+              name: data.companyName || data.displayName || 'Unknown Company'
+            });
+            companyIds.push(doc.id);
+          });
+        }
+      }
+
+      console.log(`🏢 [Bootstrap] Admin loaded ${companyIds.length} companies from navigation_companies`);
+
+    } else {
+      // =========================================================================
+      // 🔒 TENANT ISOLATION: Internal user sees only their company
+      // =========================================================================
+      console.log(`🔒 [Bootstrap] Tenant isolation mode - Loading user's company only...`);
+
+      if (!ctx.companyId) {
+        console.warn('⚠️ [Bootstrap] User has no companyId in custom claims');
+        return apiSuccess<BootstrapResponse>(
+          {
+            companies: [],
+            projects: [],
+            loadedAt: new Date().toISOString(),
+            source: 'firestore' as const,
+            cached: false
+          },
+          'User has no company assigned - contact administrator'
+        );
+      }
+
+      // Fetch only user's company
+      const companyDoc = await adminDb
+        .collection(COLLECTIONS.CONTACTS)
+        .doc(ctx.companyId)
+        .get();
+
+      if (!companyDoc.exists) {
+        console.warn(`⚠️ [Bootstrap] User's company ${ctx.companyId} not found in database`);
+        return apiSuccess<BootstrapResponse>(
+          {
+            companies: [],
+            projects: [],
+            loadedAt: new Date().toISOString(),
+            source: 'firestore' as const,
+            cached: false
+          },
+          'Company not found - returning empty bootstrap data'
+        );
+      }
+
+      const data = companyDoc.data() as Partial<CompanyContact>;
+      companyMap.set(companyDoc.id, {
+        id: companyDoc.id,
+        name: data?.companyName || data?.displayName || 'Unknown Company'
+      });
+      companyIds.push(ctx.companyId);
+
+      console.log(`🏢 [Bootstrap] Tenant isolation - loaded 1 company: ${ctx.companyId}`);
     }
 
-    console.log(`🏢 [Bootstrap] Found user's company (tenant: ${ctx.companyId})`);
-
-    // 🏢 DIAGNOSTIC: Log collection and query details
-    if (companiesSnapshot.docs.length === 0) {
-      console.warn('⚠️ [Bootstrap] No companies found - checking database state');
-      console.warn('📋 [Bootstrap] Collection:', COLLECTIONS.CONTACTS);
-      console.warn('📋 [Bootstrap] Query filters: type=company, status=active');
-    }
   } catch (error) {
     console.error('❌ [Bootstrap] Failed to fetch companies from Firestore');
-    console.error('📍 [Bootstrap] Collection:', COLLECTIONS.CONTACTS);
+    console.error('📍 [Bootstrap] Mode:', isAdmin ? 'Admin (navigation_companies)' : 'Tenant Isolation');
     console.error('📋 [Bootstrap] Error details:', error instanceof Error ? error.message : String(error));
 
     if (error instanceof Error && error.stack) {
@@ -249,24 +345,10 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
 
     throw new Error(
       `Failed to fetch companies from Firestore: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
-      `Collection: ${COLLECTIONS.CONTACTS}. ` +
+      `Mode: ${isAdmin ? 'Admin' : 'Tenant'}. ` +
       `Check Firestore security rules and Admin SDK permissions.`
     );
   }
-
-  // Build company map for quick lookup (only user's company)
-  const companyMap = new Map<string, { id: string; name: string }>();
-
-  userCompanyDocs.forEach(doc => {
-    const data = doc.data() as Partial<CompanyContact>;
-    companyMap.set(doc.id, {
-      id: doc.id,
-      name: data.companyName || data.displayName || 'Unknown Company'
-    });
-  });
-
-  // 🔒 TENANT ISOLATION: Only user's companyId (single-tenant array)
-  const companyIds = [ctx.companyId];
 
   // ============================================================================
   // 3. FETCH ALL PROJECTS (Admin SDK with chunking for `in` limit)
@@ -423,20 +505,11 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   const duration = Date.now() - startTime;
   console.log(`✅ [Bootstrap] Complete (tenant: ${ctx.companyId}): ${companies.length} companies, ${allProjects.length} projects in ${duration}ms (cached for 3min)`);
 
-  try {
-    return NextResponse.json(response);
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    console.error(`❌ [Bootstrap] Error (tenant: ${ctx.companyId}) in ${duration}ms:`, error);
-
-    return NextResponse.json({
-      companies: [],
-      projects: [],
-      loadedAt: new Date().toISOString(),
-      source: 'firestore',
-      cached: false
-    } as BootstrapResponse, { status: 500 });
-  }
+  // 🏢 ENTERPRISE: Return standard apiSuccess format
+  return apiSuccess<BootstrapResponse>(
+    response,
+    `Bootstrap loaded: ${companies.length} companies, ${allProjects.length} projects in ${duration}ms`
+  );
 }
 
 // ============================================================================

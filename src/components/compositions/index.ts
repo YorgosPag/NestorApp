@@ -1,13 +1,15 @@
 // Domain-specific compositions using core components
 
 // Card Compositions (using BaseCard)
-export * from './BuildingCard';
 export * from './ContactCard';
 export * from './NotificationCard';
 export * from './StorageCard';
 export * from './PropertyCard';
 export * from './TaskCard';
 export * from './UserCard';
+
+// 🔧 TODO: Create BuildingCard composition
+// export * from './BuildingCard';
 
 // Toolbar Compositions (using BaseToolbar)
 export * from './BuildingToolbar';
@@ -18,7 +20,8 @@ export { ProjectToolbar } from '@/components/projects/ProjectToolbar';
 export { ContactsToolbar } from '@/components/contacts/toolbar/ContactsToolbar';
 
 // Showcase Components
-export * from './ComponentShowcase';
+// 🔧 NOTE: ComponentShowcase imports from this index, would create circular dependency
+// export * from './ComponentShowcase';
 export * from './ToolbarShowcase';
 
 // Future compositions will be added here:

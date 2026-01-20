@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { BaseCard, CardAction, CardStatus } from '@/components/core/BaseCard';
 import { MapPin, Ruler, Eye, Edit, Trash2 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -119,7 +120,7 @@ export function PropertyCard({
           
           {property.price && (
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">Τιμή</p>
+              <p className="text-sm text-muted-foreground">{t('building.storage.form.price')}</p>
               <p className="font-semibold text-primary">
                 €{property.price.toLocaleString()}
               </p>
@@ -139,7 +140,7 @@ export function PropertyCard({
           {property.area && (
             <div className="flex items-center gap-1">
               <Ruler className={iconSizes.sm} />
-              <span>{property.area} τ.μ.</span>
+              <span>{property.area} {t('grid.area.sqm')}</span>
             </div>
           )}
           

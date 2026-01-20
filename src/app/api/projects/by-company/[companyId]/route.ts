@@ -19,7 +19,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -61,13 +61,11 @@ export async function GET(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ByCompanyResponse>> => {
       // 🔒 SECURITY: Use authenticated user's companyId ONLY
       const companyId = ctx.companyId;
+      const startTime = Date.now();
 
-      console.log(`🏗️ [Projects/ByCompany] Loading projects for company: ${companyId}`);
-      console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${companyId}`);
-
-      // 🚨 SECURITY WARNING: Log if URL param doesn't match authenticated companyId
+      // 🚨 SECURITY: Log URL param mismatch (informational only - no PII)
       if (urlCompanyId !== companyId) {
-        console.warn(`🚫 SECURITY: URL param mismatch - URL: ${urlCompanyId}, Auth: ${companyId} (using Auth companyId)`);
+        console.warn(`🚫 URL param mismatch detected (using authenticated scope)`);
       }
 
       try {
@@ -77,7 +75,17 @@ export async function GET(
 
         const cachedProjects = CacheHelpers.getCachedProjectsByCompany(companyId);
         if (cachedProjects) {
-          console.log(`⚡ [Projects/ByCompany] CACHE HIT - ${cachedProjects.length} projects for company ${companyId}`);
+          const duration = Date.now() - startTime;
+          console.log(`⚡ Cache hit: ${cachedProjects.length} projects (${duration}ms)`);
+
+          // 📊 Audit: Cache hit
+          await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
+            metadata: {
+              path: '/api/projects/by-company',
+              reason: `Projects by company accessed (${cachedProjects.length} items from cache, ${duration}ms)`
+            }
+          });
+
           return apiSuccess({
             projects: cachedProjects,
             companyId: companyId,
@@ -86,7 +94,7 @@ export async function GET(
           }, `Found ${cachedProjects.length} cached projects`);
         }
 
-        console.log('🔍 [Projects/ByCompany] Cache miss - Fetching from Firestore...');
+        console.log('🔍 Cache miss - querying Firestore');
 
         // ============================================================================
         // 2. FETCH FROM FIRESTORE (Admin SDK + Tenant Isolation)
@@ -97,19 +105,29 @@ export async function GET(
           .where('companyId', '==', companyId)
           .get();
 
-        console.log(`🏗️ [Projects/ByCompany] Found ${snapshot.docs.length} projects for tenant ${companyId}`);
-
         const projects = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
+
+        console.log(`🏗️ Loaded ${snapshot.docs.length} projects from Firestore`);
 
         // ============================================================================
         // 3. CACHE FOR FUTURE REQUESTS
         // ============================================================================
 
         CacheHelpers.cacheProjectsByCompany(companyId, projects);
-        console.log(`✅ [Projects/ByCompany] Complete: ${projects.length} projects (cached for 3 minutes)`);
+
+        const duration = Date.now() - startTime;
+        console.log(`✅ Complete: ${projects.length} projects cached (${duration}ms)`);
+
+        // 📊 Audit: Firestore load
+        await logAuditEvent(ctx, 'data_accessed', 'projects', 'api', {
+          metadata: {
+            path: '/api/projects/by-company',
+            reason: `Projects by company accessed (${projects.length} items from Firestore, ${duration}ms)`
+          }
+        });
 
         return apiSuccess({
           projects,
@@ -119,9 +137,7 @@ export async function GET(
         }, `Found ${projects.length} projects`);
 
       } catch (error: unknown) {
-        console.error('❌ [Projects/ByCompany] Error:', {
-          companyId: companyId,
-          userId: ctx.uid,
+        console.error('❌ Error loading projects:', {
           error: error instanceof Error ? {
             name: error.name,
             message: error.message,

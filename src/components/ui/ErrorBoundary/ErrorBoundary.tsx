@@ -10,6 +10,8 @@ import { componentSizes } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { generateErrorId } from '@/services/enterprise-id.service';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 interface CustomErrorInfo {
   componentStack: string | null | undefined; // ✅ ENTERPRISE: Handle React's full nullable componentStack
@@ -272,17 +274,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         category: 'error-report'
       };
 
-      const response = await fetch('/api/communications/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(emailPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to send email: ${response.statusText}`);
-      }
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      await apiClient.post('/api/communications/email', emailPayload);
 
       this.setState({ emailSent: true });
 

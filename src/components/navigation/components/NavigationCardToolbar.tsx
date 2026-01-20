@@ -27,17 +27,18 @@ type NavigationLevel = 'companies' | 'projects' | 'buildings' | 'floors' | 'unit
 // 🏢 ENTERPRISE: Helper functions using centralized config - ZERO hardcoded values
 
 /**
- * Get level title using centralized labels
+ * Get level title using i18n translations
+ * 🏢 ENTERPRISE: Uses i18n keys for full localization support
  */
-const getLevelTitle = (level: NavigationLevel): string => {
+const getLevelTitle = (level: NavigationLevel, t: TranslationFn): string => {
   switch (level) {
-    case 'companies': return NAVIGATION_ENTITIES.company.pluralLabel;
-    case 'projects': return NAVIGATION_ENTITIES.project.pluralLabel;
-    case 'buildings': return NAVIGATION_ENTITIES.building.pluralLabel;
-    case 'floors': return NAVIGATION_ENTITIES.floor.pluralLabel;
-    case 'units': return NAVIGATION_ENTITIES.unit.pluralLabel;
-    case 'storage': return NAVIGATION_ENTITIES.storage.pluralLabel;
-    case 'parking': return NAVIGATION_ENTITIES.parking.pluralLabel;
+    case 'companies': return t('entities.company.title');
+    case 'projects': return t('entities.project.title');
+    case 'buildings': return t('entities.building.title');
+    case 'floors': return t('entities.floor.title');
+    case 'units': return t('entities.unit.title');
+    case 'storage': return t('entities.storage.title');
+    case 'parking': return t('entities.parking.title');
     default: return '';
   }
 };
@@ -591,7 +592,8 @@ export function NavigationCardToolbar({
       selectedItems={selectedItems}
       hasSelectedContact={hasSelectedItems}
       // 🏢 ENTERPRISE Header Display - Same pattern as GenericListHeader
-      headerTitle={getLevelTitle(level)}
+      // 🏢 ENTERPRISE: Uses i18n translations for fully localized titles
+      headerTitle={getLevelTitle(level, t)}
       headerCount={itemCount}
       headerIcon={getLevelIcon(level)}
       headerIconColor={getLevelIconColor(level)}

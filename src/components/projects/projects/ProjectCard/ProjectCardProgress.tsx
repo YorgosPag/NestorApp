@@ -2,16 +2,21 @@
 
 import React from 'react';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectCardProgressProps {
   progress: number;
 }
 
 export function ProjectCardProgress({ progress }: ProjectCardProgressProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
+
   return (
     <ThemeProgressBar
       progress={progress}
-      label="Πρόοδος Έργου"
+      label={t('projectProgress.label')}
       size="md"
       showPercentage={true}
     />

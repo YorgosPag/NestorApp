@@ -20,6 +20,8 @@ import { HOVER_TEXT_EFFECTS } from '../../ui/effects';
 // 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
 import { getPriorityLabels } from '@/subapps/dxf-viewer/config/modal-select/core/labels/status';
 import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface MobileNavigationProps {
   /** 🏢 ENTERPRISE: 'floors' αφαιρέθηκε από navigation levels (Επιλογή Α) */
@@ -66,6 +68,9 @@ export function MobileNavigation({
     getUnitCount
   } = useNavigation();
 
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('navigation');
+
   // ==========================================================================
   // 🏢 ENTERPRISE: Memoized Real-time Buildings Data
   // ==========================================================================
@@ -103,7 +108,7 @@ export function MobileNavigation({
             className={`flex items-center gap-2 px-3 py-2 text-blue-600 ${HOVER_TEXT_EFFECTS.BLUE}`}
           >
             <ChevronLeft className="h-4 w-4" />
-            Πίσω
+            {t('mobile.back')}
           </button>
         )}
         <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground">
@@ -126,14 +131,14 @@ export function MobileNavigation({
               const isNavigationCompany = navigationCompanyIds.includes(company.id);
 
               // Διαφοροποίηση ανάλογα με το αν έχει έργα ή είναι navigation company
-              let subtitle = company.industry || 'Εταιρεία';
-              let extraInfo = company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined;
+              let subtitle = company.industry || t('columns.companies.defaultSubtitle');
+              let extraInfo = company.vatNumber ? t('columns.companies.vatNumber', { vatNumber: company.vatNumber }) : undefined;
 
               if (!hasProjects) {
                 subtitle = isNavigationCompany
-                  ? 'Προσθέστε έργα για αυτή την εταιρεία'
-                  : 'Εταιρεία χωρίς έργα';
-                extraInfo = company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined;
+                  ? t('columns.companies.addProjects')
+                  : t('columns.companies.noProjects');
+                extraInfo = company.vatNumber ? t('columns.companies.vatNumber', { vatNumber: company.vatNumber }) : undefined;
               }
 
               return (
@@ -168,7 +173,7 @@ export function MobileNavigation({
                   icon={NAVIGATION_ENTITIES.project.icon}
                   iconColor={NAVIGATION_ENTITIES.project.color}
                   title={project.name}
-                  subtitle={`${buildingCount} κτίρια`}
+                  subtitle={t('columns.projects.buildingCount', { count: buildingCount })}
                   badgeStatus={!hasBuildings ? 'no_projects' : undefined}
                   badgeText={!hasBuildings ? getNavigationFilterCategories().project_without_buildings : undefined}
                 />
@@ -192,7 +197,7 @@ export function MobileNavigation({
                   icon={NAVIGATION_ENTITIES.building.icon}
                   iconColor={NAVIGATION_ENTITIES.building.color}
                   title={building.name}
-                  subtitle={`${unitCount} μονάδες`}
+                  subtitle={t('columns.buildings.unitCount', { count: unitCount })}
                   badgeStatus={!hasUnits ? 'no_projects' : undefined}
                   badgeText={!hasUnits ? getNavigationFilterCategories().building_without_units : undefined}
                 />
@@ -230,13 +235,13 @@ export function MobileNavigation({
 
         {/* Actions - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
         {mobileLevel === 'actions' && selectedBuilding && (
-          <nav className="space-y-3" aria-label="Ενέργειες Κτιρίου">
+          <nav className="space-y-3" aria-label={t('mobile.actionsLabel')}>
             <NavigationButton
               onClick={() => onNavigateToPage('properties')}
               icon={NAVIGATION_ENTITIES.unit.icon}
               iconColor={NAVIGATION_ENTITIES.unit.color}
-              title="Προβολή Μονάδων"
-              subtitle={`${buildingUnits.length} μονάδες στο κτίριο`}
+              title={t('columns.actions.viewUnits')}
+              subtitle={t('columns.actions.unitsCount', { count: buildingUnits.length })}
               variant="compact"
             />
 
@@ -244,7 +249,7 @@ export function MobileNavigation({
               onClick={() => onNavigateToPage('buildings')}
               icon={NAVIGATION_ENTITIES.building.icon}
               iconColor={NAVIGATION_ENTITIES.building.color}
-              title="Λεπτομέρειες Κτιρίου"
+              title={t('columns.actions.buildingDetails')}
               subtitle={selectedBuilding.name}
               variant="compact"
             />
@@ -254,7 +259,7 @@ export function MobileNavigation({
                 onClick={() => onNavigateToPage('projects')}
                 icon={NAVIGATION_ENTITIES.project.icon}
                 iconColor={NAVIGATION_ENTITIES.project.color}
-                title="Λεπτομέρειες Έργου"
+                title={t('columns.actions.projectDetails')}
                 subtitle={selectedProject.name}
                 variant="compact"
               />

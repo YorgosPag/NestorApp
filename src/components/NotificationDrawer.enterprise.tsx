@@ -6,6 +6,8 @@
 import { create } from 'zustand';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw } from 'lucide-react';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useNotificationCenter } from '@/stores/notificationCenter';
 import { useTranslation } from '@/i18n';
 import type { Notification, Severity, UserPreferences } from '@/types/notification';
@@ -40,6 +42,9 @@ const colorMap: Record<Severity, string> = {
 };
 
 export function NotificationDrawer() {
+  // 🔐 ENTERPRISE: Wait for auth state before making API calls
+  const { user, loading: authLoading } = useAuth();
+
   const { isOpen, close } = useNotificationDrawer();
   const { items, order, markRead: markReadLocal, status, error: storeError, ingest, setStatus, setError, cursor, setCursor } = useNotificationCenter();
 
@@ -79,21 +84,40 @@ export function NotificationDrawer() {
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
 
   useEffect(() => {
+    // 🔐 AUTH-READY GATING - Wait for authentication
+    if (authLoading) {
+      console.log('⏳ [NotificationDrawer] Waiting for auth state...');
+      return;
+    }
+
+    if (!user) {
+      // User not authenticated - skip preferences loading
+      return;
+    }
+
     // Fetch user preferences on mount
     const loadPreferences = async () => {
       try {
-        const resp = await fetch('/api/notifications/preferences');
-        if (resp.ok) {
-          const prefs = await resp.json();
-          setUserPreferences(prefs);
+        console.log('🔔 [NotificationDrawer] Loading user preferences...');
+
+        // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + unwrap)
+        // apiClient.get() returns unwrapped data: { preferences: {...} }
+        const data = await apiClient.get<{ preferences: UserPreferences }>('/api/notifications/preferences');
+
+        if (!data || !data.preferences) {
+          throw new Error('Invalid response format from API');
         }
+
+        setUserPreferences(data.preferences);
+
+        console.log('✅ [NotificationDrawer] User preferences loaded');
       } catch (error) {
-        console.error('Failed to load user preferences:', error);
+        console.error('❌ [NotificationDrawer] Failed to load user preferences:', error);
       }
     };
 
     loadPreferences();
-  }, []);
+  }, [authLoading, user]);
 
   // ✅ ENTERPRISE: Retry handler
   const handleRetry = async () => {

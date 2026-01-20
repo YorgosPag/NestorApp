@@ -9,6 +9,8 @@ import { StatsCard } from './dashboard/StatsCard';
 import { StatusCard } from './dashboard/StatusCard';
 import { DetailsCard } from './dashboard/DetailsCard';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
@@ -19,59 +21,62 @@ const formatCurrency = (amount: number) => {
     return `€${amount.toLocaleString('el-GR')}`;
 };
 
-const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'sold': return 'Πουλημένες';
-      case 'available': return 'Διαθέσιμες';
-      case 'reserved': return 'Κρατημένες';
-      case 'owner': return 'Οικοπεδούχου';
-      default: return status;
-    }
-};
-
-const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'apartment': return 'Διαμερίσματα';
-      case 'studio': return 'Στούντιο';
-      case 'maisonette': return 'Μεζονέτες';
-      case 'shop': return 'Καταστήματα';
-      case 'office': return 'Γραφεία';
-      case 'storage': return 'Αποθήκες';
-      default: return type;
-    }
-};
-
-// 🏢 ENTERPRISE: Using centralized icons for area and price
-const statsCardsData = (stats: PropertyStats) => [
-    { title: "Συνολικές Μονάδες", value: stats.totalProperties, icon: NAVIGATION_ENTITIES.unit.icon, color: "blue" },
-    { title: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, value: stats.availableProperties, icon: TrendingUp, color: "gray" },
-    { title: "Συνολική Αξία", value: formatCurrency(stats.totalValue), icon: NAVIGATION_ENTITIES.price.icon, color: "green" },
-    { title: "Συνολικό Εμβαδόν", value: `${Math.round(stats.totalArea)} m²`, icon: NAVIGATION_ENTITIES.area.icon, color: "purple" },
-    { title: UNIFIED_STATUS_FILTER_LABELS.SOLD, value: stats.soldProperties, icon: CheckCircle, color: "red" },
-    { title: "Μέση Τιμή", value: formatCurrency(stats.averagePrice), icon: NAVIGATION_ENTITIES.price.icon, color: "orange" },
-];
-
 interface PropertyDashboardProps {
   stats: PropertyStats;
 }
 
 export function PropertyDashboard({ stats }: PropertyDashboardProps) {
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('properties');
+
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+          case 'sold': return t('dashboard.labels.sold');
+          case 'available': return t('dashboard.labels.available');
+          case 'reserved': return t('dashboard.labels.reserved');
+          case 'owner': return t('dashboard.labels.landowner');
+          default: return status;
+        }
+    };
+
+    const getTypeLabel = (type: string) => {
+        switch (type) {
+          case 'apartment': return t('types.apartment');
+          case 'studio': return t('types.studio');
+          case 'maisonette': return t('types.maisonette');
+          case 'shop': return t('types.shop');
+          case 'office': return t('types.office');
+          case 'storage': return t('types.storage');
+          default: return type;
+        }
+    };
+
+    // 🏢 ENTERPRISE: Using centralized icons for area and price
+    const statsCardsData = [
+        { title: t('dashboard.stats.totalUnits'), value: stats.totalProperties, icon: NAVIGATION_ENTITIES.unit.icon, color: "blue" },
+        { title: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, value: stats.availableProperties, icon: TrendingUp, color: "gray" },
+        { title: t('dashboard.stats.totalValue'), value: formatCurrency(stats.totalValue), icon: NAVIGATION_ENTITIES.price.icon, color: "green" },
+        { title: t('dashboard.stats.totalArea'), value: `${Math.round(stats.totalArea)} m²`, icon: NAVIGATION_ENTITIES.area.icon, color: "purple" },
+        { title: UNIFIED_STATUS_FILTER_LABELS.SOLD, value: stats.soldProperties, icon: CheckCircle, color: "red" },
+        { title: t('dashboard.stats.averagePrice'), value: formatCurrency(stats.averagePrice), icon: NAVIGATION_ENTITIES.price.icon, color: "orange" },
+    ];
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-            {statsCardsData(stats).map(card => (
+            {statsCardsData.map(card => (
                 <StatsCard key={card.title} {...card} />
             ))}
             <StatusCard statsByStatus={stats.propertiesByStatus} getStatusLabel={getStatusLabel} />
-            <DetailsCard title="Τύποι Μονάδων" icon={NAVIGATION_ENTITIES.unit.icon} data={stats.propertiesByType} labelFormatter={getTypeLabel} />
-            <DetailsCard title="Κατανομή ανά Όροφο" icon={NAVIGATION_ENTITIES.floor.icon} data={stats.propertiesByFloor} isFloorData={true} />
+            <DetailsCard title={t('dashboard.cards.unitTypes')} icon={NAVIGATION_ENTITIES.unit.icon} data={stats.propertiesByType} labelFormatter={getTypeLabel} />
+            <DetailsCard title={t('dashboard.cards.distributionByFloor')} icon={NAVIGATION_ENTITIES.floor.icon} data={stats.propertiesByFloor} isFloorData={true} />
             <DetailsCard
-                title="Αποθήκες"
-                icon={NAVIGATION_ENTITIES.storage.icon} 
+                title={t('dashboard.cards.storages')}
+                icon={NAVIGATION_ENTITIES.storage.icon}
                 data={{
-                    'Σύνολο': stats.totalStorageUnits,
-                    'Διαθέσιμες': stats.availableStorageUnits,
-                    'Πουλημένες': stats.soldStorageUnits,
-                }} 
+                    [t('dashboard.cards.total')]: stats.totalStorageUnits,
+                    [t('dashboard.cards.available')]: stats.availableStorageUnits,
+                    [t('dashboard.cards.sold')]: stats.soldStorageUnits,
+                }}
                 isThreeColumnGrid={true}
             />
         </div>

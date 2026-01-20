@@ -4,6 +4,30 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+/** 🏢 ENTERPRISE: Discriminated union response types */
+interface CompanyItem {
+  id: string;
+  companyName: unknown;
+  industry: unknown;
+  vatNumber: unknown;
+  status: unknown;
+  companyId: unknown;
+}
+
+interface ListCompaniesSuccessResponse {
+  success: true;
+  companies: CompanyItem[];
+  count: number;
+  tenantId: string;
+}
+
+interface ListCompaniesErrorResponse {
+  success: false;
+  error: string;
+}
+
+type ListCompaniesResponse = ListCompaniesSuccessResponse | ListCompaniesErrorResponse;
+
 /**
  * 🏢 ENTERPRISE COMPANIES LIST ENDPOINT
  *
@@ -15,7 +39,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
  */
 
 export async function GET(request: NextRequest) {
-  const handler = withAuth(
+  const handler = withAuth<ListCompaniesResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         console.log(`📋 Listing companies for companyId: ${ctx.companyId}`);

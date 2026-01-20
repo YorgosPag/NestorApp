@@ -1,0 +1,52 @@
+{
+  "general": {
+    "basicInfo": "Βασικές Πληροφορίες",
+    "location": "Τοποθεσία",
+    "financial": "Οικονομικά Στοιχεία",
+    "notes": "Σημειώσεις",
+    "updateInfo": "Στοιχεία Ενημέρωσης",
+    "unknown": "Άγνωστο",
+    "notSet": "Δεν έχει οριστεί",
+    "notCalculated": "Δεν υπολογίζεται",
+    "fields": {
+      "spotCode": "Κωδικός Θέσης",
+      "type": "Τύπος",
+      "status": "Κατάσταση",
+      "area": "Επιφάνεια",
+      "floor": "Επίπεδο/Όροφος",
+      "position": "Θέση",
+      "buildingId": "Κτίριο ID",
+      "projectId": "Έργο ID",
+      "price": "Τιμή",
+      "pricePerSqm": "Τιμή ανά m²",
+      "createdAt": "Δημιουργήθηκε",
+      "lastUpdated": "Τελευταία Ενημέρωση",
+      "createdBy": "Δημιουργήθηκε από"
+    },
+    "types": {
+      "standard": "Κανονική",
+      "compact": "Συμπαγής",
+      "handicapped": "ΑμεΑ",
+      "motorcycle": "Μοτοσικλέτα",
+      "electric": "Ηλεκτρικό Όχημα",
+      "vip": "VIP",
+      "reserved": "Κρατημένη"
+    },
+    "statuses": {
+      "available": "Διαθέσιμη",
+      "occupied": "Κατειλημμένη",
+      "reserved": "Κρατημένη",
+      "maintenance": "Συντήρηση"
+    },
+    "priceValues": {
+      "shared": "Κοινόχρηστη (Δωρεάν)",
+      "notSet": "Δεν έχει οριστεί"
+    }
+  },
+  "header": {
+    "viewParking": "Προβολή Θέσης",
+    "edit": "Επεξεργασία",
+    "print": "Εκτύπωση",
+    "ownerLabel": "Ιδιοκτήτης:"
+  }
+}

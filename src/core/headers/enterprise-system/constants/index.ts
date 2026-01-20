@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 /**
  * 🏢 ENTERPRISE HEADER SYSTEM - CONSTANTS
  *
@@ -14,6 +15,8 @@ import type { HeaderTheme, ViewMode, HeaderVariant, HeaderLayout, HeaderSpacing 
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { borderVariants } from '@/styles/design-tokens';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+// 🏢 ENTERPRISE: i18n support
+import i18n from '@/i18n/config';
 
 // ============================================================================
 // 🎨 HEADER THEMES - ENTERPRISE STYLING
@@ -110,25 +113,29 @@ export const VIEW_MODE_ICONS = {
   byStatus: 'BarChart3'
 } as const;
 
+// 🏢 ENTERPRISE: i18n-enabled view mode labels with dynamic getters
 export const VIEW_MODE_LABELS = {
-  list: 'Λίστα',
-  grid: 'Πλέγμα',
-  byType: 'Κατά Τύπο',
-  byStatus: 'Κατά Κατάσταση'
-} as const;
+  get list() { return i18n.t('viewMode.list', { ns: 'common' }); },
+  get grid() { return i18n.t('viewMode.grid', { ns: 'common' }); },
+  get byType() { return i18n.t('viewMode.byType', { ns: 'common' }); },
+  get byStatus() { return i18n.t('viewMode.byStatus', { ns: 'common' }); }
+};
+
+// 🏢 ENTERPRISE: i18n-enabled mobile labels with dynamic getters
+const VIEW_MODE_MOBILE_LABELS = {
+  get list() { return i18n.t('viewMode.mobile.list', { ns: 'common' }); },
+  get grid() { return i18n.t('viewMode.mobile.grid', { ns: 'common' }); },
+  get byType() { return i18n.t('viewMode.mobile.byType', { ns: 'common' }); },
+  get byStatus() { return i18n.t('viewMode.mobile.byStatus', { ns: 'common' }); }
+};
 
 export const VIEW_MODE_CONFIG = {
   labels: VIEW_MODE_LABELS,
   icons: VIEW_MODE_ICONS,
   mobile: {
-    labels: {
-      list: 'Προβολή λίστας',
-      grid: 'Προβολή πλέγματος',
-      byType: 'Ομαδοποίηση κατά τύπο',
-      byStatus: 'Ομαδοποίηση κατά κατάσταση'
-    }
+    labels: VIEW_MODE_MOBILE_LABELS
   }
-} as const;
+};
 
 // ============================================================================
 // 🚀 ANIMATION CONSTANTS - SMOOTH UX
@@ -168,18 +175,21 @@ export const HEADER_SIZES = {
 // 🔍 SEARCH CONFIGURATIONS - ENTERPRISE FEATURES
 // ============================================================================
 
+// 🏢 ENTERPRISE: i18n-enabled search placeholders with dynamic getters
+const SEARCH_PLACEHOLDERS = {
+  get default() { return i18n.t('search.placeholder.default', { ns: 'common' }); },
+  get contacts() { return i18n.t('search.placeholder.contacts', { ns: 'common' }); },
+  get projects() { return i18n.t('search.placeholder.projects', { ns: 'common' }); },
+  get buildings() { return i18n.t('search.placeholder.buildings', { ns: 'common' }); },
+  get files() { return i18n.t('search.placeholder.files', { ns: 'common' }); }
+};
+
 export const SEARCH_CONFIG = {
   debounceMs: 300,
   minLength: 2,
   maxLength: 100,
-  placeholder: {
-    default: "Αναζήτηση...",
-    contacts: "Αναζήτηση επαφών...",
-    projects: "Αναζήτηση έργων...",
-    buildings: "Αναζήτηση κτιρίων...",
-    files: "Αναζήτηση αρχείων..."
-  }
-} as const;
+  placeholder: SEARCH_PLACEHOLDERS
+};
 
 // ============================================================================
 // 🎨 ICON VARIANTS - VISUAL CONSISTENCY

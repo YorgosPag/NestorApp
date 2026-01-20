@@ -108,6 +108,124 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📁 FILES COLLECTION - ENTERPRISE CANONICAL FILE STORAGE (ADR-031)
+    // =========================================================================
+    // This collection stores FileRecord metadata (Source of Truth for file uploads)
+    // Binary files are stored in Firebase Storage, metadata in Firestore
+    //
+    // Flow:
+    // 1. CREATE: Client creates pending record (status: pending)
+    // 2. Storage Upload: Binary uploaded to canonical path (Storage rules verify FileRecord)
+    // 3. UPDATE: Client finalizes record (status: ready)
+    // =========================================================================
+    match /files/{fileId} {
+
+      // 📖 READ: Users belonging to file's company (tenant isolation)
+      // 🏢 ENTERPRISE: Allow company members OR creator (for pending files during upload)
+      // This enables both:
+      // - Storage Rules to validate uploads via firestore.get() (pending files)
+      // - Users to list/view ready files from their company
+      allow read: if isAuthenticated()
+                  && resource.data.keys().hasAny(['companyId'])
+                  && (
+                       // Company members can read all files from their company
+                       belongsToCompany(resource.data.companyId)
+                       // OR super_admin can read everything
+                       || isSuperAdminOnly()
+                     );
+
+      // ✍️ CREATE: Users can create pending FileRecord for their company
+      // 🔐 SECURITY: createdBy must match request.auth.uid
+      // 🔐 SECURITY: companyId must match user's company claim
+      // 🔐 SECURITY: status must be 'pending' (no direct 'ready' creation)
+      allow create: if isAuthenticated()
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.companyId == getUserCompanyId()
+                    && request.resource.data.status == 'pending'
+                    && resource == null; // Ensure document doesn't exist
+
+      // 📝 UPDATE: Only creator or company admin can finalize
+      // 🔐 SECURITY: Limited to specific fields for finalization
+      // 🔐 SECURITY: Can only transition pending → ready (or → failed)
+      allow update: if isAuthenticated()
+                    && resource.data.companyId == getUserCompanyId()
+                    && (
+                         // Creator can finalize
+                         resource.data.createdBy == request.auth.uid
+                         // OR company admin can finalize
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       )
+                    // Status transitions: pending → ready OR pending → failed
+                    && (
+                         (resource.data.status == 'pending' && request.resource.data.status == 'ready')
+                         || (resource.data.status == 'pending' && request.resource.data.status == 'failed')
+                       )
+                    // Prevent modification of immutable fields
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.storagePath == resource.data.storagePath;
+
+      // 🗑️ MOVE TO TRASH: Creator or company admin can trash ready files
+      // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
+      //    - Creator can ALWAYS manage their own files (no claims required)
+      //    - Admins need proper company claims for cross-user operations
+      // 🔐 SECURITY: Only allows setting isDeleted flag, preserves all other immutable fields
+      allow update: if isAuthenticated()
+                    && (
+                         // OWNERSHIP PRINCIPLE: Creator can ALWAYS trash their own files
+                         resource.data.createdBy == request.auth.uid
+                         // OR company admin can trash any file in their company (requires claims)
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         // OR super_admin can trash anything
+                         || isSuperAdminOnly()
+                       )
+                    // Only for ready files (soft delete)
+                    && resource.data.status == 'ready'
+                    // Must be setting isDeleted to true
+                    && request.resource.data.isDeleted == true
+                    // Preserve immutable fields
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.storagePath == resource.data.storagePath
+                    && request.resource.data.status == resource.data.status;
+
+      // ♻️ RESTORE FROM TRASH: Creator or company admin can restore trashed files
+      // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
+      //    - Creator can ALWAYS restore their own files (no claims required)
+      //    - Admins need proper company claims for cross-user operations
+      // 📅 Added: 2026-01-20 (ADR-032 - Enterprise Trash System)
+      allow update: if isAuthenticated()
+                    && (
+                         // OWNERSHIP PRINCIPLE: Creator can ALWAYS restore their own files
+                         resource.data.createdBy == request.auth.uid
+                         // OR company admin can restore any file in their company (requires claims)
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         // OR super_admin can restore anything
+                         || isSuperAdminOnly()
+                       )
+                    // Only for trashed files (isDeleted == true)
+                    && resource.data.isDeleted == true
+                    // Must be setting isDeleted to false (restoring)
+                    && request.resource.data.isDeleted == false
+                    // Preserve immutable fields
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.storagePath == resource.data.storagePath
+                    && request.resource.data.status == resource.data.status;
+
+      // 🗑️ HARD DELETE: Only creator or company admin
+      allow delete: if isAuthenticated()
+                    && resource.data.companyId == getUserCompanyId()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       );
+    }
+
+    // =========================================================================
     // 🏢 COMPANIES COLLECTION - READ-ONLY FOR AUTHENTICATED
     // =========================================================================
     match /companies/{companyId} {
@@ -263,6 +381,67 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🎨 DXF OVERLAY LEVELS COLLECTION - DXF OVERLAY SYSTEM
+    // =========================================================================
+    // 🏢 ENTERPRISE: Overlay levels for DXF viewer (with items subcollection)
+    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    // ⚠️ BOTH naming conventions supported for backwards compatibility
+
+    // Kebab-case version (used by overlay-store.tsx)
+    match /dxf-overlay-levels/{levelId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+
+      // 📁 Items subcollection for overlay items
+      match /items/{itemId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+    }
+
+    // CamelCase version (legacy support)
+    match /dxfOverlayLevels/{levelId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+
+      // 📁 Items subcollection for overlay items
+      match /items/{itemId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+    }
+
+    // =========================================================================
+    // 🎨 LAYERS COLLECTION - LEGACY LAYER SYSTEM
+    // =========================================================================
+    // 🏢 ENTERPRISE: Legacy layers for property visualization
+    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    match /layers/{layerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 📋 LAYER EVENTS COLLECTION - LAYER SYNC EVENTS
+    // =========================================================================
+    // 🏢 ENTERPRISE: Events for layer synchronization
+    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    match /layer-events/{eventId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 🏠 PROPERTY LAYERS COLLECTION - PROPERTY VISUALIZATION
+    // =========================================================================
+    // 🏢 ENTERPRISE: Property-specific layers
+    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    match /property-layers/{layerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
     // 🔐 SECURITY_ROLES COLLECTION - ΚΡΙΣΙΜΟ ΓΙΑ LOGIN!
     // =========================================================================
     // 🏢 ENTERPRISE: Role-based access control για EnterpriseSecurityService
@@ -334,6 +513,72 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 💬 COMMUNICATIONS COLLECTION - LEGACY CRM COMMUNICATIONS
+    // =========================================================================
+    // 🏢 ENTERPRISE: Legacy communications collection
+    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    match /communications/{communicationId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // ⚙️ SYSTEM COLLECTION - SYSTEM CONFIGURATION
+    // =========================================================================
+    // 🏢 ENTERPRISE: System-wide configuration and templates
+    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    match /system/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Admin/server only
+
+      // 📁 Subcollections (e.g., project-templates)
+      match /{subcollection}/{subDocId} {
+        allow read: if isAuthenticated();
+        allow write: if false; // Admin/server only
+      }
+    }
+
+    // =========================================================================
+    // ⚙️ CONFIG COLLECTION - APPLICATION CONFIGURATION
+    // =========================================================================
+    // 🏢 ENTERPRISE: Application configuration
+    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    match /config/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Admin/server only
+    }
+
+    // =========================================================================
+    // 🎯 LEADS COLLECTION - CRM LEADS
+    // =========================================================================
+    // 🏢 ENTERPRISE: CRM lead management
+    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    match /leads/{leadId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 💼 OPPORTUNITIES COLLECTION - CRM OPPORTUNITIES
+    // =========================================================================
+    // 🏢 ENTERPRISE: CRM opportunity management
+    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    match /opportunities/{opportunityId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 📋 ACTIVITIES COLLECTION - CRM ACTIVITIES
+    // =========================================================================
+    // 🏢 ENTERPRISE: CRM activity tracking
+    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
     // 💬 CONVERSATIONS - CRM COMMUNICATIONS
     // =========================================================================
     // 🏢 ENTERPRISE: Telegram/email conversations για CRM
@@ -386,6 +631,265 @@ service cloud.firestore {
       // 🗑️ DELETE: Authenticated users
       allow delete: if isAuthenticated()
                     && resource != null;
+    }
+
+    // =========================================================================
+    // 🔐 EXTERNAL IDENTITIES - TELEGRAM USER MAPPINGS
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - CRITICAL collection)
+    // 🏢 ENTERPRISE: Maps external platform IDs (Telegram chatId) to internal contacts
+    match /external_identities/{identityId} {
+      // 📖 READ: Authenticated users (CRM needs to lookup identities)
+      allow read: if isAuthenticated();
+
+      // ✍️ CREATE: Only system/admin can create identity mappings
+      allow create: if isAuthenticated()
+                    && resource == null;
+
+      // 📝 UPDATE: Only system/admin can update identity mappings
+      allow update: if isAuthenticated()
+                    && resource != null;
+
+      // 🗑️ DELETE: Only admin can delete identity mappings
+      allow delete: if isAuthenticated()
+                    && resource != null;
+    }
+
+    // =========================================================================
+    // ⚙️ CONFIG - ENTERPRISE SERVICE CONFIGURATIONS
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - CRITICAL collection)
+    // 🏢 ENTERPRISE: System-wide configuration (channels, integrations, etc.)
+    match /config/{configId} {
+      // 📖 READ: Authenticated users (app needs config)
+      allow read: if isAuthenticated();
+
+      // ✍️ CREATE/UPDATE/DELETE: Only admin users
+      allow create, update, delete: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 🔗 RELATIONSHIPS - ENTITY RELATIONSHIPS (GENERIC)
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - CRITICAL collection)
+    // 🏢 ENTERPRISE: General-purpose relationships between entities
+    // ⚠️ Note: contact_relationships has separate, more strict rules above
+    match /relationships/{relationshipId} {
+      // 📖 READ: Authenticated users
+      allow read: if isAuthenticated();
+
+      // ✍️ CREATE: Authenticated users
+      allow create: if isAuthenticated()
+                    && resource == null;
+
+      // 📝 UPDATE: Authenticated users
+      allow update: if isAuthenticated()
+                    && resource != null;
+
+      // 🗑️ DELETE: Authenticated users
+      allow delete: if isAuthenticated()
+                    && resource != null;
+    }
+
+    // =========================================================================
+    // 🔐 SECURITY POLICIES - EMAIL DOMAIN & COUNTRY RESTRICTIONS
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - CRITICAL collection)
+    // 🏢 ENTERPRISE: EnterpriseSecurityService policy collections (READ-ONLY for clients)
+    match /email_domain_policies/{policyId} {
+      // 📖 READ: Authenticated users (security validation needs this)
+      allow read: if isAuthenticated();
+      // 🚫 WRITE: Server-side only (via Admin SDK)
+      allow write: if false;
+    }
+
+    match /country_security_policies/{policyId} {
+      // 📖 READ: Authenticated users (security validation needs this)
+      allow read: if isAuthenticated();
+      // 🚫 WRITE: Server-side only (via Admin SDK)
+      allow write: if false;
+    }
+
+    // =========================================================================
+    // 🔢 COUNTERS - PROJECT CODE GENERATION
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - HIGH priority)
+    // 🏢 ENTERPRISE: Auto-increment counters for project codes, etc.
+    match /counters/{counterId} {
+      // 📖 READ: Authenticated users (need to read current counter)
+      allow read: if isAuthenticated();
+      // ✍️ WRITE: Authenticated users (increment on create)
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 📊 ANALYTICS - SENDGRID WEBHOOK ANALYTICS
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - HIGH priority)
+    match /analytics/{analyticsId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 📋 OBLIGATIONS & TEMPLATES
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - HIGH priority)
+    match /obligations/{obligationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && resource == null;
+      allow update: if isAuthenticated() && resource != null;
+      allow delete: if isAuthenticated() && resource != null;
+    }
+
+    match /obligationTemplates/{templateId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && resource == null;
+      allow update: if isAuthenticated() && resource != null;
+      allow delete: if isAuthenticated() && resource != null;
+    }
+
+    // 📋 OBLIGATION-SECTIONS - Obligation sections (dash naming convention)
+    // 📅 Added: 2026-01-17 (Missing collection from Firestore audit)
+    match /obligation-sections/{sectionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && resource == null;
+      allow update: if isAuthenticated() && resource != null;
+      allow delete: if isAuthenticated() && resource != null;
+    }
+
+    // =========================================================================
+    // 💼 OPPORTUNITIES - CRM SALES PIPELINE
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - HIGH priority)
+    match /opportunities/{opportunityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && resource == null;
+      allow update: if isAuthenticated() && resource != null;
+      allow delete: if isAuthenticated() && resource != null;
+    }
+
+    // =========================================================================
+    // 👥 LEADS - CRM LEAD MANAGEMENT
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
+    match /leads/{leadId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && resource == null;
+      allow update: if isAuthenticated() && resource != null;
+      allow delete: if isAuthenticated() && resource != null;
+    }
+
+    // =========================================================================
+    // 📆 ACTIVITIES - CRM ACTIVITY TRACKING
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
+    match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && resource == null;
+      allow update: if isAuthenticated() && resource != null;
+      allow delete: if isAuthenticated() && resource != null;
+    }
+
+    // =========================================================================
+    // 🤖 BOT_CONFIGS - TELEGRAM BOT CONFIGURATIONS
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
+    match /bot_configs/{configId} {
+      allow read: if isAuthenticated();
+      // 🚫 WRITE: Server-side only (sensitive bot tokens)
+      allow write: if false;
+    }
+
+    // =========================================================================
+    // 🗂️ LAYER GROUPS - DXF LAYER MANAGEMENT
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
+    match /layerGroups/{groupId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 🗺️ FLOORPLANS - FLOOR PLAN STORAGE
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
+    match /floorplans/{floorplanId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 📝 AUDIT COLLECTIONS - SECURITY & COMPLIANCE
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - HIGH priority)
+    // 🏢 ENTERPRISE: Audit logs are READ-ONLY for clients (write via Admin SDK)
+    match /relationship_audit/{auditId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server-side only
+    }
+
+    match /admin_building_templates/{templateId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // Admin UI needs write access
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server-side only
+    }
+
+    match /system_audit_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server-side only
+    }
+
+    // =========================================================================
+    // 📋 AUDIT_LOG COLLECTION - CLOUD FUNCTIONS AUDIT TRAIL
+    // =========================================================================
+    // 📅 Added: 2026-01-20 (ADR-032 - Enterprise Trash System)
+    // 🏢 ENTERPRISE: Audit log for file purge operations (written by Cloud Functions)
+    // 🔒 READ: Only super_admin can read audit logs
+    // 🚫 WRITE: Server-side only (via Firebase Admin SDK)
+    match /audit_log/{logId} {
+      allow read: if isSuperAdminOnly();
+      allow write: if false; // Server-side only (Cloud Functions use Admin SDK)
+    }
+
+    // =========================================================================
+    // 👥 TEAMS - TEAM MANAGEMENT
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Final 2 collections fix)
+    // 🏢 ENTERPRISE: Team management for EnterpriseTeamsService
+    match /teams/{teamId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // =========================================================================
+    // 💼 POSITIONS - ROLE/POSITION MANAGEMENT
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Final 2 collections fix)
+    // 🏢 ENTERPRISE: Position management (fallback for COLLECTIONS.ROLES)
+    match /positions/{positionId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Admin/server only
+    }
+
+    // =========================================================================
+    // ⚙️ SYSTEM - SYSTEM CONFIGURATION
+    // =========================================================================
+    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
+    // Note: Already had partial rules, adding subcollection support
+    match /system/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server-side only
+
+      // Subcollections (e.g., system/config/channels)
+      match /{subcollection}/{subDocId} {
+        allow read: if isAuthenticated();
+        allow write: if false; // Server-side only
+      }
     }
 
     // =========================================================================

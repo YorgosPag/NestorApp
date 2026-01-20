@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 // RulerBackgroundSettings.tsx - Ruler background settings (extracted from DxfSettingsPanel)
@@ -12,6 +13,8 @@ import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -50,6 +53,8 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
   // HOOKS
   // ============================================================================
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
 
   const {
     state: { rulers: rulerSettings },
@@ -174,12 +179,12 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Φόντου</div>
-            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του φόντου των χαράκων</div>
+            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.background.display.title')}</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.background.display.description')}</div>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
-              {backgroundVisible ? 'Ενεργό' : 'Ανενεργό'}
+              {backgroundVisible ? t('rulerSettings.common.active') : t('rulerSettings.common.inactive')}
             </span>
             <Switch
               checked={backgroundVisible}
@@ -192,14 +197,14 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       {/* Ruler Background Color - 🏢 ENTERPRISE: Using centralized ColorDialogTrigger */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Χρώμα Φόντου</div>
-          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Χρώμα φόντου του χάρακα</div>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.background.color.title')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.background.color.description')}</div>
         </div>
         <ColorDialogTrigger
           value={rulerBackgroundColor}
           onChange={handleRulerBackgroundColorChange}
           label={rulerBackgroundColor}
-          title="Επιλογή Χρώματος Φόντου Χάρακα"
+          title={t('rulerSettings.background.colorPicker')}
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}
@@ -211,8 +216,8 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       {/* Ruler Opacity */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια</div>
-          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας των χαράκων</div>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.background.opacity.title')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.background.opacity.description')}</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
@@ -247,8 +252,8 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       {/* Ruler Width */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πλάτος Χάρακα</div>
-          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πλάτος του χάρακα σε pixels</div>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.background.width.title')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.background.width.description')}</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
@@ -270,12 +275,12 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Γραμμών</div>
-            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Εμφάνιση/απόκρυψη γραμμών μέτρησης στους χάρακες</div>
+            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.background.lines.title')}</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.background.lines.description')}</div>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
-              {rulerSettings.horizontal.showMinorTicks ? 'Ενεργό' : 'Ανενεργό'}
+              {rulerSettings.horizontal.showMinorTicks ? t('rulerSettings.common.active') : t('rulerSettings.common.inactive')}
             </span>
             <Switch
               checked={rulerSettings.horizontal.showMinorTicks}

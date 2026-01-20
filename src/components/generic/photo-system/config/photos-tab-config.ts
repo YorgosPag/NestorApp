@@ -78,18 +78,19 @@ export const ACCEPTED_IMAGE_TYPES = [
 
 /**
  * Photo categories for Storage entity
+ * 🏢 ENTERPRISE: Labels are i18n keys - translated in PhotosTabBase component
  */
 export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
   {
     id: 'all',
-    label: 'Όλες',
+    label: 'photos.categories.all',
     icon: 'Image',
     colorClass: 'text-blue-600',
     filter: () => true,
   },
   {
     id: 'exterior',
-    label: 'Εξωτερικές',
+    label: 'photos.categories.exterior',
     icon: 'Home',
     colorClass: 'text-green-600',
     filter: (photo) =>
@@ -99,7 +100,7 @@ export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
   },
   {
     id: 'interior',
-    label: 'Εσωτερικές',
+    label: 'photos.categories.interior',
     icon: 'LayoutDashboard',
     colorClass: 'text-purple-600',
     filter: (photo) =>
@@ -109,7 +110,7 @@ export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
   },
   {
     id: 'maintenance',
-    label: 'Συντήρηση',
+    label: 'photos.categories.maintenance',
     icon: 'Wrench',
     colorClass: 'text-orange-600',
     filter: (photo) =>
@@ -121,18 +122,19 @@ export const STORAGE_PHOTO_CATEGORIES: PhotoCategory[] = [
 
 /**
  * Photo categories for Building entity
+ * 🏢 ENTERPRISE: Labels are i18n keys - translated in PhotosTabBase component
  */
 export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
   {
     id: 'all',
-    label: 'Όλες',
+    label: 'photos.categories.all',
     icon: 'Image',
     colorClass: 'text-blue-600',
     filter: () => true,
   },
   {
     id: 'facade',
-    label: 'Πρόσοψη',
+    label: 'photos.categories.facade',
     icon: 'Building2',
     colorClass: 'text-indigo-600',
     filter: (photo) =>
@@ -142,7 +144,7 @@ export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
   },
   {
     id: 'common',
-    label: 'Κοινόχρηστα',
+    label: 'photos.categories.common',
     icon: 'Users',
     colorClass: 'text-teal-600',
     filter: (photo) =>
@@ -152,7 +154,7 @@ export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
   },
   {
     id: 'amenities',
-    label: 'Παροχές',
+    label: 'photos.categories.amenities',
     icon: 'Sparkles',
     colorClass: 'text-amber-600',
     filter: (photo) =>
@@ -175,13 +177,14 @@ export const BUILDING_PHOTO_CATEGORIES: PhotoCategory[] = [
  * - Features (stats, categories)
  * - Storage (folder, purpose)
  */
+// 🌐 i18n: All titles converted to i18n keys - 2026-01-18
 export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = {
   // ---------------------------------------------------------------------------
   // PROJECT
   // ---------------------------------------------------------------------------
   project: {
     entityType: 'project',
-    title: 'Φωτογραφίες Έργου',
+    title: 'photos.tabs.project',
     titleIcon: 'Briefcase',
     maxPhotos: PHOTO_MAX_COUNTS.STANDARD,
     maxFileSize: PHOTO_SIZE_LIMITS.STANDARD,
@@ -200,7 +203,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   building: {
     entityType: 'building',
-    title: 'Φωτογραφίες Κτιρίου',
+    title: 'photos.tabs.building',
     titleIcon: 'Building2',
     maxPhotos: PHOTO_MAX_COUNTS.EXTENDED,
     maxFileSize: PHOTO_SIZE_LIMITS.LARGE,
@@ -219,7 +222,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   contact: {
     entityType: 'contact',
-    title: 'Φωτογραφίες',
+    title: 'photos.tabs.contact',
     titleIcon: 'User',
     maxPhotos: PHOTO_MAX_COUNTS.CONTACT,
     maxFileSize: PHOTO_SIZE_LIMITS.CONTACT,
@@ -242,7 +245,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   storage: {
     entityType: 'storage',
-    title: 'Φωτογραφίες Αποθήκης',
+    title: 'photos.tabs.storage',
     titleIcon: 'Warehouse',
     maxPhotos: PHOTO_MAX_COUNTS.STORAGE,
     maxFileSize: PHOTO_SIZE_LIMITS.STANDARD,
@@ -261,7 +264,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   unit: {
     entityType: 'unit',
-    title: 'Φωτογραφίες Μονάδας',
+    title: 'photos.tabs.unit',
     titleIcon: 'Home',
     maxPhotos: PHOTO_MAX_COUNTS.STANDARD,
     maxFileSize: PHOTO_SIZE_LIMITS.STANDARD,
@@ -280,7 +283,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   parking: {
     entityType: 'parking',
-    title: 'Φωτογραφίες Θέσης Στάθμευσης',
+    title: 'photos.tabs.parking',
     titleIcon: 'Car',
     maxPhotos: 10,
     maxFileSize: PHOTO_SIZE_LIMITS.STANDARD,
@@ -303,7 +306,7 @@ export const PHOTOS_TAB_CONFIGS: Record<PhotosTabEntityType, PhotosTabConfig> = 
   // ---------------------------------------------------------------------------
   floor: {
     entityType: 'floor',
-    title: 'Φωτογραφίες Ορόφου',
+    title: 'photos.tabs.floor',
     titleIcon: 'Layers',
     maxPhotos: PHOTO_MAX_COUNTS.STANDARD,
     maxFileSize: PHOTO_SIZE_LIMITS.STANDARD,
@@ -387,12 +390,11 @@ export function validatePhotoFile(
   config: PhotosTabConfig
 ): { valid: boolean; error?: string } {
   // Check file type
+  // 🌐 i18n: Validation errors converted to i18n keys - 2026-01-18
   if (!config.acceptedTypes.includes(file.type)) {
     return {
       valid: false,
-      error: `Μη αποδεκτός τύπος αρχείου. Επιτρέπονται: ${config.acceptedTypes
-        .map((t) => t.replace('image/', ''))
-        .join(', ')}`,
+      error: 'photos.validation.invalidFileType',
     };
   }
 
@@ -400,7 +402,7 @@ export function validatePhotoFile(
   if (file.size > config.maxFileSize) {
     return {
       valid: false,
-      error: `Το αρχείο υπερβαίνει το μέγιστο μέγεθος (${formatFileSize(config.maxFileSize)})`,
+      error: 'photos.validation.fileTooLarge',
     };
   }
 

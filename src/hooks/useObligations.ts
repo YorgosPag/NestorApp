@@ -26,9 +26,10 @@ export function useObligations() {
         const data = await repository.getAll();
         setObligations(data);
         console.log(`✅ Loaded ${data.length} obligations from Firebase`);
+      // 🌐 i18n: Error messages converted to i18n keys - 2026-01-18
       } catch (err) {
         console.error('❌ Error loading obligations:', err);
-        setError('Σφάλμα φόρτωσης υποχρεώσεων');
+        setError('obligations.errors.loadFailed');
         setObligations([]);
       } finally {
         setLoading(false);
@@ -73,7 +74,7 @@ export function useObligations() {
       setObligations(data);
     } catch (err) {
       console.error('❌ Error refreshing obligations:', err);
-      setError('Σφάλμα ανανέωσης υποχρεώσεων');
+      setError('obligations.errors.refreshFailed');
     } finally {
       setLoading(false);
     }
@@ -113,7 +114,7 @@ export function useObligation(id: string) {
         setObligation(data);
       } catch (err) {
         console.error('❌ Error loading obligation:', err);
-        setError('Σφάλμα φόρτωσης υποχρέωσης');
+        setError('obligations.errors.loadSingleFailed');
         setObligation(null);
       } finally {
         setLoading(false);
@@ -161,7 +162,7 @@ export function useObligationTemplates() {
         console.log(`✅ Loaded ${data.length} obligation templates from Firebase`);
       } catch (err) {
         console.error('❌ Error loading templates:', err);
-        setError('Σφάλμα φόρτωσης προτύπων');
+        setError('obligations.errors.loadTemplatesFailed');
         setTemplates([]);
       } finally {
         setLoading(false);
@@ -203,7 +204,7 @@ export function useObligationStats() {
         console.log(`✅ Loaded obligation statistics from Firebase:`, data);
       } catch (err) {
         console.error('❌ Error loading stats:', err);
-        setError('Σφάλμα φόρτωσης στατιστικών');
+        setError('obligations.errors.loadStatsFailed');
       } finally {
         setLoading(false);
       }

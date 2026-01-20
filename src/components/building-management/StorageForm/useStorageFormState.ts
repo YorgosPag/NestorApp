@@ -63,7 +63,8 @@ export function useStorageFormState({ unit, formType, building }: UseStorageForm
   }, [formData.area, formData.floor, formData.type, unit]);
 
 
-  const updateField = (field: keyof StorageUnit, value: StorageUnit[keyof StorageUnit]) => {
+  // 🏢 ENTERPRISE: More flexible signature for component compatibility
+  const updateField = (field: string, value: string | number | string[] | { x: number; y: number } | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));

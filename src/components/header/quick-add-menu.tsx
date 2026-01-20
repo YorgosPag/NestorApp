@@ -21,9 +21,13 @@ import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects'
 import { CommonBadge } from "@/core/badges"
 import { quickActions } from "@/constants/header"
 import { useIconSizes } from '@/hooks/useIconSizes'
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation'
 
 export function QuickAddMenu() {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
   return (
     <TooltipProvider>
       <DropdownMenu>
@@ -41,11 +45,11 @@ export function QuickAddMenu() {
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Προσθήκη Επαφής</p>
+            <p>{t('quickAdd.tooltip')}</p>
           </TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Νέα Επαφή</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('quickAdd.menuTitle')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {quickActions.map((action) => (
             <DropdownMenuItem key={action.label} className="cursor-pointer">
@@ -57,11 +61,11 @@ export function QuickAddMenu() {
           <DropdownMenuSeparator />
           <DropdownMenuItem className="cursor-pointer">
             <Upload className={`mr-2 ${iconSizes.sm}`} />
-            <span>Εισαγωγή από αρχείο</span>
+            <span>{t('quickAdd.importFromFile')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer">
             <Mic className={`mr-2 ${iconSizes.sm}`} />
-            <span>Φωνητική εισαγωγή</span>
+            <span>{t('quickAdd.voiceInput')}</span>
             <CommonBadge
               status="company"
               customLabel="AI"

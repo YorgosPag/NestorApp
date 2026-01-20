@@ -4,6 +4,24 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
+/** 🏢 ENTERPRISE: Discriminated union response types */
+interface AddContactsSuccessResponse {
+  success: true;
+  message: string;
+  addedContactIds: string[];
+  contactsCount: number;
+  requestedCount: number;
+  tenantId: string;
+}
+
+interface AddContactsErrorResponse {
+  success: false;
+  error: string;
+  details?: string;
+}
+
+type AddContactsResponse = AddContactsSuccessResponse | AddContactsErrorResponse;
+
 /**
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection + tenant isolation
  * @security Admin SDK + withAuth + requiredGlobalRoles: super_admin + Tenant Isolation
@@ -11,7 +29,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
  */
 
 export async function POST(request: NextRequest) {
-  const handler = withAuth(
+  const handler = withAuth<AddContactsResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         const { contacts } = await req.json();

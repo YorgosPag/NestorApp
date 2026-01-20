@@ -50,7 +50,7 @@ import {
 /**
  * Test Result Interface
  */
-interface TestResult {
+export interface TestResult {
   readonly testName: string;
   readonly success: boolean;
   readonly duration: number;
@@ -62,7 +62,7 @@ interface TestResult {
 /**
  * Validation Result Interface
  */
-interface ValidationResult {
+export interface ValidationResult {
   readonly isValid: boolean;
   readonly errors: readonly string[];
   readonly warnings: readonly string[];
@@ -72,7 +72,7 @@ interface ValidationResult {
 /**
  * Performance Benchmark Result
  */
-interface BenchmarkResult {
+export interface BenchmarkResult {
   readonly operation: string;
   readonly averageTime: number;
   readonly minTime: number;
@@ -84,7 +84,7 @@ interface BenchmarkResult {
 /**
  * Security Audit Result
  */
-interface SecurityAuditResult {
+export interface SecurityAuditResult {
   readonly vulnerabilities: readonly string[];
   readonly riskLevel: 'low' | 'medium' | 'high' | 'critical';
   readonly recommendations: readonly string[];
@@ -94,7 +94,7 @@ interface SecurityAuditResult {
 /**
  * Test Suite Result
  */
-interface TestSuiteResult {
+export interface TestSuiteResult {
   readonly suiteName: string;
   readonly totalTests: number;
   readonly passedTests: number;

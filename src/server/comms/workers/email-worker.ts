@@ -124,8 +124,9 @@ export class EmailWorker {
       const { collection, query, where, getDocs, orderBy, limit } = firestoreHelpers;
 
       // Query for pending email jobs, ordered by creation time
+      // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
       const q = query(
-        collection(database, COLLECTIONS.COMMUNICATIONS),
+        collection(database, COLLECTIONS.MESSAGES),
         where('channel', '==', 'email'),
         where('status', '==', 'pending'),
         where('type', '==', 'email'),

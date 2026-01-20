@@ -42,9 +42,10 @@ import {
  */
 export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
   // === ΤΗΛΕΦΩΝΑ ===
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   phone: {
     type: 'phone',
-    title: 'Τηλέφωνα',
+    title: 'communication.sections.phones',
     icon: NAVIGATION_ENTITIES.phone.icon,
     fields: { primary: 'number', secondary: 'countryCode' },
     types: [
@@ -55,17 +56,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: PHONE_TYPE_LABELS.other }
     ],
     defaultType: 'mobile',
-    placeholder: 'π.χ. 2310 123456',
-    labelPlaceholder: 'π.χ. Προσωπικό τηλέφωνο',
+    placeholder: 'communication.placeholders.phone',
+    labelPlaceholder: 'communication.placeholders.phoneLabel',
     supportsPrimary: true,
-    emptyStateText: 'Δεν έχουν οριστεί τηλέφωνα',
-    addButtonText: 'Προσθήκη Τηλεφώνου'
+    emptyStateText: 'communication.emptyStates.phones',
+    addButtonText: 'communication.buttons.addPhone'
   },
 
   // === E-MAILS ===
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   email: {
     type: 'email',
-    title: 'E-mails',
+    title: 'communication.sections.emails',
     icon: NAVIGATION_ENTITIES.email.icon,
     fields: { primary: 'email' },
     types: [
@@ -74,17 +76,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: EMAIL_TYPE_LABELS.other }
     ],
     defaultType: 'personal',
-    placeholder: 'π.χ. john@example.com',
-    labelPlaceholder: 'π.χ. Προσωπικό e-mail',
+    placeholder: 'communication.placeholders.email',
+    labelPlaceholder: 'communication.placeholders.emailLabel',
     supportsPrimary: true,
-    emptyStateText: 'Δεν έχουν οριστεί e-mails',
-    addButtonText: 'Προσθήκη E-mail'
+    emptyStateText: 'communication.emptyStates.emails',
+    addButtonText: 'communication.buttons.addEmail'
   },
 
   // === ΙΣΤΟΣΕΛΙΔΕΣ ===
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   website: {
     type: 'website',
-    title: 'Ιστοσελίδες',
+    title: 'communication.sections.websites',
     icon: Globe,
     fields: { primary: 'url' },
     types: [
@@ -95,17 +98,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: WEBSITE_TYPE_LABELS.other }
     ],
     defaultType: 'personal',
-    placeholder: 'π.χ. https://example.com',
-    labelPlaceholder: 'π.χ. Προσωπική ιστοσελίδα',
+    placeholder: 'communication.placeholders.website',
+    labelPlaceholder: 'communication.placeholders.websiteLabel',
     supportsPrimary: false,
-    emptyStateText: 'Δεν έχουν οριστεί ιστοσελίδες',
-    addButtonText: 'Προσθήκη Ιστοσελίδας'
+    emptyStateText: 'communication.emptyStates.websites',
+    addButtonText: 'communication.buttons.addWebsite'
   },
 
   // === SOCIAL MEDIA ===
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   social: {
     type: 'social',
-    title: 'Social Media',
+    title: 'communication.sections.socialMedia',
     icon: Globe,
     fields: { primary: 'username', secondary: 'platform' },
     // 🎯 ΤΥΠΟΙ ΧΡΗΣΗΣ για το "Τύπος" dropdown
@@ -129,17 +133,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: SOCIAL_PLATFORM_LABELS.other }
     ],
     defaultType: 'personal',
-    placeholder: 'π.χ. john-doe',
-    labelPlaceholder: 'π.χ. Προσωπικό κοινωνικό δίκτυο',
+    placeholder: 'communication.placeholders.username',
+    labelPlaceholder: 'communication.placeholders.socialLabel',
     supportsPrimary: false,
-    emptyStateText: 'Δεν έχουν οριστεί social media',
-    addButtonText: 'Προσθήκη Social Media'
+    emptyStateText: 'communication.emptyStates.socialMedia',
+    addButtonText: 'communication.buttons.addSocial'
   },
 
   // === ΤΑΥΤΟΤΗΤΑ & ΑΦΜ ===
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   identity: {
     type: 'identity',
-    title: 'Στοιχεία Ταυτότητας',
+    title: 'communication.sections.identity',
     icon: User,
     fields: { primary: 'number', secondary: 'type' },
     types: [
@@ -151,17 +156,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: IDENTITY_TYPE_LABELS.other }
     ],
     defaultType: 'id_card',
-    placeholder: 'Αριθμός εγγράφου',
-    labelPlaceholder: 'π.χ. Κύριο ΑΦΜ',
+    placeholder: 'communication.placeholders.documentNumber',
+    labelPlaceholder: 'communication.placeholders.identityLabel',
     supportsPrimary: true,
-    emptyStateText: 'Δεν έχουν οριστεί στοιχεία ταυτότητας',
-    addButtonText: 'Προσθήκη Στοιχείου'
+    emptyStateText: 'communication.emptyStates.identity',
+    addButtonText: 'communication.buttons.addIdentity'
   },
 
   // === ΕΠΑΓΓΕΛΜΑΤΙΚΑ ===
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   professional: {
     type: 'professional',
-    title: 'Επαγγελματικά Στοιχεία',
+    title: 'communication.sections.professional',
     icon: Briefcase,
     fields: { primary: 'value', secondary: 'type' },
     types: [
@@ -174,17 +180,18 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: PROFESSIONAL_TYPE_LABELS.other }
     ],
     defaultType: 'company_phone',
-    placeholder: 'Τιμή',
-    labelPlaceholder: 'π.χ. Κύριο τηλέφωνο εταιρείας',
+    placeholder: 'communication.placeholders.value',
+    labelPlaceholder: 'communication.placeholders.professionalLabel',
     supportsPrimary: true,
-    emptyStateText: 'Δεν έχουν οριστεί επαγγελματικά στοιχεία',
-    addButtonText: 'Προσθήκη Επαγγελματικού'
+    emptyStateText: 'communication.emptyStates.professional',
+    addButtonText: 'communication.buttons.addProfessional'
   },
 
   // === ΔΙΕΥΘΥΝΣΕΙΣ ===
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   address: {
     type: 'address',
-    title: 'Διευθύνσεις',
+    title: 'communication.sections.addresses',
     icon: NAVIGATION_ENTITIES.location.icon,
     fields: { primary: 'address', secondary: 'type' },
     types: [
@@ -195,11 +202,11 @@ export const COMMUNICATION_CONFIGS: CommunicationConfigRecord = {
       { value: 'other', label: ADDRESS_TYPE_LABELS.other }
     ],
     defaultType: 'home',
-    placeholder: 'Οδός, αριθμός, περιοχή',
-    labelPlaceholder: 'π.χ. Κύρια διεύθυνση',
+    placeholder: 'communication.placeholders.address',
+    labelPlaceholder: 'communication.placeholders.addressLabel',
     supportsPrimary: true,
-    emptyStateText: 'Δεν έχουν οριστεί διευθύνσεις',
-    addButtonText: 'Προσθήκη Διεύθυνσης'
+    emptyStateText: 'communication.emptyStates.addresses',
+    addButtonText: 'communication.buttons.addAddress'
   }
 };
 

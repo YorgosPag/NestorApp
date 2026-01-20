@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 // =============================================================================
@@ -298,7 +299,7 @@ export function AuthForm({
     e.preventDefault();
 
     if (!mfaCode.trim() || mfaCode.length !== 6) {
-      setValidationError(t('mfa.invalidCodeLength', 'Ο κωδικός πρέπει να είναι 6 ψηφία'));
+      setValidationError(t('mfa.invalidCodeLength'));
       return;
     }
 
@@ -308,7 +309,7 @@ export function AuthForm({
     try {
       await verifyMfaCode(mfaCode);
       // If successful, auth state listener will handle the redirect
-      setSuccessMessage(t('mfa.verificationSuccess', 'Επαλήθευση επιτυχής!'));
+      setSuccessMessage(t('mfa.verificationSuccess'));
       setIsRedirecting(true);
       setTimeout(() => {
         router.push(redirectTo);
@@ -362,7 +363,7 @@ export function AuthForm({
       <main
         className={`${layout.shellAuthStandalone} ${colors.bg.primary}`}
         role="main"
-        aria-label={t('navigation.redirecting', 'Μεταφορά στην εφαρμογή')}
+        aria-label={t('navigation.redirecting')}
       >
         <section
           className={`${layout.flexColGap4} ${layout.textCenter}`}
@@ -382,12 +383,12 @@ export function AuthForm({
 
           {/* Spinner */}
           <figure className={layout.centerHorizontal}>
-            <Spinner size="large" aria-label={t('loading.spinnerLabel', 'Φόρτωση')} />
+            <Spinner size="large" aria-label={t('loading.spinnerLabel')} />
           </figure>
 
           {/* Loading message */}
           <p className={`${typography.body.base} ${colors.text.muted}`}>
-            {t('navigation.loadingApp', 'Μεταφορά στην εφαρμογή...')}
+            {t('navigation.loadingApp')}
           </p>
         </section>
       </main>
@@ -404,7 +405,7 @@ export function AuthForm({
         {/* 🏢 ENTERPRISE: Auth Toolbar - Language & Theme */}
         <nav
           className={layout.authToolbar}
-          aria-label={t('navigation.settingsToolbar', 'Ρυθμίσεις εμφάνισης')}
+          aria-label={t('navigation.settingsToolbar')}
         >
           <LanguageSwitcher />
           <ThemeToggle />
@@ -424,10 +425,10 @@ export function AuthForm({
           <Card className={layout.cardAuthWidth}>
             <CardHeader className={layout.flexColGap2}>
               <CardTitle className={`${typography.heading.lg} ${layout.textCenter}`}>
-                {t('mfa.title', 'Επαλήθευση δύο παραγόντων')}
+                {t('mfa.title')}
               </CardTitle>
               <CardDescription className={layout.textCenter}>
-                {t('mfa.description', 'Εισάγετε τον 6-ψήφιο κωδικό από την εφαρμογή αυθεντικοποίησης')}
+                {t('mfa.description')}
               </CardDescription>
             </CardHeader>
 
@@ -452,7 +453,7 @@ export function AuthForm({
                 {/* MFA Code Input */}
                 <fieldset className={layout.flexColGap2}>
                   <label htmlFor="mfaCode" className={typography.label.sm}>
-                    {t('mfa.codeLabel', 'Κωδικός επαλήθευσης')}
+                    {t('mfa.codeLabel')}
                   </label>
                   <div className={layout.inputContainer}>
                     <Lock className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
@@ -462,7 +463,7 @@ export function AuthForm({
                       inputMode="numeric"
                       pattern="[0-9]*"
                       maxLength={6}
-                      placeholder={t('mfa.codePlaceholder', '000000')}
+                      placeholder={t('mfa.codePlaceholder')}
                       value={mfaCode}
                       onChange={(e) => {
                         // Only allow digits
@@ -479,14 +480,14 @@ export function AuthForm({
                     />
                   </div>
                   <p className={`${typography.body.sm} ${colors.text.muted}`}>
-                    {t('mfa.codeHint', 'Ο κωδικός αλλάζει κάθε 30 δευτερόλεπτα')}
+                    {t('mfa.codeHint')}
                   </p>
                 </fieldset>
 
                 {/* Submit Button */}
                 <Button type="submit" className={layout.widthFull} disabled={isLoading}>
                   {isLoading && <Spinner size="small" className={layout.buttonIconSpacing} />}
-                  {t('mfa.verifyButton', 'Επαλήθευση')}
+                  {t('mfa.verifyButton')}
                 </Button>
 
                 {/* Cancel Button */}
@@ -497,7 +498,7 @@ export function AuthForm({
                   onClick={handleCancelMfa}
                   disabled={isLoading}
                 >
-                  {t('mfa.cancelButton', 'Ακύρωση')}
+                  {t('mfa.cancelButton')}
                 </Button>
               </form>
             </CardContent>
@@ -512,7 +513,7 @@ export function AuthForm({
       {/* 🏢 ENTERPRISE: Auth Toolbar - Language & Theme (Microsoft/Google pattern) */}
       <nav
         className={layout.authToolbar}
-        aria-label={t('navigation.settingsToolbar', 'Ρυθμίσεις εμφάνισης')}
+        aria-label={t('navigation.settingsToolbar')}
       >
         <LanguageSwitcher />
         <ThemeToggle />

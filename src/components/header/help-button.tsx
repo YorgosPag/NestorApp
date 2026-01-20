@@ -73,9 +73,17 @@ export function HelpButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" aria-label={t('helpHub.menuLabel')}>
+        {/* 🏢 ENTERPRISE: suppressHydrationWarning for i18n SSR/CSR mismatch
+            The server doesn't know user's language preference, so translations
+            may differ between server and client render. This is expected behavior. */}
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label={t('helpHub.menuLabel')}
+          suppressHydrationWarning
+        >
           <HelpCircle className={iconSizes.sm} />
-          <span className="sr-only">{t('helpHub.menuLabel')}</span>
+          <span className="sr-only" suppressHydrationWarning>{t('helpHub.menuLabel')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end">

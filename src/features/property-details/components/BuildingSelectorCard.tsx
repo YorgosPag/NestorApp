@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 /**
@@ -19,6 +20,8 @@ import { Button } from '@/components/ui/button';
 import { Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -27,6 +30,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type definitions (ZERO any)
@@ -49,20 +53,8 @@ interface BuildingSelectorCardProps {
 }
 
 // ============================================================================
-// 🏢 ENTERPRISE: Centralized labels (ZERO hardcoded strings)
+// 🌐 i18n: Labels now use useTranslation hook (namespace: 'units')
 // ============================================================================
-
-const LABELS = {
-  CARD_TITLE: 'Σύνδεση με Κτίριο',
-  SELECT_LABEL: 'Ανήκει σε Κτίριο',
-  SELECT_PLACEHOLDER: 'Επιλέξτε κτίριο...',
-  NO_BUILDING: 'Χωρίς κτίριο',
-  SAVE_BUTTON: 'Αποθήκευση',
-  SAVING: 'Αποθήκευση...',
-  SUCCESS_MESSAGE: 'Η μονάδα συνδέθηκε με το κτίριο!',
-  ERROR_MESSAGE: 'Σφάλμα κατά την αποθήκευση',
-  LOADING_BUILDINGS: 'Φόρτωση κτιρίων...',
-} as const;
 
 // ============================================================================
 // 🏢 ENTERPRISE: Component
@@ -81,6 +73,7 @@ export function BuildingSelectorCard({
   isEditing = true,
 }: BuildingSelectorCardProps) {
   // 🏢 ENTERPRISE: Centralized hooks (ZERO inline styles)
+  const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -98,16 +91,14 @@ export function BuildingSelectorCard({
     const loadBuildings = async () => {
       setLoading(true);
       try {
-        // 🏢 ENTERPRISE: Use API endpoint instead of direct Firestore query
-        // This ensures consistent results regardless of Firestore query limitations
-        const response = await fetch('/api/buildings');
-        const result = await response.json();
-
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to fetch buildings');
+        // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+        interface BuildingsApiResponse {
+          buildings: Array<{ id: string; name?: string }>;
         }
 
-        const buildingsData = result.buildings || [];
+        const result = await apiClient.get<BuildingsApiResponse>('/api/buildings');
+
+        const buildingsData = result?.buildings || [];
         console.log(`🔍 [BuildingSelectorCard] API returned ${buildingsData.length} buildings`);
 
         // 🏢 ENTERPRISE: Filter to only buildings that exist in Navigation hierarchy
@@ -123,7 +114,7 @@ export function BuildingSelectorCard({
 
         const buildingOptions: BuildingOption[] = enterpriseBuildings.map((b: { id: string; name?: string }) => ({
           id: String(b.id),
-          name: b.name || 'Χωρίς όνομα',
+          name: b.name || t('buildingSelector.noName'),
         }));
         setBuildings(buildingOptions);
         console.log(`✅ [BuildingSelectorCard] Loaded ${buildingOptions.length} enterprise buildings`);
@@ -209,18 +200,18 @@ export function BuildingSelectorCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
-          {LABELS.CARD_TITLE}
+          {t('buildingSelector.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Building Selector */}
         <fieldset className="space-y-2">
-          <Label htmlFor="building-selector">{LABELS.SELECT_LABEL}</Label>
+          <Label htmlFor="building-selector">{t('buildingSelector.selectLabel')}</Label>
 
           {loading ? (
             <section className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
-              <span>{LABELS.LOADING_BUILDINGS}</span>
+              <span>{t('buildingSelector.loading')}</span>
             </section>
           ) : (
             <Select
@@ -236,12 +227,12 @@ export function BuildingSelectorCard({
                   saveStatus === 'error' && getStatusBorder('error')
                 )}
               >
-                <SelectValue placeholder={LABELS.SELECT_PLACEHOLDER} />
+                <SelectValue placeholder={t('buildingSelector.placeholder')} />
               </SelectTrigger>
               <SelectContent>
                 {/* Option for no building - Radix requires non-empty value */}
                 <SelectItem value="__none__">
-                  {LABELS.NO_BUILDING}
+                  {t('buildingSelector.noBuilding')}
                 </SelectItem>
 
                 {/* Building options */}
@@ -258,7 +249,7 @@ export function BuildingSelectorCard({
         {/* Current building info (when not editing) */}
         {!isEditing && currentBuildingName && (
           <p className={cn('text-sm', colors.text.muted)}>
-            Τρέχον κτίριο: <strong>{currentBuildingName}</strong>
+            {t('buildingSelector.currentBuilding')}: <strong>{currentBuildingName}</strong>
           </p>
         )}
 
@@ -274,12 +265,12 @@ export function BuildingSelectorCard({
               {saving ? (
                 <>
                   <Loader2 className={cn(iconSizes.sm, 'mr-2 animate-spin')} />
-                  {LABELS.SAVING}
+                  {t('buildingSelector.saving')}
                 </>
               ) : (
                 <>
                   <Save className={cn(iconSizes.sm, 'mr-2')} />
-                  {LABELS.SAVE_BUTTON}
+                  {t('buildingSelector.save')}
                 </>
               )}
             </Button>
@@ -288,13 +279,13 @@ export function BuildingSelectorCard({
             {saveStatus === 'success' && (
               <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
                 <CheckCircle className={iconSizes.sm} />
-                {LABELS.SUCCESS_MESSAGE}
+                {t('buildingSelector.success')}
               </span>
             )}
             {saveStatus === 'error' && (
               <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
                 <AlertCircle className={iconSizes.sm} />
-                {LABELS.ERROR_MESSAGE}
+                {t('buildingSelector.error')}
               </span>
             )}
           </footer>

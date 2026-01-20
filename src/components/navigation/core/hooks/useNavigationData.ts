@@ -4,9 +4,14 @@
  *
  * 🚀 ENTERPRISE PHASE 1: Uses bootstrap endpoint for aggregated loading
  * Eliminates N+1 per-company calls → 1 single bootstrap request
+ *
+ * 🔐 ENTERPRISE PHASE 2: Auth-ready gating + centralized API client
+ * Bootstrap waits for AuthContext ready → prevents 401 errors
  */
 
 import { useState, useRef } from 'react';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { NavigationApiService } from '../services/navigationApi';
 import type { NavigationCompany, NavigationProject } from '../types';
 
@@ -71,6 +76,9 @@ const BOOTSTRAP_CACHE_TTL = 3 * 60 * 1000; // 3 minutes (matches server cache)
 let inFlightBootstrapPromise: Promise<{ companies: NavigationCompany[]; projects: NavigationProject[] }> | null = null;
 
 export function useNavigationData(): UseNavigationDataReturn {
+  // 🔐 ENTERPRISE: Wait for auth state before making API calls
+  const { user, loading: authLoading } = useAuth();
+
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
@@ -89,9 +97,26 @@ export function useNavigationData(): UseNavigationDataReturn {
    * - If request is in-flight → return SAME promise (no duplicate API call)
    * - If no cache and no in-flight → start new request and store promise
    *
+   * 🔐 AUTH-READY GATING:
+   * - Waits for AuthContext to be ready (user authenticated + token available)
+   * - Prevents 401 errors from unauthenticated requests
+   *
    * This is the enterprise pattern used by React Query, SWR, and Apollo Client.
    */
   const loadViaBootstrap = async (): Promise<{ companies: NavigationCompany[]; projects: NavigationProject[] }> => {
+    // 🔐 STEP 0: AUTH-READY GATING - Check authentication state
+    // ENTERPRISE FIX: Removed polling loop (closure bug - authLoading never updates inside Promise)
+    // The caller (NavigationContext) is responsible for waiting until auth is ready
+    if (authLoading) {
+      console.log('⏳ [Navigation] Auth still loading - caller should retry when ready');
+      throw new Error('AUTH_LOADING');
+    }
+
+    if (!user) {
+      console.log('⏳ [Navigation] User not authenticated - caller should retry when ready');
+      throw new Error('USER_NOT_AUTHENTICATED');
+    }
+
     // 1. Check cache first (instant return)
     if (bootstrapCache && (Date.now() - bootstrapCache.timestamp) < BOOTSTRAP_CACHE_TTL) {
       console.log('⚡ [Navigation] Bootstrap CACHE HIT');
@@ -116,43 +141,10 @@ export function useNavigationData(): UseNavigationDataReturn {
     const fetchPromise = (async (): Promise<{ companies: NavigationCompany[]; projects: NavigationProject[] }> => {
       try {
         console.log('🚀 [Navigation] Starting bootstrap request...');
-        const response = await fetch('/api/audit/bootstrap');
 
-        if (!response.ok) {
-          // 🏢 ENTERPRISE: Enhanced error diagnostics - read actual error from server
-          let errorMessage = `Bootstrap API returned HTTP ${response.status}`;
-          let serverError: unknown = null;
-
-          try {
-            serverError = await response.json();
-
-            // Extract detailed error message from server response
-            if (serverError && typeof serverError === 'object' && 'error' in serverError) {
-              const error = (serverError as { error: string }).error;
-              errorMessage = `${errorMessage}: ${error}`;
-
-              console.error('❌ [Navigation] Server error details:', {
-                status: response.status,
-                statusText: response.statusText,
-                error: serverError,
-                timestamp: new Date().toISOString()
-              });
-            }
-          } catch (parseError) {
-            // If we can't parse JSON, use generic message
-            console.error('❌ [Navigation] Could not parse server error response');
-          }
-
-          throw new Error(errorMessage);
-        }
-
-        const result = await response.json();
-
-        if (!result.success || !result.data) {
-          throw new Error('Bootstrap returned invalid data structure');
-        }
-
-        const bootstrapData = result.data as BootstrapResponse;
+        // 🏢 ENTERPRISE: Use centralized API client (automatic Authorization header + error handling)
+        // apiClient automatically handles errors (401/403/500) and unwraps response
+        const bootstrapData = await apiClient.get<BootstrapResponse>('/api/audit/bootstrap');
         console.log(`✅ [Navigation] Bootstrap loaded: ${bootstrapData.companies.length} companies, ${bootstrapData.projects.length} projects`);
 
         // Transform to NavigationCompany format

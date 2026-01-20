@@ -1,0 +1,210 @@
+{
+  "domains": {
+    "admin": "Administrative",
+    "construction": "Construction",
+    "sales": "Sales",
+    "accounting": "Accounting",
+    "legal": "Legal",
+    "financial": "Financial"
+  },
+  "categories": {
+    "photos": "Photo",
+    "floorplans": "Floor Plan",
+    "contracts": "Contract",
+    "invoices": "Invoice",
+    "documents": "Document",
+    "drawings": "Drawing",
+    "reports": "Report",
+    "permits": "Permit"
+  },
+  "entityTypes": {
+    "contact": "Contact",
+    "building": "Building",
+    "floor": "Floor",
+    "unit": "Unit",
+    "project": "Project",
+    "company": "Company"
+  },
+  "purposes": {
+    "profile": "Profile",
+    "id": "ID",
+    "tax": "Tax ID",
+    "address": "Address",
+    "phone": "Phone",
+    "front": "Front View",
+    "back": "Back View",
+    "signed": "Signed",
+    "draft": "Draft",
+    "generic": "Generic",
+    "permit": "Permit",
+    "floorplan": "Floor Plan",
+    "exterior": "Exterior",
+    "interior": "Interior",
+    "contract": "Contract",
+    "report": "Report"
+  },
+  "labels": {
+    "revision": "Version",
+    "uploadedAt": "Uploaded at",
+    "exportFilename": "Export filename"
+  },
+  "pdf": {
+    "title": "PDF Document",
+    "preview": "PDF preview",
+    "openInNewTab": "Open PDF in new tab"
+  },
+  "validation": {
+    "onlyPdfAllowed": "Only PDF files are allowed",
+    "fileTooLarge": "File is too large (maximum 50MB)",
+    "fileLargeWarning": "File is large and may take longer to upload",
+    "filenameSpecialChars": "Filename contains special characters that may cause problems"
+  },
+  "upload": {
+    "typeQuestion": "What type of document will you upload?",
+    "categoryHint": "Select category for automatic naming",
+    "documentForCategory": "Document for this category",
+    "documentTitle": "Document Title",
+    "customTitlePlaceholder": "e.g. Power of Attorney, Affidavit, etc.",
+    "customTitleHint": "Required field - Enter a descriptive title for the document",
+    "selectDocumentType": "Select document type",
+    "errors": {
+      "generic": "Error uploading file",
+      "unauthorized": "You do not have permission to upload files",
+      "cancelled": "Upload was cancelled",
+      "quotaExceeded": "Not enough storage space",
+      "urlFetch": "Error getting file URL",
+      "databaseUpdate": "Error updating database",
+      "unknown": "Unknown error while processing PDF"
+    }
+  },
+  "manager": {
+    "filesTitle": "Files",
+    "addFiles": "Add Files",
+    "refresh": "Refresh",
+    "fileManagementTools": "File Management Tools",
+    "errorLoading": "Error loading files",
+    "totalStorage": "Total storage",
+    "viewList": "List View",
+    "viewTree": "Tree View",
+    "listView": "List",
+    "treeView": "Tree",
+    "businessView": "Business View",
+    "technicalView": "Technical View",
+    "businessViewTooltip": "Business View - User-friendly display",
+    "technicalViewTooltip": "Technical View - Full path with IDs",
+    "refreshTooltip": "Refresh file list",
+    "addFilesTooltip": "Upload new files",
+    "belongsTo": "Belongs to",
+    "selectDocumentType": "Select document type first",
+    "enterTitleToContinue": "Enter title to continue with upload"
+  },
+  "list": {
+    "file": "File",
+    "filesList": "Files List",
+    "view": "View",
+    "download": "Download",
+    "delete": "Trash",
+    "cancel": "Cancel",
+    "deleteFile": "Move to Trash",
+    "viewFile": "View file",
+    "downloadFile": "Download file",
+    "deleteConfirm": "This file will be moved to Trash. You can restore it within 30 days.",
+    "deleteSuccess": "File moved to Trash",
+    "deleteError": "Failed to move to Trash",
+    "loadingFiles": "Loading files...",
+    "noFiles": "No files",
+    "noFilesDescription": "Add files using the Add Files button",
+    "fileActions": "File actions"
+  },
+  "trash": {
+    "title": "Trash",
+    "description": "Files deleted in the last 30 days",
+    "emptyTrash": "Empty Trash",
+    "emptyTrashConfirm": "Are you sure? This will permanently delete all files.",
+    "restore": "Restore",
+    "restoreFile": "Restore File",
+    "restoreConfirm": "Do you want to restore this file?",
+    "restoreSuccess": "File restored successfully",
+    "restoreError": "Failed to restore file",
+    "permanentDelete": "Delete Permanently",
+    "permanentDeleteConfirm": "Are you sure? This file will be permanently deleted and cannot be recovered.",
+    "permanentDeleteSuccess": "File permanently deleted",
+    "permanentDeleteError": "Failed to permanently delete file",
+    "expiresIn": "Expires in",
+    "days": "days",
+    "expired": "Expired",
+    "noTrashedFiles": "Trash is empty",
+    "noTrashedFilesDescription": "Files you delete appear here for 30 days",
+    "trashedAt": "Deleted on",
+    "trashedBy": "Deleted by",
+    "purgeAt": "Permanent deletion on",
+    "holdActive": "Active Hold",
+    "holdLegal": "Legal Hold",
+    "holdRegulatory": "Regulatory Hold",
+    "holdAdmin": "Administrative Hold",
+    "cannotTrashWithHold": "Cannot delete file with active hold",
+    "stats": {
+      "totalFiles": "Total files",
+      "totalSize": "Total size",
+      "expiringInWeek": "Expiring in 7 days"
+    }
+  },
+  "uploadZone": {
+    "uploadZone": "File upload zone",
+    "fileInput": "Select files",
+    "clickToSelect": "Click to select",
+    "orDragAndDrop": "or drag and drop here",
+    "fileTypesHint": "Supported types: Images, PDF, Word, Excel",
+    "maxSize": "Maximum size: {{size}}",
+    "selectFiles": "Select Files",
+    "selectFilesButton": "Select files button",
+    "uploading": "Uploading...",
+    "errors": {
+      "fileTooLarge": "File {{fileName}} is too large. Maximum size: {{maxSize}}"
+    }
+  },
+  "pathSegments": {
+    "companies": "Companies",
+    "projects": "Projects",
+    "entities": "Entities",
+    "domains": "Domains",
+    "categories": "Categories",
+    "files": "Files"
+  },
+  "tree": {
+    "title": "File Structure",
+    "expand": "Expand folder",
+    "collapse": "Collapse folder",
+    "folder": "Folder",
+    "file": "File"
+  },
+  "technical": {
+    "storagePath": "Storage path",
+    "copyPath": "Copy path",
+    "pathCopied": "Path copied",
+    "pathUnavailable": "Unavailable",
+    "details": "Details",
+    "unavailable": "Unavailable"
+  },
+  "inspector": {
+    "title": "File Details",
+    "description": "View metadata and technical information",
+    "storagePath": "Storage Path",
+    "fileSize": "File Size",
+    "contentType": "Content Type",
+    "createdAt": "Created At",
+    "createdBy": "Created By",
+    "company": "Company",
+    "domain": "Domain",
+    "category": "Category",
+    "status": "Status",
+    "downloadUrl": "Download URL",
+    "viewFile": "View File"
+  },
+  "search": {
+    "placeholder": "Search files...",
+    "results": "{{count}} of {{total}} files",
+    "noResults": "No files found",
+    "clearSearch": "Clear search"
+  }
+}

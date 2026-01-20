@@ -11,12 +11,184 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import type { CSSProperties } from 'react';
 import { InteractiveMap } from '../components/InteractiveMap';
 import type { UniversalPolygon, PolygonType } from '@geo-alert/core';
 import type { GeoCoordinate } from '../types';
-import { layoutUtilities, mapComponents, colors, typography, getMapButtonStyle } from '@/styles/design-tokens';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { Square, Target, Home, Trash2, Edit, MapPin, FileText, Map, Settings } from 'lucide-react';
+import { layoutUtilities } from '@/styles/design-tokens';
+
+// ============================================================================
+// 🎨 LOCAL MAP COMPONENT STYLES - ENTERPRISE PATTERN
+// ============================================================================
+
+const mapComponents = {
+  container: {
+    base: {
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      backgroundColor: '#0f172a',
+    } as CSSProperties,
+  },
+  header: {
+    base: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      padding: '16px 24px',
+      backgroundColor: 'rgba(30, 41, 59, 0.95)',
+      borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
+    } as CSSProperties,
+    title: {
+      fontSize: '18px',
+      fontWeight: 600,
+      color: '#f8fafc',
+      margin: 0,
+    } as CSSProperties,
+  },
+  controlSection: {
+    base: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+    } as CSSProperties,
+    label: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+      color: '#e2e8f0',
+      fontSize: '13px',
+      cursor: 'pointer',
+    } as CSSProperties,
+    select: {
+      padding: '6px 10px',
+      backgroundColor: '#1e293b',
+      border: '1px solid rgba(100, 116, 139, 0.4)',
+      borderRadius: '6px',
+      color: '#f8fafc',
+      fontSize: '13px',
+    } as CSSProperties,
+  },
+  mapContainer: {
+    base: {
+      flex: 1,
+      display: 'flex',
+      position: 'relative',
+      overflow: 'hidden',
+    } as CSSProperties,
+    interactiveMap: {
+      flex: 1,
+    } as CSSProperties,
+  },
+  sidebar: {
+    base: {
+      width: '320px',
+      backgroundColor: 'rgba(30, 41, 59, 0.95)',
+      borderLeft: '1px solid rgba(100, 116, 139, 0.3)',
+      display: 'flex',
+      flexDirection: 'column',
+    } as CSSProperties,
+    header: {
+      padding: '16px',
+      borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
+    } as CSSProperties,
+    title: {
+      fontSize: '15px',
+      fontWeight: 600,
+      color: '#f8fafc',
+      margin: 0,
+    } as CSSProperties,
+    content: {
+      flex: 1,
+      overflowY: 'auto',
+      padding: '12px',
+    } as CSSProperties,
+    emptyState: {
+      color: '#94a3b8',
+      fontSize: '13px',
+      textAlign: 'center',
+      padding: '24px',
+    } as CSSProperties,
+  },
+  polygonList: {
+    item: {
+      padding: '12px',
+      backgroundColor: 'rgba(51, 65, 85, 0.5)',
+      borderRadius: '8px',
+      marginBottom: '8px',
+    } as CSSProperties,
+    title: {
+      fontSize: '14px',
+      fontWeight: 500,
+      color: '#f8fafc',
+      marginBottom: '4px',
+    } as CSSProperties,
+    metadata: {
+      fontSize: '12px',
+      color: '#94a3b8',
+      marginBottom: '4px',
+    } as CSSProperties,
+    timestamp: {
+      fontSize: '11px',
+      color: '#64748b',
+      display: 'block',
+      marginBottom: '8px',
+    } as CSSProperties,
+    actions: {
+      display: 'flex',
+      gap: '8px',
+    } as CSSProperties,
+  },
+  debugSection: {
+    container: {
+      padding: '16px 24px',
+      backgroundColor: 'rgba(30, 41, 59, 0.8)',
+      borderTop: '1px solid rgba(100, 116, 139, 0.3)',
+    } as CSSProperties,
+    summary: {
+      color: '#94a3b8',
+      fontSize: '13px',
+      cursor: 'pointer',
+    } as CSSProperties,
+    content: {
+      marginTop: '12px',
+      padding: '12px',
+      backgroundColor: '#0f172a',
+      borderRadius: '6px',
+      color: '#94a3b8',
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      overflow: 'auto',
+      maxHeight: '200px',
+    } as CSSProperties,
+  },
+};
+
+type ButtonVariant = 'danger' | 'dangerDisabled' | 'secondarySmall' | 'dangerSmall';
+
+const getMapButtonStyle = (variant: ButtonVariant): CSSProperties => {
+  const baseStyle: CSSProperties = {
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: 'none',
+    fontSize: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  };
+
+  switch (variant) {
+    case 'danger':
+      return { ...baseStyle, backgroundColor: '#dc2626', color: '#fff' };
+    case 'dangerDisabled':
+      return { ...baseStyle, backgroundColor: '#64748b', color: '#94a3b8', cursor: 'not-allowed' };
+    case 'secondarySmall':
+      return { ...baseStyle, backgroundColor: '#334155', color: '#e2e8f0', padding: '4px 8px' };
+    case 'dangerSmall':
+      return { ...baseStyle, backgroundColor: '#dc2626', color: '#fff', padding: '4px 8px' };
+    default:
+      return baseStyle;
+  }
+};
 
 // Mock transform state (για το παράδειγμα)
 const mockTransformState = {

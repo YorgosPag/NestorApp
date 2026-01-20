@@ -18,6 +18,8 @@ import { Users, Plus } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPES
@@ -47,20 +49,20 @@ interface EmptyStateProps extends StateComponentProps {
 export const NewContactState: React.FC<StateComponentProps> = ({ className }) => {
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslation('contacts');
 
   return (
   <Card className={className}>
     <CardContent className="pt-6">
       <div className={`text-center ${colors.text.muted}`}>
         <Users className={"h-12 w-12 mx-auto mb-4 " + colors.text.muted} />
-        <h3 className="font-medium text-lg mb-2">Σχέσεις Επαφής</h3>
+        <h3 className="font-medium text-lg mb-2">{t('relationships.summary.title')}</h3>
         <p className="text-sm mb-4">
-          Οι σχέσεις θα είναι διαθέσιμες μετά την αποθήκευση της επαφής.
+          {t('relationships.summary.newContact.availableAfterSave')}
         </p>
         <div className={`${colors.bg.info} ${quick.card} p-3`}>
           <p className={`text-xs ${colors.text.info}`}>
-            💡 <strong>Συμβουλή:</strong> Αποθηκεύστε την επαφή για να προσθέσετε
-            επαγγελματικές σχέσεις, εργαζόμενους και μετόχους.
+            💡 <strong>{t('relationships.summary.newContact.tip')}</strong> {t('relationships.summary.newContact.tipText')}
           </p>
         </div>
       </div>
@@ -82,19 +84,20 @@ export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
   const iconSizes = useIconSizes();
   const { quick, radius } = useBorderTokens();
   const colors = useSemanticColors();
+  const { t } = useTranslation('contacts');
 
   return (
   <Card className={className}>
     <CardHeader>
       <CardTitle className="flex items-center space-x-2">
         <Users className={iconSizes.md} />
-        <span>Σχέσεις Επαφής</span>
+        <span>{t('relationships.summary.title')}</span>
       </CardTitle>
     </CardHeader>
     <CardContent>
       <div className="text-center py-8">
         <AnimatedSpinner size="large" variant="info" className="mx-auto mb-4" />
-        <p className={colors.text.muted}>Φόρτωση σχέσεων...</p>
+        <p className={colors.text.muted}>{t('relationships.summary.loading')}</p>
       </div>
     </CardContent>
   </Card>
@@ -117,6 +120,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { t } = useTranslation('contacts');
 
   return (
   <Card className={className}>
@@ -124,7 +128,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <CardTitle className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Users className={iconSizes.md} />
-          <span>Σχέσεις Επαφής</span>
+          <span>{t('relationships.summary.title')}</span>
         </div>
         {!readonly && onManageRelationships && (
           <Button
@@ -133,7 +137,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             className="ml-auto"
           >
             <Plus className={`${iconSizes.sm} mr-2`} />
-            Προσθήκη
+            {t('relationships.summary.add')}
           </Button>
         )}
       </CardTitle>
@@ -141,9 +145,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     <CardContent>
       <div className="text-center py-8">
         <Users className={"h-12 w-12 mx-auto mb-4 " + colors.text.muted} />
-        <h3 className="font-medium mb-2">Δεν υπάρχουν σχέσεις</h3>
+        <h3 className="font-medium mb-2">{t('relationships.summary.empty.title')}</h3>
         <p className={`${colors.text.muted} text-sm mb-4`}>
-          Προσθέστε επαγγελματικές σχέσεις, εργαζόμενους και συνεργάτες.
+          {t('relationships.summary.empty.description')}
         </p>
         {!readonly && onManageRelationships && (
           <Button
@@ -151,7 +155,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             variant="outline"
             size="sm"
           >
-            Ξεκινήστε εδώ
+            {t('relationships.summary.startHere')}
           </Button>
         )}
       </div>

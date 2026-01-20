@@ -113,14 +113,27 @@ async function handleDownload(request: NextRequest, ctx: AuthContext) {
     const buffer = await response.arrayBuffer();
     const blob = new Uint8Array(buffer);
 
-    // 🏢 ENTERPRISE HEADERS: Force download with proper filename
+    // 🏢 ENTERPRISE: Get actual content type from Firebase response
+    const actualContentType = response.headers.get('content-type') || 'application/octet-stream';
+
+    // 🏢 ENTERPRISE: RFC 6266 compliant Content-Disposition for UTF-8 filenames
+    // Pattern: Google Drive / Dropbox / OneDrive
+    // - filename="ASCII_FALLBACK" for legacy browsers
+    // - filename*=UTF-8''ENCODED for modern browsers (supports Greek, Chinese, etc.)
+    const asciiFilename = filename.replace(/[^\x20-\x7E]/g, '_'); // ASCII fallback
+    const utf8EncodedFilename = encodeURIComponent(filename);
+    const contentDisposition = `attachment; filename="${asciiFilename}"; filename*=UTF-8''${utf8EncodedFilename}`;
+
+    // 🏢 ENTERPRISE HEADERS: Force download with proper filename and content type
     const headers = new Headers({
-      'Content-Type': 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`,
+      'Content-Type': actualContentType,
+      'Content-Disposition': contentDisposition,
       'Content-Length': blob.length.toString(),
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0',
+      // Security headers
+      'X-Content-Type-Options': 'nosniff',
       // Enterprise headers for auditing
       'X-Download-Source': 'firebase-storage',
       'X-Download-Method': 'server-proxy',
@@ -129,8 +142,10 @@ async function handleDownload(request: NextRequest, ctx: AuthContext) {
 
     console.log('✅ DOWNLOAD SUCCESS:', {
       filename: filename,
+      asciiFilename: asciiFilename,
       size: blob.length,
-      contentType: response.headers.get('content-type')
+      contentType: actualContentType,
+      contentDisposition: contentDisposition
     });
 
     // 🎯 RETURN: File with force download headers

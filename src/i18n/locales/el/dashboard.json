@@ -39,5 +39,12 @@
     "title": "Πρόσφατες Δραστηριότητες",
     "subtitle": "Οι τελευταίες ενέργειες στο σύστημα",
     "viewAll": "Προβολή όλων"
+  },
+  "upcomingMeetings": {
+    "title": "Επερχόμενα Ραντεβού",
+    "viewCalendar": "Προβολή ημερολογίου"
+  },
+  "aria": {
+    "statsSection": "Στατιστικά Dashboard"
   }
 }

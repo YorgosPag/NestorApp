@@ -14,6 +14,8 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { BadgeFactory } from './BadgeFactory';
 import { getDynamicElementClasses } from '@/components/ui/utils/dynamic-styles';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 import type {
   DomainType,
   ProjectStatus,
@@ -129,7 +131,14 @@ interface CommonBadgeProps extends Omit<UnifiedBadgeProps, 'domain'> {
 
 export const CommonBadge: React.FC<CommonBadgeProps> = ({ status, ...props }) => {
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
   const badgeConfig = BadgeFactory.createCommonBadge(status, colors, props);
+
+  // 🏢 ENTERPRISE: Translate label if it's an i18n key
+  const translatedLabel = badgeConfig.label?.startsWith('common.')
+    ? t(badgeConfig.label.replace('common.', ''))
+    : badgeConfig.label;
 
   return (
     <Badge
@@ -147,7 +156,7 @@ export const CommonBadge: React.FC<CommonBadgeProps> = ({ status, ...props }) =>
       onMouseEnter={props.onMouseEnter}
       onMouseLeave={props.onMouseLeave}
     >
-      {props.children || badgeConfig.label}
+      {props.children || translatedLabel}
     </Badge>
   );
 };

@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
@@ -11,6 +12,8 @@ import {
   PHOTO_HEIGHTS,
   PHOTO_TYPOGRAPHY
 } from '../config/photo-config';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -62,6 +65,7 @@ export function PhotosPreview({
   className = ''
 }: PhotosPreviewProps) {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('common');
 
   // ========================================================================
   // COMPANY PHOTOS LAYOUT
@@ -88,7 +92,7 @@ export function PhotosPreview({
       return (
         <div className={`text-center text-muted-foreground p-8 ${className}`}>
           <Camera className={`${iconSizes.xl2} mx-auto mb-4 ${PHOTO_TEXT_COLORS.MUTED}`} />
-          <p>Δεν υπάρχουν αποθηκευμένες φωτογραφίες</p>
+          <p>{t('photoPreview.empty.noPhotos')}</p>
         </div>
       );
     }
@@ -100,7 +104,7 @@ export function PhotosPreview({
         <div className="flex items-center justify-between mb-6">
           <h4 className={`${PHOTO_TYPOGRAPHY.HEADER} flex items-center gap-2`}>
             <Camera className={iconSizes.sm} />
-            Φωτογραφίες Εταιρείας (2)
+            {t('photoPreview.headers.companyPhotos', { count: 2 })}
           </h4>
         </div>
 
@@ -109,7 +113,7 @@ export function PhotosPreview({
           <div className={PHOTO_LAYOUTS.COMPANY_GRID.itemWrapper}>
             <CompanyLogoCard
               photoUrl={logoUrl}
-              title="Λογότυπο Εταιρείας"
+              title={t('photoPreview.alt.companyLogo')}
               height={PHOTO_SIZES.STANDARD_PREVIEW}
               onPhotoClick={hasLogo ? () => handlePhotoClick(logoUrl!, 0) : undefined}
             />
@@ -118,7 +122,7 @@ export function PhotosPreview({
           <div className={PHOTO_LAYOUTS.COMPANY_GRID.itemWrapper}>
             <RepresentativePhotoCard
               photoUrl={photoUrl}
-              title="Φωτογραφία Εκπροσώπου"
+              title={t('photoPreview.alt.representativePhoto')}
               height={PHOTO_SIZES.STANDARD_PREVIEW}
               onPhotoClick={hasPhoto ? () => handlePhotoClick(photoUrl!, 1) : undefined}
             />
@@ -169,7 +173,7 @@ export function PhotosPreview({
         <div className="flex items-center justify-between mb-6">
           <h4 className={`${PHOTO_TYPOGRAPHY.HEADER} flex items-center gap-2`}>
             <Camera className={iconSizes.sm} />
-            Φωτογραφίες ({totalPhotos}/6)
+            {t('photoPreview.headers.individualPhotos', { count: totalPhotos, max: 6 })}
           </h4>
         </div>
 
@@ -216,7 +220,7 @@ export function PhotosPreview({
         <div className="flex items-center justify-between mb-6">
           <h4 className={`${PHOTO_TYPOGRAPHY.HEADER} flex items-center gap-2`}>
             <Camera className={iconSizes.sm} />
-            Λογότυπο Δημόσιας Υπηρεσίας
+            {t('photoPreview.headers.serviceLogo')}
           </h4>
         </div>
 
@@ -243,7 +247,7 @@ export function PhotosPreview({
   return (
     <div className={`text-center text-muted-foreground p-8 ${className}`}>
       <Camera className={`${iconSizes.xl4} mx-auto mb-4 ${PHOTO_TEXT_COLORS.MUTED}`} />
-      <p>Μη υποστηριζόμενος τύπος επαφής: {contactType}</p>
+      <p>{t('photoPreview.unsupportedType', { type: contactType })}</p>
     </div>
   );
 }

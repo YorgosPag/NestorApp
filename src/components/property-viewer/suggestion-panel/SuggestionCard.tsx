@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -6,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import type { Suggestion } from '@/types/suggestions';
 import { HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function SuggestionCard({
   suggestion,
@@ -19,6 +20,8 @@ export function SuggestionCard({
   onAccept: () => void;
 }) {
   const { quick, getStatusBorder, radius } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
   const topRecommendation = suggestion.recommendations[0];
 
   return (
@@ -50,7 +53,7 @@ export function SuggestionCard({
           <div className="text-xs font-medium text-muted-foreground">Score: {suggestion.score}</div>
           {isSelected && (
             <Button size="sm" className="h-5 px-1.5 text-xs" onClick={(e) => { e.stopPropagation(); onAccept(); }}>
-              Αποδοχή
+              {t('suggestions.accept')}
             </Button>
           )}
         </div>

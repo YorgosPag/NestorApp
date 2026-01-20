@@ -9,6 +9,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { PROPERTY_STATUS_CONFIG } from "@/lib/property-utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PROPERTY_FILTER_LABELS, COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface LayerManagerHeaderProps {
   propertyCount: number;
@@ -38,28 +40,31 @@ export function LayerManagerHeader({
   onShowAll,
   onHideAll,
 }: LayerManagerHeaderProps) {
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
+
   return (
     <div className="p-4 border-b space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Layers Διαχείρισης</h3>
+        <h3 className="text-sm font-semibold">{t('layerManager.title')}</h3>
         <CommonBadge
           status="property"
-          customLabel={`${propertyCount} στοιχεία`}
+          customLabel={t('layerManager.itemCount', { count: propertyCount })}
           variant="secondary"
           className="text-xs"
         />
       </div>
       <Input
-        placeholder="Αναζήτηση layer..."
+        placeholder={t('layerManager.searchPlaceholder')}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className="h-8 text-xs"
-        aria-label="Αναζήτηση Layer"
+        aria-label={t('layerManager.searchAriaLabel')}
       />
       <div className="grid grid-cols-2 gap-2">
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="h-8 text-xs" aria-label="Φίλτρο τύπου">
-            <SelectValue placeholder="Τύπος" />
+          <SelectTrigger className="h-8 text-xs" aria-label={t('layerManager.typeFilterAriaLabel')}>
+            <SelectValue placeholder={t('layerManager.typePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_TYPES}</SelectItem>
@@ -67,8 +72,8 @@ export function LayerManagerHeader({
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="h-8 text-xs" aria-label="Φίλτρο κατάστασης">
-            <SelectValue placeholder="Κατάσταση" />
+          <SelectTrigger className="h-8 text-xs" aria-label={t('layerManager.statusFilterAriaLabel')}>
+            <SelectValue placeholder={t('layerManager.statusPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{COMMON_FILTER_LABELS.ALL_STATUSES}</SelectItem>
@@ -80,10 +85,10 @@ export function LayerManagerHeader({
       </div>
       <div className="flex gap-1">
         <Button variant="outline" size="sm" className="h-7 px-2 text-xs flex-1" onClick={onShowAll}>
-          <Eye className={`${iconSizes.xs} mr-1`} /> Εμφάνιση Όλων
+          <Eye className={`${iconSizes.xs} mr-1`} /> {t('layerManager.showAll')}
         </Button>
         <Button variant="outline" size="sm" className="h-7 px-2 text-xs flex-1" onClick={onHideAll}>
-          <EyeOff className={`${iconSizes.xs} mr-1`} /> Απόκρυψη Όλων
+          <EyeOff className={`${iconSizes.xs} mr-1`} /> {t('layerManager.hideAll')}
         </Button>
       </div>
     </div>

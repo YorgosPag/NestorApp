@@ -15,6 +15,7 @@ export function useOpportunities() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // 🌐 i18n: All messages converted to i18n keys - 2026-01-18
     const fetchOpportunities = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -22,9 +23,8 @@ export function useOpportunities() {
             const fetchedOpportunities = await apiGetOpportunities();
             setOpportunities(fetchedOpportunities);
         } catch (err) {
-            const errorMessage = "Δεν ήταν δυνατή η φόρτωση των ευκαιριών.";
-            setError(errorMessage);
-            notifications.error(errorMessage);
+            setError("opportunities.errors.loadFailed");
+            notifications.error("opportunities.errors.loadFailed");
         } finally {
             setLoading(false);
         }
@@ -44,12 +44,12 @@ export function useOpportunities() {
           };
           await apiAddOpportunity(opportunityData);
     
-          notifications.success("Το lead προστέθηκε επιτυχώς!");
-          
+          notifications.success("opportunities.status.addSuccess");
+
           fetchOpportunities();
         } catch (error) {
           console.error(error);
-          notifications.error("Δεν ήταν δυνατή η προσθήκη του lead.");
+          notifications.error("opportunities.errors.addFailed");
           throw error;
         }
       };
@@ -57,10 +57,10 @@ export function useOpportunities() {
     const deleteOpportunity = async (id: string, name: string) => {
         try {
             await apiDeleteOpportunity(id);
-            notifications.success(`Η ευκαιρία "${name}" διαγράφηκε.`);
+            notifications.success("opportunities.status.deleteSuccess");
             fetchOpportunities();
         } catch (error) {
-            notifications.error("Δεν ήταν δυνατή η διαγραφή της ευκαιρίας.");
+            notifications.error("opportunities.errors.deleteFailed");
             console.error("Error deleting opportunity:", error);
             throw error;
         }

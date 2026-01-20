@@ -20,12 +20,13 @@ import { LEGAL_FORM_OPTIONS, GEMI_STATUS_OPTIONS } from '../options';
 /**
  * Section 1: Βασικά Στοιχεία ΓΕΜΗ
  * ENTERPRISE: Uses centralized labels, help texts, και options
+ * 🏢 i18n: Uses i18n keys that are translated at runtime by GenericFormRenderer
  */
 export const basicInfoSection: SectionConfig = {
   id: 'basicInfo',
-  title: 'Βασικά Στοιχεία ΓΕΜΗ',
+  title: 'sections.basicInfoGemi', // i18n key
   icon: 'info',
-  description: 'Βασικές πληροφορίες εταιρείας από το ΓΕΜΗ',
+  description: 'sectionDescriptions.basicInfoGemi', // i18n key
   order: 1,
   fields: [
     {

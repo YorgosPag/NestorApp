@@ -6,8 +6,12 @@ import { Button } from '@/components/ui/button';
 import { createHoverBorderEffects, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function VideosTab() {
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const borderTokens = useBorderTokens();
     const hoverBorderEffects = createHoverBorderEffects(borderTokens);
@@ -15,10 +19,10 @@ export function VideosTab() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Videos Έργου</h3>
+                <h3 className="text-lg font-semibold">{t('videosTab.title')}</h3>
                 <Button>
                     <Upload className={`${iconSizes.sm} mr-2`} />
-                    Ανέβασμα Video
+                    {t('videosTab.uploadVideo')}
                 </Button>
             </div>
             
@@ -30,7 +34,7 @@ export function VideosTab() {
                     >
                         <div className="text-center">
                             <Video className={`${iconSizes.xl} text-muted-foreground ${GROUP_HOVER_PATTERNS.BLUE_ICON_ON_GROUP} mx-auto mb-2`} />
-                            <p className="text-sm text-muted-foreground">Προσθήκη Video</p>
+                            <p className="text-sm text-muted-foreground">{t('videosTab.addVideo')}</p>
                         </div>
                     </div>
                 ))}

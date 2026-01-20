@@ -2,10 +2,14 @@
 import { Grid, List } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function ViewModeToggle({ value, onChange }: { value: 'grid'|'list'; onChange: (v:'grid'|'list')=>void; }) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
 
   return (
     <div className={`flex ${colors.bg.secondary} rounded-lg p-1`}>
@@ -16,7 +20,7 @@ export function ViewModeToggle({ value, onChange }: { value: 'grid'|'list'; onCh
         }`}
       >
         <Grid className={iconSizes.sm} />
-        <span className="text-sm font-medium">Πλέγμα</span>
+        <span className="text-sm font-medium">{t('grid.viewMode.grid')}</span>
       </button>
       <button
         onClick={() => onChange('list')}
@@ -25,7 +29,7 @@ export function ViewModeToggle({ value, onChange }: { value: 'grid'|'list'; onCh
         }`}
       >
         <List className={iconSizes.sm} />
-        <span className="text-sm font-medium">Λίστα</span>
+        <span className="text-sm font-medium">{t('grid.viewMode.list')}</span>
       </button>
     </div>
   );

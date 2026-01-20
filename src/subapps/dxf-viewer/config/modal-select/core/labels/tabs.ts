@@ -133,123 +133,130 @@ export interface ParkingTabLabelsConfig {
 /**
  * Building Tab Labels - Centralized για Building detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα building tab labels
- * 🏢 PATTERN: Direct labels (SAP/Salesforce standard) - i18n at component level
+ * 🏢 PATTERN: i18n keys for translation at component level (UniversalTabsRenderer)
+ * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
 export const MODAL_SELECT_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
-  // ✅ ENTERPRISE: Direct labels for building tabs
-  general: "General",
-  floorplan: "Floor Plan",
-  timeline: "Timeline",
-  analytics: "Analytics",
-  storage: "Storages",
-  contracts: "Contracts",
-  protocols: "Protocols",
-  photos: "Photos",
-  customers: "Customers",
-  videos: "Videos",
+  // ✅ ENTERPRISE: i18n keys for building tabs
+  general: "tabs.labels.general",
+  floorplan: "tabs.labels.floorplan",
+  timeline: "tabs.labels.timeline",
+  analytics: "tabs.labels.analytics",
+  storage: "tabs.labels.storage",
+  contracts: "tabs.labels.contracts",
+  protocols: "tabs.labels.protocols",
+  photos: "tabs.labels.photos",
+  customers: "tabs.labels.customers",
+  videos: "tabs.labels.videos",
 
-  // 🔧 LEGACY: Labels for backward compatibility
-  details: "Details",
-  properties: "Properties",
-  units: "Units",
-  floors: "Floors",
-  amenities: "Amenities",
-  documents: "Documents",
-  notes: "Notes",
-  history: "History"
+  // 🔧 LEGACY: i18n keys for backward compatibility
+  details: "tabs.labels.details",
+  properties: "tabs.labels.properties",
+  units: "tabs.labels.units",
+  floors: "tabs.labels.floors",
+  amenities: "tabs.labels.amenities",
+  documents: "tabs.labels.documents",
+  notes: "tabs.labels.notes",
+  history: "tabs.labels.history"
 } as const;
 
 /**
  * Contact Tab Labels - Centralized για Contact detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα contact tab labels
- * 🏢 PATTERN: Direct labels (SAP/Salesforce standard)
+ * 🏢 PATTERN: i18n keys for translation at component level
+ * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
 export const MODAL_SELECT_CONTACT_TAB_LABELS: ContactTabLabelsConfig = {
-  general: "General",
-  details: "Details",
-  properties: "Properties",
-  units: "Units",
-  buildings: "Buildings",
-  projects: "Projects",
-  documents: "Documents",
-  notes: "Notes",
-  history: "History"
+  general: "tabs.labels.general",
+  details: "tabs.labels.details",
+  properties: "tabs.labels.properties",
+  units: "tabs.labels.units",
+  buildings: "tabs.labels.buildings",
+  projects: "tabs.labels.projects",
+  documents: "tabs.labels.documents",
+  notes: "tabs.labels.notes",
+  history: "tabs.labels.history"
 } as const;
 
 /**
  * Project Tab Labels - Centralized για Project detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα project tab labels
- * 🏢 PATTERN: Direct labels (SAP/Salesforce standard)
+ * 🏢 PATTERN: i18n keys for translation at component level
+ * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
 export const MODAL_SELECT_PROJECT_TAB_LABELS: ProjectTabLabelsConfig = {
-  general: "General",
-  details: "Details",
-  buildings: "Buildings",
-  units: "Units",
-  contacts: "Contacts",
-  documents: "Documents",
-  photos: "Photos",
-  notes: "Notes",
-  history: "History"
+  general: "tabs.labels.general",
+  details: "tabs.labels.details",
+  buildings: "tabs.labels.buildings",
+  units: "tabs.labels.units",
+  contacts: "tabs.labels.contacts",
+  documents: "tabs.labels.documents",
+  photos: "tabs.labels.photos",
+  notes: "tabs.labels.notes",
+  history: "tabs.labels.history"
 } as const;
 
 /**
  * CRM Dashboard Tab Labels - Centralized για CRM Dashboard views
  * ✅ ENTERPRISE: Single source of truth για όλα τα CRM dashboard tab labels
- * 🏢 PATTERN: Direct labels (SAP/Salesforce standard)
+ * 🏢 PATTERN: i18n keys for translation at component level
+ * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
 export const MODAL_SELECT_CRM_DASHBOARD_TAB_LABELS: CRMDashboardTabLabelsConfig = {
-  dashboard: "Dashboard",
-  leads: "Leads",
-  opportunities: "Opportunities",
-  contacts: "Contacts",
-  companies: "Companies",
-  tasks: "Tasks",
-  reports: "Reports",
-  settings: "Settings"
+  dashboard: "tabs.labels.dashboard",
+  leads: "tabs.labels.leads",
+  opportunities: "tabs.labels.opportunities",
+  contacts: "tabs.labels.contacts",
+  companies: "tabs.labels.companies",
+  tasks: "tabs.labels.tasks",
+  reports: "tabs.labels.reports",
+  settings: "tabs.labels.settings"
 } as const;
 
 /**
  * Units Tab Labels - Centralized για Units detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα units tab labels
- * 🏢 PATTERN: Direct labels (SAP/Salesforce standard)
+ * 🏢 PATTERN: i18n keys for translation at component level
+ * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
 export const MODAL_SELECT_UNITS_TAB_LABELS: UnitsTabLabelsConfig = {
-  general: "Basic Info",
-  details: "Customer",
-  files: "Floor Plan",
-  photos: "Photos",
-  documents: "Documents",
-  notes: "Videos",
-  history: "History",
-  contracts: "Contracts"
+  general: "tabs.labels.basicInfo",
+  details: "tabs.labels.customer",
+  files: "tabs.labels.floorplans",
+  photos: "tabs.labels.photos",
+  documents: "tabs.labels.documents",
+  notes: "tabs.labels.videos",
+  history: "tabs.labels.history",
+  contracts: "tabs.labels.contracts"
 } as const;
 
 /**
  * Storage Tab Labels - Centralized για Storage detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα storage tab labels
- * 🏢 PATTERN: Direct labels (SAP/Salesforce standard)
+ * 🏢 PATTERN: i18n keys for translation at component level
+ * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
 export const MODAL_SELECT_STORAGE_TAB_LABELS: StorageTabLabelsConfig = {
-  general: "General",
-  details: "Statistics",
-  units: "Floor Plans",
-  documents: "Documents",
-  notes: "Photos",
-  history: "History"
+  general: "tabs.labels.general",
+  details: "tabs.labels.statistics",
+  units: "tabs.labels.floorplans",
+  documents: "tabs.labels.documents",
+  notes: "tabs.labels.photos",
+  history: "tabs.labels.history"
 } as const;
 
 /**
  * Parking Tab Labels - Centralized για Parking detail views
  * ✅ ENTERPRISE: Single source of truth για όλα τα parking tab labels
- * 🏢 PATTERN: Direct labels (SAP/Salesforce standard)
+ * 🏢 PATTERN: i18n keys for translation at component level
+ * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
 export const MODAL_SELECT_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
-  general: "General",
-  statistics: "Statistics",
-  documents: "Documents",
-  photos: "Photos",
-  history: "History"
+  general: "tabs.labels.general",
+  statistics: "tabs.labels.statistics",
+  documents: "tabs.labels.documents",
+  photos: "tabs.labels.photos",
+  history: "tabs.labels.history"
 } as const;
 
 // ====================================================================
@@ -335,14 +342,15 @@ export function getAllTabLabels() {
 /**
  * Get common tab labels (appearing across multiple domains)
  * ✅ CENTRALIZED: Cross-cutting concerns accessor
- * 🏢 PATTERN: Direct labels (SAP/Salesforce standard)
+ * 🏢 PATTERN: i18n keys for translation at component level
+ * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
 export function getCommonTabLabels() {
   return {
-    general: "General",
-    details: "Details",
-    documents: "Documents",
-    notes: "Notes",
-    history: "History"
+    general: "tabs.labels.general",
+    details: "tabs.labels.details",
+    documents: "tabs.labels.documents",
+    notes: "tabs.labels.notes",
+    history: "tabs.labels.history"
   } as const;
 }

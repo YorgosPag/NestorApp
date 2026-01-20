@@ -687,13 +687,3 @@ class EnterpriseLayerStyleService {
 
 export const layerStyleService = new EnterpriseLayerStyleService();
 export default layerStyleService;
-
-// Export types για external usage
-export type {
-  EnterpriseLayerStyle,
-  EnterpriseLayerStyleConfig,
-  LayerCategoryConfig,
-  EnterpriseLayerCategoryConfig,
-  LayerElementType,
-  LayerCategory
-};

@@ -224,7 +224,19 @@ export const HOVER_TEXT_EFFECTS = {
   LIGHTER: 'hover:text-gray-400',
 
   /** Gray light text hover effect */
-  GRAY_LIGHT: 'hover:text-gray-300' // ✅ ENTERPRISE FIX: Added GRAY_LIGHT για EnterpriseColorPicker.tsx
+  GRAY_LIGHT: 'hover:text-gray-300', // ✅ ENTERPRISE FIX: Added GRAY_LIGHT για EnterpriseColorPicker.tsx
+
+  /** ✅ ENTERPRISE FIX: Destructive text hover for ToolbarFiltersDisplay */
+  DESTRUCTIVE: 'text-red-600 hover:text-red-700',
+
+  /** ✅ ENTERPRISE FIX: Green subtle for ToolbarMainActions */
+  GREEN_SUBTLE: 'text-green-500 hover:text-green-600',
+
+  /** ✅ ENTERPRISE FIX: Blue subtle for ToolbarMainActions */
+  BLUE_SUBTLE: 'text-blue-500 hover:text-blue-600',
+
+  /** ✅ ENTERPRISE FIX: Red subtle for ToolbarMainActions */
+  RED_SUBTLE: 'text-red-500 hover:text-red-600',
 } as const;
 
 /**
@@ -347,7 +359,43 @@ export const INTERACTIVE_PATTERNS = {
   PURPLE_HOVER: 'hover:bg-purple-100 dark:hover:bg-purple-900/40',
 
   /** Text highlight για close buttons και navigation */
-  TEXT_HIGHLIGHT: 'hover:text-white'
+  TEXT_HIGHLIGHT: 'hover:text-white',
+
+  /** ✅ ENTERPRISE FIX: Subtle button hover for minimal interactions */
+  BUTTON_SUBTLE: 'transition-colors duration-150 hover:bg-muted/50',
+
+  /** ✅ ENTERPRISE FIX: Ghost button hover */
+  BUTTON_GHOST: 'transition-colors duration-150 hover:bg-accent hover:text-accent-foreground',
+
+  /** ✅ ENTERPRISE FIX: Outline button hover */
+  BUTTON_OUTLINE: 'transition-colors duration-150 hover:bg-accent hover:text-accent-foreground',
+
+  /** ✅ ENTERPRISE FIX: Destructive button (no hover, just base) */
+  BUTTON_DESTRUCTIVE: 'transition-colors duration-150 bg-destructive text-destructive-foreground hover:bg-destructive/90',
+
+  /** ✅ ENTERPRISE FIX: Primary ghost button hover */
+  BUTTON_PRIMARY_GHOST: 'transition-colors duration-150 hover:bg-primary/10 hover:text-primary',
+
+  /** ✅ ENTERPRISE FIX: Destructive ghost button hover */
+  BUTTON_DESTRUCTIVE_GHOST: 'transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive',
+
+  /** ✅ ENTERPRISE FIX: Border blue hover */
+  BORDER_BLUE: 'transition-all duration-200 hover:border-blue-500',
+
+  /** ✅ ENTERPRISE FIX: Dropzone hover for file upload areas */
+  DROPZONE_HOVER: 'transition-all duration-200 hover:bg-accent/10 hover:border-primary',
+
+  /** ✅ ENTERPRISE FIX: Text subtle hover for muted text */
+  TEXT_SUBTLE: 'transition-colors duration-150 hover:text-foreground',
+
+  /** ✅ ENTERPRISE FIX: Accent hover subtle for BuildingListItem_old */
+  ACCENT_HOVER_SUBTLE: 'transition-colors duration-150 hover:bg-accent/30',
+
+  /** ✅ ENTERPRISE FIX: Fade hover for MobileCommunicationLayout */
+  FADE_HOVER: 'transition-opacity duration-200 hover:opacity-80',
+
+  /** ✅ ENTERPRISE FIX: Text primary hover for RecentRelationshipsSection */
+  TEXT_PRIMARY: 'transition-colors duration-150 hover:text-primary',
 } as const;
 
 /**
@@ -473,7 +521,19 @@ export const HOVER_BACKGROUND_EFFECTS = {
   LIGHTER: 'hover:bg-gray-50',
 
   /** ✅ ENTERPRISE FIX: Gradient hover effect for DebugToolbar TS2339 error */
-  GRADIENT_PURPLE_PINK: COLOR_BRIDGE.gradients.GRADIENT_PURPLE_PINK
+  GRADIENT_PURPLE_PINK: COLOR_BRIDGE.gradients.GRADIENT_PURPLE_PINK,
+
+  /** ✅ ENTERPRISE FIX: Red button background hover */
+  RED_BUTTON: 'hover:bg-red-700',
+
+  /** ✅ ENTERPRISE FIX: Green subtle background for ToolbarMainActions */
+  GREEN_SUBTLE: 'hover:bg-green-50',
+
+  /** ✅ ENTERPRISE FIX: Blue subtle background for ToolbarMainActions */
+  BLUE_SUBTLE: 'hover:bg-blue-50',
+
+  /** ✅ ENTERPRISE FIX: Red subtle background for ToolbarMainActions */
+  RED_SUBTLE: 'hover:bg-red-50',
 } as const;
 
 /**
@@ -524,7 +584,13 @@ export const GRADIENT_HOVER_EFFECTS = {
   NEUTRAL_BUTTON: 'bg-gradient-to-r from-gray-600 to-slate-700 text-white font-semibold rounded-lg hover:from-gray-700 hover:to-slate-800',
 
   /** Purple to Pink gradient με hover */
-  PURPLE_PINK_BUTTON: 'hover:from-purple-500 hover:to-pink-500'
+  PURPLE_PINK_BUTTON: 'hover:from-purple-500 hover:to-pink-500',
+
+  /** ✅ ENTERPRISE FIX: Simple gradient colors for ContactDetailsHeader */
+  BLUE: 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
+  GREEN: 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700',
+  GRAY: 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700',
+  RED: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
 } as const;
 
 /**

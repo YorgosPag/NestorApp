@@ -21,6 +21,7 @@ import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { SearchInputProps } from './types';
 import { SEARCH_CONFIG, SEARCH_UI, DEBOUNCE_PRESETS } from './constants';
 
@@ -44,6 +45,7 @@ export function SearchInput({
   onBlur,
   ...props
 }: SearchInputProps) {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   // 🚀 Enterprise debouncing implementation
   const [localValue, setLocalValue] = useState(value);
@@ -139,7 +141,7 @@ export function SearchInput({
           type="button"
           onClick={handleClear}
           className={clearButtonClasses}
-          aria-label="Καθαρισμός αναζήτησης"
+          aria-label={t('labels.clearSearch')}
           tabIndex={-1}
         >
           <X />

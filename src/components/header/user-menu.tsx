@@ -41,7 +41,7 @@ import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized routes
-import { ACCOUNT_ROUTES } from '@/lib/routes';
+import { ACCOUNT_ROUTES, AUTH_ROUTES } from '@/lib/routes';
 
 export function UserMenu() {
   // 🏢 ENTERPRISE: i18n hook
@@ -70,7 +70,7 @@ export function UserMenu() {
     console.log('🔐 [UserMenu] Starting optimistic logout');
 
     // 🚀 OPTIMISTIC: Redirect immediately for instant feedback
-    router.push('/login');
+    router.push(AUTH_ROUTES.login);
 
     // 🔥 FIRE & FORGET: SignOut in background
     try {
@@ -85,7 +85,16 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" disabled={isLoggingOut} className="relative overflow-hidden">
+        {/* 🏢 ENTERPRISE: suppressHydrationWarning for i18n SSR/CSR mismatch
+            The server doesn't know user's language preference, so translations
+            may differ between server and client render. This is expected behavior. */}
+        <Button
+          variant="outline"
+          size="icon"
+          disabled={isLoggingOut}
+          className="relative overflow-hidden"
+          suppressHydrationWarning
+        >
           {isLoggingOut ? (
             <Spinner size="small" aria-label={t('userMenu.loggingOut')} />
           ) : user?.photoURL ? (
@@ -102,7 +111,7 @@ export function UserMenu() {
           ) : (
             <User className={iconSizes.sm} />
           )}
-          <span className="sr-only">{t('userMenu.menuLabel')}</span>
+          <span className="sr-only" suppressHydrationWarning>{t('userMenu.menuLabel')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

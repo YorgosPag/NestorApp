@@ -14,7 +14,7 @@ interface UseStorageFormHandlersProps {
     formType: StorageType;
     setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
     onSave: (unit: StorageUnit) => void;
-    updateField: (field: keyof StorageUnit, value: StorageUnit[keyof StorageUnit]) => void;
+    updateField: (field: string, value: string | number | string[] | { x: number; y: number } | null) => void;
     // 🏢 ENTERPRISE: Optional translate function for i18n support
     t?: TranslateFunction;
 }

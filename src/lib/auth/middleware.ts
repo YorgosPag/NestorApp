@@ -24,6 +24,7 @@ import {
   type PermissionCache,
   type PermissionCheckOptions,
 } from './permissions';
+import { apiErrorHandler } from '@/lib/api/ApiErrorHandler';
 
 // =============================================================================
 // TYPES
@@ -234,8 +235,21 @@ export function withAuth<T = unknown>(
       }
     }
 
-    // Step 6: Call handler with authenticated context
-    return handler(request, ctx, cache);
+    // Step 6: Call handler with authenticated context + automatic error handling
+    try {
+      return await handler(request, ctx, cache);
+    } catch (error) {
+      // 🏢 ENTERPRISE: Central error handling - no need for per-endpoint wrappers
+      return await apiErrorHandler.handleError(error, request, {
+        operation: request.nextUrl.pathname,
+        userId: ctx.uid,
+        endpoint: request.nextUrl.pathname,
+        metadata: {
+          globalRole: ctx.globalRole,
+          companyId: ctx.companyId,
+        },
+      });
+    }
   };
 }
 

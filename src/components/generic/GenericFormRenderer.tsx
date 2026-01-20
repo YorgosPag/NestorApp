@@ -9,6 +9,8 @@ import { UniversalClickableField } from '@/components/ui/form/UniversalClickable
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { FieldConfig, SectionConfig } from '@/config/company-gemi';
 import { getIconComponent } from './utils/IconMapping';
+// 🏢 ENTERPRISE: i18n support - Direct useTranslation for reliability
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // INTERFACES
@@ -84,13 +86,44 @@ function renderInputField(field: FieldConfig, formData: FormDataRecord, onChange
 }
 
 /**
- * Renders a select field
+ * 🏢 ENTERPRISE: Helper function to translate text if it's an i18n key
+ * Used for option labels that may be i18n keys (contain '.')
  */
-function renderSelectField(field: FieldConfig, formData: FormDataRecord, onSelectChange: SelectChangeHandler, disabled: boolean): React.ReactNode {
+function translateText(text: string, t: (key: string) => string): string {
+  if (!text) return '';
+  // i18n keys contain dots (e.g., 'options.legalForms.ae')
+  if (text.includes('.')) {
+    const translated = t(text);
+    // If translation returns the key itself, use the last part as fallback
+    if (translated === text) {
+      const parts = text.split('.');
+      return parts[parts.length - 1];
+    }
+    return translated;
+  }
+  return text;
+}
+
+/**
+ * Renders a select field
+ * 🏢 ENTERPRISE: Now accepts translate function for i18n option labels
+ */
+function renderSelectField(
+  field: FieldConfig,
+  formData: FormDataRecord,
+  onSelectChange: SelectChangeHandler,
+  disabled: boolean,
+  t: (key: string) => string
+): React.ReactNode {
   if (!field.options || field.options.length === 0) {
     console.warn(`Select field ${field.id} has no options defined`);
     return renderInputField(field, formData, () => {}, disabled);
   }
+
+  // Translate placeholder if it's an i18n key
+  const placeholder = field.placeholder
+    ? translateText(field.placeholder, t)
+    : translateText(field.label, t).toLowerCase();
 
   return (
     <Select
@@ -100,12 +133,12 @@ function renderSelectField(field: FieldConfig, formData: FormDataRecord, onSelec
       disabled={disabled}
     >
       <SelectTrigger>
-        <SelectValue placeholder={field.placeholder || `Επιλέξτε ${field.label.toLowerCase()}`} />
+        <SelectValue placeholder={`Select ${placeholder}`} />
       </SelectTrigger>
       <SelectContent>
         {field.options.map(option => (
           <SelectItem key={option.value} value={option.value}>
-            {option.label}
+            {translateText(option.label, t)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -218,6 +251,7 @@ function renderTelField(field: FieldConfig, formData: FormDataRecord, onChange: 
 
 /**
  * Main field renderer function
+ * 🏢 ENTERPRISE: Now accepts translate function for i18n support
  */
 function renderField(
   field: FieldConfig,
@@ -225,6 +259,7 @@ function renderField(
   onChange: FormChangeHandler,
   onSelectChange: SelectChangeHandler,
   disabled: boolean,
+  t: (key: string) => string,
   customRenderers?: Record<string, CustomRendererFn>
 ): React.ReactNode {
   // Check for custom renderer first
@@ -237,7 +272,7 @@ function renderField(
     case 'input':
       return renderInputField(field, formData, onChange, disabled);
     case 'select':
-      return renderSelectField(field, formData, onSelectChange, disabled);
+      return renderSelectField(field, formData, onSelectChange, disabled, t);
     case 'textarea':
       return renderTextareaField(field, formData, onChange, disabled);
     case 'date':
@@ -289,6 +324,47 @@ export function GenericFormRenderer({
   customRenderers
 }: GenericFormRendererProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n - Direct translation with forms namespace
+  const { t, isNamespaceReady } = useTranslation('forms');
+
+  /**
+   * Translate a string if it's an i18n key (contains '.')
+   * Otherwise return as-is for backward compatibility
+   * Uses direct t() function for reliable translation
+   *
+   * 🏢 ENTERPRISE: Proper i18n key detection and translation
+   */
+  const translate = (text: string | undefined): string => {
+    if (!text) return '';
+
+    // i18n keys contain dots (e.g., 'sections.basicInfoGemi', 'company.companyName')
+    if (text.includes('.')) {
+      // Wait for namespace to be ready before translating
+      if (!isNamespaceReady) {
+        // Return loading placeholder while namespace loads
+        return '...';
+      }
+
+      // Attempt translation
+      const translated = t(text);
+
+      // If translation returns the key itself, it means the key wasn't found
+      // This can happen if the key structure is wrong
+      if (translated === text) {
+        // Log warning for debugging (only in development)
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`[i18n] Key not found in forms namespace: ${text}`);
+        }
+        // Return the key's last part as fallback (e.g., 'basicInfoGemi' from 'sections.basicInfoGemi')
+        const parts = text.split('.');
+        return parts[parts.length - 1];
+      }
+
+      return translated;
+    }
+
+    return text;
+  };
 
   if (!sections || sections.length === 0) {
     console.warn('GenericFormRenderer: No sections provided');
@@ -302,13 +378,13 @@ export function GenericFormRenderer({
 
         return (
           <div key={section.id} className="space-y-6 md:space-y-4">
-            {/* Section Header */}
+            {/* Section Header - i18n translated */}
             <div className="flex items-center gap-2 pb-2 border-b">
               <IconComponent className={iconSizes.sm} />
-              <h3 className="font-semibold text-sm">{section.title}</h3>
+              <h3 className="font-semibold text-sm">{translate(section.title)}</h3>
             </div>
             {section.description && (
-              <p className="text-xs text-muted-foreground -mt-2">{section.description}</p>
+              <p className="text-xs text-muted-foreground -mt-2">{translate(section.description)}</p>
             )}
 
             {/* Section Fields - Enhanced Mobile Layout */}
@@ -316,15 +392,15 @@ export function GenericFormRenderer({
               {section.fields.map(field => (
                 <FormField
                   key={field.id}
-                  label={field.label}
+                  label={translate(field.label)}
                   htmlFor={field.id}
                   required={field.required}
                 >
                   <FormInput>
-                    {renderField(field, formData, onChange, onSelectChange, disabled, customRenderers)}
+                    {renderField(field, formData, onChange, onSelectChange, disabled, t, customRenderers)}
                   </FormInput>
                   {field.helpText && (
-                    <p className="text-xs text-muted-foreground mt-1 whitespace-nowrap overflow-hidden text-ellipsis">{field.helpText}</p>
+                    <p className="text-xs text-muted-foreground mt-1 whitespace-nowrap overflow-hidden text-ellipsis">{translate(field.helpText)}</p>
                   )}
                 </FormField>
               ))}

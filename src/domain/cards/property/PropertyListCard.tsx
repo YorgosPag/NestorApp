@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 /**
@@ -30,6 +31,9 @@ import type { Property } from '@/types/property-viewer';
 
 // 🏢 BADGE VARIANT MAPPING
 import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
+
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // =============================================================================
 // 🏢 TYPES
@@ -67,15 +71,15 @@ const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
 };
 
 // =============================================================================
-// 🏢 STATUS LABELS (Greek)
+// 🏢 STATUS LABELS (i18n keys)
 // =============================================================================
 
-const STATUS_LABELS: Record<string, string> = {
-  'for-sale': 'Προς Πώληση',
-  'for-rent': 'Προς Ενοικίαση',
-  sold: 'Πουλημένο',
-  rented: 'Ενοικιασμένο',
-  reserved: 'Κρατημένο',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  'for-sale': 'status.forSale',
+  'for-rent': 'status.forRent',
+  sold: 'status.sold',
+  rented: 'status.rented',
+  reserved: 'status.reserved',
 };
 
 // =============================================================================
@@ -109,6 +113,8 @@ export function PropertyListCard({
   compact = false,
   className,
 }: PropertyListCardProps) {
+  const { t } = useTranslation('properties');
+
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
@@ -122,7 +128,7 @@ export function PropertyListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.building.icon,
         iconColor: NAVIGATION_ENTITIES.building.color,
-        label: 'Κτίριο',
+        label: t('card.stats.building'),
         value: property.building,
       });
     }
@@ -132,7 +138,7 @@ export function PropertyListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.floor.icon,
         iconColor: NAVIGATION_ENTITIES.floor.color,
-        label: 'Όροφος',
+        label: t('card.stats.floor'),
         value: formatFloorLabel(property.floor),
       });
     }
@@ -142,7 +148,7 @@ export function PropertyListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
         iconColor: NAVIGATION_ENTITIES.area.color,
-        label: 'Εμβαδόν',
+        label: t('card.stats.area'),
         value: `${property.area} m²`,
       });
     }
@@ -152,7 +158,7 @@ export function PropertyListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.price.icon,
         iconColor: NAVIGATION_ENTITIES.price.color,
-        label: 'Τιμή',
+        label: t('card.stats.price'),
         value: formatCurrency(property.price, 'EUR', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
@@ -162,16 +168,17 @@ export function PropertyListCard({
     }
 
     return items;
-  }, [property.building, property.floor, property.area, property.price]);
+  }, [property.building, property.floor, property.area, property.price, t]);
 
   /** Build badges from status */
   const badges = useMemo(() => {
     const status = property.status || 'for-sale';
-    const statusLabel = STATUS_LABELS[status] || status;
+    const labelKey = STATUS_LABEL_KEYS[status] || 'status.unknown';
+    const statusLabel = t(labelKey);
     const variant = STATUS_BADGE_VARIANTS[status] || 'default';
 
     return [{ label: statusLabel, variant }];
-  }, [property.status]);
+  }, [property.status, t]);
 
   /** Get subtitle - type and project */
   const subtitle = useMemo(() => {
@@ -214,7 +221,7 @@ export function PropertyListCard({
       onToggleFavorite={onToggleFavorite}
       compact={compact}
       className={className}
-      aria-label={`Ακίνητο ${property.name || property.id}`}
+      aria-label={t('card.ariaLabel', { name: property.name || property.id })}
     />
   );
 }

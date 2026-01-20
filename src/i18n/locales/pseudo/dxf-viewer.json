@@ -1,6 +1,6 @@
 {
   "layers": {
-    "title": "ĐXF Łⱥɏęȓs ({{count}})",
+    "title": "ĐXF Łⱥɏęȓs ({count})",
     "clickToSelect": "Ȼłɨȼk ŧø sęłęȼŧ",
     "delete": {
       "confirm": "{count, plural, =0 {Đęłęŧę łⱥɏęȓ \"{name}\"} one {Đęłęŧę # ęłęɱęnŧ fȓøɱ łⱥɏęȓ \"{name}\"} other {Đęłęŧę # ęłęɱęnŧs fȓøɱ łⱥɏęȓ \"{name}\"}}",

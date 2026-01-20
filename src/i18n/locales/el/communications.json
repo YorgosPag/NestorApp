@@ -1,0 +1,77 @@
+{
+  "history": {
+    "loading": "Φόρτωση επικοινωνιών...",
+    "retry": "Δοκιμή ξανά",
+    "noData": "Δεν υπάρχουν επικοινωνίες",
+    "emptyHint": "Το ιστορικό επικοινωνιών θα εμφανιστεί εδώ",
+    "title": "Ιστορικό Επικοινωνιών",
+    "count": "{count} επικοινωνίες",
+    "refresh": "Ανανέωση",
+    "attachments": "Συνημμένα:",
+    "defaultSubject": "{type} επικοινωνία",
+    "details": "Λεπτομέρειες",
+    "aria": {
+      "loadingSection": "Φόρτωση επικοινωνιών",
+      "errorSection": "Σφάλμα φόρτωσης επικοινωνιών",
+      "emptySection": "Δεν βρέθηκαν επικοινωνίες",
+      "controls": "Έλεγχοι επικοινωνιών",
+      "timeline": "Χρονολόγιο επικοινωνιών",
+      "content": "Περιεχόμενο επικοινωνίας",
+      "attachmentsSection": "Συνημμένα"
+    },
+    "srOnly": {
+      "participants": "Συμμετέχοντες:",
+      "date": "Ημερομηνία:",
+      "relativeTime": "Σχετικός χρόνος:"
+    }
+  },
+  "telegram": {
+    "title": "Telegram Messages",
+    "newMessage": "Νέο Telegram μήνυμα",
+    "noMessages": "Δεν υπάρχουν νέα μηνύματα",
+    "newBadge": "Νέο",
+    "viewAll": "Δείτε όλα τα μηνύματα"
+  },
+  "center": {
+    "title": "Communications Center",
+    "subtitle": "Διαχείριση επικοινωνιών μέσω όλων των channels",
+    "initSuccess": "Communications system αρχικοποιήθηκε επιτυχώς",
+    "initError": "Σφάλμα κατά την αρχικοποίηση του communications system",
+    "initErrorGeneric": "Σφάλμα κατά την αρχικοποίηση",
+    "initLoading": "Αρχικοποίηση Communications System...",
+    "unavailable": "Communications System μη διαθέσιμο",
+    "unavailableDesc": "Υπήρξε πρόβλημα κατά την αρχικοποίηση του συστήματος επικοινωνιών.",
+    "retry": "Δοκιμή ξανά",
+    "refresh": "Refresh",
+    "testChannels": "Test Channels",
+    "newMessage": "Νέο Μήνυμα",
+    "channelsSuccess": "Επιτυχής σύνδεση: {channels}",
+    "channelsFailed": "Αποτυχία σύνδεσης: {channels}",
+    "channelsTestError": "Σφάλμα κατά τον έλεγχο των channels",
+    "dataRefreshed": "Δεδομένα ανανεώθηκαν",
+    "channelStatus": {
+      "active": "Ενεργό",
+      "inactive": "Ανενεργό"
+    },
+    "tabs": {
+      "inbox": "Inbox",
+      "channels": "Channels",
+      "analytics": "Analytics"
+    },
+    "stats": {
+      "totalMessages": "Συνολικά Μηνύματα",
+      "inbound": "Εισερχόμενα",
+      "outbound": "Εξερχόμενα",
+      "avgResponseTime": "Μέσος Χρόνος Απάντησης"
+    },
+    "channelsTab": {
+      "title": "Κατάσταση Channels"
+    },
+    "analyticsTab": {
+      "messagesByChannel": "Μηνύματα ανά Channel",
+      "responseTime": "Χρόνος Απάντησης",
+      "average": "Μέσος όρος:",
+      "median": "Διάμεσος:"
+    }
+  }
+}

@@ -6,6 +6,8 @@ import {
   Bold, Italic, Underline, List, ListOrdered, Quote, Eye, Edit3, RotateCcw, RotateCw
 } from 'lucide-react';
 import { getAriaLabels } from '../utils/a11y';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ToolbarProps {
   disabled: boolean;
@@ -47,6 +49,8 @@ export function Toolbar({
 }: ToolbarProps) {
   const iconSizes = useIconSizes();
   const ariaLabels = getAriaLabels();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
 
   return (
     <div className="flex items-center gap-1 p-2 border rounded-md bg-muted/30 flex-wrap">
@@ -58,8 +62,8 @@ export function Toolbar({
           size="sm"
           onClick={onBold}
           className={`${iconSizes.xl} p-0`}
-          title="Έντονα (Ctrl+B)"
-          aria-label="Έντονα (Ctrl+B)"
+          title={t('richText.bold')}
+          aria-label={t('richText.bold')}
           aria-pressed={activeBold}
           disabled={isPreview || disabled}
         >
@@ -71,8 +75,8 @@ export function Toolbar({
           size="sm"
           onClick={onItalic}
           className={`${iconSizes.xl} p-0`}
-          title="Πλάγια (Ctrl+I)"
-          aria-label="Πλάγια (Ctrl+I)"
+          title={t('richText.italic')}
+          aria-label={t('richText.italic')}
           aria-pressed={activeItalic}
           disabled={isPreview || disabled}
         >
@@ -84,8 +88,8 @@ export function Toolbar({
           size="sm"
           onClick={onUnderline}
           className={`${iconSizes.xl} p-0`}
-          title="Υπογράμμιση (Ctrl+U)"
-          aria-label="Υπογράμμιση (Ctrl+U)"
+          title={t('richText.underline')}
+          aria-label={t('richText.underline')}
           aria-pressed={activeUnderline}
           disabled={isPreview || disabled}
         >
@@ -124,9 +128,9 @@ export function Toolbar({
       <div className="flex items-center gap-1 ml-auto">
         <Button type="button" variant={isPreview ? "default" : "ghost"} size="sm" onClick={onTogglePreview} className="h-8 px-3" title={isPreview ? ariaLabels.edit : ariaLabels.preview} aria-pressed={isPreview} disabled={disabled}>
           {isPreview ? (
-            <><Edit3 className={`${iconSizes.sm} mr-1`} />Επεξεργασία</>
+            <><Edit3 className={`${iconSizes.sm} mr-1`} />{t('actions.edit')}</>
           ) : (
-            <><Eye className={`${iconSizes.sm} mr-1`} />Προεπισκόπηση</>
+            <><Eye className={`${iconSizes.sm} mr-1`} />{t('richText.preview')}</>
           )}
         </Button>
       </div>

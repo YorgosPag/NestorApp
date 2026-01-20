@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
-import type { ContactFormData, ContactType } from '@/types/ContactFormTypes';
+import { useMemo, useState, useEffect } from 'react';
+import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { ContactType } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
@@ -9,8 +10,13 @@ import { ContactRelationshipManager } from '@/components/contacts/relationships/
 import { RelationshipsSummary } from '@/components/contacts/relationships/RelationshipsSummary';
 import { RelationshipProvider } from '@/components/contacts/relationships/context/RelationshipProvider';
 import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicContactArrays';
+// 🏢 ENTERPRISE: File Management System (ADR-031)
+import { EntityFilesManager } from '@/components/shared/files';
+import { useAuth } from '@/auth/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext'; // 🏢 ENTERPRISE: Workspace context για company name display
+import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
-import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType } from './utils/PhotoUploadConfiguration';
+import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
 
 /** Custom renderer field interface */
 interface CustomRendererField {
@@ -63,6 +69,10 @@ interface UnifiedContactTabbedSectionProps {
 
   // 🖼️ Photo click handler για gallery preview
   onPhotoClick?: (index: number) => void;
+
+  // 🏢 CANONICAL UPLOAD CONTEXT (ADR-031)
+  // If provided, photo uploads use canonical pipeline instead of legacy folderPath
+  canonicalUploadContext?: CanonicalUploadContext;
 }
 
 // Configuration logic moved to ContactFormConfigProvider utility
@@ -83,8 +93,51 @@ export function UnifiedContactTabbedSection({
   setFormData,
   disabled = false,
   relationshipsMode = 'full',
-  onPhotoClick
+  onPhotoClick,
+  canonicalUploadContext,
 }: UnifiedContactTabbedSectionProps) {
+
+  // 🏢 ENTERPRISE: Get auth context for file management
+  const { user } = useAuth();
+
+  // 🏢 ENTERPRISE: Get workspace context για company name display (ADR-032)
+  const { activeWorkspace } = useWorkspace();
+
+  // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)
+  const [companyDisplayName, setCompanyDisplayName] = useState<string | undefined>(undefined);
+
+  // 🏢 ENTERPRISE: Fetch company name when companyId changes
+  useEffect(() => {
+    const fetchCompanyName = async () => {
+      // 🏢 ENTERPRISE: Get companyId from user context (same as EntityFilesManager uses)
+      const companyId = user?.companyId;
+
+      if (!companyId) {
+        setCompanyDisplayName(undefined);
+        return;
+      }
+
+      try {
+        console.log(`[UnifiedContactTabbedSection] Fetching company name for ID: ${companyId}`);
+        const company = await getCompanyById(companyId);
+
+        if (company && company.type === 'company') {
+          // 🏢 ENTERPRISE: Use companyName or tradeName as fallback
+          const displayName = company.companyName || company.tradeName || companyId;
+          console.log(`[UnifiedContactTabbedSection] ✅ Company name fetched: ${displayName}`);
+          setCompanyDisplayName(displayName);
+        } else {
+          console.warn(`[UnifiedContactTabbedSection] ⚠️ Company not found, using ID: ${companyId}`);
+          setCompanyDisplayName(companyId); // Fallback to ID if company not found
+        }
+      } catch (error) {
+        console.error('[UnifiedContactTabbedSection] ❌ Failed to fetch company name:', error);
+        setCompanyDisplayName(companyId); // Fallback to ID on error
+      }
+    };
+
+    fetchCompanyName();
+  }, [user?.companyId]);
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
   const config = useMemo(() => getContactFormConfig(contactType), [contactType]);
@@ -194,7 +247,7 @@ export function UnifiedContactTabbedSection({
                 handleUploadedLogoURL,
                 handleUploadedPhotoURL
               }}
-              uploadHandlers={getPhotoUploadHandlers(formData)}
+              uploadHandlers={getPhotoUploadHandlers(formData, canonicalUploadContext)}
               disabled={fieldDisabled}
               className="mt-4"
             />
@@ -237,6 +290,47 @@ export function UnifiedContactTabbedSection({
               )}
             </RelationshipProvider>
           );
+        },
+
+        // 🏢 ENTERPRISE: Custom renderer for files tab - ADR-031 Canonical File Storage
+        files: () => {
+          const contactId = formData.id;
+          const currentUserId = user?.uid;
+          const companyId = user?.companyId;
+
+          // Don't render if no contact ID (new contact) or no user
+          if (!contactId || !currentUserId || !companyId) {
+            return (
+              <div className="p-8 text-center text-muted-foreground">
+                <p>Το Files tab θα είναι διαθέσιμο αφού αποθηκεύσετε την επαφή.</p>
+              </div>
+            );
+          }
+
+          // Get entity label for display names
+          let entityLabel = '';
+          if (contactType === 'individual') {
+            const firstName = (formData.firstName as string) || '';
+            const lastName = (formData.lastName as string) || '';
+            entityLabel = `${firstName} ${lastName}`.trim();
+          } else if (contactType === 'company') {
+            entityLabel = (formData.companyName as string) || (formData.tradeName as string) || '';
+          } else if (contactType === 'service') {
+            entityLabel = (formData.serviceName as string) || (formData.name as string) || '';
+          }
+
+          return (
+            <EntityFilesManager
+              entityType="contact"
+              entityId={contactId}
+              companyId={companyId}
+              domain="admin"
+              category="documents"
+              currentUserId={currentUserId}
+              entityLabel={entityLabel}
+              companyName={companyDisplayName} // 🏢 ENTERPRISE: Pass company name from CompaniesService (ADR-031)
+            />
+          );
         }
       }
     };
@@ -258,7 +352,10 @@ export function UnifiedContactTabbedSection({
     sections, formData, handleChange, handleSelectChange, disabled, contactType,
     handleFileChange, unifiedPhotosChange, handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection, handleLogoChange, handleUploadedLogoURL,
-    handleUploadedPhotoURL, setFormData, relationshipsMode, onPhotoClick
+    handleUploadedPhotoURL, setFormData, relationshipsMode, onPhotoClick,
+    canonicalUploadContext,
+    companyDisplayName, // 🏢 ENTERPRISE: Re-render when company name is fetched (ADR-031)
+    user?.companyId, // 🏢 ENTERPRISE: Re-render when companyId changes
   ]);
 
   return (

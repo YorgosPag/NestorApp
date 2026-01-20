@@ -5,6 +5,8 @@ import { PageHeader } from '@/core/headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { CommonBadge } from '@/core/badges';
 import type { ViewMode } from '@/core/headers';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface PropertyPageHeaderProps {
   showDashboard: boolean;
@@ -19,17 +21,20 @@ export function PropertyPageHeader({
   viewMode,
   setViewMode
 }: PropertyPageHeaderProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
+
   return (
     <PageHeader
       variant="static"
       layout="single-row"
       title={{
         icon: NAVIGATION_ENTITIES.unit.icon,
-        title: "Διαχείριση Ακινήτων",
+        title: t('header.title'),
         badge: (
           <CommonBadge
             status="property"
-            customLabel="Διαχείριση και παρακολούθηση ακινήτων έργων"
+            customLabel={t('header.subtitle')}
             variant="secondary"
             className="text-xs"
           />
@@ -41,7 +46,7 @@ export function PropertyPageHeader({
         viewMode: viewMode as ViewMode,
         onViewModeChange: (mode) => setViewMode(mode as 'list' | 'grid'),
         addButton: {
-          label: 'Νέο Ακίνητο',
+          label: t('header.newProperty'),
           onClick: () => console.log('Add property')
         }
       }}

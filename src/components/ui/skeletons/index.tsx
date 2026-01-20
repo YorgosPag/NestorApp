@@ -303,6 +303,7 @@ export function SkeletonNavigation({
   showLogo?: boolean;
 }) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <div
       className={cn(

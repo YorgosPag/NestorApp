@@ -1,0 +1,14 @@
+{
+  "history": {
+    "loading": "[Łöädïñg çömmüñïçätïöñs...]",
+    "retry": "[Rëtrÿ]",
+    "noData": "[Ñö çömmüñïçätïöñs]",
+    "emptyHint": "[Çömmüñïçätïöñs hïstörÿ wïll äppëär hërë]",
+    "title": "[Çömmüñïçätïöñs Hïstörÿ]",
+    "count": "[{count} çömmüñïçätïöñs]",
+    "refresh": "[Rëfrësh]",
+    "attachments": "[Ättächmëñts:]",
+    "defaultSubject": "[{type} çömmüñïçätïöñ]",
+    "details": "[Dëtäïls]"
+  }
+}

@@ -1,5 +1,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { UseProjectStructureState } from "../types";
 import type { ProjectStructure } from "@/services/projects.service";
 
@@ -57,30 +59,26 @@ export function useProjectStructure(
     try {
       console.log(`🔄 [LazyLoad] Fetching project structure for projectId: ${projectId}`);
 
-      const response = await fetch(`/api/projects/structure/${projectId}`);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      // 🏢 ENTERPRISE: Type-safe API response with automatic authentication
+      interface ProjectStructureApiResponse {
+        structure: ProjectStructure;
+        summary?: Record<string, unknown>;
       }
 
-      const result = await response.json();
+      const result = await apiClient.get<ProjectStructureApiResponse>(`/api/projects/structure/${projectId}`);
 
-      if (!result.success) {
-        throw new Error(result.error || 'Άγνωστο σφάλμα από το API');
-      }
-
-      console.log(`✅ [LazyLoad] Project structure loaded successfully:`, result.summary);
+      console.log(`✅ [LazyLoad] Project structure loaded successfully:`, result?.summary);
 
       if (mountedRef.current) {
-        setStructure(result.structure);
+        setStructure(result?.structure || null);
         setIsFetched(true);
         hasFetchedRef.current = true;
       }
 
     } catch (e) {
       console.error("❌ [LazyLoad] Failed to fetch project structure:", e);
-      const errorMessage = e instanceof Error ? e.message : "Αποτυχία φόρτωσης δομής έργου.";
+      // 🌐 i18n: Error message converted to i18n key - 2026-01-18
+      const errorMessage = e instanceof Error ? e.message : "projects.structure.errors.loadFailed";
       if (mountedRef.current) {
         setError(errorMessage);
       }

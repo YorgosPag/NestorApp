@@ -5,6 +5,9 @@ import { TabsOnlyTriggers, TabsContent, type TabDefinition } from "@/components/
 import { getIconComponent } from './utils/IconMapping';
 import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
 
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
 // ============================================================================
 // 🏢 ENTERPRISE: Lazy Tab Content Wrapper
 // ============================================================================
@@ -74,7 +77,7 @@ export interface UniversalTabConfig {
 // ============================================================================
 
 /** Generic tab component props interface */
-interface TabComponentProps {
+export interface TabComponentProps {
   data?: unknown;
   project?: unknown;
   building?: unknown;
@@ -145,8 +148,12 @@ export function UniversalTabsRenderer<TData = unknown>({
   additionalData = {},
   customComponents = {},
   globalProps = {},
-  translationNamespace = 'common',
+  translationNamespace = 'building',
 }: UniversalTabsRendererProps<TData>) {
+  // 🏢 ENTERPRISE: i18n hook for translations
+  // currentLanguage is needed in useMemo dependencies for reactivity on language change
+  const { t, currentLanguage } = useTranslation(translationNamespace);
+
   // Φιλτράρισμα enabled tabs
   const enabledTabs = tabs.filter(tab => tab.enabled);
 
@@ -163,8 +170,11 @@ export function UniversalTabsRenderer<TData = unknown>({
 
   // 🏢 ENTERPRISE: Memoize tab definitions
   const tabDefinitions: TabDefinition[] = useMemo(() => sortedTabs.map(tabConfig => {
-    // 🏢 ENTERPRISE: Direct label from centralized config (SAP/Salesforce pattern)
-    const displayLabel = tabConfig.label;
+    // 🏢 ENTERPRISE: Translate label if it's an i18n key (contains '.')
+    // Otherwise use label as-is for backward compatibility
+    const displayLabel = tabConfig.label.includes('.')
+      ? t(tabConfig.label)
+      : tabConfig.label;
 
     // Get component από custom components ή componentMapping
     const ComponentToRender = customComponents[tabConfig.component] ||
@@ -271,7 +281,7 @@ export function UniversalTabsRenderer<TData = unknown>({
         />
       )
     };
-  }), [sortedTabs, customComponents, componentMapping, data, additionalData, globalProps]);
+  }), [sortedTabs, customComponents, componentMapping, data, additionalData, globalProps, t, currentLanguage]);
 
   // 🏢 ENTERPRISE: Handle tab change for controlled mode
   const handleTabChange = useCallback((tabId: string) => {

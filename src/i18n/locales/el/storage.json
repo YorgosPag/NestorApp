@@ -1,0 +1,237 @@
+{
+  "general": {
+    "basicInfo": "Βασικές Πληροφορίες",
+    "location": "Τοποθεσία",
+    "financial": "Οικονομικά Στοιχεία",
+    "descriptionNotes": "Περιγραφή & Σημειώσεις",
+    "updateInfo": "Στοιχεία Ενημέρωσης",
+    "unknown": "Άγνωστο",
+    "notSet": "Δεν έχει οριστεί",
+    "notCalculated": "Δεν υπολογίζεται",
+    "notAssigned": "Δεν έχει καθοριστεί",
+    "fields": {
+      "name": "Όνομα Αποθήκης",
+      "type": "Τύπος",
+      "status": "Κατάσταση",
+      "area": "Επιφάνεια",
+      "building": "Κτίριο",
+      "floor": "Όροφος",
+      "price": "Τιμή",
+      "pricePerSqm": "Τιμή ανά m²",
+      "project": "Έργο",
+      "description": "Περιγραφή",
+      "notes": "Σημειώσεις",
+      "lastUpdated": "Τελευταία Ενημέρωση",
+      "owner": "Ιδιοκτήτης"
+    },
+    "types": {
+      "large": "Μεγάλη",
+      "small": "Μικρή",
+      "basement": "Υπόγεια",
+      "ground": "Ισόγεια",
+      "special": "Ειδική"
+    },
+    "statuses": {
+      "available": "Διαθέσιμη",
+      "occupied": "Κατειλημμένη",
+      "reserved": "Κρατημένη",
+      "maintenance": "Συντήρηση"
+    },
+    "status": {
+      "available": "Διαθέσιμο",
+      "occupied": "Κατειλημμένο",
+      "sold": "Πωληθέν",
+      "maintenance": "Συντήρηση",
+      "reserved": "Κρατημένο"
+    }
+  },
+  "card": {
+    "status": {
+      "available": "Διαθέσιμο",
+      "occupied": "Κατειλημμένο",
+      "reserved": "Δεσμευμένο",
+      "maintenance": "Συντήρηση",
+      "unavailable": "Μη Διαθέσιμο"
+    },
+    "types": {
+      "parking": "Πάρκινγκ",
+      "storage": "Αποθήκη",
+      "basement": "Υπόγειο",
+      "garage": "Γκαράζ",
+      "warehouse": "Αποθήκευση"
+    },
+    "notDefined": "Μη καθορισμένο",
+    "free": "Δωρεάν",
+    "perMonth": "μήνα",
+    "floor": "{floor}ος όροφος",
+    "sections": {
+      "location": "Τοποθεσία",
+      "section": "Τμήμα",
+      "floor": "Όροφος",
+      "specs": "Προδιαγραφές",
+      "area": "Εμβαδόν",
+      "dimensions": "Διαστάσεις",
+      "height": "Ύψος",
+      "amenities": "Παροχές",
+      "price": "Τιμή",
+      "description": "Περιγραφή"
+    },
+    "amenities": {
+      "electricity": "Ρεύμα",
+      "water": "Νερό",
+      "security": "Ασφάλεια",
+      "climate": "Κλιματισμός"
+    },
+    "actions": {
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή"
+    }
+  },
+  "documents": {
+    "overview": "Επισκόπηση Εγγράφων",
+    "totalDocuments": "Συνολικά Έγγραφα",
+    "active": "Ενεργά",
+    "pending": "Εκκρεμή",
+    "expired": "Ληγμένα",
+    "uploadTitle": "Μεταφόρτωση Εγγράφων",
+    "dropzoneHint": "Σύρετε και αφήστε εδώ τα έγγραφά σας ή κάντε κλικ για επιλογή",
+    "selectFiles": "Επιλογή Αρχείων",
+    "storageDocuments": "Έγγραφα Αποθήκης",
+    "relatedInfo": "Σχετικές Πληροφορίες",
+    "fields": {
+      "storage": "Αποθήκη:",
+      "location": "Τοποθεσία:",
+      "status": "Κατάσταση:",
+      "value": "Αξία:"
+    },
+    "types": {
+      "contract": "Συμβόλαιο",
+      "lease": "Μίσθωση",
+      "inspection": "Επιθεώρηση",
+      "insurance": "Ασφάλιση",
+      "maintenance": "Συντήρηση",
+      "legal": "Νομικό",
+      "document": "Έγγραφο"
+    },
+    "statuses": {
+      "active": "Ενεργό",
+      "pending": "Εκκρεμές",
+      "expired": "Ληγμένο",
+      "draft": "Προσχέδιο",
+      "unknown": "Άγνωστη"
+    }
+  },
+  "header": {
+    "viewStorage": "Προβολή Αποθήκης",
+    "edit": "Επεξεργασία",
+    "print": "Εκτύπωση",
+    "ownerLabel": "Ιδιοκτήτης:"
+  },
+  "page": {
+    "backToProjects": "Επιστροφή στα Έργα",
+    "linkedTo": "Συνδεδεμένο με",
+    "registeredBy": "Καταχωρήθηκε από"
+  },
+  "history": {
+    "title": "Επισκόπηση Ιστορικού",
+    "timeline": "Χρονολόγιο Γεγονότων",
+    "currentStatus": "Τρέχουσα Κατάσταση",
+    "metrics": {
+      "totalEvents": "Συνολικά Γεγονότα",
+      "leases": "Μισθώσεις",
+      "maintenances": "Συντηρήσεις",
+      "inspections": "Επιθεωρήσεις",
+      "changes": "Αλλαγές"
+    },
+    "eventStatus": {
+      "completed": "Ολοκληρώθηκε",
+      "in_progress": "Σε εξέλιξη",
+      "pending": "Εκκρεμές",
+      "cancelled": "Ακυρώθηκε"
+    },
+    "eventTypes": {
+      "status_change": {
+        "created": "Δημιουργία Αποθήκης",
+        "createdDesc": "Η αποθήκη {name} προστέθηκε στο σύστημα",
+        "statusLabel": "Κατάσταση: {status}"
+      },
+      "lease": {
+        "title": "Έναρξη Μίσθωσης",
+        "description": "Υπογραφή συμβολαίου μίσθωσης για την αποθήκη {name}"
+      },
+      "tenant_change": {
+        "title": "Καταχώριση Στοιχείων Μισθωτή",
+        "description": "Καταχώριση στοιχείων μισθωτή: {tenant}"
+      },
+      "inspection": {
+        "title": "Ετήσια Επιθεώρηση",
+        "description": "Πραγματοποιήθηκε ετήσια επιθεώρηση για την αποθήκη στον {floor}"
+      },
+      "price_change": {
+        "title": "Ενημέρωση Τιμής",
+        "description": "Ενημερώθηκε η τιμή της αποθήκης σε {price}"
+      },
+      "maintenance": {
+        "title": "Έναρξη Εργασιών Συντήρησης",
+        "description": "Ξεκίνησαν εργασίες συντήρησης και αναβάθμισης της αποθήκης"
+      }
+    },
+    "actors": {
+      "buildingManagement": "Διαχείριση Κτιρίου",
+      "management": "Διαχείριση",
+      "tenant": "Μισθωτής",
+      "technicalInspector": "Τεχνικός Ελεγκτής",
+      "maintenanceTeam": "Συνεργείο Συντήρησης",
+      "system": "Σύστημα"
+    },
+    "statusDescription": "Η αποθήκη βρίσκεται σε κατάσταση: {status}",
+    "fields": {
+      "storage": "Αποθήκη:",
+      "status": "Κατάσταση:",
+      "lastUpdated": "Τελευταία Ενημέρωση:",
+      "responsible": "Υπεύθυνος:",
+      "currentValue": "Τρέχουσα Αξία:",
+      "area": "Επιφάνεια:"
+    },
+    "notRecorded": "Δεν έχει καταγραφεί"
+  },
+  "stats": {
+    "title": "Στατιστικά Αποθήκης",
+    "detailedAnalysis": "Αναλυτικά Στοιχεία",
+    "technicalSpecs": "Τεχνικές Προδιαγραφές",
+    "metrics": {
+      "totalArea": "Συνολική Επιφάνεια",
+      "totalValue": "Συνολική Αξία",
+      "pricePerSqm": "Τιμή ανά m²",
+      "efficiencyScore": "Βαθμός Αποδοτικότητας"
+    },
+    "notSet": "Δεν έχει οριστεί",
+    "notCalculated": "Δεν υπολογίζεται",
+    "efficiency": "Αποδοτικότητα",
+    "statusAnalysis": {
+      "title": "Ανάλυση Κατάστασης",
+      "available": "Η αποθήκη είναι διαθέσιμη για μίσθωση ή πώληση.",
+      "occupied": "Η αποθήκη είναι κατειλημμένη και παράγει εισόδημα.",
+      "reserved": "Η αποθήκη έχει κρατηθεί για συγκεκριμένη χρήση.",
+      "maintenance": "Η αποθήκη βρίσκεται σε συντήρηση και δεν είναι διαθέσιμη."
+    },
+    "financialAnalysis": {
+      "title": "Οικονομική Ανάλυση",
+      "totalValue": "Συνολική Αξία:",
+      "costPerSqm": "Κόστος/m²:"
+    },
+    "technicalFields": {
+      "type": "Τύπος:",
+      "building": "Κτίριο:",
+      "floor": "Όροφος:"
+    },
+    "types": {
+      "large": "Μεγάλη Αποθήκη",
+      "small": "Μικρή Αποθήκη",
+      "basement": "Υπόγεια Αποθήκη",
+      "ground": "Ισόγεια Αποθήκη",
+      "special": "Ειδική Αποθήκη",
+      "unknown": "Άγνωστο"
+    }
+  }
+}

@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 // GridSettings.tsx - Grid settings UI (extracted from DxfSettingsPanel)
 // STATUS: ACTIVE - Phase 3 Step 3.3a
 // PURPOSE: Grid settings UI (Specific Settings → Grid → Grid tab with Major/Minor lines)
@@ -27,6 +28,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export interface GridSettingsProps {
   className?: string;
@@ -53,6 +56,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   // HOOKS
   // ============================================================================
 
+  const { t } = useTranslation('dxf-viewer');
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -119,19 +123,19 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   const gridStyleTabs: TabDefinition[] = [
     {
       id: 'lines',
-      label: 'Γραμμές',
+      label: t('gridSettings.style.lines'),
       icon: Minus, // 🏢 ENTERPRISE: Lucide icon for lines
       content: null,
     },
     {
       id: 'dots',
-      label: 'Τελείες',
+      label: t('gridSettings.style.dots'),
       icon: Circle, // 🏢 ENTERPRISE: Lucide icon for dots
       content: null,
     },
     {
       id: 'crosses',
-      label: 'Σταυροί',
+      label: t('gridSettings.style.crosses'),
       icon: Plus, // 🏢 ENTERPRISE: Lucide icon for crosses
       content: null,
     },
@@ -146,12 +150,12 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
   const getGridLinesLabels = (style: 'lines' | 'dots' | 'crosses') => {
     switch (style) {
       case 'dots':
-        return { major: 'Κύριες Τελείες', minor: 'Δευτερεύουσες Τελείες' };
+        return { major: t('gridSettings.lineTypes.majorDots'), minor: t('gridSettings.lineTypes.minorDots') };
       case 'crosses':
-        return { major: 'Κύριοι Σταυροί', minor: 'Δευτερεύοντες Σταυροί' };
+        return { major: t('gridSettings.lineTypes.majorCrosses'), minor: t('gridSettings.lineTypes.minorCrosses') };
       case 'lines':
       default:
-        return { major: 'Κύριες Γραμμές', minor: 'Δευτερεύουσες Γραμμές' };
+        return { major: t('gridSettings.lineTypes.majorLines'), minor: t('gridSettings.lineTypes.minorLines') };
     }
   };
 
@@ -187,12 +191,12 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
           <div>
-            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Εμφάνιση Πλέγματος</h4>
-            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Εμφάνιση/απόκρυψη του πλέγματος</p>
+            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('gridSettings.visibility.title')}</h4>
+            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.visibility.description')}</p>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
-              {gridSettings.visual.enabled ? 'Ενεργό' : 'Ανενεργό'}
+              {gridSettings.visual.enabled ? t('gridSettings.visibility.enabled') : t('gridSettings.visibility.disabled')}
             </span>
             <Switch
               checked={gridSettings.visual.enabled}
@@ -202,10 +206,10 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
         </div>
       </section>
 
-      {/* Grid Size (ΚΟΙΝΟ για όλα) - 🏢 ENTERPRISE: Semantic section */}
+      {/* Grid Size - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Μέγεθος Πλέγματος</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Απόσταση μεταξύ γραμμών πλέγματος (ΚΟΙΝΟ για όλες)</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('gridSettings.size.title')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.size.description')}</p>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
             type="range"
@@ -224,8 +228,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
 
       {/* 🏢 ENTERPRISE: Grid Style Selector - Using centralized TabsOnlyTriggers */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>Στυλ Πλέγματος</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Τύπος εμφάνισης γραμμών πλέγματος</p>
+        <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('gridSettings.style.title')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('gridSettings.style.description')}</p>
         <TabsOnlyTriggers
           tabs={gridStyleTabs}
           value={gridSettings.visual.style}
@@ -251,13 +255,13 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Major Grid Color */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα {gridLinesLabels.major}</label>
-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των {gridLinesLabels.major.toLowerCase()} πλέγματος</div>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('gridSettings.color.label', { type: gridLinesLabels.major })}</label>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('gridSettings.color.description', { type: gridLinesLabels.major.toLowerCase() })}</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.majorGridColor}
                 onChange={handleMajorGridColorChange}
                 label={gridSettings.visual.majorGridColor}
-                title={`Επιλογή Χρώματος ${gridLinesLabels.major}`}
+                title={t('gridSettings.color.selectTitle', { type: gridLinesLabels.major })}
                 alpha={false}
                 modes={['hex', 'rgb', 'hsl']}
                 palettes={['dxf', 'semantic', 'material']}
@@ -269,8 +273,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             {/* Major Grid Line Weight */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος {gridLinesLabels.major}</div>
-                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος των {gridLinesLabels.major.toLowerCase()} πλέγματος</div>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('gridSettings.weight.label', { type: gridLinesLabels.major })}</div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('gridSettings.weight.description', { type: gridLinesLabels.major.toLowerCase() })}</div>
               </div>
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <input
@@ -293,13 +297,13 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
           <div className={PANEL_LAYOUT.SPACING.GAP_LG}>
             {/* Minor Grid Color */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα {gridLinesLabels.minor}</label>
-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα των {gridLinesLabels.minor.toLowerCase()} πλέγματος</div>
+              <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('gridSettings.color.label', { type: gridLinesLabels.minor })}</label>
+              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('gridSettings.color.description', { type: gridLinesLabels.minor.toLowerCase() })}</div>
               <ColorDialogTrigger
                 value={gridSettings.visual.minorGridColor}
                 onChange={handleMinorGridColorChange}
                 label={gridSettings.visual.minorGridColor}
-                title={`Επιλογή Χρώματος ${gridLinesLabels.minor}`}
+                title={t('gridSettings.color.selectTitle', { type: gridLinesLabels.minor })}
                 alpha={false}
                 modes={['hex', 'rgb', 'hsl']}
                 palettes={['dxf', 'semantic', 'material']}
@@ -311,8 +315,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             {/* Minor Grid Line Weight */}
             <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
               <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος {gridLinesLabels.minor}</div>
-                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος των {gridLinesLabels.minor.toLowerCase()} πλέγματος</div>
+                <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('gridSettings.weight.label', { type: gridLinesLabels.minor })}</div>
+                <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('gridSettings.weight.description', { type: gridLinesLabels.minor.toLowerCase() })}</div>
               </div>
               <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                 <input

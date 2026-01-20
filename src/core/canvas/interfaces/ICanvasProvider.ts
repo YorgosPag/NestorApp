@@ -190,15 +190,4 @@ export interface ICanvasRegistry {
   enablePerformanceMonitoring(enabled: boolean): void;
 }
 
-/**
- * ✅ TYPE EXPORTS
- * All interfaces exported για external use
- */
-export type {
-  CanvasProviderType,
-  CanvasProviderConfig,
-  CanvasCreationConfig,
-  CanvasMiddleware,
-  CanvasPlugin,
-  CanvasPerformanceMetrics
-};
+// Types already exported inline above

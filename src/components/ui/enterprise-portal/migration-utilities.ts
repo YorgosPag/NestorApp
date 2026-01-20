@@ -9,7 +9,7 @@
  * @module components/ui/enterprise-portal/migration-utilities
  */
 
-import { portalComponents } from '../../../styles/design-tokens';
+import { portalComponents, photoPreviewComponents, zIndex } from '../../../styles/design-tokens';
 import type {
   PortalVariant,
   PortalPlacement,
@@ -95,7 +95,7 @@ export const getZIndexForComponent = (componentType: string): number => {
       return portalComponents.zIndex.modal;
     case 'notification':
     case 'toast':
-      return portalComponents.zIndex.notification;
+      return zIndex.toast; // 🏢 ENTERPRISE: Use centralized zIndex.toast (1700)
     case 'overlay':
     case 'backdrop':
       return portalComponents.zIndex.overlay;
@@ -104,7 +104,7 @@ export const getZIndexForComponent = (componentType: string): number => {
       return portalComponents.zIndex.critical;
     case 'maximum':
     case 'topmost':
-      return portalComponents.zIndex.maximum;
+      return zIndex.critical; // 🏢 ENTERPRISE: Use centralized zIndex.critical as maximum
     default:
       return portalComponents.zIndex.dropdown; // Safe default
   }
@@ -116,7 +116,8 @@ export const getZIndexForComponent = (componentType: string): number => {
  */
 export const createDynamicHeightConfig = (height: string | number) => ({
   containerStyle: {
-    ...portalComponents.dropdown.dynamic,
+    // 🏢 ENTERPRISE: Use positioned as base style (dynamic was removed)
+    ...portalComponents.dropdown.positioned,
     height: typeof height === 'number' ? `${height}px` : height
   }
 });

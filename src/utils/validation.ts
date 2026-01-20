@@ -3,57 +3,57 @@ import i18n from '@/i18n/config';
 // ✅ ENTERPRISE: Import centralized validation messages
 import { getValidationMessages, type ValidationMessagesConfig } from '@/subapps/dxf-viewer/config/modal-select';
 
-// ✅ ENTERPRISE: Get centralized validation messages with safe fallback
+// 🏢 ENTERPRISE: Get centralized validation messages with i18n fallback
 const getValidationMessagesOnce = (): ValidationMessagesConfig => {
   try {
     return getValidationMessages();
   } catch (error) {
-    console.warn('Failed to load validation messages, using fallback:', error);
-    // Fallback that matches ValidationMessagesConfig type
+    console.warn('Failed to load validation messages, using i18n fallback:', error);
+    // 🏢 ENTERPRISE: i18n-based fallback for validation messages
     return {
       // Required field messages
-      first_name_required: 'Το όνομα είναι υποχρεωτικό',
-      last_name_required: 'Το επώνυμο είναι υποχρεωτικό',
-      company_name_required: 'Η επωνυμία είναι υποχρεωτική',
-      service_name_required: 'Το όνομα υπηρεσίας είναι υποχρεωτικό',
+      first_name_required: i18n.t('validation.entities.firstNameRequired', { ns: 'forms' }),
+      last_name_required: i18n.t('validation.entities.lastNameRequired', { ns: 'forms' }),
+      company_name_required: i18n.t('validation.entities.companyNameRequired', { ns: 'forms' }),
+      service_name_required: i18n.t('validation.entities.serviceNameRequired', { ns: 'forms' }),
 
       // Format validation messages
-      vat_individual_format: 'Το ΑΦΜ πρέπει να είναι 9 ψηφία',
-      vat_company_format: 'Το ΑΦΜ εταιρείας πρέπει να είναι 9 ψηφία',
-      amka_format: 'Το ΑΜΚΑ πρέπει να είναι 11 ψηφία',
+      vat_individual_format: i18n.t('validation.entities.vatIndividualFormat', { ns: 'forms' }),
+      vat_company_format: i18n.t('validation.entities.vatCompanyFormat', { ns: 'forms' }),
+      amka_format: i18n.t('validation.entities.amkaFormat', { ns: 'forms' }),
 
       // Date validation messages
-      birthdate_invalid: 'Μη έγκυρη ημερομηνία γέννησης',
-      birthdate_future_error: 'Η ημερομηνία γέννησης δεν μπορεί να είναι μελλοντική',
-      issue_date_future_error: 'Η ημερομηνία έκδοσης δεν μπορεί να είναι μελλοντική',
-      expiry_after_issue_error: 'Η ημερομηνία λήξης πρέπει να είναι μετά την ημερομηνία έκδοσης',
-      past_date_error: 'Η ημερομηνία δεν μπορεί να είναι παρελθούσα',
-      date_comparison_error: 'Λάθος σύγκριση ημερομηνιών',
+      birthdate_invalid: i18n.t('validation.dates.birthdateInvalid', { ns: 'forms' }),
+      birthdate_future_error: i18n.t('validation.dates.birthdateFutureError', { ns: 'forms' }),
+      issue_date_future_error: i18n.t('validation.dates.issueDateFutureError', { ns: 'forms' }),
+      expiry_after_issue_error: i18n.t('validation.dates.expiryAfterIssueError', { ns: 'forms' }),
+      past_date_error: i18n.t('validation.dates.pastDateError', { ns: 'forms' }),
+      date_comparison_error: i18n.t('validation.dates.dateComparisonError', { ns: 'forms' }),
 
       // Generic validation messages - required for ValidationMessagesConfig
-      required: 'Αυτό το πεδίο είναι υποχρεωτικό',
-      minLength: 'Πρέπει να είναι τουλάχιστον {min} χαρακτήρες',
-      maxLength: 'Δεν μπορεί να ξεπερνά τους {max} χαρακτήρες',
-      exactLength: 'Πρέπει να είναι ακριβώς {length} χαρακτήρες',
-      invalidEmail: 'Μη έγκυρη διεύθυνση email',
-      invalidPhone: 'Μη έγκυρος αριθμός τηλεφώνου',
-      invalidUrl: 'Μη έγκυρη διεύθυνση URL',
-      invalidNumber: 'Πρέπει να είναι έγκυρος αριθμός',
-      notInteger: 'Πρέπει να είναι ακέραιος αριθμός',
-      positiveNumber: 'Πρέπει να είναι θετικός αριθμός',
-      nonNegativeNumber: 'Δεν μπορεί να είναι αρνητικός αριθμός',
-      minValue: 'Πρέπει να είναι τουλάχιστον {min}',
-      maxValue: 'Δεν μπορεί να ξεπερνά το {max}',
-      greaterThan: 'Πρέπει να είναι μεγαλύτερος από {value}',
-      lessThan: 'Πρέπει να είναι μικρότερος από {value}',
-      invalidDate: 'Μη έγκυρη ημερομηνία',
-      pastDate: 'Η ημερομηνία πρέπει να είναι παρελθούσα',
-      futureDate: 'Η ημερομηνία πρέπει να είναι μελλοντική',
-      invalidSelection: 'Μη έγκυρη επιλογή',
-      areaRequired: 'Το εμβαδόν πρέπει να είναι θετικός αριθμός',
-      priceRequired: 'Η τιμή πρέπει να είναι θετικός αριθμός',
-      invalidCode: 'Μη έγκυρος κωδικός',
-      confirmPassword: 'Οι κωδικοί δεν ταιριάζουν'
+      required: i18n.t('validation.required', { ns: 'forms' }),
+      minLength: i18n.t('validation.minLength', { ns: 'forms' }),
+      maxLength: i18n.t('validation.maxLength', { ns: 'forms' }),
+      exactLength: i18n.t('validation.exactLength', { ns: 'forms' }),
+      invalidEmail: i18n.t('validation.invalidEmail', { ns: 'forms' }),
+      invalidPhone: i18n.t('validation.invalidPhone', { ns: 'forms' }),
+      invalidUrl: i18n.t('validation.invalidUrl', { ns: 'forms' }),
+      invalidNumber: i18n.t('validation.invalidNumber', { ns: 'forms' }),
+      notInteger: i18n.t('validation.notInteger', { ns: 'forms' }),
+      positiveNumber: i18n.t('validation.positiveNumber', { ns: 'forms' }),
+      nonNegativeNumber: i18n.t('validation.nonNegativeNumber', { ns: 'forms' }),
+      minValue: i18n.t('validation.minValue', { ns: 'forms' }),
+      maxValue: i18n.t('validation.maxValue', { ns: 'forms' }),
+      greaterThan: i18n.t('validation.greaterThan', { ns: 'forms' }),
+      lessThan: i18n.t('validation.lessThan', { ns: 'forms' }),
+      invalidDate: i18n.t('validation.invalidDate', { ns: 'forms' }),
+      pastDate: i18n.t('validation.pastDate', { ns: 'forms' }),
+      futureDate: i18n.t('validation.futureDate', { ns: 'forms' }),
+      invalidSelection: i18n.t('validation.invalidSelection', { ns: 'forms' }),
+      areaRequired: i18n.t('validation.areaRequired', { ns: 'forms' }),
+      priceRequired: i18n.t('validation.priceRequired', { ns: 'forms' }),
+      invalidCode: i18n.t('validation.invalidCode', { ns: 'forms' }),
+      confirmPassword: i18n.t('validation.confirmPassword', { ns: 'forms' })
     };
   }
 };
@@ -211,7 +211,8 @@ export const validationRules = {
         minDate.setFullYear(minDate.getFullYear() - maxYearsAgo);
         return !isNaN(date.getTime()) && date >= minDate && date <= new Date();
       }, {
-        message: message || `Η ημερομηνία δεν μπορεί να είναι πάνω από ${maxYearsAgo} χρόνια πίσω`
+        // 🌐 i18n: Converted to i18n key with interpolation - 2026-01-18
+        message: message || `validation.dates.maxYearsAgo`
       }),
 
   /**
@@ -229,7 +230,8 @@ export const validationRules = {
         today.setHours(0, 0, 0, 0);
         return !isNaN(date.getTime()) && date >= today && date <= maxDate;
       }, {
-        message: message || `Η ημερομηνία δεν μπορεί να είναι πάνω από ${maxYearsAhead} χρόνια μπροστά`
+        // 🌐 i18n: Converted to i18n key with interpolation - 2026-01-18
+        message: message || `validation.dates.maxYearsAhead`
       }),
 
   // Selection validation

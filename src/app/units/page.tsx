@@ -146,7 +146,7 @@ function UnitsPageContent() {
               company: { id: company.id, name: company.companyName },
               project: { id: project.id, name: project.name },
               building: { id: building.id, name: building.name },
-              unit: { id: selectedUnit.id, name: selectedUnit.name || selectedUnit.title || selectedUnit.id },
+              unit: { id: selectedUnit.id, name: selectedUnit.name || selectedUnit.code || selectedUnit.id },
               currentLevel: 'units'
             });
           }
@@ -163,9 +163,10 @@ function UnitsPageContent() {
     if (!searchTerm.trim()) return safeFilteredProperties;
 
     return safeFilteredProperties.filter(property =>
-      property.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.propertyType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      // 🏢 ENTERPRISE: Use correct Property fields for search
+      property.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.building?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.status?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [safeFilteredProperties, searchTerm]);

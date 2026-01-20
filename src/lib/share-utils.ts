@@ -1,4 +1,9 @@
 // /home/user/studio/src/lib/share-utils.ts
+// 🏢 ENTERPRISE: i18n support for share messages
+import i18n from '@/i18n/config';
+
+// 🏢 ENTERPRISE: Company name constant for i18n
+const COMPANY_NAME = 'Nestor Construct';
 
 export interface ShareData {
   title: string;
@@ -183,11 +188,12 @@ export async function shareSearchResults(
     additionalParams
   );
   
-  const shareText = shareData.customMessage || 
-    'Δείτε αυτά τα ενδιαφέροντα ακίνητα από την Nestor Construct!';
-  
+  // 🏢 ENTERPRISE: i18n-enabled share messages
+  const shareText = shareData.customMessage ||
+    i18n.t('share.propertiesTeaser', { ns: 'common', company: COMPANY_NAME });
+
   const shareData_obj: ShareData = {
-    title: 'Nestor Construct - Ακίνητα',
+    title: i18n.t('share.propertiesTitle', { ns: 'common', company: COMPANY_NAME }),
     text: shareText,
     url: shareUrl
   };
@@ -210,14 +216,15 @@ function generatePropertyShareText(property: PropertyShareData): string {
   }
   
   if (property.area) {
-    text += `\n📐 ${property.area} τ.μ.`;
+    text += `\n📐 ${property.area} ${i18n.t('share.sqm', { ns: 'common' })}`;
   }
-  
+
   if (property.description) {
     text += `\n\n${property.description}`;
   }
-  
-  text += '\n\nΔείτε περισσότερα στο Nestor Construct!';
+
+  // 🏢 ENTERPRISE: i18n-enabled view more message
+  text += `\n\n${i18n.t('share.viewMore', { ns: 'common', company: COMPANY_NAME })}`;
   
   return text;
 }

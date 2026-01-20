@@ -8,6 +8,36 @@ import { smartCompressContactPhoto, ImageParser } from '@/subapps/geo-canvas/flo
 import compressionConfig, { type UsageContext } from '@/config/photo-compression-config';
 import { validateImageFile, type FileValidationResult } from '@/utils/file-validation';
 import { generateTempId } from '@/services/enterprise-id.service';
+// 🏢 ENTERPRISE: Canonical File Storage System imports
+import { FileRecordService } from '@/services/file-record.service';
+import {
+  ENTITY_TYPES,
+  FILE_DOMAINS,
+  FILE_CATEGORIES,
+  PHOTO_PURPOSES,
+  DEPRECATION_MESSAGES,
+  FILE_STORAGE_FLAGS,
+  FILE_STORAGE_ERROR_MESSAGES,
+  type PhotoPurpose,
+} from '@/config/domain-constants';
+import type { FileRecord } from '@/types/file-record';
+import { createModuleLogger } from '@/lib/telemetry';
+
+// ============================================================================
+// MODULE LOGGERS
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Logger for canonical file storage flows
+ * Uses canonical logger from src/lib/telemetry
+ */
+const canonicalLogger = createModuleLogger('CANONICAL_UPLOAD');
+
+/**
+ * 🏢 ENTERPRISE: Logger for legacy photo upload methods
+ * Uses canonical logger from src/lib/telemetry
+ */
+const legacyLogger = createModuleLogger('PHOTO_UPLOAD');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -32,6 +62,23 @@ export interface PhotoUploadOptions {
   purpose?: string;
   /** Photo index for FileNamingService (optional) */
   photoIndex?: number;
+
+  // =========================================================================
+  // 🏢 CANONICAL PIPELINE FIELDS (ADR-031)
+  // =========================================================================
+  // If ALL THREE canonical fields are provided, the upload will use the
+  // canonical pipeline (createPendingFileRecord → upload → finalize).
+  // Otherwise, legacy folderPath pipeline is used with deprecation warning.
+  // =========================================================================
+
+  /** 🏢 CANONICAL: Contact ID for FileRecord linkage */
+  contactId?: string;
+  /** 🏢 CANONICAL: Company ID for multi-tenant isolation (REQUIRED for canonical) */
+  companyId?: string;
+  /** 🏢 CANONICAL: User ID who is uploading */
+  createdBy?: string;
+  /** 🏢 CANONICAL: Contact name for display name generation */
+  contactName?: string;
 }
 
 export interface PhotoUploadResult extends FileUploadResult {
@@ -70,6 +117,53 @@ function generateUniqueFileName(originalName: string, prefix?: string): string {
 
 
 // ============================================================================
+// TYPE-SAFE HELPER FUNCTIONS (ADR-031)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Type-safe contact name resolution
+ * Resolves contact name from options without unsafe `as string` casts
+ *
+ * @param contactName - Direct contact name if provided
+ * @param contactData - Contact data object with possible name field
+ * @returns Resolved contact name or undefined (handled by naming builder)
+ */
+function resolveContactName(
+  contactName: string | undefined,
+  contactData: { name?: string; [key: string]: unknown } | undefined
+): string | undefined {
+  // Priority: explicit contactName > contactData.name
+  if (contactName && typeof contactName === 'string' && contactName.trim()) {
+    return contactName.trim();
+  }
+
+  if (contactData?.name && typeof contactData.name === 'string' && contactData.name.trim()) {
+    return contactData.name.trim();
+  }
+
+  // Return undefined - naming builder will use i18n fallback
+  return undefined;
+}
+
+/**
+ * 🏢 ENTERPRISE: Type-safe photo purpose resolution
+ * Validates purpose against domain constants
+ *
+ * @param purpose - Purpose string from options
+ * @returns Valid PhotoPurpose value (defaults to PROFILE)
+ */
+function resolvePhotoPurpose(purpose: string | undefined): PhotoPurpose {
+  const validPurposes = Object.values(PHOTO_PURPOSES);
+
+  if (purpose && validPurposes.includes(purpose as PhotoPurpose)) {
+    return purpose as PhotoPurpose;
+  }
+
+  // Default to profile if not specified or invalid
+  return PHOTO_PURPOSES.PROFILE;
+}
+
+// ============================================================================
 // MAIN SERVICE
 // ============================================================================
 
@@ -82,7 +176,7 @@ export class PhotoUploadService {
     file: File,
     options: PhotoUploadOptions
   ): Promise<PhotoUploadResult> {
-    console.log('🔄 ENTERPRISE: Starting photo upload:', {
+    legacyLogger.info('Starting photo upload', {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
@@ -93,11 +187,67 @@ export class PhotoUploadService {
     // Validate file using enterprise validation
     const validation = validateImageFile(file);
     if (!validation.isValid) {
-      console.error('❌ File validation failed:', validation.error);
+      legacyLogger.error('File validation failed', { error: validation.error });
       throw new Error(validation.error || 'Invalid file');
     }
 
-    console.log('✅ File validation passed');
+    legacyLogger.info('File validation passed');
+
+    // =========================================================================
+    // 🏢 CANONICAL PIPELINE ROUTING (ADR-031)
+    // =========================================================================
+    // If ALL canonical fields are provided, use canonical pipeline.
+    // Otherwise, use legacy pipeline with deprecation warning (or hard error in production).
+    // =========================================================================
+    const hasCanonicalFields = !!(options.companyId && options.contactId && options.createdBy);
+
+    if (hasCanonicalFields) {
+      canonicalLogger.info('Routing to canonical pipeline', {
+        contactId: options.contactId,
+        companyId: options.companyId,
+        createdBy: options.createdBy,
+      });
+
+      // 🏢 ENTERPRISE: Type-safe contact name resolution (no `as string` casts)
+      const resolvedContactName = resolveContactName(options.contactName, options.contactData);
+
+      // 🏢 ENTERPRISE: Type-safe purpose resolution using domain constants
+      const resolvedPurpose = resolvePhotoPurpose(options.purpose);
+
+      // Delegate to canonical method
+      const canonicalResult = await PhotoUploadService.uploadContactPhotoCanonical(file, {
+        contactId: options.contactId!,
+        companyId: options.companyId!,
+        createdBy: options.createdBy!,
+        contactName: resolvedContactName,
+        purpose: resolvedPurpose,
+        onProgress: options.onProgress,
+        enableCompression: options.enableCompression,
+        compressionUsage: options.compressionUsage,
+      });
+
+      // Return result compatible with legacy interface
+      return {
+        success: canonicalResult.success,
+        url: canonicalResult.url,
+        fileName: canonicalResult.fileName,
+        storagePath: canonicalResult.storagePath,
+        compressionInfo: canonicalResult.compressionInfo,
+      };
+    }
+
+    // =========================================================================
+    // 🚨 PRODUCTION LOCK: Block legacy writes if feature flag is enabled
+    // =========================================================================
+    if (FILE_STORAGE_FLAGS.BLOCK_LEGACY_WRITES) {
+      legacyLogger.error(FILE_STORAGE_ERROR_MESSAGES.PRODUCTION_LOCK);
+      throw new Error(FILE_STORAGE_ERROR_MESSAGES.PRODUCTION_LOCK);
+    }
+
+    // =========================================================================
+    // ⚠️ LEGACY PIPELINE (DEPRECATED) - Migration mode only
+    // =========================================================================
+    legacyLogger.warn(DEPRECATION_MESSAGES.LEGACY_UPLOAD);
 
     // 🔥 COMPRESSION LOGIC
     let fileToUpload = file;
@@ -115,12 +265,12 @@ export class PhotoUploadService {
       const compressionDecision = compressionConfig.shouldCompress(file.size, compressionUsage);
 
       if (compressionDecision.shouldCompress) {
-        console.log('🗜️ Compression needed:', compressionDecision.strategy.reason);
-        console.log('📊 Compression strategy:', compressionDecision.strategy.name);
-        console.log('🎯 Target profile:', compressionDecision.strategy.profile);
-        if (compressionDecision.estimatedSavings) {
-          console.log('💾 Estimated savings:', compressionDecision.estimatedSavings);
-        }
+        legacyLogger.info('Compression needed', {
+          reason: compressionDecision.strategy.reason,
+          strategy: compressionDecision.strategy.name,
+          targetProfile: compressionDecision.strategy.profile,
+          estimatedSavings: compressionDecision.estimatedSavings,
+        });
 
         try {
           const compressionResult = await smartCompressContactPhoto(file, compressionUsage);
@@ -140,22 +290,22 @@ export class PhotoUploadService {
             strategy: compressionResult.compressionInfo.strategy
           };
 
-          console.log('✅ Compression completed:', {
+          legacyLogger.info('Compression completed', {
             strategy: compressionResult.compressionInfo.strategy,
             originalSize: `${Math.round(file.size / 1024)}KB`,
             compressedSize: `${Math.round(compressionResult.blob.size / 1024)}KB`,
             savings: `${compressionInfo.compressionRatio}%`
           });
         } catch (compressionError) {
-          console.warn('⚠️ Compression failed, uploading original:', compressionError);
+          legacyLogger.warn('Compression failed, uploading original', { error: compressionError });
           // Continue with original file if compression fails
         }
       } else {
-        console.log('✅ No compression needed:', compressionDecision.strategy.reason);
+        legacyLogger.info('No compression needed', { reason: compressionDecision.strategy.reason });
       }
     }
 
-    console.log('📊 Final upload file:', {
+    legacyLogger.info('Final upload file', {
       fileName: fileToUpload.name,
       fileSize: `${Math.round(fileToUpload.size / 1024)}KB`,
       fileType: fileToUpload.type,
@@ -163,11 +313,12 @@ export class PhotoUploadService {
     });
 
     // Check authentication status and try anonymous login if needed
-    console.log('🔐 Checking authentication status...');
-    console.log('🔐 Auth current user:', auth.currentUser ? 'Authenticated' : 'Not authenticated');
+    legacyLogger.info('Checking authentication status', {
+      isAuthenticated: !!auth.currentUser,
+    });
 
     // 🔧 FIX: Skip authentication for development - Firebase Storage rules should allow uploads
-    console.log('📤 Proceeding with upload (authentication optional for storage)');
+    legacyLogger.info('Proceeding with upload (authentication optional for storage)');
 
     try {
       // 🏢 ENTERPRISE: Use FileNamingService για client-side uploads
@@ -190,16 +341,17 @@ export class PhotoUploadService {
           }
 
           // Generate professional filename
+          // 🏢 ENTERPRISE: Type assertion for backward compatibility with partial contact data
           const renamedFile = FileNamingService.generateProperFilename(
             fileToUpload,
-            options.contactData,
+            options.contactData as unknown as import('@/types/ContactFormTypes').ContactFormData,
             servicePurpose,
             options.photoIndex
           );
 
           fileName = renamedFile.name;
 
-          console.log('🏷️ CLIENT-SIDE: FileNamingService applied:', {
+          legacyLogger.info('FileNamingService applied', {
             original: fileToUpload.name,
             renamed: fileName,
             purpose: servicePurpose,
@@ -207,7 +359,7 @@ export class PhotoUploadService {
           });
 
         } catch (error) {
-          console.error('❌ CLIENT-SIDE: FileNamingService failed, using fallback:', error);
+          legacyLogger.error('FileNamingService failed, using fallback', { error });
           fileName = generateUniqueFileName(fileToUpload.name);
         }
       } else {
@@ -218,14 +370,13 @@ export class PhotoUploadService {
       // 🔧 FIX: Ensure simple path format for Firebase Storage
       const storagePath = `${options.folderPath}/${fileName}`.replace(/\/+/g, '/'); // Remove double slashes
 
-      console.log('🔍 STORAGE PATH DEBUG:', {
+      legacyLogger.info('Storage path configured', {
         folderPath: options.folderPath,
         fileName: fileName,
         finalPath: storagePath
       });
-      console.log('📁 ENTERPRISE: Storage path:', storagePath);
       const storageRef = ref(storage, storagePath);
-      console.log('🔗 ENTERPRISE: Storage reference created');
+      legacyLogger.info('Storage reference created');
 
       // 🏢 ENTERPRISE LAYER 2: Enhanced reliability mechanisms με INCREASED timeouts για Firebase Storage
       const maxRetries = 2; // Μείωσα από 3 σε 2
@@ -235,7 +386,7 @@ export class PhotoUploadService {
 
       const attemptUpload = (): Promise<PhotoUploadResult> => {
         currentAttempt++;
-        console.log(`⬆️ ENTERPRISE: Upload attempt ${currentAttempt}/${maxRetries}`);
+        legacyLogger.info('Upload attempt', { attempt: currentAttempt, maxRetries });
 
         return new Promise<PhotoUploadResult>((resolve, reject) => {
           // Create upload task with resumable upload
@@ -247,11 +398,11 @@ export class PhotoUploadService {
           // 🕐 Progressive timeout mechanism - IMMEDIATE FALLBACK
           const progressTimeoutId = setTimeout(() => {
             if (!progressReceived) {
-              console.log(`⏰ ENTERPRISE: No progress after ${progressTimeout}ms on attempt ${currentAttempt} - trying fallback IMMEDIATELY`);
+              legacyLogger.warn('No progress - trying fallback', { timeout: progressTimeout, attempt: currentAttempt });
               uploadTask.cancel();
 
               // 🚀 IMMEDIATE FALLBACK: Δεν περιμένω retries - πάω κατευθείαν σε server-side
-              console.log('🎯 ENTERPRISE: Client-side stuck at 0% - attempting server-side fallback IMMEDIATELY');
+              legacyLogger.info('Client-side stuck - attempting server-side fallback');
               PhotoUploadService.fallbackToServerUpload(fileToUpload, options, compressionInfo)
                 .then(resolve)
                 .catch(reject);
@@ -260,11 +411,11 @@ export class PhotoUploadService {
 
           // 🕐 Total timeout mechanism - IMMEDIATE FALLBACK
           const totalTimeoutId = setTimeout(() => {
-            console.log(`⏰ ENTERPRISE: Total upload timeout after ${totalTimeout}ms on attempt ${currentAttempt}`);
+            legacyLogger.warn('Total upload timeout', { timeout: totalTimeout, attempt: currentAttempt });
             uploadTask.cancel();
 
             // 🚀 IMMEDIATE FALLBACK: Πάω κατευθείαν σε server-side upload
-            console.log('🎯 ENTERPRISE: Client-side upload timeout - attempting server-side fallback IMMEDIATELY');
+            legacyLogger.info('Upload timeout - attempting server-side fallback');
             PhotoUploadService.fallbackToServerUpload(fileToUpload, options, compressionInfo)
               .then(resolve)
               .catch(reject);
@@ -277,13 +428,13 @@ export class PhotoUploadService {
               if (!progressReceived) {
                 progressReceived = true;
                 clearTimeout(progressTimeoutId);
-                console.log(`✅ ENTERPRISE: Upload started successfully on attempt ${currentAttempt}`);
+                legacyLogger.info('Upload started successfully', { attempt: currentAttempt });
               }
               lastProgressTime = Date.now();
 
               // Progress tracking
               const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              console.log(`📈 ENTERPRISE: Upload progress: ${Math.round(progress)}% (attempt ${currentAttempt})`);
+              legacyLogger.info('Upload progress', { progress: Math.round(progress), attempt: currentAttempt });
 
               // Determine phase based on progress
               let phase: FileUploadProgress['phase'];
@@ -309,9 +460,11 @@ export class PhotoUploadService {
               clearTimeout(totalTimeoutId);
 
               // Handle upload errors
-              console.error(`❌ ENTERPRISE: Photo upload error on attempt ${currentAttempt}:`, error);
-              console.error('❌ Error code:', error.code);
-              console.error('❌ Error message:', error.message);
+              legacyLogger.error('Photo upload error', {
+                attempt: currentAttempt,
+                code: error.code,
+                message: error.message
+              });
 
               const isRetryableError =
                 error.code === 'storage/retry-limit-exceeded' ||
@@ -321,14 +474,14 @@ export class PhotoUploadService {
                  (error.message.includes('retry') || error.message.includes('Max retry time')));
 
               if (isRetryableError && currentAttempt < maxRetries) {
-                console.log(`🔄 ENTERPRISE: Retrying upload due to ${error.code} (${currentAttempt + 1}/${maxRetries})`);
+                legacyLogger.info('Retrying upload', { errorCode: error.code, nextAttempt: currentAttempt + 1, maxRetries });
                 setTimeout(() => {
                   attemptUpload().then(resolve).catch(reject);
                 }, 2000 * currentAttempt); // Exponential backoff
                 return;
               } else if (currentAttempt >= maxRetries && isRetryableError) {
                 // 🚀 FALLBACK: Try server-side upload when retryable error persists
-                console.log('🎯 ENTERPRISE: All client-side retries failed - attempting server-side fallback');
+                legacyLogger.info('All client-side retries failed - attempting server-side fallback');
                 PhotoUploadService.fallbackToServerUpload(fileToUpload, options, compressionInfo)
                   .then(resolve)
                   .catch(reject);
@@ -346,7 +499,7 @@ export class PhotoUploadService {
                     : 'Το ανέβασμα ακυρώθηκε';
                   break;
                 case 'storage/retry-limit-exceeded':
-                  console.log('🔧 ENTERPRISE: Detected retry-limit-exceeded error');
+                  legacyLogger.info('Detected retry-limit-exceeded error');
                   errorMessage = 'Πρόβλημα δικτύου - Δοκιμάστε ξανά σε λίγο';
                   break;
                 case 'storage/unknown':
@@ -357,7 +510,7 @@ export class PhotoUploadService {
                     ? 'Πρόβλημα δικτύου - Δοκιμάστε ξανά σε λίγο'
                     : 'Άγνωστο σφάλμα κατά το ανέβασμα';
 
-                  console.log('🔍 ENTERPRISE: Unknown error analysis:', { isHiddenRetryError, message: error.message });
+                  legacyLogger.info('Unknown error analysis', { isHiddenRetryError, message: error.message });
                   break;
                 default:
                   errorMessage = 'Σφάλμα κατά το ανέβασμα αρχείου';
@@ -372,9 +525,9 @@ export class PhotoUploadService {
 
               try {
                 // Upload completed successfully
-                console.log(`🎉 ENTERPRISE: Upload completed successfully on attempt ${currentAttempt}!`);
+                legacyLogger.info('Upload completed successfully', { attempt: currentAttempt });
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                console.log('✅ ENTERPRISE: Download URL obtained:', downloadURL);
+                legacyLogger.info('Download URL obtained', { url: downloadURL });
 
                 resolve({
                   url: downloadURL,
@@ -385,7 +538,7 @@ export class PhotoUploadService {
                   compressionInfo: compressionInfo
                 });
               } catch (error) {
-                console.error('❌ ENTERPRISE: Failed to get download URL:', error);
+                legacyLogger.error('Failed to get download URL', { error });
                 reject(new Error('Αποτυχία λήψης URL αρχείου'));
               }
             }
@@ -397,7 +550,7 @@ export class PhotoUploadService {
       return await attemptUpload();
 
     } catch (error) {
-      console.error('Photo upload service error:', error);
+      legacyLogger.error('Photo upload service error', { error });
       throw new Error('Σφάλμα υπηρεσίας ανεβάσματος');
     }
   }
@@ -407,14 +560,14 @@ export class PhotoUploadService {
    */
   static async deletePhoto(storagePath: string): Promise<void> {
     try {
-      console.log('🗑️ ENTERPRISE CLEANUP: Starting photo deletion:', storagePath);
+      legacyLogger.info('Starting photo deletion', { storagePath });
 
       const storageRef = ref(storage, storagePath);
       await deleteObject(storageRef);
 
-      console.log('✅ ENTERPRISE CLEANUP: Photo deleted successfully from storage');
+      legacyLogger.info('Photo deleted successfully from storage');
     } catch (error: unknown) {
-      console.error('❌ ENTERPRISE CLEANUP: Photo delete error:', error);
+      legacyLogger.error('Photo delete error', { error });
 
       // 🏢 ENTERPRISE: Type-safe error handling without `as any`
       const isObjectNotFound = PhotoUploadService.isFirebaseStorageError(error) &&
@@ -422,10 +575,10 @@ export class PhotoUploadService {
 
       if (isObjectNotFound) {
         // File doesn't exist - this is OK, probably already deleted
-        console.log('⚠️ ENTERPRISE CLEANUP: File not found - probably already deleted');
+        legacyLogger.warn('File not found - probably already deleted');
       } else {
         // Actual deletion error - throw
-        console.error('💥 ENTERPRISE CLEANUP: Actual deletion error:', error);
+        legacyLogger.error('Actual deletion error', { error });
         throw new Error('Αποτυχία διαγραφής αρχείου');
       }
     }
@@ -449,25 +602,25 @@ export class PhotoUploadService {
    */
   static async deletePhotoByURL(photoURL: string): Promise<void> {
     if (!photoURL || photoURL.trim() === '') {
-      console.log('🗑️ ENTERPRISE CLEANUP: Empty URL - nothing to delete');
+      legacyLogger.info('Empty URL - nothing to delete');
       return;
     }
 
     try {
       if (this.isFirebaseStorageURL(photoURL)) {
-        console.log('🏢 ENTERPRISE CLEANUP: Deleting Firebase Storage photo');
+        legacyLogger.info('Deleting Firebase Storage photo');
         const storagePath = this.extractStoragePathFromURL(photoURL);
         if (storagePath) {
           await this.deletePhoto(storagePath);
         }
       } else if (photoURL.startsWith('data:image/')) {
-        console.log('📄 ENTERPRISE CLEANUP: Base64 photo - no storage cleanup needed');
+        legacyLogger.info('Base64 photo - no storage cleanup needed');
         // Base64 photos don't need storage cleanup
       } else {
-        console.log('⚠️ ENTERPRISE CLEANUP: Unknown photo URL format:', photoURL.substring(0, 50));
+        legacyLogger.warn('Unknown photo URL format', { urlPreview: photoURL.substring(0, 50) });
       }
     } catch (error) {
-      console.error('❌ ENTERPRISE CLEANUP: Error deleting photo by URL:', error);
+      legacyLogger.error('Error deleting photo by URL', { error });
       // Don't throw - deletion failures shouldn't break the app
     }
   }
@@ -477,24 +630,24 @@ export class PhotoUploadService {
    */
   static async cleanupMultiplePhotos(photoURLs: string[]): Promise<void> {
     if (!Array.isArray(photoURLs) || photoURLs.length === 0) {
-      console.log('🗑️ ENTERPRISE CLEANUP: No photos to cleanup');
+      legacyLogger.info('No photos to cleanup');
       return;
     }
 
-    console.log('🏢 ENTERPRISE CLEANUP: Starting batch cleanup of', photoURLs.length, 'photos');
+    legacyLogger.info('Starting batch cleanup', { count: photoURLs.length });
 
     const deletePromises = photoURLs.map(async (url, index) => {
       try {
-        console.log(`🗑️ ENTERPRISE CLEANUP: Deleting photo ${index + 1}/${photoURLs.length}`);
+        legacyLogger.info('Deleting photo', { index: index + 1, total: photoURLs.length });
         await this.deletePhotoByURL(url);
       } catch (error) {
-        console.error(`❌ ENTERPRISE CLEANUP: Failed to delete photo ${index + 1}:`, error);
+        legacyLogger.error('Failed to delete photo', { index: index + 1, error });
         // Continue with other photos even if one fails
       }
     });
 
     await Promise.allSettled(deletePromises);
-    console.log('✅ ENTERPRISE CLEANUP: Batch cleanup completed');
+    legacyLogger.info('Batch cleanup completed');
   }
 
   /**
@@ -555,7 +708,7 @@ export class PhotoUploadService {
         await this.deletePhoto(storagePath);
       }
     } catch (error) {
-      console.error('Error deleting contact photo:', error);
+      legacyLogger.error('Error deleting contact photo', { error });
       // Don't throw - photo deletion is not critical
     }
   }
@@ -591,7 +744,7 @@ export class PhotoUploadService {
     options: PhotoUploadOptions,
     compressionInfo: PhotoUploadResult['compressionInfo']
   ): Promise<PhotoUploadResult> {
-    console.log('🚀 SERVER-FALLBACK: Starting server-side upload fallback');
+    legacyLogger.info('Starting server-side upload fallback');
 
     try {
       // Create FormData for server-side upload
@@ -613,7 +766,7 @@ export class PhotoUploadService {
       // Generate filename if not provided
       const fileName = options.fileName || generateUniqueFileName(file.name);
 
-      console.log('📤 SERVER-FALLBACK: Sending to /api/upload/photo', {
+      legacyLogger.info('Sending to server-side API', {
         fileName: file.name,
         fileSize: file.size,
         folderPath: options.folderPath,
@@ -630,12 +783,12 @@ export class PhotoUploadService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown server error' }));
-        console.error('❌ SERVER-FALLBACK: Server upload failed:', errorData);
+        legacyLogger.error('Server upload failed', { errorData });
         throw new Error(errorData.error || `Server error: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('✅ SERVER-FALLBACK: Upload successful!', result);
+      legacyLogger.info('Server upload successful', { result });
 
       // Return in the expected format
       return {
@@ -648,8 +801,238 @@ export class PhotoUploadService {
       };
 
     } catch (error) {
-      console.error('❌ SERVER-FALLBACK: Fallback upload failed:', error);
+      legacyLogger.error('Fallback upload failed', { error });
       throw new Error('Αποτυχία και της εναλλακτικής μεθόδου ανεβάσματος');
     }
+  }
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: CANONICAL FILE STORAGE SYSTEM
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Canonical contact photo upload
+   *
+   * Uses the new FileRecord system:
+   * 1. Creates pending FileRecord in Firestore
+   * 2. Uploads binary to canonical path (IDs only)
+   * 3. Finalizes FileRecord with downloadUrl and sizeBytes
+   *
+   * @param file - Image file to upload
+   * @param options - Canonical upload options
+   * @returns PhotoUploadResult with FileRecord reference
+   *
+   * @example
+   * ```typescript
+   * const result = await PhotoUploadService.uploadContactPhotoCanonical(file, {
+   *   contactId: 'contact_123',
+   *   contactName: 'Γιώργος Παπαδόπουλος', // Naming context
+   *   purpose: 'profile',                   // Naming context
+   *   createdBy: 'user_abc',
+   *   companyId: 'company_xyz', // REQUIRED for multi-tenant
+   * });
+   * // displayName is generated centrally: "Φωτογραφία Προφίλ - Γιώργος Παπαδόπουλος"
+   * ```
+   */
+  static async uploadContactPhotoCanonical(
+    file: File,
+    options: {
+      /** Contact ID this photo belongs to */
+      contactId: string;
+      /** User ID who is uploading */
+      createdBy: string;
+      /** Company ID for multi-tenant isolation (REQUIRED) */
+      companyId: string;
+
+      // =========================================================================
+      // NAMING CONTEXT (for centralized display name generation)
+      // =========================================================================
+      /** Contact name (e.g., "Γιώργος Παπαδόπουλος") */
+      contactName?: string;
+      /** Photo purpose (e.g., "profile", "id") */
+      purpose?: 'profile' | 'id' | 'other';
+
+      /** Progress callback */
+      onProgress?: (progress: FileUploadProgress) => void;
+      /** Enable compression (default: true) */
+      enableCompression?: boolean;
+      /** Compression usage context */
+      compressionUsage?: UsageContext;
+    }
+  ): Promise<PhotoUploadResult & { fileRecord: FileRecord }> {
+    canonicalLogger.info('Starting contact photo upload with centralized naming', {
+      contactId: options.contactId,
+      contactName: options.contactName,
+      purpose: options.purpose,
+      fileSize: file.size,
+    });
+
+    // Validate file using enterprise validation
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
+      canonicalLogger.error('File validation failed', { error: validation.error });
+      throw new Error(validation.error || 'Invalid file');
+    }
+
+    // Step A: Create pending FileRecord
+    // 🏢 ENTERPRISE: Using naming context - displayName generated centrally
+    const { fileId, storagePath, fileRecord } = await FileRecordService.createPendingFileRecord({
+      companyId: options.companyId,
+      entityType: ENTITY_TYPES.CONTACT,
+      entityId: options.contactId,
+      domain: FILE_DOMAINS.ADMIN,
+      category: FILE_CATEGORIES.PHOTOS,
+      // Naming context (centralized name generation)
+      entityLabel: options.contactName,
+      purpose: options.purpose,
+      // File metadata
+      originalFilename: file.name,
+      ext: file.name.split('.').pop()?.toLowerCase() || 'jpg',
+      contentType: file.type,
+      createdBy: options.createdBy,
+    });
+
+    canonicalLogger.info('Pending FileRecord created', {
+      fileId,
+      storagePath,
+    });
+
+    try {
+      // Compression logic (reuse existing)
+      let fileToUpload = file;
+      let compressionInfo: PhotoUploadResult['compressionInfo'] = {
+        wasCompressed: false,
+        originalSize: file.size,
+        compressedSize: file.size,
+        compressionRatio: 0,
+      };
+
+      if (options.enableCompression !== false) {
+        const compressionUsage = options.compressionUsage || 'profile-modal';
+        const compressionDecision = compressionConfig.shouldCompress(file.size, compressionUsage);
+
+        if (compressionDecision.shouldCompress) {
+          canonicalLogger.info('Compressing image');
+          try {
+            const compressionResult = await smartCompressContactPhoto(file, compressionUsage);
+            const compressedFile = new File([compressionResult.blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: file.lastModified,
+            });
+
+            fileToUpload = compressedFile;
+            compressionInfo = {
+              wasCompressed: true,
+              originalSize: file.size,
+              compressedSize: compressionResult.blob.size,
+              compressionRatio: compressionResult.compressionInfo.stats.compressionRatio,
+              strategy: compressionResult.compressionInfo.strategy,
+            };
+
+            canonicalLogger.info('Compression completed', compressionInfo);
+          } catch (compressionError) {
+            canonicalLogger.warn('Compression failed, uploading original', { error: compressionError });
+          }
+        }
+      }
+
+      // Step B: Upload binary to canonical path
+      canonicalLogger.info('Uploading to canonical path', { storagePath });
+      const storageRef = ref(storage, storagePath);
+
+      const uploadResult = await new Promise<{ url: string }>((resolve, reject) => {
+        const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
+
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            if (options.onProgress) {
+              options.onProgress({
+                progress: Math.round(progress),
+                phase: progress < 95 ? 'upload' : 'processing',
+              });
+            }
+          },
+          (error) => {
+            canonicalLogger.error('Upload error', { error });
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve({ url: downloadURL });
+            } catch (error) {
+              reject(error);
+            }
+          }
+        );
+      });
+
+      canonicalLogger.info('Binary uploaded successfully');
+
+      // Step C: Finalize FileRecord
+      await FileRecordService.finalizeFileRecord({
+        fileId,
+        sizeBytes: fileToUpload.size,
+        downloadUrl: uploadResult.url,
+      });
+
+      canonicalLogger.info('FileRecord finalized successfully');
+
+      // Get updated FileRecord
+      const finalFileRecord = await FileRecordService.getFileRecord(fileId);
+
+      return {
+        url: uploadResult.url,
+        fileName: `${fileId}.${fileRecord.ext}`,
+        fileSize: fileToUpload.size,
+        mimeType: fileToUpload.type,
+        storagePath,
+        compressionInfo,
+        fileRecord: finalFileRecord || fileRecord,
+      };
+    } catch (error) {
+      // Mark FileRecord as failed
+      canonicalLogger.error('Upload failed, marking FileRecord as failed');
+      await FileRecordService.markFileRecordFailed(
+        fileId,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Get contact photos from canonical storage
+   *
+   * Fetches FileRecords for a contact's photos.
+   * Can also fall back to legacy path for backward compatibility.
+   */
+  static async getContactPhotos(
+    contactId: string,
+    options?: { companyId?: string; includeLegacy?: boolean }
+  ): Promise<FileRecord[]> {
+    canonicalLogger.info('Getting contact photos', { contactId });
+
+    const files = await FileRecordService.getFilesByEntity(
+      ENTITY_TYPES.CONTACT,
+      contactId,
+      {
+        domain: FILE_DOMAINS.ADMIN,
+        category: FILE_CATEGORIES.PHOTOS,
+      }
+    );
+
+    canonicalLogger.info('Contact photos retrieved', { count: files.length });
+    return files;
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Check if URL is legacy contact photo path
+   * Returns true for old paths like 'contacts/photos/filename.jpg'
+   */
+  static isLegacyContactPhotoPath(path: string): boolean {
+    return path.startsWith('contacts/photos/') || path.includes('/contacts/photos/');
   }
 }

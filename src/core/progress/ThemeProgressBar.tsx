@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
@@ -5,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from 'react-i18next';
 
 /**
  * 🎨 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ THEME-AWARE PROGRESS BAR
@@ -22,10 +24,12 @@ interface ThemeProgressBarProps {
 
 export function ThemeProgressBar({
   progress,
-  label = "Πρόοδος",
+  label,
   size = 'md',
   showPercentage = true
 }: ThemeProgressBarProps) {
+  const { t } = useTranslation('common');
+  const displayLabel = label ?? t('progress.label');
   const colors = useSemanticColors();
 
   // ✅ ENTERPRISE: Theme-aware progress bar colors using semantic system
@@ -60,7 +64,7 @@ export function ThemeProgressBar({
   return (
     <div className="mb-3">
       <div className={cn("flex items-center justify-between mb-1", textSizeClasses[size])}>
-        <span className="text-muted-foreground">{label}</span>
+        <span className="text-muted-foreground">{displayLabel}</span>
         {showPercentage && (
           <span className={cn(
             "font-medium",

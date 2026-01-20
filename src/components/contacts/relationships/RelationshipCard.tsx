@@ -81,13 +81,15 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
 
   const displayProps = getRelationshipDisplayProps(relationship.relationshipType);
   const Icon = displayProps.icon;
+  // 🏢 ENTERPRISE: Translate i18n label key
+  const translatedTypeLabel = t(displayProps.label);
 
   // ============================================================================
   // RENDER
   // ============================================================================
 
   return (
-    <Card className={`mb-4 ${getDirectionalBorder('info', 'left', 'bold')}`}>
+    <Card className={`mb-4 ${getDirectionalBorder('info', 'left')}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -122,7 +124,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                       {contactName}
                     </span>
                     <Badge className={displayProps.color} variant="outline">
-                      {displayProps.label}
+                      {translatedTypeLabel}
                     </Badge>
                     {relationship.position && (
                       <span className={`text-xs ${colors.text.muted}`}>• {relationship.position}</span>
@@ -132,7 +134,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                   <>
                     <div className={`animate-pulse ${colors.bg.muted} h-4 w-24 ${quick.rounded}`}></div>
                     <Badge className={displayProps.color} variant="outline">
-                      {displayProps.label}
+                      {translatedTypeLabel}
                     </Badge>
                   </>
                 )}
@@ -207,7 +209,7 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
                 <NAVIGATION_ENTITIES.phone.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.phone.color)} />
                 <span className="text-sm">{relationship.contactInfo.businessPhone}</span>
                 {relationship.contactInfo.extensionNumber && (
-                  <span className={`text-xs ${colors.text.light}`}>
+                  <span className={`text-xs ${colors.text.muted}`}>
                     ext. {relationship.contactInfo.extensionNumber}
                   </span>
                 )}
@@ -247,27 +249,27 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
             )}
 
             {/* Notes */}
-            {relationship.notes && (
+            {relationship.relationshipNotes && (
               <div className="md:col-span-2">
                 <p className={`text-sm ${colors.text.muted} ${colors.bg.secondary} p-3 ${quick.table}`}>
-                  <strong>{t('relationships.card.notes')}</strong> {relationship.notes}
+                  <strong>{t('relationships.card.notes')}</strong> {relationship.relationshipNotes}
                 </p>
               </div>
             )}
 
             {/* Relationship Metadata */}
-            <div className={`md:col-span-2 text-xs ${colors.text.light} ${quick.borderT} pt-2`}>
+            <div className={`md:col-span-2 text-xs ${colors.text.muted} ${quick.separator} pt-2`}>
               <span>
                 {t('relationships.card.createdAt')} {
                   relationship.createdAt
-                    ? formatDate(relationship.createdAt.seconds ? relationship.createdAt.seconds * 1000 : relationship.createdAt)
+                    ? formatDate('toDate' in relationship.createdAt ? relationship.createdAt.toDate() : relationship.createdAt)
                     : t('relationships.card.recently')
                 }
               </span>
               {relationship.updatedAt && relationship.updatedAt !== relationship.createdAt && (
                 <span className="ml-4">
                   {t('relationships.card.updatedAt')} {
-                    formatDate(relationship.updatedAt.seconds ? relationship.updatedAt.seconds * 1000 : relationship.updatedAt)
+                    formatDate('toDate' in relationship.updatedAt ? relationship.updatedAt.toDate() : relationship.updatedAt)
                   }
                 </span>
               )}

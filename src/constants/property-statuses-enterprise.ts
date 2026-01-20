@@ -26,17 +26,19 @@ export type PropertyStatus =
   | 'off-market'       // ⚪ Εκτός αγοράς
   | 'unavailable';     // ⚫ Μη διαθέσιμο
 
+// 🏢 ENTERPRISE: i18n keys for property status labels
+// Labels are translated at runtime by components using useTranslation
 export const PROPERTY_STATUS_LABELS: Record<PropertyStatus, string> = {
-  'for-sale': 'Προς Πώληση',
-  'for-rent': 'Προς Ενοικίαση',
-  'reserved': 'Δεσμευμένο',
-  'sold': 'Πουλημένο',
-  'landowner': 'Οικοπεδούχου',
-  'rented': 'Ενοικιάστηκε',
-  'under-negotiation': 'Υπό Διαπραγμάτευση',
-  'coming-soon': 'Σύντομα Διαθέσιμο',
-  'off-market': 'Εκτός Αγοράς',
-  'unavailable': 'Μη Διαθέσιμο',
+  'for-sale': 'properties.status.forSale',
+  'for-rent': 'properties.status.forRent',
+  'reserved': 'properties.status.reserved',
+  'sold': 'properties.status.sold',
+  'landowner': 'properties.status.landowner',
+  'rented': 'properties.status.rented',
+  'under-negotiation': 'properties.status.underNegotiation',
+  'coming-soon': 'properties.status.comingSoon',
+  'off-market': 'properties.status.offMarket',
+  'unavailable': 'properties.status.unavailable',
 };
 
 export const PROPERTY_STATUS_COLORS: Record<PropertyStatus, string> = {
@@ -66,13 +68,14 @@ export type PropertyType =
   | 'office'
   | 'storage';
 
+// 🏢 ENTERPRISE: i18n keys for property type labels
 export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
-  'apartment': 'Διαμέρισμα',
-  'studio': 'Στούντιο',
-  'maisonette': 'Μεζονέτα',
-  'shop': 'Κατάστημα',
-  'office': 'Γραφείο',
-  'storage': 'Αποθήκη'
+  'apartment': 'properties.types.apartment',
+  'studio': 'properties.types.studio',
+  'maisonette': 'properties.types.maisonette',
+  'shop': 'properties.types.shop',
+  'office': 'properties.types.office',
+  'storage': 'properties.types.storage'
 };
 
 // ============================================================================
@@ -132,6 +135,13 @@ export const PROPERTY_FILTER_LABELS = {
   complexity: 'filters.fields.complexity',
   year_built: 'filters.fields.yearBuilt',
   property_type: 'filters.fields.propertyType',
+  // 🏢 ENTERPRISE: Additional field labels (2026-01-19)
+  contact_type: 'filters.fields.contactType',
+  units_count: 'filters.fields.unitsCount',
+  total_area: 'filters.fields.totalArea',
+  year_range: 'filters.fields.yearRange',
+  progress_range: 'filters.fields.progressRange',
+  start_year_range: 'filters.fields.startYearRange',
   // Checkbox labels
   has_parking: 'filters.checkboxes.hasParking',
   has_elevator: 'filters.checkboxes.hasElevator',
@@ -145,7 +155,10 @@ export const PROPERTY_FILTER_LABELS = {
   has_financing: 'filters.checkboxes.hasFinancing',
   has_subcontractors: 'filters.checkboxes.hasSubcontractors',
   has_issues: 'filters.checkboxes.hasIssues',
-  is_active: 'filters.checkboxes.isActive'
+  is_active: 'filters.checkboxes.isActive',
+  is_favorite: 'filters.checkboxes.isFavorite',
+  show_archived: 'filters.checkboxes.showArchived',
+  is_ecological: 'filters.checkboxes.isEcological'
 } as const;
 
 // 🏢 ENTERPRISE: Storage domain filter labels (unified from storage/constants.ts)
@@ -154,9 +167,10 @@ export const STORAGE_FILTER_LABELS = {
 } as const;
 
 // 🏢 ENTERPRISE: Parking domain filter labels (unified from types/parking.ts)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PARKING_FILTER_LABELS = {
   ...COMMON_FILTER_LABELS,
-  ALL_LEVELS: 'Όλα τα επίπεδα'
+  ALL_LEVELS: 'filters.allLevels'
 } as const;
 
 // ============================================================================
@@ -215,16 +229,18 @@ export const UNIFIED_STATUS_FILTER_LABELS = {
 // ============================================================================
 
 // Storage-specific labels (migrated from storage/constants.ts)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const STORAGE_TYPE_LABELS = {
-  storage: 'Αποθήκη',
-  parking: 'Θέση Στάθμευσης'
+  storage: 'storage.types.storage',
+  parking: 'storage.types.parking'
 } as const;
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const STORAGE_STATUS_LABELS = {
-  available: 'Διαθέσιμο',
-  sold: 'Πωλήθηκε',
-  reserved: 'Κρατημένο',
-  maintenance: 'Συντήρηση'
+  available: 'storage.general.status.available',
+  sold: 'storage.general.status.sold',
+  reserved: 'storage.general.status.reserved',
+  maintenance: 'storage.general.status.maintenance'
 } as const;
 
 // Project type labels (migrated from ProjectToolbar.tsx)
@@ -235,16 +251,18 @@ export const PROJECT_TYPE_LABELS = {
 } as const;
 
 // DXF Layer category labels (migrated from DXF Viewer Layer Manager)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const DXF_LAYER_CATEGORY_LABELS = {
-  all: 'Όλες οι κατηγορίες',
-  electrical: 'Ηλεκτρολογικά',
-  plumbing: 'Υδραυλικά',
-  hvac: 'HVAC'
+  all: 'dxfViewer.layers.allCategories',
+  electrical: 'dxfViewer.layers.electrical',
+  plumbing: 'dxfViewer.layers.plumbing',
+  hvac: 'dxfViewer.layers.hvac'
 } as const;
 
 // Price filter labels (migrated from LandingPage.tsx)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PRICE_FILTER_LABELS = {
-  ALL_PRICES: 'Όλες οι τιμές'
+  ALL_PRICES: 'filters.allPrices'
 } as const;
 
 // Price range generator function (enterprise-grade with currency support)
@@ -266,18 +284,20 @@ export const UNIT_SALE_STATUS = {
   PENDING: 'PENDING'
 } as const;
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const UNIT_SALE_STATUS_LABELS = {
-  [UNIT_SALE_STATUS.NOT_SOLD]: 'Δεν έχει πωληθεί',
-  [UNIT_SALE_STATUS.SOLD]: 'Πωλήθηκε',
-  [UNIT_SALE_STATUS.RESERVED]: 'Κρατημένη',
-  [UNIT_SALE_STATUS.PENDING]: 'Εκκρεμεί'
+  [UNIT_SALE_STATUS.NOT_SOLD]: 'units.saleStatus.notSold',
+  [UNIT_SALE_STATUS.SOLD]: 'units.saleStatus.sold',
+  [UNIT_SALE_STATUS.RESERVED]: 'units.saleStatus.reserved',
+  [UNIT_SALE_STATUS.PENDING]: 'units.saleStatus.pending'
 } as const;
 
 // Obligation status labels (migrated from StatusConstants.ts - labels only)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const OBLIGATION_STATUS_LABELS = {
-  draft: 'Προσχέδιο',
-  completed: 'Ολοκληρωμένο',
-  approved: 'Εγκεκριμένο'
+  draft: 'common.documentStatus.draft',
+  completed: 'common.documentStatus.completed',
+  approved: 'common.documentStatus.approved'
 } as const;
 
 // Obligation status label getter function (migrated)
@@ -303,21 +323,22 @@ export const LEGACY_BRIDGE_IMPORTS = {
 // This is a safe gradual migration approach
 
 // Standard floor names (reused from storage but for properties)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PROPERTY_STANDARD_FLOORS: string[] = [
-  'Υπόγειο 3',
-  'Υπόγειο 2',
-  'Υπόγειο 1',
-  'Υπόγειο',
-  'Ισόγειο',
-  '1ος Όροφος',
-  '2ος Όροφος',
-  '3ος Όροφος',
-  '4ος Όροφος',
-  '5ος Όροφος',
-  '6ος Όροφος',
-  '7ος Όροφος',
-  '8ος Όροφος',
-  '9ος Όροφος'
+  'building.floors.basement3',
+  'building.floors.basement2',
+  'building.floors.basement1',
+  'building.floors.basement',
+  'building.floors.ground',
+  'building.floors.floor1',
+  'building.floors.floor2',
+  'building.floors.floor3',
+  'building.floors.floor4',
+  'building.floors.floor5',
+  'building.floors.floor6',
+  'building.floors.floor7',
+  'building.floors.floor8',
+  'building.floors.floor9'
 ];
 
 // Legacy status mapping for compatibility
@@ -421,36 +442,37 @@ export type PropertyPriority =
  * Ελληνικές ετικέτες για όλες τις enhanced καταστάσεις
  * Επεκτείνει τα υπάρχοντα PROPERTY_STATUS_LABELS με πλήρη συμβατότητα
  */
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const ENHANCED_STATUS_LABELS: Record<EnhancedPropertyStatus, string> = {
   // Βασικές καταστάσεις (από υπάρχον σύστημα)
   ...PROPERTY_STATUS_LABELS,
 
   // 🏨 Advanced Rental Statuses
-  'rental-only': 'Μόνο Ενοικίαση',
-  'long-term-rental': 'Μακροχρόνια Μίσθωση',
-  'short-term-rental': 'Βραχυχρόνια Μίσθωση',
+  'rental-only': 'properties.enhancedStatus.rentalOnly',
+  'long-term-rental': 'properties.enhancedStatus.longTermRental',
+  'short-term-rental': 'properties.enhancedStatus.shortTermRental',
 
   // 🔒 Advanced Reservation Statuses
-  'reserved-pending': 'Δεσμευμένο Εκκρεμές',
-  'contract-signed': 'Συμβόλαιο Υπογεγραμμένο',
-  'deposit-paid': 'Προκαταβολή Δεδομένη',
+  'reserved-pending': 'properties.enhancedStatus.reservedPending',
+  'contract-signed': 'properties.enhancedStatus.contractSigned',
+  'deposit-paid': 'properties.enhancedStatus.depositPaid',
 
   // 👑 Ownership Statuses
-  'company-owned': 'Εταιρικό',
-  'not-for-sale': 'Δεν Πωλείται',
-  'family-reserved': 'Οικογενειακό',
+  'company-owned': 'properties.enhancedStatus.companyOwned',
+  'not-for-sale': 'properties.enhancedStatus.notForSale',
+  'family-reserved': 'properties.enhancedStatus.familyReserved',
 
   // ⚡ Market Dynamics
-  'pre-launch': 'Προ-εκκίνηση',
-  'exclusive-listing': 'Αποκλειστική Διάθεση',
-  'price-reduced': 'Μειωμένη Τιμή',
-  'urgent-sale': 'Επείγουσα Πώληση',
+  'pre-launch': 'properties.enhancedStatus.preLaunch',
+  'exclusive-listing': 'properties.enhancedStatus.exclusiveListing',
+  'price-reduced': 'properties.enhancedStatus.priceReduced',
+  'urgent-sale': 'properties.enhancedStatus.urgentSale',
 
   // 🔧 Operational Statuses
-  'under-renovation': 'Υπό Ανακαίνιση',
-  'legal-issues': 'Νομικά Προβλήματα',
-  'inspection-required': 'Απαιτείται Επιθεώρηση',
-  'documentation-pending': 'Εκκρεμή Έγγραφα',
+  'under-renovation': 'properties.enhancedStatus.underRenovation',
+  'legal-issues': 'properties.enhancedStatus.legalIssues',
+  'inspection-required': 'properties.enhancedStatus.inspectionRequired',
+  'documentation-pending': 'properties.enhancedStatus.documentationPending',
 };
 
 /**
@@ -495,32 +517,35 @@ export const ENHANCED_STATUS_COLORS: Record<EnhancedPropertyStatus, string> = {
 // BUSINESS INTENT LABELS & COLORS
 // ============================================================================
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PROPERTY_INTENT_LABELS: Record<PropertyIntent, string> = {
-  'sale': 'Προς Πώληση',
-  'rental': 'Προς Ενοικίαση',
-  'both': 'Πώληση & Ενοικίαση',
-  'investment': 'Επενδυτικό',
-  'development': 'Υπό Ανάπτυξη',
-  'internal': 'Εσωτερική Χρήση',
-  'withdrawn': 'Αποσυρμένο',
+  'sale': 'properties.intent.sale',
+  'rental': 'properties.intent.rental',
+  'both': 'properties.intent.both',
+  'investment': 'properties.intent.investment',
+  'development': 'properties.intent.development',
+  'internal': 'properties.intent.internal',
+  'withdrawn': 'properties.intent.withdrawn',
 };
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const MARKET_AVAILABILITY_LABELS: Record<MarketAvailability, string> = {
-  'immediately-available': 'Άμεσα Διαθέσιμο',
-  'available-soon': 'Σύντομα Διαθέσιμο',
-  'conditionally-available': 'Υπό Προϋποθέσεις',
-  'reserved': 'Δεσμευμένο',
-  'occupied': 'Κατειλημμένο',
-  'off-market': 'Εκτός Αγοράς',
-  'not-available': 'Μη Διαθέσιμο',
+  'immediately-available': 'properties.availability.immediatelyAvailable',
+  'available-soon': 'properties.availability.availableSoon',
+  'conditionally-available': 'properties.availability.conditionallyAvailable',
+  'reserved': 'properties.availability.reserved',
+  'occupied': 'properties.availability.occupied',
+  'off-market': 'properties.availability.offMarket',
+  'not-available': 'properties.availability.notAvailable',
 };
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PROPERTY_PRIORITY_LABELS: Record<PropertyPriority, string> = {
-  'high': 'Υψηλή Προτεραιότητα',
-  'medium': 'Μέση Προτεραιότητα',
-  'low': 'Χαμηλή Προτεραιότητα',
-  'showcase': 'Showcase Property',
-  'hold': 'Κρατημένο',
+  'high': 'common.priority.high',
+  'medium': 'common.priority.medium',
+  'low': 'common.priority.low',
+  'showcase': 'properties.priority.showcase',
+  'hold': 'properties.priority.hold',
 };
 
 // ============================================================================
@@ -736,84 +761,92 @@ export const PROPERTY_BUILDING_TYPE_LABELS = {
 // ============================================================================
 
 // Phone Types
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PHONE_TYPE_LABELS = {
-  mobile: 'Κινητό',
-  home: 'Σπίτι',
-  work: 'Εργασία',
-  fax: 'Φαξ',
-  other: 'Άλλο'
+  mobile: 'communication.phoneTypes.mobile',
+  home: 'communication.phoneTypes.home',
+  work: 'communication.phoneTypes.work',
+  fax: 'communication.phoneTypes.fax',
+  other: 'communication.phoneTypes.other'
 } as const;
 
 // Email Types
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const EMAIL_TYPE_LABELS = {
-  personal: 'Προσωπικό',
-  work: 'Εργασία',
-  other: 'Άλλο'
+  personal: 'communication.emailTypes.personal',
+  work: 'communication.emailTypes.work',
+  other: 'communication.emailTypes.other'
 } as const;
 
 // Website Types
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const WEBSITE_TYPE_LABELS = {
-  personal: 'Προσωπική',
-  company: 'Εταιρική',
-  portfolio: 'Χαρτοφυλάκιο',
-  blog: 'Blog',
-  other: 'Άλλη'
+  personal: 'communication.websiteTypes.personal',
+  company: 'communication.websiteTypes.company',
+  portfolio: 'communication.websiteTypes.portfolio',
+  blog: 'communication.websiteTypes.blog',
+  other: 'communication.websiteTypes.other'
 } as const;
 
 // Social Media Types (usage context)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const SOCIAL_MEDIA_TYPE_LABELS = {
-  personal: 'Προσωπικό',
-  professional: 'Επαγγελματικό',
-  business: 'Επιχειρησιακό',
-  other: 'Άλλο'
+  personal: 'communication.socialMediaTypes.personal',
+  professional: 'communication.socialMediaTypes.professional',
+  business: 'communication.socialMediaTypes.business',
+  other: 'communication.socialMediaTypes.other'
 } as const;
 
 // Social Media Platforms
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const SOCIAL_PLATFORM_LABELS = {
-  linkedin: 'LinkedIn',
-  facebook: 'Facebook',
-  instagram: 'Instagram',
-  twitter: 'Twitter/X',
-  youtube: 'YouTube',
-  github: 'GitHub',
-  tiktok: 'TikTok',
-  whatsapp: 'WhatsApp',
-  telegram: 'Telegram',
-  other: 'Άλλη Πλατφόρμα'
+  linkedin: 'communication.platforms.linkedin',
+  facebook: 'communication.platforms.facebook',
+  instagram: 'communication.platforms.instagram',
+  twitter: 'communication.platforms.twitter',
+  youtube: 'communication.platforms.youtube',
+  github: 'communication.platforms.github',
+  tiktok: 'communication.platforms.tiktok',
+  whatsapp: 'communication.platforms.whatsapp',
+  telegram: 'communication.platforms.telegram',
+  other: 'communication.platforms.other'
 } as const;
 
 // Identity Document Types - Comprehensive Options
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const IDENTITY_TYPE_LABELS = {
-  id_card: 'Δελτίο Ταυτότητας',
-  identity_card: 'Δελτίο Ταυτότητας',
-  passport: 'Διαβατήριο',
-  afm: 'ΑΦΜ',
-  amka: 'ΑΜΚΑ',
-  license: 'Άδεια Οδήγησης',
-  drivers_license: 'Άδεια Οδήγησης',
-  other: 'Άλλο'
+  id_card: 'contacts.identity.types.idCard',
+  identity_card: 'contacts.identity.types.identityCard',
+  passport: 'contacts.identity.types.passport',
+  afm: 'contacts.identity.types.afm',
+  amka: 'contacts.identity.types.amka',
+  license: 'contacts.identity.types.license',
+  drivers_license: 'contacts.identity.types.driversLicense',
+  other: 'contacts.identity.types.other'
 } as const;
 
 // Professional Information Types
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PROFESSIONAL_TYPE_LABELS = {
-  company_phone: 'Τηλέφωνο Εταιρείας',
-  company_email: 'Email Εταιρείας',
-  company_website: 'Website Εταιρείας',
-  linkedin: 'LinkedIn',
-  position: 'Θέση Εργασίας',
-  department: 'Τμήμα',
-  other: 'Άλλο'
+  company_phone: 'contacts.professional.types.companyPhone',
+  company_email: 'contacts.professional.types.companyEmail',
+  company_website: 'contacts.professional.types.companyWebsite',
+  linkedin: 'contacts.professional.types.linkedin',
+  position: 'contacts.professional.types.position',
+  department: 'contacts.professional.types.department',
+  other: 'contacts.professional.types.other'
 } as const;
 
 // Address Types - Comprehensive Options
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const ADDRESS_TYPE_LABELS = {
-  home: 'Κατοικία',
-  work: 'Εργασία',
-  mailing: 'Αλληλογραφία',
-  billing: 'Χρέωση',
-  headquarters: 'Έδρα',
-  branch: 'Υποκατάστημα',
-  other: 'Άλλο'
+  home: 'contacts.address.types.home',
+  work: 'contacts.address.types.work',
+  mailing: 'contacts.address.types.mailing',
+  billing: 'contacts.address.types.billing',
+  headquarters: 'contacts.address.types.headquarters',
+  branch: 'contacts.address.types.branch',
+  other: 'contacts.address.types.other'
 } as const;
 
 // ============================================================================
@@ -827,16 +860,17 @@ export const ADDRESS_TYPE_LABELS = {
 // ============================================================================
 
 // Greek Company Legal Forms
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const COMPANY_LEGAL_FORM_LABELS = {
-  ae: 'Α.Ε. (Ανώνυμη Εταιρεία)',
-  epe: 'Ε.Π.Ε. (Εταιρεία Περιορισμένης Ευθύνης)',
-  ee: 'Ε.Ε. (Ετερόρρυθμη Εταιρεία)',
-  oe: 'Ο.Ε. (Ομόρρυθμη Εταιρεία)',
-  ikepe: 'Ι.Κ.Ε. (Ιδιωτική Κεφαλαιουχική Εταιρεία)',
-  ike: 'Ι.Κ.Ε. (Ιδιωτική Κεφαλαιουχική Εταιρεία)',
-  mono: 'Μονοπρόσωπη Ι.Κ.Ε.',
-  smpc: 'Α.Ε.Β.Ε. (Ανώνυμη Εταιρεία Βιομηχανικής Ερευνας)',
-  other: 'Άλλο'
+  ae: 'contacts.company.legalForms.ae',
+  epe: 'contacts.company.legalForms.epe',
+  ee: 'contacts.company.legalForms.ee',
+  oe: 'contacts.company.legalForms.oe',
+  ikepe: 'contacts.company.legalForms.ikepe',
+  ike: 'contacts.company.legalForms.ike',
+  mono: 'contacts.company.legalForms.mono',
+  smpc: 'contacts.company.legalForms.smpc',
+  other: 'contacts.company.legalForms.other'
 } as const;
 
 // ============================================================================
@@ -850,13 +884,14 @@ export const COMPANY_LEGAL_FORM_LABELS = {
 // ============================================================================
 
 // Trend Labels (used in sales/spaces statistics)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const TREND_LABELS = {
-  increase: 'Αύξηση',
-  decrease: 'Μείωση',
-  stable: 'Σταθερό',
-  improvement: 'Βελτίωση',
-  new: 'Νέο',
-  updated: 'Ενημερωμένο'
+  increase: 'common.trends.increase',
+  decrease: 'common.trends.decrease',
+  stable: 'common.trends.stable',
+  improvement: 'common.trends.improvement',
+  new: 'common.trends.new',
+  updated: 'common.trends.updated'
 } as const;
 
 // ============================================================================
@@ -870,15 +905,16 @@ export const TREND_LABELS = {
 // ============================================================================
 
 // Extended Property Type Variations (supplements existing PROPERTY_TYPE_LABELS)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const EXTENDED_PROPERTY_TYPE_LABELS = {
   ...PROPERTY_TYPE_LABELS,
-  'bedsit': 'Γκαρσονιέρα',
-  'apartment-2br': 'Διαμέρισμα 2Δ',
-  'apartment-3br': 'Διαμέρισμα 3Δ',
-  'apartment-4br': 'Διαμέρισμα 4Δ+',
+  'bedsit': 'properties.types.bedsit',
+  'apartment-2br': 'properties.types.apartment2br',
+  'apartment-3br': 'properties.types.apartment3br',
+  'apartment-4br': 'properties.types.apartment4br',
   // ✅ ENTERPRISE EXTENSION: Additional property types from CompactToolbar
-  'loft': 'Loft',
-  'penthouse': 'Penthouse'
+  'loft': 'properties.types.loft',
+  'penthouse': 'properties.types.penthouse'
 } as const;
 
 // ============================================================================
@@ -917,129 +953,137 @@ export const RISK_COMPLEXITY_LABELS = {
 // ============================================================================
 
 // 🏢 DROPDOWN PLACEHOLDER LABELS
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const DROPDOWN_PLACEHOLDERS = {
   // Company & Project Selection (DXF Viewer)
-  SELECT_COMPANY: '-- Επιλέξτε Εταιρεία --',
-  SELECT_PROJECT: '-- Επιλέξτε Έργο --',
-  SELECT_BUILDING: '-- Επιλέξτε Κτίριο --',
-  SELECT_UNIT: '-- Επιλέξτε Μονάδα --',
+  SELECT_COMPANY: 'common.dropdowns.selectCompany',
+  SELECT_PROJECT: 'common.dropdowns.selectProject',
+  SELECT_BUILDING: 'common.dropdowns.selectBuilding',
+  SELECT_UNIT: 'common.dropdowns.selectUnit',
 
   // Contact & Client Selection
-  SELECT_CLIENT: 'Επιλογή πελάτη...',
-  SELECT_CONTACT: 'Επιλογή επαφής...',
+  SELECT_CLIENT: 'common.dropdowns.selectClient',
+  SELECT_CONTACT: 'common.dropdowns.selectContact',
 
   // File & Import Operations
-  SELECT_FILE: 'Επιλογή αρχείου',
-  SELECT_ENCODING: 'Επιλέξτε κωδικοποίηση',
+  SELECT_FILE: 'common.dropdowns.selectFile',
+  SELECT_ENCODING: 'common.dropdowns.selectEncoding',
 
   // Property & Building Selection
-  SELECT_FLOOR: 'Επιλογή ορόφου...',
-  SELECT_TYPE: 'Επιλογή τύπου',
-  SELECT_STATUS: 'Επιλογή κατάστασης...',
+  SELECT_FLOOR: 'common.dropdowns.selectFloor',
+  SELECT_TYPE: 'common.dropdowns.selectType',
+  SELECT_STATUS: 'common.dropdowns.selectStatus',
 
   // CRM & Opportunity Management
-  SELECT_STAGE: 'Επιλογή σταδίου...',
+  SELECT_STAGE: 'common.dropdowns.selectStage',
 
   // Generic Template (για LabeledSelect component)
-  GENERIC_SELECT: 'Επιλέξτε'  // Χρησιμοποιείται ως: `${GENERIC_SELECT} ${label.toLowerCase()}`
+  GENERIC_SELECT: 'common.dropdowns.select'
 } as const;
 
 // 🔄 PROCESS STEP LABELS (DXF Import & Project Creation)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PROCESS_STEP_LABELS = {
   // Project Creation Steps
-  STEP_1_COMPANY: 'Βήμα 1: Επιλογή Εταιρείας',
-  STEP_2_PROJECT: 'Βήμα 2: Επιλογή Έργου',
-  STEP_3_BUILDING: 'Βήμα 3: Επιλογή Κτιρίου',
-  STEP_4_UNIT: 'Βήμα 4: Επιλογή Μονάδας',
+  STEP_1_COMPANY: 'dxfViewer.steps.selectCompany',
+  STEP_2_PROJECT: 'dxfViewer.steps.selectProject',
+  STEP_3_BUILDING: 'dxfViewer.steps.selectBuilding',
+  STEP_4_UNIT: 'dxfViewer.steps.selectUnit',
 
   // Import Process Steps
-  FILE_SELECTION: 'Επιλογή Αρχείου',
-  ENCODING_SELECTION: 'Επιλογή Κωδικοποίησης',
-  DESTINATION_SELECTION: 'Επιλογή Προορισμού'
+  FILE_SELECTION: 'dxfViewer.steps.fileSelection',
+  ENCODING_SELECTION: 'dxfViewer.steps.encodingSelection',
+  DESTINATION_SELECTION: 'dxfViewer.steps.destinationSelection'
 } as const;
 
 // 🏗️ DXF DESTINATION LABELS (HierarchicalDestinationSelector)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const DXF_DESTINATION_LABELS = {
-  GENERAL_PLAN: 'Γενική Κάτοψη',
-  PARKING_SPOTS: 'Θέσεις Στάθμευσης',
-  STORAGE_AREAS: 'Αποθήκες',
-  BUILDING_PLAN: 'Κάτοψη Κτιρίου',
-  UNIT_PLAN: 'Κάτοψη Μονάδας'
+  GENERAL_PLAN: 'dxfViewer.destinations.generalPlan',
+  PARKING_SPOTS: 'dxfViewer.destinations.parkingSpots',
+  STORAGE_AREAS: 'dxfViewer.destinations.storageAreas',
+  BUILDING_PLAN: 'dxfViewer.destinations.buildingPlan',
+  UNIT_PLAN: 'dxfViewer.destinations.unitPlan'
 } as const;
 
 // 📏 MEASUREMENT UNIT LABELS (CalibrationStep & DXF Viewer)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const MEASUREMENT_UNIT_LABELS = {
-  MILLIMETERS: 'χιλιοστά',
-  CENTIMETERS: 'εκατοστά',
-  METERS: 'μέτρα',
-  INCHES: 'ίντσες',
-  FEET: 'πόδια'
+  MILLIMETERS: 'common.units.millimeters',
+  CENTIMETERS: 'common.units.centimeters',
+  METERS: 'common.units.meters',
+  INCHES: 'common.units.inches',
+  FEET: 'common.units.feet'
 } as const;
 
 // 🔗 RELATIONSHIP STATUS LABELS (Contact Relationships)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const RELATIONSHIP_STATUS_LABELS = {
-  ACTIVE: 'Ενεργή',
-  INACTIVE: 'Αδρανής',
-  PENDING: 'Εκκρεμής',
-  TERMINATED: 'Τερματισμένη',
-  SUSPENDED: 'Αναστολή'
+  ACTIVE: 'contacts.relationships.status.active',
+  INACTIVE: 'contacts.relationships.status.inactive',
+  PENDING: 'contacts.relationships.status.pending',
+  TERMINATED: 'contacts.relationships.status.terminated',
+  SUSPENDED: 'contacts.relationships.status.suspended'
 } as const;
 
 // 💼 CRM & OPPORTUNITY LABELS
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const CRM_LABELS = {
   // Opportunity stages
-  LEAD: 'Προοπτική',
-  PROPOSAL: 'Πρόταση',
-  NEGOTIATION: 'Διαπραγμάτευση',
-  CLOSING: 'Κλείσιμο',
-  WON: 'Κέρδος',
-  LOST: 'Απώλεια',
+  LEAD: 'crm.stages.lead',
+  PROPOSAL: 'crm.stages.proposal',
+  NEGOTIATION: 'crm.stages.negotiation',
+  CLOSING: 'crm.stages.closing',
+  WON: 'crm.stages.won',
+  LOST: 'crm.stages.lost',
 
   // Contact types
-  INDIVIDUAL: 'Φυσικό Πρόσωπο',
-  COMPANY: 'Εταιρεία',
-  ORGANIZATION: 'Οργανισμός'
+  INDIVIDUAL: 'contacts.types.individual',
+  COMPANY: 'contacts.types.company',
+  ORGANIZATION: 'contacts.types.organization'
 } as const;
 
 // 🏠 PROPERTY VIEWER LABELS (Floor Selector, Connection Controls)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PROPERTY_VIEWER_LABELS = {
-  ALL_FLOORS: 'Όλοι οι όροφοι',
-  GROUND_FLOOR: 'Ισόγειο',
-  BASEMENT: 'Υπόγειο',
+  ALL_FLOORS: 'building.floors.allFloors',
+  GROUND_FLOOR: 'building.floors.ground',
+  BASEMENT: 'building.floors.basement',
 
   // Connection types
-  ELECTRICAL: 'Ηλεκτρολογικά',
-  PLUMBING: 'Υδραυλικά',
-  HVAC: 'Κλιματισμός',
-  INTERNET: 'Διαδίκτυο',
-  PHONE: 'Τηλέφωνο'
+  ELECTRICAL: 'building.connections.electrical',
+  PLUMBING: 'building.connections.plumbing',
+  HVAC: 'building.connections.hvac',
+  INTERNET: 'building.connections.internet',
+  PHONE: 'building.connections.phone'
 } as const;
 
 // 🏢 STORAGE TYPE & SIZE LABELS (migrated from storageFiltersConfig.ts)
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const STORAGE_LABELS = {
   // Storage sizes
-  LARGE: 'Μεγάλες',
-  SMALL: 'Μικρές',
+  LARGE: 'storage.sizes.large',
+  SMALL: 'storage.sizes.small',
 
   // Storage locations
-  BASEMENT_STORAGE: 'Υπόγειες',
-  GROUND_STORAGE: 'Ισόγειες',
-  SPECIAL_STORAGE: 'Ειδικές',
+  BASEMENT_STORAGE: 'storage.locations.basement',
+  GROUND_STORAGE: 'storage.locations.ground',
+  SPECIAL_STORAGE: 'storage.locations.special',
 
   // Building labels (generic)
-  BUILDING_A: 'Κτίριο Α',
-  BUILDING_B: 'Κτίριο Β',
-  BUILDING_C: 'Κτίριο Γ',
-  BUILDING_D: 'Κτίριο Δ',
-  BUILDING_E: 'Κτίριο Ε',
+  BUILDING_A: 'building.names.buildingA',
+  BUILDING_B: 'building.names.buildingB',
+  BUILDING_C: 'building.names.buildingC',
+  BUILDING_D: 'building.names.buildingD',
+  BUILDING_E: 'building.names.buildingE',
 
   // Floor labels (detailed)
-  BASEMENT_MINUS_2: 'Υπόγειο -2',
-  BASEMENT_MINUS_1: 'Υπόγειο -1',
-  GROUND_FLOOR: 'Ισόγειο',
-  FIRST_FLOOR: '1ος Όροφος',
-  SECOND_FLOOR: '2ος Όροφος',
-  OTHER_FLOORS: 'Λοιπά'
+  BASEMENT_MINUS_2: 'building.floors.basementMinus2',
+  BASEMENT_MINUS_1: 'building.floors.basementMinus1',
+  GROUND_FLOOR: 'building.floors.ground',
+  FIRST_FLOOR: 'building.floors.floor1',
+  SECOND_FLOOR: 'building.floors.floor2',
+  OTHER_FLOORS: 'building.floors.other'
 } as const;
 
 // 🔧 UTILITY FUNCTIONS για Dropdown Label Access
@@ -1134,166 +1178,181 @@ export const resolveLegacyDropdownString = (hardcodedString: string): string => 
 
 /**
  * Gender Options - Complete Coverage
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const GENDER_LABELS = {
-  male: 'Άντρας',
-  female: 'Γυναίκα',
-  other: 'Άλλο',
-  prefer_not_to_say: 'Προτιμώ να μη το δηλώσω'
+  male: 'contacts.options.gender.male',
+  female: 'contacts.options.gender.female',
+  other: 'contacts.options.gender.other',
+  prefer_not_to_say: 'contacts.options.gender.preferNotToSay'
 } as const;
 
 // Note: IDENTITY_TYPE_LABELS merged with main definition above (line ~727)
 
 /**
  * Country Labels (Common ones for Greece-focused app)
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const COUNTRY_LABELS = {
-  GR: 'Ελλάδα',
-  CY: 'Κύπρος',
-  US: 'ΗΠΑ',
-  DE: 'Γερμανία',
-  FR: 'Γαλλία',
-  IT: 'Ιταλία',
-  ES: 'Ισπανία',
-  UK: 'Ηνωμένο Βασίλειο',
-  AU: 'Αυστραλία',
-  CA: 'Καναδάς',
-  OTHER: 'Άλλη χώρα'
+  GR: 'common.countries.greece',
+  CY: 'common.countries.cyprus',
+  US: 'common.countries.usa',
+  DE: 'common.countries.germany',
+  FR: 'common.countries.france',
+  IT: 'common.countries.italy',
+  ES: 'common.countries.spain',
+  UK: 'common.countries.uk',
+  AU: 'common.countries.australia',
+  CA: 'common.countries.canada',
+  OTHER: 'common.countries.other'
 } as const;
 
 /**
  * Currency Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const CURRENCY_LABELS = {
-  EUR: 'EUR (Ευρώ)',
-  USD: 'USD (Δολάρια ΗΠΑ)',
-  GBP: 'GBP (Λίρες Στερλίνες)'
+  EUR: 'options.currencies.eur',
+  USD: 'options.currencies.usd',
+  GBP: 'options.currencies.gbp'
 } as const;
 
 // Note: ADDRESS_TYPE_LABELS merged with main definition above (line ~750)
 
 /**
  * Shareholder Types
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const SHAREHOLDER_TYPE_LABELS = {
-  individual: 'Φυσικό Πρόσωπο',
-  legal: 'Νομικό Πρόσωπο'
+  individual: 'options.shareholderTypes.individual',
+  legal: 'options.shareholderTypes.legal'
 } as const;
 
 /**
  * Document Types
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DOCUMENT_TYPE_LABELS = {
-  certificate: 'Πιστοποιητικό',
-  announcement: 'Ανακοίνωση',
-  registration: 'Έγγραφο Σύστασης',
-  amendment: 'Τροποποίηση Καταστατικού'
+  certificate: 'contacts.company.documentTypes.certificate',
+  announcement: 'contacts.company.documentTypes.announcement',
+  registration: 'contacts.company.documentTypes.registration',
+  amendment: 'contacts.company.documentTypes.amendment'
 } as const;
 
 /**
  * Board Types for company decisions
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const BOARD_TYPE_LABELS = {
-  general_assembly: 'Γενική Συνέλευση',
-  board_directors: 'Διοικητικό Συμβούλιο',
-  supervisory_board: 'Εποπτικό Συμβούλιο'
+  general_assembly: 'contacts.company.boardTypes.generalAssembly',
+  board_directors: 'contacts.company.boardTypes.boardDirectors',
+  supervisory_board: 'contacts.company.boardTypes.supervisoryBoard'
 } as const;
 
 /**
  * Representative Positions
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const REPRESENTATIVE_POSITION_LABELS = {
-  ceo: 'Διευθύνων Σύμβουλος',
-  president: 'Πρόεδρος Δ.Σ.',
-  manager: 'Διαχειριστής',
-  legal_rep: 'Νόμιμος Εκπρόσωπος',
-  secretary: 'Γραμματέας'
+  ceo: 'contacts.company.positions.ceo',
+  president: 'contacts.company.positions.president',
+  manager: 'contacts.company.positions.manager',
+  legal_rep: 'contacts.company.positions.legalRep',
+  secretary: 'contacts.company.positions.secretary'
 } as const;
 
 /**
  * ΓΕΜΗ Status Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const GEMI_STATUS_LABELS = {
-  active: 'Ενεργή',
-  inactive: 'Ανενεργή',
-  suspended: 'Αναστολή Λειτουργίας',
-  dissolution: 'Σε Διαδικασία Λύσης',
-  dissolved: 'Λυθείσα',
-  bankruptcy: 'Σε Πτώχευση',
-  liquidation: 'Υπό Εκκαθάριση'
+  active: 'options.gemiStatuses.active',
+  inactive: 'options.gemiStatuses.inactive',
+  suspended: 'options.gemiStatuses.suspended',
+  dissolution: 'options.gemiStatuses.dissolution',
+  dissolved: 'options.gemiStatuses.dissolved',
+  bankruptcy: 'options.gemiStatuses.bankruptcy',
+  liquidation: 'options.gemiStatuses.liquidation'
 } as const;
 
 /**
  * Service Categories
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const SERVICE_CATEGORY_LABELS = {
-  ministry: 'Υπουργείο',
-  region: 'Περιφέρεια',
-  municipality: 'Δήμος',
-  public_entity: 'Δημόσιος Οργανισμός',
-  independent_authority: 'Ανεξάρτητη Αρχή',
-  university: 'Πανεπιστήμιο',
-  hospital: 'Νοσοκομείο',
-  school: 'Εκπαιδευτικό Ίδρυμα',
-  other: 'Άλλο'
+  ministry: 'options.serviceCategories.ministry',
+  region: 'options.serviceCategories.region',
+  municipality: 'options.serviceCategories.municipality',
+  public_entity: 'options.serviceCategories.publicEntity',
+  independent_authority: 'options.serviceCategories.independentAuthority',
+  university: 'options.serviceCategories.university',
+  hospital: 'options.serviceCategories.hospital',
+  school: 'options.serviceCategories.school',
+  other: 'options.serviceCategories.other'
 } as const;
 
 /**
  * Legal Status Labels για δημόσιες υπηρεσίες
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const LEGAL_STATUS_LABELS = {
-  npdd: 'Νομικό Πρόσωπο Δημοσίου Δικαίου (Ν.Π.Δ.Δ.)',
-  npid: 'Νομικό Πρόσωπο Ιδιωτικού Δικαίου (Ν.Π.Ι.Δ.)',
-  public_service: 'Δημόσια Υπηρεσία',
-  independent_authority: 'Ανεξάρτητη Αρχή',
-  decentralized_admin: 'Αποκεντρωμένη Διοίκηση'
+  npdd: 'options.legalStatuses.npdd',
+  npid: 'options.legalStatuses.npid',
+  public_service: 'options.legalStatuses.publicService',
+  independent_authority: 'options.legalStatuses.independentAuthority',
+  decentralized_admin: 'options.legalStatuses.decentralizedAdmin'
 } as const;
 
 /**
  * Boolean Options (Yes/No)
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const BOOLEAN_LABELS = {
-  yes: 'Ναι',
-  no: 'Όχι'
+  yes: 'common.boolean.yes',
+  no: 'common.boolean.no'
 } as const;
 
 /**
  * Encoding Options for DXF imports
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const ENCODING_LABELS = {
-  'windows-1253': 'Windows-1253 (Greek)',
-  'UTF-8': 'UTF-8 (Προεπιλογή)',
-  'windows-1252': 'Windows-1252 (Western)',
-  'ISO-8859-7': 'ISO-8859-7 (Greek)'
+  'windows-1253': 'dxfViewer.encoding.windows1253',
+  'UTF-8': 'dxfViewer.encoding.utf8',
+  'windows-1252': 'dxfViewer.encoding.windows1252',
+  'ISO-8859-7': 'dxfViewer.encoding.iso88597'
 } as const;
 
 /**
  * Contact Business Types - για CompactToolbar configs
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const CONTACT_BUSINESS_TYPE_LABELS = {
-  customer: 'Πελάτες',
-  supplier: 'Προμηθευτές',
-  agent: 'Μεσίτες',
-  contractor: 'Εργολάβοι'
+  customer: 'contacts.businessTypes.customer',
+  supplier: 'contacts.businessTypes.supplier',
+  agent: 'contacts.businessTypes.agent',
+  contractor: 'contacts.businessTypes.contractor'
 } as const;
 
 /**
  * Availability Status Labels - για CompactToolbar configs
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const AVAILABILITY_STATUS_LABELS = {
-  unavailable: 'Μη διαθέσιμες',
-  available: 'Διαθέσιμες',
-  occupied: 'Κατειλημμένες'
+  unavailable: 'common.availability.unavailable',
+  available: 'common.availability.available',
+  occupied: 'common.availability.occupied'
 } as const;
 
 /**
  * Building Name Filter Labels - για CompactToolbar configs
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const BUILDING_NAME_FILTER_LABELS = {
-  NAME_A_TO_Z: 'Όνομα A-Z',
-  NAME_Z_TO_A: 'Όνομα Z-A',
-  CONTAINS_TOWER: 'Περιέχει "Πύργο"',
-  CONTAINS_COMPLEX: 'Περιέχει "Συγκρότημα"'
+  NAME_A_TO_Z: 'filters.sorting.nameAZ',
+  NAME_Z_TO_A: 'filters.sorting.nameZA',
+  CONTAINS_TOWER: 'filters.building.containsTower',
+  CONTAINS_COMPLEX: 'filters.building.containsComplex'
 } as const;
 
 // ============================================================================
@@ -1308,78 +1367,84 @@ export const BUILDING_NAME_FILTER_LABELS = {
 
 /**
  * DXF Selection Tool Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_SELECTION_TOOL_LABELS = {
-  SELECT: 'Επιλογή',
-  PAN: 'Μετακίνηση'
+  SELECT: 'tools.select',
+  PAN: 'tools.pan'
 } as const;
 
 /**
  * DXF Drawing Tool Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_DRAWING_TOOL_LABELS = {
-  LINE: 'Γραμμή',
-  RECTANGLE: 'Ορθογώνιο',
-  CIRCLE_RADIUS: 'Κύκλος (Ακτίνα)',
-  CIRCLE_DIAMETER: 'Κύκλος (Διάμετρος)',
-  CIRCLE_2P_DIAMETER: '2P – Διάμετρος',
-  CIRCLE_3P: '3P – Κύκλος',
-  CIRCLE_CHORD_SAGITTA: 'Χορδή + Βέλος',
-  CIRCLE_2P_RADIUS: '2P + R',
-  CIRCLE_BEST_FIT: 'N Σημεία (Best-Fit)',
-  POLYLINE: 'Πολυγραμμή',
-  POLYGON: 'Πολύγωνο',
-  LAYERING: 'Layering'
+  LINE: 'tools.line',
+  RECTANGLE: 'tools.rectangle',
+  CIRCLE_RADIUS: 'tools.circleRadius',
+  CIRCLE_DIAMETER: 'tools.circleDiameter',
+  CIRCLE_2P_DIAMETER: 'tools.circle2pDiameter',
+  CIRCLE_3P: 'tools.circle3p',
+  CIRCLE_CHORD_SAGITTA: 'tools.circleChordSagitta',
+  CIRCLE_2P_RADIUS: 'tools.circle2pRadius',
+  CIRCLE_BEST_FIT: 'tools.circleBestFit',
+  POLYLINE: 'tools.polyline',
+  POLYGON: 'tools.polygon',
+  LAYERING: 'tools.layering'
 } as const;
 
 /**
  * DXF Editing Tool Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_EDITING_TOOL_LABELS = {
-  GRIP_EDIT: 'Επεξεργασία',
-  MOVE: 'Μετακίνηση',
-  COPY: 'Αντιγραφή',
-  DELETE: 'Διαγραφή'
+  GRIP_EDIT: 'tools.gripEdit',
+  MOVE: 'tools.move',
+  COPY: 'tools.copy',
+  DELETE: 'tools.delete'
 } as const;
 
 /**
  * DXF Measurement Tool Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_MEASUREMENT_TOOL_LABELS = {
-  MEASURE_DISTANCE: 'Μέτρηση Απόστασης',
-  MEASURE_AREA: 'Μέτρηση Εμβαδού',
-  MEASURE_ANGLE: 'Μέτρηση Γωνίας',
-  MEASURE_ANGLE_BASIC: 'Μέτρηση Γωνίας (Βασική)',
-  MEASURE_ANGLE_LINE_ARC: 'Γραμμή + Τόξο/Κύκλο',
-  MEASURE_ANGLE_TWO_ARCS: 'Δύο Τόξα/Κύκλοι',
-  MEASURE_ANGLE_MEASUREGEOM: 'Μετρητής MEASUREGEOM',
-  MEASURE_ANGLE_CONSTRAINT: 'Παραμετρικό Angle Constraint'
+  MEASURE_DISTANCE: 'tools.measureDistance',
+  MEASURE_AREA: 'tools.measureArea',
+  MEASURE_ANGLE: 'tools.measureAngle',
+  MEASURE_ANGLE_BASIC: 'tools.measureAngleBasic',
+  MEASURE_ANGLE_LINE_ARC: 'tools.measureAngleLineArc',
+  MEASURE_ANGLE_TWO_ARCS: 'tools.measureAngleTwoArcs',
+  MEASURE_ANGLE_MEASUREGEOM: 'tools.measureAngleMeasuregeom',
+  MEASURE_ANGLE_CONSTRAINT: 'tools.measureAngleConstraint'
 } as const;
 
 /**
  * DXF Zoom Tool Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_ZOOM_TOOL_LABELS = {
-  ZOOM_IN: 'Zoom In',
-  ZOOM_OUT: 'Zoom Out',
-  ZOOM_WINDOW: 'Zoom Window',
-  ZOOM_EXTENTS: 'Zoom Extents'
+  ZOOM_IN: 'tools.zoomIn',
+  ZOOM_OUT: 'tools.zoomOut',
+  ZOOM_WINDOW: 'tools.zoomWindow',
+  ZOOM_EXTENTS: 'tools.zoomExtents'
 } as const;
 
 /**
  * DXF Utility Tool Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_UTILITY_TOOL_LABELS = {
-  UNDO: 'Αναίρεση',
-  REDO: 'Επανάληψη',
-  CURSOR_SETTINGS: 'Ρυθμίσεις Cursor',
-  FIT_TO_VIEW: 'Fit to View',
-  EXPORT: 'Export',
-  RUN_TESTS: 'Run Tests',
+  UNDO: 'tools.undo',
+  REDO: 'tools.redo',
+  CURSOR_SETTINGS: 'tools.cursorSettings',
+  FIT_TO_VIEW: 'tools.fitToView',
+  EXPORT: 'tools.export',
+  RUN_TESTS: 'tools.runTests',
   // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
-  TOGGLE_PERF: 'Performance',
+  TOGGLE_PERF: 'tools.togglePerf',
   // 🏢 ENTERPRISE: PDF Background Controls (Independent pan/zoom/rotation)
-  PDF_BACKGROUND: 'PDF Background'
+  PDF_BACKGROUND: 'tools.pdfBackground'
 } as const;
 
 // ============================================================================
@@ -1394,62 +1459,68 @@ export const DXF_UTILITY_TOOL_LABELS = {
 
 /**
  * Personal Information Form Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const PERSONAL_INFO_FIELD_LABELS = {
-  FIRST_NAME: 'Όνομα',
-  LAST_NAME: 'Επώνυμο',
-  FATHER_NAME: 'Πατρώνυμο',
-  MOTHER_NAME: 'Μητρώνυμο',
-  BIRTH_DATE: 'Ημερομηνία Γέννησης',
-  BIRTH_COUNTRY: 'Χώρα Γέννησης',
-  GENDER: 'Φύλο'
+  FIRST_NAME: 'individual.fields.firstName',
+  LAST_NAME: 'individual.fields.lastName',
+  FATHER_NAME: 'individual.fields.fatherName',
+  MOTHER_NAME: 'individual.fields.motherName',
+  BIRTH_DATE: 'individual.fields.birthDate',
+  BIRTH_COUNTRY: 'individual.fields.birthCountry',
+  GENDER: 'individual.fields.gender'
 } as const;
 
 /**
  * Identity Document Form Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const IDENTITY_DOCUMENT_FIELD_LABELS = {
-  AMKA: 'ΑΜΚΑ',
-  DOCUMENT_TYPE: 'Τύπος Εγγράφου',
-  DOCUMENT_ISSUER: 'Εκδούσα Αρχή',
-  DOCUMENT_NUMBER: 'Αριθμός Εγγράφου',
-  DOCUMENT_ISSUE_DATE: 'Ημερομηνία Έκδοσης',
-  DOCUMENT_EXPIRY_DATE: 'Ημερομηνία Λήξης'
+  AMKA: 'individual.fields.amka',
+  DOCUMENT_TYPE: 'individual.fields.documentType',
+  DOCUMENT_ISSUER: 'individual.fields.documentIssuer',
+  DOCUMENT_NUMBER: 'individual.fields.documentNumber',
+  DOCUMENT_ISSUE_DATE: 'individual.fields.documentIssueDate',
+  DOCUMENT_EXPIRY_DATE: 'individual.fields.documentExpiryDate'
 } as const;
 
 /**
  * Tax Information Form Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const TAX_INFO_FIELD_LABELS = {
-  VAT_NUMBER: 'ΑΦΜ',
-  TAX_OFFICE: 'ΔΟΥ'
+  VAT_NUMBER: 'individual.fields.vatNumber',
+  TAX_OFFICE: 'individual.fields.taxOffice'
 } as const;
 
 /**
  * Professional Information Form Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const PROFESSIONAL_INFO_FIELD_LABELS = {
-  PROFESSION: 'Επάγγελμα',
-  SPECIALTY: 'Ειδικότητα',
-  EMPLOYER: 'Επιχείρηση/Εργοδότης',
-  POSITION: 'Θέση/Ρόλος'
+  PROFESSION: 'individual.fields.profession',
+  SPECIALTY: 'individual.fields.specialty',
+  EMPLOYER: 'individual.fields.employer',
+  POSITION: 'individual.fields.position'
 } as const;
 
 /**
  * Address Information Form Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const ADDRESS_INFO_FIELD_LABELS = {
-  STREET: 'Οδός',
-  STREET_NUMBER: 'Αριθμός',
-  CITY: 'Πόλη',
-  POSTAL_CODE: 'Τ.Κ.'
+  STREET: 'individual.fields.street',
+  STREET_NUMBER: 'individual.fields.streetNumber',
+  CITY: 'individual.fields.city',
+  POSTAL_CODE: 'individual.fields.postalCode'
 } as const;
 
 /**
  * Contact Information Form Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const CONTACT_INFO_FIELD_LABELS = {
-  COMMUNICATION: 'Επικοινωνία'
+  COMMUNICATION: 'fields.communication'
 } as const;
 
 // ============================================================================
@@ -1464,41 +1535,45 @@ export const CONTACT_INFO_FIELD_LABELS = {
 
 /**
  * DXF Settings Tab Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_SETTINGS_TAB_LABELS = {
-  DRAWING: 'Σχεδίαση',
-  MEASUREMENTS: 'Μετρήσεις',
-  DRAFT: 'Προσχεδίαση',
-  COMPLETION: 'Ολοκλήρωση',
-  HOVER: 'Hover',
-  SELECTION: 'Επιλογή'
+  DRAWING: 'dxfViewer.settings.tabs.drawing',
+  MEASUREMENTS: 'dxfViewer.settings.tabs.measurements',
+  DRAFT: 'dxfViewer.settings.tabs.draft',
+  COMPLETION: 'dxfViewer.settings.tabs.completion',
+  HOVER: 'dxfViewer.settings.tabs.hover',
+  SELECTION: 'dxfViewer.settings.tabs.selection'
 } as const;
 
 /**
  * DXF Settings Override Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_SETTINGS_OVERRIDE_LABELS = {
-  OVERRIDE_GLOBAL_SETTINGS: 'Παράκαμψη Γενικών Ρυθμίσεων'
+  OVERRIDE_GLOBAL_SETTINGS: 'dxfViewer.settings.overrideGlobalSettings'
 } as const;
 
 /**
  * DXF Drawing Tool Labels (Simple - without context)
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_DRAWING_SIMPLE_LABELS = {
-  LINE: 'Γραμμή',
-  RECTANGLE: 'Ορθογώνιο',
-  CIRCLE: 'Κύκλος',
-  POLYLINE: 'Πολυγραμμή',
-  POLYGON: 'Πολύγωνο'
+  LINE: 'dxfViewer.tools.line',
+  RECTANGLE: 'dxfViewer.tools.rectangle',
+  CIRCLE: 'dxfViewer.tools.circle',
+  POLYLINE: 'dxfViewer.tools.polyline',
+  POLYGON: 'dxfViewer.tools.polygon'
 } as const;
 
 /**
  * DXF Measurement Tool Labels (Simple)
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_MEASUREMENT_SIMPLE_LABELS = {
-  DISTANCE: 'Απόσταση',
-  AREA: 'Εμβαδόν',
-  ANGLE: 'Γωνία'
+  DISTANCE: 'dxfViewer.measurements.distance',
+  AREA: 'dxfViewer.measurements.area',
+  ANGLE: 'dxfViewer.measurements.angle'
 } as const;
 
 // ============================================================================
@@ -1513,41 +1588,45 @@ export const DXF_MEASUREMENT_SIMPLE_LABELS = {
 
 /**
  * Company Basic Information Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const COMPANY_BASIC_INFO_LABELS = {
-  COMPANY_NAME: 'Επωνυμία Εταιρείας',
-  TRADE_NAME: 'Διακριτικός Τίτλος',
-  LEGAL_FORM: 'Νομική Μορφή'
+  COMPANY_NAME: 'contacts.company.fields.companyName',
+  TRADE_NAME: 'contacts.company.fields.tradeName',
+  LEGAL_FORM: 'contacts.company.fields.legalForm'
 } as const;
 
 /**
  * GEMI Information Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const COMPANY_GEMI_INFO_LABELS = {
-  GEMI_NUMBER: 'Αριθμός ΓΕΜΗ',
-  GEMI_STATUS: 'Κατάσταση ΓΕΜΗ',
-  CHAMBER: 'Επιμελητήριο',
-  ACTIVITY_CODE_KAD: 'Κωδικός Δραστηριότητας (ΚΑΔ)',
-  ACTIVITY_DESCRIPTION: 'Περιγραφή Δραστηριότητας'
+  GEMI_NUMBER: 'contacts.company.fields.gemiNumber',
+  GEMI_STATUS: 'contacts.company.fields.gemiStatus',
+  CHAMBER: 'contacts.company.fields.chamber',
+  ACTIVITY_CODE_KAD: 'contacts.company.fields.activityCodeKad',
+  ACTIVITY_DESCRIPTION: 'contacts.company.fields.activityDescription'
 } as const;
 
 /**
  * Company Contact Information Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const COMPANY_CONTACT_INFO_LABELS = {
-  PHONE_CENTRAL: 'Τηλέφωνο Κεντρικής',
-  EMAIL_CONTACT: 'E-mail Επικοινωνίας',
-  WEBSITE: 'Ιστοσελίδα'
+  PHONE_CENTRAL: 'contacts.company.fields.phoneCentral',
+  EMAIL_CONTACT: 'contacts.company.fields.emailContact',
+  WEBSITE: 'contacts.company.fields.website'
 } as const;
 
 /**
  * GEMI Status Option Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const COMPANY_GEMI_STATUS_OPTIONS = {
-  ACTIVE: 'Ενεργή',
-  INACTIVE: 'Ανενεργή',
-  SUSPENDED: 'Αναστολή Λειτουργίας',
-  DISSOLUTION: 'Σε Διαδικασία Λύσης'
+  ACTIVE: 'options.gemiStatuses.active',
+  INACTIVE: 'options.gemiStatuses.inactive',
+  SUSPENDED: 'options.gemiStatuses.suspended',
+  DISSOLUTION: 'options.gemiStatuses.dissolution'
 } as const;
 
 // ============================================================================
@@ -1562,22 +1641,26 @@ export const COMPANY_GEMI_STATUS_OPTIONS = {
 
 /**
  * Service Administrative Information Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+ * 🔧 FIX: Added .label suffix to match nested translation structure
  */
 export const SERVICE_ADMINISTRATIVE_INFO_LABELS = {
-  LEGAL_STATUS: 'Νομικό Καθεστώς',
-  ESTABLISHMENT_LAW: 'Νόμος Ίδρυσης',
-  HEAD_TITLE: 'Τίτλος Προϊσταμένου',
-  HEAD_NAME: 'Όνομα Προϊσταμένου'
+  LEGAL_STATUS: 'contacts.service.fields.legalStatus.label',
+  ESTABLISHMENT_LAW: 'contacts.service.fields.establishmentLaw.label',
+  HEAD_TITLE: 'contacts.service.fields.headTitle.label',
+  HEAD_NAME: 'contacts.service.fields.headName.label'
 } as const;
 
 /**
  * Service Responsibilities Field Labels
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+ * 🔧 FIX: Added .label suffix to match nested translation structure
  */
 export const SERVICE_RESPONSIBILITIES_LABELS = {
-  MAIN_RESPONSIBILITIES: 'Κύριες Αρμοδιότητες',
-  CITIZEN_SERVICES: 'Υπηρεσίες προς Πολίτες',
-  ONLINE_SERVICES: 'Ηλεκτρονικές Υπηρεσίες',
-  SERVICE_HOURS: 'Ώρες Εξυπηρέτησης'
+  MAIN_RESPONSIBILITIES: 'contacts.service.fields.mainResponsibilities.label',
+  CITIZEN_SERVICES: 'contacts.service.fields.citizenServices.label',
+  ONLINE_SERVICES: 'contacts.service.fields.onlineServices.label',
+  SERVICE_HOURS: 'contacts.service.fields.serviceHours.label'
 } as const;
 
 // ============================================================================
@@ -1594,19 +1677,21 @@ export const SERVICE_RESPONSIBILITIES_LABELS = {
  * Parking Table Column Labels
  */
 export const PARKING_TABLE_COLUMN_LABELS = {
-  CODE: 'Κωδικός',
-  TYPE: 'Τύπος',
-  PROPERTY_CODE: 'Ακίνητο',
-  LEVEL: 'Επίπεδο',
-  AREA: 'τ.μ.',
-  PRICE: 'Τιμή',
-  VALUE: 'Αντ. Αξία',
-  VALUE_WITH_SYNDICATE: 'Αντ. Αξία Με Συνιδιοκτησία',
-  STATUS: 'Κατάσταση',
-  OWNER: 'Ιδιοκτήτης',
-  FLOOR_PLAN: 'Κάτοψη',
-  CONSTRUCTED_BY: 'Καταχωρήθηκε Από',
-  ACTIONS: 'Ενέργειες'
+  // 🏢 ENTERPRISE: i18n keys for parking table columns
+  // Keys with '.' are automatically translated using useTranslation
+  CODE: 'parkingManagement.columns.code',
+  TYPE: 'parkingManagement.columns.type',
+  PROPERTY_CODE: 'parkingManagement.columns.property',
+  LEVEL: 'parkingManagement.columns.level',
+  AREA: 'parkingManagement.columns.area',
+  PRICE: 'parkingManagement.columns.price',
+  VALUE: 'parkingManagement.columns.value',
+  VALUE_WITH_SYNDICATE: 'parkingManagement.columns.valueWithSyndicate',
+  STATUS: 'parkingManagement.columns.status',
+  OWNER: 'parkingManagement.columns.owner',
+  FLOOR_PLAN: 'parkingManagement.columns.floorPlan',
+  CONSTRUCTED_BY: 'parkingManagement.columns.registeredBy',
+  ACTIONS: 'parkingManagement.columns.actions'
 } as const;
 
 // ============================================================================
@@ -1620,45 +1705,46 @@ export const PARKING_TABLE_COLUMN_LABELS = {
  * ✅ ZERO HARDCODED VALUES: Single source of truth
  * ✅ Domain: Contact relationship management
  */
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const RELATIONSHIP_TYPE_LABELS = {
   // 👥 Employment Relationships
-  EMPLOYEE: 'Υπάλληλος',
-  MANAGER: 'Προϊστάμενος',
-  DIRECTOR: 'Διευθυντής',
-  EXECUTIVE: 'Ανώτερο Στέλεχος',
-  INTERN: 'Εσωτερικός Εργαζόμενος',
-  CONTRACTOR: 'Εξωτερικός Συνεργάτης',
-  CONSULTANT: 'Σύμβουλος',
+  EMPLOYEE: 'contacts.relationships.types.employee',
+  MANAGER: 'contacts.relationships.types.manager',
+  DIRECTOR: 'contacts.relationships.types.director',
+  EXECUTIVE: 'contacts.relationships.types.executive',
+  INTERN: 'contacts.relationships.types.intern',
+  CONTRACTOR: 'contacts.relationships.types.contractor',
+  CONSULTANT: 'contacts.relationships.types.consultant',
 
   // 🏢 Corporate Relationships
-  SHAREHOLDER: 'Μέτοχος',
-  BOARD_MEMBER: 'Μέλος ΔΣ',
-  CHAIRMAN: 'Πρόεδρος ΔΣ',
-  CEO: 'Γενικός Διευθυντής',
-  REPRESENTATIVE: 'Εκπρόσωπος',
-  PARTNER: 'Συνεργάτης/Εταίρος',
-  VENDOR: 'Προμηθευτής',
-  CLIENT: 'Πελάτης',
+  SHAREHOLDER: 'contacts.relationships.types.shareholder',
+  BOARD_MEMBER: 'contacts.relationships.types.boardMember',
+  CHAIRMAN: 'contacts.relationships.types.chairman',
+  CEO: 'contacts.relationships.types.ceo',
+  REPRESENTATIVE: 'contacts.relationships.types.representative',
+  PARTNER: 'contacts.relationships.types.partner',
+  VENDOR: 'contacts.relationships.types.vendor',
+  CLIENT: 'contacts.relationships.types.client',
 
   // 🏛️ Government/Service Relationships
-  CIVIL_SERVANT: 'Δημόσιος Υπάλληλος',
-  ELECTED_OFFICIAL: 'Εκλεγμένο Πρόσωπο',
-  APPOINTED_OFFICIAL: 'Διορισμένο Πρόσωπο',
-  DEPARTMENT_HEAD: 'Προϊστάμενος Τμήματος',
-  MINISTRY_OFFICIAL: 'Στέλεχος Υπουργείου',
-  MAYOR: 'Δήμαρχος',
-  DEPUTY_MAYOR: 'Αντιδήμαρχος',
-  REGIONAL_GOVERNOR: 'Περιφερειάρχης',
+  CIVIL_SERVANT: 'contacts.relationships.types.civilServant',
+  ELECTED_OFFICIAL: 'contacts.relationships.types.electedOfficial',
+  APPOINTED_OFFICIAL: 'contacts.relationships.types.appointedOfficial',
+  DEPARTMENT_HEAD: 'contacts.relationships.types.departmentHead',
+  MINISTRY_OFFICIAL: 'contacts.relationships.types.ministryOfficial',
+  MAYOR: 'contacts.relationships.types.mayor',
+  DEPUTY_MAYOR: 'contacts.relationships.types.deputyMayor',
+  REGIONAL_GOVERNOR: 'contacts.relationships.types.regionalGovernor',
 
   // 🔗 Other Professional Relationships
-  ADVISOR: 'Σύμβουλος',
-  MENTOR: 'Μέντορας',
-  PROTEGE: 'Προστατευόμενος',
-  COLLEAGUE: 'Συνάδελφος',
-  SUPPLIER: 'Προμηθευτής',
-  CUSTOMER: 'Πελάτης',
-  COMPETITOR: 'Ανταγωνιστής',
-  OTHER: 'Άλλο'
+  ADVISOR: 'contacts.relationships.types.advisor',
+  MENTOR: 'contacts.relationships.types.mentor',
+  PROTEGE: 'contacts.relationships.types.protege',
+  COLLEAGUE: 'contacts.relationships.types.colleague',
+  SUPPLIER: 'contacts.relationships.types.supplier',
+  CUSTOMER: 'contacts.relationships.types.customer',
+  COMPETITOR: 'contacts.relationships.types.competitor',
+  OTHER: 'contacts.relationships.types.other'
 } as const;
 
 /**
@@ -1667,16 +1753,17 @@ export const RELATIONSHIP_TYPE_LABELS = {
  * ✅ ENTERPRISE: Employment status labels for HR tracking
  * ✅ Aligned with Greek labor law and EU standards
  */
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const EMPLOYMENT_STATUS_LABELS = {
-  FULL_TIME: 'Πλήρης απασχόληση',
-  PART_TIME: 'Μερική απασχόληση',
-  CONTRACT: 'Σύμβαση έργου',
-  TEMPORARY: 'Προσωρινός',
-  SEASONAL: 'Εποχιακός',
-  VOLUNTEER: 'Εθελοντής',
-  RETIRED: 'Συνταξιούχος',
-  ON_LEAVE: 'Σε άδεια',
-  TERMINATED: 'Τερματισμένος'
+  FULL_TIME: 'contacts.employment.status.fullTime',
+  PART_TIME: 'contacts.employment.status.partTime',
+  CONTRACT: 'contacts.employment.status.contract',
+  TEMPORARY: 'contacts.employment.status.temporary',
+  SEASONAL: 'contacts.employment.status.seasonal',
+  VOLUNTEER: 'contacts.employment.status.volunteer',
+  RETIRED: 'contacts.employment.status.retired',
+  ON_LEAVE: 'contacts.employment.status.onLeave',
+  TERMINATED: 'contacts.employment.status.terminated'
 } as const;
 
 // ============================================================================
@@ -1691,20 +1778,21 @@ export const EMPLOYMENT_STATUS_LABELS = {
  * ✅ Domain: Project navigation and organization
  */
 export const PROJECT_TAB_LABELS = {
-  // Core Project Tabs
-  GENERAL: 'Γενικά Έργου',
-  FLOORPLAN: 'Κάτοψη Έργου',
-  PARKING_FLOORPLAN: 'Κάτοψη Θ.Σ.',
-  STRUCTURE: 'Δομή Έργου',
-  TIMELINE: 'Timeline',
-  CUSTOMERS: 'Πελάτες',
-  BUILDING_DATA: 'Στοιχεία Δόμησης',
-  PARKING: 'Θέσεις Στάθμευσης',
-  CONTRIBUTORS: 'Συντελεστές',
-  DOCUMENTS: 'Έγγραφα Έργου',
-  IKA: 'IKA',
-  PHOTOS: 'Φωτογραφίες',
-  VIDEOS: 'Βίντεο'
+  // 🏢 ENTERPRISE: i18n keys for project tabs (translated via UniversalTabsRenderer)
+  // Keys with '.' are automatically translated using the building namespace
+  GENERAL: 'tabs.labels.projectGeneral',
+  FLOORPLAN: 'tabs.labels.projectFloorplan',
+  PARKING_FLOORPLAN: 'tabs.labels.parkingFloorplan',
+  STRUCTURE: 'tabs.labels.projectStructure',
+  TIMELINE: 'tabs.labels.timeline',
+  CUSTOMERS: 'tabs.labels.customers',
+  BUILDING_DATA: 'tabs.labels.buildingData',
+  PARKING: 'tabs.labels.parking',
+  CONTRIBUTORS: 'tabs.labels.contributors',
+  DOCUMENTS: 'tabs.labels.projectDocuments',
+  IKA: 'tabs.labels.ika',
+  PHOTOS: 'tabs.labels.photos',
+  VIDEOS: 'tabs.labels.videos'
 } as const;
 
 /**
@@ -1713,19 +1801,20 @@ export const PROJECT_TAB_LABELS = {
  * ✅ ENTERPRISE: Tab description labels for tooltips/help
  */
 export const PROJECT_TAB_DESCRIPTIONS = {
-  GENERAL: 'Βασικές πληροφορίες και στοιχεία του έργου',
-  FLOORPLAN: 'Αρχιτεκτονική κάτοψη και σχέδια του έργου',
-  PARKING_FLOORPLAN: 'Κάτοψη και διάταξη θέσεων στάθμευσης',
-  STRUCTURE: 'Οργανωτική δομή και ιεραρχία του έργου',
-  TIMELINE: 'Χρονοδιάγραμμα και ορόσημα του έργου',
-  CUSTOMERS: 'Πελάτες και αγοραστές του έργου',
-  BUILDING_DATA: 'Τεχνικά στοιχεία και παράμετροι δόμησης',
-  PARKING: 'Διαχείριση και κατανομή θέσεων στάθμευσης',
-  CONTRIBUTORS: 'Συντελεστές, εργολάβοι και συνεργάτες',
-  DOCUMENTS: 'Συμβάσεις, άδειες και νομικά έγγραφα',
-  IKA: 'Στοιχεία IKA και ασφαλιστικές υποχρεώσεις',
-  PHOTOS: 'Φωτογραφίες προόδου και ολοκληρωμένου έργου',
-  VIDEOS: 'Βίντεο παρουσίασης και τεκμηρίωσης του έργου'
+  // 🏢 ENTERPRISE: i18n keys for project tab descriptions
+  GENERAL: 'tabs.descriptions.projectGeneral',
+  FLOORPLAN: 'tabs.descriptions.projectFloorplan',
+  PARKING_FLOORPLAN: 'tabs.descriptions.parkingFloorplan',
+  STRUCTURE: 'tabs.descriptions.projectStructure',
+  TIMELINE: 'tabs.descriptions.timeline',
+  CUSTOMERS: 'tabs.descriptions.customers',
+  BUILDING_DATA: 'tabs.descriptions.buildingData',
+  PARKING: 'tabs.descriptions.parking',
+  CONTRIBUTORS: 'tabs.descriptions.contributors',
+  DOCUMENTS: 'tabs.descriptions.projectDocuments',
+  IKA: 'tabs.descriptions.ika',
+  PHOTOS: 'tabs.descriptions.photos',
+  VIDEOS: 'tabs.descriptions.videos'
 } as const;
 
 /**
@@ -1734,8 +1823,9 @@ export const PROJECT_TAB_DESCRIPTIONS = {
  * ✅ ENTERPRISE: Component title labels for FloorplanViewer
  */
 export const PROJECT_COMPONENT_LABELS = {
-  FLOORPLAN_TITLE: 'Κάτοψη Έργου',
-  PARKING_FLOORPLAN_TITLE: 'Κάτοψη Θέσεων Στάθμευσης'
+  // 🏢 ENTERPRISE: i18n keys for project component titles
+  FLOORPLAN_TITLE: 'floorplan.titles.project',
+  PARKING_FLOORPLAN_TITLE: 'floorplan.titles.parking'
 } as const;
 
 // ============================================================================
@@ -1749,57 +1839,60 @@ export const PROJECT_COMPONENT_LABELS = {
  * ✅ ZERO HARDCODED VALUES: Single source of truth
  * ✅ Domain: Building management interface
  */
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const BUILDING_TOOLBAR_LABELS = {
   // Primary Actions
-  NEW_BUILDING: 'Νέο Κτίριο',
-  EDIT_BUILDING: 'Επεξεργασία',
-  DELETE_BUILDING: 'Διαγραφή',
+  NEW_BUILDING: 'building.toolbar.newBuilding',
+  EDIT_BUILDING: 'building.toolbar.editBuilding',
+  DELETE_BUILDING: 'building.toolbar.deleteBuilding',
 
   // Secondary Actions
-  EXPORT: 'Εξαγωγή',
-  IMPORT: 'Εισαγωγή',
-  REFRESH: 'Ανανέωση',
-  ARCHIVE: 'Αρχειοθέτηση',
-  FAVORITES: 'Αγαπημένα',
-  HELP: 'Βοήθεια',
+  EXPORT: 'common.actions.export',
+  IMPORT: 'common.actions.import',
+  REFRESH: 'common.actions.refresh',
+  ARCHIVE: 'building.toolbar.archive',
+  FAVORITES: 'toolbar.labels.favorites',
+  HELP: 'common.actions.help',
 
   // Filter Labels
-  STATUS_FILTER: 'Κατάσταση',
-  TYPE_FILTER: 'Τύπος',
-  SORT_FILTER: 'Ταξινόμηση'
+  STATUS_FILTER: 'filters.fields.status',
+  TYPE_FILTER: 'filters.fields.type',
+  SORT_FILTER: 'filters.fields.sort'
 } as const;
 
 /**
  * 🔍 Building Toolbar Tooltips - Help Text
  *
  * ✅ ENTERPRISE: Tooltip labels for building toolbar actions
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const BUILDING_TOOLBAR_TOOLTIPS = {
-  NEW_BUILDING: 'Προσθήκη νέου κτιρίου (Ctrl+N)',
-  EDIT_BUILDING: 'Επεξεργασία επιλεγμένου κτιρίου (Ctrl+E)',
-  DELETE_BUILDING_SINGLE: 'Διαγραφή κτιρίου',
-  DELETE_BUILDING_MULTIPLE: 'κτιρίου/ων',
-  EXPORT_DATA: 'Εξαγωγή δεδομένων',
-  IMPORT_DATA: 'Εισαγωγή δεδομένων',
-  REFRESH_DATA: 'Ανανέωση δεδομένων (F5)',
-  ARCHIVE_SELECTED: 'Αρχειοθέτηση επιλεγμένων',
-  ADD_TO_FAVORITES: 'Προσθήκη στα αγαπημένα',
-  SHOW_HELP: 'Βοήθεια και οδηγίες (F1)'
+  NEW_BUILDING: 'building.toolbar.tooltips.newBuilding',
+  EDIT_BUILDING: 'building.toolbar.tooltips.editBuilding',
+  DELETE_BUILDING_SINGLE: 'building.toolbar.tooltips.deleteBuilding',
+  DELETE_BUILDING_MULTIPLE: 'building.toolbar.tooltips.deleteBuildingMultiple',
+  EXPORT_DATA: 'building.toolbar.tooltips.exportData',
+  IMPORT_DATA: 'building.toolbar.tooltips.importData',
+  REFRESH_DATA: 'building.toolbar.tooltips.refreshData',
+  ARCHIVE_SELECTED: 'building.toolbar.tooltips.archiveSelected',
+  ADD_TO_FAVORITES: 'building.toolbar.tooltips.addToFavorites',
+  SHOW_HELP: 'building.toolbar.tooltips.showHelp'
 } as const;
 
 /**
  * 🏷️ Building Toolbar UI Labels - Interface Text
  *
  * ✅ ENTERPRISE: UI text for building toolbar interface
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const BUILDING_TOOLBAR_UI_LABELS = {
-  SEARCH_PLACEHOLDER: 'Αναζήτηση κτιρίων...',
-  BUILDING_STATUS_LABEL: 'Κατάσταση κτιρίου',
-  BUILDING_TYPE_LABEL: 'Τύπος κτιρίου',
-  BUILDING_SORTING_LABEL: 'Ταξινόμηση κτιρίων',
-  SORT_ASCENDING: 'Αύξουσα (A-Z)',
-  SORT_DESCENDING: 'Φθίνουσα (Z-A)',
-  SORT_BY_DATE: 'Κατά ημερομηνία',
-  SORT_BY_SIZE: 'Κατά μέγεθος',
-  SELECTED_BUILDINGS: 'επιλεγμένα κτίρια'
+  SEARCH_PLACEHOLDER: 'building.toolbar.ui.searchPlaceholder',
+  BUILDING_STATUS_LABEL: 'building.toolbar.ui.statusLabel',
+  BUILDING_TYPE_LABEL: 'building.toolbar.ui.typeLabel',
+  BUILDING_SORTING_LABEL: 'building.toolbar.ui.sortingLabel',
+  SORT_ASCENDING: 'filters.sorting.ascending',
+  SORT_DESCENDING: 'filters.sorting.descending',
+  SORT_BY_DATE: 'filters.sorting.byDate',
+  SORT_BY_SIZE: 'filters.sorting.bySize',
+  SELECTED_BUILDINGS: 'building.toolbar.ui.selectedBuildings'
 } as const;

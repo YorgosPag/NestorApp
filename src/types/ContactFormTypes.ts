@@ -208,6 +208,28 @@ export interface ContactFormData {
 
   // Κοινά
   notes: string;
+
+  // 🏢 ENTERPRISE: Properties from Contact type for union compatibility (2026-01-20)
+  /** Contact status */
+  status?: 'active' | 'inactive' | 'archived';
+  /** Favorite flag */
+  isFavorite?: boolean;
+  /** Creation timestamp */
+  createdAt?: Date | string;
+  /** Update timestamp */
+  updatedAt?: Date | string;
+
+  // 🏢 ENTERPRISE: ΓΕΜΗ properties shortcuts/aliases (2026-01-20)
+  /** ΑΦΜ - Greek tax number (alias for vatNumber for GEMI API compatibility) */
+  afm?: string;
+  /** Distinctive title / Trading name */
+  distintiveTitle?: string;
+  /** KAD code for activity classification */
+  kadCode?: string;
+  /** Capital amount */
+  capital?: string | number;
+  /** Extra-balance capital / Guarantees */
+  extrabalanceCapital?: string | number;
 }
 
 export const initialFormData: ContactFormData = {

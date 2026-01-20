@@ -167,6 +167,9 @@ export interface ContactRelationship {
   /** 📝 Relationship notes */
   relationshipNotes?: string;
 
+  /** 📝 Notes shorthand alias for relationshipNotes */
+  notes?: string;
+
   /** 🏷️ Tags for categorization */
   tags?: string[];
 

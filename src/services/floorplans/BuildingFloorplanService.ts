@@ -21,6 +21,37 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
+import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
+
+// =============================================================================
+// 🏢 ENTERPRISE LOGGER CONFIGURATION
+// =============================================================================
+
+/**
+ * BuildingFloorplan Logger - Enterprise-grade logging
+ *
+ * PRODUCTION: Only ERROR level (clean console)
+ * DEVELOPMENT: DEBUG level (verbose for debugging)
+ *
+ * @enterprise ADR - Centralized Logging System (dxf-viewer/settings/telemetry/Logger)
+ */
+const floorplanLogger = new Logger({
+  level: process.env.NODE_ENV === 'production' ? LogLevel.ERROR : LogLevel.DEBUG,
+  prefix: '[BuildingFloorplan]',
+  output: process.env.NODE_ENV === 'production' ? new DevNullOutput() : undefined
+});
+
+/**
+ * Error classification for intelligent logging
+ * @enterprise Pattern: Expected errors (file not found) → silent, real errors → logged
+ */
+const isExpectedError = (error: Error): boolean => {
+  const message = error.message.toLowerCase();
+  return message.includes('not found') ||
+         message.includes('404') ||
+         message.includes('does not exist') ||
+         (message.includes('permission') && message.includes('missing'));
+};
 
 // ============================================================================
 // TYPES
@@ -109,7 +140,7 @@ export class BuildingFloorplanService {
 
       if (isPdfFloorplan) {
         // PDF floorplans: Store metadata in Firestore (PDF image stored separately)
-        console.log(`🏢 [BuildingFloorplan] Saving PDF ${type} floorplan to Firestore:`, fileId);
+        floorplanLogger.debug(`Saving PDF ${type} floorplan to Firestore`, { fileId, buildingId });
 
         const docId = `${buildingId}_${type}`;
         await setDoc(doc(db, this.LEGACY_COLLECTION, docId), {
@@ -123,29 +154,32 @@ export class BuildingFloorplanService {
           updatedAt: new Date().toISOString()
         });
 
-        console.log(`✅ [BuildingFloorplan] PDF save complete for ${type}:`, buildingId);
+        floorplanLogger.info(`PDF save complete for ${type}`, { buildingId });
         return true;
       }
 
       // DXF floorplans: Use enterprise DxfFirestoreService for storage
       if (!data.scene) {
-        console.error(`❌ [BuildingFloorplan] No scene data for DXF floorplan:`, buildingId);
+        floorplanLogger.warn(`No scene data for DXF floorplan`, { buildingId, type });
         return false;
       }
 
-      console.log(`🏢 [BuildingFloorplan] Saving DXF ${type} floorplan via enterprise storage:`, fileId);
+      floorplanLogger.debug(`Saving DXF ${type} floorplan via enterprise storage`, { fileId, buildingId });
 
       const success = await DxfFirestoreService.saveToStorage(fileId, fileName, data.scene);
 
       if (success) {
-        console.log(`✅ [BuildingFloorplan] Enterprise save complete for ${type}:`, buildingId);
+        floorplanLogger.info(`Enterprise save complete for ${type}`, { buildingId });
       } else {
-        console.error(`❌ [BuildingFloorplan] Enterprise save failed for ${type}:`, buildingId);
+        floorplanLogger.error(`Enterprise save failed for ${type}`, { buildingId });
       }
 
       return success;
     } catch (error) {
-      console.error(`❌ [BuildingFloorplan] Error saving ${type} floorplan:`, error);
+      floorplanLogger.error(`Error saving ${type} floorplan`, {
+        buildingId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return false;
     }
   }
@@ -166,7 +200,7 @@ export class BuildingFloorplanService {
     try {
       const fileId = this.generateFileId(buildingId, type);
 
-      console.log(`🏢 [BuildingFloorplan] Loading ${type} floorplan:`, fileId);
+      floorplanLogger.debug(`Loading ${type} floorplan`, { fileId, buildingId });
 
       // 1. Check legacy Firestore first (handles both PDF and old DXF format)
       const legacyResult = await this.loadFromLegacyFirestore(buildingId, type);
@@ -174,14 +208,14 @@ export class BuildingFloorplanService {
       if (legacyResult) {
         // If it's a PDF floorplan, return directly (no migration needed)
         if (legacyResult.fileType === 'pdf' || legacyResult.pdfImageUrl) {
-          console.log(`✅ [BuildingFloorplan] Loaded PDF from Firestore:`, buildingId);
+          floorplanLogger.debug(`Loaded PDF from Firestore`, { buildingId });
           return legacyResult;
         }
 
         // If it's a legacy DXF with scene data, return it
         // (Optional: could auto-migrate to enterprise storage here)
         if (legacyResult.scene) {
-          console.log(`✅ [BuildingFloorplan] Loaded legacy DXF from Firestore:`, buildingId);
+          floorplanLogger.debug(`Loaded legacy DXF from Firestore`, { buildingId });
           return legacyResult;
         }
       }
@@ -190,7 +224,7 @@ export class BuildingFloorplanService {
       const storageResult = await DxfFirestoreService.loadFileV2(fileId);
 
       if (storageResult) {
-        console.log(`✅ [BuildingFloorplan] Loaded DXF from enterprise storage:`, fileId);
+        floorplanLogger.debug(`Loaded DXF from enterprise storage`, { fileId });
         return {
           buildingId,
           type,
@@ -201,10 +235,19 @@ export class BuildingFloorplanService {
         };
       }
 
-      console.log(`ℹ️ [BuildingFloorplan] No ${type} floorplan found for:`, buildingId);
+      // 🏢 ENTERPRISE: Silent on "not found" - expected for buildings without floorplans
+      // No log output to reduce console noise
       return null;
     } catch (error) {
-      console.error(`❌ [BuildingFloorplan] Error loading ${type} floorplan:`, error);
+      // 🏢 ENTERPRISE: Intelligent error classification
+      if (error instanceof Error && isExpectedError(error)) {
+        // Expected "not found" → silent return
+        return null;
+      }
+      floorplanLogger.error(`Error loading ${type} floorplan`, {
+        buildingId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return null;
     }
   }
@@ -245,7 +288,15 @@ export class BuildingFloorplanService {
 
       return null;
     } catch (error) {
-      console.error(`❌ [BuildingFloorplan] Legacy load failed:`, error);
+      // 🏢 ENTERPRISE: Expected errors → silent, real errors → logged
+      if (error instanceof Error && isExpectedError(error)) {
+        return null;
+      }
+      floorplanLogger.warn('Legacy load failed', {
+        buildingId,
+        type,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return null;
     }
   }
@@ -276,7 +327,14 @@ export class BuildingFloorplanService {
 
       return false;
     } catch (error) {
-      console.error(`❌ [BuildingFloorplan] Error checking ${type} floorplan:`, error);
+      // 🏢 ENTERPRISE: Expected errors → silent false, real errors → logged
+      if (error instanceof Error && isExpectedError(error)) {
+        return false;
+      }
+      floorplanLogger.warn(`Error checking ${type} floorplan`, {
+        buildingId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return false;
     }
   }
@@ -296,10 +354,13 @@ export class BuildingFloorplanService {
         deletedAt: new Date().toISOString()
       });
 
-      console.log(`✅ [BuildingFloorplan] Deleted ${type} floorplan for:`, buildingId);
+      floorplanLogger.info(`Deleted ${type} floorplan`, { buildingId });
       return true;
     } catch (error) {
-      console.error(`❌ [BuildingFloorplan] Error deleting ${type} floorplan:`, error);
+      floorplanLogger.error(`Error deleting ${type} floorplan`, {
+        buildingId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return false;
     }
   }
@@ -320,23 +381,27 @@ export class BuildingFloorplanService {
       const floorplanData = data || await this.loadFromLegacyFirestore(buildingId, type);
 
       if (!floorplanData) {
-        console.log(`ℹ️ [BuildingFloorplan] No legacy data to migrate for:`, buildingId);
+        floorplanLogger.debug('No legacy data to migrate', { buildingId, type });
         return false;
       }
 
-      console.log(`🔄 [BuildingFloorplan] Migrating ${type} floorplan to enterprise storage:`, buildingId);
+      floorplanLogger.info(`Migrating ${type} floorplan to enterprise storage`, { buildingId });
 
       // Save to enterprise storage
       const success = await this.saveFloorplan(buildingId, type, floorplanData);
 
       if (success) {
-        console.log(`✅ [BuildingFloorplan] Migration complete for:`, buildingId);
+        floorplanLogger.info('Migration complete', { buildingId, type });
         // Note: We don't delete legacy data for safety - can be cleaned up later
       }
 
       return success;
     } catch (error) {
-      console.error(`❌ [BuildingFloorplan] Migration failed for:`, buildingId, error);
+      floorplanLogger.error('Migration failed', {
+        buildingId,
+        type,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return false;
     }
   }

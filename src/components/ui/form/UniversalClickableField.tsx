@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { HOVER_TEXT_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // 🏢 ENTERPRISE UNIVERSAL CLICKABLE FIELD RENDERER
@@ -108,6 +109,7 @@ export function UniversalClickableField({
  * 🔗 Render clickable link based on field type
  */
 function renderClickableLink(type: string, value: string, fieldId: string): React.ReactNode {
+  const { t } = useTranslation('common');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -123,7 +125,7 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
           rel="noopener noreferrer"
           className={`cursor-pointer ${HOVER_TEXT_EFFECTS.BLUE_WITH_UNDERLINE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           onClick={(e) => e.stopPropagation()}
-          title={`Αποστολή email στο ${value} μέσω Gmail`}
+          title={t('clickableField.sendEmail', { value })}
           data-field-id={fieldId}
           data-field-type="email"
         >
@@ -141,7 +143,7 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
           href={`tel:${value}`}
           className={`cursor-pointer ${HOVER_TEXT_EFFECTS.BLUE_WITH_UNDERLINE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           onClick={(e) => e.stopPropagation()}
-          title={`Κλήση στο ${value}`}
+          title={t('clickableField.call', { value })}
           data-field-id={fieldId}
           data-field-type="phone"
         >
@@ -162,7 +164,7 @@ function renderClickableLink(type: string, value: string, fieldId: string): Reac
           rel="noopener noreferrer"
           className={`cursor-pointer ${HOVER_TEXT_EFFECTS.BLUE_WITH_UNDERLINE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
           onClick={(e) => e.stopPropagation()}
-          title={`Άνοιγμα ιστοσελίδας ${value}`}
+          title={t('clickableField.openWebsite', { value })}
           data-field-id={fieldId}
           data-field-type="website"
         >

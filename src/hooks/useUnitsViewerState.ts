@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { usePropertyViewer } from '@/hooks/usePropertyViewer';
+import { usePropertyViewer, DEFAULT_FILTERS } from '@/hooks/usePropertyViewer';
 import type { Property } from '@/types/property-viewer';
 import type { Connection } from '@/types/connections';
 import type { FilterState } from '@/types/property-viewer';

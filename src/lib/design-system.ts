@@ -144,7 +144,7 @@ export const getGridClass = (
 
 // Shadow utilities
 export const getShadowClass = (size: keyof typeof designTokens.shadows) => {
-  const shadowMap = {
+  const shadowMap: Record<string, string> = {
     none: 'shadow-none',
     sm: 'shadow-sm',
     default: 'shadow',
@@ -153,6 +153,7 @@ export const getShadowClass = (size: keyof typeof designTokens.shadows) => {
     xl: 'shadow-xl',
     '2xl': 'shadow-2xl',
     inner: 'shadow-inner',
+    focus: 'ring-2 ring-ring ring-offset-2', // ✅ ENTERPRISE FIX: Focus shadow
   };
 
   return shadowMap[size] || shadowMap.default;
@@ -160,14 +161,16 @@ export const getShadowClass = (size: keyof typeof designTokens.shadows) => {
 
 // Border radius utilities
 export const getBorderRadiusClass = (size: keyof typeof designTokens.borderRadius) => {
-  const radiusMap = {
+  const radiusMap: Record<string, string> = {
     none: 'rounded-none',
+    xs: 'rounded-sm', // ✅ ENTERPRISE FIX: xs radius
     sm: 'rounded-sm',
     default: 'rounded',
     md: 'rounded-md',
     lg: 'rounded-lg',
     xl: 'rounded-xl',
     '2xl': 'rounded-2xl',
+    '3xl': 'rounded-3xl', // ✅ ENTERPRISE FIX: 3xl radius
     full: 'rounded-full',
   };
 

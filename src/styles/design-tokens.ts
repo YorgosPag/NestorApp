@@ -427,6 +427,41 @@ export const zIndex = {
   critical: 2147483647,
 } as const;
 
+// ============================================================================
+// 🏢 ENTERPRISE: DIALOG/MODAL SIZE TOKENS
+// ============================================================================
+// Centralized dialog sizing for consistent modal dimensions
+// ADR-031: Zero hardcoded values - all dialog sizes from here
+// ============================================================================
+export const DIALOG_SIZES = {
+  /** Small dialog (400px) - confirmations, simple forms */
+  sm: 'sm:max-w-md',
+  /** Medium dialog (600px) - standard forms, selections */
+  md: 'sm:max-w-[600px]',
+  /** Large dialog (800px) - complex forms */
+  lg: 'sm:max-w-[800px]',
+  /** Extra large dialog (900px) - contact forms, multi-tab dialogs */
+  xl: 'sm:max-w-[900px]',
+  /** Full width dialog (1200px) - dashboards, complex UIs */
+  full: 'sm:max-w-[1200px]',
+} as const;
+
+export const DIALOG_HEIGHT = {
+  /** Standard dialog height constraint */
+  standard: 'max-h-[90vh]',
+  /** Shorter dialog for simpler content */
+  short: 'max-h-[70vh]',
+  /** Auto height - content determines */
+  auto: '',
+} as const;
+
+export const DIALOG_SCROLL = {
+  /** Enable vertical scrolling */
+  scrollable: 'overflow-y-auto',
+  /** No scroll - fixed content */
+  fixed: 'overflow-hidden',
+} as const;
+
 // Grid patterns για layout consistency
 export const gridPatterns = {
   // Stats grids
@@ -1558,7 +1593,10 @@ export const photoPreviewComponents = {
   colors: {
     emptyStateBackground: colors.background.secondary,
     emptyStateBorder: colors.border.primary,
-    withPhotoBorder: colors.primary['500']
+    withPhotoBorder: colors.primary['500'],
+    // 🏢 ENTERPRISE: Additional colors for migration-utilities (2026-01-19)
+    uploadingBackground: '#f8fafc', // Slate-50 - uploading state
+    errorBackground: colors.error['50'] // Error state background
   }
 } as const;
 
@@ -1790,7 +1828,20 @@ export const canvasUtilities = {
       transform: 'translate(-50%, -50%)',
       pointerEvents: 'none' as const,
       zIndex: zIndex.tooltip // Enterprise: centralized z-index
-    })
+    }),
+
+    /**
+     * 🎯 RESPONSIVE UTILITIES
+     * ENTERPRISE: Responsive layout helpers for geo-canvas
+     */
+    responsive: {
+      mobileBreakpoint: 768,
+      tabletBreakpoint: 1024,
+      desktopBreakpoint: 1280,
+      containerPadding: (isMobile: boolean): string => isMobile ? spacing.sm : spacing.md,
+      gridGap: (isMobile: boolean): string => isMobile ? spacing.sm : spacing.md,
+      flexWrap: (isMobile: boolean): React.CSSProperties['flexWrap'] => isMobile ? 'wrap' : 'nowrap'
+    }
 
     /**
      * NOTE:
@@ -2351,6 +2402,37 @@ export const canvasUI = {
         zIndex: zIndex.modal,
         pointerEvents: 'auto'
       })
+    },
+
+    // ✅ ENTERPRISE FIX: Responsive grid utilities for ResponsiveDashboard
+    responsive: {
+      responsiveGrid: (columns: number, gap: number): React.CSSProperties => ({
+        display: 'grid',
+        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+        gap: `${gap * 4}px`,
+        width: '100%',
+      }),
+      responsiveGridItem: (span: number, offset: number, order?: number): React.CSSProperties => ({
+        gridColumn: offset > 0 ? `${offset + 1} / span ${span}` : `span ${span}`,
+        ...(order !== undefined && { order }),
+      }),
+      responsiveCardGrid: (minWidth: number, maxWidth: number, gap: number): React.CSSProperties => ({
+        display: 'grid',
+        gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, ${maxWidth}px))`,
+        gap: `${gap * 4}px`,
+        width: '100%',
+        justifyContent: 'start',
+      }),
+      responsiveSidebar: (isCollapsed: boolean, width: number): React.CSSProperties => ({
+        width: isCollapsed ? '64px' : `${width}px`,
+        transition: 'width 200ms ease-in-out',
+        flexShrink: 0,
+      }),
+      responsiveMainContent: (hasSidebar: boolean, sidebarWidth: number): React.CSSProperties => ({
+        flex: 1,
+        marginLeft: hasSidebar ? `${sidebarWidth}px` : 0,
+        transition: 'margin-left 200ms ease-in-out',
+      }),
     }
   }
 };

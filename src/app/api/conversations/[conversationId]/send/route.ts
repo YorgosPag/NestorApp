@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withErrorHandling, ApiError } from '@/lib/api/ApiErrorHandler';
+import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
@@ -257,6 +257,6 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
     sentAt: new Date().toISOString(),
   };
 
-  // 🏢 ENTERPRISE: Wrap response με data envelope (consistency με frontend hooks)
-  return NextResponse.json({ data: response });
+  // 🏢 ENTERPRISE: Return response directly (matches SendMessageResponse type)
+  return NextResponse.json(response);
 }

@@ -11,9 +11,13 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 import { getProjectLabel } from '@/lib/project-utils';
 import { useCompanyRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
 function CompanyProjectsTable({ companyId }: { companyId: string }) {
+    // 🏢 ENTERPRISE: i18n hook for translations
+    const { t } = useTranslation('contacts');
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
     const [projects, setProjects] = useState<Project[]>([]);
@@ -47,7 +51,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
     if (projects.length === 0) {
         return (
             <div className="text-center text-sm text-muted-foreground py-4">
-                Δεν βρέθηκαν έργα για αυτή την εταιρεία.
+                {t('projects.empty')}
             </div>
         )
     }
@@ -56,15 +60,15 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
         <div className="mt-4">
             <h4 className="font-semibold mb-2 text-sm flex items-center gap-2">
                 <Briefcase className={`${iconSizes.sm} text-muted-foreground`}/>
-                Σχετικά Έργα
+                {t('projects.title')}
             </h4>
             <div className={quick.card}>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Έργο</TableHead>
-                            <TableHead>Κατάσταση</TableHead>
-                            <TableHead className="text-right">Πρόοδος</TableHead>
+                            <TableHead>{t('projects.table.project')}</TableHead>
+                            <TableHead>{t('projects.table.status')}</TableHead>
+                            <TableHead className="text-right">{t('projects.table.progress')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

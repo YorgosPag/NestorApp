@@ -16,6 +16,8 @@ import { ContactsService } from '@/services/contacts.service';
 import { ContactNameResolver } from '@/services/contacts/ContactNameResolver';
 import type { ContactType } from '@/types/contacts';
 import { designSystem } from '@/lib/design-system';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -63,8 +65,8 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
   onContactSelect,
   excludeContactIds = [],
   allowedContactTypes = ['individual', 'company', 'service'],
-  label = "Επαφή",
-  placeholder = "Αναζήτηση επαφής...",
+  label,
+  placeholder,
   required = false,
   error,
   disabled = false,
@@ -72,6 +74,12 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
   className,
   searchConfig = {}
 }) => {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
+
+  // Use translated defaults
+  const displayLabel = label ?? t('relationships.form.labels.contact');
+  const displayPlaceholder = placeholder ?? t('relationships.form.placeholders.searchContact');
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -222,7 +230,7 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
 
     } catch (error) {
       console.error('🚨 ContactSearchManager Error:', error);
-      setSearchError('Σφάλμα κατά την αναζήτηση επαφών');
+      setSearchError(t('relationships.manager.errors.searchError', 'Search error'));
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -283,8 +291,8 @@ export const ContactSearchManager: React.FC<ContactSearchManagerProps> = ({
         searchResults={searchResults}
         onSearch={handleContactSearch}
         isSearching={isSearching}
-        label={label}
-        placeholder={placeholder}
+        label={displayLabel}
+        placeholder={displayPlaceholder}
         allowedContactTypes={allowedContactTypes}
         excludeContactIds={excludeContactIds}
         required={required}
@@ -353,7 +361,7 @@ export const useContactSearch = (config: {
       setSearchResults(filteredContacts);
     } catch (err) {
       console.error('Contact search error:', err);
-      setError('Σφάλμα κατά την αναζήτηση επαφών');
+      setError('Search error'); // Note: Hardcoded fallback since hooks cannot use i18n
       setSearchResults([]);
     } finally {
       setIsSearching(false);

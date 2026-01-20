@@ -11,6 +11,9 @@ import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import type { IndividualSectionConfig } from '@/config/individual-config';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 // ============================================================================
 // INTERFACES
@@ -73,6 +76,7 @@ function createIndividualFormTabsFromConfig(
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,
+  t: TFunction, // 🏢 ENTERPRISE: i18n translation function
   onPhotoChange?: (file: File | null) => void,
   onMultiplePhotosChange?: (photos: PhotoSlot[]) => void,
   onMultiplePhotoUploadComplete?: (index: number, result: FileUploadResult) => void,
@@ -83,7 +87,7 @@ function createIndividualFormTabsFromConfig(
 ) {
   return sections.map(section => ({
     id: section.id,
-    label: section.title,
+    label: t(section.title), // 🏢 ENTERPRISE: Translate section title
     icon: getIconComponent(section.icon),
     content: section.id === 'photo' ? (
       // Photo section - MultiplePhotosUpload για Individual (και σε disabled mode)
@@ -183,6 +187,9 @@ export function IndividualFormTabRenderer({
   customRenderers,
   onPhotoClick
 }: IndividualFormTabRendererProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
+
   if (!sections || sections.length === 0) {
     return null;
   }
@@ -198,6 +205,7 @@ export function IndividualFormTabRenderer({
     onChange,
     onSelectChange,
     disabled,
+    t, // 🏢 ENTERPRISE: Pass translation function
     onPhotoChange,
     onMultiplePhotosChange,
     onMultiplePhotoUploadComplete,

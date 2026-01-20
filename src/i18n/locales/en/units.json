@@ -78,7 +78,7 @@
   "dialog": {
     "deleteConfirmation": {
       "title": "Delete Confirmation",
-      "message": "Are you sure you want to delete {{count}} unit(s)?",
+      "message": "Are you sure you want to delete {count} unit(s)?",
       "warning": "This action cannot be undone."
     },
     "cancel": "Cancel",
@@ -87,7 +87,7 @@
   "list": {
     "ariaLabel": "Units List",
     "noResults": "No units found",
-    "noResultsForTerm": "for the term \"{{term}}\""
+    "noResultsForTerm": "for the term \"{term}\""
   },
   "customerTab": {
     "customerInfo": "Customer Information",
@@ -108,10 +108,10 @@
     "call": "Call",
     "noUnitSelected": "No unit selected",
     "availableUnit": "Available Unit",
-    "unitAvailable": "Unit \"{{name}}\" is available",
+    "unitAvailable": "Unit \"{name}\" is available",
     "scheduleViewing": "Schedule Viewing",
     "soldWithoutCustomer": "Sold Unit without Customer",
-    "soldWithoutCustomerWarning": "Unit has status \"{{status}}\" but no linked customer. This may indicate a database issue or that customer linking is incomplete.",
+    "soldWithoutCustomerWarning": "Unit has status \"{status}\" but no linked customer. This may indicate a database issue or that customer linking is incomplete.",
     "unitStatus": "Unit Status",
     "transactionDate": "Transaction Date",
     "unknownDate": "Unknown",
@@ -139,5 +139,37 @@
     "fullProfile": "Full Profile",
     "schedule": "Schedule",
     "report": "Report"
+  },
+  "sqm": "sq.m.",
+  "cbm": "cu.m.",
+  "linearMeters": "m",
+  "percentage": "%",
+  "total": "Total",
+  "mainProjectUnits": "{project} Units",
+  "primary": "Primary",
+  "soldNoCustomer": "Sold without customer",
+  "soldWithCustomer": "Sold with customer",
+  "overview": "Overview",
+  "allLabel": "All",
+  "projectLabel": "{project}",
+  "onlyProject": "Only {project}",
+  "allUnits": "All Units",
+  "refresh": "Refresh",
+  "error": "Error:",
+  "loading": "Loading units...",
+  "notFound": "No units found",
+  "unnamed": "Unnamed",
+  "contactLoading": "Loading...",
+  "noCustomer": "No customer",
+  "displaying": "Displaying {displayed} of {total}",
+  "filteredFor": "(filtered for {project})",
+  "table": {
+    "name": "Name",
+    "status": "Status",
+    "customer": "Customer",
+    "building": "Building",
+    "project": "Project",
+    "price": "Price",
+    "idLabel": "ID"
   }
 }

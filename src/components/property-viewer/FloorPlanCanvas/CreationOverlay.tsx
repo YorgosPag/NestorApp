@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface Point {
   x: number;
@@ -16,7 +18,7 @@ interface CreationOverlayProps {
   className?: string;
 }
 
-export function CreationOverlay({ 
+export function CreationOverlay({
   mode,
   isCreating = false,
   currentPolyline = [],
@@ -24,10 +26,12 @@ export function CreationOverlay({
   mousePosition,
   className = ''
 }: CreationOverlayProps) {
-  
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
+
   // Use currentPolyline if available, fallback to vertices
   const points = currentPolyline.length > 0 ? currentPolyline : vertices;
-  
+
   // Safe check για undefined/null arrays
   if (!Array.isArray(points) || points.length === 0 || !mousePosition) {
     return null;
@@ -37,6 +41,11 @@ export function CreationOverlay({
   if (mode !== 'create' && !isCreating) {
     return null;
   }
+
+  // Get translation labels for SVG text
+  const instructionText = points.length === 0
+    ? t('creation.clickToStart')
+    : t('creation.pointsContinue', { count: points.length });
 
   return (
     <div className={`absolute inset-0 pointer-events-none ${className}`}>
@@ -117,10 +126,7 @@ export function CreationOverlay({
             fill="#374151"
             className="font-medium"
           >
-            {points.length === 0 
-              ? "Κλικ για να ξεκινήσετε" 
-              : `${points.length} σημεία - Κλικ για συνέχεια`
-            }
+            {instructionText}
           </text>
         )}
       </svg>

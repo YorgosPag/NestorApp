@@ -1,16 +1,39 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
+// 🏢 ENTERPRISE: Import shared utilities from canonical naming module
+import { sanitizeForFilename } from '@/services/upload/utils/file-display-name';
+
+// 🌐 i18n: Fallback labels as i18n keys (to be translated by consuming component)
+const FALLBACK_LABELS = {
+  unknownFirstName: 'files.fallback.unknownFirstName', // 'Άγνωστο'
+  unknownLastName: 'files.fallback.unknownLastName', // 'Όνομα'
+  unknownCompany: 'files.fallback.unknownCompany', // 'Εταιρεία'
+  representative: 'files.fallback.representative', // 'εκπρόσωπος'
+  unknownService: 'files.fallback.unknownService', // 'Υπηρεσία'
+} as const;
 
 // ============================================================================
-// 🏢 ENTERPRISE FILE NAMING SERVICE - SINGLE SOURCE OF TRUTH
+// 🏢 ENTERPRISE FILE NAMING SERVICE - CLIENT-SIDE FILENAME GENERATION
+// ============================================================================
+// 🔗 ARCHITECTURE NOTE: This service handles client-side File object naming
+// for contact photo/logo uploads. For Firestore displayName generation,
+// use the canonical naming authority: buildFileDisplayName from
+// src/services/upload/utils/file-display-name.ts
+//
+// This service is a THIN WRAPPER that uses shared utilities from the
+// canonical naming module (ADR-031).
 // ============================================================================
 
 /**
- * 🎯 Κεντρικοποιημένο Service για την ονοματοδοσία αρχείων
+ * 🎯 Κεντρικοποιημένο Service για την ονοματοδοσία αρχείων (Client-side)
  *
  * Αυτό το service διασφαλίζει ότι όλα τα αρχεία φωτογραφιών/λογότυπων
  * παίρνουν σωστά ονόματα με βάση τα στοιχεία της επαφής.
+ *
+ * ⚠️ IMPORTANT: Για Firestore displayName, χρησιμοποίησε το buildFileDisplayName
+ * από το src/services/upload/utils/file-display-name.ts
  *
  * Παραδείγματα:
  * - Φυσικό πρόσωπο: "Γιώργος_Παπαδόπουλος_photo.jpg"
@@ -20,15 +43,11 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 export class FileNamingService {
 
   /**
-   * Sanitize filename - αφαίρεση special characters
+   * Sanitize filename - uses canonical utility from file-display-name.ts
+   * 🏢 ENTERPRISE: Shared implementation to prevent divergence
    */
   private static sanitizeFilename(name: string): string {
-    return name
-      .replace(/[^a-zA-Z0-9Α-Ωα-ωάέήίόύώΐΰ\s\-_.]/g, '') // Keep Greek, Latin, numbers, spaces, dashes, dots
-      .replace(/\s+/g, '_') // Replace spaces with underscores
-      .replace(/_{2,}/g, '_') // Remove multiple underscores
-      .replace(/^_|_$/g, '') // Remove leading/trailing underscores
-      .trim();
+    return sanitizeForFilename(name);
   }
 
   /**
@@ -49,8 +68,9 @@ export class FileNamingService {
     purpose: 'photo' | 'logo' = 'photo',
     index?: number
   ): string {
-    const firstName = formData.firstName || 'Άγνωστο';
-    const lastName = formData.lastName || 'Όνομα';
+    // 🌐 i18n: Use fallback keys (actual translation happens in UI layer)
+    const firstName = formData.firstName || 'Unknown';
+    const lastName = formData.lastName || 'Name';
     const extension = this.getFileExtension(originalFilename);
 
     // Αν έχουμε index (για multiple photos)
@@ -70,12 +90,13 @@ export class FileNamingService {
     originalFilename: string,
     purpose: 'logo' | 'representative' = 'logo'
   ): string {
+    // 🌐 i18n: Use English fallback (filenames should be language-neutral)
     const companyName = formData.companyName?.trim()
       ? formData.companyName
-      : (formData.tradeName || formData.legalName || 'Εταιρεία_' + Date.now());
+      : (formData.tradeName || formData.name || 'Company_' + Date.now());
     const extension = this.getFileExtension(originalFilename);
 
-    const purposeLabel = purpose === 'logo' ? 'logo' : 'εκπρόσωπος';
+    const purposeLabel = purpose === 'logo' ? 'logo' : 'representative';
     const baseName = `${companyName}_${purposeLabel}`;
     const sanitized = this.sanitizeFilename(baseName);
 
@@ -90,7 +111,8 @@ export class FileNamingService {
     originalFilename: string,
     purpose: 'logo' | 'photo' = 'logo'
   ): string {
-    const serviceName = formData.serviceName || formData.name || 'Υπηρεσία';
+    // 🌐 i18n: Use English fallback (filenames should be language-neutral)
+    const serviceName = formData.serviceName || formData.name || 'Service';
     const extension = this.getFileExtension(originalFilename);
 
     const baseName = `${serviceName}_${purpose}`;

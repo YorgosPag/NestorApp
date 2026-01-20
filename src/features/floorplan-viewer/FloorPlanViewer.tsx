@@ -31,8 +31,8 @@ import { EmptyState } from './components/EmptyState';
 
 import type { FloorPlanViewerLayoutProps } from './types';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση existing enterprise zoom system αντί διπλότυπου
-import { useZoom } from '../../../subapps/dxf-viewer/systems/zoom/hooks/useZoom';
-import type { ViewTransform, Viewport } from '../../../subapps/dxf-viewer/rendering/types/Types';
+import { useZoom } from '@/subapps/dxf-viewer/systems/zoom/hooks/useZoom';
+import type { ViewTransform, Viewport } from '@/subapps/dxf-viewer/rendering/types/Types';
 import { asArray, ensureFloor, isNodeEditMode, safeGetProperty } from './utils/safeProps';
 
 export function FloorPlanViewer(props: FloorPlanViewerLayoutProps) {

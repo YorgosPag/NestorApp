@@ -105,6 +105,15 @@ export const COLOR_BRIDGE = {
     // ✅ ENTERPRISE: Button colors (tests-modal, debug UI)
     purpleButton: 'bg-purple-600',       // Purple primary button
     purpleButtonHover: 'bg-purple-700',  // Purple button hover
+
+    // ✅ ENTERPRISE: Missing bg colors for component compatibility
+    accentSubtle: 'bg-accent/20',        // Subtle accent for badges, highlights
+    backgroundTertiary: 'bg-muted/70',   // Tertiary background surfaces
+    gradient: 'bg-gradient-to-br from-primary/10 to-accent/10', // Generic gradient bg
+
+    // ✅ ENTERPRISE FIX: Missing bg colors for BuildingCardUtils, SafePDFLoader
+    mutedLight: 'bg-muted/30',           // Light muted background
+    dangerSubtle: 'bg-red-100',          // Subtle danger background
   },
 
   /** 📝 Text Color Mappings */
@@ -175,6 +184,12 @@ export const COLOR_BRIDGE = {
 
     // ✅ ENTERPRISE: Purple variants for button descriptions
     purpleLight: 'text-purple-200',       // Light purple text for button descriptions
+
+    // ✅ ENTERPRISE FIX: onStatus text colors (text that appears ON status backgrounds)
+    onSuccess: 'text-green-800',          // Text on success backgrounds
+    onError: 'text-red-800',              // Text on error backgrounds
+    onInfo: 'text-blue-800',              // Text on info backgrounds
+    onWarning: 'text-yellow-800',         // Text on warning backgrounds
   },
 
   /** 🔲 Border Color Mappings */

@@ -245,14 +245,16 @@ export const MODAL_SELECT_NAVIGATION_SORT_OPTIONS = {
   date_desc: 'Νεότερα πρώτα'
 } as const;
 
+// 🌐 i18n: Search placeholders converted to i18n keys - 2026-01-19
+// Keys reference common:search.placeholder.* namespace
 export const MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
-  buildings: 'Αναζήτηση κτιρίων...',
-  projects: 'Αναζήτηση έργων...',
-  contacts: 'Αναζήτηση επαφών...',
-  units: 'Αναζήτηση μονάδων...',
-  storages: 'Αναζήτηση αποθηκών...',
-  parking: 'Αναζήτηση θέσεων...',
-  communications: 'Αναζήτηση μηνυμάτων...'
+  buildings: 'common:search.placeholder.buildings',
+  projects: 'common:search.placeholder.projects',
+  contacts: 'common:search.placeholder.contacts',
+  units: 'common:search.placeholder.units',
+  storages: 'common:search.placeholder.storages',
+  parking: 'common:search.placeholder.parking',
+  communications: 'common:search.placeholder.communications'
 } as const;
 
 export const MODAL_SELECT_COMPACT_TOOLBAR_NEW_ITEM_LABELS = {

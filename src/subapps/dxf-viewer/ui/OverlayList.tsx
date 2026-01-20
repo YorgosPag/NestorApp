@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/card';
@@ -15,6 +16,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface OverlayListProps {
   overlays: Overlay[];
@@ -33,6 +36,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   onDelete,
   onToggleLayers,
 }) => {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -60,8 +64,8 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   const filteredOverlays = overlays.filter(overlay => {
     const query = searchQuery.toLowerCase();
     const label = overlay.label?.toLowerCase() || '';
-    const status = STATUS_LABELS[overlay.status || 'for-sale'].toLowerCase();
-    const kind = KIND_LABELS[overlay.kind].toLowerCase();
+    const status = t(STATUS_LABELS[overlay.status || 'for-sale']).toLowerCase();
+    const kind = t(KIND_LABELS[overlay.kind]).toLowerCase();
     return label.includes(query) || status.includes(query) || kind.includes(query);
   });
 
@@ -78,7 +82,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Διαγραφή overlay;')) {
+    if (confirm(t('overlayList.deleteConfirm'))) {
       onDelete(id);
       if (selectedOverlayId === id) onSelect(null);
     }
@@ -93,7 +97,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
     <Card className={`w-full h-full flex flex-col ${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.primary}`}>
       <CardHeader className={`${PANEL_LAYOUT.PADDING.BOTTOM_SM} ${PANEL_LAYOUT.PADDING.TOP_SM} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM}`}>
         <div className="flex items-center justify-between">
-          <CardTitle className={PANEL_LAYOUT.TYPOGRAPHY.SM}>Overlays</CardTitle>
+          <CardTitle className={PANEL_LAYOUT.TYPOGRAPHY.SM}>{t('overlayList.title')}</CardTitle>
           <CommonBadge
             status="company"
             customLabel={overlays.length.toString()}
@@ -105,7 +109,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
         <div className={`relative ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
           <Search className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_2} ${PANEL_LAYOUT.POSITION.TOP_2_5} ${iconSizes.sm} ${colors.text.muted}`} />
           <Input
-            placeholder="Αναζήτηση..."
+            placeholder={t('overlayList.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={`${PANEL_LAYOUT.PADDING.LEFT_XL} ${iconSizes.xl} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.bg.primary} ${quick.input} ${colors.text.primary} placeholder:${colors.text.muted}`}
@@ -119,7 +123,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
             {filteredOverlays.length === 0 ? (
               <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL}`}>
                 <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
-                  {searchQuery ? 'Δεν βρέθηκαν overlays' : 'Δεν υπάρχουν overlays'}
+                  {searchQuery ? t('overlayList.notFound') : t('overlayList.empty')}
                 </p>
               </div>
             ) : (
@@ -153,7 +157,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                     />
                     <div className={`flex-1 ${PANEL_LAYOUT.MIN_WIDTH['0']} ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
                       <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
-                        {STATUS_LABELS[overlay.status || 'for-sale']} {KIND_LABELS[overlay.kind]}
+                        {t(STATUS_LABELS[overlay.status || 'for-sale'])} {t(KIND_LABELS[overlay.kind])}
                       </div>
                       <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
                         {overlay.label || `Overlay ${overlay.id.slice(0, 6)}`}
@@ -165,7 +169,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                         size="sm"
                         onClick={(e) => handleEdit(overlay.id, e)}
                         className={`${PANEL_LAYOUT.SPACING.HALF} ${iconSizes.md} ${colors.text.muted}${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-                        title="Επεξεργασία"
+                        title={t('overlayList.edit')}
                       >
                         <Edit3 className={iconSizes.xs} />
                       </Button>
@@ -174,7 +178,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                         size="sm"
                         onClick={(e) => handleDelete(overlay.id, e)}
                         className={`${PANEL_LAYOUT.SPACING.HALF} ${iconSizes.md} ${HOVER_TEXT_EFFECTS.RED}`}
-                        title="Διαγραφή"
+                        title={t('overlayList.delete')}
                       >
                         <Trash2 className={iconSizes.xs} />
                       </Button>

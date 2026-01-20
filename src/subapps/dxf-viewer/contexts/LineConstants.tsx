@@ -10,8 +10,40 @@
 import { UI_COLORS } from '../config/color-config';
 // ✅ ENTERPRISE: Use centralized types from settings-core (no duplicates!)
 import type { LineType, LineCapStyle, LineJoinStyle } from '../settings-core/types';
+// 🏢 ENTERPRISE: i18n support
+import type { TFunction } from 'i18next';
 
-// ✅ ENTERPRISE: Line type labels aligned with canonical LineType from settings-core/types.ts
+// 🏢 ENTERPRISE: i18n key mapping for line types
+const LINE_TYPE_I18N_KEYS: Record<LineType, string> = {
+  solid: 'solid',
+  dashed: 'dashed',
+  dotted: 'dotted',
+  'dash-dot': 'dashDot',
+  'dash-dot-dot': 'dashDotDot'
+} as const;
+
+// 🏢 ENTERPRISE: Get translated line type label
+export const getLineTypeLabel = (type: LineType, t: TFunction): string => {
+  const key = LINE_TYPE_I18N_KEYS[type];
+  return t(`lineSettings.types.${key}`);
+};
+
+// 🏢 ENTERPRISE: Get translated line cap label
+export const getLineCapLabel = (cap: LineCapStyle, t: TFunction): string => {
+  return t(`lineSettings.caps.${cap}`);
+};
+
+// 🏢 ENTERPRISE: Get translated line join label
+export const getLineJoinLabel = (join: LineJoinStyle, t: TFunction): string => {
+  return t(`lineSettings.joins.${join}`);
+};
+
+// 🏢 ENTERPRISE: Get translated template category label
+export const getTemplateCategoryLabel = (category: string, t: TFunction): string => {
+  return t(`lineSettings.categories.${category}`);
+};
+
+// ✅ ENTERPRISE: Line type labels (legacy - use getLineTypeLabel for i18n)
 // Canonical types: 'solid' | 'dashed' | 'dotted' | 'dash-dot' | 'dash-dot-dot'
 export const LINE_TYPE_LABELS: Record<LineType, string> = {
   solid: 'Συνεχής',
@@ -21,14 +53,14 @@ export const LINE_TYPE_LABELS: Record<LineType, string> = {
   'dash-dot-dot': 'Παύλα-Κουκκίδα-Κουκκίδα'
 } as const;
 
-// Line cap labels
+// Line cap labels (legacy - use getLineCapLabel for i18n)
 export const LINE_CAP_LABELS = {
   butt: 'Τετράγωνη',
   round: 'Στρογγυλή',
   square: 'Προεκτεταμένη'
 } as const;
 
-// Line join labels
+// Line join labels (legacy - use getLineJoinLabel for i18n)
 export const LINE_JOIN_LABELS = {
   miter: 'Αιχμηρή',
   round: 'Στρογγυλή',
@@ -60,7 +92,7 @@ export const OPACITY_RANGE = {
   step: 0.1
 } as const;
 
-// Template category labels (ίδια με το kalo)
+// Template category labels (legacy - use getTemplateCategoryLabel for i18n)
 export const TEMPLATE_LABELS = {
   engineering: 'Τεχνικά Σχέδια',
   architectural: 'Αρχιτεκτονικά',

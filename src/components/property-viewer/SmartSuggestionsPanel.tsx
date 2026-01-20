@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -9,6 +8,8 @@ import type { Property } from '@/types/property-viewer';
 import type { Suggestion } from '@/types/suggestions';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { SuggestionsList } from './suggestion-panel/SuggestionsList';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface SmartSuggestionsPanelProps {
   properties: Property[];
@@ -20,11 +21,13 @@ export function SmartSuggestionsPanel({ properties, onShowSuggestion, onAcceptSu
   const notifications = useNotifications();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null);
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
 
   const analyzePlacement = () => {
     const newSuggestions = suggestionSystem.analyzeFloorPlan(properties);
     setSuggestions(newSuggestions.sort((a, b) => b.score - a.score));
-    notifications.success(`🔍 Ανάλυση Ολοκληρώθηκε: Βρέθηκαν ${newSuggestions.length} προτάσεις τοποθέτησης`);
+    notifications.success(`🔍 ${t('suggestions.analysisComplete', { count: newSuggestions.length })}`);
   };
 
   const handleSelectSuggestion = (id: string) => {
@@ -55,7 +58,7 @@ export function SmartSuggestionsPanel({ properties, onShowSuggestion, onAcceptSu
         <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
                 <span>🤖</span>
-                Έξυπνες Προτάσεις
+                {t('suggestions.title')}
             </CardTitle>
             <Button
                 onClick={analyzePlacement}
@@ -63,14 +66,14 @@ export function SmartSuggestionsPanel({ properties, onShowSuggestion, onAcceptSu
                 variant="outline"
                 className="h-7 text-xs"
             >
-                Ανάλυση
+                {t('suggestions.analyze')}
             </Button>
         </div>
       </CardHeader>
       <CardContent className="p-2">
         {suggestions.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
-                <p className="text-xs">Πατήστε "Ανάλυση" για προτάσεις.</p>
+                <p className="text-xs">{t('suggestions.clickAnalyze')}</p>
             </div>
         ) : (
           <SuggestionsList
@@ -88,7 +91,7 @@ export function SmartSuggestionsPanel({ properties, onShowSuggestion, onAcceptSu
             variant="ghost"
             size="sm"
             >
-            Καθαρισμός Προτάσεων
+            {t('suggestions.clearSuggestions')}
             </Button>
         )}
       </CardContent>

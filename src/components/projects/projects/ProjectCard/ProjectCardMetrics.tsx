@@ -10,12 +10,16 @@ import {
 } from "@/components/ui/tooltip";
 import type { Project } from '@/types/project';
 import { formatCurrency } from '@/lib/intl-utils';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectCardMetricsProps {
   project: Project;
 }
 
 export function ProjectCardMetrics({ project }: ProjectCardMetricsProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   // 🟢 ENTERPRISE: Centralized systems
   const typography = useTypography();
   const colors = useSemanticColors();
@@ -23,11 +27,11 @@ export function ProjectCardMetrics({ project }: ProjectCardMetricsProps) {
   return (
     <div className="grid grid-cols-2 gap-4 pt-2">
       <div className="space-y-1">
-        <p className={typography.special.tertiary}>Επιφάνεια</p>
+        <p className={typography.special.tertiary}>{t('metrics.area')}</p>
         <p className={typography.heading.sm}>{project.totalArea.toLocaleString('el-GR')} m²</p>
       </div>
       <div className="space-y-1">
-        <p className={typography.special.tertiary}>Αξία</p>
+        <p className={typography.special.tertiary}>{t('metrics.value')}</p>
         <Tooltip>
           <TooltipTrigger>
             <p className={`${typography.heading.sm} ${colors.text.price}`}>
@@ -35,7 +39,7 @@ export function ProjectCardMetrics({ project }: ProjectCardMetricsProps) {
             </p>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Συνολική αξία έργου</p>
+            <p>{t('metrics.totalValueTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </div>

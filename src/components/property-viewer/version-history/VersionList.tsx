@@ -9,6 +9,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { formatDateTime as formatDate } from '@/lib/intl-utils';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Version history item type
 export interface VersionHistoryItem {
@@ -39,6 +41,9 @@ export function VersionList({
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
+
   return (
     <div className="p-4 space-y-2">
       {versions.map(version => (
@@ -60,7 +65,7 @@ export function VersionList({
                 {version.type === 'milestone' && (
                   <CommonBadge
                     status="company"
-                    customLabel="Ορόσημο"
+                    customLabel={t('versionHistory.badge.milestone')}
                     variant="outline"
                     className={`${getStatusBorder('warning')} ${colors.bg.warning} text-yellow-700`}
                   />
@@ -68,7 +73,7 @@ export function VersionList({
                 {version.type === 'auto' && (
                   <CommonBadge
                     status="company"
-                    customLabel="Auto"
+                    customLabel={t('versionHistory.badge.auto')}
                     variant="secondary"
                   />
                 )}

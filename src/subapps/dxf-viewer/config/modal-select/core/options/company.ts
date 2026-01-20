@@ -13,101 +13,111 @@
 
 /**
  * Standardized company legal forms για Ελληνικό νομικό σύστημα
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
+ * Labels are translated at runtime by GenericFormRenderer
  */
 export const MODAL_SELECT_LEGAL_FORMS = [
-  { value: 'ae', label: 'Α.Ε. (Ανώνυμη Εταιρεία)' },
-  { value: 'epe', label: 'Ε.Π.Ε. (Εταιρεία Περιορισμένης Ευθύνης)' },
-  { value: 'ee', label: 'Ε.Ε. (Ετερόρρυθμη Εταιρεία)' },
-  { value: 'oe', label: 'Ο.Ε. (Ομόρρυθμη Εταιρεία)' },
-  { value: 'ike', label: 'Ι.Κ.Ε. (Ιδιωτική Κεφαλαιουχική Εταιρεία)' },
-  { value: 'syndicate', label: 'Συνεταιρισμός' },
-  { value: 'sole_proprietorship', label: 'Ατομική Επιχείρηση' },
-  { value: 'civil_partnership', label: 'Αστική Εταιρεία' },
-  { value: 'joint_venture', label: 'Κοινοπραξία' },
-  { value: 'other', label: 'Άλλο' }
+  { value: 'ae', label: 'contacts.company.legalForms.ae' },
+  { value: 'epe', label: 'contacts.company.legalForms.epe' },
+  { value: 'ee', label: 'contacts.company.legalForms.ee' },
+  { value: 'oe', label: 'contacts.company.legalForms.oe' },
+  { value: 'ike', label: 'contacts.company.legalForms.ike' },
+  { value: 'syndicate', label: 'contacts.company.legalForms.smpc' },
+  { value: 'sole_proprietorship', label: 'contacts.company.legalForms.mono' },
+  { value: 'civil_partnership', label: 'contacts.company.legalForms.other' },
+  { value: 'joint_venture', label: 'contacts.company.legalForms.other' },
+  { value: 'other', label: 'contacts.company.legalForms.other' }
 ] as const;
 
 /**
  * Standardized ΓΕΜΗ statuses
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_GEMI_STATUSES = [
-  { value: 'active', label: 'Ενεργή' },
-  { value: 'inactive', label: 'Ανενεργή' },
-  { value: 'suspended', label: 'Αναστολή Λειτουργίας' },
-  { value: 'dissolution', label: 'Σε Διαδικασία Λύσης' },
-  { value: 'dissolved', label: 'Λυθείσα' },
-  { value: 'bankruptcy', label: 'Σε Πτώχευση' },
-  { value: 'liquidation', label: 'Υπό Εκκαθάριση' }
+  { value: 'active', label: 'contacts.options.gemiStatuses.active' },
+  { value: 'inactive', label: 'contacts.options.gemiStatuses.inactive' },
+  { value: 'suspended', label: 'contacts.options.gemiStatuses.suspended' },
+  { value: 'dissolution', label: 'contacts.options.gemiStatuses.dissolution' },
+  { value: 'dissolved', label: 'contacts.options.gemiStatuses.dissolved' },
+  { value: 'bankruptcy', label: 'contacts.options.gemiStatuses.bankruptcy' },
+  { value: 'liquidation', label: 'contacts.options.gemiStatuses.liquidation' }
 ] as const;
 
 /**
  * Standardized service categories
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_SERVICE_CATEGORIES = [
-  { value: 'ministry', label: 'Υπουργείο' },
-  { value: 'region', label: 'Περιφέρεια' },
-  { value: 'municipality', label: 'Δήμος' },
-  { value: 'public_entity', label: 'Δημόσιος Οργανισμός' },
-  { value: 'independent_authority', label: 'Ανεξάρτητη Αρχή' },
-  { value: 'university', label: 'Πανεπιστήμιο' },
-  { value: 'hospital', label: 'Νοσοκομείο' },
-  { value: 'school', label: 'Εκπαιδευτικό Ίδρυμα' },
-  { value: 'other', label: 'Άλλο' }
+  { value: 'ministry', label: 'contacts.options.serviceCategories.ministry' },
+  { value: 'region', label: 'contacts.options.serviceCategories.region' },
+  { value: 'municipality', label: 'contacts.options.serviceCategories.municipality' },
+  { value: 'public_entity', label: 'contacts.options.serviceCategories.publicEntity' },
+  { value: 'independent_authority', label: 'contacts.options.serviceCategories.independentAuthority' },
+  { value: 'university', label: 'contacts.options.serviceCategories.university' },
+  { value: 'hospital', label: 'contacts.options.serviceCategories.hospital' },
+  { value: 'school', label: 'contacts.options.serviceCategories.school' },
+  { value: 'other', label: 'contacts.options.serviceCategories.other' }
 ] as const;
 
 /**
  * Standardized legal statuses για δημόσιες υπηρεσίες
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_LEGAL_STATUSES = [
-  { value: 'npdd', label: 'Νομικό Πρόσωπο Δημοσίου Δικαίου (Ν.Π.Δ.Δ.)' },
-  { value: 'npid', label: 'Νομικό Πρόσωπο Ιδιωτικού Δικαίου (Ν.Π.Ι.Δ.)' },
-  { value: 'public_service', label: 'Δημόσια Υπηρεσία' },
-  { value: 'independent_authority', label: 'Ανεξάρτητη Αρχή' },
-  { value: 'decentralized_admin', label: 'Αποκεντρωμένη Διοίκηση' }
+  { value: 'npdd', label: 'contacts.options.legalStatuses.npdd' },
+  { value: 'npid', label: 'contacts.options.legalStatuses.npid' },
+  { value: 'public_service', label: 'contacts.options.legalStatuses.publicService' },
+  { value: 'independent_authority', label: 'contacts.options.legalStatuses.independentAuthority' },
+  { value: 'decentralized_admin', label: 'contacts.options.legalStatuses.decentralizedAdmin' }
 ] as const;
 
 /**
  * Standardized activity types
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_ACTIVITY_TYPES = [
-  { value: 'main', label: 'Κύρια' },
-  { value: 'secondary', label: 'Δευτερεύουσα' }
+  { value: 'main', label: 'contacts.options.activityTypes.main' },
+  { value: 'secondary', label: 'contacts.options.activityTypes.secondary' }
 ] as const;
 
 /**
  * Standardized address types
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_ADDRESS_TYPES = [
-  { value: 'headquarters', label: 'Έδρα' },
-  { value: 'branch', label: 'Υποκατάστημα' }
+  { value: 'headquarters', label: 'contacts.options.addressTypes.headquarters' },
+  { value: 'branch', label: 'contacts.options.addressTypes.branch' }
 ] as const;
 
 /**
  * Standardized shareholder types
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_SHAREHOLDER_TYPES = [
-  { value: 'individual', label: 'Φυσικό Πρόσωπο' },
-  { value: 'legal', label: 'Νομικό Πρόσωπο' }
+  { value: 'individual', label: 'contacts.options.shareholderTypes.individual' },
+  { value: 'legal', label: 'contacts.options.shareholderTypes.legal' }
 ] as const;
 
 // ====================================================================
 // 🏢 COMPANY GEMI HELP TEXTS - ENTERPRISE CENTRALIZED
+// 🌐 i18n: Uses keys from contacts.json namespace - 2026-01-18
 // ====================================================================
 
 /**
  * ✅ ENTERPRISE: Centralized Help Text System για ΓΕΜΗ Fields
  * Single Source of Truth για όλα τα help texts των company fields
  * Αντικαθιστά διάσπαρτα help strings σε όλη την εφαρμογή
+ * 🌐 i18n: All help texts converted to i18n keys
  */
 export const MODAL_SELECT_COMPANY_HELP_TEXTS = {
-  AFM: 'Το Α.Φ.Μ. (Αριθμός Φορολογικού Μητρώου) πρέπει να είναι 9 ψηφία',
-  DOY: 'Η Δ.Ο.Υ. (Δημόσια Οικονομική Υπηρεσία) στην οποία ανήκει η εταιρεία',
-  GEMI_NUMBER: 'Ο αριθμός Γ.Ε.ΜΗ. (Γενικό Εμπορικό Μητρώο) της εταιρείας',
-  LEGAL_FORM: 'Η νομική μορφή της εταιρείας σύμφωνα με το Ελληνικό νομικό σύστημα',
-  BUSINESS_NAME: 'Η επαγγελματική επωνυμία της εταιρείας',
-  TRADE_NAME: 'Το εμπορικό όνομα της εταιρείας (εάν διαφέρει από την επωνυμία)',
-  ACTIVITY_CODE: 'Ο κωδικός δραστηριότητας ΚΑΔ (Κλάδος Οικονομικής Δραστηριότητας)',
-  CAPITAL: 'Το μετοχικό κεφάλαιο της εταιρείας σε ευρώ'
+  AFM: 'contacts.company.helpTexts.afm',
+  DOY: 'contacts.company.helpTexts.doy',
+  GEMI_NUMBER: 'contacts.company.helpTexts.gemiNumber',
+  LEGAL_FORM: 'contacts.company.helpTexts.legalForm',
+  BUSINESS_NAME: 'contacts.company.helpTexts.businessName',
+  TRADE_NAME: 'contacts.company.helpTexts.tradeName',
+  ACTIVITY_CODE: 'contacts.company.helpTexts.activityCode',
+  CAPITAL: 'contacts.company.helpTexts.capital'
 } as const;
 
 // ====================================================================

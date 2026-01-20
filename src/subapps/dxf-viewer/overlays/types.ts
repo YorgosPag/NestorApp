@@ -59,11 +59,15 @@ export const STATUS_COLORS = PROPERTY_STATUS_COLORS;
  */
 export const STATUS_LABELS = PROPERTY_STATUS_LABELS;
 
+/**
+ * Display labels για UI - i18n keys για translation
+ * 🌐 i18n: Uses keys from dxf-viewer:overlayProperties.kindLabels namespace
+ */
 export const KIND_LABELS: Record<OverlayKind, string> = {
-  unit:      'Μονάδα',
-  parking:   'Parking',
-  storage:   'Αποθήκη',
-  footprint: 'Αποτύπωμα',
+  unit:      'dxf-viewer:overlayProperties.kindLabels.unit',
+  parking:   'dxf-viewer:overlayProperties.kindLabels.parking',
+  storage:   'dxf-viewer:overlayProperties.kindLabels.storage',
+  footprint: 'dxf-viewer:overlayProperties.kindLabels.footprint',
 };
 
 /**

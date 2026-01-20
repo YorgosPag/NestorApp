@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useDynamicBackgroundClass } from '../../../components/ui/utils/dynamic-styles';
@@ -70,6 +71,7 @@ function calculatePolygonPerimeter(polygon: unknown): number {
 }
 
 export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, onUpdate, onClose }) => {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const [label, setLabel] = useState('');
@@ -85,9 +87,9 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
   if (!overlay) {
     return (
       <Card className={PANEL_LAYOUT.WIDTH.PANEL_SM}>
-        <CardHeader><CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>Ιδιότητες Overlay</CardTitle></CardHeader>
+        <CardHeader><CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>{t('overlayProperties.title')}</CardTitle></CardHeader>
         <CardContent>
-          <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} text-muted-foreground`}>Επιλέξτε ένα overlay για να δείτε τις ιδιότητές του.</p>
+          <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} text-muted-foreground`}>{t('overlayProperties.selectOverlay')}</p>
         </CardContent>
       </Card>
     );
@@ -113,7 +115,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
     <Card className={PANEL_LAYOUT.WIDTH.PANEL_SM}>
       <CardHeader className={PANEL_LAYOUT.PADDING.BOTTOM_SM}>
         <div className="flex items-center justify-between">
-          <CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>Ιδιότητες Overlay</CardTitle>
+          <CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>{t('overlayProperties.title')}</CardTitle>
           {onClose && (
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className={iconSizes.sm} />
@@ -138,19 +140,19 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
         {/* Label */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label htmlFor="label" className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Ετικέτα</Label>
+          <Label htmlFor="label" className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.label')}</Label>
           <Input
             id="label"
             value={label}
             onChange={(e) => handleLabelChange(e.target.value)}
-            placeholder="π.χ. A-12, P-034"
+            placeholder={t('overlayProperties.labelPlaceholder')}
             className={PANEL_LAYOUT.HEIGHT.XL}
           />
         </div>
 
         {/* Status */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Κατάσταση</Label>
+          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.status')}</Label>
           <Select value={overlay.status} onValueChange={handleStatusChange}>
             <SelectTrigger className={PANEL_LAYOUT.HEIGHT.XL}><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -160,7 +162,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
                     <div
                       className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass(String(STATUS_COLORS[status] || ''))}`}
                     />
-                    {STATUS_LABELS[status]}
+                    {t(STATUS_LABELS[status])}
                   </div>
                 </SelectItem>
               ))}
@@ -170,12 +172,12 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
         {/* Kind */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Τύπος</Label>
+          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.type')}</Label>
           <Select value={overlay.kind} onValueChange={handleKindChange}>
             <SelectTrigger className={PANEL_LAYOUT.HEIGHT.XL}><SelectValue /></SelectTrigger>
             <SelectContent>
               {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => (
-                <SelectItem key={kind} value={kind}>{KIND_LABELS[kind]}</SelectItem>
+                <SelectItem key={kind} value={kind}>{t(KIND_LABELS[kind])}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -185,12 +187,12 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
         {/* Linked Entity (simplified) */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Συνδεδεμένη Μονάδα</Label>
+          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.linkedUnit')}</Label>
           <Input
             value={linkedUnitId}
             onChange={(e) => setLinkedUnitId(e.target.value)}
             onBlur={handleLinkedEntityUpdate}
-            placeholder="Unit ID"
+            placeholder={t('overlayProperties.unitIdPlaceholder')}
             className={`${PANEL_LAYOUT.HEIGHT.INPUT_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}
           />
         </div>
@@ -199,11 +201,11 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
 
         {/* Geometry Info */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>Γεωμετρία</Label>
+          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.geometry')}</Label>
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} text-muted-foreground ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
-            <div>Σημεία: {overlay && overlay.polygon ? overlay.polygon.length : 0}</div>
-            <div>Εμβαδό: {area.toFixed(2)} m²</div>
-            <div>Περίμετρος: {perimeter.toFixed(2)} m</div>
+            <div>{t('overlayProperties.points')} {overlay && overlay.polygon ? overlay.polygon.length : 0}</div>
+            <div>{t('overlayProperties.area')} {area.toFixed(2)} m²</div>
+            <div>{t('overlayProperties.perimeter')} {perimeter.toFixed(2)} m</div>
           </div>
         </div>
       </CardContent>

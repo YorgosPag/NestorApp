@@ -5,56 +5,62 @@
  * @date 2025-12-28
  * @version 1.0.0 - ENTERPRISE MODULAR ARCHITECTURE
  * @compliance CLAUDE.md Enterprise Standards - MODULAR SPLITTING
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 
 // ====================================================================
 // INDIVIDUAL & PERSONAL DATA - 🏢 ENTERPRISE CENTRALIZED
+// 🌐 i18n: Uses keys from contacts.json namespace
 // ====================================================================
 
 /**
  * Standardized gender options
+ * 🌐 i18n: Uses keys from contacts.json namespace
  */
 export const MODAL_SELECT_GENDER_OPTIONS = [
-  { value: 'male', label: 'Άντρας' },
-  { value: 'female', label: 'Γυναίκα' },
-  { value: 'other', label: 'Άλλο' },
-  { value: 'prefer_not_to_say', label: 'Προτιμώ να μη το δηλώσω' }
+  { value: 'male', label: 'contacts.options.gender.male' },
+  { value: 'female', label: 'contacts.options.gender.female' },
+  { value: 'other', label: 'contacts.options.gender.other' },
+  { value: 'prefer_not_to_say', label: 'contacts.options.gender.preferNotToSay' }
 ] as const;
 
 /**
  * Standardized identity document types
+ * 🌐 i18n: Uses keys from contacts.json namespace
  */
 export const MODAL_SELECT_IDENTITY_TYPES = [
-  { value: 'identity_card', label: 'Δελτίο Ταυτότητας' },
-  { value: 'passport', label: 'Διαβατήριο' },
-  { value: 'drivers_license', label: 'Άδεια Οδήγησης' },
-  { value: 'other', label: 'Άλλο' }
+  { value: 'identity_card', label: 'contacts.options.identity.identityCard' },
+  { value: 'passport', label: 'contacts.options.identity.passport' },
+  { value: 'drivers_license', label: 'contacts.options.identity.driversLicense' },
+  { value: 'other', label: 'contacts.options.identity.other' }
 ] as const;
 
 /**
  * Standardized country options (common ones για Greece-focused app)
+ * 🌐 i18n: Uses keys from common.json namespace
  */
 export const MODAL_SELECT_COUNTRY_OPTIONS = [
-  { value: 'GR', label: 'Ελλάδα' },
-  { value: 'CY', label: 'Κύπρος' },
-  { value: 'US', label: 'ΗΠΑ' },
-  { value: 'DE', label: 'Γερμανία' },
-  { value: 'FR', label: 'Γαλλία' },
-  { value: 'IT', label: 'Ιταλία' },
-  { value: 'ES', label: 'Ισπανία' },
-  { value: 'UK', label: 'Ηνωμένο Βασίλειο' },
-  { value: 'AU', label: 'Αυστραλία' },
-  { value: 'CA', label: 'Καναδάς' },
-  { value: 'OTHER', label: 'Άλλη χώρα' }
+  { value: 'GR', label: 'common.countries.greece' },
+  { value: 'CY', label: 'common.countries.cyprus' },
+  { value: 'US', label: 'common.countries.usa' },
+  { value: 'DE', label: 'common.countries.germany' },
+  { value: 'FR', label: 'common.countries.france' },
+  { value: 'IT', label: 'common.countries.italy' },
+  { value: 'ES', label: 'common.countries.spain' },
+  { value: 'UK', label: 'common.countries.uk' },
+  { value: 'AU', label: 'common.countries.australia' },
+  { value: 'CA', label: 'common.countries.canada' },
+  { value: 'OTHER', label: 'common.countries.other' }
 ] as const;
 
 /**
  * Standardized currency options
+ * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
 export const MODAL_SELECT_CURRENCY_OPTIONS = [
-  { value: 'EUR', label: 'EUR (Ευρώ)' },
-  { value: 'USD', label: 'USD (Δολάρια ΗΠΑ)' },
-  { value: 'GBP', label: 'GBP (Λίρες Στερλίνες)' }
+  { value: 'EUR', label: 'contacts.options.currencies.eur' },
+  { value: 'USD', label: 'contacts.options.currencies.usd' },
+  { value: 'GBP', label: 'contacts.options.currencies.gbp' }
 ] as const;
 
 // ====================================================================

@@ -35,6 +35,12 @@ export function MapCanvas({ buildingName, mapView, showNearbyProjects, selectedL
     const mapCanvas = useMapCanvasStyles('success');
     const projectMarker = useProjectMarkerStyles();
 
+    // 🏢 ENTERPRISE: Border tokens hook for createBorder utility
+    const { createBorder, quick } = useBorderTokens();
+
+    // 🏢 ENTERPRISE: Semantic colors hook for centralized colors
+    const colors = useSemanticColors();
+
     const filteredProjects = nearbyProjects.filter(project => {
         if (selectedLayer === 'all') return true;
         return project.status === selectedLayer;

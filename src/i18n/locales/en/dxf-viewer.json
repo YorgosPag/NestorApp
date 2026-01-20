@@ -67,32 +67,70 @@
   "panels": {
     "properties": {
       "title": "Properties",
-      "description": "{{selectedCount}} selected elements{{layerCount, plural, =0 {} other { | {{layerCount}} DXF layers}}"
+      "description": "{selectedCount} selected elements{{layerCount, plural, =0 {} other { | {layerCount} DXF layers}}"
     },
     "overlay": {
       "title": "Overlay",
-      "description": "{{regionCount, plural, =0 {} other {{{regionCount}} overlay regions}}"
+      "description": "{{regionCount, plural, =0 {} other {{regionCount} overlay regions}}",
+      "loading": "Loading layer management..."
     },
     "levels": {
       "title": "Levels",
-      "description": "Management Levels"
+      "description": "Management Levels",
+      "loading": "Loading levels...",
+      "projectLevels": "Project Levels",
+      "defaultLevelName": "Level {number}",
+      "emptyNameWarning": "Name cannot be empty.",
+      "selectLevel": "Select level {name}",
+      "elementsCount": "{count} elements",
+      "emptyLevel": "Empty level",
+      "renameLevel": "Rename level",
+      "deleteLevel": "Delete level",
+      "noLevels": "No levels exist",
+      "newLevelPlaceholder": "New level name..."
     },
     "hierarchy": {
       "title": "Hierarchy",
-      "description": "Project Hierarchy & Destinations"
+      "description": "Project Hierarchy & Destinations",
+      "loading": "Loading hierarchy..."
     },
     "layers": {
       "title": "Layers",
       "description": "Layer Drawing & Status Management"
-    }
+    },
+    "colors": {
+      "title": "Colors",
+      "description": "Color Palette",
+      "loading": "Loading color palette..."
+    },
+    "selectPanel": "Select a panel from the tabs"
+  },
+  "lineSettings": {
+    "selectTemplate": "Select template..."
   },
   "toolbar": {
+    "title": "Drawing Tools",
     "select": "Select",
     "pan": "Pan",
     "line": "Line",
     "rectangle": "Rectangle",
     "circle": "Circle",
-    "polyline": "Polyline"
+    "polyline": "Polyline",
+    "draw": "Draw",
+    "edit": "Edit",
+    "status": "Status:",
+    "type": "Type:",
+    "duplicate": "Duplicate ({{key}})",
+    "delete": "Delete ({{key}})",
+    "undo": "Undo ({{key}})",
+    "redo": "Redo ({{key}})",
+    "dragToMove": "Drag to move",
+    "ariaLabels": {
+      "drawingModes": "Drawing modes",
+      "overlayType": "Overlay type",
+      "overlayActions": "Overlay actions",
+      "historyControls": "History controls"
+    }
   },
   "wizard": {
     "title": "Enhanced DXF Import",
@@ -121,8 +159,8 @@
     "loading": {
       "companies": "Loading companies...",
       "projects": "Loading projects...",
-      "error": "Loading error: {{error}}",
-      "projectsError": "Error loading projects: {{error}}",
+      "error": "Loading error: {error}",
+      "projectsError": "Error loading projects: {error}",
       "retry": "Retry"
     },
     "empty": {
@@ -132,13 +170,13 @@
       "units": "No units found for the selected building."
     },
     "counts": {
-      "buildings": "{{count}} buildings",
-      "floors": "{{count}} floors",
-      "floorOrdinal": "{{floor}}th floor",
-      "companiesFound": "Found {{count}} available companies",
-      "projectsFound": "Found {{count}} projects for the selected company",
-      "buildingsFound": "Found {{count}} buildings for the selected project",
-      "unitsFound": "Found {{count}} units for the selected building"
+      "buildings": "{count} buildings",
+      "floors": "{count} floors",
+      "floorOrdinal": "{floor}th floor",
+      "companiesFound": "Found {count} available companies",
+      "projectsFound": "Found {count} projects for the selected company",
+      "buildingsFound": "Found {count} buildings for the selected project",
+      "unitsFound": "Found {count} units for the selected building"
     },
     "floorplanTypes": {
       "project": "Project Floorplan",
@@ -161,9 +199,19 @@
       "next": "Next →",
       "ready": "Ready"
     },
+    "levelSelection": {
+      "title": "Select Level for DXF Import",
+      "description": "Select an existing level or create a new one. Each level can contain multiple floor plans.",
+      "existingLevels": "Existing Levels",
+      "defaultLevel": "Default Level",
+      "createNewLevel": "Or Create New Level",
+      "createNewButton": "Create New Level",
+      "newLevelPlaceholder": "Enter level name (e.g. Basement, 2nd Floor)",
+      "cancel": "Cancel"
+    },
     "replace": {
-      "title": "Replace {{typeLabel}}",
-      "existingWarning": "There is already a saved {{typeLabel}} for this company.",
+      "title": "Replace {typeLabel}",
+      "existingWarning": "There is already a saved {typeLabel} for this company.",
       "layerWarning": "The new floorplan you are loading may not match the existing layers that have been drawn on the previous floorplan.",
       "confirmQuestion": "Do you want to continue and replace the existing floorplan?",
       "cancel": "Cancel",
@@ -197,16 +245,1193 @@
     "loading": "Loading...",
     "companies": {
       "loading": "Loading companies...",
-      "error": "Loading error: {{error}}",
+      "error": "Loading error: {error}",
       "retry": "Retry",
       "empty": "No companies found in the system.",
       "emptyHint": "Contact management to add companies."
     },
     "projects": {
       "loading": "Loading projects...",
-      "error": "Projects loading error: {{error}}",
+      "error": "Projects loading error: {error}",
       "empty": "No projects found for the selected company.",
       "emptyHint": "Select a different company or add new projects."
+    }
+  },
+  "importModal": {
+    "titleDxf": "Import DXF File",
+    "titleDxfPdf": "Import DXF / PDF File",
+    "fileLabelDxf": "DXF File",
+    "fileLabelDxfPdf": "DXF or PDF File",
+    "selectFile": "Select file",
+    "noFileSelected": "No file selected.",
+    "selectDxfOrPdf": "Select DXF file (floorplan) or PDF (background).",
+    "fileTypePdf": "📄 PDF file - Will load as background",
+    "fileTypeDxf": "📐 DXF file - Will load as floorplan",
+    "encoding": {
+      "label": "Character Encoding",
+      "hint": "Select Windows-1253 if Greek characters don't display correctly.",
+      "placeholder": "Select encoding"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "import": "Import",
+      "importing": "Importing..."
+    },
+    "errors": {
+      "importFailed": "Error during file import:"
+    }
+  },
+  "settings": {
+    "grip": {
+      "title": "Grip Settings",
+      "actionsAriaLabel": "Grip settings actions",
+      "reset": "Reset",
+      "resetTitle": "Reset to default settings",
+      "factory": "Factory",
+      "factoryTitle": "Reset to factory settings (CAD Standards)",
+      "enabled": "Show Grips",
+      "disabledWarning": "Grips are disabled and will not be displayed",
+      "sections": {
+        "basic": "Basic Settings",
+        "colors": "Grip Colors",
+        "types": "Grip Types",
+        "advanced": "Advanced Settings"
+      },
+      "labels": {
+        "size": "Grip Size",
+        "opacity": "Opacity",
+        "coldColor": "Cold Color",
+        "warmColor": "Warm Color (Hover)",
+        "hotColor": "Hot Color (Selected)",
+        "contourColor": "Contour Color",
+        "pickBoxSize": "Pick Box Size",
+        "apertureSize": "Aperture Size",
+        "maxGrips": "Max Grips per Entity"
+      },
+      "colorPicker": {
+        "cold": "Select Cold Grip Color",
+        "warm": "Select Warm Grip Color",
+        "hot": "Select Hot Grip Color",
+        "contour": "Select Contour Grip Color"
+      },
+      "checkboxes": {
+        "showMidpoints": "Show Midpoints",
+        "showCenters": "Show Centers",
+        "showQuadrants": "Show Quadrants",
+        "showAperture": "Show Aperture",
+        "multiGripEdit": "Multi-Grip Edit",
+        "snapToGrips": "Snap to Grips"
+      },
+      "presets": {
+        "title": "Quick Presets",
+        "small": "Small",
+        "normal": "Normal",
+        "large": "Large"
+      },
+      "factoryReset": {
+        "title": "Factory Reset Settings",
+        "warning": "WARNING: You will lose ALL your data!",
+        "lossTitle": "You will lose:",
+        "lossList": {
+          "customSettings": "All custom grip settings",
+          "colors": "All colors you have selected",
+          "changes": "All changes you have made"
+        },
+        "resetInfo": "Reset: Settings will return to CAD standards (AutoCAD/BricsCAD)",
+        "confirm": "Are you sure you want to continue?",
+        "cancel": "Cancel",
+        "confirmButton": "Factory Reset",
+        "successMessage": "Factory settings restored! All grip settings returned to CAD standards.",
+        "cancelMessage": "Factory reset cancelled"
+      },
+      "ariaLabel": "Grip Settings"
+    },
+    "line": {
+      "title": "Line Settings",
+      "actionsAriaLabel": "Line settings actions",
+      "reset": "Reset",
+      "resetTitle": "Reset to default settings",
+      "factory": "Factory",
+      "factoryTitle": "Reset to factory settings (ISO 128 & AutoCAD 2024)",
+      "enabled": "Show line",
+      "disabledWarning": "Lines are disabled and will not be displayed in preview",
+      "sections": {
+        "templates": "Templates & Tools",
+        "basic": "Basic Settings",
+        "hover": "Hover Settings",
+        "final": "Final Line Settings",
+        "advanced": "Advanced Settings"
+      },
+      "labels": {
+        "color": "Color",
+        "width": "Line Width",
+        "widthValue": "Line Width: {{value}}px",
+        "opacity": "Opacity",
+        "opacityValue": "Opacity: {{value}}%",
+        "type": "Line Type",
+        "templates": "Predefined Templates",
+        "breakAtCenter": "Break line for text",
+        "breakAtCenterDescription": "The line will break in the middle to fit text",
+        "hoverColor": "Hover Color",
+        "hoverWidth": "Hover Width",
+        "hoverWidthValue": "Hover Width: {{value}}px",
+        "hoverOpacity": "Hover Opacity",
+        "hoverOpacityValue": "Hover Opacity: {{value}}%",
+        "finalColor": "Final Color",
+        "finalWidth": "Final Width",
+        "finalWidthValue": "Final Width: {{value}}px",
+        "finalOpacity": "Final Opacity",
+        "finalOpacityValue": "Final Opacity: {{value}}%",
+        "dashScale": "Dash Scale",
+        "dashScaleValue": "Dash Scale: {{value}}",
+        "dashOffset": "Dash Offset",
+        "dashOffsetValue": "Dash Offset: {{value}}px",
+        "lineCap": "Line Cap",
+        "lineJoin": "Line Join"
+      },
+      "colorPicker": {
+        "line": "Select Line Color",
+        "hover": "Select Hover Color",
+        "final": "Select Final Color"
+      },
+      "factoryReset": {
+        "title": "Factory Reset Settings",
+        "warning": "WARNING: You will lose ALL your data!",
+        "lossTitle": "You will lose:",
+        "lossList": {
+          "customSettings": "All custom line settings",
+          "templates": "All templates you have selected",
+          "changes": "All changes you have made"
+        },
+        "resetInfo": "Reset: Settings will return to ISO 128 & AutoCAD 2024 standards",
+        "confirm": "Are you sure you want to continue?",
+        "cancel": "Cancel",
+        "confirmButton": "Factory Reset",
+        "successMessage": "Factory settings restored! All line settings returned to ISO 128 & AutoCAD 2024 standards.",
+        "cancelMessage": "Factory reset cancelled"
+      },
+      "ariaLabel": "Line Settings"
+    },
+    "text": {
+      "title": "Text Settings",
+      "actionsAriaLabel": "Text settings actions",
+      "reset": "Reset",
+      "resetTitle": "Reset to default settings",
+      "factory": "Factory",
+      "factoryTitle": "Reset to factory settings (ISO 3098)",
+      "enabled": "Show distance text",
+      "disabledWarning": "Distance text is disabled and will not be displayed in preview",
+      "sections": {
+        "basic": "Basic Text Settings",
+        "style": "Text Style",
+        "advanced": "Advanced Effects",
+        "preview": "Preview & Info"
+      },
+      "labels": {
+        "fontFamily": "Font Family",
+        "fontSize": "Font Size",
+        "color": "Text Color",
+        "textStyle": "Text Style",
+        "scriptStyle": "Superscript / Subscript",
+        "preview": "Preview",
+        "previewText": "Seize the day",
+        "searchFonts": "Search fonts...",
+        "searchSize": "Search size...",
+        "increaseFontSize": "Increase font size",
+        "decreaseFontSize": "Decrease font size"
+      },
+      "colorPicker": {
+        "text": "Select Text Color"
+      },
+      "styles": {
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "strikethrough": "Strikethrough",
+        "superscript": "Superscript",
+        "subscript": "Subscript",
+        "normal": "Normal"
+      },
+      "factoryReset": {
+        "title": "Factory Reset Settings",
+        "warning": "WARNING: You will lose ALL your data!",
+        "lossTitle": "You will lose:",
+        "lossList": {
+          "customSettings": "All custom text settings",
+          "templates": "All templates you have selected",
+          "changes": "All changes you have made"
+        },
+        "resetInfo": "Reset: Settings will return to ISO 3098 standards",
+        "confirm": "Are you sure you want to continue?",
+        "cancel": "Cancel",
+        "confirmButton": "Factory Reset",
+        "successMessage": "Factory settings restored! All text settings returned to ISO 3098 standards.",
+        "cancelMessage": "Factory reset cancelled"
+      },
+      "ariaLabel": "Text Settings"
+    }
+  },
+  "layerActions": {
+    "changeColor": "Change color",
+    "rename": "Rename layer",
+    "delete": "Delete",
+    "changeColorEntity": "Change entity color",
+    "renameEntity": "Rename entity",
+    "changeColorGroup": "Change Color Group color",
+    "renameGroup": "Rename Color Group",
+    "deleteGroup": "Delete Color Group",
+    "toggleVisibility": "Toggle visibility",
+    "mergeEntities": "Merge selected entities",
+    "mergeLayers": "Merge selected layers",
+    "mergeColorGroups": "Merge selected color groups",
+    "selectAllEntities": "Click to select all entities, Ctrl+Click for multi-selection",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "expandEntities": "Expand entities",
+    "collapseEntities": "Collapse entities",
+    "show": "Show",
+    "hide": "Hide",
+    "doubleClickToRename": "Double-click to rename"
+  },
+  "search": {
+    "layersAndEntities": "Search layers and entities..."
+  },
+  "mergePanel": {
+    "title": "🔗 Multi-Selection Active",
+    "entitiesSelected": "{count} entities selected",
+    "layersSelected": "{count} layers selected",
+    "colorGroupsSelected": "{count} color groups selected",
+    "mergeEntitiesButton": "Merge Entities",
+    "mergeLayersButton": "Merge Layers",
+    "mergeColorGroupsButton": "Merge Color Groups",
+    "tip": "Tip: Ctrl+Click for multi-selection"
+  },
+  "dynamicInput": {
+    "placeholders": {
+      "xCoordinate": "e.g. -1000.56",
+      "yCoordinate": "e.g. +750.32",
+      "angle": "e.g. 45 or 90.5",
+      "length": "e.g. 100.0",
+      "width": "e.g. 50.0",
+      "height": "e.g. 100.0",
+      "radius": "e.g. 50.0",
+      "diameter": "e.g. 100.0"
+    },
+    "multiPoint": {
+      "distance": "Distance:",
+      "angle": "Angle:",
+      "segments": "Segments:",
+      "total": "Total:"
+    }
+  },
+  "overlayToolbar": {
+    "objectSnap": "Enable/Disable Object Snap (F3)",
+    "basicFunctions": "Enable basic functions"
+  },
+  "autoSave": {
+    "title": "Auto-save",
+    "saving": "Saving...",
+    "error": "Save error",
+    "lastSaved": "Last saved:",
+    "waiting": "Waiting for changes...",
+    "activeFor": "Auto-save active for:",
+    "savingAllSettings": "Saving all DXF settings...",
+    "errorSavingSettings": "Error saving settings"
+  },
+  "layerManager": {
+    "title": "Layer Manager",
+    "loading": "Loading layers...",
+    "createDialog": {
+      "title": "Create New Layer",
+      "nameLabel": "Layer Name",
+      "namePlaceholder": "e.g. Electrical elements",
+      "descriptionLabel": "Description (optional)",
+      "descriptionPlaceholder": "Layer description...",
+      "categoryLabel": "Category",
+      "colorLabel": "Color",
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "actions": {
+      "hide": "Hide",
+      "show": "Show",
+      "lock": "Lock",
+      "unlock": "Unlock",
+      "rename": "Rename",
+      "duplicate": "Duplicate",
+      "exportLayer": "Export Layer",
+      "delete": "Delete",
+      "exportAll": "Export all Layers",
+      "importLayers": "Import Layers",
+      "hideSystemLayers": "Hide System Layers",
+      "showSystemLayers": "Show System Layers"
+    },
+    "labels": {
+      "opacity": "Opacity:",
+      "moreElements": "+{count} more elements",
+      "noLayersFound": "No layers found",
+      "createNewOrChangeFilters": "Create a new layer or change the filters",
+      "searchLayers": "Search layers...",
+      "moreOptions": "More options",
+      "other": "Other"
+    },
+    "stats": {
+      "total": "Total:",
+      "visible": "Visible:",
+      "elements": "Elements:"
+    },
+    "sync": {
+      "status": "Sync Status:",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "lastSync": "Last Sync:",
+      "errors": "Errors:",
+      "connectedTooltip": "Connected - Real-time sync active",
+      "disconnectedTooltip": "Disconnected"
+    },
+    "badges": {
+      "system": "System"
+    },
+    "readOnly": {
+      "title": "Layers",
+      "viewModeOnly": "View mode only",
+      "canOnlyChangeVisibility": "You can only change visibility",
+      "connectedRealtime": "Connected - Real-time updates",
+      "disconnectedNoUpdates": "Disconnected - No updates",
+      "lastUpdate": "Last update:",
+      "visibleHidden": "Visible|Hidden",
+      "waitForAdmins": "Wait for layers to be created by administrators",
+      "checkConnection": "Check your connection",
+      "dbConnectionError": "Database connection error"
+    }
+  },
+  "calibration": {
+    "title": "Coordinate Calibration",
+    "close": "Close",
+    "sceneStatus": {
+      "title": "Scene Status",
+      "entities": "Entities",
+      "levels": "Levels",
+      "noEntities": "No entities"
+    },
+    "coordinates": {
+      "title": "Coordinates",
+      "css": "CSS",
+      "world": "World",
+      "roundTripError": "Round-trip error",
+      "zoom": "Zoom",
+      "moveMouseHint": "Move your mouse over the canvas..."
+    },
+    "clickTest": {
+      "title": "Click Test",
+      "clear": "Clear",
+      "areaLabel": "Coordinate accuracy test area",
+      "clickHint": "Click here to test accuracy",
+      "noTests": "No tests available",
+      "perfect": "PERFECT",
+      "needsFix": "NEEDS FIX"
+    },
+    "tips": {
+      "title": "Tips",
+      "roundTripLimit": "Round-trip error < 0.5px",
+      "tryDifferentZoom": "Try at different zoom levels",
+      "entitiesOk": "Entities OK",
+      "loadDxf": "Load DXF",
+      "usingCoordinateTransforms": "Using centralized CoordinateTransforms"
+    },
+    "toggle": {
+      "hide": "Hide",
+      "show": "Show"
+    }
+  },
+  "calibrationStep": {
+    "title": "Scale & Units Calibration",
+    "description": "Set the units and optionally calibrate the scale using known measurements from your DXF file.",
+    "units": {
+      "title": "Units",
+      "ariaLabel": "Select units",
+      "mm": "millimeters",
+      "cm": "centimeters",
+      "m": "meters",
+      "in": "inches",
+      "ft": "feet"
+    },
+    "calibration": {
+      "title": "Calibration",
+      "skip": {
+        "title": "Skip Calibration (Recommended)",
+        "description": "Use native DXF file units and scale. Best for most architectural floor plans.",
+        "benefit": "Fast import, preserves original scale"
+      },
+      "manual": {
+        "title": "2-Point Calibration",
+        "description": "Set scale by measuring a known distance in the drawing.",
+        "benefit": "Precise calibration for custom scale"
+      },
+      "settings": {
+        "title": "Calibration Settings",
+        "distanceLabel": "Known Distance:",
+        "placeholder": "e.g. 100",
+        "hint": "In the next step you can select two points in the drawing that correspond to this distance."
+      }
+    }
+  },
+  "gridSettings": {
+    "visibility": {
+      "title": "Grid Visibility",
+      "description": "Show/hide the grid",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "size": {
+      "title": "Grid Size",
+      "description": "Distance between grid lines (COMMON for all)"
+    },
+    "style": {
+      "title": "Grid Style",
+      "description": "Grid line display type",
+      "lines": "Lines",
+      "dots": "Dots",
+      "crosses": "Crosses"
+    },
+    "lineTypes": {
+      "majorLines": "Major Lines",
+      "minorLines": "Minor Lines",
+      "majorDots": "Major Dots",
+      "minorDots": "Minor Dots",
+      "majorCrosses": "Major Crosses",
+      "minorCrosses": "Minor Crosses"
+    },
+    "color": {
+      "label": "{type} Color",
+      "description": "Color of the {type} grid",
+      "selectTitle": "Select {type} Color"
+    },
+    "weight": {
+      "label": "{type} Weight",
+      "description": "Weight of the {type} grid"
+    }
+  },
+  "zoomControls": {
+    "zoomOut": "Zoom Out (-{percentage}%) - Keyboard: -",
+    "zoomIn": "Zoom In (+{percentage}%) - Keyboard: +",
+    "inputTitle": "Zoom percentage (1-99999%, decimals with . or ,) - Press Enter or click away to apply",
+    "invalidInput": "Invalid zoom input: \"{value}\". Reverting to {percentage}%"
+  },
+  "wizardProgress": {
+    "stepLabels": {
+      "level": "Level",
+      "calibration": "Calibration",
+      "import": "Import"
+    }
+  },
+  "overlayList": {
+    "title": "Overlays",
+    "search": "Search...",
+    "deleteConfirm": "Delete overlay?",
+    "notFound": "No overlays found",
+    "empty": "No overlays",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "selectionSettings": {
+    "tabs": {
+      "window": "Window Selection",
+      "crossing": "Crossing Selection"
+    },
+    "resetButton": "Reset Selection Settings (DEBUG)",
+    "resetDescription": "Resets all settings to make new borderStyle work",
+    "window": {
+      "title": "Window Selection Settings",
+      "description": "Settings for the blue selection box (left to right)",
+      "fillColor": "Select Window Fill Color",
+      "fillColorLabel": "Fill Color",
+      "borderColor": "Select Window Border Color",
+      "borderColorLabel": "Border Color"
+    },
+    "crossing": {
+      "title": "Crossing Selection Settings",
+      "description": "Settings for the green selection box (right to left)",
+      "fillColor": "Select Crossing Fill Color",
+      "fillColorLabel": "Fill Color",
+      "borderColor": "Select Crossing Border Color",
+      "borderColorLabel": "Border Color"
+    },
+    "common": {
+      "fillOpacity": "Fill Opacity",
+      "fillOpacityDesc": "Fill transparency level",
+      "borderOpacity": "Border Opacity",
+      "borderOpacityDesc": "Border transparency level",
+      "borderWidth": "Line Width",
+      "borderWidthDesc": "Border width in pixels",
+      "borderStyle": "Border Style",
+      "borderStyleDesc": "Border line type"
+    },
+    "borderStyles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dotted",
+      "dashDot": "Dash-Dot"
+    }
+  },
+  "cursorSettings": {
+    "colorPicker": "Select Cursor Color",
+    "title": "Cursor Settings",
+    "shape": {
+      "title": "Cursor Shape",
+      "description": "Choose between circle and square",
+      "circle": "Circle",
+      "square": "Square"
+    },
+    "color": {
+      "title": "Cursor Color",
+      "description": "Cursor border color"
+    },
+    "lineStyle": {
+      "title": "Line Type",
+      "description": "Cursor border style"
+    },
+    "lineWidth": {
+      "title": "Cursor Line Width",
+      "description": "Border thickness in pixels"
+    },
+    "size": {
+      "title": "Cursor Size",
+      "description": "Diameter/side in pixels"
+    },
+    "opacity": {
+      "title": "Cursor Opacity",
+      "description": "Cursor transparency level"
+    },
+    "display": {
+      "title": "Show Cursor",
+      "description": "Show/hide cursor circle",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "lineStyles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dots",
+      "dashDot": "Dash-Dot"
+    }
+  },
+  "crosshairSettings": {
+    "title": "Crosshair Settings",
+    "tabs": {
+      "appearance": "Appearance",
+      "behavior": "Behavior"
+    },
+    "colorPicker": "Select Crosshair Color",
+    "appearanceColorPicker": "Select Crosshair Appearance Color",
+    "appearance": {
+      "colorTitle": "Crosshair Color",
+      "colorDescription": "Crosshair lines color",
+      "lineStyleTitle": "Line Type",
+      "lineStyleDescription": "Line rendering style",
+      "lineWidthTitle": "Line Width",
+      "lineWidthDescription": "Width in pixels",
+      "sizeTitle": "Crosshair Size",
+      "sizeDescription": "Extension from center"
+    },
+    "behavior": {
+      "colorTitle": "Color",
+      "colorDescription": "Crosshair lines color",
+      "opacityTitle": "Crosshair Opacity",
+      "opacityDescription": "Crosshair transparency level",
+      "cursorGapTitle": "Cursor Gap",
+      "cursorGapDescription": "Lines start outside the cursor"
+    },
+    "lineStyles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dots",
+      "dashDot": "Dash-Dot"
+    },
+    "common": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  },
+  "rulerSettings": {
+    "tabs": {
+      "background": "Background",
+      "lines": "Lines",
+      "text": "Text",
+      "units": "Units",
+      "majorLines": "Major Lines",
+      "minorLines": "Minor Lines"
+    },
+    "majorLines": {
+      "colorPicker": "Select Major Lines Color",
+      "display": {
+        "title": "Show Major Lines",
+        "description": "Show/hide ruler major lines"
+      },
+      "opacity": {
+        "title": "Major Lines Opacity",
+        "description": "Transparency level of major ruler lines"
+      },
+      "color": {
+        "title": "Major Lines Color",
+        "description": "Color of major ruler lines (ticks)"
+      },
+      "width": {
+        "title": "Major Lines Thickness",
+        "description": "Thickness of major ruler lines"
+      }
+    },
+    "minorLines": {
+      "colorPicker": "Select Minor Lines Color",
+      "display": {
+        "title": "Show Minor Lines",
+        "description": "Show/hide ruler minor lines"
+      },
+      "opacity": {
+        "title": "Minor Lines Opacity",
+        "description": "Transparency level of minor ruler lines"
+      },
+      "color": {
+        "title": "Minor Lines Color",
+        "description": "Color of minor ruler lines (ticks)"
+      },
+      "width": {
+        "title": "Minor Lines Thickness",
+        "description": "Thickness of minor ruler lines"
+      }
+    },
+    "background": {
+      "colorPicker": "Select Ruler Background Color",
+      "display": {
+        "title": "Show Background",
+        "description": "Show/hide ruler background"
+      },
+      "color": {
+        "title": "Background Color",
+        "description": "Ruler background color"
+      },
+      "opacity": {
+        "title": "Opacity",
+        "description": "Transparency level of rulers"
+      },
+      "width": {
+        "title": "Ruler Width",
+        "description": "Width of ruler in pixels"
+      },
+      "lines": {
+        "title": "Show Lines",
+        "description": "Show/hide measurement lines on rulers"
+      }
+    },
+    "text": {
+      "colorTitle": "Text Color",
+      "colorDescription": "Color of ruler numbers and text",
+      "sizeTitle": "Text Size",
+      "sizeDescription": "Size of numbers on rulers",
+      "displayTitle": "Show Text",
+      "displayDescription": "Show/hide ruler numbers and text"
+    },
+    "units": {
+      "measurementTitle": "Measurement Units",
+      "measurementDescription": "Unit of measurement for rulers",
+      "displayTitle": "Show Units",
+      "displayDescription": "Show/hide units on rulers",
+      "sizeTitle": "Units Size",
+      "sizeDescription": "Size of measurement units on rulers",
+      "colorTitle": "Units Color",
+      "colorDescription": "Color of measurement units on rulers"
+    },
+    "common": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  },
+  "layersSettings": {
+    "tabs": {
+      "outlines": "Outlines",
+      "fills": "Fills"
+    },
+    "title": "Layers Settings",
+    "description": "Colors and appearance of drawing layers",
+    "preview": {
+      "title": "Layer Preview",
+      "description": "See how layers will look"
+    },
+    "outlines": {
+      "colorsTitle": "Outline Colors",
+      "displayTitle": "Show Outlines",
+      "displayDescription": "Enable/Disable outlines"
+    },
+    "fills": {
+      "colorsTitle": "Fill Colors",
+      "opacityTitle": "Fill Opacity",
+      "opacityDescription": "Opacity level for fills",
+      "displayTitle": "Show Fills",
+      "displayDescription": "Enable/Disable fills"
+    },
+    "reset": {
+      "title": "Reset",
+      "description": "Reset to default settings",
+      "button": "Reset Layers Settings"
+    },
+    "comingSoon": {
+      "title": "Coming Soon",
+      "items": {
+        "fillColors": "Layer fill colors",
+        "lineThickness": "Line thickness settings",
+        "lineStyles": "Line styles (dashed, etc.)",
+        "customPalettes": "Custom color palettes",
+        "importExport": "Import/Export color profiles"
+      }
+    }
+  },
+  "entitiesSettings": {
+    "moreOptions": "More options"
+  },
+  "levelPanel": {
+    "title": "Project Levels",
+    "defaultLevelName": "Level {number}",
+    "selectLevel": "Select level {name}",
+    "elements": "{count} elements",
+    "emptyLevel": "Empty level",
+    "rename": "Rename level",
+    "deleteLevel": "Delete level",
+    "noLevels": "No levels",
+    "newLevelPlaceholder": "New level name...",
+    "emptyNameWarning": "Name cannot be empty."
+  },
+  "sceneInfo": {
+    "title": "Scene Information",
+    "noScene": "No scene loaded",
+    "importHint": "Import a DXF file to view information",
+    "elements": "Elements:",
+    "levels": "Levels:",
+    "units": "Units:",
+    "size": "Size:",
+    "selected": "Selected:",
+    "selectedElements": "{count} elements",
+    "selectedSuffix": "({count} selected)",
+    "entityTypes": {
+      "title": "Entity Types",
+      "line": "Lines",
+      "polyline": "Polylines",
+      "circle": "Circles",
+      "arc": "Arcs",
+      "text": "Text",
+      "block": "Blocks"
+    }
+  },
+  "dxfSettings": {
+    "title": "DXF Settings"
+  },
+  "currentSettings": {
+    "title": "Current Settings",
+    "line": "Line",
+    "text": "Text",
+    "grips": "Grips",
+    "selectTab": "Select a tab (Lines, Text or Grips) to view current settings",
+    "labels": {
+      "type": "Type:",
+      "color": "Color:",
+      "width": "Width:",
+      "opacity": "Opacity:",
+      "scale": "Scale:",
+      "offset": "Offset:",
+      "lineCap": "Line Cap:",
+      "lineJoin": "Line Join:",
+      "fontSize": "Font Size:",
+      "fontFamily": "Font Family:",
+      "style": "Style:",
+      "normal": "Normal",
+      "superscript": "Superscript:",
+      "subscript": "Subscript:",
+      "yes": "Yes",
+      "no": "No",
+      "visible": "Visible:",
+      "size": "Size:",
+      "shape": "Shape:",
+      "fill": "Fill:",
+      "coldColor": "Cold:",
+      "warmColor": "Warm:",
+      "hotColor": "Hot:"
+    }
+  },
+  "settings": {
+    "general": "General Settings",
+    "specific": "Specific Settings",
+    "tabs": {
+      "drawing": "Drawing",
+      "measurements": "Measurements",
+      "draft": "Draft",
+      "completion": "Completion",
+      "hover": "Hover",
+      "selection": "Selection"
+    }
+  },
+  "overlayProperties": {
+    "title": "Overlay Properties",
+    "selectOverlay": "Select an overlay to view its properties.",
+    "label": "Label",
+    "labelPlaceholder": "e.g. A-12, P-034",
+    "status": "Status",
+    "type": "Type",
+    "linkedUnit": "Linked Unit",
+    "unitIdPlaceholder": "Unit ID",
+    "geometry": "Geometry",
+    "points": "Points:",
+    "area": "Area:",
+    "perimeter": "Perimeter:",
+    "kindLabels": {
+      "unit": "Unit",
+      "parking": "Parking",
+      "storage": "Storage",
+      "footprint": "Footprint"
+    }
+  },
+  "entitiesSettings": {
+    "moreOptions": "More options",
+    "overrideGlobalSettings": "Use specific settings",
+    "overrideDescriptions": {
+      "lineDraft": "Use specific line settings for draft",
+      "textDraft": "Use specific text settings for draft",
+      "gripsDraft": "Use specific grips settings for draft",
+      "lineHover": "Use specific line settings for hover",
+      "lineSelection": "Use specific line settings for selection",
+      "lineCompletion": "Use specific line settings for completion"
+    },
+    "statusLabels": {
+      "general": "General Settings",
+      "specificDraft": "Specific Draft Settings",
+      "specificHover": "Specific Hover Settings",
+      "specificSelection": "Specific Selection Settings",
+      "specificCompletion": "Specific Completion Settings",
+      "specific": "Specific Settings"
+    },
+    "toolSettings": {
+      "title": "Settings {tool}",
+      "toolSettingsTitle": "Tool Settings",
+      "comingSoon": "Settings for this tool will be added soon"
+    },
+    "selectTool": {
+      "title": "Select Tool",
+      "description": "Click on a tool to see its settings"
+    }
+  },
+  "cadDock": {
+    "panels": {
+      "objectSnap": "Object Snap",
+      "layers": "Layers",
+      "properties": "Properties",
+      "commands": "Commands"
+    },
+    "snapModes": {
+      "title": "Object Snap",
+      "description": "Click to toggle snap modes"
+    },
+    "layers": {
+      "default": "0 - Default",
+      "geometry": "Geometry",
+      "dimensions": "Dimensions"
+    },
+    "properties": {
+      "layer": "Layer:",
+      "color": "Color:"
+    },
+    "history": {
+      "title": "Command History",
+      "commands": {
+        "fit": "Command: FIT",
+        "zoomWindow": "Command: ZOOM Window",
+        "line": "Command: LINE"
+      },
+      "ready": "Ready for command..."
+    },
+    "accessibility": {
+      "layerList": "Layer list"
+    }
+  },
+  "pdfPanel": {
+    "title": "PDF Background",
+    "upload": "Upload PDF",
+    "loading": "Loading...",
+    "selectFile": "Select a PDF file to use as background",
+    "removePdf": "Remove PDF",
+    "pageInfo": "Page {currentPage} of {numPages}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "scale": "Scale",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "rotation": "Rotation",
+    "rotateCcw": "Rotate counter-clockwise",
+    "rotateCw": "Rotate clockwise",
+    "opacity": "Opacity",
+    "fitToView": "Fit to View",
+    "resetTransform": "Reset Transform",
+    "hidePdf": "Hide PDF",
+    "showPdf": "Show PDF"
+  },
+  "specificSettings": {
+    "loading": "Loading...",
+    "categories": {
+      "selection": {
+        "title": "Selection",
+        "description": "Object selection settings"
+      },
+      "cursor": {
+        "title": "Cursor",
+        "description": "Cursor and crosshair settings"
+      },
+      "grid": {
+        "title": "Grid & Rulers",
+        "description": "Grid and ruler settings"
+      },
+      "layers": {
+        "title": "Layers",
+        "description": "Layer settings"
+      },
+      "entities": {
+        "title": "Entities",
+        "description": "DXF entity settings"
+      },
+      "grips": {
+        "title": "Grips",
+        "description": "Grip settings (coming soon)"
+      },
+      "lighting": {
+        "title": "Lighting",
+        "description": "Lighting settings (coming soon)"
+      }
+    }
+  },
+  "toolLabels": {
+    "line": "Line",
+    "rectangle": "Rectangle",
+    "circle": "Circle",
+    "pan": "Pan",
+    "zoomWindow": "Zoom Window",
+    "layering": "Layers"
+  },
+  "lineSettings": {
+    "types": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dotted",
+      "dashDot": "Dash-Dot",
+      "dashDotDot": "Dash-Dot-Dot"
+    },
+    "caps": {
+      "butt": "Square",
+      "round": "Round",
+      "square": "Extended"
+    },
+    "joins": {
+      "miter": "Sharp",
+      "round": "Round",
+      "bevel": "Beveled"
+    },
+    "categories": {
+      "engineering": "Engineering Drawings",
+      "architectural": "Architectural",
+      "electrical": "Electrical",
+      "custom": "Custom"
+    },
+    "templates": {
+      "mainLine": {
+        "name": "Main Line",
+        "description": "Continuous line for main elements"
+      },
+      "centerLine": {
+        "name": "Center Line",
+        "description": "Dash-dot for symmetry axes"
+      },
+      "hiddenLine": {
+        "name": "Hidden Line",
+        "description": "Dashed line for hidden elements"
+      },
+      "dimensions": {
+        "name": "Dimensions",
+        "description": "Thin line for dimensions"
+      },
+      "wall": {
+        "name": "Wall",
+        "description": "Thick line for walls"
+      },
+      "furniture": {
+        "name": "Furniture",
+        "description": "Medium line for furniture"
+      },
+      "auxiliary": {
+        "name": "Auxiliary",
+        "description": "Dashed construction lines"
+      },
+      "cables": {
+        "name": "Cables",
+        "description": "Continuous lines for cables"
+      },
+      "signals": {
+        "name": "Signals",
+        "description": "Dash-dot for signals"
+      },
+      "grounding": {
+        "name": "Grounding",
+        "description": "Double dots for grounding"
+      }
+    }
+  },
+  "snapModes": {
+    "labels": {
+      "auto": "Auto",
+      "endpoint": "Endpoint",
+      "midpoint": "Midpoint",
+      "center": "Center",
+      "intersection": "Intersection",
+      "grid": "Grid",
+      "perpendicular": "Perpendicular",
+      "tangent": "Tangent",
+      "parallel": "Parallel",
+      "quadrant": "Quadrant",
+      "nearest": "Nearest",
+      "extension": "Extension",
+      "node": "Node",
+      "insertion": "Insertion",
+      "near": "Near",
+      "ortho": "Ortho"
+    },
+    "tooltips": {
+      "auto": "Auto Snap - Automatically detects the best snap points (F11)",
+      "endpoint": "Endpoints - Snap to end points of lines and arcs (E)",
+      "midpoint": "Midpoints - Snap to the middle of lines and arcs (M)",
+      "center": "Centers - Snap to the center of circles and arcs (C)",
+      "intersection": "Intersections - Snap to intersections of two objects (I)",
+      "grid": "Grid - Snap to grid points (F9)",
+      "perpendicular": "Perpendicular - Snap perpendicular to lines (P)",
+      "tangent": "Tangent - Snap tangent to circles and arcs (T)",
+      "parallel": "Parallel - Snap parallel to existing lines (L)",
+      "quadrant": "Quadrants - Snap to quadrants of circles (Q)",
+      "nearest": "Nearest - Snap to the nearest point on an object (N)",
+      "extension": "Extension - Snap to line extensions (X)",
+      "node": "Nodes - Snap to nodes and points (D)",
+      "insertion": "Insertion - Snap to insertion points (INS)",
+      "near": "Near - Snap near objects (R)",
+      "ortho": "Ortho - Constrain to horizontal/vertical lines (F8)"
+    },
+    "ui": {
+      "showAdvanced": "Show advanced features",
+      "hideAdvanced": "Hide advanced features"
+    }
+  },
+  "toolGroups": {
+    "selection": "Selection",
+    "drawing": "Drawing",
+    "tools": "Tools",
+    "measurements": "Measurements",
+    "zoom": "Zoom"
+  },
+  "tools": {
+    "select": "Select",
+    "pan": "Pan",
+    "line": "Line",
+    "rectangle": "Rectangle",
+    "circleRadius": "Circle (Radius)",
+    "circleDiameter": "Circle (Diameter)",
+    "circle2pDiameter": "Circle (2 Points Diameter)",
+    "circle3p": "Circle (3 Points)",
+    "circleChordSagitta": "Circle (Chord-Sagitta)",
+    "circle2pRadius": "Circle (2 Points + Radius)",
+    "circleBestFit": "Circle (Best Fit)",
+    "polyline": "Polyline",
+    "polygon": "Polygon",
+    "layering": "Layers",
+    "gripEdit": "Grip Edit",
+    "move": "Move",
+    "copy": "Copy",
+    "delete": "Delete",
+    "measureDistance": "Measure Distance",
+    "measureArea": "Measure Area",
+    "measureAngle": "Measure Angle",
+    "measureAngleBasic": "Basic Angle",
+    "measureAngleLineArc": "Line-Arc Angle",
+    "measureAngleTwoArcs": "Two Arcs Angle",
+    "measureAngleMeasuregeom": "MeasureGeom",
+    "measureAngleConstraint": "Angle Constraint",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "zoomWindow": "Zoom Window",
+    "zoomExtents": "Zoom Extents",
+    "undo": "Undo",
+    "redo": "Redo",
+    "cursorSettings": "Cursor Settings",
+    "fitToView": "Fit to View",
+    "export": "Export",
+    "runTests": "Run Tests",
+    "togglePerf": "Performance Monitor",
+    "pdfBackground": "PDF Background"
+  },
+  "actionButtons": {
+    "showGrid": "Show Grid",
+    "hideGrid": "Hide Grid",
+    "autoCropOn": "Auto-Crop ON",
+    "autoCropOff": "Auto-Crop OFF"
+  },
+  "textTemplates": {
+    "normalText": {
+      "name": "Normal Text",
+      "description": "Basic text for general use (ISO 3098)"
+    },
+    "heading": {
+      "name": "Heading",
+      "description": "Large heading (ISO 3098)"
+    },
+    "technicalText": {
+      "name": "Technical Text",
+      "description": "Text for technical drawings (ISO 3098)"
+    },
+    "categories": {
+      "heading": "Headings",
+      "body": "Body Text",
+      "technical": "Technical",
+      "artistic": "Artistic",
+      "custom": "Custom"
+    }
+  },
+  "importWizard": {
+    "preview": {
+      "title": "Ready for Import",
+      "description": "Review the import settings and click Import to add the DXF file to your project.",
+      "fileInfo": {
+        "title": "File Information",
+        "file": "File:",
+        "size": "Size:",
+        "type": "Type:",
+        "unknown": "Unknown"
+      },
+      "levelAssignment": {
+        "title": "Level Assignment",
+        "destination": "Destination Level:",
+        "action": "Action:",
+        "addToExisting": "Add to existing level",
+        "createNew": "Create new level"
+      },
+      "scaleUnits": {
+        "title": "Scale & Units",
+        "units": "Units:",
+        "millimeters": "millimeters",
+        "scale": "Scale:",
+        "native": "Native (1:1)",
+        "calibration": "Calibration:",
+        "applied": "Applied",
+        "none": "None"
+      },
+      "processing": {
+        "title": "DXF Processing",
+        "autoCrop": "Auto-cropping of empty area around the floor plan will be applied"
+      },
+      "whatNext": {
+        "title": "What happens next?",
+        "analyze": "The DXF file will be analyzed and imported"
+      },
+      "newLevelWarning": "New level will be created:"
     }
   }
 }

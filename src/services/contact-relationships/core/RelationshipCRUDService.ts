@@ -13,7 +13,8 @@
 import {
   ContactRelationship,
   RelationshipType,
-  isEmploymentRelationship
+  isEmploymentRelationship,
+  isGovernmentRelationship
 } from '@/types/contacts/relationships';
 import { Contact } from '@/types/contacts';
 import { ContactsService } from '@/services/contacts.service';

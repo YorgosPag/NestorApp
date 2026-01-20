@@ -51,6 +51,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export interface CrosshairBehaviorSettingsProps {
   className?: string;
@@ -83,6 +85,8 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
   // ============================================================================
 
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   let cursorHookResult;
   try {
     cursorHookResult = useCursorSettings();
@@ -106,13 +110,13 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
     <div className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${className}`}>
       {/* Crosshair Color */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα</label>
-        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα γραμμών σταυρώνυματος</div>
+        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('crosshairSettings.behavior.colorTitle')}</label>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('crosshairSettings.behavior.colorDescription')}</div>
         <ColorDialogTrigger
           value={cursorColors.crosshairColor}
           onChange={(color) => onCursorColorsChange({ ...cursorColors, crosshairColor: color })}
           label={cursorColors.crosshairColor}
-          title="Επιλογή Χρώματος Crosshair"
+          title={t('crosshairSettings.colorPicker')}
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}
@@ -124,8 +128,8 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
       {/* Crosshair Opacity */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Σταυρονήματος</div>
-          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας του σταυρονήματος</div>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('crosshairSettings.behavior.opacityTitle')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('crosshairSettings.behavior.opacityDescription')}</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
@@ -147,12 +151,12 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Cursor Gap</div>
-            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Οι γραμμές ξεκινάνε έξω από τον κέρσορα</div>
+            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('crosshairSettings.behavior.cursorGapTitle')}</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('crosshairSettings.behavior.cursorGapDescription')}</div>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
-              {settings.crosshair.use_cursor_gap ? 'Ενεργό' : 'Ανενεργό'}
+              {settings.crosshair.use_cursor_gap ? t('crosshairSettings.common.active') : t('crosshairSettings.common.inactive')}
             </span>
             <Switch
               checked={settings.crosshair.use_cursor_gap}

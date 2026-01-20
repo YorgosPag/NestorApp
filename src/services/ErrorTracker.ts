@@ -15,6 +15,8 @@
 'use client';
 
 import { generateSessionId, generateErrorId } from '@/services/enterprise-id.service';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -521,17 +523,8 @@ export class ErrorTracker {
         category: 'error-report'
       };
 
-      const response = await fetch('/api/communications/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(emailPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Admin email failed: ${response.statusText}`);
-      }
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      await apiClient.post('/api/communications/email', emailPayload);
 
       this.log('Admin email sent successfully', { errorId: errorReport.id });
 

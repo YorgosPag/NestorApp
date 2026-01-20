@@ -14,6 +14,26 @@ interface FirebaseAdminError {
   stack?: string;
 }
 
+/** 🏢 ENTERPRISE: Discriminated union response types */
+interface PhotoUploadSuccessResponse {
+  success: true;
+  url: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  storagePath: string;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
+interface PhotoUploadErrorResponse {
+  error: string;
+  details?: string;
+  errorCode?: string;
+}
+
+type PhotoUploadResponse = PhotoUploadSuccessResponse | PhotoUploadErrorResponse;
+
 // ============================================================================
 // PHOTO UPLOAD ENDPOINT
 // ============================================================================
@@ -27,7 +47,7 @@ interface FirebaseAdminError {
  * - Firebase Storage Security Rules provide additional file-level access control
  */
 export async function POST(request: NextRequest) {
-  const handler = withAuth(
+  const handler = withAuth<unknown>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleUploadPhoto(req, ctx);
     },

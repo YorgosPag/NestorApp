@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import type { Activity } from "@/types/dashboard";
 import { INTERACTIVE_PATTERNS } from "@/components/ui/effects";
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface RecentActivitiesProps {
   activities: Activity[];
@@ -21,18 +23,21 @@ interface RecentActivitiesProps {
 
 export function RecentActivities({ activities }: RecentActivitiesProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('dashboard');
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Πρόσφατες Δραστηριότητες</CardTitle>
+          <CardTitle>{t('recentActivities.title')}</CardTitle>
           <CardDescription>
-            Οι τελευταίες ενέργειες στο σύστημα
+            {t('recentActivities.subtitle')}
           </CardDescription>
         </div>
         <Button variant="ghost" size="sm" asChild>
           <Link href="/activities">
-            Προβολή όλων
+            {t('recentActivities.viewAll')}
             <ArrowRight className={`ml-1 ${iconSizes.sm}`} />
           </Link>
         </Button>

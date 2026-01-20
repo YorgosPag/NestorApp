@@ -18,6 +18,8 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, limit, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { useAuth } from '@/auth/hooks/useAuth';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { MessageListItem } from './useInboxApi';
 import type { MessageDirection, DeliveryStatus } from '@/types/conversations';
 import type { CommunicationChannel } from '@/types/communications';
@@ -193,23 +195,16 @@ export function useRealtimeMessages(
             // Dispatch notifications για νέα inbound messages
             for (const message of newInboundMessages) {
               try {
-                const response = await fetch('/api/notifications/dispatch', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    messageId: message.id,
-                    conversationId: message.conversationId,
-                    recipientId: user.uid,
-                    tenantId: user.uid, // TODO: Replace with actual tenantId from conversation
-                    direction: message.direction,
-                    content: message.content,
-                    channel: message.channel,
-                  }),
+                // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+                await apiClient.post('/api/notifications/dispatch', {
+                  messageId: message.id,
+                  conversationId: message.conversationId,
+                  recipientId: user.uid,
+                  tenantId: user.uid, // TODO: Replace with actual tenantId from conversation
+                  direction: message.direction,
+                  content: message.content,
+                  channel: message.channel,
                 });
-
-                if (!response.ok) {
-                  console.error('[Realtime] Notification dispatch failed:', await response.text());
-                }
               } catch (err) {
                 console.error('[Realtime] Failed to dispatch notification:', err);
               }

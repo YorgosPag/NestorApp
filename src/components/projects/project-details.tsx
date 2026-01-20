@@ -14,6 +14,8 @@ import { PROJECT_COMPONENT_MAPPING } from '@/components/generic/mappings/project
 import { getSortedProjectTabs } from '@/config/project-tabs-config';
 import { DetailsContainer } from '@/core/containers';
 import { FloorplanService, type FloorplanData } from '@/services/floorplans/FloorplanService';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Dynamic import for DXF Modal - loads only on user interaction
 // This removes DXF module graph from /audit critical path
@@ -30,6 +32,9 @@ interface ProjectDetailsProps {
 }
 
 export function ProjectDetails({ project }: ProjectDetailsProps) {
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('projects');
+
     // ✅ ENTERPRISE: Modal state for DXF import
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importFloorplanType, setImportFloorplanType] = useState<FloorplanType>('project');
@@ -171,8 +176,8 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
                 }
                 emptyStateProps={{
                     icon: Briefcase,
-                    title: "Επιλέξτε ένα έργο",
-                    description: "Επιλέξτε ένα έργο από τη λίστα για να δείτε τις λεπτομέρειές του."
+                    title: t('emptyState.title'),
+                    description: t('emptyState.description')
                 }}
             />
 

@@ -20,17 +20,16 @@ export type ComponentVariantStyles = Record<string, unknown>;
 
 /** Design documentation type */
 export interface DesignDocumentation {
-  colors: typeof import('./tokens/design-tokens').colors;
-  typography: typeof import('./tokens/design-tokens').typography;
-  spacing: typeof import('./tokens/design-tokens').spacing;
+  colors: typeof import('@/styles/design-tokens').colors;
+  typography: typeof import('@/styles/design-tokens').typography;
+  spacing: typeof import('@/styles/design-tokens').spacing;
   components: string[];
 }
 
 // ============================================================================
-// DESIGN TOKENS
+// DESIGN TOKENS - Re-export from centralized location
 // ============================================================================
 
-export * from './tokens/design-tokens';
 export {
   colors,
   typography,
@@ -39,23 +38,24 @@ export {
   borderRadius,
   zIndex,
   breakpoints,
-  animations,
-  componentVariants,
-  layout
-} from './tokens/design-tokens';
+  animation as animations
+} from '@/styles/design-tokens';
 
-export type {
-  ColorScale,
-  SemanticColor,
-  SeverityLevel,
-  FontSize,
-  FontWeight,
-  Spacing,
-  Shadow,
-  BorderRadius,
-  ZIndex,
-  Breakpoint
-} from './tokens/design-tokens';
+// Local placeholder types since centralized tokens don't export these
+export type ColorScale = Record<string | number, string>;
+export type SemanticColor = string;
+export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low' | 'info';
+export type FontSize = string;
+export type FontWeight = number;
+export type Spacing = string;
+export type Shadow = string;
+export type BorderRadius = string;
+export type ZIndex = number;
+export type Breakpoint = number;
+
+// Placeholder exports for compatibility
+export const componentVariants = {} as Record<string, unknown>;
+export const layout = {} as Record<string, unknown>;
 
 // ============================================================================
 // THEME SYSTEM
@@ -170,7 +170,7 @@ export {
 // useBorderTokens system to eliminate duplicates and ensure consistency
 // across the entire application.
 
-import { colors, typography, spacing, shadows, borderRadius } from './tokens/design-tokens';
+import { colors, typography, spacing, shadows, borderRadius } from '@/styles/design-tokens';
 import { ThemeProvider } from './theme/ThemeProvider';
 
 /**

@@ -1,0 +1,110 @@
+Το σύμπτωμα (“Download” ανοίγει viewer/tab και δείχνει το αρχείο) σημαίνει ότι δεν εκτελείται πραγματικό download flow· γίνεται είτε:
+
+navigation σε URL (π.χ. window.open(downloadUrl) ή <a href=... target=_blank>), οπότε ο browser εμφανίζει inline ό,τι μπορεί (PDF/images).
+
+ή πέφτετε σε fallback που ξανά κάνει window.open, επειδή το “κανονικό” download αποτυγχάνει (CORS/Rules/SDK error) — το είδατε ήδη όταν το fetch() έβγαζε TypeError: Failed to fetch και μετά “open in new tab”. Η ρίζα εδώ είναι ότι το HTML download δεν τιμάται για cross-origin URLs και άρα η απλή λύση με <a download> δεν δουλεύει με Firebase Storage URLs.
+
+Παρακάτω είναι η επαγγελματική λύση που εφαρμόζουν μεγάλα προϊόντα (Google/Microsoft/SAP-style): download μέσω same-origin backend endpoint που σερβίρει το αρχείο με Content-Disposition: attachment.
+
+Η σωστή production λύση (enterprise-grade): Same-origin “Download Endpoint”
+Τι κάνεις αρχιτεκτονικά
+
+View: συνεχίζει να ανοίγει viewer (inline) — OK.
+
+Download: δεν ανοίγει URL απευθείας. Καλεί ένα endpoint του δικού σου domain, π.χ.
+GET /api/files/{fileId}/download
+
+Το endpoint:
+
+Επαληθεύει ταυτότητα (Firebase ID token).
+
+Κάνει authorization βάσει FileRecord (companyId/creator/role/status).
+
+Διαβάζει το object από Storage με Admin SDK / GCS client.
+
+Κάνει stream προς τον browser με headers που επιβάλλουν download:
+
+Content-Disposition: attachment; filename*=UTF-8''...
+
+Content-Type: <πραγματικό type>
+
+Cache-Control: private, no-store
+
+X-Content-Type-Options: nosniff
+
+Αυτό είναι ο μόνος τρόπος να έχεις 100% προβλέψιμη συμπεριφορά download σε όλα τα αρχεία/τύπους (ιδίως PDF), χωρίς CORS και χωρίς “άνοιξε νέο tab”. Το “attachment vs inline” ελέγχεται από Content-Disposition.
+
+Γιατί είναι καλύτερο από token URLs
+
+Τα Firebase getDownloadURL() URLs είναι tokenized και μπορούν να παρακάμπτουν rules/claims σε αρκετά σενάρια (όχι enterprise).
+
+Με backend endpoint έχεις:
+
+audit logging,
+
+κεντρική πολιτική πρόσβασης,
+
+σταθερή εμπειρία χρήστη,
+
+δυνατότητα throttling/quotas.
+
+“Γρήγορο” production workaround (όχι ιδανικό, αλλά λειτουργεί): Content-Disposition metadata στο Storage
+
+Αν θες άμεσα να αναγκάσεις download από το υπάρχον downloadUrl, μπορείς να βάλεις στο object metadata:
+
+contentDisposition: attachment; filename="..."
+
+Αυτό ρυθμίζεται στο upload ή με updateMetadata.
+
+Μειονέκτημα: είναι global ανά object. Αν το βάλεις “attachment”, τότε και το “View” θα τείνει να κατεβάζει αντί να προβάλλει. Άρα για σωστό split View/Download, το backend endpoint είναι το καθαρό enterprise.
+
+Τι είναι λάθος στη σημερινή υλοποίηση (με βάση το log που έστειλες)
+
+Υπάρχουν paths που καταλήγουν σε window.open(downloadUrl) (fallback ή αν λείπει handler). Αυτό εξηγεί γιατί “Download” και “View” κάνουν πρακτικά το ίδιο.
+
+Έγινε προσπάθεια fetch() → απέτυχε από CORS και πήγε fallback. Το cross-origin download είναι γνωστό πρόβλημα.
+
+Η μετάβαση σε getBlob(storagePath) είναι σωστή κατεύθυνση, αλλά:
+
+αν αποτύχει/κολλήσει (rules/claims/firestore.get μέσα σε rules), ξαναπέφτει σε “open tab” και χάνεται το download.
+
+και δεν θέλεις production UI να έχει “σιωπηλά fallback σε window.open” για download.
+
+Εντολή προς Claude (ακριβής, production-grade, χωρίς ερωτήσεις προς εσένα)
+A) STOP: Κατάργηση fallback που ανοίγει tab για Download
+
+Στο FilesList και όπου αλλού υπάρχει “αν δεν υπάρχει onDownload → window.open”, να αφαιρεθεί.
+
+Αν λείπει handler: disable του κουμπιού Download + toast/error state (μέσω κεντρικού UI system).
+
+B) Implement backend download endpoint
+
+Δημιουργία GET /api/files/[fileId]/download (Next.js route ή Cloud Function, ό,τι είναι canonical στο repo).
+
+Verify Firebase ID token (Admin SDK).
+
+Load FileRecord από Firestore, enforce:
+
+company isolation,
+
+creator/admin rules,
+
+status = ready,
+
+not deleted/trashed unless allowed.
+
+Stream από Storage (Admin) και set headers Content-Disposition: attachment.
+
+C) Client: Download κουμπί να κάνει navigation στο endpoint (όχι fetch blob)
+
+window.location.assign('/api/files/<id>/download') (same-origin, browser download manager).
+
+View κουμπί κρατάει τη σημερινή inline συμπεριφορά.
+
+D) Protocol συμμόρφωση (blockers που είδα στο snippet)
+
+Αφαίρεση console.log/console.warn (χρήση του υπάρχοντος centralized logger).
+
+Αφαίρεση link.style.display = 'none' (δεν χρειάζεται καθόλου· append/click/remove αρκεί).
+
+Αν εφαρμοστεί το (A)+(B)+(C), το “Download” θα καταλήγει πάντα σε πραγματική λήψη και όχι σε viewer/tab, ανεξάρτητα από τύπο αρχείου και browser, με enterprise security και audit.

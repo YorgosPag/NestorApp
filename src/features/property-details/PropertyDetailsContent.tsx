@@ -1,8 +1,11 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
 import type { Property, ExtendedPropertyDetails } from '@/types/property-viewer';
 import type { PropertyDetailsContentProps } from './types';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 import { MultiLevelNavigation } from '@/components/property-viewer/details/MultiLevelNavigation';
 import { PropertyMeta } from '@/components/property-viewer/details/PropertyMeta';
@@ -38,6 +41,7 @@ export function PropertyDetailsContent({
   onUpdateProperty?: (propertyId: string, updates: Partial<Property>) => void;
   isReadOnly?: boolean;
 }) {
+  const { t } = useTranslation(['common', 'properties']);
   const notifications = useNotifications();
   const { quick } = useBorderTokens();
 
@@ -64,13 +68,13 @@ export function PropertyDetailsContent({
   // safe update (ίδια συμπεριφορά: no-op όταν read-only)
   const safeOnUpdateProperty = makeSafeUpdate(isReadOnly, onUpdateProperty || (() => {}));
 
-  // Share handlers
+  // Share handlers - 🏢 ENTERPRISE: i18n-enabled notifications
   const handleShareSuccess = () => {
-    notifications.success('✅ Η κοινοποίηση ολοκληρώθηκε επιτυχώς!');
+    notifications.success(`✅ ${t('share.shareSuccess', { ns: 'common' })}`);
   };
 
   const handleShareError = (errorMessage: string) => {
-    notifications.error(`❌ Αποτυχία κοινοποίησης: ${errorMessage}`);
+    notifications.error(`❌ ${t('share.shareErrorSimple', { ns: 'common', error: errorMessage })}`);
   };
 
   // === RENDER: ΑΠΑΡΑΛΛΑΚΤΟ DOM/Tailwind/labels ===
@@ -113,7 +117,7 @@ export function PropertyDetailsContent({
           propertyDescription={resolvedProperty.description}
           propertyPrice={resolvedProperty.price}
           propertyArea={resolvedProperty.area}
-          propertyLocation={`${resolvedProperty.building}, Όροφος ${resolvedProperty.floor}`}
+          propertyLocation={`${resolvedProperty.building}, ${t('viewer.info.floor', { ns: 'properties' })} ${resolvedProperty.floor}`}
           source="property_details"
           variant="outline"
           size="sm"

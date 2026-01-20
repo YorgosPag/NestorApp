@@ -90,6 +90,46 @@ export {
 } from './types/upload.types';
 
 // ============================================================================
+// CANONICAL STORAGE PATH BUILDER
+// ============================================================================
+
+export {
+  buildStoragePath,
+  generateFileId,
+  getFileExtension,
+  parseStoragePath,
+  validateStoragePathParams,
+} from './utils/storage-path';
+
+export type {
+  StoragePathParams,
+  StoragePathResult,
+  StoragePathValidationError,
+} from './utils/storage-path';
+
+// ============================================================================
+// FILE DISPLAY NAME BUILDER
+// ============================================================================
+
+export {
+  buildFileDisplayName,
+  buildContactPhotoDisplayName,
+  buildFloorplanDisplayName,
+  buildContractDisplayName,
+  getDomainLabel,
+  getCategoryLabel,
+  getEntityTypeLabel,
+  formatDateForDisplay,
+  sanitizeForFilename,
+  normalizeForSearch,
+} from './utils/file-display-name';
+
+export type {
+  FileDisplayNameInput,
+  FileDisplayNameResult,
+} from './utils/file-display-name';
+
+// ============================================================================
 // BACKWARD COMPATIBILITY EXPORTS
 // ============================================================================
 

@@ -17,6 +17,8 @@ import { ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // TYPES
@@ -30,8 +32,8 @@ export interface NavigationIconProps {
   href: string;
 
   /**
-   * Tooltip text (optional, defaults to "Άνοιγμα")
-   * @example "Άνοιγμα στις Επαφές"
+   * Tooltip text (optional, defaults to i18n key 'icons.open')
+   * @example Uses t('icons.openInContacts') for contacts
    */
   tooltip?: string;
 
@@ -105,31 +107,28 @@ const SIZE_CONFIG = {
 
 /**
  * 🔗 NavigationIcon - Enterprise centralized navigation component
+ * 🏢 ENTERPRISE: Uses i18n for all tooltips
  *
  * @example
  * ```tsx
- * // In a Company Card
+ * // In a Company Card - tooltip auto-resolved via i18n
  * <div className="company-card relative">
- *   <NavigationIcon
- *     href={`/contacts/${companyId}`}
- *     tooltip="Άνοιγμα στις Επαφές"
+ *   <CompanyNavigationIcon
+ *     companyId={companyId}
  *     analyticsLabel="company-to-contacts"
  *   />
  *   <h3>{companyName}</h3>
  * </div>
  *
- * // In a Project Card
+ * // In a Project Card - tooltip auto-resolved via i18n
  * <div className="project-card relative">
- *   <NavigationIcon
- *     href={`/projects/${projectId}`}
- *     tooltip="Άνοιγμα στα Έργα"
- *   />
+ *   <ProjectNavigationIcon projectId={projectId} />
  * </div>
  * ```
  */
 export function NavigationIcon({
   href,
-  tooltip = 'Άνοιγμα',
+  tooltip,
   openInNewTab = false,
   size = 'sm',
   className,
@@ -139,7 +138,12 @@ export function NavigationIcon({
   asChild = false
 }: NavigationIconProps & { asChild?: boolean }) {
   const router = useRouter();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('navigation');
   const config = SIZE_CONFIG[size];
+
+  // 🏢 ENTERPRISE: Default tooltip from i18n
+  const tooltipText = tooltip || t('icons.open');
 
   // ============================================================================
   // HANDLERS
@@ -214,7 +218,7 @@ export function NavigationIcon({
               // Custom classes
               className
             )}
-            aria-label={tooltip}
+            aria-label={tooltipText}
           >
             <ExternalLink
               size={config.icon}
@@ -224,10 +228,10 @@ export function NavigationIcon({
         </TooltipTrigger>
         <TooltipContent>
           <p className="text-xs">
-            {tooltip}
+            {tooltipText}
             {!openInNewTab && (
               <span className="ml-1 opacity-60">
-                (Ctrl+Click για νέα καρτέλα)
+                {t('icons.ctrlClickNewTab')}
               </span>
             )}
           </p>
@@ -243,12 +247,15 @@ export function NavigationIcon({
 
 /**
  * Pre-configured for Company Cards in Navigation
+ * 🏢 ENTERPRISE: Uses i18n for tooltip
  */
-export function CompanyNavigationIcon({ companyId, ...props }: Omit<NavigationIconProps, 'href'> & { companyId: string }) {
+export function CompanyNavigationIcon({ companyId, tooltip, ...props }: Omit<NavigationIconProps, 'href'> & { companyId: string }) {
+  // 🏢 ENTERPRISE: i18n hook for default tooltip
+  const { t } = useTranslation('navigation');
   return (
     <NavigationIcon
       href={`/contacts/${companyId}`}
-      tooltip="Άνοιγμα στις Επαφές"
+      tooltip={tooltip || t('icons.openInContacts')}
       analyticsLabel="nav-company-to-contacts"
       {...props}
     />
@@ -257,12 +264,15 @@ export function CompanyNavigationIcon({ companyId, ...props }: Omit<NavigationIc
 
 /**
  * Pre-configured for Project Cards in Navigation
+ * 🏢 ENTERPRISE: Uses i18n for tooltip
  */
-export function ProjectNavigationIcon({ projectId, ...props }: Omit<NavigationIconProps, 'href'> & { projectId: string }) {
+export function ProjectNavigationIcon({ projectId, tooltip, ...props }: Omit<NavigationIconProps, 'href'> & { projectId: string }) {
+  // 🏢 ENTERPRISE: i18n hook for default tooltip
+  const { t } = useTranslation('navigation');
   return (
     <NavigationIcon
       href={`/projects/${projectId}`}
-      tooltip="Άνοιγμα στα Έργα"
+      tooltip={tooltip || t('icons.openInProjects')}
       analyticsLabel="nav-project-to-projects"
       {...props}
     />
@@ -271,12 +281,15 @@ export function ProjectNavigationIcon({ projectId, ...props }: Omit<NavigationIc
 
 /**
  * Pre-configured for Building Cards in Navigation
+ * 🏢 ENTERPRISE: Uses i18n for tooltip
  */
-export function BuildingNavigationIcon({ buildingId, ...props }: Omit<NavigationIconProps, 'href'> & { buildingId: string }) {
+export function BuildingNavigationIcon({ buildingId, tooltip, ...props }: Omit<NavigationIconProps, 'href'> & { buildingId: string }) {
+  // 🏢 ENTERPRISE: i18n hook for default tooltip
+  const { t } = useTranslation('navigation');
   return (
     <NavigationIcon
       href={`/buildings/${buildingId}`}
-      tooltip="Άνοιγμα στα Κτίρια"
+      tooltip={tooltip || t('icons.openInBuildings')}
       analyticsLabel="nav-building-to-buildings"
       {...props}
     />

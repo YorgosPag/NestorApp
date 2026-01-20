@@ -1,0 +1,207 @@
+{
+  "documentHeader": {
+    "defaultContractor": "CONTRACTOR COMPANY",
+    "companyType": "CONSTRUCTION TECHNICAL COMPANY",
+    "documentTitle": "SPECIFICATION OF OBLIGATIONS",
+    "defaultTitle": "New Specification of Obligations",
+    "defaultProjectName": "Project Name",
+    "fields": {
+      "location": "Location:",
+      "address": "Address:",
+      "plot": "Plot:",
+      "buildingPermit": "Building Permit:",
+      "owners": "Owners:",
+      "ownerDefault": "Owner {index}",
+      "status": "Status:"
+    }
+  },
+  "categories": {
+    "general": "General",
+    "construction": "Construction",
+    "materials": "Materials",
+    "systems": "Systems",
+    "finishes": "Finishes",
+    "installations": "Installations",
+    "safety": "Safety",
+    "environment": "Environment"
+  },
+  "newPage": {
+    "title": "New Specification of Obligations",
+    "subtitle": "Create a new specification of obligations with live preview",
+    "editOnly": "Edit only",
+    "splitView": "Split View",
+    "creating": "Creating...",
+    "create": "Create"
+  },
+  "basicInfo": {
+    "title": "Basic Information",
+    "company": "Contractor Company",
+    "required": "*",
+    "loadingCompanies": "Loading companies...",
+    "selectCompany": "Select company",
+    "project": "Project (Optional)",
+    "selectCompanyFirst": "First select a company",
+    "loadingProjects": "Loading projects...",
+    "selectProject": "Select project",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g. Specification of Obligations - Athanasiadis Plot",
+    "projectName": "Project Name",
+    "projectNamePlaceholder": "e.g. Thermi Extension"
+  },
+  "template": {
+    "title": "Template",
+    "useDefault": "Use default template",
+    "sections": "sections"
+  },
+  "structure": {
+    "title": "Structure & Content"
+  },
+  "preview": {
+    "title": "Preview",
+    "description": "Live preview of the document",
+    "unknownProject": "Unknown project",
+    "unknownContractor": "Unknown contractor",
+    "toc": {
+      "hide": "Hide Contents",
+      "show": "Show Contents"
+    }
+  },
+  "validation": {
+    "titleRequired": "Please enter a title",
+    "projectNameRequired": "Please enter a project name",
+    "createError": "Error creating the specification of obligations",
+    "document": {
+      "titleRequired": "Title is required",
+      "projectNameRequired": "Project name is required",
+      "contractorRequired": "Contractor company is required",
+      "ownersRequired": "At least one owner is required",
+      "noSections": "Document contains no sections"
+    },
+    "section": {
+      "prefix": "Section {index}",
+      "titleRequired": "Section title is required",
+      "numberRequired": "Section number is required",
+      "noContent": "Section has no content",
+      "contentTooShort": "Section content is too short"
+    },
+    "article": {
+      "prefix": "Article {index}",
+      "titleRequired": "Article title is required",
+      "numberRequired": "Article number is required",
+      "noContent": "Article has no content"
+    },
+    "paragraph": {
+      "prefix": "Paragraph {index}",
+      "contentRequired": "Paragraph content is required",
+      "numberRequired": "Paragraph number is required",
+      "contentTooShort": "Paragraph content is too short"
+    }
+  },
+  "aria": {
+    "editObligation": "Edit obligation",
+    "editForm": "Edit form",
+    "preview": "Preview",
+    "hideToc": "Hide table of contents",
+    "showToc": "Show table of contents",
+    "printDocument": "Print document"
+  },
+  "export": {
+    "progress": {
+      "preparingContent": "Preparing content...",
+      "formattingDocument": "Formatting document...",
+      "creatingToc": "Creating table of contents...",
+      "finalProcessing": "Final processing...",
+      "complete": "Export complete!"
+    },
+    "success": {
+      "title": "Success",
+      "message": "PDF created successfully."
+    },
+    "creating": "Creating PDF...",
+    "percentComplete": "{percent}% complete",
+    "button": "Export PDF",
+    "exporting": "Exporting..."
+  },
+  "print": {
+    "button": "Print",
+    "error": "Error printing. Please try again."
+  },
+  "sectionEditor": {
+    "categoryLabel": "Category",
+    "selectCategory": "Select category",
+    "statusLabel": "Status",
+    "requiredArticle": "Required article"
+  },
+  "richText": {
+    "defaultPlaceholder": "Enter content..."
+  },
+  "article": {
+    "titlePlaceholder": "Article title...",
+    "contentPlaceholder": "Article content...",
+    "noTitle": "No title",
+    "addParagraph": "Add paragraph",
+    "titleLabel": "Article Title",
+    "titleInputPlaceholder": "Enter article title",
+    "contentLabel": "Article Content",
+    "contentInputPlaceholder": "Enter article content..."
+  },
+  "paragraph": {
+    "contentPlaceholder": "Paragraph content...",
+    "noContent": "No content"
+  },
+  "section": {
+    "titlePlaceholder": "Section title...",
+    "contentPlaceholder": "Section content...",
+    "noTitle": "No title",
+    "requiredSection": "Required section",
+    "required": "Required",
+    "addArticle": "Add article",
+    "duplicateSection": "Duplicate section",
+    "contentLabel": "Section Content"
+  },
+  "exportOptions": {
+    "title": "Export Options",
+    "description": "Customize PDF export according to your needs",
+    "content": {
+      "title": "Content",
+      "toc": {
+        "label": "Table of Contents",
+        "description": "Automatic table with navigation links",
+        "aria": "Include table of contents"
+      },
+      "pageNumbers": {
+        "label": "Page Numbers",
+        "description": "Footer with page numbers and details",
+        "aria": "Include page numbers"
+      },
+      "logo": {
+        "label": "Company Logo",
+        "description": "Add logo to header",
+        "aria": "Include logo"
+      }
+    },
+    "quality": {
+      "title": "Quality & Formatting",
+      "standard": {
+        "label": "Standard",
+        "description": "Basic formatting, smaller size",
+        "aria": "Standard Quality"
+      },
+      "high": {
+        "label": "High Quality",
+        "description": "Improved margins and typography",
+        "aria": "High Quality"
+      }
+    },
+    "preview": {
+      "title": "Document Preview",
+      "sections": "Sections:",
+      "articles": "Articles:",
+      "paragraphs": "Paragraphs:",
+      "words": "Words:",
+      "readingTime": "Reading time:",
+      "minutes": "minutes",
+      "estimatedPages": "Estimated pages:"
+    }
+  }
+}

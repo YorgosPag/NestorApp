@@ -17,6 +17,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { designSystem } from '@/lib/design-system';
 import { getSocialShareUrls, getPhotoSocialShareUrls, trackShareEvent } from '@/lib/share-utils';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 // 🏢 ENTERPRISE: Import centralized components
 import { SharePlatformGrid } from '@/components/ui/social-sharing/SharePlatformGrid';
@@ -171,19 +173,13 @@ export function ShareModal({
     setLoading(true);
 
     try {
-      const response = await fetch('/api/communications/email/property-share/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Σφάλμα κατά την αποστολή');
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface PropertyShareEmailResponse {
+        success: boolean;
+        error?: string;
       }
+
+      await apiClient.post<PropertyShareEmailResponse>('/api/communications/email/property-share/', emailData);
 
       onShareSuccess?.(`email (${emailData.recipients.length} recipients, ${emailData.templateType} template)`);
       setShowEmailForm(false);

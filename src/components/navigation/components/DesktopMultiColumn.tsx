@@ -37,6 +37,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface DesktopMultiColumnProps {
   onCompanySelect: (companyId: string) => void;
@@ -74,10 +76,13 @@ export function DesktopMultiColumn({
     getBuildingCount,
     getBuildingsForProject,
     // 🏢 ENTERPRISE: Real-time unit functions
-    getUnitCount
+    getUnitCount,
+    getUnitsForBuilding
   } = useNavigation();
 
   const { warning } = useNotifications();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('navigation');
 
   // ==========================================================================
   // 🏢 ENTERPRISE: Real Firestore Data Hooks (ZERO mock data per CLAUDE.md)
@@ -185,7 +190,7 @@ export function DesktopMultiColumn({
           .map(b => ({
             id: b.id,
             name: b.name,
-            subtitle: b.subtitle || 'Διαθέσιμο για σύνδεση'
+            subtitle: b.subtitle || t('modals.availableForLinking')
           }));
 
         setAvailableBuildings(filteredBuildings);
@@ -246,49 +251,18 @@ export function DesktopMultiColumn({
   // 🏢 ENTERPRISE: canDeleteProject, canDeleteBuilding, canDeleteFloor αφαιρέθηκαν
   // Η αποσύνδεση (unlink) επιτρέπεται πάντα - χρησιμοποιεί το κεντρικοποιημένο EntityLinkingService
 
-  const showDeleteWarning = (itemType: string, dependentCount: number, dependentType: string) => {
-    let action: string;
-    let dependentAction: string;
+  // 🏢 ENTERPRISE: Type-safe dependency warning using i18n keys
+  type DependencyType = 'company' | 'project' | 'building';
 
-    // Για την κύρια ενέργεια (τι θέλω να κάνω)
-    if (itemType === 'εταιρεία') {
-      action = 'αφαιρέσετε';
-    } else {
-      action = 'αποσυνδέσετε';
-    }
+  const showDeleteWarning = (itemType: DependencyType, dependentCount: number) => {
+    // 🏢 ENTERPRISE: Use centralized i18n keys from dialogs.dependencies
+    const messageKey = {
+      company: 'dialogs.dependencies.cannotRemoveCompany',
+      project: 'dialogs.dependencies.cannotUnlinkProject',
+      building: 'dialogs.dependencies.cannotUnlinkBuilding'
+    }[itemType];
 
-    // Για την ενέργεια στα εξαρτημένα στοιχεία (τι πρέπει να κάνω πρώτα)
-    if (dependentType === 'έργα') {
-      // Τα έργα αποσυνδέονται από την εταιρεία
-      dependentAction = 'αποσυνδέσετε';
-    } else if (dependentType === 'κτίρια') {
-      // Τα κτίρια αποσυνδέονται από το έργο
-      dependentAction = 'αποσυνδέσετε';
-    } else if (dependentType === 'όροφοι') {
-      // Οι όροφοι αποσυνδέονται από το κτίριο
-      dependentAction = 'αποσυνδέσετε';
-    } else if (dependentType === 'μονάδες') {
-      // Οι μονάδες αποσυνδέονται από τον όροφο
-      dependentAction = 'αποσυνδέσετε';
-    } else {
-      dependentAction = 'αποσυνδέσετε';
-    }
-
-    // Κλίνω το gender για την/το/τον
-    let article: string;
-    if (itemType === 'εταιρεία') {
-      article = 'αυτή την';
-    } else if (itemType === 'έργο') {
-      article = 'αυτό το';
-    } else if (itemType === 'κτίριο') {
-      article = 'αυτό το';
-    } else if (itemType === 'όροφο') {
-      article = 'αυτόν τον';
-    } else {
-      article = 'αυτή τη';
-    }
-
-    warning(`Δεν μπορείτε να ${action} ${article} ${itemType} γιατί έχει ${dependentCount} ${dependentType}. Παρακαλούμε ${dependentAction} πρώτα τα ${dependentType}.`, {
+    warning(t(messageKey, { count: dependentCount }), {
       duration: 5000
     });
   };
@@ -302,7 +276,7 @@ export function DesktopMultiColumn({
       setConfirmDialogOpen(true);
     } else {
       const companyProjects = projects.filter(p => p.companyId === selectedCompany.id);
-      showDeleteWarning('εταιρεία', companyProjects.length, 'έργα');
+      showDeleteWarning('company', companyProjects.length);
     }
   };
 
@@ -342,7 +316,7 @@ export function DesktopMultiColumn({
       await loadCompanies();
 
       // 📢 STEP 4: Success notification με ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ TOAST
-      warning(`✅ Η εταιρεία "${companyName}" αφαιρέθηκε επιτυχώς από την πλοήγηση.`, {
+      warning(`✅ ${t('dialogs.company.successMessage', { companyName })}`, {
         duration: 4000
       });
 
@@ -350,7 +324,7 @@ export function DesktopMultiColumn({
       console.error('❌ Enterprise company deletion failed:', error);
 
       // 🚨 STEP 6: Error Handling με ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ TOAST
-      warning(`❌ Αποτυχία αφαίρεσης εταιρείας. Παρακαλούμε δοκιμάστε ξανά.`, {
+      warning(`❌ ${t('dialogs.company.errorMessage')}`, {
         duration: 5000
       });
 
@@ -378,7 +352,7 @@ export function DesktopMultiColumn({
     const buildingCount = getBuildingCount(selectedProject.id);
     if (buildingCount > 0) {
       // 🚫 ΜΠΛΟΚΑΡΙΣΜΑ: Δεν επιτρέπεται αποσύνδεση με κτίρια
-      showDeleteWarning('έργο', buildingCount, 'κτίρια');
+      showDeleteWarning('project', buildingCount);
       return;
     }
 
@@ -401,15 +375,15 @@ export function DesktopMultiColumn({
       });
 
       if (result.success) {
-        warning(`✅ Το έργο "${pendingUnlinkProject.name}" αποσυνδέθηκε επιτυχώς.`, { duration: 4000 });
+        warning(`✅ ${t('dialogs.project.successMessage', { projectName: pendingUnlinkProject.name })}`, { duration: 4000 });
         // Clear selection
         onProjectSelect('');
       } else if ('error' in result) {
-        warning(`❌ Αποτυχία αποσύνδεσης: ${result.error}`, { duration: 5000 });
+        warning(`❌ ${t('dialogs.project.errorMessage')}: ${result.error}`, { duration: 5000 });
       }
     } catch (error) {
       console.error('❌ [DesktopMultiColumn] Project unlink failed:', error);
-      warning('❌ Αποτυχία αποσύνδεσης έργου. Δοκιμάστε ξανά.', { duration: 5000 });
+      warning(`❌ ${t('dialogs.project.errorMessage')}`, { duration: 5000 });
     } finally {
       setProjectDialogOpen(false);
       setPendingUnlinkProject(null);
@@ -423,18 +397,18 @@ export function DesktopMultiColumn({
    * Το κτίριο δεν διαγράφεται - απλά αποσυνδέεται (projectId = null).
    *
    * 🔒 ΑΣΦΑΛΕΙΑ: Αν το κτίριο έχει μονάδες, δεν επιτρέπεται αποσύνδεση!
+   *
+   * FIX: Use getUnitCount (realtime hook) instead of selectedBuilding.floors/units
    */
   const handleDeleteBuilding = () => {
     if (!selectedBuilding) return;
 
-    // 🔒 ENTERPRISE SAFETY: Υπολογισμός μονάδων (από ορόφους + απευθείας)
-    const floorUnits = selectedBuilding.floors?.flatMap(floor => floor.units) || [];
-    const directUnits = selectedBuilding.units || [];
-    const totalUnits = floorUnits.length + directUnits.length;
+    // 🔒 ENTERPRISE SAFETY: Get unit count from realtime hook
+    const totalUnits = getUnitCount(selectedBuilding.id);
 
     if (totalUnits > 0) {
       // 🚫 ΜΠΛΟΚΑΡΙΣΜΑ: Δεν επιτρέπεται αποσύνδεση με μονάδες
-      showDeleteWarning('κτίριο', totalUnits, 'μονάδες');
+      showDeleteWarning('building', totalUnits);
       return;
     }
 
@@ -457,15 +431,15 @@ export function DesktopMultiColumn({
       });
 
       if (result.success) {
-        warning(`✅ Το κτίριο "${pendingUnlinkBuilding.name}" αποσυνδέθηκε επιτυχώς.`, { duration: 4000 });
+        warning(`✅ ${t('dialogs.building.successMessage', { buildingName: pendingUnlinkBuilding.name })}`, { duration: 4000 });
         // Clear selection
         onBuildingSelect('');
       } else if ('error' in result) {
-        warning(`❌ Αποτυχία αποσύνδεσης: ${result.error}`, { duration: 5000 });
+        warning(`❌ ${t('dialogs.building.errorMessage')}: ${result.error}`, { duration: 5000 });
       }
     } catch (error) {
       console.error('❌ [DesktopMultiColumn] Building unlink failed:', error);
-      warning('❌ Αποτυχία αποσύνδεσης κτιρίου. Δοκιμάστε ξανά.', { duration: 5000 });
+      warning(`❌ ${t('dialogs.building.errorMessage')}`, { duration: 5000 });
     } finally {
       setBuildingDialogOpen(false);
       setPendingUnlinkBuilding(null);
@@ -504,15 +478,15 @@ export function DesktopMultiColumn({
       });
 
       if (result.success) {
-        warning(`✅ Η μονάδα "${pendingUnlinkUnit.name}" αποσυνδέθηκε επιτυχώς.`, { duration: 4000 });
+        warning(`✅ ${t('dialogs.unit.successMessage', { unitName: pendingUnlinkUnit.name })}`, { duration: 4000 });
         // 🏢 ENTERPRISE: Clear selection using centralized action
         selectUnit(null);
       } else if ('error' in result) {
-        warning(`❌ Αποτυχία αποσύνδεσης: ${result.error}`, { duration: 5000 });
+        warning(`❌ ${t('dialogs.unit.errorMessage')}: ${result.error}`, { duration: 5000 });
       }
     } catch (error) {
       console.error('❌ [DesktopMultiColumn] Unit unlink failed:', error);
-      warning('❌ Αποτυχία αποσύνδεσης μονάδας. Δοκιμάστε ξανά.', { duration: 5000 });
+      warning(`❌ ${t('dialogs.unit.errorMessage')}`, { duration: 5000 });
     } finally {
       setUnitDialogOpen(false);
       setPendingUnlinkUnit(null);
@@ -526,7 +500,7 @@ export function DesktopMultiColumn({
 
   const handleBuildingSelected = async (building: { id: string; name: string }) => {
     if (!selectedProject) {
-      warning('Παρακαλούμε επιλέξτε πρώτα ένα έργο.', { duration: 3000 });
+      warning(t('modals.selectFirst'), { duration: 3000 });
       return;
     }
 
@@ -591,18 +565,30 @@ export function DesktopMultiColumn({
            name.includes('αποθηκη');
   }, []);
 
-  const buildingUnits = useMemo(() => {
+  /**
+   * 🏢 ENTERPRISE: Building units from realtime data
+   *
+   * FIX: Use getUnitsForBuilding (realtime hook) instead of selectedBuilding.floors/units
+   * The bootstrap only loads buildingCount, not full units array.
+   */
+  const buildingUnits = useMemo((): NavigationUnit[] => {
     if (!selectedBuilding) return [];
 
-    // 🏢 ENTERPRISE: Combine units from floors AND direct building units
-    const floorUnits = selectedBuilding.floors?.flatMap(floor => floor.units) || [];
-    const directUnits = selectedBuilding.units || [];
-    const allUnits = [...floorUnits, ...directUnits];
+    // 🏢 ENTERPRISE: Get units from realtime hook, NOT from building.floors/units
+    const realtimeUnits = getUnitsForBuilding(selectedBuilding.id);
 
-    // 🏢 ENTERPRISE (local_4.log): Filter out storage units
-    // Storage is a PARALLEL category to Units, not part of Units
-    return allUnits.filter(unit => !isStorageType(unit));
-  }, [selectedBuilding, isStorageType]);
+    // Map RealtimeUnit to NavigationUnit and filter out storage units
+    return realtimeUnits
+      .filter(unit => !isStorageType(unit))
+      .map(unit => ({
+        id: unit.id,
+        name: unit.name,
+        type: (unit.type || 'apartment') as NavigationUnit['type'],
+        floor: unit.floor || 0,
+        area: unit.area || 0,
+        status: (unit.status || 'owner') as NavigationUnit['status']
+      }));
+  }, [selectedBuilding, getUnitsForBuilding, isStorageType]);
 
   /**
    * 🏢 ENTERPRISE (local_4.log): Memoized storages filtered by building
@@ -610,34 +596,44 @@ export function DesktopMultiColumn({
    *
    * COMBINES:
    * 1. Storage units from storage_units collection (via useFirestoreStorages)
-   * 2. Units with type='storage' from units collection (legacy data)
+   * 2. Units with type='storage' from units collection (legacy data via realtime)
+   *
+   * FIX: Use getUnitsForBuilding (realtime hook) instead of selectedBuilding.floors/units
    */
   const buildingStorages = useMemo((): StorageUnit[] => {
     if (!selectedBuilding) return [];
 
-    // 1. Get storages from storage_units collection
-    const apiStorages: StorageUnit[] = (storages || []).map(storage => ({
-      id: storage.id,
-      name: storage.name,
-      type: storage.type as 'basement' | 'ground' | 'external' | undefined,
-      area: storage.area,
-      status: storage.status as StorageUnit['status']
-    }));
+    // 🏢 ENTERPRISE: Get storages filtered by buildingId (preferred) or building name (fallback)
+    // After running migration 006, all storages will have buildingId
+    const apiStorages: StorageUnit[] = (storages || [])
+      .filter(storage => {
+        // 1. Try matching by buildingId (enterprise - after migration 006)
+        if (storage.buildingId) {
+          return storage.buildingId === selectedBuilding.id;
+        }
+        // 2. Fallback: Match by building name (legacy - before migration)
+        return storage.building === selectedBuilding.name;
+      })
+      .map(storage => ({
+        id: storage.id,
+        name: storage.name,
+        type: storage.type as 'basement' | 'ground' | 'external' | undefined,
+        area: storage.area,
+        status: storage.status as StorageUnit['status']
+      }));
 
-    // 2. Get storage-type units from units collection (legacy data)
+    // 2. Get storage-type units from realtime units collection (legacy data)
     // These are units with type='storage' that haven't been migrated yet
-    const floorUnits = selectedBuilding.floors?.flatMap(floor => floor.units) || [];
-    const directUnits = selectedBuilding.units || [];
-    const allBuildingUnits = [...floorUnits, ...directUnits];
+    const realtimeUnits = getUnitsForBuilding(selectedBuilding.id);
 
-    const legacyStorages: StorageUnit[] = allBuildingUnits
+    const legacyStorages: StorageUnit[] = realtimeUnits
       .filter(unit => isStorageType(unit))
       .map(unit => ({
         id: unit.id,
         name: unit.name,
         type: 'basement' as const, // Default type for legacy
         area: unit.area,
-        status: unit.status as StorageUnit['status']
+        status: (unit.status || 'owner') as StorageUnit['status']
       }));
 
     // Combine both sources (avoid duplicates by id)
@@ -649,7 +645,7 @@ export function DesktopMultiColumn({
     });
 
     return allStorages;
-  }, [selectedBuilding, storages, isStorageType]);
+  }, [selectedBuilding, storages, getUnitsForBuilding, isStorageType]);
 
   /**
    * 🏢 ENTERPRISE (local_4.log): Memoized parking spots (already filtered by building via hook)
@@ -688,15 +684,15 @@ export function DesktopMultiColumn({
   }, []);
 
   return (
-    <nav className="hidden md:block" role="navigation" aria-label="Πλοήγηση Ιεραρχίας">
+    <nav className="hidden md:block" role="navigation" aria-label={t('page.hierarchyLabel')}>
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4">
 
         {/* Column 1: Companies */}
         <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
-                 role="region" aria-label="Εταιρείες">
+                 role="region" aria-label={t('columns.companies.sectionLabel')}>
           <header className="flex items-center gap-2 mb-2">
             <NAVIGATION_ENTITIES.company.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.company.color}`} />
-            <h3 className="font-semibold text-gray-900 dark:text-foreground">{NAVIGATION_ENTITIES.company.pluralLabel}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-foreground">{t('columns.companies.title')}</h3>
           </header>
 
           {/* Companies Toolbar */}
@@ -724,7 +720,7 @@ export function DesktopMultiColumn({
           <ul
             className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto"
             role="list"
-            aria-label="Λίστα Εταιρειών"
+            aria-label={t('columns.companies.listLabel')}
             data-navigation-scroll="true"
           >
             {filterData(companies, companiesSearch, companiesFilters).map(company => {
@@ -736,14 +732,14 @@ export function DesktopMultiColumn({
               const isNavigationCompany = navigationCompanyIds.includes(company.id);
 
               // Διαφοροποίηση ανάλογα με το αν έχει έργα ή είναι navigation company
-              let subtitle = company.industry || 'Εταιρεία';
+              let subtitle = company.industry || t('columns.companies.defaultSubtitle');
               let extraInfo: string | undefined = undefined;
 
               if (!hasProjects) {
                 subtitle = isNavigationCompany
-                  ? 'Προσθέστε έργα για αυτή την εταιρεία'
-                  : 'Εταιρεία χωρίς έργα';
-                extraInfo = company.vatNumber ? `ΑΦΜ: ${company.vatNumber}` : undefined;
+                  ? t('columns.companies.addProjects')
+                  : t('columns.companies.noProjects');
+                extraInfo = company.vatNumber ? t('columns.companies.vatNumber', { vatNumber: company.vatNumber }) : undefined;
               }
 
               return (
@@ -761,7 +757,7 @@ export function DesktopMultiColumn({
                     badgeText={!projectsLoading && !hasProjects ? getNavigationFilterCategories().company_without_projects : undefined}
                     // 🔗 ENTERPRISE: Navigation to Contacts page
                     navigationHref={ContextualNavigationService.generateRoute('company', company.id, { action: 'select' })}
-                    navigationTooltip="Άνοιγμα στις Επαφές"
+                    navigationTooltip={t('columns.companies.openTooltip')}
                   />
                 </li>
               );
@@ -772,10 +768,10 @@ export function DesktopMultiColumn({
         {/* Column 2: Projects */}
         {selectedCompany && (
           <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
-                   role="region" aria-label="Έργα">
+                   role="region" aria-label={t('columns.projects.sectionLabel')}>
             <header className="flex items-center gap-2 mb-2">
               <NAVIGATION_ENTITIES.project.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.project.color}`} />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">{NAVIGATION_ENTITIES.project.pluralLabel}</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-foreground">{t('columns.projects.title')}</h3>
             </header>
 
             {/* Projects Toolbar */}
@@ -802,7 +798,7 @@ export function DesktopMultiColumn({
             <ul
               className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto"
               role="list"
-              aria-label="Λίστα Έργων"
+              aria-label={t('columns.projects.listLabel')}
               data-navigation-scroll="true"
             >
               {filterData(projects.filter(project => project.companyId === selectedCompany?.id), projectsSearch, projectsFilters).map(project => {
@@ -817,14 +813,14 @@ export function DesktopMultiColumn({
                       icon={NAVIGATION_ENTITIES.project.icon}
                       iconColor={NAVIGATION_ENTITIES.project.color}
                       title={project.name}
-                      subtitle={`${buildingCount} κτίρια`}
+                      subtitle={t('columns.projects.buildingCount', { count: buildingCount })}
                       isSelected={selectedProject?.id === project.id}
                       variant="compact"
                       badgeStatus={!hasBuildings ? 'no_projects' : undefined}
                       badgeText={!hasBuildings ? getNavigationFilterCategories().project_without_buildings : undefined}
                       // 🔗 ENTERPRISE: Navigation to Audit page (Projects page)
                       navigationHref={ContextualNavigationService.generateRoute('project', project.id, { action: 'select' })}
-                      navigationTooltip="Άνοιγμα στα Έργα"
+                      navigationTooltip={t('columns.projects.openTooltip')}
                     />
                   </li>
                 );
@@ -836,10 +832,10 @@ export function DesktopMultiColumn({
         {/* Column 3: Buildings - 🏢 ENTERPRISE: Using memoized real-time data */}
         {selectedProject && (
           <section className="bg-white dark:bg-card border border-border rounded-lg p-3 overflow-hidden"
-                   role="region" aria-label="Κτίρια">
+                   role="region" aria-label={t('columns.buildings.sectionLabel')}>
             <header className="flex items-center gap-2 mb-2">
               <NAVIGATION_ENTITIES.building.icon className={`h-5 w-5 ${NAVIGATION_ENTITIES.building.color}`} />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">{NAVIGATION_ENTITIES.building.pluralLabel}</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-foreground">{t('columns.buildings.title')}</h3>
             </header>
 
             <NavigationCardToolbar
@@ -864,7 +860,7 @@ export function DesktopMultiColumn({
             <ul
               className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto"
               role="list"
-              aria-label="Λίστα Κτιρίων"
+              aria-label={t('columns.buildings.listLabel')}
               data-navigation-scroll="true"
             >
               {/* 🏢 ENTERPRISE: Buildings display with real-time unit count */}
@@ -880,14 +876,14 @@ export function DesktopMultiColumn({
                       icon={NAVIGATION_ENTITIES.building.icon}
                       iconColor={NAVIGATION_ENTITIES.building.color}
                       title={building.name}
-                      subtitle={`${unitCount} μονάδες`}
+                      subtitle={t('columns.buildings.unitCount', { count: unitCount })}
                       isSelected={selectedBuilding?.id === building.id}
                       variant="compact"
                       badgeStatus={!hasUnits ? 'no_projects' : undefined}
                       badgeText={!hasUnits ? getNavigationFilterCategories().building_without_units : undefined}
                       // 🔗 ENTERPRISE: Navigation to Buildings page
                       navigationHref={ContextualNavigationService.generateRoute('building', building.id, { action: 'select' })}
-                      navigationTooltip="Άνοιγμα στα Κτίρια"
+                      navigationTooltip={t('columns.buildings.openTooltip')}
                     />
                   </li>
                 );
@@ -943,19 +939,19 @@ export function DesktopMultiColumn({
         {/* Column 5: Actions & Extras - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
         {selectedBuilding && (
           <section className="bg-white dark:bg-card border border-border rounded-lg p-3"
-                   role="region" aria-label="Ενέργειες">
+                   role="region" aria-label={t('columns.actions.sectionLabel')}>
             <header className="flex items-center gap-2 mb-4">
               <ActionsIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.actions.color}`} />
-              <h3 className="font-semibold text-gray-900 dark:text-foreground">Ενέργειες</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-foreground">{t('columns.actions.title')}</h3>
             </header>
-            <ul className="space-y-2 list-none" role="list" aria-label="Λίστα Ενεργειών">
+            <ul className="space-y-2 list-none" role="list" aria-label={t('columns.actions.listLabel')}>
               <li>
                 <NavigationButton
                   onClick={() => onNavigateToPage('properties')}
                   icon={NAVIGATION_ENTITIES.unit.icon}
                   iconColor={NAVIGATION_ENTITIES.unit.color}
-                  title="Προβολή Μονάδων"
-                  subtitle={`${buildingUnits.length} μονάδες`}
+                  title={t('columns.actions.viewUnits')}
+                  subtitle={t('columns.actions.unitsCount', { count: buildingUnits.length })}
                   variant="compact"
                 />
               </li>
@@ -965,7 +961,7 @@ export function DesktopMultiColumn({
                   onClick={() => onNavigateToPage('buildings')}
                   icon={NAVIGATION_ENTITIES.building.icon}
                   iconColor={NAVIGATION_ENTITIES.building.color}
-                  title="Λεπτομέρειες Κτιρίου"
+                  title={t('columns.actions.buildingDetails')}
                   subtitle={selectedBuilding.name}
                   variant="compact"
                 />
@@ -977,7 +973,7 @@ export function DesktopMultiColumn({
                     onClick={() => onNavigateToPage('projects')}
                     icon={NAVIGATION_ENTITIES.project.icon}
                     iconColor={NAVIGATION_ENTITIES.project.color}
-                    title="Λεπτομέρειες Έργου"
+                    title={t('columns.actions.projectDetails')}
                     subtitle={selectedProject.name}
                     variant="compact"
                   />
@@ -1001,9 +997,9 @@ export function DesktopMultiColumn({
         onOpenChange={setIsProjectModalOpen}
         onItemSelected={handleProjectSelected}
         items={availableProjects}
-        title="Σύνδεση Έργου"
-        description={`Επιλέξτε ένα έργο για σύνδεση με την εταιρεία "${selectedCompany?.companyName}".`}
-        searchPlaceholder="Αναζήτηση έργου..."
+        title={t('modals.linkProject.title')}
+        description={t('modals.linkProject.description', { companyName: selectedCompany?.companyName })}
+        searchPlaceholder={t('modals.linkProject.searchPlaceholder')}
         itemType="project"
       />
 
@@ -1012,9 +1008,9 @@ export function DesktopMultiColumn({
         onOpenChange={setIsBuildingModalOpen}
         onItemSelected={handleBuildingSelected}
         items={availableBuildings}
-        title="Σύνδεση Κτιρίου"
-        description={`Επιλέξτε ένα κτίριο για σύνδεση με το έργο "${selectedProject?.name}".`}
-        searchPlaceholder="Αναζήτηση κτιρίου..."
+        title={t('modals.linkBuilding.title')}
+        description={t('modals.linkBuilding.description', { projectName: selectedProject?.name })}
+        searchPlaceholder={t('modals.linkBuilding.searchPlaceholder')}
         itemType="building"
       />
 
@@ -1025,9 +1021,9 @@ export function DesktopMultiColumn({
         onOpenChange={setIsUnitModalOpen}
         onItemSelected={handleUnitSelected}
         items={availableUnits}
-        title="Σύνδεση Μονάδας"
-        description={`Επιλέξτε μια μονάδα για σύνδεση με το κτίριο "${selectedBuilding?.name}".`}
-        searchPlaceholder="Αναζήτηση μονάδας..."
+        title={t('modals.linkUnit.title')}
+        description={t('modals.linkUnit.description', { buildingName: selectedBuilding?.name })}
+        searchPlaceholder={t('modals.linkUnit.searchPlaceholder')}
         itemType="unit"
       />
 
@@ -1037,20 +1033,19 @@ export function DesktopMultiColumn({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <DeleteIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.delete.color}`} />
-              Αφαίρεση Εταιρείας από Πλοήγηση
+              {t('dialogs.company.title')}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p>
-                Είστε βέβαιοι ότι θέλετε να αφαιρέσετε την εταιρεία{' '}
-                <strong>"{pendingDeletionCompany?.companyName}"</strong> από την πλοήγηση;
+                {t('dialogs.company.confirmation', { companyName: pendingDeletionCompany?.companyName })}
               </p>
 
               <div className="bg-muted p-3 rounded-md text-sm space-y-2 border border-border">
-                <p className="font-medium text-foreground">Αυτή η ενέργεια:</p>
+                <p className="font-medium text-foreground">{t('dialogs.company.infoTitle')}</p>
                 <ul className="text-muted-foreground space-y-1">
-                  <li>• Θα αφαιρέσει την εταιρεία από τη λίστα πλοήγησης</li>
-                  <li>• <strong className="text-foreground">ΔΕΝ</strong> θα διαγράψει την εταιρεία από τη βάση δεδομένων</li>
-                  <li>• Μπορείτε να την προσθέσετε ξανά αργότερα</li>
+                  <li>• {t('dialogs.company.willRemove')}</li>
+                  <li>• <strong className="text-foreground">{t('dialogs.company.willNotDelete')}</strong></li>
+                  <li>• {t('dialogs.company.canAddLater')}</li>
                 </ul>
               </div>
             </AlertDialogDescription>
@@ -1060,13 +1055,13 @@ export function DesktopMultiColumn({
               setConfirmDialogOpen(false);
               setPendingDeletionCompany(null);
             }}>
-              Ακύρωση
+              {t('dialogs.company.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmedCompanyDeletion}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Αφαίρεση
+              {t('dialogs.company.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1078,20 +1073,19 @@ export function DesktopMultiColumn({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <UnlinkIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.unlink.color}`} />
-              Αποσύνδεση Έργου από Εταιρεία
+              {t('dialogs.project.title')}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p>
-                Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε το έργο{' '}
-                <strong>"{pendingUnlinkProject?.name}"</strong> από την εταιρεία;
+                {t('dialogs.project.confirmation', { projectName: pendingUnlinkProject?.name })}
               </p>
 
               <div className="bg-muted p-3 rounded-md text-sm space-y-2 border border-border">
-                <p className="font-medium text-foreground">Αυτή η ενέργεια:</p>
+                <p className="font-medium text-foreground">{t('dialogs.project.infoTitle')}</p>
                 <ul className="text-muted-foreground space-y-1">
-                  <li>• Θα αποσυνδέσει το έργο από την εταιρεία</li>
-                  <li>• <strong className="text-foreground">ΔΕΝ</strong> θα διαγράψει το έργο από τη βάση δεδομένων</li>
-                  <li>• Μπορείτε να το συνδέσετε ξανά αργότερα</li>
+                  <li>• {t('dialogs.project.willUnlink')}</li>
+                  <li>• <strong className="text-foreground">{t('dialogs.project.willNotDelete')}</strong></li>
+                  <li>• {t('dialogs.project.canLinkLater')}</li>
                 </ul>
               </div>
             </AlertDialogDescription>
@@ -1101,13 +1095,13 @@ export function DesktopMultiColumn({
               setProjectDialogOpen(false);
               setPendingUnlinkProject(null);
             }}>
-              Ακύρωση
+              {t('dialogs.project.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmedProjectUnlink}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Αποσύνδεση
+              {t('dialogs.project.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1119,20 +1113,19 @@ export function DesktopMultiColumn({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <UnlinkIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.unlink.color}`} />
-              Αποσύνδεση Κτιρίου από Έργο
+              {t('dialogs.building.title')}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p>
-                Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε το κτίριο{' '}
-                <strong>"{pendingUnlinkBuilding?.name}"</strong> από το έργο;
+                {t('dialogs.building.confirmation', { buildingName: pendingUnlinkBuilding?.name })}
               </p>
 
               <div className="bg-muted p-3 rounded-md text-sm space-y-2 border border-border">
-                <p className="font-medium text-foreground">Αυτή η ενέργεια:</p>
+                <p className="font-medium text-foreground">{t('dialogs.building.infoTitle')}</p>
                 <ul className="text-muted-foreground space-y-1">
-                  <li>• Θα αποσυνδέσει το κτίριο από το έργο</li>
-                  <li>• <strong className="text-foreground">ΔΕΝ</strong> θα διαγράψει το κτίριο από τη βάση δεδομένων</li>
-                  <li>• Μπορείτε να το συνδέσετε ξανά αργότερα</li>
+                  <li>• {t('dialogs.building.willUnlink')}</li>
+                  <li>• <strong className="text-foreground">{t('dialogs.building.willNotDelete')}</strong></li>
+                  <li>• {t('dialogs.building.canLinkLater')}</li>
                 </ul>
               </div>
             </AlertDialogDescription>
@@ -1142,13 +1135,13 @@ export function DesktopMultiColumn({
               setBuildingDialogOpen(false);
               setPendingUnlinkBuilding(null);
             }}>
-              Ακύρωση
+              {t('dialogs.building.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmedBuildingUnlink}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Αποσύνδεση
+              {t('dialogs.building.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1160,20 +1153,19 @@ export function DesktopMultiColumn({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <UnlinkIcon className={`h-5 w-5 ${NAVIGATION_ACTIONS.unlink.color}`} />
-              Αποσύνδεση Μονάδας από Κτίριο
+              {t('dialogs.unit.title')}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
               <p>
-                Είστε βέβαιοι ότι θέλετε να αποσυνδέσετε τη μονάδα{' '}
-                <strong>"{pendingUnlinkUnit?.name}"</strong> από το κτίριο;
+                {t('dialogs.unit.confirmation', { unitName: pendingUnlinkUnit?.name })}
               </p>
 
               <div className="bg-muted p-3 rounded-md text-sm space-y-2 border border-border">
-                <p className="font-medium text-foreground">Αυτή η ενέργεια:</p>
+                <p className="font-medium text-foreground">{t('dialogs.unit.infoTitle')}</p>
                 <ul className="text-muted-foreground space-y-1">
-                  <li>• Θα αποσυνδέσει τη μονάδα από το κτίριο</li>
-                  <li>• <strong className="text-foreground">ΔΕΝ</strong> θα διαγράψει τη μονάδα από τη βάση δεδομένων</li>
-                  <li>• Μπορείτε να την συνδέσετε ξανά αργότερα</li>
+                  <li>• {t('dialogs.unit.willUnlink')}</li>
+                  <li>• <strong className="text-foreground">{t('dialogs.unit.willNotDelete')}</strong></li>
+                  <li>• {t('dialogs.unit.canLinkLater')}</li>
                 </ul>
               </div>
             </AlertDialogDescription>
@@ -1183,13 +1175,13 @@ export function DesktopMultiColumn({
               setUnitDialogOpen(false);
               setPendingUnlinkUnit(null);
             }}>
-              Ακύρωση
+              {t('dialogs.unit.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmedUnitUnlink}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Αποσύνδεση
+              {t('dialogs.unit.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

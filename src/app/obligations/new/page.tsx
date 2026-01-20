@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { PageLayout } from "@/components/app/page-layout";
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { 
   Owner, 
   ProjectDetails, 
@@ -82,6 +84,8 @@ const autoResize = (textarea: HTMLTextAreaElement) => {
 export default function NewObligationPage() {
   const iconSizes = useIconSizes();
   const router = useRouter();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('obligations');
   const [formData, setFormData] = useState<ObligationFormData>({
     title: "",
     projectName: "",
@@ -534,13 +538,13 @@ export default function NewObligationPage() {
 
     // 🏢 ENTERPRISE VALIDATION
     if (!formData.title.trim()) {
-      alert("Παρακαλώ εισάγετε τίτλο");
+      alert(t('validation.titleRequired'));
       setIsLoading(false);
       return;
     }
 
     if (!formData.projectName.trim()) {
-      alert("Παρακαλώ εισάγετε όνομα έργου");
+      alert(t('validation.projectNameRequired'));
       setIsLoading(false);
       return;
     }
@@ -596,7 +600,7 @@ export default function NewObligationPage() {
       router.push(`/obligations/${newObligation.id}/edit`);
     } catch (error) {
       console.error("Error creating obligation:", error);
-      alert("Σφάλμα κατά τη δημιουργία της συγγραφής υποχρεώσεων");
+      alert(t('validation.createError'));
     } finally {
       setIsLoading(false);
     }
@@ -617,8 +621,8 @@ export default function NewObligationPage() {
               </Button>
             </Link>
             <hgroup>
-              <h1 className="text-2xl font-bold">Νέα Συγγραφή Υποχρεώσεων</h1>
-              <p className="text-muted-foreground text-sm">Δημιουργήστε μια νέα συγγραφή υποχρεώσεων με live preview</p>
+              <h1 className="text-2xl font-bold">{t('newPage.title')}</h1>
+              <p className="text-muted-foreground text-sm">{t('newPage.subtitle')}</p>
             </hgroup>
           </div>
 
@@ -629,15 +633,15 @@ export default function NewObligationPage() {
               size="sm"
             >
               <Layout className={`${iconSizes.sm} mr-2`} />
-              {viewMode === 'split' ? 'Μόνο επεξεργασία' : 'Split View'}
+              {viewMode === 'split' ? t('newPage.editOnly') : t('newPage.splitView')}
             </Button>
-            <Button 
-              onClick={handleSubmit} 
+            <Button
+              onClick={handleSubmit}
               disabled={isLoading}
               className="flex items-center gap-2"
             >
               <Save className={iconSizes.sm} />
-              {isLoading ? "Δημιουργία..." : "Δημιουργία"}
+              {isLoading ? t('newPage.creating') : t('newPage.create')}
             </Button>
           </div>
         </header>
@@ -645,20 +649,20 @@ export default function NewObligationPage() {
         {/* Main Content */}
         <section
           className={`obligations-page flex-1 grid gap-6 ${viewMode === 'split' ? 'lg:grid-cols-[1fr_1fr] lg:items-start' : 'lg:grid-cols-1'} w-full min-h-0`}
-          aria-label="Επεξεργασία υποχρέωσης"
+          aria-label={t('aria.editObligation')}
         >
           {/* Left Panel - Editor */}
-          <section className="space-y-6" aria-label="Φόρμα επεξεργασίας">
+          <section className="space-y-6" aria-label={t('aria.editForm')}>
             {/* Basic Information */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Βασικές Πληροφορίες</CardTitle>
+                <CardTitle className="text-base">{t('basicInfo.title')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* 🏢 ENTERPRISE: Company & Project Selection ΠΡΩΤΑ */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <fieldset className="space-y-2">
-                    <Label className="text-sm">Εταιρεία Κατασκευαστή *</Label>
+                    <Label className="text-sm">{t('basicInfo.company')} {t('basicInfo.required')}</Label>
                     <Select
                       value={formData.companyId || ""}
                       onValueChange={handleCompanySelection}
@@ -666,7 +670,7 @@ export default function NewObligationPage() {
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue
-                          placeholder={loadingCompanies ? "Φόρτωση εταιρειών..." : "Επιλέξτε εταιρεία"}
+                          placeholder={loadingCompanies ? t('basicInfo.loadingCompanies') : t('basicInfo.selectCompany')}
                         />
                       </SelectTrigger>
                       <SelectContent className="max-h-80">
@@ -680,7 +684,7 @@ export default function NewObligationPage() {
                   </fieldset>
 
                   <fieldset className="space-y-2">
-                    <Label className="text-sm">Έργο (Προαιρετικό)</Label>
+                    <Label className="text-sm">{t('basicInfo.project')}</Label>
                     <Select
                       value={formData.projectId ? String(formData.projectId) : ""}
                       onValueChange={(value) => handleProjectSelection(value)}
@@ -690,10 +694,10 @@ export default function NewObligationPage() {
                         <SelectValue
                           placeholder={
                             !formData.companyId
-                              ? "Πρώτα επιλέξτε εταιρεία"
+                              ? t('basicInfo.selectCompanyFirst')
                               : loadingProjects
-                              ? "Φόρτωση έργων..."
-                              : "Επιλέξτε έργο"
+                              ? t('basicInfo.loadingProjects')
+                              : t('basicInfo.selectProject')
                           }
                         />
                       </SelectTrigger>
@@ -711,23 +715,23 @@ export default function NewObligationPage() {
                 {/* Τίτλος και Όνομα Έργου ΚΑΤΩ από τα dropdowns */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <fieldset>
-                    <Label htmlFor="title" className="text-sm">Τίτλος *</Label>
+                    <Label htmlFor="title" className="text-sm">{t('basicInfo.titleLabel')} {t('basicInfo.required')}</Label>
                     <Input
                       id="title"
                       value={formData.title}
                       onChange={(e) => handleInputChange("title", e.target.value)}
-                      placeholder="π.χ. Συγγραφή Υποχρεώσεων - Οικόπεδο Αθανασιάδη"
+                      placeholder={t('basicInfo.titlePlaceholder')}
                       className="mt-1"
                     />
                   </fieldset>
 
                   <fieldset>
-                    <Label htmlFor="projectName" className="text-sm">Όνομα Έργου *</Label>
+                    <Label htmlFor="projectName" className="text-sm">{t('basicInfo.projectName')} {t('basicInfo.required')}</Label>
                     <Input
                       id="projectName"
                       value={formData.projectName}
                       onChange={(e) => handleInputChange("projectName", e.target.value)}
-                      placeholder="π.χ. Επέκταση Θέρμης"
+                      placeholder={t('basicInfo.projectNamePlaceholder')}
                       className="mt-1"
                     />
                   </fieldset>
@@ -738,7 +742,7 @@ export default function NewObligationPage() {
             {/* Template Selection */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Πρότυπο</CardTitle>
+                <CardTitle className="text-base">{t('template.title')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center space-x-2">
@@ -750,7 +754,7 @@ export default function NewObligationPage() {
                     className={iconSizes.sm}
                   />
                   <Label htmlFor="useTemplate" className="text-sm">
-                    Χρήση προεπιλεγμένου προτύπου ({DEFAULT_TEMPLATE_SECTIONS.length} ενότητες)
+                    {t('template.useDefault')} ({DEFAULT_TEMPLATE_SECTIONS.length} {t('template.sections')})
                   </Label>
                 </div>
               </CardContent>
@@ -759,7 +763,7 @@ export default function NewObligationPage() {
             {/* Structure Editor */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Δομή & Περιεχόμενο</CardTitle>
+                <CardTitle className="text-base">{t('structure.title')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <StructureEditor
@@ -775,7 +779,7 @@ export default function NewObligationPage() {
 
           {/* Right Panel - Live Preview */}
           {viewMode === 'split' && (
-            <aside className="space-y-6 relative" aria-label="Προεπισκόπηση">
+            <aside className="space-y-6 relative" aria-label={t('aria.preview')}>
               <Card
                 className="flex flex-col relative"
                 style={{ height: dynamicHeight }}
@@ -783,9 +787,9 @@ export default function NewObligationPage() {
                 <CardHeader className="relative z-10 bg-card">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Eye className={iconSizes.sm} />
-                    Live Preview
+                    {t('preview.title')}
                   </CardTitle>
-                  <CardDescription>Δείτε πως θα φαίνεται το τελικό έγγραφο</CardDescription>
+                  <CardDescription>{t('preview.description')}</CardDescription>
                 </CardHeader>
                 <CardContent
                   ref={previewContentRef}
@@ -796,9 +800,9 @@ export default function NewObligationPage() {
                     className="border-0"
                     document={{
                       id: "preview",
-                      title: formData.title || "Νέα Συγγραφή Υποχρεώσεων",
-                      projectName: formData.projectName || "Άγνωστο έργο",
-                      contractorCompany: formData.contractorCompany || "Άγνωστος εργολάβος",
+                      title: formData.title || t('newPage.title'),
+                      projectName: formData.projectName || t('preview.unknownProject'),
+                      contractorCompany: formData.contractorCompany || t('preview.unknownContractor'),
                       status: "draft",
                       createdAt: new Date(),
                       updatedAt: new Date(),

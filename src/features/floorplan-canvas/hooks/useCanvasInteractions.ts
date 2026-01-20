@@ -87,8 +87,8 @@ export function useCanvasInteractions({
     // Handle different modes
     switch (mode) {
       case 'create':
-        setCurrentPolyline(prev => [...prev, snappedPoint]);
-        setUIState(prev => ({ ...prev, isCreating: true }));
+        setCurrentPolyline((prev: Point[]) => [...prev, snappedPoint]);
+        setUIState((prev: UIState) => ({ ...prev, isCreating: true }));
         break;
         
       case 'measure':

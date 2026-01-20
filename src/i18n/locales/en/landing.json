@@ -8,10 +8,13 @@
     "propertyType": "Property Type",
     "location": "Location",
     "priceRange": "Price Range",
-    "areaRange": "Area Range",
+    "areaRange": "Area",
     "allTypes": "All types",
+    "allPrices": "All prices",
+    "allSizes": "All sizes",
     "locationPlaceholder": "Area...",
-    "searchButton": "Search",
+    "searchButton": "Search Properties",
+    "searchCriteria": "Property Search Criteria",
     "types": {
       "studio": "Studio",
       "studio2": "1 Bedroom",
@@ -20,44 +23,77 @@
       "storage": "Storage"
     },
     "priceRanges": {
-      "up50k": "Up to €50,000",
+      "all": "All prices",
+      "up50k": "€0 - €50,000",
       "50k100k": "€50,000 - €100,000",
       "100k200k": "€100,000 - €200,000",
-      "200k500k": "€200,000 - €500,000",
-      "above500k": "Above €500,000"
+      "above200k": "€200,000+"
     },
     "areaRanges": {
-      "up50": "Up to 50 sq.m.",
-      "50to100": "50 - 100 sq.m.",
-      "100to150": "100 - 150 sq.m.",
-      "above150": "Above 150 sq.m."
+      "all": "All sizes",
+      "up50": "0-50 m²",
+      "50to100": "50-100 m²",
+      "100to150": "100-150 m²",
+      "above150": "150+ m²"
     }
   },
-  "features": {
-    "title": "Why Choose Us",
-    "subtitle": "Our experience and expertise in the real estate industry guarantees the best possible service.",
-    "professionalService": {
-      "title": "Professional Service",
-      "description": "Team of specialists with years of experience in the real estate industry."
-    },
-    "premiumLocations": {
-      "title": "Premium Locations",
-      "description": "Selected properties in the best areas of the city."
-    },
-    "trustedPartner": {
-      "title": "Trusted Partner",
-      "description": "Thousands of satisfied clients trust our services."
-    }
+  "quickLinks": {
+    "studio": "Studios",
+    "twoBedroom": "2 Bedrooms",
+    "maisonettes": "Maisonettes",
+    "viewFloorplan": "View Floor Plan",
+    "ariaLabel": "Quick Search Links"
   },
   "stats": {
-    "properties": "Properties",
-    "clients": "Clients",
-    "years": "Years of Experience"
+    "availableProperties": "Available Properties",
+    "premiumLocations": "Premium Locations",
+    "qualityGuarantee": "Quality Guarantee",
+    "support": "Support",
+    "ariaLabel": "Company Statistics"
+  },
+  "features": {
+    "title": "Why Choose Our Properties?",
+    "subtitle": "We offer the best property search experience with modern tools",
+    "ariaLabel": "Service Features",
+    "interactiveFloorplan": {
+      "title": "Interactive Floor Plan",
+      "description": "Explore properties in an interactive floor plan and see their location"
+    },
+    "guaranteedQuality": {
+      "title": "Guaranteed Quality",
+      "description": "All properties are inspected and meet the highest standards"
+    },
+    "personalService": {
+      "title": "Personal Service",
+      "description": "Our team is here to help you at every step of the process"
+    }
+  },
+  "featuredProperties": {
+    "title": "Featured Properties",
+    "subtitle": "See some of our most popular properties",
+    "ariaLabel": "Featured Properties",
+    "viewAll": "View All Properties",
+    "available": "Available",
+    "properties": {
+      "studioB1": {
+        "title": "Studio B1",
+        "details": "35 m² • 1st floor"
+      },
+      "apartment2D": {
+        "title": "2BR Apartment",
+        "details": "75 m² • 2 bedrooms"
+      },
+      "maisonetteE1": {
+        "title": "Maisonette E1",
+        "details": "145 m² • 3 bedrooms"
+      }
+    }
   },
   "cta": {
-    "title": "Start Your Search Today",
-    "description": "Contact us to find the ideal property for you together.",
-    "contactUs": "Contact Us",
-    "exploreProperties": "Explore Properties"
+    "title": "Ready to Find Your New Home?",
+    "description": "Explore our collection of available properties in an interactive floor plan",
+    "searchProperties": "Search Properties",
+    "viewFloorplan": "View Floor Plan",
+    "ariaLabel": "Call to Action"
   }
 }

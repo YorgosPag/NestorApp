@@ -3,16 +3,21 @@
 
 import React from 'react';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProgressBlockProps {
     progress: number;
 }
 
 export function ProgressBlock({ progress }: ProgressBlockProps) {
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('projects');
+
     return (
         <ThemeProgressBar
             progress={progress}
-            label="Πρόοδος"
+            label={t('progressBlock.progress')}
             size="md"
             showPercentage={true}
         />

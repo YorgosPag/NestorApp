@@ -31,48 +31,34 @@
 // =============================================================================
 // CORE EXPORTS - 🏗️ Basic form state and reset functionality
 // =============================================================================
-export {
-  useFormState,
-  useFormReset,
-  type UseFormStateReturn,
-  type UseFormResetReturn
-} from './core';
+// 🔧 FIX: Import first to create local bindings for ContactFormHooks object
+import { useFormState, useFormReset, type UseFormStateReturn, type UseFormResetReturn } from './core';
+export { useFormState, useFormReset, type UseFormStateReturn, type UseFormResetReturn };
 
 // =============================================================================
 // FILES EXPORTS - 📁 File upload and management functionality
 // =============================================================================
-export {
-  useFileUploads,
-  useUploadCompletion,
-  useMemoryCleanup,
-  type UseFileUploadsReturn,
-  type UseUploadCompletionReturn,
-  type UseMemoryCleanupReturn
-} from './files';
+import { useFileUploads, useUploadCompletion, useMemoryCleanup, type UseFileUploadsReturn, type UseUploadCompletionReturn, type UseMemoryCleanupReturn } from './files';
+export { useFileUploads, useUploadCompletion, useMemoryCleanup, type UseFileUploadsReturn, type UseUploadCompletionReturn, type UseMemoryCleanupReturn };
 
 // =============================================================================
 // PHOTOS EXPORTS - 📸 Photo selection and management functionality
 // =============================================================================
-export {
-  usePhotoSelection,
-  type UsePhotoSelectionReturn
-} from './photos';
+import { usePhotoSelection, type UsePhotoSelectionReturn } from './photos';
+export { usePhotoSelection, type UsePhotoSelectionReturn };
 
 // =============================================================================
 // INTERACTIONS EXPORTS - 🎭 User interaction functionality
 // =============================================================================
-export {
-  useDragAndDrop,
-  type UseDragAndDropReturn
-} from './interactions';
+import { useDragAndDrop, type UseDragAndDropReturn } from './interactions';
+export { useDragAndDrop, type UseDragAndDropReturn };
 
 // =============================================================================
 // ORCHESTRATOR EXPORTS - 🎼 Main orchestrated hook (legacy compatibility)
 // =============================================================================
-export {
-  useContactFormState,
-  type UseContactFormStateReturn
-} from './modular/orchestrator';
+// 🔧 FIX: Import first to create local binding for ContactFormHooks object
+import { useContactFormState, type UseContactFormStateReturn } from './modular/orchestrator';
+export { useContactFormState, type UseContactFormStateReturn };
 
 // =============================================================================
 // CONVENIENCE RE-EXPORTS - Most commonly used hooks in grouped format

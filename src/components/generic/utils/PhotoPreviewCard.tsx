@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
@@ -14,6 +15,8 @@ import {
   PHOTO_COMBINED_EFFECTS
 } from '../config/photo-config';
 import { usePhotoPreviewStyles } from '@/components/ui/enterprise-portal';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -76,6 +79,7 @@ export function PhotoPreviewCard({
 }: PhotoPreviewCardProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const { t } = useTranslation('common');
 
   // ========================================================================
   // COMPUTED VALUES
@@ -146,14 +150,14 @@ export function PhotoPreviewCard({
               alt={altText}
               className="w-full h-full object-cover rounded cursor-pointer"
               onClick={handleClick}
-              title="Κλικ για προεπισκόπηση"
+              title={t('photoPreview.clickToPreview')}
             />
           ) : (
             /* 🚫 EMPTY STATE: Ακριβώς όπως στο Modal */
             <div className="flex flex-col items-center justify-center">
               <EmptyIcon className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.MUTED} mb-3`} />
               <span className={`text-sm font-medium ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>{emptyText}</span>
-              <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κλικ ή σύρετε αρχείο</span>
+              <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>{t('photoPreview.dragOrClick')}</span>
             </div>
           )}
         </div>
@@ -168,57 +172,65 @@ export function PhotoPreviewCard({
 
 /**
  * Company Logo Card - για company logos
+ * 🏢 ENTERPRISE: i18n-enabled variant
  */
 export function CompanyLogoCard(props: Omit<PhotoPreviewCardProps, 'iconType' | 'altText' | 'emptyText'>) {
+  const { t } = useTranslation('common');
   return (
     <PhotoPreviewCard
       {...props}
       iconType="company"
-      altText="Λογότυπο Εταιρείας"
-      emptyText="Δεν υπάρχει λογότυπο"
+      altText={t('photoPreview.alt.companyLogo')}
+      emptyText={t('photoPreview.empty.logo')}
     />
   );
 }
 
 /**
  * Representative Photo Card - για representative photos
+ * 🏢 ENTERPRISE: i18n-enabled variant
  */
 export function RepresentativePhotoCard(props: Omit<PhotoPreviewCardProps, 'iconType' | 'altText' | 'emptyText'>) {
+  const { t } = useTranslation('common');
   return (
     <PhotoPreviewCard
       {...props}
       iconType="user"
-      altText="Φωτογραφία Εκπροσώπου"
-      emptyText="Δεν υπάρχει φωτογραφία"
+      altText={t('photoPreview.alt.representativePhoto')}
+      emptyText={t('photoPreview.empty.photo')}
     />
   );
 }
 
 /**
  * Individual Photo Card - για individual photos
+ * 🏢 ENTERPRISE: i18n-enabled variant with interpolation
  */
 export function IndividualPhotoCard(props: Omit<PhotoPreviewCardProps, 'iconType' | 'altText' | 'emptyText'> & { photoIndex?: number }) {
+  const { t } = useTranslation('common');
   const { photoIndex = 1, ...rest } = props;
   return (
     <PhotoPreviewCard
       {...rest}
       iconType="camera"
-      altText={`Φωτογραφία ${photoIndex}`}
-      emptyText="Κενή φωτογραφία"
+      altText={t('photoPreview.alt.photoWithIndex', { index: photoIndex })}
+      emptyText={t('photoPreview.empty.generic')}
     />
   );
 }
 
 /**
  * Service Logo Card - για service logos
+ * 🏢 ENTERPRISE: i18n-enabled variant
  */
 export function ServiceLogoCard(props: Omit<PhotoPreviewCardProps, 'iconType' | 'altText' | 'emptyText'>) {
+  const { t } = useTranslation('common');
   return (
     <PhotoPreviewCard
       {...props}
       iconType="company"
-      altText="Λογότυπο Δημόσιας Υπηρεσίας"
-      emptyText="Δεν υπάρχει λογότυπο"
+      altText={t('photoPreview.alt.serviceLogo')}
+      emptyText={t('photoPreview.empty.logo')}
     />
   );
 }

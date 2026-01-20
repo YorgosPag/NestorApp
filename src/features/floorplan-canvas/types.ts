@@ -38,6 +38,10 @@ export interface UIState {
   isDrawing: boolean;
   activeMode: CanvasMode;
   selectedElements: string[];
+  // 🏢 ENTERPRISE: Additional UI state properties
+  isDragging?: boolean;
+  isCreating?: boolean;
+  hoveredPropertyId?: string | null;
 }
 
 export interface ValidationError {

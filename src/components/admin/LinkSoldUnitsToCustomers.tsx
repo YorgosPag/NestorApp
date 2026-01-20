@@ -6,6 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Link, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface LinkingResult {
   success: boolean;
@@ -21,6 +25,8 @@ interface LinkingResult {
 export function LinkSoldUnitsToCustomers() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('admin');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LinkingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,24 +39,14 @@ export function LinkSoldUnitsToCustomers() {
     try {
       console.log('🔗 Starting sold units linking process...');
 
-      const response = await fetch('/api/units/admin-link', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const data = await apiClient.post<LinkingResult>('/api/units/admin-link', {});
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (data?.success) {
         setResult(data);
         console.log('✅ Units linked successfully:', data);
       } else {
-        throw new Error(data.error || 'Failed to link units');
+        throw new Error('Failed to link units');
       }
 
     } catch (err) {
@@ -66,11 +62,10 @@ export function LinkSoldUnitsToCustomers() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Link className={iconSizes.lg} />
-          Σύνδεση Πωληθέντων Μονάδων με Πελάτες
+          {t('link.title')}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Αυτόματη σύνδεση των units με status "sold" με υπάρχοντες πελάτες στη βάση δεδομένων.
-          Αυτό θα επιλύσει το πρόβλημα της μη εμφάνισης πελατών στο έργο {process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project'}.
+          {t('link.description')}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -86,12 +81,12 @@ export function LinkSoldUnitsToCustomers() {
             {loading ? (
               <>
                 <RefreshCw className={`${iconSizes.sm} mr-2 animate-spin`} />
-                Συνδέω μονάδες με πελάτες...
+                {t('link.loading')}
               </>
             ) : (
               <>
                 <Users className={`${iconSizes.sm} mr-2`} />
-                Σύνδεση Sold Units με Contacts
+                {t('link.button')}
               </>
             )}
           </Button>
@@ -102,7 +97,7 @@ export function LinkSoldUnitsToCustomers() {
           <Alert variant="destructive">
             <AlertTriangle className={iconSizes.sm} />
             <AlertDescription>
-              <strong>Σφάλμα:</strong> {error}
+              <strong>{t('link.error')}</strong> {error}
             </AlertDescription>
           </Alert>
         )}
@@ -112,11 +107,11 @@ export function LinkSoldUnitsToCustomers() {
           <Alert>
             <CheckCircle className={`${iconSizes.sm} text-green-600`} />
             <AlertDescription>
-              <strong>Επιτυχία!</strong> {result.message}
+              <strong>{t('link.success')}</strong> {result.message}
               {result.linkedUnits > 0 && (
                 <div className="mt-2">
                   <Badge variant="secondary">
-                    {result.linkedUnits} μονάδες συνδέθηκαν με πελάτες
+                    {t('link.result', { linkedUnits: result.linkedUnits })}
                   </Badge>
                 </div>
               )}
@@ -128,7 +123,7 @@ export function LinkSoldUnitsToCustomers() {
         {result?.updates && result.updates.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Αποτελέσματα Σύνδεσης</CardTitle>
+              <CardTitle className="text-lg">{t('link.results')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -140,7 +135,7 @@ export function LinkSoldUnitsToCustomers() {
                     <div className="flex items-center gap-2">
                       <CheckCircle className={`${iconSizes.sm} text-green-600`} />
                       <span className="text-sm">
-                        <strong>Unit:</strong> {update.unitId}
+                        <strong>{t('link.unitLabel')}:</strong> {update.unitId}
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -157,13 +152,13 @@ export function LinkSoldUnitsToCustomers() {
         <Card className="bg-blue-50 dark:bg-blue-950/20">
           <CardContent className="pt-6">
             <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-              💡 Πώς λειτουργεί:
+              💡 {t('link.howItWorks')}
             </h4>
             <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-              <li>• Βρίσκει όλα τα units με status "sold" που δεν έχουν soldTo field</li>
-              <li>• Συλλέγει όλους τους διαθέσιμους πελάτες από τη βάση contacts</li>
-              <li>• Συνδέει αυτόματα τα sold units με υπάρχοντες πελάτες</li>
-              <li>• Μετά τη σύνδεση, οι πελάτες θα εμφανίζονται στο tab "Πελάτες Έργου"</li>
+              <li>• {t('link.step1')}</li>
+              <li>• {t('link.step2')}</li>
+              <li>• {t('link.step3')}</li>
+              <li>• {t('link.step4')}</li>
             </ul>
           </CardContent>
         </Card>
@@ -172,8 +167,7 @@ export function LinkSoldUnitsToCustomers() {
         <Alert>
           <AlertTriangle className={iconSizes.sm} />
           <AlertDescription>
-            <strong>Σημείωση:</strong> Αυτή η λειτουργία κάνει πραγματικές αλλαγές στη βάση δεδομένων.
-            Σιγουρέψου ότι έχεις backup πριν προχωρήσεις.
+            <strong>{t('link.note')}</strong> {t('link.warning')}
           </AlertDescription>
         </Alert>
 

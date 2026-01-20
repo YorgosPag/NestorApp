@@ -8,6 +8,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface ToolButtonProps {
   tool: ToolDefinition;
@@ -23,6 +25,8 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
   const iconSizes = useIconSizes();
   const { getStatusBorder, getElementBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized backgrounds - NO HARDCODED VALUES
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   // Determine which icon to show - if activeTool matches a dropdown option, use that icon
   let IconComponent = tool.icon;
   if (tool.dropdownOptions && activeTool) {
@@ -72,7 +76,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
       <button
         onClick={onClick}
         disabled={disabled}
-        title={`${tool.label} (${tool.hotkey})`}
+        title={`${t(tool.label)} (${tool.hotkey})`}
         className={`
           ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
           flex items-center justify-center
@@ -95,7 +99,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
         <button
           onClick={handleMainClick}
           disabled={disabled}
-          title={`${tool.label} (${tool.hotkey})`}
+          title={`${t(tool.label)} (${tool.hotkey})`}
           className={`
             ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.LEFT_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
@@ -112,7 +116,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
         <button
           onClick={handleDropdownToggle}
           disabled={disabled}
-          title="Περισσότερες επιλογές"
+          title={t('entitiesSettings.moreOptions')}
           className={`
             ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.XS} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.RIGHT_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
@@ -139,7 +143,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
                 className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-left ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary} flex items-center ${PANEL_LAYOUT.GAP.SM} first:${PANEL_LAYOUT.ROUNDED.TOP_MD} last:${PANEL_LAYOUT.ROUNDED.BOTTOM_MD} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
                 {OptionIcon && <OptionIcon className={iconSizes.sm} />}
-                {option.label}
+                {t(option.label)}
               </button>
             );
           })}
@@ -157,12 +161,19 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
   const iconSizes = useIconSizes();
   const { getStatusBorder, getElementBorder } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized colors for ActionButton
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   const IconComponent = action.icon;
-  
+
+  // 🏢 ENTERPRISE: Translate label - supports both i18n keys and plain strings
+  const translatedLabel = action.label.startsWith('tools.') || action.label.startsWith('actionButtons.')
+    ? t(action.label)
+    : action.label;
+
   return (
     <button
       onClick={action.onClick}
-      title={action.hotkey ? `${action.label} (${action.hotkey})` : action.label}
+      title={action.hotkey ? `${translatedLabel} (${action.hotkey})` : translatedLabel}
       disabled={action.disabled ?? false}
       className={`
         ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}

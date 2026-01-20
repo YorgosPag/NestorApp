@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 /**
@@ -24,6 +25,9 @@ import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
 import { formatCurrency } from '@/lib/intl-utils';
+
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // 🏢 DOMAIN TYPES
 // NOTE: Υπάρχουν 2 ParkingSpot types - @/types/parking & @/hooks/useFirestoreParkingSpots
@@ -118,6 +122,8 @@ export function ParkingListCard({
   compact = false,
   className,
 }: ParkingListCardProps) {
+  const { t } = useTranslation('parking');
+
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
@@ -132,7 +138,7 @@ export function ParkingListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.floor.icon,
         iconColor: NAVIGATION_ENTITIES.floor.color,
-        label: 'Επίπεδο',
+        label: t('card.stats.level'),
         value: levelValue,
       });
     }
@@ -142,7 +148,7 @@ export function ParkingListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
         iconColor: NAVIGATION_ENTITIES.area.color,
-        label: 'Εμβαδόν',
+        label: t('card.stats.area'),
         value: `${parking.area} m²`,
       });
     }
@@ -152,7 +158,7 @@ export function ParkingListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.price.icon,
         iconColor: NAVIGATION_ENTITIES.price.color,
-        label: 'Τιμή',
+        label: t('card.stats.price'),
         value: formatCurrency(parking.price, 'EUR', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
@@ -162,7 +168,7 @@ export function ParkingListCard({
     }
 
     return items;
-  }, [parking.level, parking.floor, parking.area, parking.price]);
+  }, [parking.level, parking.floor, parking.area, parking.price, t]);
 
   /** Build badges from status */
   const badges = useMemo(() => {
@@ -199,7 +205,7 @@ export function ParkingListCard({
       onToggleFavorite={onToggleFavorite}
       compact={compact}
       className={className}
-      aria-label={`Θέση στάθμευσης ${title}`}
+      aria-label={t('card.ariaLabel', { name: title })}
     />
   );
 }

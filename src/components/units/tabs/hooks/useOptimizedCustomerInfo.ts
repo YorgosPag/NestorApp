@@ -12,6 +12,8 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 // ============================================================================
 // INTERFACES
@@ -105,24 +107,20 @@ export function useOptimizedCustomerInfo(
   // FETCH FUNCTION
   // ========================================================================
 
-  const fetchCustomerInfo = useCallback(async (id: string, signal?: AbortSignal) => {
+  const fetchCustomerInfo = useCallback(async (id: string, _signal?: AbortSignal) => {
     try {
       console.log(`🔄 Fetching customer info for: ${id}`);
 
-      const response = await fetch(`/api/contacts/${id}`, {
-        signal,
-        headers: {
-          'Cache-Control': 'max-age=300' // Browser cache for 5 minutes
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // 🏢 ENTERPRISE: Type-safe API response with automatic authentication
+      interface ContactApiResponse {
+        contact: ContactData & {
+          contactId?: string;
+        };
       }
 
-      const data = await response.json();
+      const data = await apiClient.get<ContactApiResponse>(`/api/contacts/${id}`);
 
-      if (!data.success || !data.contact) {
+      if (!data?.contact) {
         throw new Error('Invalid response format');
       }
 
@@ -142,10 +140,7 @@ export function useOptimizedCustomerInfo(
       return optimizedInfo;
 
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.log(`⏹️ Aborted fetch for: ${id}`);
-        return null;
-      }
+      // Note: apiClient handles AbortError internally
       throw err;
     }
   }, []);
@@ -261,13 +256,14 @@ export function useOptimizedCustomerInfo(
 // HELPER FUNCTIONS
 // ============================================================================
 
+// 🌐 i18n: Fallback text converted to i18n key - 2026-01-18
 function getDisplayName(contact: ContactData): string {
   if (contact.displayName) return contact.displayName;
   if (contact.name) return contact.name;
   if (contact.firstName || contact.lastName) {
     return [contact.firstName, contact.lastName].filter(Boolean).join(' ');
   }
-  return 'Άγνωστος πελάτης';
+  return 'contacts.customer.unknownCustomer';
 }
 
 function getPrimaryPhone(contact: ContactData): string | null {

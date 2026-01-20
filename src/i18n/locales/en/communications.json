@@ -1,0 +1,77 @@
+{
+  "history": {
+    "loading": "Loading communications...",
+    "retry": "Retry",
+    "noData": "No communications",
+    "emptyHint": "Communications history will appear here",
+    "title": "Communications History",
+    "count": "{count} communications",
+    "refresh": "Refresh",
+    "attachments": "Attachments:",
+    "defaultSubject": "{type} communication",
+    "details": "Details",
+    "aria": {
+      "loadingSection": "Loading communications",
+      "errorSection": "Error loading communications",
+      "emptySection": "No communications found",
+      "controls": "Communications controls",
+      "timeline": "Communications timeline",
+      "content": "Communication content",
+      "attachmentsSection": "Attachments"
+    },
+    "srOnly": {
+      "participants": "Participants:",
+      "date": "Date:",
+      "relativeTime": "Relative time:"
+    }
+  },
+  "telegram": {
+    "title": "Telegram Messages",
+    "newMessage": "New Telegram message",
+    "noMessages": "No new messages",
+    "newBadge": "New",
+    "viewAll": "View all messages"
+  },
+  "center": {
+    "title": "Communications Center",
+    "subtitle": "Manage communications across all channels",
+    "initSuccess": "Communications system initialized successfully",
+    "initError": "Error initializing communications system",
+    "initErrorGeneric": "Error during initialization",
+    "initLoading": "Initializing Communications System...",
+    "unavailable": "Communications System unavailable",
+    "unavailableDesc": "There was a problem initializing the communications system.",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "testChannels": "Test Channels",
+    "newMessage": "New Message",
+    "channelsSuccess": "Successful connection: {channels}",
+    "channelsFailed": "Connection failed: {channels}",
+    "channelsTestError": "Error testing channels",
+    "dataRefreshed": "Data refreshed",
+    "channelStatus": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "tabs": {
+      "inbox": "Inbox",
+      "channels": "Channels",
+      "analytics": "Analytics"
+    },
+    "stats": {
+      "totalMessages": "Total Messages",
+      "inbound": "Inbound",
+      "outbound": "Outbound",
+      "avgResponseTime": "Average Response Time"
+    },
+    "channelsTab": {
+      "title": "Channels Status"
+    },
+    "analyticsTab": {
+      "messagesByChannel": "Messages by Channel",
+      "responseTime": "Response Time",
+      "average": "Average:",
+      "median": "Median:"
+    }
+  }
+}

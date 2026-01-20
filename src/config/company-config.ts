@@ -46,26 +46,27 @@ export interface CompanySectionConfig {
 
 /**
  * Βασικά Στοιχεία Εταιρείας
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 const basicInfoSection: CompanySectionConfig = {
   id: 'basicInfo',
-  title: 'Βασικά Στοιχεία',
+  title: 'contacts.company.sections.basicInfo.title',
   icon: 'building',
   fields: [
     {
       id: 'companyName',
       type: 'input',
       label: COMPANY_BASIC_INFO_LABELS.COMPANY_NAME,
-      placeholder: 'π.χ. ALPHA ΒANK Α.Ε.',
+      placeholder: 'contacts.company.fields.companyName.placeholder',
       required: true,
-      helpText: 'Η επίσημη επωνυμία της εταιρείας'
+      helpText: 'contacts.company.fields.companyName.helpText'
     },
     {
       id: 'tradeName',
       type: 'input',
       label: COMPANY_BASIC_INFO_LABELS.TRADE_NAME,
-      placeholder: 'π.χ. Alpha Bank',
-      helpText: 'Εμπορικός τίτλος (αν διαφέρει από την επωνυμία)'
+      placeholder: 'contacts.company.fields.tradeName.placeholder',
+      helpText: 'contacts.company.fields.tradeName.helpText'
     },
     {
       id: 'legalForm',
@@ -89,17 +90,18 @@ const basicInfoSection: CompanySectionConfig = {
       placeholder: '123456789',
       maxLength: 9,
       required: true,
-      helpText: 'Αριθμός Φορολογικού Μητρώου (9 ψηφία)'
+      helpText: 'contacts.company.fields.vatNumber.helpText'
     }
   ]
 };
 
 /**
  * ΓΕΜΗ Στοιχεία
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 const gemiSection: CompanySectionConfig = {
   id: 'gemi',
-  title: 'ΓΕΜΗ Στοιχεία',
+  title: 'contacts.company.sections.gemi.title',
   icon: 'file-text',
   fields: [
     {
@@ -107,7 +109,7 @@ const gemiSection: CompanySectionConfig = {
       type: 'input',
       label: COMPANY_GEMI_INFO_LABELS.GEMI_NUMBER,
       placeholder: '123456789',
-      helpText: 'Αριθμός εγγραφής στο Γενικό Εμπορικό Μητρώο'
+      helpText: 'contacts.company.fields.gemiNumber.helpText'
     },
     {
       id: 'gemiStatus',
@@ -124,57 +126,58 @@ const gemiSection: CompanySectionConfig = {
       id: 'chamber',
       type: 'input',
       label: COMPANY_GEMI_INFO_LABELS.CHAMBER,
-      placeholder: 'π.χ. Επιμελητήριο Αθηνών',
-      helpText: 'Το επιμελητήριο στο οποίο είναι εγγεγραμμένη'
+      placeholder: 'contacts.company.fields.chamber.placeholder',
+      helpText: 'contacts.company.fields.chamber.helpText'
     },
     {
       id: 'activityCodeKAD',
       type: 'input',
       label: COMPANY_GEMI_INFO_LABELS.ACTIVITY_CODE_KAD,
-      placeholder: 'π.χ. 62.01',
-      helpText: 'Κύριος κωδικός δραστηριότητας'
+      placeholder: 'contacts.company.fields.activityCodeKAD.placeholder',
+      helpText: 'contacts.company.fields.activityCodeKAD.helpText'
     },
     {
       id: 'activityDescription',
       type: 'textarea',
       label: COMPANY_GEMI_INFO_LABELS.ACTIVITY_DESCRIPTION,
-      placeholder: 'Περιγράψτε τις κύριες δραστηριότητες της εταιρείας...',
-      helpText: 'Σύντομη περιγραφή των επιχειρηματικών δραστηριοτήτων'
+      placeholder: 'contacts.company.fields.activityDescription.placeholder',
+      helpText: 'contacts.company.fields.activityDescription.helpText'
     }
   ]
 };
 
 /**
  * Στοιχεία Επικοινωνίας
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 const contactSection: CompanySectionConfig = {
   id: 'contact',
-  title: 'Στοιχεία Επικοινωνίας',
+  title: 'contacts.company.sections.contact.title',
   icon: 'phone',
   fields: [
     {
       id: 'street',
       type: 'input',
       label: ADDRESS_INFO_FIELD_LABELS.STREET,
-      placeholder: 'π.χ. Πανεπιστημίου',
+      placeholder: 'contacts.common.fields.street.placeholder',
       required: true,
-      helpText: 'Όνομα οδού χωρίς αριθμό'
+      helpText: 'contacts.common.fields.street.helpText'
     },
     {
       id: 'streetNumber',
       type: 'input',
       label: ADDRESS_INFO_FIELD_LABELS.STREET_NUMBER,
-      placeholder: 'π.χ. 125',
+      placeholder: 'contacts.common.fields.streetNumber.placeholder',
       required: true,
-      helpText: 'Αριθμός οδού (μπορεί να περιλαμβάνει γράμματα π.χ. 25Α)'
+      helpText: 'contacts.common.fields.streetNumber.helpText'
     },
     {
       id: 'city',
       type: 'input',
       label: ADDRESS_INFO_FIELD_LABELS.CITY,
-      placeholder: `π.χ. ${process.env.NEXT_PUBLIC_DEFAULT_CITY || 'Αθήνα'}`,
+      placeholder: 'contacts.common.fields.city.placeholder',
       required: true,
-      helpText: 'Πόλη όπου βρίσκεται η έδρα'
+      helpText: 'contacts.company.fields.city.helpText'
     },
     {
       id: 'postalCode',
@@ -183,38 +186,39 @@ const contactSection: CompanySectionConfig = {
       placeholder: '12345',
       maxLength: 5,
       required: true,
-      helpText: 'Ταχυδρομικός κώδικας (5 ψηφία)'
+      helpText: 'contacts.common.fields.postalCode.helpText'
     },
     {
       id: 'phone',
       type: 'tel',
       label: COMPANY_CONTACT_INFO_LABELS.PHONE_CENTRAL,
       placeholder: '2101234567',
-      helpText: 'Κεντρικό τηλέφωνο της εταιρείας'
+      helpText: 'contacts.company.fields.phone.helpText'
     },
     {
       id: 'email',
       type: 'email',
       label: COMPANY_CONTACT_INFO_LABELS.EMAIL_CONTACT,
       placeholder: 'info@company.gr',
-      helpText: 'Κεντρικό email της εταιρείας'
+      helpText: 'contacts.company.fields.email.helpText'
     },
     {
       id: 'website',
       type: 'url',
       label: COMPANY_CONTACT_INFO_LABELS.WEBSITE,
       placeholder: 'https://www.company.gr',
-      helpText: 'Επίσημη ιστοσελίδα της εταιρείας'
+      helpText: 'contacts.company.fields.website.helpText'
     }
   ]
 };
 
 /**
  * Λογότυπο
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 const logoSection: CompanySectionConfig = {
   id: 'logo',
-  title: 'Λογότυπο',
+  title: 'contacts.company.sections.logo.title',
   icon: 'image',
   fields: [
     // Λογότυπο θα renderάρεται χωρίς επιπλέον fields
@@ -223,10 +227,11 @@ const logoSection: CompanySectionConfig = {
 
 // -------------------------------------------------------------------------
 // 6. ΣΧΕΣΕΙΣ - 🏢 ENTERPRISE RELATIONSHIP MANAGEMENT
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 // -------------------------------------------------------------------------
 const relationshipsSection: CompanySectionConfig = {
   id: 'relationships',
-  title: 'Εργαζόμενοι & Οργάνωση',
+  title: 'contacts.company.sections.relationships.title',
   icon: 'users',
   fields: [
     // Fields are handled by ContactRelationshipManager component

@@ -1,8 +1,8 @@
 {
   "floors": {
     "ground": "[Ισόγειο]",
-    "basement": "[Υπόγειο {{number}}]",
-    "floor": "[{{number}}ος όροφος]",
+    "basement": "[Υπόγειο {number}]",
+    "floor": "[{number}ος όροφος]",
     "firstFloor": "[1ος όροφος]",
     "secondFloor": "[2ος όροφος]",
     "thirdFloor": "[3ος όροφος]"

@@ -19,6 +19,8 @@ import React from 'react';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
 // 🏢 ENTERPRISE: Import centralized tabs system (same as Contacts/ΓΕΜΗ/PanelTabs/etc.)
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Lucide icons for tabs (replacing emojis 📦, 📏, 📝, 📐)
 import { Square, AlignJustify, Type, Ruler } from 'lucide-react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -95,6 +97,8 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
   // Tab navigation state (ADR-005)
   const { activeTab, setActiveTab } = useTabNavigation<RulerSubTab>(defaultTab);
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('dxf-viewer');
 
   // ============================================================================
   // TAB CONFIGURATION - 🏢 ENTERPRISE: Using centralized TabDefinition interface
@@ -103,25 +107,25 @@ export const RulersSettings: React.FC<RulersSettingsProps> = ({
   const rulerTabs: TabDefinition[] = [
     {
       id: 'background',
-      label: 'Φόντο',
+      label: t('rulerSettings.tabs.background'),
       icon: Square, // 🏢 ENTERPRISE: Lucide icon replacing 📦 emoji
       content: null, // Content rendered separately below
     },
     {
       id: 'lines',
-      label: 'Γραμμές',
+      label: t('rulerSettings.tabs.lines'),
       icon: AlignJustify, // 🏢 ENTERPRISE: Lucide icon replacing 📏 emoji
       content: null, // Content rendered separately below
     },
     {
       id: 'text',
-      label: 'Κείμενα',
+      label: t('rulerSettings.tabs.text'),
       icon: Type, // 🏢 ENTERPRISE: Lucide icon replacing 📝 emoji
       content: null, // Content rendered separately below
     },
     {
       id: 'units',
-      label: 'Μονάδες',
+      label: t('rulerSettings.tabs.units'),
       icon: Ruler, // 🏢 ENTERPRISE: Lucide icon replacing 📐 emoji
       content: null, // Content rendered separately below
     },

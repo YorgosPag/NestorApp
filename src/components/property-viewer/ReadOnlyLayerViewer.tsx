@@ -15,6 +15,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { DXF_LAYER_CATEGORY_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { 
   Layers, 
   Eye, 
@@ -102,6 +104,8 @@ function ReadOnlyLayerItem({
   onOpacityChange
 }: ReadOnlyLayerItemProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('dxf-viewer');
   const categoryInfo = layer.metadata?.category ? getCategoryInfo(layer.metadata.category) : null;
 
   return (
@@ -154,7 +158,7 @@ function ReadOnlyLayerItem({
               {layer.isSystem && (
                 <CommonBadge
                   status="company"
-                  customLabel="Σύστημα"
+                  customLabel={t('layerManager.badges.system')}
                   variant="outline"
                   className="text-xs"
                 />
@@ -177,7 +181,7 @@ function ReadOnlyLayerItem({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{visibilityState.isVisible ? 'Απόκρυψη' : 'Εμφάνιση'} layer</p>
+                  <p>{visibilityState.isVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')} layer</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -187,7 +191,7 @@ function ReadOnlyLayerItem({
         {/* Opacity Slider - only if visible */}
         {visibilityState.isVisible && (
           <div className="mt-2 flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-16">Διαφάνεια:</span>
+            <span className="text-xs text-muted-foreground w-16">{t('layerManager.labels.opacity')}</span>
             <Slider
               value={[visibilityState.opacity * 100]}
               onValueChange={([value]) => onOpacityChange(value / 100)}
@@ -216,13 +220,13 @@ function ReadOnlyLayerItem({
                       {element.type} - {element.id.substring(0, 8)}...
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {element.isVisible ? 'Ορατό' : 'Κρυφό'}
+                      {element.isVisible ? t('layerManager.actions.show') : t('layerManager.actions.hide')}
                     </span>
                   </div>
                 ))}
                 {layer.elements.length > 5 && (
                   <p className="text-xs text-muted-foreground">
-                    +{layer.elements.length - 5} περισσότερα στοιχεία
+                    {t('layerManager.labels.moreElements', { count: layer.elements.length - 5 })}
                   </p>
                 )}
               </div>
@@ -250,6 +254,8 @@ export function ReadOnlyLayerViewer({
 }: ReadOnlyLayerViewerProps) {
   const iconSizes = useIconSizes();
   const { radius } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('dxf-viewer');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set());
@@ -312,7 +318,7 @@ export function ReadOnlyLayerViewer({
           ...prev,
           isLoading: false,
           isConnected: false,
-          error: 'Σφάλμα σύνδεσης με τη βάση δεδομένων'
+          error: t('layerManager.readOnly.dbConnectionError')
         }));
       }
     );
@@ -410,7 +416,7 @@ export function ReadOnlyLayerViewer({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
             <Layers className={iconSizes.sm} />
-            Layers
+            {t('layerManager.readOnly.title')}
             {onToggleCollapse && (
               <Button variant="ghost" size="sm" onClick={onToggleCollapse} className={`${iconSizes.sm} p-0 ml-1`}>
                 <ChevronUp className={iconSizes.xs} />
@@ -431,14 +437,14 @@ export function ReadOnlyLayerViewer({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    {layerState.isConnected 
-                      ? 'Συνδεδεμένο - Ενημερώσεις σε πραγματικό χρόνο' 
-                      : 'Αποσυνδεδεμένο - Δεν υπάρχουν ενημερώσεις'
+                    {layerState.isConnected
+                      ? t('layerManager.readOnly.connectedRealtime')
+                      : t('layerManager.readOnly.disconnectedNoUpdates')
                     }
                   </p>
                   {layerState.lastUpdated && (
                     <p className="text-xs">
-                      Τελευταία ενημέρωση: {new Date(layerState.lastUpdated).toLocaleTimeString('el-GR')}
+                      {t('layerManager.readOnly.lastUpdate')} {new Date(layerState.lastUpdated).toLocaleTimeString('el-GR')}
                     </p>
                   )}
                 </TooltipContent>
@@ -452,8 +458,8 @@ export function ReadOnlyLayerViewer({
                   <Info className={`${iconSizes.sm} text-muted-foreground`} />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Λειτουργία προβολής μόνο</p>
-                  <p className="text-xs">Μπορείτε να αλλάξετε μόνο την ορατότητα</p>
+                  <p>{t('layerManager.readOnly.viewModeOnly')}</p>
+                  <p className="text-xs">{t('layerManager.readOnly.canOnlyChangeVisibility')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -469,7 +475,7 @@ export function ReadOnlyLayerViewer({
               <div className="relative">
                 <Search className={`absolute left-2 top-2.5 ${iconSizes.xs} text-muted-foreground`} />
                 <Input
-                  placeholder="Αναζήτηση layers..."
+                  placeholder={t('layerManager.labels.searchLayers')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-7 h-8 text-sm"
@@ -511,9 +517,9 @@ export function ReadOnlyLayerViewer({
         {/* Layer Statistics */}
         {showStatistics && (
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Σύνολο: {layerState.layers.length}</span>
-            <span>Ορατά: {visibleLayers.length}</span>
-            <span>Στοιχεία: {layerState.layers.reduce((acc, l) => acc + l.elements.length, 0)}</span>
+            <span>{t('layerManager.stats.total')} {layerState.layers.length}</span>
+            <span>{t('layerManager.stats.visible')} {visibleLayers.length}</span>
+            <span>{t('layerManager.stats.elements')} {layerState.layers.reduce((acc, l) => acc + l.elements.length, 0)}</span>
           </div>
         )}
 
@@ -524,7 +530,7 @@ export function ReadOnlyLayerViewer({
           <div className="text-center py-4 text-muted-foreground">
             <div className="flex items-center justify-center gap-2">
               <AnimatedSpinner size="small" />
-              <span className="text-sm">Φόρτωση layers...</span>
+              <span className="text-sm">{t('layerManager.loading')}</span>
             </div>
           </div>
         )}
@@ -545,7 +551,7 @@ export function ReadOnlyLayerViewer({
                         {getCategoryInfo(category).name}
                       </>
                     )}
-                    {category === 'other' && 'Άλλα'}
+                    {category === 'other' && t('layerManager.labels.other')}
                     <CommonBadge
                       status="company"
                       customLabel={layers.length}
@@ -571,11 +577,11 @@ export function ReadOnlyLayerViewer({
               {filteredLayers.length === 0 && !layerState.isLoading && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Layers className={`${iconSizes.xl} mx-auto mb-2 opacity-50`} />
-                  <p className="text-sm">Δεν βρέθηκαν layers</p>
+                  <p className="text-sm">{t('layerManager.labels.noLayersFound')}</p>
                   {layerState.isConnected ? (
-                    <p className="text-xs">Περιμένετε να δημιουργηθούν layers από τους διαχειριστές</p>
+                    <p className="text-xs">{t('layerManager.readOnly.waitForAdmins')}</p>
                   ) : (
-                    <p className="text-xs">Ελέγξτε τη σύνδεσή σας</p>
+                    <p className="text-xs">{t('layerManager.readOnly.checkConnection')}</p>
                   )}
                 </div>
               )}
@@ -586,7 +592,7 @@ export function ReadOnlyLayerViewer({
         {/* Last updated info */}
         {layerState.lastUpdated && layerState.isConnected && (
           <div className="text-xs text-muted-foreground text-center pt-2">
-            Τελευταία ενημέρωση: {new Date(layerState.lastUpdated).toLocaleTimeString('el-GR')}
+            {t('layerManager.readOnly.lastUpdate')} {new Date(layerState.lastUpdated).toLocaleTimeString('el-GR')}
           </div>
         )}
       </CardContent>

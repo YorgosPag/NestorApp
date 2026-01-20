@@ -79,6 +79,7 @@ export function BuildingCard({
         ]}
         actions={[
           {
+            label: isFavorite ? t('actions.removeFromFavorites') : t('actions.addToFavorites'),
             icon: Star,
             onClick: () => {
               setIsFavorite(!isFavorite);

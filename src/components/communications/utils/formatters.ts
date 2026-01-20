@@ -25,8 +25,9 @@ export const getStatusColor = (status: string) => ({
   pending: 'text-yellow-600',
 }[status] || 'text-gray-600');
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const getDirectionLabel = (direction: string) =>
-  direction === 'inbound' ? 'Εισερχόμενο' : 'Εξερχόμενο';
+  direction === 'inbound' ? 'communications.direction.inbound' : 'communications.direction.outbound';
 
 
 export const getRelativeTime = (timestamp: Date | string | number | { toDate?: () => Date } | null | undefined) => {
@@ -36,12 +37,13 @@ export const getRelativeTime = (timestamp: Date | string | number | { toDate?: (
     if(isNaN(date.getTime())) return '';
     const now = new Date();
     const diffInMinutes = Math.floor((+now - +date) / (1000 * 60));
-    if (diffInMinutes < 1) return 'Μόλις τώρα';
-    if (diffInMinutes < 60) return `${diffInMinutes} λεπτά πριν`;
+    // 🌐 i18n: Relative time keys - components should use t() function with interpolation
+    if (diffInMinutes < 1) return 'common.time.justNow';
+    if (diffInMinutes < 60) return 'common.time.minutesAgo';
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} ώρες πριν`;
+    if (diffInHours < 24) return 'common.time.hoursAgo';
     const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays} μέρες πριν`;
+    if (diffInDays < 7) return 'common.time.daysAgo';
     return formatDateTime(timestamp);
   } catch {
     return '';

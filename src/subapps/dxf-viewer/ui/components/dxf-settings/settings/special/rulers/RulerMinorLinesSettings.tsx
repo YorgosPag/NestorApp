@@ -49,6 +49,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-UI-001)
 import { PANEL_LAYOUT } from '../../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export interface RulerMinorLinesSettingsProps {
   className?: string;
@@ -72,6 +74,8 @@ export interface RulerMinorLinesSettingsProps {
  */
 export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = ({ className = '' }) => {
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   // ============================================================================
   // HOOKS
   // ============================================================================
@@ -174,12 +178,12 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className="flex items-center justify-between">
           <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Εμφάνιση Δευτερευουσών Γραμμών</div>
-            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Εμφάνιση/απόκρυψη των δευτερευουσών γραμμών χάρακα</div>
+            <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.minorLines.display.title')}</div>
+            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.minorLines.display.description')}</div>
           </div>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
-              {rulerSettings.horizontal.showMinorTicks ? 'Ενεργό' : 'Ανενεργό'}
+              {rulerSettings.horizontal.showMinorTicks ? t('rulerSettings.common.active') : t('rulerSettings.common.inactive')}
             </span>
             <Switch
               checked={rulerSettings.horizontal.showMinorTicks}
@@ -192,8 +196,8 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
       {/* Minor Lines Opacity */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Διαφάνεια Δευτερευουσών Γραμμών</div>
-          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Επίπεδο διαφάνειας των δευτερευουσών γραμμών χάρακα</div>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.minorLines.opacity.title')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.minorLines.opacity.description')}</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
@@ -213,13 +217,13 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
 
       {/* Minor Lines Color */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>Χρώμα Δευτερευουσών Γραμμών</label>
-        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>Χρώμα δευτερευουσών γραμμών (ticks) χαράκων</div>
+        <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>{t('rulerSettings.minorLines.color.title')}</label>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('rulerSettings.minorLines.color.description')}</div>
         <ColorDialogTrigger
           value={getBaseColor(rulerSettings.horizontal.minorTickColor)}
           onChange={handleMinorTickColorChange}
           label={getBaseColor(rulerSettings.horizontal.minorTickColor)}
-          title="Επιλογή Χρώματος Δευτερευουσών Γραμμών Χάρακα"
+          title={t('rulerSettings.minorLines.colorPicker')}
           alpha={false}
           modes={['hex', 'rgb', 'hsl']}
           palettes={['dxf', 'semantic', 'material']}
@@ -231,8 +235,8 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
       {/* Minor Lines Thickness */}
       <div className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} rounded ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>
-          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>Πάχος Δευτερευουσών Γραμμών</div>
-          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>Πάχος των δευτερευουσών γραμμών του χάρακα</div>
+          <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{t('rulerSettings.minorLines.width.title')}</div>
+          <div className={`${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted}`}>{t('rulerSettings.minorLines.width.description')}</div>
         </div>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input

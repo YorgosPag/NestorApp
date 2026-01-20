@@ -179,7 +179,7 @@ export default function PropertyStatusDemoPage() {
             <CardTitle className="text-lg">{property.name}</CardTitle>
             <PropertyBadge
               status={property.status as PropertyStatus}
-              variant="solid"
+              variant="default"
               size="sm"
               className="text-xs"
             />
@@ -358,7 +358,7 @@ export default function PropertyStatusDemoPage() {
                 <span className="font-medium">Color:</span>
                 <PropertyBadge
                   status={selectedStatus as PropertyStatus}
-                  variant="solid"
+                  variant="default"
                   size="sm"
                   className={`${iconSizes.lg} rounded border`}
                 />

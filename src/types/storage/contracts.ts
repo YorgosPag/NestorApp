@@ -1,8 +1,10 @@
 // Storage unit types and interfaces for building management system
 
-export type StorageType = 'large' | 'small' | 'basement' | 'ground' | 'special';
+// 🏢 ENTERPRISE: Extended storage types for all use cases
+export type StorageType = 'large' | 'small' | 'basement' | 'ground' | 'special' | 'storage' | 'parking' | 'garage' | 'warehouse';
 
-export type StorageStatus = 'available' | 'occupied' | 'maintenance' | 'reserved';
+// 🏢 ENTERPRISE: Extended storage status for all use cases
+export type StorageStatus = 'available' | 'occupied' | 'maintenance' | 'reserved' | 'sold' | 'unavailable';
 
 export interface Coordinates {
   x: number;
@@ -15,7 +17,10 @@ export interface Storage {
   name: string;
   type: StorageType;
   status: StorageStatus;
+  /** @deprecated Use buildingId instead. Kept for backward compatibility. */
   building: string;
+  /** 🏢 ENTERPRISE: Building document ID (foreign key) - added via migration 006 */
+  buildingId?: string;
   floor: string;
   area: number; // in square meters
   description?: string;
@@ -30,11 +35,11 @@ export interface Storage {
 export interface StorageUnit {
   id: string;
   code: string;
-  type: 'storage' | 'parking';
+  type: StorageType;
   floor: string;
   area: number; // in square meters
   price: number; // in euros
-  status: 'available' | 'sold' | 'reserved' | 'maintenance';
+  status: StorageStatus;
   description: string;
   building: string;
   project: string;
@@ -52,6 +57,25 @@ export interface StorageUnit {
   soldAt?: string;
   soldTo?: string; // Customer who bought it
   notes?: string;
+  // 🏢 ENTERPRISE: Extended properties for StorageCard component (2026-01-19)
+  /** Display identifier (alias for code) */
+  identifier?: string;
+  /** Display name */
+  name?: string;
+  /** Section/zone within building */
+  section?: string;
+  /** Dimensions (e.g., "3x4m") */
+  dimensions?: string;
+  /** Height in meters */
+  height?: number;
+  /** Has electricity connection */
+  hasElectricity?: boolean;
+  /** Has water connection */
+  hasWater?: boolean;
+  /** Has climate control */
+  hasClimateControl?: boolean;
+  /** Has security features */
+  hasSecurity?: boolean;
 }
 
 export interface StorageFilter {

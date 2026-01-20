@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -10,6 +11,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface ZoomControlsProps {
   currentZoom: number;
@@ -24,6 +27,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   onZoomOut,
   onSetZoom
 }) => {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { getFocusBorder, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -102,7 +106,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
     if (!validateInput(valueToUse)) {
       const currentPercentage = Math.round(currentZoom * 100);
       setInputValue(currentPercentage.toString());
-      console.warn(`⚠️ Άκυρη είσοδος zoom: "${valueToUse}". Επαναφορά σε ${currentPercentage}%`);
+      console.warn(`⚠️ ${t('zoomControls.invalidInput', { value: valueToUse, percentage: currentPercentage })}`);
       return;
     }
     
@@ -141,7 +145,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
       <button
         onClick={handleZoomOutClick}
         className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-        title={`Zoom Out (-${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: -`}
+        title={t('zoomControls.zoomOut', { percentage: ZOOM_STEP_PERCENTAGE })}
       >
         <Minus className={iconSizes.xs} />
       </button>
@@ -155,7 +159,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
         className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center ${getFocusBorder('input')} focus:outline-none ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.SELECT.ALL}`}
-        title="Zoom percentage (1-99999%, δεκαδικά με . ή ,) - Press Enter or click away to apply"
+        title={t('zoomControls.inputTitle')}
         placeholder="100"
       />
       
@@ -164,7 +168,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
       <button
         onClick={handleZoomInClick}
         className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-        title={`Zoom In (+${ZOOM_STEP_PERCENTAGE}%) - Πληκτρολόγιο: +`}
+        title={t('zoomControls.zoomIn', { percentage: ZOOM_STEP_PERCENTAGE })}
       >
         <Plus className={iconSizes.xs} />
       </button>

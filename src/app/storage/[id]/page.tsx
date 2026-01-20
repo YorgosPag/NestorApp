@@ -22,9 +22,12 @@ import {
   User
 } from 'lucide-react';
 import { getParkingStatusLabel, getParkingStatusColor, getParkingTypeLabel } from '@/components/projects/utils/parking-utils';
+import type { ParkingSpotStatus } from '@/types/parking';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) {
     const iconSizes = useIconSizes();
@@ -41,6 +44,8 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType, label:
 
 export default function StorageUnitPage({ params }: { params: { id: string } }) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('storage');
   const [unit, setUnit] = useState<StorageUnit | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -80,8 +85,10 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
   
   const isStorage = unit.type === 'storage';
   const MainIcon = isStorage ? Package : Car;
-  const statusColor = getParkingStatusColor(unit.status);
-  const statusLabel = getParkingStatusLabel(unit.status);
+  // 🏢 ENTERPRISE: Storage status maps to parking status for utility reuse
+  const mappedStatus = (unit.status === 'maintenance' ? 'reserved' : unit.status) as ParkingSpotStatus;
+  const statusColor = getParkingStatusColor(mappedStatus);
+  const statusLabel = getParkingStatusLabel(mappedStatus);
 
   return (
     <div className="p-4 md:p-8">
@@ -89,7 +96,7 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
             <Button asChild variant="outline" size="sm">
                 <Link href="/projects">
                     <ArrowLeft className={`${iconSizes.sm} mr-2`} />
-                    Επιστροφή στα Έργα
+                    {t('page.backToProjects')}
                 </Link>
             </Button>
        </div>
@@ -102,7 +109,7 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
                 </div>
                 <div>
                     <CardTitle className="text-2xl">{unit.code}</CardTitle>
-                    <CardDescription>{getParkingTypeLabel(unit.type)}</CardDescription>
+                    <CardDescription>{unit.type === 'storage' ? t('common.storage') : t('common.parking')}</CardDescription>
                 </div>
             </div>
              {/* 🏢 ENTERPRISE: StorageStatus maps to UnitStatus (sold->available fallback) */}
@@ -116,20 +123,20 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
         <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="space-y-3">
-                     <InfoRow icon={Ruler} label="Εμβαδόν" value={`${unit.area} m²`} />
-                     <InfoRow icon={Euro} label="Τιμή" value={`${unit.price.toLocaleString('el-GR')} €`} />
-                     <InfoRow icon={MapPin} label="Επίπεδο" value={unit.level} />
-                     <InfoRow icon={Building} label="Project" value={unit.projectId} />
+                     <InfoRow icon={Ruler} label={t('card.sections.area')} value={`${unit.area} m²`} />
+                     <InfoRow icon={Euro} label={t('general.fields.price')} value={`${unit.price.toLocaleString('el-GR')} €`} />
+                     <InfoRow icon={MapPin} label={t('general.fields.floor')} value={unit.level} />
+                     <InfoRow icon={Building} label={t('general.fields.project')} value={unit.projectId} />
                  </div>
                  <div className="space-y-3">
-                     <InfoRow icon={User} label="Ιδιοκτήτης" value={unit.owner || 'Διαθέσιμο'} />
-                     {unit.propertyCode && <InfoRow icon={LinkIcon} label="Συνδεδεμένο με" value={unit.propertyCode} />}
-                     <InfoRow icon={CheckCircle} label="Καταχωρήθηκε από" value={unit.constructedBy} />
+                     <InfoRow icon={User} label={t('general.fields.owner')} value={unit.owner || t('general.status.available')} />
+                     {unit.propertyCode && <InfoRow icon={LinkIcon} label={t('page.linkedTo')} value={unit.propertyCode} />}
+                     <InfoRow icon={CheckCircle} label={t('page.registeredBy')} value={unit.constructedBy} />
                  </div>
             </div>
             {unit.notes && (
                 <div>
-                    <h4 className="font-semibold text-sm mb-2">Σημειώσεις</h4>
+                    <h4 className="font-semibold text-sm mb-2">{t('general.fields.notes')}</h4>
                     <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-md border">{unit.notes}</p>
                 </div>
             )}

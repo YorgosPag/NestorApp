@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import React from 'react';
@@ -12,25 +13,27 @@ import {
 import { ToolbarButton } from '@/components/ui/ToolbarButton';
 import { Upload, Download, FileText } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from 'react-i18next';
 
 interface ToolbarExportMenuProps {
   onExport: () => void;
 }
 
 export function ToolbarExportMenu({ onExport }: ToolbarExportMenuProps) {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   return (
     <div className="flex items-center gap-1">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div>
-            <ToolbarButton tooltip="Εξαγωγή Δεδομένων">
+            <ToolbarButton tooltip={t('toolbar.exportData')}>
               <Download className={iconSizes.sm} />
             </ToolbarButton>
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Εξαγωγή σε:</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('toolbar.exportTo')}:</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onExport}>
             <FileText className={`${iconSizes.sm} mr-2`} />
@@ -38,13 +41,13 @@ export function ToolbarExportMenu({ onExport }: ToolbarExportMenuProps) {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onExport}>
             <FileText className={`${iconSizes.sm} mr-2`} />
-            PDF Αναφορά
+            {t('toolbar.pdfReport')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <ToolbarButton
-        tooltip="Εισαγωγή Δεδομένων"
+        tooltip={t('toolbar.importData')}
         onClick={() => console.log('Importing...')}
       >
         <Upload className={iconSizes.sm} />

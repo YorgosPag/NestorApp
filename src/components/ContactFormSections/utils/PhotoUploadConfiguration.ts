@@ -1,23 +1,40 @@
 import type React from 'react';
-import type { ContactFormData, ContactType } from '@/types/ContactFormTypes';
+import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { ContactType } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
-import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { FileUploadResult, FileUploadProgress } from '@/hooks/useFileUploadState';
 import { PhotoUploadService as FirebasePhotoUploadService } from '@/services/photo-upload.service';
+// 🏢 ENTERPRISE: Centralized constants (ADR-031)
+import { LEGACY_STORAGE_PATHS, UPLOAD_PURPOSE } from '@/config/domain-constants';
+// 🏢 ENTERPRISE: Centralized compression usage constants (ADR-031)
+import { COMPRESSION_USAGE } from '@/config/photo-compression-config';
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
 
-// 🏢 ENTERPRISE: Proper progress type for upload handlers
-export interface UploadProgress {
-  loaded: number;
-  total: number;
-  percentage?: number;
+// 🏢 ENTERPRISE: Re-export FileUploadProgress for backward compatibility
+export type { FileUploadProgress as UploadProgress };
+
+/**
+ * 🏢 ENTERPRISE: Canonical upload context for ADR-031 compliance
+ * @enterprise Required for canonical pipeline (no legacy folderPath)
+ * @see ADR-031 - Canonical File Storage System
+ */
+export interface CanonicalUploadContext {
+  /** Company ID for multi-tenant isolation (from user.companyId custom claim) */
+  companyId: string;
+  /** User ID who is uploading (from user.uid) */
+  createdBy: string;
+  /** Contact ID for FileRecord linkage (pre-generated for new, existing for edits) */
+  contactId: string;
+  /** Contact name for display name generation */
+  contactName?: string;
 }
 
 export interface PhotoUploadHandlers {
-  logoUploadHandler?: (file: File, onProgress: (progress: UploadProgress) => void) => Promise<FileUploadResult>;
-  photoUploadHandler?: (file: File, onProgress: (progress: UploadProgress) => void) => Promise<FileUploadResult>;
+  logoUploadHandler?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
+  photoUploadHandler?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
 }
 
 export interface UnifiedPhotoHandlers {
@@ -45,53 +62,91 @@ export interface UnifiedPhotoHandlers {
  */
 
 /**
- * 🏢✅ COMPANY UPLOAD HANDLERS - WORKING PERFECTLY! ΜΗΝ ΑΛΛΑΞΕΙΣ ΤΙΠΟΤΑ!
+ * 🏢 ENTERPRISE: Photo upload handlers with canonical pipeline support
  *
- * ⚠️ ΚΡΙΣΙΜΗ ΣΥΝΑΡΤΗΣΗ: Αυτή η configuration λειτουργεί 100% για:
- * - Company logo upload & deletion
- * - Representative photo upload & deletion
+ * @enterprise ADR-031 - Canonical File Storage System
  *
- * 📊 STATUS: WORKING PERFECTLY - 2025-12-05
- * 🔗 Related files: useContactSubmission.ts:285-297
+ * If canonicalContext is provided, uses canonical pipeline (recommended).
+ * Otherwise falls back to legacy folderPath (deprecated, will show warning).
  *
- * Τελική διαμόρφωση που λειτουργεί 100% - Firebase Storage path: contacts/photos
- * ✅ UPLOAD: Σώζει στο Firebase Storage και αποθηκεύει το URL στη βάση
- * ✅ DELETION: Διαγράφει από Firebase Storage όταν αφαιρείται από UI
+ * @param formData - Contact form data for naming context
+ * @param canonicalContext - Optional canonical upload context (companyId, createdBy, contactId)
+ * @returns Photo upload handlers for logo and representative photo
+ *
+ * @example
+ * // Canonical usage (recommended)
+ * const handlers = getPhotoUploadHandlers(formData, {
+ *   companyId: user.companyId,
+ *   createdBy: user.uid,
+ *   contactId: formData.id || generatedContactId,
+ *   contactName: formData.firstName + ' ' + formData.lastName,
+ * });
  */
-export function getPhotoUploadHandlers(formData: ContactFormData): PhotoUploadHandlers {
+export function getPhotoUploadHandlers(
+  formData: ContactFormData,
+  canonicalContext?: CanonicalUploadContext
+): PhotoUploadHandlers {
+  // 🏢 ENTERPRISE: Resolve contact name based on contact type
+  // Returns undefined if no name available - let naming builder/i18n handle fallback
+  const resolveContactName = (): string | undefined => {
+    if (canonicalContext?.contactName) {
+      return canonicalContext.contactName;
+    }
+    // Fallback to formData - return undefined if empty (no hardcoded 'Unknown')
+    if (formData.type === 'individual') {
+      const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
+      return fullName || undefined;
+    }
+    return formData.companyName || formData.serviceName || formData.name || undefined;
+  };
+
+  // 🏢 ENTERPRISE: Build contactData object for FileNamingService compatibility
+  const contactDataForService = {
+    type: formData.type,
+    name: formData.name || formData.companyName || formData.serviceName || `${formData.firstName} ${formData.lastName}`.trim(),
+    id: formData.id,
+  };
+
   return {
-    // 🏢✅ COMPANY LOGO UPLOAD & DELETION - ΛΕΙΤΟΥΡΓΕΙ ΤΕΛΕΙΑ! ΜΗΝ ΑΛΛΑΞΕΙΣ ΤΙΠΟΤΑ!
+    // 🏢 COMPANY LOGO UPLOAD with canonical support
     logoUploadHandler: (file, onProgress) =>
       FirebasePhotoUploadService.uploadPhoto(file, {
-        folderPath: 'contacts/photos',
+        // Legacy field (will be ignored if canonical fields present)
+        folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
         onProgress,
         enableCompression: true,
-        compressionUsage: 'company-logo',
-        contactData: formData,
-        purpose: 'logo'
+        compressionUsage: COMPRESSION_USAGE.COMPANY_LOGO,
+        contactData: contactDataForService,
+        purpose: UPLOAD_PURPOSE.LOGO,
+        // 🏢 CANONICAL FIELDS (ADR-031)
+        ...(canonicalContext && {
+          companyId: canonicalContext.companyId,
+          createdBy: canonicalContext.createdBy,
+          contactId: canonicalContext.contactId,
+          contactName: resolveContactName(),
+        }),
       }),
 
-    // 🔥✅ REPRESENTATIVE PHOTO UPLOAD - WORKING PERFECTLY!
-    // 🎯 FIXED: Stale closure race condition με formDataRef solution
-    // 📊 STATUS: WORKING PERFECTLY για representative photo type
-    // ⚠️ ΜΗΔΕΝΙΚΗ ΑΝΟΧΗ: ΜΗΝ ΑΛΛΑΞΕΙΣ την upload logic!
+    // 🏢 REPRESENTATIVE PHOTO UPLOAD with canonical support
     photoUploadHandler: (file, onProgress) => {
-      console.log('🔍 DEBUG: Representative photo upload starting:', {
-        fileName: file.name,
-        fileSize: file.size,
-        folderPath: 'contacts/photos',
-        compressionUsage: 'profile-modal',
-        purpose: 'representative'
-      });
+      // 🏢 ENTERPRISE: Debug logging removed - use centralized telemetry in photo-upload.service.ts
       return FirebasePhotoUploadService.uploadPhoto(file, {
-        folderPath: 'contacts/photos',
+        // Legacy field (will be ignored if canonical fields present)
+        folderPath: LEGACY_STORAGE_PATHS.CONTACTS_PHOTOS,
         onProgress,
         enableCompression: true,
-        compressionUsage: 'profile-modal',
-        contactData: formData,
-        purpose: 'representative'
+        compressionUsage: COMPRESSION_USAGE.PROFILE_MODAL,
+        contactData: contactDataForService,
+        purpose: UPLOAD_PURPOSE.REPRESENTATIVE,
+        // 🏢 CANONICAL FIELDS (ADR-031)
+        ...(canonicalContext && {
+          companyId: canonicalContext.companyId,
+          createdBy: canonicalContext.createdBy,
+          contactId: canonicalContext.contactId,
+          contactName: resolveContactName(),
+        }),
       });
-    }
+    },
   };
 }
 
@@ -105,8 +160,7 @@ export function createUnifiedPhotosChangeHandler(handlers: UnifiedPhotoHandlers)
   const { onPhotosChange, handleMultiplePhotosChange, setFormData, formData } = handlers;
 
   return onPhotosChange || handleMultiplePhotosChange || ((photos: PhotoSlot[]) => {
-    console.log('🏢 UNIFIED: Photos changed:', photos.length, 'photos');
-    // Default behavior: update formData if available
+    // 🏢 ENTERPRISE: Default behavior - update formData if available
     if (setFormData && formData) {
       setFormData({
         ...formData,

@@ -12,12 +12,62 @@
  */
 
 import React from 'react';
-import {
-  toolbarContainer,
-  toolbarButton,
-  toolbarSeparator,
-  toolbarButtonGroup
-} from '../../../../../styles/design-tokens';
+import type { CSSProperties } from 'react';
+
+// ============================================================================
+// 🎨 LOCAL TOOLBAR STYLES - ENTERPRISE PATTERN
+// ============================================================================
+
+interface ToolbarContainerOptions {
+  orientation: 'horizontal' | 'vertical';
+  position: 'top' | 'bottom' | 'left' | 'right' | 'floating';
+}
+
+const toolbarContainer = ({ orientation, position }: ToolbarContainerOptions): CSSProperties => ({
+  display: 'flex',
+  flexDirection: orientation === 'horizontal' ? 'row' : 'column',
+  gap: '4px',
+  padding: '8px',
+  backgroundColor: 'rgba(30, 41, 59, 0.95)',
+  borderRadius: '8px',
+  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+  position: position === 'floating' ? 'absolute' : 'relative',
+  ...(position === 'floating' && { top: '16px', right: '16px', zIndex: 1000 }),
+});
+
+interface ToolbarButtonOptions {
+  isActive: boolean;
+  isDisabled: boolean;
+  orientation: 'horizontal' | 'vertical';
+}
+
+const toolbarButton = ({ isActive, isDisabled }: ToolbarButtonOptions): CSSProperties => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  padding: '8px 12px',
+  backgroundColor: isActive ? 'rgba(59, 130, 246, 0.3)' : 'transparent',
+  border: 'none',
+  borderRadius: '6px',
+  color: isDisabled ? '#64748b' : '#f8fafc',
+  cursor: isDisabled ? 'not-allowed' : 'pointer',
+  fontSize: '13px',
+  opacity: isDisabled ? 0.5 : 1,
+  transition: 'all 0.15s ease',
+});
+
+const toolbarSeparator = (orientation: 'horizontal' | 'vertical'): CSSProperties => ({
+  width: orientation === 'horizontal' ? '1px' : '100%',
+  height: orientation === 'horizontal' ? '24px' : '1px',
+  backgroundColor: 'rgba(100, 116, 139, 0.4)',
+  margin: orientation === 'horizontal' ? '0 8px' : '8px 0',
+});
+
+const toolbarButtonGroup = (): CSSProperties => ({
+  position: 'relative',
+  display: 'flex',
+  flexDirection: 'column',
+});
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPES - TOOLBAR DOMAIN

@@ -5,6 +5,10 @@
  * ENTERPRISE STANDARD - Public API for observability
  */
 
+/**
+ * @deprecated Use '@/lib/telemetry' instead
+ * Re-exports from canonical location for backward compatibility
+ */
 export {
   Logger,
   LogLevel,
@@ -12,10 +16,11 @@ export {
   DevNullOutput,
   getLogger,
   setLogger,
-  createLogger
+  createLogger,
+  createModuleLogger,
+  type LogEntry,
+  type LogOutput,
 } from './Logger';
-
-export type { LogEntry, LogOutput } from './Logger';
 
 export {
   Metrics,

@@ -1,4 +1,107 @@
 {
+  "header": {
+    "title": "Property Management",
+    "subtitle": "Manage and track project properties",
+    "newProperty": "New Property"
+  },
+  "status": {
+    "forSale": "For Sale",
+    "forRent": "For Rent",
+    "reserved": "Reserved",
+    "sold": "Sold",
+    "landowner": "Landowner",
+    "rented": "Rented",
+    "underNegotiation": "Under Negotiation",
+    "comingSoon": "Coming Soon",
+    "offMarket": "Off Market",
+    "unavailable": "Unavailable",
+    "available": "Available",
+    "pending": "Pending",
+    "withdrawn": "Withdrawn",
+    "expired": "Expired",
+    "notSold": "Not Sold"
+  },
+  "rental": {
+    "rentOnly": "Rent Only",
+    "longTerm": "Long-Term Rental",
+    "shortTerm": "Short-Term Rental"
+  },
+  "specialStatus": {
+    "reservedPending": "Reserved Pending",
+    "contractSigned": "Contract Signed",
+    "depositPaid": "Deposit Paid",
+    "corporate": "Corporate Property",
+    "notForSale": "Not For Sale",
+    "family": "Family Reserved",
+    "preLaunch": "Pre-Launch",
+    "exclusive": "Exclusive Listing",
+    "reducedPrice": "Price Reduced",
+    "urgentSale": "Urgent Sale",
+    "underRenovation": "Under Renovation",
+    "legalIssues": "Legal Issues",
+    "inspectionRequired": "Inspection Required",
+    "pendingDocuments": "Pending Documents",
+    "underNegotiation": "Under Negotiation",
+    "availableSoon": "Available Soon",
+    "landowner": "Landowner",
+    "offMarket": "Off Market",
+    "unavailable": "Unavailable"
+  },
+  "types": {
+    "apartment": "Apartment",
+    "studio": "Studio",
+    "maisonette": "Maisonette",
+    "shop": "Shop",
+    "office": "Office",
+    "storage": "Storage",
+    "bedsit": "Bedsit",
+    "apartment2br": "2 Bedroom Apartment",
+    "apartment3br": "3 Bedroom Apartment",
+    "apartment4br": "4 Bedroom Apartment",
+    "loft": "Loft",
+    "penthouse": "Penthouse"
+  },
+  "enhancedStatus": {
+    "rentalOnly": "Rental Only",
+    "longTermRental": "Long-Term Rental",
+    "shortTermRental": "Short-Term Rental",
+    "reservedPending": "Reserved Pending",
+    "contractSigned": "Contract Signed",
+    "depositPaid": "Deposit Paid",
+    "companyOwned": "Company Owned",
+    "notForSale": "Not For Sale",
+    "familyReserved": "Family Reserved",
+    "preLaunch": "Pre-Launch",
+    "exclusiveListing": "Exclusive Listing",
+    "priceReduced": "Price Reduced",
+    "urgentSale": "Urgent Sale",
+    "underRenovation": "Under Renovation",
+    "legalIssues": "Legal Issues",
+    "inspectionRequired": "Inspection Required",
+    "documentationPending": "Documentation Pending"
+  },
+  "intent": {
+    "sale": "For Sale",
+    "rental": "For Rental",
+    "both": "Sale & Rental",
+    "investment": "Investment",
+    "development": "Development",
+    "internal": "Internal Use",
+    "withdrawn": "Withdrawn"
+  },
+  "availability": {
+    "immediatelyAvailable": "Immediately Available",
+    "availableSoon": "Available Soon",
+    "conditionallyAvailable": "Conditionally Available",
+    "reserved": "Reserved",
+    "occupied": "Occupied",
+    "offMarket": "Off Market",
+    "notAvailable": "Not Available"
+  },
+  "priority": {
+    "showcase": "Showcase",
+    "hold": "On Hold"
+  },
   "building": {
     "toolbar": {
       "actions": {
@@ -35,7 +138,7 @@
   "dialog": {
     "deleteConfirmation": {
       "title": "Confirm Deletion",
-      "message": "Are you sure you want to delete {{count}} building(s)?",
+      "message": "Are you sure you want to delete {count} building(s)?",
       "warning": "This action cannot be undone."
     },
     "cancel": "Cancel",
@@ -100,6 +203,19 @@
     }
   },
   "filters": {
+    "allTypes": "All Types",
+    "allStatuses": "All Statuses",
+    "allFloors": "All Floors",
+    "allBuildings": "All Buildings",
+    "allProjects": "All Projects",
+    "types": {
+      "apartment": "Apartment",
+      "studio": "Studio",
+      "maisonette": "Maisonette",
+      "shop": "Shop",
+      "office": "Office",
+      "storage": "Storage"
+    },
     "advanced": {
       "show": "More Filters",
       "hide": "Hide Filters",
@@ -137,7 +253,33 @@
         "combined": "Max. Allowed Semi-Outdoor Balcony % * Max. Allowed Construction",
         "volume": "Plot Area (P.A.) * Maximum Volume Coefficient (V.C.)"
       }
+    },
+    "actualBuildingData": {
+      "title": "Actual Building Elements",
+      "fields": {
+        "construction": "Construction",
+        "plotCoverage": "Plot Coverage",
+        "coveragePercentage": "Coverage Percentage",
+        "semiOutdoorArea": "Semi-Outdoor Area",
+        "semiOutdoorPercentage": "Semi-Outdoor Percentage",
+        "balconyArea": "Balcony Area",
+        "balconyPercentage": "Balcony Percentage",
+        "combinedArea": "Total Semi-Outdoor & Balcony Area",
+        "combinedPercentage": "Semi-Outdoor & Balcony Percentage",
+        "volumeExploitation": "Volume Exploitation",
+        "volumeCoefficient": "Volume Coefficient (V.C.)",
+        "height": "Height"
+      },
+      "units": {
+        "sqm": "sq.m.",
+        "cbm": "cu.m.",
+        "percent": "%",
+        "meters": "m"
+      }
     }
+  },
+  "page": {
+    "loading": "Loading properties..."
   },
   "grid": {
     "emptyState": {
@@ -149,24 +291,45 @@
     },
     "header": {
       "title": "Available Properties",
-      "found": "Found {{count}} properties"
+      "found": "Found {count} properties"
     },
     "search": {
       "placeholder": "Search properties..."
     },
     "filters": {
-      "button": "Filters"
+      "button": "Filters",
+      "priceRange": "Price Range (€)",
+      "area": "Area (m²)",
+      "from": "From",
+      "to": "To"
+    },
+    "viewMode": {
+      "grid": "Grid",
+      "list": "List"
     },
     "actions": {
       "viewFloorPlan": "View Floor Plan"
     },
     "cta": {
       "title": "Want to see the properties on the floor plan?",
-      "subtitle": "See the exact location and layout of properties on the building floor plan.",
+      "subtitle": "Explore interactively the location of each property and see the neighboring apartments",
       "button": "View Floor Plan"
     },
     "status": {
       "unknown": "Unknown"
+    }
+  },
+  "card": {
+    "floor": "{floor}th floor",
+    "contactUs": "Contact us",
+    "viewFloorPlan": "View on floor plan",
+    "aria": {
+      "propertyStatus": "Property Status",
+      "propertyInfo": "Property Information",
+      "propertyPrice": "Property Price",
+      "propertyFeatures": "Property Features",
+      "propertyTags": "Property Tags",
+      "propertyActions": "Property Actions"
     }
   },
   "viewer": {
@@ -183,7 +346,9 @@
     "actions": {
       "copySelected": "Copy selected",
       "deleteSelected": "Delete selected",
-      "reset": "Reset"
+      "reset": "Reset",
+      "info": "Information",
+      "download": "Download"
     },
     "status": {
       "tool": "Tool",
@@ -192,8 +357,377 @@
       "selected": "Selected",
       "readOnly": "Read-Only"
     },
+    "availableProperties": "Available Properties",
+    "propertyDetails": "Property Details",
+    "propertyInfo": "Property Information",
     "confirm": {
       "deleteProperty": "Are you sure you want to delete the selected property?"
+    },
+    "download": {
+      "filename": "floorplan",
+      "error": "Error loading"
+    },
+    "errors": {
+      "loadingError": "Error loading:"
+    },
+    "info": {
+      "title": "Property Information:",
+      "floor": "Floor:",
+      "unknown": "Unknown",
+      "properties": "Properties:",
+      "propertiesLabel": "Properties",
+      "zoom": "Zoom:",
+      "visibleLayers": "Visible Layers:",
+      "pdfFloorplan": "PDF Floorplan:",
+      "available": "Available",
+      "notAvailable": "Not available"
+    },
+    "noFloorplan": {
+      "title": "No floor plan available",
+      "description": "No floor plan data available for this property."
+    },
+    "emptyState": {
+      "noFloorplan": "No floor plan available",
+      "noFloorplanDescription": "No floor plan data available for this property."
+    },
+    "badges": {
+      "propertiesCount": "{count} Properties",
+      "viewOnly": "View Only"
+    },
+    "statusBar": {
+      "floor": "Floor:",
+      "layers": "Layers:",
+      "realTimeUpdates": "Real-time updates"
     }
+  },
+  "meta": {
+    "enterNewName": "Enter new name for the property:",
+    "sqm": "sqm",
+    "rooms": "rooms",
+    "description": "Description",
+    "features": "Features",
+    "edit": "Edit"
+  },
+  "details": {
+    "building": "Building",
+    "floor": "Floor",
+    "price": "Price",
+    "area": "Area",
+    "rooms": "Rooms",
+    "balcony": "Balcony",
+    "buyer": "Buyer",
+    "viewContact": "View Contact",
+    "saleDate": "Sale Date:",
+    "features": "Features",
+    "share": "Share",
+    "shareSuccess": "Property shared successfully!",
+    "shareError": "Sharing error. Please try again."
+  },
+  "statusSelector": {
+    "currentStatus": "Current Status:",
+    "changeStatus": "Change Status:",
+    "countLabel": "{count} properties",
+    "selectPlaceholder": "Select new status...",
+    "allStatuses": "All Statuses",
+    "reasonLabel": "Change Reason",
+    "reasonPlaceholder": "Enter the reason for the change...",
+    "buttons": {
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    },
+    "badges": {
+      "approval": "Approval",
+      "notAvailable": "Not Available"
+    },
+    "quickActions": {
+      "forSale": "For Sale",
+      "forRent": "For Rent",
+      "reserve": "Reserve"
+    },
+    "categories": {
+      "available": "🟢 Available",
+      "committed": "🔒 Reserved",
+      "offMarket": "⚪ Off Market",
+      "inProcess": "🔧 In Process",
+      "other": "📋 Other"
+    },
+    "descriptions": {
+      "rentalOnly": "Available exclusively for long-term rental",
+      "reservedPending": "Reserved with deposit, pending final agreement",
+      "contractSigned": "Contracts signed, pending transfer",
+      "companyOwned": "Company property, not for sale",
+      "urgentSale": "Urgent sale with special terms",
+      "underRenovation": "Under renovation, available after completion"
+    },
+    "warnings": {
+      "soldCannotChange": "Sold property cannot change status",
+      "managerApprovalRequired": "Manager approval required for company status",
+      "notAllowed": "Status change not allowed"
+    },
+    "errors": {
+      "changeError": "Error changing status"
+    }
+  },
+  "versionHistory": {
+    "title": "Version History",
+    "createMilestone": "Create Milestone",
+    "milestoneName": "Milestone name:",
+    "restoreConfirm": "Are you sure you want to restore this version? The current state will be saved as a new version.",
+    "restoring": "Restoring version {versionId}...",
+    "restored": "Version restored",
+    "creatingMilestone": "Creating milestone \"{name}\"...",
+    "selectVersion": "Select a version to view details.",
+    "badge": {
+      "milestone": "Milestone",
+      "auto": "Auto"
+    },
+    "details": {
+      "title": "Version Details",
+      "creator": "Creator:",
+      "date": "Date:",
+      "size": "Size:",
+      "changes": "Changes:",
+      "additions": "additions",
+      "modifications": "modifications",
+      "deletions": "deletions",
+      "preview": "Preview:"
+    },
+    "actions": {
+      "restore": "Restore",
+      "compare": "Compare"
+    }
+  },
+  "filterControls": {
+    "search": {
+      "label": "Search",
+      "ariaLabel": "Search by name or description",
+      "placeholder": "Name, description..."
+    },
+    "priceRange": {
+      "label": "Price Range (€)",
+      "minAriaLabel": "Minimum price",
+      "maxAriaLabel": "Maximum price",
+      "from": "From",
+      "to": "To"
+    },
+    "areaRange": {
+      "label": "Area Range (m²)",
+      "minAriaLabel": "Minimum area",
+      "maxAriaLabel": "Maximum area"
+    },
+    "status": {
+      "label": "Status",
+      "ariaLabel": "Status filter"
+    },
+    "project": {
+      "label": "Project",
+      "ariaLabel": "Project filter"
+    },
+    "building": {
+      "label": "Building",
+      "ariaLabel": "Building filter"
+    },
+    "floor": {
+      "label": "Floor",
+      "ariaLabel": "Floor filter"
+    },
+    "propertyType": {
+      "label": "Property Type",
+      "ariaLabel": "Property type filter"
+    }
+  },
+  "statusLegend": {
+    "title": "Property Status",
+    "propertiesOnFloor": "properties on floor",
+    "errors": "Errors:"
+  },
+  "editPanel": {
+    "title": "Polygon Properties",
+    "selected": "Selected:",
+    "selectToEdit": "Select a polygon to edit"
+  },
+  "detailsPanel": {
+    "selectProperty": "Select a property",
+    "toViewDetails": "to view its details",
+    "propertiesSelected": "{{count}} properties selected",
+    "selectSingleProperty": "Select a single property to view details.",
+    "noDataFound": "No data found",
+    "forSelectedProperty": "for the selected property"
+  },
+  "suggestions": {
+    "accept": "Accept",
+    "title": "Smart Suggestions",
+    "analyze": "Analyze",
+    "analysisComplete": "Analysis Complete: Found {{count}} placement suggestions",
+    "clickAnalyze": "Click \"Analyze\" for suggestions.",
+    "clearSuggestions": "Clear Suggestions"
+  },
+  "hoverInfo": {
+    "hoverMouse": "Hover your mouse",
+    "overProperty": "over a property",
+    "onFloorPlanToSee": "on the floor plan to see",
+    "quickInfo": "quick information",
+    "noDataFound": "No data found",
+    "forThisProperty": "for this property"
+  },
+  "connectionPanel": {
+    "title": "Connections & Grouping",
+    "legend": {
+      "title": "Legend"
+    },
+    "controls": {
+      "typeLabel": "Connection Type",
+      "typePlaceholder": "Select type",
+      "types": {
+        "related": "Related",
+        "sameBuilding": "Same Building",
+        "sameFloor": "Same Floor",
+        "parking": "With Parking"
+      },
+      "cancelConnection": "Cancel Connection",
+      "newConnection": "New Connection",
+      "createGroup": "Create Group ({{count}} selected)",
+      "clearConnections": "Clear Connections"
+    },
+    "connectionTypes": {
+      "sameBuilding": "Same Building",
+      "sameFloor": "Same Floor",
+      "related": "Related",
+      "parking": "Parking"
+    }
+  },
+  "floorPlanToolbar": {
+    "uploadPDF": "Upload PDF",
+    "uploading": "Uploading...",
+    "uploadTooltip": "Upload floor plan PDF",
+    "selectPDFFile": "Please select a PDF file",
+    "viewModes": {
+      "view": "View",
+      "create": "Create",
+      "measure": "Measure",
+      "edit": "Edit"
+    },
+    "layers": {
+      "hidePDF": "Hide PDF",
+      "showPDF": "Show PDF",
+      "hideGrid": "Hide Grid",
+      "showGrid": "Show Grid",
+      "hideLayers": "Hide Layers",
+      "showLayers": "Show Layers"
+    },
+    "zoom": {
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "resetView": "Reset View"
+    },
+    "fullscreen": "Fullscreen",
+    "export": {
+      "exportPNG": "Export PNG",
+      "exportPDF": "Export PDF"
+    },
+    "status": {
+      "mode": "Mode:",
+      "pdfActive": "PDF Active"
+    }
+  },
+  "dashboard": {
+    "stats": {
+      "totalUnits": "Total Units",
+      "totalValue": "Total Value",
+      "totalArea": "Total Area",
+      "averagePrice": "Average Price"
+    },
+    "cards": {
+      "unitTypes": "Unit Types",
+      "distributionByFloor": "Distribution by Floor",
+      "storages": "Storages",
+      "total": "Total",
+      "available": "Available",
+      "sold": "Sold",
+      "unitStatus": "Unit Status"
+    },
+    "labels": {
+      "sold": "Sold",
+      "available": "Available",
+      "reserved": "Reserved",
+      "landowner": "Landowner"
+    }
+  },
+  "pageFilters": {
+    "search": {
+      "label": "Search",
+      "placeholder": "Search code, buyer..."
+    },
+    "type": {
+      "label": "Type"
+    },
+    "status": {
+      "label": "Status"
+    },
+    "floor": {
+      "label": "Floor"
+    },
+    "building": {
+      "label": "Building"
+    }
+  },
+  "floorSelector": {
+    "propertiesCount": "{{count}} properties"
+  },
+  "contacts": {
+    "owner": "Owner",
+    "agent": "Agent"
+  },
+  "propertyCount": {
+    "propertiesOnFloor": "{{count}} properties on floor"
+  },
+  "multiLevel": {
+    "title": "Property Levels",
+    "goTo": "Go to"
+  },
+  "documents": {
+    "title": "Documents"
+  },
+  "attachments": {
+    "linkedStorages": "Linked Storages",
+    "linkedParking": "Linked Parking Spaces",
+    "sqm": "sq.m."
+  },
+  "dates": {
+    "title": "Dates",
+    "created": "Created:",
+    "updated": "Updated:",
+    "availability": "Availability:"
+  },
+  "fileUploader": {
+    "upload": "Upload"
+  },
+  "creation": {
+    "clickToStart": "Click to start",
+    "pointsContinue": "{{count}} points - Click to continue"
+  },
+  "multiLevelIndicator": {
+    "groundFloor": "Ground Floor",
+    "firstFloor": "1st Floor"
+  },
+  "tooltip": {
+    "sqm": "sqm"
+  },
+  "layerDetails": {
+    "color": "Color:",
+    "change": "Change",
+    "opacity": "Opacity:",
+    "price": "Price:",
+    "area": "Area:",
+    "sqm": "sqm",
+    "nodes": "Nodes:",
+    "duplicate": "Dupl."
+  },
+  "viewerFilters": {
+    "resetFilters": "Reset Filters"
+  },
+  "share": {
+    "defaultMessage": "Check out these interesting properties from Nestor Construct!",
+    "title": "Nestor Construct - Properties"
   }
 }

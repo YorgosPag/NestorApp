@@ -3,12 +3,14 @@
   "description": "Manage CRM tasks and activities",
   "types": {
     "call": "Call",
-    "email": "Email", 
+    "email": "Email",
     "meeting": "Meeting",
     "viewing": "Viewing",
     "followup": "Follow-up",
+    "follow_up": "Follow-up",
     "research": "Research",
     "documentation": "Documentation",
+    "document": "Document",
     "other": "Other"
   },
   "status": {
@@ -34,6 +36,13 @@
       "estimatedTime": "Estimated time",
       "actualTime": "Actual time"
     },
+    "sections": {
+      "dueDate": "Due date",
+      "assignedTo": "Assigned to",
+      "related": "Related",
+      "viewingDetails": "Viewing details",
+      "completed": "Completed"
+    },
     "viewing": {
       "location": "Location",
       "units": "Units",
@@ -47,7 +56,9 @@
       "delete": "Delete",
       "duplicate": "Duplicate",
       "addToFavorites": "Add to Favorites"
-    }
+    },
+    "notDefined": "Not defined",
+    "prioritySuffix": "priority"
   },
   "time": {
     "overdue": "Overdue",
@@ -55,9 +66,9 @@
     "tomorrow": "Tomorrow",
     "thisWeek": "This week",
     "nextWeek": "Next week",
-    "daysAgo": "{{count}} days ago",
-    "hoursAgo": "{{count}} hours ago",
-    "minutesAgo": "{{count}} minutes ago",
+    "daysAgo": "{count} days ago",
+    "hoursAgo": "{count} hours ago",
+    "minutesAgo": "{count} minutes ago",
     "justNow": "Just now"
   },
   "messages": {

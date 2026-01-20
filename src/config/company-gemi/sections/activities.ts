@@ -20,12 +20,13 @@ import { ACTIVITY_TYPE_OPTIONS } from '../options';
 /**
  * Section 2: Δραστηριότητες & ΚΑΔ
  * ENTERPRISE: Uses centralized labels, help texts, και options
+ * 🏢 i18n: Uses i18n keys that are translated at runtime by GenericFormRenderer
  */
 export const activitiesSection: SectionConfig = {
   id: 'activities',
-  title: 'Δραστηριότητες & ΚΑΔ',
+  title: 'sections.activitiesKad', // i18n key
   icon: 'file-text',
-  description: 'Κωδικοί και περιγραφές επιχειρηματικής δραστηριότητας',
+  description: 'sectionDescriptions.activitiesKad', // i18n key (will fallback if not exists)
   order: 2,
   fields: [
     {

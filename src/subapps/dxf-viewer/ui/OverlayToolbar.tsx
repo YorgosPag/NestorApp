@@ -1,9 +1,12 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 import React, { useState, useRef } from 'react';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useDraggable } from '../../../hooks/useDraggable';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 // import { Separator } from '../../../components/ui/separator';
 // Προσωρινή λύση - αντικατάσταση με div
 const Separator = ({ orientation, className }: { orientation?: string; className?: string }) => (
@@ -50,6 +53,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
   snapEnabled, onSnapToggle, selectedOverlayId, onDuplicate, onDelete,
   canUndo, canRedo, onUndo, onRedo, onToolChange, disableFloating = false,
 }) => {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -77,9 +81,10 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     }
   }, [selectedOverlayId, overlayStore, currentStatus, currentKind, onStatusChange, onKindChange]);
 
+  // 🏢 ENTERPRISE: i18n-enabled mode buttons
   const modeButtons = [
-    { mode: 'draw' as OverlayEditorMode, icon: Pen, label: 'Σχεδίαση', key: 'N' },
-    { mode: 'edit' as OverlayEditorMode, icon: Edit, label: 'Επεξεργασία', key: 'E' },
+    { mode: 'draw' as OverlayEditorMode, icon: Pen, label: t('toolbar.draw'), key: 'N' },
+    { mode: 'edit' as OverlayEditorMode, icon: Edit, label: t('toolbar.edit'), key: 'E' },
   ];
 
   const kindIcons = { unit: Square, parking: Circle, storage: Triangle, footprint: Grid };
@@ -168,7 +173,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
         <div
           onMouseDown={handleMouseDown}
           className={`${PANEL_LAYOUT.CURSOR.GRAB} active:${PANEL_LAYOUT.CURSOR.GRABBING} ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.hover} ${radius.md}`}
-          title="Drag to move toolbar"
+          title={t('toolbar.dragToMove')}
         >
           <div className={`${iconSizes.xs} ${iconSizes.sm} ${colors.bg.active} ${quick.button}`}></div>
         </div>
@@ -199,13 +204,13 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
 
       {/* Status Palette */}
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>Status:</span>
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('toolbar.status')}</span>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
           {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
             <button
               key={status}
               onClick={() => onStatusChange(status)}
-              title={STATUS_LABELS[status]}
+              title={t(STATUS_LABELS[status])}
               className={`${iconSizes.lg} ${quick.button} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']}`}
               style={getStatusColorButtonStyles(
                 status as PropertyStatus,
@@ -220,7 +225,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
 
       {/* Kind Selection */}
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>Τύπος:</span>
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('toolbar.type')}</span>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
           {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
             const Icon = kindIcons[kind];
@@ -228,7 +233,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
               <button
                 key={kind}
                 onClick={() => onKindChange(kind)}
-                title={KIND_LABELS[kind]}
+                title={t(KIND_LABELS[kind])}
                 className={`
                   ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
                   flex items-center justify-center
@@ -252,7 +257,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
         <button
           onClick={onDuplicate}
           disabled={!selectedOverlayId}
-          title="Αντιγραφή (D)"
+          title={t('toolbar.duplicate', { key: 'D' })}
           className={`
             ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
@@ -266,7 +271,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
         <button
           onClick={onDelete}
           disabled={!selectedOverlayId}
-          title="Διαγραφή (Del)"
+          title={t('toolbar.delete', { key: 'Del' })}
           className={`
             ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
@@ -285,7 +290,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
         <button
           onClick={onUndo}
           disabled={!canUndo}
-          title="Αναίρεση (Ctrl+Z)"
+          title={t('toolbar.undo', { key: 'Ctrl+Z' })}
           className={`
             ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center
@@ -298,7 +303,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
         <button
           onClick={onRedo}
           disabled={!canRedo}
-          title="Επανάληψη (Ctrl+Y)"
+          title={t('toolbar.redo', { key: 'Ctrl+Y' })}
           className={`
             ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
             flex items-center justify-center

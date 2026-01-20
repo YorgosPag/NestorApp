@@ -2,6 +2,16 @@
 
 import React from 'react';
 import type { Building } from '../BuildingsPageContent';
+import type { BuildingTabConfig } from '@/config/building-tabs-config';
+
+// 🏢 ENTERPRISE: Window type extension for debugging
+declare global {
+  interface Window {
+    getSortedBuildingTabs?: () => BuildingTabConfig[];
+    BUILDING_TABS?: BuildingTabConfig[];
+    currentBuilding?: Building;
+  }
+}
 import { useBuildingFloorplans } from '../../../hooks/useBuildingFloorplans';
 // 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
 import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';

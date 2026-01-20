@@ -44,6 +44,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { LanguageSwitcher } from '@/components/header/language-switcher';
 import { ThemeToggle } from '@/components/header/theme-toggle';
 import { Lock, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { AUTH_ROUTES } from '@/lib/routes';
 
 // =============================================================================
 // TYPES
@@ -335,7 +336,7 @@ export default function AuthActionPage() {
           <figure className={layout.centerHorizontal}>
             <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
           </figure>
-          <h1 className={`${typography.heading.xl} ${colors.text.primary}`}>
+          <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>
             Nestor Pagonis
           </h1>
         </header>
@@ -361,7 +362,7 @@ export default function AuthActionPage() {
           <CardContent>
             {/* Error Alert */}
             {state.errorMessage && (
-              <Alert variant="destructive" className={layout.marginBottom4}>
+              <Alert variant="destructive" className="mb-4">
                 <AlertDescription>{state.errorMessage}</AlertDescription>
               </Alert>
             )}
@@ -442,7 +443,7 @@ export default function AuthActionPage() {
             {state.status === 'success' && (
               <nav className={`${layout.flexColGap2} ${layout.textCenter}`}>
                 <Button
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push(AUTH_ROUTES.login)}
                   className={layout.widthFull}
                 >
                   {t('action.buttons.goToLogin')}
@@ -454,7 +455,7 @@ export default function AuthActionPage() {
             {state.status === 'error' && (
               <nav className={`${layout.flexColGap2} ${layout.textCenter}`}>
                 <Button
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push(AUTH_ROUTES.login)}
                   className={layout.widthFull}
                 >
                   {t('action.buttons.goToLogin')}

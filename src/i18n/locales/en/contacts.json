@@ -1,10 +1,40 @@
 {
+  "common": {
+    "select": "Select",
+    "fields": {
+      "street": {
+        "placeholder": "e.g. Athens Avenue",
+        "helpText": "Street address"
+      },
+      "streetNumber": {
+        "placeholder": "e.g. 123",
+        "helpText": "Street number"
+      },
+      "city": {
+        "placeholder": "e.g. Athens",
+        "helpText": "City"
+      },
+      "postalCode": {
+        "helpText": "Postal code (5 digits)"
+      }
+    }
+  },
+  "emptyState": {
+    "title": "Select a contact",
+    "description": "Select a contact from the list to view its details."
+  },
   "header": {
     "title": "Contact Management",
-    "titleWithCount": "Contact Management ({{count}})",
+    "titleWithCount": "Contact Management ({count})",
     "subtitle": "Central directory of all your contacts",
     "searchPlaceholder": "Search contacts...",
-    "newContact": "New Contact"
+    "newContact": "New Contact",
+    "actions": {
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete Contact"
+    }
   },
   "page": {
     "pageLabel": "Contact Management",
@@ -47,8 +77,8 @@
       "back": "Back",
       "backToList": "Back to contacts list",
       "filteringFor": "Filtering for:",
-      "contactsCount": "{{count}} contact",
-      "contactsCountPlural": "{{count}} contacts",
+      "contactsCount": "{count} contact",
+      "contactsCountPlural": "{count} contacts",
       "clear": "Clear",
       "showAll": "Show all contacts"
     }
@@ -57,9 +87,10 @@
     "ariaLabel": "Contacts List",
     "entityName": "Contacts",
     "searchPlaceholder": "Search contacts...",
+    "contactAriaLabel": "Contact {name}",
     "favorites": {
-      "added": "Added to favorites: {{name}}",
-      "removed": "Removed from favorites: {{name}}",
+      "added": "Added to favorites: {name}",
+      "removed": "Removed from favorites: {name}",
       "error": "Failed to update favorite"
     },
     "empty": {
@@ -67,8 +98,35 @@
       "subtitle": "Add your first contact"
     }
   },
+  "types": {
+    "individual": "Individual",
+    "company": "Company",
+    "service": "Service"
+  },
+  "card": {
+    "labels": {
+      "phone": "Phone",
+      "profession": "Profession",
+      "vat": "VAT"
+    }
+  },
+  "stats": {
+    "title": "Property Statistics",
+    "unitsCount": "Number of Units",
+    "totalArea": "Total Area",
+    "totalValue": "Total Value"
+  },
+  "projects": {
+    "title": "Related Projects",
+    "empty": "No projects found for this company.",
+    "table": {
+      "project": "Project",
+      "status": "Status",
+      "progress": "Progress"
+    }
+  },
   "properties": {
-    "title": "Customer Properties ({{count}})",
+    "title": "Customer Properties ({count})",
     "addProperty": "Add Property",
     "empty": "This customer has no registered properties.",
     "table": {
@@ -84,7 +142,9 @@
   "details": {
     "contactInfo": {
       "title": "Contact Information",
-      "noContactInfo": "No contact information available."
+      "noContactInfo": "No contact information available.",
+      "sendEmailTitle": "Send email to {email} via Gmail",
+      "callTitle": "Call {phone}"
     },
     "taxInfo": {
       "title": "Tax Information",
@@ -97,18 +157,93 @@
       "new": "New Contact (Ctrl+N)",
       "edit": "Edit Selected (Ctrl+E)",
       "delete": "Delete Selected (Delete)"
+    },
+    "tabs": {
+      "actions": {
+        "newContact": "New Contact",
+        "newContactTooltip": "Add new contact",
+        "edit": "Edit",
+        "editTooltip": "Edit selected contact",
+        "delete": "Delete",
+        "deleteCount": "Delete {count} contact(s)",
+        "deleteSelected": "Delete selected contact",
+        "deleteSelectFirst": "Select a contact to delete",
+        "refresh": "Refresh",
+        "refreshTooltip": "Refresh contacts list"
+      },
+      "communication": {
+        "call": "Call",
+        "callTooltip": "Call selected contacts",
+        "email": "Email",
+        "emailTooltip": "Send email to selected contacts",
+        "sms": "SMS",
+        "smsTooltip": "Send SMS to selected contacts",
+        "selectForCommunication": "Select contacts for communication"
+      },
+      "management": {
+        "export": "Export",
+        "exportTooltip": "Export contacts list",
+        "import": "Import",
+        "importTooltip": "Import contacts from file",
+        "archive": "Archive",
+        "archiveCount": "Archive {count} contact(s)",
+        "archiveSelected": "Archive selected contact",
+        "archiveSelectFirst": "Select a contact to archive",
+        "help": "Help",
+        "helpTooltip": "Help and instructions"
+      },
+      "filters": {
+        "favorites": "Favorites",
+        "showAllContacts": "Show all contacts",
+        "filterFavoritesOnly": "Filter favorites only",
+        "archived": "Archived",
+        "showActiveContacts": "Show active contacts",
+        "filterArchivedOnly": "Filter archived only",
+        "sortAtoZ": "Sort A to Z",
+        "sortZtoA": "Sort Z to A",
+        "filterHint": "Use the header filters for more options"
+      }
     }
   },
   "dialog": {
     "deleteConfirmation": {
       "title": "Delete Confirmation",
-      "message": "Are you sure you want to delete {{count}} contact(s)?",
+      "message": "Are you sure you want to delete {count} contact(s)?",
       "warning": "This action cannot be undone."
     },
     "cancel": "Cancel",
     "delete": "Delete"
   },
+  "form": {
+    "noName": "No name",
+    "noCompanyName": "No company name",
+    "editTitle": "Edit Contact",
+    "addTitle": "Add New Contact",
+    "editDescription": "Edit the contact details.",
+    "addDescription": "Enter the basic details of the new contact.",
+    "typeLabel": "Type",
+    "updateContact": "Update Contact",
+    "saveContact": "Save Contact",
+    "fields": {
+      "phone": "Phone",
+      "notes": "Notes"
+    }
+  },
   "relationships": {
+    "types": {
+      "employee": "Employee",
+      "manager": "Manager",
+      "shareholder": "Shareholder",
+      "boardMember": "Board Member",
+      "civilServant": "Civil Servant",
+      "departmentHead": "Department Head",
+      "consultant": "Consultant",
+      "colleague": "Colleague",
+      "friend": "Friend",
+      "family": "Family",
+      "businessContact": "Business Contact",
+      "other": "Other"
+    },
     "form": {
       "title": "Add New Relationship",
       "editTitle": "Edit Relationship",
@@ -155,6 +290,26 @@
       "updatedAt": "Updated:",
       "recently": "Recently"
     },
+    "recent": {
+      "title": "Recent Relationships",
+      "showLess": "Show less",
+      "showAll": "Show all ({count} more)"
+    },
+    "manager": {
+      "totalCount": "Total: {count} relationships",
+      "refreshData": "Refresh data",
+      "addRelationship": "Add Relationship",
+      "errors": {
+        "listError": "Relationship list error",
+        "formError": "Form error",
+        "treeError": "Organization chart error",
+        "searchError": "Error searching contacts"
+      },
+      "newContact": {
+        "note": "Note",
+        "description": "To create relationships, first save the contact. After saving, the relationship management options will appear."
+      }
+    },
     "list": {
       "newContact": {
         "title": "Create relationships",
@@ -167,6 +322,519 @@
         "title": "No registered relationships",
         "addHint": "Click the \"Add Relationship\" button to add the first relationship."
       }
+    },
+    "summary": {
+      "title": "Contact Relationships",
+      "organizationChart": "Organization Chart",
+      "add": "Add",
+      "startHere": "Start here",
+      "newContact": {
+        "availableAfterSave": "Relationships will be available after saving the contact.",
+        "tip": "Tip:",
+        "tipText": "Save the contact to add professional relationships, employees and shareholders."
+      },
+      "loading": "Loading relationships...",
+      "empty": {
+        "title": "No relationships",
+        "description": "Add professional relationships, employees and collaborators."
+      }
+    },
+    "organizationTree": {
+      "loading": "Loading...",
+      "loadingTree": "Loading organization chart...",
+      "loadError": "Loading error",
+      "emptyTree": "Empty organization chart",
+      "noEmployeeRelationships": "No employee relationships for this organization.",
+      "unknownContact": "Unknown Contact",
+      "employee": "Employee",
+      "totalEmployees": "Total Employees",
+      "activeDepartments": "Active Departments",
+      "managementLevels": "Management Levels",
+      "simpleStructure": "Simple Organization Structure",
+      "simpleStructureDescription": "This company has a basic organizational structure without complex hierarchy.",
+      "departmentsAndEmployees": "Departments & Employees",
+      "generalDepartment": "General Department",
+      "recentAdditions": "Recent Additions",
+      "moreItems": "+{count} more",
+      "lastUpdated": "Last updated",
+      "createdAt": "Created",
+      "unknown": "Unknown"
+    }
+  },
+  "options": {
+    "gender": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other",
+      "preferNotToSay": "Prefer not to say"
+    },
+    "identity": {
+      "identityCard": "Identity Card",
+      "passport": "Passport",
+      "driversLicense": "Driver's License",
+      "other": "Other"
+    },
+    "gemiStatuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended",
+      "dissolution": "In Dissolution",
+      "dissolved": "Dissolved",
+      "bankruptcy": "Bankruptcy",
+      "liquidation": "Liquidation"
+    },
+    "serviceCategories": {
+      "ministry": "Ministry",
+      "region": "Region",
+      "municipality": "Municipality",
+      "publicEntity": "Public Entity",
+      "independentAuthority": "Independent Authority",
+      "university": "University",
+      "hospital": "Hospital",
+      "school": "School",
+      "other": "Other"
+    },
+    "legalStatuses": {
+      "npdd": "Public Law Legal Entity",
+      "npid": "Private Law Legal Entity",
+      "publicService": "Public Service",
+      "independentAuthority": "Independent Authority",
+      "decentralizedAdmin": "Decentralized Administration"
+    },
+    "activityTypes": {
+      "main": "Main Activity",
+      "secondary": "Secondary Activity"
+    },
+    "addressTypes": {
+      "headquarters": "Headquarters",
+      "branch": "Branch"
+    },
+    "shareholderTypes": {
+      "individual": "Individual",
+      "legal": "Legal Entity"
+    },
+    "currencies": {
+      "eur": "Euro (€)",
+      "usd": "US Dollar ($)",
+      "gbp": "British Pound (£)"
+    }
+  },
+  "communication": {
+    "sections": {
+      "phones": "Phones",
+      "emails": "Emails",
+      "websites": "Websites",
+      "socialMedia": "Social Media",
+      "identity": "Identity"
+    },
+    "phoneTypes": {
+      "mobile": "Mobile",
+      "home": "Home",
+      "work": "Work",
+      "fax": "Fax",
+      "other": "Other"
+    },
+    "emailTypes": {
+      "personal": "Personal",
+      "work": "Work",
+      "other": "Other"
+    },
+    "websiteTypes": {
+      "personal": "Personal",
+      "company": "Company",
+      "portfolio": "Portfolio",
+      "blog": "Blog",
+      "other": "Other"
+    },
+    "socialMediaTypes": {
+      "personal": "Personal",
+      "professional": "Professional",
+      "business": "Business",
+      "other": "Other"
+    },
+    "platforms": {
+      "linkedin": "LinkedIn",
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "twitter": "Twitter/X",
+      "youtube": "YouTube",
+      "github": "GitHub",
+      "tiktok": "TikTok",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "other": "Other"
+    },
+    "placeholders": {
+      "phone": "e.g. 6981890123",
+      "phoneLabel": "e.g. Personal mobile",
+      "email": "e.g. email@example.com",
+      "emailLabel": "e.g. Personal email",
+      "website": "e.g. https://example.com",
+      "websiteLabel": "e.g. Personal website",
+      "username": "e.g. @username",
+      "socialLabel": "e.g. Personal profile"
+    },
+    "emptyStates": {
+      "phones": "No phones added",
+      "emails": "No emails added",
+      "websites": "No websites added",
+      "socialMedia": "No social media added"
+    },
+    "buttons": {
+      "addPhone": "Add Phone",
+      "addEmail": "Add Email",
+      "addWebsite": "Add Website",
+      "addSocial": "Add Social Media"
+    },
+    "tableHeaders": {
+      "type": "Type",
+      "countryCode": "Code",
+      "number": "Number",
+      "label": "Label",
+      "actions": "Actions",
+      "email": "Email Address",
+      "url": "URL",
+      "platform": "Platform",
+      "username": "Username"
+    }
+  },
+  "identity": {
+    "types": {
+      "idCard": "ID Card",
+      "identityCard": "Identity Card",
+      "passport": "Passport",
+      "afm": "Tax ID (AFM)",
+      "amka": "Social Security (AMKA)",
+      "license": "License",
+      "driversLicense": "Driver's License",
+      "other": "Other"
+    }
+  },
+  "professional": {
+    "types": {
+      "companyPhone": "Company Phone",
+      "companyEmail": "Company Email",
+      "companyWebsite": "Company Website",
+      "linkedin": "LinkedIn",
+      "position": "Position",
+      "department": "Department",
+      "other": "Other"
+    },
+    "fields": {
+      "profession": "Profession",
+      "specialty": "Specialty",
+      "employer": "Employer",
+      "position": "Position"
+    }
+  },
+  "address": {
+    "types": {
+      "home": "Home",
+      "work": "Work",
+      "mailing": "Mailing",
+      "billing": "Billing",
+      "headquarters": "Headquarters",
+      "branch": "Branch",
+      "other": "Other"
+    },
+    "fields": {
+      "street": "Street",
+      "streetNumber": "Number",
+      "city": "City",
+      "postalCode": "Postal Code"
+    }
+  },
+  "company": {
+    "legalForms": {
+      "ae": "Société Anonyme (S.A.)",
+      "epe": "Limited Liability (Ltd.)",
+      "ee": "Limited Partnership",
+      "oe": "General Partnership",
+      "ikepe": "Private Capital Company (IKE)",
+      "ike": "Private Capital Company",
+      "mono": "Sole Proprietorship",
+      "smpc": "Social Cooperative Enterprise",
+      "other": "Other"
+    },
+    "positions": {
+      "ceo": "Chief Executive Officer",
+      "president": "President",
+      "manager": "Manager",
+      "legalRep": "Legal Representative",
+      "secretary": "Secretary"
+    },
+    "boardTypes": {
+      "generalAssembly": "General Assembly",
+      "boardDirectors": "Board of Directors",
+      "supervisoryBoard": "Supervisory Board"
+    },
+    "documentTypes": {
+      "certificate": "Certificate",
+      "announcement": "Announcement",
+      "registration": "Registration",
+      "amendment": "Amendment"
+    },
+    "fields": {
+      "companyName": "Company Name",
+      "tradeName": "Trade Name",
+      "legalForm": "Legal Form",
+      "gemiNumber": "GEMI Number",
+      "gemiStatus": "GEMI Status",
+      "chamber": "Chamber",
+      "activityCodeKad": "Activity Code (KAD)",
+      "activityDescription": "Activity Description",
+      "phoneCentral": "Central Phone",
+      "emailContact": "Contact Email",
+      "website": "Website"
+    }
+  },
+  "service": {
+    "sections": {
+      "basicInfo": {
+        "title": "Basic Information"
+      },
+      "administrative": {
+        "title": "Administrative Information"
+      },
+      "contact": {
+        "title": "Contact Information"
+      },
+      "services": {
+        "title": "Responsibilities & Services"
+      },
+      "logo": {
+        "title": "Logo & Communication"
+      },
+      "relationships": {
+        "title": "Relationships"
+      }
+    },
+    "fields": {
+      "name": {
+        "label": "Service Name",
+        "placeholder": "e.g. City of Athens",
+        "helpText": "The official name of the public service"
+      },
+      "shortName": {
+        "label": "Short Name",
+        "placeholder": "e.g. C.A.",
+        "helpText": "Abbreviation or acronym of the service"
+      },
+      "category": {
+        "label": "Category"
+      },
+      "supervisionMinistry": {
+        "label": "Supervision Ministry",
+        "placeholder": "e.g. Ministry of Interior",
+        "helpText": "The supervising ministry"
+      },
+      "legalStatus": {
+        "label": "Legal Status"
+      },
+      "establishmentLaw": {
+        "label": "Establishment Law",
+        "placeholder": "e.g. Law 3852/2010",
+        "helpText": "The founding law of the public service"
+      },
+      "headTitle": {
+        "label": "Head Title",
+        "placeholder": "e.g. Mayor, General Secretary",
+        "helpText": "The institutional title of the head of service"
+      },
+      "headName": {
+        "label": "Head Name",
+        "placeholder": "e.g. John Smith",
+        "helpText": "The full name of the head"
+      },
+      "mainResponsibilities": {
+        "label": "Main Responsibilities",
+        "placeholder": "Describe the main responsibilities of the service...",
+        "helpText": "The core responsibilities and mission of the service"
+      },
+      "citizenServices": {
+        "label": "Citizen Services",
+        "placeholder": "List the services provided to citizens...",
+        "helpText": "The services provided to citizens"
+      },
+      "onlineServices": {
+        "label": "Online Services",
+        "helpText": "Link to online services (e.g. gov portal)"
+      },
+      "serviceHours": {
+        "label": "Service Hours",
+        "placeholder": "e.g. Monday-Friday 08:00-14:00",
+        "helpText": "The public service hours"
+      },
+      "phone": {
+        "helpText": "The central phone number of the service"
+      },
+      "email": {
+        "helpText": "The official contact email"
+      },
+      "website": {
+        "helpText": "The official website of the service"
+      }
+    }
+  },
+  "common": {
+    "fields": {
+      "street": {
+        "placeholder": "e.g. Main Street",
+        "helpText": "The street name"
+      },
+      "streetNumber": {
+        "placeholder": "e.g. 123",
+        "helpText": "The street number"
+      },
+      "city": {
+        "placeholder": "e.g. Athens",
+        "helpText": "The city where the service is located"
+      },
+      "postalCode": {
+        "helpText": "The postal code (5 digits)"
+      }
+    }
+  },
+  "fields": {
+    "vatNumber": "VAT Number",
+    "taxOffice": "Tax Office",
+    "communication": "Communication"
+  },
+  "employment": {
+    "status": {
+      "fullTime": "Full Time",
+      "partTime": "Part Time",
+      "contract": "Contract",
+      "temporary": "Temporary",
+      "seasonal": "Seasonal",
+      "volunteer": "Volunteer",
+      "retired": "Retired",
+      "onLeave": "On Leave",
+      "terminated": "Terminated"
+    }
+  },
+  "businessTypes": {
+    "customer": "Customer",
+    "supplier": "Supplier",
+    "agent": "Agent",
+    "contractor": "Contractor"
+  },
+  "validation": {
+    "contactTypeRequired": "Contact type is required",
+    "individual": {
+      "firstNameRequired": "First name is required for individuals",
+      "lastNameRequired": "Last name is required for individuals"
+    },
+    "company": {
+      "nameRequired": "Company name is required for legal entities",
+      "vatRecommended": "VAT number is recommended for legal entities"
+    },
+    "service": {
+      "nameRequired": "Service name is required for public services",
+      "typeRequired": "Service type is required for public services"
+    },
+    "email": {
+      "invalid": "Invalid email address"
+    },
+    "phone": {
+      "invalidFormat": "Phone number may have invalid format"
+    }
+  },
+  "individual": {
+    "sections": {
+      "basicInfo": {
+        "title": "Basic Info",
+        "description": "Basic contact information"
+      },
+      "identity": {
+        "title": "Identity & Tax",
+        "description": "Identity and tax information"
+      },
+      "professional": {
+        "title": "Professional Info",
+        "description": "Work and profession information"
+      },
+      "address": {
+        "title": "Home Address",
+        "description": "Address details"
+      },
+      "communication": {
+        "title": "Communication",
+        "description": "Contact details and social media"
+      },
+      "photo": {
+        "title": "Photo",
+        "description": "Contact profile photo"
+      },
+      "relationships": {
+        "title": "Relationships",
+        "description": "Manage relationships with other contacts"
+      },
+      "files": {
+        "title": "Files",
+        "description": "Manage contact files and documents"
+      }
+    },
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "fatherName": "Father's Name",
+      "motherName": "Mother's Name",
+      "birthDate": "Birth Date",
+      "birthCountry": "Country of Birth",
+      "gender": "Gender",
+      "amka": "AMKA",
+      "documentType": "Document Type",
+      "documentIssuer": "Issuing Authority",
+      "documentNumber": "Document Number",
+      "documentIssueDate": "Issue Date",
+      "documentExpiryDate": "Expiry Date",
+      "vatNumber": "VAT Number",
+      "taxOffice": "Tax Office",
+      "profession": "Profession",
+      "specialty": "Specialty",
+      "employer": "Employer",
+      "position": "Position",
+      "street": "Street",
+      "streetNumber": "Number",
+      "city": "City",
+      "postalCode": "Postal Code"
+    },
+    "helpTexts": {
+      "firstName": "The first name of the individual",
+      "lastName": "The last name of the individual",
+      "fatherName": "Father's name",
+      "motherName": "Mother's name",
+      "birthDate": "Date of birth",
+      "birthCountry": "Country of birth",
+      "gender": "Contact's gender",
+      "amka": "Social Security Number (11 digits)",
+      "documentType": "Type of identification document",
+      "documentIssuer": "Authority that issued the document",
+      "documentNumber": "Identification document number",
+      "documentIssueDate": "Document issue date",
+      "documentExpiryDate": "Document expiry date",
+      "vatNumber": "Tax Identification Number (9 digits)",
+      "taxOffice": "Tax office",
+      "profession": "Contact's profession",
+      "specialty": "Professional specialty",
+      "employer": "Employer",
+      "position": "Work position",
+      "street": "Residential street",
+      "streetNumber": "Street number",
+      "city": "Residential city",
+      "postalCode": "Postal code (5 digits)"
+    },
+    "placeholders": {
+      "documentIssuer": "e.g. Athens Police",
+      "taxOffice": "e.g. Athens Tax Office",
+      "profession": "e.g. Engineer",
+      "specialty": "e.g. Civil Engineer",
+      "employer": "e.g. XYZ Inc.",
+      "position": "e.g. Project Manager",
+      "street": "e.g. Athens Avenue",
+      "streetNumber": "e.g. 123",
+      "city": "e.g. Athens"
     }
   }
 }

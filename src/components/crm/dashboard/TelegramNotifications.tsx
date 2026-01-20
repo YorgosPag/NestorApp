@@ -9,6 +9,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /** Firestore Timestamp type */
 interface FirestoreTimestamp {
@@ -28,14 +30,17 @@ export function TelegramNotifications() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('communications');
   const [newMessages, setNewMessages] = useState<TelegramMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     // Real-time listener για νέα Telegram μηνύματα
+    // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES (COMMUNICATIONS collection deprecated)
     const q = query(
-      collection(db, COLLECTIONS.COMMUNICATIONS),
+      collection(db, COLLECTIONS.MESSAGES),
       where('type', '==', 'telegram'),
       where('direction', '==', 'inbound'),
       orderBy('createdAt', 'desc'),
@@ -71,7 +76,7 @@ export function TelegramNotifications() {
 
   const showBrowserNotification = (message: TelegramMessage) => {
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('Νέο Telegram μήνυμα', {
+      new Notification(t('telegram.newMessage'), {
         body: message.content.substring(0, 100) + '...',
         icon: '/telegram-icon.png',
         tag: 'telegram-message'
@@ -119,7 +124,7 @@ export function TelegramNotifications() {
             <div className="flex items-center justify-between">
               <h3 className={`font-semibold ${colors.text.primary} flex items-center`}>
                 <MessageCircle className={`${iconSizes.sm} mr-2`} />
-                Telegram Messages
+                {t('telegram.title')}
               </h3>
               <button
                 onClick={requestNotificationPermission}
@@ -135,7 +140,7 @@ export function TelegramNotifications() {
             {newMessages.length === 0 ? (
               <div className={`p-4 text-center ${colors.text.muted}`}>
                 <MessageCircle className={`${iconSizes.xl} mx-auto mb-2 ${colors.text.disabled}`} />
-                <p>Δεν υπάρχουν νέα μηνύματα</p>
+                <p>{t('telegram.noMessages')}</p>
               </div>
             ) : (
               newMessages.map((message) => (
@@ -164,7 +169,7 @@ export function TelegramNotifications() {
                       </p>
                       {message.status === 'received' && (
                         <span className={`inline-block mt-1 px-2 py-1 text-xs font-medium ${colors.bg.infoSubtle} ${colors.text.info} rounded-full`}>
-                          Νέο
+                          {t('telegram.newBadge')}
                         </span>
                       )}
                     </div>
@@ -175,11 +180,11 @@ export function TelegramNotifications() {
           </div>
 
           <div className={`p-3 ${quick.borderT}`}>
-            <a 
+            <a
               href="/crm/communications"
               className={`block w-full text-center text-sm ${colors.text.info} ${HOVER_TEXT_EFFECTS.BLUE_DARK} font-medium`}
             >
-              Δείτε όλα τα μηνύματα →
+              {t('telegram.viewAll')} →
             </a>
           </div>
         </div>

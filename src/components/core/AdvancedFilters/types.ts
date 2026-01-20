@@ -53,6 +53,25 @@ export interface FilterPanelConfig {
   advancedFilters?: AdvancedFiltersConfig;
 }
 
+// Range types for filters
+export interface NumericRange {
+  min?: number;
+  max?: number;
+}
+
+export interface DateRange {
+  start?: Date;
+  end?: Date;
+}
+
+export interface DateFromToRange {
+  from?: Date;
+  to?: Date;
+}
+
+// Union type for all range types
+export type FilterRange = NumericRange | DateRange | DateFromToRange;
+
 // Generic filter state
 export interface GenericFilterState {
   [key: string]: unknown;
@@ -60,10 +79,7 @@ export interface GenericFilterState {
   selectedOptions?: string[];
   advancedFeatures?: string[];
   ranges?: {
-    [key: string]: {
-      min?: number;
-      max?: number;
-    }
+    [key: string]: FilterRange;
   };
 }
 
@@ -93,12 +109,12 @@ export interface UnitFilterState extends GenericFilterState {
   type: string[];
   status: string[];
   priceRange: {
-    min?: number;
-    max?: number;
+    min?: number | null;
+    max?: number | null;
   };
   areaRange: {
-    min?: number;
-    max?: number;
+    min?: number | null;
+    max?: number | null;
   };
   features: string[];
 }

@@ -3,6 +3,8 @@
 import React from 'react';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Image, Plus, Star } from 'lucide-react';
@@ -124,6 +126,8 @@ export function MultiplePhotosCompact({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
 
   // ========================================================================
   // COMPUTED VALUES
@@ -139,9 +143,9 @@ export function MultiplePhotosCompact({
   // 🎯 Δυναμικά κείμενα ανάλογα με purpose και maxPhotos
   const getHeaderText = () => {
     if (purpose === 'logo' && maxPhotos === 1) {
-      return 'Λογότυπο';
+      return t('photos.management.logo');
     }
-    return `Φωτογραφίες (${usedSlots}/${maxPhotos})`;
+    return t('photos.management.photosCount', { used: usedSlots, max: maxPhotos });
   };
 
   // 🎯 Multiple drop handler για bulk upload
@@ -193,11 +197,11 @@ export function MultiplePhotosCompact({
   // ========================================================================
 
   return (
-    <section className={`space-y-3 ${className}`} role="region" aria-label="Διαχείριση Φωτογραφιών">
+    <section className={`space-y-3 ${className}`} role="region" aria-label={t('photos.management.title')}>
       {/* Header αφαιρέθηκε - δεν θέλουμε το "Φωτογραφία" text και Image icon */}
 
       {/* Compact Grid - Dynamic Layout */}
-      <main className={maxPhotos === 1 ? "flex justify-center" : "flex flex-col space-y-4 sm:grid sm:grid-cols-3 sm:gap-8 sm:p-2 sm:space-y-0"} role="main" aria-label="Γκαλερί Φωτογραφιών">
+      <main className={maxPhotos === 1 ? "flex justify-center" : "flex flex-col space-y-4 sm:grid sm:grid-cols-3 sm:gap-8 sm:p-2 sm:space-y-0"} role="main" aria-label={t('photos.management.gallery')}>
         {normalizedPhotos
           // ✅ CRITICAL FIX: Στο disabled mode εμφανίζουμε μόνο τα slots με φωτογραφίες
           .filter((photo, index) => {
@@ -233,7 +237,7 @@ export function MultiplePhotosCompact({
               className={slotSize}
               style={mobileStyle}
               role="img"
-              aria-label={`Φωτογραφία ${index + 1}`}
+              aria-label={t('photos.management.photoNumber', { number: index + 1 })}
             >
               <EnterprisePhotoUpload
                 key={`compact-enterprise-slot-${index}-${photosKey}`}
@@ -296,7 +300,7 @@ export function MultiplePhotosCompact({
           onDrop={handleMultipleDrop}
           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
           role="button"
-          aria-label={`Προσθήκη ${availableSlots} ακόμη φωτογραφίες`}
+          aria-label={t('photos.management.addMorePhotos', { count: availableSlots })}
           onClick={() => {
             if (disabled) return;
             const input = document.createElement('input');
@@ -319,26 +323,26 @@ export function MultiplePhotosCompact({
         >
           <Plus className={`${iconSizes.sm} mx-auto mb-1 ${PHOTO_TEXT_COLORS.MUTED}`} />
           <p className={`text-xs ${PHOTO_TEXT_COLORS.LIGHT_MUTED}`}>
-            Προσθήκη {availableSlots} ακόμη
+            {t('photos.management.addMore', { count: availableSlots })}
           </p>
         </aside>
       )}
 
       {/* 🆕 ENTERPRISE: Profile Photo Selector για compact mode */}
       {showProfileSelector && availableSlots < maxPhotos && (
-        <footer className="border-t pt-4 mt-4" role="contentinfo" aria-label="Επιλογή Φωτογραφίας Προφίλ">
+        <footer className="border-t pt-4 mt-4" role="contentinfo" aria-label={t('photos.management.profileSelection')}>
           <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
             <Star className={`${iconSizes.sm} ${colors.text.warning}`} />
-            Επιλογή Φωτογραφίας Προφίλ
+            {t('photos.management.profileSelection')}
           </h4>
-          <nav className={PHOTO_LAYOUTS.INDIVIDUAL_GRID.container} role="group" aria-label="Επιλογές Φωτογραφίες Προφίλ">
+          <nav className={PHOTO_LAYOUTS.INDIVIDUAL_GRID.container} role="group" aria-label={t('photos.management.profileOptions')}>
             {normalizedPhotos.map((photo, index) => (
-              <article key={`profile-${index}`} className="relative" role="button" aria-label={`Επιλογή φωτογραφίας ${index + 1} ως προφίλ`}>
+              <article key={`profile-${index}`} className="relative" role="button" aria-label={t('photos.management.selectAsProfile', { number: index + 1 })}>
                 {photo.preview || photo.uploadUrl ? (
-                  <figure className="relative" role="img" aria-label={`Φωτογραφία ${index + 1}`}>
+                  <figure className="relative" role="img" aria-label={t('photos.management.photoNumber', { number: index + 1 })}>
                     <img
                       src={photo.preview || photo.uploadUrl}
-                      alt={`Φωτογραφία ${index + 1}`}
+                      alt={t('photos.management.photoNumber', { number: index + 1 })}
                       className={`w-full h-20 object-cover ${quick.rounded} ${quick.input}`}
                     />
                     <Button
@@ -356,8 +360,8 @@ export function MultiplePhotosCompact({
                     </Button>
                   </figure>
                 ) : (
-                  <aside className={`w-full h-20 ${colors.bg.muted} ${quick.rounded} ${quick.input} flex items-center justify-center`} role="status" aria-label="Κενό σλοτ">
-                    <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>Κενό {index + 1}</span>
+                  <aside className={`w-full h-20 ${colors.bg.muted} ${quick.rounded} ${quick.input} flex items-center justify-center`} role="status" aria-label={t('photos.management.emptySlot')}>
+                    <span className={`text-xs ${PHOTO_TEXT_COLORS.MUTED}`}>{t('photos.management.emptySlotNumber', { number: index + 1 })}</span>
                   </aside>
                 )}
               </article>

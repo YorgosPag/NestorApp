@@ -33,7 +33,7 @@ export function ContactRelationshipsTab({
   } = additionalData || {};
   return (
     <div className="space-y-6">
-      <RelationshipProvider>
+      <RelationshipProvider contactId={data.id!} contactType={data.type}>
         {relationshipsMode === 'summary' ? (
           <RelationshipsSummary
             contactId={data.id!}

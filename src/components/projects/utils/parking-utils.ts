@@ -4,17 +4,18 @@ import type { ParkingSpotType, ParkingSpotStatus } from '@/types/parking';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { hardcodedColorValues } from '@/design-system/tokens/colors';
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const PARKING_TYPE_LABELS: Record<ParkingSpotType, string> = {
-  underground: 'Υπόγεια',
-  covered: 'Σκεπαστή',
-  open: 'Υπαίθρια'
+  underground: 'parking.types.underground',
+  covered: 'parking.types.covered',
+  open: 'parking.types.open'
 };
 
 export const PARKING_STATUS_LABELS: Record<ParkingSpotStatus, string> = {
-  sold: 'Πουλημένο',
-  owner: 'Οικοπεδούχου',
-  available: 'Διαθέσιμο',
-  reserved: 'Κρατημένο'
+  sold: 'parking.status.sold',
+  owner: 'parking.status.owner',
+  available: 'parking.status.available',
+  reserved: 'parking.status.reserved'
 };
 
 // Enterprise function for parking status colors

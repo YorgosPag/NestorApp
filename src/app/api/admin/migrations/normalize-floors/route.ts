@@ -52,6 +52,7 @@ interface BuildingRecord {
   name: string;
   projectId: string;
   projectName?: string;
+  project?: string; // 🏢 ENTERPRISE: Legacy field name
   buildingFloors?: Array<{
     id: string;
     name: string;
@@ -230,10 +231,20 @@ async function handleFloorsNormalization(
     // Step 3: Verify normalization integrity
     console.log('📋 Step 3: Verifying normalization integrity...');
     const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS).get();
-    const createdFloors = floorsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    // 🏢 ENTERPRISE: Type-safe floor data extraction
+    interface VerificationFloor {
+      id: string;
+      buildingId?: string;
+      migrationInfo?: { migrationId?: string };
+    }
+    const createdFloors: VerificationFloor[] = floorsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        buildingId: data.buildingId as string | undefined,
+        migrationInfo: data.migrationInfo as { migrationId?: string } | undefined
+      };
+    });
 
     const integrityResults = {
       totalFloors: createdFloors.length,

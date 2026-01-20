@@ -63,17 +63,22 @@ interface ThreadViewProps {
 
 /**
  * Get relative time display
+ * @param timestamp - ISO timestamp string
+ * @param t - Translation function from useTranslation
  */
-function getRelativeTime(timestamp: string): string {
+function getRelativeTime(
+  timestamp: string,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
   if (!timestamp) return '';
 
   const date = new Date(timestamp);
   const now = new Date();
   const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
-  if (diffHours < 1) return 'Now';
-  if (diffHours < 24) return `${Math.floor(diffHours)}h`;
-  if (diffHours < 48) return 'Yesterday';
+  if (diffHours < 1) return t('inbox.time.now');
+  if (diffHours < 24) return t('inbox.time.hoursAgo', { hours: Math.floor(diffHours) });
+  if (diffHours < 48) return t('inbox.time.yesterday');
 
   return formatDateTime(date);
 }
@@ -241,7 +246,7 @@ export function ThreadView({
           <ul className="space-y-4" role="log" aria-label="Messages">
             {messages.map((message) => {
               const isOutbound = message.direction === MESSAGE_DIRECTION.OUTBOUND;
-              const relativeTime = getRelativeTime(message.createdAt);
+              const relativeTime = getRelativeTime(message.createdAt, t);
 
               return (
                 <li

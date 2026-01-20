@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { UnifiedFormField } from '@/components/core/FormFields/FormField';
+import { UnifiedFormField, type FormFieldValue } from '@/components/core/FormFields/FormField';
 
 interface Props {
   label: string;
   value: string | number;
-  onChange: (value: string | number) => void;
+  onChange: (value: FormFieldValue) => void;
   type?: string;
   placeholder?: string;
   error?: string;
@@ -40,11 +40,11 @@ export function FormRowInputNew({
       placeholder={placeholder}
       required={required}
       disabled={disabled}
-      helperText={helper}
+      helpText={helper}
       error={error}
       suffix={trailingElement}
       variant="default"
-      size="default"
+      size="md"
     />
   );
 }

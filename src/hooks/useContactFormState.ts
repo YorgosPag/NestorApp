@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
@@ -19,7 +19,7 @@ export interface UseContactFormStateReturn {
   formData: ContactFormData;
 
   // Basic setters
-  setFormData: (data: ContactFormData) => void;
+  setFormData: React.Dispatch<React.SetStateAction<ContactFormData>>;
 
   // Field handlers
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
@@ -348,7 +348,7 @@ export function useContactFormState(): UseContactFormStateReturn {
         const selectedSlot = newPhotos[newSelectedIndex];
         if (!selectedSlot?.uploadUrl && !selectedSlot?.preview) {
           // Βρες το πρώτο valid slot
-          const firstValidIndex = newPhotos.findIndex(photo =>
+          const firstValidIndex = newPhotos.findIndex((photo: PhotoSlot) =>
             photo?.uploadUrl || photo?.preview
           );
           newSelectedIndex = firstValidIndex >= 0 ? firstValidIndex : undefined;

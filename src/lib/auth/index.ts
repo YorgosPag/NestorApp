@@ -173,3 +173,18 @@ export {
   logWebhookEvent,
   extractRequestMetadata,
 } from './audit';
+
+// =============================================================================
+// TENANT ISOLATION
+// =============================================================================
+
+export type {
+  TenantProject,
+  TenantBuilding,
+} from './tenant-isolation';
+
+export {
+  TenantIsolationError,
+  requireProjectInTenant,
+  requireBuildingInTenant,
+} from './tenant-isolation';

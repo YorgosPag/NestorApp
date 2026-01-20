@@ -13,12 +13,8 @@ import {
   BUILDING_NAME_FILTER_LABELS
 } from '@/constants/property-statuses-enterprise';
 
-// 🏢 ENTERPRISE: Import centralized CompactToolbar labels from modal-select
-import {
-  getCompactToolbarSearchPlaceholders,
-  getCompactToolbarNewItemLabels,
-  getCompactToolbarTooltips
-} from '@/subapps/dxf-viewer/config/modal-select';
+// 🏢 ENTERPRISE: Import centralized CompactToolbar search placeholders from modal-select
+import { getCompactToolbarSearchPlaceholders } from '@/subapps/dxf-viewer/config/modal-select';
 
 // 🅿️ ENTERPRISE: Import parking labels
 import {
@@ -26,33 +22,34 @@ import {
   PARKING_STATUS_LABELS
 } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
 
-// 🏢 ENTERPRISE: Get centralized labels ONCE - Smart Configuration Factory
+// 🏢 ENTERPRISE: Get centralized search placeholders
 const searchPlaceholders = getCompactToolbarSearchPlaceholders();
-const newItemLabels = getCompactToolbarNewItemLabels();
-const tooltips = getCompactToolbarTooltips();
 
 // 🏢 ENTERPRISE: Communications channel labels
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+// Labels are translated at runtime by components using useTranslation
 const COMMUNICATIONS_CHANNEL_LABELS = {
-  all: 'Όλα',
-  email: 'Email',
-  sms: 'SMS',
-  telegram: 'Telegram'
+  all: 'toolbar.communications.channels.all',
+  email: 'toolbar.communications.channels.email',
+  sms: 'toolbar.communications.channels.sms',
+  telegram: 'toolbar.communications.channels.telegram'
 } as const;
 
 const COMMUNICATIONS_STATUS_LABELS = {
-  all: 'Όλα',
-  sent: 'Απεσταλμένα',
-  received: 'Ληφθέντα',
-  pending: 'Σε αναμονή',
-  failed: 'Αποτυχημένα'
+  all: 'toolbar.communications.status.all',
+  sent: 'toolbar.communications.status.sent',
+  received: 'toolbar.communications.status.received',
+  pending: 'toolbar.communications.status.pending',
+  failed: 'toolbar.communications.status.failed'
 } as const;
 
 // 🚀 ENTERPRISE: Helper functions για filter categories και sort options
 function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking' | 'communications') {
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   const baseCategories = [
     {
       id: 'status',
-      label: 'Κατάσταση',
+      label: 'toolbar.filters.categories.status',
       options: [
         { value: 'available', label: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE },
         { value: 'occupied', label: UNIFIED_STATUS_FILTER_LABELS.OCCUPIED },
@@ -68,11 +65,11 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
         ...baseCategories,
         {
           id: 'type',
-          label: 'Τύπος κτιρίου',
+          label: 'toolbar.filters.categories.buildingType',
           options: [
-            { value: 'residential', label: PROPERTY_BUILDING_TYPE_LABELS.RESIDENTIAL },
-            { value: 'commercial', label: PROPERTY_BUILDING_TYPE_LABELS.COMMERCIAL },
-            { value: 'mixed', label: PROPERTY_BUILDING_TYPE_LABELS.MIXED }
+            { value: 'residential', label: PROPERTY_BUILDING_TYPE_LABELS.residential },
+            { value: 'commercial', label: PROPERTY_BUILDING_TYPE_LABELS.commercial },
+            { value: 'mixed', label: PROPERTY_BUILDING_TYPE_LABELS.mixed }
           ]
         }
       ];
@@ -80,11 +77,11 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
       return [
         {
           id: 'type',
-          label: 'Τύπος επαφής',
+          label: 'toolbar.filters.categories.contactType',
           options: [
-            { value: 'customer', label: CONTACT_BUSINESS_TYPE_LABELS.CUSTOMER },
-            { value: 'supplier', label: CONTACT_BUSINESS_TYPE_LABELS.SUPPLIER },
-            { value: 'contractor', label: CONTACT_BUSINESS_TYPE_LABELS.CONTRACTOR }
+            { value: 'customer', label: CONTACT_BUSINESS_TYPE_LABELS.customer },
+            { value: 'supplier', label: CONTACT_BUSINESS_TYPE_LABELS.supplier },
+            { value: 'contractor', label: CONTACT_BUSINESS_TYPE_LABELS.contractor }
           ]
         }
       ];
@@ -92,7 +89,7 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
       return [
         {
           id: 'status',
-          label: 'Κατάσταση',
+          label: 'toolbar.filters.categories.status',
           options: [
             { value: 'available', label: PARKING_STATUS_LABELS.available },
             { value: 'occupied', label: PARKING_STATUS_LABELS.occupied },
@@ -103,7 +100,7 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
         },
         {
           id: 'type',
-          label: 'Τύπος θέσης',
+          label: 'toolbar.filters.categories.parkingType',
           options: [
             { value: 'standard', label: PARKING_TYPE_LABELS.standard },
             { value: 'handicapped', label: PARKING_TYPE_LABELS.handicapped },
@@ -117,7 +114,7 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
       return [
         {
           id: 'channel',
-          label: 'Κανάλι',
+          label: 'toolbar.filters.categories.channel',
           options: [
             { value: 'all', label: COMMUNICATIONS_CHANNEL_LABELS.all },
             { value: 'email', label: COMMUNICATIONS_CHANNEL_LABELS.email },
@@ -127,7 +124,7 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
         },
         {
           id: 'status',
-          label: 'Κατάσταση',
+          label: 'toolbar.filters.categories.status',
           options: [
             { value: 'all', label: COMMUNICATIONS_STATUS_LABELS.all },
             { value: 'sent', label: COMMUNICATIONS_STATUS_LABELS.sent },
@@ -142,20 +139,73 @@ function getFilterCategoriesForType(type: 'buildings' | 'projects' | 'contacts' 
   }
 }
 
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'units' | 'storages' | 'parking' | 'communications') {
   if (type === 'communications') {
     return [
-      { field: 'date' as const, ascLabel: 'Ημερομηνία (Παλαιά → Νέα)', descLabel: 'Ημερομηνία (Νέα → Παλαιά)' },
-      { field: 'channel' as const, ascLabel: 'Κανάλι (Α-Ζ)', descLabel: 'Κανάλι (Ζ-Α)' },
-      { field: 'status' as const, ascLabel: 'Κατάσταση (Α-Ζ)', descLabel: 'Κατάσταση (Ζ-Α)' }
+      { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
+      { field: 'channel' as const, ascLabel: 'toolbar.sort.channel.asc', descLabel: 'toolbar.sort.channel.desc' },
+      { field: 'status' as const, ascLabel: 'toolbar.sort.status.asc', descLabel: 'toolbar.sort.status.desc' }
     ];
   }
   return [
-    { field: 'name' as const, ascLabel: 'Όνομα (Α-Ζ)', descLabel: 'Όνομα (Ζ-Α)' },
-    { field: 'date' as const, ascLabel: 'Ημερομηνία (Παλαιά → Νέα)', descLabel: 'Ημερομηνία (Νέα → Παλαιά)' },
-    { field: 'status' as const, ascLabel: 'Κατάσταση (Α-Ζ)', descLabel: 'Κατάσταση (Ζ-Α)' }
+    { field: 'name' as const, ascLabel: 'toolbar.sort.name.asc', descLabel: 'toolbar.sort.name.desc' },
+    { field: 'date' as const, ascLabel: 'toolbar.sort.date.asc', descLabel: 'toolbar.sort.date.desc' },
+    { field: 'status' as const, ascLabel: 'toolbar.sort.status.asc', descLabel: 'toolbar.sort.status.desc' }
   ];
 }
+
+// 🏢 ENTERPRISE: Direct i18n key mappings for newItem labels per type
+const NEW_ITEM_LABELS_BY_TYPE: Record<string, string> = {
+  buildings: 'common.actions.newBuilding',
+  projects: 'common.actions.newProject',
+  contacts: 'common.actions.newContact',
+  units: 'common.actions.newUnit',
+  storages: 'common.actions.newStorage',
+  parking: 'common.actions.newParking',
+  communications: 'common.actions.newMessage'
+};
+
+// 🏢 ENTERPRISE: Direct i18n keys for entity-specific tooltips
+const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
+  buildings: 'common.tooltips.newBuildingShortcut',
+  projects: 'common.tooltips.newProjectShortcut',
+  contacts: 'common.tooltips.newContactShortcut',
+  units: 'common.tooltips.newUnitShortcut',
+  storages: 'common.tooltips.newStorageShortcut',
+  parking: 'common.tooltips.newParkingShortcut',
+  communications: 'common.tooltips.newMessageShortcut'
+};
+
+const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
+  buildings: 'toolbar.actions.buildings.edit',
+  projects: 'toolbar.actions.projects.edit',
+  contacts: 'common.tooltips.editContact',
+  units: 'toolbar.actions.units.edit',
+  storages: 'toolbar.actions.storage.edit',
+  parking: 'common.tooltips.editSelected',
+  communications: 'common.tooltips.editSelected'
+};
+
+const DELETE_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
+  buildings: 'toolbar.actions.buildings.delete',
+  projects: 'toolbar.actions.projects.delete',
+  contacts: 'common.tooltips.deleteContact',
+  units: 'toolbar.actions.units.delete',
+  storages: 'toolbar.actions.storage.delete',
+  parking: 'common.tooltips.deleteSelected',
+  communications: 'common.tooltips.deleteSelected'
+};
+
+const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
+  buildings: 'common.tooltips.shareBuilding',
+  projects: 'common.tooltips.shareProject',
+  contacts: 'common.tooltips.shareContact',
+  units: 'common.tooltips.shareUnit',
+  storages: 'common.tooltips.shareStorage',
+  parking: 'toolbar.labels.share',
+  communications: 'toolbar.labels.share'
+};
 
 // 🚀 ENTERPRISE: Smart Configuration Factory - No duplicated labels!
 function createToolbarConfig(
@@ -164,45 +214,46 @@ function createToolbarConfig(
   return {
     searchPlaceholder: searchPlaceholders[type],
 
+    // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
     labels: {
-      newItem: newItemLabels[type],
-      editItem: 'Επεξεργασία',
-      deleteItems: 'Διαγραφή',
-      filters: 'Φίλτρα',
-      favorites: 'Αγαπημένα',
-      archive: 'Αρχειοθέτηση',
-      export: 'Εξαγωγή',
-      import: 'Εισαγωγή',
-      refresh: 'Ανανέωση',
-      preview: 'Προεπισκόπηση',
-      copy: 'Αντιγραφή',
-      share: 'Κοινοποίηση',
-      reports: 'Αναφορές',
-      settings: 'Ρυθμίσεις',
-      favoritesManagement: 'Διαχείριση αγαπημένων',
-      help: 'Βοήθεια',
-      sorting: 'Ταξινόμηση'
+      newItem: NEW_ITEM_LABELS_BY_TYPE[type],
+      editItem: 'toolbar.actions.edit',
+      deleteItems: 'toolbar.actions.delete',
+      filters: 'toolbar.actions.filters',
+      favorites: 'toolbar.actions.favorites',
+      archive: 'toolbar.actions.archive',
+      export: 'toolbar.actions.export',
+      import: 'toolbar.actions.import',
+      refresh: 'toolbar.actions.refresh',
+      preview: 'toolbar.actions.preview',
+      copy: 'toolbar.actions.copy',
+      share: 'toolbar.actions.share',
+      reports: 'toolbar.actions.reports',
+      settings: 'toolbar.actions.settings',
+      favoritesManagement: 'toolbar.actions.favoritesManagement',
+      help: 'toolbar.actions.help',
+      sorting: 'toolbar.actions.sorting'
     },
 
-    // 🏢 ENTERPRISE: 100% Centralized Tooltips - ZERO HARDCODED VALUES
+    // 🏢 ENTERPRISE: 100% Direct i18n keys - No external function dependency
     tooltips: {
-      newItem: tooltips[`new_${type.slice(0, -1)}_tooltip` as keyof typeof tooltips] || tooltips.new_building_tooltip,
-      editItem: tooltips[`edit_${type.slice(0, -1)}` as keyof typeof tooltips] || tooltips.edit_generic,
-      deleteItems: tooltips[`delete_${type.slice(0, -1)}` as keyof typeof tooltips] || tooltips.delete_generic,
-      filters: tooltips.filters,
-      favorites: tooltips.favorites,
-      archive: tooltips.archive,
-      export: tooltips.export,
-      import: tooltips.import,
-      refresh: tooltips.refresh,
-      preview: tooltips.preview,
-      copy: tooltips.copy,
-      share: tooltips[`share_${type.slice(0, -1)}` as keyof typeof tooltips] || tooltips.share_generic,
-      reports: tooltips.reports,
-      settings: tooltips.settings,
-      favoritesManagement: tooltips.favorites_management,
-      help: tooltips.help,
-      sorting: tooltips.sorting
+      newItem: NEW_ITEM_TOOLTIP_BY_TYPE[type],
+      editItem: EDIT_ITEM_TOOLTIP_BY_TYPE[type],
+      deleteItems: DELETE_ITEM_TOOLTIP_BY_TYPE[type],
+      filters: 'toolbar.tooltips.filters',
+      favorites: 'toolbar.tooltips.favorites',
+      archive: 'toolbar.tooltips.archive',
+      export: 'toolbar.tooltips.exportData',
+      import: 'toolbar.tooltips.importData',
+      refresh: 'toolbar.tooltips.refreshData',
+      preview: 'toolbar.tooltips.preview',
+      copy: 'toolbar.tooltips.copy',
+      share: SHARE_TOOLTIP_BY_TYPE[type],
+      reports: 'toolbar.tooltips.reports',
+      settings: 'toolbar.tooltips.settings',
+      favoritesManagement: 'toolbar.labels.favoritesManagement',
+      help: 'toolbar.tooltips.help',
+      sorting: 'toolbar.tooltips.sorting'
     },
 
     filterCategories: getFilterCategoriesForType(type),
@@ -255,44 +306,45 @@ export const parkingToolbarConfig: CompactToolbarConfig = createToolbarConfig('p
 export const communicationsConfig: CompactToolbarConfig = {
   searchPlaceholder: searchPlaceholders.communications,
 
+  // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
   labels: {
     newItem: '', // Not used - workflow only
     editItem: '', // Not used - workflow only
     deleteItems: '', // Not used - workflow only
-    filters: 'Φίλτρα',
-    favorites: 'Σημαντικά',
-    archive: 'Αρχειοθέτηση',
-    export: 'Εξαγωγή',
+    filters: 'toolbar.actions.filters',
+    favorites: 'toolbar.communications.important',
+    archive: 'toolbar.actions.archive',
+    export: 'toolbar.actions.export',
     import: '', // Not used - workflow only
-    refresh: 'Ανανέωση',
+    refresh: 'toolbar.actions.refresh',
     preview: '', // Not used - workflow only
     copy: '', // Not used - workflow only
     share: '', // Not used - workflow only
-    reports: 'Αναφορές',
-    settings: 'Ρυθμίσεις',
+    reports: 'toolbar.actions.reports',
+    settings: 'toolbar.actions.settings',
     favoritesManagement: '', // Not used - workflow only
-    help: 'Βοήθεια',
-    sorting: 'Ταξινόμηση'
+    help: 'toolbar.actions.help',
+    sorting: 'toolbar.actions.sorting'
   },
 
   tooltips: {
     newItem: '',
     editItem: '',
     deleteItems: '',
-    filters: tooltips.filters,
-    favorites: 'Σήμανση ως σημαντικό',
-    archive: tooltips.archive,
-    export: tooltips.export,
+    filters: 'toolbar.tooltips.filters',
+    favorites: 'toolbar.communications.markAsImportant',
+    archive: 'toolbar.tooltips.archive',
+    export: 'toolbar.tooltips.exportData',
     import: '',
-    refresh: tooltips.refresh,
+    refresh: 'toolbar.tooltips.refreshData',
     preview: '',
     copy: '',
     share: '',
-    reports: tooltips.reports,
-    settings: tooltips.settings,
+    reports: 'toolbar.tooltips.reports',
+    settings: 'toolbar.tooltips.settings',
     favoritesManagement: '',
-    help: tooltips.help,
-    sorting: tooltips.sorting
+    help: 'toolbar.tooltips.help',
+    sorting: 'toolbar.tooltips.sorting'
   },
 
   filterCategories: getFilterCategoriesForType('communications'),

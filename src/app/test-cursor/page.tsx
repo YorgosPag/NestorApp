@@ -4,15 +4,23 @@ import React, { useState, useEffect } from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // Dynamic import για SSR compatibility
+// 🏢 ENTERPRISE: Type-safe component state
+interface CursorSettingsPanelProps {
+  isVisible: boolean;
+  onClose: () => void;
+}
+
 const TestCursorPageClient = () => {
   const colors = useSemanticColors();
-  const [CursorComponent, setCursorComponent] = useState<React.ComponentType | null>(null);
+  const [CursorComponent, setCursorComponent] = useState<React.ComponentType<CursorSettingsPanelProps> | null>(null);
+  // 🏢 ENTERPRISE: State for cursor settings panel visibility
+  const [isPanelVisible, setIsPanelVisible] = useState(true);
 
   useEffect(() => {
     // Import the component only on client side
     import('../../subapps/dxf-viewer/ui/CursorSettingsPanel')
       .then((module) => {
-        setCursorComponent(() => module.default);
+        setCursorComponent(() => module.default as React.ComponentType<CursorSettingsPanelProps>);
       })
       .catch((error) => {
         console.error('Failed to load CursorSettingsPanel:', error);
@@ -41,7 +49,12 @@ const TestCursorPageClient = () => {
         )}
       </div>
       
-      {CursorComponent && <CursorComponent />}
+      {CursorComponent && (
+        <CursorComponent
+          isVisible={isPanelVisible}
+          onClose={() => setIsPanelVisible(false)}
+        />
+      )}
     </div>
   );
 };

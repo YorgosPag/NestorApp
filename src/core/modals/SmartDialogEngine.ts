@@ -16,6 +16,8 @@
 // ============================================================================
 
 import * as React from 'react';
+// 🏢 ENTERPRISE: i18n support for dialog translations
+import { i18n } from '@/i18n';
 
 // Import από existing centralized modal configurations
 import {
@@ -245,6 +247,7 @@ export class SmartDialogEngine {
 
   /**
    * 🎨 Generate header από centralized label systems
+   * 🏢 ENTERPRISE: Uses i18n translations με σωστό grammar
    */
   private generateHeaderFromCentralizedSystems(
     entityType: DialogEntityType,
@@ -253,9 +256,10 @@ export class SmartDialogEngine {
     const entityLabels = this.getEntityLabelsFromCentralizedSystem(entityType);
     const operationLabels = this.getOperationLabelsFromCentralizedSystem(operationType);
 
+    // 🎯 Correct Greek grammar: "Διαγραφή Επαφής" not "Διαγραφή Επαφή"
     return {
       title: `${operationLabels.title} ${entityLabels.singular}`,
-      description: `${operationLabels.description} ${entityLabels.article} ${entityLabels.singular.toLowerCase()}.`,
+      description: `${operationLabels.description} ${entityLabels.articleWithSingular}.`,
       icon: this.getEntityIconFromCentralizedSystem(entityType)
     };
   }
@@ -283,6 +287,7 @@ export class SmartDialogEngine {
 
   /**
    * 🎯 Generate actions από centralized button systems
+   * 🏢 ENTERPRISE: Uses i18n for button labels
    */
   private generateActionsFromCentralizedSystems(
     entityType: DialogEntityType,
@@ -299,7 +304,7 @@ export class SmartDialogEngine {
       },
       secondary: {
         key: 'cancel',
-        label: 'Ακύρωση',
+        label: i18n.t('dialogs.actionButtons.cancel', { ns: 'common' }),
         variant: 'outline'
       }
     };
@@ -356,40 +361,28 @@ export class SmartDialogEngine {
 
   /**
    * Get entity labels από centralized contact/company label systems
+   * 🏢 ENTERPRISE: Uses i18n for translations
    */
   private getEntityLabelsFromCentralizedSystem(entityType: DialogEntityType) {
-    const entityMappings: Record<DialogEntityType, { singular: string; article: string; plural: string }> = {
-      contact: { singular: 'Επαφή', article: 'την', plural: 'Επαφές' },
-      company: { singular: 'Εταιρεία', article: 'την', plural: 'Εταιρείες' },
-      project: { singular: 'Έργο', article: 'το', plural: 'Έργα' },
-      building: { singular: 'Κτίριο', article: 'το', plural: 'Κτίρια' },
-      unit: { singular: 'Μονάδα', article: 'τη', plural: 'Μονάδες' },
-      opportunity: { singular: 'Ευκαιρία', article: 'την', plural: 'Ευκαιρίες' },
-      property: { singular: 'Ακίνητο', article: 'το', plural: 'Ακίνητα' },
-      service: { singular: 'Υπηρεσία', article: 'την', plural: 'Υπηρεσίες' },
-      task: { singular: 'Εργασία', article: 'την', plural: 'Εργασίες' }
-    };
+    // 🌐 i18n: Get translated entity labels from common.json
+    const singular = i18n.t(`dialogs.entities.${entityType}.singular`, { ns: 'common' });
+    const article = i18n.t(`dialogs.entities.${entityType}.article`, { ns: 'common' });
+    const plural = i18n.t(`dialogs.entities.${entityType}.plural`, { ns: 'common' });
+    const articleWithSingular = i18n.t(`dialogs.entities.${entityType}.articleWithSingular`, { ns: 'common' });
 
-    return entityMappings[entityType];
+    return { singular, article, plural, articleWithSingular };
   }
 
   /**
    * Get operation labels από centralized operation systems
+   * 🏢 ENTERPRISE: Uses i18n for translations
    */
   private getOperationLabelsFromCentralizedSystem(operationType: DialogOperationType) {
-    const operationMappings = {
-      create: { title: 'Προσθήκη', description: 'Καταχωρήστε τα στοιχεία της νέας' },
-      edit: { title: 'Επεξεργασία', description: 'Επεξεργαστείτε τα στοιχεία της' },
-      delete: { title: 'Διαγραφή', description: 'Επιβεβαίωση διαγραφής της' },
-      archive: { title: 'Αρχειοθέτηση', description: 'Αρχειοθέτηση της' },
-      duplicate: { title: 'Αντιγραφή', description: 'Δημιουργία αντιγράφου της' },
-      import: { title: 'Εισαγωγή', description: 'Εισαγωγή δεδομένων για' },
-      export: { title: 'Εξαγωγή', description: 'Εξαγωγή δεδομένων για' },
-      preview: { title: 'Προεπισκόπηση', description: 'Προεπισκόπηση της' },
-      approve: { title: 'Έγκριση', description: 'Έγκριση της' }
-    };
+    // 🌐 i18n: Get translated operation labels from common.json
+    const title = i18n.t(`dialogs.operations.${operationType}.title`, { ns: 'common' });
+    const description = i18n.t(`dialogs.operations.${operationType}.description`, { ns: 'common' });
 
-    return operationMappings[operationType];
+    return { title, description };
   }
 
   /**
@@ -635,22 +628,33 @@ export class SmartDialogEngine {
     return variantMappings[operationType] || 'default';
   }
 
+  /**
+   * Get action button labels από centralized action systems
+   * 🏢 ENTERPRISE: Uses i18n for translations
+   */
   private getActionLabelsFromCentralizedSystem(operationType: DialogOperationType) {
-    const actionLabelMappings = {
-      create: { primary: 'Δημιουργία', secondary: 'Ακύρωση' },
-      edit: { primary: 'Ενημέρωση', secondary: 'Ακύρωση' },
-      update: { primary: 'Ενημέρωση', secondary: 'Ακύρωση' },
-      delete: { primary: 'Διαγραφή', secondary: 'Ακύρωση' },
-      archive: { primary: 'Αρχειοθέτηση', secondary: 'Ακύρωση' },
-      select: { primary: 'Επιλογή', secondary: 'Ακύρωση' },
-      duplicate: { primary: 'Αντιγραφή', secondary: 'Ακύρωση' },
-      import: { primary: 'Εισαγωγή', secondary: 'Ακύρωση' },
-      export: { primary: 'Εξαγωγή', secondary: 'Ακύρωση' },
-      preview: { primary: 'Κλείσιμο', secondary: 'Ακύρωση' },
-      approve: { primary: 'Έγκριση', secondary: 'Απόρριψη' }
+    // 🌐 i18n: Map operation types to action button keys
+    const actionButtonKeyMap: Record<DialogOperationType, string> = {
+      create: 'create',
+      edit: 'update',
+      update: 'update',
+      delete: 'delete',
+      archive: 'archive',
+      select: 'select',
+      duplicate: 'duplicate',
+      import: 'import',
+      export: 'export',
+      preview: 'close',
+      approve: 'approve'
     };
 
-    return actionLabelMappings[operationType];
+    const buttonKey = actionButtonKeyMap[operationType];
+    const primary = i18n.t(`dialogs.actionButtons.${buttonKey}`, { ns: 'common' });
+    const secondary = operationType === 'approve'
+      ? i18n.t('dialogs.actionButtons.reject', { ns: 'common' })
+      : i18n.t('dialogs.actionButtons.cancel', { ns: 'common' });
+
+    return { primary, secondary };
   }
 
   private getLayoutTokensFromCentralizedSystem(entityType: DialogEntityType) {
@@ -824,15 +828,21 @@ function getDialogSizeClass(size: 'sm' | 'md' | 'lg' | 'xl' | 'full'): string {
 
 /**
  * Generate content based on entity type and operation
+ * 🏢 ENTERPRISE: Uses i18n for content translations
  */
 function getContentForEntity(entityType: DialogEntityType, operationType: DialogOperationType, props: DialogEntityProps): React.ReactElement {
   // Use imported React
 
   if (operationType === 'delete' || operationType === 'archive') {
+    // 🌐 i18n: Translate operation and entity names
+    const operationTitle = i18n.t(`dialogs.operations.${operationType}.title`, { ns: 'common' });
+    const entitySingular = i18n.t(`dialogs.entities.${entityType}.singular`, { ns: 'common' });
+    const entityDisplayName = getEntityDisplayName(props);
+
     return React.createElement(
       'div',
       { className: 'text-center py-4' },
-      `${operationType === 'delete' ? 'Διαγραφή' : 'Αρχειοθέτηση'} ${entityType} - ${getEntityDisplayName(props)}`
+      `${operationTitle} ${entitySingular.toLowerCase()} - ${entityDisplayName}`
     );
   }
 

@@ -45,6 +45,33 @@
       "description": "Κάρτες ειδοποιήσεων"
     }
   },
+  "notificationCard": {
+    "types": {
+      "info": "Πληροφορία",
+      "warning": "Προειδοποίηση",
+      "error": "Σφάλμα",
+      "success": "Επιτυχία",
+      "reminder": "Υπενθύμιση"
+    },
+    "priority": {
+      "high": "Υψηλή",
+      "medium": "Μεσαία",
+      "low": "Χαμηλή"
+    },
+    "priorityLabel": "Προτεραιότητα",
+    "read": "Αναγνώστηκε",
+    "new": "Νέα",
+    "sections": {
+      "sender": "Αποστολέας",
+      "category": "Κατηγορία",
+      "time": "Χρόνος"
+    },
+    "actions": {
+      "markAsRead": "Επισήμανση ως αναγνωσμένο",
+      "view": "Προβολή",
+      "dismiss": "Απόρριψη"
+    }
+  },
   "toolbars": {
     "building": {
       "title": "BuildingToolbar",

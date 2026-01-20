@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 import React, { useState, useEffect, useMemo } from 'react';
 import { ACI_PALETTE } from '../../../../../settings/standards/aci';
 import { UI_COLORS } from '../../../../../config/color-config';
@@ -44,6 +45,8 @@ import { updateDraftTextSettingsStore } from '../../../../../hooks/useTextPrevie
 import { updateDraftGripSettingsStore } from '../../../../../hooks/useGripPreviewStyle';
 import { INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // Default grip settings for LinePreview
 const DEFAULT_GRIP_SETTINGS = {
@@ -92,6 +95,8 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   // ✅ Replaced multiple useState hooks with unified reducer for better performance
   const { state: tabState, actions: tabActions, computed } = useEntitiesSettingsReducer();
 
@@ -437,7 +442,7 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
                       : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
                     }
                   `}
-                  title="Περισσότερες επιλογές"
+                  title={t('entitiesSettings.moreOptions')}
                 >
                   <svg className={iconSizes.xs} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -488,22 +493,22 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: draftSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateDraftSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων γραμμής για προσχεδίαση",
-                statusText: draftSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Draft' : 'Γενικές Ρυθμίσεις'
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.lineDraft'),
+                statusText: draftSettings.overrideGlobalSettings ? t('entitiesSettings.statusLabels.specificDraft') : t('entitiesSettings.statusLabels.general')
               },
               text: {
                 checked: specificTextSettings.overrideGlobalSettings,
                 onChange: (checked) => updateSpecificTextSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων κειμένου για προσχεδίαση"
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.textDraft')
               },
               grips: {
                 checked: specificGripSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateSpecificGripSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων grips για προσχεδίαση",
-                statusText: specificGripSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις' : 'Γενικές Ρυθμίσεις'
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.gripsDraft'),
+                statusText: specificGripSettings.overrideGlobalSettings ? t('entitiesSettings.statusLabels.specific') : t('entitiesSettings.statusLabels.general')
               }
             }}
           />
@@ -534,9 +539,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: hoverSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateHoverSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων γραμμής για hover",
-                statusText: hoverSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Hover' : 'Γενικές Ρυθμίσεις'
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.lineHover'),
+                statusText: hoverSettings.overrideGlobalSettings ? t('entitiesSettings.statusLabels.specificHover') : t('entitiesSettings.statusLabels.general')
               }
             }}
           />
@@ -567,9 +572,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: selectionSettings.overrideGlobalSettings || false,
                 onChange: (checked) => updateSelectionSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων γραμμής για επιλογή",
-                statusText: selectionSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Selection' : 'Γενικές Ρυθμίσεις'
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.lineSelection'),
+                statusText: selectionSettings.overrideGlobalSettings ? t('entitiesSettings.statusLabels.specificSelection') : t('entitiesSettings.statusLabels.general')
               }
             }}
           />
@@ -601,9 +606,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
               line: {
                 checked: completionSettings.overrideGlobalSettings,
                 onChange: (checked) => updateCompletionSettings({ overrideGlobalSettings: checked }),
-                label: DXF_SETTINGS_OVERRIDE_LABELS.OVERRIDE_GLOBAL_SETTINGS,
-                description: "Χρήση ειδικών ρυθμίσεων γραμμής για ολοκλήρωση",
-                statusText: completionSettings.overrideGlobalSettings ? 'Ειδικές Ρυθμίσεις Completion' : 'Γενικές Ρυθμίσεις'
+                label: t('entitiesSettings.overrideGlobalSettings'),
+                description: t('entitiesSettings.overrideDescriptions.lineCompletion'),
+                statusText: completionSettings.overrideGlobalSettings ? t('entitiesSettings.statusLabels.specificCompletion') : t('entitiesSettings.statusLabels.general')
               }
             }}
           />
@@ -615,15 +620,15 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
     return (
       <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.CONTAINER.INNER_PADDING} ${colors.bg.secondary} ${quick.card}`}>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.primary} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`}>
-          Ρυθμίσεις {selectedTool}
+          {t('entitiesSettings.toolSettings.title', { tool: selectedTool })}
         </h3>
         <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
           <div className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} flex justify-center`}>
             <Wrench className={`${PANEL_LAYOUT.WIDTH.ICON_LG} ${PANEL_LAYOUT.HEIGHT.ICON_LG}`} />
           </div>
-          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Ρυθμίσεις Εργαλείου</h3>
+          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>{t('entitiesSettings.toolSettings.toolSettingsTitle')}</h3>
           <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
-            Οι ρυθμίσεις για αυτό το εργαλείο θα προστεθούν σύντομα
+            {t('entitiesSettings.toolSettings.comingSoon')}
           </p>
         </div>
       </div>
@@ -654,9 +659,9 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
       {!selectedTool && (
         <div className={`text-center ${PANEL_LAYOUT.PADDING.VERTICAL_XXXL} ${colors.text.muted}`}>
           <Pen className={`${iconSizes.xl} mx-auto ${PANEL_LAYOUT.MARGIN.BOTTOM_LG}`} />
-          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>Επιλέξτε Εργαλείο</h3>
+          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.primary}`}>{t('entitiesSettings.selectTool.title')}</h3>
           <p className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
-            Κάντε κλικ σε ένα εργαλείο για να δείτε τις ρυθμίσεις του
+            {t('entitiesSettings.selectTool.description')}
           </p>
         </div>
       )}

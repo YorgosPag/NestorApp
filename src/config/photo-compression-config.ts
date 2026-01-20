@@ -91,16 +91,33 @@ export const COMPRESSION_PROFILES: Record<string, CompressionProfile> = {
 // USAGE CONTEXT MAPPING
 // ============================================================================
 
-export type UsageContext =
-  | 'avatar'
-  | 'list-item'
-  | 'profile-modal'
-  | 'company-logo'
-  | 'business-card'
-  | 'document-scan'
-  | 'technical-drawing'
-  | 'print'
-  | 'archive';
+/**
+ * 🏢 ENTERPRISE: Centralized compression usage constants
+ * @enterprise ADR-031 - Zero hardcoded strings
+ * Use these constants instead of string literals
+ */
+export const COMPRESSION_USAGE = {
+  /** Avatar/thumbnail compression */
+  AVATAR: 'avatar',
+  /** List item thumbnails */
+  LIST_ITEM: 'list-item',
+  /** Profile modal images */
+  PROFILE_MODAL: 'profile-modal',
+  /** Company logos */
+  COMPANY_LOGO: 'company-logo',
+  /** Business card images */
+  BUSINESS_CARD: 'business-card',
+  /** Document scans */
+  DOCUMENT_SCAN: 'document-scan',
+  /** Technical drawings */
+  TECHNICAL_DRAWING: 'technical-drawing',
+  /** Print quality */
+  PRINT: 'print',
+  /** Archive (uncompressed) */
+  ARCHIVE: 'archive',
+} as const;
+
+export type UsageContext = typeof COMPRESSION_USAGE[keyof typeof COMPRESSION_USAGE];
 
 export const USAGE_TO_PROFILE_MAP: Record<UsageContext, keyof typeof COMPRESSION_PROFILES> = {
   'avatar': 'avatar',

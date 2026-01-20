@@ -73,12 +73,19 @@ const defaultTextSettings: TextSettings = {
   isSubscript: false           // ✅ ISO 3098: Normal script default
 };
 
-// Default templates
+// 🏢 ENTERPRISE: i18n keys for text templates
+export const TEXT_TEMPLATE_I18N_KEYS = {
+  normalText: { name: 'textTemplates.normalText.name', description: 'textTemplates.normalText.description' },
+  heading: { name: 'textTemplates.heading.name', description: 'textTemplates.heading.description' },
+  technicalText: { name: 'textTemplates.technicalText.name', description: 'textTemplates.technicalText.description' }
+} as const;
+
+// 🏢 ENTERPRISE: Template data with i18n keys
 export const TEXT_TEMPLATES: TextTemplate[] = [
   {
-    name: 'Κανονικό Κείμενο',
+    name: TEXT_TEMPLATE_I18N_KEYS.normalText.name,
     category: 'body',
-    description: 'Βασικό κείμενο για γενική χρήση (ISO 3098)',
+    description: TEXT_TEMPLATE_I18N_KEYS.normalText.description,
     settings: {
       enabled: true,
       fontFamily: 'Arial, sans-serif',    // ✅ ISO 3098: Sans-serif font recommended
@@ -93,9 +100,9 @@ export const TEXT_TEMPLATES: TextTemplate[] = [
     }
   },
   {
-    name: 'Τίτλος',
+    name: TEXT_TEMPLATE_I18N_KEYS.heading.name,
     category: 'heading',
-    description: 'Μεγάλος τίτλος (ISO 3098)',
+    description: TEXT_TEMPLATE_I18N_KEYS.heading.description,
     settings: {
       enabled: true,
       fontFamily: 'Arial, sans-serif',    // ✅ ISO 3098: Sans-serif font recommended
@@ -110,9 +117,9 @@ export const TEXT_TEMPLATES: TextTemplate[] = [
     }
   },
   {
-    name: 'Τεχνικό Κείμενο',
+    name: TEXT_TEMPLATE_I18N_KEYS.technicalText.name,
     category: 'technical',
-    description: 'Κείμενο για τεχνικά σχέδια (ISO 3098)',
+    description: TEXT_TEMPLATE_I18N_KEYS.technicalText.description,
     settings: {
       enabled: true,
       fontFamily: 'Arial, sans-serif',    // ✅ ISO 3098: Sans-serif font recommended

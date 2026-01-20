@@ -266,9 +266,10 @@ async function enqueueMessageForChannel(
       updatedAt: Timestamp.now()
     };
 
-    // Store in communications collection (same as Telegram)
+    // Store in messages collection (canonical collection for all communications)
     // 🏢 ENTERPRISE: Use canonical helpers-lazy API (no database param needed)
-    const collectionRef = collection(COLLECTIONS.COMMUNICATIONS);
+    // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
+    const collectionRef = collection(COLLECTIONS.MESSAGES);
     const docRef = await addDoc(collectionRef, messageRecord);
     
     // Log for debugging

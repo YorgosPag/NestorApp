@@ -5,14 +5,59 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: Firestore data types (includes legacy fields for backward compatibility)
-type FirestoreContactData = Record<string, any> & {
+type FirestoreContactData = Record<string, unknown> & {
   id: string;
   companyId?: string;
 };
 
-type FirestoreUnitData = Record<string, any> & {
+type FirestoreUnitData = Record<string, unknown> & {
   id: string;
 };
+
+/** 🏢 ENTERPRISE: Discriminated union response types */
+interface ContactUnitsSuccessResponse {
+  success: true;
+  contactId: string;
+  units: unknown[];
+  unitsCount: number;
+  totalValue: number;
+  averageUnitValue: number;
+  totalArea: number;
+  averageUnitArea: number;
+  statistics: {
+    byType: Record<string, number>;
+    byBuilding: Record<string, number>;
+    byProject: Record<string, number>;
+    byStatus: Record<string, number>;
+  };
+  contactInfo: {
+    profession: string | null;
+    city: string | null;
+    lastContactDate: unknown;
+  };
+  timestamp: string;
+  dataSource: string;
+}
+
+interface ContactUnitsErrorResponse {
+  success: false;
+  error: string;
+  errorCategory?: string;
+  contactId?: string | null;
+  timestamp?: string;
+  units?: unknown[];
+  unitsCount?: number;
+  totalValue?: number;
+  totalArea?: number;
+  statistics?: {
+    byType: Record<string, number>;
+    byBuilding: Record<string, number>;
+    byProject: Record<string, number>;
+    byStatus: Record<string, number>;
+  };
+}
+
+type ContactUnitsResponse = ContactUnitsSuccessResponse | ContactUnitsErrorResponse;
 
 /**
  * 🏠 ENTERPRISE CONTACT UNITS API ENDPOINT
@@ -36,8 +81,8 @@ export async function GET(
 ) {
   const { contactId } = await segmentData.params;
 
-  // Create authenticated handler
-  const handler = withAuth(
+  // Create authenticated handler - using unknown for flexible response types
+  const handler = withAuth<unknown>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         console.log(`🏠 API: Loading units for contactId: ${contactId}`);
@@ -149,20 +194,20 @@ export async function GET(
       totalValue += unitPrice;
       totalArea += unitArea;
 
-      // Count by type
-      const unitType = unit.type || unit.propertyType || 'unknown';
+      // Count by type - cast to string for safe indexing
+      const unitType = String(unit.type || unit.propertyType || 'unknown');
       unitsByType[unitType] = (unitsByType[unitType] || 0) + 1;
 
-      // Count by building
-      const buildingId = unit.buildingId || 'unknown';
+      // Count by building - cast to string for safe indexing
+      const buildingId = String(unit.buildingId || 'unknown');
       unitsByBuilding[buildingId] = (unitsByBuilding[buildingId] || 0) + 1;
 
-      // Count by project
-      const projectId = unit.projectId || 'unknown';
+      // Count by project - cast to string for safe indexing
+      const projectId = String(unit.projectId || 'unknown');
       unitsByProject[projectId] = (unitsByProject[projectId] || 0) + 1;
 
-      // Count by status
-      const unitStatus = unit.status || 'unknown';
+      // Count by status - cast to string for safe indexing
+      const unitStatus = String(unit.status || 'unknown');
       unitsByStatus[unitStatus] = (unitsByStatus[unitStatus] || 0) + 1;
 
       // Return processed unit data
@@ -197,9 +242,10 @@ export async function GET(
     // FETCH ADDITIONAL CONTACT INFORMATION
     // ========================================================================
 
-    // Extract additional contact info for extended response
-    const profession = contactData.profession || null;
-    const city = contactData.city || contactData.serviceAddress?.city || null;
+    // Extract additional contact info for extended response - use safe property access
+    const profession = contactData.profession as string | null || null;
+    const serviceAddress = contactData.serviceAddress as { city?: string } | undefined;
+    const city = (contactData['city'] as string | undefined) || serviceAddress?.city || null;
     const lastContactDate = contactData.lastContactDate || contactData.updatedAt || null;
 
     // ========================================================================

@@ -113,7 +113,7 @@ interface HardcodedProjectData {
 /**
  * Migration Result με comprehensive tracking
  */
-interface MigrationResult {
+export interface MigrationResult {
   readonly success: boolean;
   readonly itemsMigrated: number;
   readonly itemsFailed: number;

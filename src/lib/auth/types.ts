@@ -207,6 +207,8 @@ export const AUDIT_ACTIONS = {
   'data_fix_executed': true,        // Data correction operations (fix incorrect data)
   'direct_operation_executed': true, // Direct database operations (bypass normal flows)
   'system_configured': true,         // System configuration changes (webhooks, integrations)
+  // Data access operations (AUTHZ Phase 2)
+  'data_accessed': true,             // API data access events (read operations with tenant isolation)
   // Webhook operations (External integrations)
   'webhook_received': true,          // External webhook event received (SendGrid, Telegram, etc.)
 } as const;
@@ -222,6 +224,7 @@ export type AuditAction = keyof typeof AUDIT_ACTIONS;
 export const AUDIT_TARGET_TYPES = {
   'user': true,
   'project': true,
+  'building': true,       // Building entities (AUTHZ Phase 2)
   'unit': true,
   'role': true,
   'grant': true,
@@ -239,7 +242,7 @@ export type AuditTargetType = keyof typeof AUDIT_TARGET_TYPES;
  * Typed audit change value (NO any!).
  */
 export interface AuditChangeValue {
-  type: 'role' | 'permission' | 'grant' | 'status' | 'membership';
+  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook';
   value: string | string[] | Record<string, unknown>;
 }
 

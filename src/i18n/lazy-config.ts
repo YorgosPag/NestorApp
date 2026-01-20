@@ -33,7 +33,10 @@ export const SUPPORTED_NAMESPACES = [
   'contacts',
   'units',
   'landing',
-  'telegram'  // Telegram bot templates - PR1 centralization
+  'telegram',  // Telegram bot templates - PR1 centralization
+  'files',     // File storage display names (ADR-031)
+  'storage',   // 🏢 Storage management module
+  'admin'      // 🏢 Admin tools (units, claims repair)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
@@ -50,7 +53,8 @@ async function loadTranslations(language: Language, namespace: Namespace) {
   const cacheKey = `${language}:${namespace}`;
 
   if (translationCache.has(cacheKey)) {
-    return translationCache.get(cacheKey);
+    // Map.has() guarantees value exists, so we can safely assert non-undefined
+    return translationCache.get(cacheKey) as TranslationData;
   }
 
   try {
@@ -122,6 +126,15 @@ async function loadTranslations(language: Language, namespace: Namespace) {
         case 'telegram':
           translations = await import('./locales/el/telegram.json');
           break;
+        case 'files':
+          translations = await import('./locales/el/files.json');
+          break;
+        case 'storage':
+          translations = await import('./locales/el/storage.json');
+          break;
+        case 'admin':
+          translations = await import('./locales/el/admin.json');
+          break;
         default:
           console.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
@@ -191,6 +204,15 @@ async function loadTranslations(language: Language, namespace: Namespace) {
           break;
         case 'telegram':
           translations = await import('./locales/en/telegram.json');
+          break;
+        case 'files':
+          translations = await import('./locales/en/files.json');
+          break;
+        case 'storage':
+          translations = await import('./locales/en/storage.json');
+          break;
+        case 'admin':
+          translations = await import('./locales/en/admin.json');
           break;
         default:
           console.warn(`Namespace ${namespace} not found for language ${language}`);
@@ -290,6 +312,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'errors',
     'toasts',
     'auth',
+    'forms',         // 🏢 ENTERPRISE: Form labels, help texts, sections (company-gemi, service forms)
     'building',      // Building management - core module
     'navigation',    // Navigation labels
     'projects',      // Projects module

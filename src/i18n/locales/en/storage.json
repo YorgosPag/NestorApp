@@ -1,0 +1,237 @@
+{
+  "general": {
+    "basicInfo": "Basic Information",
+    "location": "Location",
+    "financial": "Financial Information",
+    "descriptionNotes": "Description & Notes",
+    "updateInfo": "Update Information",
+    "unknown": "Unknown",
+    "notSet": "Not set",
+    "notCalculated": "Not calculated",
+    "notAssigned": "Not assigned",
+    "fields": {
+      "name": "Storage Name",
+      "type": "Type",
+      "status": "Status",
+      "area": "Area",
+      "building": "Building",
+      "floor": "Floor",
+      "price": "Price",
+      "pricePerSqm": "Price per m\u00b2",
+      "project": "Project",
+      "description": "Description",
+      "notes": "Notes",
+      "lastUpdated": "Last Updated",
+      "owner": "Owner"
+    },
+    "types": {
+      "large": "Large",
+      "small": "Small",
+      "basement": "Basement",
+      "ground": "Ground Floor",
+      "special": "Special"
+    },
+    "statuses": {
+      "available": "Available",
+      "occupied": "Occupied",
+      "reserved": "Reserved",
+      "maintenance": "Maintenance"
+    },
+    "status": {
+      "available": "Available",
+      "occupied": "Occupied",
+      "sold": "Sold",
+      "maintenance": "Maintenance",
+      "reserved": "Reserved"
+    }
+  },
+  "card": {
+    "status": {
+      "available": "Available",
+      "occupied": "Occupied",
+      "reserved": "Reserved",
+      "maintenance": "Maintenance",
+      "unavailable": "Unavailable"
+    },
+    "types": {
+      "parking": "Parking",
+      "storage": "Storage",
+      "basement": "Basement",
+      "garage": "Garage",
+      "warehouse": "Warehouse"
+    },
+    "notDefined": "Not defined",
+    "free": "Free",
+    "perMonth": "month",
+    "floor": "{floor}th floor",
+    "sections": {
+      "location": "Location",
+      "section": "Section",
+      "floor": "Floor",
+      "specs": "Specifications",
+      "area": "Area",
+      "dimensions": "Dimensions",
+      "height": "Height",
+      "amenities": "Amenities",
+      "price": "Price",
+      "description": "Description"
+    },
+    "amenities": {
+      "electricity": "Electricity",
+      "water": "Water",
+      "security": "Security",
+      "climate": "Climate Control"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    }
+  },
+  "documents": {
+    "overview": "Documents Overview",
+    "totalDocuments": "Total Documents",
+    "active": "Active",
+    "pending": "Pending",
+    "expired": "Expired",
+    "uploadTitle": "Upload Documents",
+    "dropzoneHint": "Drag and drop your documents here or click to select",
+    "selectFiles": "Select Files",
+    "storageDocuments": "Storage Documents",
+    "relatedInfo": "Related Information",
+    "fields": {
+      "storage": "Storage:",
+      "location": "Location:",
+      "status": "Status:",
+      "value": "Value:"
+    },
+    "types": {
+      "contract": "Contract",
+      "lease": "Lease",
+      "inspection": "Inspection",
+      "insurance": "Insurance",
+      "maintenance": "Maintenance",
+      "legal": "Legal",
+      "document": "Document"
+    },
+    "statuses": {
+      "active": "Active",
+      "pending": "Pending",
+      "expired": "Expired",
+      "draft": "Draft",
+      "unknown": "Unknown"
+    }
+  },
+  "header": {
+    "viewStorage": "View Storage",
+    "edit": "Edit",
+    "print": "Print",
+    "ownerLabel": "Owner:"
+  },
+  "page": {
+    "backToProjects": "Back to Projects",
+    "linkedTo": "Linked to",
+    "registeredBy": "Registered by"
+  },
+  "history": {
+    "title": "History Overview",
+    "timeline": "Events Timeline",
+    "currentStatus": "Current Status",
+    "metrics": {
+      "totalEvents": "Total Events",
+      "leases": "Leases",
+      "maintenances": "Maintenances",
+      "inspections": "Inspections",
+      "changes": "Changes"
+    },
+    "eventStatus": {
+      "completed": "Completed",
+      "in_progress": "In progress",
+      "pending": "Pending",
+      "cancelled": "Cancelled"
+    },
+    "eventTypes": {
+      "status_change": {
+        "created": "Storage Created",
+        "createdDesc": "Storage {name} was added to the system",
+        "statusLabel": "Status: {status}"
+      },
+      "lease": {
+        "title": "Lease Started",
+        "description": "Lease agreement signed for storage {name}"
+      },
+      "tenant_change": {
+        "title": "Tenant Details Registered",
+        "description": "Tenant details registered: {tenant}"
+      },
+      "inspection": {
+        "title": "Annual Inspection",
+        "description": "Annual inspection performed for storage on floor {floor}"
+      },
+      "price_change": {
+        "title": "Price Updated",
+        "description": "Storage price updated to {price}"
+      },
+      "maintenance": {
+        "title": "Maintenance Work Started",
+        "description": "Maintenance and upgrade work started for the storage"
+      }
+    },
+    "actors": {
+      "buildingManagement": "Building Management",
+      "management": "Management",
+      "tenant": "Tenant",
+      "technicalInspector": "Technical Inspector",
+      "maintenanceTeam": "Maintenance Team",
+      "system": "System"
+    },
+    "statusDescription": "The storage is in status: {status}",
+    "fields": {
+      "storage": "Storage:",
+      "status": "Status:",
+      "lastUpdated": "Last Updated:",
+      "responsible": "Responsible:",
+      "currentValue": "Current Value:",
+      "area": "Area:"
+    },
+    "notRecorded": "Not recorded"
+  },
+  "stats": {
+    "title": "Storage Statistics",
+    "detailedAnalysis": "Detailed Analysis",
+    "technicalSpecs": "Technical Specifications",
+    "metrics": {
+      "totalArea": "Total Area",
+      "totalValue": "Total Value",
+      "pricePerSqm": "Price per m²",
+      "efficiencyScore": "Efficiency Score"
+    },
+    "notSet": "Not set",
+    "notCalculated": "Not calculated",
+    "efficiency": "Efficiency",
+    "statusAnalysis": {
+      "title": "Status Analysis",
+      "available": "The storage is available for rent or sale.",
+      "occupied": "The storage is occupied and generating income.",
+      "reserved": "The storage has been reserved for a specific use.",
+      "maintenance": "The storage is under maintenance and not available."
+    },
+    "financialAnalysis": {
+      "title": "Financial Analysis",
+      "totalValue": "Total Value:",
+      "costPerSqm": "Cost/m²:"
+    },
+    "technicalFields": {
+      "type": "Type:",
+      "building": "Building:",
+      "floor": "Floor:"
+    },
+    "types": {
+      "large": "Large Storage",
+      "small": "Small Storage",
+      "basement": "Basement Storage",
+      "ground": "Ground Floor Storage",
+      "special": "Special Storage",
+      "unknown": "Unknown"
+    }
+  }
+}

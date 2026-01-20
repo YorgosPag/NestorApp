@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 /**
@@ -30,6 +31,9 @@ import type { Property } from '@/types/property-viewer';
 
 // 🏢 BADGE VARIANT MAPPING
 import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
+
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // =============================================================================
 // 🏢 TYPES
@@ -65,15 +69,15 @@ const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
 };
 
 // =============================================================================
-// 🏢 STATUS LABELS (Greek)
+// 🏢 STATUS LABELS (i18n keys)
 // =============================================================================
 
-const STATUS_LABELS: Record<string, string> = {
-  'for-sale': 'Προς Πώληση',
-  'for-rent': 'Προς Ενοικίαση',
-  sold: 'Πουλημένο',
-  rented: 'Ενοικιασμένο',
-  reserved: 'Κρατημένο',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  'for-sale': 'status.forSale',
+  'for-rent': 'status.forRent',
+  sold: 'status.sold',
+  rented: 'status.rented',
+  reserved: 'status.reserved',
 };
 
 // =============================================================================
@@ -106,6 +110,8 @@ export function UnitListCard({
   compact = false,
   className,
 }: UnitListCardProps) {
+  const { t } = useTranslation('units');
+
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
@@ -119,7 +125,7 @@ export function UnitListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
         iconColor: NAVIGATION_ENTITIES.area.color,
-        label: 'Επιφάνεια',
+        label: t('card.stats.area'),
         value: `${formatNumber(unit.area)} m²`,
       });
     }
@@ -129,7 +135,7 @@ export function UnitListCard({
       items.push({
         icon: NAVIGATION_ENTITIES.price.icon,
         iconColor: NAVIGATION_ENTITIES.price.color,
-        label: 'Τιμή',
+        label: t('card.stats.price'),
         value: formatCurrency(unit.price, 'EUR', {
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
@@ -139,16 +145,17 @@ export function UnitListCard({
     }
 
     return items;
-  }, [unit.area, unit.price]);
+  }, [unit.area, unit.price, t]);
 
   /** Build badges from status */
   const badges = useMemo(() => {
     const status = unit.status || 'for-sale';
-    const statusLabel = STATUS_LABELS[status] || status;
+    const labelKey = STATUS_LABEL_KEYS[status] || 'status.unknown';
+    const statusLabel = t(labelKey);
     const variant = STATUS_BADGE_VARIANTS[status] || 'default';
 
     return [{ label: statusLabel, variant }];
-  }, [unit.status]);
+  }, [unit.status, t]);
 
   // ==========================================================================
   // 🏢 HANDLERS
@@ -183,7 +190,7 @@ export function UnitListCard({
       onToggleFavorite={onToggleFavorite}
       compact={compact}
       className={className}
-      aria-label={`Μονάδα ${unit.name || unit.id}`}
+      aria-label={t('card.ariaLabel', { name: unit.name || unit.id })}
     />
   );
 }

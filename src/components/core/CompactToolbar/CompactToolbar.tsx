@@ -40,6 +40,9 @@ import {
 import type { CompactToolbarProps } from './types';
 import { getIconColor } from './icon-colors';
 
+// 🏢 ENTERPRISE: i18n - Full internationalization support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
 export function CompactToolbar({
   config,
   selectedItems = [],
@@ -73,6 +76,18 @@ export function CompactToolbar({
 }: CompactToolbarProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook for translations
+  const { t } = useTranslation('building');
+
+  // 🏢 ENTERPRISE: Translate search placeholder if it's an i18n key
+  const getTranslatedPlaceholder = (placeholder?: string): string => {
+    if (!placeholder) return t('toolbar.search.placeholder');
+    if (placeholder.includes('.')) {
+      const translated = t(placeholder);
+      return translated === placeholder ? placeholder : translated;
+    }
+    return placeholder;
+  };
 
   const handleFilterChange = (filter: string, checked: boolean) => {
     if (checked) {
@@ -188,7 +203,7 @@ export function CompactToolbar({
                     className="text-destructive"
                   >
                     <X className={`${iconSizes.sm} mr-2`} />
-                    Καθαρισμός όλων ({activeFilters.length})
+                    {t('toolbar.ui.clearAllCount', { count: activeFilters.length })}
                   </DropdownMenuItem>
                 </>
               )}
@@ -391,10 +406,10 @@ export function CompactToolbar({
 
         </div>
 
-        {/* Selection indicator */}
+        {/* 🏢 ENTERPRISE: Selection indicator with i18n */}
         {selectedItems.length > 0 && (
           <div className="text-xs text-muted-foreground whitespace-nowrap">
-            {selectedItems.length} επιλεγμένα
+            {t('toolbar.ui.itemsSelected', { count: selectedItems.length })}
           </div>
         )}
 
@@ -420,7 +435,7 @@ export function CompactToolbar({
         <SearchInput
           value={searchTerm}
           onChange={onSearchChange}
-          placeholder={config.searchPlaceholder || 'Αναζήτηση...'}
+          placeholder={getTranslatedPlaceholder(config.searchPlaceholder)}
           debounceMs={0} // Instant για navigation filters
           showClearButton={true}
           className="h-8 text-sm flex-1" // Same height as toolbar buttons

@@ -11,6 +11,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts/helpers';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import type {
   CustomerBasicInfo,
   CustomerExtendedInfo,
@@ -95,21 +97,23 @@ const customerCache = new CustomerInfoCache();
 
 /**
  * Fetch basic customer info από το νέο enterprise API
+ * 🏢 ENTERPRISE: Uses centralized API client with automatic authentication
  */
 async function fetchCustomerBasicInfo(contactId: string): Promise<CustomerBasicInfo> {
   try {
-    const response = await fetch(`/api/contacts/${contactId}`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch customer: ${response.status} ${response.statusText}`);
+    // 🏢 ENTERPRISE: Type-safe API response
+    interface ContactApiResponse {
+      contact: {
+        contactId: string;
+        displayName: string;
+        primaryPhone: string | null;
+        primaryEmail: string | null;
+        status?: string;
+        avatarUrl?: string;
+      };
     }
 
-    const data = await response.json();
-
-    // Ελέγχω αν το API επέστρεψε success: false
-    if (!data.success) {
-      throw new Error(data.error || 'API returned error');
-    }
+    const data = await apiClient.get<ContactApiResponse>(`/api/contacts/${contactId}`);
 
     const contact = data.contact;
 
@@ -124,56 +128,60 @@ async function fetchCustomerBasicInfo(contactId: string): Promise<CustomerBasicI
 
   } catch (error) {
     console.error(`❌ Failed to fetch customer basic info for ${contactId}:`, error);
+    // 🌐 i18n: Error message converted to i18n key - 2026-01-18
     throw new Error(
       error instanceof Error
         ? error.message
-        : 'Αδυναμία φόρτωσης στοιχείων πελάτη'
+        : 'contacts.customer.errors.loadFailed'
     );
   }
 }
 
 /**
  * Fetch extended customer info με units και άλλα στατιστικά από enterprise APIs
+ * 🏢 ENTERPRISE: Uses centralized API client with automatic authentication
  */
 async function fetchCustomerExtendedInfo(contactId: string): Promise<CustomerExtendedInfo> {
   try {
+    // 🏢 ENTERPRISE: Type-safe API response
+    interface UnitsApiResponse {
+      units: Array<{ id: string }>;
+      unitsCount?: number;
+      totalValue?: number;
+      contactInfo?: {
+        profession?: string;
+        city?: string;
+        lastContactDate?: string;
+      };
+    }
+
     // Παράλληλη φόρτωση basic info και units info από τα νέα enterprise APIs
-    const [basicInfo, unitsResponse] = await Promise.all([
+    const [basicInfo, unitsData] = await Promise.all([
       fetchCustomerBasicInfo(contactId),
-      fetch(`/api/contacts/${contactId}/units`)
+      apiClient.get<UnitsApiResponse>(`/api/contacts/${contactId}/units`)
     ]);
 
-    if (!unitsResponse.ok) {
-      throw new Error(`Failed to fetch customer units: ${unitsResponse.status}`);
-    }
-
-    const unitsData = await unitsResponse.json();
-
-    // Ελέγχω αν το units API επέστρεψε success: false
-    if (!unitsData.success) {
-      throw new Error(unitsData.error || 'Units API returned error');
-    }
-
-    const units = unitsData.units || [];
+    const units = unitsData?.units || [];
 
     return {
       ...basicInfo,
-      unitsCount: unitsData.unitsCount || units.length,
-      unitIds: units.map((unit: unknown) => (unit as { id: string }).id),
-      totalValue: unitsData.totalValue || 0,
-      profession: unitsData.contactInfo?.profession || null,
-      city: unitsData.contactInfo?.city || null,
-      lastContactDate: unitsData.contactInfo?.lastContactDate
+      unitsCount: unitsData?.unitsCount || units.length,
+      unitIds: units.map((unit) => unit.id),
+      totalValue: unitsData?.totalValue || 0,
+      profession: unitsData?.contactInfo?.profession || null,
+      city: unitsData?.contactInfo?.city || null,
+      lastContactDate: unitsData?.contactInfo?.lastContactDate
         ? new Date(unitsData.contactInfo.lastContactDate)
         : undefined
     };
 
   } catch (error) {
     console.error(`❌ Failed to fetch customer extended info for ${contactId}:`, error);
+    // 🌐 i18n: Error message converted to i18n key - 2026-01-18
     throw new Error(
       error instanceof Error
         ? error.message
-        : 'Αδυναμία φόρτωσης εκτεταμένων στοιχείων πελάτη'
+        : 'contacts.customer.errors.loadExtendedFailed'
     );
   }
 }
@@ -283,7 +291,7 @@ export function useCustomerInfo(
       });
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Άγνωστο σφάλμα';
+      const errorMessage = err instanceof Error ? err.message : 'common.errors.unknown';
       setError(errorMessage);
 
       // Cache error για short period
@@ -338,7 +346,7 @@ export function useCustomerInfo(
       });
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Άγνωστο σφάλμα';
+      const errorMessage = err instanceof Error ? err.message : 'common.errors.unknown';
       setExtendedError(errorMessage);
 
       // Cache error

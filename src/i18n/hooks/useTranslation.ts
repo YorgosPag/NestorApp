@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useTranslation as useI18nextTranslation, TOptions } from 'react-i18next';
+import { useTranslation as useI18nextTranslation } from 'react-i18next';
+import type { TOptions } from 'i18next';
 import { loadNamespace, type Namespace, type Language } from '../lazy-config';
 
 /**

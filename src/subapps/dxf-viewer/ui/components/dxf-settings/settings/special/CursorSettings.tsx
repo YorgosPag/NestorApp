@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import React from 'react';
@@ -17,11 +18,15 @@ import {
 } from '../../../../DxfViewerComponents.styles';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 export function CursorSettings() {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
   // Αφαιρείται το tab state - όλες οι ρυθμίσεις θα εμφανίζονται μαζί
 
   // 🔺 REAL CURSOR SYSTEM INTEGRATION - Αντικατάσταση mock state
@@ -75,13 +80,13 @@ export function CursorSettings() {
     <article className={`${PANEL_LAYOUT.SPACING.GAP_LG} ${PANEL_LAYOUT.MAX_HEIGHT.XL} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
       {/* 🏢 ENTERPRISE: Semantic header για section */}
       <header className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.PADDING.BOTTOM_SM}`}>
-        Ρυθμίσεις Κέρσορα
+        {t('cursorSettings.title')}
       </header>
 
       {/* Cursor Shape - 🏢 ENTERPRISE: Semantic section αντί nested divs */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Σχήμα Κέρσορα</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Επιλογή μεταξύ κύκλου και τετραγώνου</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.shape.title')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.shape.description')}</p>
         <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorShapeChange('circle')}
@@ -95,7 +100,7 @@ export function CursorSettings() {
                   className={`${iconSizes.sm} mx-auto ${radius.full} border`}
                   style={getCursorPreviewBorderStyles(settings.cursor.color)}
                 ></div>
-                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Κύκλος</span>
+                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.shape.circle')}</span>
               </button>
               <button
                 onClick={() => handleCursorShapeChange('square')}
@@ -109,20 +114,20 @@ export function CursorSettings() {
                   className={`${iconSizes.sm} mx-auto border`}
                   style={getCursorPreviewBorderStyles(settings.cursor.color)}
                 ></div>
-                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Τετράγωνο</span>
+                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.shape.square')}</span>
               </button>
             </div>
       </section>
 
       {/* Cursor Color - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary}`}>Χρώμα Κέρσορα</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Χρώμα περιγράμματος κέρσορα</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary}`}>{t('cursorSettings.color.title')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.color.description')}</p>
         <ColorDialogTrigger
               value={settings.cursor.color}
               onChange={handleCursorColorChange}
               label={settings.cursor.color}
-              title="Επιλογή Χρώματος Κέρσορα"
+              title={t('cursorSettings.colorPicker')}
               alpha={false}
               modes={['hex', 'rgb', 'hsl']}
               palettes={['dxf', 'semantic', 'material']}
@@ -133,8 +138,8 @@ export function CursorSettings() {
 
       {/* Cursor Line Style - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Είδος Γραμμής</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Στυλ περιγράμματος κέρσορα</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.lineStyle.title')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.lineStyle.description')}</p>
         <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorLineStyleChange('solid')}
@@ -148,7 +153,7 @@ export function CursorSettings() {
                   className="w-full"
                   style={getCursorLinePreviewStyles(settings.cursor.color, 'solid')}
                 ></div>
-                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Συνεχόμενη</span>
+                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.lineStyles.solid')}</span>
               </button>
               <button
                 onClick={() => handleCursorLineStyleChange('dashed')}
@@ -162,7 +167,7 @@ export function CursorSettings() {
                   className="w-full"
                   style={getCursorLinePreviewStyles(settings.cursor.color, 'dashed')}
                 ></div>
-                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Διακεκομμένη</span>
+                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.lineStyles.dashed')}</span>
               </button>
             </div>
             <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
@@ -178,7 +183,7 @@ export function CursorSettings() {
                   className="w-full"
                   style={getCursorLinePreviewStyles(settings.cursor.color, 'dotted')}
                 ></div>
-                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Τελείες</span>
+                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.lineStyles.dotted')}</span>
               </button>
               <button
                 onClick={() => handleCursorLineStyleChange('dash-dot')}
@@ -192,15 +197,15 @@ export function CursorSettings() {
                   className="w-full"
                   style={getCursorLinePreviewStyles(settings.cursor.color, 'dash-dot')}
                 ></div>
-                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Παύλα-Τελεία</span>
+                <span className={`block ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>{t('cursorSettings.lineStyles.dashDot')}</span>
               </button>
             </div>
       </section>
 
       {/* Cursor Line Width - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Πάχος Γραμμής Κέρσορα</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Πάχος περιγράμματος σε pixels</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.lineWidth.title')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.lineWidth.description')}</p>
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <input
             type="range"
@@ -236,8 +241,8 @@ export function CursorSettings() {
 
       {/* Cursor Size - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Μέγεθος Κέρσορα</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Διάμετρος/πλευρά σε pixels</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.size.title')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.size.description')}</p>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
                 type="range"
@@ -273,8 +278,8 @@ export function CursorSettings() {
 
       {/* Cursor Opacity - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Διαφάνεια Κέρσορα</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Επίπεδο διαφάνειας του κέρσορα</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.opacity.title')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.opacity.description')}</p>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
               <input
                 type="range"
@@ -291,8 +296,8 @@ export function CursorSettings() {
 
       {/* Show/Hide Cursor - 🏢 ENTERPRISE: Semantic section */}
       <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${radius.lg} ${PANEL_LAYOUT.SPACING.GAP_SM}`}>
-        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>Εμφάνιση Κέρσορα</h4>
-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>Εμφάνιση/απόκρυψη κύκλου κέρσορα</p>
+        <h4 className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.primary}`}>{t('cursorSettings.display.title')}</h4>
+        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{t('cursorSettings.display.description')}</p>
             <div className={`flex ${PANEL_LAYOUT.GAP.SM}`}>
               <button
                 onClick={() => handleCursorEnabledChange(true)}
@@ -302,7 +307,7 @@ export function CursorSettings() {
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
-                Ενεργό
+                {t('cursorSettings.display.enabled')}
               </button>
               <button
                 onClick={() => handleCursorEnabledChange(false)}
@@ -312,7 +317,7 @@ export function CursorSettings() {
                     : `${colors.bg.muted} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${getStatusBorder('default')}`
                 }`}
               >
-                Απενεργοποιημένο
+                {t('cursorSettings.display.disabled')}
               </button>
         </div>
       </section>

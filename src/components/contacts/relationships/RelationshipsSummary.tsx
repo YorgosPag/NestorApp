@@ -16,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Users, Building2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Import centralized components και hooks
 import type { ContactType } from '@/types/contacts';
@@ -82,6 +84,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const router = useRouter();
+  const { t } = useTranslation('contacts');
 
   const {
     relationships,
@@ -182,7 +185,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
           <CardTitle className="flex items-center">
             <div className="flex items-center space-x-2">
               <Users className={iconSizes.md} />
-              <span>Σχέσεις Επαφής</span>
+              <span>{t('relationships.summary.title')}</span>
             </div>
           </CardTitle>
         </CardHeader>
@@ -199,7 +202,7 @@ export const RelationshipsSummary: React.FC<RelationshipsSummaryProps> = ({
             <div className="mt-6 mb-6">
               <div className="flex items-center space-x-2 mb-4">
                 <Building2 className={`${iconSizes.md} text-blue-600`} />
-                <h4 className="text-sm font-medium text-gray-900">Οργανωτικό Διάγραμμα</h4>
+                <h4 className="text-sm font-medium text-gray-900">{t('relationships.summary.organizationChart')}</h4>
               </div>
               <div className={`${colors.bg.secondary} rounded-lg p-4 border`}>
                 <OrganizationTree

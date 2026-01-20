@@ -9,3 +9,4 @@
  */
 
 export * from './accountRoutes';
+export * from './authRoutes';

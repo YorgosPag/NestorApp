@@ -10,15 +10,20 @@
 "use client";
 
 import { HeaderSearch } from "@/components/ui/search/HeaderSearch";
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
  * 🎯 BACKWARD COMPATIBLE HeaderSearchBar
  * Delegates στο unified HeaderSearch με την ίδια ακριβώς εμφάνιση
  */
 export function HeaderSearchBar() {
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
+
   return (
     <HeaderSearch
-      placeholder="Αναζήτηση επαφών... (⌘K)"
+      placeholder={t('header.searchBar.placeholder')}
       showShortcut={true}
       shortcutKey="k"
     />

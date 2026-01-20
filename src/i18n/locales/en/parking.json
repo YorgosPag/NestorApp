@@ -1,0 +1,52 @@
+{
+  "general": {
+    "basicInfo": "Basic Information",
+    "location": "Location",
+    "financial": "Financial Information",
+    "notes": "Notes",
+    "updateInfo": "Update Information",
+    "unknown": "Unknown",
+    "notSet": "Not set",
+    "notCalculated": "Not calculated",
+    "fields": {
+      "spotCode": "Spot Code",
+      "type": "Type",
+      "status": "Status",
+      "area": "Area",
+      "floor": "Level/Floor",
+      "position": "Position",
+      "buildingId": "Building ID",
+      "projectId": "Project ID",
+      "price": "Price",
+      "pricePerSqm": "Price per m\u00b2",
+      "createdAt": "Created",
+      "lastUpdated": "Last Updated",
+      "createdBy": "Created by"
+    },
+    "types": {
+      "standard": "Standard",
+      "compact": "Compact",
+      "handicapped": "Handicapped",
+      "motorcycle": "Motorcycle",
+      "electric": "Electric Vehicle",
+      "vip": "VIP",
+      "reserved": "Reserved"
+    },
+    "statuses": {
+      "available": "Available",
+      "occupied": "Occupied",
+      "reserved": "Reserved",
+      "maintenance": "Maintenance"
+    },
+    "priceValues": {
+      "shared": "Shared (Free)",
+      "notSet": "Not set"
+    }
+  },
+  "header": {
+    "viewParking": "View Parking",
+    "edit": "Edit",
+    "print": "Print",
+    "ownerLabel": "Owner:"
+  }
+}

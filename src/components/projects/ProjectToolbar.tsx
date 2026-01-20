@@ -18,6 +18,8 @@ import {
   SearchFiltersTabContent
 } from './ProjectsTabContent';
 import { UNIFIED_STATUS_FILTER_LABELS, COMMON_FILTER_LABELS, PROJECT_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectToolbarProps {
   selectedItems?: number[];
@@ -46,6 +48,8 @@ export function ProjectToolbar({
   onExport,
   onRefresh
 }: ProjectToolbarProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
 
   const handleStatusChange = (value: string) => {
     // Remove all existing status filters
@@ -95,10 +99,11 @@ export function ProjectToolbar({
   ];
 
   // Define tabs configuration - similar to ContactsToolbar
+  // 🏢 ENTERPRISE: Using i18n for all tab labels
   const tabs = [
     {
       id: 'actions',
-      label: 'Ενέργειες',
+      label: t('toolbarGroups.actions'),
       icon: Settings,
       content: (
         <ActionsTabContent
@@ -111,7 +116,7 @@ export function ProjectToolbar({
     },
     {
       id: 'import-export',
-      label: 'Εισαγ./Εξαγ.',
+      label: t('toolbarGroups.importExport'),
       icon: Download,
       content: (
         <ImportExportTabContent
@@ -121,7 +126,7 @@ export function ProjectToolbar({
     },
     {
       id: 'management',
-      label: 'Διαχείριση',
+      label: t('toolbarGroups.management'),
       icon: ManagementIcon,
       content: (
         <ManagementTabContent
@@ -132,7 +137,7 @@ export function ProjectToolbar({
     },
     {
       id: 'tools',
-      label: 'Εργαλεία',
+      label: t('toolbarGroups.tools'),
       icon: Wrench,
       content: (
         <ToolsTabContent
@@ -142,7 +147,7 @@ export function ProjectToolbar({
     },
     {
       id: 'search-filters',
-      label: 'Φίλτρα',
+      label: t('toolbarGroups.filters'),
       icon: Search,
       content: (
         <SearchFiltersTabContent
@@ -161,9 +166,9 @@ export function ProjectToolbar({
     }
   ];
 
-  // Selection message
+  // Selection message - 🏢 ENTERPRISE: Using i18n
   const selectionMessage = selectedItems.length > 0
-    ? `${selectedItems.length} επιλεγμένα έργα`
+    ? `${selectedItems.length} ${t('toolbar.selection.selected')}`
     : undefined;
 
   return (

@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { FormField } from '../FormField';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface FinancialRightColumnProps {
     financialData: {
@@ -18,63 +20,66 @@ interface FinancialRightColumnProps {
 }
 
 export function FinancialRightColumn({ financialData, calculatedData, onChange, onEnterPress }: FinancialRightColumnProps) {
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('projects');
+
     return (
         <div className="space-y-4">
             <FormField
                 id="grossOutsideStairwell"
-                label="Μικτά Εκτός Κλιμακοστασίου"
-                unit="τ.μ."
+                label={t('financial.grossExcludingStaircase')}
+                unit={t('units.sqm')}
                 value={financialData.grossOutsideStairwell}
                 onChange={onChange}
                 onEnterPress={onEnterPress}
-                tooltipText="Το συνολικό μικτό εμβαδόν εκτός του κλιμακοστασίου."
+                tooltipText={t('financial.tooltips.grossExcludingStaircase')}
                 labelPosition="left"
                 inputClassName="w-48"
                 unitPosition="left"
             />
             <FormField
                 id="relatedArea"
-                label="Εμβαδόν Που Ανάγεται"
-                unit="τ.μ."
+                label={t('financial.areaReduced')}
+                unit={t('units.sqm')}
                 value={financialData.relatedArea}
                 onChange={onChange}
                 onEnterPress={onEnterPress}
-                tooltipText="Επιπλέον εμβαδόν που προστίθεται ή ανάγεται."
+                tooltipText={t('financial.tooltips.areaReduced')}
                 labelPosition="left"
                 inputClassName="w-48"
                 unitPosition="left"
             />
             <FormField
                 id="actualConstructionArea"
-                label="Εμβαδόν Πραγμ. Δόμησης & Αναγωγής"
-                unit="τ.μ."
+                label={t('financial.actualBuildingArea')}
+                unit={t('units.sqm')}
                 value={financialData.actualConstructionArea}
                 onChange={onChange}
                 onEnterPress={onEnterPress}
-                tooltipText="Το τελικό εμβαδόν της πραγματικής δόμησης συμπεριλαμβανομένης της αναγωγής."
+                tooltipText={t('financial.tooltips.actualBuildingArea')}
                 labelPosition="left"
                 inputClassName="w-48"
                 unitPosition="left"
             />
             <FormField
                 id="estimatedCost"
-                label="Εκτιμώμενο Κόστος Έργου"
+                label={t('financial.estimatedCost')}
                 unit="€"
                 value={financialData.estimatedCost}
                 onChange={onChange}
                 onEnterPress={onEnterPress}
-                tooltipText="Το συνολικό εκτιμώμενο κόστος για την ολοκλήρωση του έργου."
+                tooltipText={t('financial.tooltips.estimatedCost')}
                 labelPosition="left"
                 inputClassName="w-48"
                 useGrouping
             />
             <FormField
                 id="progressPercentage"
-                label="Ποσοστό Προόδου Έργου"
-                unit="%"
+                label={t('financial.progressPercentage')}
+                unit={t('units.percentage')}
                 value={calculatedData.progressPercentage}
                 readOnly
-                tooltipText="Υπολογίζεται αυτόματα: (Αξία Πραγματοποιηθέντος / Εκτιμώμενο Κόστος) * 100"
+                tooltipText={t('financial.tooltips.progressPercentage')}
                 labelPosition="left"
                 inputClassName="w-48"
                 isPercentage

@@ -8,13 +8,35 @@
 //
 // ============================================================================
 
+// 🏢 ENTERPRISE: i18n support for validation messages
+import i18n from '@/i18n/config';
+
+// 🏢 ENTERPRISE: Helper function to get translated validation message
+const t = (key: string): string => {
+  return i18n.t(`validation.${key}`, { ns: 'contacts' });
+};
+
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
 
-/** Contact data type for cleaning/sanitization */
-export type ContactDataValue = string | number | boolean | null | undefined | Date | ContactDataValue[] | ContactDataRecord;
-export type ContactDataRecord = Record<string, ContactDataValue>;
+/**
+ * Contact data types for cleaning/sanitization
+ * 🏢 ENTERPRISE: Using interface to avoid circular reference
+ */
+export interface ContactDataRecord {
+  [key: string]: ContactDataValue;
+}
+
+export type ContactDataValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | Date
+  | ContactDataValue[]
+  | ContactDataRecord;
 
 /** Validation result type */
 export interface ValidationResult {
@@ -93,11 +115,15 @@ export function cleanUndefinedValues(obj: ContactDataRecord): ContactDataRecord 
             console.log('🛠️ DATA CLEANING: Preserving empty multiplePhotoURLs array for database deletion');
           }
         }
-      } else if (typeof value === 'object') {
-        const cleanedNestedObj = cleanUndefinedValues(value);
+      } else if (typeof value === 'object' && !(value instanceof Date)) {
+        // 🏢 ENTERPRISE: Exclude Date objects from recursive cleaning
+        const cleanedNestedObj = cleanUndefinedValues(value as ContactDataRecord);
         if (Object.keys(cleanedNestedObj).length > 0) {
           cleaned[key] = cleanedNestedObj;
         }
+      } else if (value instanceof Date) {
+        // 🏢 ENTERPRISE: Preserve Date objects as-is
+        cleaned[key] = value;
       } else {
         cleaned[key] = value;
         // 🛠️ DEBUG: Log preservation of photoURL empty strings
@@ -185,9 +211,9 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
       }
     }
 
-    // 🗂️ NESTED OBJECTS: Recursive sanitization
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      const nestedSanitized = sanitizeContactData(value);
+    // 🗂️ NESTED OBJECTS: Recursive sanitization (excluding Date objects)
+    if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date)) {
+      const nestedSanitized = sanitizeContactData(value as ContactDataRecord);
       if (Object.keys(nestedSanitized).length === 0) {
         console.log(`🗑️ SANITIZER: Removing empty object field "${key}"`);
         delete sanitized[key];
@@ -236,34 +262,39 @@ export function validateContactData(contactData: ContactDataRecord): ValidationR
 
   // 🚨 REQUIRED FIELDS VALIDATION
   if (!contactData.type) {
-    errors.push('Contact type is required');
+    errors.push(t('contactTypeRequired'));
   }
+
+  // 🏢 ENTERPRISE: Helper for safe string trim with type guard
+  const safeStringTrim = (value: ContactDataValue): string => {
+    return typeof value === 'string' ? value.trim() : '';
+  };
 
   switch (contactData.type) {
     case 'individual':
-      if (!contactData.firstName || contactData.firstName.trim() === '') {
-        errors.push('Το όνομα είναι υποχρεωτικό για φυσικά πρόσωπα');
+      if (!contactData.firstName || safeStringTrim(contactData.firstName) === '') {
+        errors.push(t('individual.firstNameRequired'));
       }
-      if (!contactData.lastName || contactData.lastName.trim() === '') {
-        errors.push('Το επώνυμο είναι υποχρεωτικό για φυσικά πρόσωπα');
+      if (!contactData.lastName || safeStringTrim(contactData.lastName) === '') {
+        errors.push(t('individual.lastNameRequired'));
       }
       break;
 
     case 'company':
-      if (!contactData.companyName || contactData.companyName.trim() === '') {
-        errors.push('Το όνομα εταιρείας είναι υποχρεωτικό για νομικά πρόσωπα');
+      if (!contactData.companyName || safeStringTrim(contactData.companyName) === '') {
+        errors.push(t('company.nameRequired'));
       }
-      if (!contactData.vatNumber || contactData.vatNumber.trim() === '') {
-        warnings.push('Το ΑΦΜ συνιστάται για νομικά πρόσωπα');
+      if (!contactData.vatNumber || safeStringTrim(contactData.vatNumber) === '') {
+        warnings.push(t('company.vatRecommended'));
       }
       break;
 
     case 'service':
-      if (!contactData.serviceName || contactData.serviceName.trim() === '') {
-        errors.push('Το όνομα υπηρεσίας είναι υποχρεωτικό για δημόσιες υπηρεσίες');
+      if (!contactData.serviceName || safeStringTrim(contactData.serviceName) === '') {
+        errors.push(t('service.nameRequired'));
       }
-      if (!contactData.serviceType || contactData.serviceType.trim() === '') {
-        errors.push('Ο τύπος υπηρεσίας είναι υποχρεωτικός για δημόσιες υπηρεσίες');
+      if (!contactData.serviceType || safeStringTrim(contactData.serviceType) === '') {
+        errors.push(t('service.typeRequired'));
       }
       break;
   }
@@ -272,7 +303,7 @@ export function validateContactData(contactData: ContactDataRecord): ValidationR
   if (contactData.email && typeof contactData.email === 'string') {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(contactData.email)) {
-      errors.push('Μη έγκυρη διεύθυνση email');
+      errors.push(t('email.invalid'));
     }
   }
 
@@ -280,7 +311,7 @@ export function validateContactData(contactData: ContactDataRecord): ValidationR
   if (contactData.phone && typeof contactData.phone === 'string') {
     const phoneRegex = /^[\+]?[0-9\s\-\(\)]{8,15}$/;
     if (!phoneRegex.test(contactData.phone.replace(/\s/g, ''))) {
-      warnings.push('Το τηλέφωνο μπορεί να έχει μη έγκυρο format');
+      warnings.push(t('phone.invalidFormat'));
     }
   }
 

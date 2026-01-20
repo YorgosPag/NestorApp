@@ -5,173 +5,188 @@
  * @date 2025-12-28
  * @version 1.0.0 - ENTERPRISE MODULAR ARCHITECTURE
  * @compliance CLAUDE.md Enterprise Standards - MODULAR SPLITTING
+ * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 
 // ====================================================================
 // STATUS LABELS - 🏢 ENTERPRISE CENTRALIZED
+// 🌐 i18n: Uses keys from various namespaces (projects, units, common, etc.)
 // ====================================================================
 
 /**
  * Centralized project status labels
+ * 🌐 i18n: Uses keys from projects.json namespace
  */
 export const MODAL_SELECT_PROJECT_STATUS_LABELS = {
-  planning: 'Σχεδιασμός',
-  in_progress: 'Σε Εξέλιξη',
-  completed: 'Ολοκληρωμένο',
-  on_hold: 'Σε Αναμονή',
-  cancelled: 'Ακυρωμένο',
-  review: 'Υπό Έλεγχο',
-  approved: 'Εγκεκριμένο'
+  planning: 'projects.status.planning',
+  in_progress: 'projects.status.inProgress',
+  completed: 'projects.status.completed',
+  on_hold: 'projects.status.onHold',
+  cancelled: 'projects.status.cancelled',
+  review: 'projects.status.review',
+  approved: 'projects.status.approved'
 } as const;
 
 /**
  * Centralized unit availability status labels
+ * 🌐 i18n: Uses keys from units.json namespace
  */
 export const MODAL_SELECT_UNIT_STATUS_LABELS = {
-  available: 'Διαθέσιμο',
-  occupied: 'Κατειλημμένο',
-  maintenance: 'Συντήρηση',
-  for_sale: 'Προς Πώληση',
-  for_rent: 'Προς Ενοικίαση',
-  sold: 'Πωλήθηκε',
-  rented: 'Ενοικιάστηκε',
-  under_construction: 'Υπό Κατασκευή',
-  planned: 'Σχεδιασμένο'
+  available: 'units.status.available',
+  occupied: 'units.status.occupied',
+  maintenance: 'units.status.maintenance',
+  for_sale: 'units.status.forSale',
+  for_rent: 'units.status.forRent',
+  sold: 'units.status.sold',
+  rented: 'units.status.rented',
+  under_construction: 'units.status.underConstruction',
+  planned: 'units.status.planned'
 } as const;
 
 /**
  * Centralized contact status labels
+ * 🌐 i18n: Uses keys from contacts.json namespace
  */
 export const MODAL_SELECT_CONTACT_STATUS_LABELS = {
-  active: 'Ενεργή',
-  inactive: 'Ανενεργή',
-  pending: 'Σε Αναμονή',
-  blocked: 'Αποκλεισμένη',
-  archived: 'Αρχειοθετημένη'
+  active: 'contacts.status.active',
+  inactive: 'contacts.status.inactive',
+  pending: 'contacts.status.pending',
+  blocked: 'contacts.status.blocked',
+  archived: 'contacts.status.archived'
 } as const;
 
 /**
  * Centralized contact type labels
+ * 🌐 i18n: Uses keys from contacts.json namespace
  */
 export const MODAL_SELECT_CONTACT_TYPE_LABELS = {
-  individual: 'Φυσικό Πρόσωπο',
-  company: 'Νομικό Πρόσωπο',
-  service: 'Δημόσια Υπηρεσία'
+  individual: 'contacts.types.individual',
+  company: 'contacts.types.company',
+  service: 'contacts.types.service'
 } as const;
 
 /**
  * Centralized property market status labels
+ * 🌐 i18n: Uses keys from properties.json namespace
  */
 export const MODAL_SELECT_PROPERTY_MARKET_STATUS_LABELS = {
-  available: 'Διαθέσιμο',
-  reserved: 'Κρατημένο',
-  sold: 'Πωλήθηκε',
-  pending: 'Εκκρεμεί',
-  withdrawn: 'Αποσύρθηκε',
-  expired: 'Έληξε',
+  available: 'properties.status.available',
+  reserved: 'properties.status.reserved',
+  sold: 'properties.status.sold',
+  pending: 'properties.status.pending',
+  withdrawn: 'properties.status.withdrawn',
+  expired: 'properties.status.expired',
   // 🏢 ENTERPRISE: Added for UNIT_SALE_STATUS_LABELS centralization
-  not_sold: 'Δεν έχει πωληθεί'
+  not_sold: 'properties.status.notSold'
 } as const;
 
 /**
  * Centralized rental type labels
+ * 🌐 i18n: Uses keys from properties.json namespace
  */
 export const MODAL_SELECT_RENTAL_TYPE_LABELS = {
-  rent_only: 'Μόνο Ενοικίαση',
-  long_term: 'Μακροχρόνια Μίσθωση',
-  short_term: 'Βραχυχρόνια Μίσθωση'
+  rent_only: 'properties.rental.rentOnly',
+  long_term: 'properties.rental.longTerm',
+  short_term: 'properties.rental.shortTerm'
 } as const;
 
 /**
  * Centralized property special status labels
+ * 🌐 i18n: Uses keys from properties.json namespace
  */
 export const MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS = {
-  reserved_pending: 'Δεσμευμένο Εκκρεμές',
-  contract_signed: 'Συμβόλαιο Υπογεγραμμένο',
-  deposit_paid: 'Προκαταβολή Δεδομένη',
-  corporate: 'Εταιρικό',
-  not_for_sale: 'Δεν Πωλείται',
-  family: 'Οικογενειακό',
-  pre_launch: 'Προ-εκκίνηση',
-  exclusive: 'Αποκλειστική Διάθεση',
-  reduced_price: 'Μειωμένη Τιμή',
-  urgent_sale: 'Επείγουσα Πώληση',
-  under_renovation: 'Υπό Ανακαίνιση',
-  legal_issues: 'Νομικά Προβλήματα',
-  inspection_required: 'Απαιτείται Επιθεώρηση',
-  pending_documents: 'Εκκρεμή Έγγραφα',
-  for_sale: 'Προς Πώληση',
-  for_rent: 'Προς Ενοικίαση',
-  rented: 'Ενοικιασμένο',
-  under_negotiation: 'Υπό Διαπραγμάτευση',
-  available_soon: 'Σύντομα Διαθέσιμο',
-  landowner: 'Ιδιοκτήτης Γης',
-  off_market: 'Εκτός Αγοράς',
-  unavailable: 'Μη Διαθέσιμο',
+  reserved_pending: 'properties.specialStatus.reservedPending',
+  contract_signed: 'properties.specialStatus.contractSigned',
+  deposit_paid: 'properties.specialStatus.depositPaid',
+  corporate: 'properties.specialStatus.corporate',
+  not_for_sale: 'properties.specialStatus.notForSale',
+  family: 'properties.specialStatus.family',
+  pre_launch: 'properties.specialStatus.preLaunch',
+  exclusive: 'properties.specialStatus.exclusive',
+  reduced_price: 'properties.specialStatus.reducedPrice',
+  urgent_sale: 'properties.specialStatus.urgentSale',
+  under_renovation: 'properties.specialStatus.underRenovation',
+  legal_issues: 'properties.specialStatus.legalIssues',
+  inspection_required: 'properties.specialStatus.inspectionRequired',
+  pending_documents: 'properties.specialStatus.pendingDocuments',
+  for_sale: 'properties.status.forSale',
+  for_rent: 'properties.status.forRent',
+  rented: 'properties.status.rented',
+  under_negotiation: 'properties.specialStatus.underNegotiation',
+  available_soon: 'properties.specialStatus.availableSoon',
+  landowner: 'properties.specialStatus.landowner',
+  off_market: 'properties.specialStatus.offMarket',
+  unavailable: 'properties.specialStatus.unavailable',
   // 🏢 ENTERPRISE: Added missing labels για property-hover/constants.ts complete coverage
-  sold: 'Πουλημένο',
-  reserved: 'Δεσμευμένο',
-  unknown: 'Άγνωστο'
+  sold: 'properties.status.sold',
+  reserved: 'properties.status.reserved',
+  unknown: 'common.status.unknown'
 } as const;
 
 /**
  * Centralized storage unit status labels
+ * 🌐 i18n: Uses keys from storage.json namespace
  */
 export const MODAL_SELECT_STORAGE_STATUS_LABELS = {
-  available: 'Διαθέσιμη',
-  occupied: 'Κατειλημμένη',
-  sold: 'Πωλήθηκε',
-  maintenance: 'Συντήρηση',
-  reserved: 'Κρατημένη'
+  available: 'storage.general.status.available',
+  occupied: 'storage.general.status.occupied',
+  sold: 'storage.general.status.sold',
+  maintenance: 'storage.general.status.maintenance',
+  reserved: 'storage.general.status.reserved'
 } as const;
 
 /**
  * Centralized priority/alert level labels
+ * 🌐 i18n: Uses keys from common.json namespace
  */
 export const MODAL_SELECT_PRIORITY_LABELS = {
-  none: 'Χωρίς έργα',
-  empty: 'Κενό',
-  warning: 'Προειδοποίηση',
-  attention: 'Προσοχή',
-  success: 'Επιτυχία',
-  info: 'Πληροφορία'
+  none: 'common.priority.none',
+  empty: 'common.priority.empty',
+  warning: 'common.priority.warning',
+  attention: 'common.priority.attention',
+  success: 'common.priority.success',
+  info: 'common.priority.info'
 } as const;
 
 /**
  * Centralized record state labels
+ * 🌐 i18n: Uses keys from common.json namespace
  */
 export const MODAL_SELECT_RECORD_STATE_LABELS = {
-  new: 'Νέο',
-  updated: 'Ενημερωμένο',
-  deleted: 'Διαγραμμένο'
+  new: 'common.recordState.new',
+  updated: 'common.recordState.updated',
+  deleted: 'common.recordState.deleted'
 } as const;
 
 /**
  * Centralized entity type labels
+ * 🌐 i18n: Uses keys from common.json namespace
  */
 export const MODAL_SELECT_ENTITY_TYPE_LABELS = {
-  company: 'Εταιρεία',
-  main: 'Κύριο',
-  secondary: 'Δευτερεύον'
+  company: 'common.entityType.company',
+  main: 'common.entityType.main',
+  secondary: 'common.entityType.secondary'
 } as const;
 
 /**
  * Centralized document status labels
+ * 🌐 i18n: Uses keys from common.json namespace
  */
 export const MODAL_SELECT_DOCUMENT_STATUS_LABELS = {
-  draft: 'Προσχέδιο',
-  completed: 'Ολοκληρωμένο',
-  approved: 'Εγκεκριμένο'
+  draft: 'common.documentStatus.draft',
+  completed: 'common.documentStatus.completed',
+  approved: 'common.documentStatus.approved'
 } as const;
 
 /**
  * Centralized property type labels
+ * 🌐 i18n: Uses keys from building.json namespace
  */
 export const MODAL_SELECT_PROPERTY_TYPE_LABELS = {
-  studio: 'Στούντιο',
-  garsoniera: 'Γκαρσονιέρα',
-  apartment: 'Διαμέρισμα',
-  maisonette: 'Μεζονέτα'
+  studio: 'building.propertyTypes.studio',
+  garsoniera: 'building.propertyTypes.garsoniera',
+  apartment: 'building.propertyTypes.apartment',
+  maisonette: 'building.propertyTypes.maisonette'
 } as const;
 
 // ====================================================================

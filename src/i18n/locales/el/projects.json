@@ -1,22 +1,45 @@
 {
   "title": "Έργα",
   "description": "Διαχείριση έργων και εργοταξίων",
+  "status": {
+    "planning": "Σχεδιασμός",
+    "inProgress": "Σε εξέλιξη",
+    "completed": "Ολοκληρωμένο",
+    "onHold": "Σε αναμονή",
+    "cancelled": "Ακυρωμένο",
+    "review": "Υπό Αξιολόγηση",
+    "approved": "Εγκεκριμένο"
+  },
+  "emptyState": {
+    "title": "Επιλέξτε ένα έργο",
+    "description": "Επιλέξτε ένα έργο από τη λίστα για να δείτε τις λεπτομέρειές του."
+  },
   "projectHeader": {
     "technicalIdLabel": "Technical ID (για support):",
     "copied": "Αντιγράφηκε!",
     "residentialBadge": "Οικιστικό",
     "saving": "Αποθήκευση...",
-    "savedAt": "Αποθηκεύτηκε {{time}}",
+    "savedAt": "Αποθηκεύτηκε {time}",
     "edit": "Επεξεργασία",
     "cancel": "Ακύρωση",
     "save": "Αποθήκευση"
   },
   "header": {
     "title": "Διαχείριση Έργων",
-    "titleWithCount": "Διαχείριση Έργων ({{count}})",
+    "titleWithCount": "Διαχείριση Έργων ({count})",
     "subtitle": "Παρακολούθηση και διαχείριση έργων",
     "searchPlaceholder": "Αναζήτηση έργων...",
-    "newProject": "Νέο Έργο"
+    "newProject": "Νέο Έργο",
+    "pageTitle": "Διαχείριση Έργων",
+    "pageSubtitle": "Διαχείριση και παρακολούθηση κατασκευαστικών έργων"
+  },
+  "timelineTab": {
+    "title": "Timeline Έργου: {name}",
+    "totalProgress": "Συνολική Πρόοδος Έργου",
+    "buildingProgress": "Πρόοδος ανά Κτίριο",
+    "buildingA": "Κτίριο Α",
+    "buildingB": "Κτίριο Β",
+    "buildingC": "Κτίριο Γ"
   },
   "toolbar": {
     "new": "Νέο Έργο",
@@ -36,6 +59,7 @@
     "filters": {
       "status": {
         "label": "Κατάσταση",
+        "title": "Κατάσταση έργου",
         "inProgress": "Σε εξέλιξη",
         "planning": "Σχεδιασμένα",
         "completed": "Ολοκληρωμένα",
@@ -43,12 +67,14 @@
       },
       "type": {
         "label": "Τύπος",
+        "title": "Τύπος έργου",
         "residential": "Οικιστικό",
         "commercial": "Επαγγελματικό",
         "infrastructure": "Υποδομές"
       },
       "sort": {
         "label": "Ταξινόμηση",
+        "title": "Ταξινόμηση έργων",
         "ascending": "Αύξουσα (A-Z)",
         "descending": "Φθίνουσα (Z-A)",
         "byDate": "Κατά ημερομηνία έναρξης",
@@ -58,7 +84,7 @@
     },
     "selection": {
       "selected": "επιλεγμένα έργα",
-      "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε {{count}} έργο/α;"
+      "deleteConfirm": "Είστε σίγουροι ότι θέλετε να διαγράψετε {count} έργο/α;"
     },
     "shortcuts": {
       "newProject": "Δημιουργία νέου έργου (Ctrl+N)",
@@ -155,5 +181,374 @@
     "detailsTitle": "Λεπτομέρειες Έργου",
     "editLabel": "Επεξεργασία Έργου",
     "deleteLabel": "Διαγραφή Έργου"
+  },
+  "detailsHeader": {
+    "showProject": "Επίδειξη Έργου",
+    "progressComplete": "{progress}% ολοκληρωμένο"
+  },
+  "listCard": {
+    "progress": "Πρόοδος",
+    "totalArea": "Συν. Εμβαδόν",
+    "value": "Αξία",
+    "ariaLabel": "Έργο {name}"
+  },
+  "filters": {
+    "toggleFilters": "Εναλλαγή φίλτρων"
+  },
+  "stats": {
+    "totalUnits": "Σύνολο Μονάδων",
+    "soldUnits": "Πωλημένες Μονάδες",
+    "totalAreaSold": "Συνολικό Εμβαδόν Πωληθέντων"
+  },
+  "toolbarGroups": {
+    "actions": "Ενέργειες",
+    "importExport": "Εισαγ./Εξαγ.",
+    "management": "Διαχείριση",
+    "tools": "Εργαλεία",
+    "filters": "Φίλτρα"
+  },
+  "rowActions": {
+    "moreActions": "Περισσότερες ενέργειες",
+    "addToFavorites": "Προσθήκη στα αγαπημένα",
+    "removeFromFavorites": "Αφαίρεση από αγαπημένα"
+  },
+  "progressBlock": {
+    "progress": "Πρόοδος"
+  },
+  "projectProgress": {
+    "label": "Πρόοδος Έργου"
+  },
+  "timeline": {
+    "deliveryToday": "Παράδοση σήμερα!",
+    "deliveryLabel": "Παράδοση:",
+    "daysDelayed": "{days} ημέρες καθυστέρηση",
+    "daysRemaining": "{days} ημέρες απομένουν"
+  },
+  "structure": {
+    "noCustomer": "Δεν έχει καταχωρηθεί πελάτης",
+    "customer": "Πελάτης",
+    "customerNotFound": "Πελάτης (ID: {id}) - Δεν βρέθηκαν στοιχεία",
+    "units": "μονάδες",
+    "soldUnits": "πωλημένες",
+    "totalArea": "Συνολική Επιφάνεια",
+    "salesPercentage": "πωλήσεις",
+    "soldArea": "πωληθέντα",
+    "totalUnitsLabel": "Σύνολο Μονάδων",
+    "soldLabel": "Πωλημένες",
+    "salesPctLabel": "% Πωλήσεων",
+    "error": "Σφάλμα",
+    "loadingCustomers": "Φόρτωση λίστας πελατών...",
+    "notFound": "Δεν βρέθηκε η δομή του έργου.",
+    "buildings": "κτίρια",
+    "buildingsCount": "{count} κτίρια",
+    "unitsCount": "{count} μονάδες"
+  },
+  "buildings": {
+    "cardTitle": "Κτίρια Έργου",
+    "loading": "Φόρτωση κτιρίων...",
+    "errorPrefix": "Σφάλμα κατά τη φόρτωση:",
+    "emptyTitle": "Δεν υπάρχουν κτίρια",
+    "emptyDescription": "Δεν έχουν συνδεθεί κτίρια με αυτό το έργο.",
+    "emptyAction": "Προσθήκη από Κτίρια",
+    "viewBuilding": "Προβολή",
+    "unitsLabel": "μονάδες",
+    "soldLabel": "πωλημένες",
+    "areaLabel": "m²",
+    "viewAllStructure": "Προβολή Δομής Έργου",
+    "clickToLoad": "Κάντε κλικ για φόρτωση κτιρίων",
+    "retry": "Επανάληψη",
+    "linkedCount": "{count} κτίρια συνδεδεμένα με αυτό το έργο",
+    "buildingName": "Όνομα Κτιρίου",
+    "unitsHeader": "Μονάδες",
+    "areaHeader": "Εμβαδόν",
+    "actionsHeader": "Ενέργειες",
+    "emptyListAriaLabel": "Κενή λίστα κτιρίων",
+    "listAriaLabel": "Λίστα κτιρίων έργου"
+  },
+  "metrics": {
+    "area": "Επιφάνεια",
+    "value": "Αξία",
+    "totalValueTooltip": "Συνολική αξία έργου"
+  },
+  "customers": {
+    "title": "Πελάτες Έργου",
+    "titleWithCount": "Πελάτες Έργου ({count})",
+    "loading": "Φόρτωση πελατών...",
+    "errorPrefix": "Σφάλμα κατά τη φόρτωση:",
+    "emptyTitle": "Δεν υπάρχουν πελάτες",
+    "emptyDescription": "Δεν υπάρχουν καταχωρημένοι πελάτες για αυτό το έργο.",
+    "clickToLoad": "Κάντε κλικ για φόρτωση πελατών",
+    "retry": "Επανάληψη",
+    "description": "Λίστα πελατών που έχουν αγοράσει ακίνητα σε αυτό το έργο.",
+    "descriptionWithCount": "Λίστα των πελατών που έχουν αγοράσει μονάδες σε αυτό το έργο ({count} πελάτες).",
+    "emptyListAriaLabel": "Κενή λίστα πελατών",
+    "listAriaLabel": "Λίστα πελατών έργου",
+    "table": {
+      "name": "Ονοματεπώνυμο",
+      "phone": "Τηλέφωνο",
+      "email": "Email",
+      "units": "Μονάδες",
+      "actions": "Ενέργειες"
+    }
+  },
+  "errors": {
+    "network": {
+      "title": "Πρόβλημα Σύνδεσης",
+      "subtitle": "Δεν ήταν δυνατή η σύνδεση με τον διακομιστή"
+    },
+    "database": {
+      "title": "Πρόβλημα Βάσης Δεδομένων",
+      "subtitle": "Προσωρινό πρόβλημα με τα δεδομένα"
+    },
+    "api": {
+      "title": "Σφάλμα Διακομιστή",
+      "subtitle": "Ο διακομιστής αντιμετωπίζει προσωρινά προβλήματα"
+    },
+    "validation": {
+      "title": "Μη Έγκυρα Δεδομένα",
+      "subtitle": "Παρακαλώ ελέγξτε τα δεδομένα και προσπαθήστε ξανά"
+    },
+    "unknown": {
+      "title": "Σφάλμα Φόρτωσης",
+      "subtitle": "Παρουσιάστηκε απρόσμενο πρόβλημα"
+    },
+    "retryButton": "Προσπάθεια Ξανά",
+    "supportMessage": "Αν το πρόβλημα συνεχίζεται, επικοινωνήστε με την υποστήριξη"
+  },
+  "financial": {
+    "grossExcludingStaircase": "Μικτά Εκτός Κλιμακοστασίου",
+    "areaReduced": "Εμβαδόν Που Ανάγεται",
+    "actualBuildingArea": "Εμβαδόν Πραγμ. Δόμησης & Αναγωγής",
+    "estimatedCost": "Εκτιμώμενο Κόστος Έργου",
+    "progressPercentage": "Ποσοστό Προόδου Έργου",
+    "tooltips": {
+      "grossExcludingStaircase": "Το συνολικό μικτό εμβαδόν εκτός του κλιμακοστασίου.",
+      "areaReduced": "Επιπλέον εμβαδόν που προστίθεται ή ανάγεται.",
+      "actualBuildingArea": "Το τελικό εμβαδόν της πραγματικής δόμησης συμπεριλαμβανομένης της αναγωγής.",
+      "estimatedCost": "Το συνολικό εκτιμώμενο κόστος για την ολοκλήρωση του έργου.",
+      "progressPercentage": "Υπολογίζεται αυτόματα: (Αξία Πραγματοποιηθέντος / Εκτιμώμενο Κόστος) * 100"
+    }
+  },
+  "ika": {
+    "workers": "Εργατοτεχνίτες",
+    "timesheet": "Παρουσιολόγιο",
+    "stampsCalculation": "Υπολογισμός Ενσήμων",
+    "apdPayments": "ΑΠΔ & Πληρωμές"
+  },
+  "parking": {
+    "searchPlaceholder": "Κωδικός, ιδιοκτήτης, ακίνητο...",
+    "ownerFilterPlaceholder": "Φίλτρο ιδιοκτήτη...",
+    "searchLabel": "Αναζήτηση",
+    "typeLabel": "Τύπος",
+    "statusLabel": "Κατάσταση",
+    "levelLabel": "Επίπεδο",
+    "ownerLabel": "Ιδιοκτήτης",
+    "levels": {
+      "basement": "Υπόγειο",
+      "ground": "Ισόγειο",
+      "first": "1ος Όροφος"
+    },
+    "stats": {
+      "total": "Σύνολο",
+      "sold": "Πουλημένες",
+      "landowner": "Οικοπεδούχου",
+      "totalValue": "Συν. Αξία",
+      "area": "Εμβαδόν"
+    },
+    "actions": {
+      "view": "Προβολή",
+      "edit": "Επεξεργασία",
+      "floorPlan": "Κάτοψη",
+      "delete": "Διαγραφή"
+    }
+  },
+  "search": {
+    "placeholder": "Αναζήτηση έργων, τίτλων...",
+    "allCompanies": "Όλες οι εταιρείες",
+    "clear": "Καθαρισμός"
+  },
+  "permits": {
+    "protocolPlaceholder": "Εισάγετε αριθμό...",
+    "authorityPlaceholder": "Εισάγετε αρχή..."
+  },
+  "plotZoning": {
+    "maxRoofHeight": "Μέγιστο Ύψος Στέγης",
+    "maxRoofSlope": "Μέγιστη Κλίση Στέγης",
+    "plotArea": "Εμβαδόν Οικοπέδου (Ε.Ο.)",
+    "insideLimits": "Εντός Ορίων",
+    "insideZone": "Εντός Ζώνης",
+    "pilotis": "Πυλωτή",
+    "roof": "Στέγη"
+  },
+  "units": {
+    "sqm": "τ.μ.",
+    "linearMeters": "μ.μ.",
+    "percentage": "%"
+  },
+  "basicInfo": {
+    "title": "Βασικές Πληροφορίες Έργου",
+    "description": "Γενικά στοιχεία και περιγραφή του έργου",
+    "projectTitle": "Τίτλος Έργου",
+    "licenseTitle": "Τίτλος Άδειας",
+    "company": "Εταιρεία",
+    "projectDescription": "Περιγραφή Έργου"
+  },
+  "permitsTab": {
+    "title": "Άδειες & Κατάσταση",
+    "description": "Στοιχεία αδειών και τρέχουσα κατάσταση του έργου",
+    "buildingBlock": "Οικοδομικό Τετράγωνο",
+    "protocolNumber": "Αρ. Πρωτοκόλλου",
+    "licenseNumber": "Αριθμός Άδειας",
+    "issuingAuthority": "Αρχή Έκδοσης",
+    "projectStatus": "Κατάσταση Έργου",
+    "options": "Επιλογές",
+    "showOnWeb": "Προβολή στο διαδίκτυο",
+    "selectProject": "Επιλογή Έργου",
+    "statusConstructed": "Κατασκευασμένα",
+    "statusPlanning": "Σχεδιασμός",
+    "statusInProgress": "Σε εξέλιξη"
+  },
+  "videosTab": {
+    "title": "Videos Έργου",
+    "uploadVideo": "Ανέβασμα Video",
+    "addVideo": "Προσθήκη Video"
+  },
+  "contributorsTab": {
+    "title": "Συντελεστές Έργου",
+    "description": "Λίστα με τους συντελεστές και τις επαφές τους για το έργο.",
+    "addContributor": "Προσθήκη Συντελεστή",
+    "role": "Ρόλος",
+    "fullName": "Ονοματεπώνυμο",
+    "company": "Εταιρεία",
+    "phone": "Τηλέφωνο",
+    "email": "Email",
+    "actions": "Ενέργειες",
+    "edit": "Επεξεργασία",
+    "delete": "Διαγραφή",
+    "loadError": "Σφάλμα φόρτωσης",
+    "loadErrorMessage": "Δεν ήταν δυνατή η φόρτωση των συνεργατών:"
+  },
+  "attachmentsTab": {
+    "title": "Συνημμένα Αρχεία",
+    "description": "Αρχεία και έγγραφα που σχετίζονται με το έργο",
+    "projectMap": "Χάρτης Περιοχής Έργου",
+    "generalFloorPlan": "Γενική Κάτοψη Έργου",
+    "percentagesTable": "Πίνακας Ποσοστών"
+  },
+  "editToolbar": {
+    "save": "Αποθήκευση",
+    "cancel": "Ακύρωση",
+    "edit": "Επεξεργασία"
+  },
+  "documentsTab": {
+    "contracts": "Συμβόλαια",
+    "miscellaneous": "Διάφορα Έγγραφα"
+  },
+  "plotDataTab": {
+    "title": "Όροι Δόμησης Οικοπέδου"
+  },
+  "otherDataTab": {
+    "title": "Άλλα Στοιχεία",
+    "description": "Οικονομικά στοιχεία και παρακολούθηση της προόδου του έργου."
+  },
+  "statsGrid": {
+    "area": "Επιφάνεια",
+    "value": "Αξία"
+  },
+  "generalTab": {
+    "defaultDescription": "Πρόκειται για ένα συγκρότημα τριών πενταόροφων κτιρίων...",
+    "totalUnits": "Σύνολο Μονάδων",
+    "soldUnits": "Πωλημένες Μονάδες",
+    "totalSoldArea": "Συνολικό Εμβαδόν Πωληθέντων",
+    "salesPercentage": "Ποσοστό Πωλήσεων",
+    "availableUnits": "{count} διαθέσιμες",
+    "salesProgress": "Πρόοδος Πωλήσεων",
+    "unitsProgress": "{sold} από {total} μονάδες",
+    "percentageComplete": "{percentage}% ολοκληρωμένο",
+    "tabs": {
+      "basicInfo": "Βασικές Πληροφορίες",
+      "structure": "Δομή Έργου",
+      "location": "Τοποθεσία & Χάρτης",
+      "permits": "Άδειες & Κατάσταση",
+      "attachments": "Συνημμένα Αρχεία"
+    }
+  },
+  "buildingDataTabs": {
+    "plotTerms": "Όροι Δόμησης Οικοπέδου",
+    "allowed": "Επιτρεπόμενα",
+    "actual": "Πραγματοποιούμενα",
+    "other": "Λοιπά Στοιχεία"
+  },
+  "parkingManagement": {
+    "title": "Διαχείριση Θέσεων Στάθμευσης",
+    "columns": {
+      "code": "Κωδικός",
+      "type": "Τύπος",
+      "property": "Ακίνητο",
+      "level": "Επίπεδο",
+      "area": "τ.μ.",
+      "price": "Τιμή",
+      "value": "Αντ. Αξία",
+      "valueWithSyndicate": "Αντ. Αξία Με Συνιδιοκτησία",
+      "status": "Κατάσταση",
+      "owner": "Ιδιοκτήτης",
+      "floorPlan": "Κάτοψη",
+      "registeredBy": "Καταχωρήθηκε Από",
+      "actions": "Ενέργειες"
+    }
+  },
+  "empty": "Δεν υπάρχουν έργα",
+  "table": {
+    "project": "Έργο",
+    "status": "Κατάσταση",
+    "progress": "Πρόοδος"
+  },
+  "actualBuildingData": {
+    "title": "Πραγματικά Πολεοδομικά Στοιχεία",
+    "units": {
+      "sqm": "m²",
+      "cbm": "m³",
+      "percent": "%",
+      "meters": "m"
+    },
+    "fields": {
+      "construction": "Δόμηση",
+      "plotCoverage": "Κάλυψη Οικοπέδου",
+      "coveragePercentage": "Ποσοστό Κάλυψης",
+      "semiOutdoorArea": "Ημιυπαίθριοι Χώροι",
+      "semiOutdoorPercentage": "Ποσοστό Ημιυπαίθριων",
+      "balconyArea": "Εμβαδόν Μπαλκονιών",
+      "balconyPercentage": "Ποσοστό Μπαλκονιών",
+      "combinedArea": "Συνδυασμένο Εμβαδόν",
+      "combinedPercentage": "Συνδυασμένο Ποσοστό",
+      "volumeExploitation": "Εκμετάλλευση Όγκου",
+      "volumeCoefficient": "Συντελεστής Όγκου",
+      "height": "Ύψος"
+    }
+  },
+  "buildingData": {
+    "title": "Επιτρεπόμενα Πολεοδομικά Στοιχεία",
+    "fields": {
+      "maxAllowedConstruction": "Μέγιστη Επιτρεπόμενη Δόμηση",
+      "maxCoveragePercentage": "Μέγιστο Ποσοστό Κάλυψης",
+      "maxPlotCoverage": "Μέγιστη Κάλυψη Οικοπέδου",
+      "maxSemiOutdoorPercentage": "Μέγιστο Ποσοστό Ημιυπαίθριων",
+      "maxAllowedSemiOutdoorArea": "Μέγιστο Εμβαδόν Ημιυπαίθριων",
+      "maxBalconyPercentage": "Μέγιστο Ποσοστό Μπαλκονιών",
+      "maxBalconyArea": "Μέγιστο Εμβαδόν Μπαλκονιών",
+      "maxCombinedPercentage": "Μέγιστο Συνδυασμένο Ποσοστό",
+      "maxCombinedArea": "Μέγιστο Συνδυασμένο Εμβαδόν",
+      "maxVolumeCoefficient": "Μέγιστος Συντελεστής Όγκου",
+      "maxVolumeExploitation": "Μέγιστη Εκμετάλλευση Όγκου",
+      "maxAllowedHeight": "Μέγιστο Επιτρεπόμενο Ύψος"
+    },
+    "formulas": {
+      "construction": "Δόμηση = Σ.Δ. × Εμβαδόν Οικοπέδου",
+      "plotCoverage": "Κάλυψη = % Κάλυψης × Εμβαδόν Οικοπέδου",
+      "semiOutdoor": "Ημιυπαίθριοι = % Ημιυπ. × Δόμηση",
+      "balcony": "Μπαλκόνια = % Μπαλκ. × Δόμηση",
+      "combined": "Συνδυασμένο = % Συνδ. × Δόμηση",
+      "volume": "Όγκος = Συντ. Όγκου × Δόμηση"
+    }
   }
 }

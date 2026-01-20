@@ -1,5 +1,8 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 import React from 'react';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 // StorageErrorBoundary module not available - creating mock
 const useStorageMonitor = () => ({
   isLowSpace: false,
@@ -23,6 +26,7 @@ interface StorageStatusProps {
 }
 
 export function StorageStatus({ showDetails = false, className }: StorageStatusProps) {
+  const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const { radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -31,25 +35,18 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
   const [isClearing, setIsClearing] = React.useState(false);
 
   const handleClearStorage = async () => {
-    const confirmed = confirm(
-      'Θέλετε να καθαρίσετε το cached storage data?\n\n' +
-      'Αυτό θα διαγράψει:\n' +
-      '• Cached DXF files\n' +
-      '• Temporary data\n' +
-      '• Browser cache\n\n' +
-      'Τα αποθηκευμένα projects δεν θα επηρεαστούν.'
-    );
-    
+    const confirmed = confirm(t('storage.clearConfirm'));
+
     if (!confirmed) return;
 
     try {
       setIsClearing(true);
       await StorageManager.clearAllStorage();
-      notifications.success('✅ Storage καθαρίστηκε! Ανανεώνω τη σελίδα...');
+      notifications.success(`✅ ${t('storage.clearedSuccess')}`);
       setTimeout(() => window.location.reload(), PANEL_LAYOUT.TIMING.PAGE_RELOAD);
     } catch (error) {
       console.error('Error clearing storage:', error);
-      notifications.error('❌ Σφάλμα κατά τον καθαρισμό storage.');
+      notifications.error(`❌ ${t('storage.clearError')}`);
     } finally {
       setIsClearing(false);
     }
@@ -97,7 +94,7 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
                 className={PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS}
               >
                 <Trash2 className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.RIGHT_XS}`} />
-                {isClearing ? 'Clearing...' : 'Clear'}
+                {isClearing ? t('storage.clearing') : t('storage.clear')}
               </Button>
             )}
           </div>
@@ -122,12 +119,12 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
             {/* Warnings */}
             {isCritical && (
               <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.error} ${colors.bg.errorLight} ${PANEL_LAYOUT.ALERT.PADDING} ${radius.md}`}>
-                ⚠️ Storage σχεδόν γεμάτο! Καθαρίστε το για να αποφύγετε errors.
+                ⚠️ {t('storage.criticalWarning')}
               </div>
             )}
             {isWarning && !isCritical && (
               <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.warning} ${colors.bg.warningLight} ${PANEL_LAYOUT.ALERT.PADDING} ${radius.md}`}>
-                ⚠️ Storage σε χαμηλά επίπεδα. Σκεφτείτε καθαρισμό.
+                ⚠️ {t('storage.lowWarning')}
               </div>
             )}
           </>

@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef, memo } from 'react';
+import React, { useRef, memo, useEffect, useCallback } from 'react';
 import { DockviewReact, DockviewReadyEvent } from 'dockview';
 import 'dockview/dist/styles/dockview.css';
 
@@ -11,9 +11,22 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PANEL_LAYOUT, PANEL_COLORS } from '../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
+
+// 🏢 ENTERPRISE: Panel title mapping for i18n
+const PANEL_TITLE_KEYS = {
+  snapping: 'cadDock.panels.objectSnap',
+  layers: 'cadDock.panels.layers',
+  properties: 'cadDock.panels.properties',
+  history: 'cadDock.panels.commands',
+} as const;
+
+type PanelId = keyof typeof PANEL_TITLE_KEYS;
 
 // 🔺 FIXED SNAPPING PANEL με ProSnapToolbar
 const SnappingView = memo(() => {
+  const { t } = useTranslation('dxf-viewer');
   const {
     enabledModes,
     toggleMode,
@@ -25,8 +38,8 @@ const SnappingView = memo(() => {
   return (
     <section className={`${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary}`}>
       <header className={PANEL_LAYOUT.MARGIN.BOTTOM_SM}>
-        <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted}`}>Object Snap</h3>
-        <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted}`}>Click to toggle snap modes</p>
+        <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted}`}>{t('cadDock.snapModes.title')}</h3>
+        <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted}`}>{t('cadDock.snapModes.description')}</p>
       </header>
       <ProSnapToolbar
         enabledModes={enabledModes}
@@ -43,27 +56,28 @@ SnappingView.displayName = 'SnappingView';
 
 // 📋 LAYERS PANEL
 const LayersView = memo(() => {
+  const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
   return (
     <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
-      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Layers</h3>
-      <nav className={PANEL_LAYOUT.SPACING.GAP_XS} aria-label="Layer list">
+      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>{t('cadDock.panels.layers')}</h3>
+      <nav className={PANEL_LAYOUT.SPACING.GAP_XS} aria-label={t('cadDock.accessibility.layerList')}>
         <label className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
           <Checkbox defaultChecked />
           <span className={`${iconSizes.xs} ${colors.bg.error} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS}`} aria-hidden="true" />
-          <span>0 - Default</span>
+          <span>{t('cadDock.layers.default')}</span>
         </label>
         <label className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
           <Checkbox defaultChecked />
           <span className={`${iconSizes.xs} ${colors.bg.info} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS}`} aria-hidden="true" />
-          <span>Geometry</span>
+          <span>{t('cadDock.layers.geometry')}</span>
         </label>
         <label className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
           <Checkbox defaultChecked />
           <span className={`${iconSizes.xs} ${colors.bg.success} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS}`} aria-hidden="true" />
-          <span>Dimensions</span>
+          <span>{t('cadDock.layers.dimensions')}</span>
         </label>
       </nav>
     </section>
@@ -73,25 +87,26 @@ LayersView.displayName = 'LayersView';
 
 // 🔧 PROPERTIES PANEL
 const PropertiesView = memo(() => {
+  const { t } = useTranslation('dxf-viewer');
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
   return (
     <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
-      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Properties</h3>
+      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>{t('cadDock.panels.properties')}</h3>
       <form className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE}`}>
         <fieldset>
-          <label className={`block ${colors.text.muted}`} htmlFor="layer-select">Layer:</label>
+          <label className={`block ${colors.text.muted}`} htmlFor="layer-select">{t('cadDock.properties.layer')}</label>
           <select
             id="layer-select"
             className={`${PANEL_LAYOUT.INPUT.FULL_WIDTH} ${colors.bg.secondary} ${getStatusBorder('muted')} ${quick.input} ${PANEL_LAYOUT.SPACING.COMPACT}`}
           >
-            <option>0 - Default</option>
-            <option>Geometry</option>
+            <option>{t('cadDock.layers.default')}</option>
+            <option>{t('cadDock.layers.geometry')}</option>
           </select>
         </fieldset>
         <fieldset>
-          <label className={`block ${colors.text.muted}`} htmlFor="color-input">Color:</label>
+          <label className={`block ${colors.text.muted}`} htmlFor="color-input">{t('cadDock.properties.color')}</label>
           <input
             type="color"
             id="color-input"
@@ -106,38 +121,65 @@ PropertiesView.displayName = 'PropertiesView';
 
 // 📜 HISTORY PANEL
 const HistoryView = memo(() => {
+  const { t } = useTranslation('dxf-viewer');
   const colors = useSemanticColors();
 
   return (
     <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
-      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>Command History</h3>
+      <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>{t('cadDock.history.title')}</h3>
       <output className={`${PANEL_LAYOUT.SPACING.GAP_XS} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-mono block`}>
-        <p className={colors.text.muted}>Command: FIT</p>
-        <p className={colors.text.muted}>Command: ZOOM Window</p>
-        <p className={colors.text.muted}>Command: LINE</p>
-        <p className={colors.text.success}>Ready for command...</p>
+        <p className={colors.text.muted}>{t('cadDock.history.commands.fit')}</p>
+        <p className={colors.text.muted}>{t('cadDock.history.commands.zoomWindow')}</p>
+        <p className={colors.text.muted}>{t('cadDock.history.commands.line')}</p>
+        <p className={colors.text.success}>{t('cadDock.history.ready')}</p>
       </output>
     </section>
   );
 });
 HistoryView.displayName = 'HistoryView';
 
+// 🏢 ENTERPRISE: Dockview API interface for type safety
+interface DockviewApi {
+  addPanel: (config: unknown) => void;
+  getPanel: (id: string) => { setTitle: (title: string) => void } | undefined;
+  panels: Array<{ id: string; setTitle: (title: string) => void }>;
+}
+
 // 🏗️ MAIN CAD DOCK
 const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
+  const { t, i18n } = useTranslation('dxf-viewer');
+
   // ✅ ENTERPRISE FIX: Use compatible type for API ref
-  const apiRef = useRef<{ addPanel?: ((config: unknown) => void) | undefined } | null>(null);
+  const apiRef = useRef<DockviewApi | null>(null);
+
+  // 🏢 ENTERPRISE: Get translated panel title
+  const getPanelTitle = useCallback((panelId: PanelId): string => {
+    return t(PANEL_TITLE_KEYS[panelId]);
+  }, [t]);
+
+  // 🏢 ENTERPRISE: Update panel titles when language changes
+  useEffect(() => {
+    if (!apiRef.current) return;
+
+    const api = apiRef.current;
+    (Object.keys(PANEL_TITLE_KEYS) as PanelId[]).forEach((panelId) => {
+      const panel = api.getPanel(panelId);
+      if (panel) {
+        panel.setTitle(getPanelTitle(panelId));
+      }
+    });
+  }, [i18n.language, getPanelTitle]);
 
   const onReady = (e: DockviewReadyEvent) => {
     // 🏢 ENTERPRISE: Store API reference with proper typing
-    // The Dockview API has more methods than our simplified ref type, so we extract what we need
-    apiRef.current = { addPanel: e.api.addPanel.bind(e.api) };
+    apiRef.current = e.api as unknown as DockviewApi;
 
     try {
 
       // 🔺 SNAPPING PANEL (αριστερά, πάνω)
       e.api.addPanel({
         id: 'snapping',
-        title: 'Object Snap',
+        title: getPanelTitle('snapping'),
         component: 'snappingView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { direction: 'left' },
       });
@@ -145,7 +187,7 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
       // 📋 LAYERS PANEL (κάτω από snapping)
       e.api.addPanel({
         id: 'layers',
-        title: 'Layers',
+        title: getPanelTitle('layers'),
         component: 'layersView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { referencePanel: 'snapping', direction: 'below' },
       });
@@ -153,7 +195,7 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
       // 🔧 PROPERTIES PANEL (δεξιά)
       e.api.addPanel({
         id: 'properties',
-        title: 'Properties',
+        title: getPanelTitle('properties'),
         component: 'propertiesView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { direction: 'right' },
       });
@@ -161,7 +203,7 @@ const CadDock = memo(({ children }: { children?: React.ReactNode }) => {
       // 📜 HISTORY PANEL (κάτω από properties)
       e.api.addPanel({
         id: 'history',
-        title: 'Commands',
+        title: getPanelTitle('history'),
         component: 'historyView', // ✅ ENTERPRISE FIX: Use 'component' instead of 'contentComponent'
         position: { referencePanel: 'properties', direction: 'below' },
       });

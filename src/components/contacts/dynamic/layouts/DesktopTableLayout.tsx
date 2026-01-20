@@ -21,6 +21,8 @@
 
 import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 // 🏢 ENTERPRISE: Centralized types και renderers
 import type {
@@ -54,26 +56,52 @@ export interface DesktopTableLayoutProps {
 }
 
 /**
- * Header configuration for different communication types
+ * 🏢 ENTERPRISE: Header configuration generator με i18n support
+ *
+ * Returns header configuration for different communication types
+ * using translated labels from i18n system.
  */
-const DESKTOP_TABLE_HEADERS = {
+const getDesktopTableHeaders = (t: (key: string) => string) => ({
   phone: {
     columns: 'grid-cols-5',
-    headers: ['Τύπος', 'Κωδικός', 'Αριθμός', 'Ετικέτα', 'Ενέργειες']
+    headers: [
+      t('communication.tableHeaders.type'),
+      t('communication.tableHeaders.countryCode'),
+      t('communication.tableHeaders.number'),
+      t('communication.tableHeaders.label'),
+      t('communication.tableHeaders.actions')
+    ]
   },
   email: {
     columns: 'grid-cols-4',
-    headers: ['Τύπος', 'Διεύθυνση E-mail', 'Ετικέτα', 'Ενέργειες']
+    headers: [
+      t('communication.tableHeaders.type'),
+      t('communication.tableHeaders.email'),
+      t('communication.tableHeaders.label'),
+      t('communication.tableHeaders.actions')
+    ]
   },
   website: {
     columns: 'grid-cols-4',
-    headers: ['Τύπος', 'URL', 'Ετικέτα', 'Ενέργειες']
+    headers: [
+      t('communication.tableHeaders.type'),
+      t('communication.tableHeaders.url'),
+      t('communication.tableHeaders.label'),
+      t('communication.tableHeaders.actions')
+    ]
   },
   social: {
     columns: 'grid-cols-6',
-    headers: ['Τύπος', 'Πλατφόρμα', 'Username', 'URL', 'Ετικέτα', 'Ενέργειες']
+    headers: [
+      t('communication.tableHeaders.type'),
+      t('communication.tableHeaders.platform'),
+      t('communication.tableHeaders.username'),
+      t('communication.tableHeaders.url'),
+      t('communication.tableHeaders.label'),
+      t('communication.tableHeaders.actions')
+    ]
   }
-} as const;
+} as const);
 
 /**
  * 🏢 ENTERPRISE: Desktop table header component with semantic HTML
@@ -82,12 +110,15 @@ const DESKTOP_TABLE_HEADERS = {
  */
 interface DesktopTableHeaderProps {
   /** Communication type for header configuration */
-  readonly type: keyof typeof DESKTOP_TABLE_HEADERS;
+  readonly type: 'phone' | 'email' | 'website' | 'social';
   /** Communication title for ARIA label */
   readonly title: string;
+  /** Translation function */
+  readonly t: (key: string) => string;
 }
 
-function DesktopTableHeader({ type, title }: DesktopTableHeaderProps): JSX.Element {
+function DesktopTableHeader({ type, title, t }: DesktopTableHeaderProps): JSX.Element {
+  const DESKTOP_TABLE_HEADERS = getDesktopTableHeaders(t);
   const headerConfig = DESKTOP_TABLE_HEADERS[type];
 
   return (
@@ -138,8 +169,8 @@ function DesktopTableRows({
 }: DesktopTableRowsProps): JSX.Element {
 
   const renderCommunicationItem = (item: CommunicationItem, index: number) => {
+    // 🏢 ENTERPRISE: Extract key separately (React requirement - no key in spread props)
     const commonProps = {
-      key: index,
       item,
       index,
       isDesktop: true, // Always true for desktop layout
@@ -154,6 +185,7 @@ function DesktopTableRows({
       case 'phone':
         return (
           <PhoneRenderer
+            key={index}
             {...commonProps}
             setPrimary={setPrimary}
           />
@@ -162,6 +194,7 @@ function DesktopTableRows({
       case 'email':
         return (
           <EmailRenderer
+            key={index}
             {...commonProps}
             setPrimary={setPrimary}
           />
@@ -170,6 +203,7 @@ function DesktopTableRows({
       case 'website':
         return (
           <WebsiteRenderer
+            key={index}
             {...commonProps}
           />
         );
@@ -177,6 +211,7 @@ function DesktopTableRows({
       case 'social':
         return (
           <SocialRenderer
+            key={index}
             {...commonProps}
           />
         );
@@ -224,6 +259,8 @@ export function DesktopTableLayout({
   setPrimary
 }: DesktopTableLayoutProps): JSX.Element | null {
   const { quick } = useBorderTokens();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
 
   // 🔒 VALIDATION: Early return για empty state
   if (items.length === 0) {
@@ -231,12 +268,13 @@ export function DesktopTableLayout({
   }
 
   // 🔒 VALIDATION: Ensure communication type is supported
-  if (!(config.type in DESKTOP_TABLE_HEADERS)) {
+  const supportedTypes = ['phone', 'email', 'website', 'social'] as const;
+  if (!supportedTypes.includes(config.type as typeof supportedTypes[number])) {
     console.warn(`Desktop table layout not supported for type: ${config.type}`);
     return null;
   }
 
-  const typedConfigType = config.type as keyof typeof DESKTOP_TABLE_HEADERS;
+  const typedConfigType = config.type as 'phone' | 'email' | 'website' | 'social';
 
   return (
     <section
@@ -247,6 +285,7 @@ export function DesktopTableLayout({
       <DesktopTableHeader
         type={typedConfigType}
         title={config.title}
+        t={t}
       />
 
       {/* 🎯 SEMANTIC MAIN: Table data rows */}

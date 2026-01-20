@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { enterpriseTeamsService } from '@/services/teams/EnterpriseTeamsService';
 import type { EnterpriseTeam, EnterpriseTeamMember } from '@/services/teams/EnterpriseTeamsService';
+import { useTranslation } from 'react-i18next';
 
 interface DisplayTeam {
   id: string;
@@ -24,6 +26,7 @@ const getInitials = (name: string) => {
 }
 
 export default function CrmTeamsPage() {
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const [teams, setTeams] = useState<DisplayTeam[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +77,7 @@ export default function CrmTeamsPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
             <Loader2 className={`${iconSizes.xl} animate-spin mx-auto text-primary`} />
-            <p className="text-muted-foreground">Φόρτωση ομάδων...</p>
+            <p className="text-muted-foreground">{t('teams.loading')}</p>
           </div>
         </div>
       </div>
@@ -91,14 +94,14 @@ export default function CrmTeamsPage() {
               <Shield className={`${iconSizes.sm} text-destructive`} />
             </div>
             <div className="space-y-2">
-              <p className="font-medium text-destructive">Σφάλμα φόρτωσης</p>
+              <p className="font-medium text-destructive">{t('teams.error.title')}</p>
               <p className="text-sm text-muted-foreground">{error}</p>
               <Button
                 variant="outline"
                 onClick={() => window.location.reload()}
                 className="mt-4"
               >
-                Επαναφόρτωση
+                {t('teams.error.reload')}
               </Button>
             </div>
           </div>
@@ -115,26 +118,26 @@ export default function CrmTeamsPage() {
           <div>
             <div className="flex items-center gap-2">
               <Users2 className={`${iconSizes.xl} text-primary`} />
-              <h1 className="text-3xl font-bold">Ομάδες & Ρόλοι</h1>
+              <h1 className="text-3xl font-bold">{t('teams.title')}</h1>
             </div>
-            <p className="text-muted-foreground">Διαχείριση των ομάδων εργασίας και των δικαιωμάτων τους.</p>
+            <p className="text-muted-foreground">{t('teams.subtitle')}</p>
           </div>
           <Button>
             <Plus className={`${iconSizes.sm} mr-2`} />
-            Νέα Ομάδα
+            {t('teams.newTeam')}
           </Button>
         </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
             <Users2 className={`${iconSizes.xl2} text-muted-foreground/50 mx-auto`} />
             <div className="space-y-2">
-              <p className="font-medium">Δεν βρέθηκαν ομάδες</p>
+              <p className="font-medium">{t('teams.empty.title')}</p>
               <p className="text-sm text-muted-foreground">
-                Δημιουργήστε την πρώτη ομάδα για να ξεκινήσετε.
+                {t('teams.empty.description')}
               </p>
               <Button className="mt-4">
                 <Plus className={`${iconSizes.sm} mr-2`} />
-                Δημιουργία Ομάδας
+                {t('teams.createTeam')}
               </Button>
             </div>
           </div>
@@ -149,13 +152,13 @@ export default function CrmTeamsPage() {
         <div>
             <div className="flex items-center gap-2">
                 <Users2 className={`${iconSizes.xl} text-primary`} />
-                <h1 className="text-3xl font-bold">Ομάδες & Ρόλοι</h1>
+                <h1 className="text-3xl font-bold">{t('teams.title')}</h1>
             </div>
-          <p className="text-muted-foreground">Διαχείριση των ομάδων εργασίας και των δικαιωμάτων τους.</p>
+          <p className="text-muted-foreground">{t('teams.subtitle')}</p>
         </div>
         <Button>
           <Plus className={`${iconSizes.sm} mr-2`} />
-          Νέα Ομάδα
+          {t('teams.newTeam')}
         </Button>
       </div>
 
@@ -172,7 +175,7 @@ export default function CrmTeamsPage() {
               <CardDescription>{team.description}</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 space-y-4">
-              <h4 className="text-sm font-medium text-muted-foreground">Μέλη ({team.members.length})</h4>
+              <h4 className="text-sm font-medium text-muted-foreground">{t('teams.members', { count: team.members.length })}</h4>
               <div className="space-y-3">
                 {team.members.map((member) => (
                   <div key={member.id} className="flex items-center gap-3">
@@ -190,7 +193,7 @@ export default function CrmTeamsPage() {
                <div className="pt-4">
                  <Button variant="outline" size="sm" className="w-full">
                     <Shield className={`${iconSizes.sm} mr-2`} />
-                    Διαχείριση Δικαιωμάτων
+                    {t('teams.managePermissions')}
                 </Button>
                </div>
             </CardContent>

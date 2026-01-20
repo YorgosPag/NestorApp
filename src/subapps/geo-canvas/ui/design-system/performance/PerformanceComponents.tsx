@@ -825,7 +825,7 @@ export const AdminBoundariesPerformancePanel = memo(({
       case 'high': return GEO_COLORS.OPTIMIZATION.HIGH_PRIORITY;
       case 'medium': return GEO_COLORS.OPTIMIZATION.MEDIUM_PRIORITY;
       case 'low': return GEO_COLORS.OPTIMIZATION.LOW_PRIORITY;
-      default: return semanticColors.text.primary;
+      default: return colors.text.primary;
     }
   }, [semanticColors.text.primary]);
 

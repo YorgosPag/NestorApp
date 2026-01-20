@@ -6,6 +6,8 @@ import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // 🏢 ENTERPRISE: Centralized layout tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 
 interface CursorTooltipOverlayProps {
   isActive: boolean;
@@ -15,6 +17,16 @@ interface CursorTooltipOverlayProps {
   className?: string;
 }
 
+// 🏢 ENTERPRISE: Tool key mapping for i18n
+const TOOL_I18N_KEYS: Record<string, string> = {
+  'line': 'line',
+  'rectangle': 'rectangle',
+  'circle': 'circle',
+  'pan': 'pan',
+  'zoom-window': 'zoomWindow',
+  'layering': 'layering'
+} as const;
+
 export default function CursorTooltipOverlay({
   isActive,
   cursorPosition,
@@ -22,18 +34,14 @@ export default function CursorTooltipOverlay({
   canvasRect,
   className = ''
 }: CursorTooltipOverlayProps) {
+  // 🌐 i18n
+  const { t } = useTranslation('dxf-viewer');
+
   if (!isActive || !cursorPosition || activeTool === 'select') return null;
 
-  const toolLabels: { [key: string]: string } = {
-    'line': 'Γραμμή',
-    'rectangle': 'Ορθογώνιο',
-    'circle': 'Κύκλος',
-    'pan': 'Μετακίνηση',
-    'zoom-window': 'Παράθυρο Zoom',
-    'layering': 'Επίπεδα'
-  };
-
-  const label = toolLabels[activeTool] || activeTool;
+  // 🏢 ENTERPRISE: Get translated tool label
+  const i18nKey = TOOL_I18N_KEYS[activeTool];
+  const label = i18nKey ? t(`toolLabels.${i18nKey}`) : activeTool;
 
   return (
     // 🏢 ENTERPRISE: pointer-events-none για να μην εμποδίζει mouse events στο canvas κάτω

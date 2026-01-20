@@ -40,7 +40,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
                         target="_blank"
                         rel="noopener noreferrer"
                         className={INTERACTIVE_PATTERNS.LINK_PRIMARY}
-                        title={`Αποστολή email στο ${email} μέσω Gmail`}
+                        title={t('details.contactInfo.sendEmailTitle', { email })}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {email}
@@ -53,7 +53,7 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
                     <a
                         href={`tel:${phone}`}
                         className={INTERACTIVE_PATTERNS.LINK_PRIMARY}
-                        title={`Κλήση στο ${phone}`}
+                        title={t('details.contactInfo.callTitle', { phone })}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {phone}

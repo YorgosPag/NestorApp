@@ -16,50 +16,96 @@ import {
   Mail,
   Phone,
   Loader2,
-  CheckCircle,
-  AlertCircle,
-  User,
   X
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent } from '../ui/card';
 import communicationsService from '../../lib/communications';
 import { MESSAGE_TYPES, MESSAGE_TEMPLATES } from '../../lib/config/communications.config';
 import { toast } from 'sonner';
+// 🏢 ENTERPRISE: Type imports
+import type { CommunicationChannel } from '@/types/communications';
+
+// ============================================================================
+// 🏢 ENTERPRISE: Type Definitions
+// ============================================================================
+
+/** Lead data for message sending */
+interface LeadData {
+  id: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+}
+
+/** Custom variable for template substitution */
+interface CustomVariable {
+  key: string;
+  value: string;
+}
+
+/** Send message result */
+interface SendResult {
+  success: boolean;
+  error?: string;
+  messageId?: string;
+}
+
+/** Props interface for SendMessageModal */
+interface SendMessageModalProps {
+  /** Trigger element that opens the modal */
+  trigger?: React.ReactNode;
+  /** Lead data to pre-fill recipient info */
+  leadData?: LeadData | null;
+  /** Default communication channel */
+  defaultChannel?: CommunicationChannel;
+  /** Default template to use */
+  defaultTemplate?: string | null;
+  /** Callback when message is sent successfully */
+  onMessageSent?: ((result: SendResult) => void) | null;
+  /** Controlled open state */
+  open?: boolean;
+  /** Callback for open state changes */
+  onOpenChange?: (open: boolean) => void;
+}
 
 /**
  * Send Message Modal Component
  * Επιτρέπει την αποστολή μηνυμάτων μέσω διαφόρων channels
  */
 
-const SendMessageModal = ({
+const SendMessageModal: React.FC<SendMessageModalProps> = ({
   trigger,
   leadData = null,
-  defaultChannel = MESSAGE_TYPES.EMAIL,
+  defaultChannel = MESSAGE_TYPES.EMAIL as CommunicationChannel,
   defaultTemplate = null,
   onMessageSent = null,
   open,
   onOpenChange
 }) => {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('crm');
   const [isOpen, setIsOpen] = useState(false);
   const [sending, setSending] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState(defaultChannel);
-  const [selectedTemplate, setSelectedTemplate] = useState(defaultTemplate);
-  const [availableChannels, setAvailableChannels] = useState([]);
-  
+  const [selectedChannel, setSelectedChannel] = useState<CommunicationChannel>(defaultChannel);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(defaultTemplate);
+  // 🏢 ENTERPRISE: Properly typed state arrays
+  const [availableChannels, setAvailableChannels] = useState<CommunicationChannel[]>([]);
+
   // Form data
   const [formData, setFormData] = useState({
     to: '',
     subject: '',
     content: '',
-    templateVariables: {}
+    templateVariables: {} as Record<string, string>
   });
 
   // Προσθήκη custom template variables
-  const [customVariables, setCustomVariables] = useState([]);
+  const [customVariables, setCustomVariables] = useState<CustomVariable[]>([]);
 
   useEffect(() => {
     checkAvailableChannels();
@@ -103,7 +149,7 @@ const SendMessageModal = ({
   /**
    * Λήψη default recipient βάσει channel
    */
-  const getDefaultRecipient = (channel) => {
+  const getDefaultRecipient = (channel: CommunicationChannel): string => {
     if (!leadData) return '';
     
     switch (channel) {
@@ -120,17 +166,30 @@ const SendMessageModal = ({
 
   /**
    * Φόρτωση περιεχομένου template
+   * 🏢 ENTERPRISE: Uses MESSAGE_TEMPLATES from config instead of service method
    */
   const loadTemplateContent = () => {
-    const template = communicationsService.getMessageTemplate(selectedChannel, selectedTemplate);
+    if (!selectedTemplate) return;
+
+    // 🏢 ENTERPRISE: Type-safe template lookup
+    type TemplateChannels = keyof typeof MESSAGE_TEMPLATES;
+    const channelKey = selectedChannel as TemplateChannels;
+
+    // Get templates for the selected channel from config (if exists)
+    if (!(channelKey in MESSAGE_TEMPLATES)) return;
+    const channelTemplates = MESSAGE_TEMPLATES[channelKey] as Record<string, unknown>;
+    if (!channelTemplates) return;
+
+    const template = channelTemplates[selectedTemplate];
     if (template) {
       if (typeof template === 'string') {
         setFormData(prev => ({ ...prev, content: template }));
-      } else if (template.subject && template.template) {
+      } else if (typeof template === 'object' && template !== null && 'subject' in template && 'template' in template) {
+        const typedTemplate = template as { subject: string; template: string };
         setFormData(prev => ({
           ...prev,
-          subject: template.subject,
-          content: template.template
+          subject: typedTemplate.subject,
+          content: typedTemplate.template
         }));
       }
     }
@@ -139,7 +198,7 @@ const SendMessageModal = ({
   /**
    * Χειρισμός αλλαγής channel
    */
-  const handleChannelChange = (channel) => {
+  const handleChannelChange = (channel: CommunicationChannel): void => {
     setSelectedChannel(channel);
     setSelectedTemplate(null);
     setFormData(prev => ({
@@ -160,7 +219,7 @@ const SendMessageModal = ({
   /**
    * Ενημέρωση custom variable
    */
-  const updateCustomVariable = (index, field, value) => {
+  const updateCustomVariable = (index: number, field: keyof CustomVariable, value: string): void => {
     setCustomVariables(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -171,7 +230,7 @@ const SendMessageModal = ({
   /**
    * Διαγραφή custom variable
    */
-  const removeCustomVariable = (index) => {
+  const removeCustomVariable = (index: number): void => {
     setCustomVariables(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -184,12 +243,12 @@ const SendMessageModal = ({
 
       // Validation
       if (!formData.to.trim()) {
-        toast.error('Παρακαλώ συμπληρώστε τον παραλήπτη');
+        toast.error(t('sendMessage.validation.recipientRequired'));
         return;
       }
 
       if (!formData.content.trim()) {
-        toast.error('Παρακαλώ συμπληρώστε το περιεχόμενο');
+        toast.error(t('sendMessage.validation.contentRequired'));
         return;
       }
 
@@ -225,20 +284,44 @@ const SendMessageModal = ({
       };
 
       // Αποστολή μηνύματος
-      let result;
+      let result: SendResult;
       if (selectedTemplate) {
         result = await communicationsService.sendTemplateMessage({
           templateType: selectedTemplate,
           channel: selectedChannel,
           variables: allVariables,
-          ...messageData
+          to: messageData.to,
+          content: messageData.content,
+          // 🏢 ENTERPRISE: Subject goes in metadata (not in TemplateSendInput)
+          metadata: { ...messageData.metadata, subject: messageData.subject }
         });
       } else {
-        result = await communicationsService.sendMessage(messageData);
+        // 🏢 ENTERPRISE: Route to channel-specific method
+        const baseMessageData = {
+          to: messageData.to,
+          content: messageData.content,
+          subject: messageData.subject,
+          metadata: messageData.metadata
+        };
+
+        switch (selectedChannel) {
+          case MESSAGE_TYPES.EMAIL:
+            result = await communicationsService.sendEmail(baseMessageData);
+            break;
+          case MESSAGE_TYPES.TELEGRAM:
+            result = await communicationsService.sendTelegramMessage(baseMessageData);
+            break;
+          case MESSAGE_TYPES.WHATSAPP:
+            result = await communicationsService.sendWhatsAppMessage(baseMessageData);
+            break;
+          default:
+            // Fallback to email for unsupported channels
+            result = await communicationsService.sendEmail(baseMessageData);
+        }
       }
 
       if (result.success) {
-        toast.success(`Μήνυμα εστάλη επιτυχώς μέσω ${selectedChannel.toUpperCase()}`);
+        toast.success(t('sendMessage.toasts.success', { channel: selectedChannel.toUpperCase() }));
         
         // Reset form
         setFormData({
@@ -259,12 +342,12 @@ const SendMessageModal = ({
           onMessageSent(result);
         }
       } else {
-        toast.error(`Σφάλμα κατά την αποστολή: ${result.error}`);
+        toast.error(t('sendMessage.toasts.error', { error: result.error }));
       }
 
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Σφάλμα κατά την αποστολή μηνύματος');
+      toast.error(t('sendMessage.toasts.genericError'));
     } finally {
       setSending(false);
     }
@@ -272,11 +355,16 @@ const SendMessageModal = ({
 
   /**
    * Λήψη διαθέσιμων templates για το επιλεγμένο channel
+   * 🏢 ENTERPRISE: Type-safe template lookup
    */
-  const getAvailableTemplates = () => {
-    const templates = MESSAGE_TEMPLATES[selectedChannel];
+  const getAvailableTemplates = (): Array<{ value: string; label: string }> => {
+    type TemplateChannels = keyof typeof MESSAGE_TEMPLATES;
+    const channelKey = selectedChannel as TemplateChannels;
+
+    if (!(channelKey in MESSAGE_TEMPLATES)) return [];
+    const templates = MESSAGE_TEMPLATES[channelKey] as Record<string, unknown>;
     if (!templates) return [];
-    
+
     return Object.keys(templates).map(key => ({
       value: key,
       label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -286,7 +374,7 @@ const SendMessageModal = ({
   /**
    * Λήψη icon για κάθε channel
    */
-  const getChannelIcon = (channel) => {
+  const getChannelIcon = (channel: CommunicationChannel): React.ReactNode => {
     switch (channel) {
       case MESSAGE_TYPES.EMAIL:
         return <Mail className={iconSizes.sm} />;
@@ -317,7 +405,7 @@ const SendMessageModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className={iconSizes.md} />
-            Αποστολή Μηνύματος
+            {t('sendMessage.title')}
             {leadData && (
               <CommonBadge
                 status="contact"
@@ -331,10 +419,10 @@ const SendMessageModal = ({
         <div className="space-y-4">
           {/* Channel Selection */}
           <div className="space-y-2">
-            <Label>Επιλογή Channel</Label>
+            <Label>{t('sendMessage.selectChannel')}</Label>
             <Select value={selectedChannel} onValueChange={handleChannelChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Επιλέξτε channel" />
+                <SelectValue placeholder={t('sendMessage.selectChannelPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {availableChannels.map(channel => (
@@ -351,13 +439,13 @@ const SendMessageModal = ({
 
           {/* Template Selection */}
           <div className="space-y-2">
-            <Label>Template (Προαιρετικό)</Label>
+            <Label>{t('sendMessage.template')}</Label>
             <Select value={selectedTemplate || ''} onValueChange={setSelectedTemplate}>
               <SelectTrigger>
-                <SelectValue placeholder="Χωρίς template" />
+                <SelectValue placeholder={t('sendMessage.noTemplate')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Χωρίς template</SelectItem>
+                <SelectItem value="">{t('sendMessage.noTemplate')}</SelectItem>
                 {getAvailableTemplates().map(template => (
                   <SelectItem key={template.value} value={template.value}>
                     {template.label}
@@ -369,7 +457,7 @@ const SendMessageModal = ({
 
           {/* Recipient */}
           <div className="space-y-2">
-            <Label>Παραλήπτης</Label>
+            <Label>{t('sendMessage.recipient')}</Label>
             <Input
               value={formData.to}
               onChange={(e) => setFormData(prev => ({ ...prev, to: e.target.value }))}
@@ -384,22 +472,22 @@ const SendMessageModal = ({
           {/* Subject (για email) */}
           {selectedChannel === MESSAGE_TYPES.EMAIL && (
             <div className="space-y-2">
-              <Label>Θέμα</Label>
+              <Label>{t('sendMessage.subject')}</Label>
               <Input
                 value={formData.subject}
                 onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                placeholder="Θέμα μηνύματος"
+                placeholder={t('sendMessage.subjectPlaceholder')}
               />
             </div>
           )}
 
           {/* Content */}
           <div className="space-y-2">
-            <Label>Περιεχόμενο</Label>
+            <Label>{t('sendMessage.content')}</Label>
             <Textarea
               value={formData.content}
               onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-              placeholder="Γράψτε το μήνυμά σας εδώ..."
+              placeholder={t('sendMessage.contentPlaceholder')}
               rows={6}
             />
           </div>
@@ -409,12 +497,12 @@ const SendMessageModal = ({
             <Card>
               <CardContent className="pt-4">
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Template Variables</Label>
-                  
+                  <Label className="text-sm font-medium">{t('sendMessage.templateVariables')}</Label>
+
                   {/* Predefined variables */}
                   {leadData && (
                     <div className="space-y-2">
-                      <div className="text-xs text-gray-600">Διαθέσιμες μεταβλητές:</div>
+                      <div className="text-xs text-gray-600">{t('sendMessage.availableVariables')}</div>
                       <div className="flex flex-wrap gap-1">
                         <CommonBadge status="contact" customLabel="leadName" variant="outline" className="text-xs" />
                         <CommonBadge status="contact" customLabel="leadEmail" variant="outline" className="text-xs" />
@@ -430,13 +518,13 @@ const SendMessageModal = ({
                   {customVariables.map((variable, index) => (
                     <div key={index} className="flex items-center gap-2">
                       <Input
-                        placeholder="Όνομα μεταβλητής"
+                        placeholder={t('sendMessage.variableName')}
                         value={variable.key}
                         onChange={(e) => updateCustomVariable(index, 'key', e.target.value)}
                         className="flex-1"
                       />
                       <Input
-                        placeholder="Τιμή"
+                        placeholder={t('sendMessage.variableValue')}
                         value={variable.value}
                         onChange={(e) => updateCustomVariable(index, 'value', e.target.value)}
                         className="flex-1"
@@ -457,7 +545,7 @@ const SendMessageModal = ({
                     onClick={addCustomVariable}
                     className="w-full"
                   >
-                    Προσθήκη Μεταβλητής
+                    {t('sendMessage.addVariable')}
                   </Button>
                 </div>
               </CardContent>
@@ -473,7 +561,7 @@ const SendMessageModal = ({
                 if (onOpenChange) onOpenChange(false);
               }}
             >
-              Ακύρωση
+              {t('sendMessage.cancel')}
             </Button>
             <Button
               onClick={handleSend}
@@ -482,12 +570,12 @@ const SendMessageModal = ({
               {sending ? (
                 <>
                   <Loader2 className={`${iconSizes.sm} mr-2 animate-spin`} />
-                  Αποστολή...
+                  {t('sendMessage.sending')}
                 </>
               ) : (
                 <>
                   <Send className={`${iconSizes.sm} mr-2`} />
-                  Αποστολή
+                  {t('sendMessage.send')}
                 </>
               )}
             </Button>

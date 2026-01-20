@@ -13,9 +13,13 @@ import { useIconSizes } from '@/hooks/useIconSizes'
 import { getNotifications } from "@/constants/header"
 import { NotificationItem } from "@/components/header/notification-item"
 import type { Notification } from "@/types/header"
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation'
 
 export function NotificationsPopover() {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
   const [notifications, setNotifications] = React.useState<Notification[]>([])
 
   React.useEffect(() => {
@@ -49,9 +53,9 @@ export function NotificationsPopover() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="font-semibold">Ειδοποιήσεις</h4>
+          <h4 className="font-semibold">{t('header.notifications.title')}</h4>
           <Button variant="ghost" size="sm">
-            Διαγραφή όλων
+            {t('header.notifications.clearAll')}
           </Button>
         </div>
         <div className="space-y-2">

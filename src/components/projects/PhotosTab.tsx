@@ -21,6 +21,8 @@
 
 import React from 'react';
 import { PhotosTabBase } from '@/components/generic/photo-system';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // =============================================================================
 // PROPS
@@ -40,8 +42,10 @@ interface PhotosTabProps {
  * Migration from 106 lines to ~25 lines using enterprise template.
  */
 export function PhotosTab({ project }: PhotosTabProps = {}) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
   // If no project provided, use placeholder
-  const entity = project || { id: 'placeholder', name: 'Έργο' };
+  const entity = project || { id: 'placeholder', name: t('entities.project') };
 
   return (
     <PhotosTabBase

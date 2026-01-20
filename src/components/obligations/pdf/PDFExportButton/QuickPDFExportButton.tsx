@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n';
 import { PDFExportButtonProps } from "./types";
 import { usePdfExport } from "./hooks/usePdfExport";
 
@@ -16,6 +16,7 @@ export function QuickPDFExportButton({
   className,
 }: Omit<PDFExportButtonProps, 'showPreview'>) {
     const iconSizes = useIconSizes();
+    const { t } = useTranslation('obligations');
     const { isExporting, handleExport } = usePdfExport(document);
 
     return (
@@ -36,7 +37,7 @@ export function QuickPDFExportButton({
             ) : (
             <Download className={iconSizes.sm} />
             )}
-            {isExporting ? "Εξαγωγή..." : "Εξαγωγή PDF"}
+            {isExporting ? t('export.exporting') : t('export.button')}
         </Button>
     );
 }

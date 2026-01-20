@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -10,8 +11,10 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 
 export default function CrmNotificationsPage() {
+  const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const { user } = useAuth();
   const [testNotificationId, setTestNotificationId] = useState<string | null>(null);
@@ -71,14 +74,14 @@ export default function CrmNotificationsPage() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Bell className={iconSizes.lg} />
-                Κέντρο Ειδοποιήσεων
+                {t('notifications.title')}
                 {unreadCount > 0 && (
                   <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
                     {unreadCount}
                   </span>
                 )}
               </CardTitle>
-              <CardDescription>Όλες οι ενημερώσεις σας σε ένα μέρος.</CardDescription>
+              <CardDescription>{t('notifications.description')}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               {/* 🧪 Test Buttons - Development Only */}
@@ -92,7 +95,7 @@ export default function CrmNotificationsPage() {
                       className="border-dashed"
                     >
                       <FlaskConical className={`${iconSizes.sm} mr-2`} />
-                      {isCreatingTest ? 'Δημιουργία...' : '🧪 Test'}
+                      {isCreatingTest ? t('notifications.creating') : '🧪 Test'}
                     </Button>
                   ) : (
                     <Button
@@ -101,21 +104,21 @@ export default function CrmNotificationsPage() {
                       className="border-dashed text-destructive hover:text-destructive"
                     >
                       <Trash2 className={`${iconSizes.sm} mr-2`} />
-                      Διαγραφή Test
+                      {t('notifications.deleteTest')}
                     </Button>
                   )}
                 </>
               )}
               <Button variant="outline">
                 <Filter className={`${iconSizes.sm} mr-2`} />
-                Φίλτρα
+                {t('notifications.filters')}
               </Button>
               <Button
                 onClick={() => void markAllAsRead()}
                 disabled={unreadCount === 0 || loading}
               >
                 <CheckCheck className={`${iconSizes.sm} mr-2`} />
-                Όλες ως διαβασμένες
+                {t('notifications.markAllRead')}
               </Button>
             </div>
           </div>
@@ -125,7 +128,7 @@ export default function CrmNotificationsPage() {
           {loading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <span className="ml-3 text-muted-foreground">Φόρτωση ειδοποιήσεων...</span>
+              <span className="ml-3 text-muted-foreground">{t('notifications.loading')}</span>
             </div>
           )}
 
@@ -141,8 +144,8 @@ export default function CrmNotificationsPage() {
           {!loading && !error && notifications.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <Inbox className="h-12 w-12 mb-4" />
-              <p className="text-lg font-medium">Δεν υπάρχουν ειδοποιήσεις</p>
-              <p className="text-sm">Θα εμφανιστούν εδώ όταν έχετε νέες ενημερώσεις.</p>
+              <p className="text-lg font-medium">{t('notifications.empty')}</p>
+              <p className="text-sm">{t('notifications.emptyDescription')}</p>
             </div>
           )}
 

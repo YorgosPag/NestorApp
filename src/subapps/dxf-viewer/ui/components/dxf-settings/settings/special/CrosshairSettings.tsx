@@ -26,6 +26,8 @@ import { Palette, Settings2 } from 'lucide-react';
 import { CrosshairAppearanceSettings } from './CrosshairAppearanceSettings';
 import { CrosshairBehaviorSettings } from './CrosshairBehaviorSettings';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 
@@ -83,6 +85,8 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
 
   const { settings, updateSettings } = cursorHookResult;
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('dxf-viewer');
 
   // ============================================================================
   // STATE - Tab Navigation & Cursor Colors
@@ -167,13 +171,13 @@ export const CrosshairSettings: React.FC<CrosshairSettingsProps> = ({ className 
   const crosshairTabs: TabDefinition[] = [
     {
       id: 'appearance',
-      label: 'Εμφάνιση',
+      label: t('crosshairSettings.tabs.appearance'),
       icon: Palette, // 🏢 ENTERPRISE: Lucide icon replacing 🎨 emoji
       content: null, // Content rendered separately below
     },
     {
       id: 'behavior',
-      label: 'Συμπεριφορά',
+      label: t('crosshairSettings.tabs.behavior'),
       icon: Settings2, // 🏢 ENTERPRISE: Lucide icon replacing ⚙️ emoji
       content: null, // Content rendered separately below
     },

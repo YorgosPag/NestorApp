@@ -11,10 +11,10 @@ type FirestoreContactData = Record<string, any> & {
   companyId?: string;
 };
 
-/** Response type for contact API */
-interface ContactResponse {
-  success: boolean;
-  contact?: {
+/** 🏢 ENTERPRISE: Discriminated union response types for type-safe API responses */
+interface ContactSuccessResponse {
+  success: true;
+  contact: {
     id: string;
     contactId: string;
     displayName: string;
@@ -28,14 +28,21 @@ interface ContactResponse {
     avatarUrl: string | null;
     companyName: string | null;
     serviceType: string;
-    createdAt: any;
-    updatedAt: any;
-    lastContactDate: any;
+    createdAt: unknown;
+    updatedAt: unknown;
+    lastContactDate: unknown;
   };
-  contactId?: string;
-  timestamp?: string;
-  error?: string;
+  contactId: string;
+  timestamp: string;
 }
+
+interface ContactErrorResponse {
+  success: false;
+  error: string;
+}
+
+/** Response type for contact API - discriminated union */
+type ContactResponse = ContactSuccessResponse | ContactErrorResponse;
 
 // ✅ ENTERPRISE FIX: Force dynamic rendering to prevent static generation errors
 export const dynamic = 'force-dynamic';
@@ -62,8 +69,8 @@ export async function GET(
 ) {
   const { contactId } = await segmentData.params;
 
-  // Create authenticated handler
-  const handler = withAuth<ContactResponse>(
+  // Create authenticated handler - using unknown for flexible response types
+  const handler = withAuth<unknown>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         console.log(`📇 API: Loading contact for contactId: ${contactId}`);

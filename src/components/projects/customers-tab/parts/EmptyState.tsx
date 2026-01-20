@@ -1,20 +1,26 @@
 
+'use client';
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function EmptyState() {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Πελάτες Έργου</CardTitle>
+        <CardTitle>{t('customers.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="text-center py-8 text-muted-foreground">
           <Users className={`${iconSizes.xl2} mx-auto mb-2`} />
-          <p>Δεν υπάρχουν καταχωρημένοι πελάτες για αυτό το έργο.</p>
+          <p>{t('customers.emptyDescription')}</p>
         </div>
       </CardContent>
     </Card>

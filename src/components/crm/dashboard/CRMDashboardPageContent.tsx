@@ -11,11 +11,15 @@ import { getSortedCRMDashboardTabs } from '@/config/crm-dashboard-tabs-config';
 import { getSortedPeriods } from '@/config/period-selector-config';
 import { TelegramNotifications } from './TelegramNotifications';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function CRMDashboardPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('crm');
 
   // Get CRM Dashboard tabs from centralized config
   const crmDashboardTabs = getSortedCRMDashboardTabs();
@@ -40,7 +44,7 @@ export function CRMDashboardPageContent() {
               />
               <button className={`px-4 py-2 ${colors.text.inverted} rounded-lg flex items-center gap-2 ${colors.bg.gradient} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}>
                 <Plus className={iconSizes.sm} />
-                Νέα Επαφή
+                {t('contactsTab.newContact')}
               </button>
             </nav>
           </div>

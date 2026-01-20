@@ -9,13 +9,12 @@ import {
 } from '@/components/ui/select';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { PROPERTY_TYPE_LABELS, PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
+import { PROPERTY_TYPE_LABELS } from '@/constants/property-statuses-enterprise';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-// 🏢 ENTERPRISE: Centralized property type options
-const TYPE_OPTIONS = [
-  { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES },
-  ...Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => ({ value, label }))
-] as const;
+// 🏢 ENTERPRISE: Property type keys for i18n translation
+const PROPERTY_TYPE_KEYS = Object.keys(PROPERTY_TYPE_LABELS) as Array<keyof typeof PROPERTY_TYPE_LABELS>;
 
 // ============================================================================
 // PROPERTY GRID: PURE RADIX UI TYPE SELECT
@@ -42,6 +41,17 @@ export function TypeSelect({
 }) {
   const { quick, radius } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('properties');
+
+  // 🏢 ENTERPRISE: Dynamic options with i18n translation
+  const typeOptions = [
+    { value: 'all', label: t('filters.allTypes') },
+    ...PROPERTY_TYPE_KEYS.map((key) => ({
+      value: key,
+      label: t(`filters.types.${key}`)
+    }))
+  ];
 
   return (
     <Select value={selected || 'all'} onValueChange={onChange}>
@@ -49,7 +59,7 @@ export function TypeSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {TYPE_OPTIONS.map((opt) => (
+        {typeOptions.map((opt) => (
           <SelectItem key={opt.value} value={opt.value}>
             {opt.label}
           </SelectItem>

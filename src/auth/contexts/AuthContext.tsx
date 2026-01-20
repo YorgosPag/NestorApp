@@ -316,9 +316,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const profileIncomplete = isGoogleProvider && !localStorage.getItem(`profile_complete_${firebaseUser.uid}`);
 
         // 🔐 ENTERPRISE: Load custom claims from Firebase ID token
+        // forceRefresh=true ensures we get fresh claims after bootstrap/permission updates
         let customClaims: Record<string, unknown> = {};
         try {
-          const idTokenResult = await firebaseUser.getIdTokenResult();
+          const idTokenResult = await firebaseUser.getIdTokenResult(true);
           customClaims = idTokenResult.claims;
           console.log('🔐 [AuthContext] Custom claims loaded:', {
             globalRole: customClaims.globalRole,
@@ -579,6 +580,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setError(null);
 
       console.log('🔐 [AuthContext] Signing out');
+
+      // 🏢 ENTERPRISE: Dispatch logout event BEFORE signOut
+      // This allows other modules (NavigationContext) to cleanup their state
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:logout'));
+        console.log('📡 [AuthContext] Dispatched auth:logout event');
+      }
+
       await firebaseSignOut(auth);
       console.log('✅ [AuthContext] Sign out successful');
     } catch (error) {

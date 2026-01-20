@@ -1,0 +1,207 @@
+{
+  "documentHeader": {
+    "defaultContractor": "ΕΡΓΟΛΑΒΟΣ ΕΤΑΙΡΕΙΑ",
+    "companyType": "ΤΕΧΝΙΚΗ ΕΤΑΙΡΕΙΑ ΚΑΤΑΣΚΕΥΩΝ",
+    "documentTitle": "ΣΥΓΓΡΑΦΗ ΥΠΟΧΡΕΩΣΕΩΝ",
+    "defaultTitle": "Νέα Συγγραφή Υποχρεώσεων",
+    "defaultProjectName": "Όνομα Έργου",
+    "fields": {
+      "location": "Τοποθεσία:",
+      "address": "Διεύθυνση:",
+      "plot": "Οικόπεδο:",
+      "buildingPermit": "Οικ. Άδεια:",
+      "owners": "Ιδιοκτήτες:",
+      "ownerDefault": "Ιδιοκτήτης {index}",
+      "status": "Κατάσταση:"
+    }
+  },
+  "categories": {
+    "general": "Γενικά",
+    "construction": "Κατασκευή",
+    "materials": "Υλικά",
+    "systems": "Συστήματα",
+    "finishes": "Τελειώματα",
+    "installations": "Εγκαταστάσεις",
+    "safety": "Ασφάλεια",
+    "environment": "Περιβάλλον"
+  },
+  "newPage": {
+    "title": "Νέα Συγγραφή Υποχρεώσεων",
+    "subtitle": "Δημιουργήστε μια νέα συγγραφή υποχρεώσεων με live preview",
+    "editOnly": "Μόνο επεξεργασία",
+    "splitView": "Split View",
+    "creating": "Δημιουργία...",
+    "create": "Δημιουργία"
+  },
+  "basicInfo": {
+    "title": "Βασικές Πληροφορίες",
+    "company": "Εταιρεία Κατασκευαστή",
+    "required": "*",
+    "loadingCompanies": "Φόρτωση εταιρειών...",
+    "selectCompany": "Επιλέξτε εταιρεία",
+    "project": "Έργο (Προαιρετικό)",
+    "selectCompanyFirst": "Πρώτα επιλέξτε εταιρεία",
+    "loadingProjects": "Φόρτωση έργων...",
+    "selectProject": "Επιλέξτε έργο",
+    "titleLabel": "Τίτλος",
+    "titlePlaceholder": "π.χ. Συγγραφή Υποχρεώσεων - Οικόπεδο Αθανασιάδη",
+    "projectName": "Όνομα Έργου",
+    "projectNamePlaceholder": "π.χ. Επέκταση Θέρμης"
+  },
+  "template": {
+    "title": "Πρότυπο",
+    "useDefault": "Χρήση προεπιλεγμένου προτύπου",
+    "sections": "ενότητες"
+  },
+  "structure": {
+    "title": "Δομή & Περιεχόμενο"
+  },
+  "preview": {
+    "title": "Προεπισκόπηση",
+    "description": "Live preview του εγγράφου",
+    "unknownProject": "Άγνωστο έργο",
+    "unknownContractor": "Άγνωστος εργολάβος",
+    "toc": {
+      "hide": "Απόκρυψη Περιεχομένων",
+      "show": "Εμφάνιση Περιεχομένων"
+    }
+  },
+  "validation": {
+    "titleRequired": "Παρακαλώ εισάγετε τίτλο",
+    "projectNameRequired": "Παρακαλώ εισάγετε όνομα έργου",
+    "createError": "Σφάλμα κατά τη δημιουργία της συγγραφής υποχρεώσεων",
+    "document": {
+      "titleRequired": "Ο τίτλος είναι υποχρεωτικός",
+      "projectNameRequired": "Το όνομα έργου είναι υποχρεωτικό",
+      "contractorRequired": "Η εταιρεία ανάδοχου είναι υποχρεωτική",
+      "ownersRequired": "Απαιτείται τουλάχιστον ένας ιδιοκτήτης",
+      "noSections": "Το έγγραφο δεν περιέχει ενότητες"
+    },
+    "section": {
+      "prefix": "Ενότητα {index}",
+      "titleRequired": "Ο τίτλος ενότητας είναι υποχρεωτικός",
+      "numberRequired": "Ο αριθμός ενότητας είναι υποχρεωτικός",
+      "noContent": "Η ενότητα δεν έχει περιεχόμενο",
+      "contentTooShort": "Το περιεχόμενο της ενότητας είναι πολύ σύντομο"
+    },
+    "article": {
+      "prefix": "Άρθρο {index}",
+      "titleRequired": "Ο τίτλος άρθρου είναι υποχρεωτικός",
+      "numberRequired": "Ο αριθμός άρθρου είναι υποχρεωτικός",
+      "noContent": "Το άρθρο δεν έχει περιεχόμενο"
+    },
+    "paragraph": {
+      "prefix": "Παράγραφος {index}",
+      "contentRequired": "Το περιεχόμενο παραγράφου είναι υποχρεωτικό",
+      "numberRequired": "Ο αριθμός παραγράφου είναι υποχρεωτικός",
+      "contentTooShort": "Το περιεχόμενο παραγράφου είναι πολύ σύντομο"
+    }
+  },
+  "aria": {
+    "editObligation": "Επεξεργασία υποχρέωσης",
+    "editForm": "Φόρμα επεξεργασίας",
+    "preview": "Προεπισκόπηση",
+    "hideToc": "Απόκρυψη πίνακα περιεχομένων",
+    "showToc": "Εμφάνιση πίνακα περιεχομένων",
+    "printDocument": "Εκτύπωση εγγράφου"
+  },
+  "export": {
+    "progress": {
+      "preparingContent": "Προετοιμασία περιεχομένου...",
+      "formattingDocument": "Μορφοποίηση εγγράφου...",
+      "creatingToc": "Δημιουργία πίνακα περιεχομένων...",
+      "finalProcessing": "Τελική επεξεργασία...",
+      "complete": "Εξαγωγή ολοκληρώθηκε!"
+    },
+    "success": {
+      "title": "Επιτυχία",
+      "message": "Το PDF δημιουργήθηκε επιτυχώς."
+    },
+    "creating": "Δημιουργία PDF...",
+    "percentComplete": "{percent}% ολοκληρώθηκε",
+    "button": "Εξαγωγή PDF",
+    "exporting": "Εξαγωγή..."
+  },
+  "print": {
+    "button": "Εκτύπωση",
+    "error": "Σφάλμα κατά την εκτύπωση. Παρακαλώ δοκιμάστε ξανά."
+  },
+  "sectionEditor": {
+    "categoryLabel": "Κατηγορία",
+    "selectCategory": "Επιλέξτε κατηγορία",
+    "statusLabel": "Στάτους",
+    "requiredArticle": "Απαραίτητο άρθρο"
+  },
+  "richText": {
+    "defaultPlaceholder": "Εισάγετε το περιεχόμενο..."
+  },
+  "article": {
+    "titlePlaceholder": "Τίτλος άρθρου...",
+    "contentPlaceholder": "Περιεχόμενο άρθρου...",
+    "noTitle": "Χωρίς τίτλο",
+    "addParagraph": "Προσθήκη παραγράφου",
+    "titleLabel": "Τίτλος Άρθρου",
+    "titleInputPlaceholder": "Εισάγετε τον τίτλο του άρθρου",
+    "contentLabel": "Περιεχόμενο Άρθρου",
+    "contentInputPlaceholder": "Εισάγετε το περιεχόμενο του άρθρου..."
+  },
+  "paragraph": {
+    "contentPlaceholder": "Περιεχόμενο παραγράφου...",
+    "noContent": "Χωρίς περιεχόμενο"
+  },
+  "section": {
+    "titlePlaceholder": "Τίτλος ενότητας...",
+    "contentPlaceholder": "Περιεχόμενο της ενότητας...",
+    "noTitle": "Χωρίς τίτλο",
+    "requiredSection": "Απαραίτητη ενότητα",
+    "required": "Απαραίτητο",
+    "addArticle": "Προσθήκη άρθρου",
+    "duplicateSection": "Αντιγραφή ενότητας",
+    "contentLabel": "Περιεχόμενο Ενότητας"
+  },
+  "exportOptions": {
+    "title": "Επιλογές Εξαγωγής",
+    "description": "Προσαρμόστε την εξαγωγή PDF σύμφωνα με τις ανάγκες σας",
+    "content": {
+      "title": "Περιεχόμενο",
+      "toc": {
+        "label": "Πίνακας Περιεχομένων",
+        "description": "Αυτόματος πίνακας με navigation links",
+        "aria": "Συμπερίληψη πίνακα περιεχομένων"
+      },
+      "pageNumbers": {
+        "label": "Αρίθμηση Σελίδων",
+        "description": "Footer με αριθμούς σελίδων και στοιχεία",
+        "aria": "Συμπερίληψη αρίθμησης σελίδων"
+      },
+      "logo": {
+        "label": "Λογότυπο Εταιρείας",
+        "description": "Προσθήκη λογοτύπου στο header",
+        "aria": "Συμπερίληψη λογότυπου"
+      }
+    },
+    "quality": {
+      "title": "Ποιότητα & Μορφοποίηση",
+      "standard": {
+        "label": "Στάνταρ",
+        "description": "Βασική μορφοποίηση, μικρότερο μέγεθος",
+        "aria": "Ποιότητα Standard"
+      },
+      "high": {
+        "label": "Υψηλή Ποιότητα",
+        "description": "Βελτιωμένα περιθώρια και typography",
+        "aria": "Ποιότητα High"
+      }
+    },
+    "preview": {
+      "title": "Προεπισκόπηση Εγγράφου",
+      "sections": "Ενότητες:",
+      "articles": "Άρθρα:",
+      "paragraphs": "Παράγραφοι:",
+      "words": "Λέξεις:",
+      "readingTime": "Ανάγνωση:",
+      "minutes": "λεπτά",
+      "estimatedPages": "Εκτιμώμενες σελίδες:"
+    }
+  }
+}

@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 import React from 'react';
 import { Label } from '@/components/ui/label';
@@ -17,6 +18,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { getContactDisplayName } from '@/types/contacts';
 import { useBulkAssign } from './hooks/useBulkAssign';
 import { DROPDOWN_PLACEHOLDERS } from '@/constants/property-statuses-enterprise';
+import { useTranslation } from 'react-i18next';
 
 export function BulkAssignToolbar({
   selectedIds,
@@ -27,6 +29,7 @@ export function BulkAssignToolbar({
   onClearSelection: () => void;
   onAssignmentSuccess: () => void;
 }) {
+  const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
   const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -48,7 +51,7 @@ export function BulkAssignToolbar({
           <div className="flex items-center gap-2">
             <User className={`${iconSizes.sm} ${colors.text.info}`} />
             <Label className="text-sm font-medium ${colors.text.info}">
-              Μαζική Ανάθεση σε Πελάτη
+              {t('toolbar.bulkAssign')}
             </Label>
           </div>
           <Select value={selectedContactId} onValueChange={setSelectedContactId}>
@@ -70,7 +73,7 @@ export function BulkAssignToolbar({
             disabled={isLoading || !selectedContactId}
           >
             <Check className={`${iconSizes.sm} mr-2`} />
-            {isLoading ? 'Ανάθεση...' : 'Ανάθεση'}
+            {isLoading ? t('toolbar.assigning') : t('toolbar.assign')}
           </Button>
         </div>
         <Button
@@ -80,7 +83,7 @@ export function BulkAssignToolbar({
           onClick={onClearSelection}
         >
           <X className={`${iconSizes.xs} mr-1`} />
-          Καθαρισμός Επιλογής ({selectedIds.length})
+          {t('toolbar.clearSelection', { count: selectedIds.length })}
         </Button>
       </div>
     </div>

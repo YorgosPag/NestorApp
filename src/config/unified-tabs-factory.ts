@@ -373,12 +373,12 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'floorplan',
             // 🏢 ENTERPRISE: Primary concept = Κάτοψη (floor plan), NOT building context
             icon: 'layout-grid',
-            description: 'Κάτοψη και διάταξη του κτιρίου',
+            description: 'tabs.floorplan.description',
             order: 2,
             enabled: true,
             component: 'FloorplanViewerTab',
             componentProps: {
-              title: 'Κάτοψη Κτιρίου',
+              title: 'tabs.labels.floorplan',
               floorplanType: 'building'
             }
           },
@@ -413,12 +413,12 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             id: 'contracts',
             value: 'contracts',
             icon: 'file-signature',
-            description: 'Συμβόλαια και συμφωνίες πελατών',
+            description: 'tabs.contracts.description',
             order: 6,
             enabled: true,
             component: 'PlaceholderTab',
             componentProps: {
-              title: 'Συμβόλαια Πελατών',
+              title: 'tabs.labels.customerContracts',
               icon: 'FileSignature'
             }
           },
@@ -426,12 +426,12 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             id: 'protocols',
             value: 'protocols',
             icon: 'clipboard-check',
-            description: 'Υ.Δ.Τοιχοποιίας & Πρωτόκολλα',
+            description: 'tabs.protocols.description',
             order: 7,
             enabled: true,
             component: 'PlaceholderTab',
             componentProps: {
-              title: 'Υ.Δ.Τοιχοποιίας & Πρωτόκολλα',
+              title: 'tabs.labels.protocols',
               icon: 'ClipboardCheck'
             }
           },
@@ -597,8 +597,4 @@ export default {
   }
 };
 
-export type {
-  TabEntityType,
-  ContactType,
-  UnifiedTabConfig
-};
+// Types already exported inline above

@@ -32,11 +32,12 @@ import {
 // ============================================================================
 
 // Temporary sections που θα μπορούσαν να γίνουν μελλοντικά modular αν χρειαστεί
+// 🏢 i18n: Uses i18n keys that are translated at runtime by GenericFormRenderer
 const datesLocationSection: SectionConfig = {
   id: 'datesLocation',
-  title: 'Ημερομηνίες & Τοποθεσία',
+  title: 'sections.datesLocation', // i18n key
   icon: 'calendar',
-  description: 'Χρονολογικά και γεωγραφικά στοιχεία',
+  description: 'sectionDescriptions.datesLocation', // i18n key
   order: 4,
   fields: [
     {
@@ -74,9 +75,9 @@ const datesLocationSection: SectionConfig = {
 
 const addressesSection: SectionConfig = {
   id: 'addresses',
-  title: 'Διευθύνσεις & Υποκαταστήματα',
+  title: 'sections.addressesBranches', // i18n key
   icon: 'map-pin',
-  description: 'Έδρα και υποκαταστήματα εταιρείας',
+  description: 'sectionDescriptions.addressesBranches', // i18n key
   order: 5,
   fields: [
     {
@@ -123,14 +124,14 @@ const addressesSection: SectionConfig = {
 // Add more simplified sections για demonstration...
 const shareholdersSection: SectionConfig = {
   id: 'shareholders',
-  title: 'Μετοχική Σύνθεση & Εταίροι',
+  title: 'sections.shareholdersPartners', // i18n key
   icon: 'users',
-  description: 'Μέτοχοι και εταιρική σύνθεση',
+  description: 'sectionDescriptions.shareholdersPartners', // i18n key
   order: 6,
   fields: [
     {
       id: 'shareholderName',
-      label: 'Όνομα Μετόχου',
+      label: 'company.shareholderType', // i18n key
       type: 'input',
       helpText: gemiHelps.shareholder_name_help,
     },
@@ -145,15 +146,15 @@ const shareholdersSection: SectionConfig = {
   ],
 };
 
-// Quick simplified sections για completeness
-const documentsSection: SectionConfig = { id: 'documents', title: 'Έγγραφα & Πιστοποιητικά', icon: 'file-text', order: 7, fields: [], description: 'Έγγραφα ΓΕΜΗ' };
-const decisionsSection: SectionConfig = { id: 'decisions', title: 'Αποφάσεις Οργάνων', icon: 'gavel', order: 8, fields: [], description: 'Αποφάσεις συμβουλίων' };
-const historySection: SectionConfig = { id: 'companyVersions', title: 'Ιστορικό & Μεταβολές', icon: 'history', order: 9, fields: [], description: 'Ιστορικό εκδόσεων' };
-const representativesSection: SectionConfig = { id: 'representatives', title: 'Εκπρόσωποι & Διοίκηση', icon: 'user-check', order: 10, fields: [], description: 'Νόμιμοι εκπρόσωποι' };
-const announcementsSection: SectionConfig = { id: 'announcements', title: 'Ανακοινώσεις & Δημοσιεύσεις', icon: 'megaphone', order: 11, fields: [], description: 'Ανακοινώσεις εταιρείας' };
-const statusesSection: SectionConfig = { id: 'statuses', title: 'Καταστάσεις & Lifecycle', icon: 'activity', order: 12, fields: [], description: 'Ιστορικό καταστάσεων' };
-const photosSection: SectionConfig = { id: 'companyPhotos', title: 'Λογότυπο & Φωτογραφίες', icon: 'image', order: 13, fields: [], description: 'Λογότυπο εταιρείας' };
-const relationshipsSection: SectionConfig = { id: 'relationships', title: 'Μέτοχοι & Εργαζόμενοι', icon: 'users', order: 14, fields: [], description: 'Διαχείριση μετόχων' };
+// Quick simplified sections για completeness - 🏢 i18n keys
+const documentsSection: SectionConfig = { id: 'documents', title: 'sections.documentsCertificates', icon: 'file-text', order: 7, fields: [], description: 'sectionDescriptions.documentsCertificates' };
+const decisionsSection: SectionConfig = { id: 'decisions', title: 'sections.organDecisions', icon: 'gavel', order: 8, fields: [], description: 'sectionDescriptions.organDecisions' };
+const historySection: SectionConfig = { id: 'companyVersions', title: 'sections.historyChanges', icon: 'history', order: 9, fields: [], description: 'sectionDescriptions.historyChanges' };
+const representativesSection: SectionConfig = { id: 'representatives', title: 'sections.representativesManagement', icon: 'user-check', order: 10, fields: [], description: 'sectionDescriptions.representativesManagement' };
+const announcementsSection: SectionConfig = { id: 'announcements', title: 'sections.announcementsPublications', icon: 'megaphone', order: 11, fields: [], description: 'sectionDescriptions.announcementsPublications' };
+const statusesSection: SectionConfig = { id: 'statuses', title: 'sections.statusesLifecycle', icon: 'activity', order: 12, fields: [], description: 'sectionDescriptions.statusesLifecycle' };
+const photosSection: SectionConfig = { id: 'companyPhotos', title: 'sections.logoPhotos', icon: 'image', order: 13, fields: [], description: 'sectionDescriptions.logoPhotos' };
+const relationshipsSection: SectionConfig = { id: 'relationships', title: 'sections.shareholdersEmployees', icon: 'users', order: 14, fields: [], description: 'sectionDescriptions.shareholdersPartners' };
 
 // ============================================================================
 // SECTION REGISTRY

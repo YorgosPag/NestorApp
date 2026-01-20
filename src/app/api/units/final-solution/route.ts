@@ -61,14 +61,15 @@ export async function POST(request: NextRequest) {
         console.log('🔍 Finding sold units without customers...');
         const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
 
-        const soldUnitsWithoutCustomers = [];
+        // 🏢 ENTERPRISE: Explicit type annotation to avoid implicit any[]
+        const soldUnitsWithoutCustomers: Array<{ id: string; name: string; currentSoldTo: string }> = [];
         unitsSnapshot.docs.forEach(docRef => {
           const unitData = docRef.data();
           if (unitData.status === 'sold' && (!unitData.soldTo || unitData.soldTo === UNIT_SALE_STATUS.NOT_SOLD)) {
             soldUnitsWithoutCustomers.push({
               id: docRef.id,
-              name: unitData.name || 'Unknown Unit',
-              currentSoldTo: unitData.soldTo || 'null'
+              name: (unitData.name as string) || 'Unknown Unit',
+              currentSoldTo: (unitData.soldTo as string) || 'null'
             });
           }
         });

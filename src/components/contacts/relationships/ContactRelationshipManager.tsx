@@ -23,6 +23,8 @@ import { AlertCircle, Users, Plus, RefreshCw } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Import centralized types
 import type { ContactType } from '@/types/contacts';
@@ -71,6 +73,8 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
 
   // 📋 Relationship list management hook
   const {
@@ -206,10 +210,10 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
       <div className="flex items-center space-x-3">
         <Users className={`${iconSizes.lg} ${colors.text.muted}`} />
         <div>
-          <h3 className="text-lg font-medium">Σχέσεις Επαφής</h3>
+          <h3 className="text-lg font-medium">{t('relationships.summary.title')}</h3>
           {!isNewContact && (
             <p className={`text-sm ${colors.text.muted}`}>
-              Σύνολο: {relationships.length} σχέσεις
+              {t('relationships.manager.totalCount', { count: relationships.length })}
             </p>
           )}
         </div>
@@ -222,7 +226,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
             size="sm"
             onClick={handleGlobalRefresh}
             disabled={anyLoading}
-            title="Ανανέωση δεδομένων"
+            title={t('relationships.manager.refreshData')}
           >
             <RefreshCw className={`${iconSizes.sm} ${anyLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -234,7 +238,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
               size="sm"
             >
               <Plus className={`${iconSizes.sm} mr-2`} />
-              Προσθήκη Σχέσης
+              {t('relationships.manager.addRelationship')}
             </Button>
           )}
         </div>
@@ -254,7 +258,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           <Alert variant="destructive">
             <AlertCircle className={iconSizes.sm} />
             <AlertDescription>
-              <strong>Σφάλμα λίστας σχέσεων:</strong> {listError}
+              <strong>{t('relationships.manager.errors.listError')}:</strong> {listError}
             </AlertDescription>
           </Alert>
         )}
@@ -263,7 +267,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           <Alert variant="destructive">
             <AlertCircle className={iconSizes.sm} />
             <AlertDescription>
-              <strong>Σφάλμα φόρμας:</strong> {formError}
+              <strong>{t('relationships.manager.errors.formError')}:</strong> {formError}
             </AlertDescription>
           </Alert>
         )}
@@ -272,7 +276,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           <Alert variant="destructive">
             <AlertCircle className={iconSizes.sm} />
             <AlertDescription>
-              <strong>Σφάλμα οργανωσιακού διαγράμματος:</strong> {treeError}
+              <strong>{t('relationships.manager.errors.treeError')}:</strong> {treeError}
             </AlertDescription>
           </Alert>
         )}
@@ -333,7 +337,7 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Users className={iconSizes.md} />
-              <span>Οργανωτικό Διάγραμμα</span>
+              <span>{t('relationships.summary.organizationChart')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -365,10 +369,9 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
         <Card className={`${getStatusBorder('info')} ${colors.bg.info}`}>
           <CardContent className="pt-6">
             <div className={`text-center ${colors.text.info}`}>
-              <p className="font-medium">💡 Σημείωση</p>
+              <p className="font-medium">💡 {t('relationships.manager.newContact.note')}</p>
               <p className="text-sm mt-2">
-                Για να δημιουργήσετε σχέσεις, αποθηκεύστε πρώτα την επαφή.
-                Μετά την αποθήκευση θα εμφανιστούν οι επιλογές διαχείρισης σχέσεων.
+                {t('relationships.manager.newContact.description')}
               </p>
             </div>
           </CardContent>

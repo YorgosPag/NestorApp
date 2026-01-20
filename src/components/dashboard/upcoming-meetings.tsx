@@ -13,6 +13,8 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, MapPin, ChevronRight } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Meeting } from "@/types/dashboard";
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface UpcomingMeetingsProps {
   meetings: Meeting[];
@@ -20,10 +22,13 @@ interface UpcomingMeetingsProps {
 
 export function UpcomingMeetings({ meetings }: UpcomingMeetingsProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('dashboard');
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Επερχόμενα Ραντεβού</CardTitle>
+        <CardTitle className="text-base">{t('upcomingMeetings.title')}</CardTitle>
         <Calendar className={`${iconSizes.sm} text-muted-foreground`} />
       </CardHeader>
       <CardContent>
@@ -55,7 +60,7 @@ export function UpcomingMeetings({ meetings }: UpcomingMeetingsProps) {
       <CardFooter className="pt-4">
         <Button asChild className="w-full" variant="ghost">
           <Link href="/calendar">
-            Προβολή ημερολογίου
+            {t('upcomingMeetings.viewCalendar')}
             <ChevronRight className={`ml-1 ${iconSizes.sm}`} />
           </Link>
         </Button>

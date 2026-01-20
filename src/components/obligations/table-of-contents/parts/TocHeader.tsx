@@ -1,3 +1,4 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 "use client";
 
 import React from 'react';
@@ -8,6 +9,7 @@ import { BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
 import type { TocHeaderProps } from '../types';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from 'react-i18next';
 
 export function TocHeader({
   items,
@@ -16,6 +18,7 @@ export function TocHeader({
   onExpandAll,
   onCollapseAll,
 }: TocHeaderProps) {
+  const { t } = useTranslation('obligations');
   const iconSizes = useIconSizes();
   const isAllExpanded = expandedIds.length > 0; // Simplified check for toggle icon
 
@@ -24,9 +27,9 @@ export function TocHeader({
       <div className="flex items-center justify-between">
         <CardTitle className={cn("text-lg flex items-center gap-2", compact && "text-base")}>
           <BookOpen className={iconSizes.md} />
-          Πίνακας Περιεχομένων
+          {t('toc.title')}
           <Badge variant="secondary" className="text-xs">
-            {items.length} {items.length === 1 ? 'ενότητα' : 'ενότητες'}
+            {t('toc.sectionCount', { count: items.length })}
           </Badge>
         </CardTitle>
 
@@ -36,8 +39,8 @@ export function TocHeader({
             size="sm"
             onClick={isAllExpanded ? onCollapseAll : onExpandAll}
             className="h-7 px-2"
-            title={isAllExpanded ? "Σύμπτυξη όλων" : "Επέκταση όλων"}
-            aria-label={isAllExpanded ? "Σύμπτυξη όλων" : "Επέκταση όλων"}
+            title={isAllExpanded ? t('toc.collapseAll') : t('toc.expandAll')}
+            aria-label={isAllExpanded ? t('toc.collapseAll') : t('toc.expandAll')}
           >
             {isAllExpanded ? (
               <ChevronDown className={iconSizes.sm} />
@@ -47,10 +50,10 @@ export function TocHeader({
           </Button>
         </div>
       </div>
-      
+
       {!compact && (
         <CardDescription>
-          Κλικ σε μια ενότητα για πλοήγηση
+          {t('toc.clickToNavigate')}
         </CardDescription>
       )}
     </CardHeader>

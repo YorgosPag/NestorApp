@@ -1,5 +1,5 @@
 import type { FilterPanelConfig } from '../types';
-import { GEOGRAPHIC_CONFIG } from '@/config/geo-constants';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import {
   UNIFIED_STATUS_FILTER_LABELS,
   COMMON_FILTER_LABELS,
@@ -8,7 +8,9 @@ import {
 } from '@/constants/property-statuses-enterprise';
 
 // Storage Filter State Type
+// 🏢 ENTERPRISE: Added index signature for GenericFilterState compatibility
 export interface StorageFilterState {
+  [key: string]: unknown;
   searchTerm?: string;
   status?: string[];
   type?: string[];
@@ -38,9 +40,10 @@ export const defaultStorageFilters: StorageFilterState = {
 };
 
 // Storage Filters Configuration
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const storageFiltersConfig: FilterPanelConfig = {
-  title: 'Φίλτρα Αποθηκών',
-  searchPlaceholder: 'Όνομα, περιγραφή, κτίριο...',
+  title: 'filters.storage.title',
+  searchPlaceholder: 'filters.storage.searchPlaceholder',
   rows: [
     {
       id: 'storage-basic',
@@ -48,17 +51,17 @@ export const storageFiltersConfig: FilterPanelConfig = {
         {
           id: 'searchTerm',
           type: 'search',
-          label: 'Αναζήτηση',
-          placeholder: 'Όνομα, περιγραφή, κτίριο...',
-          ariaLabel: 'Αναζήτηση αποθηκών',
+          label: 'filters.common.search',
+          placeholder: 'filters.storage.searchPlaceholder',
+          ariaLabel: 'filters.storage.ariaLabels.search',
           width: 2
         },
         {
           id: 'status',
           type: 'select',
-          label: 'Κατάσταση',
-          placeholder: 'Επιλέξτε κατάσταση',
-          ariaLabel: 'Φίλτρο κατάστασης αποθήκης',
+          label: 'filters.common.status',
+          placeholder: 'filters.common.selectStatus',
+          ariaLabel: 'filters.storage.ariaLabels.status',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -71,9 +74,9 @@ export const storageFiltersConfig: FilterPanelConfig = {
         {
           id: 'type',
           type: 'select',
-          label: 'Τύπος',
-          placeholder: 'Επιλέξτε τύπο',
-          ariaLabel: 'Φίλτρο τύπου αποθήκης',
+          label: 'filters.common.type',
+          placeholder: 'filters.common.selectType',
+          ariaLabel: 'filters.storage.ariaLabels.type',
           width: 1,
           options: [
             { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
@@ -92,9 +95,9 @@ export const storageFiltersConfig: FilterPanelConfig = {
         {
           id: 'building',
           type: 'select',
-          label: 'Κτίριο',
-          placeholder: 'Επιλέξτε κτίριο',
-          ariaLabel: 'Φίλτρο κτιρίου',
+          label: 'filters.common.building',
+          placeholder: 'filters.common.selectBuilding',
+          ariaLabel: 'filters.storage.ariaLabels.building',
           width: 1,
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_BUILDINGS },
@@ -108,9 +111,9 @@ export const storageFiltersConfig: FilterPanelConfig = {
         {
           id: 'floor',
           type: 'select',
-          label: 'Όροφος',
-          placeholder: 'Επιλέξτε όροφο',
-          ariaLabel: 'Φίλτρο ορόφου',
+          label: 'filters.common.floor',
+          placeholder: 'filters.common.selectFloor',
+          ariaLabel: 'filters.storage.ariaLabels.floor',
           width: 1,
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_FLOORS },
@@ -125,15 +128,15 @@ export const storageFiltersConfig: FilterPanelConfig = {
         {
           id: 'project',
           type: 'select',
-          label: 'Έργο',
-          placeholder: 'Επιλέξτε έργο',
-          ariaLabel: 'Φίλτρο έργου',
+          label: 'filters.common.project',
+          placeholder: 'filters.common.selectProject',
+          ariaLabel: 'filters.storage.ariaLabels.project',
           width: 1,
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_PROJECTS },
-            { value: 'project1', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_NAME || 'Έργο Α' },
-            { value: 'project2', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_2_NAME || 'Έργο Β' },
-            { value: 'project3', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_3_NAME || 'Έργο Γ' }
+            { value: 'project1', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_1_NAME || 'storage.projects.projectA' },
+            { value: 'project2', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_2_NAME || 'storage.projects.projectB' },
+            { value: 'project3', label: process.env.NEXT_PUBLIC_SAMPLE_PROJECT_3_NAME || 'storage.projects.projectC' }
           ]
         }
       ]
@@ -144,27 +147,27 @@ export const storageFiltersConfig: FilterPanelConfig = {
         {
           id: 'ranges.areaRange',
           type: 'range',
-          label: 'Εμβαδόν (m²)',
-          placeholder: { min: 'Από', max: 'Έως' },
-          ariaLabel: 'Φίλτρο εμβαδού',
+          label: 'filters.common.area',
+          placeholder: { min: 'filters.common.from', max: 'filters.common.to' },
+          ariaLabel: 'filters.storage.ariaLabels.area',
           width: 1,
           range: { min: 0, max: 200, step: 5 }
         },
         {
           id: 'ranges.priceRange',
           type: 'range',
-          label: 'Τιμή (€)',
-          placeholder: { min: 'Από', max: 'Έως' },
-          ariaLabel: 'Φίλτρο τιμής',
+          label: 'filters.common.price',
+          placeholder: { min: 'filters.common.from', max: 'filters.common.to' },
+          ariaLabel: 'filters.storage.ariaLabels.price',
           width: 1,
           range: { min: 0, max: 100000, step: 1000 }
         },
         {
           id: 'ranges.dateRange',
           type: 'dateRange',
-          label: 'Ημερομηνία Ενημέρωσης',
-          placeholder: { start: 'Από', end: 'Έως' },
-          ariaLabel: 'Φίλτρο ημερομηνίας',
+          label: 'filters.common.updateDate',
+          placeholder: { start: 'filters.common.from', end: 'filters.common.to' },
+          ariaLabel: 'filters.storage.ariaLabels.date',
           width: 1
         }
       ]

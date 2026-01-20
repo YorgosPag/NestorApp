@@ -6,19 +6,24 @@ import { Mail, PhoneCall, MessageSquare } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function RecentActivities() {
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
     const { quick } = useBorderTokens();
+    // 🏢 ENTERPRISE: i18n support
+    const { t } = useTranslation('crm');
+
     const activities = [
-        { icon: Mail, text: "Email από Γ. Παπαδόπουλο", time: "2 λεπτά πριν" },
-        { icon: PhoneCall, text: "Κλήση σε TechCorp", time: "15 λεπτά πριν" },
-        { icon: MessageSquare, text: "Σημείωση για Μ. Ιωάννου", time: "1 ώρα πριν" },
+        { icon: Mail, text: t('dashboard.recentActivities.emailFrom', { name: 'Γ. Παπαδόπουλο' }), time: t('dashboard.recentActivities.time.minutesAgo', { count: 2 }) },
+        { icon: PhoneCall, text: t('dashboard.recentActivities.callTo', { name: 'TechCorp' }), time: t('dashboard.recentActivities.time.minutesAgo', { count: 15 }) },
+        { icon: MessageSquare, text: t('dashboard.recentActivities.noteFor', { name: 'Μ. Ιωάννου' }), time: t('dashboard.recentActivities.time.hoursAgo', { count: 1 }) },
     ];
     return (
         <section className={`${colors.bg.primary} ${quick.card} p-6`} aria-labelledby="recent-activities-title">
-            <h2 id="recent-activities-title" className="text-lg font-semibold mb-4">Πρόσφατη Δραστηριότητα</h2>
+            <h2 id="recent-activities-title" className="text-lg font-semibold mb-4">{t('dashboard.recentActivities.title')}</h2>
             <ul className="space-y-4" role="list">
                 {activities.map((activity, idx) => (
                     <li key={idx} className="flex items-center gap-3">

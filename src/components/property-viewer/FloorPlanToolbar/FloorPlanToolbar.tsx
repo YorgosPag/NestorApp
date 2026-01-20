@@ -37,6 +37,8 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -78,6 +80,8 @@ export function FloorPlanToolbar({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('properties');
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,14 +89,14 @@ export function FloorPlanToolbar({
     if (file && file.type === 'application/pdf') {
       setIsUploading(true);
       onPDFUpload(file);
-      
+
       // Reset after upload
       setTimeout(() => {
         setIsUploading(false);
         event.target.value = '';
       }, 2000);
     } else {
-      alert('Παρακαλώ επιλέξτε ένα PDF αρχείο');
+      alert(t('floorPlanToolbar.selectPDFFile'));
     }
   };
 
@@ -160,13 +164,13 @@ export function FloorPlanToolbar({
                 >
                   <label htmlFor="pdf-upload" className="cursor-pointer">
                     <Upload className={`${iconSizes.sm} mr-2`} />
-                    {isUploading ? 'Φόρτωση...' : 'Φόρτωση PDF'}
+                    {isUploading ? t('floorPlanToolbar.uploading') : t('floorPlanToolbar.uploadPDF')}
                   </label>
                 </Button>
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Φόρτωση κάτοψης PDF</p>
+              <p>{t('floorPlanToolbar.uploadTooltip')}</p>
             </TooltipContent>
           </Tooltip>
         </div>
@@ -177,25 +181,25 @@ export function FloorPlanToolbar({
         <div className="flex items-center gap-1">
           <ToolbarButton
             icon={MousePointer}
-            label="Προβολή"
+            label={t('floorPlanToolbar.viewModes.view')}
             active={viewMode === 'view'}
             onClick={() => onViewModeChange('view')}
           />
           <ToolbarButton
             icon={Plus}
-            label="Δημιουργία"
+            label={t('floorPlanToolbar.viewModes.create')}
             active={viewMode === 'create'}
             onClick={() => onViewModeChange('create')}
           />
           <ToolbarButton
             icon={Ruler}
-            label="Μέτρηση"
+            label={t('floorPlanToolbar.viewModes.measure')}
             active={viewMode === 'measure'}
             onClick={() => onViewModeChange('measure')}
           />
           <ToolbarButton
             icon={Move}
-            label="Επεξεργασία"
+            label={t('floorPlanToolbar.viewModes.edit')}
             active={viewMode === 'edit'}
             onClick={() => onViewModeChange('edit')}
           />
@@ -207,19 +211,19 @@ export function FloorPlanToolbar({
         <div className="flex items-center gap-1">
           <ToolbarButton
             icon={showPDF ? Eye : EyeOff}
-            label={showPDF ? "Απόκρυψη PDF" : "Εμφάνιση PDF"}
+            label={showPDF ? t('floorPlanToolbar.layers.hidePDF') : t('floorPlanToolbar.layers.showPDF')}
             active={showPDF}
             onClick={onPDFToggle}
           />
           <ToolbarButton
             icon={Grid}
-            label={showGrid ? "Απόκρυψη Grid" : "Εμφάνιση Grid"}
+            label={showGrid ? t('floorPlanToolbar.layers.hideGrid') : t('floorPlanToolbar.layers.showGrid')}
             active={showGrid}
             onClick={onGridToggle}
           />
           <ToolbarButton
             icon={Layers}
-            label={showLayers ? "Απόκρυψη Layers" : "Εμφάνιση Layers"}
+            label={showLayers ? t('floorPlanToolbar.layers.hideLayers') : t('floorPlanToolbar.layers.showLayers')}
             active={showLayers}
             onClick={onLayersToggle}
           />
@@ -233,19 +237,19 @@ export function FloorPlanToolbar({
             <div className="flex items-center gap-1">
               <ToolbarButton
                 icon={ZoomIn}
-                label="Μεγέθυνση"
+                label={t('floorPlanToolbar.zoom.zoomIn')}
                 onClick={onZoomIn}
                 disabled={!onZoomIn}
               />
               <ToolbarButton
                 icon={ZoomOut}
-                label="Σμίκρυνση"
+                label={t('floorPlanToolbar.zoom.zoomOut')}
                 onClick={onZoomOut}
                 disabled={!onZoomOut}
               />
               <ToolbarButton
                 icon={RotateCcw}
-                label="Επαναφορά View"
+                label={t('floorPlanToolbar.zoom.resetView')}
                 onClick={onResetView}
                 disabled={!onResetView}
               />
@@ -259,11 +263,11 @@ export function FloorPlanToolbar({
         <div className="flex items-center gap-1">
           <ToolbarButton
             icon={Maximize}
-            label="Πλήρης Οθόνη"
+            label={t('floorPlanToolbar.fullscreen')}
             onClick={onFullscreen}
             disabled={!onFullscreen}
           />
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="${iconSizes.xl} p-0">
@@ -273,11 +277,11 @@ export function FloorPlanToolbar({
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
                 <Download className={`${iconSizes.sm} mr-2`} />
-                Εξαγωγή PNG
+                {t('floorPlanToolbar.export.exportPNG')}
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Download className={`${iconSizes.sm} mr-2`} />
-                Εξαγωγή PDF
+                {t('floorPlanToolbar.export.exportPDF')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -285,8 +289,8 @@ export function FloorPlanToolbar({
 
         {/* STATUS INFO */}
         <div className={`ml-auto flex items-center gap-2 text-sm ${colors.text.muted}`}>
-          <span className="capitalize">Λειτουργία: {viewMode}</span>
-          {showPDF && <span className={`${colors.text.success}`}>• PDF Active</span>}
+          <span className="capitalize">{t('floorPlanToolbar.status.mode')} {viewMode}</span>
+          {showPDF && <span className={`${colors.text.success}`}>• {t('floorPlanToolbar.status.pdfActive')}</span>}
         </div>
       </div>
     </TooltipProvider>

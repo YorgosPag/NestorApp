@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FormField } from './FormField';
 import type { PlotData } from './GeneralPlotDataTab';
 import { getBooleanOptions } from '@/subapps/dxf-viewer/config/modal-select';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface PlotZoningSelectorsProps {
     plotData: PlotData;
@@ -15,6 +17,9 @@ interface PlotZoningSelectorsProps {
 }
 
 export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onEnterPress }: PlotZoningSelectorsProps) {
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('projects');
+
     const handleSelectChange = (field: keyof PlotData, value: 'yes' | 'no') => {
         onPlotDataChange({ [field]: value });
     };
@@ -39,7 +44,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                         ))}
                     </SelectContent>
                 </Select>
-                <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Εντός Ορίων</Label>
+                <Label className="text-sm font-medium text-muted-foreground text-left pl-2">{t('plotZoning.insideLimits')}</Label>
             </div>
              <div className="grid grid-cols-[auto_1fr] items-center">
                  <Select value={plotData.insideZone} onValueChange={(v) => handleSelectChange('insideZone', v as 'yes' | 'no')} disabled={!isEditing}>
@@ -54,7 +59,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                         ))}
                     </SelectContent>
                 </Select>
-                <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Εντός Ζώνης</Label>
+                <Label className="text-sm font-medium text-muted-foreground text-left pl-2">{t('plotZoning.insideZone')}</Label>
             </div>
             <div className="grid grid-cols-[auto_1fr] items-center">
                  <Select value={plotData.pilotis} onValueChange={(v) => handleSelectChange('pilotis', v as 'yes' | 'no')} disabled={!isEditing}>
@@ -69,7 +74,7 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                         ))}
                     </SelectContent>
                 </Select>
-                <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Πυλωτή</Label>
+                <Label className="text-sm font-medium text-muted-foreground text-left pl-2">{t('plotZoning.pilotis')}</Label>
             </div>
              <div className="grid grid-cols-[auto_1fr] items-center">
                  <Select value={plotData.hasRoof} onValueChange={(v) => handleSelectChange('hasRoof', v as 'yes' | 'no')} disabled={!isEditing}>
@@ -84,12 +89,12 @@ export function PlotZoningSelectors({ plotData, onPlotDataChange, isEditing, onE
                         ))}
                     </SelectContent>
                 </Select>
-                <Label className="text-sm font-medium text-muted-foreground text-left pl-2">Στέγη</Label>
+                <Label className="text-sm font-medium text-muted-foreground text-left pl-2">{t('plotZoning.roof')}</Label>
             </div>
-            
-            <FormField id="maxRoofHeight" label="Μέγιστο Ύψος Στέγης" value={plotData.maxRoofHeight} onChange={handleChange} unit="μ.μ." labelPosition='left' unitPosition='left' onEnterPress={onEnterPress} inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
-            <FormField id="maxRoofSlope" label="Μέγιστη Κλίση Στέγης" value={plotData.maxRoofSlope} onChange={handleChange} unit="%" labelPosition='left' unitPosition='left' onEnterPress={onEnterPress} inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
-            <FormField id="plotArea" label="Εμβαδόν Οικοπέδου (Ε.Ο.)" value={plotData.plotArea} onChange={handleChange} unit="τ.μ." labelPosition='left' unitPosition='left' useGrouping={true} onEnterPress={onEnterPress} inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
+
+            <FormField id="maxRoofHeight" label={t('plotZoning.maxRoofHeight')} value={plotData.maxRoofHeight} onChange={handleChange} unit={t('units.linearMeters')} labelPosition='left' unitPosition='left' onEnterPress={onEnterPress} inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
+            <FormField id="maxRoofSlope" label={t('plotZoning.maxRoofSlope')} value={plotData.maxRoofSlope} onChange={handleChange} unit={t('units.percentage')} labelPosition='left' unitPosition='left' onEnterPress={onEnterPress} inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
+            <FormField id="plotArea" label={t('plotZoning.plotArea')} value={plotData.plotArea} onChange={handleChange} unit={t('units.sqm')} labelPosition='left' unitPosition='left' useGrouping={true} onEnterPress={onEnterPress} inputClassName="w-32" labelClassName="text-muted-foreground" readOnly={!isEditing} />
         </div>
     );
 }

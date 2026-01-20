@@ -18,6 +18,8 @@ import {
   Activity
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface StorageHistoryTabProps {
   storage: Storage;
@@ -78,15 +80,21 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  // Γεννάμε πραγματικό ιστορικό βάση των στοιχείων της αποθήκης
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('storage');
+
+  // Helper to get translated status label
+  const getStatusLabel = (status: string) => t(`general.statuses.${status}`) || t('general.unknown');
+
+  // Generate history events based on storage data
   const historyEvents: HistoryEvent[] = [
     {
       id: '1',
       type: 'status_change',
-      title: 'Δημιουργία Αποθήκης',
-      description: `Η αποθήκη ${storage.name} προστέθηκε στο σύστημα`,
-      date: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000), // 6 μήνες πριν
-      actor: 'Διαχείριση Κτιρίου',
+      title: t('history.eventTypes.status_change.created'),
+      description: t('history.eventTypes.status_change.createdDesc', { name: storage.name }),
+      date: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000),
+      actor: t('history.actors.buildingManagement'),
       status: 'completed',
       metadata: {
         newValue: 'created'
@@ -96,10 +104,10 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
       {
         id: '2',
         type: 'lease' as const,
-        title: 'Έναρξη Μίσθωσης',
-        description: `Υπογραφή συμβολαίου μίσθωσης για την αποθήκη ${storage.name}`,
-        date: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000), // 4 μήνες πριν
-        actor: storage.owner || 'Μισθωτής',
+        title: t('history.eventTypes.lease.title'),
+        description: t('history.eventTypes.lease.description', { name: storage.name }),
+        date: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000),
+        actor: storage.owner || t('history.actors.tenant'),
         status: 'completed' as const,
         metadata: {
           amount: storage.price,
@@ -109,10 +117,10 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
       {
         id: '3',
         type: 'tenant_change' as const,
-        title: 'Καταχώριση Στοιχείων Μισθωτή',
-        description: `Καταχώριση στοιχείων μισθωτή: ${storage.owner}`,
+        title: t('history.eventTypes.tenant_change.title'),
+        description: t('history.eventTypes.tenant_change.description', { tenant: storage.owner }),
         date: new Date(Date.now() - 118 * 24 * 60 * 60 * 1000),
-        actor: 'Διαχείριση',
+        actor: t('history.actors.management'),
         status: 'completed' as const,
         metadata: {
           tenant: storage.owner
@@ -122,50 +130,47 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
     {
       id: '4',
       type: 'inspection',
-      title: 'Ετήσια Επιθεώρηση',
-      description: `Πραγματοποιήθηκε ετήσια επιθεώρηση για την αποθήκη στον ${storage.floor}`,
-      date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 3 μήνες πριν
-      actor: 'Τεχνικός Ελεγκτής',
+      title: t('history.eventTypes.inspection.title'),
+      description: t('history.eventTypes.inspection.description', { floor: storage.floor }),
+      date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+      actor: t('history.actors.technicalInspector'),
       status: 'completed',
     },
     ...(storage.price ? [{
       id: '5',
       type: 'price_change' as const,
-      title: 'Ενημέρωση Τιμής',
-      description: `Ενημερώθηκε η τιμή της αποθήκης σε ${formatCurrency(storage.price)}`,
-      date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 2 μήνες πριν
-      actor: 'Διαχείριση',
+      title: t('history.eventTypes.price_change.title'),
+      description: t('history.eventTypes.price_change.description', { price: formatCurrency(storage.price) }),
+      date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+      actor: t('history.actors.management'),
       status: 'completed' as const,
       metadata: {
         newValue: storage.price,
-        oldValue: storage.price * 0.9 // 10% παλαιότερη τιμή
+        oldValue: storage.price * 0.9
       }
     }] : []),
     ...(storage.status === 'maintenance' ? [{
       id: '6',
       type: 'maintenance' as const,
-      title: 'Έναρξη Εργασιών Συντήρησης',
-      description: `Ξεκίνησαν εργασίες συντήρησης και αναβάθμισης της αποθήκης`,
-      date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 2 εβδομάδες πριν
-      actor: 'Συνεργείο Συντήρησης',
+      title: t('history.eventTypes.maintenance.title'),
+      description: t('history.eventTypes.maintenance.description'),
+      date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+      actor: t('history.actors.maintenanceTeam'),
       status: 'in_progress' as const,
     }] : []),
     {
       id: '7',
       type: 'status_change',
-      title: `Κατάσταση: ${storage.status === 'available' ? 'Διαθέσιμη' :
-                         storage.status === 'occupied' ? 'Κατειλημμένη' :
-                         storage.status === 'reserved' ? 'Κρατημένη' :
-                         storage.status === 'maintenance' ? 'Συντήρηση' : 'Άγνωστη'}`,
-      description: `Η αποθήκη βρίσκεται σε κατάσταση: ${storage.status}`,
+      title: t('history.eventTypes.status_change.statusLabel', { status: getStatusLabel(storage.status || 'unknown') }),
+      description: t('history.statusDescription', { status: storage.status }),
       date: storage.lastUpdated ? new Date(storage.lastUpdated) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      actor: 'Σύστημα',
+      actor: t('history.actors.system'),
       status: 'completed',
       metadata: {
         newValue: storage.status
       }
     }
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Ταξινομημένα κατά ημερομηνία
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const eventsByType = {
     total: historyEvents.length,
@@ -177,41 +182,41 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Στατιστικά Ιστορικού */}
+      {/* History Statistics */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Activity className={iconSizes.md} />
-          Επισκόπηση Ιστορικού
+          {t('history.title')}
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.muted}`}>{eventsByType.total}</div>
-            <div className="text-sm text-muted-foreground">Συνολικά Γεγονότα</div>
+            <div className="text-sm text-muted-foreground">{t('history.metrics.totalEvents')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.info}`}>{eventsByType.lease}</div>
-            <div className="text-sm text-muted-foreground">Μισθώσεις</div>
+            <div className="text-sm text-muted-foreground">{t('history.metrics.leases')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.warning}`}>{eventsByType.maintenance}</div>
-            <div className="text-sm text-muted-foreground">Συντηρήσεις</div>
+            <div className="text-sm text-muted-foreground">{t('history.metrics.maintenances')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.success}`}>{eventsByType.inspection}</div>
-            <div className="text-sm text-muted-foreground">Επιθεωρήσεις</div>
+            <div className="text-sm text-muted-foreground">{t('history.metrics.inspections')}</div>
           </div>
           <div className={`bg-card ${quick.card} p-4 text-center`}>
             <div className={`text-2xl font-bold ${colors.text.accent}`}>{eventsByType.changes}</div>
-            <div className="text-sm text-muted-foreground">Αλλαγές</div>
+            <div className="text-sm text-muted-foreground">{t('history.metrics.changes')}</div>
           </div>
         </div>
       </section>
 
-      {/* Timeline Γεγονότων */}
+      {/* Events Timeline */}
       <section>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Clock className={iconSizes.md} />
-          Χρονολόγιο Γεγονότων
+          {t('history.timeline')}
         </h3>
         <div className="space-y-4">
           {historyEvents.map((event, index) => {
@@ -242,9 +247,7 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground ml-4">
                           <StatusIcon className={iconSizes.xs} />
-                          {event.status === 'completed' ? 'Ολοκληρώθηκε' :
-                           event.status === 'in_progress' ? 'Σε εξέλιξη' :
-                           event.status === 'pending' ? 'Εκκρεμές' : 'Ακυρώθηκε'}
+                          {t(`history.eventStatus.${event.status}`)}
                         </div>
                       </div>
 
@@ -290,44 +293,39 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
         </div>
       </section>
 
-      {/* Περίληψη Κατάστασης */}
+      {/* Current Status Summary */}
       <section>
-        <h3 className="font-semibold mb-4">Τρέχουσα Κατάσταση</h3>
+        <h3 className="font-semibold mb-4">{t('history.currentStatus')}</h3>
         <div className={`bg-card ${quick.card} p-4`}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <label className="font-medium text-muted-foreground">Αποθήκη:</label>
+              <label className="font-medium text-muted-foreground">{t('history.fields.storage')}</label>
               <span className="ml-2">{storage.name}</span>
             </div>
             <div>
-              <label className="font-medium text-muted-foreground">Κατάσταση:</label>
-              <span className="ml-2">
-                {storage.status === 'available' ? 'Διαθέσιμη' :
-                 storage.status === 'occupied' ? 'Κατειλημμένη' :
-                 storage.status === 'reserved' ? 'Κρατημένη' :
-                 storage.status === 'maintenance' ? 'Συντήρηση' : 'Άγνωστη'}
-              </span>
+              <label className="font-medium text-muted-foreground">{t('history.fields.status')}</label>
+              <span className="ml-2">{getStatusLabel(storage.status || 'unknown')}</span>
             </div>
             <div>
-              <label className="font-medium text-muted-foreground">Τελευταία Ενημέρωση:</label>
+              <label className="font-medium text-muted-foreground">{t('history.fields.lastUpdated')}</label>
               <span className="ml-2">
-                {storage.lastUpdated ? formatDate(new Date(storage.lastUpdated).toISOString()) : 'Δεν έχει καταγραφεί'}
+                {storage.lastUpdated ? formatDate(new Date(storage.lastUpdated).toISOString()) : t('history.notRecorded')}
               </span>
             </div>
             {storage.owner && (
               <div>
-                <label className="font-medium text-muted-foreground">Υπεύθυνος:</label>
+                <label className="font-medium text-muted-foreground">{t('history.fields.responsible')}</label>
                 <span className="ml-2">{storage.owner}</span>
               </div>
             )}
             {storage.price && (
               <div>
-                <label className="font-medium text-muted-foreground">Τρέχουσα Αξία:</label>
+                <label className="font-medium text-muted-foreground">{t('history.fields.currentValue')}</label>
                 <span className="ml-2">{formatCurrency(storage.price)}</span>
               </div>
             )}
             <div>
-              <label className="font-medium text-muted-foreground">Επιφάνεια:</label>
+              <label className="font-medium text-muted-foreground">{t('history.fields.area')}</label>
               <span className="ml-2">{storage.area} m²</span>
             </div>
           </div>

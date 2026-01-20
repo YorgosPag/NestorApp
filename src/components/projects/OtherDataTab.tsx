@@ -6,8 +6,12 @@ import { useEnterFormNavigation } from '@/hooks/useEnterFormNavigation';
 import { useFinancialCalculations } from '@/hooks/useFinancialCalculations';
 import { FinancialLeftColumn } from './other-data/FinancialLeftColumn';
 import { FinancialRightColumn } from './other-data/FinancialRightColumn';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function OtherDataTab() {
+    // 🏢 ENTERPRISE: i18n hook
+    const { t } = useTranslation('projects');
     const formRef = useRef<HTMLDivElement>(null);
     const [financialData, setFinancialData] = useState({
         salePricePerSqm: 0,
@@ -31,9 +35,9 @@ export function OtherDataTab() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="text-lg">Άλλα Στοιχεία</CardTitle>
+                <CardTitle className="text-lg">{t('otherDataTab.title')}</CardTitle>
                 <CardDescription>
-                    Οικονομικά στοιχεία και παρακολούθηση της προόδου του έργου.
+                    {t('otherDataTab.description')}
                 </CardDescription>
             </CardHeader>
             <CardContent>

@@ -12,6 +12,8 @@ import { PropertyViewerFilters } from '@/components/property-viewer/PropertyView
 import type { FilterState } from '@/types/property-viewer';
 import { PageHeader } from '@/core/headers';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface PropertyViewerHeaderProps {
   showDashboard: boolean;
@@ -31,6 +33,8 @@ export function PropertyViewerHeader({
   onFiltersChange
 }: PropertyViewerHeaderProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n support
+  const { t } = useTranslation('common');
 
   return (
     <div className="shrink-0">
@@ -39,8 +43,8 @@ export function PropertyViewerHeader({
         layout="single-row"
         title={{
           icon: NAVIGATION_ENTITIES.unit.icon,
-          title: "Ευρετήριο Ακινήτων",
-          subtitle: "Οπτική διαχείριση και ανάλυση ακινήτων σε κάτοψη."
+          title: t('propertyViewer.title'),
+          subtitle: t('propertyViewer.subtitle')
         }}
         actions={{
           showDashboard,
@@ -49,7 +53,7 @@ export function PropertyViewerHeader({
           onViewModeChange: (mode) => setViewMode(mode as 'list' | 'grid'),
           viewModes: ['list', 'grid'] as CoreViewMode[],
           addButton: {
-            label: 'Νέο Ακίνητο',
+            label: t('propertyViewer.newProperty'),
             onClick: () => console.log('Add property')
           }
         }}
@@ -59,7 +63,7 @@ export function PropertyViewerHeader({
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-start p-4 text-sm font-semibold">
               <NAVIGATION_ACTIONS.filter.icon className={cn(iconSizes.sm, NAVIGATION_ACTIONS.filter.color, 'mr-2')}/>
-              {NAVIGATION_ACTIONS.filter.label} Αναζήτησης
+              {t('filters.searchFilters')}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>

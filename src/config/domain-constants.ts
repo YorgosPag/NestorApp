@@ -102,9 +102,280 @@ export const ENTITY_TYPES = {
   UNIT: 'unit',
   /** Building entity */
   BUILDING: 'building',
+  /** Floor entity */
+  FLOOR: 'floor',
+  /** Storage unit entity */
+  STORAGE_UNIT: 'storage_unit',
+  /** Parking spot entity */
+  PARKING_SPOT: 'parking_spot',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPES[keyof typeof ENTITY_TYPES];
+
+// ============================================================================
+// FILE STORAGE CONSTANTS - ENTERPRISE CANONICAL
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: File storage domains (business areas)
+ * @enterprise Used in FileRecord.domain for organizing files by business function
+ * @see local_ΔΙΚΑΙΩΜΑΤΑ.txt - Canonical File Storage System
+ */
+export const FILE_DOMAINS = {
+  /** Administrative documents (contacts, HR, general) */
+  ADMIN: 'admin',
+  /** Construction-related files (blueprints, progress, permits) */
+  CONSTRUCTION: 'construction',
+  /** Sales-related files (contracts, offers, brochures) */
+  SALES: 'sales',
+  /** Accounting files (invoices, receipts, financial) */
+  ACCOUNTING: 'accounting',
+  /** Legal documents (contracts, agreements, legal) */
+  LEGAL: 'legal',
+  /** Financial documents (financial reports, statements) */
+  FINANCIAL: 'financial',
+} as const;
+
+export type FileDomain = typeof FILE_DOMAINS[keyof typeof FILE_DOMAINS];
+
+/**
+ * 🏢 ENTERPRISE: File categories (content types)
+ * @enterprise Used in FileRecord.category for organizing files by type
+ */
+export const FILE_CATEGORIES = {
+  /** Photos and images */
+  PHOTOS: 'photos',
+  /** Floor plans (PDF, DXF) */
+  FLOORPLANS: 'floorplans',
+  /** General documents (PDF, DOC) */
+  DOCUMENTS: 'documents',
+  /** Invoices and billing */
+  INVOICES: 'invoices',
+  /** Contracts and agreements */
+  CONTRACTS: 'contracts',
+  /** Audio recordings */
+  AUDIO: 'audio',
+  /** Video files */
+  VIDEOS: 'videos',
+  /** Technical drawings (CAD) */
+  DRAWINGS: 'drawings',
+  /** Permits and certifications */
+  PERMITS: 'permits',
+} as const;
+
+export type FileCategory = typeof FILE_CATEGORIES[keyof typeof FILE_CATEGORIES];
+
+/**
+ * 🏢 ENTERPRISE: File processing status
+ * @enterprise Used in FileRecord.status for tracking upload state
+ */
+export const FILE_STATUS = {
+  /** Upload pending/in progress */
+  PENDING: 'pending',
+  /** File ready and available */
+  READY: 'ready',
+  /** Upload or processing failed */
+  FAILED: 'failed',
+} as const;
+
+export type FileStatus = typeof FILE_STATUS[keyof typeof FILE_STATUS];
+
+// ============================================================================
+// 🗑️ ENTERPRISE TRASH SYSTEM - LIFECYCLE MANAGEMENT
+// ============================================================================
+// 3-tier lifecycle pattern (Google Drive, Salesforce, Microsoft Purview):
+// Active → Trashed → Archived → Purged
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: File lifecycle states
+ * @enterprise ADR-032 - Enterprise Trash System
+ * @see local_3.txt - Enterprise delete patterns analysis
+ *
+ * States:
+ * - ACTIVE: Normal file, visible in UI, can be modified
+ * - TRASHED: Soft deleted, in "Trash" view, can be restored
+ * - ARCHIVED: Long-term retention, not in active views (legal hold, compliance)
+ * - PURGED: Permanently deleted (Storage + Firestore)
+ */
+export const FILE_LIFECYCLE_STATES = {
+  /** Normal file, visible in UI */
+  ACTIVE: 'active',
+  /** Soft deleted, in Trash view, restorable */
+  TRASHED: 'trashed',
+  /** Archived for retention/compliance */
+  ARCHIVED: 'archived',
+  /** Permanently deleted (marker only, actual docs are removed) */
+  PURGED: 'purged',
+} as const;
+
+export type FileLifecycleState = typeof FILE_LIFECYCLE_STATES[keyof typeof FILE_LIFECYCLE_STATES];
+
+/**
+ * 🏢 ENTERPRISE: Default retention policies (in days)
+ * @enterprise Configurable per deployment, per category
+ *
+ * Examples from industry:
+ * - Google Drive: 30 days in trash
+ * - Salesforce: 15 days (extendable)
+ * - Microsoft Purview: Configurable retention policies
+ */
+export const DEFAULT_RETENTION_POLICIES = {
+  /** Days in trash before auto-purge eligibility */
+  TRASH_RETENTION_DAYS: 30,
+  /** Days to retain archived files (legal/compliance) */
+  ARCHIVE_RETENTION_DAYS: 365 * 7, // 7 years for construction documents
+  /** Grace period for restoration after purge request */
+  PURGE_GRACE_PERIOD_DAYS: 7,
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Retention policies by file category
+ * @enterprise Construction/real estate specific
+ *
+ * Critical documents (contracts, permits) have longer retention
+ * Temporary files (drafts, temp uploads) have shorter retention
+ */
+export const RETENTION_BY_CATEGORY: Record<FileCategory, number> = {
+  [FILE_CATEGORIES.PHOTOS]: 30, // Standard 30 days
+  [FILE_CATEGORIES.FLOORPLANS]: 365 * 10, // 10 years for blueprints
+  [FILE_CATEGORIES.DOCUMENTS]: 365 * 5, // 5 years
+  [FILE_CATEGORIES.INVOICES]: 365 * 10, // 10 years (tax compliance)
+  [FILE_CATEGORIES.CONTRACTS]: 365 * 15, // 15 years (legal)
+  [FILE_CATEGORIES.AUDIO]: 30, // Standard 30 days
+  [FILE_CATEGORIES.VIDEOS]: 30, // Standard 30 days
+  [FILE_CATEGORIES.DRAWINGS]: 365 * 10, // 10 years (CAD drawings)
+  [FILE_CATEGORIES.PERMITS]: 365 * 20, // 20 years (building permits)
+};
+
+/**
+ * 🏢 ENTERPRISE: Hold types for compliance
+ * @enterprise Legal hold prevents deletion even after retention expires
+ */
+export const HOLD_TYPES = {
+  /** No hold - normal lifecycle */
+  NONE: 'none',
+  /** Legal hold - eDiscovery, litigation */
+  LEGAL: 'legal',
+  /** Regulatory hold - compliance audit */
+  REGULATORY: 'regulatory',
+  /** Administrative hold - internal review */
+  ADMIN: 'admin',
+} as const;
+
+export type HoldType = typeof HOLD_TYPES[keyof typeof HOLD_TYPES];
+
+/**
+ * 🏢 ENTERPRISE: Photo upload purposes
+ * @enterprise Used for naming context in photo uploads
+ * @see ADR-031 - Canonical File Storage System
+ */
+export const PHOTO_PURPOSES = {
+  /** Profile/representative photo */
+  PROFILE: 'profile',
+  /** ID card photo */
+  ID: 'id',
+  /** Other/general photo */
+  OTHER: 'other',
+} as const;
+
+export type PhotoPurpose = typeof PHOTO_PURPOSES[keyof typeof PHOTO_PURPOSES];
+
+/**
+ * 🏢 ENTERPRISE: Centralized deprecation messages
+ * @enterprise All deprecation warnings use these constants
+ */
+export const DEPRECATION_MESSAGES = {
+  /** Legacy upload without canonical fields */
+  LEGACY_UPLOAD: '[DEPRECATION] uploadPhoto() without canonical fields (companyId, contactId, createdBy) is deprecated. New uploads should use canonical pipeline. This fallback will be removed in a future release.',
+  /** Legacy folderPath usage */
+  LEGACY_FOLDER_PATH: '[DEPRECATION] Using folderPath is deprecated. Use canonical pipeline with buildStoragePath() instead.',
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Centralized error messages for file storage
+ * @enterprise All file storage errors use these constants
+ * @see ADR-031 - Canonical File Storage System
+ */
+export const FILE_STORAGE_ERROR_MESSAGES = {
+  /** Production lock - legacy writes blocked */
+  PRODUCTION_LOCK: 'Legacy uploads are blocked in production. Use canonical pipeline with companyId, contactId, createdBy.',
+  /** Missing required fields */
+  MISSING_CANONICAL_FIELDS: 'Missing required canonical fields: companyId, contactId, or createdBy.',
+  /** Invalid storage path */
+  INVALID_STORAGE_PATH: 'Invalid storage path parameters provided.',
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: File storage feature flags for controlled migrations
+ * @enterprise Used to control legacy vs canonical behavior
+ * @note Separate from DXF viewer FEATURE_FLAGS (different domain)
+ */
+export const FILE_STORAGE_FLAGS = {
+  /** If true, legacy writes are blocked (production-safe mode) */
+  BLOCK_LEGACY_WRITES: process.env.NEXT_PUBLIC_BLOCK_LEGACY_WRITES === 'true',
+  /** If true, allow legacy writes with warning (migration mode) */
+  ALLOW_LEGACY_WITH_WARNING: process.env.NEXT_PUBLIC_ALLOW_LEGACY_WITH_WARNING !== 'false',
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Legacy storage paths (for backward compatibility ONLY)
+ * @deprecated Use canonical pipeline with buildStoragePath() instead
+ * @enterprise These paths are READ-ONLY in production
+ * @see ADR-031 - Canonical File Storage System
+ */
+export const LEGACY_STORAGE_PATHS = {
+  /** Legacy contacts photos folder - DO NOT USE FOR NEW UPLOADS */
+  CONTACTS_PHOTOS: 'contacts/photos',
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Photo upload purposes
+ * @enterprise Type-safe purpose values for file naming
+ * @see ADR-031 - Canonical File Storage System
+ */
+export const UPLOAD_PURPOSE = {
+  /** Company logo */
+  LOGO: 'logo',
+  /** Representative/profile photo */
+  REPRESENTATIVE: 'representative',
+  /** Profile photo (alias for representative) */
+  PROFILE: 'profile',
+  /** ID document scan */
+  ID_DOCUMENT: 'id-document',
+  /** General/other purpose */
+  OTHER: 'other',
+} as const;
+
+export type UploadPurpose = typeof UPLOAD_PURPOSE[keyof typeof UPLOAD_PURPOSE];
+
+/**
+ * 🏢 ENTERPRISE: Storage path segments (for buildStoragePath)
+ * @enterprise ZERO hardcoded path strings - all segments from here
+ */
+export const STORAGE_PATH_SEGMENTS = {
+  /** Root companies folder */
+  COMPANIES: 'companies',
+  /** Projects subfolder */
+  PROJECTS: 'projects',
+  /** Entities subfolder */
+  ENTITIES: 'entities',
+  /** Domains subfolder */
+  DOMAINS: 'domains',
+  /** Categories subfolder */
+  CATEGORIES: 'categories',
+  /** Files subfolder */
+  FILES: 'files',
+} as const;
+
+// ============================================================================
+// 🚨 ENTERPRISE: NO HARDCODED LABELS IN CONSTANTS
+// ============================================================================
+// Labels/display names MUST come from i18n system, NOT from constants.
+// Use: i18n.t('files:domains.admin'), i18n.t('files:categories.photos'), etc.
+// See: src/i18n/locales/el/files.json, src/i18n/locales/en/files.json
+// ADR-030: Zero Hardcoded Values - Labels only via centralized i18n
+// ============================================================================
 
 // ============================================================================
 // MESSAGE STATUS VALUES
