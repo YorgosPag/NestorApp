@@ -1,44 +1,84 @@
+/**
+ * =============================================================================
+ * 🏢 ENTERPRISE: Project Documents Tab
+ * =============================================================================
+ *
+ * Uses centralized EntityFilesManager for document upload with:
+ * - Enterprise naming convention (ΔΟΜΗ.txt pattern)
+ * - Multi-tenant Storage Rules
+ * - Entry point selection for document types (contracts, permits, invoices, etc.)
+ * - EXCLUDES photos and videos (they have dedicated tabs)
+ *
+ * @module components/projects/documents-project-tab
+ * @enterprise ADR-031 - Canonical File Storage System
+ *
+ * MIGRATION NOTE: Previously had nested sub-tabs (Contracts, Miscellaneous).
+ * Now uses unified EntityFilesManager with entry point selector.
+ */
+
 'use client';
 
 import React from 'react';
-import { TabsContent } from "@/components/ui/tabs";
-import { TabsOnlyTriggers } from "@/components/ui/navigation/TabsComponents";
-import { FileText, File } from 'lucide-react';
-import { ContractsTabContent } from './documents/ContractsTabContent';
-import { MiscellaneousTabContent } from './documents/MiscellaneousTabContent';
-// 🏢 ENTERPRISE: i18n support
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import { useAuth } from '@/auth/contexts/AuthContext';
+import type { Project } from '@/types/project';
 
-export function DocumentsProjectTab() {
-  // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('projects');
+// =============================================================================
+// PROPS
+// =============================================================================
 
-  const documentTabs = [
-    {
-      id: 'contracts',
-      label: t('documentsTab.contracts'),
-      icon: FileText,
-      content: <ContractsTabContent />,
-    },
-    {
-      id: 'miscellaneous',
-      label: t('documentsTab.miscellaneous'),
-      icon: File,
-      content: <MiscellaneousTabContent />,
-    }
-  ];
+interface DocumentsProjectTabProps {
+  /** Project data (passed automatically by UniversalTabsRenderer) */
+  project?: Project;
+  /** Alternative data prop */
+  data?: Project;
+}
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
+/**
+ * Project Documents Tab - Enterprise File Management
+ *
+ * Displays project documents using centralized EntityFilesManager with:
+ * - Domain: construction (default for file queries)
+ * - Category: documents (default for file queries)
+ * - Entry points: ALL except photos and videos (filtered via excludeCategories)
+ *
+ * This tab handles: contracts, permits, invoices, reports, delivery notes, etc.
+ * Photos and Videos have their own dedicated tabs for better preview experience.
+ */
+export function DocumentsProjectTab({ project, data }: DocumentsProjectTabProps) {
+  const { user } = useAuth();
+
+  // Resolve project from props
+  const resolvedProject = project || data;
+
+  // Get companyId and userId from auth context
+  const companyId = user?.companyId;
+  const currentUserId = user?.uid;
+
+  // If no project, companyId, or userId, show placeholder
+  if (!resolvedProject?.id || !companyId || !currentUserId) {
+    return (
+      <div className="p-6 text-center text-muted-foreground">
+        <p>Επιλέξτε ένα έργο για να δείτε τα έγγραφα.</p>
+      </div>
+    );
+  }
 
   return (
-    <TabsOnlyTriggers
-      tabs={documentTabs}
-      defaultTab="contracts"
-      theme="default"
-    >
-      {documentTabs.map((tab) => (
-        <TabsContent key={tab.id} value={tab.id} className="mt-8 overflow-x-auto">
-          {tab.content}
-        </TabsContent>
-      ))}
-    </TabsOnlyTriggers>
+    <EntityFilesManager
+      companyId={companyId}
+      currentUserId={currentUserId}
+      entityType="project"
+      entityId={String(resolvedProject.id)}
+      entityLabel={resolvedProject.name || `Έργο ${resolvedProject.id}`}
+      domain="construction"
+      category="documents"
+      purpose="document"
+      entryPointExcludeCategories={['photos', 'videos']}
+    />
   );
 }

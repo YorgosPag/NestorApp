@@ -16,7 +16,7 @@
 
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import { useAuthContext } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/contexts/AuthContext';
 import type { Project } from '@/types/project';
 
 // =============================================================================
@@ -43,16 +43,17 @@ interface VideosTabProps {
  * - Entry points: construction-video, etc.
  */
 export function VideosTab({ project, data }: VideosTabProps) {
-  const { user } = useAuthContext();
+  const { user } = useAuth();
 
   // Resolve project from props
   const resolvedProject = project || data;
 
-  // Get companyId from auth context
+  // Get companyId and userId from auth context
   const companyId = user?.companyId;
+  const currentUserId = user?.uid;
 
-  // If no project or companyId, show placeholder
-  if (!resolvedProject?.id || !companyId) {
+  // If no project, companyId, or userId, show placeholder
+  if (!resolvedProject?.id || !companyId || !currentUserId) {
     return (
       <div className="p-6 text-center text-muted-foreground">
         <p>Επιλέξτε ένα έργο για να δείτε τα βίντεο.</p>
@@ -63,13 +64,15 @@ export function VideosTab({ project, data }: VideosTabProps) {
   return (
     <EntityFilesManager
       companyId={companyId}
+      currentUserId={currentUserId}
       entityType="project"
       entityId={String(resolvedProject.id)}
       entityLabel={resolvedProject.name || `Έργο ${resolvedProject.id}`}
       domain="construction"
       category="videos"
       purpose="video"
-      showEntryPointSelector={true}
+      entryPointCategoryFilter="videos"
+      displayStyle="media-gallery"
     />
   );
 }
