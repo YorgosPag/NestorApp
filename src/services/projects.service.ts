@@ -9,4 +9,10 @@ export {
     debugProjectData
 } from './projects/index.server';
 
-export type { ProjectStructure } from './projects/contracts';
+export type {
+    ProjectStructure,
+    ProjectBuilding,
+    ProjectUnit,
+    ProjectStorage,
+    ProjectParking
+} from './projects/contracts';

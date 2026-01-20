@@ -52,6 +52,62 @@ export interface SpacingTokens {
     xl: string;
     '2xl': string;
     none: string;
+
+    /** Directional padding */
+    top: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+      '2xl': string;
+      none: string;
+    };
+    bottom: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+      '2xl': string;
+      none: string;
+    };
+    left: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+      '2xl': string;
+      none: string;
+    };
+    right: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+      '2xl': string;
+      none: string;
+    };
+    x: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+      '2xl': string;
+      none: string;
+    };
+    y: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+      '2xl': string;
+      none: string;
+    };
   };
 
   /** Margin utilities */
@@ -158,6 +214,62 @@ export function useSpacingTokens(): SpacingTokens {
         xl: 'p-8',        // 32px
         '2xl': 'p-12',    // 48px
         none: 'p-0',
+
+        // Directional padding
+        top: {
+          xs: 'pt-1',
+          sm: 'pt-2',
+          md: 'pt-4',
+          lg: 'pt-6',
+          xl: 'pt-8',
+          '2xl': 'pt-12',
+          none: 'pt-0',
+        },
+        bottom: {
+          xs: 'pb-1',
+          sm: 'pb-2',
+          md: 'pb-4',
+          lg: 'pb-6',
+          xl: 'pb-8',
+          '2xl': 'pb-12',
+          none: 'pb-0',
+        },
+        left: {
+          xs: 'pl-1',
+          sm: 'pl-2',
+          md: 'pl-4',
+          lg: 'pl-6',
+          xl: 'pl-8',
+          '2xl': 'pl-12',
+          none: 'pl-0',
+        },
+        right: {
+          xs: 'pr-1',
+          sm: 'pr-2',
+          md: 'pr-4',
+          lg: 'pr-6',
+          xl: 'pr-8',
+          '2xl': 'pr-12',
+          none: 'pr-0',
+        },
+        x: {
+          xs: 'px-1',
+          sm: 'px-2',
+          md: 'px-4',
+          lg: 'px-6',
+          xl: 'px-8',
+          '2xl': 'px-12',
+          none: 'px-0',
+        },
+        y: {
+          xs: 'py-1',
+          sm: 'py-2',
+          md: 'py-4',
+          lg: 'py-6',
+          xl: 'py-8',
+          '2xl': 'py-12',
+          none: 'py-0',
+        },
       },
 
       // Margin utilities

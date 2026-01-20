@@ -53,53 +53,7 @@ export function StorageDetailsHeader({ storage }: StorageDetailsHeaderProps) {
             }
           ]}
           variant="detailed"
-        >
-          {/* Centralized Storage Badges */}
-          <div className="flex gap-2 mt-2 flex-wrap">
-            {/* Status Badge using UnitBadge (similar statuses) */}
-            <UnitBadge
-              status={storage.status as UnitStatus}
-              size="sm"
-            />
-
-            {/* Type Badge using CommonBadge */}
-            <CommonBadge
-              status={storage.type}
-              size="sm"
-              variant="secondary"
-            >
-              {getTypeLabel(storage.type)}
-            </CommonBadge>
-
-            {/* Area Badge using CommonBadge */}
-            <CommonBadge
-              status="area"
-              size="sm"
-              variant="outline"
-            >
-              {storage.area} m²
-            </CommonBadge>
-
-            {/* Price Badge using CommonBadge */}
-            {storage.price && (
-              <CommonBadge
-                status="price"
-                size="sm"
-                variant="success"
-              >
-                €{storage.price.toLocaleString()}
-              </CommonBadge>
-            )}
-          </div>
-
-          {/* Additional Info */}
-          <div className="mt-2 text-sm text-muted-foreground">
-            <span>{storage.building} • {storage.floor}</span>
-            {storage.owner && (
-              <span> • {t('header.ownerLabel')} {storage.owner}</span>
-            )}
-          </div>
-        </EntityDetailsHeader>
+        />
       </div>
 
       {/* 📱 MOBILE: Hidden (no header duplication) */}

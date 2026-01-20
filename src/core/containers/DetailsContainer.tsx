@@ -4,6 +4,8 @@
 import React from 'react';
 import { Users } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 
@@ -73,6 +75,9 @@ export function DetailsContainer({
   selectedItem,
   emptyStateProps = {}
 }: DetailsContainerProps) {
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
+
   if (!selectedItem) {
     return <DefaultEmptyState {...emptyStateProps} />;
   }
@@ -88,14 +93,14 @@ export function DetailsContainer({
       <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
         {/* Tabs Section (if provided) - flex-1 allows tabs to expand to full height */}
         {tabsRenderer && (
-          <div className="px-4 flex-1 flex flex-col min-h-0">
+          <div className={`${spacing.padding.x.md} ${spacing.padding.top.md} flex-1 flex flex-col min-h-0`}>
             {tabsRenderer}
           </div>
         )}
 
         {/* Custom Content (if no tabs) */}
         {!tabsRenderer && children && (
-          <div className="flex-1 p-4">
+          <div className={`flex-1 ${spacing.padding.md}`}>
             {children}
           </div>
         )}

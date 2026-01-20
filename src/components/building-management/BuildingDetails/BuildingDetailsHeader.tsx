@@ -40,18 +40,7 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
                         }
                     ]}
                     variant="detailed"
-                >
-                    {/* Centralized BuildingBadge Components */}
-                    <div className="flex gap-2 mt-2">
-                        <BuildingBadge status={building.status} size="sm" />
-                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-full">
-                            {/* 🏢 ENTERPRISE: Fallback when namespace not ready */}
-                            {isNamespaceReady
-                                ? t('details.percentComplete', { percent: building.progress ?? 0 })
-                                : `${building.progress ?? 0}%`}
-                        </span>
-                    </div>
-                </EntityDetailsHeader>
+                />
             </div>
 
             {/* 📱 MOBILE: Hidden (no header duplication) */}

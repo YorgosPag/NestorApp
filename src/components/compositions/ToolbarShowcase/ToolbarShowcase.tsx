@@ -83,8 +83,6 @@ export function ToolbarShowcase() {
           <ProjectToolbar
             selectedItems={projectState.selectedItems}
             onSelectionChange={(items) => setProjectState(prev => ({ ...prev, selectedItems: items }))}
-            searchTerm={projectState.searchTerm}
-            onSearchChange={(term) => setProjectState(prev => ({ ...prev, searchTerm: term }))}
             activeFilters={projectState.activeFilters}
             onFiltersChange={(filters) => setProjectState(prev => ({ ...prev, activeFilters: filters }))}
             onNewProject={() => console.log('New project')}

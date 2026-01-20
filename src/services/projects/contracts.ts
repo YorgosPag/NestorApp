@@ -3,10 +3,48 @@ import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import type { Contact } from '@/types/contacts';
 import type { Building } from '@/types/building/contracts';
 import type { Property } from '@/types/property-viewer';
+import type { Storage } from '@/types/storage/contracts';
+import type { ParkingSpot } from '@/types/parking';
 
+/**
+ * 🏢 ENTERPRISE: Unit with customer info for project structure
+ */
+export type ProjectUnit = Property & { customerName?: string | null };
+
+/**
+ * 🏢 ENTERPRISE: Storage summary for project structure (minimal fields)
+ */
+export type ProjectStorage = Pick<Storage, 'id' | 'name' | 'type' | 'status' | 'area' | 'floor'>;
+
+/**
+ * 🏢 ENTERPRISE: Parking summary for project structure (minimal fields)
+ */
+export type ProjectParking = Pick<ParkingSpot, 'id' | 'code' | 'type' | 'status' | 'level' | 'area'>;
+
+/**
+ * 🏢 ENTERPRISE: Building with full hierarchy (Units, Storage, Parking)
+ *
+ * Architecture decision (from BuildingSpacesTabs):
+ * ❌ NO: Parking/Storage as "attachments" or children of Units
+ * ✅ YES: Parking/Storage/Units as equal parallel categories in Building context
+ */
+export interface ProjectBuilding extends Building {
+  /** Units in this building */
+  units: ProjectUnit[];
+  /** Storage areas in this building */
+  storages: ProjectStorage[];
+  /** Parking spots in this building */
+  parkingSpots: ProjectParking[];
+}
+
+/**
+ * 🏢 ENTERPRISE: Complete project structure with hierarchical data
+ *
+ * Hierarchy: Project → Buildings → (Units | Storage | Parking)
+ */
 export interface ProjectStructure {
   project: Project;
-  buildings: Array<Building & { units: Array<Property & { customerName?: string | null }> }>;
+  buildings: ProjectBuilding[];
 }
 
 export interface IProjectsRepository {

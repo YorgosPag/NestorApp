@@ -57,55 +57,7 @@ export function ParkingDetailsHeader({ parking }: ParkingDetailsHeaderProps) {
             }
           ]}
           variant="detailed"
-        >
-          {/* Centralized Parking Badges */}
-          <div className="flex gap-2 mt-2 flex-wrap">
-            {/* Status Badge using UnitBadge (similar statuses) */}
-            <UnitBadge
-              status={parking.status as 'available' | 'occupied' | 'reserved' | 'sold' | 'maintenance'}
-              size="sm"
-            />
-
-            {/* Type Badge using CommonBadge */}
-            <CommonBadge
-              status={parking.type || 'standard'}
-              size="sm"
-              variant="secondary"
-            >
-              {getTypeLabel(parking.type || 'standard')}
-            </CommonBadge>
-
-            {/* Area Badge using CommonBadge */}
-            {parking.area && (
-              <CommonBadge
-                status="area"
-                size="sm"
-                variant="outline"
-              >
-                {parking.area} m²
-              </CommonBadge>
-            )}
-
-            {/* Price Badge using CommonBadge */}
-            {parking.price !== undefined && parking.price > 0 && (
-              <CommonBadge
-                status="price"
-                size="sm"
-                variant="success"
-              >
-                €{parking.price.toLocaleString('el-GR')}
-              </CommonBadge>
-            )}
-          </div>
-
-          {/* Additional Info */}
-          <div className="mt-2 text-sm text-muted-foreground">
-            <span>{parking.floor || 'N/A'}</span>
-            {parking.location && (
-              <span> • {parking.location}</span>
-            )}
-          </div>
-        </EntityDetailsHeader>
+        />
       </div>
 
       {/* 📱 MOBILE: Hidden (no header duplication) */}
