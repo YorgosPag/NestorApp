@@ -191,14 +191,30 @@ export function useFormErrorHandler() {
     let errorMessage = fallbackMessage || t('validation.fieldError');
 
     // Extract error message from different error formats
+    // 🏢 ENTERPRISE: Proper type narrowing for unknown error
     if (typeof error === 'string') {
       errorMessage = error;
-    } else if (error?.message) {
+    } else if (error instanceof Error) {
       errorMessage = error.message;
-    } else if (error?.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    } else if (error?.response?.data?.error) {
-      errorMessage = error.response.data.error;
+    } else if (error !== null && typeof error === 'object') {
+      // Handle axios-style errors with response.data
+      const errorObj = error as Record<string, unknown>;
+      if (typeof errorObj.message === 'string') {
+        errorMessage = errorObj.message;
+      } else if (
+        errorObj.response !== null &&
+        typeof errorObj.response === 'object'
+      ) {
+        const response = errorObj.response as Record<string, unknown>;
+        if (response.data !== null && typeof response.data === 'object') {
+          const data = response.data as Record<string, unknown>;
+          if (typeof data.message === 'string') {
+            errorMessage = data.message;
+          } else if (typeof data.error === 'string') {
+            errorMessage = data.error;
+          }
+        }
+      }
     }
 
     if (showToast) {

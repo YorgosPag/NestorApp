@@ -71,7 +71,7 @@ export function getSortedContactTabs(contactType: ContactType): ContactTabConfig
   return CONTACT_TABS
     .filter(tab =>
       tab.enabled !== false &&
-      tab.contactTypes.includes(contactType)
+      (tab.contactType?.includes(contactType) ?? true)
     )
     .sort((a, b) => a.order - b.order);
 }
@@ -103,7 +103,7 @@ export function getEnabledContactTabsCount(contactType: ContactType): number {
 export function isContactTabEnabled(tabId: string, contactType: ContactType): boolean {
   const tab = getContactTabById(tabId);
   return tab
-    ? tab.enabled !== false && tab.contactTypes.includes(contactType)
+    ? tab.enabled !== false && (tab.contactType?.includes(contactType) ?? true)
     : false;
 }
 

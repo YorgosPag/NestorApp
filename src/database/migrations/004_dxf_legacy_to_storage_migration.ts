@@ -13,7 +13,7 @@
  */
 
 import { Migration, MigrationStep } from './types';
-import { db, storage } from '../../../lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import {
   collection,
   getDocs,
@@ -27,8 +27,8 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { COLLECTIONS } from '../../../config/firestore-collections';
-import { DxfFirestoreService } from '../../../subapps/dxf-viewer/services/dxf-firestore.service';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
 
 // 🏢 ENTERPRISE: Type-safe legacy scene structure (massive serialized DXF data)
 interface LegacyDxfScene {

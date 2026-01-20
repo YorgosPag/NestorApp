@@ -24,6 +24,9 @@ import type {
 
 import type { CanvasRenderSettings } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasSettings';
 
+// 🏢 ENTERPRISE: Import DXF-specific CanvasConfig for type casting
+import type { CanvasConfig as DxfCanvasConfig } from '../../../subapps/dxf-viewer/rendering/types/Types';
+
 // Εισάγω το υπάρχον enterprise DXF Canvas system
 import {
   CanvasManager,
@@ -42,9 +45,10 @@ export class DxfCanvasAdapter implements ICanvasProvider {
   readonly type = 'dxf' as const;
 
   private _isInitialized = false;
-  private canvasManager: CanvasManager;
-  private eventSystem: CanvasEventSystem;
-  private settings: CanvasSettings;
+  // 🏢 ENTERPRISE: Definite assignment assertions - initialized in initialize() method
+  private canvasManager!: CanvasManager;
+  private eventSystem!: CanvasEventSystem;
+  private settings!: CanvasSettings;
   private eventListeners = new Map<string, Function[]>();
   private middlewares: CanvasMiddleware[] = [];
   private plugins: CanvasPlugin[] = [];
@@ -177,11 +181,19 @@ export class DxfCanvasAdapter implements ICanvasProvider {
       this.applyMiddlewareHooks('onCanvasCreate', null, config);
 
       // Χρησιμοποιώ το υπάρχον enterprise CanvasManager
+      // 🏢 ENTERPRISE: Cast CanvasConfig to DXF-specific type
+      const dxfConfig: DxfCanvasConfig = {
+        devicePixelRatio: (config.config as Record<string, unknown>).devicePixelRatio as number ?? window.devicePixelRatio,
+        enableHiDPI: (config.config as Record<string, unknown>).enableHiDPI as boolean ?? true,
+        backgroundColor: (config.config as Record<string, unknown>).backgroundColor as string ?? '#1a1a1a',
+        antialias: (config.config as Record<string, unknown>).antialias as boolean | undefined,
+        imageSmoothingEnabled: (config.config as Record<string, unknown>).imageSmoothingEnabled as boolean | undefined
+      };
       const canvasInstance = this.canvasManager.registerCanvas(
         config.canvasId,
         config.canvasType,
         config.element,
-        config.config,
+        dxfConfig,
         config.zIndex || 1
       );
 
@@ -251,7 +263,8 @@ export class DxfCanvasAdapter implements ICanvasProvider {
    */
   getCanvas(id: string): CanvasInstance | undefined {
     if (!this._isInitialized) return undefined;
-    return this.canvasManager.getCanvas(id);
+    // 🏢 ENTERPRISE: Convert null to undefined for interface compatibility
+    return this.canvasManager.getCanvas(id) ?? undefined;
   }
 
   /**
@@ -259,7 +272,8 @@ export class DxfCanvasAdapter implements ICanvasProvider {
    */
   listCanvases(): CanvasInstance[] {
     if (!this._isInitialized) return [];
-    return this.canvasManager.listCanvases();
+    // 🏢 ENTERPRISE: Use getActiveCanvases as listCanvases doesn't exist
+    return this.canvasManager.getActiveCanvases();
   }
 
   // ============================================================================
@@ -352,6 +366,7 @@ export class DxfCanvasAdapter implements ICanvasProvider {
 
   /**
    * Apply middleware hooks
+   * 🏢 ENTERPRISE: Type-safe middleware hook application
    */
   private applyMiddlewareHooks(
     hookName: keyof CanvasMiddleware,
@@ -365,12 +380,14 @@ export class DxfCanvasAdapter implements ICanvasProvider {
 
     for (const middleware of sortedMiddlewares) {
       try {
-        const hook = middleware[hookName] as Function | undefined;
+        const hook = middleware[hookName] as ((arg1: unknown, arg2?: unknown) => void) | undefined;
         if (hook) {
           if (canvas) {
             hook.call(middleware, canvas, data);
           } else {
-            hook.call(middleware, data?.event || hookName, data);
+            // 🏢 ENTERPRISE: Type-safe event extraction
+            const eventName = data && 'event' in data ? data.event : hookName;
+            hook.call(middleware, eventName, data);
           }
         }
       } catch (error) {
@@ -385,15 +402,20 @@ export class DxfCanvasAdapter implements ICanvasProvider {
 
   /**
    * Setup event forwarding από το DXF system στο global system
+   * 🏢 ENTERPRISE: Subscribe to common events and forward to adapter
    */
   private setupEventForwarding(): void {
     // Forward DXF canvas events στο adapter
-    this.eventSystem.subscribe((event, data) => {
-      this.emit(`dxf:${event}`, data);
+    // Subscribe to common event types
+    const eventTypes = ['transform:change', 'render:start', 'render:complete', 'canvas:render'];
+    eventTypes.forEach(eventType => {
+      this.eventSystem.subscribe(eventType, (event: { type: string; data?: unknown }) => {
+        this.emit(`dxf:${event.type}`, event.data);
+      });
     });
 
     // Subscribe to settings changes
-    this.settings.subscribeToChanges((settings) => {
+    this.settings.subscribeToChanges((settings: CanvasRenderSettings) => {
       this.emit('settings:changed', {
         providerId: this.id,
         settings
@@ -403,12 +425,19 @@ export class DxfCanvasAdapter implements ICanvasProvider {
 }
 
 /**
+ * 🏢 ENTERPRISE: Extended config with auto-initialize support
+ */
+export interface DxfCanvasProviderConfig extends CanvasProviderConfig {
+  autoInitialize?: boolean;
+}
+
+/**
  * ✅ CONVENIENCE FACTORY FUNCTION
  * Easy creation of DXF Canvas Provider
  */
 export const createDxfCanvasProvider = (
   providerId: string,
-  config?: Partial<CanvasProviderConfig>
+  config?: Partial<DxfCanvasProviderConfig>
 ): DxfCanvasAdapter => {
   const adapter = new DxfCanvasAdapter(providerId);
 
@@ -429,11 +458,4 @@ export const createDxfCanvasProvider = (
   }
 
   return adapter;
-};
-
-/**
- * ✅ TYPE EXPORTS
- */
-export type DxfCanvasProviderConfig = CanvasProviderConfig & {
-  autoInitialize?: boolean;
 };

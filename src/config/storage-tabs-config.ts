@@ -126,6 +126,4 @@ export default {
   getStorageTabsForEnvironment
 };
 
-export type {
-  StorageTabConfig
-};
+// StorageTabConfig already exported inline above

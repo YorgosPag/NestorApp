@@ -22,6 +22,8 @@ export interface BaseContact {
   // 🏢 ENTERPRISE: Common display properties for all contact types (2026-01-19)
   /** Computed display name - for UI consistency across contact types */
   name?: string;
+  /** Display name alias (used in some API responses) */
+  displayName?: string;
   /** First name (individuals) or primary contact name (companies/services) */
   firstName?: string;
   /** Last name (individuals) */
@@ -37,6 +39,27 @@ export interface BaseContact {
   multiplePhotoURLs?: string[];
   /** Logo URL (for companies/services) */
   logoURL?: string;
+
+  // 🏢 ENTERPRISE: Extended display properties (2026-01-20)
+  /** Trade name / Commercial name (for companies) */
+  tradeName?: string;
+  /** Legal name (full official name for companies) */
+  legalName?: string;
+  /** Multiple photos array (for gallery-style display) */
+  multiplePhotos?: Array<{
+    id: string;
+    url: string;
+    thumbnailUrl?: string;
+    caption?: string;
+    isProfile?: boolean;
+  }>;
+  /** Social media accounts array (for DynamicContactArrays compatibility) */
+  socialMediaArray?: Array<{
+    platform: 'facebook' | 'twitter' | 'linkedin' | 'instagram' | 'youtube' | 'github' | 'other';
+    username: string;
+    url?: string;
+    label?: string;
+  }>;
 }
 
 // Interface για Φυσικά Πρόσωπα
@@ -132,9 +155,13 @@ export interface CompanyContact extends BaseContact {
   
   // Υπεύθυνοι επικοινωνίας
   contactPersons?: ContactPerson[];
-  
+
   // Λογότυπο
   logoURL?: string;
+
+  // 🏢 ENTERPRISE: Representative photo for company (2026-01-20)
+  /** Representative photo URL for company primary contact */
+  representativePhotoURL?: string;
 }
 
 // Interface για Δημόσιες Υπηρεσίες

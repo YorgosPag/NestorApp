@@ -77,6 +77,56 @@ export interface CreateGeoProjectRequest {
 }
 
 // ============================================================================
+// UNIVERSAL POLYGON SYSTEM TYPES
+// ============================================================================
+
+/**
+ * 🎯 Τύπος polygon στο Universal Polygon System
+ */
+export type PolygonType = 'simple' | 'georeferencing' | 'alert-zone' | 'measurement' | 'annotation';
+
+/**
+ * 🎨 Στυλ polygon
+ */
+export interface PolygonStyle {
+  strokeColor: string;
+  fillColor: string;
+  strokeWidth: number;
+  fillOpacity: number;
+  strokeOpacity: number;
+  strokeDash?: number[];
+}
+
+/**
+ * 📍 Σημείο polygon
+ */
+export interface PolygonPoint {
+  id: string;
+  x: number;
+  y: number;
+  label?: string;
+  isControlPoint?: boolean;
+  geoAccuracy?: number;
+  sourceType?: 'manual' | 'gps' | 'survey';
+}
+
+/**
+ * 🔷 Universal Polygon
+ */
+export interface UniversalPolygon {
+  id: string;
+  name: string;
+  description?: string;
+  polygonType: PolygonType;
+  points: PolygonPoint[];
+  style: PolygonStyle;
+  isClosed: boolean;
+  metadata?: Record<string, unknown>;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// ============================================================================
 // UNIVERSAL POLYGONS INTEGRATION
 // ============================================================================
 

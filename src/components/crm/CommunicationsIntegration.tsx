@@ -37,6 +37,17 @@ import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
+ * 🏢 ENTERPRISE: Communications Stats Interface
+ */
+interface CommunicationsStats {
+  totalMessages: number;
+  byChannel: Record<string, number>;
+  byDirection: { inbound: number; outbound: number };
+  responseTime: { average: string; median: string };
+  period: string;
+}
+
+/**
  * Communications Integration Component
  * Κεντρικό component που ενσωματώνει όλη την communications infrastructure στο CRM
  */
@@ -46,8 +57,8 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('communications');
   const [activeTab, setActiveTab] = useState(defaultTab);
-  const [channelsStatus, setChannelsStatus] = useState({});
-  const [stats, setStats] = useState(null);
+  const [channelsStatus, setChannelsStatus] = useState<Record<string, unknown>>({});
+  const [stats, setStats] = useState<CommunicationsStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -153,7 +164,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
   /**
    * Callback όταν στέλνεται μήνυμα
    */
-  const handleMessageSent = async (result) => {
+  const handleMessageSent = async (result: { success: boolean }) => {
     // Refresh inbox για να φανεί το νέο μήνυμα
     await loadData();
   };
@@ -189,7 +200,7 @@ const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) =>
   /**
    * Λήψη icon για κάθε channel
    */
-  const getChannelIcon = (channel) => {
+  const getChannelIcon = (channel: string) => {
     switch (channel) {
       case MESSAGE_TYPES.EMAIL:
       case 'email':

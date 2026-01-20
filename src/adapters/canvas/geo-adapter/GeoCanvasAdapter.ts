@@ -19,6 +19,8 @@ import type {
 
 import type { CanvasInstance } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasManager';
 import type { CanvasRenderSettings } from '../../../subapps/dxf-viewer/rendering/canvas/core/CanvasSettings';
+// 🏢 ENTERPRISE: Import DXF-specific CanvasConfig for type casting
+import type { CanvasConfig as DxfCanvasConfig } from '../../../subapps/dxf-viewer/rendering/types/Types';
 
 // Import coordinate utilities
 import type { Point2D, CoordinateBounds } from '../../../core/canvas/primitives/coordinates';
@@ -201,12 +203,20 @@ export class GeoCanvasAdapter implements ICanvasProvider {
       // Setup canvas context (using DXF infrastructure principles)
       const context = this.setupGeoCanvasContext(config.element);
 
+      // 🏢 ENTERPRISE: Cast CanvasConfig to DXF-specific type
+      const dxfConfig: DxfCanvasConfig = {
+        devicePixelRatio: (config.config as Record<string, unknown>).devicePixelRatio as number ?? window.devicePixelRatio,
+        enableHiDPI: (config.config as Record<string, unknown>).enableHiDPI as boolean ?? true,
+        backgroundColor: (config.config as Record<string, unknown>).backgroundColor as string ?? '#1a1a1a',
+        antialias: (config.config as Record<string, unknown>).antialias as boolean | undefined,
+        imageSmoothingEnabled: (config.config as Record<string, unknown>).imageSmoothingEnabled as boolean | undefined
+      };
       const canvasInstance: CanvasInstance = {
         id: config.canvasId,
         type: config.canvasType,
         element: config.element,
         context,
-        config: config.config,
+        config: dxfConfig,
         zIndex: config.zIndex || 1,
         isActive: config.isActive !== false,
         lastRenderTime: 0
@@ -525,6 +535,7 @@ export class GeoCanvasAdapter implements ICanvasProvider {
 
   /**
    * Apply middleware hooks
+   * 🏢 ENTERPRISE: Type-safe middleware hook application
    */
   private applyMiddlewareHooks(
     hookName: keyof CanvasMiddleware,
@@ -537,12 +548,14 @@ export class GeoCanvasAdapter implements ICanvasProvider {
 
     for (const middleware of sortedMiddlewares) {
       try {
-        const hook = middleware[hookName] as Function | undefined;
+        const hook = middleware[hookName] as ((arg1: unknown, arg2?: unknown) => void) | undefined;
         if (hook) {
           if (canvas) {
             hook.call(middleware, canvas, data);
           } else {
-            hook.call(middleware, data?.event || hookName, data);
+            // 🏢 ENTERPRISE: Type-safe event extraction
+            const eventName = data && 'event' in data ? data.event : hookName;
+            hook.call(middleware, eventName, data);
           }
         }
       } catch (error) {

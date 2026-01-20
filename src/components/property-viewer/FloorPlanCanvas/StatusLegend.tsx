@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { layoutUtilities, chartComponents, interactionUtilities } from '@/styles/design-tokens';
+import { layoutUtilities, interactionUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -63,7 +63,7 @@ export function StatusLegend({
           >
             <div
               className={`${iconSizes.xs} ${quick.input} rounded-full`}
-              style={chartComponents.legend.indicator.withColor(item.color)}
+              style={{ backgroundColor: item.color }}
             />
             <span className={`${colors.text.secondary} flex-1`}>{item.label}</span>
             <span className={`${colors.text.muted} font-mono`}>{item.count}</span>

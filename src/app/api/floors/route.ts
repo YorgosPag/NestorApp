@@ -148,11 +148,11 @@ export const GET = async (request: NextRequest) => {
           console.log(`✅ [Floors/List] Complete: ${floors.length} floors returned`);
 
           return NextResponse.json({
-            success: true,
+            success: true as const,
             floors,
             stats: {
               totalFloors: floors.length,
-              buildingId
+              buildingId: buildingId ?? undefined  // 🏢 ENTERPRISE: Convert null to undefined
             },
             message: `Found ${floors.length} floors${buildingId ? ` for building ${buildingId}` : ''}`
           });
@@ -172,7 +172,7 @@ export const GET = async (request: NextRequest) => {
         }, { status: 500 });
       }
     },
-    { permissions: 'floors:floors:view' }
+    { permissions: 'projects:floors:view' }
   );
 
   return handler(request);

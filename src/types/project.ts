@@ -75,6 +75,8 @@ export interface ProjectCustomer {
   contactId: string;
   name: string;
   phone: string | null;
+  /** Email address for customer communication */
+  email?: string;
   unitsCount: number;
 }
 

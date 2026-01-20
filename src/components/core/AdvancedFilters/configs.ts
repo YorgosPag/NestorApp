@@ -986,7 +986,9 @@ export const communicationsFiltersConfig: FilterPanelConfig = {
 };
 
 // Communications Filter State Interface
+// 🏢 ENTERPRISE: Added index signature for GenericFilterState compatibility
 export interface CommunicationsFilterState {
+  [key: string]: unknown;
   searchTerm: string;
   channel: string;
   status: string;

@@ -10,10 +10,7 @@ import type {
   UniversalPolygon,
   PolygonPoint,
   PolygonType,
-  PolygonStyle
-} from '../polygon-system/types';
-
-import type {
+  PolygonStyle,
   UniversalPolygonRecord,
   PolygonPointRecord,
   CreateUniversalPolygonRequest,

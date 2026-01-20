@@ -285,6 +285,21 @@ export function useBorderTokens() {
 
       /** ✅ ENTERPRISE FIX: Generic separator for LineSettings.tsx TS2339 error */
       separator: 'border-t border-border', // 🏢 ENTERPRISE: Centralized
+
+      /** ✅ ENTERPRISE FIX: Bottom border for card sections, headers */
+      borderB: 'border-b border-border', // 🏢 ENTERPRISE: Centralized
+
+      /** ✅ ENTERPRISE FIX: Top border for footers, separators */
+      borderT: 'border-t border-border', // 🏢 ENTERPRISE: Centralized
+
+      /** ✅ ENTERPRISE FIX: Left border for sidebars, panels */
+      borderL: 'border-l border-border', // 🏢 ENTERPRISE: Centralized
+
+      /** ✅ ENTERPRISE FIX: Right border for sidebars, panels */
+      borderR: 'border-r border-border', // 🏢 ENTERPRISE: Centralized
+
+      /** ✅ ENTERPRISE FIX: Avatar border for UserCard */
+      avatar: 'border-2 border-border rounded-full', // 🏢 ENTERPRISE: Centralized
     },
 
     // ========================================================================

@@ -96,6 +96,15 @@ export { useCustomerInfo as useCustomer } from './hooks/useCustomerInfo';
 // DEFAULT EXPORT - BUILDER PATTERN (Optional)
 // ============================================================================
 
+// Import types for Builder class
+import type {
+  UnifiedCustomerCardProps,
+  CustomerInfoContext,
+  CustomerInfoVariant,
+  CustomerInfoSize,
+  CustomerActionType
+} from './types/CustomerInfoTypes';
+
 /**
  * Builder pattern για programmatic customer info creation
  * Useful για complex configurations

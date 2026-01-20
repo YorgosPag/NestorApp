@@ -86,6 +86,12 @@ export interface Contact {
     accessibility?: boolean;
     /** Furnished units available */
     furnished?: boolean;
+
+    // 🏢 ENTERPRISE: Timestamps for audit trail (2026-01-20)
+    /** Creation timestamp */
+    createdAt?: string | Date;
+    /** Last update timestamp */
+    updatedAt?: string | Date;
   }
   
   export interface Floor {

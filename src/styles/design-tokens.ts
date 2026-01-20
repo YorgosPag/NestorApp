@@ -1828,7 +1828,20 @@ export const canvasUtilities = {
       transform: 'translate(-50%, -50%)',
       pointerEvents: 'none' as const,
       zIndex: zIndex.tooltip // Enterprise: centralized z-index
-    })
+    }),
+
+    /**
+     * 🎯 RESPONSIVE UTILITIES
+     * ENTERPRISE: Responsive layout helpers for geo-canvas
+     */
+    responsive: {
+      mobileBreakpoint: 768,
+      tabletBreakpoint: 1024,
+      desktopBreakpoint: 1280,
+      containerPadding: (isMobile: boolean): string => isMobile ? spacing.sm : spacing.md,
+      gridGap: (isMobile: boolean): string => isMobile ? spacing.sm : spacing.md,
+      flexWrap: (isMobile: boolean): React.CSSProperties['flexWrap'] => isMobile ? 'wrap' : 'nowrap'
+    }
 
     /**
      * NOTE:
@@ -2389,6 +2402,37 @@ export const canvasUI = {
         zIndex: zIndex.modal,
         pointerEvents: 'auto'
       })
+    },
+
+    // ✅ ENTERPRISE FIX: Responsive grid utilities for ResponsiveDashboard
+    responsive: {
+      responsiveGrid: (columns: number, gap: number): React.CSSProperties => ({
+        display: 'grid',
+        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+        gap: `${gap * 4}px`,
+        width: '100%',
+      }),
+      responsiveGridItem: (span: number, offset: number, order?: number): React.CSSProperties => ({
+        gridColumn: offset > 0 ? `${offset + 1} / span ${span}` : `span ${span}`,
+        ...(order !== undefined && { order }),
+      }),
+      responsiveCardGrid: (minWidth: number, maxWidth: number, gap: number): React.CSSProperties => ({
+        display: 'grid',
+        gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, ${maxWidth}px))`,
+        gap: `${gap * 4}px`,
+        width: '100%',
+        justifyContent: 'start',
+      }),
+      responsiveSidebar: (isCollapsed: boolean, width: number): React.CSSProperties => ({
+        width: isCollapsed ? '64px' : `${width}px`,
+        transition: 'width 200ms ease-in-out',
+        flexShrink: 0,
+      }),
+      responsiveMainContent: (hasSidebar: boolean, sidebarWidth: number): React.CSSProperties => ({
+        flex: 1,
+        marginLeft: hasSidebar ? `${sidebarWidth}px` : 0,
+        transition: 'margin-left 200ms ease-in-out',
+      }),
     }
   }
 };

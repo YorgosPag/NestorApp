@@ -140,6 +140,7 @@ export function PropertyStatusSelector({
   size = 'md',
   disabled = false,
   className,
+  placeholders,
   onStatusChange,
   onValidate
 }: PropertyStatusSelectorProps) {

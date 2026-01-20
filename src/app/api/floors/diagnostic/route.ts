@@ -73,12 +73,12 @@ export async function GET(request: NextRequest) {
       const result: FirestoreDiagnosticResult = {
         timestamp: new Date().toISOString(),
         summary: {
-          overallHealth: 'UNKNOWN',
+          overallHealth: 'FAILED',  // 🏢 ENTERPRISE: Default to worst case, updated after checks
           criticalIssues: [],
           recommendedActions: []
         },
         connection: {
-          status: 'UNKNOWN'
+          status: 'FAILED' as const  // Will be updated after connection test
         },
         environment: {
           hasRequiredVars: false,

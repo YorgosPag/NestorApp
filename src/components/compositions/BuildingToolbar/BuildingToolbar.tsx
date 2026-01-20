@@ -4,16 +4,18 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { BaseToolbar, ToolbarAction, ToolbarFilter } from '@/components/core/BaseToolbar';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Download, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Download,
   Filter,
   BarChart3,
-  Timeline,
-  FileText 
+  CalendarDays,
+  FileText
 } from 'lucide-react';
+// 🏢 ENTERPRISE: Timeline icon replaced with CalendarDays (not available in lucide-react)
+const Timeline = CalendarDays;
 import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,

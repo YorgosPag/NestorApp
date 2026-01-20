@@ -339,6 +339,4 @@ export default {
   getPropertyStatusBadgeConfig,
 };
 
-export type {
-  UnifiedPropertyStatusBadgeProps
-};
+// Types already exported inline above

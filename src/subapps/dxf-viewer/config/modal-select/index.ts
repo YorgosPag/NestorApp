@@ -157,6 +157,15 @@ export {
   getGenericValidationMessages
 } from './validation/messages';
 
+// 📝 VALIDATION MODULE - TYPES
+export type {
+  ValidationMessagesConfig,
+  ValidationRequiredMessagesConfig,
+  ValidationFormatMessagesConfig,
+  ValidationDateMessagesConfig,
+  ValidationGenericMessagesConfig
+} from './validation/messages';
+
 // 🏷️ TAB LABELS MODULE
 export {
   MODAL_SELECT_BUILDING_TAB_LABELS,

@@ -99,8 +99,9 @@ export interface CompactToolbarProps {
   config: CompactToolbarConfig;
 
   // State
-  selectedItems?: number[];
-  onSelectionChange?: (items: number[]) => void;
+  // 🏢 ENTERPRISE: Using string IDs for Firebase compatibility
+  selectedItems?: string[];
+  onSelectionChange?: (items: string[]) => void;
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
   activeFilters?: string[];

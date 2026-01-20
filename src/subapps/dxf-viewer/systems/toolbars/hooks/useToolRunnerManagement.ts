@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { ToolType, ToolRunner, ToolEvents } from '../config';
+import type { ToolType, ToolRunner, ToolEvents, ActionParameters, ToolExecutionResult } from '../config';
 import { ToolbarSystemUtils } from '../utils';
 
 interface ToolRunnerManagementParams {

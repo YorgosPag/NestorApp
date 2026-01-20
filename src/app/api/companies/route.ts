@@ -217,8 +217,9 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
     const cachedCompanies = CacheHelpers.getCachedCompanies(tenantCacheKey);
     if (cachedCompanies) {
       console.log(`⚡ API: CACHE HIT (${tenantCacheKey}) - Returning ${cachedCompanies.length} cached companies`);
+      // 🏢 ENTERPRISE: Type-safe cache return with proper cast
       return NextResponse.json({
-        companies: cachedCompanies,
+        companies: cachedCompanies as CompanyContact[],
         count: cachedCompanies.length,
         cached: true
       });

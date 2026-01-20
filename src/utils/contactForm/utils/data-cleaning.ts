@@ -20,9 +20,23 @@ const t = (key: string): string => {
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
 
-/** Contact data type for cleaning/sanitization */
-export type ContactDataValue = string | number | boolean | null | undefined | Date | ContactDataValue[] | ContactDataRecord;
-export type ContactDataRecord = Record<string, ContactDataValue>;
+/**
+ * Contact data types for cleaning/sanitization
+ * 🏢 ENTERPRISE: Using interface to avoid circular reference
+ */
+export interface ContactDataRecord {
+  [key: string]: ContactDataValue;
+}
+
+export type ContactDataValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | Date
+  | ContactDataValue[]
+  | ContactDataRecord;
 
 /** Validation result type */
 export interface ValidationResult {
@@ -101,11 +115,15 @@ export function cleanUndefinedValues(obj: ContactDataRecord): ContactDataRecord 
             console.log('🛠️ DATA CLEANING: Preserving empty multiplePhotoURLs array for database deletion');
           }
         }
-      } else if (typeof value === 'object') {
-        const cleanedNestedObj = cleanUndefinedValues(value);
+      } else if (typeof value === 'object' && !(value instanceof Date)) {
+        // 🏢 ENTERPRISE: Exclude Date objects from recursive cleaning
+        const cleanedNestedObj = cleanUndefinedValues(value as ContactDataRecord);
         if (Object.keys(cleanedNestedObj).length > 0) {
           cleaned[key] = cleanedNestedObj;
         }
+      } else if (value instanceof Date) {
+        // 🏢 ENTERPRISE: Preserve Date objects as-is
+        cleaned[key] = value;
       } else {
         cleaned[key] = value;
         // 🛠️ DEBUG: Log preservation of photoURL empty strings
@@ -193,9 +211,9 @@ export function sanitizeContactData(contactData: ContactDataRecord): ContactData
       }
     }
 
-    // 🗂️ NESTED OBJECTS: Recursive sanitization
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      const nestedSanitized = sanitizeContactData(value);
+    // 🗂️ NESTED OBJECTS: Recursive sanitization (excluding Date objects)
+    if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date)) {
+      const nestedSanitized = sanitizeContactData(value as ContactDataRecord);
       if (Object.keys(nestedSanitized).length === 0) {
         console.log(`🗑️ SANITIZER: Removing empty object field "${key}"`);
         delete sanitized[key];
@@ -247,30 +265,35 @@ export function validateContactData(contactData: ContactDataRecord): ValidationR
     errors.push(t('contactTypeRequired'));
   }
 
+  // 🏢 ENTERPRISE: Helper for safe string trim with type guard
+  const safeStringTrim = (value: ContactDataValue): string => {
+    return typeof value === 'string' ? value.trim() : '';
+  };
+
   switch (contactData.type) {
     case 'individual':
-      if (!contactData.firstName || contactData.firstName.trim() === '') {
+      if (!contactData.firstName || safeStringTrim(contactData.firstName) === '') {
         errors.push(t('individual.firstNameRequired'));
       }
-      if (!contactData.lastName || contactData.lastName.trim() === '') {
+      if (!contactData.lastName || safeStringTrim(contactData.lastName) === '') {
         errors.push(t('individual.lastNameRequired'));
       }
       break;
 
     case 'company':
-      if (!contactData.companyName || contactData.companyName.trim() === '') {
+      if (!contactData.companyName || safeStringTrim(contactData.companyName) === '') {
         errors.push(t('company.nameRequired'));
       }
-      if (!contactData.vatNumber || contactData.vatNumber.trim() === '') {
+      if (!contactData.vatNumber || safeStringTrim(contactData.vatNumber) === '') {
         warnings.push(t('company.vatRecommended'));
       }
       break;
 
     case 'service':
-      if (!contactData.serviceName || contactData.serviceName.trim() === '') {
+      if (!contactData.serviceName || safeStringTrim(contactData.serviceName) === '') {
         errors.push(t('service.nameRequired'));
       }
-      if (!contactData.serviceType || contactData.serviceType.trim() === '') {
+      if (!contactData.serviceType || safeStringTrim(contactData.serviceType) === '') {
         errors.push(t('service.typeRequired'));
       }
       break;

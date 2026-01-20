@@ -597,8 +597,4 @@ export default {
   }
 };
 
-export type {
-  TabEntityType,
-  ContactType,
-  UnifiedTabConfig
-};
+// Types already exported inline above

@@ -19,7 +19,8 @@ import {
   useDynamicInputLayout,
   useDynamicInputState,
   useDynamicInputToolReset,
-  useDynamicInputAnchoring
+  useDynamicInputAnchoring,
+  useDynamicInputRealtime
 } from '../hooks';
 import { useDynamicInputMultiPoint } from '../hooks/useDynamicInputMultiPoint';
 import { normalizeNumber, isValidNumber } from '../utils/number';

@@ -651,12 +651,4 @@ class EnterpriseFileSystemService {
 export const fileSystemService = new EnterpriseFileSystemService();
 export default fileSystemService;
 
-// Export types για external usage
-export type {
-  FileSystemConfiguration,
-  FileSizeUnit,
-  FileTypeValidation,
-  FileUploadSettings,
-  FileSecuritySettings,
-  EnterpriseFileSystemConfig
-};
+// Types already exported inline above

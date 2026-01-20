@@ -40,6 +40,18 @@ import { useTranslation } from 'react-i18next';
  *
  * Configurable props for different entity types and use cases
  */
+// 🏢 ENTERPRISE: Component type with static factory methods
+interface EnterpriseHeaderActionsComponent extends React.FC<EnterpriseHeaderActionsProps> {
+  /** Projects header actions factory */
+  forProjects: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
+  /** Buildings header actions factory */
+  forBuildings: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
+  /** Contacts header actions factory */
+  forContacts: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
+  /** Units header actions factory */
+  forUnits: (props: Omit<EnterpriseHeaderActionsProps, 'entityType'>) => React.ReactElement;
+}
+
 export interface EnterpriseHeaderActionsProps {
   /** Dashboard toggle state */
   showDashboard: boolean;
@@ -123,7 +135,7 @@ const ENTITY_TYPE_KEYS: Record<string, string> = {
  *   onCreateNew={handleCreateBuilding}
  * />
  */
-export const EnterpriseHeaderActions: React.FC<EnterpriseHeaderActionsProps> = ({
+const EnterpriseHeaderActionsBase: React.FC<EnterpriseHeaderActionsProps> = ({
   showDashboard,
   setShowDashboard,
   entityType,
@@ -252,6 +264,15 @@ export const EnterpriseHeaderActionsFactories = {
 // ============================================================================
 // EXPORTS
 // ============================================================================
+
+// 🏢 ENTERPRISE: Create component with static factory methods
+// This enables: EnterpriseHeaderActions.forProjects(...) usage
+export const EnterpriseHeaderActions = Object.assign(EnterpriseHeaderActionsBase, {
+  forProjects: EnterpriseHeaderActionsFactories.forProjects,
+  forBuildings: EnterpriseHeaderActionsFactories.forBuildings,
+  forContacts: EnterpriseHeaderActionsFactories.forContacts,
+  forUnits: EnterpriseHeaderActionsFactories.forUnits,
+}) as EnterpriseHeaderActionsComponent;
 
 export default EnterpriseHeaderActions;
 

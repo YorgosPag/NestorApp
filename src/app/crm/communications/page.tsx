@@ -137,7 +137,8 @@ export default function CrmCommunicationsPage() {
   const [showToolbar, setShowToolbar] = useState(false);
 
   // CompactToolbar state
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  // 🏢 ENTERPRISE: Using string[] for Firebase-compatible IDs
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'status'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');

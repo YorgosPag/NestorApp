@@ -22,6 +22,7 @@ import {
   User
 } from 'lucide-react';
 import { getParkingStatusLabel, getParkingStatusColor, getParkingTypeLabel } from '@/components/projects/utils/parking-utils';
+import type { ParkingSpotStatus } from '@/types/parking';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -84,8 +85,10 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
   
   const isStorage = unit.type === 'storage';
   const MainIcon = isStorage ? Package : Car;
-  const statusColor = getParkingStatusColor(unit.status);
-  const statusLabel = getParkingStatusLabel(unit.status);
+  // 🏢 ENTERPRISE: Storage status maps to parking status for utility reuse
+  const mappedStatus = (unit.status === 'maintenance' ? 'reserved' : unit.status) as ParkingSpotStatus;
+  const statusColor = getParkingStatusColor(mappedStatus);
+  const statusLabel = getParkingStatusLabel(mappedStatus);
 
   return (
     <div className="p-4 md:p-8">
@@ -106,7 +109,7 @@ export default function StorageUnitPage({ params }: { params: { id: string } }) 
                 </div>
                 <div>
                     <CardTitle className="text-2xl">{unit.code}</CardTitle>
-                    <CardDescription>{getParkingTypeLabel(unit.type)}</CardDescription>
+                    <CardDescription>{unit.type === 'storage' ? t('common.storage') : t('common.parking')}</CardDescription>
                 </div>
             </div>
              {/* 🏢 ENTERPRISE: StorageStatus maps to UnitStatus (sold->available fallback) */}

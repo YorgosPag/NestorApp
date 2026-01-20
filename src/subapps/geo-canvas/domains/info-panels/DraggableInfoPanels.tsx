@@ -12,12 +12,64 @@
  */
 
 import React from 'react';
-import {
-  draggablePanelContainer,
-  panelHeader,
-  panelContent,
-  panelCloseButton
-} from '../../../../../styles/design-tokens';
+import type { CSSProperties } from 'react';
+
+// ============================================================================
+// 🎨 LOCAL PANEL STYLES - ENTERPRISE PATTERN
+// ============================================================================
+
+const draggablePanelContainer = (
+  position: { x: number; y: number },
+  isDragging: boolean,
+  width?: number
+): CSSProperties => ({
+  position: 'absolute',
+  left: position.x,
+  top: position.y,
+  width: width ?? 350,
+  backgroundColor: 'rgba(30, 41, 59, 0.95)',
+  borderRadius: '8px',
+  boxShadow: isDragging
+    ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+    : '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+  transition: isDragging ? 'none' : 'box-shadow 0.2s ease',
+  cursor: isDragging ? 'grabbing' : 'default',
+  overflow: 'hidden',
+});
+
+const panelHeader = (isActive: boolean): CSSProperties => ({
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '10px 14px',
+  backgroundColor: isActive ? 'rgba(59, 130, 246, 0.2)' : 'rgba(51, 65, 85, 0.8)',
+  cursor: 'grab',
+  userSelect: 'none',
+  borderBottom: '1px solid rgba(100, 116, 139, 0.3)',
+  color: '#f8fafc',
+  fontSize: '14px',
+  fontWeight: 500,
+});
+
+const panelContent = (): CSSProperties => ({
+  padding: '14px',
+  color: '#e2e8f0',
+  fontSize: '13px',
+  maxHeight: '400px',
+  overflowY: 'auto',
+});
+
+const panelCloseButton = (): CSSProperties => ({
+  background: 'transparent',
+  border: 'none',
+  color: '#94a3b8',
+  cursor: 'pointer',
+  padding: '4px 8px',
+  fontSize: '14px',
+  lineHeight: 1,
+  borderRadius: '4px',
+  transition: 'all 0.15s ease',
+});
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPES - INFO PANELS DOMAIN

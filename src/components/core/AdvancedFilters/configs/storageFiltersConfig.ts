@@ -1,5 +1,5 @@
 import type { FilterPanelConfig } from '../types';
-import { GEOGRAPHIC_CONFIG } from '@/config/geo-constants';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import {
   UNIFIED_STATUS_FILTER_LABELS,
   COMMON_FILTER_LABELS,
@@ -8,7 +8,9 @@ import {
 } from '@/constants/property-statuses-enterprise';
 
 // Storage Filter State Type
+// 🏢 ENTERPRISE: Added index signature for GenericFilterState compatibility
 export interface StorageFilterState {
+  [key: string]: unknown;
   searchTerm?: string;
   status?: string[];
   type?: string[];

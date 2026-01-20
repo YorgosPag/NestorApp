@@ -12,7 +12,8 @@
 
 import {
   ContactRelationship,
-  RelationshipType
+  RelationshipType,
+  isEmploymentRelationship
 } from '@/types/contacts/relationships';
 import { Contact, ContactType } from '@/types/contacts';
 

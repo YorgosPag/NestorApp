@@ -20,7 +20,7 @@ const DxfViewerApp = dynamic(
       return (
         <main className="w-full h-full flex items-center justify-center" role="main" aria-label={i18n.t('common:dxfViewer.loadingAriaLabel')}>
           <section className="text-center" role="status" aria-live="polite">
-            <AnimatedSpinner size="large" variant="info" className="mx-auto mb-4" />
+            <AnimatedSpinner size="large" className="mx-auto mb-4" />
           <p className="text-gray-600">{i18n.t('common:dxfViewer.loading')}</p>
           </section>
         </main>
@@ -82,7 +82,7 @@ export default function DxfViewerPage() {
           <Suspense fallback={
             <section className="w-full h-full flex items-center justify-center" role="status" aria-live="polite">
               <div className="text-center">
-                <AnimatedSpinner size="large" variant="info" className="mx-auto mb-4" />
+                <AnimatedSpinner size="large" className="mx-auto mb-4" />
                 <p className="text-gray-600">{t('dxfViewer.loading')}</p>
               </div>
             </section>

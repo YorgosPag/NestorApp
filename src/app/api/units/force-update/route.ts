@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
         console.log('🔍 Finding sold units without customers...');
         const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
 
-        const unitsToUpdate = [];
+        // 🏢 ENTERPRISE: Explicit type annotation to avoid implicit any[]
+        const unitsToUpdate: Array<{ id: string; name: string; currentSoldTo: string }> = [];
         unitsSnapshot.docs.forEach((doc, index) => {
           const fields = doc.data();
           const status = fields.status;
@@ -71,8 +72,8 @@ export async function POST(request: NextRequest) {
           if (status === 'sold' && (!soldTo || soldTo === UNIT_SALE_STATUS.NOT_SOLD)) {
             unitsToUpdate.push({
               id: doc.id,
-              name: name || `Unit ${index + 1}`,
-              currentSoldTo: soldTo || 'null'
+              name: (name as string) || `Unit ${index + 1}`,
+              currentSoldTo: (soldTo as string) || 'null'
             });
           }
         });

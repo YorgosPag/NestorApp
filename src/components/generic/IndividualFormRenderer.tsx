@@ -10,7 +10,7 @@ import type { IndividualFieldConfig, IndividualSectionConfig } from '@/config/in
 import { getIconComponent } from './utils/IconMapping';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)

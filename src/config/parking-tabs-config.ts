@@ -126,6 +126,4 @@ export default {
   getParkingTabsForEnvironment
 };
 
-export type {
-  ParkingTabConfig
-};
+// ParkingTabConfig already exported inline above

@@ -27,7 +27,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Import centralized types and utilities
-import type { RelationshipType, ContactType } from '@/types/contacts/relationships';
+import type { RelationshipType } from '@/types/contacts/relationships';
+import type { ContactType } from '@/types/contacts/contracts';
 import {
   getRelationshipTypeConfig,
   getAvailableRelationshipTypes

@@ -7,7 +7,7 @@ import type { FilterState } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
-import { propertyTypes, availabilityOptions, PRICE_MAX, AREA_MAX } from './constants';
+import { PROPERTY_TYPES as propertyTypes, AVAILABILITY as availabilityOptions, PRICE_MAX, AREA_MAX } from '@/components/public-property-filters/constants';
 import { usePublicPropertyFilterHandlers } from './hooks/usePublicPropertyFilterHandlers';
 import { SearchField } from './components/SearchField';
 import { CheckboxRow } from './components/CheckboxRow';

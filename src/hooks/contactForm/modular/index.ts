@@ -60,13 +60,8 @@ export {
   useDragAndDrop
 } from '../interactions';
 
-// Key types
-export type {
-  UseFormStateReturn,
-  UseFormResetReturn,
-  UseFileUploadsReturn,
-  UseUploadCompletionReturn,
-  UseMemoryCleanupReturn,
-  UsePhotoSelectionReturn,
-  UseDragAndDropReturn
-} from '../core';
+// Key types - from their respective modules
+export type { UseFormStateReturn, UseFormResetReturn } from '../core';
+export type { UseFileUploadsReturn, UseUploadCompletionReturn, UseMemoryCleanupReturn } from '../files';
+export type { UsePhotoSelectionReturn } from '../photos';
+export type { UseDragAndDropReturn } from '../interactions';

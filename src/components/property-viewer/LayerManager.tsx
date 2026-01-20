@@ -9,9 +9,9 @@ import React, {
 } from 'react';
 
 import { DxfCanvas as DxfCanvasCore } from '@/subapps/dxf-viewer/canvas/DxfCanvas';
-import ZoomWindowOverlay from '@/subapps/dxf-viewer/canvas/ZoomWindowOverlay';
-import SelectionMarqueeOverlay from '@/subapps/dxf-viewer/canvas/SelectionMarqueeOverlay';
-import CoordinateCalibrationOverlay from '@/subapps/dxf-viewer/canvas/CoordinateCalibrationOverlay';
+import ZoomWindowOverlay from '@/subapps/dxf-viewer/canvas-v2/overlays/ZoomWindowOverlay';
+import SelectionMarqueeOverlay from '@/subapps/dxf-viewer/canvas-v2/overlays/SelectionMarqueeOverlay';
+import CoordinateCalibrationOverlay from '@/subapps/dxf-viewer/ui/CoordinateCalibrationOverlay';
 import CursorSettingsPanel from '@/subapps/dxf-viewer/ui/CursorSettingsPanel';
 
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
@@ -97,6 +97,8 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
   const [canvasRect, setCanvasRect] = useState<DOMRect | null>(null);
   const [mouseCss, setMouseCss] = useState<Point | null>(null);
   const [mouseWorld, setMouseWorld] = useState<Point | null>(null);
+  // 🏢 ENTERPRISE: Cursor settings panel visibility state
+  const [showCursorSettings, setShowCursorSettings] = useState(false);
 
   const handleRendererReady = (renderer: RendererInstance) => {
     rendererRef.current = renderer;
@@ -221,7 +223,10 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
           onToggle={onCalibrationToggle}
         />
       </div>
-      <CursorSettingsPanel />
+      <CursorSettingsPanel
+        isVisible={showCursorSettings}
+        onClose={() => setShowCursorSettings(false)}
+      />
     </>
   );
 });

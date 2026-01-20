@@ -33,6 +33,10 @@ export type { ImageMetadata, ImageParserResult } from './raster/ImageParser';
 // ============================================================================
 
 import type { FloorPlanFormat, ParserResult } from '../types';
+// 🏢 ENTERPRISE: Import parsers for local use in getParser
+import { parseDxf } from './vector/DxfParser';
+import { parseDwg } from './vector/DwgParser';
+import { parseImage } from './raster/ImageParser';
 
 /**
  * Detect format from file

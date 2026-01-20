@@ -336,7 +336,7 @@ export default function AuthActionPage() {
           <figure className={layout.centerHorizontal}>
             <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
           </figure>
-          <h1 className={`${typography.heading.xl} ${colors.text.primary}`}>
+          <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>
             Nestor Pagonis
           </h1>
         </header>
@@ -362,7 +362,7 @@ export default function AuthActionPage() {
           <CardContent>
             {/* Error Alert */}
             {state.errorMessage && (
-              <Alert variant="destructive" className={layout.marginBottom4}>
+              <Alert variant="destructive" className="mb-4">
                 <AlertDescription>{state.errorMessage}</AlertDescription>
               </Alert>
             )}

@@ -41,6 +41,7 @@ interface OptimizedAppProviderProps {
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const { currentStep, isComplete, start, nextStep } = useProgressiveLoader(LoadingPresets.appInit);
   const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -137,6 +138,7 @@ function MemoryWrapper({ children }: { children: React.ReactNode }) {
 // Error boundary with app-specific fallback
 function AppErrorBoundary({ children }: { children: React.ReactNode }) {
   const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
   return (
     <ErrorBoundary
       componentName="App"
@@ -278,6 +280,8 @@ export function useOptimizationStatus() {
 export function OptimizationDebugPanel() {
   const [isOpen, setIsOpen] = React.useState(false);
   const status = useOptimizationStatus();
+  const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
 
   if (process.env.NODE_ENV !== 'development') {
     return null;

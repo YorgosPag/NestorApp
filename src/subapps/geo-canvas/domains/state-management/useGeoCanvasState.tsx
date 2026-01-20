@@ -362,7 +362,6 @@ export function useGeoCanvasState(initialData?: Partial<GeoCanvasState>) {
 // 🔗 DOMAIN EXPORTS - STATE MANAGEMENT
 // ============================================================================
 
-export type { GeoCanvasState, GeoCanvasAction, PanelState, ToolState, MapViewState };
 export { initialState, geoCanvasReducer };
 export default useGeoCanvasState;
 

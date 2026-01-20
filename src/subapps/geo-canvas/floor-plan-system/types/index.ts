@@ -14,18 +14,22 @@ export type {
   FloorPlanCoordinate,
   FloorPlanControlPoint,
   ControlPointPickingState,
-  ControlPointPickingMode
+  ControlPointPickingMode,
+  GeoCoordinate
 } from './control-points';
-export type { GeoCoordinate } from './control-points';
 
 // ============================================================================
 // 🔄 TRANSFORMATION (STEP 2.3)
 // ============================================================================
 
+// 🏢 ENTERPRISE: Import TransformationMethod for local usage
+import type { TransformationMethod as TransformMethod } from './transformation';
+// Re-export as type alias
+export type TransformationMethod = TransformMethod;
+
 export type {
   AffineTransformMatrix,
   TransformationResult,
-  TransformationMethod,
   TransformationOptions,
   CoordinateTransformer
 } from './transformation';
@@ -163,11 +167,6 @@ export interface GeoTransformMatrix {
   scale: { x: number; y: number }; // Scale factors
   translation: { x: number; y: number }; // Translation vector
 }
-
-/**
- * Transformation method
- */
-export type TransformationMethod = 'affine' | 'polynomial' | 'tps';
 
 /**
  * Georeferencing accuracy assessment

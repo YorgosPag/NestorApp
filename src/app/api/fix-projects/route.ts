@@ -196,7 +196,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
         projectsUpdated: results.filter(r => r.status === 'UPDATED').length,
         projectsNoChange: results.filter(r => r.status === 'NO_CHANGE').length,
         targetCompanyId: correctCompanyId,
-        allProjectsCorrect,
+        allProjectsCorrect: allCorrect,
         executionTimeMs: duration,
         result: allCorrect ? 'success' : 'partial_success',
         metadata,

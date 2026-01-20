@@ -303,8 +303,12 @@ class AdvancedSearchEngine<T extends Record<string, unknown> = Record<string, un
         } else {
           const valueA = this.getFieldValue(a, sort.field);
           const valueB = this.getFieldValue(b, sort.field);
-          
-          if (valueA < valueB) comparison = -1;
+
+          // 🏢 ENTERPRISE: Null-safe comparison
+          if (valueA == null && valueB == null) comparison = 0;
+          else if (valueA == null) comparison = 1;
+          else if (valueB == null) comparison = -1;
+          else if (valueA < valueB) comparison = -1;
           else if (valueA > valueB) comparison = 1;
           else comparison = 0;
         }

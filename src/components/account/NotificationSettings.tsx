@@ -279,12 +279,12 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
     return (
       <section
         key={config.id}
-        className={cn(layout.flexColGap4, layout.paddingY4, 'border-t', colors.border.default)}
+        className={cn(layout.flexColGap4, 'py-4 border-t border-border')}
       >
         <header className={layout.flexCenterGap2}>
           <CategoryIcon className={cn(iconSizes.md, colors.text.primary)} aria-hidden="true" />
           <div>
-            <h3 className={cn(typography.label.md, colors.text.primary)}>
+            <h3 className={cn(typography.label.sm, colors.text.primary)}>
               {t(config.titleKey)}
             </h3>
             <p className={cn(typography.body.sm, colors.text.muted)}>
@@ -299,7 +299,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
             return (
               <div
                 key={setting.key}
-                className={cn(layout.flexCenterBetween, layout.paddingY2)}
+                className={cn(layout.flexCenterBetween, 'py-2')}
               >
                 <Label
                   htmlFor={`${config.id}-${setting.key}`}
@@ -374,13 +374,13 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
         <CardDescription>{t('account.notificationSettings.description')}</CardDescription>
       </CardHeader>
 
-      <CardContent className={layout.flexColGap6}>
+      <CardContent className="flex flex-col gap-6">
         {/* Global Toggle */}
         <section className={cn(layout.flexCenterBetween, layout.padding4, borders.radiusClass.md, colors.bg.muted)}>
           <div className={layout.flexCenterGap2}>
             <Bell className={cn(iconSizes.md, colors.text.primary)} aria-hidden="true" />
             <div>
-              <p className={cn(typography.label.md, colors.text.primary)}>
+              <p className={cn(typography.label.sm, colors.text.primary)}>
                 {t('account.notificationSettings.globalToggle')}
               </p>
               <p className={cn(typography.body.sm, colors.text.muted)}>
@@ -398,12 +398,12 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
 
         {/* Delivery Methods */}
         <section className={layout.flexColGap4}>
-          <h3 className={cn(typography.label.md, colors.text.primary)}>
+          <h3 className={cn(typography.label.sm, colors.text.primary)}>
             {t('account.notificationSettings.deliveryMethods')}
           </h3>
 
           {/* In-App */}
-          <div className={cn(layout.flexCenterBetween, layout.paddingY2)}>
+          <div className={cn(layout.flexCenterBetween, 'py-2')}>
             <div className={layout.flexCenterGap2}>
               <Smartphone className={cn(iconSizes.sm, colors.text.muted)} aria-hidden="true" />
               <Label htmlFor="in-app" className={cn(typography.body.sm, colors.text.secondary)}>
@@ -419,7 +419,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
           </div>
 
           {/* Email */}
-          <div className={cn(layout.flexCenterBetween, layout.paddingY2)}>
+          <div className={cn(layout.flexCenterBetween, 'py-2')}>
             <div className={layout.flexCenterGap2}>
               <Mail className={cn(iconSizes.sm, colors.text.muted)} aria-hidden="true" />
               <Label htmlFor="email" className={cn(typography.body.sm, colors.text.secondary)}>
@@ -436,7 +436,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
 
           {/* Email Frequency */}
           {settings.emailEnabled && settings.globalEnabled && (
-            <div className={cn(layout.flexCenterBetween, layout.paddingY2, 'pl-8')}>
+            <div className={cn(layout.flexCenterBetween, 'py-2', 'pl-8')}>
               <Label htmlFor="email-frequency" className={cn(typography.body.sm, colors.text.secondary)}>
                 {t('account.notificationSettings.emailFrequency')}
               </Label>
@@ -477,7 +477,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
             className={cn(
               layout.flexColGap2,
               layout.centerContent,
-              layout.paddingY8,
+              'py-8',
               layout.textCenter
             )}
           >

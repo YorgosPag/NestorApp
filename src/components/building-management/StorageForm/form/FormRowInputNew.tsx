@@ -44,7 +44,7 @@ export function FormRowInputNew({
       error={error}
       suffix={trailingElement}
       variant="default"
-      size="default"
+      size="md"
     />
   );
 }

@@ -5,7 +5,7 @@ const DEBUG_DYNAMIC_INPUT_PHASE = false;
 
 import { useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import { resetPhaseForNewShape } from '../utils/field-value-utils';
+import { resetPhaseForNewShape, type PhaseResetActions } from '../utils/field-value-utils';
 import type { Point2D, Phase } from '../../../rendering/types/Types';
 import type { CircleFieldState, ManualInputState, CoordinateFieldState } from '../types/common-interfaces';
 

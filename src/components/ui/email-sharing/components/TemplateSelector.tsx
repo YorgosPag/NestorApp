@@ -221,6 +221,8 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
   orientation = 'horizontal'
 }) => {
   const iconSizes = useIconSizes();
+  const { quick, radius, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
   const availableTemplates = EmailTemplatesService.getAllTemplates();
 
   if (!show) return null;

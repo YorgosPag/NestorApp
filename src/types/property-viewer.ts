@@ -5,6 +5,7 @@ export type { PropertyStats } from './property';
 
 export interface Property {
     id: string;
+    code?: string;
     name: string;
     type: string;
     building: string;

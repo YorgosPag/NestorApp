@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { formatCurrency, formatDate } from '@/lib/intl-utils';
 import type { Property } from '@/types/property';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
-import { PropertyInfoItem } from './details/PropertyInfoItem';
+import { PropertyInfoItem } from '@/components/property-management/details/PropertyInfoItem';
 import { shareProperty, trackShareEvent, type PropertyShareData } from '@/lib/share-utils';
 
 interface PropertyDetailsProps {

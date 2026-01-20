@@ -261,21 +261,13 @@ export default function DatabaseUpdatePage() {
       unitsSnapshot.docs.forEach((unitDoc, index) => {
         if (index < contactIds.length) {
           const contactId = contactIds[index];
-          const assignment = CONTACT_ASSIGNMENTS[contactId];
+          // 🏢 ENTERPRISE: Type-safe access with guard
+          if (!(contactId in CONTACT_ASSIGNMENTS)) return;
+          const assignment = CONTACT_ASSIGNMENTS[contactId as keyof typeof CONTACT_ASSIGNMENTS];
           const newStatus = STATUS_ASSIGNMENTS[assignment.role];
 
-          // 🏢 ENTERPRISE: Type-safe unit update data
-          interface UnitUpdateData {
-            status: string;
-            updatedAt: ReturnType<typeof serverTimestamp>;
-            soldTo?: string;
-            saleDate?: string;
-            ownerId?: string;
-            tenantId?: string;
-            companyId?: string;
-          }
-
-          const updateData: UnitUpdateData = {
+          // 🏢 ENTERPRISE: Type-safe unit update data with Firebase compatibility
+          const updateData: Record<string, unknown> = {
             status: newStatus,
             updatedAt: serverTimestamp()
           };

@@ -11,7 +11,7 @@ import { UI_COLORS } from '../config/color-config';
 // ✅ ENTERPRISE: Use centralized types from settings-core (no duplicates!)
 import type { LineType, LineCapStyle, LineJoinStyle } from '../settings-core/types';
 // 🏢 ENTERPRISE: i18n support
-import type { TFunction } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 // 🏢 ENTERPRISE: i18n key mapping for line types
 const LINE_TYPE_I18N_KEYS: Record<LineType, string> = {

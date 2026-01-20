@@ -11,7 +11,7 @@ export * from './pdf';
 
 // Re-export services & hooks
 export { obligationsService } from '@/services/obligations.service';
-export { useObligations, useObligation, useObligationTemplates, useObligationStats } from '@/hooks/use-obligations';
+export { useObligations, useObligation, useObligationTemplates, useObligationStats } from '@/hooks/useObligations';
 
 // Re-export mock data
 export {

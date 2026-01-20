@@ -32,7 +32,7 @@ export function TasksSummary({ tasks, loading }: TasksSummaryProps) {
       <h4 className="font-medium mb-3">Εργασίες</h4>
       {loading ? (
         <div className="text-center py-4">
-          <AnimatedSpinner size="large" variant="info" className="mx-auto" />
+          <AnimatedSpinner size="large" className="mx-auto" />
         </div>
       ) : (
         <div className="space-y-2">

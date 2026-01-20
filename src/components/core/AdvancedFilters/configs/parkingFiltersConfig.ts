@@ -22,7 +22,9 @@ import {
 // 🅿️ PARKING FILTER STATE TYPE
 // =============================================================================
 
+// 🏢 ENTERPRISE: Added index signature for GenericFilterState compatibility
 export interface ParkingFilterState {
+  [key: string]: unknown;
   searchTerm?: string;
   status?: string[];
   type?: string[];

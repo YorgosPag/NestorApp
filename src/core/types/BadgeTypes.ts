@@ -44,7 +44,12 @@ export type BuildingStatus =
   | 'sold'
   | 'rented'
   | 'construction'
-  | 'planned';
+  | 'planned'
+  // ✅ ENTERPRISE FIX: Additional building statuses
+  | 'active'
+  | 'completed'
+  | 'planning'
+  | 'partially-occupied';
 
 export type ContactStatus =
   | 'active'

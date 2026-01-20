@@ -51,7 +51,7 @@ export function FormRowSelectNew({
       error={error}
       options={selectOptions}
       variant="default"
-      size="default"
+      size="md"
     />
   );
 }

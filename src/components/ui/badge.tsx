@@ -63,7 +63,40 @@ function Badge({ className, variant, ...props }: BadgeProps) {
   )
 }
 
-// Export badgeVariants function για backward compatibility
-const badgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors: ReturnType<typeof useSemanticColors>) => createBadgeVariants(borderTokens, colors);
+// 🏢 ENTERPRISE: Static badge variants for use outside of React components
+// Uses default styling without hooks for cases like callbacks or static generation
+const staticBadgeVariants = cva(
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  {
+    variants: {
+      variant: {
+        default: "border-transparent bg-blue-600 text-white hover:bg-blue-700",
+        secondary: "border-transparent bg-gray-100 text-gray-900 hover:bg-gray-200",
+        destructive: "border-transparent bg-red-600 text-white hover:bg-red-700",
+        outline: "text-foreground",
+        success: "border-transparent bg-green-50 text-green-600 hover:bg-green-100",
+        warning: "border-transparent bg-yellow-50 text-yellow-600 hover:bg-yellow-100",
+        info: "border-transparent bg-blue-50 text-blue-600 hover:bg-blue-100",
+        error: "border-transparent bg-red-50 text-red-600 hover:bg-red-100",
+        purple: "border-transparent bg-purple-50 text-purple-600 hover:bg-purple-100",
+        light: "border-transparent bg-gray-50 text-gray-600 hover:bg-gray-100",
+        muted: "border-transparent bg-gray-100 text-gray-500 hover:bg-gray-200",
+        subtle: "border-transparent bg-slate-50 text-slate-600 hover:bg-slate-100",
+      },
+      size: {
+        default: "px-2.5 py-0.5",
+        sm: "px-2 py-0.5 text-xs",
+        lg: "px-3 py-1 text-sm",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+);
 
-export { Badge, badgeVariants, createBadgeVariants }
+// ✅ ENTERPRISE: Exported static badgeVariants for backward compatibility
+const badgeVariants = staticBadgeVariants;
+
+export { Badge, badgeVariants, createBadgeVariants, staticBadgeVariants }

@@ -191,12 +191,10 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
   if (cachedData) {
     const duration = Date.now() - startTime;
     console.log(`⚡ [Conversations/List] CACHE HIT - ${cachedData.count} conversations in ${duration}ms`);
-    // 🏢 ENTERPRISE: Wrap response με data envelope (consistency με frontend hooks)
+    // 🏢 ENTERPRISE: Return response directly (matches ConversationsListResponse type)
     return NextResponse.json({
-      data: {
-        ...cachedData,
-        source: 'cache'
-      }
+      ...cachedData,
+      source: 'cache'
     });
   }
 
@@ -283,6 +281,6 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
   const duration = Date.now() - startTime;
   console.log(`✅ [Conversations/List] Complete: ${conversations.length} conversations in ${duration}ms`);
 
-  // 🏢 ENTERPRISE: Wrap response με data envelope (consistency με frontend hooks)
-  return NextResponse.json({ data: response });
+  // 🏢 ENTERPRISE: Return response directly (matches ConversationsListResponse type)
+  return NextResponse.json(response);
 }

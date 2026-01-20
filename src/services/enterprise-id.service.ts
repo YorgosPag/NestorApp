@@ -767,10 +767,7 @@ export const parseEnterpriseId = (id: string) => enterpriseIdService.parseId(id)
 export const getIdType = (id: string) => enterpriseIdService.getIdType(id);
 export const isLegacyId = (id: string) => enterpriseIdService.isLegacyId(id);
 
-/**
- * Export types για TypeScript integration
- */
-export type { EnterpriseId, EnterpriseIdPrefix };
+// Types already exported inline above
 
 /**
  * Default export for convenience

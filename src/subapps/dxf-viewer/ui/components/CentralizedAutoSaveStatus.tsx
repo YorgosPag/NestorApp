@@ -231,6 +231,7 @@ export function CentralizedAutoSaveStatusCompact() {
   const { t } = useTranslation('dxf-viewer');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { radius } = useBorderTokens();
   const dxfSettings = useDxfSettingsSafe();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
