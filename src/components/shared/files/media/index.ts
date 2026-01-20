@@ -30,6 +30,9 @@ export type { MediaCardProps } from './MediaCard';
 export { VideoPlayer } from './VideoPlayer';
 export type { VideoPlayerProps } from './VideoPlayer';
 
+export { FloorplanGallery } from './FloorplanGallery';
+export type { FloorplanGalleryProps } from './FloorplanGallery';
+
 // Hooks
 export { useMediaGallery } from './hooks/useMediaGallery';
 export type {

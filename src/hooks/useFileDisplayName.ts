@@ -29,6 +29,24 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
 
 /**
+ * 🏢 ENTERPRISE: Add file extension to display name
+ * Ensures file extension is shown for clarity (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+ */
+function addExtension(displayName: string, ext?: string): string {
+  if (!ext) return displayName;
+
+  // Normalize extension (add dot if needed)
+  const normalizedExt = ext.startsWith('.') ? ext : `.${ext}`;
+
+  // Check if displayName already ends with the extension
+  if (displayName.toLowerCase().endsWith(normalizedExt.toLowerCase())) {
+    return displayName;
+  }
+
+  return `${displayName}${normalizedExt}`;
+}
+
+/**
  * 🏢 ENTERPRISE: Hook for runtime display name translation
  *
  * Returns a function that translates FileRecord display names
@@ -53,9 +71,9 @@ export function useFileDisplayName() {
     (fileRecord: FileRecord): string => {
       // 🏢 ENTERPRISE: Clean architecture - metadata-driven translation
 
-      // CASE 1: No metadata → return stored displayName AS-IS (legacy files)
+      // CASE 1: No metadata → return stored displayName with extension (legacy files)
       if (!fileRecord.category) {
-        return fileRecord.displayName;
+        return addExtension(fileRecord.displayName, fileRecord.ext);
       }
 
       // CASE 2: Has category but no purpose → translate category only
@@ -65,21 +83,22 @@ export function useFileDisplayName() {
         const parts = fileRecord.displayName.split(' - ');
 
         if (parts.length === 0) {
-          return fileRecord.displayName;
+          return addExtension(fileRecord.displayName, fileRecord.ext);
         }
 
         // Translate category, keep rest as-is
         const categoryLabel = t(`categories.${fileRecord.category}`, { defaultValue: fileRecord.category });
         const translatedParts = [categoryLabel, ...parts.slice(1)];
 
-        return translatedParts.join(' - ');
+        // 🏢 ENTERPRISE: Add file extension for clarity
+        return addExtension(translatedParts.join(' - '), fileRecord.ext);
       }
 
       // CASE 3: Has full metadata (category + purpose) → translate both (ENTERPRISE!)
       const parts = fileRecord.displayName.split(' - ');
 
       if (parts.length === 0) {
-        return fileRecord.displayName;
+        return addExtension(fileRecord.displayName, fileRecord.ext);
       }
 
       // Translate category and purpose
@@ -92,7 +111,8 @@ export function useFileDisplayName() {
       // Replace first part, keep rest as-is (entity labels, dates, etc.)
       const translatedParts = [firstPart, ...parts.slice(1)];
 
-      return translatedParts.join(' - ');
+      // 🏢 ENTERPRISE: Add file extension for clarity (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+      return addExtension(translatedParts.join(' - '), fileRecord.ext);
     },
     [t, i18n.language] // 🏢 CRITICAL: Must include i18n.language to trigger re-render on language change!
   );

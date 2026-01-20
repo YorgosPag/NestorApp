@@ -50,6 +50,8 @@ export interface UseEntityFilesParams {
   domain?: FileDomain;
   /** Optional category filter */
   category?: FileCategory;
+  /** Optional purpose filter (e.g., 'project-floorplan', 'parking-floorplan') */
+  purpose?: string;
   /** Auto-fetch on mount (default: true) */
   autoFetch?: boolean;
 }
@@ -99,6 +101,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     companyId,
     domain,
     category,
+    purpose,
     autoFetch = true,
   } = params;
 
@@ -124,9 +127,12 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
         entityId,
         domain,
         category,
+        purpose,
       });
 
       // Use FileRecordService to fetch files
+      // 🏢 ENTERPRISE: Don't filter by purpose in query - do client-side filtering
+      // This allows legacy files (without purpose) to still appear
       const fetchedFiles = await FileRecordService.getFilesByEntity(
         entityType,
         entityId,
@@ -134,17 +140,38 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
           companyId, // 🏢 ENTERPRISE: Required for Firestore Rules query authorization
           domain,
           category,
+          // NOTE: purpose filtering is done client-side below for backward compatibility
           includeDeleted: false, // Don't include soft-deleted files
         }
       );
 
+      // 🏢 ENTERPRISE: Client-side purpose filtering (backward compatible)
+      // - Files with matching purpose → show
+      // - Files without purpose (legacy) → show in all tabs
+      // - Files with 'floorplan' purpose (legacy) → show in project-floorplan tab only
+      // - Files with different purpose → hide
+      const filteredByPurpose = purpose
+        ? fetchedFiles.filter(file => {
+            // No purpose = legacy, show everywhere
+            if (!file.purpose) return true;
+            // Exact match
+            if (file.purpose === purpose) return true;
+            // Legacy 'floorplan' purpose → show in project-floorplan tab (primary tab)
+            if (file.purpose === 'floorplan' && purpose === 'project-floorplan') return true;
+            // Hide files with different purpose
+            return false;
+          })
+        : fetchedFiles;
+
       logger.info('Files fetched successfully', {
-        count: fetchedFiles.length,
+        count: filteredByPurpose.length,
+        totalFetched: fetchedFiles.length,
         entityType,
         entityId,
+        purposeFilter: purpose || 'none',
       });
 
-      setFiles(fetchedFiles);
+      setFiles(filteredByPurpose);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error fetching files');
       logger.error('Failed to fetch files', {
@@ -156,7 +183,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     } finally {
       setLoading(false);
     }
-  }, [entityType, entityId, companyId, domain, category]);
+  }, [entityType, entityId, companyId, domain, category, purpose]);
 
   // =========================================================================
   // 🗑️ TRASH OPERATIONS (Enterprise Trash System - ADR-032)

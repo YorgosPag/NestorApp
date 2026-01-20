@@ -80,7 +80,7 @@ export const dynamic = 'force-dynamic';
  * Returns the processed scene JSON for a floorplan file.
  */
 export async function GET(request: NextRequest) {
-  const handler = withAuth<SceneErrorResponse | Response>(
+  const handler = withAuth<SceneErrorResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleGetScene(req, ctx);
     },
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
 async function handleGetScene(
   request: NextRequest,
   ctx: AuthContext
-): Promise<NextResponse<SceneErrorResponse> | Response> {
+): Promise<NextResponse<SceneErrorResponse>> {
   const { searchParams } = new URL(request.url);
   const fileId = searchParams.get('fileId');
 
@@ -272,15 +272,17 @@ async function handleGetScene(
     // Check If-None-Match for conditional request
     const ifNoneMatch = request.headers.get('If-None-Match');
     if (ifNoneMatch === etag) {
-      return new Response(null, { status: 304 });
+      return new NextResponse(null, { status: 304 });
     }
 
-    return new Response(fileBuffer, {
+    // 🏢 ENTERPRISE: Return scene JSON with proper NextResponse
+    // Convert Buffer to string for NextResponse body
+    return new NextResponse(fileBuffer.toString('utf-8'), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': `private, max-age=${SCENE_CACHE_TTL_SECONDS}`,
-        'ETag': etag,
+        'ETag': String(etag),
         'X-File-Id': fileId,
       },
     });
