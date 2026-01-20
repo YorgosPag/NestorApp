@@ -40,10 +40,12 @@ import { FilePathTree } from './FilePathTree';
 import { UploadEntryPointSelector } from './UploadEntryPointSelector';
 import { TrashView } from './TrashView'; // 🗑️ ENTERPRISE: Trash System (ADR-032)
 import { SearchInput } from '@/components/ui/search'; // 🔍 ENTERPRISE: Centralized Search System
+import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized Toast System
 import { FileRecordService } from '@/services/file-record.service';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, auth } from '@/lib/firebase';
+import app from '@/lib/firebase'; // 🏢 ENTERPRISE: For diagnostic logging
 import { buildStoragePath, generateFileId, getFileExtension } from '@/services/upload';
 import { UPLOAD_LIMITS, DEFAULT_DOCUMENT_ACCEPT } from '@/config/file-upload-config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -116,6 +118,7 @@ export function EntityFilesManager({
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
   const { activeWorkspace } = useWorkspace(); // 🏢 ENTERPRISE: Active workspace για multi-tenant display
+  const { success, error: showError, warning } = useNotifications(); // 🏢 ENTERPRISE: Centralized Toast System
 
   // =========================================================================
   // STATE
@@ -205,6 +208,50 @@ export function EntityFilesManager({
   const handleUpload = useCallback(async (selectedFiles: File[]) => {
     if (!selectedFiles || selectedFiles.length === 0) return;
 
+    // =========================================================================
+    // 🔒 ENTERPRISE: AUTH GATE - Deterministic authentication verification
+    // =========================================================================
+    // Pattern: Google Cloud / AWS / Azure - Never upload without verified auth
+    // Root cause prevention: storage/unauthorized errors from race conditions
+    // =========================================================================
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      logger.error('AUTH_GATE_FAILED', { reason: 'No authenticated user' });
+      showError(t('upload.errors.notAuthenticated') || 'Πρέπει να είστε συνδεδεμένος για να ανεβάσετε αρχεία');
+      return;
+    }
+
+    // 🔒 ENTERPRISE: Force token refresh to ensure valid authentication
+    // This ensures Storage Rules receive a valid, non-expired auth token
+    try {
+      const idToken = await currentUser.getIdToken(true); // force refresh
+      logger.info('AUTH_VERIFIED', {
+        uid: currentUser.uid,
+        tokenLength: idToken.length,
+        hasEmail: !!currentUser.email
+      });
+    } catch (authError) {
+      logger.error('AUTH_TOKEN_REFRESH_FAILED', { error: String(authError) });
+      showError(t('upload.errors.authFailed') || 'Σφάλμα επαλήθευσης ταυτότητας. Παρακαλώ ξανασυνδεθείτε.');
+      return;
+    }
+
+    // 🏢 ENTERPRISE: Diagnostic logging - Verify correct project/bucket
+    // Critical for debugging: ensures client matches Firebase project
+    const diagnosticInfo = {
+      projectId: app.options.projectId,
+      storageBucket: app.options.storageBucket,
+      authUid: currentUser.uid,
+      companyId,
+      entityType,
+      entityId,
+      domain,
+      category,
+    };
+    logger.info('UPLOAD_DIAGNOSTIC', diagnosticInfo);
+    console.log('[EntityFilesManager] 🔍 DIAGNOSTIC:', JSON.stringify(diagnosticInfo, null, 2));
+
     setUploading(true);
 
     try {
@@ -246,8 +293,26 @@ export function EntityFilesManager({
           });
           console.log(`[EntityFilesManager] ✅ Created FileRecord: ${fileId}`);
 
+          // 🏢 ENTERPRISE: Wait for Firestore propagation before Storage upload
+          // Storage Rules validate against Firestore - need time for document to be readable
+          // Pattern: Google Cloud / AWS eventually consistent systems
+          // NOTE: 300ms is baseline - may need tuning for high-latency environments
+          console.log(`[EntityFilesManager] ⏱️ Waiting for Firestore propagation (300ms)...`);
+          await new Promise(resolve => setTimeout(resolve, 300));
+
           // 🏢 STEP B: Upload binary to Storage
-          console.log(`[EntityFilesManager] STEP B: Uploading to Storage: ${storagePath}`);
+          // 🔍 ENTERPRISE: Full diagnostic before upload for debugging storage/unauthorized
+          const uploadDiagnostic = {
+            storagePath,
+            bucket: app.options.storageBucket,
+            fileSize: file.size,
+            contentType: file.type,
+            authUid: auth.currentUser?.uid,
+            fileRecordId: fileId,
+          };
+          logger.info('UPLOAD_START', uploadDiagnostic);
+          console.log(`[EntityFilesManager] STEP B: Uploading to Storage:`, JSON.stringify(uploadDiagnostic, null, 2));
+
           const storageRef = ref(storage, storagePath);
           await uploadBytes(storageRef, file);
           console.log(`[EntityFilesManager] ✅ Uploaded to Storage`);
@@ -282,8 +347,16 @@ export function EntityFilesManager({
 
       console.log(`[EntityFilesManager] Upload complete: ${successCount} succeeded, ${failCount} failed`);
 
-      if (failCount > 0) {
-        alert(`⚠️ ${failCount} από ${selectedFiles.length} αρχεία απέτυχαν. Ελέγξτε το console για λεπτομέρειες.`);
+      // 🏢 ENTERPRISE: Show toast notifications for upload results
+      if (failCount > 0 && successCount > 0) {
+        warning(t('upload.errors.partialSuccess', { success: successCount, fail: failCount, total: selectedFiles.length })
+          || `${successCount} επιτυχία, ${failCount} αποτυχία από ${selectedFiles.length} αρχεία`);
+      } else if (failCount > 0) {
+        showError(t('upload.errors.allFailed', { count: failCount })
+          || `Αποτυχία αποστολής ${failCount} αρχείων`);
+      } else if (successCount > 0) {
+        success(t('upload.success', { count: successCount })
+          || `${successCount} αρχεία ανέβηκαν επιτυχώς`);
       }
 
       // Refetch files list
@@ -295,7 +368,7 @@ export function EntityFilesManager({
       setCustomTitle(''); // 🏢 ENTERPRISE: Reset custom title για επόμενο upload
     } catch (error) {
       console.error('[EntityFilesManager] Upload failed:', error);
-      // TODO: Show error toast
+      showError(t('upload.errors.generic') || 'Σφάλμα κατά την αποστολή αρχείων');
     } finally {
       setUploading(false);
     }
@@ -312,6 +385,10 @@ export function EntityFilesManager({
     refetch,
     selectedEntryPoint, // 🏢 ENTERPRISE: Include entry point in dependencies
     customTitle, // 🏢 ENTERPRISE: Include custom title in dependencies
+    success, // 🏢 ENTERPRISE: Toast notification
+    showError, // 🏢 ENTERPRISE: Toast notification
+    warning, // 🏢 ENTERPRISE: Toast notification
+    t, // 🏢 ENTERPRISE: Translation function
   ]);
 
   // =========================================================================

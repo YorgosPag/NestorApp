@@ -67,14 +67,19 @@
     "customTitlePlaceholder": "π.χ. Πληρεξούσιο, Υπεύθυνη Δήλωση, κτλ.",
     "customTitleHint": "Υποχρεωτικό πεδίο - Εισάγετε περιγραφικό τίτλο για το έγγραφο",
     "selectDocumentType": "Επιλογή τύπου εγγράφου",
+    "success": "{count, plural, =1 {1 αρχείο ανέβηκε επιτυχώς} other {{count} αρχεία ανέβηκαν επιτυχώς}}",
     "errors": {
       "generic": "Σφάλμα κατά την αποστολή του αρχείου",
       "unauthorized": "Δεν έχετε δικαίωμα να ανεβάσετε αρχεία",
+      "notAuthenticated": "Πρέπει να είστε συνδεδεμένος για να ανεβάσετε αρχεία",
+      "authFailed": "Σφάλμα επαλήθευσης ταυτότητας. Παρακαλώ ξανασυνδεθείτε.",
       "cancelled": "Η αποστολή ακυρώθηκε",
       "quotaExceeded": "Δεν υπάρχει αρκετός χώρος αποθήκευσης",
       "urlFetch": "Σφάλμα κατά τη λήψη URL αρχείου",
       "databaseUpdate": "Σφάλμα κατά την ενημέρωση βάσης δεδομένων",
-      "unknown": "Άγνωστο σφάλμα κατά τη διαχείριση του PDF"
+      "unknown": "Άγνωστο σφάλμα κατά τη διαχείριση του PDF",
+      "partialSuccess": "{success} επιτυχία, {fail} αποτυχία από {total} αρχεία",
+      "allFailed": "Αποτυχία αποστολής {count, plural, =1 {1 αρχείου} other {{count} αρχείων}}"
     }
   },
   "manager": {
@@ -155,12 +160,13 @@
     "clickToSelect": "Κάντε κλικ για επιλογή",
     "orDragAndDrop": "ή σύρετε και αποθέστε εδώ",
     "fileTypesHint": "Υποστηριζόμενοι τύποι: Εικόνες, PDF, Word, Excel",
-    "maxSize": "Μέγιστο μέγεθος: {{size}}",
+    "maxSize": "Μέγιστο μέγεθος: {size}",
     "selectFiles": "Επιλογή Αρχείων",
     "selectFilesButton": "Κουμπί επιλογής αρχείων",
     "uploading": "Μεταφόρτωση σε εξέλιξη...",
+    "processing": "Επεξεργασία αρχείων...",
     "errors": {
-      "fileTooLarge": "Το αρχείο {{fileName}} είναι πολύ μεγάλο. Μέγιστο μέγεθος: {{maxSize}}"
+      "fileTooLarge": "Το αρχείο {fileName} είναι πολύ μεγάλο. Μέγιστο μέγεθος: {maxSize}"
     }
   },
   "pathSegments": {
@@ -203,7 +209,7 @@
   },
   "search": {
     "placeholder": "Αναζήτηση αρχείων...",
-    "results": "{{count}} από {{total}} αρχεία",
+    "results": "{count} από {total} αρχεία",
     "noResults": "Δεν βρέθηκαν αρχεία",
     "clearSearch": "Καθαρισμός αναζήτησης"
   }

@@ -67,14 +67,19 @@
     "customTitlePlaceholder": "e.g. Power of Attorney, Affidavit, etc.",
     "customTitleHint": "Required field - Enter a descriptive title for the document",
     "selectDocumentType": "Select document type",
+    "success": "{count, plural, =1 {1 file uploaded successfully} other {{count} files uploaded successfully}}",
     "errors": {
       "generic": "Error uploading file",
       "unauthorized": "You do not have permission to upload files",
+      "notAuthenticated": "You must be signed in to upload files",
+      "authFailed": "Authentication verification failed. Please sign in again.",
       "cancelled": "Upload was cancelled",
       "quotaExceeded": "Not enough storage space",
       "urlFetch": "Error getting file URL",
       "databaseUpdate": "Error updating database",
-      "unknown": "Unknown error while processing PDF"
+      "unknown": "Unknown error while processing PDF",
+      "partialSuccess": "{success} succeeded, {fail} failed out of {total} files",
+      "allFailed": "{count, plural, =1 {Failed to upload 1 file} other {Failed to upload {count} files}}"
     }
   },
   "manager": {
@@ -155,12 +160,13 @@
     "clickToSelect": "Click to select",
     "orDragAndDrop": "or drag and drop here",
     "fileTypesHint": "Supported types: Images, PDF, Word, Excel",
-    "maxSize": "Maximum size: {{size}}",
+    "maxSize": "Maximum size: {size}",
     "selectFiles": "Select Files",
     "selectFilesButton": "Select files button",
     "uploading": "Uploading...",
+    "processing": "Processing files...",
     "errors": {
-      "fileTooLarge": "File {{fileName}} is too large. Maximum size: {{maxSize}}"
+      "fileTooLarge": "File {fileName} is too large. Maximum size: {maxSize}"
     }
   },
   "pathSegments": {
@@ -203,7 +209,7 @@
   },
   "search": {
     "placeholder": "Search files...",
-    "results": "{{count}} of {{total}} files",
+    "results": "{count} of {total} files",
     "noResults": "No files found",
     "clearSearch": "Clear search"
   }
