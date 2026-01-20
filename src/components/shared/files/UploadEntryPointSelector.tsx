@@ -66,12 +66,16 @@ export function UploadEntryPointSelector({
   selectedEntryPointId,
   onSelect,
   className,
-  language = 'el',
+  language, // Optional override - defaults to current i18n language
   customTitle = '',
   onCustomTitleChange,
 }: UploadEntryPointSelectorProps) {
   const iconSizes = useIconSizes();
-  const { t } = useTranslation('files');
+  const { t, i18n } = useTranslation('files');
+
+  // 🏢 ENTERPRISE: Use current i18n language unless explicitly overridden
+  // Fixes bug where cards showed Greek text even with English selected
+  const currentLanguage = (language || i18n.language?.split('-')[0] || 'en') as 'el' | 'en';
 
   // Get entry points for this entity type
   const entryPoints = getSortedEntryPoints(entityType);
@@ -124,8 +128,8 @@ export function UploadEntryPointSelector({
               )}
               role="radio"
               aria-checked={isSelected}
-              aria-label={entryPoint.label[language]}
-              title={entryPoint.description?.[language]}
+              aria-label={entryPoint.label[currentLanguage]}
+              title={entryPoint.description?.[currentLanguage]}
             >
               {/* Icon */}
               <div
@@ -144,7 +148,7 @@ export function UploadEntryPointSelector({
                   isSelected ? 'text-primary' : 'text-foreground'
                 )}
               >
-                {entryPoint.label[language]}
+                {entryPoint.label[currentLanguage]}
               </span>
 
               {/* Selected indicator */}
@@ -163,8 +167,8 @@ export function UploadEntryPointSelector({
             .filter((ep) => ep.id === selectedEntryPointId)
             .map((ep) => (
               <p key={ep.id} className="text-xs text-muted-foreground">
-                <strong className="text-foreground">{ep.label[language]}:</strong>{' '}
-                {ep.description?.[language] || t('upload.documentForCategory')}
+                <strong className="text-foreground">{ep.label[currentLanguage]}:</strong>{' '}
+                {ep.description?.[currentLanguage] || t('upload.documentForCategory')}
               </p>
             ))}
         </footer>

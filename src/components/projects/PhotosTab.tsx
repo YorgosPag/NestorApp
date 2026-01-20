@@ -1,35 +1,37 @@
-// ============================================================================
-// PROJECT PHOTOS TAB - MIGRATED TO PhotosTabBase
-// ============================================================================
-//
-// ADR-018: Upload Systems Centralization
-// This component now uses the centralized PhotosTabBase template.
-//
-// BEFORE: 106 lines of custom code
-// AFTER: ~25 lines using template
-//
-// Benefits:
-// - Zero code duplication
-// - Consistent behavior across all entity types
-// - Type-safe (no `any` types)
-// - Uses centralized hooks and components
-// - Uses PhotoItem instead of raw img elements
-//
-// ============================================================================
+/**
+ * =============================================================================
+ * 🏢 ENTERPRISE: Project Photos Tab
+ * =============================================================================
+ *
+ * Uses centralized EntityFilesManager for photo upload with:
+ * - Enterprise naming convention (ΔΟΜΗ.txt pattern)
+ * - Smart compression for images
+ * - Multi-tenant Storage Rules
+ * - Entry point selection for photo types
+ *
+ * @module components/projects/PhotosTab
+ * @enterprise ADR-031 - Canonical File Storage System
+ *
+ * MIGRATION NOTE: Previously used PhotosTabBase template.
+ * Now uses EntityFilesManager for consistent behavior across all entity types.
+ */
 
 'use client';
 
 import React from 'react';
-import { PhotosTabBase } from '@/components/generic/photo-system';
-// 🏢 ENTERPRISE: i18n support
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import { useAuthContext } from '@/contexts/AuthContext';
+import type { Project } from '@/types/project';
 
 // =============================================================================
 // PROPS
 // =============================================================================
 
 interface PhotosTabProps {
-  project?: { id: string; name?: string };
+  /** Project data (passed automatically by UniversalTabsRenderer) */
+  project?: Project & { id: string; name?: string };
+  /** Alternative data prop */
+  data?: Project;
 }
 
 // =============================================================================
@@ -37,21 +39,41 @@ interface PhotosTabProps {
 // =============================================================================
 
 /**
- * Project Photos Tab - Uses centralized PhotosTabBase
+ * Project Photos Tab - Enterprise File Management
  *
- * Migration from 106 lines to ~25 lines using enterprise template.
+ * Displays project photos using centralized EntityFilesManager with:
+ * - Domain: construction
+ * - Category: photos
+ * - Entry points: construction-photo, exterior-photo, etc.
  */
-export function PhotosTab({ project }: PhotosTabProps = {}) {
-  // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('common');
-  // If no project provided, use placeholder
-  const entity = project || { id: 'placeholder', name: t('entities.project') };
+export function PhotosTab({ project, data }: PhotosTabProps) {
+  const { user } = useAuthContext();
+
+  // Resolve project from props
+  const resolvedProject = project || data;
+
+  // Get companyId from auth context
+  const companyId = user?.companyId;
+
+  // If no project or companyId, show placeholder
+  if (!resolvedProject?.id || !companyId) {
+    return (
+      <div className="p-6 text-center text-muted-foreground">
+        <p>Επιλέξτε ένα έργο για να δείτε τις φωτογραφίες.</p>
+      </div>
+    );
+  }
 
   return (
-    <PhotosTabBase
-      entity={entity}
+    <EntityFilesManager
+      companyId={companyId}
       entityType="project"
-      entityName={entity.name}
+      entityId={String(resolvedProject.id)}
+      entityLabel={resolvedProject.name || `Έργο ${resolvedProject.id}`}
+      domain="construction"
+      category="photos"
+      purpose="photo"
+      showEntryPointSelector={true}
     />
   );
 }

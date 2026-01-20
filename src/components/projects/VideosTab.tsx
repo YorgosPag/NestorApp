@@ -1,44 +1,75 @@
+/**
+ * =============================================================================
+ * 🏢 ENTERPRISE: Project Videos Tab
+ * =============================================================================
+ *
+ * Uses centralized EntityFilesManager for video upload with:
+ * - Enterprise naming convention (ΔΟΜΗ.txt pattern)
+ * - Multi-tenant Storage Rules
+ * - Entry point selection for video types
+ *
+ * @module components/projects/VideosTab
+ * @enterprise ADR-031 - Canonical File Storage System
+ */
+
 'use client';
 
 import React from 'react';
-import { Video, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { createHoverBorderEffects, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-// 🏢 ENTERPRISE: i18n support
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import { useAuthContext } from '@/contexts/AuthContext';
+import type { Project } from '@/types/project';
 
-export function VideosTab() {
-    // 🏢 ENTERPRISE: i18n hook
-    const { t } = useTranslation('projects');
-    const iconSizes = useIconSizes();
-    const borderTokens = useBorderTokens();
-    const hoverBorderEffects = createHoverBorderEffects(borderTokens);
+// =============================================================================
+// PROPS
+// =============================================================================
 
+interface VideosTabProps {
+  /** Project data (passed automatically by UniversalTabsRenderer) */
+  project?: Project;
+  /** Alternative data prop */
+  data?: Project;
+}
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
+/**
+ * Project Videos Tab - Enterprise File Management
+ *
+ * Displays project videos using centralized EntityFilesManager with:
+ * - Domain: construction
+ * - Category: videos
+ * - Entry points: construction-video, etc.
+ */
+export function VideosTab({ project, data }: VideosTabProps) {
+  const { user } = useAuthContext();
+
+  // Resolve project from props
+  const resolvedProject = project || data;
+
+  // Get companyId from auth context
+  const companyId = user?.companyId;
+
+  // If no project or companyId, show placeholder
+  if (!resolvedProject?.id || !companyId) {
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{t('videosTab.title')}</h3>
-                <Button>
-                    <Upload className={`${iconSizes.sm} mr-2`} />
-                    {t('videosTab.uploadVideo')}
-                </Button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3].map((index) => (
-                    <div
-                        key={index}
-                        className={`aspect-video bg-muted rounded-lg flex items-center justify-center border border-dashed border-border ${hoverBorderEffects.BLUE} transition-colors cursor-pointer group`}
-                    >
-                        <div className="text-center">
-                            <Video className={`${iconSizes.xl} text-muted-foreground ${GROUP_HOVER_PATTERNS.BLUE_ICON_ON_GROUP} mx-auto mb-2`} />
-                            <p className="text-sm text-muted-foreground">{t('videosTab.addVideo')}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
+      <div className="p-6 text-center text-muted-foreground">
+        <p>Επιλέξτε ένα έργο για να δείτε τα βίντεο.</p>
+      </div>
     );
+  }
+
+  return (
+    <EntityFilesManager
+      companyId={companyId}
+      entityType="project"
+      entityId={String(resolvedProject.id)}
+      entityLabel={resolvedProject.name || `Έργο ${resolvedProject.id}`}
+      domain="construction"
+      category="videos"
+      purpose="video"
+      showEntryPointSelector={true}
+    />
+  );
 }
