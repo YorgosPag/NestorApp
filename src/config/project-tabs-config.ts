@@ -67,7 +67,7 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 2. ΚΑΤΟΨΗ ΕΡΓΟΥ
+  // 2. ΚΑΤΟΨΗ ΕΡΓΟΥ - 🏢 ENTERPRISE: Uses centralized file storage (ADR-033)
   // -------------------------------------------------------------------------
   {
     id: 'floorplan',
@@ -77,15 +77,15 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     description: PROJECT_TAB_DESCRIPTIONS.FLOORPLAN,
     order: 2,
     enabled: true,
-    component: 'FloorplanViewerTab',
+    component: 'ProjectFloorplanTab',
     componentProps: {
       title: PROJECT_COMPONENT_LABELS.FLOORPLAN_TITLE,
-      type: 'project'
+      floorplanType: 'project'
     }
   },
 
   // -------------------------------------------------------------------------
-  // 3. ΚΑΤΟΨΗ ΘΕΣΕΩΝ ΣΤΑΘΜΕΥΣΗΣ
+  // 3. ΚΑΤΟΨΗ ΘΕΣΕΩΝ ΣΤΑΘΜΕΥΣΗΣ - 🏢 ENTERPRISE: Uses centralized file storage (ADR-033)
   // -------------------------------------------------------------------------
   {
     id: 'parking-floorplan',
@@ -95,10 +95,10 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     description: PROJECT_TAB_DESCRIPTIONS.PARKING_FLOORPLAN,
     order: 3,
     enabled: true,
-    component: 'FloorplanViewerTab',
+    component: 'ProjectFloorplanTab',
     componentProps: {
       title: PROJECT_COMPONENT_LABELS.PARKING_FLOORPLAN_TITLE,
-      type: 'parking'
+      floorplanType: 'parking'
     }
   },
 

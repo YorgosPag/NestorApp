@@ -147,6 +147,9 @@ export const PERMISSIONS = {
   'photos:photos:upload': true,
   'progress:progress:update': true,
 
+  // Floorplans
+  'floorplans:floorplans:process': true,
+
   // Orders (for vendors)
   'orders:orders:view': true,
   'deliveries:deliveries:view': true,

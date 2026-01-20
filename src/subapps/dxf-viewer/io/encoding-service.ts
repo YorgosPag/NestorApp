@@ -337,6 +337,87 @@ export class EncodingService {
   hasEncodingErrors(content: string): boolean {
     return /[�\uFFFD]/.test(content);
   }
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: SERVER-SIDE METHODS (for API routes)
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Decode buffer with auto-detection (Server-side)
+   *
+   * Attempts to decode a buffer trying multiple encodings.
+   * Optimized for Greek DXF files from AutoCAD.
+   *
+   * @param buffer - The buffer to decode (Node.js Buffer or Uint8Array)
+   * @returns Object with content and detected encoding
+   */
+  decodeBufferWithAutoDetect(buffer: Uint8Array | Buffer): { content: string; encoding: SupportedEncoding } {
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+
+    // 1. Try UTF-8 first
+    const utf8Content = this.tryDecodeUTF8(bytes);
+    if (utf8Content && !this.hasEncodingErrors(utf8Content)) {
+      // Check if it looks like garbled Greek (UTF-8 misinterpreting Windows-1253)
+      const hasGarbledGreek = this.looksLikeGarbledGreek(utf8Content);
+      if (!hasGarbledGreek) {
+        return { content: utf8Content, encoding: 'UTF-8' };
+      }
+    }
+
+    // 2. Try Windows-1253 (most common for Greek AutoCAD)
+    const win1253Content = this.decodeWindows1253(bytes);
+    if (this.hasGreekText(win1253Content) && !this.hasEncodingErrors(win1253Content)) {
+      return { content: win1253Content, encoding: 'Windows-1253' };
+    }
+
+    // 3. Try ISO-8859-7
+    const isoContent = this.decodeISO88597(bytes);
+    if (this.hasGreekText(isoContent) && !this.hasEncodingErrors(isoContent)) {
+      return { content: isoContent, encoding: 'ISO-8859-7' };
+    }
+
+    // 4. Fallback: prefer Windows-1253 for Greek files
+    if (win1253Content) {
+      return { content: win1253Content, encoding: 'Windows-1253' };
+    }
+
+    // 5. Last resort: UTF-8
+    return { content: utf8Content || '', encoding: 'UTF-8' };
+  }
+
+  /**
+   * Try to decode bytes as UTF-8
+   */
+  private tryDecodeUTF8(bytes: Uint8Array): string | null {
+    try {
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      return decoder.decode(bytes);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Check if content looks like garbled Greek (UTF-8 misinterpretation)
+   * Common patterns when Windows-1253 is read as UTF-8
+   */
+  private looksLikeGarbledGreek(content: string): boolean {
+    // These patterns appear when Windows-1253 Greek is read as UTF-8
+    const garbledPatterns = [
+      /[\xC0-\xDF][\x80-\xBF]/,  // Invalid UTF-8 sequences
+      /Î[±²³´µ¶·¸¹ºº»¼½¾¿]/,    // Common garbled Greek pattern
+      /Ï[€‚ƒ„…†‡ˆ‰Š‹]/,        // Another common pattern
+      /[ÎÏ][^\x00-\x7F]{2,}/,   // Multiple high bytes after Î/Ï
+    ];
+
+    for (const pattern of garbledPatterns) {
+      if (pattern.test(content)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }
 
 // ============================================================================

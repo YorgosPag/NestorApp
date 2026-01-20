@@ -870,11 +870,18 @@
       "addFloorplan": "Add Floor Plan",
       "editFloorplan": "Edit Floor Plan",
       "loading": "Loading floor plan...",
+      "loadingScene": "Loading drawing...",
+      "processing": "Processing floor plan...",
       "pdfAlt": "PDF Floor Plan: {fileName}",
+      "canvasAlt": "Technical DXF floor plan",
+      "uploadFirst": "Upload Floor Plan",
       "noFloorplan": {
         "title": "No floor plan available",
         "description": "Click \"Add Floor Plan\" to upload a floor plan"
-      }
+      },
+      "noProject": "No project selected",
+      "processingInProgress": "Processing in progress...",
+      "loadError": "Failed to load floor plan"
     },
     "timeline": {
       "header": {

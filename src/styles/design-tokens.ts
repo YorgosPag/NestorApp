@@ -706,6 +706,38 @@ export const layoutUtilities = {
     auto: 'auto' as const,
   },
 
+  // 🏢 ENTERPRISE: Content area dimensions
+  // Based on: Material Design (Google), Carbon (IBM), Fluent UI (Microsoft)
+  // These tokens define minimum heights for content containers to ensure
+  // consistent UX across different screen sizes and content types
+  contentAreas: {
+    // Tab content minimum heights
+    tabContent: {
+      sm: '300px',   // Compact tabs (settings, forms)
+      md: '450px',   // Standard tabs (lists, details)
+      lg: '600px',   // Large content tabs (floorplans, viewers)
+      xl: '800px',   // Full-screen content (CAD viewers, maps)
+    },
+    // Viewer/preview minimum heights
+    viewer: {
+      compact: '350px',  // Thumbnail previews
+      standard: '450px', // Document/PDF viewers
+      expanded: '600px', // Floorplan/CAD viewers
+      fullscreen: '80vh', // Immersive viewers
+    },
+    // Tailwind class equivalents for direct className usage
+    tailwind: {
+      tabContentSm: 'min-h-[300px]',
+      tabContentMd: 'min-h-[450px]',
+      tabContentLg: 'min-h-[600px]',
+      tabContentXl: 'min-h-[800px]',
+      viewerCompact: 'min-h-[350px]',
+      viewerStandard: 'min-h-[450px]',
+      viewerExpanded: 'min-h-[600px]',
+      viewerFullscreen: 'min-h-[80vh]',
+    },
+  },
+
   // Dynamic percentage generator για width/height
   percentage: (value: number): string => `${Math.max(0, Math.min(100, value))}%`,
 

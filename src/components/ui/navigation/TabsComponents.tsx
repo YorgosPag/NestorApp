@@ -212,16 +212,16 @@ export function TabsOnlyTriggers({
   const flexWrapStyles = "flex flex-wrap gap-2 h-auto min-h-fit";
 
   return (
-    <div className={cn(themeConfig?.container, className)}>
+    <div className={cn(themeConfig?.container, 'flex-1 flex flex-col min-h-0', className)}>
       {/* Selection message */}
       {selectedItems.length > 0 && selectionMessage && (
-        <div className="text-sm text-muted-foreground mb-2 px-2">
+        <div className="text-sm text-muted-foreground mb-2 px-2 flex-shrink-0">
           {selectionMessage}
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className={TABS_STYLES.container}>
-        <TabsList className={TABS_STYLES.list}>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className={cn(TABS_STYLES.container, 'flex-1 flex flex-col min-h-0')}>
+        <TabsList className={cn(TABS_STYLES.list, 'flex-shrink-0')}>
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
@@ -237,7 +237,7 @@ export function TabsOnlyTriggers({
           ))}
         </TabsList>
 
-        {/* Render children directly without wrapper styling */}
+        {/* Render children directly - flex-1 allows full height expansion */}
         {children}
       </Tabs>
     </div>

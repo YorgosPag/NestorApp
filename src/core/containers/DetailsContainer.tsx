@@ -86,9 +86,9 @@ export function DetailsContainer({
 
       {/* Scrollable Content Area */}
       <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
-        {/* Tabs Section (if provided) */}
+        {/* Tabs Section (if provided) - flex-1 allows tabs to expand to full height */}
         {tabsRenderer && (
-          <div className="px-4">
+          <div className="px-4 flex-1 flex flex-col min-h-0">
             {tabsRenderer}
           </div>
         )}

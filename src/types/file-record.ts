@@ -25,6 +25,158 @@ import type {
 } from '@/config/domain-constants';
 
 // ============================================================================
+// 🏢 ENTERPRISE: FLOORPLAN PROCESSED DATA TYPES (ADR-033)
+// ============================================================================
+// Cached processed data for floorplan files (DXF, PDF).
+// Original files remain in Storage - this is render-ready cached data.
+// Pattern: Autodesk Viewer (DWG + preview), Google Docs (file + cached render)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: DXF Scene Entity
+ * Represents a single CAD entity (line, polyline, circle, arc, text)
+ */
+export interface DxfSceneEntity {
+  /** Entity type (line, polyline, circle, arc, text, etc.) */
+  type: string;
+  /** Layer name this entity belongs to */
+  layer: string;
+  /** Additional entity-specific properties */
+  [key: string]: unknown;
+}
+
+/**
+ * 🏢 ENTERPRISE: DXF Scene Layer
+ * Represents a CAD layer with visibility and color
+ */
+export interface DxfSceneLayer {
+  /** Layer name */
+  name: string;
+  /** Layer color (hex or CAD color index) */
+  color?: string;
+  /** Layer visibility */
+  visible?: boolean;
+}
+
+/**
+ * 🏢 ENTERPRISE: DXF Scene Bounds
+ * Bounding box of the entire drawing
+ */
+export interface DxfSceneBounds {
+  min: { x: number; y: number };
+  max: { x: number; y: number };
+}
+
+/**
+ * 🏢 ENTERPRISE: Parsed DXF Scene Data
+ * Complete parsed representation of a DXF file
+ */
+export interface DxfSceneData {
+  /** All entities in the drawing */
+  entities: DxfSceneEntity[];
+  /** Layer definitions */
+  layers: Record<string, DxfSceneLayer>;
+  /** Drawing bounds for viewport calculations */
+  bounds?: DxfSceneBounds;
+}
+
+/**
+ * 🏢 ENTERPRISE: Floorplan file type discriminator
+ */
+export type FloorplanFileType = 'dxf' | 'pdf';
+
+/**
+ * 🏢 ENTERPRISE: Cached Processed Data for Floorplans
+ *
+ * Stored in FileRecord.processedData for floorplan files.
+ * Eliminates re-parsing on every view while keeping original in Storage.
+ *
+ * ARCHITECTURE (Enterprise Pattern - Autodesk/Bentley):
+ * - Firestore: Metadata only (~1KB) - paths, timestamps, stats
+ * - Storage: Processed JSON file (~100KB-5MB) - actual scene data
+ * - Client: Fetches JSON on-demand from Storage
+ *
+ * @enterprise ADR-033 - Floorplan Processing Pipeline
+ */
+export interface FloorplanProcessedData {
+  /** File type discriminator */
+  fileType: FloorplanFileType;
+
+  // =========================================================================
+  // 🏢 ENTERPRISE: STORAGE-BASED ARCHITECTURE (V2)
+  // =========================================================================
+  // Scene data is stored in Storage, NOT Firestore (prevents 1MB limit issues)
+  // =========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Path to processed JSON in Storage
+   * The actual scene data is stored here, NOT in Firestore
+   * Format: {storagePath}.processed.json
+   */
+  processedDataPath?: string;
+
+  /**
+   * 🏢 ENTERPRISE: Download URL for processed JSON
+   * Client fetches this URL to load the scene data
+   */
+  processedDataUrl?: string;
+
+  // =========================================================================
+  // METADATA (stored in Firestore - small footprint)
+  // =========================================================================
+
+  /**
+   * Scene statistics (for UI display without loading full scene)
+   */
+  sceneStats?: {
+    entityCount: number;
+    layerCount: number;
+    parseTimeMs: number;
+  };
+
+  /**
+   * Drawing bounds for viewport calculations
+   * Small enough to store in Firestore
+   */
+  bounds?: DxfSceneBounds;
+
+  /**
+   * @deprecated V1: Scene was stored directly in Firestore (caused 1MB limit issues)
+   * V2: Scene is now stored in Storage at processedDataPath
+   * Kept for backward compatibility with existing records
+   */
+  scene?: DxfSceneData;
+
+  /**
+   * Cached PDF thumbnail/preview URL
+   * Only populated when fileType === 'pdf'
+   * Can be a data URL or Storage URL to rendered preview
+   */
+  pdfPreviewUrl?: string;
+
+  /**
+   * PDF page dimensions (for aspect ratio calculations)
+   * Only populated when fileType === 'pdf'
+   */
+  pdfDimensions?: {
+    width: number;
+    height: number;
+  };
+
+  /** Timestamp when data was processed (for cache invalidation) */
+  processedAt: number;
+
+  /** Original file size before compression (bytes) */
+  originalSize?: number;
+
+  /** Processed JSON file size (bytes) */
+  processedSize?: number;
+
+  /** Encoding used to decode the DXF file */
+  encoding?: string;
+}
+
+// ============================================================================
 // CORE FILE RECORD CONTRACT
 // ============================================================================
 
@@ -176,6 +328,30 @@ export interface FileRecord {
 
   /** Version/revision number for versioned files */
   revision?: number;
+
+  /**
+   * 🏢 ENTERPRISE: Entry point ID used during upload
+   * @see UPLOAD_ENTRY_POINTS in upload-entry-points.ts
+   */
+  entryPointId?: string;
+
+  // =========================================================================
+  // 🏢 ENTERPRISE: PROCESSED DATA - FLOORPLAN CACHING (ADR-033)
+  // =========================================================================
+  // For floorplan files (DXF, PDF), we cache processed data to avoid
+  // re-parsing on every view. Original file remains in Storage as SSoT.
+  // Pattern: Google Docs (file + cached render), Autodesk (DWG + preview)
+  // =========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Cached processed data for special file types
+   *
+   * Used for floorplans (DXF/PDF) to cache parsed scene data.
+   * Original file remains in Storage - this is just a cached representation.
+   *
+   * @enterprise ADR-033 - Floorplan Processing Pipeline
+   */
+  processedData?: FloorplanProcessedData;
 
   // =========================================================================
   // 🗑️ ENTERPRISE TRASH SYSTEM - LIFECYCLE FIELDS

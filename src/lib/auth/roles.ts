@@ -78,6 +78,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'settings:settings:manage',
       'notifications:notifications:view',
       'audit:data:view',
+      'floorplans:floorplans:process',
     ],
     level: 1,
     isProjectRole: false
@@ -107,6 +108,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'photos:photos:upload',
       'progress:progress:update',
       'notifications:notifications:view',
+      'floorplans:floorplans:process',
     ],
     level: 2,
     isProjectRole: true

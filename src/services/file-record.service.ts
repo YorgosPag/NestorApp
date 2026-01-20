@@ -208,6 +208,7 @@ export class FileRecordService {
       ext,
       contentType: input.contentType,
       status: FILE_STATUS.PENDING,
+      lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE, // 🏢 ENTERPRISE: REQUIRED - useFloorplanFiles queries by this field
       isDeleted: false, // 🏢 ENTERPRISE: REQUIRED - Firestore queries with '!=' exclude docs without the field
       createdAt: new Date().toISOString(),
       createdBy: input.createdBy,
