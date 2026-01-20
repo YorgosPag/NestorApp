@@ -24,7 +24,7 @@
 
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { FileText, Upload, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ import { FileUploadZone } from './FileUploadZone';
 import { FilePathTree } from './FilePathTree';
 import { UploadEntryPointSelector } from './UploadEntryPointSelector';
 import { TrashView } from './TrashView'; // 🗑️ ENTERPRISE: Trash System (ADR-032)
+import { SearchInput } from '@/components/ui/search'; // 🔍 ENTERPRISE: Centralized Search System
 import { FileRecordService } from '@/services/file-record.service';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -127,6 +128,7 @@ export function EntityFilesManager({
   const [treeViewMode, setTreeViewMode] = useState<'business' | 'technical'>('business'); // 🏢 ENTERPRISE: Business View (default) vs Technical View
   const [selectedEntryPoint, setSelectedEntryPoint] = useState<UploadEntryPoint | null>(null);
   const [customTitle, setCustomTitle] = useState(''); // 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
+  const [searchTerm, setSearchTerm] = useState(''); // 🔍 ENTERPRISE: File search (Google Drive/Dropbox pattern)
 
   // 🏢 ENTERPRISE: Reset custom title when entry point changes
   React.useEffect(() => {
@@ -159,6 +161,36 @@ export function EntityFilesManager({
     category,
     autoFetch: true,
   });
+
+  // =========================================================================
+  // 🔍 FILE FILTERING (Enterprise Search - Google Drive/Dropbox pattern)
+  // =========================================================================
+
+  /**
+   * Filter files based on search term
+   * Searches in: displayName, originalFilename, category, domain
+   */
+  const filteredFiles = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return files;
+    }
+
+    const lowerSearch = searchTerm.toLowerCase().trim();
+
+    return files.filter((file) => {
+      const searchableFields = [
+        file.displayName,
+        file.originalFilename,
+        file.category,
+        file.domain,
+        file.purpose,
+      ].filter(Boolean);
+
+      return searchableFields.some((field) =>
+        field?.toLowerCase().includes(lowerSearch)
+      );
+    });
+  }, [files, searchTerm]);
 
   // =========================================================================
   // UPLOAD HANDLER (Canonical Pipeline - ADR-031)
@@ -582,10 +614,30 @@ export function EntityFilesManager({
         {/* 🗑️ ENTERPRISE: Tab content - Files or Trash (Procore/BIM360 pattern) */}
         {activeTab === 'files' ? (
           <>
+            {/* 🔍 ENTERPRISE: File Search (Google Drive/Dropbox/OneDrive pattern) */}
+            {files.length > 0 && (
+              <div className="flex items-center gap-4">
+                <div className="flex-1 max-w-md">
+                  <SearchInput
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder={t('search.placeholder')}
+                    debounceMs={300}
+                    showClearButton={true}
+                  />
+                </div>
+                {searchTerm && (
+                  <span className="text-sm text-muted-foreground">
+                    {t('search.results', { count: filteredFiles.length, total: files.length })}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Files display (list or tree) */}
             {viewMode === 'list' ? (
               <FilesList
-                files={files}
+                files={filteredFiles}
                 loading={loading}
                 onDelete={handleDelete}
                 onView={handleView}
@@ -594,7 +646,7 @@ export function EntityFilesManager({
               />
             ) : (
               <FilePathTree
-                files={files}
+                files={filteredFiles}
                 onFileSelect={handleView}
                 contextLevel="full" // 🏢 ENTERPRISE: Full hierarchy - Show complete path with user-friendly labels
                 companyName={companyName}

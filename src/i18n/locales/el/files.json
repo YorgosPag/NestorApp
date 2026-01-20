@@ -200,5 +200,11 @@
     "status": "Κατάσταση",
     "downloadUrl": "Σύνδεσμος Λήψης",
     "viewFile": "Προβολή Αρχείου"
+  },
+  "search": {
+    "placeholder": "Αναζήτηση αρχείων...",
+    "results": "{{count}} από {{total}} αρχεία",
+    "noResults": "Δεν βρέθηκαν αρχεία",
+    "clearSearch": "Καθαρισμός αναζήτησης"
   }
 }

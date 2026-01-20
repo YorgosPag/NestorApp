@@ -200,5 +200,11 @@
     "status": "Status",
     "downloadUrl": "Download URL",
     "viewFile": "View File"
+  },
+  "search": {
+    "placeholder": "Search files...",
+    "results": "{{count}} of {{total}} files",
+    "noResults": "No files found",
+    "clearSearch": "Clear search"
   }
 }
