@@ -458,7 +458,9 @@
     "startByAddingSection": "Start by adding the first section of the obligations document",
     "addSection": "Add Section",
     "paragraphPlaceholder": "Paragraph content...",
-    "clickToAddContent": "Click to add content..."
+    "clickToAddContent": "Click to add content...",
+    "deleteTitle": "Delete Article",
+    "deleteConfirm": "Are you sure you want to delete this article?"
   },
   "propertyViewer": {
     "title": "Property Index",

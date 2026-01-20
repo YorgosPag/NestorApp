@@ -12,7 +12,7 @@
 
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { FileText, Download, Eye, Trash2, Calendar, HardDrive } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,8 @@ import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effec
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName'; // 🏢 ENTERPRISE: Runtime i18n translation
 import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
-import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized notifications
+import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Toast notifications
+import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog'; // 🏢 ENTERPRISE: Centralized modal confirmation
 
 // ============================================================================
 // TYPES
@@ -111,38 +112,50 @@ export function FilesList({
   const colors = useSemanticColors();
   const { t } = useTranslation('files');
   const translateDisplayName = useFileDisplayName(); // 🏢 ENTERPRISE: Runtime i18n translation
-  const { showConfirmDialog, success, error } = useNotifications(); // 🏢 ENTERPRISE: Centralized notifications
+  const { success, error } = useNotifications(); // 🏢 ENTERPRISE: Toast notifications
+
+  // =========================================================================
+  // DELETE CONFIRMATION STATE - 🏢 ENTERPRISE: Modal dialog (center screen)
+  // =========================================================================
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // =========================================================================
   // HANDLERS
   // =========================================================================
 
-  const handleDelete = useCallback(async (fileId: string, event: React.MouseEvent) => {
+  /**
+   * 🏢 ENTERPRISE: Opens delete confirmation modal (center screen)
+   * Replaces showConfirmDialog (toast) with proper AlertDialog modal
+   */
+  const handleDeleteClick = useCallback((fileId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-
     if (!onDelete || !currentUserId) return;
 
-    // 🏢 ENTERPRISE: Use centralized confirmation dialog (no browser confirm)
-    showConfirmDialog(
-      t('list.deleteConfirm'),
-      async () => {
-        // On confirm
-        try {
-          await onDelete(fileId);
-          success(t('list.deleteSuccess'));
-        } catch (err) {
-          error(t('list.deleteError'));
-          console.error('[FilesList] Delete failed:', err);
-        }
-      },
-      undefined, // onCancel
-      {
-        confirmText: t('list.delete'),
-        cancelText: t('list.cancel'),
-        type: 'warning',
-      }
-    );
-  }, [onDelete, currentUserId, t, showConfirmDialog, success, error]);
+    setFileToDelete(fileId);
+    setDeleteConfirmOpen(true);
+  }, [onDelete, currentUserId]);
+
+  /**
+   * 🏢 ENTERPRISE: Executes delete after user confirms in modal
+   */
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!fileToDelete || !onDelete) return;
+
+    setDeleteLoading(true);
+    try {
+      await onDelete(fileToDelete);
+      success(t('list.deleteSuccess'));
+      setDeleteConfirmOpen(false);
+      setFileToDelete(null);
+    } catch (err) {
+      error(t('list.deleteError'));
+      console.error('[FilesList] Delete failed:', err);
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [fileToDelete, onDelete, t, success, error]);
 
   const handleView = useCallback((file: FileRecord, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -224,7 +237,7 @@ export function FilesList({
             <div className="flex items-center space-x-3 flex-1 min-w-0">
               {/* Icon */}
               <div
-                className={`flex-shrink-0 w-10 h-10 ${colors.bg.primarySubtle} ${quick.card} flex items-center justify-center`}
+                className={`flex-shrink-0 w-10 h-10 bg-primary/10 ${quick.card} flex items-center justify-center`}
                 aria-hidden="true"
               >
                 <IconComponent className={`${iconSizes.md} text-primary`} />
@@ -292,7 +305,7 @@ export function FilesList({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={(e) => handleDelete(file.id, e)}
+                  onClick={(e) => handleDeleteClick(file.id, e)}
                   className={`text-red-500 ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`}
                   aria-label={t('list.deleteFile')}
                   title={t('list.deleteFile')}
@@ -304,6 +317,18 @@ export function FilesList({
           </article>
         );
       })}
+
+      {/* 🏢 ENTERPRISE: Centralized Delete Confirmation Modal (center screen) */}
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={t('list.deleteFile')}
+        description={t('list.deleteConfirm')}
+        onConfirm={handleDeleteConfirm}
+        confirmText={t('list.delete')}
+        cancelText={t('list.cancel')}
+        loading={deleteLoading}
+      />
     </section>
   );
 }

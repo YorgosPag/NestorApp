@@ -180,6 +180,91 @@ export const FILE_STATUS = {
 
 export type FileStatus = typeof FILE_STATUS[keyof typeof FILE_STATUS];
 
+// ============================================================================
+// 🗑️ ENTERPRISE TRASH SYSTEM - LIFECYCLE MANAGEMENT
+// ============================================================================
+// 3-tier lifecycle pattern (Google Drive, Salesforce, Microsoft Purview):
+// Active → Trashed → Archived → Purged
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: File lifecycle states
+ * @enterprise ADR-032 - Enterprise Trash System
+ * @see local_3.txt - Enterprise delete patterns analysis
+ *
+ * States:
+ * - ACTIVE: Normal file, visible in UI, can be modified
+ * - TRASHED: Soft deleted, in "Trash" view, can be restored
+ * - ARCHIVED: Long-term retention, not in active views (legal hold, compliance)
+ * - PURGED: Permanently deleted (Storage + Firestore)
+ */
+export const FILE_LIFECYCLE_STATES = {
+  /** Normal file, visible in UI */
+  ACTIVE: 'active',
+  /** Soft deleted, in Trash view, restorable */
+  TRASHED: 'trashed',
+  /** Archived for retention/compliance */
+  ARCHIVED: 'archived',
+  /** Permanently deleted (marker only, actual docs are removed) */
+  PURGED: 'purged',
+} as const;
+
+export type FileLifecycleState = typeof FILE_LIFECYCLE_STATES[keyof typeof FILE_LIFECYCLE_STATES];
+
+/**
+ * 🏢 ENTERPRISE: Default retention policies (in days)
+ * @enterprise Configurable per deployment, per category
+ *
+ * Examples from industry:
+ * - Google Drive: 30 days in trash
+ * - Salesforce: 15 days (extendable)
+ * - Microsoft Purview: Configurable retention policies
+ */
+export const DEFAULT_RETENTION_POLICIES = {
+  /** Days in trash before auto-purge eligibility */
+  TRASH_RETENTION_DAYS: 30,
+  /** Days to retain archived files (legal/compliance) */
+  ARCHIVE_RETENTION_DAYS: 365 * 7, // 7 years for construction documents
+  /** Grace period for restoration after purge request */
+  PURGE_GRACE_PERIOD_DAYS: 7,
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Retention policies by file category
+ * @enterprise Construction/real estate specific
+ *
+ * Critical documents (contracts, permits) have longer retention
+ * Temporary files (drafts, temp uploads) have shorter retention
+ */
+export const RETENTION_BY_CATEGORY: Record<FileCategory, number> = {
+  [FILE_CATEGORIES.PHOTOS]: 30, // Standard 30 days
+  [FILE_CATEGORIES.FLOORPLANS]: 365 * 10, // 10 years for blueprints
+  [FILE_CATEGORIES.DOCUMENTS]: 365 * 5, // 5 years
+  [FILE_CATEGORIES.INVOICES]: 365 * 10, // 10 years (tax compliance)
+  [FILE_CATEGORIES.CONTRACTS]: 365 * 15, // 15 years (legal)
+  [FILE_CATEGORIES.AUDIO]: 30, // Standard 30 days
+  [FILE_CATEGORIES.VIDEOS]: 30, // Standard 30 days
+  [FILE_CATEGORIES.DRAWINGS]: 365 * 10, // 10 years (CAD drawings)
+  [FILE_CATEGORIES.PERMITS]: 365 * 20, // 20 years (building permits)
+};
+
+/**
+ * 🏢 ENTERPRISE: Hold types for compliance
+ * @enterprise Legal hold prevents deletion even after retention expires
+ */
+export const HOLD_TYPES = {
+  /** No hold - normal lifecycle */
+  NONE: 'none',
+  /** Legal hold - eDiscovery, litigation */
+  LEGAL: 'legal',
+  /** Regulatory hold - compliance audit */
+  REGULATORY: 'regulatory',
+  /** Administrative hold - internal review */
+  ADMIN: 'admin',
+} as const;
+
+export type HoldType = typeof HOLD_TYPES[keyof typeof HOLD_TYPES];
+
 /**
  * 🏢 ENTERPRISE: Photo upload purposes
  * @enterprise Used for naming context in photo uploads

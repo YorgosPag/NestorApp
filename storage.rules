@@ -157,6 +157,14 @@ service firebase.storage {
              firestore.get(getFileRecordPath(fileId)).data.status == 'ready';
     }
 
+    // 🏢 ENTERPRISE: Ownership Principle - Creator can ALWAYS access their files
+    // Pattern: SAP / Salesforce / Google Drive / Microsoft OneDrive
+    // If you created it, you can read it - no claims required
+    function isFileCreator(fileId) {
+      return firestore.exists(getFileRecordPath(fileId)) &&
+             firestore.get(getFileRecordPath(fileId)).data.createdBy == request.auth.uid;
+    }
+
     // =========================================================================
     // 🏢 CANONICAL ENTERPRISE PATH (NEW UPLOADS)
     // =========================================================================
@@ -168,10 +176,13 @@ service firebase.storage {
 
     match /companies/{companyId}/projects/{projectId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{fileName} {
 
-      // 📖 READ: Authenticated users belonging to company (or super_admin)
-      // 🏢 ENTERPRISE: Only allow read if FileRecord is 'ready' (prevents draft access)
-      allow read: if (belongsToCompany(companyId) || isSuperAdmin())
-                  && hasReadyFileRecord(extractFileId(fileName));
+      // 📖 READ: Ownership Principle + Company Access
+      // 🏢 ENTERPRISE: Pattern SAP / Salesforce / Google Drive / Microsoft OneDrive
+      // Priority 1: Creator can ALWAYS read their files (no claims required)
+      // Priority 2: Company members can read 'ready' files
+      // Priority 3: Super admin can read anything
+      allow read: if isFileCreator(extractFileId(fileName))
+                  || ((belongsToCompany(companyId) || isSuperAdmin()) && hasReadyFileRecord(extractFileId(fileName)));
 
       // ✍️ WRITE: HARDENED with Firestore validation + STRICT storagePath match
       // 🏢 ENTERPRISE: Step A (createPendingFileRecord) MUST complete before Step B (upload)
@@ -218,10 +229,13 @@ service firebase.storage {
 
     match /companies/{companyId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{fileName} {
 
-      // 📖 READ: Authenticated users belonging to company (or super_admin)
-      // 🏢 ENTERPRISE: Only allow read if FileRecord is 'ready'
-      allow read: if (belongsToCompany(companyId) || isSuperAdmin())
-                  && hasReadyFileRecord(extractFileId(fileName));
+      // 📖 READ: Ownership Principle + Company Access
+      // 🏢 ENTERPRISE: Pattern SAP / Salesforce / Google Drive / Microsoft OneDrive
+      // Priority 1: Creator can ALWAYS read their files (no claims required)
+      // Priority 2: Company members can read 'ready' files
+      // Priority 3: Super admin can read anything
+      allow read: if isFileCreator(extractFileId(fileName))
+                  || ((belongsToCompany(companyId) || isSuperAdmin()) && hasReadyFileRecord(extractFileId(fileName)));
 
       // ✍️ WRITE: HARDENED with Firestore validation + STRICT storagePath match
       // 🏢 ENTERPRISE: Same security as project-scoped path

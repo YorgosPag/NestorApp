@@ -25,7 +25,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { FileText, Upload, RefreshCw, List, Network, Eye, Code, ArrowUp } from 'lucide-react';
+import { FileText, Upload, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -38,12 +38,20 @@ import { FilesList } from './FilesList';
 import { FileUploadZone } from './FileUploadZone';
 import { FilePathTree } from './FilePathTree';
 import { UploadEntryPointSelector } from './UploadEntryPointSelector';
+import { TrashView } from './TrashView'; // 🗑️ ENTERPRISE: Trash System (ADR-032)
 import { FileRecordService } from '@/services/file-record.service';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+import { storage, auth } from '@/lib/firebase';
 import { buildStoragePath, generateFileId, getFileExtension } from '@/services/upload';
 import { UPLOAD_LIMITS, DEFAULT_DOCUMENT_ACCEPT } from '@/config/file-upload-config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+// ============================================================================
+// MODULE LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('ENTITY_FILES_MANAGER');
 
 // ============================================================================
 // TYPES
@@ -115,6 +123,7 @@ export function EntityFilesManager({
   const [uploading, setUploading] = useState(false);
   const [showUploadZone, setShowUploadZone] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'tree'>('list');
+  const [activeTab, setActiveTab] = useState<'files' | 'trash'>('files'); // 🗑️ ENTERPRISE: Procore/BIM360 pattern
   const [treeViewMode, setTreeViewMode] = useState<'business' | 'technical'>('business'); // 🏢 ENTERPRISE: Business View (default) vs Technical View
   const [selectedEntryPoint, setSelectedEntryPoint] = useState<UploadEntryPoint | null>(null);
   const [customTitle, setCustomTitle] = useState(''); // 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
@@ -123,6 +132,13 @@ export function EntityFilesManager({
   React.useEffect(() => {
     setCustomTitle('');
   }, [selectedEntryPoint?.id]);
+
+  // 🗑️ ENTERPRISE: Close upload zone when switching to trash tab
+  React.useEffect(() => {
+    if (activeTab === 'trash') {
+      setShowUploadZone(false);
+    }
+  }, [activeTab]);
 
   // =========================================================================
   // DATA FETCHING (uses FileRecordService)
@@ -286,14 +302,81 @@ export function EntityFilesManager({
     }
   }, []);
 
-  const handleDownload = useCallback((file: { downloadUrl?: string; displayName: string }) => {
-    if (file.downloadUrl) {
-      // Create temporary link for download με σωστό filename
+  /**
+   * 🏢 ENTERPRISE: File Download Handler
+   *
+   * Pattern: Google Drive / Dropbox / OneDrive / SAP
+   *
+   * Solution: Same-origin backend endpoint that:
+   * - Verifies Firebase ID token via Authorization header
+   * - Validates Firebase Storage URL
+   * - Streams file with Content-Disposition: attachment
+   * - Forces browser download instead of inline viewing
+   *
+   * This is the industry-standard approach used by Fortune 500 applications.
+   * The backend endpoint at /api/download handles the Firebase proxy properly.
+   */
+  const handleDownload = useCallback(async (file: { storagePath?: string; downloadUrl?: string; displayName: string }) => {
+    if (!file.downloadUrl) {
+      logger.warn('Download requested but no downloadUrl available', { displayName: file.displayName });
+      return;
+    }
+
+    logger.info('Starting enterprise download', { displayName: file.displayName });
+
+    try {
+      // 🔐 SECURITY: Get current user's ID token for authenticated download
+      const user = auth.currentUser;
+      if (!user) {
+        logger.error('Download failed: User not authenticated');
+        return;
+      }
+
+      const idToken = await user.getIdToken();
+
+      // 🏢 ENTERPRISE: Same-origin backend endpoint with Authorization header
+      // This bypasses CORS issues and enforces server-side access control
+      const downloadEndpoint = `/api/download?url=${encodeURIComponent(file.downloadUrl)}&filename=${encodeURIComponent(file.displayName)}`;
+
+      const response = await fetch(downloadEndpoint, {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error('Download API returned error', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        return;
+      }
+
+      // 📦 Get blob and trigger browser download
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
       const link = document.createElement('a');
-      link.href = file.downloadUrl;
+      link.href = objectUrl;
       link.download = file.displayName;
-      link.target = '_blank';
+      document.body.appendChild(link);
       link.click();
+
+      // 🧹 Cleanup
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(objectUrl);
+      }, 100);
+
+      logger.info('Download completed successfully', { displayName: file.displayName, size: blob.size });
+
+    } catch (error) {
+      logger.error('Download failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        displayName: file.displayName
+      });
     }
   }, []);
 
@@ -326,8 +409,38 @@ export function EntityFilesManager({
           </div>
 
           <div className="flex gap-2">
-            {/* View toggle buttons */}
-            <div className="flex gap-1 border rounded-md p-1" role="group" aria-label="View mode">
+            {/* 🗑️ ENTERPRISE: Tab switcher (Procore/BIM360 pattern) */}
+            <div className="flex gap-1 border rounded-md p-1" role="tablist" aria-label={t('manager.filesTitle')}>
+              <Button
+                variant={activeTab === 'files' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveTab('files')}
+                role="tab"
+                aria-selected={activeTab === 'files'}
+                aria-controls="files-panel"
+                className={cn('px-3', activeTab === 'files' && 'bg-primary text-primary-foreground')}
+              >
+                <FileText className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
+                {t('manager.filesTitle')}
+              </Button>
+              <Button
+                variant={activeTab === 'trash' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveTab('trash')}
+                role="tab"
+                aria-selected={activeTab === 'trash'}
+                aria-controls="trash-panel"
+                className={cn('px-3', activeTab === 'trash' && 'bg-red-500 text-white hover:bg-red-600')}
+              >
+                <Trash2 className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
+                {t('trash.title')}
+              </Button>
+            </div>
+
+            {/* View toggle buttons - Only show when on files tab */}
+            {activeTab === 'files' && (
+              <>
+                <div className="flex gap-1 border rounded-md p-1" role="group" aria-label="View mode">
               <Button
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="sm"
@@ -379,38 +492,44 @@ export function EntityFilesManager({
                 </Button>
               </div>
             )}
+            </>
+            )}
 
-            {/* Upload button */}
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowUploadZone(!showUploadZone)}
-              disabled={uploading}
-              aria-label={t('manager.addFiles')}
-              title={t('manager.addFilesTooltip')}
-            >
-              <Upload className={`${iconSizes.sm} mr-2`} aria-hidden="true" />
-              {t('manager.addFiles')}
-            </Button>
+            {/* Upload button - Only show when on files tab */}
+            {activeTab === 'files' && (
+              <>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowUploadZone(!showUploadZone)}
+                  disabled={uploading}
+                  aria-label={t('manager.addFiles')}
+                  title={t('manager.addFilesTooltip')}
+                >
+                  <Upload className={`${iconSizes.sm} mr-2`} aria-hidden="true" />
+                  {t('manager.addFiles')}
+                </Button>
 
-            {/* Refresh button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              disabled={loading || uploading}
-              aria-label={t('manager.refresh')}
-              title={t('manager.refreshTooltip')}
-            >
-              <RefreshCw className={`${iconSizes.sm} ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
-            </Button>
+                {/* Refresh button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  disabled={loading || uploading}
+                  aria-label={t('manager.refresh')}
+                  title={t('manager.refreshTooltip')}
+                >
+                  <RefreshCw className={`${iconSizes.sm} ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
+                </Button>
+              </>
+            )}
           </div>
         </nav>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Upload Pipeline (conditional) */}
-        {showUploadZone && (
+        {/* Upload Pipeline (conditional) - Only show on files tab */}
+        {activeTab === 'files' && showUploadZone && (
           <div className="space-y-4 p-4 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
             {/* Step 1: Entry Point Selection */}
             <UploadEntryPointSelector
@@ -460,31 +579,48 @@ export function EntityFilesManager({
           </div>
         )}
 
-        {/* Files display (list or tree) */}
-        {viewMode === 'list' ? (
-          <FilesList
-            files={files}
-            loading={loading}
-            onDelete={handleDelete}
-            onView={handleView}
-            onDownload={handleDownload}
-            currentUserId={currentUserId}
-          />
-        ) : (
-          <FilePathTree
-            files={files}
-            onFileSelect={handleView}
-            contextLevel="full" // 🏢 ENTERPRISE: Full hierarchy - Show complete path with user-friendly labels
-            companyName={companyName}
-            viewMode={treeViewMode} // 🏢 ENTERPRISE: Business View (default) vs Technical View toggle
-          />
-        )}
+        {/* 🗑️ ENTERPRISE: Tab content - Files or Trash (Procore/BIM360 pattern) */}
+        {activeTab === 'files' ? (
+          <>
+            {/* Files display (list or tree) */}
+            {viewMode === 'list' ? (
+              <FilesList
+                files={files}
+                loading={loading}
+                onDelete={handleDelete}
+                onView={handleView}
+                onDownload={handleDownload}
+                currentUserId={currentUserId}
+              />
+            ) : (
+              <FilePathTree
+                files={files}
+                onFileSelect={handleView}
+                contextLevel="full" // 🏢 ENTERPRISE: Full hierarchy - Show complete path with user-friendly labels
+                companyName={companyName}
+                viewMode={treeViewMode} // 🏢 ENTERPRISE: Business View (default) vs Technical View toggle
+              />
+            )}
 
-        {/* Storage info */}
-        {totalStorageBytes > 0 && (
-          <footer className="pt-4 border-t text-xs text-muted-foreground">
-            {t('manager.totalStorage')}: {(totalStorageBytes / 1024 / 1024).toFixed(2)} MB
-          </footer>
+            {/* Storage info */}
+            {totalStorageBytes > 0 && (
+              <footer className="pt-4 border-t text-xs text-muted-foreground">
+                {t('manager.totalStorage')}: {(totalStorageBytes / 1024 / 1024).toFixed(2)} MB
+              </footer>
+            )}
+          </>
+        ) : (
+          /* 🗑️ ENTERPRISE: Trash View (ADR-032) */
+          <TrashView
+            companyId={companyId}
+            currentUserId={currentUserId}
+            entityType={entityType}
+            entityId={entityId}
+            onRestore={() => {
+              // Refetch files when restored
+              refetch();
+            }}
+          />
         )}
       </CardContent>
     </Card>

@@ -33,7 +33,13 @@ import {
   type EntityType,
   type FileDomain,
   type FileCategory,
+  type FileLifecycleState,
+  type HoldType,
   FILE_STATUS,
+  FILE_LIFECYCLE_STATES,
+  DEFAULT_RETENTION_POLICIES,
+  RETENTION_BY_CATEGORY,
+  HOLD_TYPES,
 } from '@/config/domain-constants';
 import type {
   FileRecord,
@@ -487,29 +493,295 @@ export class FileRecordService {
   }
 
   // ==========================================================================
-  // DELETE OPERATIONS
+  // 🗑️ ENTERPRISE TRASH SYSTEM - LIFECYCLE OPERATIONS
+  // ==========================================================================
+  // 3-tier lifecycle: Active → Trashed → Archived → Purged
+  // @enterprise ADR-032 - Enterprise Trash System
   // ==========================================================================
 
   /**
-   * Soft delete a FileRecord
-   * Sets isDeleted flag but keeps the document for audit trail
+   * Calculate purge date based on category retention policy
+   * @enterprise Uses RETENTION_BY_CATEGORY from domain-constants
+   */
+  private static calculatePurgeDate(category: FileCategory): Date {
+    const retentionDays = RETENTION_BY_CATEGORY[category] ?? DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS;
+    const purgeDate = new Date();
+    purgeDate.setDate(purgeDate.getDate() + retentionDays);
+    return purgeDate;
+  }
+
+  /**
+   * 🗑️ Move file to Trash (soft delete)
+   * @enterprise Replaces hard delete with 3-tier lifecycle
+   *
+   * What this does:
+   * - Sets lifecycleState = 'trashed'
+   * - Sets isDeleted = true (for backward compatibility)
+   * - Records trashedAt, trashedBy
+   * - Calculates purgeAt based on category retention policy
+   *
+   * File remains in Firestore and Storage until server-side purge runs.
+   * User can restore from Trash view.
+   *
+   * @example
+   * ```typescript
+   * await FileRecordService.moveToTrash('file_123', 'user_abc');
+   * ```
+   */
+  static async moveToTrash(fileId: string, trashedBy: string): Promise<void> {
+    logger.info('Moving FileRecord to trash', { fileId, trashedBy });
+
+    const docRef = doc(db, COLLECTIONS.FILES, fileId);
+
+    // Get current record to determine retention policy
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      throw new Error(`FileRecord not found: ${fileId}`);
+    }
+
+    const data = docSnap.data();
+    const category = data.category as FileCategory;
+    const purgeDate = this.calculatePurgeDate(category);
+
+    // 🏢 ENTERPRISE: Check if file has hold - cannot trash files with active holds
+    if (data.hold && data.hold !== HOLD_TYPES.NONE) {
+      throw new Error(`Cannot trash file ${fileId}: Active hold (${data.hold}) prevents deletion. Contact administrator.`);
+    }
+
+    await updateDoc(docRef, {
+      // Lifecycle state
+      lifecycleState: FILE_LIFECYCLE_STATES.TRASHED,
+      // Trash metadata
+      trashedAt: serverTimestamp(),
+      trashedBy,
+      purgeAt: purgeDate.toISOString(),
+      // Legacy compatibility
+      isDeleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: trashedBy,
+      // Audit
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.info('FileRecord moved to trash', {
+      fileId,
+      purgeAt: purgeDate.toISOString(),
+      retentionDays: RETENTION_BY_CATEGORY[category] ?? DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS,
+    });
+  }
+
+  /**
+   * ♻️ Restore file from Trash
+   * @enterprise Returns file to active state
+   *
+   * What this does:
+   * - Sets lifecycleState = 'active'
+   * - Clears isDeleted, trashedAt, trashedBy, purgeAt
+   * - Records restoration in audit trail
+   *
+   * @example
+   * ```typescript
+   * await FileRecordService.restoreFromTrash('file_123', 'user_abc');
+   * ```
+   */
+  static async restoreFromTrash(fileId: string, restoredBy: string): Promise<void> {
+    logger.info('Restoring FileRecord from trash', { fileId, restoredBy });
+
+    const docRef = doc(db, COLLECTIONS.FILES, fileId);
+
+    // Verify file is in trash
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      throw new Error(`FileRecord not found: ${fileId}`);
+    }
+
+    const data = docSnap.data();
+    if (data.lifecycleState !== FILE_LIFECYCLE_STATES.TRASHED && data.isDeleted !== true) {
+      throw new Error(`FileRecord ${fileId} is not in trash`);
+    }
+
+    await updateDoc(docRef, {
+      // Restore to active state
+      lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE,
+      // Clear trash fields
+      isDeleted: false,
+      trashedAt: null,
+      trashedBy: null,
+      purgeAt: null,
+      // Clear legacy fields
+      deletedAt: null,
+      deletedBy: null,
+      // Audit
+      restoredAt: serverTimestamp(),
+      restoredBy,
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.info('FileRecord restored from trash', { fileId, restoredBy });
+  }
+
+  /**
+   * 📂 Get files in Trash for an entity
+   * @enterprise Used in Trash view component
+   */
+  static async getTrashedFiles(options: {
+    companyId: string;
+    entityType?: EntityType;
+    entityId?: string;
+  }): Promise<FileRecord[]> {
+    const constraints = [
+      where('companyId', '==', options.companyId),
+      where('isDeleted', '==', true),
+    ];
+
+    if (options.entityType) {
+      constraints.push(where('entityType', '==', options.entityType));
+    }
+
+    if (options.entityId) {
+      constraints.push(where('entityId', '==', options.entityId));
+    }
+
+    const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
+    const querySnapshot = await getDocs(q);
+
+    const trashedFiles: FileRecord[] = [];
+    for (const docSnap of querySnapshot.docs) {
+      const data = docSnap.data();
+      const record = {
+        ...data,
+        id: docSnap.id,
+        createdAt: data.createdAt instanceof Object && 'toDate' in data.createdAt
+          ? (data.createdAt as Timestamp).toDate().toISOString()
+          : data.createdAt,
+        trashedAt: data.trashedAt instanceof Object && 'toDate' in data.trashedAt
+          ? (data.trashedAt as Timestamp).toDate().toISOString()
+          : data.trashedAt,
+      };
+
+      if (isFileRecord(record)) {
+        trashedFiles.push(record);
+      }
+    }
+
+    return trashedFiles;
+  }
+
+  /**
+   * 📋 Get files eligible for purge
+   * @enterprise Used by server-side scheduler (Cloud Function)
+   *
+   * Returns files where:
+   * - lifecycleState = 'trashed' OR isDeleted = true
+   * - purgeAt <= now
+   * - hold = 'none' OR hold is null
+   * - retentionUntil <= now OR retentionUntil is null
+   */
+  static async getFilesEligibleForPurge(): Promise<FileRecord[]> {
+    const now = new Date().toISOString();
+
+    // Query trashed files with expired purgeAt
+    // Note: Firestore doesn't support complex OR queries, so we use isDeleted
+    const constraints = [
+      where('isDeleted', '==', true),
+      where('purgeAt', '<=', now),
+    ];
+
+    const q = query(collection(db, COLLECTIONS.FILES), ...constraints);
+    const querySnapshot = await getDocs(q);
+
+    const eligibleFiles: FileRecord[] = [];
+    for (const docSnap of querySnapshot.docs) {
+      const data = docSnap.data();
+
+      // Additional filtering in code (Firestore limitations)
+      // Check hold status
+      if (data.hold && data.hold !== HOLD_TYPES.NONE) {
+        logger.info('Skipping file with active hold', { fileId: docSnap.id, hold: data.hold });
+        continue;
+      }
+
+      // Check retention policy
+      if (data.retentionUntil) {
+        const retentionDate = new Date(data.retentionUntil);
+        if (retentionDate > new Date()) {
+          logger.info('Skipping file with active retention', { fileId: docSnap.id, retentionUntil: data.retentionUntil });
+          continue;
+        }
+      }
+
+      const record = {
+        ...data,
+        id: docSnap.id,
+      };
+
+      if (isFileRecord(record)) {
+        eligibleFiles.push(record);
+      }
+    }
+
+    logger.info('Found files eligible for purge', { count: eligibleFiles.length });
+    return eligibleFiles;
+  }
+
+  /**
+   * 🔒 Place hold on file (prevents deletion)
+   * @enterprise For legal/regulatory compliance
+   */
+  static async placeHold(
+    fileId: string,
+    holdType: HoldType,
+    placedBy: string,
+    reason: string
+  ): Promise<void> {
+    logger.info('Placing hold on FileRecord', { fileId, holdType, placedBy, reason });
+
+    const docRef = doc(db, COLLECTIONS.FILES, fileId);
+
+    await updateDoc(docRef, {
+      hold: holdType,
+      holdPlacedBy: placedBy,
+      holdPlacedAt: serverTimestamp(),
+      holdReason: reason,
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.info('Hold placed on FileRecord', { fileId, holdType });
+  }
+
+  /**
+   * 🔓 Release hold on file
+   * @enterprise Allows file to be deleted again
+   */
+  static async releaseHold(fileId: string, releasedBy: string): Promise<void> {
+    logger.info('Releasing hold on FileRecord', { fileId, releasedBy });
+
+    const docRef = doc(db, COLLECTIONS.FILES, fileId);
+
+    await updateDoc(docRef, {
+      hold: HOLD_TYPES.NONE,
+      holdReleasedBy: releasedBy,
+      holdReleasedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    logger.info('Hold released on FileRecord', { fileId });
+  }
+
+  // ==========================================================================
+  // LEGACY DELETE OPERATIONS (deprecated - use moveToTrash)
+  // ==========================================================================
+
+  /**
+   * @deprecated Use moveToTrash() instead for enterprise trash lifecycle
+   * Kept for backward compatibility
    */
   static async softDeleteFileRecord(
     fileId: string,
     deletedBy: string
   ): Promise<void> {
-    logger.info('Soft deleting FileRecord', { fileId, deletedBy });
-
-    const docRef = doc(db, COLLECTIONS.FILES, fileId);
-
-    await updateDoc(docRef, {
-      isDeleted: true,
-      deletedAt: serverTimestamp(),
-      deletedBy,
-      updatedAt: serverTimestamp(),
-    });
-
-    logger.info('FileRecord soft deleted');
+    logger.warn('softDeleteFileRecord is deprecated, use moveToTrash instead', { fileId });
+    return this.moveToTrash(fileId, deletedBy);
   }
 
   // ==========================================================================

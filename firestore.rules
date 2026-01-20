@@ -166,7 +166,57 @@ service cloud.firestore {
                     && request.resource.data.createdBy == resource.data.createdBy
                     && request.resource.data.storagePath == resource.data.storagePath;
 
-      // 🗑️ DELETE: Only creator or company admin
+      // 🗑️ MOVE TO TRASH: Creator or company admin can trash ready files
+      // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
+      //    - Creator can ALWAYS manage their own files (no claims required)
+      //    - Admins need proper company claims for cross-user operations
+      // 🔐 SECURITY: Only allows setting isDeleted flag, preserves all other immutable fields
+      allow update: if isAuthenticated()
+                    && (
+                         // OWNERSHIP PRINCIPLE: Creator can ALWAYS trash their own files
+                         resource.data.createdBy == request.auth.uid
+                         // OR company admin can trash any file in their company (requires claims)
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         // OR super_admin can trash anything
+                         || isSuperAdminOnly()
+                       )
+                    // Only for ready files (soft delete)
+                    && resource.data.status == 'ready'
+                    // Must be setting isDeleted to true
+                    && request.resource.data.isDeleted == true
+                    // Preserve immutable fields
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.storagePath == resource.data.storagePath
+                    && request.resource.data.status == resource.data.status;
+
+      // ♻️ RESTORE FROM TRASH: Creator or company admin can restore trashed files
+      // 🏢 ENTERPRISE: Ownership Principle (SAP/Salesforce/Google Drive pattern)
+      //    - Creator can ALWAYS restore their own files (no claims required)
+      //    - Admins need proper company claims for cross-user operations
+      // 📅 Added: 2026-01-20 (ADR-032 - Enterprise Trash System)
+      allow update: if isAuthenticated()
+                    && (
+                         // OWNERSHIP PRINCIPLE: Creator can ALWAYS restore their own files
+                         resource.data.createdBy == request.auth.uid
+                         // OR company admin can restore any file in their company (requires claims)
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         // OR super_admin can restore anything
+                         || isSuperAdminOnly()
+                       )
+                    // Only for trashed files (isDeleted == true)
+                    && resource.data.isDeleted == true
+                    // Must be setting isDeleted to false (restoring)
+                    && request.resource.data.isDeleted == false
+                    // Preserve immutable fields
+                    && request.resource.data.id == resource.data.id
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.storagePath == resource.data.storagePath
+                    && request.resource.data.status == resource.data.status;
+
+      // 🗑️ HARD DELETE: Only creator or company admin
       allow delete: if isAuthenticated()
                     && resource.data.companyId == getUserCompanyId()
                     && (
@@ -792,6 +842,18 @@ service cloud.firestore {
     match /system_audit_logs/{logId} {
       allow read: if isAuthenticated();
       allow write: if false; // Server-side only
+    }
+
+    // =========================================================================
+    // 📋 AUDIT_LOG COLLECTION - CLOUD FUNCTIONS AUDIT TRAIL
+    // =========================================================================
+    // 📅 Added: 2026-01-20 (ADR-032 - Enterprise Trash System)
+    // 🏢 ENTERPRISE: Audit log for file purge operations (written by Cloud Functions)
+    // 🔒 READ: Only super_admin can read audit logs
+    // 🚫 WRITE: Server-side only (via Firebase Admin SDK)
+    match /audit_log/{logId} {
+      allow read: if isSuperAdminOnly();
+      allow write: if false; // Server-side only (Cloud Functions use Admin SDK)
     }
 
     // =========================================================================

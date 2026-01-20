@@ -20,6 +20,8 @@ import type {
   FileDomain,
   FileCategory,
   FileStatus,
+  FileLifecycleState,
+  HoldType,
 } from '@/config/domain-constants';
 
 // ============================================================================
@@ -175,13 +177,103 @@ export interface FileRecord {
   /** Version/revision number for versioned files */
   revision?: number;
 
-  /** Soft delete flag */
+  // =========================================================================
+  // 🗑️ ENTERPRISE TRASH SYSTEM - LIFECYCLE FIELDS
+  // =========================================================================
+  // 3-tier lifecycle: Active → Trashed → Archived → Purged
+  // @enterprise ADR-032 - Enterprise Trash System
+  // =========================================================================
+
+  /**
+   * Current lifecycle state
+   * @default 'active' for new files
+   * @see FILE_LIFECYCLE_STATES in domain-constants.ts
+   */
+  lifecycleState?: FileLifecycleState;
+
+  // -------------------------------------------------------------------------
+  // TRASH FIELDS (when lifecycleState === 'trashed')
+  // -------------------------------------------------------------------------
+
+  /** Soft delete flag (legacy compatibility + Firestore query optimization) */
   isDeleted?: boolean;
 
-  /** Deletion timestamp */
+  /** When file was moved to trash */
+  trashedAt?: Date | string;
+
+  /** User who moved file to trash */
+  trashedBy?: string;
+
+  /**
+   * When file becomes eligible for permanent deletion
+   * Calculated: trashedAt + retentionDays
+   * @enterprise Server-side scheduler checks this field
+   */
+  purgeAt?: Date | string;
+
+  // -------------------------------------------------------------------------
+  // RETENTION & HOLD FIELDS (compliance/legal)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Retention policy end date
+   * File cannot be purged before this date (even if purgeAt passed)
+   * @enterprise For regulatory compliance (tax records, legal documents)
+   */
+  retentionUntil?: Date | string;
+
+  /**
+   * Hold type preventing deletion
+   * @see HOLD_TYPES in domain-constants.ts
+   * @enterprise Legal/regulatory holds block purge regardless of purgeAt
+   */
+  hold?: HoldType;
+
+  /**
+   * Who placed the hold
+   * @enterprise Audit trail for compliance
+   */
+  holdPlacedBy?: string;
+
+  /**
+   * When hold was placed
+   * @enterprise Audit trail for compliance
+   */
+  holdPlacedAt?: Date | string;
+
+  /**
+   * Reason for hold (free text)
+   * @enterprise Documentation for legal/compliance
+   */
+  holdReason?: string;
+
+  // -------------------------------------------------------------------------
+  // ARCHIVE FIELDS (when lifecycleState === 'archived')
+  // -------------------------------------------------------------------------
+
+  /** When file was archived */
+  archivedAt?: Date | string;
+
+  /** User who archived the file */
+  archivedBy?: string;
+
+  /** Reason for archival */
+  archiveReason?: string;
+
+  // -------------------------------------------------------------------------
+  // LEGACY COMPATIBILITY (deprecated, use trashedAt/trashedBy)
+  // -------------------------------------------------------------------------
+
+  /**
+   * @deprecated Use trashedAt instead
+   * Kept for backward compatibility with existing queries
+   */
   deletedAt?: Date | string;
 
-  /** User who deleted */
+  /**
+   * @deprecated Use trashedBy instead
+   * Kept for backward compatibility with existing queries
+   */
   deletedBy?: string;
 }
 

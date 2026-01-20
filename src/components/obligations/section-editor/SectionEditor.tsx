@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useSectionEditorState } from './hooks/useSectionEditorState';
 import { categoryLabels } from './constants';
@@ -12,7 +12,7 @@ import { ContentEditor } from './parts/ContentEditor';
 import { ActionsBar } from './parts/ActionsBar';
 import { UnsavedBanner } from './parts/UnsavedBanner';
 import type { SectionEditorProps } from './types';
-import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized notifications
+import { WarningConfirmDialog } from '@/components/ui/ConfirmDialog'; // 🏢 ENTERPRISE: Centralized modal confirmation
 import { useTranslation } from '@/i18n/hooks/useTranslation'; // 🏢 ENTERPRISE: i18n support
 
 export default function SectionEditor({
@@ -23,7 +23,6 @@ export default function SectionEditor({
   isEditing = true
 }: SectionEditorProps) {
   const { t } = useTranslation('common'); // 🏢 ENTERPRISE: i18n translation
-  const { showConfirmDialog } = useNotifications(); // 🏢 ENTERPRISE: Centralized notifications
 
   const {
     editedSection,
@@ -33,21 +32,28 @@ export default function SectionEditor({
     handleCancel
   } = useSectionEditorState(section, onSave, onCancel);
 
-  // 🏢 ENTERPRISE: Use centralized confirmation dialog (no hardcoded strings)
-  const handleDelete = () => {
+  // =========================================================================
+  // DELETE CONFIRMATION STATE - 🏢 ENTERPRISE: Modal dialog (center screen)
+  // =========================================================================
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  /**
+   * 🏢 ENTERPRISE: Opens delete confirmation modal (center screen)
+   * Replaces showConfirmDialog (toast) with proper AlertDialog modal
+   */
+  const handleDeleteClick = () => {
     if (onDelete) {
-      showConfirmDialog(
-        t('obligations.deleteConfirm', 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το άρθρο;'),
-        () => {
-          onDelete(editedSection.id);
-        },
-        undefined,
-        {
-          confirmText: t('buttons.delete', 'Διαγραφή'),
-          cancelText: t('buttons.cancel', 'Ακύρωση'),
-          type: 'warning',
-        }
-      );
+      setDeleteConfirmOpen(true);
+    }
+  };
+
+  /**
+   * 🏢 ENTERPRISE: Executes delete after user confirms in modal
+   */
+  const handleDeleteConfirm = () => {
+    if (onDelete) {
+      onDelete(editedSection.id);
+      setDeleteConfirmOpen(false);
     }
   };
 
@@ -94,11 +100,22 @@ export default function SectionEditor({
           hasUnsavedChanges={hasUnsavedChanges}
           onSave={handleSave}
           onCancel={handleCancel}
-          onDelete={onDelete ? handleDelete : undefined}
+          onDelete={onDelete ? handleDeleteClick : undefined}
           onClose={onCancel}
         />
         
         <UnsavedBanner show={hasUnsavedChanges} />
+
+        {/* 🏢 ENTERPRISE: Centralized Delete Confirmation Modal (center screen) */}
+        <WarningConfirmDialog
+          open={deleteConfirmOpen}
+          onOpenChange={setDeleteConfirmOpen}
+          title={t('obligations.deleteTitle', 'Διαγραφή Άρθρου')}
+          description={t('obligations.deleteConfirm', 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το άρθρο;')}
+          onConfirm={handleDeleteConfirm}
+          confirmText={t('buttons.delete', 'Διαγραφή')}
+          cancelText={t('buttons.cancel', 'Ακύρωση')}
+        />
       </CardContent>
     </Card>
   );

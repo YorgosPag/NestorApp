@@ -66,7 +66,9 @@ export interface UseEntityFilesReturn {
   error: Error | null;
   /** Refetch files from Firestore */
   refetch: () => Promise<void>;
-  /** Delete a file (soft delete) */
+  /** Move file to trash (soft delete with 30-day retention) */
+  moveToTrash: (fileId: string, trashedBy: string) => Promise<void>;
+  /** @deprecated Use moveToTrash instead */
   deleteFile: (fileId: string, deletedBy: string) => Promise<void>;
   /** Total storage used by entity (bytes) */
   totalStorageBytes: number;
@@ -157,31 +159,44 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
   }, [entityType, entityId, companyId, domain, category]);
 
   // =========================================================================
-  // DELETE FILE
+  // 🗑️ TRASH OPERATIONS (Enterprise Trash System - ADR-032)
   // =========================================================================
 
   /**
-   * Delete a file (soft delete - keeps FileRecord for audit trail)
+   * 🗑️ Move file to Trash (soft delete with retention policy)
+   * @enterprise ADR-032 - Enterprise Trash System
+   *
+   * File remains in Firestore/Storage for 30 days (configurable by category).
+   * User can restore from Trash view. Server-side scheduler handles purge.
    */
-  const deleteFile = useCallback(async (fileId: string, deletedBy: string) => {
+  const moveToTrash = useCallback(async (fileId: string, trashedBy: string) => {
     try {
-      logger.info('Deleting file', { fileId, deletedBy });
+      logger.info('Moving file to trash', { fileId, trashedBy });
 
-      await FileRecordService.softDeleteFileRecord(fileId, deletedBy);
+      await FileRecordService.moveToTrash(fileId, trashedBy);
 
-      logger.info('File deleted successfully', { fileId });
+      logger.info('File moved to trash successfully', { fileId });
 
-      // Remove from local state
+      // Remove from local state (file is now in "trashed" state)
       setFiles((prev) => prev.filter((file) => file.id !== fileId));
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error deleting file');
-      logger.error('Failed to delete file', {
+      const error = err instanceof Error ? err : new Error('Unknown error moving file to trash');
+      logger.error('Failed to move file to trash', {
         error: error.message,
         fileId,
       });
-      throw error; // Re-throw για UI error handling
+      throw error; // Re-throw for UI error handling
     }
   }, []);
+
+  /**
+   * @deprecated Use moveToTrash instead
+   * Kept for backward compatibility
+   */
+  const deleteFile = useCallback(async (fileId: string, deletedBy: string) => {
+    logger.warn('deleteFile is deprecated, use moveToTrash instead', { fileId });
+    return moveToTrash(fileId, deletedBy);
+  }, [moveToTrash]);
 
   // =========================================================================
   // COMPUTED VALUES
@@ -217,7 +232,8 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     loading,
     error,
     refetch: fetchFiles,
-    deleteFile,
+    moveToTrash,
+    deleteFile, // @deprecated - use moveToTrash
     totalStorageBytes,
   };
 }
