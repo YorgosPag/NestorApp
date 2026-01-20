@@ -23,6 +23,7 @@ import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effec
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName'; // 🏢 ENTERPRISE: Runtime i18n translation
 import { formatFileSize as formatFileSizeUtil } from '@/utils/file-validation'; // 🏢 ENTERPRISE: Centralized file size formatting
+import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized notifications
 
 // ============================================================================
 // TYPES
@@ -110,6 +111,7 @@ export function FilesList({
   const colors = useSemanticColors();
   const { t } = useTranslation('files');
   const translateDisplayName = useFileDisplayName(); // 🏢 ENTERPRISE: Runtime i18n translation
+  const { showConfirmDialog, success, error } = useNotifications(); // 🏢 ENTERPRISE: Centralized notifications
 
   // =========================================================================
   // HANDLERS
@@ -120,16 +122,27 @@ export function FilesList({
 
     if (!onDelete || !currentUserId) return;
 
-    // Confirm delete
-    const confirmed = window.confirm(t('list.deleteConfirm'));
-    if (!confirmed) return;
-
-    try {
-      await onDelete(fileId);
-    } catch (error) {
-      // TODO: Show toast notification
-    }
-  }, [onDelete, currentUserId, t]);
+    // 🏢 ENTERPRISE: Use centralized confirmation dialog (no browser confirm)
+    showConfirmDialog(
+      t('list.deleteConfirm'),
+      async () => {
+        // On confirm
+        try {
+          await onDelete(fileId);
+          success(t('list.deleteSuccess'));
+        } catch (err) {
+          error(t('list.deleteError'));
+          console.error('[FilesList] Delete failed:', err);
+        }
+      },
+      undefined, // onCancel
+      {
+        confirmText: t('list.delete'),
+        cancelText: t('list.cancel'),
+        type: 'warning',
+      }
+    );
+  }, [onDelete, currentUserId, t, showConfirmDialog, success, error]);
 
   const handleView = useCallback((file: FileRecord, event: React.MouseEvent) => {
     event.stopPropagation();

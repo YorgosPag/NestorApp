@@ -23,8 +23,10 @@ import React, { useState } from 'react';
 import { Building2, ChevronDown, Check, RefreshCw } from 'lucide-react';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTranslation } from '@/i18n/hooks/useTranslation'; // 🏢 ENTERPRISE: i18n support
 import { cn } from '@/lib/utils';
 import type { Workspace, WorkspaceType } from '@/types/workspace';
+import { WORKSPACE_TYPE_LABELS } from '@/types/workspace'; // 🏢 ENTERPRISE: i18n keys
 
 // ============================================================================
 // COMPONENT
@@ -44,6 +46,7 @@ export interface WorkspaceSwitcherProps {
  */
 export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSwitcherProps) {
   const iconSizes = useIconSizes();
+  const { t } = useTranslation('common'); // 🏢 ENTERPRISE: i18n translation
   const { activeWorkspace, availableWorkspaces, loading, switchWorkspace, refreshWorkspaces } =
     useWorkspace();
 
@@ -97,17 +100,10 @@ export function WorkspaceSwitcher({ className, showRefresh = true }: WorkspaceSw
     }
   };
 
+  // 🏢 ENTERPRISE: i18n-aware workspace type label (no hardcoded strings)
   const getWorkspaceTypeLabel = (type: WorkspaceType): string => {
-    switch (type) {
-      case 'company':
-        return 'Εταιρεία';
-      case 'office_directory':
-        return 'Κοινός Κατάλογος';
-      case 'personal':
-        return 'Προσωπικός';
-      default:
-        return type;
-    }
+    const i18nKey = WORKSPACE_TYPE_LABELS[type];
+    return t(i18nKey, { defaultValue: type });
   };
 
   // ==========================================================================

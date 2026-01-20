@@ -1327,5 +1327,12 @@
       "alt": "Public Service Logo",
       "empty": "No logo available"
     }
+  },
+  "workspace": {
+    "type": {
+      "company": "Company",
+      "officeDirectory": "Office Directory",
+      "personal": "Personal"
+    }
   }
 }

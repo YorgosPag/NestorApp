@@ -1,126 +1,15 @@
-Από το αρχείο προκύπτουν δύο διαφορετικοί λόγοι που “κολλάνε” οι ονομασίες στο δέντρο και δεν ακολουθούν την αλλαγή γλώσσας — και οι δύο μπορούν να ισχύουν ταυτόχρονα. 
-
-local_FILE_STORAGE_SYSTEM
-
-1) Τα ονόματα που βλέπεις είναι “δεδομένα” (persisted) και όχι “μεταφράσεις” (runtime)
-
-Στο log φαίνεται καθαρά ότι σε κάποια φάση το σύστημα βασίζεται σε displayName που αποθηκεύεται στο Firestore κατά το upload (“Τα display names ΔΕΝ είναι dynamic - αποθηκεύονται στη βάση κατά το upload!”). 
-
-local_FILE_STORAGE_SYSTEM
-
-Αυτό σημαίνει:
-
-Αν στο UI εμφανίζεις fileRecord.displayName (ή node.label που έχει χτιστεί από αυτό), τότε η αλλαγή γλώσσας δεν έχει τι να αλλάξει: το string είναι ήδη αποθηκευμένο.
-
-Γι’ αυτό είδες το φαινόμενο: ανεβάζω στα Ελληνικά ⇒ βλέπω Ελληνικό όνομα, ανεβάζω στα Αγγλικά ⇒ βλέπω Αγγλικό όνομα, και μετά δεν αλλάζει όταν κάνω switch. 
-
-local_FILE_STORAGE_SYSTEM
-
-Enterprise σωστό μοντέλο: το Firestore να κρατάει language-agnostic metadata (π.χ. purpose: 'address', docType: 'id', customTitle, κ.λπ.) και το UI να παράγει το display label runtime με i18n.
-
-2) Ακόμα κι αν έχεις runtime μετάφραση, το UI δεν έκανε re-render / recompute στο language switch (memoization bug)
-
-Στο αρχείο καταγράφεται root cause τύπου React closure/memoization:
-
-2.1 useFileDisplayName hook: έλειπε i18n.language από dependencies
-
-Το log δείχνει ότι διορθώθηκε το hook ώστε το callback να ξαναδημιουργείται όταν αλλάζει γλώσσα: από [t] σε [t, i18n.language]. 
-
-local_FILE_STORAGE_SYSTEM
-
-
-Χωρίς αυτό, η function κρατάει “παλιά γλώσσα” μέσα στο closure.
-
-2.2 FilePathTree: renderFileNode useCallback χωρίς translateDisplayName dependency
-
-Εδώ είναι το πιο κρίσιμο για το δέντρο: το renderFileNode ήταν useCallback και δεν είχε το translateDisplayName στο dependency array, άρα το callback έμενε “κολλημένο” στην παλιά συνάρτηση/γλώσσα. Η προτεινόμενη λύση είναι να μπει το translateDisplayName στα dependencies. 
-
-local_FILE_STORAGE_SYSTEM
-
-2.3 Αν το “χτίσιμο” του tree γίνεται με useMemo, θέλει dependency στη γλώσσα ή (καλύτερα) labels να υπολογίζονται στο render
-
-Στο log φαίνεται ότι το tree structure χτίζεται με useMemo (“Build tree structure from files const initialTree = useMemo…”). 
-
-local_FILE_STORAGE_SYSTEM
-
-
-Αν μέσα σε αυτό το useMemo αποθηκεύεις label ως string, τότε πρέπει:
-
-είτε το useMemo να εξαρτάται από i18n.language/translateDisplayName,
-
-είτε να μην αποθηκεύεις “τελικό label” στο tree node, αλλά μόνο stable ids/refs και να κάνεις translateDisplayName(fileRecord) την ώρα του render.
-
-3) Υπάρχει και τρίτος “σίγουρος” λόγος για κάποια labels: hardcoded κείμενα
-
-Στο WorkspaceSwitcher υπάρχει getWorkspaceTypeLabel που επιστρέφει hardcoded Ελληνικά ('Εταιρεία', 'Κοινός Κατάλογος', κ.λπ.). Αυτά δεν θα μεταφραστούν ποτέ όσο είναι hardcoded. 
-
-local_FILE_STORAGE_SYSTEM
-
-
-(Υπάρχει ήδη σωστό pattern για i18n keys: WORKSPACE_TYPE_LABELS → workspace.type.*.) 
-
-local_FILE_STORAGE_SYSTEM
-
-Πώς το λύνεις σωστά (οδηγία προς Claude, production-grade)
-A) Κανόνας αρχιτεκτονικής: το Firestore δεν αποθηκεύει “μεταφρασμένα labels” ως source of truth
-
-Στο FileRecord αποθηκεύεις μόνο canonical metadata:
-
-purpose/docType codes (π.χ. address, id, tax, κ.λπ.) — υπάρχουν i18n keys για purposes στο files.json. 
-
-local_FILE_STORAGE_SYSTEM
-
-customTitle (αν υπάρχει)
-
-(προαιρετικά) subjectName / ownerName
-
-Το UI label βγαίνει runtime από buildDisplayNameFromRecord(...) ή translateDisplayName(fileRecord).
-
-B) React correctness: language switch πρέπει να προκαλεί recompute στο tree
-
-Στο FilePathTree.tsx:
-
-renderFileNode dependencies να περιλαμβάνουν translateDisplayName. 
-
-local_FILE_STORAGE_SYSTEM
-
-Αν υπάρχει useMemo που χτίζει nodes με label: string, είτε:
-
-πρόσθεσε i18n.language (ή translateDisplayName) στα deps,
-
-είτε άλλαξε το tree node να κρατάει fileId και να υπολογίζεις label στο render.
-
-Στο useFileDisplayName.ts:
-
-να μείνει το dependency [t, i18n.language]. 
-
-local_FILE_STORAGE_SYSTEM
-
-C) i18n hygiene: μηδέν hardcoded strings σε UI που “πρέπει” να μεταφράζεται
-
-Αντικατάσταση getWorkspaceTypeLabel → t(WORKSPACE_TYPE_LABELS[type]) και προσθήκη των keys στα locale files (workspace namespace).
-
-D) Data fix για ήδη ανεβασμένα αρχεία (αλλιώς θα βλέπεις “μείξη” για πάντα)
-
-Το log ήδη προτείνει “Migration Script” για να διορθωθούν τα παλιά displayNames. 
-
-local_FILE_STORAGE_SYSTEM
-
-
-Production-grade εκδοχή:
-
-One-time migration που:
-
-συμπληρώνει/διορθώνει τα canonical metadata fields σε κάθε file record,
-
-(προαιρετικά) μηδενίζει/παύει να χρησιμοποιεί το παλιό displayName,
-
-και κάνει dedupe όπου έχουν δημιουργηθεί διπλά records από uploads σε διαφορετικές γλώσσες (αν ταυτοποιούνται από ίδιο storage object / hash / path).
-
-Αν εφαρμόσεις τα A+B (και μετά κάνεις το D), το αποτέλεσμα είναι:
-
-ένα αρχείο στη βάση,
-
-ίδιο canonical metadata,
-
-και το δέντρο αλλάζει ονομασίες 100% live με το language switch (χωρίς “ελληνικό vs αγγλικό διπλό”).
+Μελέτησε σε παρακαλώ το στιγμιότυπο της οθόνης που σου δίνω και κάνε το εξής όταν θα πατάω το delete σε ένα αρχείο για να το διαγράψω δεν θέλω να εμφανίζεται μήνυμα τοαστ του browser αλλά θέλω να εμφανίζεται μήνυμα από το κεντρικοποιημένο σύστημα μηνυμάτων που έχουμε στην εφαρμογή επίσης να μελετήσεις γιατί δεν διαγράφεται το αρχείο ούτε από την οθόνη ούτε ο από το fire base fire store ούτε από το storage
+
+
+suppress-console.js:185 2026-01-20T08:01:52.123Z [ERROR] [USE_ENTITY_FILES] Failed to delete file 
+{error: 'Missing or insufficient permissions.', fileId: 'file_1768895874172_u06atn'}
+console.error	@	suppress-console.js:185
+console.error	@	suppress-console.js:185
+write	@	Logger.ts:78
+log	@	Logger.ts:218
+error	@	Logger.ts:132
+useEntityFiles.useCallback[deleteFile]	@	useEntityFiles.ts:178
+await in useEntityFiles.useCallback[deleteFile]		
+EntityFilesManager.useCallback[handleDelete]	@	EntityFilesManager.tsx:274
+FilesList.useCallback[handleDelete]	@	FilesList.tsx:128
+onClick	@	FilesList.tsx:282

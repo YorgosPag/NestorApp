@@ -12,29 +12,42 @@ import { ContentEditor } from './parts/ContentEditor';
 import { ActionsBar } from './parts/ActionsBar';
 import { UnsavedBanner } from './parts/UnsavedBanner';
 import type { SectionEditorProps } from './types';
+import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized notifications
+import { useTranslation } from '@/i18n/hooks/useTranslation'; // 🏢 ENTERPRISE: i18n support
 
-export default function SectionEditor({ 
-  section, 
-  onSave, 
-  onDelete, 
-  onCancel, 
-  isEditing = true 
+export default function SectionEditor({
+  section,
+  onSave,
+  onDelete,
+  onCancel,
+  isEditing = true
 }: SectionEditorProps) {
-  
-  const { 
-    editedSection, 
-    hasUnsavedChanges, 
-    updateSection, 
-    handleSave, 
-    handleCancel 
+  const { t } = useTranslation('common'); // 🏢 ENTERPRISE: i18n translation
+  const { showConfirmDialog } = useNotifications(); // 🏢 ENTERPRISE: Centralized notifications
+
+  const {
+    editedSection,
+    hasUnsavedChanges,
+    updateSection,
+    handleSave,
+    handleCancel
   } = useSectionEditorState(section, onSave, onCancel);
 
+  // 🏢 ENTERPRISE: Use centralized confirmation dialog (no hardcoded strings)
   const handleDelete = () => {
     if (onDelete) {
-      const confirm = window.confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το άρθρο;');
-      if (confirm) {
-        onDelete(editedSection.id);
-      }
+      showConfirmDialog(
+        t('obligations.deleteConfirm', 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το άρθρο;'),
+        () => {
+          onDelete(editedSection.id);
+        },
+        undefined,
+        {
+          confirmText: t('buttons.delete', 'Διαγραφή'),
+          cancelText: t('buttons.cancel', 'Ακύρωση'),
+          type: 'warning',
+        }
+      );
     }
   };
 
