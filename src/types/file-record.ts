@@ -335,6 +335,13 @@ export interface FileRecord {
    */
   entryPointId?: string;
 
+  /**
+   * 🏢 ENTERPRISE: Purpose/descriptor for file filtering
+   * e.g., "profile", "front", "signed", "project-floorplan", "parking-floorplan"
+   * Used for filtering files within the same category by specific purpose
+   */
+  purpose?: string;
+
   // =========================================================================
   // 🏢 ENTERPRISE: PROCESSED DATA - FLOORPLAN CACHING (ADR-033)
   // =========================================================================

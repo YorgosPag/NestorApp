@@ -50,6 +50,7 @@ import { buildStoragePath, generateFileId, getFileExtension } from '@/services/u
 import { UPLOAD_LIMITS, DEFAULT_DOCUMENT_ACCEPT } from '@/config/file-upload-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { MediaGallery } from './media'; // 🏢 ENTERPRISE: Media Gallery for photos/videos (Procore/BIM360 pattern)
+import { FloorplanGallery } from './media/FloorplanGallery'; // 🏢 ENTERPRISE: Full-width floorplan viewer (Bentley/Autodesk pattern)
 
 // ============================================================================
 // MODULE LOGGER
@@ -94,8 +95,9 @@ export interface EntityFilesManagerProps {
    * 🏢 ENTERPRISE: Display style for files (Procore/BIM360/Autodesk pattern)
    * - 'standard': Traditional list/tree view (default)
    * - 'media-gallery': Thumbnail grid for photos/videos with lightbox preview
+   * - 'floorplan-gallery': Full-width DXF/PDF viewer with navigation (Bentley/Autodesk pattern)
    */
-  displayStyle?: 'standard' | 'media-gallery';
+  displayStyle?: 'standard' | 'media-gallery' | 'floorplan-gallery';
 }
 
 // ============================================================================
@@ -141,9 +143,9 @@ export function EntityFilesManager({
   const [uploading, setUploading] = useState(false);
   const [showUploadZone, setShowUploadZone] = useState(false);
   // 🏢 ENTERPRISE: View mode with Gallery support (Procore/BIM360/Google Drive pattern)
-  // Default to 'gallery' for media files, 'list' for documents
+  // Default to 'gallery' for media files and floorplans, 'list' for documents
   const [viewMode, setViewMode] = useState<'list' | 'tree' | 'gallery'>(
-    displayStyle === 'media-gallery' ? 'gallery' : 'list'
+    displayStyle === 'media-gallery' || displayStyle === 'floorplan-gallery' ? 'gallery' : 'list'
   );
   const [activeTab, setActiveTab] = useState<'files' | 'trash'>('files'); // 🗑️ ENTERPRISE: Procore/BIM360 pattern
   const [treeViewMode, setTreeViewMode] = useState<'business' | 'technical'>('business'); // 🏢 ENTERPRISE: Business View (default) vs Technical View
@@ -180,6 +182,7 @@ export function EntityFilesManager({
     companyId, // 🏢 ENTERPRISE: Required for Firestore Rules query authorization
     domain,
     category,
+    purpose, // 🏢 ENTERPRISE: Filter by purpose for separate tabs (project-floorplan vs parking-floorplan)
     autoFetch: true,
   });
 
@@ -277,7 +280,7 @@ export function EntityFilesManager({
       // CRITICAL: Domain/category must match props, otherwise refetch() won't find uploaded files!
       const uploadDomain = domain; // Always use props domain (NOT entry point)
       const uploadCategory = category; // Always use props category (NOT entry point)
-      const uploadPurpose = selectedEntryPoint?.purpose || purpose; // Use entry point purpose for naming
+      const uploadPurpose = purpose || selectedEntryPoint?.purpose; // 🏢 ENTERPRISE: Tab purpose has priority over entry point (for Floorplan tab separation)
 
       console.log(`[EntityFilesManager] Starting upload of ${selectedFiles.length} files`);
 
@@ -582,6 +585,20 @@ export function EntityFilesManager({
                       <Grid3X3 className={iconSizes.sm} aria-hidden="true" />
                     </Button>
                   )}
+                  {/* 🏢 ENTERPRISE: Full-width floorplan viewer (Bentley/Autodesk pattern) */}
+                  {displayStyle === 'floorplan-gallery' && (
+                    <Button
+                      variant={viewMode === 'gallery' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('gallery')}
+                      aria-label={t('manager.viewFloorplan')}
+                      aria-pressed={viewMode === 'gallery'}
+                      title={t('manager.viewFloorplanTooltip')}
+                      className={cn('px-2', viewMode === 'gallery' && 'bg-primary text-primary-foreground')}
+                    >
+                      <ImageIcon className={iconSizes.sm} aria-hidden="true" />
+                    </Button>
+                  )}
                   <Button
                     variant={viewMode === 'list' ? 'default' : 'ghost'}
                     size="sm"
@@ -747,20 +764,33 @@ export function EntityFilesManager({
 
             {/* Files display (gallery, list, or tree) - Based on viewMode state */}
             {viewMode === 'gallery' ? (
-              /* 🏢 ENTERPRISE: Media Gallery View (Procore/BIM360/Autodesk pattern) */
-              <MediaGallery
-                files={filteredFiles}
-                initialViewMode="grid"
-                showToolbar={false}
-                enableSelection={true}
-                cardSize="md"
-                onDelete={async (filesToDelete) => {
-                  for (const file of filesToDelete) {
+              displayStyle === 'floorplan-gallery' ? (
+                /* 🏢 ENTERPRISE: Floorplan Gallery View (Bentley/Autodesk pattern) */
+                <FloorplanGallery
+                  files={filteredFiles}
+                  onDelete={async (file) => {
                     await handleDelete(file.id);
-                  }
-                }}
-                emptyMessage={t('media.noMedia')}
-              />
+                  }}
+                  onDownload={handleDownload}
+                  onRefresh={() => refetch()} // 🏢 ENTERPRISE: Refetch after DXF processing completes
+                  emptyMessage={t('floorplan.noFloorplans')}
+                />
+              ) : (
+                /* 🏢 ENTERPRISE: Media Gallery View (Procore/BIM360/Autodesk pattern) */
+                <MediaGallery
+                  files={filteredFiles}
+                  initialViewMode="grid"
+                  showToolbar={false}
+                  enableSelection={true}
+                  cardSize="md"
+                  onDelete={async (filesToDelete) => {
+                    for (const file of filesToDelete) {
+                      await handleDelete(file.id);
+                    }
+                  }}
+                  emptyMessage={t('media.noMedia')}
+                />
+              )
             ) : viewMode === 'list' ? (
               <FilesList
                 files={filteredFiles}

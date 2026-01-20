@@ -505,6 +505,44 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "files",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "entityType",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "entityId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "companyId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "domain",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "purpose",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isDeleted",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -368,6 +368,7 @@ export class FileRecordService {
     options?: {
       domain?: FileDomain;
       category?: FileCategory;
+      purpose?: string; // 🏢 ENTERPRISE: Filter by purpose (e.g., 'project-floorplan' vs 'parking-floorplan')
       includeDeleted?: boolean;
       companyId?: string; // 🏢 ENTERPRISE: Required for Firestore Rules query authorization
     }
@@ -390,6 +391,12 @@ export class FileRecordService {
 
     if (options?.category) {
       constraints.push(where('category', '==', options.category));
+    }
+
+    // 🏢 ENTERPRISE: Filter by purpose (critical for Floorplan tab separation)
+    // Requires Firestore composite index (standard enterprise practice)
+    if (options?.purpose) {
+      constraints.push(where('purpose', '==', options.purpose));
     }
 
     if (!options?.includeDeleted) {

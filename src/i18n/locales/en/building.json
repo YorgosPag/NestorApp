@@ -881,7 +881,10 @@
       },
       "noProject": "No project selected",
       "processingInProgress": "Processing in progress...",
-      "loadError": "Failed to load floor plan"
+      "loadError": "Failed to load floor plan",
+      "fileList": "Floor plan files",
+      "selectFile": "Select a file from the list",
+      "filesCount": "{count, plural, =1 {# file} other {# files}}"
     },
     "timeline": {
       "header": {

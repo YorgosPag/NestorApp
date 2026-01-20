@@ -881,7 +881,10 @@
       },
       "noProject": "Δεν επιλέχθηκε έργο",
       "processingInProgress": "Η επεξεργασία είναι σε εξέλιξη...",
-      "loadError": "Αποτυχία φόρτωσης κάτοψης"
+      "loadError": "Αποτυχία φόρτωσης κάτοψης",
+      "fileList": "Αρχεία κατόψεων",
+      "selectFile": "Επιλέξτε ένα αρχείο από τη λίστα",
+      "filesCount": "{count, plural, =1 {# αρχείο} other {# αρχεία}}"
     },
     "timeline": {
       "header": {

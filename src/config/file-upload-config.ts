@@ -177,3 +177,9 @@ export const DEFAULT_VIDEO_ACCEPT = buildAcceptString(['video']);
  * Use for mixed media galleries
  */
 export const DEFAULT_MEDIA_ACCEPT = buildAcceptString(['image', 'video']);
+
+/**
+ * 🏢 ENTERPRISE: Accept string for floorplans (DXF, PDF, images)
+ * Use for construction floorplans and technical drawings
+ */
+export const FLOORPLAN_ACCEPT = '.dxf,.pdf,.png,.jpg,.jpeg,.webp,application/pdf,application/dxf,image/vnd.dxf,image/png,image/jpeg,image/webp';

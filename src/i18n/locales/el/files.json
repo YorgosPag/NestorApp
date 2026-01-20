@@ -99,11 +99,18 @@
     "technicalViewTooltip": "Τεχνική Προβολή - Πλήρης διαδρομή με IDs",
     "viewGallery": "Προβολή Συλλογής",
     "viewGalleryTooltip": "Προβολή Συλλογής - Πλέγμα μικρογραφιών φωτογραφιών/βίντεο",
+    "viewFloorplan": "Προβολή Κάτοψης",
+    "viewFloorplanTooltip": "Προβολή Κάτοψης - Πλήρης προεπισκόπηση DXF/PDF",
     "refreshTooltip": "Ανανέωση λίστας αρχείων",
     "addFilesTooltip": "Ανέβασμα νέων αρχείων",
     "belongsTo": "Ανήκει στο",
     "selectDocumentType": "Επιλέξτε πρώτα τον τύπο του εγγράφου",
-    "enterTitleToContinue": "Εισάγετε τίτλο για να συνεχίσετε με το upload"
+    "enterTitleToContinue": "Εισάγετε τίτλο για να συνεχίσετε με το upload",
+    "fileList": "Λίστα αρχείων",
+    "file": "αρχείο",
+    "files": "αρχεία",
+    "noFiles": "Δεν υπάρχουν αρχεία",
+    "selectFileToPreview": "Επιλέξτε ένα αρχείο από τη λίστα για προεπισκόπηση"
   },
   "list": {
     "file": "Αρχείο",
@@ -255,5 +262,26 @@
     "downloadSelected": "Λήψη επιλεγμένων",
     "deleteSelected": "Διαγραφή επιλεγμένων",
     "mediaItems": "Στοιχεία πολυμέσων"
+  },
+  "floorplan": {
+    "noFloorplans": "Δεν υπάρχουν κατόψεις",
+    "noFloorplansDescription": "Ανεβάστε DXF ή PDF αρχεία κάτοψης",
+    "gallery": "Συλλογή κατόψεων",
+    "previous": "Προηγούμενη κάτοψη",
+    "next": "Επόμενη κάτοψη",
+    "fileIndicator": "{current} από {total}",
+    "zoomIn": "Μεγέθυνση",
+    "zoomOut": "Σμίκρυνση",
+    "resetZoom": "Επαναφορά zoom",
+    "rotate": "Περιστροφή",
+    "fullscreen": "Πλήρης οθόνη",
+    "download": "Λήψη",
+    "delete": "Διαγραφή",
+    "loadingScene": "Φόρτωση σκηνής DXF...",
+    "sceneError": "Σφάλμα φόρτωσης σκηνής",
+    "dxfViewer": "Προβολή DXF",
+    "pdfViewer": "Προβολή PDF",
+    "imageViewer": "Προβολή εικόνας",
+    "keyboardNav": "Χρησιμοποιήστε τα βέλη αριστερά/δεξιά για πλοήγηση"
   }
 }

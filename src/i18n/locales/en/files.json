@@ -99,11 +99,18 @@
     "technicalViewTooltip": "Technical View - Full path with IDs",
     "viewGallery": "Gallery View",
     "viewGalleryTooltip": "Gallery View - Thumbnail grid for photos/videos",
+    "viewFloorplan": "Floorplan View",
+    "viewFloorplanTooltip": "Floorplan View - Full DXF/PDF preview",
     "refreshTooltip": "Refresh file list",
     "addFilesTooltip": "Upload new files",
     "belongsTo": "Belongs to",
     "selectDocumentType": "Select document type first",
-    "enterTitleToContinue": "Enter title to continue with upload"
+    "enterTitleToContinue": "Enter title to continue with upload",
+    "fileList": "File list",
+    "file": "file",
+    "files": "files",
+    "noFiles": "No files",
+    "selectFileToPreview": "Select a file from the list to preview"
   },
   "list": {
     "file": "File",
@@ -255,5 +262,26 @@
     "downloadSelected": "Download selected",
     "deleteSelected": "Delete selected",
     "mediaItems": "Media items"
+  },
+  "floorplan": {
+    "noFloorplans": "No floorplans",
+    "noFloorplansDescription": "Upload DXF or PDF floorplan files",
+    "gallery": "Floorplan gallery",
+    "previous": "Previous floorplan",
+    "next": "Next floorplan",
+    "fileIndicator": "{current} of {total}",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "resetZoom": "Reset zoom",
+    "rotate": "Rotate",
+    "fullscreen": "Fullscreen",
+    "download": "Download",
+    "delete": "Delete",
+    "loadingScene": "Loading DXF scene...",
+    "sceneError": "Error loading scene",
+    "dxfViewer": "DXF Viewer",
+    "pdfViewer": "PDF Viewer",
+    "imageViewer": "Image Viewer",
+    "keyboardNav": "Use left/right arrow keys to navigate"
   }
 }
