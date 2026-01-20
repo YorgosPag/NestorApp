@@ -17,6 +17,7 @@
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
 import type { Project } from '@/types/project';
 
 // =============================================================================
@@ -73,6 +74,7 @@ export function VideosTab({ project, data }: VideosTabProps) {
       purpose="video"
       entryPointCategoryFilter="videos"
       displayStyle="media-gallery"
+      acceptedTypes={DEFAULT_VIDEO_ACCEPT}
     />
   );
 }

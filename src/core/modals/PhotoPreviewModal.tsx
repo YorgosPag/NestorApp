@@ -19,6 +19,7 @@ import {
 } from '@/components/generic/config/photo-config';
 import { useFocusTrap, announceToScreenReader } from '@/utils/accessibility';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useSemanticColors, type UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 
@@ -55,9 +56,14 @@ export interface PhotoPreviewModalProps {
 
 /**
  * Δημιουργεί gallery counter badge με κεντρικοποιημένο badge system
+ * 🏢 ENTERPRISE: Accepts colors via dependency injection
  */
-function createGalleryCounterBadge(currentIndex: number, totalPhotos: number) {
-  return BadgeFactory.createCommonBadge('info', {
+function createGalleryCounterBadge(
+  currentIndex: number,
+  totalPhotos: number,
+  colors: UseSemanticColorsReturn
+) {
+  return BadgeFactory.createCommonBadge('info', colors, {
     customLabel: `${currentIndex + 1}/${totalPhotos}`,
     variant: 'outline',
     size: 'sm',
@@ -67,9 +73,13 @@ function createGalleryCounterBadge(currentIndex: number, totalPhotos: number) {
 
 /**
  * Δημιουργεί contact type badge με κεντρικοποιημένο badge system
- * 🏢 ENTERPRISE: i18n-enabled with t function parameter
+ * 🏢 ENTERPRISE: i18n-enabled with t function parameter and colors DI
  */
-function createContactTypeBadge(contactType: Contact['type'], t: (key: string) => string) {
+function createContactTypeBadge(
+  contactType: Contact['type'],
+  t: (key: string) => string,
+  colors: UseSemanticColorsReturn
+) {
   let label = '';
 
   switch (contactType) {
@@ -86,7 +96,7 @@ function createContactTypeBadge(contactType: Contact['type'], t: (key: string) =
       label = t('photoPreview.contactType.unknown');
   }
 
-  return BadgeFactory.createCommonBadge('info', {
+  return BadgeFactory.createCommonBadge('info', colors, {
     customLabel: label,
     variant: 'secondary',
     size: 'sm'
@@ -204,6 +214,7 @@ export function PhotoPreviewModal({
   // ============================================================================
 
   const iconSizes = useIconSizes();
+  const colors = useSemanticColors();
   const { t } = useTranslation('common');
   // State για zoom functionality (μελλοντική επέκταση)
   const [zoom, setZoom] = useState(1);
@@ -611,7 +622,7 @@ export function PhotoPreviewModal({
 
             {/* Gallery Counter - δεξιά από το όνομα */}
             {isGalleryMode && totalPhotos > 1 && (() => {
-              const galleryBadge = createGalleryCounterBadge(currentIndex, totalPhotos);
+              const galleryBadge = createGalleryCounterBadge(currentIndex, totalPhotos, colors);
               return (
                 <Badge
                   variant={galleryBadge.variant}
@@ -788,7 +799,7 @@ export function PhotoPreviewModal({
           <section className="flex items-center" role="region" aria-label={t('photoPreview.aria.contactType')}>
             {/* Μόνο η ετικέτα τύπου contact - όχι εικονίδιο και όνομα */}
             {contact?.type && (() => {
-              const contactTypeBadge = createContactTypeBadge(contact.type, t);
+              const contactTypeBadge = createContactTypeBadge(contact.type, t, colors);
               return (
                 <Badge
                   variant={contactTypeBadge.variant}

@@ -13,7 +13,7 @@
 // TYPES & INTERFACES
 // ============================================================================
 
-export type FileType = 'image' | 'pdf' | 'document' | 'any';
+export type FileType = 'image' | 'video' | 'pdf' | 'document' | 'any';
 export type UploadPurpose = 'photo' | 'logo' | 'document' | 'floorplan' | 'avatar' | 'representative';
 
 export interface FileTypeConfig {
@@ -42,6 +42,12 @@ export const FILE_TYPE_CONFIG: Record<FileType, FileTypeConfig> = {
     extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
     maxSize: 5 * 1024 * 1024, // 5MB
     errorMessage: 'Επιλέξτε μόνο αρχεία εικόνας (JPG, PNG, GIF, WebP)'
+  },
+  video: {
+    mimeTypes: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv', 'video/avi'],
+    extensions: ['.mp4', '.webm', '.mov', '.avi', '.wmv'],
+    maxSize: 200 * 1024 * 1024, // 200MB - Enterprise video limit
+    errorMessage: 'Επιλέξτε μόνο αρχεία βίντεο (MP4, WebM, MOV, AVI, WMV)'
   },
   pdf: {
     mimeTypes: ['application/pdf'],
@@ -153,3 +159,21 @@ export function buildAcceptString(types: FileType[]): string {
  * Common use case: images + PDFs + Office documents
  */
 export const DEFAULT_DOCUMENT_ACCEPT = buildAcceptString(['image', 'pdf', 'document']);
+
+/**
+ * 🏢 ENTERPRISE: Get default accept string for photos only
+ * Use for photo galleries, profile pictures
+ */
+export const DEFAULT_PHOTO_ACCEPT = buildAcceptString(['image']);
+
+/**
+ * 🏢 ENTERPRISE: Get default accept string for videos only
+ * Use for video galleries, project videos
+ */
+export const DEFAULT_VIDEO_ACCEPT = buildAcceptString(['video']);
+
+/**
+ * 🏢 ENTERPRISE: Get default accept string for media (photos + videos)
+ * Use for mixed media galleries
+ */
+export const DEFAULT_MEDIA_ACCEPT = buildAcceptString(['image', 'video']);
