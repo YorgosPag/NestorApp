@@ -49,6 +49,7 @@ import app from '@/lib/firebase'; // 🏢 ENTERPRISE: For diagnostic logging
 import { buildStoragePath, generateFileId, getFileExtension } from '@/services/upload';
 import { UPLOAD_LIMITS, DEFAULT_DOCUMENT_ACCEPT } from '@/config/file-upload-config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { MediaGallery } from './media'; // 🏢 ENTERPRISE: Media Gallery for photos/videos (Procore/BIM360 pattern)
 
 // ============================================================================
 // MODULE LOGGER
@@ -85,6 +86,16 @@ export interface EntityFilesManagerProps {
   maxFileSize?: number;
   /** Optional: Accepted file types */
   acceptedTypes?: string;
+  /** 🏢 ENTERPRISE: Filter entry points to show only specific category (e.g., 'photos' for PhotosTab) */
+  entryPointCategoryFilter?: FileCategory;
+  /** 🏢 ENTERPRISE: Exclude entry points with specific categories (e.g., ['photos', 'videos'] for DocumentsTab) */
+  entryPointExcludeCategories?: FileCategory[];
+  /**
+   * 🏢 ENTERPRISE: Display style for files (Procore/BIM360/Autodesk pattern)
+   * - 'standard': Traditional list/tree view (default)
+   * - 'media-gallery': Thumbnail grid for photos/videos with lightbox preview
+   */
+  displayStyle?: 'standard' | 'media-gallery';
 }
 
 // ============================================================================
@@ -114,6 +125,9 @@ export function EntityFilesManager({
   purpose,
   maxFileSize = UPLOAD_LIMITS.MAX_FILE_SIZE, // 🏢 ENTERPRISE: Centralized config
   acceptedTypes = DEFAULT_DOCUMENT_ACCEPT, // 🏢 ENTERPRISE: Built from FILE_TYPE_CONFIG
+  entryPointCategoryFilter,
+  entryPointExcludeCategories,
+  displayStyle = 'standard', // 🏢 ENTERPRISE: Default to standard list/tree view
 }: EntityFilesManagerProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation('files');
@@ -647,6 +661,8 @@ export function EntityFilesManager({
               onSelect={setSelectedEntryPoint}
               customTitle={customTitle}
               onCustomTitleChange={setCustomTitle}
+              categoryFilter={entryPointCategoryFilter}
+              excludeCategories={entryPointExcludeCategories}
             />
 
             {/* Step 2: File Upload Zone (enabled only when entry point selected AND custom title provided if required) */}
@@ -711,8 +727,23 @@ export function EntityFilesManager({
               </div>
             )}
 
-            {/* Files display (list or tree) */}
-            {viewMode === 'list' ? (
+            {/* Files display (list, tree, or media gallery) */}
+            {displayStyle === 'media-gallery' ? (
+              /* 🏢 ENTERPRISE: Media Gallery View (Procore/BIM360/Autodesk pattern) */
+              <MediaGallery
+                files={filteredFiles}
+                initialViewMode="grid"
+                showToolbar={true}
+                enableSelection={true}
+                cardSize="md"
+                onDelete={async (filesToDelete) => {
+                  for (const file of filesToDelete) {
+                    await handleDelete(file.id);
+                  }
+                }}
+                emptyMessage={t('media.noMedia')}
+              />
+            ) : viewMode === 'list' ? (
               <FilesList
                 files={filteredFiles}
                 loading={loading}

@@ -20,7 +20,7 @@
 
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import { useAuthContext } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/contexts/AuthContext';
 import type { Project } from '@/types/project';
 
 // =============================================================================
@@ -47,16 +47,17 @@ interface PhotosTabProps {
  * - Entry points: construction-photo, exterior-photo, etc.
  */
 export function PhotosTab({ project, data }: PhotosTabProps) {
-  const { user } = useAuthContext();
+  const { user } = useAuth();
 
   // Resolve project from props
   const resolvedProject = project || data;
 
-  // Get companyId from auth context
+  // Get companyId and userId from auth context
   const companyId = user?.companyId;
+  const currentUserId = user?.uid;
 
-  // If no project or companyId, show placeholder
-  if (!resolvedProject?.id || !companyId) {
+  // If no project, companyId, or userId, show placeholder
+  if (!resolvedProject?.id || !companyId || !currentUserId) {
     return (
       <div className="p-6 text-center text-muted-foreground">
         <p>Επιλέξτε ένα έργο για να δείτε τις φωτογραφίες.</p>
@@ -67,13 +68,15 @@ export function PhotosTab({ project, data }: PhotosTabProps) {
   return (
     <EntityFilesManager
       companyId={companyId}
+      currentUserId={currentUserId}
       entityType="project"
       entityId={String(resolvedProject.id)}
       entityLabel={resolvedProject.name || `Έργο ${resolvedProject.id}`}
       domain="construction"
       category="photos"
       purpose="photo"
-      showEntryPointSelector={true}
+      entryPointCategoryFilter="photos"
+      displayStyle="media-gallery"
     />
   );
 }

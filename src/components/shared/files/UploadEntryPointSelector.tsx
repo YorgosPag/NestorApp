@@ -25,7 +25,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { EntityType } from '@/config/domain-constants';
+import type { EntityType, FileCategory } from '@/config/domain-constants';
 import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import { getSortedEntryPoints } from '@/config/upload-entry-points';
 import * as LucideIcons from 'lucide-react';
@@ -49,6 +49,10 @@ export interface UploadEntryPointSelectorProps {
   customTitle?: string;
   /** 🏢 ENTERPRISE: Callback when custom title changes */
   onCustomTitleChange?: (title: string) => void;
+  /** 🏢 ENTERPRISE: Filter to show only specific categories (e.g., 'photos' for PhotosTab) */
+  categoryFilter?: FileCategory;
+  /** 🏢 ENTERPRISE: Exclude specific categories (e.g., ['photos', 'videos'] for DocumentsTab) */
+  excludeCategories?: FileCategory[];
 }
 
 // ============================================================================
@@ -69,6 +73,8 @@ export function UploadEntryPointSelector({
   language, // Optional override - defaults to current i18n language
   customTitle = '',
   onCustomTitleChange,
+  categoryFilter,
+  excludeCategories,
 }: UploadEntryPointSelectorProps) {
   const iconSizes = useIconSizes();
   const { t, i18n } = useTranslation('files');
@@ -78,7 +84,22 @@ export function UploadEntryPointSelector({
   const currentLanguage = (language || i18n.language?.split('-')[0] || 'en') as 'el' | 'en';
 
   // Get entry points for this entity type
-  const entryPoints = getSortedEntryPoints(entityType);
+  const allEntryPoints = getSortedEntryPoints(entityType);
+
+  // 🏢 ENTERPRISE: Filter entry points by category
+  // - categoryFilter: show ONLY entries with this category (e.g., 'photos' for PhotosTab)
+  // - excludeCategories: hide entries with these categories (e.g., ['photos', 'videos'] for DocumentsTab)
+  const entryPoints = allEntryPoints.filter((ep) => {
+    // If categoryFilter is set, only show entries matching that category
+    if (categoryFilter && ep.category !== categoryFilter) {
+      return false;
+    }
+    // If excludeCategories is set, hide entries matching those categories
+    if (excludeCategories && excludeCategories.includes(ep.category)) {
+      return false;
+    }
+    return true;
+  });
 
   // Get selected entry point
   const selectedEntryPoint = entryPoints.find((ep) => ep.id === selectedEntryPointId);

@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Project Contracts Tab Content
+ * 🏢 ENTERPRISE: Project Miscellaneous Documents Tab Content
  * =============================================================================
  *
  * Uses centralized EntityFilesManager for file upload with:
@@ -9,7 +9,7 @@
  * - Multi-tenant Storage Rules
  * - Entry point selection for document types
  *
- * @module components/projects/documents/ContractsTabContent
+ * @module components/projects/documents/MiscellaneousTabContent
  * @enterprise ADR-031 - Canonical File Storage System
  */
 
@@ -17,14 +17,14 @@
 
 import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import { useAuthContext } from '@/contexts/AuthContext';
+import { useAuth } from '@/auth/contexts/AuthContext';
 import type { Project } from '@/types/project';
 
 // =============================================================================
 // PROPS
 // =============================================================================
 
-interface ContractsTabContentProps {
+interface MiscellaneousTabContentProps {
   /** Project data (passed automatically by UniversalTabsRenderer) */
   project?: Project;
   /** Alternative data prop */
@@ -36,27 +36,28 @@ interface ContractsTabContentProps {
 // =============================================================================
 
 /**
- * Project Contracts Tab - Enterprise File Management
+ * Project Miscellaneous Documents Tab - Enterprise File Management
  *
- * Displays contracts using centralized EntityFilesManager with:
- * - Domain: legal
- * - Category: contracts
- * - Entry points from upload-entry-points.ts (project-contract, signed-contract, etc.)
+ * Displays general project documents using centralized EntityFilesManager with:
+ * - Domain: construction
+ * - Category: documents
+ * - Entry points: permits, reports, invoices, delivery notes, etc.
  */
-export function ContractsTabContent({ project, data }: ContractsTabContentProps) {
-  const { user } = useAuthContext();
+export function MiscellaneousTabContent({ project, data }: MiscellaneousTabContentProps) {
+  const { user } = useAuth();
 
   // Resolve project from props
   const resolvedProject = project || data;
 
-  // Get companyId from auth context
+  // Get companyId and userId from auth context
   const companyId = user?.companyId;
+  const currentUserId = user?.uid;
 
-  // If no project or companyId, show placeholder
-  if (!resolvedProject?.id || !companyId) {
+  // If no project, companyId, or userId, show placeholder
+  if (!resolvedProject?.id || !companyId || !currentUserId) {
     return (
       <div className="p-6 text-center text-muted-foreground">
-        <p>Επιλέξτε ένα έργο για να δείτε τα συμβόλαια.</p>
+        <p>Επιλέξτε ένα έργο για να δείτε τα έγγραφα.</p>
       </div>
     );
   }
@@ -64,13 +65,13 @@ export function ContractsTabContent({ project, data }: ContractsTabContentProps)
   return (
     <EntityFilesManager
       companyId={companyId}
+      currentUserId={currentUserId}
       entityType="project"
       entityId={String(resolvedProject.id)}
       entityLabel={resolvedProject.name || `Έργο ${resolvedProject.id}`}
-      domain="legal"
-      category="contracts"
-      purpose="contract"
-      showEntryPointSelector={true}
+      domain="construction"
+      category="documents"
+      purpose="document"
     />
   );
 }
