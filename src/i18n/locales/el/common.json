@@ -14,6 +14,53 @@
     "clearAll": "Διαγραφή όλων",
     "clearAllCount": "Καθαρισμός ({count})"
   },
+  "filters": {
+    "status": {
+      "available": "Διαθέσιμο",
+      "sold": "Πωλημένο",
+      "reserved": "Κρατημένο",
+      "maintenance": "Συντήρηση",
+      "occupied": "Κατειλημμένο",
+      "planning": "Σχεδιασμός",
+      "inProgress": "Σε Εξέλιξη",
+      "completed": "Ολοκληρωμένο",
+      "onHold": "Σε Αναμονή",
+      "active": "Ενεργό",
+      "inactive": "Ανενεργό",
+      "archived": "Αρχειοθετημένο",
+      "lead": "Lead",
+      "pending": "Εκκρεμεί",
+      "construction": "Υπό Κατασκευή"
+    }
+  },
+  "navigation": {
+    "actions": {
+      "link": {
+        "label": "Σύνδεσμος",
+        "description": "Δημιουργία συνδέσμου"
+      },
+      "actions": {
+        "label": "Ενέργειες",
+        "description": "Διαθέσιμες ενέργειες"
+      },
+      "view": {
+        "label": "Προβολή",
+        "description": "Προβολή λεπτομερειών"
+      },
+      "edit": {
+        "label": "Επεξεργασία",
+        "description": "Επεξεργασία στοιχείου"
+      },
+      "share": {
+        "label": "Κοινοποίηση",
+        "description": "Κοινοποίηση στοιχείου"
+      },
+      "filter": {
+        "label": "Φίλτρο",
+        "description": "Φιλτράρισμα αποτελεσμάτων"
+      }
+    }
+  },
   "header": {
     "notifications": {
       "title": "Ειδοποιήσεις",

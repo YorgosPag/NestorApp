@@ -14,6 +14,53 @@
     "clearAll": "Clear all",
     "clearAllCount": "Clear ({count})"
   },
+  "filters": {
+    "status": {
+      "available": "Available",
+      "sold": "Sold",
+      "reserved": "Reserved",
+      "maintenance": "Maintenance",
+      "occupied": "Occupied",
+      "planning": "Planning",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "onHold": "On Hold",
+      "active": "Active",
+      "inactive": "Inactive",
+      "archived": "Archived",
+      "lead": "Lead",
+      "pending": "Pending",
+      "construction": "Under Construction"
+    }
+  },
+  "navigation": {
+    "actions": {
+      "link": {
+        "label": "Link",
+        "description": "Create a link"
+      },
+      "actions": {
+        "label": "Actions",
+        "description": "Available actions"
+      },
+      "view": {
+        "label": "View",
+        "description": "View details"
+      },
+      "edit": {
+        "label": "Edit",
+        "description": "Edit item"
+      },
+      "share": {
+        "label": "Share",
+        "description": "Share item"
+      },
+      "filter": {
+        "label": "Filter",
+        "description": "Filter results"
+      }
+    }
+  },
   "header": {
     "notifications": {
       "title": "Notifications",
