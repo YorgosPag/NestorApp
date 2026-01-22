@@ -33,7 +33,10 @@ export const getDirectionLabel = (direction: string) =>
 export const getRelativeTime = (timestamp: Date | string | number | { toDate?: () => Date } | null | undefined) => {
   if (!timestamp) return '';
   try {
-    const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
+    // 🏢 ENTERPRISE: Type-safe Firestore timestamp handling
+    const date = typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp && typeof timestamp.toDate === 'function'
+      ? timestamp.toDate()
+      : new Date(timestamp as string | number | Date);
     if(isNaN(date.getTime())) return '';
     const now = new Date();
     const diffInMinutes = Math.floor((+now - +date) / (1000 * 60));
@@ -44,7 +47,11 @@ export const getRelativeTime = (timestamp: Date | string | number | { toDate?: (
     if (diffInHours < 24) return 'common.time.hoursAgo';
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 7) return 'common.time.daysAgo';
-    return formatDateTime(timestamp);
+    // 🏢 ENTERPRISE: Type-safe date conversion before formatting
+    const dateValue = typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp && typeof timestamp.toDate === 'function'
+      ? timestamp.toDate()
+      : new Date(timestamp as string | number | Date);
+    return formatDateTime(dateValue);
   } catch {
     return '';
   }

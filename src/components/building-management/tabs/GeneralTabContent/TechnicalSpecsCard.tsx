@@ -99,7 +99,7 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
             {errors.units && <p className={`text-sm ${colors.text.error}`}>{errors.units}</p>}
             {formData.floors > 0 && (
               <p className="text-xs text-muted-foreground">
-                {t('tabs.general.technicalSpecs.unitsPerFloor', { count: (formData.units / formData.floors).toFixed(1) })}
+                {t('tabs.general.technicalSpecs.unitsPerFloor', { count: Math.round(formData.units / formData.floors * 10) / 10 })}
               </p>
             )}
           </div>

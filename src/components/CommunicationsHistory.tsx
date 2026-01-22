@@ -15,7 +15,12 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-export default function CommunicationsHistory({ contactId }) {
+// 🏢 ENTERPRISE: Props interface with proper types
+interface CommunicationsHistoryProps {
+  contactId: string;
+}
+
+export default function CommunicationsHistory({ contactId }: CommunicationsHistoryProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -87,7 +92,9 @@ export default function CommunicationsHistory({ contactId }) {
                         <dt className="sr-only">{t('history.srOnly.participants')}</dt>
                         <dd>{comm.from} → {comm.to}</dd>
                         <dt className="sr-only">{t('history.srOnly.date')}</dt>
-                        <dd>{formatDate(comm.createdAt)}</dd>
+                        <dd>{comm.createdAt && typeof comm.createdAt === 'object' && comm.createdAt !== null && 'toDate' in comm.createdAt && typeof (comm.createdAt as { toDate?: () => Date }).toDate === 'function'
+                          ? formatDate((comm.createdAt as { toDate: () => Date }).toDate())
+                          : formatDate(comm.createdAt as string | number | Date)}</dd>
                         <dt className="sr-only">{t('history.srOnly.relativeTime')}</dt>
                         <dd className={`text-xs ${colors.text.muted}`}>{getRelativeTime(comm.createdAt)}</dd>
                       </dl>
@@ -104,7 +111,7 @@ export default function CommunicationsHistory({ contactId }) {
                     </section>
                   )}
 
-                  {comm.attachments?.length > 0 && (
+                  {comm.attachments && comm.attachments.length > 0 && (
                     <aside className="mt-2 pt-2 border-t" aria-label={t('history.aria.attachmentsSection')}>
                       <p className={`text-xs ${colors.text.muted} mb-1`}>{t('history.attachments')}</p>
                       <ul className="flex gap-2 list-none">

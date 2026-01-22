@@ -37,10 +37,14 @@ export function FormRowSelectNew({
     return option;
   });
 
+  // 🏢 ENTERPRISE: Generate unique id from name/label
+  const fieldId = name || label.toLowerCase().replace(/\s+/g, '_');
+
   return (
     <UnifiedFormField
+      id={fieldId}
       label={label}
-      name={name || label.toLowerCase().replace(/\s+/g, '_')}
+      name={fieldId}
       type="select"
       value={value}
       onChange={onChange}

@@ -5,34 +5,22 @@ import { getIndividualSortedSections } from '@/config/individual-config';
 import { GenericFormTabRenderer } from '@/components/generic/GenericFormTabRenderer';
 import { ServiceFormTabRenderer } from '@/components/generic/ServiceFormTabRenderer';
 import { IndividualFormTabRenderer } from '@/components/generic/IndividualFormTabRenderer';
-import type { ContactType } from '@/types/ContactFormTypes';
+// 🏢 ENTERPRISE: Import ContactType from its source
+import type { ContactType } from '@/types/contacts';
 
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
 
-// 🏢 ENTERPRISE: Section configuration type
-interface FormSection {
-  id: string;
-  label: string;
-  icon?: React.ComponentType;
-  order?: number;
-  fields?: unknown[];
-  [key: string]: unknown;
-}
-
-// 🏢 ENTERPRISE: Form tab renderer component type
-type FormTabRendererComponent = React.ComponentType<{
-  sections: FormSection[];
-  formData: unknown;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onSelectChange?: (name: string, value: string) => void;
-  [key: string]: unknown;
-}>;
+// 🏢 ENTERPRISE: Form tab renderer component type (flexible to support all renderers)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FormTabRendererComponent = React.ComponentType<any>;
 
 export interface ContactFormConfig {
-  getSections: () => FormSection[];
+  // 🏢 ENTERPRISE: Generic sections array - each renderer has its own section type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getSections: () => any[];
   renderer: FormTabRendererComponent;
   name: string;
 }

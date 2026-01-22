@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  TaskCard, 
-  UserCard, 
-  BuildingCard, 
-  ProjectCard, 
-  ContactCard, 
-  NotificationCard, 
-  StorageCard 
+import {
+  TaskCard,
+  UserCard,
+  // BuildingCard, // 🔧 TODO: Create BuildingCard composition
+  // ProjectCard,  // 🔧 TODO: Create ProjectCard composition
+  ContactCard,
+  NotificationCard,
+  StorageCard
 } from '@/components/compositions';
 import type { CrmTask } from '@/types/crm';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';

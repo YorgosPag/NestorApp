@@ -29,7 +29,6 @@ const MapTabContent = ({ building }: MapTabContentProps) => {
       <LocationInfoCard building={building} coordinates={coordinates} />
       <InteractiveMap
         building={building}
-        coordinates={coordinates}
         mapView={mapView}
         selectedLayer={selectedLayer}
         setSelectedLayer={setSelectedLayer}

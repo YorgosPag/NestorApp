@@ -79,6 +79,42 @@ export interface UseLayoutClassesReturn {
   /** "flex flex-col gap-4" */
   readonly flexColGap4: string;
 
+  // 🏢 ENTERPRISE: Responsive spacing for list pages
+  /** "gap-1 sm:gap-2" - List container gap between list and details */
+  readonly listGapResponsive: string;
+  /** "px-1 py-2 sm:px-2 sm:py-2" - List container padding */
+  readonly listPaddingResponsive: string;
+  /** "px-1 pt-2 sm:px-2 sm:pt-2" - Advanced filters panel padding */
+  readonly filterPaddingResponsive: string;
+  /** "gap-1 sm:gap-2" - Gap between list and details (responsive 4px→8px) */
+  readonly listItemsGap: string;
+
+  // 🏢 ENTERPRISE: PageHeader spacing
+  /** "mx-1 mt-1 sm:mx-2 sm:mt-2" - PageHeader margins */
+  readonly pageHeaderMargins: string;
+  /** "px-1 py-4 sm:px-4 sm:py-4" - PageHeader normal spacing */
+  readonly pageHeaderPaddingNormal: string;
+  /** "px-1 py-2 sm:px-2 sm:py-2" - PageHeader tight/compact spacing (8px) */
+  readonly pageHeaderPaddingTight: string;
+
+  // 🏢 ENTERPRISE: Dashboard spacing
+  /** "px-1 py-1 sm:px-2 sm:py-1" - Dashboard padding */
+  readonly dashboardPadding: string;
+  /** "gap-1 sm:gap-2" - Dashboard grid gap (8px) */
+  readonly dashboardGridGap: string;
+  /** "mt-2" - Margin top for sections (8px) */
+  readonly sectionMarginTop: string;
+
+  // 🏢 ENTERPRISE: AdvancedFiltersPanel spacing
+  /** "p-2" - Filter button padding (8px) */
+  readonly filterButtonPadding: string;
+  /** "p-2" - Filter content padding (8px) */
+  readonly filterContentPadding: string;
+  /** "space-y-2" - Filter content vertical gap (8px) */
+  readonly filterContentGap: string;
+  /** "gap-1 sm:gap-2" - Filter grid gap (responsive 4px→8px) */
+  readonly filterGridGap: string;
+
   // ==========================================================================
   // 📝 FORM PATTERNS - Input icons, widths, alignment
   // ==========================================================================
@@ -248,6 +284,28 @@ export function useLayoutClasses(): UseLayoutClassesReturn {
     responsiveFlexRow: "flex flex-col md:flex-row gap-2", // Responsive
     flexColGap2: "flex flex-col gap-2",                // Column με gap
     flexColGap4: "flex flex-col gap-4",                // Column με μεγάλο gap
+
+    // 🏢 ENTERPRISE: Responsive spacing for list pages (8px desktop, 4px mobile)
+    listGapResponsive: "gap-1 sm:gap-2",               // List container gap between list and details
+    listPaddingResponsive: "px-1 py-2 sm:px-2 sm:py-2", // List container padding
+    filterPaddingResponsive: "px-1 pt-2 sm:px-2 sm:pt-2", // Advanced filters panel padding
+    listItemsGap: "gap-1 sm:gap-2",                    // Gap between list and details (responsive 4px→8px)
+
+    // 🏢 ENTERPRISE: PageHeader spacing
+    pageHeaderMargins: "mx-1 mt-1 sm:mx-2 sm:mt-2",   // PageHeader margins
+    pageHeaderPaddingNormal: "px-1 py-4 sm:px-4 sm:py-4", // PageHeader normal spacing
+    pageHeaderPaddingTight: "px-1 py-2 sm:px-2 sm:py-2", // PageHeader tight spacing
+
+    // 🏢 ENTERPRISE: Dashboard spacing
+    dashboardPadding: "px-1 py-1 sm:px-2 sm:py-1",    // Dashboard padding
+    dashboardGridGap: "gap-1 sm:gap-2",               // Dashboard grid gap (8px)
+    sectionMarginTop: "mt-2",                         // Margin top for sections (8px)
+
+    // 🏢 ENTERPRISE: AdvancedFiltersPanel spacing
+    filterButtonPadding: "p-2",                       // Filter button padding (8px)
+    filterContentPadding: "p-2",                      // Filter content padding (8px)
+    filterContentGap: "space-y-2",                    // Filter content vertical gap (8px)
+    filterGridGap: "gap-1 sm:gap-2",                  // Filter grid gap (responsive 4px→8px)
 
     // ========================================================================
     // 📝 FORM PATTERNS - Input icons, widths, alignment

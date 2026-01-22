@@ -36,7 +36,7 @@ export function ProjectViewSwitch({
   return (
     <>
       {/* 🖥️ DESKTOP: Standard split layout */}
-      <div className="hidden md:flex flex-1 gap-4 min-h-0">
+      <div className="hidden md:flex flex-1 gap-2 min-h-0">
         <ProjectsList
             projects={projects}
             selectedProject={selectedProject}

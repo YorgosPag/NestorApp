@@ -7,11 +7,14 @@ import { MilestoneItem, type Milestone } from './MilestoneItem';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
+// 🏢 ENTERPRISE: LucideIcon type for icon components
+type LucideIconType = React.ComponentType<{ className?: string }>;
+
 interface TimelineMilestonesProps {
     milestones: Milestone[];
     getStatusColor: (status: string) => string;
     getStatusText: (status: string) => string;
-    getTypeIcon: (type: string) => string;
+    getTypeIcon: (type: string) => LucideIconType;
 }
 
 export function TimelineMilestones({ milestones, getStatusColor, getStatusText, getTypeIcon }: TimelineMilestonesProps) {

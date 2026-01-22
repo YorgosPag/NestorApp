@@ -123,9 +123,9 @@ export function ContactDetailsHeader({
     if (!avatarImageUrl) return;
 
     // 🎯 SMART LOGIC: Gallery navigation για Individual με multiplePhotoURLs
-    if (type === 'individual' && multiplePhotoURLs?.length > 0) {
-      const multiplePhotos = multiplePhotoURLs;
-      const currentPhotoIndex = multiplePhotos.findIndex((url: string) => url === avatarImageUrl);
+    if (type === 'individual' && multiplePhotoURLs && multiplePhotoURLs.length > 0) {
+      const validPhotos = multiplePhotoURLs.filter((url): url is string => typeof url === 'string' && url.length > 0);
+      const currentPhotoIndex = validPhotos.findIndex((url) => url === avatarImageUrl);
       const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
 
       // Άνοιγμα με gallery navigation (βελάκια working!)
@@ -137,13 +137,15 @@ export function ContactDetailsHeader({
       const companyPhotoURL = photoURL; // Representative photo
       const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
 
-      if (galleryPhotos.length > 1) {
+      // 🏢 ENTERPRISE: Type-safe photo filtering
+      const validPhotos = galleryPhotos.filter((url): url is string => typeof url === 'string' && url.length > 0);
+      if (validPhotos.length > 1) {
         // Multiple photos available - use gallery navigation
-        const currentPhotoIndex = galleryPhotos.findIndex((url: string) => url === avatarImageUrl);
+        const currentPhotoIndex = validPhotos.findIndex((url) => url === avatarImageUrl);
         const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
 
         // Create temporary contact with multiplePhotoURLs for gallery
-        const galleryContact = { ...contact, multiplePhotoURLs: galleryPhotos };
+        const galleryContact = { ...contact, multiplePhotoURLs: validPhotos } as Contact;
         openGalleryPhotoModal(photoModal, galleryContact, photoIndex);
       } else {
         // Single photo fallback
@@ -157,13 +159,15 @@ export function ContactDetailsHeader({
       const servicePhotoURL = photoURL; // Representative photo
       const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
 
-      if (galleryPhotos.length > 1) {
+      // 🏢 ENTERPRISE: Type-safe photo filtering
+      const validPhotos = galleryPhotos.filter((url): url is string => typeof url === 'string' && url.length > 0);
+      if (validPhotos.length > 1) {
         // Multiple photos available - use gallery navigation
-        const currentPhotoIndex = galleryPhotos.findIndex((url: string) => url === avatarImageUrl);
+        const currentPhotoIndex = validPhotos.findIndex((url) => url === avatarImageUrl);
         const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
 
         // Create temporary contact with multiplePhotoURLs for gallery
-        const galleryContact = { ...contact, multiplePhotoURLs: galleryPhotos };
+        const galleryContact = { ...contact, multiplePhotoURLs: validPhotos } as Contact;
         openGalleryPhotoModal(photoModal, galleryContact, photoIndex);
       } else {
         // Single photo fallback
@@ -179,7 +183,7 @@ export function ContactDetailsHeader({
 
   // 🎯 INLINE EDITING: Handle name updates
   const handleNameUpdate = async (newName: string) => {
-    if (!newName.trim()) return; // Don't save empty names
+    if (!newName.trim() || !contact.id) return; // Don't save empty names or without ID
 
     try {
       // Determine which field to update based on contact type

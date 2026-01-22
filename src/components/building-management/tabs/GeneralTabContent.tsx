@@ -24,10 +24,10 @@ export function GeneralTabContent({ building }: { building: Building }) {
     name: building.name,
     description: building.description || '',
     totalArea: building.totalArea,
-    builtArea: building.builtArea,
+    builtArea: building.builtArea ?? 0,
     floors: building.floors,
-    units: building.units,
-    totalValue: building.totalValue,
+    units: building.units ?? 0,
+    totalValue: building.totalValue ?? 0,
     startDate: building.startDate || '',
     completionDate: building.completionDate || '',
     address: building.address || '',
@@ -66,12 +66,14 @@ export function GeneralTabContent({ building }: { building: Building }) {
   const updateField = (field: string, value: string | number) => {
     setFormData(prev => {
         const newState = { ...prev, [field]: value };
-        if (field === 'totalArea' && value > 0 && prev.builtArea === 0) {
-            return { ...newState, builtArea: Math.round(value * 0.8) };
+        // 🏢 ENTERPRISE: Safe numeric check for auto-calculation
+        const numericValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+        if (field === 'totalArea' && numericValue > 0 && prev.builtArea === 0) {
+            return { ...newState, builtArea: Math.round(numericValue * 0.8) };
         }
         return newState;
     });
-    
+
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -110,7 +112,7 @@ export function GeneralTabContent({ building }: { building: Building }) {
         errors={errors}
       />
       <ProgressCard progress={building.progress} />
-      <BuildingUnitsTable buildingId={building.id} />
+      <BuildingUnitsTable buildingId={String(building.id)} />
       <FilesCard />
       <LegalInfoCard />
       <SettingsCard />

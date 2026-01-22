@@ -14,8 +14,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Proper type safety - Zero 'any' tolerance
 export interface Milestone {
-    id: string;
-    status: 'completed' | 'in-progress' | 'pending' | 'delayed';
+    id: string | number;
+    status: 'completed' | 'in-progress' | 'pending' | 'delayed' | string;
     title: string;
     type: string;
     date: string;
@@ -23,11 +23,14 @@ export interface Milestone {
     progress?: number;
 }
 
+// 🏢 ENTERPRISE: LucideIcon type for icon components
+type LucideIconType = React.ComponentType<{ className?: string }>;
+
 interface MilestoneItemProps {
     milestone: Milestone;
     getStatusColor: (status: string) => string;
     getStatusText: (status: string) => string;
-    getTypeIcon: (type: string) => string;
+    getTypeIcon: (type: string) => LucideIconType;
 }
 
 export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTypeIcon }: MilestoneItemProps) {
@@ -80,7 +83,7 @@ export function MilestoneItem({ milestone, getStatusColor, getStatusText, getTyp
                 </p>
 
                 <ThemeProgressBar
-                    progress={milestone.progress}
+                    progress={milestone.progress ?? 0}
                     label={t('tabs.timeline.milestone.progressLabel')}
                     size="sm"
                     showPercentage={true}

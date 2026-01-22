@@ -4,6 +4,8 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { CommonBadge } from '@/core/badges';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 interface DetailsCardProps {
     title: string;
@@ -16,15 +18,16 @@ interface DetailsCardProps {
 
 export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorData = false, isThreeColumnGrid = false }: DetailsCardProps) {
     const iconSizes = useIconSizes();
+    const spacing = useSpacingTokens();
     
     if (isThreeColumnGrid) {
         return (
             <Card className="lg:col-span-2">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
                     <CardTitle className="text-sm font-medium">{title}</CardTitle>
                     <Icon className={`${iconSizes.sm} text-muted-foreground`} />
                 </CardHeader>
-                <CardContent>
+                <CardContent className={`${spacing.padding.sm} pt-0`}>
                     <div className="grid grid-cols-3 gap-4 text-center">
                         {Object.entries(data).map(([label, count]) => (
                             <div key={label}>
@@ -40,11 +43,11 @@ export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorDa
     
     return (
         <Card className={isFloorData ? "" : "lg:col-span-2"}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
                 <Icon className={`${iconSizes.sm} text-muted-foreground`} />
             </CardHeader>
-            <CardContent>
+            <CardContent className={`${spacing.padding.sm} pt-0`}>
                 <div className={isFloorData ? "space-y-2" : "flex flex-wrap gap-2"}>
                     {Object.entries(data).slice(0, isFloorData ? 5 : undefined).map(([key, count]) => (
                         isFloorData ? (

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { StatsCard } from './StatsCard';
+// 🏢 ENTERPRISE: Centralized layout classes
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 
 interface DashboardStat {
   title: string;
@@ -28,14 +30,19 @@ interface UnifiedDashboardProps {
 export function UnifiedDashboard({
   stats,
   columns = 6,
-  className = "p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20",
+  className,
   additionalContainers,
   onCardClick,
   title,
   variant
 }: UnifiedDashboardProps) {
+  // 🏢 ENTERPRISE: Centralized layout classes
+  const layout = useLayoutClasses();
 
   const [isMobile, setIsMobile] = useState(false);
+
+  // Default dashboard styling with centralized tokens
+  const defaultClassName = `${layout.dashboardPadding} border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20`;
 
   useEffect(() => {
     const checkMobile = () => {
@@ -66,9 +73,9 @@ export function UnifiedDashboard({
   };
 
   return (
-    <div className={className}>
+    <div className={className || defaultClassName}>
       <div
-        className={`grid ${getGridClass(columns)} gap-1 sm:gap-4 w-full min-w-0 overflow-hidden`}
+        className={`grid ${getGridClass(columns)} ${layout.dashboardGridGap} w-full min-w-0 overflow-hidden`}
         style={getGridStyle()}
       >
         {stats.map((stat, index) => (
@@ -85,7 +92,7 @@ export function UnifiedDashboard({
 
       {/* Additional containers section */}
       {additionalContainers && (
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        <div className={`${layout.sectionMarginTop} grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 ${layout.dashboardGridGap}`}>
           {additionalContainers}
         </div>
       )}

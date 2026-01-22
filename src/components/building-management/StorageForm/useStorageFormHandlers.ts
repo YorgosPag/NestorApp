@@ -52,7 +52,7 @@ export function useStorageFormHandlers({
                 building: formData.building!,
                 project: formData.project!,
                 company: formData.company!,
-                linkedProperty: formData.linkedProperty,
+                linkedProperty: formData.linkedProperty ?? null,
                 coordinates: formData.coordinates!,
                 features: formData.features!
             };

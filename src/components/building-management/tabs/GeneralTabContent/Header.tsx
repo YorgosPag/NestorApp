@@ -13,7 +13,7 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface HeaderProps {
-    building: { id: string; category: string };
+    building: { id: string; category?: 'mixed' | 'residential' | 'commercial' | 'industrial' };
     isEditing: boolean;
     autoSaving: boolean;
     lastSaved: Date | null;
@@ -28,7 +28,8 @@ export function Header({ building, isEditing, autoSaving, lastSaved, setIsEditin
   const iconSizes = useIconSizes();
 
   // 🏢 ENTERPRISE: i18n-enabled category label mapping
-  const getCategoryLabel = (category: string): string => {
+  const getCategoryLabel = (category?: string): string => {
+    if (!category) return t('categories.unknown');
     const categoryKey = `categories.${category}`;
     return t(categoryKey);
   };

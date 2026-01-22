@@ -30,10 +30,14 @@ export function FormRowInputNew({
   disabled = false,
   name
 }: Props) {
+  // 🏢 ENTERPRISE: Generate unique id from name/label
+  const fieldId = name || label.toLowerCase().replace(/\s+/g, '_');
+
   return (
     <UnifiedFormField
+      id={fieldId}
       label={label}
-      name={name || label.toLowerCase().replace(/\s+/g, '_')}
+      name={fieldId}
       type={type === 'number' ? 'number' : 'text'}
       value={value}
       onChange={onChange}
@@ -42,7 +46,7 @@ export function FormRowInputNew({
       disabled={disabled}
       helpText={helper}
       error={error}
-      suffix={trailingElement}
+      unit={typeof trailingElement === 'string' ? trailingElement : undefined}
       variant="default"
       size="md"
     />
