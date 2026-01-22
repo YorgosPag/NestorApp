@@ -6,6 +6,8 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 interface StatsCardProps {
     title: string;
@@ -19,6 +21,7 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
     // Enterprise semantic color mapping
     const colorClasses = {
         blue: `${getStatusBorder('info')} ${colors.bg.infoSubtle} ${colors.text.info}`,
@@ -68,7 +71,7 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
             className={`${colorClasses[colorKey]} ${onClick ? `cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}` : ''} min-w-0 max-w-full overflow-hidden`}
             onClick={onClick}
         >
-            <CardContent className="p-2 sm:p-4 min-w-0">
+            <CardContent className={`${spacing.padding.sm} min-w-0`}>
                 <div className="flex items-center justify-between min-w-0 max-w-full">
                     <div className="min-w-0 flex-1 mr-1 sm:mr-2 overflow-hidden">
                         <p className={`text-xs font-medium ${colorClasses[colorKey]} truncate leading-tight`}>{title}</p>

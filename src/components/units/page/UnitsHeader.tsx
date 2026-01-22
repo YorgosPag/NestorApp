@@ -18,6 +18,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 export type UnitsViewMode = 'list' | 'grid';
 
@@ -50,6 +52,7 @@ export function UnitsHeader({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
   return (
     <PageHeader
         variant="sticky-rounded"
@@ -82,7 +85,7 @@ export function UnitsHeader({
             <button
               key="mobile-filter"
               onClick={() => setShowFilters(!showFilters)}
-              className={`md:hidden p-2 rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+              className={`md:hidden ${spacing.padding.sm} rounded-md ${TRANSITION_PRESETS.STANDARD_COLORS} ${
                 showFilters
                   ? `bg-primary text-primary-foreground ${quick.focus}`
                   : `${colors.bg.primary} ${quick.input} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`

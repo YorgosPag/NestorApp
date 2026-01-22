@@ -9,6 +9,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from 'react-i18next';
 
 import { UnitsList } from '@/components/units/UnitsList';
@@ -43,6 +45,7 @@ export function UnitsSidebar({
   const emptyStateMessages = useEmptyStateMessages();
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
+  const spacing = useSpacingTokens();
 
   const {
     safeFloors,
@@ -91,7 +94,7 @@ export function UnitsSidebar({
   return (
     <>
       {/* 🖥️ DESKTOP: Standard split layout */}
-      <div className={`hidden md:flex flex-1 ${layout.flexGap4} min-h-0`}>
+      <div className={`hidden md:flex flex-1 ${layout.listItemsGap} min-h-0`}>
         <UnitsList
           units={units}
           selectedUnitIds={selectedUnitIds}
@@ -120,14 +123,14 @@ export function UnitsSidebar({
           <>
             <button
               onClick={() => {/* TODO: Edit unit handler */}}
-              className={`p-2 rounded-md ${quick.input} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
+              className={`${spacing.padding.sm} rounded-md ${quick.input} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
               aria-label={t('mobile.editUnit')}
             >
               <Edit className={iconSizes.sm} />
             </button>
             <button
               onClick={() => {/* TODO: Delete unit handler */}}
-              className={`p-2 rounded-md ${quick.error} ${colors.bg.primary} text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
+              className={`${spacing.padding.sm} rounded-md ${quick.error} ${colors.bg.primary} text-destructive ${INTERACTIVE_PATTERNS.ACCENT_HOVER} ${TRANSITION_PRESETS.FAST_COLORS}`}
               aria-label={t('mobile.deleteUnit')}
             >
               <Trash2 className={iconSizes.sm} />

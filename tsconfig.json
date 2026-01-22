@@ -20,6 +20,7 @@
     "node_modules",
     ".next",
     "-.next",
+    "functions/**",
     "src/subapps/dxf-viewer/patches/**",
     "src/subapps/dxf-viewer/archive/**",
     "src/subapps/dxf-viewer-10-backup/**",

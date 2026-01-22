@@ -9,6 +9,8 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized layout classes
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { HEADER_THEME } from '../constants';
 import { HeaderTitle } from './HeaderTitle';
 import { HeaderSearch } from './HeaderSearch';
@@ -116,20 +118,23 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   layout = 'multi-row',
   spacing = 'normal'
 }) => {
+  // 🏢 ENTERPRISE: Centralized layout classes
+  const layoutTokens = useLayoutClasses();
+
   // Base classes for different variants
   const variantClasses = {
     sticky: "border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50",
     static: "border-b bg-card",
     floating: "rounded-lg border bg-card shadow-sm",
-    "sticky-rounded": "rounded-lg border bg-card/50 backdrop-blur-sm sticky top-0 z-50 shadow-sm mx-1 mt-1 sm:mx-4 sm:mt-4"
+    "sticky-rounded": `rounded-lg border bg-card/50 backdrop-blur-sm sticky top-0 z-50 shadow-sm ${layoutTokens.pageHeaderMargins}`
   };
 
-  // Spacing classes - UNIFIED MOBILE-FIRST SYSTEM
+  // Spacing classes - UNIFIED MOBILE-FIRST SYSTEM (using centralized tokens)
   const spacingClasses = {
-    tight: "px-1 py-2 sm:px-2 sm:py-2",
-    normal: "px-1 py-4 sm:px-4 sm:py-4",
+    tight: layoutTokens.pageHeaderPaddingTight,    // px-1 py-2 sm:px-2 sm:py-2 (8px)
+    normal: layoutTokens.pageHeaderPaddingNormal,  // px-1 py-4 sm:px-4 sm:py-4
     loose: "px-1 py-6 sm:px-6 sm:py-6",
-    compact: "px-3 py-2 sm:px-4 sm:py-3"
+    compact: layoutTokens.pageHeaderPaddingTight   // px-1 py-2 sm:px-2 sm:py-2 (8px)
   };
 
   // Layout classes with mobile-first responsive design

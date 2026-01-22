@@ -247,9 +247,10 @@ export function useUnitsViewerState() {
     reserved: safeProperties.filter(p => p.status === 'reserved').length,
   }), [safeProperties]);
 
-  const handleFiltersChange = (newFilters: Partial<FilterState>) => {
+  // 🏢 ENTERPRISE: Flexible filter handler compatible with AdvancedFiltersPanel
+  const handleFiltersChange = (newFilters: Partial<FilterState> | Record<string, unknown>) => {
     if (setFilters) {
-      setFilters((prev: FilterState) => ({ ...prev, ...newFilters }));
+      setFilters((prev: FilterState) => ({ ...prev, ...newFilters } as FilterState));
     }
   };
 

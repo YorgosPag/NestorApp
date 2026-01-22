@@ -20,6 +20,8 @@ import { cn } from '@/lib/utils';
 import type { HeaderViewToggleProps, ViewMode } from '../types';
 import { HEADER_THEME, VIEW_MODE_CONFIG } from '../constants';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
   viewMode,
@@ -28,6 +30,7 @@ export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
   className
 }) => {
   const iconSizes = useIconSizes();
+  const spacing = useSpacingTokens();
   const getViewIcon = (mode: ViewMode) => {
     const iconMap = {
       list: List,
@@ -60,6 +63,7 @@ export const MobileHeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
 
   const buttonClasses = cn(
     HEADER_THEME.components.viewToggle.mobile,
+    spacing.padding.x.sm,
     className
   );
 

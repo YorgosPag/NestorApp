@@ -77,7 +77,7 @@ export function BuildingTabs({ building }: BuildingTabsProps) {
             data={building}
             componentMapping={BUILDING_COMPONENT_MAPPING}
             defaultTab="general"
-            theme="clean"
+            theme="default"
             // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
             translationNamespace="building"
             additionalData={{

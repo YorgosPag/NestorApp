@@ -28,8 +28,8 @@ import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-// Generic User interface for the UserCard
-interface UserProfile {
+// 🏢 ENTERPRISE: Generic User interface for the UserCard - exported for type reuse
+export interface UserProfile {
   id: string;
   name: string;
   email?: string;

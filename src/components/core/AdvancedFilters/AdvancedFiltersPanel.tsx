@@ -13,6 +13,8 @@ import type { FilterPanelConfig, GenericFilterState } from './types';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized layout classes
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -34,6 +36,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const layout = useLayoutClasses();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(defaultOpen);
 
@@ -75,10 +78,10 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   };
 
   return (
-    <div className="px-1 pt-4 sm:px-4 sm:pt-4 shrink-0 w-full overflow-hidden">
+    <div className={`${layout.filterPaddingResponsive} shrink-0 w-full overflow-hidden`}>
       <Collapsible open={isPanelOpen} onOpenChange={setIsPanelOpen} className={`${quick.card} bg-card`}>
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" className="w-full justify-start p-4 text-sm font-semibold">
+          <Button variant="ghost" className={`w-full justify-start ${layout.filterButtonPadding} text-sm font-semibold`}>
             <Filter className={`${iconSizes.sm} mr-2`} />
             {/* 🏢 ENTERPRISE: Support both translation keys and direct labels */}
             {config.title.startsWith('filters.') ? t(config.title) : config.title}
@@ -86,10 +89,10 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <Card className="w-full bg-card/50 border-none shadow-none">
-            <CardContent className="space-y-4 p-2">
+            <CardContent className={`${layout.filterContentGap} ${layout.filterContentPadding}`}>
               {/* Render filter rows */}
               {config.rows.map(row => (
-                <div key={row.id} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1 sm:gap-4 items-end w-full min-w-0 overflow-hidden">
+                <div key={row.id} className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 ${layout.filterGridGap} items-end w-full min-w-0 overflow-hidden`}>
                   {row.fields.map(field => (
                     <FilterField
                       key={field.id}
@@ -111,8 +114,8 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                       {showAdvanced ? t('filters.hideAdvanced') : t('filters.showAdvanced')}
                     </Button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className={`mt-4 p-4 ${quick.card} ${colors.bg.primary} animate-in fade-in-0 zoom-in-95`}>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-4 w-full min-w-0 overflow-hidden">
+                  <CollapsibleContent className={`mt-2 ${layout.filterContentPadding} ${quick.card} ${colors.bg.primary} animate-in fade-in-0 zoom-in-95`}>
+                    <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 ${layout.filterGridGap} w-full min-w-0 overflow-hidden`}>
                       {config.advancedFilters.options.map(option => (
                         <div key={option.id} className="flex items-center space-x-2">
                           <Checkbox

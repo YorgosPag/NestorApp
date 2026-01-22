@@ -50,8 +50,8 @@ export function ContactsList({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [togglingFavorites, setTogglingFavorites] = useState<Set<string>>(new Set());
 
-  // CompactToolbar state
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  // 🏢 ENTERPRISE: CompactToolbar state - using string[] for contact IDs
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);

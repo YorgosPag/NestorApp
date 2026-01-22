@@ -10,19 +10,20 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export function ToolbarShowcase() {
   const colors = useSemanticColors();
-  // Shared state για demonstration
+  // 🏢 ENTERPRISE: Shared state για demonstration - using string[] for IDs
   const [buildingState, setBuildingState] = useState({
-    selectedItems: [] as number[],
+    selectedItems: [] as string[],
     searchTerm: '',
     activeFilters: [] as string[]
   });
-  
+
+  // 🏢 ENTERPRISE: ProjectToolbar uses number[] for IDs
   const [projectState, setProjectState] = useState({
     selectedItems: [] as number[],
     searchTerm: '',
     activeFilters: [] as string[]
   });
-  
+
   const [contactState, setContactState] = useState({
     selectedItems: [] as string[],
     searchTerm: '',
@@ -51,9 +52,9 @@ export function ToolbarShowcase() {
             onSearchChange={(term) => setBuildingState(prev => ({ ...prev, searchTerm: term }))}
             activeFilters={buildingState.activeFilters}
             onFiltersChange={(filters) => setBuildingState(prev => ({ ...prev, activeFilters: filters }))}
-            onNewBuilding={() => {}}
-            onEditBuilding={(id) => {}}
-            onDeleteBuilding={(ids) => {}}
+            onNewBuilding={() => console.log('New building')}
+            onEditBuilding={() => console.log('Edit building')}
+            onDeleteBuilding={(ids) => console.log('Delete buildings:', ids)}
             onExport={() => console.log('Export buildings')}
             onRefresh={() => console.log('Refresh buildings')}
           />
@@ -65,7 +66,7 @@ export function ToolbarShowcase() {
               <div>Filters: {buildingState.activeFilters.join(', ') || 'None'}</div>
               <button 
                 className="mt-2 px-3 py-1 bg-primary text-primary-foreground rounded text-xs"
-                onClick={() => setBuildingState(prev => ({ ...prev, selectedItems: [1, 2, 3] }))}
+                onClick={() => setBuildingState(prev => ({ ...prev, selectedItems: ['bld1', 'bld2', 'bld3'] }))}
               >
                 Simulate Selection (3 items)
               </button>
@@ -122,7 +123,7 @@ export function ToolbarShowcase() {
             activeFilters={contactState.activeFilters}
             onFiltersChange={(filters) => setContactState(prev => ({ ...prev, activeFilters: filters }))}
             onNewContact={() => console.log('New contact')}
-            onEditContact={(id) => console.log('Edit contact:', id)}
+            onEditContact={() => console.log('Edit contact')}
             onDeleteContact={(ids) => console.log('Delete contacts:', ids)}
             onExport={() => console.log('Export contacts')}
             onRefresh={() => console.log('Refresh contacts')}

@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 // ===== TYPES & INTERFACES =====
 
@@ -69,17 +71,18 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
   children
 }) => {
   const iconSizes = useIconSizes();
+  const spacing = useSpacingTokens();
 
   const variantClasses = {
     default: "p-4",
     compact: "p-3",
-    detailed: "p-6"
+    detailed: spacing.padding.sm  // 🏢 ENTERPRISE: Centralized 8px padding
   };
 
   const iconSizeClasses = {
     default: iconSizes.xl2,
     compact: iconSizes.xl,
-    detailed: iconSizes.xl3
+    detailed: iconSizes.lg  // 🏢 ENTERPRISE: Μικρότερο εικονίδιο (όπως το PageHeader)
   };
 
   const titleSizes = {
@@ -115,7 +118,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
               <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600">
                 <Icon className={cn(
                   "text-white",
-                  variant === 'detailed' ? iconSizes.lg :
+                  variant === 'detailed' ? iconSizes.sm :  // 🏢 ENTERPRISE: Μικρότερο εικονίδιο (όπως το PageHeader)
                   variant === 'compact' ? iconSizes.sm :
                   iconSizes.md
                 )} />
@@ -130,7 +133,7 @@ export const EntityDetailsHeader: React.FC<EntityHeaderProps> = ({
             >
               <Icon className={cn(
                 "text-white",
-                variant === 'detailed' ? iconSizes.lg :
+                variant === 'detailed' ? iconSizes.sm :  // 🏢 ENTERPRISE: Μικρότερο εικονίδιο (όπως το PageHeader)
                 variant === 'compact' ? iconSizes.sm :
                 iconSizes.md
               )} />
@@ -238,12 +241,13 @@ const EntityAction: React.FC<EntityHeaderAction> = ({
   className
 }) => {
   const iconSizes = useIconSizes();
+  const spacing = useSpacingTokens();
   return (
     <Button
       variant={variant}
       size="sm"
       onClick={onClick}
-      className={cn("h-8", className)}
+      className={cn("h-8", spacing.padding.x.sm, className)}
     >
       {Icon && <Icon className={`${iconSizes.sm} mr-2`} />}
       {label}

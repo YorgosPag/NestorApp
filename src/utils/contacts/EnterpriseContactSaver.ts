@@ -49,7 +49,7 @@ export class EnterpriseContactSaver {
    * @param formData - Form data with flat fields
    * @returns Enterprise contact data with arrays
    */
-  static convertToEnterpriseStructure(formData: ContactFormData): EnterpriseContactData {
+  static convertToEnterpriseStructure(formData: Partial<ContactFormData>): EnterpriseContactData {
     console.log('🏢 ENTERPRISE SAVER: Converting form data to arrays structure');
 
     const enterpriseData = { ...formData };
@@ -193,7 +193,7 @@ export class EnterpriseContactSaver {
    * @param formData - New form data
    * @returns Updated contact with merged arrays
    */
-  static updateExistingContact(existingContact: Contact, formData: ContactFormData): EnterpriseContactData {
+  static updateExistingContact(existingContact: Contact, formData: Partial<ContactFormData>): EnterpriseContactData {
     console.log('🔄 ENTERPRISE SAVER: Updating existing contact with new data');
 
     const updatedData = { ...existingContact };

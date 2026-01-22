@@ -11,6 +11,8 @@ import type { Property } from '@/types/property-viewer';
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { EntityListColumn } from '@/core/containers';
 import { matchesSearchTerm } from '@/lib/search/search';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -31,6 +33,8 @@ export function UnitsList({
 }: UnitsListProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('units');
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
   const [favorites, setFavorites] = useState<string[]>(['prop-1']);
   const [sortBy, setSortBy] = useState<UnitSortKey>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -232,7 +236,7 @@ export function UnitsList({
       />
 
       <ScrollArea className="flex-1">
-        <div className="p-2 space-y-2">
+        <div className={`${spacing.padding.sm} ${spacing.spaceBetween.sm}`}>
           {sortedUnits.map((unit) => (
             <UnitListCard
               key={unit.id}

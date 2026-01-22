@@ -20,7 +20,7 @@
 
 import { useMemo } from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useDynamicElementClasses, getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { useDynamicElementClasses, getDynamicBackgroundClass, getDynamicElementClasses } from '@/components/ui/utils/dynamic-styles';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -227,22 +227,12 @@ export function useNearbyProjectMarkerStyles(
 
     const statusColor = statusColorMap[status as keyof typeof statusColorMap] || colors.bg.warning;
 
-    // 🚀 ENTERPRISE BREAKTHROUGH: Auto-generated positioning CSS class
-    const dynamicPositioningClass = getDynamicElementClasses({
-      // This creates auto-generated CSS with actual positioning
-      position: 'absolute',
-      top: position.top,
-      left: position.left,
-      zIndex: 10,
-      transform: 'translate(-50%, -50%)'
-    });
-
     return {
-      // 🎯 ENTERPRISE: Dynamic positioning via auto-generated CSS - ZERO inline styles
+      // 🎯 ENTERPRISE: CSS arbitrary values for dynamic positioning - ZERO inline styles
       containerClass: cn(
-        // Base positioning from auto-generated CSS
-        dynamicPositioningClass || 'absolute z-10 transform -translate-x-1/2 -translate-y-1/2',
-        // Fallback with CSS arbitrary values for reliable positioning
+        // Base positioning classes
+        'absolute z-10 transform -translate-x-1/2 -translate-y-1/2',
+        // CSS arbitrary values for reliable positioning
         `[top:${position.top}] [left:${position.left}]`
       ),
 

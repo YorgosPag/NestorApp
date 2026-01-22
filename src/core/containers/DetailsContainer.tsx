@@ -21,14 +21,15 @@ function DefaultEmptyState({
   description
 }: EmptyStateProps) {
   const iconSizes = useIconSizes();
+  const spacing = useSpacingTokens();
   const { t } = useTranslation('common');
 
   // 🏢 ENTERPRISE: i18n-enabled default values
   const displayTitle = title || t('emptyState.selectItem.title');
   const displayDescription = description || t('emptyState.selectItem.description');
   return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-card border rounded-lg min-w-0 shadow-sm text-center p-8">
-      <Icon className={`${iconSizes.xl4} text-muted-foreground mb-4`} />
+    <div className={`flex-1 flex flex-col items-center justify-center bg-card border rounded-lg min-w-0 shadow-sm text-center ${spacing.padding.lg}`}>
+      <Icon className={`${iconSizes.xl4} text-muted-foreground ${spacing.margin.bottom.md}`} />
       <h2 className="text-xl font-semibold text-foreground">{displayTitle}</h2>
       <p className="text-muted-foreground">{displayDescription}</p>
     </div>

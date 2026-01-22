@@ -7,9 +7,15 @@ import type { Building } from '../../BuildingsPageContent';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
+// 🏢 ENTERPRISE: Milestone type with date for calculations
+interface MilestoneWithDate {
+    status: string;
+    date?: string;
+}
+
 interface OverallProgressCardProps {
     building: Building;
-    milestones: { status: string }[];
+    milestones: MilestoneWithDate[];
 }
 
 export function OverallProgressCard({ building, milestones }: OverallProgressCardProps) {
@@ -46,10 +52,13 @@ export function OverallProgressCard({ building, milestones }: OverallProgressCar
                     </div>
                     <div className="text-center">
                         <dd className="text-2xl font-bold text-purple-600">
-                            {milestones.find(m => m.status === 'in-progress')?.date ?
-                                Math.ceil((new Date(milestones.find(m => m.status === 'in-progress')!.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-                                : 0
-                            }
+                            {(() => {
+                                const inProgressMilestone = milestones.find(m => m.status === 'in-progress');
+                                if (inProgressMilestone?.date) {
+                                    return Math.ceil((new Date(inProgressMilestone.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                                }
+                                return 0;
+                            })()}
                         </dd>
                         <dt className="text-muted-foreground">{t('tabs.timeline.overallProgress.daysRemaining')}</dt>
                     </div>

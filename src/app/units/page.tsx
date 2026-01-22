@@ -346,7 +346,7 @@ function UnitsPageContent() {
         <div className="hidden md:block">
           <AdvancedFiltersPanel
             config={unitFiltersConfig}
-            filters={filters as UnitFilterState}
+            filters={filters as unknown as UnitFilterState}
             onFiltersChange={handleFiltersChange}
           />
         </div>
@@ -356,7 +356,7 @@ function UnitsPageContent() {
           <div className="md:hidden">
             <AdvancedFiltersPanel
               config={unitFiltersConfig}
-              filters={filters as UnitFilterState}
+              filters={filters as unknown as UnitFilterState}
               onFiltersChange={handleFiltersChange}
               defaultOpen={true}
             />

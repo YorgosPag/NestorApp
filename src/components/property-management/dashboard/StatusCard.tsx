@@ -6,6 +6,8 @@ import { Activity } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 interface StatusCardProps {
     statsByStatus: Record<string, number>;
@@ -16,6 +18,7 @@ export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
     const { t } = useTranslation('properties');
+    const spacing = useSpacingTokens();
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'sold': return colors.bg.success;
@@ -28,11 +31,11 @@ export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
     
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
                 <CardTitle className="text-sm font-medium">{t('dashboard.cards.unitStatus')}</CardTitle>
                 <Activity className={`${iconSizes.sm} text-muted-foreground`} />
             </CardHeader>
-            <CardContent>
+            <CardContent className={`${spacing.padding.sm} pt-0`}>
                 <div className="space-y-2">
                     {Object.entries(statsByStatus).map(([status, count]) => (
                         <div key={status} className="flex items-center justify-between">

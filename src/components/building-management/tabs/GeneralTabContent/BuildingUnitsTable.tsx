@@ -14,7 +14,7 @@ import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
+function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
   // 🏢 ENTERPRISE: Centralized icon sizes
@@ -35,7 +35,8 @@ function BuildingUnitsTable({ buildingId }: { buildingId: number }) {
             // 🏢 ENTERPRISE: Loading units μέσω centralized Building Relationship Engine
             console.log(`🏗️ ENTERPRISE BuildingUnitsTable: Loading units for building building-${buildingId}`);
             const buildingUnits = await buildingRelationships.getUnits();
-            setUnits(buildingUnits);
+            // 🏢 ENTERPRISE: Type assertion for relationship engine results
+            setUnits(buildingUnits as Property[]);
             console.log(`✅ ENTERPRISE BuildingUnitsTable: Loaded ${buildingUnits.length} units for building building-${buildingId}`);
 
         } catch (error) {

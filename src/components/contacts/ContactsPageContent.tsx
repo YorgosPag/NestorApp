@@ -12,6 +12,16 @@ import { getContactDisplayName } from '@/types/contacts';
 const hasMultiplePhotoURLs = (contact: Contact): contact is IndividualContact & { multiplePhotoURLs: string[] } => {
   return 'multiplePhotoURLs' in contact && Array.isArray((contact as IndividualContact).multiplePhotoURLs);
 };
+
+// 🏢 ENTERPRISE: Type-safe Firestore timestamp to Date conversion
+const toDate = (timestamp: Date | { toDate: () => Date } | undefined | null): Date | null => {
+  if (!timestamp) return null;
+  if (timestamp instanceof Date) return timestamp;
+  if (typeof timestamp === 'object' && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
+    return timestamp.toDate();
+  }
+  return null;
+};
 import { ContactsService } from '@/services/contacts.service';
 import { CONTACT_TYPES } from '@/constants/contacts';
 import { ContactsHeader } from './page/ContactsHeader';
@@ -408,7 +418,8 @@ export function ContactsPageContent() {
         case recentAdditionsTitle:
           const oneMonthAgo = new Date();
           oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-          if (!contact.createdAt || new Date(contact.createdAt) <= oneMonthAgo) return false;
+          const createdDate = toDate(contact.createdAt);
+          if (!createdDate || createdDate <= oneMonthAgo) return false;
           break;
         case favoritesTitle:
           if (!contact.isFavorite) return false;
@@ -494,7 +505,8 @@ export function ContactsPageContent() {
       value: contacts.filter(c => {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        return c.createdAt && new Date(c.createdAt) > oneMonthAgo;
+        const createdDate = toDate(c.createdAt);
+        return createdDate && createdDate > oneMonthAgo;
       }).length,
       icon: Calendar,
       color: "pink"
@@ -670,7 +682,7 @@ export function ContactsPageContent() {
           ) : viewMode === 'list' ? (
             <>
               {/* 🖥️ DESKTOP: Standard split layout - Same as Units/Projects/Buildings */}
-              <section className="hidden md:flex flex-1 gap-4 min-h-0" role="region" aria-label={t('page.views.desktopView')}>
+              <section className="hidden md:flex flex-1 gap-2 min-h-0" role="region" aria-label={t('page.views.desktopView')}>
                 <ContactsList
                   contacts={filteredContacts}
                   selectedContact={selectedContact}
