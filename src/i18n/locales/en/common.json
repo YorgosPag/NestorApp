@@ -82,6 +82,101 @@
         "parkingType": "Parking Type",
         "channel": "Channel"
       }
+    },
+    "tooltips": {
+      "filters": "Filters",
+      "favorites": "Add to favorites",
+      "archive": "Archive",
+      "exportData": "Export data",
+      "importData": "Import data",
+      "refreshData": "Refresh data",
+      "preview": "Preview",
+      "copy": "Copy",
+      "reports": "Reports",
+      "settings": "Settings",
+      "help": "Help",
+      "sorting": "Sorting"
+    },
+    "labels": {
+      "favoritesManagement": "Manage favorites",
+      "share": "Share",
+      "sorting": "Sorting"
+    },
+    "ui": {
+      "itemsSelected": "{count} selected",
+      "clearAllCount": "Clear ({count})"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "filters": "Filters",
+      "favorites": "Favorites",
+      "archive": "Archive",
+      "export": "Export",
+      "import": "Import",
+      "refresh": "Refresh",
+      "preview": "Preview",
+      "copy": "Copy",
+      "share": "Share",
+      "reports": "Reports",
+      "settings": "Settings",
+      "favoritesManagement": "Manage favorites",
+      "help": "Help",
+      "sorting": "Sorting",
+      "buildings": {
+        "edit": "Edit building",
+        "delete": "Delete building"
+      },
+      "projects": {
+        "edit": "Edit project",
+        "delete": "Delete project"
+      },
+      "units": {
+        "edit": "Edit unit",
+        "delete": "Delete unit"
+      },
+      "storage": {
+        "edit": "Edit storage",
+        "delete": "Delete storage"
+      }
+    },
+    "sort": {
+      "name": {
+        "asc": "Name ascending",
+        "desc": "Name descending"
+      },
+      "date": {
+        "asc": "Oldest first",
+        "desc": "Newest first"
+      },
+      "status": {
+        "asc": "Status (A-Z)",
+        "desc": "Status (Z-A)"
+      },
+      "channel": {
+        "asc": "Channel (A-Z)",
+        "desc": "Channel (Z-A)"
+      }
+    },
+    "communications": {
+      "important": "Important",
+      "markAsImportant": "Mark as important",
+      "channels": {
+        "all": "All channels",
+        "email": "Email",
+        "sms": "SMS",
+        "telegram": "Telegram"
+      },
+      "status": {
+        "all": "All statuses",
+        "sent": "Sent",
+        "received": "Received",
+        "pending": "Pending",
+        "failed": "Failed"
+      }
+    },
+    "search": {
+      "placeholder": "Search..."
     }
   },
   "header": {
@@ -192,7 +287,8 @@
     "newContact": "New Contact",
     "newUnit": "New Unit",
     "newStorage": "New Storage",
-    "newParking": "New Parking Space"
+    "newParking": "New Parking Space",
+    "newMessage": "New Message"
   },
   "unitStatus": {
     "sold": "Sold",
@@ -257,6 +353,8 @@
     "newContactShortcut": "New Contact (Ctrl+N)",
     "newUnitShortcut": "New Unit (Ctrl+N)",
     "newStorageShortcut": "New Storage (Ctrl+N)",
+    "newParkingShortcut": "New Parking Space (Ctrl+N)",
+    "newMessageShortcut": "New Message (Ctrl+N)",
     "editContact": "Edit selected contact",
     "editSelected": "Edit selected item",
     "deleteContact": "Delete selected contact",
@@ -1359,6 +1457,8 @@
   "headerActions": {
     "dashboard": "Dashboard",
     "toggleDashboard": "Show/Hide Dashboard",
+    "hideDashboard": "Hide Dashboard",
+    "showDashboard": "Show Dashboard",
     "createNew": "New {entity}",
     "createTooltip": "Create new {entity}",
     "entities": {

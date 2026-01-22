@@ -34,6 +34,7 @@ import { getRelationshipDisplayProps } from './utils/relationship-types';
 import type { RelationshipCardProps } from './types/relationship-manager.types';
 import { useContactName } from './hooks/useContactName';
 import { HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 

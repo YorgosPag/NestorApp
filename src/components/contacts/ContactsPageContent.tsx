@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import type { Contact, IndividualContact } from '@/types/contacts';
@@ -569,14 +569,18 @@ export function ContactsPageContent() {
                 {t('page.filterIndicator.selectedContact')}
               </span>
             </div>
-            <button
-              onClick={handleClearURLFilter}
-              className={`flex items-center space-x-1 px-2 py-1 text-sm ${colors.text.success} rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
-              title={t('page.filterIndicator.backToList')}
-            >
-              <X className={iconSizes.sm} />
-              <span>{t('page.filterIndicator.back')}</span>
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleClearURLFilter}
+                  className={`flex items-center space-x-1 px-2 py-1 text-sm ${colors.text.success} rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
+                >
+                  <X className={iconSizes.sm} />
+                  <span>{t('page.filterIndicator.back')}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t('page.filterIndicator.backToList')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       );
@@ -599,14 +603,18 @@ export function ContactsPageContent() {
                   : t('page.filterIndicator.contactsCountPlural', { count: filteredContacts.length })}
               </span>
             </div>
-            <button
-              onClick={handleClearURLFilter}
-              className={`flex items-center space-x-1 px-2 py-1 text-sm ${colors.text.info} rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
-              title={t('page.filterIndicator.showAll')}
-            >
-              <X className={iconSizes.sm} />
-              <span>{t('page.filterIndicator.clear')}</span>
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleClearURLFilter}
+                  className={`flex items-center space-x-1 px-2 py-1 text-sm ${colors.text.info} rounded ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_GHOST}`}
+                >
+                  <X className={iconSizes.sm} />
+                  <span>{t('page.filterIndicator.clear')}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t('page.filterIndicator.showAll')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       );

@@ -42,6 +42,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Import types
 import type { Property } from '@/types/property-viewer';
@@ -324,27 +325,35 @@ function LayerItem({
           {/* Right side - Controls */}
           <div className="flex items-center gap-1 ml-2">
             {/* Visibility */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`${iconSizes.md} p-0`}
-              onClick={onToggleVisibility}
-              title={layer.isVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}
-            >
-              {layer.isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.md} p-0`}
+                  onClick={onToggleVisibility}
+                >
+                  {layer.isVisible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{layer.isVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}</TooltipContent>
+            </Tooltip>
 
             {/* Lock */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`${iconSizes.md} p-0`}
-              onClick={onToggleLock}
-              disabled={layer.isSystem}
-              title={layer.isLocked ? t('layerManager.actions.unlock') : t('layerManager.actions.lock')}
-            >
-              {layer.isLocked ? <Lock className={iconSizes.xs} /> : <Unlock className={iconSizes.xs} />}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.md} p-0`}
+                  onClick={onToggleLock}
+                  disabled={layer.isSystem}
+                >
+                  {layer.isLocked ? <Lock className={iconSizes.xs} /> : <Unlock className={iconSizes.xs} />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{layer.isLocked ? t('layerManager.actions.unlock') : t('layerManager.actions.lock')}</TooltipContent>
+            </Tooltip>
             
             {/* More options */}
             <DropdownMenu>

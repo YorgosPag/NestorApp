@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/ui/search'; // 🏢 Enterprise centralized search - Same as navigation modal
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================================================
 // TYPES (Backward Compatibility)
@@ -102,16 +103,20 @@ export function GenericListHeader({
 
             {/* Right: Toolbar Toggle Button - Mobile Only */}
             {onToolbarToggle && (
-                <Button
-                    onClick={() => onToolbarToggle(!showToolbar)}
-                    size="sm"
-                    variant={showToolbar ? "default" : "outline"}
-                    className="h-8 px-2 flex-shrink-0 md:hidden"
-                    title={t('tooltips.toolbar')}
-                    aria-label="Toggle toolbar"
-                >
-                    <Settings className={iconSizes.xs} />
-                </Button>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            onClick={() => onToolbarToggle(!showToolbar)}
+                            size="sm"
+                            variant={showToolbar ? "default" : "outline"}
+                            className="h-8 px-2 flex-shrink-0 md:hidden"
+                            aria-label="Toggle toolbar"
+                        >
+                            <Settings className={iconSizes.xs} />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('tooltips.toolbar')}</TooltipContent>
+                </Tooltip>
             )}
         </div>
     );

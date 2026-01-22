@@ -101,16 +101,21 @@ export function PropertyDetailsContent({
       />
 
       {/* 🏢 ENTERPRISE: Building Selector για σύνδεση Μονάδας→Κτιρίου */}
-      {!isReadOnly && (
+      {/* 🎯 PR1.2: Hidden by default - requires explicit edit mode toggle */}
+      {/* TODO: Add edit mode toggle button to show BuildingSelectorCard */}
+      {/* When edit mode is implemented, uncomment and use: !isReadOnly && isEditMode && (...) */}
+      {/*
+      {!isReadOnly && isEditMode && (
         <BuildingSelectorCard
-          unitId={resolvedProperty.id}
-          currentBuildingId={resolvedProperty.buildingId}
+          unitId={resolvedProperty?.id ?? ''}
+          currentBuildingId={resolvedProperty?.buildingId}
           isEditing={true}
           onBuildingChanged={(newBuildingId) => {
-            console.log(`✅ Unit ${resolvedProperty.id} linked to building ${newBuildingId}`);
+            console.log(`✅ Unit ${resolvedProperty?.id} linked to building ${newBuildingId}`);
           }}
         />
       )}
+      */}
 
       {/* Share Button - Always visible for easy sharing */}
       <div className="flex justify-end">

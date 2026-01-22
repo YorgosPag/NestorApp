@@ -5,7 +5,7 @@ import { FormGrid } from '@/components/ui/form/FormComponents';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './utils/IconMapping';
-import { IndividualFormRenderer } from './IndividualFormRenderer';
+import { IndividualFormRenderer, type IndividualFormData, type CustomFieldRenderer } from './IndividualFormRenderer';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import type { IndividualSectionConfig } from '@/config/individual-config';
@@ -118,11 +118,11 @@ function createIndividualFormTabsFromConfig(
         <FormGrid>
           <IndividualFormRenderer
             sections={[section]} // Regular fields (like description)
-            formData={formData}
+            formData={formData as IndividualFormData} // 🏢 ENTERPRISE: Type assertion
             onChange={onChange}
             onSelectChange={onSelectChange}
             disabled={disabled}
-            customRenderers={customRenderers}
+            customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
           />
         </FormGrid>
       </div>

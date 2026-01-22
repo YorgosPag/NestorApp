@@ -34,7 +34,7 @@ export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
     return (
         <Card>
             <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
-                <CardTitle className="text-sm font-medium">{t('page.dashboard.unitStatus', { ns: 'properties' })}</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('page.dashboard.unitStatus')}</CardTitle>
                 <Activity className={`${iconSizes.sm} text-muted-foreground`} />
             </CardHeader>
             <CardContent className={`${spacing.padding.sm} pt-0`}>

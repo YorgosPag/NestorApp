@@ -4,14 +4,14 @@
     "loading": "Φόρτωση μονάδων...",
     "dashboard": {
       "totalUnits": "Σύνολο Μονάδων",
-      "soldUnits": "Πωληθείσες",
-      "totalValue": "Συνολική Αξία",
       "totalArea": "Συνολική Επιφάνεια",
       "uniqueBuildings": "Μοναδικά Κτίρια",
       "unitTypes": "Τύποι Μονάδων",
       "floorDistribution": "Κατανομή ανά Όροφο",
+      "unitStatus": "Λειτουργική Κατάσταση",
       "storages": "Αποθήκες",
-      "total": "Σύνολο"
+      "total": "Σύνολο",
+      "completeness": "Πληρότητα Τεκμηρίωσης"
     },
     "statusLabels": {
       "sold": "Πουλημένες",

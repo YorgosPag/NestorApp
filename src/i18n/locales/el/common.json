@@ -82,6 +82,101 @@
         "parkingType": "Τύπος Parking",
         "channel": "Κανάλι"
       }
+    },
+    "tooltips": {
+      "filters": "Φίλτρα",
+      "favorites": "Προσθήκη στα αγαπημένα",
+      "archive": "Αρχειοθέτηση",
+      "exportData": "Εξαγωγή δεδομένων",
+      "importData": "Εισαγωγή δεδομένων",
+      "refreshData": "Ανανέωση δεδομένων",
+      "preview": "Προεπισκόπηση",
+      "copy": "Αντιγραφή",
+      "reports": "Αναφορές",
+      "settings": "Ρυθμίσεις",
+      "help": "Βοήθεια",
+      "sorting": "Ταξινόμηση"
+    },
+    "labels": {
+      "favoritesManagement": "Διαχείριση αγαπημένων",
+      "share": "Κοινοποίηση",
+      "sorting": "Ταξινόμηση"
+    },
+    "ui": {
+      "itemsSelected": "{count} επιλεγμένα",
+      "clearAllCount": "Καθαρισμός ({count})"
+    },
+    "actions": {
+      "edit": "Επεξεργασία",
+      "delete": "Διαγραφή",
+      "filters": "Φίλτρα",
+      "favorites": "Αγαπημένα",
+      "archive": "Αρχειοθέτηση",
+      "export": "Εξαγωγή",
+      "import": "Εισαγωγή",
+      "refresh": "Ανανέωση",
+      "preview": "Προεπισκόπηση",
+      "copy": "Αντιγραφή",
+      "share": "Κοινοποίηση",
+      "reports": "Αναφορές",
+      "settings": "Ρυθμίσεις",
+      "favoritesManagement": "Διαχείριση αγαπημένων",
+      "help": "Βοήθεια",
+      "sorting": "Ταξινόμηση",
+      "buildings": {
+        "edit": "Επεξεργασία κτιρίου",
+        "delete": "Διαγραφή κτιρίου"
+      },
+      "projects": {
+        "edit": "Επεξεργασία έργου",
+        "delete": "Διαγραφή έργου"
+      },
+      "units": {
+        "edit": "Επεξεργασία μονάδας",
+        "delete": "Διαγραφή μονάδας"
+      },
+      "storage": {
+        "edit": "Επεξεργασία αποθήκης",
+        "delete": "Διαγραφή αποθήκης"
+      }
+    },
+    "sort": {
+      "name": {
+        "asc": "Αύξουσα κατά όνομα",
+        "desc": "Φθίνουσα κατά όνομα"
+      },
+      "date": {
+        "asc": "Παλαιότερα πρώτα",
+        "desc": "Νεότερα πρώτα"
+      },
+      "status": {
+        "asc": "Κατάσταση (Α-Ω)",
+        "desc": "Κατάσταση (Ω-Α)"
+      },
+      "channel": {
+        "asc": "Κανάλι (Α-Ω)",
+        "desc": "Κανάλι (Ω-Α)"
+      }
+    },
+    "communications": {
+      "important": "Σημαντικό",
+      "markAsImportant": "Σήμανση ως σημαντικό",
+      "channels": {
+        "all": "Όλα τα κανάλια",
+        "email": "Email",
+        "sms": "SMS",
+        "telegram": "Telegram"
+      },
+      "status": {
+        "all": "Όλες οι καταστάσεις",
+        "sent": "Απεσταλμένα",
+        "received": "Ληφθέντα",
+        "pending": "Εκκρεμή",
+        "failed": "Αποτυχημένα"
+      }
+    },
+    "search": {
+      "placeholder": "Αναζήτηση..."
     }
   },
   "header": {
@@ -192,7 +287,8 @@
     "newContact": "Νέα Επαφή",
     "newUnit": "Νέα Μονάδα",
     "newStorage": "Νέα Αποθήκη",
-    "newParking": "Νέα Θέση Στάθμευσης"
+    "newParking": "Νέα Θέση Στάθμευσης",
+    "newMessage": "Νέο Μήνυμα"
   },
   "unitStatus": {
     "sold": "Πωλήθηκε",
@@ -257,6 +353,8 @@
     "newContactShortcut": "Νέα Επαφή (Ctrl+N)",
     "newUnitShortcut": "Νέα Μονάδα (Ctrl+N)",
     "newStorageShortcut": "Νέα Αποθήκη (Ctrl+N)",
+    "newParkingShortcut": "Νέα Θέση Στάθμευσης (Ctrl+N)",
+    "newMessageShortcut": "Νέο Μήνυμα (Ctrl+N)",
     "editContact": "Επεξεργασία επιλεγμένης επαφής",
     "editSelected": "Επεξεργασία επιλεγμένου στοιχείου",
     "deleteContact": "Διαγραφή επιλεγμένης επαφής",
@@ -1359,6 +1457,8 @@
   "headerActions": {
     "dashboard": "Dashboard",
     "toggleDashboard": "Εμφάνιση/Απόκρυψη Dashboard",
+    "hideDashboard": "Απόκρυψη Dashboard",
+    "showDashboard": "Εμφάνιση Dashboard",
     "createNew": "Νέο {entity}",
     "createTooltip": "Δημιουργία νέου {entity}",
     "entities": {

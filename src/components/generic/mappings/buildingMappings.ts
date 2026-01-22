@@ -49,9 +49,9 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabCompone
   'PhotosTabContent': PhotosTabContent as ComponentType<TabComponentProps>,
   'VideosTabContent': VideosTabContent as ComponentType<TabComponentProps>,
   'PlaceholderTab': PlaceholderTab as ComponentType<TabComponentProps>,
-  'FloorplanViewerTab': FloorplanViewerTab as ComponentType<TabComponentProps>,
+  'FloorplanViewerTab': FloorplanViewerTab as unknown as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Double assertion for component with specific props
   'StorageTab': StorageTab as ComponentType<TabComponentProps>,
-  'BuildingCustomersTab': BuildingCustomersTab as ComponentType<TabComponentProps>,
+  'BuildingCustomersTab': BuildingCustomersTab as unknown as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Double assertion for component with specific props
 
   // 🏢 ENTERPRISE: Unified Factory aliases - same components, different names
   'BuildingGeneralTab': GeneralTabContent as ComponentType<TabComponentProps>,

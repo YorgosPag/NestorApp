@@ -11,6 +11,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n';
 import { GripVertical, ChevronRight, ChevronDown, FileText, Plus, Save, X, Copy, Trash2 } from 'lucide-react';
 import { RichTextEditor } from '@/components/obligations/rich-text-editor';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { ObligationSection, SectionCategory } from '@/types/obligations';
 import { categoryLabels } from '../config/categoryLabels';
@@ -117,8 +118,18 @@ export function SectionCard({
                 </>
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" onClick={() => handlers.addArticle(section.id)} className="h-8 px-2" title={t('section.addArticle')}><Plus className={iconSizes.sm} /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => handlers.duplicateSection(section.id)} className="h-8 px-2" title={t('section.duplicateSection')}><Copy className={iconSizes.sm} /></Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="sm" onClick={() => handlers.addArticle(section.id)} className="h-8 px-2"><Plus className={iconSizes.sm} /></Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('section.addArticle')}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="sm" onClick={() => handlers.duplicateSection(section.id)} className="h-8 px-2"><Copy className={iconSizes.sm} /></Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('section.duplicateSection')}</TooltipContent>
+                  </Tooltip>
                   <Button variant="ghost" size="sm" onClick={() => handlers.deleteSection(section.id)} className="h-8 px-2 text-destructive hover:text-destructive/80"><Trash2 className={iconSizes.sm} /></Button>
                 </>
               )}

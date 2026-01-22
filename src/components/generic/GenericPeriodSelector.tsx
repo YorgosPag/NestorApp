@@ -3,6 +3,7 @@
 import React from 'react';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PeriodConfig } from '@/config/period-selector-config';
 
 // ============================================================================
@@ -73,15 +74,18 @@ export function GenericPeriodSelector({
     <Tabs value={value} onValueChange={onChange} className={className}>
       <TabsList className="w-auto">
         {enabledPeriods.map(period => (
-          <TabsTrigger
-            key={period.id}
-            value={period.value}
-            disabled={disabled || period.enabled === false}
-            className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.BUTTON_ORANGE_GHOST}`}
-            title={period.description}
-          >
-            {period.label}
-          </TabsTrigger>
+          <Tooltip key={period.id}>
+            <TooltipTrigger asChild>
+              <TabsTrigger
+                value={period.value}
+                disabled={disabled || period.enabled === false}
+                className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.BUTTON_ORANGE_GHOST}`}
+              >
+                {period.label}
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent>{period.description}</TooltipContent>
+          </Tooltip>
         ))}
       </TabsList>
     </Tabs>

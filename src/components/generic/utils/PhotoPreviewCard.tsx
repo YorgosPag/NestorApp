@@ -140,7 +140,7 @@ export function PhotoPreviewCard({
       <CardContent className={showHeader ? '' : 'p-0'}>
         <div
           className={`relative rounded-lg p-6 ${height} w-full flex flex-col items-center justify-center text-center cursor-pointer transition-colors overflow-hidden ${getStatusBorder('muted')} border-dashed`}
-          style={usePhotoPreviewStyles(hasPhoto).dynamicColors}
+          style={usePhotoPreviewStyles(hasPhoto).dynamicColors as React.CSSProperties} // 🏢 ENTERPRISE: Type assertion for style object
           onClick={handleClick}
         >
           {hasPhoto ? (

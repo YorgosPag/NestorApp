@@ -88,6 +88,7 @@ export function ListCard({
   compact = false,
   hideIcon = false,
   hideStats = false,
+  inlineBadges = false,
   className,
   // Accessibility
   'aria-label': ariaLabel,
@@ -237,7 +238,7 @@ export function ListCard({
       {/* 🏢 HEADER: Icon + Title + Badges */}
       {/* ================================================================== */}
       <header className={cn('overflow-hidden', spacing.margin.bottom.sm)}>
-        {/* Row 1: Icon + Title */}
+        {/* Row 1: Icon + Title (+ inline badges if enabled) */}
         <div className={`flex items-center ${spacing.gap.sm}`}>
           {/* Entity Icon */}
           {!hideIcon && (entityType || customIcon) && (
@@ -251,15 +252,38 @@ export function ListCard({
 
           {/* Title & Subtitle - 🏢 ENTERPRISE: Using centralized typography */}
           <div className="flex-1 min-w-0 overflow-hidden">
-            <h3
-              className={cn(
-                'truncate',
-                compact ? typography.card.titleCompact : typography.card.title,
-                colors.text.primary
+            {/* 🏢 PR1.2: Inline badges support - Title + Badge on same row */}
+            <div className={cn('flex items-center', spacing.gap.sm)}>
+              <h3
+                className={cn(
+                  'truncate',
+                  compact ? typography.card.titleCompact : typography.card.title,
+                  colors.text.primary,
+                  inlineBadges ? 'flex-shrink' : ''
+                )}
+              >
+                {title}
+              </h3>
+
+              {/* Inline badges (when inlineBadges=true) */}
+              {inlineBadges && badges.length > 0 && (
+                <>
+                  {badges.slice(0, 1).map((badge, index) => (
+                    <span
+                      key={`inline-${badge.label}-${index}`}
+                      className={cn(
+                        'px-1.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0',
+                        getBadgeClasses(badge.variant),
+                        badge.className
+                      )}
+                    >
+                      {badge.label}
+                    </span>
+                  ))}
+                </>
               )}
-            >
-              {title}
-            </h3>
+            </div>
+
             {subtitle && (
               <p
                 className={cn(
@@ -274,8 +298,8 @@ export function ListCard({
           </div>
         </div>
 
-        {/* Row 2: Badges (separate row to prevent overflow) */}
-        {badges.length > 0 && (
+        {/* Row 2: Badges (separate row when NOT inline) */}
+        {!inlineBadges && badges.length > 0 && (
           <div className={cn(`flex items-center ${spacing.gap.sm} ${spacing.margin.top.sm} overflow-hidden`)}>
             {badges.slice(0, 2).map((badge, index) => (
               <span

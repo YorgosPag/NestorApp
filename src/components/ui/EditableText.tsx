@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface EditableTextProps {
   /** Current text value */
@@ -111,24 +112,32 @@ export function EditableText({
           className={cn("flex-1", inputClassName)}
           maxLength={maxLength}
         />
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleSave}
-          className={`${iconSizes.xl} p-0`}
-          title={t('buttons.save')}
-        >
-          <Check className={iconSizes.sm} />
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={handleCancel}
-          className={`${iconSizes.xl} p-0`}
-          title={t('buttons.cancel')}
-        >
-          <X className={iconSizes.sm} />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSave}
+              className={`${iconSizes.xl} p-0`}
+            >
+              <Check className={iconSizes.sm} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('buttons.save')}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCancel}
+              className={`${iconSizes.xl} p-0`}
+            >
+              <X className={iconSizes.sm} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('buttons.cancel')}</TooltipContent>
+        </Tooltip>
       </div>
     );
   }

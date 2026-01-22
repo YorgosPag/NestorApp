@@ -44,10 +44,20 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
   const spacing = useSpacingTokens();
 
   // 🏢 ENTERPRISE: Helper to translate option labels
-  // Supports both translation keys (e.g., 'filters.allStatuses') and direct values
+  // Supports both translation keys (e.g., 'units.operationalStatus.ready') and direct values
+  // 🎯 PR1.2: Auto-detect namespace from key prefix (e.g., 'units.x.y' → ns:'units', key:'x.y')
   const translateLabel = (label: string): string => {
     // If it's a translation key (contains a dot), translate it
     if (label.includes('.')) {
+      // Check if key has namespace prefix (e.g., 'units.operationalStatus.ready')
+      const parts = label.split('.');
+      const knownNamespaces = ['units', 'common', 'navigation', 'properties', 'building', 'filters'];
+      if (parts.length >= 2 && knownNamespaces.includes(parts[0])) {
+        const namespace = parts[0];
+        const key = parts.slice(1).join('.');
+        return t(key, { ns: namespace });
+      }
+      // Default: use current namespace (building)
       return t(label);
     }
     // Otherwise return as-is (for dynamic values like city names from env)

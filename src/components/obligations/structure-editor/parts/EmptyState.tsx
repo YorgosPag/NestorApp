@@ -20,7 +20,7 @@ export function EmptyState({ readOnly, onAddSection }: EmptyStateProps) {
   return (
     <Card>
       <CardContent className="text-center py-12">
-        <FileText className={`${iconSizes.huge} mx-auto mb-4 text-muted-foreground/50`} />
+        <FileText className={`${iconSizes.xl12} mx-auto mb-4 text-muted-foreground/50`} /> {/* 🏢 ENTERPRISE: Using xl12 (h-48 w-48) - 'huge' doesn't exist */}
         <h3 className="font-medium mb-2">{t('obligations.noSections')}</h3>
         <p className="text-sm text-muted-foreground mb-4">
           {t('obligations.startByAddingSection')}

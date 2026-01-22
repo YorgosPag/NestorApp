@@ -30,6 +30,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText, Copy, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFileDisplayName } from '@/hooks/useFileDisplayName'; // 🏢 ENTERPRISE: Runtime i18n translation
@@ -487,34 +488,42 @@ export function FilePathTree({
             {showTechnicalActions && (
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 {/* Copy Path button (NO inline display) */}
-                <button
-                  type="button"
-                  onClick={(e) => handleCopyPath(node.fileRecord, e)}
-                  className={cn(
-                    'p-1.5 rounded transition-colors',
-                    'hover:bg-muted text-muted-foreground hover:text-foreground',
-                    'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
-                  )}
-                  aria-label={t('technical.copyPath')}
-                  title={t('technical.copyPath')}
-                >
-                  <Copy className={iconSizes.xs} aria-hidden="true" />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => handleCopyPath(node.fileRecord, e)}
+                      className={cn(
+                        'p-1.5 rounded transition-colors',
+                        'hover:bg-muted text-muted-foreground hover:text-foreground',
+                        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
+                      )}
+                      aria-label={t('technical.copyPath')}
+                    >
+                      <Copy className={iconSizes.xs} aria-hidden="true" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('technical.copyPath')}</TooltipContent>
+                </Tooltip>
 
                 {/* Details button (opens Inspector) */}
-                <button
-                  type="button"
-                  onClick={(e) => handleOpenInspector(node.fileRecord, e)}
-                  className={cn(
-                    'p-1.5 rounded transition-colors',
-                    'hover:bg-muted text-muted-foreground hover:text-foreground',
-                    'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
-                  )}
-                  aria-label={t('technical.details')}
-                  title={t('technical.details')}
-                >
-                  <Info className={iconSizes.xs} aria-hidden="true" />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenInspector(node.fileRecord, e)}
+                      className={cn(
+                        'p-1.5 rounded transition-colors',
+                        'hover:bg-muted text-muted-foreground hover:text-foreground',
+                        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
+                      )}
+                      aria-label={t('technical.details')}
+                    >
+                      <Info className={iconSizes.xs} aria-hidden="true" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('technical.details')}</TooltipContent>
+                </Tooltip>
               </div>
             )}
           </div>

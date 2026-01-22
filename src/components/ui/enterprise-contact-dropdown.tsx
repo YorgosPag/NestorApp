@@ -24,6 +24,7 @@ import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effect
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================================================
 // TYPES
@@ -314,18 +315,22 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
 
             <div className="flex items-center space-x-1">
               {selectedContact && (
-                <button
-                  type="button"
-                  onClick={clearSelection}
-                  className={cn(
-                    `${iconSizes.sm} rounded-sm flex items-center justify-center text-muted-foreground`,
-                    INTERACTIVE_PATTERNS.SUBTLE_HOVER,
-                    TRANSITION_PRESETS.STANDARD_COLORS
-                  )}
-                  title={t('dropdown.clearSelection')}
-                >
-                  <X className={iconSizes.xs} />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={clearSelection}
+                      className={cn(
+                        `${iconSizes.sm} rounded-sm flex items-center justify-center text-muted-foreground`,
+                        INTERACTIVE_PATTERNS.SUBTLE_HOVER,
+                        TRANSITION_PRESETS.STANDARD_COLORS
+                      )}
+                    >
+                      <X className={iconSizes.xs} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('dropdown.clearSelection')}</TooltipContent>
+                </Tooltip>
               )}
               <ChevronDown className={cn(
                 iconSizes.sm,

@@ -13,8 +13,8 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
 
-/** Unit data type for the tabs renderer */
-export type UnitData = Record<string, unknown>;
+/** Unit data type for the tabs renderer - Must have id field for PhotosTabContentProps compatibility */
+export type UnitData = { id: string; name?: string; [key: string]: unknown };
 
 /** Floor data type */
 export type FloorData = Record<string, unknown>;

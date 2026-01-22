@@ -18,6 +18,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { HeaderActionsProps } from '../types';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // Local interface για compatibility με UnifiedHeaderSystem
 interface UnifiedHeaderActionsProps {
@@ -49,6 +51,8 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
   className
 }) => {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('common');
   const actionsClasses = cn(
     HEADER_THEME.components.actions.default,
     className
@@ -68,7 +72,9 @@ export const HeaderActions: React.FC<UnifiedHeaderActionsProps> = ({
               {showDashboard ? <EyeOff className={iconSizes.sm} /> : <Eye className={iconSizes.sm} />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{showDashboard ? 'Απόκρυψη' : 'Εμφάνιση'} Dashboard</TooltipContent>
+          <TooltipContent>
+            {showDashboard ? t('headerActions.hideDashboard') : t('headerActions.showDashboard')}
+          </TooltipContent>
         </Tooltip>
       )}
 

@@ -178,7 +178,7 @@ export function useUnitsViewerState() {
       id: `prop_${Date.now()}`,
       name: `Νέο Ακίνητο ${safeProperties.length + 1}`,
       type: 'Διαμέρισμα 2Δ',
-      status: 'draft', // Legacy field - will be removed
+      status: 'for-sale', // ⚠️ DEPRECATED: Legacy field (required for type compatibility)
       operationalStatus: 'draft', // 🏢 ENTERPRISE: New units start as draft
       building: 'Κτίριο Alpha',
       floor: 1,

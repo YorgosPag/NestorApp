@@ -14,6 +14,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Types για το BaseToolbar system
 export interface ToolbarAction {
@@ -368,34 +369,47 @@ function ToolbarFiltersComponent({
 function ToolbarActionsComponent({ actions }: { actions: ToolbarAction[] }) {
   const iconSizes = useIconSizes();
 
+  const renderButton = (action: ToolbarAction) => (
+    <Button
+      variant={action.variant || 'default'}
+      size="sm"
+      onClick={action.onClick}
+      disabled={action.disabled}
+      className="relative"
+    >
+      {action.icon && <action.icon className={`${iconSizes.sm} mr-1`} />}
+      {action.label}
+      {action.badge && (
+        <CommonBadge
+          status="company"
+          customLabel={action.badge.toString()}
+          variant="secondary"
+          className={`ml-1 ${iconSizes.md} p-0 text-xs flex items-center justify-center`}
+        />
+      )}
+      {action.shortcut && (
+        <span className="ml-2 text-xs text-muted-foreground">
+          {action.shortcut}
+        </span>
+      )}
+    </Button>
+  );
+
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {actions.map((action) => (
-        <Button
-          key={action.id}
-          variant={action.variant || 'default'}
-          size="sm"
-          onClick={action.onClick}
-          disabled={action.disabled}
-          title={action.tooltip}
-          className="relative"
-        >
-          {action.icon && <action.icon className={`${iconSizes.sm} mr-1`} />}
-          {action.label}
-          {action.badge && (
-            <CommonBadge
-              status="company"
-              customLabel={action.badge.toString()}
-              variant="secondary"
-              className={`ml-1 ${iconSizes.md} p-0 text-xs flex items-center justify-center`}
-            />
-          )}
-          {action.shortcut && (
-            <span className="ml-2 text-xs text-muted-foreground">
-              {action.shortcut}
-            </span>
-          )}
-        </Button>
+        action.tooltip ? (
+          <Tooltip key={action.id}>
+            <TooltipTrigger asChild>
+              {renderButton(action)}
+            </TooltipTrigger>
+            <TooltipContent>{action.tooltip}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <React.Fragment key={action.id}>
+            {renderButton(action)}
+          </React.Fragment>
+        )
       ))}
     </div>
   );

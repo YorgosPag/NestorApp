@@ -167,16 +167,16 @@ export function LandingPage() {
 
             {/* Quick Search Links */}
             <nav className="flex flex-wrap justify-center gap-3 mt-6" role="navigation" aria-label={t('quickLinks.ariaLabel')}>
-              <Link href="/properties?type=Στούντιο" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?type=Στούντιο" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} rounded-full ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 {t('quickLinks.studio')}
               </Link>
-              <Link href="/properties?type=Διαμέρισμα" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?type=Διαμέρισμα" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} rounded-full ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 {t('quickLinks.twoBedroom')}
               </Link>
-              <Link href="/properties?type=Μεζονέτα" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} ${quick.pill} ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?type=Μεζονέτα" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.muted} rounded-full ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 {t('quickLinks.maisonettes')}
               </Link>
-              <Link href="/properties?view=floorplan" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.info} ${quick.pill} flex items-center gap-1 ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
+              <Link href="/properties?view=floorplan" className={`px-4 py-2 ${colors.bg.primary}/80 backdrop-blur text-sm font-medium ${colors.text.info} rounded-full flex items-center gap-1 ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE}`}>
                 <MapPin className={iconSizes.sm} />
                 {t('quickLinks.viewFloorplan')}
               </Link>
@@ -284,7 +284,7 @@ export function LandingPage() {
             <li>
               <article className={`${colors.bg.primary} rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
               <figure className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                <Home className={`${iconSizes.huge} ${colors.text.foreground}`} aria-hidden="true" />
+                <Home className={`${iconSizes.xl12} ${colors.text.foreground}`} aria-hidden="true" />
               </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
@@ -311,7 +311,7 @@ export function LandingPage() {
             <li>
               <article className={`${colors.bg.primary} rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
                 <figure className="h-48 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                  <Building className={`${iconSizes.huge} ${colors.text.foreground}`} aria-hidden="true" />
+                  <Building className={`${iconSizes.xl12} ${colors.text.foreground}`} aria-hidden="true" />
                 </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
@@ -338,7 +338,7 @@ export function LandingPage() {
             <li>
               <article className={`${colors.bg.primary} rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
                 <figure className="h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                  <TrendingUp className={`${iconSizes.huge} ${colors.text.foreground}`} aria-hidden="true" />
+                  <TrendingUp className={`${iconSizes.xl12} ${colors.text.foreground}`} aria-hidden="true" />
                 </figure>
               <div className="p-6">
                 <div className="flex justify-between items-start mb-2">
