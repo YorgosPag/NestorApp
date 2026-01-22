@@ -65,13 +65,9 @@ class CustomerInfoCache {
     }
 
     this.cache[contactId] = {
-      basic: null,
-      extended: null,
-      timestamp: Date.now(),
-      basicError: null,
-      extendedError: null,
       ...this.cache[contactId],
-      ...data
+      ...data,
+      timestamp: Date.now()
     };
   }
 

@@ -10,10 +10,11 @@
 import React from 'react';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-// 🏢 ENTERPRISE: Re-export AnimatedSpinner from canonical location
+// 🏢 ENTERPRISE: Import and re-export AnimatedSpinner from canonical location
 // This provides backward compatibility for existing imports while
 // keeping single source of truth at @/components/ui/spinner
-export { AnimatedSpinner } from '@/components/ui/spinner';
+import { AnimatedSpinner } from '@/components/ui/spinner';
+export { AnimatedSpinner };
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';

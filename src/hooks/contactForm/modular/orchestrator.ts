@@ -8,6 +8,7 @@
 //
 // ============================================================================
 
+import React from 'react';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { useFormState } from '../core/useFormState';
@@ -89,20 +90,69 @@ export function useContactFormState(): UseContactFormStateReturn {
   // SPECIALIZED HOOKS WITH STATE INJECTION
   // ========================================================================
 
-  // File upload management - inject state handlers
-  const { handleFileChange, handleLogoChange, handleMultiplePhotosChange } = useFileUploads();
+  // File upload management - get hook functions
+  const fileUploadsHook = useFileUploads();
 
-  // Upload completion handlers - inject state handlers
-  const { handleUploadedPhotoURL, handleUploadedLogoURL, handleMultiplePhotoUploadComplete } = useUploadCompletion();
+  // Upload completion handlers - get hook functions
+  const uploadCompletionHook = useUploadCompletion();
 
-  // Photo selection management - inject state handlers
-  const { handleProfilePhotoSelection } = usePhotoSelection();
+  // Photo selection management - get hook functions
+  const photoSelectionHook = usePhotoSelection();
 
-  // Form reset functionality - inject state handlers
-  const { resetForm } = useFormReset();
+  // Form reset functionality - get hook functions
+  const formResetHook = useFormReset();
 
-  // Drag and drop interactions - inject file handler
-  const { handleDrop, handleDragOver } = useDragAndDrop();
+  // Drag and drop interactions - get hook functions
+  const dragAndDropHook = useDragAndDrop();
+
+  // ========================================================================
+  // WRAPPER FUNCTIONS - PARTIAL APPLICATION PATTERN
+  // ========================================================================
+
+  // File upload wrappers - inject formData and setFormData
+  const handleFileChange = React.useCallback((file: File | null) => {
+    fileUploadsHook.handleFileChange(file, formData, setFormData);
+  }, [formData, setFormData, fileUploadsHook]);
+
+  const handleLogoChange = React.useCallback((file: File | null) => {
+    fileUploadsHook.handleLogoChange(file, formData, setFormData);
+  }, [formData, setFormData, fileUploadsHook]);
+
+  const handleMultiplePhotosChange = React.useCallback((photos: PhotoSlot[]) => {
+    fileUploadsHook.handleMultiplePhotosChange(photos, formData, setFormData);
+  }, [formData, setFormData, fileUploadsHook]);
+
+  // Upload completion wrappers
+  const handleUploadedPhotoURL = React.useCallback((photoURL: string) => {
+    uploadCompletionHook.handleUploadedPhotoURL(photoURL, formData, setFormData);
+  }, [formData, setFormData, uploadCompletionHook]);
+
+  const handleUploadedLogoURL = React.useCallback((logoURL: string) => {
+    uploadCompletionHook.handleUploadedLogoURL(logoURL, formData, setFormData);
+  }, [formData, setFormData, uploadCompletionHook]);
+
+  const handleMultiplePhotoUploadComplete = React.useCallback((index: number, result: MultiplePhotoUploadResult) => {
+    uploadCompletionHook.handleMultiplePhotoUploadComplete(index, result, formData, setFormData);
+  }, [formData, setFormData, uploadCompletionHook]);
+
+  // Photo selection wrapper
+  const handleProfilePhotoSelection = React.useCallback((index: number) => {
+    photoSelectionHook.handleProfilePhotoSelection(index, formData, setFormData);
+  }, [formData, setFormData, photoSelectionHook]);
+
+  // Drag and drop wrappers
+  const handleDrop = React.useCallback((e: React.DragEvent) => {
+    dragAndDropHook.handleDrop(e, handleFileChange);
+  }, [dragAndDropHook, handleFileChange]);
+
+  const handleDragOver = React.useCallback((e: React.DragEvent) => {
+    dragAndDropHook.handleDragOver(e);
+  }, [dragAndDropHook]);
+
+  // Reset wrapper
+  const resetForm = React.useCallback(() => {
+    formResetHook.resetForm(formData, setFormData);
+  }, [formData, setFormData, formResetHook]);
 
   // ========================================================================
   // RETURN UNIFIED API

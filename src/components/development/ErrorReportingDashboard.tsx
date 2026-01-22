@@ -103,12 +103,12 @@ export function ErrorReportingDashboard({
           </div>
           {stats.totalErrors > 0 && (
             <div className={`text-xs ${colors.text.muted} mt-1`}>
-              <span className={getStatusColor('critical')}>●</span> {stats.errorsBySeverity.critical || 0}
+              <span className={getStatusColor('critical')}>●</span> {(stats.errorsBySeverity as Record<string, number>).critical || 0}
               <span className="ml-2">
-                <span className={getStatusColor('error')}>●</span> {stats.errorsBySeverity.error || 0}
+                <span className={getStatusColor('error')}>●</span> {(stats.errorsBySeverity as Record<string, number>).error || 0}
               </span>
               <span className="ml-2">
-                <span className={getStatusColor('warning')}>●</span> {stats.errorsBySeverity.warning || 0}
+                <span className={getStatusColor('warning')}>●</span> {(stats.errorsBySeverity as Record<string, number>).warning || 0}
               </span>
             </div>
           )}
@@ -157,19 +157,19 @@ export function ErrorReportingDashboard({
             <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
               <div className="text-center">
                 <div className={getStatusColor('critical')}>●</div>
-                <div>{stats.errorsBySeverity.critical || 0}</div>
+                <div>{(stats.errorsBySeverity as Record<string, number>).critical || 0}</div>
               </div>
               <div className="text-center">
                 <div className={getStatusColor('error')}>●</div>
-                <div>{stats.errorsBySeverity.error || 0}</div>
+                <div>{(stats.errorsBySeverity as Record<string, number>).error || 0}</div>
               </div>
               <div className="text-center">
                 <div className={getStatusColor('warning')}>●</div>
-                <div>{stats.errorsBySeverity.warning || 0}</div>
+                <div>{(stats.errorsBySeverity as Record<string, number>).warning || 0}</div>
               </div>
               <div className="text-center">
                 <div className={getStatusColor('info')}>●</div>
-                <div>{stats.errorsBySeverity.info || 0}</div>
+                <div>{(stats.errorsBySeverity as Record<string, number>).info || 0}</div>
               </div>
             </div>
           </div>

@@ -127,7 +127,7 @@ export default function LeadProfilePage() {
             <section className="lg:col-span-2 space-y-6" aria-label="Εργασίες και ιστορικό επικοινωνίας">
               <UpcomingTasks tasks={tasks} router={router} />
               <article className={`${colors.bg.primary} rounded-lg shadow p-6`}>
-                <CommunicationsHistory contactId={lead.id} />
+                <CommunicationsHistory contactId={lead.id ?? ''} />
               </article>
             </section>
           </div>

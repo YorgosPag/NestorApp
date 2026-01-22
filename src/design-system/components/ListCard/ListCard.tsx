@@ -26,6 +26,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+// 🏢 ENTERPRISE: Centralized positioning tokens (2026-01-22)
+import { usePositioningTokens } from '@/hooks/usePositioningTokens';
 
 // 🏢 CENTRALIZED UI PATTERNS
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -100,6 +102,7 @@ export function ListCard({
   const { quick, getStatusBorder } = useBorderTokens();
   const typography = useTypography();
   const spacing = useSpacingTokens();
+  const positioning = usePositioningTokens();
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES FROM CENTRALIZED SYSTEMS
@@ -185,7 +188,7 @@ export function ListCard({
       {(onToggleFavorite || actions.length > 0) && (
         <nav
           className={cn(
-            `absolute ${spacing.top.sm} ${spacing.right.sm} flex ${spacing.gap.sm}`,
+            `absolute ${positioning.top.sm} ${positioning.right.sm} flex ${spacing.gap.sm}`,
             'opacity-0 group-hover:opacity-100 transition-opacity'
           )}
           aria-label="Card actions"

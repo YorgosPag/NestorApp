@@ -126,7 +126,7 @@ const realContactSearch = async (query: string, filters: {
       }
 
       const summary: ContactSummary = {
-        id: contact.id,
+        id: contact.id ?? '',
         name,
         type: contact.type,
         email: contact.emails?.[0]?.email || '',

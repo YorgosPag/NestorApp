@@ -130,7 +130,7 @@ export function CompactToolbar({
             variant="ghost"
             size="sm"
             className={`${iconSizes.xl} p-0`}
-            onClick={() => hasSelectedContact && onEditItem?.(0)}
+            onClick={() => hasSelectedContact && onEditItem?.('0')}
             disabled={!hasSelectedContact}
             title={config.tooltips.editItem}
           >
@@ -171,7 +171,7 @@ export function CompactToolbar({
               >
                 <Filter className={`${iconSizes.sm} ${getIconColor('filters')}`} />
                 {activeFilters.length > 0 && (
-                  <span className={`absolute -top-1 -right-1 ${iconSizes.sm} ${colors.bg.error} ${colors.text.onError} text-xs font-medium rounded-full flex items-center justify-center`}>
+                  <span className={`absolute -top-1 -right-1 ${iconSizes.sm} ${colors.bg.error} ${colors.text.inverted} text-xs font-medium rounded-full flex items-center justify-center`}>
                     {activeFilters.length}
                   </span>
                 )}
