@@ -164,7 +164,7 @@ export const storageFiltersConfig: FilterPanelConfig = {
         },
         {
           id: 'ranges.dateRange',
-          type: 'dateRange',
+          type: 'daterange',
           label: 'filters.common.updateDate',
           placeholder: { start: 'filters.common.from', end: 'filters.common.to' },
           ariaLabel: 'filters.storage.ariaLabels.date',

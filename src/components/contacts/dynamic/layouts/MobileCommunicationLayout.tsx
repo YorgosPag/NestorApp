@@ -121,7 +121,7 @@ function MobileCommunicationItem({
             <IconComponent className={`${iconSizes.sm} ${colors.text.muted}`} />
             <Input
               type={getInputType(config.type)}
-              value={item[config.fields.primary] || ''}
+              value={(item[config.fields.primary] as string | undefined) ?? ''}
               onChange={(e) => updateItem(index, config.fields.primary, e.target.value)}
               placeholder={config.placeholder}
               disabled={disabled}
@@ -136,16 +136,16 @@ function MobileCommunicationItem({
             <Label>{getSecondaryFieldLabel(config.type)}</Label>
             {config.type === 'phone' ? (
               <Input
-                value={item[config.fields.secondary] || '+30'}
-                onChange={(e) => updateItem(index, config.fields.secondary, e.target.value)}
+                value={(item[config.fields.secondary] as string | undefined) ?? '+30'}
+                onChange={(e) => updateItem(index, config.fields.secondary!, e.target.value)}
                 placeholder="+30"
                 disabled={disabled}
                 className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}
               />
             ) : (
               <Select
-                value={item[config.fields.secondary] || item.type || config.defaultType}
-                onValueChange={(value) => updateItem(index, config.fields.secondary, value)}
+                value={(item[config.fields.secondary] as string | undefined) ?? item.type ?? config.defaultType}
+                onValueChange={(value) => updateItem(index, config.fields.secondary!, value)}
                 disabled={disabled}
               >
                 <SelectTrigger className={`w-full ${COMMUNICATION_STYLES.groupedTable.input}`}>
@@ -241,7 +241,7 @@ function MobileCommunicationItem({
           size="sm"
           onClick={() => removeItem(index)}
           disabled={disabled}
-          className={`${colors.text.error} ${INTERACTIVE_PATTERNS.TEXT_DESTRUCTIVE}`}
+          className={`${colors.text.error} ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST}`}
         >
           <Trash2 className={iconSizes.sm} />
         </Button>

@@ -46,6 +46,8 @@ export type CommunicationFieldValue =
  *
  * Universal data structure που υποστηρίζει όλους τους τύπους επικοινωνίας
  * με flexible schema για maximum extensibility
+ *
+ * 🏢 ENTERPRISE: Index signature enables dynamic field access via config.fields.primary/secondary
  */
 export interface CommunicationItem {
   // Common fields για όλους τους τύπους
@@ -62,6 +64,10 @@ export interface CommunicationItem {
   platform?: string; // social
   value?: string; // professional, general purpose
   address?: string; // addresses
+
+  // 🏢 ENTERPRISE: Index signature for dynamic field access (config.fields.primary/secondary)
+  // All known fields are string | boolean | undefined, so this is type-safe
+  [key: string]: CommunicationFieldValue;
 }
 
 /**

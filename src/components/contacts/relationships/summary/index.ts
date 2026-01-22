@@ -48,20 +48,32 @@ export type { ContactNamesMap, NavigationFilters } from '../utils/summary/contac
 // DEFAULT EXPORT - Complete Module
 // ============================================================================
 
+// 🏢 ENTERPRISE: Import all for default export to avoid circular dependencies
+import { StatisticsSection as Stats } from './StatisticsSection';
+import { RecentRelationshipsSection as Recent } from './RecentRelationshipsSection';
+import { ActionsSection as Actions } from './ActionsSection';
+import { NewContactState as NewContact, LoadingState as Loading, EmptyState as Empty } from './StateComponents';
+import { useRelationshipStatistics as useStats } from '../hooks/summary/useRelationshipStatistics';
+import {
+  navigateToDashboardFilter as navToFilter,
+  navigateToRelationshipContact as navToContact
+} from '../utils/summary/contact-navigation';
+import { calculateRelationshipStats as calcStats } from '../utils/summary/statistics-calculator';
+
 export default {
   // Components
-  StatisticsSection,
-  RecentRelationshipsSection,
-  ActionsSection,
-  NewContactState,
-  LoadingState,
-  EmptyState,
+  StatisticsSection: Stats,
+  RecentRelationshipsSection: Recent,
+  ActionsSection: Actions,
+  NewContactState: NewContact,
+  LoadingState: Loading,
+  EmptyState: Empty,
 
   // Hooks
-  useRelationshipStatistics,
+  useRelationshipStatistics: useStats,
 
   // Utils
-  navigateToDashboardFilter,
-  navigateToRelationshipContact,
-  calculateRelationshipStats
+  navigateToDashboardFilter: navToFilter,
+  navigateToRelationshipContact: navToContact,
+  calculateRelationshipStats: calcStats
 };

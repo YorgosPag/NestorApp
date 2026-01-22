@@ -172,7 +172,7 @@ export function UnifiedContactTabbedSection({
             <DynamicContactArrays
               phones={formData.phones || []}
               emails={formData.emails || []}
-              websites={formData.websites || []}
+              websites={Array.isArray(formData.websites) ? formData.websites : []}
               socialMedia={formData.socialMediaArray || []}
               disabled={fieldDisabled}
               onPhonesChange={(phones) => {

@@ -40,7 +40,7 @@ export function ArchiveContactDialog(props: ArchiveContactDialogProps) {
     props: {
       ...props,
       // Mapping για archive action
-      onSubmit: async (_data: { reason?: string }) => {
+      onSubmit: async (_data?: Record<string, unknown>) => {
         // Smart Factory handles archiving με reason field
         if (props.onContactsArchived) {
           props.onContactsArchived();

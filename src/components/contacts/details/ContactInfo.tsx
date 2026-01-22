@@ -66,14 +66,15 @@ export function ContactInfo({ contact, onAddUnit, onRefresh }: ContactInfoProps)
             <div className={`p-4 ${quick.card}`}>
                 <h4 className="font-semibold mb-2 text-sm">{t('details.taxInfo.title')}</h4>
                 <div className="text-sm">
-                    <strong>{t('details.taxInfo.vatNumber')}</strong> {
+                    <strong>{t('details.taxInfo.vatNumber')}</strong> {(() => {
                       // 🏢 ENTERPRISE: Type-safe VAT number access using type guards
-                      isCompanyContact(contact)
+                      const value = isCompanyContact(contact)
                         ? contact.vatNumber
                         : isIndividualContact(contact)
                           ? (contact.vatNumber || contact.taxNumber)
-                          : null
-                    || t('details.taxInfo.notSet')}
+                          : null;
+                      return value || t('details.taxInfo.notSet');
+                    })()}
                 </div>
             </div>
          )}

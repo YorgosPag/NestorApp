@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { Contact } from '@/types/contacts';
+import type { Contact, PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicContactArrays';
 
@@ -33,25 +33,25 @@ export function ContactCommunicationTab({
 
   const effectiveFormData = formData || data;
 
-  const handlePhonesChange = React.useCallback((phones: Array<{ number: string; type?: string; label?: string }>) => {
+  const handlePhonesChange = React.useCallback((phones: PhoneInfo[]) => {
     if (setFormData && formData) {
       setFormData({ ...formData, phones });
     }
   }, [setFormData, formData]);
 
-  const handleEmailsChange = React.useCallback((emails: Array<{ email: string; type?: string; label?: string }>) => {
+  const handleEmailsChange = React.useCallback((emails: EmailInfo[]) => {
     if (setFormData && formData) {
       setFormData({ ...formData, emails });
     }
   }, [setFormData, formData]);
 
-  const handleWebsitesChange = React.useCallback((websites: Array<{ url: string; type?: string; label?: string }>) => {
+  const handleWebsitesChange = React.useCallback((websites: WebsiteInfo[]) => {
     if (setFormData && formData) {
-      setFormData({ ...formData, websites });
+      setFormData({ ...formData, websites: websites as any });
     }
   }, [setFormData, formData]);
 
-  const handleSocialMediaChange = React.useCallback((socialMedia: Array<{ platform: string; url: string }>) => {
+  const handleSocialMediaChange = React.useCallback((socialMedia: SocialMediaInfo[]) => {
     if (setFormData && formData) {
       setFormData({ ...formData, socialMediaArray: socialMedia });
     }
@@ -62,12 +62,12 @@ export function ContactCommunicationTab({
       <DynamicContactArrays
         phones={effectiveFormData.phones || []}
         emails={effectiveFormData.emails || []}
-        websites={effectiveFormData.websites || []}
+        websites={Array.isArray(effectiveFormData.websites) ? effectiveFormData.websites : []}
         socialMedia={effectiveFormData.socialMediaArray || []}
         disabled={disabled}
         onPhonesChange={handlePhonesChange}
         onEmailsChange={handleEmailsChange}
-        onWebsitesChange={handleWebsitesChange}
+        onWebsitesChange={handleWebsitesChange as (websites: WebsiteInfo[]) => void}
         onSocialMediaChange={handleSocialMediaChange}
       />
     </div>

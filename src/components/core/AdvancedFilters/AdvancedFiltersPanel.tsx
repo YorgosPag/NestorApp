@@ -15,6 +15,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized layout classes
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -37,6 +39,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const layout = useLayoutClasses();
+  const spacing = useSpacingTokens();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(defaultOpen);
 
@@ -79,17 +82,17 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
 
   return (
     <div className={`${layout.filterPaddingResponsive} shrink-0 w-full overflow-hidden`}>
-      <Collapsible open={isPanelOpen} onOpenChange={setIsPanelOpen} className={`${quick.card} bg-card`}>
+      <Collapsible open={isPanelOpen} onOpenChange={setIsPanelOpen} className="rounded-lg bg-card">
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className={`w-full justify-start ${layout.filterButtonPadding} text-sm font-semibold`}>
-            <Filter className={`${iconSizes.sm} mr-2`} />
+            <Filter className={`${iconSizes.sm} ${spacing.margin.right.sm}`} />
             {/* 🏢 ENTERPRISE: Support both translation keys and direct labels */}
             {config.title.startsWith('filters.') ? t(config.title) : config.title}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <Card className="w-full bg-card/50 border-none shadow-none">
-            <CardContent className={`${layout.filterContentGap} ${layout.filterContentPadding}`}>
+          <Card className="w-full bg-card/50 border-none shadow-none !m-0">
+            <CardContent className={`!p-2 !m-0 ${spacing.spaceBetween.sm}`}>
               {/* Render filter rows */}
               {config.rows.map(row => (
                 <div key={row.id} className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 ${layout.filterGridGap} items-end w-full min-w-0 overflow-hidden`}>
@@ -107,25 +110,25 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
 
               {/* Advanced Filters Section */}
               {config.advancedFilters && (
-                <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced} className="pt-2">
+                <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
                   <CollapsibleTrigger asChild>
-                    <Button variant="link" size="sm">
-                      <Filter className={`${iconSizes.sm} mr-2`}/>
+                    <Button variant="outline" size="sm" className="text-sm font-medium">
+                      <Filter className={`${iconSizes.sm} ${spacing.margin.right.sm}`}/>
                       {showAdvanced ? t('filters.hideAdvanced') : t('filters.showAdvanced')}
                     </Button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className={`mt-2 ${layout.filterContentPadding} ${quick.card} ${colors.bg.primary} animate-in fade-in-0 zoom-in-95`}>
+                  <CollapsibleContent className={`!mt-2 !p-2 ${quick.card} ${colors.bg.primary} animate-in fade-in-0 zoom-in-95`}>
                     <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 ${layout.filterGridGap} w-full min-w-0 overflow-hidden`}>
                       {config.advancedFilters.options.map(option => (
-                        <div key={option.id} className="flex items-center space-x-2">
+                        <div key={option.id} className={`flex items-center ${spacing.gap.sm}`}>
                           <Checkbox
                             id={`feature-${option.id}`}
                             checked={filters.advancedFeatures?.includes(option.id) || false}
                             onCheckedChange={(checked) => handleFeatureChange(option.id, checked)}
-                            aria-label={option.label}
+                            aria-label={t(option.label)}
                           />
                           <Label htmlFor={`feature-${option.id}`} className="text-sm font-normal">
-                            {option.label}
+                            {t(option.label)}
                           </Label>
                         </div>
                       ))}
@@ -136,9 +139,9 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
 
               {/* Clear filters button */}
               {hasActiveFilters && (
-                <div className="flex justify-end pt-2">
+                <div className="flex justify-end">
                   <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                    <RotateCcw className={`${iconSizes.sm} mr-2`} />
+                    <RotateCcw className={`${iconSizes.sm} ${spacing.margin.right.sm}`} />
                     {t('filters.resetFilters')}
                   </Button>
                 </div>

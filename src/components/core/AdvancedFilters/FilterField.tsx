@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search } from "lucide-react";
 import type { FilterFieldConfig } from './types';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -31,6 +33,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
+  const spacing = useSpacingTokens();
 
   // 🏢 ENTERPRISE: Helper to translate option labels
   // Supports both translation keys (e.g., 'filters.allStatuses') and direct values
@@ -71,7 +74,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
 
       case 'range':
         return (
-          <div className="flex gap-2">
+          <div className={`flex ${spacing.gap.sm}`}>
             <Input
               type="number"
               aria-label={`${t('filters.minimum')} ${config.label?.toLowerCase()}`}
@@ -152,7 +155,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
       case 'checkbox':
         // 🏢 ENTERPRISE: Using centralized Checkbox component (Radix UI)
         return (
-          <div className="flex items-center space-x-2">
+          <div className={`flex items-center ${spacing.gap.sm}`}>
             <Checkbox
               id={config.id}
               checked={Boolean(value)}
@@ -186,7 +189,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
   const isCheckbox = config.type === 'checkbox';
 
   return (
-    <div className={`flex items-center gap-2 ${getColumnSpan(config.width)}`}>
+    <div className={`flex items-center ${spacing.gap.sm} ${getColumnSpan(config.width)}`}>
       {!isCheckbox && (
         <Label htmlFor={config.id} className="text-xs font-medium shrink-0">
           {translateLabel(config.label || '')}

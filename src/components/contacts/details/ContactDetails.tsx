@@ -153,7 +153,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
   return (
     <>
       <DetailsContainer
-        selectedItem={contact}
+        selectedItem={contact as any}
         header={
           <ContactDetailsHeader
             contact={contact!}
@@ -207,7 +207,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
 
         <UnifiedContactTabbedSection
           contactType={contact?.type || 'individual'}
-          formData={isEditing ? editedData : enhancedFormData} // 🎯 Use edited data when editing
+          formData={(isEditing ? editedData : enhancedFormData) as ContactFormData} // 🎯 Use edited data when editing
           handleChange={handleFieldChange} // 🎯 Enable changes when editing
           handleSelectChange={handleSelectChange} // 🎯 Enable select changes when editing
           setFormData={isEditing ? setEditedData : undefined} // 🔧 FIX: Pass setFormData when in edit mode

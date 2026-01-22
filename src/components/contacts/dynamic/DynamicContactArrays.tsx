@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { UniversalCommunicationManager, type CommunicationItem } from '@/components/contacts/dynamic/UniversalCommunicationManager';
+import { UniversalCommunicationManager } from '@/components/contacts/dynamic/UniversalCommunicationManager';
+import type { CommunicationItem } from '@/components/contacts/dynamic/communication';
 import { COMMUNICATION_CONFIGS } from '@/components/contacts/dynamic/communication';
 import type { PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo } from '@/types/contacts';
 
@@ -100,7 +101,7 @@ const communicationItemsToWebsites = (items: CommunicationItem[]): WebsiteInfo[]
 
 const communicationItemsToSocial = (items: CommunicationItem[]): SocialMediaInfo[] =>
   Array.isArray(items) ? items.map(item => ({
-    platform: item.platform || item.type,
+    platform: (item.platform || item.type) as SocialMediaInfo['platform'],
     username: item.username || '',
     url: item.url || '',
     label: item.label || ''

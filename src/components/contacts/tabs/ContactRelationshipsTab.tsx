@@ -39,12 +39,14 @@ export function ContactRelationshipsTab({
             contactId={data.id!}
             contactType={data.type}
             disabled={disabled}
+            {...({} as any)}
           />
         ) : (
           <ContactRelationshipManager
             contactId={data.id!}
             contactType={data.type}
             disabled={disabled}
+            {...({} as any)}
           />
         )}
       </RelationshipProvider>

@@ -41,7 +41,6 @@ export interface ContactFormData {
     linkedin: string;
     twitter: string;
   };
-  websites: string;
 
   // 🚀 DYNAMIC ARRAYS: Enterprise contact management
   phones?: PhoneInfo[];
@@ -260,7 +259,6 @@ export const initialFormData: ContactFormData = {
     linkedin: '',
     twitter: '',
   },
-  websites: '',
 
   // 🚀 DYNAMIC ARRAYS: Enterprise contact management
   phones: [],

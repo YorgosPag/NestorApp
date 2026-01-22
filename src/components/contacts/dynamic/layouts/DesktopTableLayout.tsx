@@ -187,7 +187,7 @@ function DesktopTableRows({
           <PhoneRenderer
             key={index}
             {...commonProps}
-            setPrimary={setPrimary}
+            setPrimary={setPrimary!}
           />
         );
 
@@ -196,7 +196,7 @@ function DesktopTableRows({
           <EmailRenderer
             key={index}
             {...commonProps}
-            setPrimary={setPrimary}
+            setPrimary={setPrimary!}
           />
         );
 

@@ -210,7 +210,7 @@ export const CustomRelationshipSelect: React.FC<CustomRelationshipSelectProps> =
                 return (
                   <div
                     key={type}
-                    onClick={() => handleSelect(type)}
+                    onClick={() => handleSelect(type as RelationshipType)}
                     className={`
                       flex items-center space-x-3 px-4 py-3 cursor-pointer ${quick.borderB} last:border-b-0
                       ${TRANSITION_PRESETS.STANDARD_COLORS} ${INTERACTIVE_PATTERNS.ACCENT_HOVER}

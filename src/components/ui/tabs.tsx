@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils"
 import { useIconSizes } from "@/hooks/useIconSizes"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens'
 
 const Tabs = TabsPrimitive.Root
 
@@ -15,11 +17,12 @@ const TabsList = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes()
+  const spacing = useSpacingTokens()
   return (
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      `inline-flex ${iconSizes.xl2} items-center justify-center rounded-md bg-muted p-1 text-muted-foreground`,
+      `inline-flex ${iconSizes.xl2} items-center justify-center rounded-md bg-muted ${spacing.padding.sm} text-muted-foreground`,
       className
     )}
     {...props}
@@ -33,12 +36,13 @@ const TabsTrigger = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
 >(({ className, ...props }, ref) => {
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
 
   return (
     <TabsPrimitive.Trigger
       ref={ref}
       className={cn(
-        `inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background ${TRANSITION_PRESETS.STANDARD_ALL} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:${colors.bg.primary} data-[state=active]:text-foreground data-[state=active]:shadow-sm`,
+        `inline-flex items-center justify-center whitespace-nowrap rounded-sm ${spacing.padding.sm} text-sm font-medium ring-offset-background ${TRANSITION_PRESETS.STANDARD_ALL} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:${colors.bg.primary} data-[state=active]:text-foreground data-[state=active]:shadow-sm`,
         className
       )}
       {...props}
