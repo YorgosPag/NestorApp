@@ -39,10 +39,16 @@ export function PipelineTab() {
   
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   const handleEdit = (opportunity: Opportunity) => {
     setEditingOpportunity(opportunity);
   };
+
+  const handleRefresh = useCallback(async () => {
+    await fetchOpportunities();
+    setRefreshCounter(prev => prev + 1);
+  }, [fetchOpportunities]);
 
   const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
 
@@ -100,7 +106,7 @@ export function PipelineTab() {
                 onDelete={removeOpportunity}
               />
             ) : (
-              <LeadsList refreshTrigger={fetchOpportunities} />
+              <LeadsList refreshTrigger={refreshCounter} />
             )
           )}
         </div>

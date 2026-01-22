@@ -111,7 +111,7 @@ const SP = {
 // 🏢 ENTERPRISE: Filter titles as i18n translation keys
 // These are translated in AdvancedFiltersPanel using the 'building' namespace
 const FT = {
-  units: 'filters.title',      // Translated based on context
+  units: 'filters.unitsTitle', // ✅ PR1.1: "Units Filters" / "Φίλτρα Μονάδων"
   contacts: 'filters.title',   // Translated based on context
   buildings: 'filters.title',  // → "Building Filters" (i18n translated)
   projects: 'filters.title',   // Translated based on context
@@ -120,6 +120,7 @@ const FT = {
 
 // Unit Filters Configuration
 // [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
+// ✅ PR1.1 Fix-up: Removed sales data (priceRange), added operational statuses
 export const unitFiltersConfig: FilterPanelConfig = {
   title: FT.units,
   searchPlaceholder: SP.units_search,
@@ -135,13 +136,15 @@ export const unitFiltersConfig: FilterPanelConfig = {
           width: 1,
           ariaLabel: 'Search by name or description'
         },
-        {
-          id: 'priceRange',
-          type: 'range',
-          label: FL.price_range,
-          width: 1,
-          ariaLabel: 'Price range filter'
-        },
+        // ❌ REMOVED: priceRange filter (commercial data - domain separation)
+        // {
+        //   id: 'priceRange',
+        //   type: 'range',
+        //   label: FL.price_range,
+        //   width: 1,
+        //   ariaLabel: 'Price range filter'
+        // },
+        // Migration: PR1.1 - Units Filter Cleanup
         {
           id: 'areaRange',
           type: 'range',
@@ -155,15 +158,16 @@ export const unitFiltersConfig: FilterPanelConfig = {
           label: FL.status,
           placeholder: SP.status_placeholder,
           width: 1,
-          ariaLabel: 'Status filter',
+          ariaLabel: 'Operational status filter',
+          // ✅ DOMAIN SEPARATION: Operational statuses (physical truth)
+          // Removed sales statuses (for-sale/sold/reserved)
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_STATUSES },
-            { value: 'for-sale', label: BUILDING_PROJECT_STATUS_LABELS['for-sale'] },
-            { value: 'for-rent', label: BUILDING_PROJECT_STATUS_LABELS['for-rent'] },
-            { value: 'sold', label: UNIFIED_STATUS_FILTER_LABELS.SOLD },
-            { value: 'rented', label: BUILDING_PROJECT_STATUS_LABELS.rented },
-            { value: 'reserved', label: UNIFIED_STATUS_FILTER_LABELS.RESERVED },
-            { value: 'withdrawn', label: BUILDING_PROJECT_STATUS_LABELS.withdrawn }
+            { value: 'ready', label: 'operationalStatus.ready' },
+            { value: 'under-construction', label: 'operationalStatus.underConstruction' },
+            { value: 'inspection', label: 'operationalStatus.inspection' },
+            { value: 'maintenance', label: 'operationalStatus.maintenance' },
+            { value: 'draft', label: 'operationalStatus.draft' }
           ]
         }
       ]

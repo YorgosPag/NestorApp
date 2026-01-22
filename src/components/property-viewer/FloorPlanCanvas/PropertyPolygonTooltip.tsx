@@ -47,21 +47,13 @@ export function PropertyPolygonTooltip({ property, centroid }: PropertyPolygonTo
       >
         {property.type}
       </text>
-      {property.price && (
-        <text
-          x={centroid.x + 50}
-          y={centroid.y + 5}
-          fontSize="9"
-          fill="#059669"
-          className="pointer-events-none select-none font-medium"
-        >
-          {property.price.toLocaleString('el-GR')}€
-        </text>
-      )}
+      {/* ❌ REMOVED: Price display (commercial data - domain separation)
+      Migration: PR1.1 - Units Tooltip Cleanup - Price moved to /sales
+      */}
       {property.area && (
         <text
           x={centroid.x + 50}
-          y={centroid.y + 15}
+          y={centroid.y + 5}
           fontSize="8"
           fill="#6b7280"
           className="pointer-events-none select-none"

@@ -48,17 +48,19 @@ function PropertyHoverContent({ property }: { property: Property }) {
 
       <PropertyHoverLocation floorLabel={formatFloorLabel(property.floor)} />
 
-      {(property.price || property.area) && (
+      {/* ❌ REMOVED: Price & Price per sqm display (commercial data - domain separation) */}
+      {/* Migration: PR1.1 - Units Hover Cleanup - Price moved to /sales */}
+      {property.area && (
         <>
           <Separator />
           <PropertyHoverPriceArea
-            hasPrice={property.price !== undefined}
-            price={property.price}
+            hasPrice={false}
+            price={undefined}
             priceLabel={statusInfo.priceLabel}
-            isRentLike={property.status === 'for-rent' || property.status === 'rented'}
+            isRentLike={false}
             hasArea={!!property.area}
             area={property.area}
-            pricePerSqm={property.price && property.area ? formatPricePerSqm(property.price, property.area) : undefined}
+            pricePerSqm={undefined}
           />
         </>
       )}

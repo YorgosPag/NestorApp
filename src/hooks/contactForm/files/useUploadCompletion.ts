@@ -198,9 +198,10 @@ export function useUploadCompletion(): UseUploadCompletionReturn {
       const selectedSlot = newPhotos[newSelectedIndex];
       if (!selectedSlot?.uploadUrl && !selectedSlot?.preview) {
         // Βρες το πρώτο valid slot
-        const firstValidIndex = newPhotos.findIndex(photo =>
-          photo?.uploadUrl || photo?.preview
-        );
+        const firstValidIndex = newPhotos.findIndex((photo: unknown) => {
+          const p = photo as { uploadUrl?: string; preview?: string } | null | undefined;
+          return p?.uploadUrl || p?.preview;
+        });
         newSelectedIndex = firstValidIndex >= 0 ? firstValidIndex : undefined;
       }
     }

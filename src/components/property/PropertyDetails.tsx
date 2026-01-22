@@ -32,7 +32,7 @@ interface PropertyDetailsProps {
 
 export function PropertyDetails({ property }: PropertyDetailsProps) {
   const { t } = useTranslation('properties');
-  const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
+  const statusInfo = (PROPERTY_STATUS_CONFIG as Record<string, { label: string; color: string }>)[property.status] || PROPERTY_STATUS_CONFIG.default;
 
   // 🏢 ENTERPRISE: Centralized systems
   const iconSizes = useIconSizes();

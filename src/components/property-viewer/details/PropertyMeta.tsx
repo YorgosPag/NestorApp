@@ -74,17 +74,19 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
 
       <Separator />
 
-      {/* Price & Specs */}
+      {/* Specs */}
       <div className={spacing.spaceBetween.sm}>
+        {/* ❌ REMOVED: Price display (commercial data - domain separation)
         {property.price && (
           <div className={`flex items-center ${spacing.gap.sm} text-sm`}>
-            {/* 🏢 ENTERPRISE: Using centralized price icon/color */}
             <NAVIGATION_ENTITIES.price.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.price.color)} />
             <span className={cn("font-semibold", NAVIGATION_ENTITIES.price.color)}>
               {formatCurrency(property.price)}
             </span>
           </div>
         )}
+        Migration: PR1.1 - Units Detail Cleanup - Price moved to /sales
+        */}
         <div className={`grid grid-cols-2 ${spacing.gap.sm} text-xs`}>
           {property.area && (
             <div className={`flex items-center ${spacing.gap.sm}`}>

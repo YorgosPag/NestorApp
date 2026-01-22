@@ -109,10 +109,9 @@ export function UnitsList({
         aValue = a.name.toLowerCase();
         bValue = b.name.toLowerCase();
         break;
-      case 'price':
-        aValue = a.price || 0;
-        bValue = b.price || 0;
-        break;
+      // ❌ REMOVED: Price sorting (commercial data - domain separation)
+      // case 'price': aValue = a.price || 0; bValue = b.price || 0; break;
+      // Migration: PR1 - Units List Cleanup
       case 'area':
         aValue = a.area || 0;
         bValue = b.area || 0;
@@ -140,8 +139,10 @@ export function UnitsList({
     }
   };
 
-  const availableCount = units.filter(u => u.status === 'for-sale' || u.status === 'for-rent').length;
-  const totalValue = units.reduce((sum, u) => sum + (u.price || 0), 0);
+  // ❌ REMOVED: Sales data calculations (commercial data - domain separation)
+  // const availableCount = units.filter(u => u.status === 'for-sale' || u.status === 'for-rent').length;
+  // const totalValue = units.reduce((sum, u) => sum + (u.price || 0), 0);
+  // Migration: PR1 - Units List Cleanup - These belong to SalesAsset aggregations
 
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>

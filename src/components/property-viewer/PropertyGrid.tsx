@@ -121,13 +121,9 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
           <span>{formatFloorLabel(property.floor)}</span>
         </div>
         <div className="flex justify-between items-center text-sm">
-            {property.price && (
-                <div className={cn("flex items-center gap-1 font-semibold", NAVIGATION_ENTITIES.price.color)}>
-                    {/* 🏢 ENTERPRISE: Using centralized price icon/color */}
-                    <NAVIGATION_ENTITIES.price.icon className={iconSizes.sm}/>
-                    {formatCurrency(property.price)}
-                </div>
-            )}
+            {/* ❌ REMOVED: Price display (commercial data - domain separation)
+            Migration: PR1.1 - Units Grid Cleanup - Price moved to /sales
+            */}
             {property.area && (
                  <div className={`flex items-center gap-1 ${colors.text.muted}`}>
                     {/* 🏢 ENTERPRISE: Using centralized area icon/color */}

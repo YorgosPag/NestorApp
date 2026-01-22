@@ -14,7 +14,7 @@ import { DEFAULT_TOOLBAR_SETTINGS } from '../config';
 import { ToolbarSystemUtils } from '../utils';
 import type { ToolbarsContextType } from '../ToolbarsContext.types';
 
-interface ContextValueParams extends ToolbarsContextType {
+type ContextValueParams = ToolbarsContextType & {
   setState: React.Dispatch<React.SetStateAction<ToolbarState>>;
   setEventListeners: React.Dispatch<React.SetStateAction<ToolEvents>>;
   unregisterHotkey: (hotkey: string) => void;
@@ -25,7 +25,7 @@ interface ContextValueParams extends ToolbarsContextType {
   getSettings: () => unknown;
   searchTools: (query: string) => ToolDefinition[];
   getToolTooltip: (toolId: ToolType) => string;
-}
+};
 
 export function useToolbarsContextValue(params: ContextValueParams): ToolbarsContextType {
   const {

@@ -221,30 +221,45 @@ export function useUnitsViewerState() {
   };
 
   const dashboardStats = useMemo(() => ({
+    // ✅ PHYSICAL METRICS (Unit = Physical Truth)
     totalProperties: safeProperties.length,
+    totalArea: safeProperties.reduce((sum, p) => sum + (p.area || 0), 0),
+    uniqueBuildings: [...new Set(safeProperties.map(p => p.building))].length,
+
+    // ✅ OPERATIONAL STATUS METRICS (Physical readiness)
+    readyProperties: safeProperties.filter(p => p.operationalStatus === 'ready').length,
+    underConstructionProperties: safeProperties.filter(p => p.operationalStatus === 'under-construction').length,
+
+    // ⚠️ DEPRECATED: Sales status metrics (temporary for backward compatibility)
+    // These will be moved to SalesAsset aggregations in /sales module
     availableProperties: safeProperties.filter(p => p.status === 'for-sale' || p.status === 'for-rent').length,
     soldProperties: safeProperties.filter(p => p.status === 'sold' || p.status === 'rented').length,
-    totalValue: safeProperties.reduce((sum, p) => sum + (p.price || 0), 0),
-    totalArea: safeProperties.reduce((sum, p) => sum + (p.area || 0), 0),
-    averagePrice: safeProperties.length > 0 ? safeProperties.reduce((sum, p) => sum + (p.price || 0), 0) / safeProperties.length : 0,
-    propertiesByStatus: safeProperties.reduce((acc, p) => { 
-      acc[p.status] = (acc[p.status] || 0) + 1; 
-      return acc; 
+    reserved: safeProperties.filter(p => p.status === 'reserved').length,
+
+    // ❌ REMOVED: Commercial metrics (domain separation)
+    // totalValue: Moved to SalesAsset aggregations
+    // averagePrice: Moved to SalesAsset aggregations
+    // Migration: PR1 - Units List Cleanup
+
+    // ✅ DISTRIBUTION METRICS (Physical attributes)
+    propertiesByStatus: safeProperties.reduce((acc, p) => {
+      acc[p.status] = (acc[p.status] || 0) + 1;
+      return acc;
     }, {} as Record<string, number>),
-    propertiesByType: safeProperties.reduce((acc, p) => { 
-      acc[p.type] = (acc[p.type] || 0) + 1; 
-      return acc; 
+    propertiesByType: safeProperties.reduce((acc, p) => {
+      acc[p.type] = (acc[p.type] || 0) + 1;
+      return acc;
     }, {} as Record<string, number>),
-    propertiesByFloor: safeProperties.reduce((acc, p) => { 
-      const floorLabel = `Όροφος ${p.floor}`; 
-      acc[floorLabel] = (acc[floorLabel] || 0) + 1; 
-      return acc; 
+    propertiesByFloor: safeProperties.reduce((acc, p) => {
+      const floorLabel = `Όροφος ${p.floor}`;
+      acc[floorLabel] = (acc[floorLabel] || 0) + 1;
+      return acc;
     }, {} as Record<string, number>),
+
+    // ✅ STORAGE METRICS (Physical inventory)
     totalStorageUnits: 0,
     availableStorageUnits: 0,
     soldStorageUnits: 0,
-    uniqueBuildings: [...new Set(safeProperties.map(p => p.building))].length,
-    reserved: safeProperties.filter(p => p.status === 'reserved').length,
   }), [safeProperties]);
 
   // 🏢 ENTERPRISE: Flexible filter handler compatible with AdvancedFiltersPanel

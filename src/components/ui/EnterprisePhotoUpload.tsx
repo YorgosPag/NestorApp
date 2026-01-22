@@ -36,7 +36,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // TYPES & INTERFACES
 // ============================================================================
 
-export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUploadConfig, 'fileType'> {
+export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUploadConfig, 'fileType' | 'contactData'> {
   /** Current photo file */
   photoFile?: File | null;
   /** Current photo preview URL */

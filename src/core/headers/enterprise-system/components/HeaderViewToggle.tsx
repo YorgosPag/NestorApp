@@ -52,7 +52,7 @@ export const HeaderViewToggle: React.FC<HeaderViewToggleProps> = ({
 
   return (
     <div className={containerClasses}>
-      {viewModes.map((mode, index) => {
+      {viewModes.map((mode: ViewMode, index: number) => {
         const Icon = getViewIcon(mode);
         const isFirst = index === 0;
         const isLast = index === viewModes.length - 1;

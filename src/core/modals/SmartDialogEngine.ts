@@ -436,7 +436,7 @@ export class SmartDialogEngine {
       opportunity: ['title', 'fullName', 'email', 'phone', 'stage', 'estimatedValue'],
       property: ['name', 'type', 'status', 'price', 'area'],
       service: ['service_name', 'category', 'legal_status', 'phone', 'email']
-    };
+    } as Record<DialogEntityType, string[]>;
 
     return entityFieldMappings[entityType] || [];
   }
@@ -459,7 +459,7 @@ export class SmartDialogEngine {
       project: 'select',
       building: 'select',
       floor: 'select'
-    };
+    } as Record<string, SmartDialogField['type']>;
 
     // Check for field name patterns
     if (fieldName.includes('date') || fieldName.includes('Date')) return 'date';
@@ -572,7 +572,7 @@ export class SmartDialogEngine {
       company: ['company_name', 'vat_number', 'legal_form'],
       project: ['name', 'status'],
       opportunity: ['fullName', 'email', 'stage']
-    };
+    } as Record<DialogEntityType, string[]>;
 
     return entityRequiredMappings[entityType] || [];
   }

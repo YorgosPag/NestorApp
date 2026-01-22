@@ -8,6 +8,12 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
+interface TeamMember {
+    name: string;
+    leads: number;
+    value: string;
+}
+
 export function TeamPerformance() {
     const colors = useSemanticColors();
     const { quick } = useBorderTokens();
@@ -46,7 +52,7 @@ export function TeamPerformance() {
                     </tr>
                 </thead>
                 <tbody>
-                    {team.map(member => (
+                    {team.map((member: TeamMember) => (
                         <tr key={member.name} className={`border-b ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}>
                             <td className="p-2 font-medium">{member.name}</td>
                             <td className={`p-2 ${colors.text.muted}`}>{member.leads}</td>

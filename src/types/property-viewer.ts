@@ -3,6 +3,17 @@
 // Re-export PropertyStats from property.ts
 export type { PropertyStats } from './property';
 
+/**
+ * ✅ DOMAIN SEPARATION: Operational status type (re-imported from unit.ts)
+ * Represents construction/maintenance status, NOT sales/commercial status
+ */
+export type OperationalStatus =
+  | 'ready'                 // Έτοιμο (construction complete)
+  | 'under-construction'    // υπό ολοκλήρωση (not ready)
+  | 'inspection'            // σε επιθεώρηση (under inspection)
+  | 'maintenance'           // υπό συντήρηση (under maintenance)
+  | 'draft';                // πρόχειρο (not finalized)
+
 export interface Property {
     id: string;
     code?: string;
@@ -10,8 +21,26 @@ export interface Property {
     type: string;
     building: string;
     floor: number;
+
+    /**
+     * ⚠️ DEPRECATED: Sales status (commercial state)
+     * @deprecated Use operationalStatus for physical state
+     */
     status: 'for-sale' | 'for-rent' | 'sold' | 'rented' | 'reserved';
+
+    /**
+     * ✅ NEW: Operational status (physical state)
+     * Use this for construction/readiness status
+     * @migration PR1 - Units List Cleanup
+     */
+    operationalStatus?: OperationalStatus;
+
+    /**
+     * ⚠️ DEPRECATED: Price (commercial data)
+     * @deprecated Will be moved to SalesAsset type
+     */
     price?: number;
+
     area?: number;
     project: string;
     description?: string;
@@ -26,7 +55,17 @@ export interface Property {
         parkingSpots: string[];
         storageRooms: string[];
     }
+
+    /**
+     * ⚠️ DEPRECATED: Customer reference (commercial data)
+     * @deprecated Will be moved to SalesAsset type
+     */
     soldTo?: string | null; // ID of the contact
+
+    /**
+     * ⚠️ DEPRECATED: Sale date (commercial data)
+     * @deprecated Will be moved to SalesAsset type
+     */
     saleDate?: string | null; // Date of sale
   }
   

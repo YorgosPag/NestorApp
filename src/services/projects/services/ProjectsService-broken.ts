@@ -169,7 +169,7 @@ export class ProjectsService implements IProjectsService {
         const buildingsQuery = admin.query(admin.collection(db, COLLECTIONS.BUILDINGS), admin.where('projectId', '==', projectId));
         const buildings = await admin.getDocs(buildingsQuery);
         // Debug logging removed
-        buildings.docs.forEach(doc => {
+        buildings.docs.forEach((doc: admin.QueryDocumentSnapshot) => {
             // Debug logging removed
         });
         
@@ -177,7 +177,7 @@ export class ProjectsService implements IProjectsService {
             const unitsQuery = admin.query(admin.collection(db, COLLECTIONS.UNITS), admin.where('buildingId', '==', `building-${building.id}`));
             const units = await admin.getDocs(unitsQuery);
             // Debug logging removed
-            units.docs.forEach(doc => {
+            units.docs.forEach((doc: admin.QueryDocumentSnapshot) => {
                 const data = doc.data();
                 // Debug logging removed
             });

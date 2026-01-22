@@ -78,7 +78,7 @@ export function LayerManagerHeader({
           <SelectContent>
             <SelectItem value="all">{COMMON_FILTER_LABELS.ALL_STATUSES}</SelectItem>
             {uniqueStatuses.map(status => (
-              <SelectItem key={status} value={status}>{PROPERTY_STATUS_CONFIG[status]?.label || status}</SelectItem>
+              <SelectItem key={status} value={status}>{(PROPERTY_STATUS_CONFIG as Record<string, { label: string; color: string }>)[status]?.label || status}</SelectItem>
             ))}
           </SelectContent>
         </Select>

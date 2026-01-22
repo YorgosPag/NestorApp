@@ -191,12 +191,14 @@ function UnitsPageContent() {
       icon: BarChart3,
       color: "purple"
     },
-    {
-      title: t('page.dashboard.totalValue'),
-      value: `€${(dashboardStats.totalValue / 1000000).toFixed(1)}M`,
-      icon: MapPin,
-      color: "orange"
-    },
+    // ❌ REMOVED: Total Value card (commercial metric - domain separation)
+    // {
+    //   title: t('page.dashboard.totalValue'),
+    //   value: `€${(dashboardStats.totalValue / 1000000).toFixed(1)}M`,
+    //   icon: MapPin,
+    //   color: "orange"
+    // },
+    // Migration: PR1 - Units List Cleanup - Moved to /sales dashboard
     {
       title: t('page.dashboard.totalArea'),
       value: `${(dashboardStats.totalArea / 1000).toFixed(1)}K m²`,
