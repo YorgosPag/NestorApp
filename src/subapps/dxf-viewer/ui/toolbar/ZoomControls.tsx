@@ -11,6 +11,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 
@@ -141,37 +143,47 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   }, [applyZoom]);
 
   return (
-    <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${colors.bg.backgroundSecondary} rounded ${PANEL_LAYOUT.SPACING.COMPACT}`}>
-      <button
-        onClick={handleZoomOutClick}
-        className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-        title={t('zoomControls.zoomOut', { percentage: ZOOM_STEP_PERCENTAGE })}
-      >
-        <Minus className={iconSizes.xs} />
-      </button>
-      
-      <input
-        ref={inputRef}
-        type="text"
-        value={inputValue}
-        onChange={handleInputChange}
-        onKeyPress={handleKeyPress}
-        onFocus={handleInputFocus}
-        onBlur={handleInputBlur}
-        className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center ${getFocusBorder('input')} focus:outline-none ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.SELECT.ALL}`}
-        title={t('zoomControls.inputTitle')}
-        placeholder="100"
-      />
-      
-      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>%</span>
-      
-      <button
-        onClick={handleZoomInClick}
-        className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-        title={t('zoomControls.zoomIn', { percentage: ZOOM_STEP_PERCENTAGE })}
-      >
-        <Plus className={iconSizes.xs} />
-      </button>
-    </div>
+    <TooltipProvider>
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${colors.bg.backgroundSecondary} rounded ${PANEL_LAYOUT.SPACING.COMPACT}`}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={handleZoomOutClick}
+              className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+            >
+              <Minus className={iconSizes.xs} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('zoomControls.zoomOut', { percentage: ZOOM_STEP_PERCENTAGE })}</TooltipContent>
+        </Tooltip>
+
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyPress={handleKeyPress}
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
+          className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_X} ${PANEL_LAYOUT.PADDING.VERTICAL_NONE} ${colors.bg.secondary} ${getStatusBorder('muted')} rounded ${colors.text.inverted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} text-center ${getFocusBorder('input')} focus:outline-none ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.SELECT.ALL}`}
+          title={t('zoomControls.inputTitle')}
+          placeholder="100"
+        />
+
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>%</span>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={handleZoomInClick}
+              className={`${PANEL_LAYOUT.BUTTON.HEIGHT_SM} ${PANEL_LAYOUT.WIDTH.BUTTON_SM} ${PANEL_LAYOUT.SPACING.NONE} ${colors.text.tertiary} ${HOVER_TEXT_EFFECTS.WHITE} flex items-center justify-center rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+            >
+              <Plus className={iconSizes.xs} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('zoomControls.zoomIn', { percentage: ZOOM_STEP_PERCENTAGE })}</TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
   );
 };

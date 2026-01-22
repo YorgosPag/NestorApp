@@ -119,6 +119,18 @@ const FT = {
   advanced: 'filters.showAdvanced'
 } as const;
 
+// 🏢 ENTERPRISE: Area range presets (centralized, i18n-ready)
+// PR1.2: Combobox presets for area range filter
+// Labels are i18n keys from units namespace
+export const UNIT_AREA_RANGE_PRESETS = [
+  { id: 'all', label: 'filters.areaPresets.all', min: null, max: null },
+  { id: 'small', label: 'filters.areaPresets.small', min: 0, max: 50 },
+  { id: 'medium', label: 'filters.areaPresets.medium', min: 50, max: 100 },
+  { id: 'large', label: 'filters.areaPresets.large', min: 100, max: 200 },
+  { id: 'veryLarge', label: 'filters.areaPresets.veryLarge', min: 200, max: null },
+  { id: 'custom', label: 'filters.areaPresets.custom', min: null, max: null },
+] as const;
+
 // Unit Filters Configuration
 // [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 // ✅ PR1.1 Fix-up: Removed sales data (priceRange), added operational statuses
@@ -166,12 +178,12 @@ export const unitFiltersConfig: FilterPanelConfig = {
           // Removed sales statuses (for-sale/sold/reserved)
           // 🏢 PR1.2: i18n keys directly (avoid circular dependency)
           options: [
-            { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_STATUSES },
-            { value: 'ready', label: 'units.operationalStatus.ready' },
-            { value: 'under-construction', label: 'units.operationalStatus.underConstruction' },
-            { value: 'inspection', label: 'units.operationalStatus.inspection' },
-            { value: 'maintenance', label: 'units.operationalStatus.maintenance' },
-            { value: 'draft', label: 'units.operationalStatus.draft' }
+            { value: 'all', label: 'filters.allStatuses' },
+            { value: 'ready', label: 'operationalStatus.ready' },
+            { value: 'under-construction', label: 'operationalStatus.underConstruction' },
+            { value: 'inspection', label: 'operationalStatus.inspection' },
+            { value: 'maintenance', label: 'operationalStatus.maintenance' },
+            { value: 'draft', label: 'operationalStatus.draft' }
           ]
         }
       ]

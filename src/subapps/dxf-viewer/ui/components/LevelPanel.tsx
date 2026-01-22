@@ -7,6 +7,8 @@ const DEBUG_LEVEL_PANEL = false;
 import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2, Plus, Edit, MousePointer, Pen, Move, Info, Shapes } from 'lucide-react';
+// 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -318,27 +320,35 @@ export function LevelPanel({
                   )}
                   
                   <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.LEFT_SM}`}>
-                    <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startEditing(level);
-                        }}
-                        className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.EDIT}
-                        title={t('panels.levels.renameLevel')}
-                      >
-                        <Edit className={iconSizes.sm} />
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditing(level);
+                          }}
+                          className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.EDIT}
+                        >
+                          <Edit className={iconSizes.sm} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('panels.levels.renameLevel')}</TooltipContent>
+                    </Tooltip>
                     {!isOnlyLevel && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteLevel(level.id);
-                        }}
-                        className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.DELETE}
-                        title={t('panels.levels.deleteLevel')}
-                      >
-                        <Trash2 className={iconSizes.sm} />
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteLevel(level.id);
+                            }}
+                            className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.DELETE}
+                          >
+                            <Trash2 className={iconSizes.sm} />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>{t('panels.levels.deleteLevel')}</TooltipContent>
+                      </Tooltip>
                     )}
                   </nav>
                 </div>

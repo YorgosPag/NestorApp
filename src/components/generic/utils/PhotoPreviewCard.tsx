@@ -17,6 +17,7 @@ import {
 import { usePhotoPreviewStyles } from '@/components/ui/enterprise-portal';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -145,13 +146,17 @@ export function PhotoPreviewCard({
         >
           {hasPhoto ? (
             /* 🖼️ PHOTO STATE: Ακριβώς όπως στο Modal */
-            <img
-              src={photoUrl}
-              alt={altText}
-              className="w-full h-full object-cover rounded cursor-pointer"
-              onClick={handleClick}
-              title={t('photoPreview.clickToPreview')}
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <img
+                  src={photoUrl}
+                  alt={altText}
+                  className="w-full h-full object-cover rounded cursor-pointer"
+                  onClick={handleClick}
+                />
+              </TooltipTrigger>
+              <TooltipContent>{t('photoPreview.clickToPreview')}</TooltipContent>
+            </Tooltip>
           ) : (
             /* 🚫 EMPTY STATE: Ακριβώς όπως στο Modal */
             <div className="flex flex-col items-center justify-center">

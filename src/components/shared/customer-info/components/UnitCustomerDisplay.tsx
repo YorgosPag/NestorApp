@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { formatDate } from '@/lib/intl-utils'; // ✅ Using centralized function
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -208,43 +209,55 @@ export function UnitCustomerDisplay({
         {showActions && (
           <div className="flex items-center gap-1 shrink-0">
             {/* View Customer Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`${styles.buttonSize} p-0`}
-              onClick={() => window.open(`/contacts?contactId=${unit.soldTo}`, '_blank')}
-              title={t('customerActions.tooltips.viewDetails', { name: customerName })}
-            >
-              <Eye className={styles.iconSize} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${styles.buttonSize} p-0`}
+                  onClick={() => window.open(`/contacts?contactId=${unit.soldTo}`, '_blank')}
+                >
+                  <Eye className={styles.iconSize} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('customerActions.tooltips.viewDetails', { name: customerName })}</TooltipContent>
+            </Tooltip>
 
             {/* Call Customer Button */}
             {customerInfo.primaryPhone && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`${styles.buttonSize} p-0`}
-                onClick={() => {
-                  const cleanPhone = customerInfo.primaryPhone!.replace(/\s+/g, '');
-                  window.open(`tel:${cleanPhone}`, '_self');
-                }}
-                title={t('customerActions.tooltips.callTo', { phone: customerInfo.primaryPhone })}
-              >
-                <Phone className={styles.iconSize} />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`${styles.buttonSize} p-0`}
+                    onClick={() => {
+                      const cleanPhone = customerInfo.primaryPhone!.replace(/\s+/g, '');
+                      window.open(`tel:${cleanPhone}`, '_self');
+                    }}
+                  >
+                    <Phone className={styles.iconSize} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('customerActions.tooltips.callTo', { phone: customerInfo.primaryPhone })}</TooltipContent>
+              </Tooltip>
             )}
 
             {/* Email Customer Button */}
             {customerInfo.primaryEmail && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`${styles.buttonSize} p-0`}
-                onClick={() => window.open(`mailto:${customerInfo.primaryEmail}`, '_self')}
-                title={t('customerActions.tooltips.emailTo', { email: customerInfo.primaryEmail })}
-              >
-                <Mail className={styles.iconSize} />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`${styles.buttonSize} p-0`}
+                    onClick={() => window.open(`mailto:${customerInfo.primaryEmail}`, '_self')}
+                  >
+                    <Mail className={styles.iconSize} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('customerActions.tooltips.emailTo', { email: customerInfo.primaryEmail })}</TooltipContent>
+              </Tooltip>
             )}
           </div>
         )}

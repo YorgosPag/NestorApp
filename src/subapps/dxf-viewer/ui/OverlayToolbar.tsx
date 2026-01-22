@@ -5,6 +5,8 @@ import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useDraggable } from '../../../hooks/useDraggable';
+// 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 // import { Separator } from '../../../components/ui/separator';
@@ -160,160 +162,191 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
   };
 
   return (
-    <div
-      ref={elementRef}
-      style={draggableStyles}
-      className={`${disableFloating ? 'relative' : 'fixed'} flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} flex-wrap ${PANEL_LAYOUT.SHADOW.XL} ${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
-      onMouseEnter={(e) => e.stopPropagation()}
-      onMouseMove={(e) => e.stopPropagation()}
-      onMouseLeave={(e) => e.stopPropagation()}
-    >
-      {/* Drag Handle */}
-      {!disableFloating && (
-        <div
-          onMouseDown={handleMouseDown}
-          className={`${PANEL_LAYOUT.CURSOR.GRAB} active:${PANEL_LAYOUT.CURSOR.GRABBING} ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.hover} ${radius.md}`}
-          title={t('toolbar.dragToMove')}
-        >
-          <div className={`${iconSizes.xs} ${iconSizes.sm} ${colors.bg.active} ${quick.button}`}></div>
-        </div>
-      )}
-      {/* Drawing Modes */}
-      <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-        {modeButtons.map(({ mode: btnMode, icon: Icon, label, key }) => (
-          <button
-            key={btnMode}
-            onClick={() => handleModeChange(btnMode)}
-            title={`${label} (${key})`}
-            className={`
-              ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-              flex items-center justify-center ${PANEL_LAYOUT.GAP.XS}
-              ${mode === btnMode
-                ? `${colors.bg.info} ${colors.text.inverted} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
-              }
-            `}
-          >
-            {Icon ? <Icon className={iconSizes.sm} /> : <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>?</span>}
-            <span className={`hidden sm:inline ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{label}</span>
-          </button>
-        ))}
-      </div>
-
-      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
-
-      {/* Status Palette */}
-      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('toolbar.status')}</span>
+    <TooltipProvider>
+      <div
+        ref={elementRef}
+        style={draggableStyles}
+        className={`${disableFloating ? 'relative' : 'fixed'} flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${quick.card} flex-wrap ${PANEL_LAYOUT.SHADOW.XL} ${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
+        onMouseEnter={(e) => e.stopPropagation()}
+        onMouseMove={(e) => e.stopPropagation()}
+        onMouseLeave={(e) => e.stopPropagation()}
+      >
+        {/* Drag Handle */}
+        {!disableFloating && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                onMouseDown={handleMouseDown}
+                className={`${PANEL_LAYOUT.CURSOR.GRAB} active:${PANEL_LAYOUT.CURSOR.GRABBING} ${PANEL_LAYOUT.SPACING.XS} ${colors.bg.hover} ${radius.md}`}
+              >
+                <div className={`${iconSizes.xs} ${iconSizes.sm} ${colors.bg.active} ${quick.button}`}></div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>{t('toolbar.dragToMove')}</TooltipContent>
+          </Tooltip>
+        )}
+        {/* Drawing Modes */}
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-          {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
-            <button
-              key={status}
-              onClick={() => onStatusChange(status)}
-              title={t(STATUS_LABELS[status])}
-              className={`${iconSizes.lg} ${quick.button} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']}`}
-              style={getStatusColorButtonStyles(
-                status as PropertyStatus,
-                currentStatus === status
-              )}
-            />
+          {modeButtons.map(({ mode: btnMode, icon: Icon, label, key }) => (
+            <Tooltip key={btnMode}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => handleModeChange(btnMode)}
+                  className={`
+                    ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                    flex items-center justify-center ${PANEL_LAYOUT.GAP.XS}
+                    ${mode === btnMode
+                      ? `${colors.bg.info} ${colors.text.inverted} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                      : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+                    }
+                  `}
+                >
+                  {Icon ? <Icon className={iconSizes.sm} /> : <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>?</span>}
+                  <span className={`hidden sm:inline ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{label}</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{`${label} (${key})`}</TooltipContent>
+            </Tooltip>
           ))}
         </div>
-      </div>
 
       <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
 
-      {/* Kind Selection */}
-      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('toolbar.type')}</span>
+        {/* Status Palette */}
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('toolbar.status')}</span>
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
+            {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
+              <Tooltip key={status}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onStatusChange(status)}
+                    className={`${iconSizes.lg} ${quick.button} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']}`}
+                    style={getStatusColorButtonStyles(
+                      status as PropertyStatus,
+                      currentStatus === status
+                    )}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>{t(STATUS_LABELS[status])}</TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </div>
+
+      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
+
+        {/* Kind Selection */}
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('toolbar.type')}</span>
+          <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
+            {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
+              const Icon = kindIcons[kind];
+              return (
+                <Tooltip key={kind}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => onKindChange(kind)}
+                      className={`
+                        ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                        flex items-center justify-center
+                        ${currentKind === kind
+                          ? `${colors.bg.info} ${colors.text.inverted} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                          : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
+                        }
+                      `}
+                    >
+                      {Icon ? <Icon className={iconSizes.sm} /> : <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>?</span>}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t(KIND_LABELS[kind])}</TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+        </div>
+
+      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
+
+        {/* Actions */}
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-          {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
-            const Icon = kindIcons[kind];
-            return (
+          <Tooltip>
+            <TooltipTrigger asChild>
               <button
-                key={kind}
-                onClick={() => onKindChange(kind)}
-                title={t(KIND_LABELS[kind])}
+                onClick={onDuplicate}
+                disabled={!selectedOverlayId}
                 className={`
                   ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
                   flex items-center justify-center
-                  ${currentKind === kind
-                    ? `${colors.bg.info} ${colors.text.inverted} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
-                  }
+                  ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
+                  disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
                 `}
               >
-                {Icon ? <Icon className={iconSizes.sm} /> : <span className={PANEL_LAYOUT.TYPOGRAPHY.XS}>?</span>}
+                <Copy className={iconSizes.sm} />
               </button>
-            );
-          })}
+            </TooltipTrigger>
+            <TooltipContent>{t('toolbar.duplicate', { key: 'D' })}</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onDelete}
+                disabled={!selectedOverlayId}
+                className={`
+                  ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                  flex items-center justify-center
+                  ${colors.bg.secondary} ${colors.text.error} ${getStatusBorder('default')}
+                  disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
+                `}
+              >
+                <X className={iconSizes.sm} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('toolbar.delete', { key: 'Del' })}</TooltipContent>
+          </Tooltip>
+        </div>
+
+      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
+
+        {/* Undo/Redo */}
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onUndo}
+                disabled={!canUndo}
+                className={`
+                  ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                  flex items-center justify-center
+                  ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
+                  disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
+                `}
+              >
+                <RotateCcw className={iconSizes.sm} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('toolbar.undo', { key: 'Ctrl+Z' })}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onRedo}
+                disabled={!canRedo}
+                className={`
+                  ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                  flex items-center justify-center
+                  ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
+                  disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
+                `}
+              >
+                <RotateCw className={iconSizes.sm} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('toolbar.redo', { key: 'Ctrl+Y' })}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
-
-      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
-
-      {/* Actions */}
-      <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-        <button
-          onClick={onDuplicate}
-          disabled={!selectedOverlayId}
-          title={t('toolbar.duplicate', { key: 'D' })}
-          className={`
-            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-            flex items-center justify-center
-            ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
-            disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
-          `}
-        >
-          <Copy className={iconSizes.sm} />
-        </button>
-        
-        <button
-          onClick={onDelete}
-          disabled={!selectedOverlayId}
-          title={t('toolbar.delete', { key: 'Del' })}
-          className={`
-            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-            flex items-center justify-center
-            ${colors.bg.secondary} ${colors.text.error} ${getStatusBorder('default')}
-            disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
-          `}
-        >
-          <X className={iconSizes.sm} />
-        </button>
-      </div>
-
-      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
-
-      {/* Undo/Redo */}
-      <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-        <button
-          onClick={onUndo}
-          disabled={!canUndo}
-          title={t('toolbar.undo', { key: 'Ctrl+Z' })}
-          className={`
-            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-            flex items-center justify-center
-            ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
-            disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
-          `}
-        >
-          <RotateCcw className={iconSizes.sm} />
-        </button>
-        <button
-          onClick={onRedo}
-          disabled={!canRedo}
-          title={t('toolbar.redo', { key: 'Ctrl+Y' })}
-          className={`
-            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-            flex items-center justify-center
-            ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
-            disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
-          `}
-        >
-          <RotateCw className={iconSizes.sm} />
-        </button>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 };

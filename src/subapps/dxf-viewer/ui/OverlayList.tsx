@@ -16,6 +16,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+// 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 
@@ -163,26 +165,36 @@ export const OverlayList: React.FC<OverlayListProps> = ({
                         {overlay.label || `Overlay ${overlay.id.slice(0, 6)}`}
                       </div>
                     </div>
-                    <nav className={`flex items-center ${PANEL_LAYOUT.GAP.HALF} ${PANEL_LAYOUT.FLEX_SHRINK.NONE}`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleEdit(overlay.id, e)}
-                        className={`${PANEL_LAYOUT.SPACING.HALF} ${iconSizes.md} ${colors.text.muted}${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-                        title={t('overlayList.edit')}
-                      >
-                        <Edit3 className={iconSizes.xs} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleDelete(overlay.id, e)}
-                        className={`${PANEL_LAYOUT.SPACING.HALF} ${iconSizes.md} ${HOVER_TEXT_EFFECTS.RED}`}
-                        title={t('overlayList.delete')}
-                      >
-                        <Trash2 className={iconSizes.xs} />
-                      </Button>
-                    </nav>
+                    <TooltipProvider>
+                      <nav className={`flex items-center ${PANEL_LAYOUT.GAP.HALF} ${PANEL_LAYOUT.FLEX_SHRINK.NONE}`}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleEdit(overlay.id, e)}
+                              className={`${PANEL_LAYOUT.SPACING.HALF} ${iconSizes.md} ${colors.text.muted}${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                            >
+                              <Edit3 className={iconSizes.xs} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('overlayList.edit')}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => handleDelete(overlay.id, e)}
+                              className={`${PANEL_LAYOUT.SPACING.HALF} ${iconSizes.md} ${HOVER_TEXT_EFFECTS.RED}`}
+                            >
+                              <Trash2 className={iconSizes.xs} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('overlayList.delete')}</TooltipContent>
+                        </Tooltip>
+                      </nav>
+                    </TooltipProvider>
                   </article>
                 );
               })

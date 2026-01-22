@@ -131,11 +131,11 @@ function createIndividualFormTabsFromConfig(
       <FormGrid>
         <IndividualFormRenderer
           sections={[section]} // Single section per tab
-          formData={formData}
+          formData={formData as IndividualFormData} // 🏢 ENTERPRISE: Type assertion
           onChange={onChange}
           onSelectChange={onSelectChange}
           disabled={disabled}
-          customRenderers={customRenderers}
+          customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
         />
       </FormGrid>
     )

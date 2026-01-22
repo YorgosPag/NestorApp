@@ -8,6 +8,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { LayerListProps } from './types';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 

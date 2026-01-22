@@ -6,6 +6,7 @@ import { Tag, Palette, Eye, EyeOff, Settings, Info } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized navigation entities for building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // ✅ ENTERPRISE: Mock effects για compilation - θα συνδεθεί με πραγματικό effects system
 const INTERACTIVE_PATTERNS = {
   PRIMARY_HOVER: 'hover:bg-blue-700',

@@ -20,6 +20,7 @@ import {
 import { useFocusTrap, announceToScreenReader } from '@/utils/accessibility';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors, type UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 
@@ -639,75 +640,99 @@ export function PhotoPreviewModal({
             {/* Gallery Navigation */}
             {isGalleryMode && totalPhotos > 1 && (
               <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handlePreviousPhoto}
-                  title={t('photoPreview.navigation.previous')}
-                  aria-label={t('photoPreview.navigation.previousAria', { current: currentIndex, total: totalPhotos })}
-                  className="${iconSizes.xl} p-0"
-                  disabled={currentIndex === 0}
-                >
-                  <ChevronLeft className={`${iconSizes.sm}`} aria-hidden="true" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handlePreviousPhoto}
+                      aria-label={t('photoPreview.navigation.previousAria', { current: currentIndex, total: totalPhotos })}
+                      className="${iconSizes.xl} p-0"
+                      disabled={currentIndex === 0}
+                    >
+                      <ChevronLeft className={`${iconSizes.sm}`} aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('photoPreview.navigation.previous')}</TooltipContent>
+                </Tooltip>
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleNextPhoto}
-                  title={t('photoPreview.navigation.next')}
-                  aria-label={t('photoPreview.navigation.nextAria', { current: currentIndex + 2, total: totalPhotos })}
-                  className="${iconSizes.xl} p-0"
-                  disabled={currentIndex === totalPhotos - 1}
-                >
-                  <ChevronRight className={`${iconSizes.sm}`} aria-hidden="true" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleNextPhoto}
+                      aria-label={t('photoPreview.navigation.nextAria', { current: currentIndex + 2, total: totalPhotos })}
+                      className="${iconSizes.xl} p-0"
+                      disabled={currentIndex === totalPhotos - 1}
+                    >
+                      <ChevronRight className={`${iconSizes.sm}`} aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('photoPreview.navigation.next')}</TooltipContent>
+                </Tooltip>
 
                 <div className="w-px h-4 bg-border mx-1" />
               </>
             )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleZoomOut}
-              disabled={zoom <= 0.25}
-              title={t('photoPreview.zoom.out')}
-              className="${iconSizes.xl} p-0"
-            >
-              <ZoomOut className={iconSizes.sm} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleZoomOut}
+                  disabled={zoom <= 0.25}
+                  className="${iconSizes.xl} p-0"
+                >
+                  <ZoomOut className={iconSizes.sm} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('photoPreview.zoom.out')}</TooltipContent>
+            </Tooltip>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleZoomIn}
-              disabled={zoom >= 8}
-              title={t('photoPreview.zoom.in')}
-              className="${iconSizes.xl} p-0"
-            >
-              <ZoomIn className={iconSizes.sm} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleZoomIn}
+                  disabled={zoom >= 8}
+                  className="${iconSizes.xl} p-0"
+                >
+                  <ZoomIn className={iconSizes.sm} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('photoPreview.zoom.in')}</TooltipContent>
+            </Tooltip>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRotate}
-              title={t('photoPreview.actions.rotate')}
-              className="${iconSizes.xl} p-0"
-            >
-              <RotateCw className={iconSizes.sm} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRotate}
+                  className="${iconSizes.xl} p-0"
+                >
+                  <RotateCw className={iconSizes.sm} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('photoPreview.actions.rotate')}</TooltipContent>
+            </Tooltip>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleFitToView}
-              title={t('photoPreview.zoom.fit')}
-              className="${iconSizes.xl} p-0"
-            >
-              <Maximize2 className={iconSizes.sm} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleFitToView}
+                  className="${iconSizes.xl} p-0"
+                >
+                  <Maximize2 className={iconSizes.sm} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('photoPreview.zoom.fit')}</TooltipContent>
+            </Tooltip>
 
             <ShareButton
               shareData={shareData}
@@ -717,25 +742,33 @@ export function PhotoPreviewModal({
               className="${iconSizes.xl} p-0"
             />
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDownload}
-              title={t('photoPreview.actions.download')}
-              className="${iconSizes.xl} p-0"
-            >
-              <Download className={iconSizes.sm} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDownload}
+                  className="${iconSizes.xl} p-0"
+                >
+                  <Download className={iconSizes.sm} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('photoPreview.actions.download')}</TooltipContent>
+            </Tooltip>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              title={t('photoPreview.actions.close')}
-              className="${iconSizes.xl} p-0"
-            >
-              <X className={iconSizes.sm} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onOpenChange(false)}
+                  className="${iconSizes.xl} p-0"
+                >
+                  <X className={iconSizes.sm} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('photoPreview.actions.close')}</TooltipContent>
+            </Tooltip>
           </nav>
         </DialogHeader>
 

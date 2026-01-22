@@ -15,6 +15,7 @@ import React from 'react';
 import { Phone, Mail, Eye, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
@@ -400,45 +401,57 @@ export function CustomerInfoCompact({
           {showActions && displayInfo && (
             <>
               {/* View Action (Ματάκι) */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="${iconSizes.xl} p-0"
-                onClick={() => window.open(`/contacts?contactId=${contactId}`, '_blank')}
-                title={t('customerActions.viewCustomer')}
-              >
-                <Eye className={iconSizes.sm} />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="${iconSizes.xl} p-0"
+                    onClick={() => window.open(`/contacts?contactId=${contactId}`, '_blank')}
+                  >
+                    <Eye className={iconSizes.sm} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('customerActions.viewCustomer')}</TooltipContent>
+              </Tooltip>
 
               {/* Phone Action (Τηλέφωνο) */}
               {displayInfo.primaryPhone && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="${iconSizes.xl} p-0"
-                  onClick={() => {
-                    const cleanPhone = displayInfo.primaryPhone!.replace(/\s+/g, '');
-                    window.open(`tel:${cleanPhone}`, '_self');
-                  }}
-                  title={t('customerActions.call')}
-                >
-                  <Phone className={iconSizes.sm} />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="${iconSizes.xl} p-0"
+                      onClick={() => {
+                        const cleanPhone = displayInfo.primaryPhone!.replace(/\s+/g, '');
+                        window.open(`tel:${cleanPhone}`, '_self');
+                      }}
+                    >
+                      <Phone className={iconSizes.sm} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('customerActions.call')}</TooltipContent>
+                </Tooltip>
               )}
 
               {/* Email Action (Email) */}
               {displayInfo.primaryEmail && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="${iconSizes.xl} p-0"
-                  onClick={() => {
-                    window.open(`mailto:${displayInfo.primaryEmail}`, '_self');
-                  }}
-                  title={t('customerActions.sendEmail')}
-                >
-                  <Mail className={iconSizes.sm} />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="${iconSizes.xl} p-0"
+                      onClick={() => {
+                        window.open(`mailto:${displayInfo.primaryEmail}`, '_self');
+                      }}
+                    >
+                      <Mail className={iconSizes.sm} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('customerActions.sendEmail')}</TooltipContent>
+                </Tooltip>
               )}
             </>
           )}

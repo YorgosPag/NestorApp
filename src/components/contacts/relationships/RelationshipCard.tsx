@@ -147,34 +147,42 @@ export const RelationshipCard: React.FC<RelationshipCardProps> = ({
           {!readonly && (
             <div className="flex space-x-2">
               {onEdit && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onEdit) onEdit();
-                  }}
-                  className={`${iconSizes.xl} p-0`}
-                  title={t('relationships.card.editTitle')}
-                >
-                  <Edit className={iconSizes.sm} />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onEdit) onEdit();
+                      }}
+                      className={`${iconSizes.xl} p-0`}
+                    >
+                      <Edit className={iconSizes.sm} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('relationships.card.editTitle')}</TooltipContent>
+                </Tooltip>
               )}
               {onDelete && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onDelete) onDelete();
-                  }}
-                  className={`${iconSizes.xl} p-0 ${HOVER_TEXT_EFFECTS.RED}`}
-                  title={t('relationships.card.deleteTitle')}
-                >
-                  <Trash2 className={iconSizes.sm} />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onDelete) onDelete();
+                      }}
+                      className={`${iconSizes.xl} p-0 ${HOVER_TEXT_EFFECTS.RED}`}
+                    >
+                      <Trash2 className={iconSizes.sm} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('relationships.card.deleteTitle')}</TooltipContent>
+                </Tooltip>
               )}
             </div>
           )}

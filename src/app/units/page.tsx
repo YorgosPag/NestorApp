@@ -317,16 +317,8 @@ function UnitsPageContent() {
                 <StatusCard statsByStatus={dashboardStats.propertiesByStatus} getStatusLabel={getStatusLabel} />
                 <DetailsCard title={t('page.dashboard.unitTypes')} icon={Building2} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
                 <DetailsCard title={t('page.dashboard.floorDistribution')} icon={MapPin} data={dashboardStats.propertiesByFloor} isFloorData={true} />
-                <DetailsCard
-                  title={t('page.dashboard.storages')}
-                  icon={Package}
-                  data={{
-                    [t('page.dashboard.total')]: dashboardStats.totalStorageUnits,
-                    [t('operationalStatus.ready')]: dashboardStats.availableStorageUnits,
-                    // ❌ REMOVED: "Sold" storage count - SALES DATA (moved to /sales)
-                  }}
-                  isThreeColumnGrid={false}
-                />
+                {/* 🎯 DOMAIN SEPARATION: Storages card removed (separate entity, not Unit subtype) */}
+                {/* Storage units have their own module at /spaces/storage */}
               </>
             }
           />

@@ -27,6 +27,8 @@ import type { ColorSwatch } from './types';
 import { layoutUtilities } from '@/styles/design-tokens';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SwatchesPaletteProps {
   /** Palette IDs to display */
@@ -183,19 +185,23 @@ function ColorSwatchButton({
   );
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      className={`
-        rounded border ${PANEL_LAYOUT.TRANSITION.ALL}
-        ${COMPLEX_HOVER_EFFECTS.SCALE_AND_SHADOW}
-        focus:outline-none ${colors.interactive.focus.ring} focus:ring-offset-2 ring-offset-background
-        ${isSelected ? `${getStatusBorder('info')} ring-2 ${colors.ring.info}` : getStatusBorder('muted')}
-      `}
-      style={layoutUtilities.dxf.swatch.square(size, color)}
-      title={name}
-      aria-label={`Select color ${name}`}
-    />
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={handleClick}
+          onKeyDown={handleKeyDown}
+          className={`
+            rounded border ${PANEL_LAYOUT.TRANSITION.ALL}
+            ${COMPLEX_HOVER_EFFECTS.SCALE_AND_SHADOW}
+            focus:outline-none ${colors.interactive.focus.ring} focus:ring-offset-2 ring-offset-background
+            ${isSelected ? `${getStatusBorder('info')} ring-2 ${colors.ring.info}` : getStatusBorder('muted')}
+          `}
+          style={layoutUtilities.dxf.swatch.square(size, color)}
+          aria-label={`Select color ${name}`}
+        />
+      </TooltipTrigger>
+      <TooltipContent>{name}</TooltipContent>
+    </Tooltip>
   );
 }

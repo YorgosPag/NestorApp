@@ -56,7 +56,7 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabCompone
   // 🏢 ENTERPRISE: Unified Factory aliases - same components, different names
   'BuildingGeneralTab': GeneralTabContent as ComponentType<TabComponentProps>,
   'BuildingFloorsTab': TimelineTabContent as ComponentType<TabComponentProps>,
-  'BuildingFloorplansTab': FloorplanViewerTab as ComponentType<TabComponentProps>,
+  'BuildingFloorplansTab': FloorplanViewerTab as unknown as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Double assertion for component with specific props
   'BuildingDocumentsTab': PlaceholderTab as ComponentType<TabComponentProps>,
   'BuildingPhotosTab': PhotosTabContent as ComponentType<TabComponentProps>,
   'BuildingActivityTab': AnalyticsTabContent as ComponentType<TabComponentProps>,

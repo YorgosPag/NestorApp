@@ -143,6 +143,19 @@
     "showAdvanced": "Show advanced",
     "hideAdvanced": "Hide advanced",
     "resetFilters": "Reset filters",
+    "allStatuses": "All Statuses",
+    "allTypes": "All Types",
+    "allBuildings": "All Buildings",
+    "allProjects": "All Projects",
+    "allFloors": "All Floors",
+    "areaPresets": {
+      "all": "All sizes",
+      "small": "Small (up to 50 m²)",
+      "medium": "Medium (50-100 m²)",
+      "large": "Large (100-200 m²)",
+      "veryLarge": "Very large (200+ m²)",
+      "custom": "Custom range"
+    },
     "status": {
       "available": "Available",
       "sold": "Sold",

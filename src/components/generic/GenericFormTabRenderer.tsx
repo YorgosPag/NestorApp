@@ -31,8 +31,8 @@ interface FormFieldData {
   [key: string]: unknown;
 }
 
-/** Custom renderer function type */
-type CustomRendererFn = () => React.ReactNode;
+/** Local custom renderer function type (parameterless for special sections) */
+type LocalCustomRendererFn = () => React.ReactNode;
 
 /** Field renderer function type */
 type FieldRendererFn = (field: FormFieldData, formData: Record<string, unknown>, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, onSelectChange: (name: string, value: string) => void, disabled: boolean) => React.ReactNode;
@@ -51,7 +51,7 @@ export interface GenericFormTabRendererProps {
   /** Multiple photos change handler (now used for logos too) */
   onPhotosChange?: (photos: PhotoSlotData[]) => void;
   /** Custom field renderers for forms */
-  customRenderers?: Record<string, FieldRendererFn | CustomRendererFn>;
+  customRenderers?: Record<string, FieldRendererFn | LocalCustomRendererFn>;
 }
 
 // ============================================================================
@@ -112,21 +112,21 @@ function createFormTabsFromConfig(
       // Check for custom renderer FIRST (but exclude companyPhotos and relationships which have special logic)
       if (customRenderers?.[section.id] && section.id !== 'companyPhotos' && section.id !== 'relationships') {
         console.log('🔧 DEBUG: Using generic custom renderer for section:', section.id);
-        const renderer = customRenderers[section.id] as CustomRendererFn;
+        const renderer = customRenderers[section.id] as LocalCustomRendererFn;
         return renderer();
       }
 
       // 🏢 ENTERPRISE: Custom renderer for relationships tab
       if (section.id === 'relationships' && customRenderers && customRenderers.relationships) {
         console.log('🏢 DEBUG: Using relationships custom renderer');
-        const renderer = customRenderers.relationships as CustomRendererFn;
+        const renderer = customRenderers.relationships as LocalCustomRendererFn;
         return renderer();
       }
 
       if (section.id === 'companyPhotos' && customRenderers && customRenderers.companyPhotos) {
         // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager)
         console.log('🏢 DEBUG: Using companyPhotos custom renderer');
-        const renderer = customRenderers.companyPhotos as CustomRendererFn;
+        const renderer = customRenderers.companyPhotos as LocalCustomRendererFn;
         return renderer();
       }
 

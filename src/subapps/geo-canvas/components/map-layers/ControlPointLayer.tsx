@@ -19,6 +19,7 @@ import { Marker } from 'react-map-gl/maplibre';
 import type { GeoControlPoint } from '../../types';
 import { mapControlPointTokens } from '@/styles/design-tokens';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS

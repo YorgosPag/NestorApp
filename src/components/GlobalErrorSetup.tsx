@@ -11,10 +11,10 @@ import { useEffect } from 'react';
 import type { ErrorTracker } from '@/services/ErrorTracker';
 
 // 🏢 ENTERPRISE: Extend Window interface for type-safe global access
-// Note: errorTracker is a proxy object, not the full ErrorTracker class instance
+// Note: errorTracker is a proxy object with methods, not the full ErrorTracker class instance
 declare global {
   interface Window {
-    errorTracker?: Partial<ErrorTracker>; // 🏢 ENTERPRISE: Partial type for proxy object
+    errorTracker?: typeof import('@/services/ErrorTracker').errorTracker; // 🏢 ENTERPRISE: Use exact proxy type
   }
 }
 

@@ -13,6 +13,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { AnimatedSpinner } from '../modal/ModalLoadingStates';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Button variants for consistent styling
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'tool' | 'tab' | 'action';
@@ -102,14 +104,14 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
     const variantClass = isActive ? activeVariantStyles[variant] : variantStyles[variant];
     const sizeClass = sizeStyles[size];
     const iconSizeClass = getIconSizeStyles(iconSizes)[size];
-    
+
     const disabledClass = disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : '';
     const widthClass = fullWidth ? 'w-full' : '';
     const loadingClass = isLoading ? `${PANEL_LAYOUT.OPACITY['75']} ${PANEL_LAYOUT.CURSOR.WAIT}` : '';
-    
-    const finalTitle = title || (hotkey ? `${children} (${hotkey})` : undefined);
-    
-    return (
+
+    const tooltipText = title || (hotkey ? `${children} (${hotkey})` : undefined);
+
+    const buttonElement = (
       <button
         ref={ref}
         className={`
@@ -122,7 +124,6 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
           ${className}
         `.trim()}
         disabled={disabled || isLoading}
-        title={finalTitle}
         {...props}
       >
         {Icon && iconPosition === 'left' && (
@@ -140,6 +141,20 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
         )}
       </button>
     );
+
+    // 🏢 ENTERPRISE: Use Shadcn Tooltip when tooltip text exists, otherwise render button directly
+    if (tooltipText) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {buttonElement}
+          </TooltipTrigger>
+          <TooltipContent>{tooltipText}</TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return buttonElement;
   }
 );
 

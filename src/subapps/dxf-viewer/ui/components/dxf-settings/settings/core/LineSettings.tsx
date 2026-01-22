@@ -107,6 +107,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE: Shadcn Tooltip component
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Simple SVG icons
 const SettingsIcon = ({ className }: { className?: string }) => (
@@ -404,28 +406,36 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
       <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('settings.line.title')}</h3>
         <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label={t('settings.line.actionsAriaLabel')}>
-          {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={resetToDefaults}
-            title={t('settings.line.resetTitle')}
-            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
-          >
-            <RotateCcw className={iconSizes.xs} />
-            {t('settings.line.reset')}
-          </Button>
-          {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon */}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleFactoryResetClick}
-            title={t('settings.line.factoryTitle')}
-            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
-          >
-            <Factory className={iconSizes.xs} />
-            {t('settings.line.factory')}
-          </Button>
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon + Shadcn Tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={resetToDefaults}
+                className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              >
+                <RotateCcw className={iconSizes.xs} />
+                {t('settings.line.reset')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('settings.line.resetTitle')}</TooltipContent>
+          </Tooltip>
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon + Shadcn Tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleFactoryResetClick}
+                className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              >
+                <Factory className={iconSizes.xs} />
+                {t('settings.line.factory')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('settings.line.factoryTitle')}</TooltipContent>
+          </Tooltip>
         </nav>
       </header>
 

@@ -30,6 +30,8 @@ import { getStatusColorButtonStyles } from '../DxfViewerComponents.styles';
 import { ToolButton, ActionButton } from '../../components/shared/BaseButton';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 
@@ -209,16 +211,19 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-muted-foreground`}>{t('toolbar.status')}</span>
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
               {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
-                <button
-                  key={status}
-                  onClick={() => props.onStatusChange(status)}
-                  title={t(STATUS_LABELS[status])}
-                  className={`${iconSizes.lg} ${quick.button} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']}`}
-                  style={getStatusColorButtonStyles(
-                    status as PropertyStatus,
-                    props.currentStatus === status
-                  )}
-                />
+                <Tooltip key={status}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => props.onStatusChange(status)}
+                      className={`${iconSizes.lg} ${quick.button} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']}`}
+                      style={getStatusColorButtonStyles(
+                        status as PropertyStatus,
+                        props.currentStatus === status
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>{t(STATUS_LABELS[status])}</TooltipContent>
+                </Tooltip>
               ))}
             </div>
           </div>
