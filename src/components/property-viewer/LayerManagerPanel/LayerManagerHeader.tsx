@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, EyeOff } from "lucide-react";
 import { PROPERTY_STATUS_CONFIG } from "@/lib/property-utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { PROPERTY_FILTER_LABELS, COMMON_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -67,7 +66,7 @@ export function LayerManagerHeader({
             <SelectValue placeholder={t('layerManager.typePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_TYPES}</SelectItem>
+            <SelectItem value="all">{t('filters.allTypes')}</SelectItem>
             {uniqueTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -76,7 +75,7 @@ export function LayerManagerHeader({
             <SelectValue placeholder={t('layerManager.statusPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{COMMON_FILTER_LABELS.ALL_STATUSES}</SelectItem>
+            <SelectItem value="all">{t('filters.allStatuses')}</SelectItem>
             {uniqueStatuses.map(status => (
               <SelectItem key={status} value={status}>{(PROPERTY_STATUS_CONFIG as Record<string, { label: string; color: string }>)[status]?.label || status}</SelectItem>
             ))}

@@ -5,9 +5,10 @@ import { emailTemplates, getTemplateContent } from "../utils/emailTemplates";
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 
-type Lead = { id: string; fullName: string; email: string };
+// 🏢 ENTERPRISE: Lead type with optional fields to match Opportunity type
+type Lead = { id?: string; fullName?: string; email?: string };
 
-export function useSendEmailModal(lead?: Lead, onClose?: () => void, onEmailSent?: () => void) {
+export function useSendEmailModal(lead?: Lead | null, onClose?: () => void, onEmailSent?: () => void) {
   const [formData, setFormData] = useState({
     templateType: "custom",
     subject: "",

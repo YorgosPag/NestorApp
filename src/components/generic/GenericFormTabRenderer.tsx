@@ -5,7 +5,7 @@ import { FormGrid } from '@/components/ui/form/FormComponents';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './utils/IconMapping';
-import { GenericFormRenderer } from './GenericFormRenderer';
+import { GenericFormRenderer, type FormDataRecord, type PhotoData, type CustomRendererFn } from './GenericFormRenderer';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { SectionConfig } from '@/config/company-gemi';
 // 🏢 ENTERPRISE: i18n support for tab labels
@@ -155,12 +155,12 @@ function createFormTabsFromConfig(
         <FormGrid>
           <GenericFormRenderer
             sections={[section]} // Single section per tab
-            formData={formData}
+            formData={formData as FormDataRecord} // 🏢 ENTERPRISE: Type assertion - formData is compatible
             onChange={onChange}
             onSelectChange={onSelectChange}
             disabled={disabled}
-            onPhotosChange={onPhotosChange} // Pass photo handler to GenericFormRenderer
-            customRenderers={customRenderers}
+            onPhotosChange={onPhotosChange as ((photos: PhotoData[]) => void) | undefined} // 🏢 ENTERPRISE: Type assertion
+            customRenderers={customRenderers as Record<string, CustomRendererFn> | undefined} // 🏢 ENTERPRISE: Type assertion
           />
         </FormGrid>
       );

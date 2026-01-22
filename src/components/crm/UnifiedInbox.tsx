@@ -63,6 +63,10 @@ interface UnifiedInboxProps {
   showFilters?: boolean;
   /** Enable polling for real-time updates */
   enablePolling?: boolean;
+  /** Lead/Contact ID για filtering (optional) */
+  leadId?: string;
+  /** Height of the inbox component */
+  height?: string;
 }
 
 // ============================================================================

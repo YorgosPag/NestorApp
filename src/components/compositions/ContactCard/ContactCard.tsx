@@ -116,7 +116,7 @@ export function ContactCard({
                     >
                       {lead.email}
                     </a>
-                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="text-xs text-muted-foreground">{t('contactCard.email')}</p>
                   </div>
                 </div>
               )}

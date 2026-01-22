@@ -54,6 +54,22 @@ export interface IndividualFormRendererProps {
 }
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Helper to convert form data value to string for input fields
+ * Handles string | number | boolean types safely
+ */
+function toStringValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  return String(value);
+}
+
+// ============================================================================
 // FIELD RENDERER FUNCTIONS
 // ============================================================================
 
@@ -67,7 +83,7 @@ function renderInputField(
   disabled: boolean,
   t: TFunction // 🏢 ENTERPRISE: i18n translation function
 ): React.ReactNode {
-  const value = formData[field.id] ?? '';
+  const value = toStringValue(formData[field.id]);
 
   // 🏢 ENTERPRISE: Use Universal Clickable Field - ZERO διασπορά!
   return (
@@ -99,7 +115,7 @@ function renderTextareaField(
     <Textarea
       id={field.id}
       name={field.id}
-      value={formData[field.id] ?? ''}
+      value={toStringValue(formData[field.id])}
       onChange={onChange}
       disabled={disabled}
       required={field.required}

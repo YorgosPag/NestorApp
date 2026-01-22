@@ -80,9 +80,8 @@ This file has been refactored into Enterprise modular architecture:
 
 // Import legacy helpers for backward compatibility
 import {
-  getPhotoDimensions as _getPhotoDimensions,
-  getPhotoLayout as _getPhotoLayout,
-  buildResponsivePhotoClass as _buildResponsivePhotoClass,
+  calculatePhotoDimensions,
+  buildResponsiveGrid,
   getPhotoConfig,
   getPhotoContextConfig,
   PHOTO_LAYOUTS
@@ -93,16 +92,18 @@ import type { PhotoContext } from './photo-config';
 type PhotoLayoutKey = keyof typeof PHOTO_LAYOUTS;
 
 // Legacy function exports for backward compatibility
-export function getPhotoDimensions(context: string): string {
-  console.warn('⚠️ getPhotoDimensions is deprecated. Use getPhotoConfig from photo-config instead.');
-  // 🏢 ENTERPRISE: Cast to PhotoContext for type safety (legacy string input)
-  return _getPhotoDimensions(context as PhotoContext);
+export function getPhotoDimensions(viewportWidth: number = 1024): string {
+  console.warn('⚠️ getPhotoDimensions is deprecated. Use calculatePhotoDimensions from photo-config instead.');
+  // Default to 'individual' type for backward compatibility
+  const dimensions = calculatePhotoDimensions(viewportWidth, 'individual');
+  return `w-[${dimensions.width}px] h-[${dimensions.height}px]`;
 }
 
 export function getPhotoLayout(layout: string) {
-  console.warn('⚠️ getPhotoLayout is deprecated. Use photo-config layouts directly.');
-  // 🏢 ENTERPRISE: Cast to PhotoLayoutKey for type safety (legacy string input)
-  return _getPhotoLayout(layout as PhotoLayoutKey);
+  console.warn('⚠️ getPhotoLayout is deprecated. Use PHOTO_LAYOUTS from photo-config directly.');
+  // Return layout key from PHOTO_LAYOUTS based on string key
+  const layoutKey = layout as PhotoLayoutKey;
+  return PHOTO_LAYOUTS[layoutKey] || PHOTO_LAYOUTS.PHOTO_GRID;
 }
 
 export function buildResponsivePhotoClass(
@@ -111,7 +112,12 @@ export function buildResponsivePhotoClass(
   desktop?: string
 ): string {
   console.warn('⚠️ buildResponsivePhotoClass is deprecated. Use buildResponsiveGrid from photo-config/utils.');
-  return _buildResponsivePhotoClass(mobile, tablet, desktop);
+  // Fallback implementation for backward compatibility
+  const classes: string[] = [];
+  if (mobile) classes.push(mobile);
+  if (tablet) classes.push(tablet);
+  if (desktop) classes.push(desktop);
+  return classes.join(' ') || buildResponsiveGrid('individual');
 }
 
 // ============================================================================

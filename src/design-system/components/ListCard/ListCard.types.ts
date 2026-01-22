@@ -166,6 +166,13 @@ export interface ListCardProps {
   /** Hide stats section */
   hideStats?: boolean;
 
+  /**
+   * 🏢 PR1.2: Show badges inline with title (same row)
+   * When true: Title + Badge on same line
+   * When false: Badge on separate row (default)
+   */
+  inlineBadges?: boolean;
+
   /** Additional className */
   className?: string;
 

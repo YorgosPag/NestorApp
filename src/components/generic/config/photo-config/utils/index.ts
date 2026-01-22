@@ -12,5 +12,5 @@ export * from './helpers';
 export * from './contexts';
 
 // Re-export key types
-export type { PhotoType, PhotoContext } from './helpers';
-export type { PhotoContext as ContextType } from './contexts';
+export type { PhotoType } from './helpers';
+export type { PhotoContext } from './contexts';

@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n';
 import { GripVertical, ChevronRight, ChevronDown, Hash, Plus, Save, X, Trash2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { ObligationArticle } from '@/types/obligations';
 import { ParagraphItem } from './ParagraphItem';
@@ -99,7 +100,12 @@ export function ArticleItem({
               </>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => handlers.addParagraph(sectionId, article.id)} className="h-7 px-2" title={t('article.addParagraph')}><Plus className={iconSizes.xs} /></Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => handlers.addParagraph(sectionId, article.id)} className="h-7 px-2"><Plus className={iconSizes.xs} /></Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('article.addParagraph')}</TooltipContent>
+                </Tooltip>
                 <Button variant="ghost" size="sm" onClick={() => handlers.deleteArticle(sectionId, article.id)} className="h-7 px-2 text-destructive hover:text-destructive/80"><Trash2 className={iconSizes.xs} /></Button>
               </>
             )}

@@ -30,6 +30,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -442,17 +443,21 @@ export function TrashView({
               {/* Actions */}
               <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
                 {/* Restore */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRestoreClick(file.id)}
-                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                  aria-label={t('trash.restoreFile')}
-                  title={t('trash.restoreFile')}
-                >
-                  <RotateCcw className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-                  {t('trash.restore')}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRestoreClick(file.id)}
+                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                      aria-label={t('trash.restoreFile')}
+                    >
+                      <RotateCcw className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
+                      {t('trash.restore')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('trash.restoreFile')}</TooltipContent>
+                </Tooltip>
               </nav>
             </article>
           );

@@ -195,18 +195,11 @@ export interface UseRelationshipListReturn {
 /**
  * useOrganizationTree hook return type
  */
-// 🏢 ENTERPRISE: Organization tree node structure
-interface OrganizationTreeNode {
-  id: string;
-  name: string;
-  type: string;
-  children?: OrganizationTreeNode[];
-  relationship?: ContactRelationship;
-  [key: string]: unknown;
-}
+// 🏢 ENTERPRISE: Import OrganizationTree from centralized types
+import type { OrganizationTree } from '@/types/contacts/relationships';
 
 export interface UseOrganizationTreeReturn {
-  organizationTree: OrganizationTreeNode | null;
+  organizationTree: OrganizationTree | null;
   loading: boolean;
   error: string | null;
   refreshTree: () => Promise<void>;

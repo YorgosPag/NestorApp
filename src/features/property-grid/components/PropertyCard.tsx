@@ -32,7 +32,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Filterab
         <aside className="absolute top-3 left-3" role="status" aria-label={t('card.aria.propertyStatus')}>
           <PropertyBadge
             status="available"
-            customLabel={UNIFIED_STATUS_FILTER_LABELS.AVAILABLE}
+            customLabel={t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' })}
           />
         </aside>
         <button className={`absolute top-3 right-3 p-2 ${colors.bg.primary}/90 backdrop-blur ${radius.full} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}>

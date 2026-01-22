@@ -6,6 +6,7 @@ import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, ChevronDown, ChevronRight } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { TocHeaderProps } from '../types';
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -34,20 +35,24 @@ export function TocHeader({
         </CardTitle>
 
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={isAllExpanded ? onCollapseAll : onExpandAll}
-            className="h-7 px-2"
-            title={isAllExpanded ? t('toc.collapseAll') : t('toc.expandAll')}
-            aria-label={isAllExpanded ? t('toc.collapseAll') : t('toc.expandAll')}
-          >
-            {isAllExpanded ? (
-              <ChevronDown className={iconSizes.sm} />
-            ) : (
-              <ChevronRight className={iconSizes.sm} />
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={isAllExpanded ? onCollapseAll : onExpandAll}
+                className="h-7 px-2"
+                aria-label={isAllExpanded ? t('toc.collapseAll') : t('toc.expandAll')}
+              >
+                {isAllExpanded ? (
+                  <ChevronDown className={iconSizes.sm} />
+                ) : (
+                  <ChevronRight className={iconSizes.sm} />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isAllExpanded ? t('toc.collapseAll') : t('toc.expandAll')}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

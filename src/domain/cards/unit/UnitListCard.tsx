@@ -126,36 +126,45 @@ export function UnitListCard({
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
 
-  /** Build stats array from unit data */
+  /**
+   * 🏢 PR1.2: Build stats array with ICONS + VALUES for compact inline display
+   * Format: 🏠 Type | 📐 85 m² | 🏢 1ος
+   */
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    // Area - 🏢 ENTERPRISE: Using centralized area icon/color
+    // Type with icon
+    if (unit.type) {
+      items.push({
+        icon: NAVIGATION_ENTITIES.unit.icon, // 🏠 Unit icon for type
+        iconColor: NAVIGATION_ENTITIES.unit.color,
+        label: t('card.stats.type'),
+        value: t(`types.${unit.type}`, { defaultValue: unit.type }),
+      });
+    }
+
+    // Area with icon
     if (unit.area) {
       items.push({
-        icon: NAVIGATION_ENTITIES.area.icon,
+        icon: NAVIGATION_ENTITIES.area.icon, // 📐 Area icon
         iconColor: NAVIGATION_ENTITIES.area.color,
         label: t('card.stats.area'),
         value: `${formatNumber(unit.area)} m²`,
       });
     }
 
-    // Floor - 🏢 PR1.2: Added for Google-grade density
+    // Floor with icon
     if (unit.floor !== undefined && unit.floor !== null) {
       items.push({
-        icon: NAVIGATION_ENTITIES.floor.icon,
+        icon: NAVIGATION_ENTITIES.floor.icon, // 🏢 Floor icon
         iconColor: NAVIGATION_ENTITIES.floor.color,
         label: t('card.stats.floor'),
         value: formatFloorLabel(unit.floor),
       });
     }
 
-    // ❌ REMOVED: Price display (commercial data - domain separation)
-    // Price now belongs to SalesAsset type in /sales module
-    // Migration: PR1 - Units List Cleanup
-
     return items;
-  }, [unit.area, unit.floor, t]);
+  }, [unit.type, unit.area, unit.floor, t]);
 
   /** Build badges from operational status */
   const badges = useMemo(() => {
@@ -188,11 +197,13 @@ export function UnitListCard({
   // 🏢 RENDER
   // ==========================================================================
 
+  // 🏢 PR1.2: Compact mobile-first layout (2 lines)
+  // Line 1: Name + Status chip (inline)
+  // Line 2: 🏠 Type | 📐 85 m² | 🏢 1ος (icons + values inline)
   return (
     <ListCard
       entityType="unit"
-      title={unit.name || unit.id}
-      subtitle={unit.type}
+      title={unit.name || unit.code || unit.id}
       badges={badges}
       stats={stats}
       isSelected={isSelected}
@@ -200,9 +211,12 @@ export function UnitListCard({
       onKeyDown={handleKeyDown}
       isFavorite={isFavorite}
       onToggleFavorite={onToggleFavorite}
-      compact={compact}
+      compact={true} // 🏢 PR1.2: Always compact for mobile-first
+      hideStats={false} // 🏢 PR1.2: Show stats with icons + values
+      inlineBadges={true} // 🏢 PR1.2: Badge inline with title
+      hideIcon={true} // 🏢 PR1.2: Hide entity icon (icon-less compact)
       className={className}
-      aria-label={t('card.ariaLabel', { name: unit.name || unit.id })}
+      aria-label={t('card.ariaLabel', { name: unit.name || unit.code || unit.id })}
     />
   );
 }

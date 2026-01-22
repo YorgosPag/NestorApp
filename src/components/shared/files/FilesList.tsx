@@ -16,6 +16,7 @@ import React, { useCallback, useState } from 'react';
 import { FileText, Download, Eye, Trash2, Calendar, HardDrive } from 'lucide-react';
 import type { FileRecord } from '@/types/file-record';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -274,44 +275,56 @@ export function FilesList({
             <nav className="flex items-center space-x-1" role="toolbar" aria-label={t('list.fileActions')}>
               {/* View */}
               {onView && file.downloadUrl && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => handleView(file, e)}
-                  aria-label={t('list.viewFile')}
-                  title={t('list.viewFile')}
-                >
-                  <Eye className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-                  {t('list.view')}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleView(file, e)}
+                      aria-label={t('list.viewFile')}
+                    >
+                      <Eye className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
+                      {t('list.view')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('list.viewFile')}</TooltipContent>
+                </Tooltip>
               )}
 
               {/* Download */}
               {file.downloadUrl && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => handleDownload(file, e)}
-                  aria-label={t('list.downloadFile')}
-                  title={t('list.downloadFile')}
-                >
-                  <Download className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
-                  {t('list.download')}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleDownload(file, e)}
+                      aria-label={t('list.downloadFile')}
+                    >
+                      <Download className={`${iconSizes.sm} mr-1`} aria-hidden="true" />
+                      {t('list.download')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('list.downloadFile')}</TooltipContent>
+                </Tooltip>
               )}
 
               {/* Delete */}
               {onDelete && currentUserId && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => handleDeleteClick(file.id, e)}
-                  className={`text-red-500 ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`}
-                  aria-label={t('list.deleteFile')}
-                  title={t('list.deleteFile')}
-                >
-                  <Trash2 className={iconSizes.sm} aria-hidden="true" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => handleDeleteClick(file.id, e)}
+                      className={`text-red-500 ${FORM_BUTTON_EFFECTS.DESTRUCTIVE}`}
+                      aria-label={t('list.deleteFile')}
+                    >
+                      <Trash2 className={iconSizes.sm} aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('list.deleteFile')}</TooltipContent>
+                </Tooltip>
               )}
             </nav>
           </article>

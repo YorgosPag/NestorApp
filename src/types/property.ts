@@ -59,7 +59,6 @@ export interface PropertyFilters {
 export interface PropertyStats {
   totalProperties: number;
   availableProperties: number;
-  soldProperties: number;
   totalValue: number;
   totalArea: number;
   averagePrice: number;
@@ -68,7 +67,17 @@ export interface PropertyStats {
   propertiesByFloor: Record<string, number>;
   totalStorageUnits: number;
   availableStorageUnits: number;
-  soldStorageUnits: number;
   uniqueBuildings: number;
-  reserved: number;
+
+  // 🎯 DOMAIN SEPARATION: Operational Status Metrics (Units = Physical Truth)
+  underConstructionProperties?: number;
+  maintenanceProperties?: number;
+  inspectionProperties?: number;
+  draftProperties?: number;
+
+  // ⚠️ DEPRECATED: Sales metrics (for backward compatibility only)
+  // These will be removed when /sales module is fully migrated
+  soldProperties?: number;
+  soldStorageUnits?: number;
+  reserved?: number;
 }

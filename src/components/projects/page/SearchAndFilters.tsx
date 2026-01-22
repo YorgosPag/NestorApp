@@ -12,7 +12,6 @@ import { FilterSelect } from '../FilterSelect';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -86,17 +85,21 @@ export function SearchAndFilters({
               value="all"
               className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`}
             >
-              {PROPERTY_FILTER_LABELS.ALL_STATUSES}
+              {t('search.allStatuses')}
             </TabsTrigger>
-            {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => (
-              <TabsTrigger
-                key={key}
-                value={key}
-                className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`}
-              >
-                {label}
-              </TabsTrigger>
-            ))}
+            {Object.entries(PROJECT_STATUS_LABELS).map(([key, label]) => {
+              // 🏢 ENTERPRISE: Convert snake_case to camelCase for i18n key
+              const i18nKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+              return (
+                <TabsTrigger
+                  key={key}
+                  value={key}
+                  className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.ACCENT_HOVER}`}
+                >
+                  {t(`status.${i18nKey}`)}
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
         </Tabs>
       </div>

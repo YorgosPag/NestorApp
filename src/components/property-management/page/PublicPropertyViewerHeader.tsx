@@ -12,6 +12,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized action icons (ZERO hardcoded values)
 import { NAVIGATION_ACTIONS } from '@/components/navigation/config';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface PublicPropertyViewerHeaderProps {
   viewMode: 'list' | 'grid';
@@ -31,6 +33,7 @@ export function PublicPropertyViewerHeader({
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const router = useRouter();
+  const { t } = useTranslation('common');
   
   return (
     <div className="shrink-0">
@@ -46,8 +49,8 @@ export function PublicPropertyViewerHeader({
                 className={`h-9 px-3 flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} transition-colors`}
               >
                 <ArrowLeft className={iconSizes.sm} />
-                <span className="hidden sm:inline">Πίσω στην Αναζήτηση</span>
-                <span className="sm:hidden">Πίσω</span>
+                <span className="hidden sm:inline">{t('propertyViewer.header.backToSearch')}</span>
+                <span className="sm:hidden">{t('propertyViewer.header.back')}</span>
               </Button>
               
               <div className="h-6 w-px bg-border" />
@@ -59,7 +62,7 @@ export function PublicPropertyViewerHeader({
                 className={`h-9 px-3 flex items-center gap-2 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               >
                 <Home className={iconSizes.sm} />
-                <span className="hidden sm:inline">Αρχική</span>
+                <span className="hidden sm:inline">{t('propertyViewer.header.home')}</span>
               </Button>
             </div>
             
@@ -67,9 +70,9 @@ export function PublicPropertyViewerHeader({
             
             {/* Title */}
             <div>
-              <h1 className="text-xl font-bold text-foreground">Κάτοψη Ορόφου</h1>
+              <h1 className="text-xl font-bold text-foreground">{t('propertyViewer.header.floorPlan')}</h1>
               <p className="text-sm text-muted-foreground">
-                {availableCount} διαθέσιμα ακίνητα
+                {t('propertyViewer.header.availableProperties', { count: availableCount })}
               </p>
             </div>
           </div>
@@ -83,7 +86,7 @@ export function PublicPropertyViewerHeader({
               className="h-8 hidden md:flex items-center gap-2"
             >
               <Search className={iconSizes.sm} />
-              Νέα Αναζήτηση
+              {t('propertyViewer.header.newSearch')}
             </Button>
             
             {/* View Mode Toggle */}
@@ -95,7 +98,7 @@ export function PublicPropertyViewerHeader({
                 className="h-8 rounded-r-none border-0"
               >
                 <List className={`${iconSizes.sm} mr-1`} />
-                Λίστα
+                {t('viewMode.list')}
               </Button>
               <Button
                 variant={viewMode === 'grid' ? "default" : "ghost"}
@@ -104,7 +107,7 @@ export function PublicPropertyViewerHeader({
                 className="h-8 rounded-l-none border-0"
               >
                 <LayoutGrid className={`${iconSizes.sm} mr-1`} />
-                Πλέγμα
+                {t('viewMode.grid')}
               </Button>
             </div>
           </div>
@@ -115,17 +118,17 @@ export function PublicPropertyViewerHeader({
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-start p-4 text-sm font-semibold">
               <NAVIGATION_ACTIONS.filter.icon className={cn(iconSizes.sm, NAVIGATION_ACTIONS.filter.color, 'mr-2')}/>
-              {NAVIGATION_ACTIONS.filter.label} Αναζήτησης
+              {t('propertyViewer.header.searchFilters')}
               {(filters.searchTerm || filters.propertyType.length > 0 || filters.status.length > 0) && (
                 <span className="ml-2 px-2 py-1 bg-primary text-primary-foreground text-xs rounded-full">
-                  Ενεργά
+                  {t('propertyViewer.header.activeFilters')}
                 </span>
               )}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="p-4 bg-muted/50 rounded-b-lg">
-              <p className="text-sm text-muted-foreground">Φίλτρα θα εμφανιστούν εδώ</p>
+              <p className="text-sm text-muted-foreground">{t('propertyViewer.header.filtersPlaceholder')}</p>
             </div>
           </CollapsibleContent>
         </Collapsible>

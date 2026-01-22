@@ -32,6 +32,7 @@
 import React, { useCallback } from 'react';
 import { Copy, File as FileIcon, Calendar, HardDrive, Tag, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
@@ -180,19 +181,23 @@ export function FileInspector({
                     {file.storagePath || t('technical.pathUnavailable')}
                   </code>
                   {file.storagePath && (
-                    <button
-                      type="button"
-                      onClick={handleCopyPath}
-                      className={cn(
-                        'flex-shrink-0 p-2 rounded transition-colors',
-                        'hover:bg-muted text-muted-foreground hover:text-foreground',
-                        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
-                      )}
-                      aria-label={t('technical.copyPath')}
-                      title={t('technical.copyPath')}
-                    >
-                      <Copy className={iconSizes.xs} />
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={handleCopyPath}
+                          className={cn(
+                            'flex-shrink-0 p-2 rounded transition-colors',
+                            'hover:bg-muted text-muted-foreground hover:text-foreground',
+                            'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
+                          )}
+                          aria-label={t('technical.copyPath')}
+                        >
+                          <Copy className={iconSizes.xs} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('technical.copyPath')}</TooltipContent>
+                    </Tooltip>
                   )}
                 </dd>
               </div>

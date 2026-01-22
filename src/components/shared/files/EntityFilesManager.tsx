@@ -28,6 +28,7 @@ import React, { useCallback, useState, useMemo } from 'react';
 import { FileText, Upload, RefreshCw, List, Network, Eye, Code, ArrowUp, Trash2, Grid3X3, Image as ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -573,81 +574,105 @@ export function EntityFilesManager({
                 <div className="flex gap-1 border rounded-md p-1" role="group" aria-label="View mode">
                   {/* 🏢 ENTERPRISE: Gallery view for media files (Procore/BIM360 pattern) */}
                   {displayStyle === 'media-gallery' && (
-                    <Button
-                      variant={viewMode === 'gallery' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('gallery')}
-                      aria-label={t('manager.viewGallery')}
-                      aria-pressed={viewMode === 'gallery'}
-                      title={t('manager.viewGalleryTooltip')}
-                      className={cn('px-2', viewMode === 'gallery' && 'bg-primary text-primary-foreground')}
-                    >
-                      <Grid3X3 className={iconSizes.sm} aria-hidden="true" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={viewMode === 'gallery' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setViewMode('gallery')}
+                          aria-label={t('manager.viewGallery')}
+                          aria-pressed={viewMode === 'gallery'}
+                          className={cn('px-2', viewMode === 'gallery' && 'bg-primary text-primary-foreground')}
+                        >
+                          <Grid3X3 className={iconSizes.sm} aria-hidden="true" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('manager.viewGalleryTooltip')}</TooltipContent>
+                    </Tooltip>
                   )}
                   {/* 🏢 ENTERPRISE: Full-width floorplan viewer (Bentley/Autodesk pattern) */}
                   {displayStyle === 'floorplan-gallery' && (
-                    <Button
-                      variant={viewMode === 'gallery' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('gallery')}
-                      aria-label={t('manager.viewFloorplan')}
-                      aria-pressed={viewMode === 'gallery'}
-                      title={t('manager.viewFloorplanTooltip')}
-                      className={cn('px-2', viewMode === 'gallery' && 'bg-primary text-primary-foreground')}
-                    >
-                      <ImageIcon className={iconSizes.sm} aria-hidden="true" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={viewMode === 'gallery' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setViewMode('gallery')}
+                          aria-label={t('manager.viewFloorplan')}
+                          aria-pressed={viewMode === 'gallery'}
+                          className={cn('px-2', viewMode === 'gallery' && 'bg-primary text-primary-foreground')}
+                        >
+                          <ImageIcon className={iconSizes.sm} aria-hidden="true" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('manager.viewFloorplanTooltip')}</TooltipContent>
+                    </Tooltip>
                   )}
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                    aria-label={t('manager.viewList')}
-                    aria-pressed={viewMode === 'list'}
-                    title={t('manager.viewList')}
-                    className={cn('px-2', viewMode === 'list' && 'bg-primary text-primary-foreground')}
-                  >
-                    <List className={iconSizes.sm} aria-hidden="true" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'tree' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('tree')}
-                    aria-label={t('manager.viewTree')}
-                    aria-pressed={viewMode === 'tree'}
-                    title={t('manager.viewTree')}
-                    className={cn('px-2', viewMode === 'tree' && 'bg-primary text-primary-foreground')}
-                  >
-                    <Network className={iconSizes.sm} aria-hidden="true" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={viewMode === 'list' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('list')}
+                        aria-label={t('manager.viewList')}
+                        aria-pressed={viewMode === 'list'}
+                        className={cn('px-2', viewMode === 'list' && 'bg-primary text-primary-foreground')}
+                      >
+                        <List className={iconSizes.sm} aria-hidden="true" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('manager.viewList')}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={viewMode === 'tree' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('tree')}
+                        aria-label={t('manager.viewTree')}
+                        aria-pressed={viewMode === 'tree'}
+                        className={cn('px-2', viewMode === 'tree' && 'bg-primary text-primary-foreground')}
+                      >
+                        <Network className={iconSizes.sm} aria-hidden="true" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('manager.viewTree')}</TooltipContent>
+                  </Tooltip>
                 </div>
 
             {/* Tree view mode toggle (Business vs Technical) - Only visible when viewMode === 'tree' */}
             {viewMode === 'tree' && (
               <div className="flex gap-1 border rounded-md p-1" role="group" aria-label="Tree view mode">
-                <Button
-                  variant={treeViewMode === 'business' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setTreeViewMode('business')}
-                  aria-label={t('manager.businessView')}
-                  aria-pressed={treeViewMode === 'business'}
-                  className={cn('px-2', treeViewMode === 'business' && 'bg-primary text-primary-foreground')}
-                  title={t('manager.businessViewTooltip')}
-                >
-                  <Eye className={iconSizes.sm} aria-hidden="true" />
-                </Button>
-                <Button
-                  variant={treeViewMode === 'technical' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setTreeViewMode('technical')}
-                  aria-label={t('manager.technicalView')}
-                  aria-pressed={treeViewMode === 'technical'}
-                  className={cn('px-2', treeViewMode === 'technical' && 'bg-primary text-primary-foreground')}
-                  title={t('manager.technicalViewTooltip')}
-                >
-                  <Code className={iconSizes.sm} aria-hidden="true" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={treeViewMode === 'business' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setTreeViewMode('business')}
+                      aria-label={t('manager.businessView')}
+                      aria-pressed={treeViewMode === 'business'}
+                      className={cn('px-2', treeViewMode === 'business' && 'bg-primary text-primary-foreground')}
+                    >
+                      <Eye className={iconSizes.sm} aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('manager.businessViewTooltip')}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={treeViewMode === 'technical' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setTreeViewMode('technical')}
+                      aria-label={t('manager.technicalView')}
+                      aria-pressed={treeViewMode === 'technical'}
+                      className={cn('px-2', treeViewMode === 'technical' && 'bg-primary text-primary-foreground')}
+                    >
+                      <Code className={iconSizes.sm} aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('manager.technicalViewTooltip')}</TooltipContent>
+                </Tooltip>
               </div>
             )}
             </>
@@ -656,29 +681,37 @@ export function EntityFilesManager({
             {/* Upload button - Only show when on files tab */}
             {activeTab === 'files' && (
               <>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setShowUploadZone(!showUploadZone)}
-                  disabled={uploading}
-                  aria-label={t('manager.addFiles')}
-                  title={t('manager.addFilesTooltip')}
-                >
-                  <Upload className={`${iconSizes.sm} mr-2`} aria-hidden="true" />
-                  {t('manager.addFiles')}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setShowUploadZone(!showUploadZone)}
+                      disabled={uploading}
+                      aria-label={t('manager.addFiles')}
+                    >
+                      <Upload className={`${iconSizes.sm} mr-2`} aria-hidden="true" />
+                      {t('manager.addFiles')}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('manager.addFilesTooltip')}</TooltipContent>
+                </Tooltip>
 
                 {/* Refresh button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => refetch()}
-                  disabled={loading || uploading}
-                  aria-label={t('manager.refresh')}
-                  title={t('manager.refreshTooltip')}
-                >
-                  <RefreshCw className={`${iconSizes.sm} ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => refetch()}
+                      disabled={loading || uploading}
+                      aria-label={t('manager.refresh')}
+                    >
+                      <RefreshCw className={`${iconSizes.sm} ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('manager.refreshTooltip')}</TooltipContent>
+                </Tooltip>
               </>
             )}
           </div>

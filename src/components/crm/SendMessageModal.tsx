@@ -35,7 +35,7 @@ import type { CommunicationChannel } from '@/types/communications';
 
 /** Lead data for message sending */
 interface LeadData {
-  id: string;
+  id?: string; // 🏢 ENTERPRISE: Optional to match usage in CommunicationsIntegration
   fullName?: string;
   email?: string;
   phone?: string;

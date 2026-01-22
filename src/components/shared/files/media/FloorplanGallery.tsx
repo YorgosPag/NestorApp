@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -548,16 +549,20 @@ export function FloorplanGallery({
       <header className="flex items-center justify-between p-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         {/* Navigation Arrows + File Info */}
         <nav className="flex items-center gap-2" aria-label={t('floorplan.navigation')}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goToPrevious}
-            disabled={floorplanFiles.length <= 1}
-            aria-label={t('floorplan.previous')}
-            title={t('floorplan.previous')}
-          >
-            <ChevronLeft className={iconSizes.md} aria-hidden="true" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goToPrevious}
+                disabled={floorplanFiles.length <= 1}
+                aria-label={t('floorplan.previous')}
+              >
+                <ChevronLeft className={iconSizes.md} aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('floorplan.previous')}</TooltipContent>
+          </Tooltip>
 
           <span className="flex items-center gap-2 min-w-[200px] justify-center">
             {getFileIcon(currentFile?.ext || '')}
@@ -569,80 +574,104 @@ export function FloorplanGallery({
             </span>
           </span>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goToNext}
-            disabled={floorplanFiles.length <= 1}
-            aria-label={t('floorplan.next')}
-            title={t('floorplan.next')}
-          >
-            <ChevronRight className={iconSizes.md} aria-hidden="true" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={goToNext}
+                disabled={floorplanFiles.length <= 1}
+                aria-label={t('floorplan.next')}
+              >
+                <ChevronRight className={iconSizes.md} aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('floorplan.next')}</TooltipContent>
+          </Tooltip>
         </nav>
 
         {/* Action Buttons */}
         <nav className="flex items-center gap-1" aria-label={t('floorplan.actions')}>
           {/* Zoom Controls */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleZoomOut}
-            disabled={zoom <= ZOOM_LEVELS.MIN}
-            aria-label={t('floorplan.zoomOut')}
-            title={t('floorplan.zoomOut')}
-          >
-            <ZoomOut className={iconSizes.sm} aria-hidden="true" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleZoomOut}
+                disabled={zoom <= ZOOM_LEVELS.MIN}
+                aria-label={t('floorplan.zoomOut')}
+              >
+                <ZoomOut className={iconSizes.sm} aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('floorplan.zoomOut')}</TooltipContent>
+          </Tooltip>
           <span className={cn('text-xs min-w-[40px] text-center', colors.text.muted)}>
             {Math.round(zoom * 100)}%
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleZoomIn}
-            disabled={zoom >= ZOOM_LEVELS.MAX}
-            aria-label={t('floorplan.zoomIn')}
-            title={t('floorplan.zoomIn')}
-          >
-            <ZoomIn className={iconSizes.sm} aria-hidden="true" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleResetZoom}
-            aria-label={t('floorplan.resetZoom')}
-            title={t('floorplan.resetZoom')}
-          >
-            <Maximize2 className={iconSizes.sm} aria-hidden="true" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleZoomIn}
+                disabled={zoom >= ZOOM_LEVELS.MAX}
+                aria-label={t('floorplan.zoomIn')}
+              >
+                <ZoomIn className={iconSizes.sm} aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('floorplan.zoomIn')}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetZoom}
+                aria-label={t('floorplan.resetZoom')}
+              >
+                <Maximize2 className={iconSizes.sm} aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('floorplan.resetZoom')}</TooltipContent>
+          </Tooltip>
 
           <div className="w-px h-6 bg-border mx-1" aria-hidden="true" />
 
           {/* Download */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDownload}
-            disabled={!currentFile?.downloadUrl}
-            aria-label={t('floorplan.download')}
-            title={t('floorplan.download')}
-          >
-            <Download className={iconSizes.sm} aria-hidden="true" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDownload}
+                disabled={!currentFile?.downloadUrl}
+                aria-label={t('floorplan.download')}
+              >
+                <Download className={iconSizes.sm} aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('floorplan.download')}</TooltipContent>
+          </Tooltip>
 
           {/* Delete */}
           {onDelete && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDelete}
-              className="text-destructive hover:text-destructive"
-              aria-label={t('floorplan.delete')}
-              title={t('floorplan.delete')}
-            >
-              <Trash2 className={iconSizes.sm} aria-hidden="true" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDelete}
+                  className="text-destructive hover:text-destructive"
+                  aria-label={t('floorplan.delete')}
+                >
+                  <Trash2 className={iconSizes.sm} aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('floorplan.delete')}</TooltipContent>
+            </Tooltip>
           )}
         </nav>
       </header>

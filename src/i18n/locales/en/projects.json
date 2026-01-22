@@ -365,6 +365,7 @@
   "search": {
     "placeholder": "Search projects, titles...",
     "allCompanies": "All companies",
+    "allStatuses": "All statuses",
     "clear": "Clear"
   },
   "permits": {

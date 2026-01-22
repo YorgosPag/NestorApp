@@ -392,7 +392,7 @@ const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ l
             </CardHeader>
             <CardContent className="space-y-3">
               {Object.entries(channelsStatus).map(([channelName, status]) =>
-                renderChannelStatus(channelName, status)
+                renderChannelStatus(channelName, status as { enabled: boolean; configured: boolean }) // 🏢 ENTERPRISE: Type assertion
               )}
             </CardContent>
           </Card>

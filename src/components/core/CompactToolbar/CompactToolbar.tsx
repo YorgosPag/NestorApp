@@ -38,6 +38,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+// 🏢 ENTERPRISE: Centralized Tooltip for consistent styling across all toolbars
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import type { CompactToolbarProps } from './types';
 import { getIconColor } from './icon-colors';
@@ -80,7 +82,7 @@ export function CompactToolbar({
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation('common');
 
   // 🏢 ENTERPRISE: Translate search placeholder if it's an i18n key
   const getTranslatedPlaceholder = (placeholder?: string): string => {
@@ -90,6 +92,16 @@ export function CompactToolbar({
       return translated === placeholder ? placeholder : translated;
     }
     return placeholder;
+  };
+
+  // 🏢 ENTERPRISE: Helper to translate tooltip keys
+  const getTooltip = (tooltipKey?: string): string | undefined => {
+    if (!tooltipKey) return undefined;
+    if (tooltipKey.includes('.')) {
+      const translated = t(tooltipKey);
+      return translated === tooltipKey ? tooltipKey : translated;
+    }
+    return tooltipKey;
   };
 
   const handleFilterChange = (filter: string, checked: boolean) => {
@@ -111,32 +123,44 @@ export function CompactToolbar({
         {config.availableActions.newItem && (() => {
           // 🏢 ENTERPRISE: Use custom icon if provided (e.g., Link2 for connect), fallback to Plus
           const IconComponent = NewItemIcon || Plus;
+          const tooltip = getTooltip(config.tooltips.newItem);
           return (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`${iconSizes.xl} p-0`}
-              onClick={onNewItem}
-              title={config.tooltips.newItem}
-            >
-              <IconComponent className={`${iconSizes.sm} ${getIconColor('newItem')}`} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onNewItem}
+                >
+                  <IconComponent className={`${iconSizes.sm} ${getIconColor('newItem')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
           );
         })()}
 
         {/* Edit Item */}
-        {config.availableActions.editItem && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={() => hasSelectedContact && onEditItem?.('0')}
-            disabled={!hasSelectedContact}
-            title={config.tooltips.editItem}
-          >
-            <Edit className={`${iconSizes.sm} ${!hasSelectedContact ? colors.text.muted : getIconColor('editItem')}`} />
-          </Button>
-        )}
+        {config.availableActions.editItem && (() => {
+          const tooltip = getTooltip(config.tooltips.editItem);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={() => hasSelectedContact && onEditItem?.('0')}
+                  disabled={!hasSelectedContact}
+                >
+                  <Edit className={`${iconSizes.sm} ${!hasSelectedContact ? colors.text.muted : getIconColor('editItem')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Delete Items */}
         {config.availableActions.deleteItems && (() => {
@@ -144,43 +168,52 @@ export function CompactToolbar({
           const IconComponent = DeleteIcon || Trash2;
           const isDisabled = hasSelectedContact !== undefined ? !hasSelectedContact : selectedItems.length === 0;
           const iconColor = isDisabled ? colors.text.muted : getIconColor('deleteItems');
+          const tooltip = getTooltip(config.tooltips.deleteItems);
 
           return (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`${iconSizes.xl} p-0`}
-              onClick={() => onDeleteItems?.(selectedItems)}
-              disabled={isDisabled}
-              title={config.tooltips.deleteItems}
-            >
-              <IconComponent className={`${iconSizes.sm} ${iconColor}`} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={() => onDeleteItems?.(selectedItems)}
+                  disabled={isDisabled}
+                >
+                  <IconComponent className={`${iconSizes.sm} ${iconColor}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
           );
         })()}
 
         {/* Filters Dropdown */}
         {config.availableActions.filters && config.filterCategories.length > 0 && (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`${iconSizes.xl} p-0 relative`}
-                title={config.tooltips.filters}
-              >
-                <Filter className={`${iconSizes.sm} ${getIconColor('filters')}`} />
-                {activeFilters.length > 0 && (
-                  <span className={`absolute -top-1 -right-1 ${iconSizes.sm} ${colors.bg.error} ${colors.text.inverted} text-xs font-medium rounded-full flex items-center justify-center`}>
-                    {activeFilters.length}
-                  </span>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`${iconSizes.xl} p-0 relative`}
+                  >
+                    <Filter className={`${iconSizes.sm} ${getIconColor('filters')}`} />
+                    {activeFilters.length > 0 && (
+                      <span className={`absolute -top-1 -right-1 ${iconSizes.sm} ${colors.bg.error} ${colors.text.inverted} text-xs font-medium rounded-full flex items-center justify-center`}>
+                        {activeFilters.length}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{getTooltip(config.tooltips.filters)}</TooltipContent>
+            </Tooltip>
             <DropdownMenuContent align="end" className="w-56">
               {config.filterCategories.map((category, categoryIndex) => (
                 <React.Fragment key={category.id}>
-                  <DropdownMenuLabel>{category.label}</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t(category.label, { ns: 'common' })}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {category.options.map((option) => (
                     <DropdownMenuCheckboxItem
@@ -188,7 +221,7 @@ export function CompactToolbar({
                       checked={activeFilters.includes(option.value)}
                       onCheckedChange={(checked) => handleFilterChange(option.value, !!checked)}
                     >
-                      {option.label}
+                      {t(option.label, { ns: 'common' })}
                     </DropdownMenuCheckboxItem>
                   ))}
                   {categoryIndex < config.filterCategories.length - 1 && (
@@ -215,85 +248,124 @@ export function CompactToolbar({
         )}
 
         {/* Favorites */}
-        {config.availableActions.favorites && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={() => console.log('Add to favorites...')}
-            disabled={selectedItems.length === 0}
-            title={config.tooltips.favorites}
-          >
-            <Star className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('favorites')}`} />
-          </Button>
-        )}
+        {config.availableActions.favorites && (() => {
+          const tooltip = getTooltip(config.tooltips.favorites);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={() => console.log('Add to favorites...')}
+                  disabled={selectedItems.length === 0}
+                >
+                  <Star className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('favorites')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Archive */}
-        {config.availableActions.archive && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={() => console.log('Archive selected...')}
-            disabled={selectedItems.length === 0}
-            title={config.tooltips.archive}
-          >
-            <Archive className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('archive')}`} />
-          </Button>
-        )}
+        {config.availableActions.archive && (() => {
+          const tooltip = getTooltip(config.tooltips.archive);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={() => console.log('Archive selected...')}
+                  disabled={selectedItems.length === 0}
+                >
+                  <Archive className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('archive')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Export */}
-        {config.availableActions.export && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onExport}
-            title={config.tooltips.export}
-          >
-            <Download className={`${iconSizes.sm} ${getIconColor('export')}`} />
-          </Button>
-        )}
+        {config.availableActions.export && (() => {
+          const tooltip = getTooltip(config.tooltips.export);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onExport}
+                >
+                  <Download className={`${iconSizes.sm} ${getIconColor('export')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Import */}
-        {config.availableActions.import && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onImport}
-            title={config.tooltips.import}
-          >
-            <Upload className={`${iconSizes.sm} ${getIconColor('import')}`} />
-          </Button>
-        )}
+        {config.availableActions.import && (() => {
+          const tooltip = getTooltip(config.tooltips.import);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onImport}
+                >
+                  <Upload className={`${iconSizes.sm} ${getIconColor('import')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Refresh */}
-        {config.availableActions.refresh && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onRefresh}
-            title={config.tooltips.refresh}
-          >
-            <RefreshCw className={`${iconSizes.sm} ${getIconColor('refresh')}`} />
-          </Button>
-        )}
+        {config.availableActions.refresh && (() => {
+          const tooltip = getTooltip(config.tooltips.refresh);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onRefresh}
+                >
+                  <RefreshCw className={`${iconSizes.sm} ${getIconColor('refresh')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Sort Options Dropdown */}
         {config.availableActions.sorting && config.sortOptions.length > 0 && (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`${iconSizes.xl} p-0`}
-                title={config.tooltips.sorting}
-              >
-                <ArrowUpDown className={`${iconSizes.sm} ${getIconColor('sorting')}`} />
-              </Button>
-            </DropdownMenuTrigger>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`${iconSizes.xl} p-0`}
+                  >
+                    <ArrowUpDown className={`${iconSizes.sm} ${getIconColor('sorting')}`} />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{getTooltip(config.tooltips.sorting)}</TooltipContent>
+            </Tooltip>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel>{config.labels.sorting}</DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -316,96 +388,145 @@ export function CompactToolbar({
         )}
 
         {/* Preview */}
-        {config.availableActions.preview && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onPreview}
-            title={config.tooltips.preview}
-          >
-            <Eye className={`${iconSizes.sm} ${getIconColor('preview')}`} />
-          </Button>
-        )}
+        {config.availableActions.preview && (() => {
+          const tooltip = getTooltip(config.tooltips.preview);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onPreview}
+                >
+                  <Eye className={`${iconSizes.sm} ${getIconColor('preview')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Copy */}
-        {config.availableActions.copy && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onCopy}
-            disabled={selectedItems.length === 0}
-            title={config.tooltips.copy}
-          >
-            <Copy className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('copy')}`} />
-          </Button>
-        )}
+        {config.availableActions.copy && (() => {
+          const tooltip = getTooltip(config.tooltips.copy);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onCopy}
+                  disabled={selectedItems.length === 0}
+                >
+                  <Copy className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('copy')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Share */}
-        {config.availableActions.share && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onShare}
-            title={config.tooltips.share}
-          >
-            <Share2 className={`${iconSizes.sm} ${getIconColor('share')}`} />
-          </Button>
-        )}
+        {config.availableActions.share && (() => {
+          const tooltip = getTooltip(config.tooltips.share);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onShare}
+                >
+                  <Share2 className={`${iconSizes.sm} ${getIconColor('share')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Reports */}
-        {config.availableActions.reports && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onReports}
-            title={config.tooltips.reports}
-          >
-            <FileText className={`${iconSizes.sm} ${getIconColor('reports')}`} />
-          </Button>
-        )}
+        {config.availableActions.reports && (() => {
+          const tooltip = getTooltip(config.tooltips.reports);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onReports}
+                >
+                  <FileText className={`${iconSizes.sm} ${getIconColor('reports')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Settings */}
-        {config.availableActions.settings && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onSettings}
-            title={config.tooltips.settings}
-          >
-            <Settings className={`${iconSizes.sm} ${getIconColor('settings')}`} />
-          </Button>
-        )}
+        {config.availableActions.settings && (() => {
+          const tooltip = getTooltip(config.tooltips.settings);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onSettings}
+                >
+                  <Settings className={`${iconSizes.sm} ${getIconColor('settings')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Favorites Management */}
-        {config.availableActions.favoritesManagement && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onFavoritesManagement}
-            title={config.tooltips.favoritesManagement}
-          >
-            <Heart className={`${iconSizes.sm} ${getIconColor('favoritesManagement')}`} />
-          </Button>
-        )}
+        {config.availableActions.favoritesManagement && (() => {
+          const tooltip = getTooltip(config.tooltips.favoritesManagement);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onFavoritesManagement}
+                >
+                  <Heart className={`${iconSizes.sm} ${getIconColor('favoritesManagement')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         {/* Help */}
-        {config.availableActions.help && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${iconSizes.xl} p-0`}
-            onClick={onHelp}
-            title={config.tooltips.help}
-          >
-            <HelpCircle className={`${iconSizes.sm} ${getIconColor('help')}`} />
-          </Button>
-        )}
+        {config.availableActions.help && (() => {
+          const tooltip = getTooltip(config.tooltips.help);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`${iconSizes.xl} p-0`}
+                  onClick={onHelp}
+                >
+                  <HelpCircle className={`${iconSizes.sm} ${getIconColor('help')}`} />
+                </Button>
+              </TooltipTrigger>
+              {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
+            </Tooltip>
+          );
+        })()}
 
         </div>
 

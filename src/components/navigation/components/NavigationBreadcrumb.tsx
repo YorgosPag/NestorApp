@@ -21,6 +21,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips (replaces native title)
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded imports
 import { NAVIGATION_ENTITIES, isNavigationEntityType } from '../config';
 import { useNavigation } from '../core/NavigationContext';
@@ -180,14 +182,19 @@ export function NavigationBreadcrumb({ className }: NavigationBreadcrumbProps) {
                * - Uses ContextualNavigationService.generateRoute() for URL
                * - Ctrl+Click opens in new tab (native browser behavior)
                * - Proper <a> semantics for accessibility
+               * - Shadcn Tooltip replaces native title for better UX
                */
-              <Link
-                href={item.href}
-                className="flex items-center gap-1 text-gray-300 hover:text-white transition-colors"
-                title={t('page.breadcrumb.navigateTo', { name: item.label })}
-              >
-                {renderItemContent(item)}
-              </Link>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={item.href}
+                    className="flex items-center gap-1 text-gray-300 hover:text-white transition-colors"
+                  >
+                    {renderItemContent(item)}
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>{t('page.breadcrumb.navigateTo', { name: item.label })}</TooltipContent>
+              </Tooltip>
             )}
             {!isLastItem && (
               <span className="text-gray-500" aria-hidden="true">→</span>

@@ -55,11 +55,22 @@ const formatDate = (timestamp: FirestoreishTimestamp, unknownLabel: string): str
     if (!timestamp) return unknownLabel;
 
     try {
-      const date = timestamp instanceof Date
-        ? timestamp
-        : typeof (timestamp as unknown as { toDate: () => Date }).toDate === 'function'
-        ? (timestamp as unknown as { toDate: () => Date }).toDate()
-        : new Date(timestamp);
+      // 🏢 ENTERPRISE: Type-safe timestamp conversion with proper type guards
+      let date: Date;
+
+      if (timestamp instanceof Date) {
+        date = timestamp;
+      } else if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp) {
+        // Firestore Timestamp with toDate() method
+        const timestampObj = timestamp as { toDate: () => Date };
+        date = timestampObj.toDate();
+      } else if (typeof timestamp === 'string') {
+        // ISO string or date string
+        date = new Date(timestamp);
+      } else {
+        // Fallback
+        return unknownLabel;
+      }
 
       if (isNaN(date.getTime())) return unknownLabel;
 

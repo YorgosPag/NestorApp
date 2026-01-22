@@ -87,13 +87,13 @@ export function FilterControls({ filters, onFilterChange, onRangeChange }: Filte
             value={filters.status.length === 1 ? filters.status[0] : 'all'}
           >
             <SelectTrigger className="h-9 w-full" aria-label={t('filterControls.status.ariaLabel')}>
-              <SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_STATUS} />
+              <SelectValue placeholder={t(DROPDOWN_PLACEHOLDERS.SELECT_STATUS, { ns: 'common' })} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_STATUSES}</SelectItem>
+              <SelectItem value="all">{t(PROPERTY_FILTER_LABELS.ALL_STATUSES, { ns: 'common' })}</SelectItem>
               {getAllStatuses().map(status => (
                 <SelectItem key={status} value={status}>
-                  {getStatusLabel(status)}
+                  {t(getStatusLabel(status), { ns: 'common' })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -103,19 +103,19 @@ export function FilterControls({ filters, onFilterChange, onRangeChange }: Filte
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
         <div className="flex items-center gap-2">
           <Label className="text-xs font-medium shrink-0">{t('filterControls.project.label')}</Label>
-          <Select><SelectTrigger className="h-9 w-full" aria-label={t('filterControls.project.ariaLabel')}><SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_PROJECT} /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_PROJECTS}</SelectItem></SelectContent></Select>
+          <Select><SelectTrigger className="h-9 w-full" aria-label={t('filterControls.project.ariaLabel')}><SelectValue placeholder={t(DROPDOWN_PLACEHOLDERS.SELECT_PROJECT, { ns: 'common' })} /></SelectTrigger><SelectContent><SelectItem value="all">{t(PROPERTY_FILTER_LABELS.ALL_PROJECTS, { ns: 'common' })}</SelectItem></SelectContent></Select>
         </div>
         <div className="flex items-center gap-2">
           <Label className="text-xs font-medium shrink-0">{t('filterControls.building.label')}</Label>
-          <Select><SelectTrigger className="h-9 w-full" aria-label={t('filterControls.building.ariaLabel')}><SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_BUILDING} /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_BUILDINGS}</SelectItem></SelectContent></Select>
+          <Select><SelectTrigger className="h-9 w-full" aria-label={t('filterControls.building.ariaLabel')}><SelectValue placeholder={t(DROPDOWN_PLACEHOLDERS.SELECT_BUILDING, { ns: 'common' })} /></SelectTrigger><SelectContent><SelectItem value="all">{t(PROPERTY_FILTER_LABELS.ALL_BUILDINGS, { ns: 'common' })}</SelectItem></SelectContent></Select>
         </div>
         <div className="flex items-center gap-2">
           <Label className="text-xs font-medium shrink-0">{t('filterControls.floor.label')}</Label>
-          <Select><SelectTrigger className="h-9 w-full" aria-label={t('filterControls.floor.ariaLabel')}><SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_FLOOR} /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_FLOORS}</SelectItem></SelectContent></Select>
+          <Select><SelectTrigger className="h-9 w-full" aria-label={t('filterControls.floor.ariaLabel')}><SelectValue placeholder={t(DROPDOWN_PLACEHOLDERS.SELECT_FLOOR, { ns: 'common' })} /></SelectTrigger><SelectContent><SelectItem value="all">{t(PROPERTY_FILTER_LABELS.ALL_FLOORS, { ns: 'common' })}</SelectItem></SelectContent></Select>
         </div>
         <div className="flex items-center gap-2">
           <Label className="text-xs font-medium shrink-0">{t('filterControls.propertyType.label')}</Label>
-          <Select><SelectTrigger className="h-9 w-full" aria-label={t('filterControls.propertyType.ariaLabel')}><SelectValue placeholder={DROPDOWN_PLACEHOLDERS.SELECT_TYPE} /></SelectTrigger><SelectContent><SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_TYPES}</SelectItem></SelectContent></Select>
+          <Select><SelectTrigger className="h-9 w-full" aria-label={t('filterControls.propertyType.ariaLabel')}><SelectValue placeholder={t(DROPDOWN_PLACEHOLDERS.SELECT_TYPE, { ns: 'common' })} /></SelectTrigger><SelectContent><SelectItem value="all">{t(PROPERTY_FILTER_LABELS.ALL_TYPES, { ns: 'common' })}</SelectItem></SelectContent></Select>
         </div>
       </div>
     </>

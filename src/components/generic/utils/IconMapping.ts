@@ -6,7 +6,8 @@ import {
   Hash, Wrench, Factory, Smartphone, Shield, ClipboardList, Image, Mail, Lock,
   AlertTriangle, CheckCircle, XCircle, Star, Search, Edit, Save, Upload, Download,
   Building2, Warehouse, LayoutGrid, FileSignature, ClipboardCheck, PlayCircle,
-  BarChart3
+  BarChart3,
+  LucideIcon
 } from 'lucide-react';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 
@@ -171,11 +172,16 @@ export type IconName = keyof typeof ICON_MAPPING;
  * <IconComponent className={iconSizes.sm} />
  * ```
  */
-export function getIconComponent(iconName: string) {
+/**
+ * 🏢 ENTERPRISE: Get icon component by name with type safety
+ * Returns LucideIcon component or custom icon (like CraneIcon) for the given icon name
+ */
+export function getIconComponent(iconName: string): LucideIcon | React.FC<any> {
   // Direct lookup in mapping
   const iconComponent = ICON_MAPPING[iconName as IconName];
   if (iconComponent) {
-    return iconComponent;
+    // 🏢 ENTERPRISE: Type assertion to handle both Lucide icons and custom icons
+    return iconComponent as LucideIcon | React.FC<any>;
   }
 
   // Fallback για unrecognized icons

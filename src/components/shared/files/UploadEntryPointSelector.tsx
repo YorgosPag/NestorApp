@@ -23,6 +23,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { EntityType, FileCategory } from '@/config/domain-constants';
@@ -135,48 +136,53 @@ export function UploadEntryPointSelector({
           const isSelected = selectedEntryPointId === entryPoint.id;
 
           return (
-            <button
-              key={entryPoint.id}
-              type="button"
-              onClick={() => onSelect(entryPoint)}
-              className={cn(
-                'flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all',
-                'hover:shadow-md hover:scale-105',
-                'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-                isSelected
-                  ? 'border-primary bg-primary/10 shadow-md scale-105'
-                  : 'border-border bg-card hover:border-primary/50'
-              )}
-              role="radio"
-              aria-checked={isSelected}
-              aria-label={entryPoint.label[currentLanguage]}
-              title={entryPoint.description?.[currentLanguage]}
-            >
-              {/* Icon */}
-              <div
-                className={cn(
-                  'flex items-center justify-center w-10 h-10 rounded-full',
-                  isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                )}
-              >
-                <Icon className={iconSizes.md} aria-hidden="true" />
-              </div>
+            <Tooltip key={entryPoint.id}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => onSelect(entryPoint)}
+                  className={cn(
+                    'flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all',
+                    'hover:shadow-md hover:scale-105',
+                    'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+                    isSelected
+                      ? 'border-primary bg-primary/10 shadow-md scale-105'
+                      : 'border-border bg-card hover:border-primary/50'
+                  )}
+                  role="radio"
+                  aria-checked={isSelected}
+                  aria-label={entryPoint.label[currentLanguage]}
+                >
+                  {/* Icon */}
+                  <div
+                    className={cn(
+                      'flex items-center justify-center w-10 h-10 rounded-full',
+                      isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                    )}
+                  >
+                    <Icon className={iconSizes.md} aria-hidden="true" />
+                  </div>
 
-              {/* Label */}
-              <span
-                className={cn(
-                  'text-xs font-medium text-center leading-tight',
-                  isSelected ? 'text-primary' : 'text-foreground'
-                )}
-              >
-                {entryPoint.label[currentLanguage]}
-              </span>
+                  {/* Label */}
+                  <span
+                    className={cn(
+                      'text-xs font-medium text-center leading-tight',
+                      isSelected ? 'text-primary' : 'text-foreground'
+                    )}
+                  >
+                    {entryPoint.label[currentLanguage]}
+                  </span>
 
-              {/* Selected indicator */}
-              {isSelected && (
-                <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" aria-hidden="true" />
+                  {/* Selected indicator */}
+                  {isSelected && (
+                    <div className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" aria-hidden="true" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              {entryPoint.description?.[currentLanguage] && (
+                <TooltipContent>{entryPoint.description[currentLanguage]}</TooltipContent>
               )}
-            </button>
+            </Tooltip>
           );
         })}
       </div>

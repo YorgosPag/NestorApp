@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Filter, RotateCcw } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { FilterField } from './FilterField';
+import { FilterField, type FilterFieldValue } from './FilterField';
 import { useGenericFilters } from './useGenericFilters';
 import type { FilterPanelConfig, GenericFilterState } from './types';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -52,11 +52,11 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
     hasActiveFilters
   } = useGenericFilters(filters, onFiltersChange);
 
-  const getFieldValue = (fieldId: string) => {
+  const getFieldValue = (fieldId: string): FilterFieldValue => {
     if (fieldId.includes('Range')) {
       return filters.ranges?.[fieldId] || { min: undefined, max: undefined };
     }
-    return (filters as Record<string, unknown>)[fieldId];
+    return (filters as Record<string, unknown>)[fieldId] as FilterFieldValue;
   };
 
   const handleFieldChange = (fieldId: string, value: unknown) => {
@@ -70,9 +70,11 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
       .find(f => f.id === fieldId);
 
     if (field?.type === 'select') {
-      handleSelectChange(fieldId, value);
+      // Type-safe: handleSelectChange expects string
+      handleSelectChange(fieldId, typeof value === 'string' ? value : String(value || ''));
     } else {
-      handleFilterChange(fieldId as keyof T, value);
+      // Type assertion needed for generic type T
+      handleFilterChange(fieldId as keyof T, value as T[keyof T]);
     }
   };
 

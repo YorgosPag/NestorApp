@@ -4,14 +4,14 @@
     "loading": "Loading units...",
     "dashboard": {
       "totalUnits": "Total Units",
-      "soldUnits": "Sold",
-      "totalValue": "Total Value",
       "totalArea": "Total Area",
       "uniqueBuildings": "Unique Buildings",
       "unitTypes": "Unit Types",
       "floorDistribution": "Floor Distribution",
+      "unitStatus": "Operational Status",
       "storages": "Storages",
-      "total": "Total"
+      "total": "Total",
+      "completeness": "Documentation Completeness"
     },
     "statusLabels": {
       "sold": "Sold",
@@ -38,10 +38,6 @@
     "maintenance": "Under Maintenance",
     "draft": "Draft"
   },
-  "status": {
-    "forSale": "For Sale",
-    "available": "Available"
-  },
   "card": {
     "stats": {
       "area": "Area",
@@ -54,12 +50,16 @@
     "subtitle": "Central directory of all your units"
   },
   "details": {
-    "showAll": "Show all"
+    "showAll": "Show all",
+    "showUnit": "View unit"
   },
   "navigation": {
     "actions": {
       "view": {
         "label": "View"
+      },
+      "edit": {
+        "label": "Edit"
       }
     }
   },
@@ -87,6 +87,7 @@
     "newUnit": "New Unit"
   },
   "types": {
+    "apartment": "Apartment",
     "studio": "Studio",
     "apartment_1br": "1 Bedroom Apartment",
     "apartment_2br": "2 Bedroom Apartment",
@@ -99,7 +100,27 @@
     "available": "Available",
     "reserved": "Reserved",
     "sold": "Sold",
-    "owner": "Owner"
+    "owner": "Owner",
+    "forSale": "For Sale",
+    "forRent": "For Rent",
+    "rented": "Rented",
+    "occupied": "Occupied",
+    "maintenance": "Maintenance",
+    "underConstruction": "Under Construction",
+    "planned": "Planned"
+  },
+  "units": {
+    "status": {
+      "available": "Available",
+      "occupied": "Occupied",
+      "maintenance": "Maintenance",
+      "forSale": "For Sale",
+      "forRent": "For Rent",
+      "sold": "Sold",
+      "rented": "Rented",
+      "underConstruction": "Under Construction",
+      "planned": "Planned"
+    }
   },
   "toolbar": {
     "actions": {
@@ -122,12 +143,36 @@
     "showAdvanced": "Show advanced",
     "hideAdvanced": "Hide advanced",
     "resetFilters": "Reset filters",
+    "status": {
+      "available": "Available",
+      "sold": "Sold",
+      "reserved": "Reserved",
+      "maintenance": "Maintenance",
+      "occupied": "Occupied",
+      "planning": "Planning",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "onHold": "On Hold",
+      "active": "Active",
+      "inactive": "Inactive",
+      "lead": "Lead",
+      "pending": "Pending",
+      "construction": "Under Construction",
+      "sent": "Sent",
+      "received": "Received",
+      "failed": "Failed"
+    },
     "advancedOptions": {
       "parking": "Parking",
       "storage": "Storage",
       "fireplace": "Fireplace",
       "view": "View",
       "pool": "Pool"
+    }
+  },
+  "properties": {
+    "status": {
+      "available": "Available"
     }
   },
   "list": {

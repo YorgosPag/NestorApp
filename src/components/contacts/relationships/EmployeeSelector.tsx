@@ -125,6 +125,24 @@ const realContactSearch = async (query: string, filters: {
         name = contact.serviceName || '';
       }
 
+      // 🏢 ENTERPRISE: Safe date conversion with type guards
+      let lastActivityDate: string | undefined;
+      if (contact.updatedAt) {
+        try {
+          const dateValue = contact.updatedAt instanceof Date
+            ? contact.updatedAt
+            : typeof contact.updatedAt === 'string' || typeof contact.updatedAt === 'number'
+            ? new Date(contact.updatedAt)
+            : undefined;
+
+          if (dateValue && !isNaN(dateValue.getTime())) {
+            lastActivityDate = dateValue.toISOString().split('T')[0];
+          }
+        } catch {
+          lastActivityDate = undefined;
+        }
+      }
+
       const summary: ContactSummary = {
         id: contact.id ?? '',
         name,
@@ -133,7 +151,7 @@ const realContactSearch = async (query: string, filters: {
         phone: contact.phones?.[0]?.number || '',
         company,
         department,
-        lastActivity: contact.updatedAt ? new Date(contact.updatedAt).toISOString().split('T')[0] : undefined
+        lastActivity: lastActivityDate
       };
       return summary;
     }).filter(contact => contact.name.length > 0); // Only contacts with names

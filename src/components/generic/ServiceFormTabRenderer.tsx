@@ -5,7 +5,7 @@ import { FormGrid } from '@/components/ui/form/FormComponents';
 import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
 import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './utils/IconMapping';
-import { ServiceFormRenderer } from './ServiceFormRenderer';
+import { ServiceFormRenderer, type ServiceFormData, type PhotoData, type CustomFieldRenderer } from './ServiceFormRenderer';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { ServiceSectionConfig } from '@/config/service-config';
 // 🏢 ENTERPRISE: i18n support for tab labels
@@ -159,12 +159,12 @@ function createServiceFormTabsFromConfig(
         <div className="space-y-8 md:space-y-6">
           <ServiceFormRenderer
             sections={[section]} // Single section per tab
-            formData={formData}
+            formData={formData as ServiceFormData} // 🏢 ENTERPRISE: Type assertion
             onChange={onChange}
             onSelectChange={onSelectChange}
             disabled={disabled}
-            onPhotosChange={onPhotosChange} // Pass photo handler to ServiceFormRenderer
-            customRenderers={customRenderers}
+            onPhotosChange={onPhotosChange as ((photos: PhotoData[]) => void) | undefined} // 🏢 ENTERPRISE: Type assertion
+            customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
           />
         </div>
       );

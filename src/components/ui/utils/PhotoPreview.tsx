@@ -14,6 +14,7 @@ import {
 } from '@/components/generic/config/photo-config';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useTranslation } from 'react-i18next';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -125,14 +126,18 @@ export function PhotoPreview({
 
           {/* Remove button για compact mode */}
           {showRemoveButton && (
-            <button
-              type="button"
-              className={`absolute top-2 right-2 ${colors.bg.error} ${colors.text.error} rounded-full p-1.5 ${PHOTO_HOVER_EFFECTS.REMOVE_BUTTON} z-10`}
-              onClick={handleRemoveClick}
-              title={t('photo.remove', { name: displayName })}
-            >
-              <X className={iconSizes.sm} />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className={`absolute top-2 right-2 ${colors.bg.error} ${colors.text.error} rounded-full p-1.5 ${PHOTO_HOVER_EFFECTS.REMOVE_BUTTON} z-10`}
+                  onClick={handleRemoveClick}
+                >
+                  <X className={iconSizes.sm} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{t('photo.remove', { name: displayName })}</TooltipContent>
+            </Tooltip>
           )}
         </div>
 

@@ -77,11 +77,17 @@ export const DEFAULT_FILTERS: FilterState = {
   features: []
 };
 
+// 🎯 DOMAIN SEPARATION: Default stats without sales metrics
 export const DEFAULT_STATS: PropertyStats = {
-  totalProperties: 0, availableProperties: 0, soldProperties: 0, totalValue: 0, totalArea: 0, averagePrice: 0,
+  totalProperties: 0, availableProperties: 0, totalValue: 0, totalArea: 0, averagePrice: 0,
   propertiesByStatus: {}, propertiesByType: {}, propertiesByFloor: {},
-  totalStorageUnits: 0, availableStorageUnits: 0, soldStorageUnits: 0,
-  uniqueBuildings: 0, reserved: 0
+  totalStorageUnits: 0, availableStorageUnits: 0,
+  uniqueBuildings: 0,
+  // Optional operational status metrics
+  underConstructionProperties: 0,
+  maintenanceProperties: 0,
+  inspectionProperties: 0,
+  draftProperties: 0,
 };
 
 

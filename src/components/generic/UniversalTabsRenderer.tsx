@@ -193,7 +193,7 @@ export function UniversalTabsRenderer<TData = unknown>({
           <PlaceholderTab
             title={`${displayLabel} - Coming Soon`}
             icon={getIconComponent(tabConfig.icon ?? '') || (() => null)}
-            building={data}
+            building={data as Record<string, unknown> | undefined} // 🏢 ENTERPRISE: Type assertion
             {...globalProps}
             {...tabConfig.componentProps}
           />
@@ -294,7 +294,7 @@ export function UniversalTabsRenderer<TData = unknown>({
       tabs={tabDefinitions}
       value={activeTab}
       onTabChange={handleTabChange}
-      theme={theme}
+      theme={theme === 'destructive' || theme === 'accent' ? 'default' : theme} // 🏢 ENTERPRISE: Map unsupported theme values
     >
       {/* 🏢 ENTERPRISE: Lazy render TabsContent - only render when tab becomes active */}
       {tabDefinitions.map((tabDef) => (

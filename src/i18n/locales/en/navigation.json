@@ -163,6 +163,32 @@
       "cannotUnlinkBuilding": "Cannot unlink this building because it has {count} units. Please unlink the units first."
     }
   },
+  "actions": {
+    "view": {
+      "label": "View",
+      "description": "View details"
+    },
+    "edit": {
+      "label": "Edit",
+      "description": "Edit item"
+    },
+    "link": {
+      "label": "Link",
+      "description": "Link item"
+    },
+    "actions": {
+      "label": "Actions",
+      "description": "Available actions"
+    },
+    "share": {
+      "label": "Share",
+      "description": "Share with others"
+    },
+    "filter": {
+      "label": "Filters",
+      "description": "Filter results"
+    }
+  },
   "menu": {
     "main": "Main Menu",
     "tools": "Tools",
