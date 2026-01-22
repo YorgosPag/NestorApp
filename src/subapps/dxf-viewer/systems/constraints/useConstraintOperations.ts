@@ -47,10 +47,13 @@ export function useConstraintOperations(
           setPolarSettings(DEFAULT_POLAR_SETTINGS);
           break;
         case 'load-preset':
-          if (operation.presetId && CONSTRAINT_PRESETS[operation.presetId]) {
-            const preset = CONSTRAINT_PRESETS[operation.presetId];
-            setOrthoSettings(preset.orthoSettings);
-            setPolarSettings(preset.polarSettings);
+          if (operation.presetId) {
+            const presetsMap = CONSTRAINT_PRESETS as unknown as Record<string, { orthoSettings: unknown; polarSettings: unknown }>;
+            const preset = presetsMap[operation.presetId];
+            if (preset) {
+              setOrthoSettings(preset.orthoSettings);
+              setPolarSettings(preset.polarSettings);
+            }
           }
           break;
         default:
@@ -69,11 +72,12 @@ export function useConstraintOperations(
 
   const loadPreset = useCallback((presetId: string): ConstraintOperationResult => {
     try {
-      const preset = CONSTRAINT_PRESETS[presetId];
+      const presetsMap = CONSTRAINT_PRESETS as unknown as Record<string, { orthoSettings: unknown; polarSettings: unknown; constraints?: unknown }>;
+      const preset = presetsMap[presetId];
       if (!preset) {
         throw new Error(`Preset not found: ${presetId}`);
       }
-      
+
       setOrthoSettings(preset.orthoSettings);
       setPolarSettings(preset.polarSettings);
       if (preset.constraints) {

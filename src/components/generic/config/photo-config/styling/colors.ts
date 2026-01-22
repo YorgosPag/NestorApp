@@ -76,6 +76,9 @@ export const PHOTO_TEXT_COLORS = {
   /** White text για overlays */
   OVERLAY: 'text-white',
 
+  /** ✅ ENTERPRISE FIX: Foreground text */
+  FOREGROUND: 'text-foreground',
+
   /** Muted foreground */
   FOREGROUND_MUTED: 'text-muted-foreground',
 

@@ -24,7 +24,7 @@ import { ListCard } from '@/design-system';
 import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
-import { formatNumber } from '@/lib/intl-utils';
+import { formatNumber, formatFloorLabel } from '@/lib/intl-utils';
 
 // 🏢 DOMAIN TYPES
 import type { Property } from '@/types/property-viewer';
@@ -140,12 +140,22 @@ export function UnitListCard({
       });
     }
 
+    // Floor - 🏢 PR1.2: Added for Google-grade density
+    if (unit.floor !== undefined && unit.floor !== null) {
+      items.push({
+        icon: NAVIGATION_ENTITIES.floor.icon,
+        iconColor: NAVIGATION_ENTITIES.floor.color,
+        label: t('card.stats.floor'),
+        value: formatFloorLabel(unit.floor),
+      });
+    }
+
     // ❌ REMOVED: Price display (commercial data - domain separation)
     // Price now belongs to SalesAsset type in /sales module
     // Migration: PR1 - Units List Cleanup
 
     return items;
-  }, [unit.area, t]);
+  }, [unit.area, unit.floor, t]);
 
   /** Build badges from operational status */
   const badges = useMemo(() => {

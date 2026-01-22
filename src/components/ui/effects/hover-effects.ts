@@ -145,6 +145,8 @@ export const HOVER_BORDER_EFFECTS = {
   RED: 'hover:border-hsl(var(--border-error)) dark:hover:border-hsl(var(--border-error)),',
   /** @deprecated */
   GRAY: 'hover:border-border',
+  /** ✅ ENTERPRISE FIX: Missing border effects */
+  GRAY_400: 'hover:border-gray-400',
   /** Muted border για subtle interactions */
   MUTED: 'hover:border-muted dark:hover:border-muted'
 } as const;
@@ -174,6 +176,11 @@ export const HOVER_TEXT_EFFECTS = {
 
   /** Neutral/archive actions */
   GRAY: 'text-gray-600 hover:text-gray-700',
+
+  /** ✅ ENTERPRISE FIX: Missing text hover effects */
+  GRAY_TO_BLACK: 'text-gray-600 hover:text-black',
+  GRAY_600_TO_800: 'text-gray-600 hover:text-gray-800',
+  BLUE_DARK: 'text-blue-700 hover:text-blue-800',
 
   /** ✅ ENTERPRISE FIX: White text hover for LayersSettings, ProSnapToolbar, ZoomControls */
   WHITE: 'text-white hover:text-gray-100',
@@ -379,6 +386,9 @@ export const INTERACTIVE_PATTERNS = {
   /** ✅ ENTERPRISE FIX: Destructive ghost button hover */
   BUTTON_DESTRUCTIVE_GHOST: 'transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive',
 
+  /** ✅ ENTERPRISE FIX: Orange ghost button hover */
+  BUTTON_ORANGE_GHOST: 'transition-colors duration-150 hover:bg-orange-500/10 hover:text-orange-600',
+
   /** ✅ ENTERPRISE FIX: Border blue hover */
   BORDER_BLUE: 'transition-all duration-200 hover:border-blue-500',
 
@@ -447,6 +457,10 @@ export const HOVER_BACKGROUND_EFFECTS = {
 
   /** Gray dark background hover (darker shade for modals) */
   GRAY_DARK: `hover:${hardcodedColorValues.background.gray[800]}`,
+
+  /** ✅ ENTERPRISE FIX: Missing specific gray shades */
+  GRAY_800: `hover:${hardcodedColorValues.background.gray[800]}`,
+  GRAY_400: `hover:${hardcodedColorValues.background.gray[400]}`,
 
   /** Gray darker background hover (darkest shade for enterprise UI) */
   GRAY_DARKER: `hover:${hardcodedColorValues.background.gray[900]}`, // ✅ ENTERPRISE: Darkest shade for enterprise UI elements
@@ -563,7 +577,11 @@ export const GROUP_HOVER_PATTERNS = {
   BLUE_TEXT_ON_GROUP: 'group-hover:text-blue-600',
 
   /** Blue icon color on group hover (lighter shade) */
-  BLUE_ICON_ON_GROUP: 'group-hover:text-blue-500'
+  BLUE_ICON_ON_GROUP: 'group-hover:text-blue-500',
+
+  /** ✅ ENTERPRISE FIX: Missing group hover patterns */
+  OVERLAY_ON_GROUP: 'group-hover:opacity-100',
+  BACKGROUND_SUBTLE: 'group-hover:bg-black/5'
 } as const;
 
 /**

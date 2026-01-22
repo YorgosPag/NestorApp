@@ -38,9 +38,35 @@
     "maintenance": "Υπό συντήρηση",
     "draft": "Πρόχειρο"
   },
+  "status": {
+    "forSale": "Προς πώληση",
+    "available": "Διαθέσιμο"
+  },
+  "card": {
+    "stats": {
+      "area": "Εμβαδόν",
+      "floor": "Όροφος"
+    },
+    "ariaLabel": "Κάρτα μονάδας {name}"
+  },
   "management": {
     "title": "Διαχείριση Μονάδων",
     "subtitle": "Κεντρικό ευρετήριο όλων των μονάδων σας"
+  },
+  "details": {
+    "showAll": "Εμφάνιση όλων"
+  },
+  "navigation": {
+    "actions": {
+      "view": {
+        "label": "Προβολή"
+      }
+    }
+  },
+  "buildingSelector": {
+    "title": "Επιλογή Κτιρίου",
+    "selectLabel": "Επιλέξτε κτίριο",
+    "save": "Αποθήκευση"
   },
   "header": {
     "title": "Διαχείριση Μονάδων",
@@ -91,7 +117,21 @@
     "cancel": "Ακύρωση",
     "delete": "Διαγραφή"
   },
+  "filters": {
+    "unitsTitle": "Φίλτρα Μονάδων",
+    "showAdvanced": "Εμφάνιση προχωρημένων",
+    "hideAdvanced": "Απόκρυψη προχωρημένων",
+    "resetFilters": "Επαναφορά φίλτρων",
+    "advancedOptions": {
+      "parking": "Χώρος στάθμευσης",
+      "storage": "Αποθήκη",
+      "fireplace": "Τζάκι",
+      "view": "Θέα",
+      "pool": "Πισίνα"
+    }
+  },
   "list": {
+    "title": "Μονάδες",
     "ariaLabel": "Λίστα Μονάδων",
     "noResults": "Δεν βρέθηκαν μονάδες",
     "noResultsForTerm": "για τον όρο \"{term}\""

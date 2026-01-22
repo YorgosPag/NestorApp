@@ -38,9 +38,35 @@
     "maintenance": "Under Maintenance",
     "draft": "Draft"
   },
+  "status": {
+    "forSale": "For Sale",
+    "available": "Available"
+  },
+  "card": {
+    "stats": {
+      "area": "Area",
+      "floor": "Floor"
+    },
+    "ariaLabel": "Unit card {name}"
+  },
   "management": {
     "title": "Unit Management",
     "subtitle": "Central directory of all your units"
+  },
+  "details": {
+    "showAll": "Show all"
+  },
+  "navigation": {
+    "actions": {
+      "view": {
+        "label": "View"
+      }
+    }
+  },
+  "buildingSelector": {
+    "title": "Select Building",
+    "selectLabel": "Select building",
+    "save": "Save"
   },
   "header": {
     "title": "Unit Management",
@@ -91,7 +117,21 @@
     "cancel": "Cancel",
     "delete": "Delete"
   },
+  "filters": {
+    "unitsTitle": "Units Filters",
+    "showAdvanced": "Show advanced",
+    "hideAdvanced": "Hide advanced",
+    "resetFilters": "Reset filters",
+    "advancedOptions": {
+      "parking": "Parking",
+      "storage": "Storage",
+      "fireplace": "Fireplace",
+      "view": "View",
+      "pool": "Pool"
+    }
+  },
   "list": {
+    "title": "Units",
     "ariaLabel": "Units List",
     "noResults": "No units found",
     "noResultsForTerm": "for the term \"{term}\""

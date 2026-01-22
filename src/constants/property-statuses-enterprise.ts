@@ -292,6 +292,20 @@ export const UNIT_SALE_STATUS_LABELS = {
   [UNIT_SALE_STATUS.PENDING]: 'units.saleStatus.pending'
 } as const;
 
+// 🏢 ENTERPRISE: Operational Status Labels (PR1.2 - Domain Separation)
+// Physical/construction status - ZERO sales data
+// 🌐 i18n: All labels are i18n keys for units.operationalStatus namespace
+export const OPERATIONAL_STATUS_LABELS = {
+  ready: 'units.operationalStatus.ready',
+  'under-construction': 'units.operationalStatus.underConstruction',
+  inspection: 'units.operationalStatus.inspection',
+  maintenance: 'units.operationalStatus.maintenance',
+  draft: 'units.operationalStatus.draft'
+} as const;
+
+// Type for operational status values
+export type OperationalStatusValue = keyof typeof OPERATIONAL_STATUS_LABELS;
+
 // Obligation status labels (migrated from StatusConstants.ts - labels only)
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const OBLIGATION_STATUS_LABELS = {

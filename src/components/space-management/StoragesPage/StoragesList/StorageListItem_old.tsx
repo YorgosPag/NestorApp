@@ -8,10 +8,10 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import type { Storage } from '@/types/storage/contracts';
 
-import { StorageListItemHeader } from './ListItem/StorageListItemHeader';
-import { StorageListItemStats } from './ListItem/StorageListItemStats';
-import { StorageListItemFooter } from './ListItem/StorageListItemFooter';
-import { StorageListItemActions } from './ListItem/StorageListItemActions';
+import { StorageListItemHeader } from './ListItem/StorageListItemHeader_old';
+import { StorageListItemStats } from './ListItem/StorageListItemStats_old';
+import { StorageListItemFooter } from './ListItem/StorageListItemFooter_old';
+import { StorageListItemActions } from './ListItem/StorageListItemActions_old';
 
 interface StorageListItemProps {
   storage: Storage;

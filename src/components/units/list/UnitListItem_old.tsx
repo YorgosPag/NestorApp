@@ -7,8 +7,8 @@ import type { Property } from '@/types/property-viewer';
 import { brandClasses } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 
-import { UnitListItemHeader } from './ListItem/UnitListItemHeader';
-import { UnitListItemStats } from './ListItem/UnitListItemStats';
+import { UnitListItemHeader } from './ListItem/UnitListItemHeader_old';
+import { UnitListItemStats } from './ListItem/UnitListItemStats_old';
 // 🏢 ENTERPRISE CARD SPEC (local_4.log): Removed Progress and Footer from cards
 // These belong ONLY in the detail panel (right side)
 import { getPropertyTypeIcon, getPropertyTypeLabel } from './ListItem/UnitListItemUtils';
