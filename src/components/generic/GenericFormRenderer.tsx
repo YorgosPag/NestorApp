@@ -181,7 +181,7 @@ function renderTextareaField(field: FieldConfig, formData: FormDataRecord, onCha
  * Renders a date field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
 function renderDateField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
-  const value = formData[field.id] || '';
+  const value = toStringValue(formData[field.id]);
 
   return (
     <UniversalClickableField
@@ -201,7 +201,7 @@ function renderDateField(field: FieldConfig, formData: FormDataRecord, onChange:
  * Renders a number field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
 function renderNumberField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
-  const value = formData[field.id] || '';
+  const value = toStringValue(formData[field.id]);
 
   return (
     <UniversalClickableField
@@ -222,7 +222,7 @@ function renderNumberField(field: FieldConfig, formData: FormDataRecord, onChang
  * Renders an email field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
 function renderEmailField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
-  const value = formData[field.id] || '';
+  const value = toStringValue(formData[field.id]);
 
   return (
     <UniversalClickableField
@@ -243,7 +243,7 @@ function renderEmailField(field: FieldConfig, formData: FormDataRecord, onChange
  * Renders a tel field - NOW USING UNIVERSAL CLICKABLE FIELD
  */
 function renderTelField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
-  const value = formData[field.id] || '';
+  const value = toStringValue(formData[field.id]);
 
   return (
     <UniversalClickableField

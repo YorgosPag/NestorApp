@@ -79,19 +79,19 @@ export function ProjectToolbar({
 
   // Status tabs configuration
   const statusTabs = [
-    { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
-    { value: 'in_progress', label: UNIFIED_STATUS_FILTER_LABELS.IN_PROGRESS },
-    { value: 'planning', label: UNIFIED_STATUS_FILTER_LABELS.PLANNING },
-    { value: 'completed', label: UNIFIED_STATUS_FILTER_LABELS.COMPLETED },
-    { value: 'on_hold', label: UNIFIED_STATUS_FILTER_LABELS.ON_HOLD },
+    { value: 'all', label: t(COMMON_FILTER_LABELS.ALL_STATUSES, { ns: 'common' }) },
+    { value: 'in_progress', label: t(UNIFIED_STATUS_FILTER_LABELS.IN_PROGRESS, { ns: 'common' }) },
+    { value: 'planning', label: t(UNIFIED_STATUS_FILTER_LABELS.PLANNING, { ns: 'common' }) },
+    { value: 'completed', label: t(UNIFIED_STATUS_FILTER_LABELS.COMPLETED, { ns: 'common' }) },
+    { value: 'on_hold', label: t(UNIFIED_STATUS_FILTER_LABELS.ON_HOLD, { ns: 'common' }) },
   ];
 
   // Type tabs configuration
   const typeTabs = [
-    { value: 'all', label: COMMON_FILTER_LABELS.ALL_TYPES },
-    { value: 'residential', label: PROJECT_TYPE_LABELS.residential },
-    { value: 'commercial', label: PROJECT_TYPE_LABELS.commercial },
-    { value: 'infrastructure', label: PROJECT_TYPE_LABELS.infrastructure },
+    { value: 'all', label: t(COMMON_FILTER_LABELS.ALL_TYPES, { ns: 'common' }) },
+    { value: 'residential', label: t(PROJECT_TYPE_LABELS.residential, { ns: 'projects' }) },
+    { value: 'commercial', label: t(PROJECT_TYPE_LABELS.commercial, { ns: 'projects' }) },
+    { value: 'infrastructure', label: t(PROJECT_TYPE_LABELS.infrastructure, { ns: 'projects' }) },
   ];
 
   // Define tabs configuration - similar to ContactsToolbar

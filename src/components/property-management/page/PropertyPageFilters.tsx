@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { LabeledSelect } from './LabeledSelect';
 import { LabeledInput } from './LabeledInput';
 import { MapPin, Activity, Search } from 'lucide-react';
@@ -32,32 +32,6 @@ interface PropertyPageFiltersProps {
   setFilterBuilding: (building: string) => void;
 }
 
-const typeOptions = [
-  { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES },
-  ...Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => ({ value, label }))
-];
-
-const statusOptions = [
-  { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_STATUSES },
-  ...Object.entries(LEGACY_STATUS_MAPPING).map(([legacyValue, modernValue]) => ({
-    value: legacyValue,
-    label: PROPERTY_STATUS_LABELS[modernValue]
-  }))
-];
-
-const floorOptions = [
-  { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_FLOORS },
-  ...PROPERTY_STANDARD_FLOORS.map(floor => ({ value: floor, label: floor }))
-];
-
-const buildingOptions = [
-  { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_BUILDINGS },
-  { value: 'A', label: STORAGE_LABELS.BUILDING_A },
-  { value: 'B', label: STORAGE_LABELS.BUILDING_B },
-  { value: 'C', label: STORAGE_LABELS.BUILDING_C },
-  { value: 'D', label: STORAGE_LABELS.BUILDING_D },
-];
-
 export function PropertyPageFilters({
   searchTerm,
   setSearchTerm,
@@ -73,6 +47,36 @@ export function PropertyPageFilters({
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
   const iconSizes = useIconSizes();
+
+  // 🏢 ENTERPRISE: Options with i18n support
+  const typeOptions = useMemo(() => [
+    { value: 'all', label: t(PROPERTY_FILTER_LABELS.ALL_TYPES, { ns: 'common' }) },
+    ...Object.entries(PROPERTY_TYPE_LABELS).map(([value, label]) => ({
+      value,
+      label: t(label, { ns: 'properties' })
+    }))
+  ], [t]);
+
+  const statusOptions = useMemo(() => [
+    { value: 'all', label: t(PROPERTY_FILTER_LABELS.ALL_STATUSES, { ns: 'common' }) },
+    ...Object.entries(LEGACY_STATUS_MAPPING).map(([legacyValue, modernValue]) => ({
+      value: legacyValue,
+      label: t(PROPERTY_STATUS_LABELS[modernValue], { ns: 'common' })
+    }))
+  ], [t]);
+
+  const floorOptions = useMemo(() => [
+    { value: 'all', label: t(PROPERTY_FILTER_LABELS.ALL_FLOORS, { ns: 'common' }) },
+    ...PROPERTY_STANDARD_FLOORS.map(floor => ({ value: floor, label: floor }))
+  ], [t]);
+
+  const buildingOptions = useMemo(() => [
+    { value: 'all', label: t(PROPERTY_FILTER_LABELS.ALL_BUILDINGS, { ns: 'common' }) },
+    { value: 'A', label: t(STORAGE_LABELS.BUILDING_A, { ns: 'building' }) },
+    { value: 'B', label: t(STORAGE_LABELS.BUILDING_B, { ns: 'building' }) },
+    { value: 'C', label: t(STORAGE_LABELS.BUILDING_C, { ns: 'building' }) },
+    { value: 'D', label: t(STORAGE_LABELS.BUILDING_D, { ns: 'building' }) },
+  ], [t]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">

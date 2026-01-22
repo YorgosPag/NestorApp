@@ -187,9 +187,9 @@ export function BuildingToolbar({
           <DropdownMenuLabel>{t('toolbar.filters.statusLabel')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {[
-            { value: 'active', label: UNIFIED_STATUS_FILTER_LABELS.ACTIVE },
-            { value: 'inactive', label: UNIFIED_STATUS_FILTER_LABELS.INACTIVE },
-            { value: 'maintenance', label: UNIFIED_STATUS_FILTER_LABELS.MAINTENANCE },
+            { value: 'active', label: t(UNIFIED_STATUS_FILTER_LABELS.ACTIVE, { ns: 'common' }) },
+            { value: 'inactive', label: t(UNIFIED_STATUS_FILTER_LABELS.INACTIVE, { ns: 'common' }) },
+            { value: 'maintenance', label: t(UNIFIED_STATUS_FILTER_LABELS.MAINTENANCE, { ns: 'common' }) },
           ].map(({ value, label }) => (
             <DropdownMenuCheckboxItem
               key={value}

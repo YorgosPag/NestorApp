@@ -535,7 +535,18 @@
   "propertyViewer": {
     "title": "Ευρετήριο Ακινήτων",
     "subtitle": "Οπτική διαχείριση και ανάλυση ακινήτων σε κάτοψη.",
-    "newProperty": "Νέο Ακίνητο"
+    "newProperty": "Νέο Ακίνητο",
+    "header": {
+      "backToSearch": "Πίσω στην Αναζήτηση",
+      "back": "Πίσω",
+      "home": "Αρχική",
+      "floorPlan": "Κάτοψη Ορόφου",
+      "availableProperties": "{count} διαθέσιμα ακίνητα",
+      "newSearch": "Νέα Αναζήτηση",
+      "searchFilters": "Φίλτρα Αναζήτησης",
+      "activeFilters": "Ενεργά",
+      "filtersPlaceholder": "Φίλτρα θα εμφανιστούν εδώ"
+    }
   },
   "propertyEditor": {
     "nodeEditing": "Επεξεργασία Κόμβων",

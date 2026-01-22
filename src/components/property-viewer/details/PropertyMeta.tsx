@@ -143,7 +143,7 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       <div className={`flex ${spacing.gap.sm}`}>
         <Button variant="outline" size="sm" className="flex-1">
           <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.view.color, spacing.margin.right.sm)} />
-          {NAVIGATION_ACTIONS.view.label}
+          {t(NAVIGATION_ACTIONS.view.label, { ns: 'common' })}
         </Button>
         <Button variant="outline" size="sm" className="flex-1" onClick={handleEditClick}>
           <NAVIGATION_ACTIONS.edit.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.edit.color, spacing.margin.right.sm)} />

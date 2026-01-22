@@ -180,7 +180,7 @@ function UnitsPageContent() {
       color: "blue"
     },
     {
-      title: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE,
+      title: t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' }),
       value: dashboardStats.availableProperties,
       icon: TrendingUp,
       color: "green"

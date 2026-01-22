@@ -95,7 +95,7 @@ function createIndividualFormTabsFromConfig(
         {/* 📸 ΠΟΛΛΑΠΛΕΣ ΦΩΤΟΓΡΑΦΙΕΣ για Φυσικό Πρόσωπο (μέχρι 6) */}
         <MultiplePhotosUpload
           maxPhotos={6}
-          photos={formData.multiplePhotos || []}
+          photos={Array.isArray(formData.multiplePhotos) ? formData.multiplePhotos : []}
           onPhotosChange={onMultiplePhotosChange}
           onPhotoUploadComplete={onMultiplePhotoUploadComplete}
           onProfilePhotoSelection={onProfilePhotoSelection}

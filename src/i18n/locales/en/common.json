@@ -535,7 +535,18 @@
   "propertyViewer": {
     "title": "Property Index",
     "subtitle": "Visual management and analysis of properties in floor plan.",
-    "newProperty": "New Property"
+    "newProperty": "New Property",
+    "header": {
+      "backToSearch": "Back to Search",
+      "back": "Back",
+      "home": "Home",
+      "floorPlan": "Floor Plan",
+      "availableProperties": "{count} available properties",
+      "newSearch": "New Search",
+      "searchFilters": "Search Filters",
+      "activeFilters": "Active",
+      "filtersPlaceholder": "Filters will appear here"
+    }
   },
   "propertyEditor": {
     "nodeEditing": "Node Editing",

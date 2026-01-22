@@ -128,7 +128,7 @@ function renderInputField(
   onChange: InputChangeHandler,
   disabled: boolean
 ): React.ReactNode {
-  const value = formData[field.id] ?? '';
+  const value = toStringValue(formData[field.id]);
 
   // 🎯 DEBUG: Log για contact fields
   if (['phone', 'email', 'website'].includes(field.id)) {

@@ -131,13 +131,13 @@ function StoragePageContent() {
       color: "blue"
     },
     {
-      title: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE,
+      title: t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' }),
       value: stats.availableStorages,
       icon: TrendingUp,
       color: "green"
     },
     {
-      title: UNIFIED_STATUS_FILTER_LABELS.OCCUPIED,
+      title: t(UNIFIED_STATUS_FILTER_LABELS.OCCUPIED, { ns: 'common' }),
       value: stats.occupiedStorages,
       icon: PackageCheck,
       color: "purple"

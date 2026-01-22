@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Ruler, ZoomIn, ZoomOut } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -48,7 +47,7 @@ export function MapControls({
                             <SelectValue placeholder={t('tabs.map.controls.selectFilter')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">{PROPERTY_FILTER_LABELS.ALL_PROJECTS}</SelectItem>
+                            <SelectItem value="all">{t('filters.allProjects')}</SelectItem>
                             <SelectItem value="active">{t('tabs.map.controls.activeOnly')}</SelectItem>
                             <SelectItem value="completed">{t('tabs.map.controls.completedOnly')}</SelectItem>
                         </SelectContent>

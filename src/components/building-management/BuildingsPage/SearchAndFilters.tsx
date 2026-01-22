@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { FilterSelect } from './FilterSelect';
-import { PROPERTY_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -77,18 +76,18 @@ export function SearchAndFilters({
           value={filterProject}
           onChange={setFilterProject}
           options={projects}
-          placeholder={PROPERTY_FILTER_LABELS.ALL_PROJECTS}
+          placeholder={t('filters.allProjects')}
         />
         <FilterSelect
           value={filterStatus}
           onChange={setFilterStatus}
           options={[
-            { id: 'active', name: 'active' },
-            { id: 'construction', name: 'construction' },
-            { id: 'planned', name: 'planned' },
-            { id: 'completed', name: 'completed' }
+            { id: 'active', name: t('status.active') },
+            { id: 'construction', name: t('status.construction') },
+            { id: 'planned', name: t('status.planned') },
+            { id: 'completed', name: t('status.completed') }
           ]}
-          placeholder={PROPERTY_FILTER_LABELS.ALL_STATUSES}
+          placeholder={t('filters.allStatuses')}
         />
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
