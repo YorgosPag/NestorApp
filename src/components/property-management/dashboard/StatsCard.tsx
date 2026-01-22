@@ -19,21 +19,21 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCardProps) {
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
-    // Enterprise semantic color mapping
+    // Enterprise semantic color mapping (ONLY text colors - NO borders, NO backgrounds)
     const colorClasses = {
-        blue: `${getStatusBorder('info')} ${colors.bg.infoSubtle} ${colors.text.info}`,
-        gray: `${getStatusBorder('muted')} ${colors.bg.muted} ${colors.text.muted}`,
-        green: `${getStatusBorder('success')} ${colors.bg.successSubtle} ${colors.text.success}`,
-        purple: `${getStatusBorder('subtle')} ${colors.bg.purple} ${colors.text.purple}`,
-        red: `${getStatusBorder('error')} ${colors.bg.errorSubtle} ${colors.text.danger}`,
-        orange: `${getStatusBorder('warning')} ${colors.bg.warningSubtle} ${colors.text.warning}`,
-        cyan: `${getStatusBorder('info')} ${colors.bg.infoSubtle} ${colors.text.info}`,
-        pink: `${getStatusBorder('subtle')} ${colors.bg.purple} ${colors.text.purple}`,
-        yellow: `${getStatusBorder('warning')} ${colors.bg.warningSubtle} ${colors.text.warning}`,
-        indigo: `${getStatusBorder('info')} ${colors.bg.infoSubtle} ${colors.text.info}`
+        blue: colors.text.info,
+        gray: colors.text.muted,
+        green: colors.text.success,
+        purple: colors.text.purple,
+        red: colors.text.danger,
+        orange: colors.text.warning,
+        cyan: colors.text.info,
+        pink: colors.text.purple,
+        yellow: colors.text.warning,
+        indigo: colors.text.info
     };
 
     // Enterprise semantic value color mapping
@@ -68,7 +68,7 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
 
     return (
         <Card
-            className={`${colorClasses[colorKey]} ${onClick ? `cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}` : ''} min-w-0 max-w-full overflow-hidden`}
+            className={`${quick.card} ${colors.bg.card} ${colorClasses[colorKey]} ${onClick ? `cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}` : ''} min-w-0 max-w-full overflow-hidden`}
             onClick={onClick}
         >
             <CardContent className={`${spacing.padding.sm} min-w-0`}>

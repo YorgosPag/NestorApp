@@ -31,6 +31,12 @@ interface FormFieldData {
   [key: string]: unknown;
 }
 
+/** Custom renderer function type */
+type CustomRendererFn = () => React.ReactNode;
+
+/** Field renderer function type */
+type FieldRendererFn = (field: FormFieldData, formData: Record<string, unknown>, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, onSelectChange: (name: string, value: string) => void, disabled: boolean) => React.ReactNode;
+
 export interface GenericFormTabRendererProps {
   /** Sections configuration from config file */
   sections: SectionConfig[];
@@ -45,7 +51,7 @@ export interface GenericFormTabRendererProps {
   /** Multiple photos change handler (now used for logos too) */
   onPhotosChange?: (photos: PhotoSlotData[]) => void;
   /** Custom field renderers for forms */
-  customRenderers?: Record<string, (field: FormFieldData, formData: Record<string, unknown>, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, onSelectChange: (name: string, value: string) => void, disabled: boolean) => React.ReactNode>;
+  customRenderers?: Record<string, FieldRendererFn | CustomRendererFn>;
 }
 
 // ============================================================================
@@ -83,7 +89,7 @@ function createFormTabsFromConfig(
   disabled: boolean,
   t: (key: string) => string,
   onPhotosChange?: (photos: PhotoSlotData[]) => void,
-  customRenderers?: Record<string, unknown>
+  customRenderers?: Record<string, FieldRendererFn | CustomRendererFn>
 ) {
   return sections.map(section => {
     // ========================================================================
@@ -106,30 +112,34 @@ function createFormTabsFromConfig(
       // Check for custom renderer FIRST (but exclude companyPhotos and relationships which have special logic)
       if (customRenderers?.[section.id] && section.id !== 'companyPhotos' && section.id !== 'relationships') {
         console.log('🔧 DEBUG: Using generic custom renderer for section:', section.id);
-        return customRenderers[section.id]();
+        const renderer = customRenderers[section.id] as CustomRendererFn;
+        return renderer();
       }
 
       // 🏢 ENTERPRISE: Custom renderer for relationships tab
       if (section.id === 'relationships' && customRenderers && customRenderers.relationships) {
         console.log('🏢 DEBUG: Using relationships custom renderer');
-        return customRenderers.relationships();
+        const renderer = customRenderers.relationships as CustomRendererFn;
+        return renderer();
       }
 
       if (section.id === 'companyPhotos' && customRenderers && customRenderers.companyPhotos) {
         // 🏢 ENTERPRISE: Custom renderer για companyPhotos (UnifiedPhotoManager)
         console.log('🏢 DEBUG: Using companyPhotos custom renderer');
-        return customRenderers.companyPhotos();
+        const renderer = customRenderers.companyPhotos as CustomRendererFn;
+        return renderer();
       }
 
       if (section.id === 'logo') {
         // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload (1 slot)
+        const multiplePhotos = (formData.multiplePhotos as PhotoSlotData[] | undefined) || [];
         return (
           <div className="flex flex-col items-center space-y-4 p-6 min-h-[360px]">
             <MultiplePhotosUpload
-              key={`logo-upload-${(formData.multiplePhotos || []).length}-${(formData.multiplePhotos || [])[0]?.uploadUrl || 'empty'}`}
-              photos={formData.multiplePhotos || []}
+              key={`logo-upload-${multiplePhotos.length}-${multiplePhotos[0]?.uploadUrl || 'empty'}`}
+              photos={multiplePhotos}
               maxPhotos={1} // For service logos, we use exactly 1 slot
-              onPhotosChange={onPhotosChange}
+              onPhotosChange={onPhotosChange as ((photos: import('@/components/ui/MultiplePhotosUpload').PhotoSlot[]) => void) | undefined}
               disabled={disabled}
               purpose="logo" // For services
               contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService

@@ -52,7 +52,12 @@ interface CommunicationsStats {
  * Κεντρικό component που ενσωματώνει όλη την communications infrastructure στο CRM
  */
 
-const CommunicationsIntegration = ({ leadData = null, defaultTab = "inbox" }) => {
+interface CommunicationsIntegrationProps {
+  leadData?: { id?: string } | null;
+  defaultTab?: string;
+}
+
+const CommunicationsIntegration: React.FC<CommunicationsIntegrationProps> = ({ leadData = null, defaultTab = "inbox" }) => {
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('communications');

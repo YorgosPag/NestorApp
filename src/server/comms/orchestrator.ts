@@ -307,7 +307,7 @@ function getFromAddress(channel: CommunicationChannel, params: EnqueueMessagePar
  * Get platform name for metadata
  */
 function getPlatformName(channel: CommunicationChannel): string {
-  const platforms = {
+  const platforms: Record<CommunicationChannel, string> = {
     email: 'sendgrid',
     telegram: 'telegram',
     whatsapp: 'meta_cloud_api',
@@ -320,8 +320,8 @@ function getPlatformName(channel: CommunicationChannel): string {
  * Get channel-specific metadata
  */
 function getChannelSpecificMetadata(channel: CommunicationChannel, params: EnqueueMessageParams): ChannelMetadata {
-  const channelMeta = params.metadata?.[channel] ?? {};
-  
+  const channelMeta = (params.metadata as Record<CommunicationChannel, unknown> | undefined)?.[channel] ?? {};
+
   switch (channel) {
     case 'telegram':
       return {
@@ -342,13 +342,13 @@ function getChannelSpecificMetadata(channel: CommunicationChannel, params: Enque
  * Get max retry attempts based on channel and priority
  */
 function getMaxAttempts(channel: CommunicationChannel, priority?: MessagePriority): number {
-  const baseAttempts = {
+  const baseAttempts: Record<CommunicationChannel, number> = {
     email: 3,
     telegram: 5,
     whatsapp: 3,
     sms: 2
   };
-  
+
   const base = baseAttempts[channel] || 3;
   
   // Increase attempts for high priority messages

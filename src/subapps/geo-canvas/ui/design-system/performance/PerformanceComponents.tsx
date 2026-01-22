@@ -827,7 +827,7 @@ export const AdminBoundariesPerformancePanel = memo(({
       case 'low': return GEO_COLORS.OPTIMIZATION.LOW_PRIORITY;
       default: return colors.text.primary;
     }
-  }, [semanticColors.text.primary]);
+  }, [colors.text.primary]);
 
   const getAlertIcon = useCallback((severity: AdminBoundariesAlert['severity']) => {
     const iconProps = { className: iconSizes.sm };

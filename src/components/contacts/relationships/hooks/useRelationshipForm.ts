@@ -110,8 +110,9 @@ export const useRelationshipForm = (
       }
 
       // 🔧 FIX: Contact object uses 'type' field, not 'contactType'
-      const sourceType = sourceContact.type || sourceContact.contactType;
-      const targetType = targetContact.type || targetContact.contactType;
+      // Type assertions needed because TypeScript can't infer non-null after checks
+      const sourceType = (sourceContact as NonNullable<typeof sourceContact>).type || (sourceContact as NonNullable<typeof sourceContact> & { contactType?: string }).contactType;
+      const targetType = (targetContact as NonNullable<typeof targetContact>).type || (targetContact as NonNullable<typeof targetContact> & { contactType?: string }).contactType;
 
       console.log('🚨 VALIDATION: Contact details for centralized validation:', {
         source: {
@@ -158,7 +159,7 @@ export const useRelationshipForm = (
           existingRelationships,
           formData.targetContactId,
           formData.relationshipType,
-          editingId // Exclude current relationship if editing
+          editingId ?? undefined // Exclude current relationship if editing
         );
 
         console.log('✅ DUPLICATE VALIDATION: No duplicates found');

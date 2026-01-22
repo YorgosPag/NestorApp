@@ -158,14 +158,14 @@ export function WebSocketProvider({
         // Page is hidden - send away status
         wsRef.current.send('user_status', {
           userId: user.email,
-          status: 'away',
+          status: 'away' as const,
           timestamp: Date.now()
         });
       } else {
         // Page is visible - send online status
         wsRef.current.send('user_status', {
           userId: user.email,
-          status: 'online',
+          status: 'online' as const,
           timestamp: Date.now()
         });
       }
@@ -275,9 +275,19 @@ export function useWebSocketEvent<T = WebSocketPayload>(
   const { addEventListener, removeEventListener } = useWebSocket();
 
   useEffect(() => {
-    const listenerId = addEventListener(eventType, handler);
-    return () => removeEventListener(listenerId);
+    const listenerId = addEventListener(eventType, handler as (message: WebSocketMessage<WebSocketPayload>) => void);
+    return () => {
+      removeEventListener(listenerId);
+    };
   }, [addEventListener, removeEventListener, eventType, ...dependencies]);
+}
+
+/** User Presence payload interfaces */
+interface UserPresencePayload {
+  userId: string;
+  status?: 'online' | 'away' | 'offline';
+  timestamp?: number;
+  [key: string]: unknown;
 }
 
 /** Notification payload interface */
@@ -337,28 +347,31 @@ interface UserPresenceData {
 export function useUserPresence() {
   const [onlineUsers, setOnlineUsers] = useState<Map<string, UserPresenceData>>(new Map());
 
-  useWebSocketEvent('user_online', (message) => {
-    setOnlineUsers(prev => new Map(prev.set(message.payload.userId, {
+  useWebSocketEvent<UserPresencePayload>('user_online', (message) => {
+    const userId = message.payload.userId;
+    setOnlineUsers(prev => new Map(prev.set(userId, {
       ...message.payload,
       lastSeen: Date.now()
-    })));
+    } as UserPresenceData)));
   });
 
-  useWebSocketEvent('user_offline', (message) => {
+  useWebSocketEvent<UserPresencePayload>('user_offline', (message) => {
     setOnlineUsers(prev => {
       const newMap = new Map(prev);
-      newMap.delete(message.payload.userId);
+      const userId = message.payload.userId;
+      newMap.delete(userId);
       return newMap;
     });
   });
 
-  useWebSocketEvent('user_status', (message) => {
+  useWebSocketEvent<UserPresencePayload>('user_status', (message) => {
     setOnlineUsers(prev => {
-      const user = prev.get(message.payload.userId);
+      const userId = message.payload.userId;
+      const user = prev.get(userId);
       if (user) {
-        return new Map(prev.set(message.payload.userId, {
+        return new Map(prev.set(userId, {
           ...user,
-          status: message.payload.status,
+          status: message.payload.status || 'online',
           lastSeen: Date.now()
         }));
       }

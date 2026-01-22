@@ -117,29 +117,32 @@ function createServiceFormTabsFromConfig(
       // Check for custom renderer FIRST (but exclude logo and relationships which have special logic)
       if (customRenderers?.[section.id] && section.id !== 'logo' && section.id !== 'relationships') {
         console.log('🔧 DEBUG: Using service custom renderer for section:', section.id);
-        return customRenderers[section.id]();
+        const renderer = customRenderers[section.id] as (() => React.ReactNode);
+        return renderer();
       }
 
       // 🏢 ENTERPRISE: Custom renderer for relationships tab
       if (section.id === 'relationships' && customRenderers && customRenderers.relationships) {
         console.log('🏢 DEBUG: Using relationships custom renderer');
-        return customRenderers.relationships();
+        const renderer = customRenderers.relationships as (() => React.ReactNode);
+        return renderer();
       }
 
       if (section.id === 'logo') {
         // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload (1 slot)
+        const multiplePhotos = (formData.multiplePhotos as PhotoSlot[] | undefined) || [];
         console.log('🖼️ DEBUG: Rendering LOGO section with MultiplePhotosUpload', {
-          photos: formData.multiplePhotos,
+          photos: multiplePhotos,
           onPhotosChange: !!onPhotosChange,
           disabled
         });
         return (
           <div className="flex flex-col items-center space-y-4 p-6 min-h-[360px]">
             <MultiplePhotosUpload
-              key={`logo-upload-${(formData.multiplePhotos || []).length}-${(formData.multiplePhotos || [])[0]?.uploadUrl || 'empty'}`}
-              photos={formData.multiplePhotos || []}
+              key={`logo-upload-${multiplePhotos.length}-${multiplePhotos[0]?.uploadUrl || 'empty'}`}
+              photos={multiplePhotos}
               maxPhotos={1} // For service logos, we use exactly 1 slot
-              onPhotosChange={onPhotosChange}
+              onPhotosChange={onPhotosChange as ((photos: import('@/components/ui/MultiplePhotosUpload').PhotoSlot[]) => void) | undefined}
               disabled={disabled}
               purpose="logo" // For services
               contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService

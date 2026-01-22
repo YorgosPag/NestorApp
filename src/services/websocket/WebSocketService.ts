@@ -3,9 +3,10 @@
 import { generateMessageId, generateTempId } from '@/services/enterprise-id.service';
 
 // WebSocket service for real-time communication
-export type WebSocketEventType = 
+export type WebSocketEventType =
   | 'user_online'
   | 'user_offline'
+  | 'user_status'
   | 'message_received'
   | 'notification'
   | 'task_updated'

@@ -343,7 +343,7 @@ function UnitsPageContent() {
         )}
 
         {/* Desktop: Always visible filters */}
-        <div className="hidden md:block">
+        <div className="hidden md:block -mt-1">
           <AdvancedFiltersPanel
             config={unitFiltersConfig}
             filters={filters as unknown as UnitFilterState}

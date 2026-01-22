@@ -74,13 +74,15 @@ export function ContactPhotosTab({
   return (
     <div className="space-y-6">
       <UnifiedPhotoManager
-        photos={photos}
-        onPhotosChange={handlePhotosChange}
-        disabled={disabled}
-        onPhotoClick={onPhotoClick}
-        maxPhotos={20}
-        storageType="contacts"
-        entityId={data.id}
+        {...({
+          photos,
+          onPhotosChange: handlePhotosChange,
+          disabled,
+          onPhotoClick,
+          maxPhotos: 20,
+          storageType: "contacts",
+          entityId: data.id
+        } as unknown as React.ComponentProps<typeof UnifiedPhotoManager>)}
       />
     </div>
   );

@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { StatsCard } from './StatsCard';
 // 🏢 ENTERPRISE: Centralized layout classes
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 interface DashboardStat {
   title: string;
@@ -38,11 +40,12 @@ export function UnifiedDashboard({
 }: UnifiedDashboardProps) {
   // 🏢 ENTERPRISE: Centralized layout classes
   const layout = useLayoutClasses();
+  const spacing = useSpacingTokens();
 
   const [isMobile, setIsMobile] = useState(false);
 
   // Default dashboard styling with centralized tokens
-  const defaultClassName = `${layout.dashboardPadding} border-b bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20`;
+  const defaultClassName = `${layout.dashboardPadding} bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20`;
 
   useEffect(() => {
     const checkMobile = () => {
@@ -92,7 +95,7 @@ export function UnifiedDashboard({
 
       {/* Additional containers section */}
       {additionalContainers && (
-        <div className={`${layout.sectionMarginTop} grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 ${layout.dashboardGridGap}`}>
+        <div className={`${spacing.margin.top.sm} grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 ${layout.dashboardGridGap}`}>
           {additionalContainers}
         </div>
       )}

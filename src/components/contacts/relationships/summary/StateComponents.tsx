@@ -96,7 +96,7 @@ export const LoadingState: React.FC<StateComponentProps> = ({ className }) => {
     </CardHeader>
     <CardContent>
       <div className="text-center py-8">
-        <AnimatedSpinner size="large" variant="info" className="mx-auto mb-4" />
+        <AnimatedSpinner size="large" className="mx-auto mb-4" />
         <p className={colors.text.muted}>{t('relationships.summary.loading')}</p>
       </div>
     </CardContent>

@@ -188,11 +188,11 @@ export function UniversalTabsRenderer<TData = unknown>({
       return {
         id: tabConfig.value,
         label: displayLabel,
-        icon: getIconComponent(tabConfig.icon),
+        icon: getIconComponent(tabConfig.icon ?? ''),
         content: (
           <PlaceholderTab
             title={`${displayLabel} - Coming Soon`}
-            icon={getIconComponent(tabConfig.icon) || (() => null)}
+            icon={getIconComponent(tabConfig.icon ?? '') || (() => null)}
             building={data}
             {...globalProps}
             {...tabConfig.componentProps}
@@ -261,7 +261,7 @@ export function UniversalTabsRenderer<TData = unknown>({
     return {
       id: tabConfig.value,
       label: displayLabel,
-      icon: getIconComponent(tabConfig.icon),
+      icon: getIconComponent(tabConfig.icon ?? ''),
       content: (
         <ComponentToRender
           // Primary data prop (περνάει ως data, project, building, storage, κτλ.)
@@ -273,7 +273,7 @@ export function UniversalTabsRenderer<TData = unknown>({
           unit={data} // For backward compatibility με unit components
           selectedUnit={data} // For backward compatibility με unit components
           // For PlaceholderTab compatibility
-          icon={getIconComponent(tabConfig.icon)}
+          icon={getIconComponent(tabConfig.icon ?? '')}
           {...additionalData}
           {...getFloorplanProps()} // ✅ ENTERPRISE: FloorplanViewerTab special props
           {...globalProps}

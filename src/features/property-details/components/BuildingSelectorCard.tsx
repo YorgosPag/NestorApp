@@ -77,7 +77,7 @@ export function BuildingSelectorCard({
   // 🏢 ENTERPRISE: Centralized hooks (ZERO inline styles)
   const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
+  const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
 

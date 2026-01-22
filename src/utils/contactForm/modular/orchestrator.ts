@@ -13,7 +13,7 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import { mapIndividualFormData } from '../mappers/individual';
 import { mapCompanyFormData } from '../mappers/company';
 import { mapServiceFormData } from '../mappers/service';
-import { cleanUndefinedValues } from '../utils/data-cleaning';
+import { cleanUndefinedValues, type ContactDataRecord } from '../utils/data-cleaning';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -50,34 +50,34 @@ export function mapFormDataToContact(formData: ContactFormData): FormDataMapping
   try {
     switch (formData.type) {
       case 'individual':
-        contactData = mapIndividualFormData(formData);
-        photoURL = contactData.photoURL;
-        multiplePhotoURLs = contactData.multiplePhotoURLs;
+        contactData = mapIndividualFormData(formData) as unknown as typeof contactData;
+        photoURL = contactData.photoURL ?? '';
+        multiplePhotoURLs = contactData.multiplePhotoURLs ?? [];
         break;
 
       case 'company':
-        contactData = mapCompanyFormData(formData);
-        logoURL = contactData.logoURL;
-        photoURL = contactData.photoURL; // 🔧 FIX: Προσθήκη φωτογραφίας εκπροσώπου για εταιρείες
-        multiplePhotoURLs = contactData.multiplePhotoURLs; // 🔧 FIX: Προσθήκη multiple photos για εταιρείες
+        contactData = mapCompanyFormData(formData) as unknown as typeof contactData;
+        logoURL = contactData.logoURL ?? '';
+        photoURL = contactData.photoURL ?? ''; // 🔧 FIX: Προσθήκη φωτογραφίας εκπροσώπου για εταιρείες
+        multiplePhotoURLs = contactData.multiplePhotoURLs ?? []; // 🔧 FIX: Προσθήκη multiple photos για εταιρείες
         break;
 
       case 'service':
-        contactData = mapServiceFormData(formData);
-        logoURL = contactData.logoURL;
-        photoURL = contactData.photoURL;
-        multiplePhotoURLs = contactData.multiplePhotoURLs; // 🔧 FIX: Προσθήκη multiple photos για υπηρεσίες
+        contactData = mapServiceFormData(formData) as unknown as typeof contactData;
+        logoURL = contactData.logoURL ?? '';
+        photoURL = contactData.photoURL ?? '';
+        multiplePhotoURLs = contactData.multiplePhotoURLs ?? []; // 🔧 FIX: Προσθήκη multiple photos για υπηρεσίες
         break;
 
       default:
         throw new Error(`Unknown contact type: ${formData.type}`);
     }
 
-    // Clean undefined values
-    const cleanedData = cleanUndefinedValues(contactData);
+    // Clean undefined values - type assertion needed for compatibility
+    const cleanedData = cleanUndefinedValues(contactData as unknown as ContactDataRecord);
 
     return {
-      contactData: cleanedData,
+      contactData: cleanedData as Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>,
       multiplePhotoURLs,
       photoURL,
       logoURL,
