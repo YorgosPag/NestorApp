@@ -38,7 +38,7 @@ export function AddNewContactDialog(props: AddNewContactDialogProps) {
     operationType: props.editContact ? 'update' : 'create',
     props: {
       ...props,
-      onSubmit: async (data: Partial<Contact>) => {
+      onSubmit: async (data?: Record<string, unknown>) => {
         // Smart Factory handles the actual submission logic
         if (props.onContactAdded) {
           props.onContactAdded();

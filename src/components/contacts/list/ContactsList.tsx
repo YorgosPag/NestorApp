@@ -46,7 +46,8 @@ export function ContactsList({
 }: ContactsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('contacts');
-  const [sortBy, setSortBy] = useState<string>('name');
+  // 🏢 ENTERPRISE: Using SortField type for toolbar compatibility
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'status' | 'type'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [togglingFavorites, setTogglingFavorites] = useState<Set<string>>(new Set());
 
@@ -158,7 +159,10 @@ export function ContactsList({
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
             onSortChange={(newSortBy, newSortOrder) => {
-            setSortBy(newSortBy);
+            // 🏢 ENTERPRISE: Type narrowing - filter to supported contact sort fields
+            if (newSortBy === 'name' || newSortBy === 'date' || newSortBy === 'status' || newSortBy === 'type') {
+              setSortBy(newSortBy);
+            }
             setSortOrder(newSortOrder);
           }}
           hasSelectedContact={selectedContact !== null}
@@ -196,7 +200,10 @@ export function ContactsList({
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
             onSortChange={(newSortBy, newSortOrder) => {
-            setSortBy(newSortBy);
+            // 🏢 ENTERPRISE: Type narrowing - filter to supported contact sort fields
+            if (newSortBy === 'name' || newSortBy === 'date' || newSortBy === 'status' || newSortBy === 'type') {
+              setSortBy(newSortBy);
+            }
             setSortOrder(newSortOrder);
           }}
           hasSelectedContact={selectedContact !== null}

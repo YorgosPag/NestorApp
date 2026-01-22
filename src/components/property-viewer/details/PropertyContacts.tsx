@@ -9,6 +9,8 @@ import type { ExtendedPropertyDetails } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 interface PropertyContactsProps {
   owner: ExtendedPropertyDetails['owner'];
@@ -17,29 +19,30 @@ interface PropertyContactsProps {
 
 export function PropertyContacts({ owner, agent }: PropertyContactsProps) {
   const iconSizes = useIconSizes();
+  const spacing = useSpacingTokens();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
 
   return (
-    <div className="space-y-3">
+    <div className={spacing.spaceBetween.sm}>
       {owner && (
-        <div className="space-y-1">
-          <h4 className="text-xs font-medium flex items-center gap-1">
+        <div className={spacing.spaceBetween.sm}>
+          <h4 className={`text-xs font-medium flex items-center ${spacing.gap.sm}`}>
             <User className={iconSizes.xs} />
             {t('contacts.owner')}
           </h4>
-          <div className="space-y-1 pl-4">
+          <div className={`${spacing.spaceBetween.sm} ${spacing.padding.left.sm}`}>
             <p className="text-xs">{owner.name}</p>
             {/* 🏢 ENTERPRISE: Using centralized phone icon/color */}
             {owner.phone && (
-              <div className="flex items-center gap-1 text-xs">
+              <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
                 <NAVIGATION_ENTITIES.phone.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.phone.color)} />
                 <span className="text-muted-foreground">{owner.phone}</span>
               </div>
             )}
             {/* 🏢 ENTERPRISE: Using centralized email icon/color */}
             {owner.email && (
-              <div className="flex items-center gap-1 text-xs">
+              <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
                 <NAVIGATION_ENTITIES.email.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.email.color)} />
                 <span className="text-muted-foreground">{owner.email}</span>
               </div>
@@ -49,23 +52,23 @@ export function PropertyContacts({ owner, agent }: PropertyContactsProps) {
       )}
 
       {agent && (
-        <div className="space-y-1">
-          <h4 className="text-xs font-medium flex items-center gap-1">
+        <div className={spacing.spaceBetween.sm}>
+          <h4 className={`text-xs font-medium flex items-center ${spacing.gap.sm}`}>
             <User className={iconSizes.xs} />
             {t('contacts.agent')}
           </h4>
-          <div className="space-y-1 pl-4">
+          <div className={`${spacing.spaceBetween.sm} ${spacing.padding.left.sm}`}>
             <p className="text-xs">{agent.name}</p>
             {/* 🏢 ENTERPRISE: Using centralized phone icon/color */}
             {agent.phone && (
-              <div className="flex items-center gap-1 text-xs">
+              <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
                 <NAVIGATION_ENTITIES.phone.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.phone.color)} />
                 <span className="text-muted-foreground">{agent.phone}</span>
               </div>
             )}
             {/* 🏢 ENTERPRISE: Using centralized email icon/color */}
             {agent.email && (
-              <div className="flex items-center gap-1 text-xs">
+              <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
                 <NAVIGATION_ENTITIES.email.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.email.color)} />
                 <span className="text-muted-foreground">{agent.email}</span>
               </div>

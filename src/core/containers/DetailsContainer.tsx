@@ -94,14 +94,14 @@ export function DetailsContainer({
       <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
         {/* Tabs Section (if provided) - flex-1 allows tabs to expand to full height */}
         {tabsRenderer && (
-          <div className={`${spacing.padding.x.md} ${spacing.padding.top.md} flex-1 flex flex-col min-h-0`}>
+          <div className={`${spacing.padding.x.sm} ${spacing.padding.top.sm} flex-1 flex flex-col min-h-0`}>
             {tabsRenderer}
           </div>
         )}
 
         {/* Custom Content (if no tabs) */}
         {!tabsRenderer && children && (
-          <div className={`flex-1 ${spacing.padding.md}`}>
+          <div className={`flex-1 ${spacing.padding.sm}`}>
             {children}
           </div>
         )}

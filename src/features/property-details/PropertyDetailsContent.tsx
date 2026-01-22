@@ -21,6 +21,8 @@ import { ContactsBlock } from './components/ContactsBlock';
 import { DocumentsBlock } from './components/DocumentsBlock';
 import { DatesBlock } from './components/DatesBlock';
 import { BuildingSelectorCard } from './components/BuildingSelectorCard';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 import { resolveAttachments } from './utils/attachments';
 import { makeSafeUpdate } from './utils/safeUpdate';
@@ -44,6 +46,7 @@ export function PropertyDetailsContent({
   const { t } = useTranslation(['common', 'properties']);
   const notifications = useNotifications();
   const { quick } = useBorderTokens();
+  const spacing = useSpacingTokens();
 
   // Resolve the actual property from all possible sources (enterprise pattern)
   const resolvedProperty = property || unit || data;
@@ -79,7 +82,7 @@ export function PropertyDetailsContent({
 
   // === RENDER: ΑΠΑΡΑΛΛΑΚΤΟ DOM/Tailwind/labels ===
   return (
-    <div className="space-y-4 p-1">
+    <div className={`${spacing.spaceBetween.sm} ${spacing.padding.sm}`}>
       {isReadOnly && <ReadOnlyBanner />}
 
       {hasPropertyWithMismatch(resolvedProperty) && resolvedProperty.buyerMismatch && !isReadOnly && <BuyerMismatchAlert />}

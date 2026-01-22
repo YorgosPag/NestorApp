@@ -31,6 +31,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type definitions (ZERO any)
@@ -77,6 +79,7 @@ export function BuildingSelectorCard({
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
 
   // 🏢 ENTERPRISE: State management
   const [buildings, setBuildings] = useState<BuildingOption[]>([]);
@@ -196,20 +199,20 @@ export function BuildingSelectorCard({
   const currentBuildingName = buildings.find(b => b.id === currentBuildingId)?.name;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className={cn(quick.card, colors.bg.card)}>
+      <CardHeader className="!p-2 flex flex-col space-y-2">
+        <CardTitle className={`flex items-center ${spacing.gap.sm}`}>
           <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
           {t('buildingSelector.title')}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="!p-2 !pt-2 space-y-2">
         {/* Building Selector */}
-        <fieldset className="space-y-2">
+        <fieldset className={spacing.spaceBetween.sm}>
           <Label htmlFor="building-selector">{t('buildingSelector.selectLabel')}</Label>
 
           {loading ? (
-            <section className="flex items-center gap-2 text-muted-foreground">
+            <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground`}>
               <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
               <span>{t('buildingSelector.loading')}</span>
             </section>
@@ -255,7 +258,7 @@ export function BuildingSelectorCard({
 
         {/* Save button and status */}
         {isEditing && (
-          <footer className="flex items-center justify-between pt-2">
+          <footer className={`flex items-center justify-between ${spacing.padding.top.sm}`}>
             <Button
               onClick={handleSave}
               disabled={saving || !hasChanges}
@@ -264,12 +267,12 @@ export function BuildingSelectorCard({
             >
               {saving ? (
                 <>
-                  <Loader2 className={cn(iconSizes.sm, 'mr-2 animate-spin')} />
+                  <Loader2 className={cn(iconSizes.sm, spacing.margin.right.sm, 'animate-spin')} />
                   {t('buildingSelector.saving')}
                 </>
               ) : (
                 <>
-                  <Save className={cn(iconSizes.sm, 'mr-2')} />
+                  <Save className={cn(iconSizes.sm, spacing.margin.right.sm)} />
                   {t('buildingSelector.save')}
                 </>
               )}
@@ -277,13 +280,13 @@ export function BuildingSelectorCard({
 
             {/* Status indicators */}
             {saveStatus === 'success' && (
-              <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+              <span className={`flex items-center ${spacing.gap.sm} text-sm text-green-600 dark:text-green-400`}>
                 <CheckCircle className={iconSizes.sm} />
                 {t('buildingSelector.success')}
               </span>
             )}
             {saveStatus === 'error' && (
-              <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
+              <span className={`flex items-center ${spacing.gap.sm} text-sm text-red-600 dark:text-red-400`}>
                 <AlertCircle className={iconSizes.sm} />
                 {t('buildingSelector.error')}
               </span>

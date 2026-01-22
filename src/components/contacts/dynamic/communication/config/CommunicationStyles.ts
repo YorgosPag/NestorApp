@@ -10,7 +10,7 @@
 
 import { HOVER_BACKGROUND_EFFECTS, HOVER_TEXT_EFFECTS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import type { SemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 
 // ============================================================================
@@ -30,7 +30,7 @@ import { COLOR_BRIDGE } from '@/design-system/color-bridge';
  * - Empty state presentation
  * - Header styling για grouped layouts
  */
-export function getCommunicationStyles(colors?: SemanticColors) {
+export function getCommunicationStyles(colors?: UseSemanticColorsReturn) {
   const { quick } = useBorderTokens();
 
   return {

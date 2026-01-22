@@ -33,7 +33,7 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
                 console.log(`🏗️ ENTERPRISE CompanyProjectsTable: Loading projects for company ${companyId}`);
                 const companyProjects = await companyRelationships.getProjects();
                 if (isMounted) {
-                    setProjects(companyProjects);
+                    setProjects([...companyProjects] as Project[]);
                     console.log(`✅ ENTERPRISE CompanyProjectsTable: Loaded ${companyProjects.length} projects for company ${companyId}`);
                 }
             } catch (error) {

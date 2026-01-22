@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import i18n from '@/i18n/config';
 // ✅ ENTERPRISE: Import centralized validation messages
-import { getValidationMessages, type ValidationMessagesConfig } from '@/subapps/dxf-viewer/config/modal-select';
+import { getValidationMessages } from '@/subapps/dxf-viewer/config/modal-select';
+
+// 🏢 ENTERPRISE: Validation messages config type
+type ValidationMessagesConfig = Record<string, string>;
 
 // 🏢 ENTERPRISE: Get centralized validation messages with i18n fallback
 const getValidationMessagesOnce = (): ValidationMessagesConfig => {

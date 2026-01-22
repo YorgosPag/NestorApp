@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { SearchInput } from '@/components/ui/search'; // 🏢 ENTERPRISE centralized search
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import {
   Plus,
   Edit,
@@ -76,6 +78,7 @@ export function CompactToolbar({
 }: CompactToolbarProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
 
@@ -98,11 +101,11 @@ export function CompactToolbar({
   };
 
   return (
-    <div className={`flex flex-col gap-2 p-2 ${colors.bg.transparent}`}>
+    <div className={`flex flex-col ${spacing.gap.sm} ${spacing.padding.sm} ${colors.bg.transparent}`}>
 
       {/* Action icons row with selection indicator */}
-      <div className="flex items-center justify-between flex-wrap gap-1">
-        <div className="flex items-center flex-wrap gap-1">
+      <div className={`flex items-center justify-between flex-wrap ${spacing.gap.sm}`}>
+        <div className={`flex items-center flex-wrap ${spacing.gap.sm}`}>
 
         {/* New Item */}
         {config.availableActions.newItem && (() => {
@@ -202,7 +205,7 @@ export function CompactToolbar({
                     onClick={() => onFiltersChange([])}
                     className="text-destructive"
                   >
-                    <X className={`${iconSizes.sm} mr-2`} />
+                    <X className={`${iconSizes.sm} ${spacing.margin.right.sm}`} />
                     {t('toolbar.ui.clearAllCount', { count: activeFilters.length })}
                   </DropdownMenuItem>
                 </>
@@ -416,10 +419,10 @@ export function CompactToolbar({
       </div>
 
       {/* 🏢 ENTERPRISE Search Row - Same pattern as GenericListHeader */}
-      <div className="flex items-center gap-2 mt-2">
+      <div className={`flex items-center ${spacing.gap.sm} ${spacing.margin.top.sm}`}>
         {/* Left: Icon + Title + Count - Same as lists */}
         {(headerTitle || headerCount !== undefined || HeaderIcon) && (
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className={`flex items-center ${spacing.gap.sm} flex-shrink-0`}>
             {HeaderIcon && (
               <HeaderIcon className={`${iconSizes.sm} ${headerIconColor || colors.text.info}`} />
             )}

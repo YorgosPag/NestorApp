@@ -11,6 +11,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '@/components/navigation/config/navigation-entities';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import type { ExtendedPropertyDetails, Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { PROPERTY_STATUS_CONFIG } from '@/lib/property-utils';
@@ -23,6 +25,7 @@ interface PropertyMetaProps {
 
 export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) {
   const iconSizes = useIconSizes();
+  const spacing = useSpacingTokens();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('properties');
@@ -35,10 +38,10 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
   };
 
   return (
-    <div className="space-y-4">
+    <div className={spacing.spaceBetween.sm}>
       {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-start justify-between gap-2">
+      <div className={spacing.spaceBetween.sm}>
+        <div className={`flex items-start justify-between ${spacing.gap.sm}`}>
           <h3 className="font-semibold text-sm leading-tight">{property.name}</h3>
           <PropertyBadge
             status={property.status as PropertyStatus}
@@ -53,18 +56,18 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       <Separator />
 
       {/* Location */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs">
+      <div className={spacing.spaceBetween.sm}>
+        <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
           {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
           <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
           <span>{property.building}</span>
         </div>
-        <div className="flex items-center gap-2 text-xs">
+        <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
           {/* 🏢 ENTERPRISE: Using centralized floor icon/color */}
           <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color)} />
           <span>{formatFloorLabel(property.floor)}</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className={`flex items-center ${spacing.gap.sm} text-xs text-muted-foreground`}>
           <span>{property.project}</span>
         </div>
       </div>
@@ -72,9 +75,9 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       <Separator />
 
       {/* Price & Specs */}
-      <div className="space-y-2">
+      <div className={spacing.spaceBetween.sm}>
         {property.price && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className={`flex items-center ${spacing.gap.sm} text-sm`}>
             {/* 🏢 ENTERPRISE: Using centralized price icon/color */}
             <NAVIGATION_ENTITIES.price.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.price.color)} />
             <span className={cn("font-semibold", NAVIGATION_ENTITIES.price.color)}>
@@ -82,16 +85,16 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
             </span>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className={`grid grid-cols-2 ${spacing.gap.sm} text-xs`}>
           {property.area && (
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center ${spacing.gap.sm}`}>
               {/* 🏢 ENTERPRISE: Using centralized area icon/color */}
               <NAVIGATION_ENTITIES.area.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.area.color)} />
               <span>{property.area}{t('meta.sqm')}</span>
             </div>
           )}
           {property.rooms && (
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center ${spacing.gap.sm}`}>
               <NAVIGATION_ENTITIES.unit.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.unit.color)} />
               <span>{property.rooms} {t('meta.rooms')}</span>
             </div>
@@ -103,7 +106,7 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       {property.description && (
         <>
           <Separator />
-          <div className="space-y-1">
+          <div className={spacing.spaceBetween.sm}>
             <h4 className="text-xs font-medium">{t('meta.description')}</h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {property.description}
@@ -116,9 +119,9 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
       {property.features && property.features.length > 0 && (
         <>
           <Separator />
-          <div className="space-y-2">
+          <div className={spacing.spaceBetween.sm}>
             <h4 className="text-xs font-medium">{t('meta.features')}</h4>
-            <div className="flex flex-wrap gap-1">
+            <div className={`flex flex-wrap ${spacing.gap.sm}`}>
               {property.features.map((feature, index) => (
                 <CommonBadge
                   key={index}
@@ -135,13 +138,13 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
 
       {/* Actions - 🏢 ENTERPRISE: Using centralized action icons/colors */}
       <Separator />
-      <div className="flex gap-2">
+      <div className={`flex ${spacing.gap.sm}`}>
         <Button variant="outline" size="sm" className="flex-1">
-          <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.view.color, 'mr-1')} />
+          <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.view.color, spacing.margin.right.sm)} />
           {NAVIGATION_ACTIONS.view.label}
         </Button>
         <Button variant="outline" size="sm" className="flex-1" onClick={handleEditClick}>
-          <NAVIGATION_ACTIONS.edit.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.edit.color, 'mr-1')} />
+          <NAVIGATION_ACTIONS.edit.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.edit.color, spacing.margin.right.sm)} />
           {t('meta.edit')}
         </Button>
       </div>

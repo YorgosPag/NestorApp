@@ -24,6 +24,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTypography } from '@/hooks/useTypography';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 // 🏢 CENTRALIZED UI PATTERNS
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -97,6 +99,7 @@ export function ListCard({
   const colors = useSemanticColors();
   const { quick, getStatusBorder } = useBorderTokens();
   const typography = useTypography();
+  const spacing = useSpacingTokens();
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES FROM CENTRALIZED SYSTEMS
@@ -158,8 +161,8 @@ export function ListCard({
         'relative group cursor-pointer overflow-hidden w-full',
         quick.card,
         'border',
-        // Spacing based on compact mode
-        compact ? 'p-2' : 'p-3',
+        // Spacing based on compact mode - 🏢 ENTERPRISE: Centralized spacing
+        spacing.padding.sm,
         // Interactive patterns from centralized system
         INTERACTIVE_PATTERNS.CARD_STANDARD,
         // Selection state using centralized colors
@@ -182,7 +185,7 @@ export function ListCard({
       {(onToggleFavorite || actions.length > 0) && (
         <nav
           className={cn(
-            'absolute top-2 right-2 flex gap-1',
+            `absolute ${spacing.top.sm} ${spacing.right.sm} flex ${spacing.gap.sm}`,
             'opacity-0 group-hover:opacity-100 transition-opacity'
           )}
           aria-label="Card actions"
@@ -193,7 +196,7 @@ export function ListCard({
               type="button"
               onClick={handleFavoriteClick}
               className={cn(
-                'p-1 rounded-md transition-colors',
+                `${spacing.padding.xs} rounded-md transition-colors`,
                 isFavorite
                   ? 'text-yellow-500'
                   : cn(colors.text.muted, 'hover:text-yellow-500')
@@ -213,7 +216,7 @@ export function ListCard({
               onClick={(e) => handleActionClick(e, action)}
               disabled={action.disabled}
               className={cn(
-                'p-1 rounded-md transition-colors',
+                `${spacing.padding.xs} rounded-md transition-colors`,
                 colors.text.muted,
                 'hover:text-primary',
                 action.disabled && 'opacity-50 cursor-not-allowed',
@@ -230,9 +233,9 @@ export function ListCard({
       {/* ================================================================== */}
       {/* 🏢 HEADER: Icon + Title + Badges */}
       {/* ================================================================== */}
-      <header className={cn('overflow-hidden', compact ? 'mb-1.5' : 'mb-2')}>
+      <header className={cn('overflow-hidden', spacing.margin.bottom.sm)}>
         {/* Row 1: Icon + Title */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${spacing.gap.sm}`}>
           {/* Entity Icon */}
           {!hideIcon && (entityType || customIcon) && (
             <CardIcon
@@ -270,7 +273,7 @@ export function ListCard({
 
         {/* Row 2: Badges (separate row to prevent overflow) */}
         {badges.length > 0 && (
-          <div className={cn('flex items-center gap-1 mt-1.5 overflow-hidden')}>
+          <div className={cn(`flex items-center ${spacing.gap.sm} ${spacing.margin.top.sm} overflow-hidden`)}>
             {badges.slice(0, 2).map((badge, index) => (
               <span
                 key={`${badge.label}-${index}`}
@@ -295,7 +298,7 @@ export function ListCard({
           stats={stats}
           layout="horizontal"
           compact={compact}
-          className={compact ? 'mt-1.5' : 'mt-2'}
+          className={spacing.margin.top.sm}
         />
       )}
 
@@ -303,7 +306,7 @@ export function ListCard({
       {/* 🏢 CUSTOM CONTENT */}
       {/* ================================================================== */}
       {children && (
-        <div className={compact ? 'mt-1.5' : 'mt-2'}>
+        <div className={spacing.margin.top.sm}>
           {children}
         </div>
       )}

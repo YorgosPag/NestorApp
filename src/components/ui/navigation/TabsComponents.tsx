@@ -10,12 +10,12 @@ import { cn } from '@/lib/utils';
 import { THEME_VARIANTS, getThemeVariant, type ThemeVariant } from '@/components/ui/theme/ThemeComponents';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
-// Centralized tabs styling using the theme system
+// 🏢 ENTERPRISE: Centralized tabs styling using the theme system (8px spacing)
 export const TABS_STYLES = {
   container: "w-full",
-  list: "flex flex-wrap gap-2 w-full h-auto min-h-fit",
-  content: "mt-3",
-  contentWrapper: "flex flex-wrap gap-2"
+  list: "flex flex-wrap gap-2 w-full h-auto min-h-fit",  // gap-2 = 8px ✅
+  content: "mt-2",  // mt-2 = 8px (centralized spacing)
+  contentWrapper: "flex flex-wrap gap-2"  // gap-2 = 8px ✅
 } as const;
 
 // Tab definition interface

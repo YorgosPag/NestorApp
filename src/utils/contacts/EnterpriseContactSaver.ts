@@ -69,12 +69,12 @@ export class EnterpriseContactSaver {
         city: formData.city || '',
         postalCode: formData.postalCode || '',
         country: 'GR', // Default to Greece
-        type: this.getAddressTypeForContactType(formData.type),
+        type: this.getAddressTypeForContactType(formData.type || 'individual'),
         isPrimary: true,
         label: 'contacts.address.primary'
       };
 
-      enterpriseData.addresses = [primaryAddress];
+      (enterpriseData as any).addresses = [primaryAddress];
       console.log('🏠 ENTERPRISE SAVER: Created primary address:', primaryAddress);
     }
 
@@ -90,8 +90,8 @@ export class EnterpriseContactSaver {
       // Fallback to flat field
       const primaryWebsite: WebsiteInfo = {
         url: formData.website.trim(),
-        type: this.getWebsiteTypeForContactType(formData.type),
-        label: this.getWebsiteLabelForContactType(formData.type)
+        type: this.getWebsiteTypeForContactType(formData.type || 'individual'),
+        label: this.getWebsiteLabelForContactType(formData.type || 'individual')
       };
 
       enterpriseData.websites = [primaryWebsite];
@@ -121,7 +121,7 @@ export class EnterpriseContactSaver {
     // ========================================================================
 
     if (formData.socialMediaArray && Array.isArray(formData.socialMediaArray) && formData.socialMediaArray.length > 0) {
-      enterpriseData.socialMedia = formData.socialMediaArray;
+      (enterpriseData as any).socialMedia = formData.socialMediaArray;
       console.log('🌐 ENTERPRISE SAVER: Using dynamic social media array:', formData.socialMediaArray.length, 'items');
     }
 
@@ -136,7 +136,7 @@ export class EnterpriseContactSaver {
     delete enterpriseData.website;
 
     console.log('✅ ENTERPRISE SAVER: Conversion complete');
-    return enterpriseData;
+    return enterpriseData as EnterpriseContactData;
   }
 
   /**
