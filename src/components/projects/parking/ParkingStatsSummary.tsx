@@ -58,7 +58,7 @@ export function ParkingStatsSummary({ stats }: ParkingStatsSummaryProps) {
             <div className={`${iconSizes.xs} rounded-full ${colors.bg.muted}`} />
             <div>
               <div className="text-sm font-medium">{stats.availableSpots}</div>
-              <div className="text-xs text-muted-foreground">{UNIFIED_STATUS_FILTER_LABELS.AVAILABLE}</div>
+              <div className="text-xs text-muted-foreground">{t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' })}</div>
             </div>
           </div>
 

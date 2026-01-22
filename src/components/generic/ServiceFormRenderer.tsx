@@ -41,6 +41,26 @@ export type CustomFieldRenderer = (
   disabled: boolean
 ) => React.ReactNode;
 
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Helper to convert form data value to string for input fields
+ * Handles string | number | boolean types safely
+ */
+function toStringValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  return String(value);
+}
+
+// ============================================================================
+// INTERFACES
+// ============================================================================
+
 export interface ServiceFormRendererProps {
   /** Sections configuration from service config file */
   sections: ServiceSectionConfig[];
@@ -145,7 +165,7 @@ function renderTextareaField(
     <Textarea
       id={field.id}
       name={field.id}
-      value={formData[field.id] ?? ''}
+      value={toStringValue(formData[field.id])}
       onChange={onChange}
       disabled={disabled}
       required={field.required}

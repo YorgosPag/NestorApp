@@ -192,7 +192,7 @@ export function UnitListCard({
     <ListCard
       entityType="unit"
       title={unit.name || unit.id}
-      subtitle={unit.type}
+      subtitle={unit.type ? t(`types.${unit.type}`) : undefined}
       badges={badges}
       stats={stats}
       isSelected={isSelected}

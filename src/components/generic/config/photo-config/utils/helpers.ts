@@ -26,7 +26,7 @@ export function buildPhotoClass(
   colors?: string,
   typography?: string
 ): string {
-  const classes = [PHOTO_SIZES[size]];
+  const classes: string[] = [PHOTO_SIZES[size]];
 
   if (effects) classes.push(effects);
   if (colors) classes.push(colors);

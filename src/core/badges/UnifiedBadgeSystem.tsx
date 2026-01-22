@@ -49,8 +49,26 @@ export const UnifiedBadge: React.FC<UnifiedBadgeProps> = ({
 }) => {
   // ✅ ZERO HARDCODED VALUES - Use centralized semantic colors
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: i18n support for all domain badges
+  const { t } = useTranslation();
   // Δημιουργία badge configuration μέσω Factory
   const badgeConfig = BadgeFactory.create(domain, status, colors, options);
+
+  // 🏢 ENTERPRISE: Auto-detect namespace from label prefix and translate
+  const translateLabel = (label: string | undefined): string => {
+    if (!label) return '';
+
+    // Extract namespace from label prefix (e.g., 'projects.status.planning' → namespace: 'projects')
+    const parts = label.split('.');
+    if (parts.length >= 2) {
+      const namespace = parts[0];
+      const key = parts.slice(1).join('.');
+      return t(key, { ns: namespace, defaultValue: label });
+    }
+    return label;
+  };
+
+  const translatedLabel = translateLabel(badgeConfig.label);
 
   return (
     <Badge
@@ -75,8 +93,8 @@ export const UnifiedBadge: React.FC<UnifiedBadgeProps> = ({
         </span>
       )}
 
-      {/* Label */}
-      {children || badgeConfig.label}
+      {/* Label - 🏢 ENTERPRISE: Now uses translated label */}
+      {children || translatedLabel}
     </Badge>
   );
 };

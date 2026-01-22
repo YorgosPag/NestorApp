@@ -19,8 +19,16 @@ interface RangeValue {
   max?: number;
 }
 
+/** Date range value */
+interface DateRangeValue {
+  start?: Date;
+  end?: Date;
+  from?: Date;
+  to?: Date;
+}
+
 /** Possible filter field values */
-type FilterFieldValue = string | string[] | boolean | number | RangeValue | undefined;
+export type FilterFieldValue = string | string[] | boolean | number | RangeValue | DateRangeValue | undefined;
 
 interface FilterFieldProps {
   config: FilterFieldConfig;
@@ -105,13 +113,14 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
 
       case 'select': {
         const selectValue = Array.isArray(value) && value.length === 1 ? value[0] : (Array.isArray(value) ? 'all' : (typeof value === 'string' ? value : 'all'));
+        const placeholderText = typeof config.placeholder === 'string' ? config.placeholder : '';
         return (
           <Select
             onValueChange={(newValue) => onValueChange(newValue)}
             value={selectValue}
           >
             <SelectTrigger className="h-9 w-full" aria-label={config.ariaLabel}>
-              <SelectValue placeholder={translateLabel(config.placeholder || '')} />
+              <SelectValue placeholder={translateLabel(placeholderText)} />
             </SelectTrigger>
             <SelectContent>
               {config.options?.map(option => (
@@ -145,7 +154,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
               <SelectValue placeholder={
                 Array.isArray(value) && value.length > 0
                   ? t('filters.selectedCount', { count: value.length })
-                  : translateLabel(config.placeholder || '')
+                  : translateLabel(typeof config.placeholder === 'string' ? config.placeholder : '')
               } />
             </SelectTrigger>
             <SelectContent>

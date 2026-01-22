@@ -180,7 +180,7 @@ export function CompactToolbar({
             <DropdownMenuContent align="end" className="w-56">
               {config.filterCategories.map((category, categoryIndex) => (
                 <React.Fragment key={category.id}>
-                  <DropdownMenuLabel>{category.label}</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t(category.label, { ns: 'common' })}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {category.options.map((option) => (
                     <DropdownMenuCheckboxItem
@@ -188,7 +188,7 @@ export function CompactToolbar({
                       checked={activeFilters.includes(option.value)}
                       onCheckedChange={(checked) => handleFilterChange(option.value, !!checked)}
                     >
-                      {option.label}
+                      {t(option.label, { ns: 'common' })}
                     </DropdownMenuCheckboxItem>
                   ))}
                   {categoryIndex < config.filterCategories.length - 1 && (

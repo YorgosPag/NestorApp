@@ -35,6 +35,18 @@
   },
   "navigation": {
     "actions": {
+      "delete": {
+        "label": "Delete",
+        "description": "Delete item"
+      },
+      "unlink": {
+        "label": "Unlink",
+        "description": "Remove link"
+      },
+      "add": {
+        "label": "Add",
+        "description": "Add new item"
+      },
       "link": {
         "label": "Link",
         "description": "Create a link"
@@ -58,6 +70,17 @@
       "filter": {
         "label": "Filter",
         "description": "Filter results"
+      }
+    }
+  },
+  "toolbar": {
+    "filters": {
+      "categories": {
+        "status": "Status",
+        "buildingType": "Building Type",
+        "contactType": "Contact Type",
+        "parkingType": "Parking Type",
+        "channel": "Channel"
       }
     }
   },

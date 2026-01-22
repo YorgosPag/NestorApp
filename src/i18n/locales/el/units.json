@@ -38,10 +38,6 @@
     "maintenance": "Υπό συντήρηση",
     "draft": "Πρόχειρο"
   },
-  "status": {
-    "forSale": "Προς πώληση",
-    "available": "Διαθέσιμο"
-  },
   "card": {
     "stats": {
       "area": "Εμβαδόν",
@@ -54,12 +50,16 @@
     "subtitle": "Κεντρικό ευρετήριο όλων των μονάδων σας"
   },
   "details": {
-    "showAll": "Εμφάνιση όλων"
+    "showAll": "Εμφάνιση όλων",
+    "showUnit": "Προβολή μονάδας"
   },
   "navigation": {
     "actions": {
       "view": {
         "label": "Προβολή"
+      },
+      "edit": {
+        "label": "Επεξεργασία"
       }
     }
   },
@@ -87,6 +87,7 @@
     "newUnit": "Νέα Μονάδα"
   },
   "types": {
+    "apartment": "Διαμέρισμα",
     "studio": "Στούντιο",
     "apartment_1br": "Γκαρσονιέρα",
     "apartment_2br": "Διαμέρισμα 2Δ",
@@ -99,7 +100,27 @@
     "available": "Διαθέσιμο",
     "reserved": "Κρατημένο",
     "sold": "Πωληθέν",
-    "owner": "Ιδιοκτήτη"
+    "owner": "Ιδιοκτήτη",
+    "forSale": "Προς πώληση",
+    "forRent": "Προς ενοικίαση",
+    "rented": "Ενοικιασμένο",
+    "occupied": "Κατειλημμένο",
+    "maintenance": "Συντήρηση",
+    "underConstruction": "Υπό κατασκευή",
+    "planned": "Σχεδιασμένο"
+  },
+  "units": {
+    "status": {
+      "available": "Διαθέσιμο",
+      "occupied": "Κατειλημμένο",
+      "maintenance": "Συντήρηση",
+      "forSale": "Προς πώληση",
+      "forRent": "Προς ενοικίαση",
+      "sold": "Πωληθέν",
+      "rented": "Ενοικιασμένο",
+      "underConstruction": "Υπό κατασκευή",
+      "planned": "Σχεδιασμένο"
+    }
   },
   "toolbar": {
     "actions": {
@@ -122,12 +143,36 @@
     "showAdvanced": "Εμφάνιση προχωρημένων",
     "hideAdvanced": "Απόκρυψη προχωρημένων",
     "resetFilters": "Επαναφορά φίλτρων",
+    "status": {
+      "available": "Διαθέσιμο",
+      "sold": "Πωλημένο",
+      "reserved": "Κρατημένο",
+      "maintenance": "Συντήρηση",
+      "occupied": "Κατειλημμένο",
+      "planning": "Σχεδιασμός",
+      "inProgress": "Σε Εξέλιξη",
+      "completed": "Ολοκληρωμένο",
+      "onHold": "Σε Αναμονή",
+      "active": "Ενεργό",
+      "inactive": "Ανενεργό",
+      "lead": "Lead",
+      "pending": "Εκκρεμεί",
+      "construction": "Υπό Κατασκευή",
+      "sent": "Απεσταλμένο",
+      "received": "Ληφθέν",
+      "failed": "Αποτυχημένο"
+    },
     "advancedOptions": {
       "parking": "Χώρος στάθμευσης",
       "storage": "Αποθήκη",
       "fireplace": "Τζάκι",
       "view": "Θέα",
       "pool": "Πισίνα"
+    }
+  },
+  "properties": {
+    "status": {
+      "available": "Διαθέσιμες"
     }
   },
   "list": {

@@ -194,12 +194,12 @@ const BaseCard = forwardRef<HTMLDivElement, BaseCardProps>(({
 
   // 🏢 ENTERPRISE: Filter valid actions (removes all falsy values)
   const validActions = (actions || []).filter((action): action is CardAction =>
-    Boolean(action) && typeof action === 'object' && 'label' in action && 'onClick' in action
+    Boolean(action) && action !== null && typeof action === 'object' && 'label' in action && 'onClick' in action
   );
 
   // 🏢 ENTERPRISE: Filter valid content sections (removes all falsy values)
   const validContentSections = (contentSections || []).filter((section): section is ContentSection =>
-    Boolean(section) && typeof section === 'object' && 'title' in section && 'content' in section
+    Boolean(section) && section !== null && typeof section === 'object' && 'title' in section && 'content' in section
   );
 
   return (

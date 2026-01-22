@@ -157,7 +157,7 @@ export function buildContextPhotoClass(
   additionalClasses?: string[]
 ): string {
   const config = getPhotoContextConfig(type, context);
-  const classes = [
+  const classes: string[] = [
     config.colors,
     config.borders,
     config.typography,
@@ -193,8 +193,8 @@ export const PHOTO_CROSS_REFERENCE = {
 
   /** Find contexts that use specific colors */
   byColor: {
-    [PHOTO_COLORS.PHOTO_BACKGROUND]: ['display', 'gallery', 'preview', 'modal'] as PhotoContext[],
-    [PHOTO_COLORS.UPLOAD_BACKGROUND]: ['form'] as PhotoContext[],
+    // Note: PHOTO_BACKGROUND and UPLOAD_BACKGROUND share same value 'bg-secondary'
+    [PHOTO_COLORS.PHOTO_BACKGROUND]: ['display', 'gallery', 'preview', 'modal', 'form'] as PhotoContext[],
     [PHOTO_COLORS.EMPTY_STATE_BACKGROUND]: ['upload'] as PhotoContext[]
   },
 

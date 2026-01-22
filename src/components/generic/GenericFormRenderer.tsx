@@ -74,7 +74,7 @@ function renderInputField(field: FieldConfig, formData: FormDataRecord, onChange
       id={field.id}
       name={field.id}
       type={field.type}
-      value={value}
+      value={toStringValue(value)}
       onChange={onChange}
       disabled={disabled}
       required={field.required}
@@ -105,6 +105,18 @@ function translateText(text: string, t: (key: string) => string): string {
 }
 
 /**
+ * 🏢 ENTERPRISE: Helper to convert form data value to string for input fields
+ * Handles string | number | boolean | true types safely
+ */
+function toStringValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  return String(value);
+}
+
+/**
  * Renders a select field
  * 🏢 ENTERPRISE: Now accepts translate function for i18n option labels
  */
@@ -128,7 +140,7 @@ function renderSelectField(
   return (
     <Select
       name={field.id}
-      value={formData[field.id] || field.defaultValue || ''}
+      value={toStringValue(formData[field.id] || field.defaultValue)}
       onValueChange={(value) => onSelectChange(field.id, value)}
       disabled={disabled}
     >
@@ -154,7 +166,7 @@ function renderTextareaField(field: FieldConfig, formData: FormDataRecord, onCha
     <Textarea
       id={field.id}
       name={field.id}
-      value={formData[field.id] || ''}
+      value={toStringValue(formData[field.id])}
       onChange={onChange}
       disabled={disabled}
       required={field.required}

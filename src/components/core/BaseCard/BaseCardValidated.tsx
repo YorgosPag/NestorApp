@@ -127,8 +127,9 @@ export function withDesignSystemValidation<T extends object>(
   validationOptions: ValidationHOCOptions = {}
 ) {
   const ValidatedComponent = React.forwardRef<HTMLElement, T>((props, ref) => {
+    // Type assertion needed for validation hook with generic props
     useAdvancedDesignSystemValidation(
-      props,
+      props as unknown as { className?: string; style?: React.CSSProperties; [key: string]: unknown },
       componentName,
       {
         enabled: process.env.NODE_ENV === 'development',

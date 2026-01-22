@@ -35,6 +35,18 @@
   },
   "navigation": {
     "actions": {
+      "delete": {
+        "label": "Διαγραφή",
+        "description": "Διαγραφή στοιχείου"
+      },
+      "unlink": {
+        "label": "Αποσύνδεση",
+        "description": "Αφαίρεση συνδέσμου"
+      },
+      "add": {
+        "label": "Προσθήκη",
+        "description": "Προσθήκη νέου στοιχείου"
+      },
       "link": {
         "label": "Σύνδεσμος",
         "description": "Δημιουργία συνδέσμου"
@@ -58,6 +70,17 @@
       "filter": {
         "label": "Φίλτρο",
         "description": "Φιλτράρισμα αποτελεσμάτων"
+      }
+    }
+  },
+  "toolbar": {
+    "filters": {
+      "categories": {
+        "status": "Κατάσταση",
+        "buildingType": "Τύπος Κτιρίου",
+        "contactType": "Τύπος Επαφής",
+        "parkingType": "Τύπος Parking",
+        "channel": "Κανάλι"
       }
     }
   },
