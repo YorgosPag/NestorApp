@@ -170,20 +170,24 @@ export function ViewerTools({
   };
 
   const ToolButton = ({ tool }: { tool: Tool }) => (
-    <Button
-      variant={activeTool === tool.id ? 'default' : 'outline'}
-      size="sm"
-      className={cn(
-        `${iconSizes.xl} p-0`,
-        activeTool === tool.id && cn(`${colors.bg.info} text-white`, HOVER_BACKGROUND_EFFECTS.BLUE)
-      )}
-      onClick={() => handleToolChange(tool.id)}
-      disabled={isReadOnly && tool.id !== 'select'}
-      aria-label={tool.label}
-      title={`${tool.label} ${tool.shortcut ? `(${tool.shortcut})` : ''}`}
-    >
-      <tool.icon className={iconSizes.sm} />
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant={activeTool === tool.id ? 'default' : 'outline'}
+          size="sm"
+          className={cn(
+            `${iconSizes.xl} p-0`,
+            activeTool === tool.id && cn(`${colors.bg.info} text-white`, HOVER_BACKGROUND_EFFECTS.BLUE)
+          )}
+          onClick={() => handleToolChange(tool.id)}
+          disabled={isReadOnly && tool.id !== 'select'}
+          aria-label={tool.label}
+        >
+          <tool.icon className={iconSizes.sm} />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{`${tool.label} ${tool.shortcut ? `(${tool.shortcut})` : ''}`}</TooltipContent>
+    </Tooltip>
   );
 
   return (
@@ -212,37 +216,49 @@ export function ViewerTools({
 
       {/* PROPERTY ACTIONS */}
       <div className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className={`${iconSizes.xl} p-0`}
-          onClick={handleCopySelected}
-          disabled={!selectedPropertyId || isReadOnly}
-          title={t('viewer.actions.copySelected')}
-        >
-          <Copy className={iconSizes.sm} />
-        </Button>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          className={cn(`${iconSizes.xl} p-0`, HOVER_TEXT_EFFECTS.RED)}
-          onClick={handleDeleteSelected}
-          disabled={!selectedPropertyId || isReadOnly}
-          title={t('viewer.actions.deleteSelected')}
-        >
-          <Trash2 className={iconSizes.sm} />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`${iconSizes.xl} p-0`}
+              onClick={handleCopySelected}
+              disabled={!selectedPropertyId || isReadOnly}
+            >
+              <Copy className={iconSizes.sm} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('viewer.actions.copySelected')}</TooltipContent>
+        </Tooltip>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className={`${iconSizes.xl} p-0`}
-          onClick={handleResetView}
-          title={t('viewer.actions.reset')}
-        >
-          <RotateCcw className={iconSizes.sm} />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(`${iconSizes.xl} p-0`, HOVER_TEXT_EFFECTS.RED)}
+              onClick={handleDeleteSelected}
+              disabled={!selectedPropertyId || isReadOnly}
+            >
+              <Trash2 className={iconSizes.sm} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('viewer.actions.deleteSelected')}</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`${iconSizes.xl} p-0`}
+              onClick={handleResetView}
+            >
+              <RotateCcw className={iconSizes.sm} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('viewer.actions.reset')}</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* STATUS INFO */}

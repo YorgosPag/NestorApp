@@ -222,15 +222,19 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
 
       {!readonly && !isNewContact && (
         <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleGlobalRefresh}
-            disabled={anyLoading}
-            title={t('relationships.manager.refreshData')}
-          >
-            <RefreshCw className={`${iconSizes.sm} ${anyLoading ? 'animate-spin' : ''}`} />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGlobalRefresh}
+                disabled={anyLoading}
+              >
+                <RefreshCw className={`${iconSizes.sm} ${anyLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('relationships.manager.refreshData')}</TooltipContent>
+          </Tooltip>
 
           {!showFormCard && (
             <Button
@@ -307,78 +311,80 @@ export const ContactRelationshipManager: React.FC<ContactRelationshipManagerProp
   // ============================================================================
 
   return (
-    <div className="space-y-6">
-      {/* Header with title and actions */}
-      {renderHeader()}
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Header with title and actions */}
+        {renderHeader()}
 
-      {/* Error alerts */}
-      {renderErrors()}
+        {/* Error alerts */}
+        {renderErrors()}
 
-      {/* Success messages */}
-      {renderSuccess()}
+        {/* Success messages */}
+        {renderSuccess()}
 
-      {/* Relationship Form (conditionally shown) */}
-      {showForm && showFormCard && (
-        <RelationshipForm
-          formData={formData}
-          setFormData={setFormData}
+        {/* Relationship Form (conditionally shown) */}
+        {showForm && showFormCard && (
+          <RelationshipForm
+            formData={formData}
+            setFormData={setFormData}
+            contactType={contactType}
+            currentContactId={contactId}
+            loading={formLoading}
+            error={formError}
+            editingId={editingId}
+            onSubmit={handleSubmit}
+            onCancel={handleHideForm}
+          />
+        )}
+
+        {/* Organization Tree (for companies/services only) */}
+        {shouldShowTree && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Users className={iconSizes.md} />
+                <span>{t('relationships.summary.organizationChart')}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <OrganizationTree
+                tree={organizationTree}
+                loading={treeLoading}
+                error={treeError}
+                readonly={readonly}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Relationship List */}
+        <RelationshipList
+          relationships={relationships}
           contactType={contactType}
-          currentContactId={contactId}
-          loading={formLoading}
-          error={formError}
-          editingId={editingId}
-          onSubmit={handleSubmit}
-          onCancel={handleHideForm}
+          loading={listLoading}
+          contactId={contactId}
+          readonly={readonly}
+          expandedRelationships={expandedRelationships}
+          onToggleExpanded={handleToggleExpanded}
+          onEdit={handleEditRelationship}
+          onDelete={handleDelete}
         />
-      )}
 
-      {/* Organization Tree (for companies/services only) */}
-      {shouldShowTree && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Users className={iconSizes.md} />
-              <span>{t('relationships.summary.organizationChart')}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <OrganizationTree
-              tree={organizationTree}
-              loading={treeLoading}
-              error={treeError}
-              readonly={readonly}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Relationship List */}
-      <RelationshipList
-        relationships={relationships}
-        contactType={contactType}
-        loading={listLoading}
-        contactId={contactId}
-        readonly={readonly}
-        expandedRelationships={expandedRelationships}
-        onToggleExpanded={handleToggleExpanded}
-        onEdit={handleEditRelationship}
-        onDelete={handleDelete}
-      />
-
-      {/* Footer note for new contacts */}
-      {isNewContact && (
-        <Card className={`${getStatusBorder('info')} ${colors.bg.info}`}>
-          <CardContent className="pt-6">
-            <div className={`text-center ${colors.text.info}`}>
-              <p className="font-medium">💡 {t('relationships.manager.newContact.note')}</p>
-              <p className="text-sm mt-2">
-                {t('relationships.manager.newContact.description')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        {/* Footer note for new contacts */}
+        {isNewContact && (
+          <Card className={`${getStatusBorder('info')} ${colors.bg.info}`}>
+            <CardContent className="pt-6">
+              <div className={`text-center ${colors.text.info}`}>
+                <p className="font-medium">💡 {t('relationships.manager.newContact.note')}</p>
+                <p className="text-sm mt-2">
+                  {t('relationships.manager.newContact.description')}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </TooltipProvider>
   );
 };
 

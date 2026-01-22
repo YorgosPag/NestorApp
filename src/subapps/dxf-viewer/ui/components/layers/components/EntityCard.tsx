@@ -10,6 +10,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 
@@ -91,16 +92,20 @@ export const EntityCard = ({
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}`}>
         {/* Entity Color Picker */}
         <div className="relative">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSetColorPickerEntity(showEntityColorPicker ? null : entity.id);
-            }}
-            className={`${PANEL_LAYOUT.ROUNDED.FULL} ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
-              isSelected ? iconSizes.xs : iconSizes.xs
-            } ${getDynamicBackgroundClass(entity.color || layer.color)}`}
-            title={t('layerActions.changeColorEntity')}
-          />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSetColorPickerEntity(showEntityColorPicker ? null : entity.id);
+                }}
+                className={`${PANEL_LAYOUT.ROUNDED.FULL} ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${
+                  isSelected ? iconSizes.xs : iconSizes.xs
+                } ${getDynamicBackgroundClass(entity.color || layer.color)}`}
+              />
+            </TooltipTrigger>
+            <TooltipContent>{t('layerActions.changeColorEntity')}</TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Entity Name */}

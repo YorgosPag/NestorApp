@@ -9,6 +9,8 @@ import { ExtendedSnapType } from '../../snapping/extended-types';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -62,21 +64,25 @@ const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact
   if (!label) return null;
 
   return (
-    <button
-      onClick={onClick}
-      title={tooltip}
-      className={`
-        ${compact ? `${PANEL_LAYOUT.HEIGHT.LG} ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS}` : `${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}
-        ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}
-        flex items-center justify-center
-        ${enabled
-          ? `${colors.bg.primary} ${getStatusBorder('info')} ${colors.text.primary} ${PANEL_LAYOUT.SHADOW.MD} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
-          : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
-        }
-      `}
-    >
-      <span className={`${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>{label}</span>
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={onClick}
+          className={`
+            ${compact ? `${PANEL_LAYOUT.HEIGHT.LG} ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS}` : `${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}
+            ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}
+            flex items-center justify-center
+            ${enabled
+              ? `${colors.bg.primary} ${getStatusBorder('info')} ${colors.text.primary} ${PANEL_LAYOUT.SHADOW.MD} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
+              : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+            }
+          `}
+        >
+          <span className={`${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>{label}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
   );
 };
 
@@ -152,17 +158,21 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   
   return (
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${className}`}>
-      <button
-        onClick={handleMasterToggle}
-        className={`${PANEL_LAYOUT.SPACING.COMPACT} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.TRANSITION.COLORS} border flex items-center ${PANEL_LAYOUT.GAP.XS} ${
-          snapEnabled ? `${colors.bg.primary} ${colors.text.primary} ${getStatusBorder('info')} ${PANEL_LAYOUT.SHADOW.MD}` : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
-        }`}
-        title={t('overlayToolbar.objectSnap')}
-      >
-        <Target size={14} />
-        <span>SNAP</span>
-        {enabledCount > 0 && <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.OPACITY['80']}`}>({enabledCount})</span>}
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={handleMasterToggle}
+            className={`${PANEL_LAYOUT.SPACING.COMPACT} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.TRANSITION.COLORS} border flex items-center ${PANEL_LAYOUT.GAP.XS} ${
+              snapEnabled ? `${colors.bg.primary} ${colors.text.primary} ${getStatusBorder('info')} ${PANEL_LAYOUT.SHADOW.MD}` : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
+            }`}
+          >
+            <Target size={14} />
+            <span>SNAP</span>
+            {enabledCount > 0 && <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.OPACITY['80']}`}>({enabledCount})</span>}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{t('overlayToolbar.objectSnap')}</TooltipContent>
+      </Tooltip>
 
       <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
         {CORE_MODES.map(mode => (
@@ -180,26 +190,34 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       {ADVANCED_MODES.length > 0 && (
         <>
           <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
-          <button
-            onClick={handleToggleAdvanced}
-            className={`${iconSizes.xl} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${
-              showAdvanced || advancedEnabledCount > 0 ? `${colors.bg.muted} ${getStatusBorder('subtle')} ${colors.text.primary}` : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
-            }`}
-            title={showAdvanced ? t('snapModes.ui.hideAdvanced') : t('snapModes.ui.showAdvanced')}
-          >
-            {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleToggleAdvanced}
+                className={`${iconSizes.xl} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${
+                  showAdvanced || advancedEnabledCount > 0 ? `${colors.bg.muted} ${getStatusBorder('subtle')} ${colors.text.primary}` : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
+                }`}
+              >
+                {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{showAdvanced ? t('snapModes.ui.hideAdvanced') : t('snapModes.ui.showAdvanced')}</TooltipContent>
+          </Tooltip>
         </>
       )}
 
       <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
-      <button
-        onClick={handleQuickEnable}
-        className={`${iconSizes.xl} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${colors.bg.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
-        title={t('overlayToolbar.basicFunctions')}
-      >
-        <Settings size={14} />
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={handleQuickEnable}
+            className={`${iconSizes.xl} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${colors.bg.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
+          >
+            <Settings size={14} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{t('overlayToolbar.basicFunctions')}</TooltipContent>
+      </Tooltip>
 
       {showAdvanced && (
         <div className={`flex ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.MARGIN.LEFT_XS} ${PANEL_LAYOUT.INPUT.PADDING_X} ${quick.separatorV}`}>

@@ -72,6 +72,8 @@ import { layoutUtilities } from '../../../../../../../styles/design-tokens';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE: Shadcn Tooltip component
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Simple SVG icons for text
 const DocumentTextIcon = ({ className }: { className?: string }) => (
@@ -168,18 +170,21 @@ function TextStyleButtons({ settings, onToggle }: TextStyleButtonsProps) {
   return (
     <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS}`}>
       {TEXT_STYLE_BUTTONS.map((style) => (
-        <button
-          key={style.key}
-          onClick={() => onToggle(style.key)}
-          title={style.title}
-          className={`${iconSizes.xl} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
-            settings[style.key]
-              ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
-              : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${quick.button} ${colors.text.muted}`
-          }`}
-        >
-          {style.label}
-        </button>
+        <Tooltip key={style.key}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onToggle(style.key)}
+              className={`${iconSizes.xl} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${
+                settings[style.key]
+                  ? `${colors.bg.success} ${getStatusBorder('success')} ${colors.text.inverted}`
+                  : `${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.LIGHT} ${quick.button} ${colors.text.muted}`
+              }`}
+            >
+              {style.label}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{style.title}</TooltipContent>
+        </Tooltip>
       ))}
     </div>
   );
@@ -348,28 +353,36 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
       <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('settings.text.title')}</h3>
         <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label={t('settings.text.actionsAriaLabel')}>
-          {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={resetToDefaults}
-            title={t('settings.text.resetTitle')}
-            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
-          >
-            <RotateCcw className={iconSizes.xs} />
-            {t('settings.text.reset')}
-          </Button>
-          {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon */}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleFactoryResetClick}
-            title={t('settings.text.factoryTitle')}
-            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
-          >
-            <Factory className={iconSizes.xs} />
-            {t('settings.text.factory')}
-          </Button>
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon + Shadcn Tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={resetToDefaults}
+                className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              >
+                <RotateCcw className={iconSizes.xs} />
+                {t('settings.text.reset')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('settings.text.resetTitle')}</TooltipContent>
+          </Tooltip>
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon + Shadcn Tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleFactoryResetClick}
+                className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              >
+                <Factory className={iconSizes.xs} />
+                {t('settings.text.factory')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('settings.text.factoryTitle')}</TooltipContent>
+          </Tooltip>
         </nav>
       </header>
 

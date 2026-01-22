@@ -2,6 +2,8 @@
 import React, { useEffect } from 'react';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
+// 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Toggle = { on: boolean; toggle: () => void };
 
@@ -66,22 +68,26 @@ export default function CadStatusBar({
   }, [osnap, grid, snap, ortho, polar, dynInput]);
 
   const StatusButton = ({ label, toggle, fkey, description }: {
-    label: string; 
-    toggle: Toggle; 
+    label: string;
+    toggle: Toggle;
     fkey: string;
     description: string;
   }) => (
-    <button 
-      onClick={toggle.toggle} 
-      style={{
-        ...canvasUI.positioning.cadStatusBar.button,
-        ...(toggle.on ? canvasUI.positioning.cadStatusBar.buttonActive : {})
-      }}
-      title={`${description} (${fkey})`}
-    >
-      <span style={canvasUI.positioning.cadStatusBar.label}>{label}</span>
-      <span style={canvasUI.positioning.cadStatusBar.functionKey}>{fkey}</span>
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={toggle.toggle}
+          style={{
+            ...canvasUI.positioning.cadStatusBar.button,
+            ...(toggle.on ? canvasUI.positioning.cadStatusBar.buttonActive : {})
+          }}
+        >
+          <span style={canvasUI.positioning.cadStatusBar.label}>{label}</span>
+          <span style={canvasUI.positioning.cadStatusBar.functionKey}>{fkey}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{`${description} (${fkey})`}</TooltipContent>
+    </Tooltip>
   );
 
   return (

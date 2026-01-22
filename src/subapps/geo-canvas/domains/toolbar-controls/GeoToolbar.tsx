@@ -13,6 +13,7 @@
 
 import React from 'react';
 import type { CSSProperties } from 'react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================================================
 // 🎨 LOCAL TOOLBAR STYLES - ENTERPRISE PATTERN

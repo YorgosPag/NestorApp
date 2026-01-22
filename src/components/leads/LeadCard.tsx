@@ -2,6 +2,7 @@
 import { User, Mail, Phone, Calendar, ExternalLink, Send, Edit3, Trash2 } from "lucide-react";
 import type { Opportunity } from '@/types/crm';
 import { INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effects';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
@@ -76,17 +77,21 @@ export function LeadCard({
 
         <nav className="flex flex-col gap-2 ml-4" aria-label={t('leadCard.actionsLabel')}>
           <section className="flex gap-2" aria-label={t('leadCard.primaryActions')}>
-            <button
-              onClick={() => onEmail(lead)}
-              disabled={!lead.email}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm ${
-                lead.email ? `${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}` : `${colors.text.muted} cursor-not-allowed`
-              }`}
-              title={lead.email ? t('leadCard.sendEmail') : t('leadCard.noEmail')}
-            >
-              <Send className={iconSizes.sm} />
-              Email
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onEmail(lead)}
+                  disabled={!lead.email}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm ${
+                    lead.email ? `${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER}` : `${colors.text.muted} cursor-not-allowed`
+                  }`}
+                >
+                  <Send className={iconSizes.sm} />
+                  Email
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{lead.email ? t('leadCard.sendEmail') : t('leadCard.noEmail')}</TooltipContent>
+            </Tooltip>
 
             <button
               onClick={() => onEdit(lead)}

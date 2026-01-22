@@ -21,6 +21,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export interface FloorPlanUploadButtonProps {
   /**

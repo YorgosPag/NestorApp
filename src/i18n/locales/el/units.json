@@ -143,6 +143,19 @@
     "showAdvanced": "Εμφάνιση προχωρημένων",
     "hideAdvanced": "Απόκρυψη προχωρημένων",
     "resetFilters": "Επαναφορά φίλτρων",
+    "allStatuses": "Όλες οι Καταστάσεις",
+    "allTypes": "Όλοι οι Τύποι",
+    "allBuildings": "Όλα τα Κτίρια",
+    "allProjects": "Όλα τα Έργα",
+    "allFloors": "Όλοι οι Όροφοι",
+    "areaPresets": {
+      "all": "Όλα τα μεγέθη",
+      "small": "Μικρό (έως 50 m²)",
+      "medium": "Μεσαίο (50-100 m²)",
+      "large": "Μεγάλο (100-200 m²)",
+      "veryLarge": "Πολύ μεγάλο (200+ m²)",
+      "custom": "Προσαρμοσμένο εύρος"
+    },
     "status": {
       "available": "Διαθέσιμο",
       "sold": "Πωλημένο",

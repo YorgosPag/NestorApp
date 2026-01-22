@@ -16,6 +16,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { PANEL_LAYOUT } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
+// 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import {
@@ -109,10 +111,17 @@ export default function CoordinateCalibrationOverlay({
   return (
     <div style={getCalibrationOverlayContainerStyles(portalComponents.overlay.calibration.zIndex())}>
       <div style={getCalibrationDebugPanelStyles()}>
-        <header className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
-          <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.cyanAccent}`}>🔧 Καλιμπράρισμα Συντεταγμένων</h3>
-          <button onClick={() => onToggle?.(false)} className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${PANEL_LAYOUT.TYPOGRAPHY.XL}`} title={t('calibration.close')}>×</button>
-        </header>
+        <TooltipProvider>
+          <header className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_MD}`}>
+            <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${colors.text.cyanAccent}`}>🔧 Καλιμπράρισμα Συντεταγμένων</h3>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button onClick={() => onToggle?.(false)} className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${PANEL_LAYOUT.TYPOGRAPHY.XL}`}>×</button>
+              </TooltipTrigger>
+              <TooltipContent>{t('calibration.close')}</TooltipContent>
+            </Tooltip>
+          </header>
+        </TooltipProvider>
         <section className={PANEL_LAYOUT.SPACING.GAP_MD}>
           {/* ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CoordinateTransforms */}
           <article className={`${colors.bg.info} ${PANEL_LAYOUT.SPACING.SM} rounded ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>

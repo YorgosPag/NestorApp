@@ -22,6 +22,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Map, Mountain, Moon, Flag, Palette, Circle, Satellite } from 'lucide-react';
 import type { GeoCoordinate } from '../../types';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS

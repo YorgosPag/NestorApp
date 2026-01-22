@@ -8,6 +8,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 
@@ -73,83 +75,99 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
 
   if (!hasDropdown) {
     return (
-      <button
-        onClick={onClick}
-        disabled={disabled}
-        title={`${t(tool.label)} (${tool.hotkey})`}
-        className={`
-          ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-          flex items-center justify-center
-          ${
-            isActive
-              ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-              : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-          }
-          ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
-        `}
-      >
-        {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{tool.label?.charAt(0) || '?'}</span>}
-      </button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onClick}
+              disabled={disabled}
+              className={`
+                ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                flex items-center justify-center
+                ${
+                  isActive
+                    ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                    : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                }
+                ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
+              `}
+            >
+              {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{tool.label?.charAt(0) || '?'}</span>}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{`${t(tool.label)} (${tool.hotkey})`}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <div className="flex">
-        <button
-          onClick={handleMainClick}
-          disabled={disabled}
-          title={`${t(tool.label)} (${tool.hotkey})`}
-          className={`
-            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.LEFT_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-            flex items-center justify-center
-            ${
-              isActive
-                ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-            }
-            ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
-          `}
-        >
-          {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{tool.label?.charAt(0) || '?'}</span>}
-        </button>
-        <button
-          onClick={handleDropdownToggle}
-          disabled={disabled}
-          title={t('entitiesSettings.moreOptions')}
-          className={`
-            ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.XS} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.RIGHT_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-            flex items-center justify-center
-            ${
-              isActive
-                ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-            }
-            ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
-          `}
-        >
-          <ChevronDown className={`${iconSizes.xs} text-current`} />
-        </button>
-      </div>
-
-      {showDropdown && (
-        <nav className={`absolute ${PANEL_LAYOUT.POSITION.TOP_FULL} ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.SHADOW.LG} ${PANEL_LAYOUT.Z_INDEX['50']} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.DROPDOWN_MIN_WIDTH} ${getStatusBorder('default')}`}>
-          {tool.dropdownOptions!.map((option) => {
-            const OptionIcon = option.icon;
-            return (
+    <TooltipProvider>
+      <div className="relative" ref={dropdownRef}>
+        <div className="flex">
+          <Tooltip>
+            <TooltipTrigger asChild>
               <button
-                key={option.id}
-                onClick={() => handleDropdownItemClick(option.id)}
-                className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-left ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary} flex items-center ${PANEL_LAYOUT.GAP.SM} first:${PANEL_LAYOUT.ROUNDED.TOP_MD} last:${PANEL_LAYOUT.ROUNDED.BOTTOM_MD} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                onClick={handleMainClick}
+                disabled={disabled}
+                className={`
+                  ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.LEFT_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                  flex items-center justify-center
+                  ${
+                    isActive
+                      ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                      : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                  }
+                  ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
+                `}
               >
-                {OptionIcon && <OptionIcon className={iconSizes.sm} />}
-                {t(option.label)}
+                {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{tool.label?.charAt(0) || '?'}</span>}
               </button>
-            );
-          })}
-        </nav>
-      )}
-    </div>
+            </TooltipTrigger>
+            <TooltipContent>{`${t(tool.label)} (${tool.hotkey})`}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleDropdownToggle}
+                disabled={disabled}
+                className={`
+                  ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.XS} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.RIGHT_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                  flex items-center justify-center
+                  ${
+                    isActive
+                      ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                      : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                  }
+                  ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
+                `}
+              >
+                <ChevronDown className={`${iconSizes.xs} text-current`} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('entitiesSettings.moreOptions')}</TooltipContent>
+          </Tooltip>
+        </div>
+
+        {showDropdown && (
+          <nav className={`absolute ${PANEL_LAYOUT.POSITION.TOP_FULL} ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.SHADOW.LG} ${PANEL_LAYOUT.Z_INDEX['50']} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.DROPDOWN_MIN_WIDTH} ${getStatusBorder('default')}`}>
+            {tool.dropdownOptions!.map((option) => {
+              const OptionIcon = option.icon;
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => handleDropdownItemClick(option.id)}
+                  className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-left ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary} flex items-center ${PANEL_LAYOUT.GAP.SM} first:${PANEL_LAYOUT.ROUNDED.TOP_MD} last:${PANEL_LAYOUT.ROUNDED.BOTTOM_MD} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                >
+                  {OptionIcon && <OptionIcon className={iconSizes.sm} />}
+                  {t(option.label)}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
+    </TooltipProvider>
   );
 };
 
@@ -171,23 +189,29 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
     : action.label;
 
   return (
-    <button
-      onClick={action.onClick}
-      title={action.hotkey ? `${translatedLabel} (${action.hotkey})` : translatedLabel}
-      disabled={action.disabled ?? false}
-      className={`
-        ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-        flex items-center justify-center
-        ${
-          action.active
-            ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-            : action.disabled
-            ? `${colors.bg.secondary} ${colors.text.muted} ${getElementBorder('button', 'default')} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`
-            : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-        }
-      `}
-    >
-      {IconComponent ? <IconComponent className={iconSizes.sm} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{action.label?.charAt(0) || '?'}</span>}
-    </button>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={action.onClick}
+            disabled={action.disabled ?? false}
+            className={`
+              ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+              flex items-center justify-center
+              ${
+                action.active
+                  ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
+                  : action.disabled
+                  ? `${colors.bg.secondary} ${colors.text.muted} ${getElementBorder('button', 'default')} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`
+                  : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+              }
+            `}
+          >
+            {IconComponent ? <IconComponent className={iconSizes.sm} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{action.label?.charAt(0) || '?'}</span>}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{action.hotkey ? `${translatedLabel} (${action.hotkey})` : translatedLabel}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };

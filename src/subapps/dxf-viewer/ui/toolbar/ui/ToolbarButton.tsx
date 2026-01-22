@@ -23,6 +23,8 @@ import { BaseButton, type ButtonVariant } from '../../../components/shared/BaseB
 import { withIconProps } from '../../icons/iconRegistry';
 import { useBorderTokens } from '../../../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 // Legacy → Enterprise variant mapping
 const VARIANT_MAP: Record<string, ButtonVariant> = {
@@ -73,17 +75,23 @@ export default function ToolbarButton({
     : '';
 
   return (
-    <BaseButton
-      variant={buttonVariant}
-      size={buttonSize}
-      isActive={active}
-      disabled={disabled}
-      onClick={onClick}
-      title={label}
-      className={customVariantClass}
-    >
-      {icon && withIconProps(icon)}
-      {label}
-    </BaseButton>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <BaseButton
+            variant={buttonVariant}
+            size={buttonSize}
+            isActive={active}
+            disabled={disabled}
+            onClick={onClick}
+            className={customVariantClass}
+          >
+            {icon && withIconProps(icon)}
+            {label}
+          </BaseButton>
+        </TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

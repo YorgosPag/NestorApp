@@ -161,14 +161,18 @@ export function PhotoPreview({
 
         {/* Remove button για full mode */}
         {showRemoveButton && (
-          <button
-            type="button"
-            className={`absolute top-1 right-1 ${colors.bg.error} ${colors.text.error} rounded-full p-1 transition-colors z-10 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
-            onClick={handleRemoveClick}
-            title={t('photo.remove', { name: displayName })}
-          >
-            <X className={iconSizes.xs} />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className={`absolute top-1 right-1 ${colors.bg.error} ${colors.text.error} rounded-full p-1 transition-colors z-10 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
+                onClick={handleRemoveClick}
+              >
+                <X className={iconSizes.xs} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('photo.remove', { name: displayName })}</TooltipContent>
+          </Tooltip>
         )}
       </div>
 
