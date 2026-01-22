@@ -9,6 +9,8 @@ import {
   ManagementTabContent,
   FiltersTabContent
 } from './ContactsTabContent';
+// 🏢 ENTERPRISE: i18n support
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ContactsToolbarProps {
   selectedItems?: string[];
@@ -31,6 +33,9 @@ interface ContactsToolbarProps {
 }
 
 export function ContactsToolbar(props: ContactsToolbarProps) {
+  // 🏢 ENTERPRISE: i18n hook
+  const { t } = useTranslation('contacts');
+
   const {
     selectedItems = [],
     onNewContact,
@@ -50,7 +55,7 @@ export function ContactsToolbar(props: ContactsToolbarProps) {
   const tabs = [
     {
       id: 'actions',
-      label: 'Ενέργειες',
+      label: t('toolbar.tabs.actions'),
       icon: Settings,
       content: (
         <ActionsTabContent
@@ -66,7 +71,7 @@ export function ContactsToolbar(props: ContactsToolbarProps) {
     },
     {
       id: 'communication',
-      label: 'Επικοινωνία',
+      label: t('toolbar.tabs.communication'),
       icon: MessageSquare,
       content: (
         <CommunicationTabContent
@@ -76,7 +81,7 @@ export function ContactsToolbar(props: ContactsToolbarProps) {
     },
     {
       id: 'management',
-      label: 'Διαχείριση',
+      label: t('toolbar.tabs.management'),
       icon: FolderOpen,
       content: (
         <ManagementTabContent
@@ -89,7 +94,7 @@ export function ContactsToolbar(props: ContactsToolbarProps) {
     },
     {
       id: 'filters',
-      label: 'Φίλτρα',
+      label: t('toolbar.tabs.filters'),
       icon: Star,
       content: (
         <FiltersTabContent
@@ -104,7 +109,7 @@ export function ContactsToolbar(props: ContactsToolbarProps) {
 
   // Selection message
   const selectionMessage = selectedItems.length > 0
-    ? `${selectedItems.length} επιλεγμένες επαφές`
+    ? t('toolbar.selectedContacts', { count: selectedItems.length })
     : undefined;
 
   return (

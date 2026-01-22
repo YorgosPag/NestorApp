@@ -173,11 +173,13 @@ export function useUnitsViewerState() {
   const handlePolygonCreated = (newPropertyData: Omit<Property, 'id' | 'name' | 'type' | 'status' | 'building' | 'floor' | 'project' | 'buildingId' | 'floorId'>) => {
     if (!setProperties) return;
     
+    // 🎯 DOMAIN SEPARATION: Default operationalStatus='draft' (NOT sales status!)
     const newProperty: Property = {
       id: `prop_${Date.now()}`,
       name: `Νέο Ακίνητο ${safeProperties.length + 1}`,
       type: 'Διαμέρισμα 2Δ',
-      status: 'for-sale',
+      status: 'draft', // Legacy field - will be removed
+      operationalStatus: 'draft', // 🏢 ENTERPRISE: New units start as draft
       building: 'Κτίριο Alpha',
       floor: 1,
       project: 'Έργο Κέντρο',
@@ -226,24 +228,19 @@ export function useUnitsViewerState() {
     totalArea: safeProperties.reduce((sum, p) => sum + (p.area || 0), 0),
     uniqueBuildings: [...new Set(safeProperties.map(p => p.building))].length,
 
-    // ✅ OPERATIONAL STATUS METRICS (Physical readiness)
-    readyProperties: safeProperties.filter(p => p.operationalStatus === 'ready').length,
+    // 🎯 DOMAIN SEPARATION: OPERATIONAL STATUS METRICS (Physical readiness - NO SALES!)
+    // Units = Physical Truth, Sales = Commercial Truth (separate module)
+    availableProperties: safeProperties.filter(p => p.operationalStatus === 'ready').length,
     underConstructionProperties: safeProperties.filter(p => p.operationalStatus === 'under-construction').length,
-
-    // ⚠️ DEPRECATED: Sales status metrics (temporary for backward compatibility)
-    // These will be moved to SalesAsset aggregations in /sales module
-    availableProperties: safeProperties.filter(p => p.status === 'for-sale' || p.status === 'for-rent').length,
-    soldProperties: safeProperties.filter(p => p.status === 'sold' || p.status === 'rented').length,
-    reserved: safeProperties.filter(p => p.status === 'reserved').length,
-
-    // ❌ REMOVED: Commercial metrics (domain separation)
-    // totalValue: Moved to SalesAsset aggregations
-    // averagePrice: Moved to SalesAsset aggregations
-    // Migration: PR1 - Units List Cleanup
+    maintenanceProperties: safeProperties.filter(p => p.operationalStatus === 'maintenance').length,
+    inspectionProperties: safeProperties.filter(p => p.operationalStatus === 'inspection').length,
+    draftProperties: safeProperties.filter(p => p.operationalStatus === 'draft').length,
 
     // ✅ DISTRIBUTION METRICS (Physical attributes)
+    // 🎯 DOMAIN SEPARATION: Uses operationalStatus (NOT sales status!)
     propertiesByStatus: safeProperties.reduce((acc, p) => {
-      acc[p.status] = (acc[p.status] || 0) + 1;
+      const status = p.operationalStatus || 'draft';
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>),
     propertiesByType: safeProperties.reduce((acc, p) => {
@@ -256,10 +253,10 @@ export function useUnitsViewerState() {
       return acc;
     }, {} as Record<string, number>),
 
-    // ✅ STORAGE METRICS (Physical inventory)
+    // ✅ STORAGE METRICS (Physical inventory - Operational status only)
+    // 🎯 DOMAIN SEPARATION: No "sold" storage - that's sales data!
     totalStorageUnits: 0,
-    availableStorageUnits: 0,
-    soldStorageUnits: 0,
+    availableStorageUnits: 0, // Storage units with operationalStatus='ready'
   }), [safeProperties]);
 
   // 🏢 ENTERPRISE: Flexible filter handler compatible with AdvancedFiltersPanel

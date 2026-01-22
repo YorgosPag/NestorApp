@@ -51,7 +51,10 @@ export default function CreateTaskModal(props: CreateTaskModalProps) {
           props.onClose();
         }
       },
-      onSubmit: async (data: Partial<CrmTask>) => {
+      // 🏢 ENTERPRISE: Type conversion - SmartDialogEngine provides generic Record<string, unknown>
+      onSubmit: async (data?: Record<string, unknown>) => {
+        // Type assertion for type safety - we know data is Partial<CrmTask> from Smart Factory
+        const taskData = data as Partial<CrmTask>;
         // Smart Factory handles task creation με leads linking
         if (props.onTaskCreated) {
           props.onTaskCreated();

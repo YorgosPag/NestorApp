@@ -25,20 +25,20 @@ import { PropertyGridViewCompatible as PropertyGridView } from '@/components/pro
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-// 🏢 ENTERPRISE: Translation key type for status labels
-type StatusKey = 'sold' | 'available' | 'reserved' | 'owner' | 'for-sale' | 'for-rent' | 'rented';
+// 🏢 ENTERPRISE: Translation key type for OPERATIONAL status labels (Physical Truth - No Sales!)
+type OperationalStatusKey = 'ready' | 'underConstruction' | 'inspection' | 'maintenance' | 'draft';
 // 🏢 ENTERPRISE: Translation key type for type labels
 type TypeKey = 'apartment' | 'studio' | 'maisonette' | 'shop' | 'office' | 'storage';
 
-// ✅ ENTERPRISE: Factory function that creates a status label getter with translation support
+// ✅ ENTERPRISE: Factory function that creates an OPERATIONAL status label getter
+// 🎯 DOMAIN SEPARATION: Units = Physical Truth, NO sales statuses!
 const createStatusLabelGetter = (t: (key: string) => string) => (status: string): string => {
-  const knownStatuses: StatusKey[] = ['sold', 'available', 'reserved', 'owner', 'for-sale', 'for-rent', 'rented'];
-  if (knownStatuses.includes(status as StatusKey)) {
-    return t(`page.statusLabels.${status}`);
+  const operationalStatuses: OperationalStatusKey[] = ['ready', 'underConstruction', 'inspection', 'maintenance', 'draft'];
+  if (operationalStatuses.includes(status as OperationalStatusKey)) {
+    return t(`operationalStatus.${status}`);
   }
   return status;
 };
@@ -172,6 +172,7 @@ function UnitsPageContent() {
   }, [safeFilteredProperties, searchTerm]);
 
   // Transform dashboardStats object to DashboardStat array
+  // 🎯 DOMAIN SEPARATION: Units = Physical Truth - NO SALES METRICS!
   const unifiedDashboardStats: DashboardStat[] = [
     {
       title: t('page.dashboard.totalUnits'),
@@ -179,26 +180,15 @@ function UnitsPageContent() {
       icon: NAVIGATION_ENTITIES.unit.icon,
       color: "blue"
     },
+    // 🏢 ENTERPRISE: Operational status "Ready" instead of sales "Available"
     {
-      title: t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' }),
-      value: dashboardStats.availableProperties,
+      title: t('operationalStatus.ready'),
+      value: dashboardStats.availableProperties, // Ready units (physical status)
       icon: TrendingUp,
       color: "green"
     },
-    {
-      title: t('page.dashboard.soldUnits'),
-      value: dashboardStats.soldProperties,
-      icon: BarChart3,
-      color: "purple"
-    },
-    // ❌ REMOVED: Total Value card (commercial metric - domain separation)
-    // {
-    //   title: t('page.dashboard.totalValue'),
-    //   value: `€${(dashboardStats.totalValue / 1000000).toFixed(1)}M`,
-    //   icon: MapPin,
-    //   color: "orange"
-    // },
-    // Migration: PR1 - Units List Cleanup - Moved to /sales dashboard
+    // ❌ REMOVED: "Sold Units" card - SALES DATA (moved to /sales dashboard)
+    // ❌ REMOVED: Total Value card - SALES DATA (moved to /sales dashboard)
     {
       title: t('page.dashboard.totalArea'),
       value: `${(dashboardStats.totalArea / 1000).toFixed(1)}K m²`,
@@ -214,10 +204,11 @@ function UnitsPageContent() {
   ];
 
   // 🔥 NEW: Handle dashboard card clicks για filtering
+  // 🎯 DOMAIN SEPARATION: Units = Physical Truth - Operational status filters only!
   const handleCardClick = (stat: DashboardStat, index: number) => {
     const cardTitle = stat.title;
     const totalUnitsTitle = t('page.dashboard.totalUnits');
-    const soldUnitsTitle = t('page.dashboard.soldUnits');
+    const readyTitle = t('operationalStatus.ready');
 
     // Toggle filter: αν κλικάρουμε την ίδια κάρτα, αφαιρούμε το φίλτρο
     if (activeCardFilter === cardTitle) {
@@ -227,21 +218,18 @@ function UnitsPageContent() {
     } else {
       setActiveCardFilter(cardTitle);
 
-      // Apply filter based on card type
+      // Apply filter based on card type - OPERATIONAL STATUS ONLY
       switch (cardTitle) {
         case totalUnitsTitle:
           // Show all units - reset filters
           handleFiltersChange({ ...filters, status: [] });
           break;
-        case UNIFIED_STATUS_FILTER_LABELS.AVAILABLE:
-          // Filter only available units
-          handleFiltersChange({ ...filters, status: ['available'] });
+        case readyTitle:
+          // Filter only "ready" units (operational status)
+          handleFiltersChange({ ...filters, status: ['ready'] });
           break;
-        case soldUnitsTitle:
-          // Filter only sold units
-          handleFiltersChange({ ...filters, status: ['sold'] });
-          break;
-        // Note: Other cards (Total Value, Total Area, Unique Buildings)
+        // ❌ REMOVED: soldUnitsTitle filter - SALES DATA (moved to /sales)
+        // Note: Other cards (Total Area, Unique Buildings)
         // are informational and don't apply specific filters
         default:
           // For other stats, just clear active filter without changing data
@@ -334,10 +322,10 @@ function UnitsPageContent() {
                   icon={Package}
                   data={{
                     [t('page.dashboard.total')]: dashboardStats.totalStorageUnits,
-                    [UNIFIED_STATUS_FILTER_LABELS.AVAILABLE]: dashboardStats.availableStorageUnits,
-                    [t('page.statusLabels.sold')]: dashboardStats.soldStorageUnits,
+                    [t('operationalStatus.ready')]: dashboardStats.availableStorageUnits,
+                    // ❌ REMOVED: "Sold" storage count - SALES DATA (moved to /sales)
                   }}
-                  isThreeColumnGrid={true}
+                  isThreeColumnGrid={false}
                 />
               </>
             }

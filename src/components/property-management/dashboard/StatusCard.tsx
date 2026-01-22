@@ -17,14 +17,16 @@ interface StatusCardProps {
 export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
-    const { t } = useTranslation('properties');
+    const { t } = useTranslation('units');
     const spacing = useSpacingTokens();
+    // 🎯 DOMAIN SEPARATION: Operational status colors (Physical Truth - No Sales!)
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'sold': return colors.bg.success;
-            case 'available': return colors.bg.muted;
-            case 'reserved': return colors.bg.warning;
-            case 'owner': return colors.bg.info;
+            case 'ready': return colors.bg.success;
+            case 'underConstruction': return colors.bg.warning;
+            case 'inspection': return colors.bg.info;
+            case 'maintenance': return colors.bg.error;
+            case 'draft': return colors.bg.muted;
             default: return colors.bg.muted;
         }
     };
@@ -32,7 +34,7 @@ export function StatusCard({ statsByStatus, getStatusLabel }: StatusCardProps) {
     return (
         <Card>
             <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
-                <CardTitle className="text-sm font-medium">{t('dashboard.cards.unitStatus')}</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('page.dashboard.unitStatus', { ns: 'properties' })}</CardTitle>
                 <Activity className={`${iconSizes.sm} text-muted-foreground`} />
             </CardHeader>
             <CardContent className={`${spacing.padding.sm} pt-0`}>

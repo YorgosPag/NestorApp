@@ -153,13 +153,22 @@
     }
   },
   "toolbar": {
-    "actions": {
+    "actions": "Ενέργειες",
+    "communication": "Επικοινωνία",
+    "management": "Διαχείριση",
+    "filters": "Φίλτρα",
+    "selectedContacts": "{count} επιλεγμένες επαφές",
+    "shortcutActions": {
       "new": "Νέα Επαφή (Ctrl+N)",
       "edit": "Επεξεργασία Επιλεγμένης (Ctrl+E)",
       "delete": "Διαγραφή Επιλεγμένης (Delete)"
     },
     "tabs": {
-      "actions": {
+      "actions": "Ενέργειες",
+      "communication": "Επικοινωνία",
+      "management": "Διαχείριση",
+      "filters": "Φίλτρα",
+      "actionsContent": {
         "newContact": "Νέα Επαφή",
         "newContactTooltip": "Προσθήκη νέας επαφής",
         "edit": "Επεξεργασία",

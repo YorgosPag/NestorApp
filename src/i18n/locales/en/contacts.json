@@ -153,13 +153,22 @@
     }
   },
   "toolbar": {
-    "actions": {
+    "actions": "Actions",
+    "communication": "Communication",
+    "management": "Management",
+    "filters": "Filters",
+    "selectedContacts": "{count} selected contacts",
+    "shortcutActions": {
       "new": "New Contact (Ctrl+N)",
       "edit": "Edit Selected (Ctrl+E)",
       "delete": "Delete Selected (Delete)"
     },
     "tabs": {
-      "actions": {
+      "actions": "Actions",
+      "communication": "Communication",
+      "management": "Management",
+      "filters": "Filters",
+      "actionsContent": {
         "newContact": "New Contact",
         "newContactTooltip": "Add new contact",
         "edit": "Edit",

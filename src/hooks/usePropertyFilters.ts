@@ -33,11 +33,17 @@ export function usePropertyFilters(
 ) {
   const { filteredProperties, stats } = useMemo(() => {
     if (!properties || !filters) {
+      // 🎯 DOMAIN SEPARATION: Default stats without deprecated sales metrics
       const emptyStats: PropertyStats = {
-        totalProperties: 0, availableProperties: 0, soldProperties: 0, totalValue: 0, totalArea: 0, averagePrice: 0,
+        totalProperties: 0, availableProperties: 0, totalValue: 0, totalArea: 0, averagePrice: 0,
         propertiesByStatus: {}, propertiesByType: {}, propertiesByFloor: {},
-        totalStorageUnits: 0, availableStorageUnits: 0, soldStorageUnits: 0,
-        uniqueBuildings: 0, reserved: 0
+        totalStorageUnits: 0, availableStorageUnits: 0,
+        uniqueBuildings: 0,
+        // Operational status metrics
+        underConstructionProperties: 0,
+        maintenanceProperties: 0,
+        inspectionProperties: 0,
+        draftProperties: 0,
       };
       return { filteredProperties: [], stats: emptyStats };
     }
@@ -84,21 +90,30 @@ export function usePropertyFilters(
       return searchMatch && projectMatch && buildingMatch && floorMatch && typeMatch && statusMatch && priceMatch && areaMatch && featuresMatch;
     });
     
+    // 🎯 DOMAIN SEPARATION: Stats use operationalStatus where available
     const calculatedStats: PropertyStats = {
       totalProperties: filtered.length,
-      availableProperties: filtered.filter(p => p.status === 'for-sale' || p.status === 'for-rent').length,
-      soldProperties: filtered.filter(p => p.status === 'sold').length,
+      // availableProperties = operationalStatus 'ready' (Physical readiness)
+      availableProperties: filtered.filter(p => p.operationalStatus === 'ready').length,
       totalValue: filtered.reduce((sum, p) => sum + (p.price || 0), 0),
       totalArea: filtered.reduce((sum, p) => sum + (p.area || 0), 0),
       averagePrice: filtered.length > 0 ? filtered.reduce((sum, p) => sum + (p.price || 0), 0) / filtered.length : 0,
-      propertiesByStatus: filtered.reduce((acc, p) => { acc[p.status] = (acc[p.status] || 0) + 1; return acc; }, {} as Record<string, number>),
+      // propertiesByStatus uses operationalStatus (not sales status)
+      propertiesByStatus: filtered.reduce((acc, p) => {
+        const status = p.operationalStatus || 'draft';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>),
       propertiesByType: filtered.reduce((acc, p) => { acc[p.type] = (acc[p.type] || 0) + 1; return acc; }, {} as Record<string, number>),
       propertiesByFloor: filtered.reduce((acc, p) => { const floorLabel = `Όροφος ${p.floor}`; acc[floorLabel] = (acc[floorLabel] || 0) + 1; return acc; }, {} as Record<string, number>),
       totalStorageUnits: 0, // storageUnits not available in this Property type
       availableStorageUnits: 0,
-      soldStorageUnits: 0,
       uniqueBuildings: [...new Set(filtered.map(p => p.building))].length,
-      reserved: filtered.filter(p => p.status === 'reserved').length,
+      // Operational status metrics
+      underConstructionProperties: filtered.filter(p => p.operationalStatus === 'under-construction').length,
+      maintenanceProperties: filtered.filter(p => p.operationalStatus === 'maintenance').length,
+      inspectionProperties: filtered.filter(p => p.operationalStatus === 'inspection').length,
+      draftProperties: filtered.filter(p => p.operationalStatus === 'draft').length,
     };
 
     return { filteredProperties: filtered, stats: calculatedStats };

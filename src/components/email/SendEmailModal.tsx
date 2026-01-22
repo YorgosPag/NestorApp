@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects";
 import { useTranslation } from 'react-i18next';
 
+// 🏢 ENTERPRISE: Lead data can come from Opportunity which has optional fields
 interface SendEmailModalProps {
-  lead: { id: string; fullName: string; email: string } | null;
+  lead: { id?: string; fullName?: string; email?: string } | null;
   isOpen: boolean;
   onClose: () => void;
   onEmailSent?: () => void;

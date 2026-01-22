@@ -365,6 +365,7 @@
   "search": {
     "placeholder": "Αναζήτηση έργων, τίτλων...",
     "allCompanies": "Όλες οι εταιρείες",
+    "allStatuses": "Όλες οι καταστάσεις",
     "clear": "Καθαρισμός"
   },
   "permits": {

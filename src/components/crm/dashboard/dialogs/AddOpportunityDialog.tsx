@@ -35,6 +35,11 @@ export function AddOpportunityDialog(props: AddOpportunityDialogProps) {
   return createSmartDialog({
     entityType: 'opportunity',
     operationType: 'create',
-    props
+    props: {
+      ...props,
+      // 🏢 ENTERPRISE: Type assertion needed - SmartDialogEngine expects generic Record<string, unknown>
+      // Our specific onSubmit: (data: Partial<Opportunity>) => Promise<void> is compatible
+      onSubmit: props.onSubmit as ((data?: Record<string, unknown>) => Promise<void>)
+    }
   });
 }
