@@ -90,6 +90,7 @@ export function SelectCompanyContactModal({
       const companyContacts = result.contacts.filter(
         contact => contact.type === 'company' &&
                    contact.status === 'active' &&
+                   contact.id !== undefined &&
                    !existingCompanyIds.includes(contact.id)  // 🚫 EXCLUDE existing companies
       );
 

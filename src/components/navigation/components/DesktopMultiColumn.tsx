@@ -579,7 +579,7 @@ export function DesktopMultiColumn({
 
     // Map RealtimeUnit to NavigationUnit and filter out storage units
     return realtimeUnits
-      .filter(unit => !isStorageType(unit))
+      .filter(unit => !isStorageType(unit as unknown as NavigationUnit)) // 🏢 ENTERPRISE: Type assertion for filter
       .map(unit => ({
         id: unit.id,
         name: unit.name,
@@ -627,7 +627,7 @@ export function DesktopMultiColumn({
     const realtimeUnits = getUnitsForBuilding(selectedBuilding.id);
 
     const legacyStorages: StorageUnit[] = realtimeUnits
-      .filter(unit => isStorageType(unit))
+      .filter(unit => isStorageType(unit as unknown as NavigationUnit)) // 🏢 ENTERPRISE: Type assertion for filter
       .map(unit => ({
         id: unit.id,
         name: unit.name,

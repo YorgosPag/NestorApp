@@ -29,22 +29,30 @@ export function LayerHeader({ isConnected, onAddLayer, onSettings }: LayerHeader
       </h3>
 
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-        <button
-          onClick={onAddLayer}
-          className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-          title={t('layerManager.createDialog.title')}
-        >
-          <Plus className={iconSizes.xs} />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onAddLayer}
+              className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+            >
+              <Plus className={iconSizes.xs} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('layerManager.createDialog.title')}</TooltipContent>
+        </Tooltip>
 
         <div className="relative">
-          <button
-            onClick={onSettings}
-            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-            title={t('common.settings', { ns: 'common' })}
-          >
-            <Settings className={iconSizes.xs} />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onSettings}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+              >
+                <Settings className={iconSizes.xs} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('common.settings', { ns: 'common' })}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>

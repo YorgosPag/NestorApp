@@ -158,51 +158,63 @@ export const EntityCard = ({
       
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
         {/* Visibility Toggle */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEntityToggle?.(entity.id, entity.visible === false ? true : false);
-          }}
-          className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
-            isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
-          }`}
-          title={entity.visible === false ? t('layerActions.show') : t('layerActions.hide')}
-        >
-          {entity.visible === false ? (
-            <EyeOff className={isSelected ? iconSizes.sm : iconSizes.xs} />
-          ) : (
-            <Eye className={isSelected ? iconSizes.sm : iconSizes.xs} />
-          )}
-        </button>
-        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEntityToggle?.(entity.id, entity.visible === false ? true : false);
+              }}
+              className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
+                isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
+              }`}
+            >
+              {entity.visible === false ? (
+                <EyeOff className={isSelected ? iconSizes.sm : iconSizes.xs} />
+              ) : (
+                <Eye className={isSelected ? iconSizes.sm : iconSizes.xs} />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{entity.visible === false ? t('layerActions.show') : t('layerActions.hide')}</TooltipContent>
+        </Tooltip>
+
         {/* Edit Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSetEditingEntity(entity.id);
-            onSetEditingEntityName(entity.name || `${entity.type}_${entity.id.substring(0, 8)}`);
-          }}
-          className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
-            isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
-          }`}
-          title={t('layerActions.renameEntity')}
-        >
-          <Edit2 className={isSelected ? iconSizes.sm : iconSizes.xs} />
-        </button>
-        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSetEditingEntity(entity.id);
+                onSetEditingEntityName(entity.name || `${entity.type}_${entity.id.substring(0, 8)}`);
+              }}
+              className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${
+                isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
+              }`}
+            >
+              <Edit2 className={isSelected ? iconSizes.sm : iconSizes.xs} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('layerActions.renameEntity')}</TooltipContent>
+        </Tooltip>
+
         {/* Delete Button */}
-        <button
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            onEntityDelete?.(entity.id); 
-          }}
-          className={`${colors.text.error} ${HOVER_TEXT_EFFECTS.RED} ${
-            isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
-          }`}
-          title={t('layerActions.delete')}
-        >
-          <Trash2 className={isSelected ? iconSizes.sm : iconSizes.xs} />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEntityDelete?.(entity.id);
+              }}
+              className={`${colors.text.error} ${HOVER_TEXT_EFFECTS.RED} ${
+                isSelected ? PANEL_LAYOUT.SPACING.XS : PANEL_LAYOUT.SPACING.HALF
+              }`}
+            >
+              <Trash2 className={isSelected ? iconSizes.sm : iconSizes.xs} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('layerActions.delete')}</TooltipContent>
+        </Tooltip>
         
         {/* Selection indicator */}
         {isSelected && (

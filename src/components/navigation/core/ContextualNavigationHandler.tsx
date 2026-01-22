@@ -70,7 +70,7 @@ export function ContextualNavigationHandler() {
         // First select the company that owns this project
         const company = navigation.companies.find(c => c.id === project.companyId);
         if (company && navigation.selectedCompany?.id !== company.id) {
-          console.log('🏢 [ContextualNavigation] Auto-selecting parent company:', company.name);
+          console.log('🏢 [ContextualNavigation] Auto-selecting parent company:', company.companyName);
           navigation.selectCompany(company.id);
         }
 

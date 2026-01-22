@@ -454,3 +454,42 @@ export type BorderVariant = keyof typeof borderVariants;
  * Default export for easy consumption
  */
 export default useBorderTokens;
+
+/**
+ * 🎯 STATIC BORDER TOKENS
+ * For use in utility functions and non-React contexts
+ *
+ * ⚠️ Note: Prefer useBorderTokens() hook in React components
+ * This static export is for utility functions that need border tokens
+ * but cannot use React hooks
+ */
+export const borderTokens = {
+  quick: {
+    none: 'border-0',
+    default: 'border border-border rounded-lg',
+    card: 'border border-border rounded-lg',
+    button: 'border border-border',
+    input: 'border border-border rounded-md',
+    checkbox: 'border border-border rounded-md',
+    modal: 'border-0 rounded-lg shadow-lg',
+    container: 'border-0',
+    separatorH: 'border-t border-border',
+    separatorV: 'border-l border-border',
+    success: 'border border-green-500',
+    error: 'border border-red-500',
+    warning: 'border border-yellow-500',
+    info: 'border border-blue-500',
+    muted: 'border border-border',
+    focus: 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200',
+    selected: 'border-blue-500 bg-blue-50',
+    table: 'border border-border rounded-lg',
+    rounded: 'border border-border rounded-lg',
+    dashed: 'border-2 border-border border-dashed rounded-lg',
+    separator: 'border-t border-border',
+    borderB: 'border-b border-border',
+    borderT: 'border-t border-border',
+    borderL: 'border-l border-border',
+    borderR: 'border-r border-border',
+    avatar: 'border-2 border-border rounded-full',
+  }
+} as const;

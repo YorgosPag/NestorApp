@@ -52,12 +52,13 @@ export function PropertyDashboard({ stats }: PropertyDashboardProps) {
     };
 
     // 🏢 ENTERPRISE: Using centralized icons for area and price
+    // 🏢 ENTERPRISE: Fallback values for optional stats to ensure type safety
     const statsCardsData = [
-        { title: t('dashboard.stats.totalUnits'), value: stats.totalProperties, icon: NAVIGATION_ENTITIES.unit.icon, color: "blue" },
-        { title: t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' }), value: stats.availableProperties, icon: TrendingUp, color: "gray" },
+        { title: t('dashboard.stats.totalUnits'), value: stats.totalProperties ?? 0, icon: NAVIGATION_ENTITIES.unit.icon, color: "blue" },
+        { title: t(UNIFIED_STATUS_FILTER_LABELS.AVAILABLE, { ns: 'common' }), value: stats.availableProperties ?? 0, icon: TrendingUp, color: "gray" },
         { title: t('dashboard.stats.totalValue'), value: formatCurrency(stats.totalValue), icon: NAVIGATION_ENTITIES.price.icon, color: "green" },
-        { title: t('dashboard.stats.totalArea'), value: `${Math.round(stats.totalArea)} m²`, icon: NAVIGATION_ENTITIES.area.icon, color: "purple" },
-        { title: t(UNIFIED_STATUS_FILTER_LABELS.SOLD, { ns: 'common' }), value: stats.soldProperties, icon: CheckCircle, color: "red" },
+        { title: t('dashboard.stats.totalArea'), value: `${Math.round(stats.totalArea ?? 0)} m²`, icon: NAVIGATION_ENTITIES.area.icon, color: "purple" },
+        { title: t(UNIFIED_STATUS_FILTER_LABELS.SOLD, { ns: 'common' }), value: stats.soldProperties ?? 0, icon: CheckCircle, color: "red" },
         { title: t('dashboard.stats.averagePrice'), value: formatCurrency(stats.averagePrice), icon: NAVIGATION_ENTITIES.price.icon, color: "orange" },
     ];
 

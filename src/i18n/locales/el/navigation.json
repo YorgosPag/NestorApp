@@ -187,6 +187,18 @@
     "filter": {
       "label": "Φίλτρα",
       "description": "Φιλτράρισμα αποτελεσμάτων"
+    },
+    "delete": {
+      "label": "Διαγραφή",
+      "description": "Διαγραφή στοιχείου"
+    },
+    "unlink": {
+      "label": "Αποσύνδεση",
+      "description": "Αποσύνδεση στοιχείου"
+    },
+    "add": {
+      "label": "Προσθήκη",
+      "description": "Προσθήκη νέου στοιχείου"
     }
   },
   "menu": {
@@ -344,13 +356,86 @@
     }
   },
   "entities": {
-    "company": { "title": "Εταιρείες" },
-    "project": { "title": "Έργα" },
-    "building": { "title": "Κτίρια" },
-    "floor": { "title": "Όροφοι" },
-    "unit": { "title": "Μονάδες" },
-    "storage": { "title": "Αποθήκες" },
-    "parking": { "title": "Θέσεις Πάρκινγκ" }
+    "company": {
+      "label": "Εταιρεία",
+      "plural": "Εταιρείες",
+      "description": "Επιχειρηματική οντότητα ή οργανισμός"
+    },
+    "project": {
+      "label": "Έργο",
+      "plural": "Έργα",
+      "description": "Κατασκευαστικό ή αναπτυξιακό έργο"
+    },
+    "building": {
+      "label": "Κτίριο",
+      "plural": "Κτίρια",
+      "description": "Φυσική κτιριακή κατασκευή"
+    },
+    "floor": {
+      "label": "Όροφος",
+      "plural": "Όροφοι",
+      "description": "Όροφος ή επίπεδο κτιρίου"
+    },
+    "unit": {
+      "label": "Μονάδα",
+      "plural": "Μονάδες",
+      "description": "Ατομική μονάδα εντός κτιρίου"
+    },
+    "storage": {
+      "label": "Αποθήκη",
+      "plural": "Αποθήκες",
+      "description": "Χώρος αποθήκευσης ή δωμάτιο"
+    },
+    "parking": {
+      "label": "Θέση Στάθμευσης",
+      "plural": "Θέσεις Στάθμευσης",
+      "description": "Θέση στάθμευσης"
+    },
+    "area": {
+      "label": "Εμβαδόν",
+      "plural": "Εμβαδά",
+      "description": "Μέτρηση επιφάνειας"
+    },
+    "price": {
+      "label": "Τιμή",
+      "plural": "Τιμές",
+      "description": "Πληροφορίες τιμολόγησης"
+    },
+    "location": {
+      "label": "Τοποθεσία",
+      "plural": "Τοποθεσίες",
+      "description": "Γεωγραφική τοποθεσία"
+    },
+    "phone": {
+      "label": "Τηλέφωνο",
+      "plural": "Τηλέφωνα",
+      "description": "Αριθμός τηλεφώνου"
+    },
+    "email": {
+      "label": "Email",
+      "plural": "Emails",
+      "description": "Διεύθυνση email"
+    },
+    "vat": {
+      "label": "ΑΦΜ",
+      "plural": "ΑΦΜ",
+      "description": "Αριθμός φορολογικού μητρώου"
+    },
+    "contactIndividual": {
+      "label": "Ατομική Επαφή",
+      "plural": "Ατομικές Επαφές",
+      "description": "Ατομική επαφή"
+    },
+    "contactCompany": {
+      "label": "Εταιρική Επαφή",
+      "plural": "Εταιρικές Επαφές",
+      "description": "Στοιχεία επικοινωνίας εταιρείας"
+    },
+    "contactService": {
+      "label": "Επαφή Υπηρεσίας",
+      "plural": "Επαφές Υπηρεσιών",
+      "description": "Επαφή παρόχου υπηρεσιών"
+    }
   },
   "buildingSpaces": {
     "sectionLabel": "Χώροι Κτιρίου",

@@ -86,7 +86,8 @@ export function PhotoPreviewCard({
   // COMPUTED VALUES
   // ========================================================================
 
-  const hasPhoto = photoUrl && photoUrl.length > 0;
+  // 🏢 ENTERPRISE: Explicit boolean for type safety
+  const hasPhoto: boolean = !!(photoUrl && photoUrl.length > 0);
 
   // Icon mapping για header
   const getHeaderIcon = () => {

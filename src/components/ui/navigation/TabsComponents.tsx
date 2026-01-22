@@ -7,7 +7,7 @@ import { LucideIcon } from 'lucide-react';
 // Re-export TabsContent for convenience
 export { TabsContent };
 import { cn } from '@/lib/utils';
-import { THEME_VARIANTS, getThemeVariant, type ThemeVariant } from '@/components/ui/theme/ThemeComponents';
+import { getThemeVariants, getThemeVariant, type ThemeVariant } from '@/components/ui/theme/ThemeComponents';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
 // 🏢 ENTERPRISE: Centralized tabs styling using the theme system (8px spacing)

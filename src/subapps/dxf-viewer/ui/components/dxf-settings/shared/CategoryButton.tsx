@@ -12,6 +12,8 @@
  */
 
 import React from 'react';
+// 🏢 ENTERPRISE: Shadcn Tooltip component
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 /**
  * CategoryButton - Reusable category button component
@@ -139,7 +141,7 @@ export const CategoryButton: React.FC<CategoryButtonProps> = ({
   // RENDER
   // ============================================================================
 
-  return (
+  const buttonElement = (
     <button
       type="button"
       className={buttonClasses}
@@ -148,7 +150,6 @@ export const CategoryButton: React.FC<CategoryButtonProps> = ({
       disabled={disabled}
       aria-label={label}
       aria-pressed={isActive}
-      title={tooltip}
       data-category-id={id}
     >
       {/* Icon Container */}
@@ -175,6 +176,20 @@ export const CategoryButton: React.FC<CategoryButtonProps> = ({
       {badge && <span className="category-button__badge">{badge}</span>}
     </button>
   );
+
+  // 🏢 ENTERPRISE: Shadcn Tooltip αντί native title attribute
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {buttonElement}
+        </TooltipTrigger>
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return buttonElement;
 };
 
 // ============================================================================

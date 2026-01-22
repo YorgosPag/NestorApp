@@ -6,7 +6,6 @@ export type {
   ObligationSection,
   ObligationArticle,
   ObligationParagraph,
-  ObligationSubsection,
   ObligationTemplate,
   Owner,
   ProjectDetails,

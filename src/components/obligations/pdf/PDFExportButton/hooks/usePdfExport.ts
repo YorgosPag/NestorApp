@@ -42,7 +42,7 @@ export function usePdfExport(document: ObligationDocument) {
         if (timer) clearInterval(timer);
         setExportProgress(100);
 
-        const filename = generateFileName(document, "pdf");
+        const filename = generateFileName(document.title || 'obligation', "pdf");
         if (openPreview) {
           const blob = new Blob([pdfData as BlobPart], { type: "application/pdf" });
           const url = URL.createObjectURL(blob);

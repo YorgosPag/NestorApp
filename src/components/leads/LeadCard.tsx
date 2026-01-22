@@ -5,10 +5,13 @@ import { INTERACTIVE_PATTERNS, GROUP_HOVER_PATTERNS } from '@/components/ui/effe
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Date normalization for Firestore Timestamps
+import { normalizeToDate } from '@/lib/date-local';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
+// 🏢 ENTERPRISE: Type-safe props that match the actual function signatures used
 export function LeadCard({
   lead,
   onEmail,
@@ -23,8 +26,8 @@ export function LeadCard({
   onEdit: (lead: Opportunity) => void;
   onView: (id: string) => void;
   onDelete: (id: string, name: string) => void;
-  formatDate: (ts: Date | string | number | { seconds: number; nanoseconds: number } | null | undefined) => string;
-  getStatusColor: (status: string) => string;
+  formatDate: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
+  getStatusColor: (status?: Opportunity['stage']) => string;
 }) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -64,7 +67,7 @@ export function LeadCard({
             )}
             <p className="flex items-center gap-2">
               <Calendar className={iconSizes.sm} />
-              <span>{t('leadCard.createdAt')}: {formatDate(lead.createdAt)}</span>
+              <span>{t('leadCard.createdAt')}: {formatDate(normalizeToDate(lead.createdAt) ?? new Date())}</span>
             </p>
           </address>
 

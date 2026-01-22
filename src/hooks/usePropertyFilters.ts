@@ -64,6 +64,7 @@ export function usePropertyFilters(
       priceRange = { min: null, max: null },
       areaRange = { min: null, max: null },
       features = [],
+      coverage = {},
     } = filters;
 
     const filtered = baseProperties.filter(property => {
@@ -87,7 +88,27 @@ export function usePropertyFilters(
 
       const featuresMatch = !features || features.length === 0 || features.every(feature => (property.features || []).includes(feature));
 
-      return searchMatch && projectMatch && buildingMatch && floorMatch && typeMatch && statusMatch && priceMatch && areaMatch && featuresMatch;
+      // ✅ ENTERPRISE: Coverage filters for "missing X" functionality
+      const coverageMatch = !coverage || Object.keys(coverage).length === 0 || (() => {
+        const { missingPhotos, missingFloorplans, missingDocuments } = coverage;
+
+        // If no coverage filters are active, include all units
+        if (!missingPhotos && !missingFloorplans && !missingDocuments) {
+          return true;
+        }
+
+        // ⚠️ BACKWARD COMPATIBILITY: Handle units without unitCoverage (treat as "missing")
+        const unitCoverage = property.unitCoverage;
+
+        // Check each filter condition
+        const photosCondition = !missingPhotos || (unitCoverage?.hasPhotos !== true);
+        const floorplansCondition = !missingFloorplans || (unitCoverage?.hasFloorplans !== true);
+        const documentsCondition = !missingDocuments || (unitCoverage?.hasDocuments !== true);
+
+        return photosCondition && floorplansCondition && documentsCondition;
+      })();
+
+      return searchMatch && projectMatch && buildingMatch && floorMatch && typeMatch && statusMatch && priceMatch && areaMatch && featuresMatch && coverageMatch;
     });
     
     // 🎯 DOMAIN SEPARATION: Stats use operationalStatus where available

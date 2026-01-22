@@ -29,7 +29,7 @@ export function TocBody({
               expandedIds={expandedIds}
               onToggle={onToggle}
               activeItemId={activeItemId}
-              onItemClick={onItemClick}
+              onClick={onItemClick}
               showPageNumbers={showPageNumbers}
               compact={compact}
             />

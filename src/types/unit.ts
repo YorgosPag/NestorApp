@@ -1,5 +1,6 @@
 
 import { PropertyStatus } from '@/constants/property-statuses-enterprise';
+import type { Timestamp } from 'firebase/firestore';
 
 // =============================================================================
 // 🏢 OPERATIONAL STATUS (Physical Truth - Construction/Readiness State)
@@ -40,6 +41,33 @@ export type LegacySalesStatus = PropertyStatus | 'rented';
 // =============================================================================
 
 export type UnitType = 'Στούντιο' | 'Γκαρσονιέρα' | 'Διαμέρισμα 2Δ' | 'Διαμέρισμα 3Δ' | 'Μεζονέτα' | 'Κατάστημα' | 'Αποθήκη';
+
+// =============================================================================
+// 🏢 COVERAGE INTERFACE (Documentation Completeness)
+// =============================================================================
+
+/**
+ * ✅ ENTERPRISE: Unit documentation coverage tracking
+ * Tracks whether unit has required documentation for completeness metrics
+ *
+ * @enterprise Used for dashboard Πληρότητα card and "missing X" filters
+ * @since PR1.2 - Coverage/Completeness card implementation
+ *
+ * ⚠️ QUERYABLE CONTRACT: All boolean flags are NON-OPTIONAL for Firestore filtering
+ * - hasPhotos/hasFloorplans/hasDocuments MUST be explicit true/false (not undefined)
+ * - Requires backfill to set false where missing for existing units
+ * - Firestore where(hasPhotos, '==', false) only matches explicit false, not undefined
+ */
+export interface UnitCoverage {
+  /** Unit has at least 1 photo - MUST be explicit true/false for filtering */
+  hasPhotos: boolean;
+  /** Unit has at least 1 floorplan - MUST be explicit true/false for filtering */
+  hasFloorplans: boolean;
+  /** Unit has basic documents - MUST be explicit true/false for filtering */
+  hasDocuments: boolean;
+  /** Last updated timestamp - Canonical Firestore Timestamp */
+  updatedAt: Timestamp;
+}
 
 // =============================================================================
 // 🏢 UNIT INTERFACE (Physical Truth)
@@ -100,6 +128,13 @@ export interface Unit {
    * @deprecated Will be moved to SalesAsset type
    */
   saleDate?: string;
+
+  /**
+   * ✅ ENTERPRISE: Documentation coverage tracking
+   * Used for Πληρότητα dashboard card and filtering
+   * @since PR1.2 - Coverage/Completeness implementation
+   */
+  unitCoverage?: UnitCoverage;
 
   unitName?: string; // ✅ ENTERPRISE FIX: Optional fallback property for backward compatibility
 }

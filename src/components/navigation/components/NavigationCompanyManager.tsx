@@ -11,14 +11,8 @@ import type { Contact } from '@/types/contacts';
 import { addCompanyToNavigation, getNavigationCompanyIds } from '@/services/navigation-companies.service';
 import { NavigationApiService } from '../core/services/navigationApi';
 import { useNavigation } from '../core/NavigationContext';
-
-// 🏢 ENTERPRISE: Company type for navigation
-interface NavigationCompany {
-  id: string;
-  name?: string;
-  contactId?: string;
-  [key: string]: unknown;
-}
+// 🏢 ENTERPRISE: Use centralized NavigationCompany type
+import type { NavigationCompany } from '../core/types';
 
 interface NavigationCompanyManagerProps {
   companies: NavigationCompany[];

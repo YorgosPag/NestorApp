@@ -187,6 +187,18 @@
     "filter": {
       "label": "Filters",
       "description": "Filter results"
+    },
+    "delete": {
+      "label": "Delete",
+      "description": "Delete item"
+    },
+    "unlink": {
+      "label": "Unlink",
+      "description": "Unlink item"
+    },
+    "add": {
+      "label": "Add",
+      "description": "Add new item"
     }
   },
   "menu": {
@@ -344,13 +356,86 @@
     }
   },
   "entities": {
-    "company": { "title": "Companies" },
-    "project": { "title": "Projects" },
-    "building": { "title": "Buildings" },
-    "floor": { "title": "Floors" },
-    "unit": { "title": "Units" },
-    "storage": { "title": "Storage" },
-    "parking": { "title": "Parking" }
+    "company": {
+      "label": "Company",
+      "plural": "Companies",
+      "description": "Business entity or organization"
+    },
+    "project": {
+      "label": "Project",
+      "plural": "Projects",
+      "description": "Construction or development project"
+    },
+    "building": {
+      "label": "Building",
+      "plural": "Buildings",
+      "description": "Physical building structure"
+    },
+    "floor": {
+      "label": "Floor",
+      "plural": "Floors",
+      "description": "Building floor or level"
+    },
+    "unit": {
+      "label": "Unit",
+      "plural": "Units",
+      "description": "Individual unit within building"
+    },
+    "storage": {
+      "label": "Storage",
+      "plural": "Storage",
+      "description": "Storage space or room"
+    },
+    "parking": {
+      "label": "Parking",
+      "plural": "Parking",
+      "description": "Parking space"
+    },
+    "area": {
+      "label": "Area",
+      "plural": "Areas",
+      "description": "Surface area measurement"
+    },
+    "price": {
+      "label": "Price",
+      "plural": "Prices",
+      "description": "Pricing information"
+    },
+    "location": {
+      "label": "Location",
+      "plural": "Locations",
+      "description": "Geographic location"
+    },
+    "phone": {
+      "label": "Phone",
+      "plural": "Phones",
+      "description": "Phone number"
+    },
+    "email": {
+      "label": "Email",
+      "plural": "Emails",
+      "description": "Email address"
+    },
+    "vat": {
+      "label": "VAT",
+      "plural": "VAT Numbers",
+      "description": "VAT identification number"
+    },
+    "contactIndividual": {
+      "label": "Individual",
+      "plural": "Individuals",
+      "description": "Individual contact person"
+    },
+    "contactCompany": {
+      "label": "Company Contact",
+      "plural": "Company Contacts",
+      "description": "Company contact information"
+    },
+    "contactService": {
+      "label": "Service Contact",
+      "plural": "Service Contacts",
+      "description": "Service provider contact"
+    }
   },
   "buildingSpaces": {
     "sectionLabel": "Building Spaces",

@@ -63,6 +63,7 @@ export function DetailsCard({ title, icon: Icon, data, labelFormatter, isFloorDa
                             </div>
                         ) : (
                             <CommonBadge
+                              key={key}
                               status="company"
                               customLabel={`${labelFormatter ? labelFormatter(key) : key} (${count})`}
                               variant="secondary"

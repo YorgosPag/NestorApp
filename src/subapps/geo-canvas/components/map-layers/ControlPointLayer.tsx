@@ -68,64 +68,68 @@ export const ControlPointLayer: React.FC<ControlPointLayerProps> = memo(({
         const isFirstPoint = index === 0;
         const shouldHighlightFirst = isFirstPointSpecial && isFirstPoint && !isPolygonComplete;
 
+        const tooltipText = isPolygonComplete
+          ? `${cp.id} - ✅ ΚΛΕΙΣΤΟ Πολύγωνο (±${cp.accuracy}m)`
+          : shouldHighlightFirst
+          ? `${cp.id} - ↻ Κάντε κλικ για ΚΛΕΙΣΙΜΟ πολυγώνου (±${cp.accuracy}m)`
+          : `${cp.id} (±${cp.accuracy}m)`;
+
         return (
           <Marker
             key={cp.id}
             longitude={cp.geo.lng}
             latitude={cp.geo.lat}
           >
-            <div
-              className={`rounded-full border transition-all relative z-50 ${
-                mapControlPointTokens.getControlPointStyle(
-                  selectedPointId === cp.id, // isActive
-                  shouldHighlightFirst,       // shouldHighlight
-                  isPolygonComplete           // isCompleted
-                ).classes
-              }`}
-              style={interactiveMapStyles.controlPoints.interaction(
-                selectedPointId === cp.id,
-                shouldHighlightFirst,
-                isPolygonComplete
-              )}
-              title={
-                isPolygonComplete
-                  ? `${cp.id} - ✅ ΚΛΕΙΣΤΟ Πολύγωνο (±${cp.accuracy}m)`
-                  : shouldHighlightFirst
-                  ? `${cp.id} - ↻ Κάντε κλικ για ΚΛΕΙΣΙΜΟ πολυγώνου (±${cp.accuracy}m)`
-                  : `${cp.id} (±${cp.accuracy}m)`
-              }
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={`rounded-full border transition-all relative z-50 ${
+                    mapControlPointTokens.getControlPointStyle(
+                      selectedPointId === cp.id, // isActive
+                      shouldHighlightFirst,       // shouldHighlight
+                      isPolygonComplete           // isCompleted
+                    ).classes
+                  }`}
+                  style={interactiveMapStyles.controlPoints.interaction(
+                    selectedPointId === cp.id,
+                    shouldHighlightFirst,
+                    isPolygonComplete
+                  )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
 
-                if (isPolygonComplete) {
-                  return;
-                }
+                    if (isPolygonComplete) {
+                      return;
+                    }
 
-                if (shouldHighlightFirst && onLegacyPolygonClosure) {
-                  onLegacyPolygonClosure();
-                }
-              }}
-              // ✅ ACCESSIBILITY: Keyboard support
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  if (!isPolygonComplete && shouldHighlightFirst && onLegacyPolygonClosure) {
-                    onLegacyPolygonClosure();
+                    if (shouldHighlightFirst && onLegacyPolygonClosure) {
+                      onLegacyPolygonClosure();
+                    }
+                  }}
+                  // ✅ ACCESSIBILITY: Keyboard support
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      if (!isPolygonComplete && shouldHighlightFirst && onLegacyPolygonClosure) {
+                        onLegacyPolygonClosure();
+                      }
+                    }
+                  }}
+                  // ✅ ACCESSIBILITY: Make focusable
+                  tabIndex={shouldHighlightFirst ? 0 : -1}
+                  role="button"
+                  aria-label={
+                    isPolygonComplete
+                      ? `Control point ${cp.id}, polygon completed, accuracy ${cp.accuracy} meters`
+                      : shouldHighlightFirst
+                      ? `Control point ${cp.id}, click to close polygon, accuracy ${cp.accuracy} meters`
+                      : `Control point ${cp.id}, accuracy ${cp.accuracy} meters`
                   }
-                }
-              }}
-              // ✅ ACCESSIBILITY: Make focusable
-              tabIndex={shouldHighlightFirst ? 0 : -1}
-              role="button"
-              aria-label={
-                isPolygonComplete
-                  ? `Control point ${cp.id}, polygon completed, accuracy ${cp.accuracy} meters`
-                  : shouldHighlightFirst
-                  ? `Control point ${cp.id}, click to close polygon, accuracy ${cp.accuracy} meters`
-                  : `Control point ${cp.id}, accuracy ${cp.accuracy} meters`
-              }
-            />
+                />
+              </TooltipTrigger>
+              <TooltipContent>{tooltipText}</TooltipContent>
+            </Tooltip>
           </Marker>
         );
       })}

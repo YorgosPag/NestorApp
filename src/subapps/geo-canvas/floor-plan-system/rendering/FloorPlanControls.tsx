@@ -79,17 +79,21 @@ export function FloorPlanControls({
         </div>
 
         {/* Visibility Toggle */}
-        <button
-          onClick={() => onVisibilityChange(!visible)}
-          className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-            visible
-              ? `${colors.bg.success} text-green-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
-              : `${colors.bg.muted} text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
-          }`}
-          title={visible ? 'Hide layer' : 'Show layer'}
-        >
-          {visible ? '👁️ Visible' : '🚫 Hidden'}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onVisibilityChange(!visible)}
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                visible
+                  ? `${colors.bg.success} text-green-700 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                  : `${colors.bg.muted} text-gray-600 ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              }`}
+            >
+              {visible ? '👁️ Visible' : '🚫 Hidden'}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{visible ? 'Hide layer' : 'Show layer'}</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* File Name */}
@@ -134,38 +138,54 @@ export function FloorPlanControls({
 
       {/* Quick Preset Buttons */}
       <div className="mt-3 flex gap-2">
-        <button
-          onClick={() => onOpacityChange(0.3)}
-          disabled={!visible}
-          className={`flex-1 px-2 py-1 text-xs ${colors.bg.muted} disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
-          title="Set opacity to 30%"
-        >
-          30%
-        </button>
-        <button
-          onClick={() => onOpacityChange(0.5)}
-          disabled={!visible}
-          className={`flex-1 px-2 py-1 text-xs ${colors.bg.muted} disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
-          title="Set opacity to 50%"
-        >
-          50%
-        </button>
-        <button
-          onClick={() => onOpacityChange(0.8)}
-          disabled={!visible}
-          className={`flex-1 px-2 py-1 text-xs ${colors.bg.muted} disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
-          title="Set opacity to 80%"
-        >
-          80%
-        </button>
-        <button
-          onClick={() => onOpacityChange(1.0)}
-          disabled={!visible}
-          className={`flex-1 px-2 py-1 text-xs ${colors.bg.muted} disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
-          title="Set opacity to 100%"
-        >
-          100%
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onOpacityChange(0.3)}
+              disabled={!visible}
+              className={`flex-1 px-2 py-1 text-xs ${colors.bg.muted} disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
+            >
+              30%
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Set opacity to 30%</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onOpacityChange(0.5)}
+              disabled={!visible}
+              className={`flex-1 px-2 py-1 text-xs ${colors.bg.muted} disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
+            >
+              50%
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Set opacity to 50%</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onOpacityChange(0.8)}
+              disabled={!visible}
+              className={`flex-1 px-2 py-1 text-xs ${colors.bg.muted} disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
+            >
+              80%
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Set opacity to 80%</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onOpacityChange(1.0)}
+              disabled={!visible}
+              className={`flex-1 px-2 py-1 text-xs ${colors.bg.muted} disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors ${HOVER_BACKGROUND_EFFECTS.LIGHT}`}
+            >
+              100%
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Set opacity to 100%</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

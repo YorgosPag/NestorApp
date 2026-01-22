@@ -11,7 +11,15 @@
       "unitStatus": "Operational Status",
       "storages": "Storages",
       "total": "Total",
-      "completeness": "Documentation Completeness"
+      "completeness": "Documentation Completeness",
+      "coverage": {
+        "title": "Documentation Completeness",
+        "photos": "Photos",
+        "floorplans": "Floorplans",
+        "documents": "Documents",
+        "missing": "{count} missing",
+        "clickToFilterMissing": "Click to filter units missing {type}"
+      }
     },
     "statusLabels": {
       "sold": "Sold",

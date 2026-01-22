@@ -253,28 +253,32 @@ export const GeoToolbar: React.FC<GeoToolbarProps> = ({
 
     return (
       <div key={action.id} style={toolbarButtonGroup()}>
-        <button
-          type="button"
-          style={toolbarButton({
-            isActive,
-            isDisabled: action.isDisabled || false,
-            orientation
-          })}
-          title={action.tooltip}
-          aria-label={action.label}
-          aria-expanded={action.type === 'dropdown' ? isExpanded : undefined}
-          onClick={() => handleActionClick(action)}
-          onMouseEnter={() => setState(prev => ({ ...prev, hoveredAction: action.id }))}
-          onMouseLeave={() => setState(prev => ({ ...prev, hoveredAction: null }))}
-        >
-          {action.icon && <span className={`icon-${action.icon}`} aria-hidden="true" />}
-          <span className="button-text">{action.label}</span>
-          {action.shortcut && (
-            <kbd className="shortcut" aria-label={`Keyboard shortcut: ${action.shortcut}`}>
-              {action.shortcut}
-            </kbd>
-          )}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              style={toolbarButton({
+                isActive,
+                isDisabled: action.isDisabled || false,
+                orientation
+              })}
+              aria-label={action.label}
+              aria-expanded={action.type === 'dropdown' ? isExpanded : undefined}
+              onClick={() => handleActionClick(action)}
+              onMouseEnter={() => setState(prev => ({ ...prev, hoveredAction: action.id }))}
+              onMouseLeave={() => setState(prev => ({ ...prev, hoveredAction: null }))}
+            >
+              {action.icon && <span className={`icon-${action.icon}`} aria-hidden="true" />}
+              <span className="button-text">{action.label}</span>
+              {action.shortcut && (
+                <kbd className="shortcut" aria-label={`Keyboard shortcut: ${action.shortcut}`}>
+                  {action.shortcut}
+                </kbd>
+              )}
+            </button>
+          </TooltipTrigger>
+          {action.tooltip && <TooltipContent>{action.tooltip}</TooltipContent>}
+        </Tooltip>
 
         {/* Dropdown children */}
         {action.type === 'dropdown' && isExpanded && action.children && (

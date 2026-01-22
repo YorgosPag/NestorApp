@@ -13,7 +13,7 @@ export function ReadOnlyBanner() {
   return (
     <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
       <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.sm, NAVIGATION_ACTIONS.view.color)} />
-      <span className="text-xs text-muted-foreground">{t(NAVIGATION_ACTIONS.view.label, { ns: 'common' })}</span>
+      <span className="text-xs text-muted-foreground">{t(NAVIGATION_ACTIONS.view.label, { ns: 'navigation' })}</span>
       <CommonBadge
         status="property"
         customLabel={t('details.publicView')}

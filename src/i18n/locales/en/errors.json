@@ -50,5 +50,16 @@
     "title": "404",
     "message": "The page you are looking for was not found.",
     "backToLogin": "Back to login"
+  },
+  "global": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred in the application.",
+    "suggestion": "Please try refreshing the page or return to the homepage.",
+    "technicalDetails": "Technical details (for developers)",
+    "supportMessage": "If the problem persists, please contact support."
+  },
+  "actions": {
+    "tryAgain": "Try again",
+    "backToHome": "Back to home"
   }
 }

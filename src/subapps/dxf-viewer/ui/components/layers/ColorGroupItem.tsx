@@ -156,25 +156,33 @@ export function ColorGroupItem({
       >
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1 ${PANEL_LAYOUT.MIN_WIDTH['0']}`}>
           {/* Expand/Collapse Arrow */}
-          <button
-            onClick={handleExpandToggle}
-            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
-            title={isExpanded ? t('layerActions.collapse') : t('layerActions.expand')}
-          >
-            {isExpanded ? (
-              <ChevronDown className={iconSizes.sm} />
-            ) : (
-              <ChevronRight className={iconSizes.sm} />
-            )}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleExpandToggle}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
+              >
+                {isExpanded ? (
+                  <ChevronDown className={iconSizes.sm} />
+                ) : (
+                  <ChevronRight className={iconSizes.sm} />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{isExpanded ? t('layerActions.collapse') : t('layerActions.expand')}</TooltipContent>
+          </Tooltip>
 
           {/* Color Group Color Picker */}
           <div className="relative">
-            <button
-              onClick={handleColorPickerToggle}
-              className={`${iconSizes.sm} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('muted')} ${hoverBorderEffects.BLUE} ${colorBgClass}`}
-              title={t('layerActions.changeColorGroup')}
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleColorPickerToggle}
+                  className={`${iconSizes.sm} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${getStatusBorder('muted')} ${hoverBorderEffects.BLUE} ${colorBgClass}`}
+                />
+              </TooltipTrigger>
+              <TooltipContent>{t('layerActions.changeColorGroup')}</TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Color Group Name */}
@@ -201,37 +209,49 @@ export function ColorGroupItem({
 
         <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
           {/* Visibility Toggle */}
-          <button
-            onClick={handleVisibilityToggle}
-            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
-            title={allVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}
-          >
-            {allVisible ? (
-              <Eye className={iconSizes.sm} />
-            ) : someVisible ? (
-              <Eye className={`${iconSizes.sm} ${PANEL_LAYOUT.INTERACTIVE.DISABLED_OPACITY}`} />
-            ) : (
-              <EyeOff className={iconSizes.sm} />
-            )}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleVisibilityToggle}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
+              >
+                {allVisible ? (
+                  <Eye className={iconSizes.sm} />
+                ) : someVisible ? (
+                  <Eye className={`${iconSizes.sm} ${PANEL_LAYOUT.INTERACTIVE.DISABLED_OPACITY}`} />
+                ) : (
+                  <EyeOff className={iconSizes.sm} />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{allVisible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}</TooltipContent>
+          </Tooltip>
 
           {/* Edit Button */}
-          <button
-            onClick={handleEditClick}
-            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
-            title={t('layerActions.renameGroup')}
-          >
-            <Edit2 className={iconSizes.sm} />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleEditClick}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT}`}
+              >
+                <Edit2 className={iconSizes.sm} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('layerActions.renameGroup')}</TooltipContent>
+          </Tooltip>
 
           {/* Delete Button */}
-          <button
-            onClick={handleDeleteClick}
-            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.error} ${HOVER_TEXT_EFFECTS.RED}`}
-            title={t('layerActions.deleteGroup')}
-          >
-            <Trash2 className={iconSizes.sm} />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleDeleteClick}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.error} ${HOVER_TEXT_EFFECTS.RED}`}
+              >
+                <Trash2 className={iconSizes.sm} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('layerActions.deleteGroup')}</TooltipContent>
+          </Tooltip>
         </nav>
       </header>
 

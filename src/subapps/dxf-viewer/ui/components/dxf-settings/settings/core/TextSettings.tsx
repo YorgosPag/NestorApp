@@ -473,33 +473,41 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
                 {/* Font Size Increase/Decrease Controls */}
                 <div className={`flex ${PANEL_LAYOUT.GAP.XS} items-end`}>
-                  {/* Increase Font Size - Big A with up arrow */}
-                  <button
-                    onClick={increaseFontSize}
-                    className={`${PANEL_LAYOUT.ICON.BUTTON_SM} ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
-                    title={t('settings.text.labels.increaseFontSize')}
-                  >
-                    <div className="flex items-center">
-                      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>A</span>
-                      <svg className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" />
-                      </svg>
-                    </div>
-                  </button>
+                  {/* Increase Font Size - Big A with up arrow + Shadcn Tooltip */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={increaseFontSize}
+                        className={`${PANEL_LAYOUT.ICON.BUTTON_SM} ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
+                      >
+                        <div className="flex items-center">
+                          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.BASE} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>A</span>
+                          <svg className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" />
+                          </svg>
+                        </div>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('settings.text.labels.increaseFontSize')}</TooltipContent>
+                  </Tooltip>
 
-                  {/* Decrease Font Size - Small A with down arrow */}
-                  <button
-                    onClick={decreaseFontSize}
-                    className={`${PANEL_LAYOUT.ICON.BUTTON_SM} ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
-                    title={t('settings.text.labels.decreaseFontSize')}
-                  >
-                    <div className="flex items-center">
-                      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>A</span>
-                      <svg className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </button>
+                  {/* Decrease Font Size - Small A with down arrow + Shadcn Tooltip */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={decreaseFontSize}
+                        className={`${PANEL_LAYOUT.ICON.BUTTON_SM} ${colors.bg.hover} ${quick.button} ${colors.text.primary} ${HOVER_BACKGROUND_EFFECTS.DARKER} ${PANEL_LAYOUT.TRANSITION.COLORS} flex items-center justify-center`}
+                      >
+                        <div className="flex items-center">
+                          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>A</span>
+                          <svg className={`${iconSizes.xs} ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('settings.text.labels.decreaseFontSize')}</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </div>

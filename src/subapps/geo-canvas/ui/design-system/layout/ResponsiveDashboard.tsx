@@ -197,14 +197,18 @@ const Sidebar: React.FC<SidebarProps> = ({
       className={`dashboard-sidebar ${className}`}
       style={canvasUI.positioning.responsive.dashboardSidebar(isCollapsed, width, collapsedWidth)}
     >
-      <button
-        onClick={onToggle}
-        style={canvasUI.positioning.responsive.sidebarToggleButton(isCollapsed)}
-        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        {isCollapsed ? '→' : '←'}
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={onToggle}
+            style={canvasUI.positioning.responsive.sidebarToggleButton(isCollapsed)}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? '→' : '←'}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}</TooltipContent>
+      </Tooltip>
 
       <div style={canvasUI.positioning.responsive.sidebarContent(isCollapsed)}>
         {children}

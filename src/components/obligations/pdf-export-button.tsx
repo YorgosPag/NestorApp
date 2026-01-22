@@ -36,7 +36,21 @@ export default function PDFExportButton({
   });
 
   const { isExporting, exportProgress, handleExport } = usePdfExport(document);
-  const contentSummary = useMemo(() => getContentSummary(document), [document]);
+  const contentSummary = useMemo(() => {
+    const metrics = getContentSummary(document);
+    // Map ContentMetrics to the format expected by ExportOptionsCard
+    const sections = document.sections?.length ?? 0;
+    const articles = document.sections?.reduce((sum, s) => sum + (s.articles?.length ?? 0), 0) ?? 0;
+    const paragraphs = document.sections?.reduce((sum, s) =>
+      sum + (s.articles?.reduce((aSum, a) => aSum + (a.paragraphs?.length ?? 0), 0) ?? 0), 0) ?? 0;
+    return {
+      sections,
+      articles,
+      paragraphs,
+      words: metrics.totalWords,
+      readingTime: parseInt(metrics.readingTime) || Math.ceil(metrics.totalWords / 200)
+    };
+  }, [document]);
 
   if (!showPreview) {
     return (

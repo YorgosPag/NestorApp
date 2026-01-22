@@ -22,8 +22,8 @@ import { UNIFIED_STATUS_FILTER_LABELS, COMMON_FILTER_LABELS, PROJECT_TYPE_LABELS
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectToolbarProps {
-  selectedItems?: number[];
-  onSelectionChange?: (items: number[]) => void;
+  selectedItems?: string[];
+  onSelectionChange?: (items: string[]) => void;
   activeFilters?: string[];
   onFiltersChange?: (filters: string[]) => void;
   onNewProject?: () => void;

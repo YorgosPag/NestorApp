@@ -62,24 +62,28 @@ export interface PropertyListCardProps {
 // 🏢 STATUS TO BADGE VARIANT MAPPING (Centralized)
 // =============================================================================
 
+// 🎯 PR1.2: Remove sales statuses (for-sale/sold/reserved) - Units use operational status
 const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
-  'for-sale': 'info',
   'for-rent': 'warning',
-  sold: 'success',
   rented: 'secondary',
-  reserved: 'destructive',
+  ready: 'success', // Operational status
+  'under-construction': 'info',
+  maintenance: 'destructive',
+  draft: 'default',
 };
 
 // =============================================================================
 // 🏢 STATUS LABELS (i18n keys)
 // =============================================================================
 
+// 🎯 PR1.2: Remove sales statuses - use operational status i18n keys
 const STATUS_LABEL_KEYS: Record<string, string> = {
-  'for-sale': 'status.forSale',
   'for-rent': 'status.forRent',
-  sold: 'status.sold',
   rented: 'status.rented',
-  reserved: 'status.reserved',
+  ready: 'operationalStatus.ready',
+  'under-construction': 'operationalStatus.underConstruction',
+  maintenance: 'operationalStatus.maintenance',
+  draft: 'operationalStatus.draft',
 };
 
 // =============================================================================
@@ -170,15 +174,16 @@ export function PropertyListCard({
     return items;
   }, [property.building, property.floor, property.area, property.price, t]);
 
-  /** Build badges from status */
+  /** Build badges from operational status (no more sales statuses) */
   const badges = useMemo(() => {
-    const status = property.status || 'for-sale';
-    const labelKey = STATUS_LABEL_KEYS[status] || 'status.unknown';
+    // 🎯 PR1.2: Default to 'ready' instead of 'for-sale' (operational status)
+    const status = property.operationalStatus || property.status || 'ready';
+    const labelKey = STATUS_LABEL_KEYS[status] || 'operationalStatus.ready';
     const statusLabel = t(labelKey);
-    const variant = STATUS_BADGE_VARIANTS[status] || 'default';
+    const variant = STATUS_BADGE_VARIANTS[status] || 'success';
 
     return [{ label: statusLabel, variant }];
-  }, [property.status, t]);
+  }, [property.operationalStatus, property.status, t]);
 
   /** Get subtitle - type and project */
   const subtitle = useMemo(() => {

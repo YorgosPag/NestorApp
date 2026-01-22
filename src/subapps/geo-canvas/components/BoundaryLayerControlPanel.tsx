@@ -135,26 +135,34 @@ export function BoundaryLayerControlPanel({
         </div>
 
         {/* Visibility Toggle */}
-        <button
-          onClick={() => handleVisibilityToggle(layer.id, !layer.visible)}
-          className={`p-1 rounded transition-colors ${
-            layer.visible
-              ? `${colors.text.info} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
-              : `${colors.text.muted} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
-          }`}
-          title={layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}
-        >
-          {layer.visible ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => handleVisibilityToggle(layer.id, !layer.visible)}
+              className={`p-1 rounded transition-colors ${
+                layer.visible
+                  ? `${colors.text.info} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+                  : `${colors.text.muted} \${HOVER_BACKGROUND_EFFECTS.LIGHT}`
+              }`}
+            >
+              {layer.visible ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{layer.visible ? 'Απόκρυψη' : 'Εμφάνιση'}</TooltipContent>
+        </Tooltip>
 
         {/* Remove Button */}
-        <button
-          onClick={() => onLayerRemove(layer.id)}
-          className={`p-1 rounded ${colors.text.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ml-1`}
-          title="Αφαίρεση layer"
-        >
-          ×
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onLayerRemove(layer.id)}
+              className={`p-1 rounded ${colors.text.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER} ml-1`}
+            >
+              ×
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Αφαίρεση layer</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Opacity Slider */}
@@ -271,13 +279,17 @@ export function BoundaryLayerControlPanel({
             )}
           </div>
 
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className={`${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
-            title={isExpanded ? 'Σύμπτυξη' : 'Επέκταση'}
-          >
-            {isExpanded ? '−' : '+'}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className={`${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
+              >
+                {isExpanded ? '−' : '+'}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{isExpanded ? 'Σύμπτυξη' : 'Επέκταση'}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

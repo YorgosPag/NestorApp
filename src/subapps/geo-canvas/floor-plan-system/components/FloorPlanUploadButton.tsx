@@ -71,35 +71,39 @@ export function FloorPlanUploadButton({
   const colors = useSemanticColors();
 
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled || loading}
-      className={`
-        px-4 py-2
-        ${colors.bg.info} text-white font-medium text-sm
-        ${quick.card}
-        transition-all duration-200
-        transform active:scale-95
-        disabled:opacity-50 disabled:cursor-not-allowed
-        flex items-center gap-2
-        shadow-lg
-        ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${HOVER_SHADOWS.COLORED.BLUE}
-        ${className}
-      `}
-      title={t('floorPlan.uploadButton.tooltip')}
-    >
-      {loading ? (
-        <>
-          <AnimatedSpinner size="small" className="text-white" />
-          <span>{t('floorPlan.uploadButton.loading')}</span>
-        </>
-      ) : (
-        <>
-          <CraneIcon className={iconSizes.sm} />
-          <span>{t('floorPlan.uploadButton.text')}</span>
-        </>
-      )}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={onClick}
+          disabled={disabled || loading}
+          className={`
+            px-4 py-2
+            ${colors.bg.info} text-white font-medium text-sm
+            ${quick.card}
+            transition-all duration-200
+            transform active:scale-95
+            disabled:opacity-50 disabled:cursor-not-allowed
+            flex items-center gap-2
+            shadow-lg
+            ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${HOVER_SHADOWS.COLORED.BLUE}
+            ${className}
+          `}
+        >
+          {loading ? (
+            <>
+              <AnimatedSpinner size="small" className="text-white" />
+              <span>{t('floorPlan.uploadButton.loading')}</span>
+            </>
+          ) : (
+            <>
+              <CraneIcon className={iconSizes.sm} />
+              <span>{t('floorPlan.uploadButton.text')}</span>
+            </>
+          )}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{t('floorPlan.uploadButton.tooltip')}</TooltipContent>
+    </Tooltip>
   );
 }
 

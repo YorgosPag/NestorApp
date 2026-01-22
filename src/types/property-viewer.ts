@@ -2,6 +2,8 @@
 
 // Re-export PropertyStats from property.ts
 export type { PropertyStats } from './property';
+// Re-export UnitCoverage from unit.ts for property compatibility
+export type { UnitCoverage } from './unit';
 
 /**
  * ✅ DOMAIN SEPARATION: Operational status type (re-imported from unit.ts)
@@ -67,6 +69,13 @@ export interface Property {
      * @deprecated Will be moved to SalesAsset type
      */
     saleDate?: string | null; // Date of sale
+
+    /**
+     * ✅ ENTERPRISE: Documentation coverage tracking
+     * Used for Πληρότητα dashboard card and filtering
+     * @since PR1.2 - Coverage/Completeness implementation
+     */
+    unitCoverage?: UnitCoverage;
   }
   
 export interface StorageUnitStub {
@@ -120,4 +129,16 @@ export interface FilterState {
   priceRange: { min: number | null; max: number | null };
   areaRange: { min: number | null; max: number | null };
   features: string[];
+
+  /** ✅ ENTERPRISE: Coverage filters for "missing X" functionality
+   * @since PR1.2 - Coverage/Completeness card click-to-filter
+   */
+  coverage?: {
+    /** Show only units missing photos */
+    missingPhotos?: boolean;
+    /** Show only units missing floorplans */
+    missingFloorplans?: boolean;
+    /** Show only units missing documents */
+    missingDocuments?: boolean;
+  };
 }

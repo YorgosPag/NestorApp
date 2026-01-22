@@ -20,6 +20,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { BaseModal } from '../../../../../components/shared/BaseModal';
 import { useNotifications } from '@/providers/NotificationProvider';
+// 🏢 ENTERPRISE: Shadcn Tooltip component
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -115,28 +117,36 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
       <header className={`flex flex-col ${PANEL_LAYOUT.GAP.SM}`}>
         <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary}`}>{t('settings.grip.title')}</h3>
         <nav className={`flex ${PANEL_LAYOUT.GAP.SM}`} aria-label={t('settings.grip.actionsAriaLabel')}>
-          {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={resetToDefaults}
-            title={t('settings.grip.resetTitle')}
-            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
-          >
-            <RotateCcw className={iconSizes.xs} />
-            {t('settings.grip.reset')}
-          </Button>
-          {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon */}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleFactoryResetClick}
-            title={t('settings.grip.factoryTitle')}
-            className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
-          >
-            <Factory className={iconSizes.xs} />
-            {t('settings.grip.factory')}
-          </Button>
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="secondary") + Lucide icon + Shadcn Tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={resetToDefaults}
+                className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              >
+                <RotateCcw className={iconSizes.xs} />
+                {t('settings.grip.reset')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('settings.grip.resetTitle')}</TooltipContent>
+          </Tooltip>
+          {/* 🏢 ENTERPRISE: Centralized Button component (variant="destructive") + Lucide icon + Shadcn Tooltip */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleFactoryResetClick}
+                className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}
+              >
+                <Factory className={iconSizes.xs} />
+                {t('settings.grip.factory')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('settings.grip.factoryTitle')}</TooltipContent>
+          </Tooltip>
         </nav>
       </header>
 

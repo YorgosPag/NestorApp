@@ -107,22 +107,25 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
           <span className="text-xs text-gray-400">{t('map.styleSelector.style')}</span>
           <div className="flex space-x-1" role="group" aria-label={t('map.styleSelector.quickSwitcher')}>
             {(['osm', 'satellite', 'terrain', 'dark', 'greece', 'watercolor', 'toner'] as const).map((style) => (
-              <button
-                key={style}
-                onClick={() => onMapStyleChange(style)}
-                className={`${iconSizes.lg} rounded text-xs transition-colors ${
-                  currentMapStyle === style
-                    ? `${colors.bg.info} text-white`
-                    : `${colors.bg.hover} text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-                }`}
-                title={mapStyleNames[style]}
-                aria-pressed={currentMapStyle === style}
-              >
-                {(() => {
-                  const IconComponent = MAP_STYLE_ICONS[style];
-                  return <IconComponent className={iconSizes.xs} />;
-                })()}
-              </button>
+              <Tooltip key={style}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onMapStyleChange(style)}
+                    className={`${iconSizes.lg} rounded text-xs transition-colors ${
+                      currentMapStyle === style
+                        ? `${colors.bg.info} text-white`
+                        : `${colors.bg.hover} text-gray-400 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
+                    }`}
+                    aria-pressed={currentMapStyle === style}
+                  >
+                    {(() => {
+                      const IconComponent = MAP_STYLE_ICONS[style];
+                      return <IconComponent className={iconSizes.xs} />;
+                    })()}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{mapStyleNames[style]}</TooltipContent>
+              </Tooltip>
             ))}
           </div>
         </header>

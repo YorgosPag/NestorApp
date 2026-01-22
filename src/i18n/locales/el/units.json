@@ -11,7 +11,15 @@
       "unitStatus": "Λειτουργική Κατάσταση",
       "storages": "Αποθήκες",
       "total": "Σύνολο",
-      "completeness": "Πληρότητα Τεκμηρίωσης"
+      "completeness": "Πληρότητα Τεκμηρίωσης",
+      "coverage": {
+        "title": "Πληρότητα Τεκμηρίωσης",
+        "photos": "Φωτογραφίες",
+        "floorplans": "Κατόψεις",
+        "documents": "Έγγραφα",
+        "missing": "{count} λείπουν",
+        "clickToFilterMissing": "Κλικ για φιλτράρισμα μονάδων που λείπουν {type}"
+      }
     },
     "statusLabels": {
       "sold": "Πουλημένες",

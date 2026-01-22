@@ -103,7 +103,7 @@ export function TocItem({
               expandedIds={expandedIds}
               onToggle={onToggle}
               activeItemId={activeItemId}
-              onItemClick={onClick}
+              onClick={onClick}
               showPageNumbers={showPageNumbers}
               compact={compact}
             />

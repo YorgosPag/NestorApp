@@ -216,27 +216,35 @@ export function LayerItem({
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-1 ${PANEL_LAYOUT.MIN_WIDTH['0']}`}>
           {/* Expand/Collapse Arrow for entities */}
           {entityCount > 0 && (
-            <button
-              onClick={handleExpandToggle}
-              className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-              title={isLayerExpanded ? t('layerActions.collapseEntities') : t('layerActions.expandEntities')}
-            >
-              {isLayerExpanded ? (
-                <ChevronDown className={iconSizes.xs} />
-              ) : (
-                <ChevronRight className={iconSizes.xs} />
-              )}
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleExpandToggle}
+                  className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                >
+                  {isLayerExpanded ? (
+                    <ChevronDown className={iconSizes.xs} />
+                  ) : (
+                    <ChevronRight className={iconSizes.xs} />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{isLayerExpanded ? t('layerActions.collapseEntities') : t('layerActions.expandEntities')}</TooltipContent>
+            </Tooltip>
           )}
-          
+
           {/* Color Picker */}
           <div className="relative">
-            <button
-              onClick={handleColorPickerToggle}
-              className={`${iconSizes.xs} rounded ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
-              style={layoutUtilities.dxf.colors.backgroundColor(layer.color)}
-              title={t('layerActions.changeColor')}
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleColorPickerToggle}
+                  className={`${iconSizes.xs} rounded ${getStatusBorder('muted')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+                  style={layoutUtilities.dxf.colors.backgroundColor(layer.color)}
+                />
+              </TooltipTrigger>
+              <TooltipContent>{t('layerActions.changeColor')}</TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Layer Name */}
@@ -264,33 +272,45 @@ export function LayerItem({
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           {/* Entity Count */}
           <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{entityCount}</span>
-          
+
           {/* Visibility Toggle */}
-          <button
-            onClick={handleVisibilityToggle}
-            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-            title={layer.visible ? t('layerActions.hide') : t('layerActions.show')}
-          >
-            {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
-          </button>
-          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleVisibilityToggle}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+              >
+                {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{layer.visible ? t('layerActions.hide') : t('layerActions.show')}</TooltipContent>
+          </Tooltip>
+
           {/* Edit Button */}
-          <button
-            onClick={handleEditClick}
-            className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
-            title={t('layerActions.rename')}
-          >
-            <Edit2 className={iconSizes.xs} />
-          </button>
-          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleEditClick}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+              >
+                <Edit2 className={iconSizes.xs} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('layerActions.rename')}</TooltipContent>
+          </Tooltip>
+
           {/* Delete Button */}
-          <button
-            onClick={handleDeleteClick}
-            className={`${PANEL_LAYOUT.SPACING.XS} ${HOVER_TEXT_EFFECTS.RED}`}
-            title={t('layerActions.delete')}
-          >
-            <Trash2 className={iconSizes.xs} />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleDeleteClick}
+                className={`${PANEL_LAYOUT.SPACING.XS} ${HOVER_TEXT_EFFECTS.RED}`}
+              >
+                <Trash2 className={iconSizes.xs} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('layerActions.delete')}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

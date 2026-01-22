@@ -167,7 +167,7 @@ export function SectionCard({
                   isEditing={editingItem === article.id}
                   isActive={activeItemId === article.id}
                   readOnly={readOnly}
-                  hasParagraphs={article.paragraphs && article.paragraphs.length > 0}
+                  hasParagraphs={!!(article.paragraphs && article.paragraphs.length > 0)}
                   dragState={dragState}
                   handlers={handlers}
                   activeItemId={activeItemId}

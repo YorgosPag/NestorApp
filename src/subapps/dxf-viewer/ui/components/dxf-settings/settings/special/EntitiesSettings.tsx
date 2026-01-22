@@ -47,6 +47,8 @@ import { INTERACTIVE_PATTERNS } from '../../../../../../../components/ui/effects
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE: Shadcn Tooltip component
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Default grip settings for LinePreview
 const DEFAULT_GRIP_SETTINGS = {
@@ -399,55 +401,66 @@ export const EntitiesSettings: React.FC<EntitiesSettingsProps> = () => {
 
             if (!hasDropdown) {
               return (
-                <button
-                  key={tool.id}
-                  onClick={() => handleToolClick(tool.id)}
-                  title={`${tool.label} (${tool.hotkey})`}
-                  className={`
-                    ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-                    flex items-center justify-center
-                    ${isSelected
-                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
-                      : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
-                    }
-                  `}
-                >
-                  {React.createElement(tool.icon as React.ComponentType<{ size: number }>, { size: 16 })}
-                </button>
+                <Tooltip key={tool.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => handleToolClick(tool.id)}
+                      className={`
+                        ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                        flex items-center justify-center
+                        ${isSelected
+                          ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
+                          : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
+                        }
+                      `}
+                    >
+                      {React.createElement(tool.icon as React.ComponentType<{ size: number }>, { size: 16 })}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{`${tool.label} (${tool.hotkey})`}</TooltipContent>
+                </Tooltip>
               );
             }
 
             return (
               <div key={tool.id} className="relative flex">
-                <button
-                  onClick={() => handleToolClick(tool.id)}
-                  title={`${tool.label} (${tool.hotkey})`}
-                  className={`
-                    ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} border-r-0 ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-                    flex items-center justify-center
-                    ${isSelected
-                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
-                      : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
-                    }
-                  `}
-                >
-                  {React.createElement(tool.icon as React.ComponentType<{ size: number }>, { size: 14 })}
-                </button>
-                <button
-                  className={`
-                    ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.INDICATOR_MD} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-                    flex items-center justify-center
-                    ${isSelected
-                      ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
-                      : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
-                    }
-                  `}
-                  title={t('entitiesSettings.moreOptions')}
-                >
-                  <svg className={iconSizes.xs} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => handleToolClick(tool.id)}
+                      className={`
+                        ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} border-r-0 ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                        flex items-center justify-center
+                        ${isSelected
+                          ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
+                          : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
+                        }
+                      `}
+                    >
+                      {React.createElement(tool.icon as React.ComponentType<{ size: number }>, { size: 14 })}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{`${tool.label} (${tool.hotkey})`}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      className={`
+                        ${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.INDICATOR_MD} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+                        flex items-center justify-center
+                        ${isSelected
+                          ? `${colors.bg.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${colors.text.inverted} ${getStatusBorder('info')}`
+                          : `${colors.bg.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} ${colors.text.secondary} ${getStatusBorder('default')}`
+                        }
+                      `}
+                    >
+                      <svg className={iconSizes.xs} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('entitiesSettings.moreOptions')}</TooltipContent>
+                </Tooltip>
               </div>
             );
           })}

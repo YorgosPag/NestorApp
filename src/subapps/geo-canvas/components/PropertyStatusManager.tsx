@@ -139,13 +139,17 @@ export function PropertyStatusManager({
             <BuildingIcon className={`${iconSizes.md} ${NAVIGATION_ENTITIES.building.color}`} />
             {t('propertyStatusManager.title')}
           </h3>
-          <button
-            onClick={() => setShowLegend(!showLegend)}
-            className={`p-2 ${colors.text.secondary} ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
-            title="Toggle Legend"
-          >
-            {showLegend ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setShowLegend(!showLegend)}
+                className={`p-2 ${colors.text.secondary} ${HOVER_TEXT_EFFECTS.DARKER} transition-colors`}
+              >
+                {showLegend ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Toggle Legend</TooltipContent>
+          </Tooltip>
         </div>
         <p className={`text-sm ${colors.text.secondary} mt-1`}>
           {t('propertyStatusManager.subtitle')}
@@ -236,17 +240,21 @@ export function PropertyStatusManager({
                   </span>
 
                   {/* Visibility Toggle */}
-                  <button
-                    onClick={() => handleStatusToggle(status)}
-                    className={`p-1 rounded transition-colors ${
-                      isVisible
-                        ? `${colors.text.info} ${HOVER_TEXT_EFFECTS.DARKER}`
-                        : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER}`
-                    }`}
-                    title={isVisible ? t('propertyStatusManager.hide') : t('propertyStatusManager.show')}
-                  >
-                    {isVisible ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => handleStatusToggle(status)}
+                        className={`p-1 rounded transition-colors ${
+                          isVisible
+                            ? `${colors.text.info} ${HOVER_TEXT_EFFECTS.DARKER}`
+                            : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.DARKER}`
+                        }`}
+                      >
+                        {isVisible ? <Eye className={iconSizes.sm} /> : <EyeOff className={iconSizes.sm} />}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{isVisible ? t('propertyStatusManager.hide') : t('propertyStatusManager.show')}</TooltipContent>
+                  </Tooltip>
                 </div>
               );
             })}

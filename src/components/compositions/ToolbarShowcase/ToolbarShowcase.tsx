@@ -17,9 +17,9 @@ export function ToolbarShowcase() {
     activeFilters: [] as string[]
   });
 
-  // 🏢 ENTERPRISE: ProjectToolbar uses number[] for IDs
+  // 🏢 ENTERPRISE: ProjectToolbar uses string[] for IDs
   const [projectState, setProjectState] = useState({
-    selectedItems: [] as number[],
+    selectedItems: [] as string[],
     searchTerm: '',
     activeFilters: [] as string[]
   });
@@ -100,7 +100,7 @@ export function ToolbarShowcase() {
               <div>Filters: {projectState.activeFilters.join(', ') || 'None'}</div>
               <button 
                 className="mt-2 px-3 py-1 bg-primary text-primary-foreground rounded text-xs"
-                onClick={() => setProjectState(prev => ({ ...prev, selectedItems: [1, 2] }))}
+                onClick={() => setProjectState(prev => ({ ...prev, selectedItems: ['1', '2'] }))}
               >
                 Simulate Selection (2 items)
               </button>

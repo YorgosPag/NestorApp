@@ -257,6 +257,24 @@ export function useUnitsViewerState() {
     // 🎯 DOMAIN SEPARATION: No "sold" storage - that's sales data!
     totalStorageUnits: 0,
     availableStorageUnits: 0, // Storage units with operationalStatus='ready'
+
+    // ✅ ENTERPRISE: Coverage stats for Πληρότητα card (PR1.2)
+    // ⚠️ BACKWARD COMPATIBILITY: Handle missing unitCoverage until backfill completes
+    coverage: (() => {
+      const totalUnits = safeProperties.length;
+      const unitsWithPhotos = safeProperties.filter(p => p.unitCoverage?.hasPhotos === true).length;
+      const unitsWithFloorplans = safeProperties.filter(p => p.unitCoverage?.hasFloorplans === true).length;
+      const unitsWithDocuments = safeProperties.filter(p => p.unitCoverage?.hasDocuments === true).length;
+      return {
+        totalUnits,
+        unitsWithPhotos,
+        unitsWithFloorplans,
+        unitsWithDocuments,
+        photosPercentage: totalUnits > 0 ? Math.round((unitsWithPhotos / totalUnits) * 100) : 0,
+        floorplansPercentage: totalUnits > 0 ? Math.round((unitsWithFloorplans / totalUnits) * 100) : 0,
+        documentsPercentage: totalUnits > 0 ? Math.round((unitsWithDocuments / totalUnits) * 100) : 0,
+      };
+    })(),
   }), [safeProperties]);
 
   // 🏢 ENTERPRISE: Flexible filter handler compatible with AdvancedFiltersPanel

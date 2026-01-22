@@ -104,7 +104,10 @@ export type UnitStatus =
   | 'available'
   | 'occupied'
   | 'maintenance'
-  | 'reserved';
+  | 'reserved'
+  // 🏢 ENTERPRISE: Added parking-compatible statuses
+  | 'sold'
+  | 'owner';
 
 export type NavigationStatus =
   | 'no_projects'

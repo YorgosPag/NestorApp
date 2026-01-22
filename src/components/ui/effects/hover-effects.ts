@@ -73,6 +73,9 @@ export const HOVER_SHADOWS = {
   /** Combined shadow with lift */
   LIFTED: 'hover:shadow-lg hover:-translate-y-1',
 
+  /** ✅ ENTERPRISE FIX: MEDIUM - for UnitNode.tsx (between SUBTLE and ENHANCED) */
+  MEDIUM: 'hover:shadow-md hover:shadow-gray-400/20',
+
   /** Sidebar accent border shadow */
   SIDEBAR_ACCENT: 'hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]'
 } as const;
@@ -548,6 +551,15 @@ export const HOVER_BACKGROUND_EFFECTS = {
 
   /** ✅ ENTERPRISE FIX: Red subtle background for ToolbarMainActions */
   RED_SUBTLE: 'hover:bg-red-50',
+
+  /** ✅ ENTERPRISE FIX: BLUE - for NavigationTree.tsx */
+  BLUE: 'hover:bg-blue-600/90',
+
+  /** ✅ ENTERPRISE FIX: ACCENT_SUBTLE - for NotificationDrawer */
+  ACCENT_SUBTLE: 'hover:bg-accent/30',
+
+  /** ✅ ENTERPRISE FIX: ACCENT_DARKER - for NotificationDrawer enterprise */
+  ACCENT_DARKER: 'hover:bg-accent/70',
 } as const;
 
 /**
@@ -609,6 +621,9 @@ export const GRADIENT_HOVER_EFFECTS = {
   GREEN: 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700',
   GRAY: 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700',
   RED: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
+
+  /** ✅ ENTERPRISE FIX: BLUE_PURPLE_DEEPER - for ProjectDetailsHeader.tsx */
+  BLUE_PURPLE_DEEPER: 'bg-gradient-to-r from-blue-700 to-purple-700 hover:from-blue-800 hover:to-purple-800',
 } as const;
 
 /**

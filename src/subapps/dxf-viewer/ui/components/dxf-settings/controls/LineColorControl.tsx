@@ -17,6 +17,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
+// 🏢 ENTERPRISE: Shadcn Tooltip component
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface LineColorControlProps {
   value: string;
@@ -106,19 +108,22 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                 <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>AutoCAD Colors</p>
                 <div className={`grid ${PANEL_LAYOUT.GRID.COLS_5} ${PANEL_LAYOUT.GAP.XS}`}>
                   {presetColorClasses.map(({ color, bgClass }) => (
-                    <button
-                      key={color}
-                      onClick={() => handlePresetClick(color)}
-                      className={`
-                        ${iconSizes.xl2} rounded border ${PANEL_LAYOUT.TRANSITION.ALL}
-                        ${tempColor === color
-                          ? `${getStatusBorder('info').replace('border ', '')} ${PANEL_LAYOUT.TRANSFORM.SCALE_110}`
-                          : `${getStatusBorder('muted').replace('border ', '')} ${hoverBorderEffects.GRAY}`
-                        }
-                        ${bgClass}
-                      `}
-                      title={color}
-                    />
+                    <Tooltip key={color}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handlePresetClick(color)}
+                          className={`
+                            ${iconSizes.xl2} rounded border ${PANEL_LAYOUT.TRANSITION.ALL}
+                            ${tempColor === color
+                              ? `${getStatusBorder('info').replace('border ', '')} ${PANEL_LAYOUT.TRANSFORM.SCALE_110}`
+                              : `${getStatusBorder('muted').replace('border ', '')} ${hoverBorderEffects.GRAY}`
+                            }
+                            ${bgClass}
+                          `}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>{color}</TooltipContent>
+                    </Tooltip>
                   ))}
                 </div>
               </div>

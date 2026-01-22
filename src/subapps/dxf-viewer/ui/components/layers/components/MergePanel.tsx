@@ -46,14 +46,18 @@ export const MergePanel = ({
           <span className={PANEL_TOKENS.MERGE_PANEL.SECTION_TEXT.BASE}>
             {t('mergePanel.entitiesSelected', { count: selectedEntitiesForMerge.size })}
           </span>
-          <button
-            onClick={onMergeEntities}
-            className={PANEL_TOKENS.MERGE_PANEL.ACTION_BUTTON.BASE}
-            title={t('layerActions.mergeEntities')}
-          >
-            <GitMerge className={iconSizes.xs} />
-            {t('mergePanel.mergeEntitiesButton')}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onMergeEntities}
+                className={PANEL_TOKENS.MERGE_PANEL.ACTION_BUTTON.BASE}
+              >
+                <GitMerge className={iconSizes.xs} />
+                {t('mergePanel.mergeEntitiesButton')}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('layerActions.mergeEntities')}</TooltipContent>
+          </Tooltip>
         </div>
       )}
 
@@ -62,14 +66,18 @@ export const MergePanel = ({
           <span className={PANEL_TOKENS.MERGE_PANEL.SECTION_TEXT.BASE}>
             {t('mergePanel.layersSelected', { count: selectedLayersForMerge.size })}
           </span>
-          <button
-            onClick={onMergeLayers}
-            className={PANEL_TOKENS.MERGE_PANEL.ACTION_BUTTON.BASE}
-            title={t('layerActions.mergeLayers')}
-          >
-            <GitMerge className={iconSizes.xs} />
-            {t('mergePanel.mergeLayersButton')}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onMergeLayers}
+                className={PANEL_TOKENS.MERGE_PANEL.ACTION_BUTTON.BASE}
+              >
+                <GitMerge className={iconSizes.xs} />
+                {t('mergePanel.mergeLayersButton')}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('layerActions.mergeLayers')}</TooltipContent>
+          </Tooltip>
         </div>
       )}
 
@@ -78,14 +86,18 @@ export const MergePanel = ({
           <span className={PANEL_TOKENS.MERGE_PANEL.SECTION_TEXT.BASE}>
             {t('mergePanel.colorGroupsSelected', { count: selectedColorGroupsForMerge.size })}
           </span>
-          <button
-            onClick={onMergeColorGroups}
-            className={PANEL_TOKENS.MERGE_PANEL.ACTION_BUTTON.BASE}
-            title={t('layerActions.mergeColorGroups')}
-          >
-            <GitMerge className={iconSizes.xs} />
-            {t('mergePanel.mergeColorGroupsButton')}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onMergeColorGroups}
+                className={PANEL_TOKENS.MERGE_PANEL.ACTION_BUTTON.BASE}
+              >
+                <GitMerge className={iconSizes.xs} />
+                {t('mergePanel.mergeColorGroupsButton')}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('layerActions.mergeColorGroups')}</TooltipContent>
+          </Tooltip>
         </div>
       )}
 

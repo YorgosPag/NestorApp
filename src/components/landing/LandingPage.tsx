@@ -392,8 +392,8 @@ export function LandingPage() {
             </Link>
             <Link
               href="/properties?view=floorplan"
-              className={`px-8 py-3 bg-transparent ${getStatusBorder('secondary')} ${colors.text.foreground} font-semibold ${quick.card} flex items-center justify-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_OUTLINE}`}
-            >
+              className={`px-8 py-3 bg-transparent ${getStatusBorder('default')} ${colors.text.foreground} font-semibold ${quick.card} flex items-center justify-center gap-2 ${INTERACTIVE_PATTERNS.BUTTON_OUTLINE}`}
+            > {/* 🏢 ENTERPRISE: Changed 'secondary' to 'default' - secondary not available in getStatusBorder */}
               <MapPin className={iconSizes.md} />
               {t('cta.viewFloorplan')}
             </Link>

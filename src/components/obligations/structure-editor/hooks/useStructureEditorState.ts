@@ -174,13 +174,15 @@ export function useStructureEditorState({
       const [draggedSection] = newSections.splice(dragIndex, 1);
       newSections.splice(targetIndex, 0, draggedSection);
       onSectionsChange(renumberSections(newSections));
-    } else if (dragType === 'article' && targetType === 'article' && dragParentId === targetParentId) {
-      const section = sections.find(s => s.id === dragParentId);
+    } else if (dragType === 'article' && targetType === 'article' && dragParentId === targetParentId && dragParentId) {
+      // 🏢 ENTERPRISE: Type guard already verified dragParentId is string via && dragParentId
+      const parentId = dragParentId; // TypeScript knows this is string here
+      const section = sections.find(s => s.id === parentId);
       if (!section || !section.articles) return;
       const newArticles = [...section.articles];
       const [draggedArticle] = newArticles.splice(dragIndex, 1);
       newArticles.splice(targetIndex, 0, draggedArticle);
-      updateSection(dragParentId, { articles: renumberArticles(newArticles) });
+      updateSection(parentId, { articles: renumberArticles(newArticles) });
     }
     setDragState(null);
   }, [readOnly, dragState, sections, onSectionsChange, updateSection]);

@@ -18,6 +18,7 @@ import { useNavigation } from '@/components/navigation/core/NavigationContext';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { StatusCard } from '@/components/property-management/dashboard/StatusCard';
 import { DetailsCard } from '@/components/property-management/dashboard/DetailsCard';
+import { CoverageCard } from '@/components/property-management/dashboard/CoverageCard';
 import { AdvancedFiltersPanel, unitFiltersConfig, defaultUnitFilters, type UnitFilterState } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { UnitsSidebar } from '@/components/units/UnitsSidebar';
@@ -203,6 +204,28 @@ function UnitsPageContent() {
     }
   ];
 
+  // ✅ ENTERPRISE: Coverage filter handlers for CoverageCard click-to-filter
+  const handleMissingPhotosClick = useCallback(() => {
+    handleFiltersChange({
+      ...filters,
+      coverage: { missingPhotos: true }
+    });
+  }, [filters, handleFiltersChange]);
+
+  const handleMissingFloorplansClick = useCallback(() => {
+    handleFiltersChange({
+      ...filters,
+      coverage: { missingFloorplans: true }
+    });
+  }, [filters, handleFiltersChange]);
+
+  const handleMissingDocumentsClick = useCallback(() => {
+    handleFiltersChange({
+      ...filters,
+      coverage: { missingDocuments: true }
+    });
+  }, [filters, handleFiltersChange]);
+
   // 🔥 NEW: Handle dashboard card clicks για filtering
   // 🎯 DOMAIN SEPARATION: Units = Physical Truth - Operational status filters only!
   const handleCardClick = (stat: DashboardStat, index: number) => {
@@ -317,6 +340,13 @@ function UnitsPageContent() {
                 <StatusCard statsByStatus={dashboardStats.propertiesByStatus} getStatusLabel={getStatusLabel} />
                 <DetailsCard title={t('page.dashboard.unitTypes')} icon={Building2} data={dashboardStats.propertiesByType} labelFormatter={getTypeLabel} />
                 <DetailsCard title={t('page.dashboard.floorDistribution')} icon={MapPin} data={dashboardStats.propertiesByFloor} isFloorData={true} />
+                {/* ✅ ENTERPRISE: Coverage card for documentation completeness (PR1.2) */}
+                <CoverageCard
+                  coverage={dashboardStats.coverage}
+                  onMissingPhotosClick={handleMissingPhotosClick}
+                  onMissingFloorplansClick={handleMissingFloorplansClick}
+                  onMissingDocumentsClick={handleMissingDocumentsClick}
+                />
                 {/* 🎯 DOMAIN SEPARATION: Storages card removed (separate entity, not Unit subtype) */}
                 {/* Storage units have their own module at /spaces/storage */}
               </>

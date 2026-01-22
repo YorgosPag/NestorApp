@@ -25,7 +25,7 @@ export function PrintButton({ document, className }: PrintButtonProps) {
         includeLogo: false,
       });
 
-      const blob = new Blob([pdfData], { type: "application/pdf" });
+      const blob = new Blob([pdfData as BlobPart], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
       if (typeof window !== "undefined") {

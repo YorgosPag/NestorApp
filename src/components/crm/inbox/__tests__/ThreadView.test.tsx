@@ -17,7 +17,7 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, jest, beforeEach, beforeAll } from '@jest/globals';
+// 🏢 ENTERPRISE: Use global Jest types (from @types/jest) instead of @jest/globals
 import { ThreadView } from '../ThreadView';
 import type { MessageListItem, ConversationListItem } from '@/hooks/inbox/useInboxApi';
 import { MESSAGE_DIRECTION, DELIVERY_STATUS } from '@/types/conversations';

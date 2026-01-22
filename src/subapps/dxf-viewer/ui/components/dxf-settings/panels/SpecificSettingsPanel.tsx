@@ -7,6 +7,8 @@ import { INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '@/components/ui/effe
 import { PANEL_TOKENS, PanelTokenUtils, PANEL_LAYOUT } from '../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE: Shadcn Tooltip component
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 /**
  * ╔════════════════════════════════════════════════════════════════════════════╗
@@ -197,26 +199,29 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
 
   return (
     <div className={className}>
-      {/* Category Navigation - Icon Only - 🏢 ENTERPRISE: Centralized spacing */}
+      {/* Category Navigation - Icon Only - 🏢 ENTERPRISE: Centralized spacing + Shadcn Tooltip */}
       <nav className={`flex ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.SPACING.SM}`}>
         {categories.map((category) => (
-          <button
-            key={category.id}
-            onClick={() => setActiveCategory(category.id)}
-            disabled={category.comingSoon}
-            title={category.title}
-            className={PanelTokenUtils.getSpecificCategoryButtonClasses(
-              activeCategory === category.id,
-              category.comingSoon
-            )}
-          >
-            {category.icon}
-            {category.comingSoon && (
-              <span className={PANEL_TOKENS.SPECIFIC_SETTINGS.COMING_SOON_BADGE.BASE}>
-                !
-              </span>
-            )}
-          </button>
+          <Tooltip key={category.id}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setActiveCategory(category.id)}
+                disabled={category.comingSoon}
+                className={PanelTokenUtils.getSpecificCategoryButtonClasses(
+                  activeCategory === category.id,
+                  category.comingSoon
+                )}
+              >
+                {category.icon}
+                {category.comingSoon && (
+                  <span className={PANEL_TOKENS.SPECIFIC_SETTINGS.COMING_SOON_BADGE.BASE}>
+                    !
+                  </span>
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{category.title}</TooltipContent>
+          </Tooltip>
         ))}
       </nav>
 

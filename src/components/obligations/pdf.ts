@@ -57,14 +57,14 @@ export const PDFHelpers = {
   /** Γρήγορη εξαγωγή PDF με τα default options */
   quickExport: async (document: _Doc) => {
     const pdfData = await _exportToPDF(document, mergePdfOptions());
-    const filename = _genName(document, 'pdf');
+    const filename = _genName(document.title || 'obligation', 'pdf');
     _downloadPDF(pdfData, filename);
   },
 
   /** Εξαγωγή PDF με custom options (γίνεται merge με defaults) */
   customExport: async (document: _Doc, options: PDFExportOptions) => {
     const pdfData = await _exportToPDF(document, mergePdfOptions(options));
-    const filename = _genName(document, 'pdf');
+    const filename = _genName(document.title || 'obligation', 'pdf');
     _downloadPDF(pdfData, filename);
   },
 
@@ -89,14 +89,14 @@ export const PDFHelpers = {
 export const PDFValidationHelpers = {
   /** Ελέγχει αν το έγγραφο περνάει το validation των υποχρεωτικών πεδίων/δομής */
   isReadyForExport: (document: _Doc): boolean => {
-    const errors = _validate(document);
-    return errors.length === 0;
+    const validation = _validate(document);
+    return validation.isValid;
   },
 
   /** Αναφορά ετοιμότητας για εξαγωγή PDF (errors, warnings, summary) */
   getExportReadiness: (document: _Doc) => {
-    const errors = _validate(document);
-    const warnings: string[] = [];
+    const validation = _validate(document);
+    const warnings: string[] = [...validation.warnings];
 
     if (document.sections.length === 0) {
       warnings.push('Το έγγραφο δεν έχει ενότητες');
@@ -107,10 +107,10 @@ export const PDFValidationHelpers = {
 
     const summary = _getSummary(document);
     const minCount = DefaultObligationConfig.validation.minWordCount ?? 100;
-    if (summary.words < minCount) {
+    if (summary.totalWords < minCount) {
       warnings.push(`Το έγγραφο είναι σύντομο (< ${minCount} λέξεις)`);
     }
 
-    return { isReady: errors.length === 0, errors, warnings, summary };
+    return { isReady: validation.isValid, errors: validation.errors, warnings, summary };
   },
 };

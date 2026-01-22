@@ -1,7 +1,7 @@
 // CompactToolbar Types - Generic interfaces for all list types
 
-// 🏢 ENTERPRISE: Unified sort fields for all entity types including communications
-export type SortField = 'name' | 'progress' | 'value' | 'area' | 'date' | 'status' | 'type' | 'priority' | 'channel';
+// 🏢 ENTERPRISE: Unified sort fields for all entity types including communications, units, parking
+export type SortField = 'name' | 'progress' | 'value' | 'area' | 'date' | 'status' | 'type' | 'priority' | 'channel' | 'rooms' | 'number' | 'location';
 
 export interface CompactToolbarConfig {
   // Search configuration

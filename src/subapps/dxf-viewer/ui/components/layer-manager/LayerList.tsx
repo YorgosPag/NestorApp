@@ -57,21 +57,29 @@ export function LayerList({ layers, onToggleVisibility, onLayerAction }: LayerLi
             </div>
 
             <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-              <button
-                onClick={() => onToggleVisibility?.(layer.id)}
-                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-                title={layer.visible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}
-              >
-                {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onToggleVisibility?.(layer.id)}
+                    className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+                  >
+                    {layer.visible ? <Eye className={iconSizes.xs} /> : <EyeOff className={iconSizes.xs} />}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{layer.visible ? t('layerManager.actions.hide') : t('layerManager.actions.show')}</TooltipContent>
+              </Tooltip>
 
-              <button
-                onClick={() => onLayerAction?.(layer.id, 'menu')}
-                className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
-                title={t('layerManager.labels.moreOptions')}
-              >
-                <MoreVertical className={iconSizes.xs} />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onLayerAction?.(layer.id, 'menu')}
+                    className={`${PANEL_LAYOUT.SPACING.XS} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HIGHLIGHT} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+                  >
+                    <MoreVertical className={iconSizes.xs} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{t('layerManager.labels.moreOptions')}</TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </div>

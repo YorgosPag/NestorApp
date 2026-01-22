@@ -43,7 +43,12 @@ export class NavigationApiService {
     const companies = await getAllActiveCompanies();
 
     // 🚀 PERFORMANCE: Remove duplicates by id AND by companyName
-    const uniqueCompanies = companies.reduce((unique, company) => {
+    // 🏢 ENTERPRISE: Filter companies with valid id (required by NavigationCompany)
+    const validCompanies = companies.filter((c): c is typeof c & { id: string } =>
+      typeof c.id === 'string' && c.id.length > 0
+    );
+
+    const uniqueCompanies = validCompanies.reduce((unique, company) => {
       const duplicateById = unique.find(c => c.id === company.id);
       const duplicateByName = unique.find(c => c.companyName === company.companyName);
 
@@ -51,14 +56,22 @@ export class NavigationApiService {
         unique.push(company);
       }
       return unique;
-    }, [] as typeof companies);
+    }, [] as typeof validCompanies);
+
+    // 🏢 ENTERPRISE: Transform to NavigationCompany type
+    const navigationCompanies: NavigationCompany[] = uniqueCompanies.map(c => ({
+      id: c.id,
+      companyName: c.companyName,
+      industry: c.industry,
+      vatNumber: c.vatNumber
+    }));
 
     // 💾 Update cache με fresh data
-    cache.data = uniqueCompanies;
+    cache.data = navigationCompanies;
     cache.timestamp = now;
 
-    // console.log(`🏢 CACHED: Returning ${uniqueCompanies.length} unique companies`);
-    return uniqueCompanies;
+    // console.log(`🏢 CACHED: Returning ${navigationCompanies.length} unique companies`);
+    return navigationCompanies;
   }
 
   /**
@@ -196,15 +209,22 @@ export class NavigationApiService {
           id: string;
           name?: string;
           type?: string;
+          floor?: number;
+          area?: number;
+          status?: string;
         }>;
       }
 
       const unitsResult = await apiClient.get<UnitsApiResponse>(`/api/units?floorId=${floorId}&buildingId=${buildingId}`);
 
-      return (unitsResult?.units || []).map((unit) => ({
+      // 🏢 ENTERPRISE: Map to NavigationUnit with all required fields
+      return (unitsResult?.units || []).map((unit): NavigationUnit => ({
         id: unit.id,
         name: unit.name || 'Unnamed Unit',
-        type: unit.type || 'unknown'
+        type: (unit.type as NavigationUnit['type']) || 'apartment',
+        floor: 0, // Default floor - actual value loaded on-demand
+        area: 0,  // Default area - actual value loaded on-demand
+        status: 'forSale' // Default status - actual value loaded on-demand
       }));
 
     } catch (error) {
@@ -224,15 +244,22 @@ export class NavigationApiService {
           id: string;
           name?: string;
           type?: string;
+          floor?: number;
+          area?: number;
+          status?: string;
         }>;
       }
 
       const unitsResult = await apiClient.get<UnitsApiResponse>(`/api/units?buildingId=${buildingId}`);
 
-      return (unitsResult?.units || []).map((unit) => ({
+      // 🏢 ENTERPRISE: Map to NavigationUnit with all required fields
+      return (unitsResult?.units || []).map((unit): NavigationUnit => ({
         id: unit.id,
         name: unit.name || 'Unnamed Unit',
-        type: unit.type || 'unknown'
+        type: (unit.type as NavigationUnit['type']) || 'apartment',
+        floor: unit.floor ?? 0,
+        area: unit.area ?? 0,
+        status: (unit.status as NavigationUnit['status']) || 'forSale'
       }));
 
     } catch (error) {
