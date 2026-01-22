@@ -931,8 +931,8 @@ export class AdministrativeBoundaryService {
       const coordinates = geometry.coordinates[0]; // First ring
       if (coordinates.length === 0) return null;
 
-      const lngs = coordinates.map(coord => coord[0]);
-      const lats = coordinates.map(coord => coord[1]);
+      const lngs = coordinates.map((coord: number[]) => coord[0]);
+      const lats = coordinates.map((coord: number[]) => coord[1]);
 
       const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
       const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
@@ -1181,7 +1181,7 @@ export class AdministrativeBoundaryService {
         [GreekAdminLevel.MUNICIPAL_UNIT]: 2,
         [GreekAdminLevel.MUNICIPALITY]: 1,
         [GreekAdminLevel.REGION]: 0
-      };
+      } as Record<GreekAdminLevel, number>;
 
       const aPriority = adminLevelPriority[a.adminLevel] || 0;
       const bPriority = adminLevelPriority[b.adminLevel] || 0;

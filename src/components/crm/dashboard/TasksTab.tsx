@@ -334,7 +334,7 @@ export function TasksTab() {
                       </div>
                       <div className={`space-y-1 text-sm ${colors.text.muted}`}>
                         <div className="flex items-center gap-4">
-                          <span className={`flex items-center gap-1 ${getDateColor(task.dueDate, task.status, colors)}`}><Clock className={iconSizes.xs} />{formatDueDate(task.dueDate)}</span>
+                          <span className={`flex items-center gap-1 ${getDateColor(task.dueDate ?? undefined, task.status, colors)}`}><Clock className={iconSizes.xs} />{formatDueDate(task.dueDate ?? undefined)}</span>
                           {leadName && <span className="flex items-center gap-1"><User className={iconSizes.xs} />{leadName}</span>}
                           {meta.location && <span className="flex items-center gap-1"><MapPin className={iconSizes.xs} />{meta.location}</span>}
                         </div>

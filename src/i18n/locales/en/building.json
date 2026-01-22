@@ -98,6 +98,7 @@
   },
   "filters": {
     "title": "Building Filters",
+    "unitsTitle": "Units Filters",
     "tooltip": "Filters and View",
     "clearAll": "Clear Filters",
     "resetFilters": "Reset Filters",

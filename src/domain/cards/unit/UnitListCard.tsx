@@ -24,7 +24,7 @@ import { ListCard } from '@/design-system';
 import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
-import { formatCurrency, formatNumber } from '@/lib/intl-utils';
+import { formatNumber } from '@/lib/intl-utils';
 
 // 🏢 DOMAIN TYPES
 import type { Property } from '@/types/property-viewer';
@@ -57,27 +57,37 @@ export interface UnitListCardProps {
 }
 
 // =============================================================================
-// 🏢 STATUS TO BADGE VARIANT MAPPING (Centralized)
+// 🏢 OPERATIONAL STATUS TO BADGE VARIANT MAPPING (Physical Truth)
 // =============================================================================
 
-const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
-  'for-sale': 'info',
-  'for-rent': 'warning',
-  sold: 'success',
-  rented: 'secondary',
-  reserved: 'warning',
+/**
+ * ✅ DOMAIN SEPARATION: Operational status mapping (construction/readiness)
+ * Removed sales status mapping (for-sale/sold/reserved) per ChatGPT guidance
+ *
+ * @migration PR1 - Units List Cleanup
+ */
+const OPERATIONAL_STATUS_VARIANTS: Record<string, ListCardBadgeVariant> = {
+  'ready': 'success',              // Έτοιμο
+  'under-construction': 'warning', // υπό ολοκλήρωση
+  'inspection': 'info',            // σε επιθεώρηση
+  'maintenance': 'secondary',      // υπό συντήρηση
+  'draft': 'default',              // πρόχειρο
 };
 
 // =============================================================================
-// 🏢 STATUS LABELS (i18n keys)
+// 🏢 OPERATIONAL STATUS LABELS (i18n keys)
 // =============================================================================
 
-const STATUS_LABEL_KEYS: Record<string, string> = {
-  'for-sale': 'status.forSale',
-  'for-rent': 'status.forRent',
-  sold: 'status.sold',
-  rented: 'status.rented',
-  reserved: 'status.reserved',
+/**
+ * ✅ DOMAIN SEPARATION: Operational status i18n keys
+ * Removed sales status keys per domain separation
+ */
+const OPERATIONAL_STATUS_LABEL_KEYS: Record<string, string> = {
+  'ready': 'operationalStatus.ready',
+  'under-construction': 'operationalStatus.underConstruction',
+  'inspection': 'operationalStatus.inspection',
+  'maintenance': 'operationalStatus.maintenance',
+  'draft': 'operationalStatus.draft',
 };
 
 // =============================================================================
@@ -130,32 +140,24 @@ export function UnitListCard({
       });
     }
 
-    // Price - 🏢 ENTERPRISE: Using centralized price icon/color
-    if (unit.price && unit.price > 0) {
-      items.push({
-        icon: NAVIGATION_ENTITIES.price.icon,
-        iconColor: NAVIGATION_ENTITIES.price.color,
-        label: t('card.stats.price'),
-        value: formatCurrency(unit.price, 'EUR', {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }),
-        valueColor: NAVIGATION_ENTITIES.price.color,
-      });
-    }
+    // ❌ REMOVED: Price display (commercial data - domain separation)
+    // Price now belongs to SalesAsset type in /sales module
+    // Migration: PR1 - Units List Cleanup
 
     return items;
-  }, [unit.area, unit.price, t]);
+  }, [unit.area, t]);
 
-  /** Build badges from status */
+  /** Build badges from operational status */
   const badges = useMemo(() => {
-    const status = unit.status || 'for-sale';
-    const labelKey = STATUS_LABEL_KEYS[status] || 'status.unknown';
+    // ✅ DOMAIN SEPARATION: Use operationalStatus (physical state)
+    // Fallback to 'ready' if not set (most units are construction-complete)
+    const opStatus = unit.operationalStatus || 'ready';
+    const labelKey = OPERATIONAL_STATUS_LABEL_KEYS[opStatus] || 'operationalStatus.ready';
     const statusLabel = t(labelKey);
-    const variant = STATUS_BADGE_VARIANTS[status] || 'default';
+    const variant = OPERATIONAL_STATUS_VARIANTS[opStatus] || 'success';
 
     return [{ label: statusLabel, variant }];
-  }, [unit.status, t]);
+  }, [unit.operationalStatus, t]);
 
   // ==========================================================================
   // 🏢 HANDLERS

@@ -58,20 +58,14 @@ export function PropertyLayerDetails({
           step={10}
         />
       </div>
-      {(property.price || property.area) && (
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          {property.price && (
-            <div>
-              <span className="text-muted-foreground">{t('layerDetails.price')}</span>
-              <div className="font-medium text-green-600">{property.price.toLocaleString('el-GR')}€</div>
-            </div>
-          )}
-          {property.area && (
-            <div>
-              <span className="text-muted-foreground">{t('layerDetails.area')}</span>
-              <div className="font-medium">{property.area}{t('layerDetails.sqm')}</div>
-            </div>
-          )}
+      {/* ❌ REMOVED: Price display (commercial data - domain separation) */}
+      {/* Migration: PR1.1 - Units Detail Cleanup - Price moved to /sales */}
+      {property.area && (
+        <div className="text-xs">
+          <div>
+            <span className="text-muted-foreground">{t('layerDetails.area')}</span>
+            <div className="font-medium">{property.area}{t('layerDetails.sqm')}</div>
+          </div>
         </div>
       )}
       <div className="text-xs text-muted-foreground">{t('layerDetails.nodes')} {property.vertices.length}</div>

@@ -244,8 +244,8 @@ export class QuadTreeSpatialIndex implements ISpatialIndex {
     };
   }
 
-  // 🏢 ENTERPRISE: Helper to count total nodes
-  private getNodeCount(): number {
+  // 🏢 ENTERPRISE: Public method to count total nodes (required by ISpatialIndex)
+  getNodeCount(): number {
     let count = 0;
     const countNodes = (node: QuadTreeNode): void => {
       count++;

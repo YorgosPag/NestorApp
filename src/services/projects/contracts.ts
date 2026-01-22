@@ -27,15 +27,17 @@ export type ProjectParking = Pick<ParkingSpot, 'id' | 'code' | 'type' | 'status'
  * Architecture decision (from BuildingSpacesTabs):
  * ❌ NO: Parking/Storage as "attachments" or children of Units
  * ✅ YES: Parking/Storage/Units as equal parallel categories in Building context
+ *
+ * NOTE: Using intersection type (&) instead of extends to avoid conflict with Building's index signature
  */
-export interface ProjectBuilding extends Building {
+export type ProjectBuilding = Building & {
   /** Units in this building */
   units: ProjectUnit[];
   /** Storage areas in this building */
   storages: ProjectStorage[];
   /** Parking spots in this building */
   parkingSpots: ProjectParking[];
-}
+};
 
 /**
  * 🏢 ENTERPRISE: Complete project structure with hierarchical data

@@ -31,6 +31,13 @@
       "storage": "Αποθήκες"
     }
   },
+  "operationalStatus": {
+    "ready": "Έτοιμο",
+    "underConstruction": "Υπό ολοκλήρωση",
+    "inspection": "Σε επιθεώρηση",
+    "maintenance": "Υπό συντήρηση",
+    "draft": "Πρόχειρο"
+  },
   "management": {
     "title": "Διαχείριση Μονάδων",
     "subtitle": "Κεντρικό ευρετήριο όλων των μονάδων σας"

@@ -69,10 +69,10 @@ interface DOMInspectionResult {
   canvases: HTMLCanvasElement[];
 }
 
-/** Window with layering test function */
-interface WindowWithLayeringTest extends Window {
+/** Window with layering test function (using intersection type to avoid index signature conflict) */
+type WindowWithLayeringTest = Window & {
   runLayeringWorkflowTest?: () => Promise<LayeringWorkflowResult>;
-}
+};
 
 interface DebugToolbarProps {
   showCopyableNotification: (message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;

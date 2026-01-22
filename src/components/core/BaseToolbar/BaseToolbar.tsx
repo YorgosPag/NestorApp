@@ -45,31 +45,31 @@ export interface ToolbarSearch {
   disabled?: boolean;
 }
 
-export interface BaseToolbarProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface BaseToolbarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   // Layout options
   variant?: 'default' | 'compact' | 'expanded' | 'narrow';
   position?: 'top' | 'bottom' | 'sticky';
-  
+
   // Actions section
   actions?: ToolbarAction[];
   primaryActions?: ToolbarAction[];
   secondaryActions?: ToolbarAction[];
-  
+
   // Search functionality
   search?: ToolbarSearch;
-  
+
   // Filters section
   filters?: ToolbarFilter[];
   activeFiltersCount?: number;
   onClearAllFilters?: () => void;
-  
+
   // Content sections
   title?: React.ReactNode;
   subtitle?: React.ReactNode;
   leftContent?: React.ReactNode;
   rightContent?: React.ReactNode;
   centerContent?: React.ReactNode;
-  
+
   // State
   loading?: boolean;
   disabled?: boolean;

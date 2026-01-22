@@ -31,6 +31,13 @@
       "storage": "Storages"
     }
   },
+  "operationalStatus": {
+    "ready": "Ready",
+    "underConstruction": "Under Construction",
+    "inspection": "Under Inspection",
+    "maintenance": "Under Maintenance",
+    "draft": "Draft"
+  },
   "management": {
     "title": "Unit Management",
     "subtitle": "Central directory of all your units"
