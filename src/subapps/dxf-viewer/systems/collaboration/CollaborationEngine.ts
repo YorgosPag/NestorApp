@@ -260,15 +260,16 @@ export class CollaborationEngine extends EventEmitter {
    */
   private transformData(data1: EntityOperationData, data2: EntityOperationData): EntityOperationData {
     // Simplified transformation
-    const result = { ...data2 };
+    const result = { ...data2 } as Record<string, unknown>;
+    const d1 = data1 as Record<string, unknown>;
 
     for (const key in data1) {
       if (!(key in data2)) {
-        result[key] = data1[key];
+        result[key] = d1[key];
       }
     }
 
-    return result;
+    return result as EntityOperationData;
   }
 
   /**

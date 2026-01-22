@@ -33,8 +33,8 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   onFiltersChange,
   defaultOpen = false
 }: AdvancedFiltersPanelProps<T>) {
-  // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('building');
+  // 🏢 ENTERPRISE: i18n hook with configurable namespace (PR1.2)
+  const { t } = useTranslation(config.i18nNamespace || 'building');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

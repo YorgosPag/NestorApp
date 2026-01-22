@@ -89,6 +89,9 @@ export const PHOTO_TYPOGRAPHY = {
   /** Photo label: small, medium weight, center aligned */
   LABEL: `${PHOTO_TEXT_SIZES.SMALL} ${PHOTO_FONT_WEIGHTS.MEDIUM} ${PHOTO_TEXT_ALIGNMENT.CENTER}`,
 
+  /** ✅ ENTERPRISE FIX: Photo header typography */
+  HEADER: `${PHOTO_TEXT_SIZES.LARGE} ${PHOTO_FONT_WEIGHTS.SEMIBOLD} ${PHOTO_TEXT_ALIGNMENT.CENTER}`,
+
   /** Photo title: large, semibold, center aligned */
   TITLE: `${PHOTO_TEXT_SIZES.LARGE} ${PHOTO_FONT_WEIGHTS.SEMIBOLD} ${PHOTO_TEXT_ALIGNMENT.CENTER}`,
 

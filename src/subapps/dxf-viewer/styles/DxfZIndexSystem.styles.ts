@@ -391,7 +391,17 @@ export const createOverlayPositionStyle = (
   y: number,
   overlayType: 'selection' | 'crosshair' | 'snap' | 'cursor' | 'zoom'
 ): CSSProperties => {
-  const baseStyle = dxfOverlayStyles[overlayType];
+  // Map overlay type to actual dxfOverlayStyles keys
+  const overlayTypeMap: Record<string, keyof DxfOverlayStyles> = {
+    selection: 'selectionMarquee',
+    crosshair: 'crosshair',
+    snap: 'snapIndicator',
+    cursor: 'cursorTooltip',
+    zoom: 'zoomWindow'
+  };
+
+  const styleKey = overlayTypeMap[overlayType] || 'crosshair';
+  const baseStyle = dxfOverlayStyles[styleKey];
 
   return {
     ...baseStyle,

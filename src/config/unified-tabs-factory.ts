@@ -187,21 +187,24 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             enabled: true,
             component: 'PropertyDetailsContent'
           },
-          {
-            id: 'customer',
-            value: 'customer',
-            icon: 'user',
-            description: 'Πληροφορίες και διαχείριση πελάτη της μονάδας',
-            order: 2,
-            enabled: true,
-            component: 'UnitCustomerTab'
-          },
+          // ❌ REMOVED: Customer tab (Sales domain - PR1.2)
+          // {
+          //   id: 'customer',
+          //   value: 'customer',
+          //   icon: 'user',
+          //   description: 'Πληροφορίες και διαχείριση πελάτη της μονάδας',
+          //   order: 2,
+          //   enabled: true,
+          //   component: 'UnitCustomerTab'
+          // },
+          // Migration: PR1.2 - Units Domain Cleanup
+          // Customer data moved to /sales domain
           {
             id: 'floor-plan',
             value: 'floor-plan',
             icon: 'map',
             description: 'Κάτοψη και διάταξη της μονάδας',
-            order: 3,
+            order: 2, // PR1.2: Reordered after customer removal
             enabled: true,
             component: 'FloorPlanTab'
           },
@@ -210,7 +213,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'documents',
             icon: 'file-text',
             description: 'Έγγραφα και πιστοποιητικά της μονάδας',
-            order: 4,
+            order: 3, // PR1.2: Reordered after customer removal
             enabled: true,
             component: 'DocumentsPlaceholder',
             componentProps: {
@@ -222,7 +225,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'photos',
             icon: 'camera',
             description: 'Φωτογραφίες της μονάδας',
-            order: 5,
+            order: 4, // PR1.2: Reordered after customer removal
             enabled: true,
             component: 'PhotosTabContent'
           },
@@ -231,7 +234,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             value: 'videos',
             icon: 'video',
             description: 'Videos της μονάδας',
-            order: 6,
+            order: 5, // PR1.2: Reordered after customer removal
             enabled: true,
             component: 'VideosTabContent'
           }

@@ -51,6 +51,7 @@ import {
   PROJECT_TYPE_LABELS,
   PRIORITY_LABELS,
   RISK_COMPLEXITY_LABELS
+  // Note: OPERATIONAL_STATUS_LABELS not imported - using i18n keys directly to avoid circular dependency
 } from '@/constants/property-statuses-enterprise';
 
 // ====================================================================
@@ -121,9 +122,11 @@ const FT = {
 // Unit Filters Configuration
 // [ENTERPRISE]: 100% centralized labels - ZERO hardcoded values
 // ✅ PR1.1 Fix-up: Removed sales data (priceRange), added operational statuses
+// ✅ PR1.2: Configurable i18n namespace - domain separation
 export const unitFiltersConfig: FilterPanelConfig = {
   title: FT.units,
   searchPlaceholder: SP.units_search,
+  i18nNamespace: 'units', // 🏢 ENTERPRISE: Units domain namespace
   rows: [
     {
       id: 'basic-filters',
@@ -161,13 +164,14 @@ export const unitFiltersConfig: FilterPanelConfig = {
           ariaLabel: 'Operational status filter',
           // ✅ DOMAIN SEPARATION: Operational statuses (physical truth)
           // Removed sales statuses (for-sale/sold/reserved)
+          // 🏢 PR1.2: i18n keys directly (avoid circular dependency)
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_STATUSES },
-            { value: 'ready', label: 'operationalStatus.ready' },
-            { value: 'under-construction', label: 'operationalStatus.underConstruction' },
-            { value: 'inspection', label: 'operationalStatus.inspection' },
-            { value: 'maintenance', label: 'operationalStatus.maintenance' },
-            { value: 'draft', label: 'operationalStatus.draft' }
+            { value: 'ready', label: 'units.operationalStatus.ready' },
+            { value: 'under-construction', label: 'units.operationalStatus.underConstruction' },
+            { value: 'inspection', label: 'units.operationalStatus.inspection' },
+            { value: 'maintenance', label: 'units.operationalStatus.maintenance' },
+            { value: 'draft', label: 'units.operationalStatus.draft' }
           ]
         }
       ]

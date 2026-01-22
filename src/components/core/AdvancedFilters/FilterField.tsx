@@ -57,22 +57,26 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
 
   const renderField = () => {
     switch (config.type) {
-      case 'search':
+      case 'search': {
+        const searchValue = (typeof value === 'string' || typeof value === 'number') ? value : '';
+        const placeholderText = typeof config.placeholder === 'string' ? config.placeholder : '';
         return (
           <div className="relative w-full">
             <Search className={`absolute left-2.5 top-2.5 ${iconSizes.sm} text-muted-foreground`} />
             <Input
               id={config.id}
               aria-label={config.ariaLabel}
-              placeholder={translateLabel(config.placeholder || '')}
+              placeholder={translateLabel(placeholderText)}
               className="pl-9 h-9"
-              value={value || ''}
+              value={searchValue || ''}
               onChange={(e) => onValueChange(e.target.value)}
             />
           </div>
         );
+      }
 
-      case 'range':
+      case 'range': {
+        const rangeValue = value as RangeValue | undefined;
         return (
           <div className={`flex ${spacing.gap.sm}`}>
             <Input
@@ -80,7 +84,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
               aria-label={`${t('filters.minimum')} ${config.label?.toLowerCase()}`}
               placeholder={t('filters.from')}
               className="h-9"
-              value={value?.min ?? ''}
+              value={rangeValue?.min ?? ''}
               onChange={(e) => onRangeChange?.('min', e.target.value)}
               min={config.min}
               max={config.max}
@@ -90,19 +94,21 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
               aria-label={`${t('filters.maximum')} ${config.label?.toLowerCase()}`}
               placeholder={t('filters.to')}
               className="h-9"
-              value={value?.max ?? ''}
+              value={rangeValue?.max ?? ''}
               onChange={(e) => onRangeChange?.('max', e.target.value)}
               min={config.min}
               max={config.max}
             />
           </div>
         );
+      }
 
-      case 'select':
+      case 'select': {
+        const selectValue = Array.isArray(value) && value.length === 1 ? value[0] : (Array.isArray(value) ? 'all' : (typeof value === 'string' ? value : 'all'));
         return (
           <Select
             onValueChange={(newValue) => onValueChange(newValue)}
-            value={Array.isArray(value) && value.length === 1 ? value[0] : (Array.isArray(value) ? 'all' : value || 'all')}
+            value={selectValue}
           >
             <SelectTrigger className="h-9 w-full" aria-label={config.ariaLabel}>
               <SelectValue placeholder={translateLabel(config.placeholder || '')} />
@@ -116,8 +122,9 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             </SelectContent>
           </Select>
         );
+      }
 
-      case 'multiselect':
+      case 'multiselect': {
         // For multiselect, we'll use a simple select for now but could expand to a more complex component
         return (
           <Select
@@ -151,8 +158,9 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             </SelectContent>
           </Select>
         );
+      }
 
-      case 'checkbox':
+      case 'checkbox': {
         // 🏢 ENTERPRISE: Using centralized Checkbox component (Radix UI)
         return (
           <div className={`flex items-center ${spacing.gap.sm}`}>
@@ -170,18 +178,22 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             </Label>
           </div>
         );
+      }
 
-      default:
+      default: {
+        const defaultValue = (typeof value === 'string' || typeof value === 'number') ? value : '';
+        const placeholderText = typeof config.placeholder === 'string' ? config.placeholder : '';
         return (
           <Input
             id={config.id}
             aria-label={config.ariaLabel}
-            placeholder={translateLabel(config.placeholder || '')}
+            placeholder={translateLabel(placeholderText)}
             className="h-9"
-            value={value || ''}
+            value={defaultValue || ''}
             onChange={(e) => onValueChange(e.target.value)}
           />
         );
+      }
     }
   };
 

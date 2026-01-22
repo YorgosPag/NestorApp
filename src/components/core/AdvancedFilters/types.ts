@@ -19,13 +19,14 @@ export interface FilterFieldConfig {
   id: string;
   type: FilterFieldType;
   label: string;
-  placeholder?: string;
+  placeholder?: string | { min?: string; max?: string; start?: string; end?: string };
   options?: FilterOption[];
   required?: boolean;
   width?: number; // 1-4 columns in grid
   ariaLabel?: string;
   min?: number;
   max?: number;
+  range?: { min: number; max: number; step?: number };
 }
 
 export interface FilterRowConfig {
@@ -51,6 +52,8 @@ export interface FilterPanelConfig {
   searchPlaceholder?: string;
   rows: FilterRowConfig[];
   advancedFilters?: AdvancedFiltersConfig;
+  // 🏢 ENTERPRISE: Configurable i18n namespace (PR1.2 - Domain separation)
+  i18nNamespace?: string; // Default: 'building', Units: 'units', etc.
 }
 
 // Range types for filters

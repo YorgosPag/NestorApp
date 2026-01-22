@@ -152,7 +152,7 @@ export function useToolbarsContextValue(params: ContextValueParams): ToolbarsCon
     getSettings,
     
     // Layout and Positioning (basic implementations)
-    getToolbarLayout: () => null, // TODO: Implement
+    getToolbarLayout: () => undefined, // TODO: Implement
     optimizeLayout: () => {}, // TODO: Implement
     resetLayout: () => {}, // TODO: Implement
     
