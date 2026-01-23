@@ -107,20 +107,30 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             { id: 'custom', label: 'filters.areaPresets.custom', min: null, max: null },
           ];
 
-          // Determine current preset based on range value
+          // 🔧 FIX #1: Determine current preset based on range value
           const getCurrentPreset = () => {
             if (!rangeValue || (rangeValue.min === undefined && rangeValue.max === undefined)) {
               return 'all';
             }
 
-            const preset = areaPresets.find(p =>
-              p.min === rangeValue.min && p.max === rangeValue.max
-            );
+            // Check if current values match any preset exactly
+            const preset = areaPresets.find(p => {
+              // For 'all' preset, both min and max should be null/undefined
+              if (p.id === 'all') {
+                return (rangeValue.min === null || rangeValue.min === undefined) &&
+                       (rangeValue.max === null || rangeValue.max === undefined);
+              }
+              // For other presets, compare exact values
+              return p.min === rangeValue.min && p.max === rangeValue.max;
+            });
+
             return preset ? preset.id : 'custom';
           };
 
           const currentPreset = getCurrentPreset();
-          const isCustom = currentPreset === 'custom';
+          const isCustom = currentPreset === 'custom' ||
+                          (rangeValue && (rangeValue.min !== undefined || rangeValue.max !== undefined) &&
+                           !areaPresets.some(p => p.min === rangeValue.min && p.max === rangeValue.max));
 
           return (
             <div className={`flex flex-col ${spacing.gap.sm}`}>
@@ -128,11 +138,12 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
                 onValueChange={(selectedValue) => {
                   const preset = areaPresets.find(p => p.id === selectedValue);
                   if (preset && selectedValue !== 'custom') {
-                    // Predefined range selected
+                    // 🔧 FIX #2: Use onValueChange for preset selection (sets entire range object)
                     onValueChange({ min: preset.min, max: preset.max });
                   } else if (selectedValue === 'custom') {
-                    // Custom option - keep current values or clear if none
-                    onValueChange(rangeValue || { min: undefined, max: undefined });
+                    // Custom option - keep current values or initialize empty for input
+                    const currentRange = rangeValue || { min: undefined, max: undefined };
+                    onValueChange(currentRange);
                   }
                 }}
                 value={currentPreset}
@@ -150,7 +161,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
                 </SelectContent>
               </Select>
 
-              {/* Custom input fields - shown when "custom" is selected */}
+              {/* 🔧 FIX #1: Custom input fields - shown when custom is detected */}
               {isCustom && (
                 <div className={`flex ${spacing.gap.sm}`}>
                   <Input
