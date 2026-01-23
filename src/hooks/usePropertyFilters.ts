@@ -78,13 +78,24 @@ export function usePropertyFilters(
       const typeMatch = !propertyType || propertyType.length === 0 || propertyType.includes(property.type);
       const statusMatch = !status || status.length === 0 || status.includes(property.status);
       
-      const priceMatch = 
-        (priceRange?.min === null || (property.price ?? 0) >= priceRange.min) &&
-        (priceRange?.max === null || (property.price ?? 0) <= priceRange.max);
+      const priceMatch =
+        (!priceRange || priceRange.min === null || priceRange.min === undefined || (property.price ?? 0) >= priceRange.min) &&
+        (!priceRange || priceRange.max === null || priceRange.max === undefined || (property.price ?? 0) <= priceRange.max);
         
-      const areaMatch = 
-        (areaRange?.min === null || (property.area ?? 0) >= areaRange.min) &&
-        (areaRange?.max === null || (property.area ?? 0) <= areaRange.max);
+      const areaMatch =
+        (!areaRange || areaRange.min === null || areaRange.min === undefined || (property.area ?? 0) >= areaRange.min) &&
+        (!areaRange || areaRange.max === null || areaRange.max === undefined || (property.area ?? 0) <= areaRange.max);
+
+      // 🐛 DEBUG: Area filtering
+      if (areaRange?.min !== null || areaRange?.max !== null) {
+        console.log('🔍 AREA FILTER DEBUG:', {
+          property: property.name,
+          propertyArea: property.area,
+          filterMin: areaRange?.min,
+          filterMax: areaRange?.max,
+          areaMatch
+        });
+      }
 
       const featuresMatch = !features || features.length === 0 || features.every(feature => (property.features || []).includes(feature));
 

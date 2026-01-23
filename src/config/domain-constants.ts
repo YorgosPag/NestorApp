@@ -469,3 +469,76 @@ export const MESSAGES_PAGE_SIZE = 50;
  * @enterprise Consistent truncation across components
  */
 export const MESSAGE_PREVIEW_LENGTH = 120;
+
+// ============================================================================
+// PARKING/STORAGE ALLOCATION METADATA SCHEMA
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Parking/Storage Allocation Metadata Schema
+ * Used with Associations system for linking parking/storage to units
+ *
+ * @enterprise Phase 2 - Uses existing Associations system (ADR-032)
+ * @created 2026-01-23
+ *
+ * IMPORTANT: LinkedSpace interface remains as VIEW/DTO only
+ * Actual persistence is through Associations with this metadata schema
+ */
+
+/**
+ * Inclusion types for parking/storage allocations
+ */
+export const SPACE_INCLUSION_TYPES = {
+  /** Included with unit sale/rent */
+  INCLUDED: 'included',
+  /** Available as optional purchase/rent */
+  OPTIONAL: 'optional',
+  /** Separately rented */
+  RENTED: 'rented',
+} as const;
+
+export type SpaceInclusionType = typeof SPACE_INCLUSION_TYPES[keyof typeof SPACE_INCLUSION_TYPES];
+
+/**
+ * Space types for allocations
+ */
+export const ALLOCATION_SPACE_TYPES = {
+  PARKING: 'parking',
+  STORAGE: 'storage',
+} as const;
+
+export type AllocationSpaceType = typeof ALLOCATION_SPACE_TYPES[keyof typeof ALLOCATION_SPACE_TYPES];
+
+/**
+ * Metadata schema for parking/storage allocations
+ * Used in ContactLink.metadata when linking spaces to units
+ */
+export interface ParkingStorageAllocationMetadata {
+  /** Type of space being allocated */
+  spaceType: AllocationSpaceType;
+
+  /** How many spaces allocated */
+  quantity: number;
+
+  /** How the space is included with the unit */
+  inclusion: SpaceInclusionType;
+
+  /** Human-readable allocation code (e.g., "P-101", "S-42") */
+  allocationCode?: string;
+
+  /** Additional notes about the allocation */
+  allocationNotes?: string;
+}
+
+/**
+ * Standard reason codes for parking/storage allocations
+ * @enterprise NO hardcoded labels - use i18n keys in UI
+ */
+export const ALLOCATION_REASONS = {
+  STANDARD: 'standard',
+  UPGRADE: 'upgrade',
+  TEMPORARY: 'temporary',
+  EXCHANGE: 'exchange',
+} as const;
+
+export type AllocationReasonCode = typeof ALLOCATION_REASONS[keyof typeof ALLOCATION_REASONS];

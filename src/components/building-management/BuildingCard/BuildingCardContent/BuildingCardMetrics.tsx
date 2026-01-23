@@ -28,15 +28,15 @@ export function BuildingCardMetrics({ building }: BuildingCardMetricsProps) {
     <div className="grid grid-cols-2 gap-4 pt-2">
       <div className="space-y-1">
         <p className={typography.special.tertiary}>{t('card.metrics.area')}</p>
-        <p className={typography.heading.sm}>{building.totalArea.toLocaleString('el-GR')} m²</p>
+        <p className={typography.heading.sm}>{(building.totalArea ?? 0).toLocaleString('el-GR')} m²</p>
       </div>
       <div className="space-y-1">
         <p className={typography.special.tertiary}>{t('card.metrics.floors')}</p>
-        <p className={typography.heading.sm}>{building.floors}</p>
+        <p className={typography.heading.sm}>{building.floors ?? 0}</p>
       </div>
       <div className="space-y-1">
         <p className={typography.special.tertiary}>{t('card.metrics.units')}</p>
-        <p className={typography.heading.sm}>{building.units}</p>
+        <p className={typography.heading.sm}>{building.units ?? 0}</p>
       </div>
       <div className="space-y-1">
         <p className={typography.special.tertiary}>{t('card.metrics.value')}</p>

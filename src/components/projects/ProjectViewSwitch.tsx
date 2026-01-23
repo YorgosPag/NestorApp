@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { Project } from '@/types/project';
 import type { NavigationCompany } from '@/components/navigation/core/types';
 import { Edit, Trash2 } from 'lucide-react';
@@ -12,21 +12,39 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Grid view imports (PR: Projects Grid View)
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ProjectListCard } from '@/domain';
+
+// 🏢 ENTERPRISE: View mode type (matches useProjectsPageState)
+type ProjectsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
 
 interface ProjectViewSwitchProps {
   projects: Project[];
   selectedProject: Project | null;
   onSelectProject: (project: Project | null) => void;
   companies: NavigationCompany[];
+  // 🏢 ENTERPRISE: Added viewMode prop for grid/list switching (PR: Projects Grid View)
+  viewMode?: ProjectsViewMode;
 }
 
 export function ProjectViewSwitch({
-  projects, selectedProject, onSelectProject, companies }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies, viewMode = 'list' }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: Favorites state for grid view (PR: Projects Grid View)
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  const toggleFavorite = (projectId: string) => {
+    setFavorites(prev =>
+      prev.includes(projectId)
+        ? prev.filter(id => id !== projectId)
+        : [...prev, projectId]
+    );
+  };
 
   const getProjectWithCompanyName = (project: Project) => {
     const company = companies?.find(c => c.id === project.companyId);
@@ -36,6 +54,61 @@ export function ProjectViewSwitch({
     };
   };
 
+  // 🏢 ENTERPRISE: Grid View Rendering (PR: Projects Grid View)
+  // Uses same ProjectListCard as list view, but in responsive grid layout
+  if (viewMode === 'grid') {
+    return (
+      <>
+        {/* 🖥️ DESKTOP & MOBILE: Grid layout */}
+        <ScrollArea className="flex-1 w-full">
+          <section
+            className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2"
+            aria-label={t('grid.ariaLabel')}
+          >
+            {projects.map((project: Project) => (
+              <ProjectListCard
+                key={project.id}
+                project={project}
+                isSelected={selectedProject?.id === project.id}
+                isFavorite={favorites.includes(project.id)}
+                onSelect={() => onSelectProject(project)}
+                onToggleFavorite={() => toggleFavorite(project.id)}
+              />
+            ))}
+          </section>
+        </ScrollArea>
+
+        {/* 📱 MOBILE: Slide-in ProjectDetails when project is selected */}
+        <MobileDetailsSlideIn
+          isOpen={!!selectedProject}
+          onClose={() => onSelectProject(null)}
+          title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
+          actionButtons={
+            <>
+              <button
+                onClick={() => {/* TODO: Edit project handler */}}
+                className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                aria-label={t('viewSwitch.editLabel')}
+              >
+                <Edit className={iconSizes.sm} />
+              </button>
+              <button
+                onClick={() => {/* TODO: Delete project handler */}}
+                className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                aria-label={t('viewSwitch.deleteLabel')}
+              >
+                <Trash2 className={iconSizes.sm} />
+              </button>
+            </>
+          }
+        >
+          {selectedProject && <ProjectDetails project={getProjectWithCompanyName(selectedProject)} />}
+        </MobileDetailsSlideIn>
+      </>
+    );
+  }
+
+  // 🏢 ENTERPRISE: List View (Original behavior)
   return (
     <>
       {/* 🖥️ DESKTOP: Standard split layout */}

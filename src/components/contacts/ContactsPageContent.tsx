@@ -44,6 +44,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { ContactsList } from './list/ContactsList';
+// 🏢 ENTERPRISE: Grid view imports (PR: Contacts Grid View)
+import { ContactListCard } from '@/domain';
 import { ContactDetails } from './details/ContactDetails';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { TabbedAddNewContactDialog } from './dialogs/TabbedAddNewContactDialog';
@@ -760,9 +762,63 @@ export function ContactsPageContent() {
               </MobileDetailsSlideIn>
             </>
           ) : (
-            <section className="w-full text-center p-8 bg-card rounded-lg border" role="region" aria-label={t('page.views.gridPlaceholder')}>
-                {t('page.views.gridPlaceholder')}
-            </section>
+            /* 🏢 ENTERPRISE: Grid View with ContactListCard (PR: Contacts Grid View) */
+            <>
+              <section
+                className="w-full p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto"
+                role="region"
+                aria-label={t('page.views.gridView')}
+              >
+                {filteredContacts.map((contact: Contact) => (
+                  <ContactListCard
+                    key={contact.id}
+                    contact={contact}
+                    isSelected={selectedContact?.id === contact.id}
+                    isFavorite={contact.isFavorite}
+                    onSelect={() => setSelectedContact(contact)}
+                    onToggleFavorite={async () => {
+                      // 🏢 ENTERPRISE: Toggle favorite via service
+                      await ContactsService.updateContact(contact.id!, { isFavorite: !contact.isFavorite });
+                      await refreshContacts();
+                    }}
+                  />
+                ))}
+              </section>
+
+              {/* 📱 MOBILE: Slide-in ContactDetails when contact is selected in grid mode */}
+              <MobileDetailsSlideIn
+                isOpen={!!selectedContact}
+                onClose={() => setSelectedContact(null)}
+                title={selectedContact ? getContactDisplayName(selectedContact) : t('page.details.title')}
+                actionButtons={
+                  <>
+                    <button
+                      onClick={() => handleEditContact()}
+                      className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.BUTTON_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                      aria-label={t('page.details.editContact')}
+                    >
+                      <Edit className={iconSizes.sm} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteContacts()}
+                      className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.BUTTON_DESTRUCTIVE_GHOST} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                      aria-label={t('page.details.deleteContact')}
+                    >
+                      <Trash2 className={iconSizes.sm} />
+                    </button>
+                  </>
+                }
+              >
+                {selectedContact && (
+                  <ContactDetails
+                    contact={livePreviewContact || selectedContact}
+                    onEditContact={handleEditContact}
+                    onDeleteContact={() => handleDeleteContacts()}
+                    onContactUpdated={refreshContacts}
+                  />
+                )}
+              </MobileDetailsSlideIn>
+            </>
           )}
         </ListContainer>
 

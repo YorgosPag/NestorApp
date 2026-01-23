@@ -228,6 +228,8 @@ export function ProjectsPageContent() {
             selectedProject={selectedProject}
             onSelectProject={setSelectedProject}
             companies={companies}
+            // 🏢 ENTERPRISE: Pass viewMode for grid/list switching (PR: Projects Grid View)
+            viewMode={viewMode}
           />
         </ListContainer>
       </PageContainer>

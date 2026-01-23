@@ -182,6 +182,9 @@
     "editLabel": "Επεξεργασία Έργου",
     "deleteLabel": "Διαγραφή Έργου"
   },
+  "grid": {
+    "ariaLabel": "Πλέγμα Έργων"
+  },
   "detailsHeader": {
     "showProject": "Επίδειξη Έργου",
     "progressComplete": "{progress}% ολοκληρωμένο"

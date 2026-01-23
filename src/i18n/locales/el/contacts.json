@@ -64,7 +64,8 @@
     "views": {
       "desktopView": "Λίστα και Λεπτομέρειες Desktop",
       "mobileList": "Λίστα Επαφών Mobile",
-      "gridPlaceholder": "Προβολή πλέγματος (Grid View) θα υλοποιηθεί σύντομα."
+      "gridPlaceholder": "Προβολή πλέγματος (Grid View) θα υλοποιηθεί σύντομα.",
+      "gridView": "Πλέγμα Επαφών"
     },
     "details": {
       "title": "Λεπτομέρειες",

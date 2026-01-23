@@ -64,7 +64,8 @@
     "views": {
       "desktopView": "List and Details Desktop",
       "mobileList": "Contacts Mobile List",
-      "gridPlaceholder": "Grid View will be implemented soon."
+      "gridPlaceholder": "Grid View will be implemented soon.",
+      "gridView": "Contacts Grid"
     },
     "details": {
       "title": "Details",

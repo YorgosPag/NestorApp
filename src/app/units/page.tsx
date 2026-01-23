@@ -388,7 +388,13 @@ function UnitsPageContent() {
               onAssignmentSuccess={handleAssignmentSuccess}
             />
           ) : (
-            <PropertyGridView />
+            // ✅ ENTERPRISE: Pass filtered properties + selection to grid (Single Source of Truth)
+            // 🏢 PR: Grid Selection Styling - Blue border + blue background on selected cards
+            <PropertyGridView
+              properties={searchFilteredProperties}
+              selectedPropertyIds={selectedPropertyIds}
+              onSelect={handlePolygonSelect}
+            />
           )}
         </ListContainer>
 

@@ -39,7 +39,8 @@ function applyFilters(
 }
 
 export function usePropertyGridFilters(allProperties: PropertyForFilter[], filters: { propertyType: string[] }) {
-  const [viewMode, setViewMode] = React.useState<'grid' | 'list'>('grid');
+  // ❌ REMOVED: viewMode state - Conflicts with header icons (Single Source of Truth)
+  // Grid view is now controlled by page-level viewMode in useUnitsViewerState
   const [showFilters, setShowFilters] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [priceRange, setPriceRange] = React.useState({ min: '', max: '' });
@@ -54,7 +55,7 @@ export function usePropertyGridFilters(allProperties: PropertyForFilter[], filte
   );
 
   return {
-    viewMode, setViewMode,
+    // ❌ REMOVED: viewMode, setViewMode
     showFilters, setShowFilters,
     searchTerm, setSearchTerm,
     priceRange, setPriceRange,

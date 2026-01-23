@@ -31,6 +31,8 @@ import { usePositioningTokens } from '@/hooks/usePositioningTokens';
 
 // 🏢 CENTRALIZED UI PATTERNS
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: Centralized Badge component (single source of truth for all badges)
+import { Badge } from '@/components/ui/badge';
 
 // 🏢 CENTRALIZED ENTITY CONFIG
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
@@ -140,20 +142,9 @@ export function ListCard({
   };
 
   // ==========================================================================
-  // 🏢 BADGE VARIANT MAPPING (uses centralized colors)
+  // 🏢 BADGE: Now using centralized Badge component (single source of truth)
+  // Removed local getBadgeClasses() - all badges use @/components/ui/badge
   // ==========================================================================
-  const getBadgeClasses = (variant: string = 'default'): string => {
-    const variantMap: Record<string, string> = {
-      default: cn(colors.bg.muted, colors.text.primary),
-      secondary: cn(colors.bg.secondary, colors.text.secondary),
-      destructive: cn(colors.bg.error, 'text-white'),
-      outline: cn('bg-transparent border', colors.text.primary),
-      success: cn(colors.bg.success, colors.text.success),
-      warning: cn(colors.bg.warning, colors.text.warning),
-      info: cn(colors.bg.info, colors.text.info),
-    };
-    return variantMap[variant] || variantMap.default;
-  };
 
   // ==========================================================================
   // 🏢 RENDER - SEMANTIC HTML STRUCTURE
@@ -265,20 +256,17 @@ export function ListCard({
                 {title}
               </h3>
 
-              {/* Inline badges (when inlineBadges=true) */}
+              {/* Inline badges (when inlineBadges=true) - 🏢 ENTERPRISE: Using centralized Badge */}
               {inlineBadges && badges.length > 0 && (
                 <>
                   {badges.slice(0, 1).map((badge, index) => (
-                    <span
+                    <Badge
                       key={`inline-${badge.label}-${index}`}
-                      className={cn(
-                        'px-1.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0',
-                        getBadgeClasses(badge.variant),
-                        badge.className
-                      )}
+                      variant={badge.variant as 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error'}
+                      className={cn('whitespace-nowrap flex-shrink-0', badge.className)}
                     >
                       {badge.label}
-                    </span>
+                    </Badge>
                   ))}
                 </>
               )}
@@ -298,20 +286,17 @@ export function ListCard({
           </div>
         </div>
 
-        {/* Row 2: Badges (separate row when NOT inline) */}
+        {/* Row 2: Badges (separate row when NOT inline) - 🏢 ENTERPRISE: Using centralized Badge */}
         {!inlineBadges && badges.length > 0 && (
           <div className={cn(`flex items-center ${spacing.gap.sm} ${spacing.margin.top.sm} overflow-hidden`)}>
             {badges.slice(0, 2).map((badge, index) => (
-              <span
+              <Badge
                 key={`${badge.label}-${index}`}
-                className={cn(
-                  'px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
-                  getBadgeClasses(badge.variant),
-                  badge.className
-                )}
+                variant={badge.variant as 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'error'}
+                className={cn('whitespace-nowrap', badge.className)}
               >
                 {badge.label}
-              </span>
+              </Badge>
             ))}
           </div>
         )}

@@ -89,13 +89,19 @@ export interface CRMDashboardTabLabelsConfig {
 /**
  * Units Tab Labels Configuration Type
  * ✅ ENTERPRISE: Type-safe units tab labels (existing function preserved)
+ * 🔧 UPDATED: Keys now match tab IDs from unified-tabs-factory.ts
  */
 export interface UnitsTabLabelsConfig {
+  // Core unit tabs - matching unified-tabs-factory IDs
+  readonly info: string;
+  readonly 'floor-plan': string;
+  readonly documents: string;
+  readonly photos: string;
+  readonly videos: string;
+  // Legacy keys for backward compatibility
   readonly general: string;
   readonly details: string;
   readonly files: string;
-  readonly photos: string;
-  readonly documents: string;
   readonly notes: string;
   readonly history: string;
   readonly contracts: string;
@@ -218,13 +224,19 @@ export const MODAL_SELECT_CRM_DASHBOARD_TAB_LABELS: CRMDashboardTabLabelsConfig 
  * ✅ ENTERPRISE: Single source of truth για όλα τα units tab labels
  * 🏢 PATTERN: i18n keys for translation at component level
  * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
+ * 🔧 UPDATED: Added keys matching unified-tabs-factory tab IDs
  */
 export const MODAL_SELECT_UNITS_TAB_LABELS: UnitsTabLabelsConfig = {
+  // 🎯 Core unit tabs - matching unified-tabs-factory IDs
+  info: "tabs.labels.basicInfo",
+  'floor-plan': "tabs.labels.floorplans",
+  documents: "tabs.labels.documents",
+  photos: "tabs.labels.photos",
+  videos: "tabs.labels.videos",
+  // 🔧 Legacy keys for backward compatibility
   general: "tabs.labels.basicInfo",
   details: "tabs.labels.customer",
   files: "tabs.labels.floorplans",
-  photos: "tabs.labels.photos",
-  documents: "tabs.labels.documents",
   notes: "tabs.labels.videos",
   history: "tabs.labels.history",
   contracts: "tabs.labels.contracts"

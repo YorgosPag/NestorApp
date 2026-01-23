@@ -7,34 +7,35 @@ import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'
 
 // 🏢 ENTERPRISE: Dynamic badge variants using centralized border tokens and semantic colors
+// ✅ CENTRALIZED: Single source of truth for ALL badges (Grid view + List view)
 const createBadgeVariants = (borderTokens: ReturnType<typeof useBorderTokens>, colors: ReturnType<typeof useSemanticColors>) => cva(
-  `inline-flex items-center ${borderTokens.radius.full} border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
+  `inline-flex items-center ${borderTokens.radiusClass.full} border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
   {
     variants: {
       variant: {
         default:
-          `${borderTokens.style.none} bg-blue-600 text-white ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:bg-blue-700'}`,
+          `border-transparent ${colors.bg.primary} ${colors.text.primary} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:opacity-90'}`,
         secondary:
-          `${borderTokens.style.none} bg-gray-100 text-gray-900 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:bg-gray-200'}`,
+          `border-transparent ${colors.bg.secondary} ${colors.text.secondary} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
         destructive:
-          `${borderTokens.style.none} bg-red-600 text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:bg-red-700'}`,
+          `border-transparent ${colors.bg.error} text-white ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:opacity-90'}`,
         outline: "text-foreground",
         success:
-          `${borderTokens.style.none} bg-green-50 text-green-600 ${INTERACTIVE_PATTERNS.SUCCESS_HOVER || 'hover:bg-green-100'}`,
+          `border-transparent ${colors.bg.success} ${colors.text.success} ${INTERACTIVE_PATTERNS.SUCCESS_HOVER || 'hover:opacity-90'}`,
         warning:
-          `${borderTokens.style.none} bg-yellow-50 text-yellow-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:bg-yellow-100'}`,
+          `border-transparent ${colors.bg.warning} ${colors.text.warning} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
         info:
-          `${borderTokens.style.none} bg-blue-50 text-blue-600 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:bg-blue-100'}`,
+          `border-transparent ${colors.bg.info} ${colors.text.info} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER || 'hover:opacity-90'}`,
         error:
-          `${borderTokens.style.none} bg-red-50 text-red-600 ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:bg-red-100'}`,
+          `border-transparent ${colors.bg.error} ${colors.text.error} ${INTERACTIVE_PATTERNS.DESTRUCTIVE_HOVER || 'hover:opacity-90'}`,
         purple:
-          `${borderTokens.style.none} bg-purple-50 text-purple-600 ${INTERACTIVE_PATTERNS.ACCENT_HOVER || 'hover:bg-purple-100'}`,
+          `border-transparent ${colors.bg.secondary} ${colors.text.primary} ${INTERACTIVE_PATTERNS.ACCENT_HOVER || 'hover:opacity-90'}`,
         light:
-          `${borderTokens.style.none} bg-gray-50 text-gray-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:bg-gray-100'}`,
+          `border-transparent ${colors.bg.muted} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
         muted:
-          `${borderTokens.style.none} bg-gray-100 text-gray-500 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:bg-gray-200'}`,
+          `border-transparent ${colors.bg.muted} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
         subtle:
-          `${borderTokens.style.none} bg-slate-50 text-slate-600 ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:bg-slate-100'}`,
+          `border-transparent ${colors.bg.muted} ${colors.text.muted} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER || 'hover:opacity-90'}`,
       },
     },
     defaultVariants: {
@@ -64,24 +65,24 @@ function Badge({ className, variant, ...props }: BadgeProps) {
 }
 
 // 🏢 ENTERPRISE: Static badge variants for use outside of React components
-// Uses default styling without hooks for cases like callbacks or static generation
+// Uses CSS variables for theme-aware styling (same as dynamic variants)
 const staticBadgeVariants = cva(
   "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-blue-600 text-white hover:bg-blue-700",
-        secondary: "border-transparent bg-gray-100 text-gray-900 hover:bg-gray-200",
-        destructive: "border-transparent bg-red-600 text-white hover:bg-red-700",
+        default: "border-transparent bg-background text-foreground hover:opacity-90",
+        secondary: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
+        destructive: "border-transparent bg-[hsl(var(--bg-error))] text-white hover:opacity-90",
         outline: "text-foreground",
-        success: "border-transparent bg-green-50 text-green-600 hover:bg-green-100",
-        warning: "border-transparent bg-yellow-50 text-yellow-600 hover:bg-yellow-100",
-        info: "border-transparent bg-blue-50 text-blue-600 hover:bg-blue-100",
-        error: "border-transparent bg-red-50 text-red-600 hover:bg-red-100",
-        purple: "border-transparent bg-purple-50 text-purple-600 hover:bg-purple-100",
-        light: "border-transparent bg-gray-50 text-gray-600 hover:bg-gray-100",
-        muted: "border-transparent bg-gray-100 text-gray-500 hover:bg-gray-200",
-        subtle: "border-transparent bg-slate-50 text-slate-600 hover:bg-slate-100",
+        success: "border-transparent bg-[hsl(var(--bg-success))] text-[hsl(var(--text-success))] hover:opacity-90",
+        warning: "border-transparent bg-[hsl(var(--bg-warning))] text-[hsl(var(--text-warning))] hover:opacity-90",
+        info: "border-transparent bg-[hsl(var(--bg-info))] text-[hsl(var(--text-info))] hover:opacity-90",
+        error: "border-transparent bg-[hsl(var(--bg-error))] text-[hsl(var(--text-error))] hover:opacity-90",
+        purple: "border-transparent bg-muted text-foreground hover:opacity-90",
+        light: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
+        muted: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
+        subtle: "border-transparent bg-muted text-muted-foreground hover:opacity-90",
       },
       size: {
         default: "px-2.5 py-0.5",

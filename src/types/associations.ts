@@ -31,7 +31,7 @@
  */
 
 import type { Timestamp } from 'firebase/firestore';
-import type { EntityType } from '@/config/domain-constants';
+import type { EntityType, AllocationReasonCode, ParkingStorageAllocationMetadata } from '@/config/domain-constants';
 
 // ============================================================================
 // CONTACT LINKS
@@ -115,6 +115,95 @@ export interface CreateContactLinkInput {
   reason?: string;
   createdBy: string;
   metadata?: Record<string, unknown>;
+}
+
+// ============================================================================
+// ENTITY LINKS (Entity-to-Entity Relationships)
+// ============================================================================
+
+/**
+ * Entity Link
+ *
+ * Links one entity to another entity (e.g., parking_spot → unit, storage → unit).
+ * Used for parking/storage allocations, unit-to-building relationships, etc.
+ */
+export interface EntityLink {
+  /** Unique link ID */
+  id: string;
+
+  /** Source entity type (parking_spot, storage_unit, etc.) */
+  sourceEntityType: EntityType;
+
+  /** Source entity ID */
+  sourceEntityId: string;
+
+  /** Source workspace ID (where source entity exists) */
+  sourceWorkspaceId: string;
+
+  /** Target entity type (unit, building, project, etc.) */
+  targetEntityType: EntityType;
+
+  /** Target entity ID */
+  targetEntityId: string;
+
+  /** Target workspace ID (if different from source) */
+  targetWorkspaceId?: string;
+
+  /** Reason for the link (for audit trail) */
+  reason?: AllocationReasonCode;
+
+  /** Link status */
+  status: 'active' | 'inactive';
+
+  /** Created timestamp */
+  createdAt: Timestamp;
+
+  /** Created by user ID */
+  createdBy: string;
+
+  /** Updated timestamp */
+  updatedAt?: Timestamp;
+
+  /** Updated by user ID */
+  updatedBy?: string;
+
+  /** Metadata for extensibility (ParkingStorageAllocationMetadata) */
+  metadata?: ParkingStorageAllocationMetadata;
+}
+
+/**
+ * Entity Link as stored in Firestore
+ */
+export interface EntityLinkFirestoreDoc {
+  id: string;
+  sourceEntityType: EntityType;
+  sourceEntityId: string;
+  sourceWorkspaceId: string;
+  targetEntityType: EntityType;
+  targetEntityId: string;
+  targetWorkspaceId?: string;
+  reason?: AllocationReasonCode;
+  status: 'active' | 'inactive';
+  createdAt: Timestamp;
+  createdBy: string;
+  updatedAt?: Timestamp;
+  updatedBy?: string;
+  metadata?: ParkingStorageAllocationMetadata;
+}
+
+/**
+ * Input for creating an entity link
+ */
+export interface CreateEntityLinkInput {
+  sourceEntityType: EntityType;
+  sourceEntityId: string;
+  sourceWorkspaceId: string;
+  targetEntityType: EntityType;
+  targetEntityId: string;
+  targetWorkspaceId?: string;
+  reason?: AllocationReasonCode;
+  createdBy: string;
+  metadata?: ParkingStorageAllocationMetadata;
 }
 
 // ============================================================================
@@ -223,6 +312,35 @@ export interface ListContactLinksParams {
 
   /** Filter by target entity ID */
   targetEntityId?: string;
+
+  /** Filter by status */
+  status?: 'active' | 'inactive';
+
+  /** Limit results */
+  limit?: number;
+}
+
+/**
+ * Query parameters for listing entity links
+ */
+export interface ListEntityLinksParams {
+  /** Filter by source entity type */
+  sourceEntityType?: EntityType;
+
+  /** Filter by source entity ID */
+  sourceEntityId?: string;
+
+  /** Filter by source workspace ID */
+  sourceWorkspaceId?: string;
+
+  /** Filter by target entity type */
+  targetEntityType?: EntityType;
+
+  /** Filter by target entity ID */
+  targetEntityId?: string;
+
+  /** Filter by target workspace ID */
+  targetWorkspaceId?: string;
 
   /** Filter by status */
   status?: 'active' | 'inactive';

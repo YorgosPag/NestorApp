@@ -182,6 +182,9 @@
     "editLabel": "Edit Project",
     "deleteLabel": "Delete Project"
   },
+  "grid": {
+    "ariaLabel": "Projects Grid"
+  },
   "detailsHeader": {
     "showProject": "Show Project",
     "progressComplete": "{progress}% complete"

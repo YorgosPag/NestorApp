@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { BadgeFactory } from './BadgeFactory';
-import { getDynamicElementClasses } from '@/components/ui/utils/dynamic-styles';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
@@ -76,11 +75,8 @@ export const UnifiedBadge: React.FC<UnifiedBadgeProps> = ({
       className={cn(
         'transition-all duration-200 cursor-default',
         badgeConfig.className,
-        onClick && `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`,
-        getDynamicElementClasses({
-          backgroundColor: badgeConfig.backgroundColor,
-          textColor: badgeConfig.color
-        })
+        onClick && `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`
+        // 🏢 ENTERPRISE: Removed getDynamicElementClasses - Badge variants now handle colors
       )}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
@@ -164,11 +160,8 @@ export const CommonBadge: React.FC<CommonBadgeProps> = ({ status, ...props }) =>
       className={cn(
         'transition-all duration-200 cursor-default',
         badgeConfig.className,
-        props.onClick && `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`,
-        getDynamicElementClasses({
-          backgroundColor: badgeConfig.backgroundColor,
-          textColor: badgeConfig.color
-        })
+        props.onClick && `cursor-pointer ${INTERACTIVE_PATTERNS.OPACITY_HOVER}`
+        // 🏢 ENTERPRISE: Removed getDynamicElementClasses - Badge variants now handle colors
       )}
       onClick={props.onClick}
       onMouseEnter={props.onMouseEnter}

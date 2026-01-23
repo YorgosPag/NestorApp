@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -107,7 +107,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             { id: 'custom', label: 'filters.areaPresets.custom', min: null, max: null },
           ];
 
-          // 🔧 FIX #1: Determine current preset based on range value
+          // 🔧 ENTERPRISE: Determine current preset based on range value
           const getCurrentPreset = () => {
             if (!rangeValue || (rangeValue.min === undefined && rangeValue.max === undefined)) {
               return 'all';
@@ -127,8 +127,74 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             return preset ? preset.id : 'custom';
           };
 
-          const currentPreset = getCurrentPreset();
-          const isCustom = currentPreset === 'custom' ||
+          // 🔧 ENTERPRISE: Local state για dropdown value tracking
+          const [selectedPreset, setSelectedPreset] = useState(getCurrentPreset());
+
+          // 🏢 ENTERPRISE: Controlled input state με null safety
+          const [minValue, setMinValue] = useState(() => {
+            const min = rangeValue?.min;
+            return (min !== null && min !== undefined) ? min.toString() : '';
+          });
+          const [maxValue, setMaxValue] = useState(() => {
+            const max = rangeValue?.max;
+            return (max !== null && max !== undefined) ? max.toString() : '';
+          });
+
+          // 🔧 FIX: Refs για focus management (not needed for uncontrolled anymore)
+          const minInputRef = useRef<HTMLInputElement>(null);
+          const maxInputRef = useRef<HTMLInputElement>(null);
+
+          // 🏢 ENTERPRISE: Intelligent state synchronization pattern
+          // ONLY syncs on external clear events, NOT during user typing
+          useEffect(() => {
+            const isClearEvent = !rangeValue ||
+              (typeof rangeValue === 'object' && Object.keys(rangeValue).length === 0) ||
+              (rangeValue.min === undefined && rangeValue.max === undefined);
+
+            console.log('🔍 ENTERPRISE DEBUG:', {
+              rangeValue,
+              rangeValueType: typeof rangeValue,
+              rangeValueKeys: rangeValue ? Object.keys(rangeValue) : 'null',
+              hasMin: rangeValue?.min !== undefined,
+              hasMax: rangeValue?.max !== undefined,
+              minValue: rangeValue?.min,
+              maxValue: rangeValue?.max,
+              isClearEvent,
+              selectedPreset,
+              trigger: 'useEffect'
+            });
+
+            if (isClearEvent) {
+              console.log('🔄 CLEAR EVENT DETECTED - Resetting to "all"');
+              setSelectedPreset('all');
+              // 🏢 ENTERPRISE: Reset controlled input state on clear
+              setMinValue('');
+              setMaxValue('');
+            }
+            // IMPORTANT: Do NOT sync during user typing (preserves custom mode)
+          }, [rangeValue]);
+
+          // 🏢 ENTERPRISE: Sync controlled state με external range changes (null safe)
+          useEffect(() => {
+            const min = rangeValue?.min;
+            const max = rangeValue?.max;
+
+            if (min !== null && min !== undefined) {
+              const minStr = min.toString();
+              if (minStr !== minValue) {
+                setMinValue(minStr);
+              }
+            }
+
+            if (max !== null && max !== undefined) {
+              const maxStr = max.toString();
+              if (maxStr !== maxValue) {
+                setMaxValue(maxStr);
+              }
+            }
+          }, [rangeValue?.min, rangeValue?.max, minValue, maxValue]);
+
+          const isCustom = selectedPreset === 'custom' ||
                           (rangeValue && (rangeValue.min !== undefined || rangeValue.max !== undefined) &&
                            !areaPresets.some(p => p.min === rangeValue.min && p.max === rangeValue.max));
 
@@ -136,17 +202,22 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
             <div className={`flex flex-col ${spacing.gap.sm}`}>
               <Select
                 onValueChange={(selectedValue) => {
+                  // Update local state first
+                  setSelectedPreset(selectedValue);
+
                   const preset = areaPresets.find(p => p.id === selectedValue);
+
                   if (preset && selectedValue !== 'custom') {
-                    // 🔧 FIX #2: Use onValueChange for preset selection (sets entire range object)
+                    // Set predefined range
                     onValueChange({ min: preset.min, max: preset.max });
                   } else if (selectedValue === 'custom') {
-                    // Custom option - keep current values or initialize empty for input
-                    const currentRange = rangeValue || { min: undefined, max: undefined };
-                    onValueChange(currentRange);
+                    // Switch to custom mode - DON'T send undefined values that break filtering
+                    // Just update the dropdown state, let user type values
+                    // This avoids sending {min: undefined, max: undefined} which breaks filtering
+                    console.log('🔄 SWITCHING TO CUSTOM MODE - not sending undefined values');
                   }
                 }}
-                value={currentPreset}
+                value={selectedPreset}
               >
                 <SelectTrigger className="h-9 w-full" aria-label={config.ariaLabel}>
                   <SelectValue placeholder={t('filters.areaPresets.all', { ns: 'units' })} />
@@ -165,22 +236,54 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
               {isCustom && (
                 <div className={`flex ${spacing.gap.sm}`}>
                   <Input
+                    ref={minInputRef}
                     type="number"
                     aria-label={`${t('filters.minimum')} ${translateLabel(config.label)?.toLowerCase()}`}
                     placeholder={t('filters.from')}
-                    className="h-9"
-                    value={rangeValue?.min ?? ''}
-                    onChange={(e) => onRangeChange?.('min', e.target.value)}
+                    className="h-9 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    value={minValue}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      console.log('🔢 CONTROLLED MIN INPUT:', {
+                        value,
+                        currentPreset: selectedPreset
+                      });
+
+                      // 🏢 ENTERPRISE: Update controlled state immediately (no remount)
+                      setMinValue(value);
+
+                      // 🚀 REALTIME FILTERING: Update on every keystroke
+                      onRangeChange?.('min', value);
+
+                      // Update selected preset to custom when user types
+                      setSelectedPreset('custom');
+                    }}
                     min={config.min}
                     max={config.max}
                   />
                   <Input
+                    ref={maxInputRef}
                     type="number"
                     aria-label={`${t('filters.maximum')} ${translateLabel(config.label)?.toLowerCase()}`}
                     placeholder={t('filters.to')}
-                    className="h-9"
-                    value={rangeValue?.max ?? ''}
-                    onChange={(e) => onRangeChange?.('max', e.target.value)}
+                    className="h-9 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    value={maxValue}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      console.log('🔢 CONTROLLED MAX INPUT:', {
+                        value,
+                        currentPreset: selectedPreset
+                      });
+
+                      // 🏢 ENTERPRISE: Update controlled state immediately (no remount)
+                      setMaxValue(value);
+
+                      // 🚀 REALTIME FILTERING: Update on every keystroke
+                      onRangeChange?.('max', value);
+
+                      // Update selected preset to custom when user types
+                      setSelectedPreset('custom');
+                    }}
                     min={config.min}
                     max={config.max}
                   />

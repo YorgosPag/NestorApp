@@ -20,9 +20,12 @@ import { NavigationBreadcrumb } from '@/components/navigation/components/Navigat
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
+// 🏢 ENTERPRISE: Added 'grid' view mode for card grid layout (PR: Projects Grid View)
+type ProjectsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
+
 interface ProjectsHeaderProps {
-  viewMode: 'list' | 'byType' | 'byStatus';
-  setViewMode: (mode: 'list' | 'byType' | 'byStatus') => void;
+  viewMode: ProjectsViewMode;
+  setViewMode: (mode: ProjectsViewMode) => void;
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
   onNewProject?: () => void;
@@ -33,8 +36,7 @@ interface ProjectsHeaderProps {
   projectCount?: number;
 }
 
-// 🏢 ENTERPRISE: Type for Projects view modes (avoids `as any`)
-type ProjectsViewMode = 'list' | 'byType' | 'byStatus';
+// 🏢 ENTERPRISE: Type moved to interface section above
 
 export function ProjectsHeader({
   viewMode,
@@ -73,7 +75,8 @@ export function ProjectsHeader({
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode: viewMode as ViewMode,
         onViewModeChange: (mode) => setViewMode(mode as ProjectsViewMode),
-        viewModes: ['list', 'byType', 'byStatus'] as ViewMode[],
+        // 🏢 ENTERPRISE: Added 'grid' for card grid layout (PR: Projects Grid View)
+        viewModes: ['list', 'grid', 'byType', 'byStatus'] as ViewMode[],
         addButton: {
           label: t('header.newProject'),
           onClick: () => onNewProject?.() || console.log('Add project')

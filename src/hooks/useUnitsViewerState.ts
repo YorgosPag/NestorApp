@@ -279,8 +279,21 @@ export function useUnitsViewerState() {
 
   // 🏢 ENTERPRISE: Flexible filter handler compatible with AdvancedFiltersPanel
   const handleFiltersChange = (newFilters: Partial<FilterState> | Record<string, unknown>) => {
+    console.log('🚀 FILTERS CHANGE DEBUG:', {
+      newFilters,
+      areaRange: (newFilters as any)?.areaRange,
+      hasAreaRange: 'areaRange' in (newFilters as any)
+    });
+
     if (setFilters) {
-      setFilters((prev: FilterState) => ({ ...prev, ...newFilters } as FilterState));
+      setFilters((prev: FilterState) => {
+        const updated = { ...prev, ...newFilters } as FilterState;
+        console.log('🔄 UPDATED FILTERS:', {
+          updatedFilters: updated,
+          updatedAreaRange: updated.areaRange
+        });
+        return updated;
+      });
     }
   };
 

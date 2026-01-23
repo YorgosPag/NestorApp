@@ -11,7 +11,8 @@ export function useProjectsPageState(initialProjects: Project[]) {
   const projectIdFromUrl = searchParams.get('projectId');
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'byType' | 'byStatus'>('list');
+  // 🏢 ENTERPRISE: Added 'grid' view mode for card grid layout (PR: Projects Grid View)
+  const [viewMode, setViewMode] = useState<'list' | 'grid' | 'byType' | 'byStatus'>('list');
   const [showDashboard, setShowDashboard] = useState(false);
 
   // Use centralized filter state

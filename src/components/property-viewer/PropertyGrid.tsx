@@ -27,7 +27,8 @@ import { PageHeader } from '@/core/headers';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
 import { usePropertyGridFilters } from './usePropertyGridFilters';
 import { TypeSelect } from './TypeSelect';
-import { ViewModeToggle } from './ViewModeToggle';
+// ❌ REMOVED: ViewModeToggle - Conflicts with header icons (Single Source of Truth)
+// import { ViewModeToggle } from './ViewModeToggle';
 import { AdvancedFiltersPanel } from './AdvancedFiltersPanel';
 
 
@@ -53,65 +54,60 @@ function PropertyCard({ property, onSelect, isSelected }: { property: Property, 
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
-  // 🎨 ENTERPRISE BORDER TOKENS - Centralized status configuration
+  // 🎨 ENTERPRISE STATUS STYLING - Subtle, professional approach
   // ✅ CENTRALIZED: Using PROPERTY_STATUS_LABELS from central system - ZERO HARDCODED VALUES
+  // 🏢 SAP/Salesforce Pattern: Status only shown in badge, header is clean
   const statusConfig = {
     'for-sale': {
-      label: PROPERTY_STATUS_LABELS['for-sale'],
-      color: `${getStatusBorder('success')} ${colors.bg.success}`,
-      textColor: colors.text.success
+      label: PROPERTY_STATUS_LABELS['for-sale']
     },
     'for-rent': {
-      label: PROPERTY_STATUS_LABELS['for-rent'],
-      color: `${brandClasses.primary.border} ${brandClasses.primary.bg}`,
-      textColor: brandClasses.primary.text
+      label: PROPERTY_STATUS_LABELS['for-rent']
     },
     'sold': {
-      label: PROPERTY_STATUS_LABELS.sold,
-      color: `${getStatusBorder('error')} ${colors.bg.error}`,
-      textColor: colors.text.error
+      label: PROPERTY_STATUS_LABELS.sold
     },
     'rented': {
-      label: PROPERTY_STATUS_LABELS.rented,
-      color: `${getStatusBorder('warning')} ${colors.bg.warning}`,
-      textColor: colors.text.warning
+      label: PROPERTY_STATUS_LABELS.rented
     },
     'reserved': {
-      label: PROPERTY_STATUS_LABELS.reserved,
-      color: `${getStatusBorder('warning')} ${colors.bg.warning}`,
-      textColor: colors.text.warning
+      label: PROPERTY_STATUS_LABELS.reserved
     },
   };
 
-  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { color: `${quick.card}`, label: t('grid.status.unknown'), textColor: colors.text.muted };
+  const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || { label: t('grid.status.unknown') };
   const IconComponent = propertyTypeIcons[property.type] || UnitIcon;
 
   return (
-    <Card 
+    <Card
         className={cn(
-            "cursor-pointer group border",
+            "cursor-pointer group border rounded-lg",
             COMPLEX_HOVER_EFFECTS.FEATURE_CARD,
-            isSelected ? `ring-2 ring-primary shadow-lg ${getStatusBorder('info')}` : getStatusBorder('muted')
+            // 🏢 ENTERPRISE: Selection styling aligned with ListCard (blue border + blue background)
+            isSelected
+              ? cn(getStatusBorder('info'), colors.bg.info, 'ring-2 ring-primary shadow-lg')
+              : getStatusBorder('muted')
         )}
         onClick={onSelect}
     >
-      <CardHeader className={cn("p-4 border-b", statusInfo.color)}>
-        <div className="flex justify-between items-start">
-            <div>
-                <CardTitle className="text-base flex items-center gap-2">
+      {/* 🏢 ENTERPRISE: Clean header without heavy status borders - Professional SAP/Salesforce pattern */}
+      <CardHeader className="p-3 border-b">
+        <div className="flex justify-between items-start gap-2">
+            <div className="flex-1 min-w-0">
+                <CardTitle className="text-sm flex items-center gap-2 truncate">
                     <IconComponent className={iconSizes.sm} />
                     {property.name}
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">{property.type}</p>
+                <p className="text-xs text-muted-foreground truncate mt-1">{property.type}</p>
             </div>
+            {/* 🏢 ENTERPRISE: Badge handles status styling (subtle, professional) */}
             <PropertyBadge
               status={property.status}
-              variant="outline"
-              className={cn("text-xs", statusInfo.color, statusInfo.textColor)}
+              className="text-xs flex-shrink-0"
             />
         </div>
       </CardHeader>
-      <CardContent className="p-4 space-y-3">
+      <CardContent className="p-3 space-y-2">
         <div className={`flex items-center gap-2 text-xs ${colors.text.muted}`}>
           {/* 🏢 ENTERPRISE: Using centralized building icon/color */}
           <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.building.color)} />
@@ -148,7 +144,7 @@ interface PropertyGridProps {
     withHeader?: boolean;
     withFilters?: boolean;
     withSearch?: boolean;
-    withViewModeToggle?: boolean;
+    // ❌ REMOVED: withViewModeToggle - Conflicts with header icons (Single Source of Truth)
     onViewFloorPlan?: (propertyId: string) => void;
     initialFilters?: { propertyType: string[] };
   };
@@ -173,7 +169,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
     ? gridFilters.filteredProperties
     : properties;
 
-  const viewMode = gridFilters?.viewMode || 'grid';
+  // ❌ REMOVED: viewMode from gridFilters - Always grid now (Single Source of Truth)
   const showFilters = gridFilters?.showFilters || false;
 
   // Enhanced handlers
@@ -203,113 +199,26 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
   // 🚀 ENHANCED MODE: Full PropertyGridView features
   if (enhanced?.withHeader) {
     return (
-      <div className={`min-h-screen ${colors.bg.secondary} overflow-x-hidden`}>
-        {/* Header */}
-        <div className="sticky top-0 z-10">
-          <PageHeader
-            variant="sticky"
-            layout="multi-row"
-            title={{
-              icon: UnitIcon,
-              title: t('grid.header.title'),
-              subtitle: t('grid.header.found', { count: displayProperties.length })
-            }}
-            search={enhanced.withSearch && gridFilters ? {
-              value: gridFilters.searchTerm,
-              onChange: gridFilters.setSearchTerm,
-              placeholder: t('grid.search.placeholder')
-            } : undefined}
-            filters={enhanced.withFilters ? {
-              customFilters: [
-                <TypeSelect
-                  key="typeselect"
-                  selected={filters.propertyType[0] || 'all'}
-                  onChange={(value) => {
-                    setFilters({
-                      ...filters,
-                      propertyType: value === 'all' ? [] : [value],
-                    });
-                  }}
-                />,
-                <button
-                  key="advfilters"
-                  onClick={() => gridFilters?.setShowFilters(!showFilters)}
-                  className={`px-4 py-2.5 border ${radius.lg} flex items-center gap-2 transition-colors h-9 ${
-                    showFilters ? `${colors.bg.info} ${getStatusBorder('info')} ${colors.text.info}` : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.LIGHT}`
-                  }`}
-                >
-                  <SlidersHorizontal className={iconSizes.sm} />
-                  <span className="font-medium">{t('grid.filters.button')}</span>
-                </button>
-              ]
-            } : undefined}
-            actions={{
-              customActions: [
-                enhanced.withViewModeToggle && gridFilters ? (
-                  <ViewModeToggle key="viewmode" value={viewMode} onChange={gridFilters.setViewMode} />
-                ) : null,
-                <button
-                  key="floorplan"
-                  onClick={handleViewAllFloorPlan}
-                  className={`px-4 py-2 ${colors.bg.gradient} text-white ${radius.lg} transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
-                >
-                  <NAVIGATION_ENTITIES.location.icon className={iconSizes.sm} />
-                  {t('grid.actions.viewFloorPlan')}
-                </button>
-              ].filter(Boolean)
-            }}
-          />
+      <>
+        {/* ❌ REMOVED: Duplicate PageHeader with search/filters - Already present in main page */}
+        {/* 🏢 ENTERPRISE: Grid view uses centralized page-level AdvancedFiltersPanel (no duplication) */}
 
-          {/* Advanced Filters Panel */}
-          {enhanced.withFilters && gridFilters && (
-            <AdvancedFiltersPanel
-              show={showFilters}
-              priceRange={gridFilters.priceRange}
-              setPriceRange={gridFilters.setPriceRange}
-              areaRange={gridFilters.areaRange}
-              setAreaRange={gridFilters.setAreaRange}
-            />
-          )}
-        </div>
-
-        {/* Properties Grid/List */}
-        <div className="w-full px-4 py-8 overflow-x-hidden">
-          <div className="w-full max-w-screen-sm mx-auto overflow-hidden">
-            <div className={viewMode === 'grid'
-              ? "flex flex-col gap-4"
-              : "flex flex-col gap-4"
-            }>
-              {displayProperties.map((property: Property) => (
-                <div key={property.id} className="w-full min-w-0 overflow-hidden">
-                  <PropertyCard
-                    property={property}
-                    onSelect={() => onSelect(property.id, false)}
-                    isSelected={selectedPropertyIds.includes(property.id)}
-                  />
-                </div>
-              ))}
-            </div>
+        {/* Properties Grid - Full width with 8px padding matching list layout */}
+        <div className="w-full p-2 overflow-y-auto flex-1">
+          {/* 🏢 ENTERPRISE: Responsive Grid - 1 col (mobile), 2 cols (tablet), 3 cols (desktop), 4 cols (xl) */}
+          {/* NO max-width constraint - grid expands to fill available space */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            {displayProperties.map((property: Property) => (
+              <PropertyCard
+                key={property.id}
+                property={property}
+                onSelect={() => onSelect(property.id, false)}
+                isSelected={selectedPropertyIds.includes(property.id)}
+              />
+            ))}
           </div>
         </div>
-
-        {/* Bottom CTA */}
-        <div className={`${colors.bg.secondary}/30 py-12 mt-12`}>
-          <div className="max-w-4xl mx-auto text-center px-4">
-            <h2 className={`text-2xl font-bold ${colors.text.foreground} mb-4`}>
-              {t('grid.cta.title')}
-            </h2>
-            <p className={`${colors.text.muted} mb-6`}>
-              {t('grid.cta.subtitle')}
-            </p>
-            <button
-              onClick={handleViewAllFloorPlan}
-              className={`px-8 py-3 ${colors.bg.gradient} text-white ${radius.lg} font-medium transition-all ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
-            >
-              {t('grid.cta.button')}
-            </button>
-          </div>
-        </div>
-      </div>
+      </>
     );
   }
 
@@ -331,19 +240,36 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
 }
 
 // 🚀 ENTERPRISE COMPATIBILITY: PropertyGridView wrapper for seamless migration
-export function PropertyGridViewCompatible() {
-  const { properties, filters, setFilters } = usePublicPropertyViewer();
+// 🏢 ENTERPRISE: Grid view now fully integrated with page-level filters (no duplication)
+
+// 🏢 ENTERPRISE: Extended interface for selection support (PR: Grid Selection Styling)
+interface PropertyGridViewCompatibleProps {
+  properties?: Property[];
+  /** Selected property IDs for visual highlighting */
+  selectedPropertyIds?: string[];
+  /** Callback when a property is selected */
+  onSelect?: (id: string, shift: boolean) => void;
+}
+
+export function PropertyGridViewCompatible({
+  properties: externalProperties,
+  selectedPropertyIds: externalSelectedIds,
+  onSelect: externalOnSelect,
+}: PropertyGridViewCompatibleProps) {
+  // ✅ ENTERPRISE: Use externally provided properties (from page filters) if available
+  // Otherwise fallback to usePublicPropertyViewer (for standalone usage)
+  const { properties: hookProperties, filters, setFilters } = usePublicPropertyViewer();
+  const displayProperties = externalProperties || hookProperties;
 
   return (
     <PropertyGrid
-      properties={properties}
-      onSelect={() => {}} // PropertyGridView doesn't use selection
-      selectedPropertyIds={[]}
+      properties={displayProperties}
+      // 🏢 ENTERPRISE: Support external selection (PR: Grid Selection Styling)
+      onSelect={externalOnSelect || (() => {})}
+      selectedPropertyIds={externalSelectedIds || []}
       enhanced={{
         withHeader: true,
-        withFilters: true,
-        withSearch: true,
-        withViewModeToggle: true,
+        // ❌ REMOVED: withFilters, withSearch - Use page-level AdvancedFiltersPanel (no duplication)
         initialFilters: filters
       }}
     />

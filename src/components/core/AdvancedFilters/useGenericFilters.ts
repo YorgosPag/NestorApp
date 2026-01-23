@@ -22,19 +22,39 @@ export function useGenericFilters<T extends GenericFilterState>(
     subKey: 'min' | 'max',
     value: string
   ) => {
-    const ranges = filters.ranges || {};
-    const currentRange = ranges[rangeKey] || {};
+    console.log('🎯 HANDLE RANGE CHANGE:', { rangeKey, subKey, value }); // Debug log
 
-    onFiltersChange({
-      ...filters,
-      ranges: {
-        ...ranges,
-        [rangeKey]: {
-          ...currentRange,
-          [subKey]: value === '' ? undefined : Number(value)
+    // 🔧 ENTERPRISE FIX: Handle both nested ranges and direct range properties
+    if ((filters as any)[rangeKey] !== undefined) {
+      // Direct range property (e.g., areaRange, priceRange)
+      const currentRange = (filters as any)[rangeKey] || {};
+      const newRange = {
+        ...currentRange,
+        [subKey]: value === '' ? undefined : Number(value)
+      };
+
+      console.log('🔄 DIRECT RANGE UPDATE:', { rangeKey, currentRange, newRange }); // Debug log
+
+      onFiltersChange({
+        ...filters,
+        [rangeKey]: newRange
+      } as T);
+    } else {
+      // Nested ranges property (legacy support)
+      const ranges = filters.ranges || {};
+      const currentRange = ranges[rangeKey] || {};
+
+      onFiltersChange({
+        ...filters,
+        ranges: {
+          ...ranges,
+          [rangeKey]: {
+            ...currentRange,
+            [subKey]: value === '' ? undefined : Number(value)
+          }
         }
-      }
-    } as T);
+      } as T);
+    }
   }, [filters, onFiltersChange]);
 
   const handleFeatureChange = useCallback((

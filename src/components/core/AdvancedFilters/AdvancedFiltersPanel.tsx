@@ -54,6 +54,12 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
 
   const getFieldValue = (fieldId: string): FilterFieldValue => {
     if (fieldId.includes('Range')) {
+      // 🏢 ENTERPRISE: Support both direct ranges (areaRange) and nested ranges (ranges.areaRange)
+      const directRange = (filters as Record<string, unknown>)[fieldId];
+      if (directRange !== undefined) {
+        return directRange as FilterFieldValue;
+      }
+      // Fallback to nested ranges (legacy support)
       return filters.ranges?.[fieldId] || { min: undefined, max: undefined };
     }
     return (filters as Record<string, unknown>)[fieldId] as FilterFieldValue;
@@ -61,7 +67,15 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
 
   const handleFieldChange = (fieldId: string, value: unknown) => {
     if (fieldId.includes('Range')) {
-      // Range fields are handled by handleRangeChange
+      // 🔧 ENTERPRISE FIX: Handle range dropdown mode (preset selections)
+      // Check if value is a complete range object from dropdown
+      if (value && typeof value === 'object' && 'min' in value && 'max' in value) {
+        console.log('🚀 RANGE DROPDOWN MODE - Field:', fieldId, 'Value:', value); // Debug log
+        // Direct range object from dropdown preset selection
+        handleFilterChange(fieldId as keyof T, value as T[keyof T]);
+        return;
+      }
+      // Individual range changes are handled by handleRangeChange
       return;
     }
 
@@ -79,6 +93,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   };
 
   const handleFieldRangeChange = (fieldId: string, subKey: 'min' | 'max', value: string) => {
+    console.log('🔄 FIELD RANGE CHANGE:', { fieldId, subKey, value }); // Debug log
     handleRangeChange(fieldId, subKey, value);
   };
 

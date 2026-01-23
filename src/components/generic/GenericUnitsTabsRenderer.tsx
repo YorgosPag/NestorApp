@@ -8,6 +8,7 @@ import type { UnitsTabConfig } from '@/config/units-tabs-config';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Map, FileText, Camera, Video, User } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -149,6 +150,9 @@ export function GenericUnitsTabsRenderer({
   globalProps = {},
 }: GenericUnitsTabsRendererProps) {
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: i18n translation for tab labels
+  const { t } = useTranslation('building');
+
   // Φιλτράρισμα enabled tabs
   const enabledTabs = tabs.filter(tab => tab.enabled !== false);
 
@@ -250,6 +254,7 @@ export function GenericUnitsTabsRenderer({
   };
 
   // Μετατροπή UnitsTabConfig[] σε TabDefinition[]
+  // 🏢 ENTERPRISE: Translate i18n keys to actual labels
   const tabDefinitions: TabDefinition[] = enabledTabs.map((tab) => {
     const Component = getComponent(tab.component || 'PropertyDetailsContent');
     const componentProps = getComponentProps(tab);
@@ -257,7 +262,8 @@ export function GenericUnitsTabsRenderer({
 
     return {
       id: tab.value,
-      label: tab.label,
+      // 🏢 ENTERPRISE: Translate the i18n key (e.g., "tabs.labels.basicInfo" → "Πληροφορίες")
+      label: t(tab.label),
       icon: IconComponent,
       content: getContentWrapper(tab, <Component {...componentProps} />),
       disabled: tab.enabled === false,
