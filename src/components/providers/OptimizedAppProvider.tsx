@@ -85,7 +85,7 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
           
           <ProgressiveLoader
             steps={LoadingPresets.appInit}
-            currentStep={currentStep}
+            currentStep={currentStep ?? undefined}
             showEstimatedTime={true}
             className="w-full"
           />
@@ -104,8 +104,10 @@ function PerformanceWrapper({ children }: { children: React.ReactNode }) {
     const tracker = performanceMonitor.trackRouteChange('app-init');
     
     const cleanup = () => {
+      // 🏢 ENTERPRISE: Type-safe access to PerformanceNavigationTiming
+      const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
       tracker.finish({
-        'app-bundle': performance.getEntriesByType('navigation')[0]?.loadEventEnd || 0
+        'app-bundle': navEntry?.loadEventEnd ?? 0
       });
     };
 

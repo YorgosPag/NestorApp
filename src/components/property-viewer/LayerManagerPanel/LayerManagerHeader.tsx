@@ -26,7 +26,6 @@ interface LayerManagerHeaderProps {
 }
 
 export function LayerManagerHeader({
-  iconSizes = useIconSizes(),
   propertyCount,
   searchQuery,
   setSearchQuery,
@@ -39,8 +38,9 @@ export function LayerManagerHeader({
   onShowAll,
   onHideAll,
 }: LayerManagerHeaderProps) {
-  // 🏢 ENTERPRISE: i18n support
+  // 🏢 ENTERPRISE: i18n support and icon sizes hook
   const { t } = useTranslation('common');
+  const iconSizes = useIconSizes();
 
   return (
     <div className="p-4 border-b space-y-3">

@@ -74,9 +74,9 @@ export function PropertyDashboard({ stats }: PropertyDashboardProps) {
                 title={t('dashboard.cards.storages')}
                 icon={NAVIGATION_ENTITIES.storage.icon}
                 data={{
-                    [t('dashboard.cards.total')]: stats.totalStorageUnits,
-                    [t('dashboard.cards.available')]: stats.availableStorageUnits,
-                    [t('dashboard.cards.sold')]: stats.soldStorageUnits,
+                    [t('dashboard.cards.total')]: stats.totalStorageUnits ?? 0,
+                    [t('dashboard.cards.available')]: stats.availableStorageUnits ?? 0,
+                    [t('dashboard.cards.sold')]: stats.soldStorageUnits ?? 0,
                 }}
                 isThreeColumnGrid={true}
             />

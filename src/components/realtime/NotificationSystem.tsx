@@ -130,9 +130,10 @@ export function NotificationCenter() {
                     key={notification.id}
                     notification={{
                       id: notification.id,
-                      type: notification.payload.type || 'info',
-                      title: notification.payload.title,
-                      message: notification.payload.message,
+                      // 🏢 ENTERPRISE: Safe type casting with fallback
+                      type: (notification.payload.type as NotificationProps['type']) || 'info',
+                      title: notification.payload.title ?? 'Notification',
+                      message: notification.payload.message ?? '',
                       timestamp: notification.timestamp,
                       closeable: true
                     }}

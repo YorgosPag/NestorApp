@@ -729,7 +729,32 @@
     "fields": {
       "search": "Αναζήτηση",
       "priceRange": "Εύρος Τιμής",
-      "areaRange": "Εύρος Επιφάνειας"
+      "areaRange": "Εύρος Επιφάνειας",
+      "status": "Κατάσταση",
+      "project": "Έργο",
+      "building": "Κτίριο",
+      "floor": "Όροφος",
+      "propertyType": "Τύπος Ακινήτου"
+    },
+    "placeholders": {
+      "general": "Αναζήτηση...",
+      "unitsSearch": "Αναζήτηση μονάδων...",
+      "contactsSearch": "Αναζήτηση επαφών...",
+      "buildingsSearch": "Αναζήτηση κτιρίων...",
+      "projectsSearch": "Αναζήτηση έργων...",
+      "selectStatus": "Επιλέξτε κατάσταση",
+      "selectProject": "Επιλέξτε έργο",
+      "selectBuilding": "Επιλέξτε κτίριο",
+      "selectFloor": "Επιλέξτε όροφο",
+      "selectType": "Επιλέξτε τύπο",
+      "selectPriority": "Επιλέξτε προτεραιότητα",
+      "selectLocation": "Επιλέξτε τοποθεσία",
+      "selectCompany": "Επιλέξτε εταιρεία",
+      "selectEnergyClass": "Επιλέξτε ενεργειακή κλάση",
+      "selectRenovation": "Επιλέξτε ανακαίνιση",
+      "selectClient": "Επιλέξτε πελάτη",
+      "selectRiskLevel": "Επιλέξτε επίπεδο κινδύνου",
+      "selectComplexity": "Επιλέξτε πολυπλοκότητα"
     },
     "unitTypes": {
       "ariaLabel": "Φίλτρα τύπου μονάδας",

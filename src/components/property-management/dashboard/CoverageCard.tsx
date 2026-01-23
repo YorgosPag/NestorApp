@@ -94,7 +94,7 @@ export function CoverageCard({
     <Card className={`lg:col-span-2 ${className || ''}`}>
       <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${spacing.padding.sm} pb-2`}>
         <CardTitle className="text-sm font-medium">
-          {t('dashboard.coverage.title', { ns: 'units' })}
+          {t('page.dashboard.coverage.title')}
         </CardTitle>
         <TrendingUp className={`${iconSizes.sm} text-muted-foreground`} />
       </CardHeader>
@@ -112,9 +112,8 @@ export function CoverageCard({
             tabIndex={onMissingPhotosClick ? 0 : undefined}
             aria-label={
               onMissingPhotosClick
-                ? t('dashboard.coverage.clickToFilterMissing', {
-                    type: t('dashboard.coverage.photos', { ns: 'units' }),
-                    ns: 'units'
+                ? t('page.dashboard.coverage.clickToFilterMissing', {
+                    type: t('page.dashboard.coverage.photos')
                   })
                 : undefined
             }
@@ -127,16 +126,15 @@ export function CoverageCard({
             </div>
             <div className="space-y-1">
               <p className={`text-xs font-medium ${colors.text.primary}`}>
-                {t('dashboard.coverage.photos', { ns: 'units' })}
+                {t('page.dashboard.coverage.photos')}
               </p>
               <p className={`text-xs ${colors.text.muted}`}>
-                {coverage.unitsWithPhotos}/{coverage.totalUnits} {t('entities.units', { ns: 'common' })}
+                {coverage.unitsWithPhotos}/{coverage.totalUnits} {t('navigation.units', { ns: 'common' })}
               </p>
               {missingPhotos > 0 && (
                 <p className={`text-xs ${colors.text.warning}`}>
-                  {t('dashboard.coverage.missing', {
-                    count: missingPhotos,
-                    ns: 'units'
+                  {t('page.dashboard.coverage.missing', {
+                    count: missingPhotos
                   })}
                 </p>
               )}
@@ -153,9 +151,8 @@ export function CoverageCard({
             tabIndex={onMissingFloorplansClick ? 0 : undefined}
             aria-label={
               onMissingFloorplansClick
-                ? t('dashboard.coverage.clickToFilterMissing', {
-                    type: t('dashboard.coverage.floorplans', { ns: 'units' }),
-                    ns: 'units'
+                ? t('page.dashboard.coverage.clickToFilterMissing', {
+                    type: t('page.dashboard.coverage.floorplans')
                   })
                 : undefined
             }
@@ -168,16 +165,15 @@ export function CoverageCard({
             </div>
             <div className="space-y-1">
               <p className={`text-xs font-medium ${colors.text.primary}`}>
-                {t('dashboard.coverage.floorplans', { ns: 'units' })}
+                {t('page.dashboard.coverage.floorplans')}
               </p>
               <p className={`text-xs ${colors.text.muted}`}>
-                {coverage.unitsWithFloorplans}/{coverage.totalUnits} {t('entities.units', { ns: 'common' })}
+                {coverage.unitsWithFloorplans}/{coverage.totalUnits} {t('navigation.units', { ns: 'common' })}
               </p>
               {missingFloorplans > 0 && (
                 <p className={`text-xs ${colors.text.warning}`}>
-                  {t('dashboard.coverage.missing', {
-                    count: missingFloorplans,
-                    ns: 'units'
+                  {t('page.dashboard.coverage.missing', {
+                    count: missingFloorplans
                   })}
                 </p>
               )}
@@ -194,9 +190,8 @@ export function CoverageCard({
             tabIndex={onMissingDocumentsClick ? 0 : undefined}
             aria-label={
               onMissingDocumentsClick
-                ? t('dashboard.coverage.clickToFilterMissing', {
-                    type: t('dashboard.coverage.documents', { ns: 'units' }),
-                    ns: 'units'
+                ? t('page.dashboard.coverage.clickToFilterMissing', {
+                    type: t('page.dashboard.coverage.documents')
                   })
                 : undefined
             }
@@ -209,16 +204,15 @@ export function CoverageCard({
             </div>
             <div className="space-y-1">
               <p className={`text-xs font-medium ${colors.text.primary}`}>
-                {t('dashboard.coverage.documents', { ns: 'units' })}
+                {t('page.dashboard.coverage.documents')}
               </p>
               <p className={`text-xs ${colors.text.muted}`}>
-                {coverage.unitsWithDocuments}/{coverage.totalUnits} {t('entities.units', { ns: 'common' })}
+                {coverage.unitsWithDocuments}/{coverage.totalUnits} {t('navigation.units', { ns: 'common' })}
               </p>
               {missingDocuments > 0 && (
                 <p className={`text-xs ${colors.text.warning}`}>
-                  {t('dashboard.coverage.missing', {
-                    count: missingDocuments,
-                    ns: 'units'
+                  {t('page.dashboard.coverage.missing', {
+                    count: missingDocuments
                   })}
                 </p>
               )}

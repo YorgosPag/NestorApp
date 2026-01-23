@@ -227,6 +227,7 @@ export function ProjectsPageContent() {
             projects={filteredProjects}
             selectedProject={selectedProject}
             onSelectProject={setSelectedProject}
+            companies={companies}
           />
         </ListContainer>
       </PageContainer>

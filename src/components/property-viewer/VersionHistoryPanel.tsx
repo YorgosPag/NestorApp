@@ -8,7 +8,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ScrollArea } from '../ui/scroll-area';
 import { Skeleton } from '../ui/skeleton';
-import { VersionList } from './version-history/VersionList';
+import { VersionList, type VersionHistoryItem } from './version-history/VersionList';
 import { VersionDetails } from './version-history/VersionDetails';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 // 🏢 ENTERPRISE: i18n support
@@ -29,6 +29,23 @@ interface FloorplanVersion {
 }
 
 // 🏢 ENTERPRISE: Mock version data - NO HARDCODED building IDs
+// 🏢 ENTERPRISE: Convert FloorplanVersion to VersionHistoryItem
+const toVersionHistoryItem = (v: FloorplanVersion): VersionHistoryItem => ({
+    id: v.id,
+    message: v.message,
+    type: v.type,
+    timestamp: v.timestamp.toDate(),
+    author: v.author,
+    stats: v.stats,
+    size: v.size,
+    thumbnail: v.thumbnail,
+    diff: v.diff ? {
+        added: v.diff.added,
+        modified: v.diff.modified,
+        removed: v.diff.removed
+    } : undefined
+});
+
 const mockVersions: FloorplanVersion[] = [
     {
         id: 'v_1722956400000',
@@ -73,9 +90,9 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
     const notifications = useNotifications();
     // 🏢 ENTERPRISE: i18n hook
     const { t } = useTranslation('properties');
-    // 🏢 ENTERPRISE: Proper types instead of any
-    const [versions, setVersions] = useState<FloorplanVersion[]>([]);
-    const [selectedVersion, setSelectedVersion] = useState<FloorplanVersion | null>(null);
+    // 🏢 ENTERPRISE: Proper types - using VersionHistoryItem for display compatibility
+    const [versions, setVersions] = useState<VersionHistoryItem[]>([]);
+    const [selectedVersion, setSelectedVersion] = useState<VersionHistoryItem | null>(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -83,7 +100,11 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
             setLoading(true);
             // Simulate fetching data
             setTimeout(() => {
-                setVersions(mockVersions.sort((a,b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime()));
+                // 🏢 ENTERPRISE: Convert FloorplanVersion to VersionHistoryItem for display
+                const converted = mockVersions
+                    .sort((a,b) => b.timestamp.toDate().getTime() - a.timestamp.toDate().getTime())
+                    .map(toVersionHistoryItem);
+                setVersions(converted);
                 setLoading(false);
             }, 500);
         }

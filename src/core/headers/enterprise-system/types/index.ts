@@ -10,6 +10,7 @@
  * - CompactToolbar system
  */
 
+import type React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { QuickAction, Notification } from '@/types/header';
 import type { CompactToolbarConfig, CompactToolbarProps } from '@/components/core/CompactToolbar/types';
@@ -43,6 +44,7 @@ export interface HeaderTitleProps {
   variant?: 'large' | 'medium' | 'small';
   className?: string;
   hideSubtitle?: boolean; // 🏢 Enterprise support για conditional subtitle
+  badge?: React.ReactNode; // 🏢 ENTERPRISE: Optional badge element
 }
 
 export interface HeaderSearchProps {

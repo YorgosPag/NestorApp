@@ -165,7 +165,9 @@ export const unitFiltersConfig: FilterPanelConfig = {
           type: 'range',
           label: FL.area_range,
           width: 1,
-          ariaLabel: 'Area range filter'
+          ariaLabel: 'Area range filter',
+          // 🏢 ENTERPRISE: Enable dropdown mode με predefined area values
+          dropdownMode: true
         },
         {
           id: 'status',

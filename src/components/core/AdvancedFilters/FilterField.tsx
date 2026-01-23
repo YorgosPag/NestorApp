@@ -95,6 +95,91 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
 
       case 'range': {
         const rangeValue = value as RangeValue | undefined;
+
+        // 🏢 ENTERPRISE: Dropdown mode με predefined area values + custom input
+        if (config.dropdownMode && config.id === 'areaRange') {
+          const areaPresets = [
+            { id: 'all', label: 'filters.areaPresets.all', min: null, max: null },
+            { id: 'small', label: 'filters.areaPresets.small', min: 0, max: 50 },
+            { id: 'medium', label: 'filters.areaPresets.medium', min: 50, max: 100 },
+            { id: 'large', label: 'filters.areaPresets.large', min: 100, max: 200 },
+            { id: 'veryLarge', label: 'filters.areaPresets.veryLarge', min: 200, max: null },
+            { id: 'custom', label: 'filters.areaPresets.custom', min: null, max: null },
+          ];
+
+          // Determine current preset based on range value
+          const getCurrentPreset = () => {
+            if (!rangeValue || (rangeValue.min === undefined && rangeValue.max === undefined)) {
+              return 'all';
+            }
+
+            const preset = areaPresets.find(p =>
+              p.min === rangeValue.min && p.max === rangeValue.max
+            );
+            return preset ? preset.id : 'custom';
+          };
+
+          const currentPreset = getCurrentPreset();
+          const isCustom = currentPreset === 'custom';
+
+          return (
+            <div className={`flex flex-col ${spacing.gap.sm}`}>
+              <Select
+                onValueChange={(selectedValue) => {
+                  const preset = areaPresets.find(p => p.id === selectedValue);
+                  if (preset && selectedValue !== 'custom') {
+                    // Predefined range selected
+                    onValueChange({ min: preset.min, max: preset.max });
+                  } else if (selectedValue === 'custom') {
+                    // Custom option - keep current values or clear if none
+                    onValueChange(rangeValue || { min: undefined, max: undefined });
+                  }
+                }}
+                value={currentPreset}
+              >
+                <SelectTrigger className="h-9 w-full" aria-label={config.ariaLabel}>
+                  <SelectValue placeholder={t('filters.areaPresets.all', { ns: 'units' })} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('filters.areaPresets.all', { ns: 'units' })}</SelectItem>
+                  <SelectItem value="small">{t('filters.areaPresets.small', { ns: 'units' })}</SelectItem>
+                  <SelectItem value="medium">{t('filters.areaPresets.medium', { ns: 'units' })}</SelectItem>
+                  <SelectItem value="large">{t('filters.areaPresets.large', { ns: 'units' })}</SelectItem>
+                  <SelectItem value="veryLarge">{t('filters.areaPresets.veryLarge', { ns: 'units' })}</SelectItem>
+                  <SelectItem value="custom">{t('filters.areaPresets.custom', { ns: 'units' })}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Custom input fields - shown when "custom" is selected */}
+              {isCustom && (
+                <div className={`flex ${spacing.gap.sm}`}>
+                  <Input
+                    type="number"
+                    aria-label={`${t('filters.minimum')} ${translateLabel(config.label)?.toLowerCase()}`}
+                    placeholder={t('filters.from')}
+                    className="h-9"
+                    value={rangeValue?.min ?? ''}
+                    onChange={(e) => onRangeChange?.('min', e.target.value)}
+                    min={config.min}
+                    max={config.max}
+                  />
+                  <Input
+                    type="number"
+                    aria-label={`${t('filters.maximum')} ${translateLabel(config.label)?.toLowerCase()}`}
+                    placeholder={t('filters.to')}
+                    className="h-9"
+                    value={rangeValue?.max ?? ''}
+                    onChange={(e) => onRangeChange?.('max', e.target.value)}
+                    min={config.min}
+                    max={config.max}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // 🏢 ENTERPRISE: Standard range mode (Input fields)
         return (
           <div className={`flex ${spacing.gap.sm}`}>
             <Input

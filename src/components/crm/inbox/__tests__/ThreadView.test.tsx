@@ -17,7 +17,8 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-// 🏢 ENTERPRISE: Use global Jest types (from @types/jest) instead of @jest/globals
+// 🏢 ENTERPRISE: Import jest-dom matchers for toBeInTheDocument, toHaveClass, etc.
+import '@testing-library/jest-dom';
 import { ThreadView } from '../ThreadView';
 import type { MessageListItem, ConversationListItem } from '@/hooks/inbox/useInboxApi';
 import { MESSAGE_DIRECTION, DELIVERY_STATUS } from '@/types/conversations';
@@ -80,37 +81,54 @@ describe('ThreadView', () => {
   // TEST DATA
   // ===========================================================================
 
+  // 🏢 ENTERPRISE: Updated test data to match ConversationListItem interface
   const mockConversation: ConversationListItem = {
     id: 'conv-123',
     channel: 'telegram',
     status: 'active',
+    messageCount: 10,
+    unreadCount: 0,
+    lastMessage: {
+      content: 'Last message',
+      direction: MESSAGE_DIRECTION.INBOUND,
+      timestamp: new Date().toISOString(),
+    },
     participants: [
       {
-        id: 'user-1',
         displayName: 'Test User',
+        role: 'customer',
         isInternal: false,
-        identityProvider: 'telegram',
-        identityProviderId: 'telegram-user-1',
       },
     ],
-    unreadCount: 0,
-    lastMessageAt: new Date().toISOString(),
-    lastMessagePreview: 'Last message',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    tags: [],
+    assignedTo: null,
+    audit: {
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
   };
 
+  // 🏢 ENTERPRISE: Updated test data to match MessageListItem interface
   const createMockMessage = (overrides?: Partial<MessageListItem>): MessageListItem => ({
     id: 'msg-123',
     conversationId: 'conv-123',
     direction: MESSAGE_DIRECTION.INBOUND,
+    channel: 'telegram',
+    senderId: 'user-1',
     senderType: 'customer',
     senderName: 'Test User',
     content: {
       text: 'Test message',
     },
+    providerMessageId: 'provider-msg-123',
     deliveryStatus: DELIVERY_STATUS.DELIVERED,
+    providerMetadata: {
+      platform: 'telegram',
+      chatId: 'chat-123',
+      userName: 'test_user',
+    },
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     ...overrides,
   });
 

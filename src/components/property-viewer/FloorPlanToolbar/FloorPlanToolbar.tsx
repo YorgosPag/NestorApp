@@ -42,7 +42,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
-interface FloorPlanToolbarProps {
+export interface FloorPlanToolbarProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   showGrid: boolean;

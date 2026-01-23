@@ -51,9 +51,9 @@ export function ParkingTab() {
           />
           
           <OverflowContainer>
+            {/* 🏢 ENTERPRISE: ParkingSpotTable uses internal filter logic (useParkingFilters hook) */}
             <ParkingSpotTable
               spots={parkingSpots}
-              filters={filters}
               selectedSpots={selectedSpots}
               onSelectionChange={setSelectedSpots}
               onEdit={handleEdit}

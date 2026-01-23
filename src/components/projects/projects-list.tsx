@@ -4,6 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Project } from '@/types/project';
+import type { NavigationCompany } from '@/components/navigation/core/types';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
 import { ProjectListCard } from '@/domain';
@@ -17,7 +18,7 @@ interface ProjectsListProps {
   projects: Project[];
   selectedProject: Project | null;
   onSelectProject?: (project: Project) => void;
-  companies: { id: string; name: string }[];
+  companies: NavigationCompany[];
 }
 
 export function ProjectsList({
@@ -28,10 +29,11 @@ export function ProjectsList({
 }: ProjectsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
-  const [favorites, setFavorites] = useState<number[]>([1]);
+  // 🏢 ENTERPRISE: Using string IDs for Firebase compatibility
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
 
-  const toggleFavorite = (projectId: number) => {
+  const toggleFavorite = (projectId: string) => {
     setFavorites(prev =>
       prev.includes(projectId)
         ? prev.filter(id => id !== projectId)
@@ -57,7 +59,6 @@ export function ProjectsList({
       <div className="hidden md:block">
         <CompactToolbar
           config={projectsConfig}
-          data={displayProjects}
           onFiltersChange={() => {}}
           onSortChange={() => {}}
         />
@@ -68,7 +69,6 @@ export function ProjectsList({
         {showToolbar && (
           <CompactToolbar
             config={projectsConfig}
-            data={displayProjects}
             onFiltersChange={() => {}}
             onSortChange={() => {}}
           />

@@ -42,8 +42,9 @@ export const getTotals = (structure: ProjectStructure): ProjectTotals => {
   const soldUnits = structure.buildings.reduce(
     (s, b) => s + (b.units?.filter(u => u.status === "sold").length || 0), 0
   );
+  // 🏢 ENTERPRISE: "for-sale" and "for-rent" are the "available" states in property-viewer
   const availableUnits = structure.buildings.reduce(
-    (s, b) => s + (b.units?.filter(u => u.status === "available").length || 0), 0
+    (s, b) => s + (b.units?.filter(u => u.status === "for-sale" || u.status === "for-rent").length || 0), 0
   );
   const reservedUnits = structure.buildings.reduce(
     (s, b) => s + (b.units?.filter(u => u.status === "reserved").length || 0), 0

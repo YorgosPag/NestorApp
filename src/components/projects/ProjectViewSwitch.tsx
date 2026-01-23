@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { Project } from '@/types/project';
+import type { NavigationCompany } from '@/components/navigation/core/types';
 import { Edit, Trash2 } from 'lucide-react';
 import { ProjectsList } from './projects-list';
 import { ProjectDetails } from './project-details';
@@ -16,11 +17,13 @@ interface ProjectViewSwitchProps {
   projects: Project[];
   selectedProject: Project | null;
   onSelectProject: (project: Project | null) => void;
-  companies: { id: string; name: string }[];
+  companies: NavigationCompany[];
 }
 
 export function ProjectViewSwitch({
-  iconSizes = useIconSizes(), projects, selectedProject, onSelectProject, companies }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies }: ProjectViewSwitchProps) {
+  // 🏢 ENTERPRISE: Hooks must be called inside component body
+  const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
   const colors = useSemanticColors();
@@ -29,7 +32,7 @@ export function ProjectViewSwitch({
     const company = companies?.find(c => c.id === project.companyId);
     return {
       ...project,
-      companyName: company?.name || project.company,
+      companyName: company?.companyName || project.company,
     };
   };
 

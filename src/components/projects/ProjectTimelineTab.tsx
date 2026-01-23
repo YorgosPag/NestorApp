@@ -24,9 +24,10 @@ interface MockBuilding {
 }
 
 // 🏢 ENTERPRISE: Mock buildings use translation keys instead of hardcoded strings
+// 🏢 ENTERPRISE: Using valid BuildingStatus values (construction instead of in_progress)
 const mockBuildingsConfig: MockBuilding[] = [
     { id: 1, nameKey: 'timelineTab.buildingA', progress: 100, status: 'completed' },
-    { id: 2, nameKey: 'timelineTab.buildingB', progress: 60, status: 'in_progress' },
+    { id: 2, nameKey: 'timelineTab.buildingB', progress: 60, status: 'construction' },
     { id: 3, nameKey: 'timelineTab.buildingC', progress: 15, status: 'planning' },
 ]
 

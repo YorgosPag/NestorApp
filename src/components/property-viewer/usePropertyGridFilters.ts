@@ -26,12 +26,14 @@ function applyFilters(
 ) {
   const { priceRange, areaRange } = ranges;
   return properties.filter((property) => {
-    if (filters.propertyType.length > 0 && !filters.propertyType.includes(property.type)) return false;
+    // 🏢 ENTERPRISE: Safe type check with nullish coalescing
+    if (filters.propertyType.length > 0 && !filters.propertyType.includes(property.type ?? '')) return false;
     if (searchTerm && !property.name?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    if (priceRange.min && property.price < parseInt(priceRange.min)) return false;
-    if (priceRange.max && property.price > parseInt(priceRange.max)) return false;
-    if (areaRange.min && property.area < parseInt(areaRange.min)) return false;
-    if (areaRange.max && property.area > parseInt(areaRange.max)) return false;
+    // 🏢 ENTERPRISE: Safe numeric comparisons with optional chaining
+    if (priceRange.min && (property.price ?? 0) < parseInt(priceRange.min)) return false;
+    if (priceRange.max && (property.price ?? 0) > parseInt(priceRange.max)) return false;
+    if (areaRange.min && (property.area ?? 0) < parseInt(areaRange.min)) return false;
+    if (areaRange.max && (property.area ?? 0) > parseInt(areaRange.max)) return false;
     return true;
   });
 }

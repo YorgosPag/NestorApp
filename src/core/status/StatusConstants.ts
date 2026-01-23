@@ -303,6 +303,35 @@ export const createBuildingStatuses = (colors: UseSemanticColorsReturn): Record<
     backgroundColor: colors.bg.secondary,
     color: colors.text.muted,
     icon: 'blueprint'
+  },
+  // 🏢 ENTERPRISE: Additional building statuses to match BuildingStatus type
+  planning: {
+    label: projectStatusLabels.planning,
+    variant: 'outline',
+    backgroundColor: colors.bg.secondary,
+    color: colors.text.muted,
+    icon: 'planning'
+  },
+  completed: {
+    label: projectStatusLabels.completed,
+    variant: 'success',
+    backgroundColor: colors.bg.success,
+    color: colors.text.success,
+    icon: 'check'
+  },
+  active: {
+    label: contactStatusLabels.active,
+    variant: 'info',
+    backgroundColor: colors.bg.info,
+    color: colors.text.info,
+    icon: 'activity'
+  },
+  'partially-occupied': {
+    label: 'buildings.status.partiallyOccupied',
+    variant: 'warning',
+    backgroundColor: colors.bg.warning,
+    color: colors.text.warning,
+    icon: 'users'
   }
 });
 

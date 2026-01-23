@@ -729,7 +729,32 @@
     "fields": {
       "search": "Search",
       "priceRange": "Price Range",
-      "areaRange": "Area Range"
+      "areaRange": "Area Range",
+      "status": "Status",
+      "project": "Project",
+      "building": "Building",
+      "floor": "Floor",
+      "propertyType": "Property Type"
+    },
+    "placeholders": {
+      "general": "Search...",
+      "unitsSearch": "Search units...",
+      "contactsSearch": "Search contacts...",
+      "buildingsSearch": "Search buildings...",
+      "projectsSearch": "Search projects...",
+      "selectStatus": "Select status",
+      "selectProject": "Select project",
+      "selectBuilding": "Select building",
+      "selectFloor": "Select floor",
+      "selectType": "Select type",
+      "selectPriority": "Select priority",
+      "selectLocation": "Select location",
+      "selectCompany": "Select company",
+      "selectEnergyClass": "Select energy class",
+      "selectRenovation": "Select renovation",
+      "selectClient": "Select client",
+      "selectRiskLevel": "Select risk level",
+      "selectComplexity": "Select complexity"
     },
     "unitTypes": {
       "ariaLabel": "Unit type filters",

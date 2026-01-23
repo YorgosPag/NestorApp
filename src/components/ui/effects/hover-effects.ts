@@ -247,6 +247,9 @@ export const HOVER_TEXT_EFFECTS = {
 
   /** ✅ ENTERPRISE FIX: Red subtle for ToolbarMainActions */
   RED_SUBTLE: 'text-red-500 hover:text-red-600',
+
+  /** ✅ ENTERPRISE FIX: Primary color with underline for links */
+  PRIMARY_WITH_UNDERLINE: 'text-primary hover:text-primary/80 hover:underline',
 } as const;
 
 /**
@@ -320,6 +323,9 @@ export const INTERACTIVE_PATTERNS = {
 
   /** Opacity hover για interactive elements */
   OPACITY_HOVER: 'hover:opacity-80',
+
+  /** Opacity reveal - from dim to full opacity on hover */
+  OPACITY_REVEAL: 'opacity-70 hover:opacity-100',
 
   // ========================================================================
   // 🔘 BUTTON-SPECIFIC HOVER PATTERNS

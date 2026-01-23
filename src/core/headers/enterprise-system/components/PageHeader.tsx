@@ -25,6 +25,7 @@ interface HeaderTitleProps {
   subtitle?: string;
   variant?: 'large' | 'medium' | 'small';
   hideSubtitle?: boolean;
+  badge?: React.ReactNode; // 🏢 ENTERPRISE: Optional badge element
 }
 
 interface HeaderSearchProps {

@@ -45,9 +45,14 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-// Helper function for safe LAYER_CATEGORIES access
-const getCategoryInfo = (category: string) => {
-  return LAYER_CATEGORIES[category as keyof typeof LAYER_CATEGORIES] || { color: '#gray', name: category };
+// 🏢 ENTERPRISE: Helper function for safe LAYER_CATEGORIES access with proper type guard
+const getCategoryInfo = (category: string): { color: string; name: string } => {
+  // Type-safe check if category exists in LAYER_CATEGORIES
+  const validCategory = category as keyof typeof LAYER_CATEGORIES;
+  if (validCategory in LAYER_CATEGORIES) {
+    return LAYER_CATEGORIES[validCategory];
+  }
+  return { color: '#gray', name: category };
 };
 
 interface ReadOnlyLayerViewerProps {

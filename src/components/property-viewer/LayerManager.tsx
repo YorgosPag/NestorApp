@@ -154,21 +154,25 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
   
   const handleWheel = (e: React.WheelEvent) => {
     e.deltaY > 0 ? rendererRef.current?.zoomOut() : rendererRef.current?.zoomIn();
-    onTransformChange?.(rendererRef.current?.getTransform());
+    const transform = rendererRef.current?.getTransform();
+    if (transform) onTransformChange?.(transform);
   };
 
   useImperativeHandle(ref, () => ({
     fitToView: () => {
       rendererRef.current?.fitToView(currentScene);
-      onTransformChange?.(rendererRef.current?.getTransform());
+      const transform = rendererRef.current?.getTransform();
+      if (transform) onTransformChange?.(transform);
     },
     zoomIn: () => {
       rendererRef.current?.zoomIn();
-      onTransformChange?.(rendererRef.current?.getTransform());
+      const transform = rendererRef.current?.getTransform();
+      if (transform) onTransformChange?.(transform);
     },
     zoomOut: () => {
       rendererRef.current?.zoomOut();
-      onTransformChange?.(rendererRef.current?.getTransform());
+      const transform = rendererRef.current?.getTransform();
+      if (transform) onTransformChange?.(transform);
     },
     setSelectedEntityIds: (ids: string[]) => rendererRef.current?.setSelectedEntityIds?.(ids),
     renderScene: (s: SceneModel) => { 
@@ -181,8 +185,8 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
     deactivateZoomWindow: () => rendererRef.current?.deactivateZoomWindow(),
     undo: () => rendererRef.current?.undo(),
     redo: () => rendererRef.current?.redo(),
-    canUndo: () => rendererRef.current?.canUndo(),
-    canRedo: () => rendererRef.current?.canRedo(),
+    canUndo: () => rendererRef.current?.canUndo() ?? false,
+    canRedo: () => rendererRef.current?.canRedo() ?? false,
   }));
 
   return (

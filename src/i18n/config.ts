@@ -68,6 +68,7 @@ if (typeof window !== 'undefined') {
       'errors',
       'toasts',
       'navigation',
+      'filters',       // 🏢 ENTERPRISE: Generic filter labels (domain separation)
       'auth',          // 🏢 Auth screens - critical for UX
       'forms',         // 🏢 ENTERPRISE: Form labels, sections, help texts (company-gemi, service forms)
       'building',      // Building management - core module

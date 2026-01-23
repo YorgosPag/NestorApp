@@ -5,7 +5,8 @@ import { getProjectStats } from "@/services/projects.service";
 import type { UseProjectStatsState } from "../types";
 import type { ProjectStats } from "@/types/project";
 
-export function useProjectStats(projectId: number): UseProjectStatsState {
+// 🏢 ENTERPRISE: projectId is string (Firestore document ID)
+export function useProjectStats(projectId: string): UseProjectStatsState {
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

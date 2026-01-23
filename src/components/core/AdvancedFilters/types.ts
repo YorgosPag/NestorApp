@@ -27,6 +27,8 @@ export interface FilterFieldConfig {
   min?: number;
   max?: number;
   range?: { min: number; max: number; step?: number };
+  // 🏢 ENTERPRISE: Range dropdown mode with predefined values + custom option
+  dropdownMode?: boolean; // When true, range fields render as dropdown + custom input
 }
 
 export interface FilterRowConfig {

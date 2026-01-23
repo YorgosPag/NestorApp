@@ -14,6 +14,7 @@ export type Language = typeof SUPPORTED_LANGUAGES[number];
 // Available namespaces
 export const SUPPORTED_NAMESPACES = [
   'common',
+  'filters',   // 🏢 ENTERPRISE: Generic filter labels (domain separation - ADR-032)
   'dxf-viewer',
   'geo-canvas', // Added geo-canvas namespace
   'forms',
@@ -65,6 +66,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
       switch (namespace) {
         case 'common':
           translations = await import('./locales/el/common.json');
+          break;
+        case 'filters':
+          translations = await import('./locales/el/filters.json');
           break;
         case 'dxf-viewer':
           translations = await import('./locales/el/dxf-viewer.json');
@@ -144,6 +148,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
       switch (namespace) {
         case 'common':
           translations = await import('./locales/en/common.json');
+          break;
+        case 'filters':
+          translations = await import('./locales/en/filters.json');
           break;
         case 'dxf-viewer':
           translations = await import('./locales/en/dxf-viewer.json');
@@ -309,6 +316,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
   // 🏢 ENTERPRISE: Core namespaces loaded at startup (SAP/Salesforce pattern)
   const critical: Namespace[] = [
     'common',
+    'filters',       // 🏢 ENTERPRISE: Generic filter labels (domain separation)
     'errors',
     'toasts',
     'auth',
