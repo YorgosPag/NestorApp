@@ -1,20 +1,19 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Unit Floorplan Tab
+ * 🏢 ENTERPRISE: Unit Documents Tab
  * =============================================================================
  *
- * Uses centralized EntityFilesManager for floorplan upload with:
- * - Same UI as Photos/Videos tabs (Αρχεία | Κάδος, Gallery/List/Tree views)
- * - Full-width FloorplanGallery for DXF/PDF display
+ * Uses centralized EntityFilesManager for document upload with:
  * - Enterprise naming convention (ΔΟΜΗ.txt pattern)
  * - Multi-tenant Storage Rules
+ * - Entry point selection for document types
+ * - EXCLUDES photos, videos, and floorplans (they have dedicated tabs)
  *
- * @module features/units-sidebar/components/FloorPlanTab
+ * @module features/units-sidebar/components/DocumentsTab
  * @enterprise ADR-031 - Canonical File Storage System
- * @enterprise ADR-033 - Floorplan Processing Pipeline
  *
  * Storage Path:
- * companies/{companyId}/entities/unit/{unitId}/domains/construction/categories/floorplans/files/
+ * companies/{companyId}/entities/unit/{unitId}/domains/sales/categories/documents/files/
  */
 
 'use client';
@@ -44,7 +43,7 @@ interface ViewerProps {
   [key: string]: unknown;
 }
 
-interface FloorPlanTabProps {
+interface DocumentsTabProps {
   selectedUnit: Property | null;
   currentFloor: FloorData | null;
   safeFloors: FloorData[];
@@ -55,28 +54,23 @@ interface FloorPlanTabProps {
 }
 
 // =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Accepted file types for floorplans (DXF, PDF, images) */
-const FLOORPLAN_ACCEPT = '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dxf,.jpg,.jpeg,.png,image/jpeg,image/png';
-
-// =============================================================================
 // COMPONENT
 // =============================================================================
 
 /**
- * 🏢 ENTERPRISE: Unit Floorplan Tab
+ * 🏢 ENTERPRISE: Unit Documents Tab
  *
- * Displays unit floorplans using centralized EntityFilesManager with:
- * - Domain: construction
- * - Category: floorplans
- * - DisplayStyle: floorplan-gallery (full-width DXF/PDF viewer)
- * - Purpose: 'unit-floorplan' for filtering
+ * Displays unit documents using centralized EntityFilesManager with:
+ * - Domain: sales (default for unit documents)
+ * - Category: documents
+ * - Entry points: ALL except photos, videos, and floorplans
+ *
+ * This tab handles: contracts, permits, certificates, etc.
+ * Photos, Videos, and Floorplans have their own dedicated tabs.
  */
-export function FloorPlanTab({
+export function DocumentsTab({
   selectedUnit,
-}: FloorPlanTabProps) {
+}: DocumentsTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
@@ -105,7 +99,7 @@ export function FloorPlanTab({
           setCompanyDisplayName(companyId); // Fallback to ID if company not found
         }
       } catch (error) {
-        console.error('[FloorPlanTab] Failed to fetch company name:', error);
+        console.error('[DocumentsTab] Failed to fetch company name:', error);
         setCompanyDisplayName(companyId); // Fallback to ID on error
       }
     };
@@ -118,9 +112,9 @@ export function FloorPlanTab({
     return (
       <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
         <UnitIcon className={`${iconSizes['2xl']} ${unitColor} mb-4 opacity-50`} />
-        <h3 className="text-xl font-semibold mb-2">{t('floorplan.selectUnit')}</h3>
+        <h3 className="text-xl font-semibold mb-2">{t('documents.selectUnit', 'Επιλέξτε Μονάδα')}</h3>
         <p className="text-sm max-w-sm">
-          {t('floorplan.selectUnitDescription')}
+          {t('documents.selectUnitDescription', 'Επιλέξτε μια μονάδα από τη λίστα για να δείτε τα έγγραφά της.')}
         </p>
       </div>
     );
@@ -130,7 +124,7 @@ export function FloorPlanTab({
   if (!companyId || !currentUserId) {
     return (
       <section className="p-6 text-center text-muted-foreground">
-        <p>{t('floorplan.noAuth', 'Απαιτείται σύνδεση για να δείτε τις κατόψεις.')}</p>
+        <p>{t('documents.noAuth', 'Απαιτείται σύνδεση για να δείτε τα έγγραφα.')}</p>
       </section>
     );
   }
@@ -142,12 +136,10 @@ export function FloorPlanTab({
       entityType="unit"
       entityId={String(selectedUnit.id)}
       entityLabel={selectedUnit.name || `Μονάδα ${selectedUnit.id}`}
-      domain="construction"
-      category="floorplans"
-      purpose="unit-floorplan"
-      entryPointCategoryFilter="floorplans"
-      displayStyle="floorplan-gallery"
-      acceptedTypes={FLOORPLAN_ACCEPT}
+      domain="sales"
+      category="documents"
+      purpose="document"
+      entryPointExcludeCategories={['photos', 'videos', 'floorplans']}
       companyName={companyDisplayName}
     />
   );

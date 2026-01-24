@@ -34,6 +34,8 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+// 🏢 ENTERPRISE: Centralized Select clear value (Radix forbids empty string in SelectItem)
+import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type definitions (ZERO any)
@@ -94,13 +96,35 @@ export function BuildingSelectorCard({
 
   // 🏢 ENTERPRISE: State management - Buildings
   const [buildings, setBuildings] = useState<BuildingOption[]>([]);
-  // 🏢 ENTERPRISE: Initialize with '__none__' if no building (Radix requires non-empty value)
-  const [selectedBuildingId, setSelectedBuildingId] = useState<string>(currentBuildingId || '__none__');
+  // 🏢 ENTERPRISE: Draft state - initialized ONCE from props (no sync via useEffect)
+  // This follows the "edit session" pattern where draft is independent until save
+  const [draftBuildingId, setDraftBuildingId] = useState<string | undefined>(currentBuildingId);
 
   // 🏢 ENTERPRISE: State management - Floors (Phase 1.1)
   const [floors, setFloors] = useState<FloorOption[]>([]);
-  const [selectedFloorId, setSelectedFloorId] = useState<string>(currentFloorId || '__none__');
+  // 🏢 ENTERPRISE: Draft floor - initialized ONCE (no continuous sync)
+  const [draftFloorId, setDraftFloorId] = useState<string | undefined>(currentFloorId);
   const [loadingFloors, setLoadingFloors] = useState(false);
+
+  // ============================================================================
+  // 🏢 ENTERPRISE: Reset/Cancel Policy - Reset draft when exiting edit mode
+  // ============================================================================
+  // When isEditing changes from true → false (user cancels/exits edit mode),
+  // reset draft values to current props (discard unsaved changes).
+  // This is deterministic: exit without save = revert to original values.
+  // ============================================================================
+  const prevIsEditingRef = React.useRef(isEditing);
+  useEffect(() => {
+    // Detect transition: was editing → no longer editing (cancel/exit)
+    if (prevIsEditingRef.current && !isEditing) {
+      // Reset drafts to props (discard unsaved changes)
+      setDraftBuildingId(currentBuildingId);
+      setDraftFloorId(currentFloorId);
+      setSaveStatus('idle');
+      console.log('🔄 [BuildingSelectorCard] Edit cancelled - draft reset to props');
+    }
+    prevIsEditingRef.current = isEditing;
+  }, [isEditing, currentBuildingId, currentFloorId]);
 
   // 🏢 ENTERPRISE: Loading & Saving states
   const [loading, setLoading] = useState(true);
@@ -150,28 +174,20 @@ export function BuildingSelectorCard({
     loadBuildings();
   }, []);
 
-  // 🏢 ENTERPRISE: Sync with external currentBuildingId changes
-  useEffect(() => {
-    if (currentBuildingId !== undefined) {
-      // Convert empty/null to '__none__' for Radix Select compatibility
-      setSelectedBuildingId(currentBuildingId || '__none__');
-    }
-  }, [currentBuildingId]);
+  // ============================================================================
+  // 🏢 ENTERPRISE: NO STATE MIRRORING - Draft initialized once, not synced
+  // ============================================================================
+  // ❌ REMOVED: useEffect(() => setState(prop), [prop]) - causes infinite loop
+  // ✅ PATTERN: Draft state initialized in useState, updated only by user action
+  // ============================================================================
 
-  // 🏢 ENTERPRISE: Sync with external currentFloorId changes
-  useEffect(() => {
-    if (currentFloorId !== undefined) {
-      setSelectedFloorId(currentFloorId || '__none__');
-    }
-  }, [currentFloorId]);
-
-  // 🏢 ENTERPRISE: Load floors when building changes (Phase 1.1)
+  // 🏢 ENTERPRISE: Load floors when draft building changes (Phase 1.1)
   useEffect(() => {
     const loadFloors = async () => {
       // Reset floors if no building selected
-      if (!selectedBuildingId || selectedBuildingId === '__none__') {
+      if (!draftBuildingId) {
         setFloors([]);
-        setSelectedFloorId('__none__');
+        setDraftFloorId(undefined);
         return;
       }
 
@@ -182,12 +198,12 @@ export function BuildingSelectorCard({
           floors: Array<{ id: string; name?: string; number?: number; buildingId?: string }>;
         }
 
-        const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${selectedBuildingId}`);
+        const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${draftBuildingId}`);
         const floorsData = result?.floors || [];
 
         // Filter floors that belong to this building and sort by floor number
         const buildingFloors = floorsData
-          .filter(f => f.buildingId === selectedBuildingId)
+          .filter(f => f.buildingId === draftBuildingId)
           .sort((a, b) => (a.number || 0) - (b.number || 0));
 
         const floorOptions: FloorOption[] = buildingFloors.map(f => ({
@@ -197,11 +213,11 @@ export function BuildingSelectorCard({
         }));
 
         setFloors(floorOptions);
-        console.log(`✅ [BuildingSelectorCard] Loaded ${floorOptions.length} floors for building ${selectedBuildingId}`);
+        console.log(`✅ [BuildingSelectorCard] Loaded ${floorOptions.length} floors for building ${draftBuildingId}`);
 
-        // If current floor is not in the new building, reset to none
-        if (currentFloorId && !floorOptions.find(f => f.id === currentFloorId)) {
-          setSelectedFloorId('__none__');
+        // If draft floor is not in the new building, reset
+        if (draftFloorId && !floorOptions.find(f => f.id === draftFloorId)) {
+          setDraftFloorId(undefined);
         }
       } catch (error) {
         console.error('❌ [BuildingSelectorCard] Error loading floors:', error);
@@ -212,20 +228,24 @@ export function BuildingSelectorCard({
     };
 
     loadFloors();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBuildingId, currentFloorId]); // Note: 't' removed - stable reference not needed
+    // 🏢 ENTERPRISE: Only react to draftBuildingId changes (user actions)
+  }, [draftBuildingId, draftFloorId, t]);
 
-  // 🏢 ENTERPRISE: Handle building selection
+  // 🏢 ENTERPRISE: Handle building selection (user action only)
   const handleBuildingChange = useCallback((value: string) => {
-    setSelectedBuildingId(value);
+    // 🏢 ENTERPRISE: Handle "clear" option - sentinel means no selection
+    const newBuildingId = isSelectClearValue(value) ? undefined : value;
+    setDraftBuildingId(newBuildingId);
     // Reset floor when building changes
-    setSelectedFloorId('__none__');
+    setDraftFloorId(undefined);
     setSaveStatus('idle');
   }, []);
 
-  // 🏢 ENTERPRISE: Handle floor selection (Phase 1.1)
+  // 🏢 ENTERPRISE: Handle floor selection (Phase 1.1) - user action only
   const handleFloorChange = useCallback((value: string) => {
-    setSelectedFloorId(value);
+    // 🏢 ENTERPRISE: Handle "clear" option - sentinel means no selection
+    const newFloorId = isSelectClearValue(value) ? undefined : value;
+    setDraftFloorId(newFloorId);
     setSaveStatus('idle');
   }, []);
 
@@ -242,9 +262,9 @@ export function BuildingSelectorCard({
     try {
       const unitRef = doc(db, COLLECTIONS.UNITS, unitId);
 
-      // 🏢 ENTERPRISE: Convert "__none__" back to null for Firestore
-      const buildingIdToSave = selectedBuildingId === '__none__' ? null : selectedBuildingId || null;
-      const floorIdToSave = selectedFloorId === '__none__' ? null : selectedFloorId || null;
+      // 🏢 ENTERPRISE: Use draft values directly (undefined → null for Firestore)
+      const buildingIdToSave = draftBuildingId || null;
+      const floorIdToSave = draftFloorId || null;
 
       // 🏢 ENTERPRISE: Update both buildingId and floorId (Phase 1.1)
       await updateDoc(unitRef, {
@@ -276,16 +296,17 @@ export function BuildingSelectorCard({
     } finally {
       setSaving(false);
     }
-  }, [unitId, selectedBuildingId, selectedFloorId, currentBuildingId, onBuildingChanged]);
+  }, [unitId, draftBuildingId, draftFloorId, currentBuildingId, onBuildingChanged]);
 
-  // 🏢 ENTERPRISE: Check if value changed (using '__none__' for empty values)
-  const hasBuildingChanges = selectedBuildingId !== (currentBuildingId || '__none__');
-  const hasFloorChanges = selectedFloorId !== (currentFloorId || '__none__');
+  // 🏢 ENTERPRISE: Check if draft differs from props (no magic strings)
+  const hasBuildingChanges = draftBuildingId !== currentBuildingId;
+  const hasFloorChanges = draftFloorId !== currentFloorId;
   const hasChanges = hasBuildingChanges || hasFloorChanges;
 
-  // 🏢 ENTERPRISE: Get current building/floor names for display
+  // 🏢 ENTERPRISE: Get building/floor names for display
   const currentBuildingName = buildings.find(b => b.id === currentBuildingId)?.name;
   const currentFloorName = floors.find(f => f.id === currentFloorId)?.name;
+  const draftBuildingName = buildings.find(b => b.id === draftBuildingId)?.name;
 
   return (
     <Card className={cn(quick.card, colors.bg.card)}>
@@ -307,7 +328,7 @@ export function BuildingSelectorCard({
             </section>
           ) : (
             <Select
-              value={selectedBuildingId}
+              value={draftBuildingId ?? ''}
               onValueChange={handleBuildingChange}
               disabled={!isEditing}
             >
@@ -322,8 +343,8 @@ export function BuildingSelectorCard({
                 <SelectValue placeholder={t('buildingSelector.placeholder')} />
               </SelectTrigger>
               <SelectContent>
-                {/* Option for no building - Radix requires non-empty value */}
-                <SelectItem value="__none__">
+                {/* 🏢 ENTERPRISE: Clear option - uses sentinel (Radix forbids empty string) */}
+                <SelectItem value={SELECT_CLEAR_VALUE}>
                   {t('buildingSelector.noBuilding')}
                 </SelectItem>
 
@@ -338,8 +359,8 @@ export function BuildingSelectorCard({
           )}
         </fieldset>
 
-        {/* 🏢 ENTERPRISE: Floor Selector (Phase 1.1) */}
-        {selectedBuildingId && selectedBuildingId !== '__none__' && (
+        {/* 🏢 ENTERPRISE: Floor Selector (Phase 1.1) - only show when building selected */}
+        {draftBuildingId && (
           <fieldset className={spacing.spaceBetween.sm}>
             <Label htmlFor="floor-selector">
               <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color, 'inline mr-1')} />
@@ -357,7 +378,7 @@ export function BuildingSelectorCard({
               </p>
             ) : (
               <Select
-                value={selectedFloorId}
+                value={draftFloorId ?? ''}
                 onValueChange={handleFloorChange}
                 disabled={!isEditing}
               >
@@ -372,8 +393,8 @@ export function BuildingSelectorCard({
                   <SelectValue placeholder={t('buildingSelector.floorPlaceholder', { defaultValue: 'Επιλέξτε όροφο' })} />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Option for no floor */}
-                  <SelectItem value="__none__">
+                  {/* 🏢 ENTERPRISE: Clear option - uses sentinel (Radix forbids empty string) */}
+                  <SelectItem value={SELECT_CLEAR_VALUE}>
                     {t('buildingSelector.noFloor', { defaultValue: '-- Χωρίς όροφο --' })}
                   </SelectItem>
 

@@ -37,14 +37,15 @@ export function PropertyDetailsPanel({
   // Safe check για το propertyIds - εξασφαλίζουμε ότι είναι array
   const safePropertyIds = Array.isArray(propertyIds) ? propertyIds : [];
   const safeProperties = Array.isArray(properties) ? properties : [];
-  
+
   // Safe functions με fallbacks - disable updates in read-only mode
   const safeOnSelectFloor = onSelectFloor || (() => {});
   const safeOnUpdateProperty = isReadOnly ? (() => {}) : (onUpdateProperty || (() => {}));
 
   if (safePropertyIds.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+      // 🏢 ENTERPRISE: No internal padding - parent CardContent handles padding
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
         <UnitIcon className={`${iconSizes.xl} mb-2 ${unitColor}`} />
         <p className="text-sm text-center">{t('detailsPanel.selectProperty')}</p>
         <p className="text-xs text-center">{t('detailsPanel.toViewDetails')}</p>
@@ -54,7 +55,8 @@ export function PropertyDetailsPanel({
 
   if (safePropertyIds.length > 1) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+      // 🏢 ENTERPRISE: No internal padding - parent CardContent handles padding
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
         <Layers className={`${iconSizes.xl} mb-2`} />
         <p className="text-sm font-medium text-center">{t('detailsPanel.propertiesSelected', { count: safePropertyIds.length })}</p>
         <p className="text-xs text-center mt-2">{t('detailsPanel.selectSingleProperty')}</p>
@@ -64,10 +66,11 @@ export function PropertyDetailsPanel({
 
   const propertyId = safePropertyIds[0];
   const property = safeProperties.find(p => p && p.id === propertyId);
-  
+
   if (!property) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+      // 🏢 ENTERPRISE: No internal padding - parent CardContent handles padding
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
         <UnitIcon className={`${iconSizes.xl} mb-2 ${unitColor}`} />
         <p className="text-sm text-center">{t('detailsPanel.noDataFound')}</p>
         <p className="text-xs text-center">{t('detailsPanel.forSelectedProperty')}</p>
@@ -76,10 +79,11 @@ export function PropertyDetailsPanel({
   }
 
   return (
+    // 🏢 ENTERPRISE: No internal padding - parent CardContent handles padding
     <ScrollArea className="h-full">
-      <PropertyDetailsContent 
-        property={property as ExtendedPropertyDetails} 
-        onSelectFloor={safeOnSelectFloor} 
+      <PropertyDetailsContent
+        property={property as ExtendedPropertyDetails}
+        onSelectFloor={safeOnSelectFloor}
         onUpdateProperty={safeOnUpdateProperty}
         isReadOnly={isReadOnly} // NEW: Pass read-only state
       />

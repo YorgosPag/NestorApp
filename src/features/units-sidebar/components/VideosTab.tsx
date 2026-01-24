@@ -1,20 +1,19 @@
 /**
  * =============================================================================
- * 🏢 ENTERPRISE: Unit Floorplan Tab
+ * 🏢 ENTERPRISE: Unit Videos Tab
  * =============================================================================
  *
- * Uses centralized EntityFilesManager for floorplan upload with:
- * - Same UI as Photos/Videos tabs (Αρχεία | Κάδος, Gallery/List/Tree views)
- * - Full-width FloorplanGallery for DXF/PDF display
+ * Uses centralized EntityFilesManager for video upload with:
  * - Enterprise naming convention (ΔΟΜΗ.txt pattern)
  * - Multi-tenant Storage Rules
+ * - Entry point selection for video types
+ * - Media gallery display style
  *
- * @module features/units-sidebar/components/FloorPlanTab
+ * @module features/units-sidebar/components/VideosTab
  * @enterprise ADR-031 - Canonical File Storage System
- * @enterprise ADR-033 - Floorplan Processing Pipeline
  *
  * Storage Path:
- * companies/{companyId}/entities/unit/{unitId}/domains/construction/categories/floorplans/files/
+ * companies/{companyId}/entities/unit/{unitId}/domains/sales/categories/videos/files/
  */
 
 'use client';
@@ -26,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { getCompanyById } from '@/services/companies.service';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { DEFAULT_VIDEO_ACCEPT } from '@/config/file-upload-config';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData } from '../types';
 
@@ -44,7 +44,7 @@ interface ViewerProps {
   [key: string]: unknown;
 }
 
-interface FloorPlanTabProps {
+interface VideosTabProps {
   selectedUnit: Property | null;
   currentFloor: FloorData | null;
   safeFloors: FloorData[];
@@ -55,28 +55,21 @@ interface FloorPlanTabProps {
 }
 
 // =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Accepted file types for floorplans (DXF, PDF, images) */
-const FLOORPLAN_ACCEPT = '.dxf,.pdf,application/pdf,application/dxf,image/vnd.dxf,.jpg,.jpeg,.png,image/jpeg,image/png';
-
-// =============================================================================
 // COMPONENT
 // =============================================================================
 
 /**
- * 🏢 ENTERPRISE: Unit Floorplan Tab
+ * 🏢 ENTERPRISE: Unit Videos Tab
  *
- * Displays unit floorplans using centralized EntityFilesManager with:
- * - Domain: construction
- * - Category: floorplans
- * - DisplayStyle: floorplan-gallery (full-width DXF/PDF viewer)
- * - Purpose: 'unit-floorplan' for filtering
+ * Displays unit videos using centralized EntityFilesManager with:
+ * - Domain: sales
+ * - Category: videos
+ * - DisplayStyle: media-gallery
+ * - Entry points: walkthrough, tour, etc.
  */
-export function FloorPlanTab({
+export function VideosTab({
   selectedUnit,
-}: FloorPlanTabProps) {
+}: VideosTabProps) {
   const { user } = useAuth();
   const { t } = useTranslation('units');
   const iconSizes = useIconSizes();
@@ -105,7 +98,7 @@ export function FloorPlanTab({
           setCompanyDisplayName(companyId); // Fallback to ID if company not found
         }
       } catch (error) {
-        console.error('[FloorPlanTab] Failed to fetch company name:', error);
+        console.error('[VideosTab] Failed to fetch company name:', error);
         setCompanyDisplayName(companyId); // Fallback to ID on error
       }
     };
@@ -118,9 +111,9 @@ export function FloorPlanTab({
     return (
       <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
         <UnitIcon className={`${iconSizes['2xl']} ${unitColor} mb-4 opacity-50`} />
-        <h3 className="text-xl font-semibold mb-2">{t('floorplan.selectUnit')}</h3>
+        <h3 className="text-xl font-semibold mb-2">{t('videos.selectUnit', 'Επιλέξτε Μονάδα')}</h3>
         <p className="text-sm max-w-sm">
-          {t('floorplan.selectUnitDescription')}
+          {t('videos.selectUnitDescription', 'Επιλέξτε μια μονάδα από τη λίστα για να δείτε τα βίντεο της.')}
         </p>
       </div>
     );
@@ -130,7 +123,7 @@ export function FloorPlanTab({
   if (!companyId || !currentUserId) {
     return (
       <section className="p-6 text-center text-muted-foreground">
-        <p>{t('floorplan.noAuth', 'Απαιτείται σύνδεση για να δείτε τις κατόψεις.')}</p>
+        <p>{t('videos.noAuth', 'Απαιτείται σύνδεση για να δείτε τα βίντεο.')}</p>
       </section>
     );
   }
@@ -142,12 +135,12 @@ export function FloorPlanTab({
       entityType="unit"
       entityId={String(selectedUnit.id)}
       entityLabel={selectedUnit.name || `Μονάδα ${selectedUnit.id}`}
-      domain="construction"
-      category="floorplans"
-      purpose="unit-floorplan"
-      entryPointCategoryFilter="floorplans"
-      displayStyle="floorplan-gallery"
-      acceptedTypes={FLOORPLAN_ACCEPT}
+      domain="sales"
+      category="videos"
+      purpose="video"
+      entryPointCategoryFilter="videos"
+      displayStyle="media-gallery"
+      acceptedTypes={DEFAULT_VIDEO_ACCEPT}
       companyName={companyDisplayName}
     />
   );

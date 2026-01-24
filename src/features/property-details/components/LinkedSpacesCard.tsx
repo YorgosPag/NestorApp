@@ -33,8 +33,8 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
-// 🏢 ENTERPRISE: Domain constants for space types
-import { ALLOCATION_SPACE_TYPES, SPACE_INCLUSION_TYPES } from '@/config/domain-constants';
+// 🏢 ENTERPRISE: Domain constants for space types + Select clear value
+import { ALLOCATION_SPACE_TYPES, SPACE_INCLUSION_TYPES, SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import type { LinkedSpace } from '@/types/unit';
 import type { AllocationSpaceType, SpaceInclusionType } from '@/config/domain-constants';
 
@@ -102,13 +102,36 @@ export function LinkedSpacesCard({
   const [loadingParking, setLoadingParking] = useState(false);
   const [loadingStorage, setLoadingStorage] = useState(false);
 
-  // 🏢 ENTERPRISE: State management - Selected spaces
-  const [linkedSpaces, setLinkedSpaces] = useState<LinkedSpace[]>(currentLinkedSpaces);
+  // 🏢 ENTERPRISE: Draft state - initialized ONCE from props (no sync via useEffect)
+  // This follows the "edit session" pattern where draft is independent until save
+  const [draftLinkedSpaces, setDraftLinkedSpaces] = useState<LinkedSpace[]>(currentLinkedSpaces);
 
-  // 🏢 ENTERPRISE: New space selection (for adding)
-  const [selectedParkingId, setSelectedParkingId] = useState<string>('__none__');
-  const [selectedStorageId, setSelectedStorageId] = useState<string>('__none__');
+  // 🏢 ENTERPRISE: New space selection (for adding) - uses sentinel for no selection
+  const [selectedParkingId, setSelectedParkingId] = useState<string>(SELECT_CLEAR_VALUE);
+  const [selectedStorageId, setSelectedStorageId] = useState<string>(SELECT_CLEAR_VALUE);
   const [selectedInclusion, setSelectedInclusion] = useState<SpaceInclusionType>('included');
+
+  // ============================================================================
+  // 🏢 ENTERPRISE: Reset/Cancel Policy - Reset draft when exiting edit mode
+  // ============================================================================
+  // When isEditing changes from true → false (user cancels/exits edit mode),
+  // reset draft values to current props (discard unsaved changes).
+  // This is deterministic: exit without save = revert to original values.
+  // ============================================================================
+  const prevIsEditingRef = React.useRef(isEditing);
+  useEffect(() => {
+    // Detect transition: was editing → no longer editing (cancel/exit)
+    if (prevIsEditingRef.current && !isEditing) {
+      // Reset drafts to props (discard unsaved changes)
+      setDraftLinkedSpaces(currentLinkedSpaces);
+      setSelectedParkingId(SELECT_CLEAR_VALUE);
+      setSelectedStorageId(SELECT_CLEAR_VALUE);
+      setSelectedInclusion('included');
+      setSaveStatus('idle');
+      console.log('🔄 [LinkedSpacesCard] Edit cancelled - draft reset to props');
+    }
+    prevIsEditingRef.current = isEditing;
+  }, [isEditing, currentLinkedSpaces]);
 
   // 🏢 ENTERPRISE: Loading & Saving states
   const [saving, setSaving] = useState(false);
@@ -188,20 +211,22 @@ export function LinkedSpacesCard({
     loadStorage();
   }, [buildingId]);
 
-  // 🏢 ENTERPRISE: Sync with external currentLinkedSpaces changes
-  useEffect(() => {
-    setLinkedSpaces(currentLinkedSpaces);
-  }, [currentLinkedSpaces]);
+  // ============================================================================
+  // 🏢 ENTERPRISE: NO STATE MIRRORING - Draft initialized once, not synced
+  // ============================================================================
+  // ❌ REMOVED: useEffect(() => setLinkedSpaces(currentLinkedSpaces), [currentLinkedSpaces])
+  // ✅ PATTERN: Draft state initialized in useState, updated only by user action
+  // ============================================================================
 
-  // 🏢 ENTERPRISE: Add parking space to linked list
+  // 🏢 ENTERPRISE: Add parking space to draft list (user action only)
   const handleAddParking = useCallback(() => {
-    if (selectedParkingId === '__none__') return;
+    if (!selectedParkingId || isSelectClearValue(selectedParkingId)) return;
 
     const parking = parkingOptions.find(p => p.id === selectedParkingId);
     if (!parking) return;
 
     // Check if already linked
-    if (linkedSpaces.some(ls => ls.spaceId === selectedParkingId)) {
+    if (draftLinkedSpaces.some(ls => ls.spaceId === selectedParkingId)) {
       console.warn('⚠️ [LinkedSpacesCard] Parking already linked');
       return;
     }
@@ -214,20 +239,20 @@ export function LinkedSpacesCard({
       allocationCode: parking.number,
     };
 
-    setLinkedSpaces(prev => [...prev, newLinkedSpace]);
-    setSelectedParkingId('__none__');
+    setDraftLinkedSpaces(prev => [...prev, newLinkedSpace]);
+    setSelectedParkingId(SELECT_CLEAR_VALUE);
     setSaveStatus('idle');
-  }, [selectedParkingId, parkingOptions, linkedSpaces, selectedInclusion]);
+  }, [selectedParkingId, parkingOptions, draftLinkedSpaces, selectedInclusion]);
 
-  // 🏢 ENTERPRISE: Add storage space to linked list
+  // 🏢 ENTERPRISE: Add storage space to draft list (user action only)
   const handleAddStorage = useCallback(() => {
-    if (selectedStorageId === '__none__') return;
+    if (!selectedStorageId || isSelectClearValue(selectedStorageId)) return;
 
     const storage = storageOptions.find(s => s.id === selectedStorageId);
     if (!storage) return;
 
     // Check if already linked
-    if (linkedSpaces.some(ls => ls.spaceId === selectedStorageId)) {
+    if (draftLinkedSpaces.some(ls => ls.spaceId === selectedStorageId)) {
       console.warn('⚠️ [LinkedSpacesCard] Storage already linked');
       return;
     }
@@ -240,18 +265,18 @@ export function LinkedSpacesCard({
       allocationCode: storage.name,
     };
 
-    setLinkedSpaces(prev => [...prev, newLinkedSpace]);
-    setSelectedStorageId('__none__');
+    setDraftLinkedSpaces(prev => [...prev, newLinkedSpace]);
+    setSelectedStorageId(SELECT_CLEAR_VALUE);
     setSaveStatus('idle');
-  }, [selectedStorageId, storageOptions, linkedSpaces, selectedInclusion]);
+  }, [selectedStorageId, storageOptions, draftLinkedSpaces, selectedInclusion]);
 
-  // 🏢 ENTERPRISE: Remove linked space
+  // 🏢 ENTERPRISE: Remove space from draft (user action only)
   const handleRemoveSpace = useCallback((spaceId: string) => {
-    setLinkedSpaces(prev => prev.filter(ls => ls.spaceId !== spaceId));
+    setDraftLinkedSpaces(prev => prev.filter(ls => ls.spaceId !== spaceId));
     setSaveStatus('idle');
   }, []);
 
-  // 🏢 ENTERPRISE: Save to Firestore
+  // 🏢 ENTERPRISE: Save draft to Firestore
   const handleSave = useCallback(async () => {
     if (!unitId) {
       console.error('❌ [LinkedSpacesCard] No unitId provided');
@@ -264,17 +289,17 @@ export function LinkedSpacesCard({
     try {
       const unitRef = doc(db, COLLECTIONS.UNITS, unitId);
 
-      // 🏢 ENTERPRISE: Update linkedSpaces array
+      // 🏢 ENTERPRISE: Update linkedSpaces array with draft values
       await updateDoc(unitRef, {
-        linkedSpaces: linkedSpaces,
+        linkedSpaces: draftLinkedSpaces,
         updatedAt: new Date().toISOString(),
       });
 
-      console.log(`✅ [LinkedSpacesCard] Unit ${unitId} linkedSpaces updated with ${linkedSpaces.length} spaces`);
+      console.log(`✅ [LinkedSpacesCard] Unit ${unitId} linkedSpaces updated with ${draftLinkedSpaces.length} spaces`);
       setSaveStatus('success');
 
       if (onLinkedSpacesChanged) {
-        onLinkedSpacesChanged(linkedSpaces);
+        onLinkedSpacesChanged(draftLinkedSpaces);
       }
 
       // Reset success status after 3 seconds
@@ -285,10 +310,10 @@ export function LinkedSpacesCard({
     } finally {
       setSaving(false);
     }
-  }, [unitId, linkedSpaces, onLinkedSpacesChanged]);
+  }, [unitId, draftLinkedSpaces, onLinkedSpacesChanged]);
 
-  // 🏢 ENTERPRISE: Check if changes exist
-  const hasChanges = JSON.stringify(linkedSpaces) !== JSON.stringify(currentLinkedSpaces);
+  // 🏢 ENTERPRISE: Check if draft differs from props
+  const hasChanges = JSON.stringify(draftLinkedSpaces) !== JSON.stringify(currentLinkedSpaces);
 
   // 🏢 ENTERPRISE: Get space name for display
   const getSpaceName = (space: LinkedSpace): string => {
@@ -321,14 +346,14 @@ export function LinkedSpacesCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="!p-2 !pt-2 space-y-3">
-        {/* 🏢 ENTERPRISE: Currently linked spaces */}
-        {linkedSpaces.length > 0 && (
+        {/* 🏢 ENTERPRISE: Currently linked spaces (from draft) */}
+        {draftLinkedSpaces.length > 0 && (
           <section className={spacing.spaceBetween.sm}>
             <Label className="text-xs text-muted-foreground">
               {t('linkedSpaces.currentlyLinked', { defaultValue: 'Συνδεδεμένα' })}
             </Label>
             <ul className={`flex flex-wrap ${spacing.gap.sm}`}>
-              {linkedSpaces.map((space) => (
+              {draftLinkedSpaces.map((space) => (
                 <li key={space.spaceId}>
                   <Badge
                     variant="secondary"
@@ -418,11 +443,12 @@ export function LinkedSpacesCard({
                       <SelectValue placeholder={t('linkedSpaces.selectParking', { defaultValue: 'Επιλογή parking...' })} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">
+                      {/* 🏢 ENTERPRISE: Clear option - uses sentinel (Radix forbids empty string) */}
+                      <SelectItem value={SELECT_CLEAR_VALUE}>
                         {t('linkedSpaces.selectParking', { defaultValue: '-- Επιλέξτε --' })}
                       </SelectItem>
                       {parkingOptions
-                        .filter(p => !linkedSpaces.some(ls => ls.spaceId === p.id))
+                        .filter(p => !draftLinkedSpaces.some(ls => ls.spaceId === p.id))
                         .map((parking) => (
                           <SelectItem key={parking.id} value={parking.id}>
                             {parking.number} {parking.type && `(${parking.type})`}
@@ -435,7 +461,7 @@ export function LinkedSpacesCard({
                     size="sm"
                     variant="outline"
                     onClick={handleAddParking}
-                    disabled={selectedParkingId === '__none__'}
+                    disabled={!selectedParkingId || isSelectClearValue(selectedParkingId)}
                     className="h-8"
                   >
                     <Plus className={iconSizes.xs} />
@@ -469,11 +495,12 @@ export function LinkedSpacesCard({
                       <SelectValue placeholder={t('linkedSpaces.selectStorage', { defaultValue: 'Επιλογή αποθήκης...' })} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">
+                      {/* 🏢 ENTERPRISE: Clear option - uses sentinel (Radix forbids empty string) */}
+                      <SelectItem value={SELECT_CLEAR_VALUE}>
                         {t('linkedSpaces.selectStorage', { defaultValue: '-- Επιλέξτε --' })}
                       </SelectItem>
                       {storageOptions
-                        .filter(s => !linkedSpaces.some(ls => ls.spaceId === s.id))
+                        .filter(s => !draftLinkedSpaces.some(ls => ls.spaceId === s.id))
                         .map((storage) => (
                           <SelectItem key={storage.id} value={storage.id}>
                             {storage.name} {storage.area && `(${storage.area} τ.μ.)`}
@@ -486,7 +513,7 @@ export function LinkedSpacesCard({
                     size="sm"
                     variant="outline"
                     onClick={handleAddStorage}
-                    disabled={selectedStorageId === '__none__'}
+                    disabled={!selectedStorageId || isSelectClearValue(selectedStorageId)}
                     className="h-8"
                   >
                     <Plus className={iconSizes.xs} />
@@ -534,7 +561,7 @@ export function LinkedSpacesCard({
         )}
 
         {/* Empty state */}
-        {linkedSpaces.length === 0 && !isEditing && (
+        {draftLinkedSpaces.length === 0 && !isEditing && (
           <p className={cn('text-sm', colors.text.muted)}>
             {t('linkedSpaces.noLinkedSpaces', { defaultValue: 'Δεν υπάρχουν συνδεδεμένοι χώροι' })}
           </p>

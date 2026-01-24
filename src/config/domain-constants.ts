@@ -441,6 +441,41 @@ export const DEFAULTS = {
 // ============================================================================
 
 /**
+ * 🏢 ENTERPRISE: Radix Select "Clear" Value
+ * @enterprise Used for "no selection" / "clear selection" options in Radix Select
+ *
+ * CRITICAL: Radix Select FORBIDS <SelectItem value="" />
+ * The Select component can have value="" to show placeholder,
+ * but SelectItem MUST have a non-empty value.
+ *
+ * Pattern:
+ * 1. <SelectItem value={SELECT_CLEAR_VALUE}>No selection</SelectItem>
+ * 2. In onValueChange: if (value === SELECT_CLEAR_VALUE) setDraft(undefined)
+ * 3. In Save: never persist SELECT_CLEAR_VALUE - convert to null/undefined
+ *
+ * @see https://www.radix-ui.com/primitives/docs/components/select
+ */
+export const SELECT_CLEAR_VALUE = '__clear__' as const;
+
+/**
+ * Helper to check if a value is the clear sentinel
+ * @param value - Value to check
+ * @returns true if value is the clear sentinel
+ */
+export function isSelectClearValue(value: string | undefined | null): value is typeof SELECT_CLEAR_VALUE {
+  return value === SELECT_CLEAR_VALUE;
+}
+
+/**
+ * Convert select value for persistence (sentinel → undefined)
+ * @param value - Select value (may be sentinel)
+ * @returns undefined if sentinel, otherwise original value
+ */
+export function selectValueForPersistence(value: string | undefined): string | undefined {
+  return isSelectClearValue(value) ? undefined : value;
+}
+
+/**
  * Conversation preview length for lastMessage.content
  * @enterprise Used in conversation list views
  */

@@ -16,15 +16,18 @@
  */
 
 // ============================================================================
-// UNITS-SPECIFIC COMPONENTS
+// UNITS-SPECIFIC COMPONENTS (EntityFilesManager-based tabs)
 // ============================================================================
 
 import { PropertyDetailsContent } from '@/components/property-viewer/details/PropertyDetailsContent';
 import { UnitCustomerTab } from '@/components/units/tabs/UnitCustomerTab';
 import { FloorPlanTab } from '@/features/units-sidebar/components/FloorPlanTab';
+import { DocumentsTab } from '@/features/units-sidebar/components/DocumentsTab';
+import { PhotosTab } from '@/features/units-sidebar/components/PhotosTab';
+import { VideosTab } from '@/features/units-sidebar/components/VideosTab';
 
 // ============================================================================
-// SHARED COMPONENTS (reused from their original locations)
+// SHARED COMPONENTS (legacy - kept for backward compatibility)
 // ============================================================================
 
 import PhotosTabContent from '@/components/building-management/tabs/PhotosTabContent';
@@ -40,6 +43,11 @@ export const UNITS_COMPONENT_MAPPING = {
   'PropertyDetailsContent': PropertyDetailsContent,
   'UnitCustomerTab': UnitCustomerTab,
   'FloorPlanTab': FloorPlanTab,
+  // 🏢 ENTERPRISE: New EntityFilesManager-based tabs (ADR-031)
+  'DocumentsTab': DocumentsTab,
+  'PhotosTab': PhotosTab,
+  'VideosTab': VideosTab,
+  // Legacy mappings (kept for backward compatibility)
   'PhotosTabContent': PhotosTabContent,
   'VideosTabContent': VideosTabContent,
   'DocumentsPlaceholder': PlaceholderTab,

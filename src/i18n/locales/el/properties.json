@@ -407,6 +407,15 @@
       "floor": "Όροφος:",
       "layers": "Layers:",
       "liveUpdates": "Ενημερώσεις σε πραγματικό χρόνο"
+    },
+    "selectPropertyToViewMedia": "Επιλέξτε ακίνητο για προβολή",
+    "media": {
+      "floorplans": "Κάτοψη",
+      "photos": "Φωτογραφίες",
+      "videos": "Βίντεο",
+      "noFloorplans": "Δεν υπάρχουν κατόψεις",
+      "noPhotos": "Δεν υπάρχουν φωτογραφίες",
+      "noVideos": "Δεν υπάρχουν βίντεο"
     }
   },
   "meta": {
@@ -418,6 +427,7 @@
     "edit": "Επεξ."
   },
   "details": {
+    "publicView": "Δημόσια Προβολή",
     "building": "Κτίριο",
     "floor": "Όροφος",
     "price": "Τιμή",

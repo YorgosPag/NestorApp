@@ -32,13 +32,14 @@ import type { PropertyFilterState } from '@/components/core/AdvancedFilters';
 import { useUrlPreselect } from '@/features/property-management/hooks/useUrlPreselect';
 import { useViewerProps } from '@/features/property-management/hooks/useViewerProps';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+// 🏢 ENTERPRISE: Semantic colors for consistent styling
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 export function PropertyManagementPageContent() {
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('selected');
   const { t } = useTranslation('properties');
-  const spacing = useSpacingTokens();
+  const colors = useSemanticColors();
 
   // Hook with all property data and state
   const hookState = usePublicPropertyViewer();
@@ -112,7 +113,10 @@ export function PropertyManagementPageContent() {
   };
 
   return (
-    <section className="h-full flex flex-col bg-muted/30" aria-label={t('header.title')}>
+    <section
+      className={`h-full flex flex-col overflow-hidden ${colors.bg.primary}`}
+      aria-label={t('header.title')}
+    >
       {/* 🏢 ENTERPRISE: Centralized header with breadcrumb */}
       <PropertiesHeader
         viewMode={hookState.viewMode}
@@ -134,17 +138,30 @@ export function PropertyManagementPageContent() {
         />
       )}
 
-      {/* 🏢 ENTERPRISE: Advanced Filters Panel (centralized) */}
-      <div className={`${spacing.padding.md} border-b bg-card`}>
+      {/* 🏢 ENTERPRISE: Advanced Filters Panel - Desktop: Always visible */}
+      {/* Same structure as Units page - separate container below Dashboard */}
+      <div className="hidden md:block">
         <AdvancedFiltersPanel
           config={propertyFiltersConfig}
           filters={enterpriseFilters}
-          onFiltersChange={handleEnterpriseFilterChange}
-          className="w-full"
+          onFiltersChange={(updated) => handleEnterpriseFilterChange(updated)}
         />
       </div>
 
-      {/* Property viewer layout */}
+      {/* 🏢 ENTERPRISE: Advanced Filters Panel - Mobile: Show only when toggled */}
+      {showFilters && (
+        <div className="md:hidden">
+          <AdvancedFiltersPanel
+            config={propertyFiltersConfig}
+            filters={enterpriseFilters}
+            onFiltersChange={(updated) => handleEnterpriseFilterChange(updated)}
+            defaultOpen={true}
+          />
+        </div>
+      )}
+
+      {/* 🏢 ENTERPRISE: Property viewer layout */}
+      {/* Note: ReadOnlyPropertyViewerLayout has its own flex-1 flex overflow-hidden structure */}
       <ReadOnlyPropertyViewerLayout
         {...viewerProps}
         isLoading={hookState.isLoading}

@@ -872,9 +872,9 @@ export const projectFiltersConfig: FilterPanelConfig = {
 // For public property viewer (/properties page)
 // ====================================================================
 export const propertyFiltersConfig: FilterPanelConfig = {
-  title: 'filters.propertiesTitle',
-  searchPlaceholder: 'filters.placeholders.propertiesSearch',
-  i18nNamespace: 'properties', // 🏢 ENTERPRISE: Properties domain namespace
+  title: 'propertiesTitle',
+  searchPlaceholder: 'placeholders.propertiesSearch',
+  i18nNamespace: 'filters', // 🏢 ENTERPRISE: Filters domain namespace (filter labels live in filters.json)
   rows: [
     {
       id: 'property-basic',
@@ -883,7 +883,7 @@ export const propertyFiltersConfig: FilterPanelConfig = {
           id: 'searchTerm',
           type: 'search',
           label: FL.search,
-          placeholder: 'filters.placeholders.propertiesSearch',
+          placeholder: 'placeholders.propertiesSearch',
           ariaLabel: 'Search properties',
           width: 1
         },
@@ -896,11 +896,11 @@ export const propertyFiltersConfig: FilterPanelConfig = {
           width: 1,
           options: [
             { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES },
-            { value: 'apartment', label: PROPERTY_BUILDING_TYPE_LABELS.apartment },
-            { value: 'maisonette', label: PROPERTY_BUILDING_TYPE_LABELS.maisonette },
-            { value: 'studio', label: PROPERTY_BUILDING_TYPE_LABELS.studio },
-            { value: 'shop', label: PROPERTY_BUILDING_TYPE_LABELS.shop },
-            { value: 'office', label: PROPERTY_BUILDING_TYPE_LABELS.office }
+            { value: 'apartment', label: 'properties.types.apartment' },
+            { value: 'maisonette', label: 'properties.types.maisonette' },
+            { value: 'studio', label: 'properties.types.studio' },
+            { value: 'shop', label: 'properties.types.shop' },
+            { value: 'office', label: 'properties.types.office' }
           ]
         },
         {

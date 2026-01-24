@@ -53,7 +53,23 @@
     "noFloorplan": "No floorplan available",
     "addFloorplan": "Add Floorplan",
     "editFloorplan": "Edit Floorplan",
-    "deleteFloorplan": "Delete Floorplan"
+    "deleteFloorplan": "Delete Floorplan",
+    "noAuth": "Login required to view floorplans."
+  },
+  "documents": {
+    "selectUnit": "Select Unit",
+    "selectUnitDescription": "Select a unit from the list to view its documents.",
+    "noAuth": "Login required to view documents."
+  },
+  "photos": {
+    "selectUnit": "Select Unit",
+    "selectUnitDescription": "Select a unit from the list to view its photos.",
+    "noAuth": "Login required to view photos."
+  },
+  "videos": {
+    "selectUnit": "Select Unit",
+    "selectUnitDescription": "Select a unit from the list to view its videos.",
+    "noAuth": "Login required to view videos."
   },
   "card": {
     "stats": {

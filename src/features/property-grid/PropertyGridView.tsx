@@ -26,13 +26,11 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { usePropertyGridFilters } from './hooks/usePropertyGridFilters';
 import { PropertyCard } from './components/PropertyCard';
 import { PropertyListCard } from '@/domain';
-import { ViewModeToggle } from './components/ViewModeToggle';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
@@ -46,15 +44,15 @@ import type { ViewMode as CoreViewMode } from '@/core/headers';
 
 export function PropertyGridView() {
   const router = useRouter();
-  const { properties, filters, setFilters, dashboardStats } = usePublicPropertyViewer();
+  const { properties, filters, handleFiltersChange, dashboardStats } = usePublicPropertyViewer();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { radius } = useBorderTokens();
-  const spacing = useSpacingTokens();
   const { t } = useTranslation('properties');
 
   // Local state
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [enterpriseFilters, setEnterpriseFilters] = useState<PropertyFilterState>(defaultPropertyFilters);
 
   const {
@@ -69,8 +67,7 @@ export function PropertyGridView() {
     setEnterpriseFilters(updated);
 
     // Map to hook's filter format
-    setFilters({
-      ...filters,
+    handleFiltersChange({
       searchTerm: updated.searchTerm || '',
       propertyType: updated.propertyType || [],
       status: updated.status || [],
@@ -152,7 +149,7 @@ export function PropertyGridView() {
               <button
                 key="floorplan"
                 onClick={handleViewAllFloorPlan}
-                className={`px-4 py-2 ${colors.bg.gradient} ${colors.text.primaryContrast} ${radius.lg} transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+                className={`px-4 py-2 ${colors.bg.gradient} ${colors.text.inverse} ${radius.lg} transition-all flex items-center gap-2 font-medium h-8 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
               >
                 <MapPin className={iconSizes.sm} />
                 {t('grid.actions.viewFloorPlan')}
@@ -170,15 +167,27 @@ export function PropertyGridView() {
         />
       )}
 
-      {/* 🏢 ENTERPRISE: Advanced Filters Panel (centralized) */}
-      <div className={`${spacing.padding.md} border-b bg-card`}>
+      {/* 🏢 ENTERPRISE: Advanced Filters Panel - Desktop: Always visible */}
+      {/* Same structure as Units page - separate container below Dashboard */}
+      <div className="hidden md:block">
         <AdvancedFiltersPanel
           config={propertyFiltersConfig}
           filters={enterpriseFilters}
-          onFiltersChange={handleEnterpriseFilterChange}
-          className="w-full"
+          onFiltersChange={(updated) => handleEnterpriseFilterChange(updated)}
         />
       </div>
+
+      {/* 🏢 ENTERPRISE: Advanced Filters Panel - Mobile: Show only when toggled */}
+      {showFilters && (
+        <div className="md:hidden">
+          <AdvancedFiltersPanel
+            config={propertyFiltersConfig}
+            filters={enterpriseFilters}
+            onFiltersChange={(updated) => handleEnterpriseFilterChange(updated)}
+            defaultOpen={true}
+          />
+        </div>
+      )}
 
       {/* Properties Grid/List */}
       <main className="w-full px-4 py-8 overflow-x-hidden">
@@ -215,7 +224,7 @@ export function PropertyGridView() {
           </p>
           <button
             onClick={handleViewAllFloorPlan}
-            className={`px-8 py-3 ${colors.bg.gradient} ${colors.text.primaryContrast} ${radius.lg} transition-all font-medium inline-flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+            className={`px-8 py-3 ${colors.bg.gradient} ${colors.text.inverse} ${radius.lg} transition-all font-medium inline-flex items-center gap-2 ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
           >
             <MapPin className={iconSizes.md} />
             {t('grid.cta.button')}

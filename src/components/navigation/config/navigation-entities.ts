@@ -282,56 +282,56 @@ export const NAVIGATION_ACTIONS: NavigationActionsConfig = {
   delete: {
     icon: Trash2,
     color: 'text-destructive',
-    label: 'navigation.actions.delete.label',
-    description: 'navigation.actions.delete.description'
+    label: 'actions.delete.label',
+    description: 'actions.delete.description'
   },
   unlink: {
     icon: Unlink2,
     color: 'text-orange-500',
-    label: 'navigation.actions.unlink.label',
-    description: 'navigation.actions.unlink.description'
+    label: 'actions.unlink.label',
+    description: 'actions.unlink.description'
   },
   add: {
     icon: Plus,
     color: 'text-green-600',
-    label: 'navigation.actions.add.label',
-    description: 'navigation.actions.add.description'
+    label: 'actions.add.label',
+    description: 'actions.add.description'
   },
   link: {
     icon: Link2,
     color: 'text-blue-600',
-    label: 'navigation.actions.link.label',
-    description: 'navigation.actions.link.description'
+    label: 'actions.link.label',
+    description: 'actions.link.description'
   },
   actions: {
     icon: MapPin,
     color: 'text-red-600',
-    label: 'navigation.actions.actions.label',
-    description: 'navigation.actions.actions.description'
+    label: 'actions.actions.label',
+    description: 'actions.actions.description'
   },
   view: {
     icon: Eye,
     color: 'text-cyan-600',
-    label: 'navigation.actions.view.label',
-    description: 'navigation.actions.view.description'
+    label: 'actions.view.label',
+    description: 'actions.view.description'
   },
   edit: {
     icon: Pencil,
     color: 'text-cyan-600',
-    label: 'navigation.actions.edit.label',
-    description: 'navigation.actions.edit.description'
+    label: 'actions.edit.label',
+    description: 'actions.edit.description'
   },
   share: {
     icon: Share2,
     color: 'text-violet-600',
-    label: 'navigation.actions.share.label',
-    description: 'navigation.actions.share.description'
+    label: 'actions.share.label',
+    description: 'actions.share.description'
   },
   filter: {
     icon: Filter,
     color: 'text-orange-500',
-    label: 'navigation.actions.filter.label',
-    description: 'navigation.actions.filter.description'
+    label: 'actions.filter.label',
+    description: 'actions.filter.description'
   }
 } as const;
 

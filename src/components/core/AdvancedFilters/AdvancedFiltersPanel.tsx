@@ -133,6 +133,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                       value={getFieldValue(field.id)}
                       onValueChange={(value) => handleFieldChange(field.id, value)}
                       onRangeChange={(subKey, value) => handleFieldRangeChange(field.id, subKey, value)}
+                      i18nNamespace={currentNamespace}
                     />
                   ))}
                 </div>
@@ -144,7 +145,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                   <CollapsibleTrigger asChild>
                     <Button variant="outline" size="sm" className="text-sm font-medium">
                       <Filter className={`${iconSizes.sm} ${spacing.margin.right.sm}`}/>
-                      {showAdvanced ? t('filters.hideAdvanced') : t('filters.showAdvanced')}
+                      {showAdvanced ? t('hideAdvanced') : t('showAdvanced')}
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className={`!mt-2 !p-2 ${quick.card} ${colors.bg.primary} animate-in fade-in-0 zoom-in-95`}>

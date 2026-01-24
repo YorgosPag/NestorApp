@@ -20,15 +20,24 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { ContactsBlock } from './components/ContactsBlock';
 import { DocumentsBlock } from './components/DocumentsBlock';
 import { DatesBlock } from './components/DatesBlock';
-import { BuildingSelectorCard } from './components/BuildingSelectorCard';
-import { LinkedSpacesCard } from './components/LinkedSpacesCard';
 import { UnitFieldsBlock } from './components/UnitFieldsBlock';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+// 🏢 ENTERPRISE: Centralized feature flags
+import { isAppFeatureEnabled } from '@/config/feature-flags';
 
 import { resolveAttachments } from './utils/attachments';
 import { makeSafeUpdate } from './utils/safeUpdate';
 import { useNotifications } from '@/providers/NotificationProvider';
+
+// 🏢 ENTERPRISE: Lazy imports for Unit Linking (behind feature flag)
+// These are only loaded when UNIT_LINKING feature is enabled
+const BuildingSelectorCard = isAppFeatureEnabled('UNIT_LINKING')
+  ? require('./components/BuildingSelectorCard').BuildingSelectorCard
+  : null;
+const LinkedSpacesCard = isAppFeatureEnabled('UNIT_LINKING')
+  ? require('./components/LinkedSpacesCard').LinkedSpacesCard
+  : null;
 
 export function PropertyDetailsContent({
   property,
@@ -115,6 +124,7 @@ export function PropertyDetailsContent({
   };
 
   // === RENDER: ΑΠΑΡΑΛΛΑΚΤΟ DOM/Tailwind/labels ===
+  // 🏢 ENTERPRISE: Internal padding (8px) - parent CardContent has p-0 for scrollbar alignment
   return (
     <div className={`${spacing.spaceBetween.sm} ${spacing.padding.sm}`}>
       {isReadOnly && <ReadOnlyBanner />}
@@ -146,47 +156,44 @@ export function PropertyDetailsContent({
         onExitEditMode={handleExitEditMode}
       />
 
-      {/* 🏢 ENTERPRISE: Building & Floor Selector για σύνδεση Μονάδας→Κτιρίου→Ορόφου */}
-      {/* ⚠️ TEMPORARILY DISABLED - Debugging infinite loop issue */}
-      {/* Εμφανίζεται ΜΟΝΟ σε edit mode (Pattern A - entity header edit) */}
-      {/* {!isReadOnly && isEditMode && (
-        <BuildingSelectorCard
-          unitId={resolvedProperty?.id ?? ''}
-          currentBuildingId={resolvedProperty?.buildingId}
-          currentFloorId={resolvedProperty?.floorId}
-          isEditing={true}
-          onBuildingChanged={(newBuildingId, newFloorId) => {
-            console.log(`✅ Unit ${resolvedProperty?.id} linked to building ${newBuildingId}, floor ${newFloorId}`);
-            // 🏢 ENTERPRISE: Trigger property update to refresh UI
-            if (onUpdateProperty) {
-              const updates: Partial<Property> = { buildingId: newBuildingId };
-              if (newFloorId) {
-                updates.floorId = newFloorId;
+      {/* 🏢 ENTERPRISE: Unit Linking Section (Building, Floor, Parking, Storage) */}
+      {/* 🚫 FEATURE FLAG: UNIT_LINKING - Currently DISABLED */}
+      {/* Root Cause: State mirroring anti-pattern causing ref attach/detach loop */}
+      {/* Fix Required: Convert to fully controlled components (ΒΗΜΑ 2) */}
+      {/* See: src/config/feature-flags.ts for details */}
+      {isAppFeatureEnabled('UNIT_LINKING') && !isReadOnly && isEditMode && BuildingSelectorCard && (
+        <>
+          <BuildingSelectorCard
+            unitId={resolvedProperty?.id ?? ''}
+            currentBuildingId={resolvedProperty?.buildingId}
+            currentFloorId={resolvedProperty?.floorId}
+            isEditing={true}
+            onBuildingChanged={(newBuildingId: string, newFloorId?: string) => {
+              if (onUpdateProperty && resolvedProperty?.id) {
+                const updates: Partial<Property> = { buildingId: newBuildingId };
+                if (newFloorId) {
+                  updates.floorId = newFloorId;
+                }
+                onUpdateProperty(resolvedProperty.id, updates);
               }
-              onUpdateProperty(resolvedProperty.id, updates);
-            }
-          }}
-        />
-      )} */}
+            }}
+          />
 
-      {/* 🏢 ENTERPRISE: LinkedSpaces για σύνδεση Parking & Storage (Phase 2) */}
-      {/* ⚠️ TEMPORARILY DISABLED - Debugging infinite loop issue */}
-      {/* Εμφανίζεται ΜΟΝΟ σε edit mode και όταν υπάρχει buildingId */}
-      {/* {!isReadOnly && isEditMode && resolvedProperty?.buildingId && (
-        <LinkedSpacesCard
-          unitId={resolvedProperty?.id ?? ''}
-          buildingId={resolvedProperty?.buildingId}
-          currentLinkedSpaces={resolvedProperty?.linkedSpaces}
-          isEditing={true}
-          onLinkedSpacesChanged={(newLinkedSpaces) => {
-            console.log(`✅ Unit ${resolvedProperty?.id} linkedSpaces updated with ${newLinkedSpaces.length} spaces`);
-            // 🏢 ENTERPRISE: Trigger property update to refresh UI
-            if (onUpdateProperty) {
-              onUpdateProperty(resolvedProperty.id, { linkedSpaces: newLinkedSpaces });
-            }
-          }}
-        />
-      )} */}
+          {resolvedProperty?.buildingId && LinkedSpacesCard && (
+            <LinkedSpacesCard
+              unitId={resolvedProperty?.id ?? ''}
+              buildingId={resolvedProperty.buildingId}
+              currentLinkedSpaces={resolvedProperty?.linkedSpaces}
+              isEditing={true}
+              onLinkedSpacesChanged={(newLinkedSpaces: Property['linkedSpaces']) => {
+                if (onUpdateProperty && resolvedProperty?.id) {
+                  onUpdateProperty(resolvedProperty.id, { linkedSpaces: newLinkedSpaces });
+                }
+              }}
+            />
+          )}
+        </>
+      )}
 
       {/* Share Button - Always visible for easy sharing */}
       <div className="flex justify-end">

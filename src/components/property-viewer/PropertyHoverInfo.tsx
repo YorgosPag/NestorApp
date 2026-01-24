@@ -10,6 +10,8 @@ const unitColor = NAVIGATION_ENTITIES.unit.color;
 import { Separator } from '@/components/ui/separator';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { getPropertyStatusConfig } from '@/features/property-hover/constants';
 import { PropertyHoverHeader } from '@/features/property-hover/components/PropertyHoverHeader';
 import { PropertyHoverLocation } from '@/features/property-hover/components/PropertyHoverLocation';
@@ -31,11 +33,13 @@ interface PropertyHoverInfoProps {
 
 function PropertyHoverContent({ property }: { property: Property }) {
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
   const statusConfig = getPropertyStatusConfig(colors);
   const statusInfo = statusConfig[property.status as keyof typeof statusConfig] || statusConfig['unknown'];
 
   return (
-    <div className="space-y-3 p-1 animate-fade-in">
+    // 🏢 ENTERPRISE: 8px internal padding from centralized tokens
+    <div className={`${spacing.spaceBetween.sm} ${spacing.padding.sm} animate-fade-in`}>
       <PropertyHoverHeader
         name={property.name}
         type={property.type}
@@ -80,13 +84,15 @@ function PropertyHoverContent({ property }: { property: Property }) {
 
 export function PropertyHoverInfo({ propertyId, properties }: PropertyHoverInfoProps) {
   const iconSizes = useIconSizes();
+  const spacing = useSpacingTokens();
   const property = useHoveredProperty(propertyId, properties);
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('properties');
 
   if (!propertyId) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+      // 🏢 ENTERPRISE: 8px internal padding from centralized tokens
+      <div className={`flex flex-col items-center justify-center h-full text-muted-foreground ${spacing.padding.sm}`}>
         <MousePointer className={`${iconSizes.md} mb-2`} />
         <p className="text-xs text-center">{t('hoverInfo.hoverMouse')}</p>
         <p className="text-xs text-center">{t('hoverInfo.overProperty')}</p>
@@ -98,7 +104,8 @@ export function PropertyHoverInfo({ propertyId, properties }: PropertyHoverInfoP
 
   if (!property) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+      // 🏢 ENTERPRISE: 8px internal padding from centralized tokens
+      <div className={`flex flex-col items-center justify-center h-full text-muted-foreground ${spacing.padding.sm}`}>
         <UnitIcon className={`${iconSizes.md} mb-2 ${unitColor}`} />
         <p className="text-xs text-center">{t('hoverInfo.noDataFound')}</p>
         <p className="text-xs text-center">{t('hoverInfo.forThisProperty')}</p>

@@ -33,6 +33,8 @@ import {
   getResultItemClassName
 } from './SearchSystem.styles';
 import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized Select clear value (Radix forbids empty string in SelectItem)
+import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -488,13 +490,14 @@ const Filter: React.FC<FilterProps> = ({
         return (
           <Select
             value={selectVal}
-            onValueChange={(val) => onChange(val || null)}
+            onValueChange={(val) => onChange(isSelectClearValue(val) ? null : val)}
           >
             <SelectTrigger className={searchSystemClasses.filter.select}>
               <SelectValue placeholder={`All ${config.label}`} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All {config.label}</SelectItem>
+              {/* 🏢 ENTERPRISE: Clear option - uses sentinel (Radix forbids empty string) */}
+              <SelectItem value={SELECT_CLEAR_VALUE}>All {config.label}</SelectItem>
               {config.options?.map(option => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label} {option.count && `(${option.count})`}

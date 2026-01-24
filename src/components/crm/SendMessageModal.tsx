@@ -28,6 +28,8 @@ import { MESSAGE_TYPES, MESSAGE_TEMPLATES } from '../../lib/config/communication
 import { toast } from 'sonner';
 // 🏢 ENTERPRISE: Type imports
 import type { CommunicationChannel } from '@/types/communications';
+// 🏢 ENTERPRISE: Centralized Select clear value (Radix forbids empty string in SelectItem)
+import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions
@@ -440,12 +442,16 @@ const SendMessageModal: React.FC<SendMessageModalProps> = ({
           {/* Template Selection */}
           <div className="space-y-2">
             <Label>{t('sendMessage.template')}</Label>
-            <Select value={selectedTemplate || ''} onValueChange={setSelectedTemplate}>
+            <Select
+              value={selectedTemplate || SELECT_CLEAR_VALUE}
+              onValueChange={(val) => setSelectedTemplate(isSelectClearValue(val) ? '' : val)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={t('sendMessage.noTemplate')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{t('sendMessage.noTemplate')}</SelectItem>
+                {/* 🏢 ENTERPRISE: Clear option - uses sentinel (Radix forbids empty string) */}
+                <SelectItem value={SELECT_CLEAR_VALUE}>{t('sendMessage.noTemplate')}</SelectItem>
                 {getAvailableTemplates().map(template => (
                   <SelectItem key={template.value} value={template.value}>
                     {template.label}

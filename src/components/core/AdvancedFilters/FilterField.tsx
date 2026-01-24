@@ -35,18 +35,22 @@ interface FilterFieldProps {
   value: FilterFieldValue;
   onValueChange: (value: FilterFieldValue) => void;
   onRangeChange?: (subKey: 'min' | 'max', value: string) => void;
+  /** 🏢 ENTERPRISE: i18n namespace for translations (passed from parent config) */
+  i18nNamespace?: string;
 }
 
-export function FilterField({ config, value, onValueChange, onRangeChange }: FilterFieldProps) {
-  // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('building');
+export function FilterField({ config, value, onValueChange, onRangeChange, i18nNamespace = 'building' }: FilterFieldProps) {
+  // 🏢 ENTERPRISE: i18n hook with configurable namespace
+  const { t } = useTranslation(i18nNamespace);
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
 
   // 🏢 ENTERPRISE: Helper to translate option labels
   // Supports both translation keys (e.g., 'units.operationalStatus.ready') and direct values
   // 🎯 PR1.2: Auto-detect namespace from key prefix (e.g., 'units.x.y' → ns:'units', key:'x.y')
-  const translateLabel = (label: string): string => {
+  const translateLabel = (label: string | undefined): string => {
+    // 🛡️ ENTERPRISE: Guard against undefined/null labels
+    if (!label) return '';
     // If it's a translation key (contains a dot), translate it
     if (label.includes('.')) {
       // Check if key has namespace prefix (e.g., 'units.operationalStatus.ready')

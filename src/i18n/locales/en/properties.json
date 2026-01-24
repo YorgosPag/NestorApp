@@ -413,6 +413,15 @@
       "floor": "Floor:",
       "layers": "Layers:",
       "realTimeUpdates": "Real-time updates"
+    },
+    "selectPropertyToViewMedia": "Select a property to view",
+    "media": {
+      "floorplans": "Floorplan",
+      "photos": "Photos",
+      "videos": "Videos",
+      "noFloorplans": "No floorplans available",
+      "noPhotos": "No photos available",
+      "noVideos": "No videos available"
     }
   },
   "meta": {
@@ -424,6 +433,7 @@
     "edit": "Edit"
   },
   "details": {
+    "publicView": "Public View",
     "building": "Building",
     "floor": "Floor",
     "price": "Price",

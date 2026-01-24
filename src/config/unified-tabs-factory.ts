@@ -215,10 +215,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             description: 'Έγγραφα και πιστοποιητικά της μονάδας',
             order: 3, // PR1.2: Reordered after customer removal
             enabled: true,
-            component: 'DocumentsPlaceholder',
-            componentProps: {
-              subtitle: 'Εδώ θα εμφανίζονται τα έγγραφα της μονάδας'
-            }
+            component: 'DocumentsTab'
           },
           {
             id: 'photos',
@@ -227,7 +224,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             description: 'Φωτογραφίες της μονάδας',
             order: 4, // PR1.2: Reordered after customer removal
             enabled: true,
-            component: 'PhotosTabContent'
+            component: 'PhotosTab'
           },
           {
             id: 'videos',
@@ -236,7 +233,7 @@ function getBaseConfigForEntity(entityType: TabEntityType): EntityTabsConfig {
             description: 'Videos της μονάδας',
             order: 5, // PR1.2: Reordered after customer removal
             enabled: true,
-            component: 'VideosTabContent'
+            component: 'VideosTab'
           }
         ],
         defaultEnabled: true
