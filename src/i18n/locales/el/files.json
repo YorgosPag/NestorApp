@@ -264,6 +264,7 @@
     "mediaItems": "Στοιχεία πολυμέσων"
   },
   "floorplan": {
+    "loading": "Φόρτωση κάτοψης...",
     "noFloorplans": "Δεν υπάρχουν κατόψεις",
     "noFloorplansDescription": "Ανεβάστε DXF ή PDF αρχεία κάτοψης",
     "gallery": "Συλλογή κατόψεων",

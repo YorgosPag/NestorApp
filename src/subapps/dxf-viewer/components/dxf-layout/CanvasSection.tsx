@@ -22,6 +22,7 @@ import { useCursorSettings } from '../../systems/cursor';
 import { globalRulerStore } from '../../settings-provider';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind, Overlay } from '../../overlays/types';
+import type { RegionStatus } from '../../types/overlay';
 import { getStatusColors } from '../../config/color-mapping';
 import { createOverlayHandlers } from '../../overlays/types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -360,30 +361,28 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       .map((overlay, index) => {
         const vertices = overlay.polygon.map((point: [number, number]) => ({ x: point[0], y: point[1] }));
 
-        // Debug για το πρώτο overlay
-        if (index === 0) {
-          // // console.log('🔍 convertToColorLayers - First overlay conversion:', {
-          //   overlayId: overlay.id,
-          //   originalPolygon: overlay.polygon.slice(0, 3), // Τα πρώτα 3 points
-          //   convertedVertices: vertices.slice(0, 3), // Τα πρώτα 3 vertices
-          //   color: overlay.color || UI_COLORS.OVERLAY_RED
-          // });
-        }
+        // 🎯 ENTERPRISE: Χρήση Overlay.style properties αντί για non-existent properties
+        const isSelected = overlay.id === overlayStore.selectedOverlayId;
+        const statusColors = overlay.status ? getStatusColors(overlay.status) : null;
+        const fillColor = overlay.style?.fill || statusColors?.fill || UI_COLORS.BUTTON_PRIMARY;
+        const strokeColor = overlay.style?.stroke || statusColors?.stroke || UI_COLORS.BLACK;
 
         return {
           id: overlay.id,
-          name: `Layer ${index + 1}`,
-          color: overlay.color || getStatusColors(overlay.status)?.fill || UI_COLORS.BUTTON_PRIMARY,
-          opacity: overlay.opacity || 0.7,  // Slightly transparent so we can see them
-          visible: overlay.visible !== false,
+          name: overlay.label || `Layer ${index + 1}`,
+          color: fillColor,
+          opacity: overlay.style?.opacity ?? 0.7,  // Slightly transparent so we can see them
+          visible: true,  // Overlays are always visible (no visible property in Overlay interface)
           zIndex: index,
+          // 🎯 ΚΡΙΣΙΜΟ: Περνάμε το status για STATUS_COLORS mapping στο LayerRenderer
+          status: overlay.status as RegionStatus | undefined,
           polygons: [{
             id: `polygon_${overlay.id}`,
             vertices,
-            fillColor: overlay.color || getStatusColors(overlay.status)?.fill || UI_COLORS.BUTTON_PRIMARY,  // Use κεντρικά STATUS_COLORS
-            strokeColor: overlay.selected ? UI_COLORS.SELECTED_RED : UI_COLORS.BLACK,  // Black stroke for visibility
-            strokeWidth: overlay.selected ? 3 : 2,  // Thicker stroke
-            selected: overlay.id === overlayStore.selectedOverlayId
+            fillColor,  // Use status colors or style colors
+            strokeColor: isSelected ? UI_COLORS.SELECTED_RED : strokeColor,
+            strokeWidth: isSelected ? 3 : 2,  // Thicker stroke when selected
+            selected: isSelected
           }]
         };
       });
@@ -634,10 +633,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // ✅ OVERLAY MODE: Use legacy overlay system with draftPolygon
     if (overlayMode === 'draw') {
       // 🔧 Use UNIFIED CoordinateTransforms για consistency
-      const canvas = dxfCanvasRef.current || overlayCanvasRef.current;
-      if (!canvas) return;
+      const canvasRef = dxfCanvasRef.current || overlayCanvasRef.current;
+      if (!canvasRef) return;
 
-      const viewport = { width: canvas.clientWidth, height: canvas.clientHeight };
+      // 🏢 ENTERPRISE: Type-safe canvas element access (DxfCanvasRef vs HTMLCanvasElement)
+      const canvasElement = 'getCanvas' in canvasRef ? canvasRef.getCanvas() : canvasRef;
+      if (!canvasElement) return;
+
+      const viewport = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
       const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewport);
       const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
 

@@ -264,6 +264,7 @@
     "mediaItems": "Media items"
   },
   "floorplan": {
+    "loading": "Loading floorplan...",
     "noFloorplans": "No floorplans",
     "noFloorplansDescription": "Upload DXF or PDF floorplan files",
     "gallery": "Floorplan gallery",

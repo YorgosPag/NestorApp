@@ -131,10 +131,13 @@ const SelectLabel = React.forwardRef<
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
 /**
- * 🏢 ENTERPRISE: SelectItem with dev-only empty value assertion
+ * 🏢 ENTERPRISE: SelectItem with compile-time AND runtime empty value protection
  *
  * Radix Select FORBIDS <SelectItem value="" /> - it will crash at runtime.
- * This wrapper catches the error early in development with a clear message.
+ *
+ * PROTECTION LAYERS:
+ * 1. Compile-time: TypeScript enforces `value: string` (required, non-optional)
+ * 2. Runtime (dev): Assertion throws if value is empty/undefined/null
  *
  * For "clear/no selection" options, use SELECT_CLEAR_VALUE from domain-constants.ts:
  * @example
@@ -143,9 +146,17 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
  * <SelectItem value={SELECT_CLEAR_VALUE}>No selection</SelectItem>
  * ```
  */
+type SelectItemProps = Omit<React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>, 'value'> & {
+  /**
+   * 🏢 ENTERPRISE: Required non-empty string value.
+   * Use SELECT_CLEAR_VALUE from '@/config/domain-constants' for "no selection" options.
+   */
+  value: string;
+};
+
 const SelectItem = React.forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
+  SelectItemProps
 >(({ className, children, value, ...props }, ref) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
