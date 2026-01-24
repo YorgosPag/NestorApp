@@ -212,7 +212,8 @@ export function BuildingSelectorCard({
     };
 
     loadFloors();
-  }, [selectedBuildingId, currentFloorId, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBuildingId, currentFloorId]); // Note: 't' removed - stable reference not needed
 
   // 🏢 ENTERPRISE: Handle building selection
   const handleBuildingChange = useCallback((value: string) => {

@@ -528,6 +528,19 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🏢 WORKSPACES COLLECTION - AUTHENTICATED READ ACCESS
+    // =========================================================================
+    // 📅 Added 2026-01-24: Fix WorkspaceContext permission error
+    match /workspaces/{workspaceId} {
+      // 📖 READ: Authenticated users can read workspaces
+      // TODO: Refine to workspace membership when implemented
+      allow read: if isAuthenticated();
+
+      // ✍️ WRITE: Admin/server only for now
+      allow write: if false;
+    }
+
+    // =========================================================================
     // 📞 CONTACTS COLLECTION - PUBLIC READ ACCESS
     // =========================================================================
     match /contacts/{contactId} {
