@@ -1183,12 +1183,15 @@ service cloud.firestore {
     }
 
     // Unit Fields allowlist - only these fields can be updated by non-super-admin users
-    // 🏢 ENTERPRISE: Prevents modification of structural fields (project, buildingId, floorId)
+    // 🏢 ENTERPRISE: Prevents modification of structural fields (project, id)
     // 📅 Updated 2026-01-24: Added 'name' to allowlist (rename is allowed for company admins)
+    // 📅 Updated 2026-01-24: Added buildingId, floorId, linkedSpaces for Unit Linking System
     function isAllowedUnitFieldUpdate() {
       let allowedFields = [
         // Identity (editable by company admins)
         'name', 'description',
+        // Unit Linking System (Phase 1-2) - Building/Floor/LinkedSpaces
+        'buildingId', 'floorId', 'linkedSpaces',
         // Phase 1-5 Unit Fields
         'bedrooms', 'bathrooms', 'wc',
         'areas', 'orientation', 'orientations', 'condition', 'energyClass',
@@ -1207,12 +1210,13 @@ service cloud.firestore {
     }
 
     // Check that structural fields are not being modified (invariants)
-    // 🏢 ENTERPRISE: Prevents "re-tenanting" or "moving" units via client update
+    // 🏢 ENTERPRISE: Prevents "re-tenanting" units via client update
     // 📅 Updated 2026-01-24: Removed 'name' from invariants (rename is now allowed)
+    // 📅 Updated 2026-01-24: Removed buildingId/floorId from invariants (Unit Linking System)
+    //    - Units CAN be moved between buildings/floors within the SAME project
+    //    - Units CANNOT be moved to a different project (tenant isolation)
     function unitStructuralFieldsUnchanged() {
       return request.resource.data.project == resource.data.project
-             && request.resource.data.buildingId == resource.data.buildingId
-             && request.resource.data.floorId == resource.data.floorId
              && request.resource.data.id == resource.data.id;
     }
 
