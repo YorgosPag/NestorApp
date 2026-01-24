@@ -3,7 +3,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { UseProjectStructureState } from "../types";
-import type { ProjectStructure } from "@/services/projects.service";
+// 🏢 ENTERPRISE: Types imported from contracts (not server actions file)
+import type { ProjectStructure } from "@/services/projects/contracts";
 
 // ============================================================================
 // 🏢 ENTERPRISE: Hook Options για Lazy Loading

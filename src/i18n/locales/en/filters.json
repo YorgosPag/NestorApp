@@ -24,6 +24,55 @@
   "allRiskLevels": "All Risk Levels",
   "allComplexities": "All Complexities",
   "allBuildings": "All Buildings",
+  "allLevels": "All Levels",
+  "common": {
+    "search": "Search",
+    "status": "Status",
+    "type": "Type",
+    "building": "Building",
+    "level": "Level",
+    "project": "Project",
+    "area": "Area",
+    "price": "Price",
+    "updateDate": "Update Date",
+    "from": "From",
+    "to": "To",
+    "selectStatus": "Select status",
+    "selectType": "Select type",
+    "selectBuilding": "Select building",
+    "selectLevel": "Select level",
+    "selectProject": "Select project"
+  },
+  "parking": {
+    "title": "Parking Spots",
+    "searchPlaceholder": "Search parking spots...",
+    "ariaLabels": {
+      "search": "Search parking spots",
+      "status": "Filter by parking status",
+      "type": "Filter by parking type",
+      "building": "Filter by building",
+      "level": "Filter by level",
+      "project": "Filter by project",
+      "area": "Filter by area",
+      "price": "Filter by price",
+      "date": "Filter by update date"
+    }
+  },
+  "storage": {
+    "title": "Storage Units",
+    "searchPlaceholder": "Search storage units...",
+    "ariaLabels": {
+      "search": "Search storage units",
+      "status": "Filter by storage status",
+      "type": "Filter by storage type",
+      "building": "Filter by building",
+      "floor": "Filter by floor",
+      "project": "Filter by project",
+      "area": "Filter by area",
+      "price": "Filter by price",
+      "date": "Filter by update date"
+    }
+  },
   "status": {
     "available": "Available",
     "sold": "Sold",
@@ -49,7 +98,10 @@
     "project": "Project",
     "building": "Building",
     "floor": "Floor",
-    "propertyType": "Property Type"
+    "propertyType": "Property Type",
+    "contactType": "Contact Type",
+    "unitsCount": "Units Count",
+    "totalArea": "Total Area"
   },
   "placeholders": {
     "general": "Search...",
@@ -104,5 +156,21 @@
     "smsTooltip": "SMS messages",
     "telegram": "Telegram",
     "telegramTooltip": "Telegram messages"
+  },
+  "checkboxes": {
+    "showArchived": "Show archived",
+    "hasProperties": "With properties",
+    "isFavorite": "Favorites"
+  },
+  "advancedOptions": {
+    "isFavoriteContacts": "Favorite contacts",
+    "hasEmail": "With email",
+    "hasPhone": "With phone",
+    "recentActivity": "Recent activity",
+    "parking": "Parking",
+    "storage": "Storage",
+    "fireplace": "Fireplace",
+    "view": "View",
+    "pool": "Pool"
   }
 }

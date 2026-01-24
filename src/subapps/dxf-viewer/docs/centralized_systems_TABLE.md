@@ -1,9 +1,9 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-11
-> **= -> TOTAL SYSTEMS**: 21 Major Enterprise Systems (incl. Enterprise ID Generation System + Spinner)
-> **= -> TOTAL CODE**: 14,250+ Lines
+> **= -> LAST UPDATED**: 2026-01-24
+> **= -> TOTAL SYSTEMS**: 22 Major Enterprise Systems (incl. Unit Fields System)
+> **= -> TOTAL CODE**: 15,125+ Lines
 > **= -> TOTAL ADRs**: 17 Architectural Decision Records
 
 ---
@@ -88,6 +88,7 @@
 | **📦 Entity List Column** | `src/core/containers/EntityListColumn.tsx` | 50+ | UI Container | 🏢 **ENTERPRISE** | Semantic HTML, centralized width tokens, hasBorder variant | `import { EntityListColumn } from '@/core/containers'` | **ADR-015: 6 files centralized** |
 | **📷 PhotosTabBase System** | `src/components/generic/photo-system/` | 800+ | UI Template | 🏢 **ENTERPRISE** | Template pattern, 3 hooks, config-driven | `import { PhotosTabBase } from '@/components/generic/photo-system'` | **ADR-018.1: 79% code reduction** |
 | **🔄 Spinner Component** | `src/components/ui/spinner.tsx` | 50+ | UI Component | 🏢 **ENTERPRISE** | 4 sizes, ESLint enforcement, no direct Loader2 | `import { Spinner } from '@/components/ui/spinner'` | **ADR-023: Migrate on touch** |
+| **🏠 Unit Fields System** | `src/features/property-details/components/` | 875+ | Data Entry | 🏢 **ENTERPRISE** | 7 sections, Firestore persistence, i18n support | `import { UnitFieldsBlock } from '@/features/property-details/components'` | **2026-01-24: Full CRUD για unit details** |
 
 ---
 

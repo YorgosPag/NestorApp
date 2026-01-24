@@ -93,9 +93,9 @@ export const UNIT_TYPE_OPTIONS: TypeFilterOption[] = [
  */
 export const CONTACT_TYPE_OPTIONS: TypeFilterOption[] = [
   { value: 'all', label: 'filters.contactTypes.all', icon: Users, tooltip: 'filters.contactTypes.allTooltip' },
-  { value: 'individual', label: 'filters.contactTypes.individual', icon: NAVIGATION_ENTITIES.contactIndividual.icon, tooltip: 'contacts.types.individual' },
-  { value: 'company', label: 'filters.contactTypes.company', icon: NAVIGATION_ENTITIES.contactCompany.icon, tooltip: 'contacts.types.company' },
-  { value: 'service', label: 'filters.contactTypes.service', icon: NAVIGATION_ENTITIES.contactService.icon, tooltip: 'contacts.types.service' },
+  { value: 'individual', label: 'filters.contactTypes.individual', icon: NAVIGATION_ENTITIES.contactIndividual.icon, tooltip: 'contactTypes.individual' },
+  { value: 'company', label: 'filters.contactTypes.company', icon: NAVIGATION_ENTITIES.contactCompany.icon, tooltip: 'contactTypes.company' },
+  { value: 'service', label: 'filters.contactTypes.service', icon: NAVIGATION_ENTITIES.contactService.icon, tooltip: 'contactTypes.service' },
 ];
 
 /**

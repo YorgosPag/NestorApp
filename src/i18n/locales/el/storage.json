@@ -1,4 +1,48 @@
 {
+  "storages": {
+    "header": {
+      "title": "Αποθήκες",
+      "subtitle": "Διαχείριση αποθηκευτικών χώρων",
+      "searchPlaceholder": "Αναζήτηση αποθηκών...",
+      "newStorage": "Νέα Αποθήκη"
+    },
+    "list": {
+      "entityName": "αποθήκη",
+      "searchPlaceholder": "Αναζήτηση αποθηκών...",
+      "ariaLabel": "Λίστα αποθηκών",
+      "noResults": "Δεν βρέθηκαν αποθήκες",
+      "noResultsHint": "Δοκιμάστε να αλλάξετε τα φίλτρα αναζήτησης",
+      "noResultsForTerm": "Δεν βρέθηκαν αποθήκες για «{{term}}»"
+    },
+    "accessibility": {
+      "toggleFilters": "Εμφάνιση/Απόκρυψη φίλτρων"
+    }
+  },
+  "sizes": {
+    "large": "Μεγάλη",
+    "small": "Μικρή"
+  },
+  "locations": {
+    "basement": "Υπόγεια",
+    "ground": "Ισόγεια",
+    "special": "Ειδική"
+  },
+  "types": {
+    "large": "Μεγάλη",
+    "small": "Μικρή",
+    "basement": "Υπόγεια",
+    "ground": "Ισόγεια",
+    "special": "Ειδική",
+    "unknown": "Άγνωστο"
+  },
+  "status": {
+    "available": "Διαθέσιμη",
+    "occupied": "Κατειλημμένη",
+    "reserved": "Κρατημένη",
+    "maintenance": "Συντήρηση",
+    "sold": "Πωλημένη",
+    "unknown": "Άγνωστη"
+  },
   "general": {
     "basicInfo": "Βασικές Πληροφορίες",
     "location": "Τοποθεσία",
@@ -46,6 +90,12 @@
     }
   },
   "card": {
+    "stats": {
+      "floor": "Όροφος",
+      "area": "Εμβαδόν",
+      "price": "Τιμή"
+    },
+    "ariaLabel": "Κάρτα αποθήκης {{name}}",
     "status": {
       "available": "Διαθέσιμο",
       "occupied": "Κατειλημμένο",

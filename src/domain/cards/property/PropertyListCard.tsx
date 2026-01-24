@@ -33,7 +33,7 @@ import type { Property } from '@/types/property-viewer';
 import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
 
 // 🏢 ENTERPRISE: i18n support
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // =============================================================================
 // 🏢 TYPES

@@ -31,6 +31,22 @@
       "lead": "Lead",
       "pending": "Pending",
       "construction": "Under Construction"
+    },
+    "types": {
+      "individual": "Individual",
+      "company": "Company",
+      "service": "Service",
+      "residential": "Residential",
+      "commercial": "Commercial",
+      "industrial": "Industrial",
+      "office": "Office",
+      "mixed": "Mixed Use",
+      "warehouse": "Warehouse",
+      "retail": "Retail",
+      "hotel": "Hotel",
+      "public": "Public",
+      "renovation": "Renovation",
+      "infrastructure": "Infrastructure"
     }
   },
   "navigation": {
@@ -205,6 +221,14 @@
     "service": "Public Service",
     "individual": "Individual",
     "contact": "Contact"
+  },
+  "contacts": {
+    "types": {
+      "individual": "Individual",
+      "company": "Company",
+      "service": "Public Service",
+      "organization": "Organization"
+    }
   },
   "status": {
     "loading": "Loading...",
@@ -789,6 +813,39 @@
       "smsTooltip": "SMS messages",
       "telegram": "Telegram",
       "telegramTooltip": "Telegram messages"
+    },
+    "common": {
+      "search": "Search",
+      "status": "Status",
+      "selectStatus": "Select status",
+      "type": "Type",
+      "selectType": "Select type",
+      "building": "Building",
+      "selectBuilding": "Select building",
+      "level": "Level",
+      "selectLevel": "Select level",
+      "project": "Project",
+      "selectProject": "Select project",
+      "area": "Area",
+      "price": "Price",
+      "updateDate": "Update Date",
+      "from": "From",
+      "to": "To"
+    },
+    "parking": {
+      "title": "Parking Filters",
+      "searchPlaceholder": "Search parking spots...",
+      "ariaLabels": {
+        "search": "Search parking spots",
+        "status": "Filter by status",
+        "type": "Filter by type",
+        "building": "Filter by building",
+        "level": "Filter by level",
+        "project": "Filter by project",
+        "area": "Filter by area",
+        "price": "Filter by price",
+        "date": "Filter by date"
+      }
     }
   },
   "sharing": {

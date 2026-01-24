@@ -1,4 +1,47 @@
 {
+  "storages": {
+    "header": {
+      "title": "Storage Units",
+      "subtitle": "Manage storage spaces",
+      "searchPlaceholder": "Search storage units...",
+      "newStorage": "New Storage"
+    },
+    "list": {
+      "entityName": "storage",
+      "searchPlaceholder": "Search storage units...",
+      "ariaLabel": "Storage list",
+      "noResults": "No storage units found",
+      "noResultsHint": "Try adjusting your search filters",
+      "noResultsForTerm": "No storage units found for \"{{term}}\""
+    },
+    "accessibility": {
+      "toggleFilters": "Toggle filters"
+    }
+  },
+  "sizes": {
+    "large": "Large",
+    "small": "Small"
+  },
+  "locations": {
+    "basement": "Basement",
+    "ground": "Ground Floor",
+    "special": "Special"
+  },
+  "types": {
+    "large": "Large",
+    "small": "Small",
+    "basement": "Basement",
+    "ground": "Ground Floor",
+    "special": "Special",
+    "unknown": "Unknown"
+  },
+  "status": {
+    "available": "Available",
+    "occupied": "Occupied",
+    "reserved": "Reserved",
+    "maintenance": "Maintenance",
+    "unknown": "Unknown"
+  },
   "general": {
     "basicInfo": "Basic Information",
     "location": "Location",
@@ -46,6 +89,12 @@
     }
   },
   "card": {
+    "stats": {
+      "floor": "Floor",
+      "area": "Area",
+      "price": "Price"
+    },
+    "ariaLabel": "Storage card {{name}}",
     "status": {
       "available": "Available",
       "occupied": "Occupied",

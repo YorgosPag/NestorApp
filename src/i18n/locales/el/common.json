@@ -206,6 +206,14 @@
     "individual": "Φυσικό Πρόσωπο",
     "contact": "Επαφή"
   },
+  "contacts": {
+    "types": {
+      "individual": "Φυσικό Πρόσωπο",
+      "company": "Εταιρεία",
+      "service": "Δημόσια Υπηρεσία",
+      "organization": "Οργανισμός"
+    }
+  },
   "status": {
     "loading": "Φόρτωση...",
     "error": "Σφάλμα",
@@ -726,6 +734,22 @@
       "pending": "Εκκρεμεί",
       "construction": "Υπό Κατασκευή"
     },
+    "types": {
+      "individual": "Φυσικό Πρόσωπο",
+      "company": "Εταιρεία",
+      "service": "Υπηρεσία",
+      "residential": "Κατοικία",
+      "commercial": "Εμπορικό",
+      "industrial": "Βιομηχανικό",
+      "office": "Γραφείο",
+      "mixed": "Μικτή Χρήση",
+      "warehouse": "Αποθήκη",
+      "retail": "Λιανικό Εμπόριο",
+      "hotel": "Ξενοδοχείο",
+      "public": "Δημόσιο",
+      "renovation": "Ανακαίνιση",
+      "infrastructure": "Υποδομή"
+    },
     "fields": {
       "search": "Αναζήτηση",
       "priceRange": "Εύρος Τιμής",
@@ -789,6 +813,39 @@
       "smsTooltip": "SMS μηνύματα",
       "telegram": "Telegram",
       "telegramTooltip": "Telegram μηνύματα"
+    },
+    "common": {
+      "search": "Αναζήτηση",
+      "status": "Κατάσταση",
+      "selectStatus": "Επιλέξτε κατάσταση",
+      "type": "Τύπος",
+      "selectType": "Επιλέξτε τύπο",
+      "building": "Κτίριο",
+      "selectBuilding": "Επιλέξτε κτίριο",
+      "level": "Επίπεδο",
+      "selectLevel": "Επιλέξτε επίπεδο",
+      "project": "Έργο",
+      "selectProject": "Επιλέξτε έργο",
+      "area": "Εμβαδόν",
+      "price": "Τιμή",
+      "updateDate": "Ημ/νία Ενημέρωσης",
+      "from": "Από",
+      "to": "Έως"
+    },
+    "parking": {
+      "title": "Φίλτρα Θέσεων Στάθμευσης",
+      "searchPlaceholder": "Αναζήτηση θέσεων...",
+      "ariaLabels": {
+        "search": "Αναζήτηση θέσεων στάθμευσης",
+        "status": "Φιλτράρισμα κατά κατάσταση",
+        "type": "Φιλτράρισμα κατά τύπο",
+        "building": "Φιλτράρισμα κατά κτίριο",
+        "level": "Φιλτράρισμα κατά επίπεδο",
+        "project": "Φιλτράρισμα κατά έργο",
+        "area": "Φιλτράρισμα κατά εμβαδόν",
+        "price": "Φιλτράρισμα κατά τιμή",
+        "date": "Φιλτράρισμα κατά ημερομηνία"
+      }
     }
   },
   "sharing": {

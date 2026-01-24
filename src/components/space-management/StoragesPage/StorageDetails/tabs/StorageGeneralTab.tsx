@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { formatDate, formatCurrency } from '@/lib/intl-utils';
+import { formatDate, formatCurrency, formatFloorString } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
 import { Warehouse, MapPin, Calendar, User, Euro, Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -61,7 +61,7 @@ export function StorageGeneralTab({ storage }: StorageGeneralTabProps) {
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground">{t('general.fields.floor')}</label>
-            <p className="mt-1 text-sm">{storage.floor}</p>
+            <p className="mt-1 text-sm">{storage.floor ? formatFloorString(storage.floor) : 'N/A'}</p>
           </div>
         </div>
       </section>

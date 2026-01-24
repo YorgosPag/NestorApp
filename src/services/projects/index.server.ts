@@ -1,33 +1,27 @@
-'use server';
+/**
+ * @deprecated This file is deprecated. Import from '@/services/projects.service' instead.
+ *
+ * 🏢 ENTERPRISE: Single Source of Truth Pattern
+ * All server actions are defined in the parent projects.service.ts file.
+ * This file exists only for backward compatibility and will be removed in future versions.
+ *
+ * Correct import:
+ * import { getProjectsByCompanyId, getProjectStats } from '@/services/projects.service';
+ */
 
-import { FirestoreProjectsRepository } from './repositories/FirestoreProjectsRepository';
-import { FirestoreProjectsRepository as NewFirestoreRepo } from './repositories/projects-repository'; // Updated to use production repo
-import { ProjectsService } from './services/ProjectsService';
+// Re-export from the single source of truth (no 'use server' needed - parent has it)
+export {
+    getProjectsByCompanyId,
+    getProjectStructure,
+    getProjectCustomers,
+    getProjectStats,
+    debugProjectData
+} from '../projects.service';
 
-// 🔥 PRODUCTION READY: Χρησιμοποιεί μόνο επαγγελματικά repositories
-const firestoreRepo = new FirestoreProjectsRepository();
-const productionRepo = new NewFirestoreRepo(); // Αντικατέστησε το sample repository
-const service = new ProjectsService(firestoreRepo, productionRepo);
-
-export async function getProjectsByCompanyId(companyId: string) {
-    console.log(`🏗️ SERVER ACTION: getProjectsByCompanyId called with: "${companyId}"`);
-    const result = await service.getProjectsByCompanyId(companyId);
-    console.log(`🏗️ SERVER ACTION: returning ${result.length} projects for companyId "${companyId}"`);
-    return result;
-}
-
-export async function getProjectStructure(projectId: string) {
-    return await service.getProjectStructure(projectId);
-}
-
-export async function getProjectCustomers(projectId: string) {
-    return await service.getProjectCustomers(projectId);
-}
-
-export async function getProjectStats(projectId: string) {
-    return await service.getProjectStats(projectId);
-}
-
-export async function debugProjectData(projectId: string) {
-    return await service.debugProjectData(projectId);
-}
+export type {
+    ProjectStructure,
+    ProjectBuilding,
+    ProjectUnit,
+    ProjectStorage,
+    ProjectParking
+} from './contracts';

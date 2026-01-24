@@ -85,23 +85,53 @@ export function CompactToolbar({
   const { t } = useTranslation('common');
 
   // 🏢 ENTERPRISE: Translate search placeholder if it's an i18n key
+  // Clean implementation - relies on centralized i18n system
   const getTranslatedPlaceholder = (placeholder?: string): string => {
     if (!placeholder) return t('toolbar.search.placeholder');
+
+    // If placeholder looks like an i18n key (contains dots)
     if (placeholder.includes('.')) {
       const translated = t(placeholder);
-      return translated === placeholder ? placeholder : translated;
+
+      // Check if translation succeeded (not a raw key)
+      const isTranslationSuccessful =
+        translated !== placeholder &&
+        !translated.startsWith('common.') &&
+        !translated.startsWith('common:');
+
+      return isTranslationSuccessful ? translated : placeholder;
     }
+
     return placeholder;
   };
 
   // 🏢 ENTERPRISE: Helper to translate tooltip keys
+  // Clean implementation - relies on centralized i18n system
   const getTooltip = (tooltipKey?: string): string | undefined => {
     if (!tooltipKey) return undefined;
-    if (tooltipKey.includes('.')) {
-      const translated = t(tooltipKey);
-      return translated === tooltipKey ? tooltipKey : translated;
+
+    const translated = t(tooltipKey);
+
+    // 🏢 ENTERPRISE: Check if translation succeeded
+    // A successful translation will NOT equal the key
+    // Failed translations return the key itself or namespace-prefixed key
+    // NOTE: Removed `.includes(' ')` check - single-word translations like "Φίλτρα" are valid
+    const isTranslationSuccessful =
+      translated !== tooltipKey &&
+      !translated.startsWith('common.') &&
+      !translated.startsWith('common:');
+
+    if (isTranslationSuccessful) {
+      return translated;
     }
-    return tooltipKey;
+
+    // 🏢 ENTERPRISE: If translation failed, return undefined (no tooltip)
+    // This prevents showing raw i18n keys to users
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`[i18n] Translation missing for key: ${tooltipKey}`);
+    }
+
+    return undefined;
   };
 
   const handleFilterChange = (filter: string, checked: boolean) => {

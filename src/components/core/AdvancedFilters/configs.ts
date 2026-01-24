@@ -181,11 +181,11 @@ export const unitFiltersConfig: FilterPanelConfig = {
           // 🏢 PR1.2: i18n keys directly (avoid circular dependency)
           options: [
             { value: 'all', label: 'filters.allStatuses' },
-            { value: 'ready', label: 'operationalStatus.ready' },
-            { value: 'under-construction', label: 'operationalStatus.underConstruction' },
-            { value: 'inspection', label: 'operationalStatus.inspection' },
-            { value: 'maintenance', label: 'operationalStatus.maintenance' },
-            { value: 'draft', label: 'operationalStatus.draft' }
+            { value: 'ready', label: 'units.operationalStatus.ready' },
+            { value: 'under-construction', label: 'units.operationalStatus.underConstruction' },
+            { value: 'inspection', label: 'units.operationalStatus.inspection' },
+            { value: 'maintenance', label: 'units.operationalStatus.maintenance' },
+            { value: 'draft', label: 'units.operationalStatus.draft' }
           ]
         }
       ]
@@ -259,6 +259,7 @@ export const unitFiltersConfig: FilterPanelConfig = {
 export const contactFiltersConfig: FilterPanelConfig = {
   title: FT.contacts,
   searchPlaceholder: SP.contacts_search,
+  i18nNamespace: 'filters', // 🏢 ENTERPRISE: Filters domain namespace
   rows: [
     {
       id: 'contact-basic',
@@ -367,6 +368,7 @@ export const contactFiltersConfig: FilterPanelConfig = {
 export const buildingFiltersConfig: FilterPanelConfig = {
   title: FT.buildings,
   searchPlaceholder: SP.buildings_search,
+  i18nNamespace: 'filters', // 🏢 ENTERPRISE: Filters domain namespace
   rows: [
     {
       id: 'building-basic',
@@ -621,6 +623,7 @@ export const buildingFiltersConfig: FilterPanelConfig = {
 export const projectFiltersConfig: FilterPanelConfig = {
   title: FT.projects,
   searchPlaceholder: SP.projects_search,
+  i18nNamespace: 'filters', // 🏢 ENTERPRISE: Filters domain namespace
   rows: [
     {
       id: 'project-basic',
@@ -942,6 +945,7 @@ export const defaultProjectFilters: ProjectFilterState = {
 export const communicationsFiltersConfig: FilterPanelConfig = {
   title: 'filters.communicationsTitle',
   searchPlaceholder: 'filters.placeholders.communicationsSearch',
+  i18nNamespace: 'filters', // 🏢 ENTERPRISE: Filters domain namespace
   rows: [
     {
       id: 'communications-basic',

@@ -11,7 +11,7 @@ interface StorageTabProps {
 
 export function StorageTab({ building }: StorageTabProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation('building');
+  const { t } = useTranslation('storage');
 
   return (
     <div className="p-4">

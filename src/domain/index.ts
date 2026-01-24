@@ -10,7 +10,7 @@
  */
 
 // =============================================================================
-// 🎴 CARDS
+// 🎴 CARDS - LIST VIEW (Horizontal Layout)
 // =============================================================================
 
 export {
@@ -35,4 +35,29 @@ export {
   // Property
   PropertyListCard,
   type PropertyListCardProps,
+} from './cards';
+
+// =============================================================================
+// 🎴 CARDS - GRID VIEW (Vertical Layout) - Added 2026-01-24
+// =============================================================================
+
+export {
+  // Unit
+  UnitGridCard,
+  type UnitGridCardProps,
+  // Building
+  BuildingGridCard,
+  type BuildingGridCardProps,
+  // Contact
+  ContactGridCard,
+  type ContactGridCardProps,
+  // Project
+  ProjectGridCard,
+  type ProjectGridCardProps,
+  // Storage - Added 2026-01-24
+  StorageGridCard,
+  type StorageGridCardProps,
+  // Parking - Added 2026-01-24
+  ParkingGridCard,
+  type ParkingGridCardProps,
 } from './cards';

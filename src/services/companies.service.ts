@@ -4,7 +4,8 @@ import { getApp } from 'firebase/app';
 import type { CompanyContact, Contact } from '@/types/contacts';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { getNavigationCompanyIds } from './navigation-companies.service';
-import { getProjectsByCompanyId } from './projects.service';
+// 🏢 ENTERPRISE: Removed server action import - use direct Firestore queries instead
+// Server actions cannot be imported into client-side services
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🎯 PRODUCTION: DEBUG FLAG enabled temporarily for navigation investigation
@@ -124,22 +125,10 @@ export class CompaniesService {
         }
 
       } catch (error) {
-        console.error('❌ Batch project query failed, falling back to individual queries:', error);
-
-        // Fallback to individual queries if batch fails
-        for (const doc of snapshot.docs) {
-          const companyId = doc.id;
-          const companyData = doc.data();
-
-          try {
-            const projects = await getProjectsByCompanyId(companyId);
-            if (projects && projects.length > 0) {
-              companyIds.push(companyId);
-            }
-          } catch (error) {
-            // Skip failed company checks
-          }
-        }
+        // 🏢 ENTERPRISE: Batch mode is the only supported strategy
+        // Server actions cannot be called from client-side services
+        console.error('❌ Batch project query failed:', error);
+        // Return empty array - batch mode failure means no companies can be determined
       }
 
       return companyIds;

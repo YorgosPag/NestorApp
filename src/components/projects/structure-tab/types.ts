@@ -1,4 +1,5 @@
-import type { ProjectStructure, ProjectBuilding, ProjectUnit, ProjectStorage, ProjectParking } from "@/services/projects.service";
+// 🏢 ENTERPRISE: Types imported from contracts (not server actions file)
+import type { ProjectStructure, ProjectBuilding, ProjectUnit, ProjectStorage, ProjectParking } from "@/services/projects/contracts";
 
 export interface ProjectStructureTabProps {
   projectId: number;

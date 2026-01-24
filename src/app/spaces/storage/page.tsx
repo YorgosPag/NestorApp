@@ -12,6 +12,7 @@ import { StoragesHeader } from '@/components/space-management/StoragesPage/Stora
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { StoragesList } from '@/components/space-management/StoragesPage/StoragesList';
 import { StorageDetails } from '@/components/space-management/StoragesPage/StorageDetails';
+import { StorageGridView } from '@/components/space-management/StoragesPage/StorageGridView';
 import {
   Warehouse,
   TrendingUp,
@@ -260,15 +261,24 @@ function StoragePageContent() {
 
         {/* Content */}
         <ListContainer>
-          {/* Professional StoragesList component */}
-          <StoragesList
-            storages={filteredStorages}
-            selectedStorage={selectedStorage}
-            onSelectStorage={setSelectedStorage}
-          />
-
-          {/* Professional StorageDetails component */}
-          <StorageDetails storage={selectedStorage} />
+          {viewMode === 'grid' ? (
+            /* 🏢 ENTERPRISE: Full-width Grid View */
+            <StorageGridView
+              storages={filteredStorages}
+              selectedStorage={selectedStorage}
+              onSelectStorage={setSelectedStorage}
+            />
+          ) : (
+            /* 🏢 ENTERPRISE: List View with Details Panel */
+            <>
+              <StoragesList
+                storages={filteredStorages}
+                selectedStorage={selectedStorage}
+                onSelectStorage={setSelectedStorage}
+              />
+              <StorageDetails storage={selectedStorage} />
+            </>
+          )}
         </ListContainer>
 
         {/* Mobile: Filters Slide-in */}

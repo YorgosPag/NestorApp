@@ -24,7 +24,7 @@ export function StoragesListHeader({
     onToolbarToggle
 }: StoragesListHeaderProps) {
     // 🏢 ENTERPRISE: i18n hook for translations
-    const { t } = useTranslation('building');
+    const { t } = useTranslation('storage');
     const iconSizes = useIconSizes();
     // Calculate statistics
     const availableCount = storages.filter(storage => storage.status === 'available').length;

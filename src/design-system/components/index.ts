@@ -10,7 +10,7 @@
  */
 
 // =============================================================================
-// 🏢 LIST CARD
+// 🏢 LIST CARD (Horizontal Layout - For List Views)
 // =============================================================================
 
 export {
@@ -20,3 +20,15 @@ export {
   type ListCardBadgeVariant,
   type ListCardAction,
 } from './ListCard';
+
+// =============================================================================
+// 🏢 GRID CARD (Vertical Layout - For Grid/Tile Views)
+// =============================================================================
+
+export {
+  GridCard,
+  type GridCardProps,
+  type GridCardBadge,
+  type GridCardBadgeVariant,
+  type GridCardAction,
+} from './GridCard';

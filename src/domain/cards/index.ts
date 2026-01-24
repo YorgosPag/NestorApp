@@ -15,36 +15,42 @@
 // =============================================================================
 
 export { ParkingListCard, type ParkingListCardProps } from './parking';
+export { ParkingGridCard, type ParkingGridCardProps } from './parking';
 
 // =============================================================================
 // 🏠 UNIT
 // =============================================================================
 
 export { UnitListCard, type UnitListCardProps } from './unit';
+export { UnitGridCard, type UnitGridCardProps } from './unit';
 
 // =============================================================================
 // 📦 STORAGE
 // =============================================================================
 
 export { StorageListCard, type StorageListCardProps } from './storage';
+export { StorageGridCard, type StorageGridCardProps } from './storage';
 
 // =============================================================================
 // 🏢 BUILDING
 // =============================================================================
 
 export { BuildingListCard, type BuildingListCardProps } from './building';
+export { BuildingGridCard, type BuildingGridCardProps } from './building';
 
 // =============================================================================
 // 👤 CONTACT
 // =============================================================================
 
 export { ContactListCard, type ContactListCardProps } from './contact';
+export { ContactGridCard, type ContactGridCardProps } from './contact';
 
 // =============================================================================
 // 📋 PROJECT
 // =============================================================================
 
 export { ProjectListCard, type ProjectListCardProps } from './project';
+export { ProjectGridCard, type ProjectGridCardProps } from './project';
 
 // =============================================================================
 // 🏠 PROPERTY

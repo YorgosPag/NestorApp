@@ -17,10 +17,15 @@ import {
 } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Property } from '@/types/property-viewer';
+import type { UnitModel } from '@/types/unit';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 const UNITS_COLLECTION = COLLECTIONS.UNITS;
 
+/**
+ * 🏢 ENTERPRISE: Transform Firestore document to Property type
+ * Handles Timestamp conversion and passes through all fields including new Unit Fields
+ */
 const transformUnit = (doc: DocumentSnapshot<DocumentData> | QueryDocumentSnapshot<DocumentData>): Property => {
     const data = doc.data();
     const unit: Record<string, unknown> = { id: doc.id };
@@ -34,6 +39,12 @@ const transformUnit = (doc: DocumentSnapshot<DocumentData> | QueryDocumentSnapsh
     }
     return unit as Property;
 };
+
+/**
+ * 🏢 ENTERPRISE: Alias for backward compatibility
+ * @deprecated Use transformUnit directly
+ */
+const transformUnitToProperty = transformUnit;
 
 // Add a single unit
 export async function addUnit(unitData: Omit<Property, 'id'>): Promise<{ id: string; success: boolean }> {

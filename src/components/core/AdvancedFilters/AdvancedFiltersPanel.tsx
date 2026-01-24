@@ -34,7 +34,8 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   defaultOpen = false
 }: AdvancedFiltersPanelProps<T>) {
   // 🏢 ENTERPRISE: i18n hook with configurable namespace (PR1.2)
-  const { t } = useTranslation(config.i18nNamespace || 'building');
+  const currentNamespace = config.i18nNamespace || 'building';
+  const { t } = useTranslation(currentNamespace);
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -42,6 +43,18 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   const spacing = useSpacingTokens();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(defaultOpen);
+
+  // 🏢 ENTERPRISE: Helper to translate labels with namespace prefix removal
+  // Handles labels like 'filters.advancedOptions.x' when namespace is 'filters'
+  const translateLabel = (label: string): string => {
+    if (!label) return '';
+    // If label starts with current namespace prefix, remove it
+    const prefix = `${currentNamespace}.`;
+    if (label.startsWith(prefix)) {
+      return t(label.slice(prefix.length));
+    }
+    return t(label);
+  };
 
   const {
     handleFilterChange,
@@ -104,7 +117,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
           <Button variant="ghost" className={`w-full justify-start ${layout.filterButtonPadding} text-sm font-semibold`}>
             <Filter className={`${iconSizes.sm} ${spacing.margin.right.sm}`} />
             {/* 🏢 ENTERPRISE: Support both translation keys and direct labels */}
-            {config.title.startsWith('filters.') ? t(config.title) : config.title}
+            {t(config.title)}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -142,10 +155,10 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                             id={`feature-${option.id}`}
                             checked={filters.advancedFeatures?.includes(option.id) || false}
                             onCheckedChange={(checked) => handleFeatureChange(option.id, checked)}
-                            aria-label={t(option.label)}
+                            aria-label={translateLabel(option.label)}
                           />
                           <Label htmlFor={`feature-${option.id}`} className="text-sm font-normal">
-                            {t(option.label)}
+                            {translateLabel(option.label)}
                           </Label>
                         </div>
                       ))}

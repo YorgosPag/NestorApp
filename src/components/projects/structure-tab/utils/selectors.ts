@@ -1,4 +1,5 @@
-import type { ProjectStructure } from "@/services/projects.service";
+// 🏢 ENTERPRISE: Types imported from contracts (not server actions file)
+import type { ProjectStructure } from "@/services/projects/contracts";
 
 /**
  * 🏢 ENTERPRISE: Project Structure Statistics

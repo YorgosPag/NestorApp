@@ -21,19 +21,38 @@ import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
 interface PropertyMetaProps {
   property: ExtendedPropertyDetails;
   onUpdateProperty: (propertyId: string, updates: Partial<Property>) => void;
+  /** 🏢 ENTERPRISE: Edit mode state - controlled by parent */
+  isEditMode?: boolean;
+  /** 🏢 ENTERPRISE: Toggle edit mode callback */
+  onToggleEditMode?: () => void;
+  /** 🏢 ENTERPRISE: Navigate to Floor Plan tab */
+  onNavigateToFloorPlan?: () => void;
 }
 
-export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) {
+export function PropertyMeta({
+  property,
+  onUpdateProperty,
+  isEditMode = false,
+  onToggleEditMode,
+  onNavigateToFloorPlan
+}: PropertyMetaProps) {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
   // 🏢 ENTERPRISE: i18n support
   const { t } = useTranslation('properties');
 
+  // 🏢 ENTERPRISE: Edit button now toggles full edit mode (not prompt-based rename)
   const handleEditClick = () => {
-    const newName = prompt(t('meta.enterNewName'), property.name);
-    if (newName && newName !== property.name) {
-      onUpdateProperty(property.id, { name: newName });
+    if (onToggleEditMode) {
+      onToggleEditMode();
+    }
+  };
+
+  // 🏢 ENTERPRISE: View button navigates to Floor Plan tab
+  const handleViewClick = () => {
+    if (onNavigateToFloorPlan) {
+      onNavigateToFloorPlan();
     }
   };
 
@@ -138,17 +157,26 @@ export function PropertyMeta({ property, onUpdateProperty }: PropertyMetaProps) 
         </>
       )}
 
-      {/* Actions - 🏢 ENTERPRISE: Using centralized action icons/colors */}
+      {/* Actions - 🏢 ENTERPRISE: Primary/Secondary layout per Fortune 500 UX */}
       <Separator />
       <div className={`flex ${spacing.gap.sm}`}>
-        <Button variant="outline" size="sm" className="flex-1">
-          <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.view.color, spacing.margin.right.sm)} />
-          {t('actions.view.label', { ns: 'navigation' })}
+        {/* Primary: Edit Details - controls all unit fields */}
+        <Button
+          variant={isEditMode ? "default" : "outline"}
+          size="sm"
+          className="flex-1"
+          onClick={handleEditClick}
+        >
+          <NAVIGATION_ACTIONS.edit.icon className={cn(iconSizes.xs, isEditMode ? 'text-white' : NAVIGATION_ACTIONS.edit.color, spacing.margin.right.sm)} />
+          {isEditMode ? t('meta.editing', { defaultValue: 'Επεξεργασία...' }) : t('meta.edit')}
         </Button>
-        <Button variant="outline" size="sm" className="flex-1" onClick={handleEditClick}>
-          <NAVIGATION_ACTIONS.edit.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.edit.color, spacing.margin.right.sm)} />
-          {t('meta.edit')}
-        </Button>
+        {/* Secondary: Floor Plan - navigates to floor plan tab */}
+        {onNavigateToFloorPlan && (
+          <Button variant="outline" size="sm" className="flex-1" onClick={handleViewClick}>
+            <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.view.color, spacing.margin.right.sm)} />
+            {t('meta.floorPlan', { defaultValue: 'Κάτοψη' })}
+          </Button>
+        )}
       </div>
     </div>
   );

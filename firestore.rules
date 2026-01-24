@@ -251,9 +251,23 @@ service cloud.firestore {
       allow write: if false; // Admin/server only
     }
 
+    // =========================================================================
+    // 🏠 UNITS COLLECTION - SECURITY-HARDENED (2026-01-24 ROLLBACK)
+    // =========================================================================
+    // 🚨 SECURITY ROLLBACK: Reverted from isAuthenticated() → isSuperAdminOnly()
+    // ❌ INSECURE: allow update: if isAuthenticated() - επιτρέπει σε οποιονδήποτε authenticated
+    //             να κάνει update σε οποιαδήποτε unit χωρίς tenant isolation ή RBAC
+    // ✅ SECURE STUB: Μόνο super_admin μπορεί να κάνει update (προσωρινό μέχρι RBAC/Callable)
+    // 📋 TODO: Implement one of:
+    //    - Option A: Callable Function updateUnitFields (SAP/Salesforce pattern)
+    //    - Option B: Strict Rules με tenant isolation via project→company lookup
+    // 📅 Rollback Date: 2026-01-24
     match /units/{unitId} {
       allow read: if isAuthenticated(); // Authenticated users only
-      allow write: if false; // Admin/server only
+      allow create: if false; // Admin/server only
+      // 🔒 SECURITY STUB: Only super_admin can update until proper RBAC is implemented
+      allow update: if isSuperAdminOnly();
+      allow delete: if false; // Admin/server only
     }
 
     // =========================================================================

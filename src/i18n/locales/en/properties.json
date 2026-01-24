@@ -323,6 +323,14 @@
     "floor": "{floor}th floor",
     "contactUs": "Contact us",
     "viewFloorPlan": "View on floor plan",
+    "stats": {
+      "building": "Building",
+      "floor": "Floor",
+      "area": "Area",
+      "price": "Price",
+      "type": "Type"
+    },
+    "ariaLabel": "Property card {name}",
     "aria": {
       "propertyStatus": "Property Status",
       "propertyInfo": "Property Information",
@@ -331,6 +339,13 @@
       "propertyTags": "Property Tags",
       "propertyActions": "Property Actions"
     }
+  },
+  "operationalStatus": {
+    "ready": "Ready",
+    "underConstruction": "Under Construction",
+    "inspection": "Under Inspection",
+    "maintenance": "Under Maintenance",
+    "draft": "Draft"
   },
   "viewer": {
     "tools": {

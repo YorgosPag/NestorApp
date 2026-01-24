@@ -28,7 +28,7 @@ export function StoragesList({
   onSelectStorage,
 }: StoragesListProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('building');
+  const { t } = useTranslation('storage');
   const iconSizes = useIconSizes();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'name' | 'area' | 'price' | 'status' | 'building' | 'type'>('name');

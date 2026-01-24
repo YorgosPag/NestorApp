@@ -44,8 +44,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { ContactsList } from './list/ContactsList';
-// 🏢 ENTERPRISE: Grid view imports (PR: Contacts Grid View)
-import { ContactListCard } from '@/domain';
+// 🏢 ENTERPRISE: Grid view imports - Using proper GridCard (PR: Enterprise Grid System)
+import { ContactGridCard } from '@/domain';
 import { ContactDetails } from './details/ContactDetails';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { TabbedAddNewContactDialog } from './dialogs/TabbedAddNewContactDialog';
@@ -770,7 +770,7 @@ export function ContactsPageContent() {
                 aria-label={t('page.views.gridView')}
               >
                 {filteredContacts.map((contact: Contact) => (
-                  <ContactListCard
+                  <ContactGridCard
                     key={contact.id}
                     contact={contact}
                     isSelected={selectedContact?.id === contact.id}

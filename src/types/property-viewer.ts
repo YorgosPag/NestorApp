@@ -5,6 +5,25 @@ export type { PropertyStats } from './property';
 // Re-export UnitCoverage from unit.ts for property compatibility
 export type { UnitCoverage } from './unit';
 
+// 🏢 PHASE 3-5: Import all unit feature types
+import type {
+  OrientationType,
+  ViewTypeValue,
+  ViewQuality,
+  ConditionType,
+  EnergyClassType,
+  HeatingType,
+  FuelType,
+  CoolingType,
+  WaterHeatingType,
+  FlooringType,
+  FrameType,
+  GlazingType,
+  InteriorFeatureCodeType,
+  SecurityFeatureCodeType
+} from '@/constants/unit-features-enterprise';
+import type { Timestamp } from 'firebase/firestore';
+
 /**
  * ✅ DOMAIN SEPARATION: Operational status type (re-imported from unit.ts)
  * Represents construction/maintenance status, NOT sales/commercial status
@@ -76,6 +95,56 @@ export interface Property {
      * @since PR1.2 - Coverage/Completeness implementation
      */
     unitCoverage?: UnitCoverage;
+
+    // === LAYOUT (room configuration) - Phase 1 Unit Fields ===
+    layout?: {
+      bedrooms?: number;
+      bathrooms?: number;
+      wc?: number;
+      totalRooms?: number;
+      levels?: number;
+      balconies?: number;
+    };
+
+    // === AREAS (measurements) - Phase 2 Unit Fields ===
+    areas?: {
+      gross: number;
+      net?: number;
+      balcony?: number;
+      terrace?: number;
+      garden?: number;
+    };
+
+    // === ORIENTATION & VIEWS - Phase 3 Unit Fields ===
+    orientations?: OrientationType[];
+    views?: Array<{
+      type: ViewTypeValue;
+      quality?: ViewQuality;
+    }>;
+
+    // === CONDITION & ENERGY - Phase 4 Unit Fields ===
+    condition?: ConditionType;
+    energy?: {
+      class: EnergyClassType;
+      certificateId?: string;
+      certificateDate?: Timestamp;
+      validUntil?: Timestamp;
+    };
+
+    // === SYSTEMS, FINISHES & FEATURES - Phase 5 Unit Fields ===
+    systemsOverride?: Partial<{
+      heatingType: HeatingType;
+      heatingFuel: FuelType;
+      coolingType: CoolingType;
+      waterHeating: WaterHeatingType;
+    }>;
+    finishes?: {
+      flooring?: FlooringType[];
+      windowFrames?: FrameType;
+      glazing?: GlazingType;
+    };
+    interiorFeatures?: InteriorFeatureCodeType[];
+    securityFeatures?: SecurityFeatureCodeType[];
   }
   
 export interface StorageUnitStub {

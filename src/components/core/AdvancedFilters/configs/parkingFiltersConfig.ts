@@ -102,8 +102,9 @@ export const PARKING_FLOOR_LABELS = {
 
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const parkingFiltersConfig: FilterPanelConfig = {
-  title: 'filters.parking.title',
-  searchPlaceholder: 'filters.parking.searchPlaceholder',
+  title: 'parking.title',
+  searchPlaceholder: 'parking.searchPlaceholder',
+  i18nNamespace: 'filters',
   rows: [
     {
       id: 'parking-basic',

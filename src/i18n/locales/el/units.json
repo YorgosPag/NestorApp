@@ -46,12 +46,182 @@
     "maintenance": "Υπό συντήρηση",
     "draft": "Πρόχειρο"
   },
+  "floorplan": {
+    "unitFloorplan": "Κάτοψη Μονάδας",
+    "selectUnit": "Επιλέξτε Μονάδα",
+    "selectUnitDescription": "Επιλέξτε μια μονάδα από τη λίστα για να δείτε την κάτοψή της.",
+    "noFloorplan": "Δεν υπάρχει κάτοψη",
+    "addFloorplan": "Προσθήκη Κάτοψης",
+    "editFloorplan": "Επεξεργασία Κάτοψης",
+    "deleteFloorplan": "Διαγραφή Κάτοψης"
+  },
   "card": {
     "stats": {
       "area": "Εμβαδόν",
-      "floor": "Όροφος"
+      "floor": "Όροφος",
+      "building": "Κτίριο",
+      "type": "Τύπος",
+      "bedrooms": "Υπνοδ.",
+      "bathrooms": "Μπάνια",
+      "orientation": "Προσ.",
+      "condition": "Κατ."
     },
     "ariaLabel": "Κάρτα μονάδας {name}"
+  },
+  "fields": {
+    "layout": {
+      "bedrooms": "Υπνοδωμάτια",
+      "bathrooms": "Μπάνια",
+      "wc": "WC",
+      "totalRooms": "Σύνολο δωματίων",
+      "levels": "Επίπεδα",
+      "balconies": "Μπαλκόνια"
+    },
+    "areas": {
+      "sectionTitle": "Εμβαδά",
+      "gross": "Μικτό εμβαδόν",
+      "net": "Καθαρό εμβαδόν",
+      "balcony": "Μπαλκόνι",
+      "terrace": "Βεράντα",
+      "garden": "Κήπος"
+    }
+  },
+  "orientation": {
+    "sectionTitle": "Προσανατολισμός",
+    "north": "Βόρειος",
+    "northeast": "Βορειοανατολικός",
+    "east": "Ανατολικός",
+    "southeast": "Νοτιοανατολικός",
+    "south": "Νότιος",
+    "southwest": "Νοτιοδυτικός",
+    "west": "Δυτικός",
+    "northwest": "Βορειοδυτικός",
+    "short": {
+      "north": "Β",
+      "northeast": "ΒΑ",
+      "east": "Α",
+      "southeast": "ΝΑ",
+      "south": "Ν",
+      "southwest": "ΝΔ",
+      "west": "Δ",
+      "northwest": "ΒΔ"
+    }
+  },
+  "views": {
+    "sectionTitle": "Θέα",
+    "sea": "Θάλασσα",
+    "mountain": "Βουνό",
+    "city": "Πόλη",
+    "park": "Πάρκο",
+    "garden": "Κήπος",
+    "courtyard": "Αυλή",
+    "quality": {
+      "full": "Πλήρης",
+      "partial": "Μερική",
+      "distant": "Μακρινή"
+    }
+  },
+  "condition": {
+    "sectionTitle": "Κατάσταση",
+    "new": "Νέο",
+    "excellent": "Άριστο",
+    "good": "Καλό",
+    "needs-renovation": "Χρειάζεται ανακαίνιση"
+  },
+  "energy": {
+    "sectionTitle": "Ενεργειακή Απόδοση",
+    "class": "Ενεργειακή κλάση",
+    "certificateId": "Αριθμός πιστοποιητικού",
+    "certificateDate": "Ημερομηνία έκδοσης",
+    "validUntil": "Ισχύει έως",
+    "aPlus": "A+",
+    "a": "A",
+    "b": "B",
+    "c": "C",
+    "d": "D",
+    "e": "E",
+    "f": "F",
+    "g": "G"
+  },
+  "systems": {
+    "sectionTitle": "Συστήματα",
+    "heating": {
+      "label": "Θέρμανση",
+      "central": "Κεντρική",
+      "autonomous": "Αυτόνομη",
+      "heat-pump": "Αντλία θερμότητας",
+      "solar": "Ηλιακή",
+      "none": "Χωρίς"
+    },
+    "fuel": {
+      "label": "Καύσιμο",
+      "natural-gas": "Φυσικό αέριο",
+      "oil": "Πετρέλαιο",
+      "electricity": "Ηλεκτρισμός",
+      "solar": "Ηλιακή",
+      "heat-pump": "Αντλία θερμότητας"
+    },
+    "cooling": {
+      "label": "Ψύξη",
+      "central-air": "Κεντρικός κλιματισμός",
+      "split-units": "Split units",
+      "fan-coil": "Fan coil",
+      "none": "Χωρίς"
+    },
+    "waterHeating": {
+      "label": "Ζεστό νερό",
+      "electric": "Ηλεκτρικό",
+      "gas": "Αέριο",
+      "solar": "Ηλιακό",
+      "heat-pump": "Αντλία θερμότητας"
+    }
+  },
+  "finishes": {
+    "sectionTitle": "Φινιρίσματα",
+    "flooring": {
+      "label": "Δάπεδα",
+      "tiles": "Πλακάκια",
+      "wood": "Ξύλο",
+      "laminate": "Laminate",
+      "marble": "Μάρμαρο",
+      "carpet": "Μοκέτα"
+    },
+    "frames": {
+      "label": "Κουφώματα",
+      "aluminum": "Αλουμίνιο",
+      "pvc": "PVC",
+      "wood": "Ξύλο"
+    },
+    "glazing": {
+      "label": "Υαλοπίνακες",
+      "single": "Απλοί",
+      "double": "Διπλοί",
+      "triple": "Τριπλοί",
+      "energy": "Ενεργειακοί"
+    }
+  },
+  "features": {
+    "sectionTitle": "Χαρακτηριστικά",
+    "interior": {
+      "label": "Εσωτερικά",
+      "fireplace": "Τζάκι",
+      "jacuzzi": "Τζακούζι",
+      "sauna": "Σάουνα",
+      "smart-home": "Έξυπνο σπίτι",
+      "solar-panels": "Ηλιακά πάνελ",
+      "underfloor-heating": "Ενδοδαπέδια θέρμανση",
+      "air-conditioning": "Κλιματισμός",
+      "alarm-system": "Σύστημα συναγερμού"
+    },
+    "security": {
+      "label": "Ασφάλεια",
+      "alarm": "Συναγερμός",
+      "security-door": "Πόρτα ασφαλείας",
+      "cctv": "Κάμερες",
+      "access-control": "Έλεγχος πρόσβασης",
+      "intercom": "Θυροτηλεόραση",
+      "motion-sensors": "Αισθητήρες κίνησης"
+    }
   },
   "management": {
     "title": "Διαχείριση Μονάδων",

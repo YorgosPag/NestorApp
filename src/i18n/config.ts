@@ -16,12 +16,16 @@ import commonPseudo from './locales/pseudo/common.json';
 import landingEl from './locales/el/landing.json';
 import landingEn from './locales/en/landing.json';
 import landingPseudo from './locales/pseudo/landing.json';
+// 🏢 ENTERPRISE: Pre-load navigation (used on every page - prevents race condition warnings)
+import navigationEl from './locales/el/navigation.json';
+import navigationEn from './locales/en/navigation.json';
+// Note: pseudo/navigation.json not needed - fallback to el
 
-// Initial resources - common and landing for homepage
+// Initial resources - common, landing, and navigation for immediate availability
 const resources = {
-  el: { common: commonEl, landing: landingEl },
-  en: { common: commonEn, landing: landingEn },
-  pseudo: { common: commonPseudo, landing: landingPseudo },
+  el: { common: commonEl, landing: landingEl, navigation: navigationEl },
+  en: { common: commonEn, landing: landingEn, navigation: navigationEn },
+  pseudo: { common: commonPseudo, landing: landingPseudo, navigation: navigationEl },
 };
 
 // Detect preferred language
@@ -50,9 +54,9 @@ i18n
       escapeValue: false, // React already escapes values
     },
     
-    // Start with only common namespace
+    // 🏢 ENTERPRISE: Start with common + navigation (both pre-loaded sync)
     defaultNS: 'common',
-    ns: ['common'],
+    ns: ['common', 'navigation'],
     
     react: {
       useSuspense: false, // Better for lazy loading
@@ -75,6 +79,8 @@ if (typeof window !== 'undefined') {
       'projects',      // Projects module
       'contacts',      // Contacts module
       'units',         // Units module
+      'storage',       // 🏢 Storage module - added 2026-01-24
+      'parking',       // 🏢 Parking module - added 2026-01-24
       'dxf-viewer',
       'geo-canvas',
     ];

@@ -20,6 +20,7 @@ import { ParkingsHeader } from '@/components/space-management/ParkingPage/Parkin
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ParkingsList } from '@/components/space-management/ParkingPage/ParkingsList';
 import { ParkingDetails } from '@/components/space-management/ParkingPage/ParkingDetails';
+import { ParkingGridView } from '@/components/space-management/ParkingPage/ParkingGridView';
 import {
   Car,
   TrendingUp,
@@ -247,15 +248,24 @@ function ParkingPageContent() {
 
         {/* Content */}
         <ListContainer>
-          {/* Professional ParkingsList component */}
-          <ParkingsList
-            parkingSpots={filteredParkingSpots}
-            selectedParking={selectedParking}
-            onSelectParking={setSelectedParking}
-          />
-
-          {/* Professional ParkingDetails component */}
-          <ParkingDetails parking={selectedParking} />
+          {viewMode === 'grid' ? (
+            /* 🏢 ENTERPRISE: Full-width Grid View */
+            <ParkingGridView
+              parkingSpots={filteredParkingSpots}
+              selectedParking={selectedParking}
+              onSelectParking={setSelectedParking}
+            />
+          ) : (
+            /* 🏢 ENTERPRISE: List View with Details Panel */
+            <>
+              <ParkingsList
+                parkingSpots={filteredParkingSpots}
+                selectedParking={selectedParking}
+                onSelectParking={setSelectedParking}
+              />
+              <ParkingDetails parking={selectedParking} />
+            </>
+          )}
         </ListContainer>
 
         {/* Mobile: Filters Slide-in */}

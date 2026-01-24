@@ -1,4 +1,5 @@
-'use server';
+// 🏢 ENTERPRISE: Type definitions for Projects module
+// NOTE: No 'use server' - types are shared between client and server
 import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import type { Contact } from '@/types/contacts';
 import type { Building } from '@/types/building/contracts';

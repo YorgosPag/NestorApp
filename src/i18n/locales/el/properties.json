@@ -323,6 +323,14 @@
     "floor": "{floor}ος όροφος",
     "contactUs": "Επικοινωνήστε",
     "viewFloorPlan": "Δείτε στην κάτοψη",
+    "stats": {
+      "building": "Κτίριο",
+      "floor": "Όροφος",
+      "area": "Εμβαδόν",
+      "price": "Τιμή",
+      "type": "Τύπος"
+    },
+    "ariaLabel": "Κάρτα ακινήτου {name}",
     "aria": {
       "propertyStatus": "Κατάσταση Ακινήτου",
       "propertyInfo": "Πληροφορίες Ακινήτου",
@@ -331,6 +339,13 @@
       "propertyTags": "Χαρακτηριστικά Ταγκς",
       "propertyActions": "Ενέργειες Ακινήτου"
     }
+  },
+  "operationalStatus": {
+    "ready": "Έτοιμο",
+    "underConstruction": "Υπό ολοκλήρωση",
+    "inspection": "Σε επιθεώρηση",
+    "maintenance": "Υπό συντήρηση",
+    "draft": "Πρόχειρο"
   },
   "viewer": {
     "tools": {

@@ -1,4 +1,32 @@
 {
+  "card": {
+    "stats": {
+      "level": "Επίπεδο",
+      "area": "Εμβαδόν",
+      "price": "Τιμή"
+    },
+    "ariaLabel": "Κάρτα πάρκινγκ {{name}}"
+  },
+  "types": {
+    "underground": "Υπόγειο",
+    "covered": "Στεγασμένο",
+    "open": "Ανοιχτό",
+    "standard": "Κανονική",
+    "compact": "Συμπαγής",
+    "handicapped": "ΑμεΑ",
+    "motorcycle": "Μοτοσικλέτα",
+    "electric": "Ηλεκτρικό Όχημα",
+    "vip": "VIP",
+    "visitor": "Επισκεπτών"
+  },
+  "status": {
+    "sold": "Πωλημένη",
+    "owner": "Ιδιοκτήτης",
+    "available": "Διαθέσιμη",
+    "reserved": "Κρατημένη",
+    "occupied": "Κατειλημμένη",
+    "maintenance": "Συντήρηση"
+  },
   "general": {
     "basicInfo": "Βασικές Πληροφορίες",
     "location": "Τοποθεσία",
@@ -30,13 +58,15 @@
       "motorcycle": "Μοτοσικλέτα",
       "electric": "Ηλεκτρικό Όχημα",
       "vip": "VIP",
-      "reserved": "Κρατημένη"
+      "reserved": "Κρατημένη",
+      "visitor": "Επισκεπτών"
     },
     "statuses": {
       "available": "Διαθέσιμη",
       "occupied": "Κατειλημμένη",
       "reserved": "Κρατημένη",
-      "maintenance": "Συντήρηση"
+      "maintenance": "Συντήρηση",
+      "sold": "Πωλημένη"
     },
     "priceValues": {
       "shared": "Κοινόχρηστη (Δωρεάν)",

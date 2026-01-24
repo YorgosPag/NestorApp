@@ -4,6 +4,8 @@
 import type { Property } from '@/types/property-viewer';
 import type { Connection } from '@/types/connections';
 import { BUILDING_IDS } from '@/config/building-ids-config';
+// 🏢 ENTERPRISE: Firestore persistence for property updates
+import { updateUnit } from '@/services/units.service';
 
 interface UsePolygonHandlersProps {
   properties: Property[];
@@ -101,12 +103,22 @@ export function usePolygonHandlers({
     }
   };
   
-  const handleUpdateProperty = (propertyId: string, updates: Partial<Property>) => {
+  const handleUpdateProperty = async (propertyId: string, updates: Partial<Property>) => {
       const description = `Updated details for property ${propertyId}`;
+      // 🏢 ENTERPRISE: Update local state immediately for responsive UI
       setProperties(
           properties.map(p => p.id === propertyId ? { ...p, ...updates } : p),
           description
       );
+
+      // 🏢 ENTERPRISE: Persist to Firestore for data durability
+      try {
+          await updateUnit(propertyId, updates);
+      } catch (error) {
+          console.error('Failed to persist property update to Firestore:', error);
+          // Note: Local state is already updated for optimistic UI
+          // Consider adding rollback or notification here if needed
+      }
   };
 
 

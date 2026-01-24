@@ -46,12 +46,182 @@
     "maintenance": "Under Maintenance",
     "draft": "Draft"
   },
+  "floorplan": {
+    "unitFloorplan": "Unit Floorplan",
+    "selectUnit": "Select Unit",
+    "selectUnitDescription": "Select a unit from the list to view its floorplan.",
+    "noFloorplan": "No floorplan available",
+    "addFloorplan": "Add Floorplan",
+    "editFloorplan": "Edit Floorplan",
+    "deleteFloorplan": "Delete Floorplan"
+  },
   "card": {
     "stats": {
       "area": "Area",
-      "floor": "Floor"
+      "floor": "Floor",
+      "building": "Building",
+      "type": "Type",
+      "bedrooms": "Beds",
+      "bathrooms": "Baths",
+      "orientation": "Orient.",
+      "condition": "Cond."
     },
     "ariaLabel": "Unit card {name}"
+  },
+  "fields": {
+    "layout": {
+      "bedrooms": "Bedrooms",
+      "bathrooms": "Bathrooms",
+      "wc": "WC",
+      "totalRooms": "Total rooms",
+      "levels": "Levels",
+      "balconies": "Balconies"
+    },
+    "areas": {
+      "sectionTitle": "Areas",
+      "gross": "Gross area",
+      "net": "Net area",
+      "balcony": "Balcony",
+      "terrace": "Terrace",
+      "garden": "Garden"
+    }
+  },
+  "orientation": {
+    "sectionTitle": "Orientation",
+    "north": "North",
+    "northeast": "Northeast",
+    "east": "East",
+    "southeast": "Southeast",
+    "south": "South",
+    "southwest": "Southwest",
+    "west": "West",
+    "northwest": "Northwest",
+    "short": {
+      "north": "N",
+      "northeast": "NE",
+      "east": "E",
+      "southeast": "SE",
+      "south": "S",
+      "southwest": "SW",
+      "west": "W",
+      "northwest": "NW"
+    }
+  },
+  "views": {
+    "sectionTitle": "Views",
+    "sea": "Sea",
+    "mountain": "Mountain",
+    "city": "City",
+    "park": "Park",
+    "garden": "Garden",
+    "courtyard": "Courtyard",
+    "quality": {
+      "full": "Full",
+      "partial": "Partial",
+      "distant": "Distant"
+    }
+  },
+  "condition": {
+    "sectionTitle": "Condition",
+    "new": "New",
+    "excellent": "Excellent",
+    "good": "Good",
+    "needs-renovation": "Needs renovation"
+  },
+  "energy": {
+    "sectionTitle": "Energy Performance",
+    "class": "Energy class",
+    "certificateId": "Certificate ID",
+    "certificateDate": "Issue date",
+    "validUntil": "Valid until",
+    "aPlus": "A+",
+    "a": "A",
+    "b": "B",
+    "c": "C",
+    "d": "D",
+    "e": "E",
+    "f": "F",
+    "g": "G"
+  },
+  "systems": {
+    "sectionTitle": "Systems",
+    "heating": {
+      "label": "Heating",
+      "central": "Central",
+      "autonomous": "Autonomous",
+      "heat-pump": "Heat pump",
+      "solar": "Solar",
+      "none": "None"
+    },
+    "fuel": {
+      "label": "Fuel",
+      "natural-gas": "Natural gas",
+      "oil": "Oil",
+      "electricity": "Electricity",
+      "solar": "Solar",
+      "heat-pump": "Heat pump"
+    },
+    "cooling": {
+      "label": "Cooling",
+      "central-air": "Central air",
+      "split-units": "Split units",
+      "fan-coil": "Fan coil",
+      "none": "None"
+    },
+    "waterHeating": {
+      "label": "Water heating",
+      "electric": "Electric",
+      "gas": "Gas",
+      "solar": "Solar",
+      "heat-pump": "Heat pump"
+    }
+  },
+  "finishes": {
+    "sectionTitle": "Finishes",
+    "flooring": {
+      "label": "Flooring",
+      "tiles": "Tiles",
+      "wood": "Wood",
+      "laminate": "Laminate",
+      "marble": "Marble",
+      "carpet": "Carpet"
+    },
+    "frames": {
+      "label": "Window frames",
+      "aluminum": "Aluminum",
+      "pvc": "PVC",
+      "wood": "Wood"
+    },
+    "glazing": {
+      "label": "Glazing",
+      "single": "Single",
+      "double": "Double",
+      "triple": "Triple",
+      "energy": "Energy-efficient"
+    }
+  },
+  "features": {
+    "sectionTitle": "Features",
+    "interior": {
+      "label": "Interior",
+      "fireplace": "Fireplace",
+      "jacuzzi": "Jacuzzi",
+      "sauna": "Sauna",
+      "smart-home": "Smart home",
+      "solar-panels": "Solar panels",
+      "underfloor-heating": "Underfloor heating",
+      "air-conditioning": "Air conditioning",
+      "alarm-system": "Alarm system"
+    },
+    "security": {
+      "label": "Security",
+      "alarm": "Alarm",
+      "security-door": "Security door",
+      "cctv": "CCTV",
+      "access-control": "Access control",
+      "intercom": "Intercom",
+      "motion-sensors": "Motion sensors"
+    }
   },
   "management": {
     "title": "Unit Management",

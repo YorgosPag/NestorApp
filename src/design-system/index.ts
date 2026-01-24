@@ -98,10 +98,20 @@ export type {
 // 🏢 COMPONENTS (Molecules)
 // =============================================================================
 
+// 🏢 LIST CARD (Horizontal Layout - For List Views)
 export {
   ListCard,
   type ListCardProps,
   type ListCardBadge as ListCardBadgeConfig,
   type ListCardBadgeVariant,
   type ListCardAction,
+} from './components';
+
+// 🏢 GRID CARD (Vertical Layout - For Grid/Tile Views)
+export {
+  GridCard,
+  type GridCardProps,
+  type GridCardBadge as GridCardBadgeConfig,
+  type GridCardBadgeVariant,
+  type GridCardAction,
 } from './components';

@@ -4,7 +4,7 @@
 >
 > Complete documentation για όλα τα κεντρικοποιημένα συστήματα της εφαρμογής
 
-**📊 Quick Stats**: 17 Enterprise Systems | 11,362+ Lines | Fortune 500 Quality
+**📊 Quick Stats**: 18 Enterprise Systems | 12,237+ Lines | Fortune 500 Quality
 
 ---
 
@@ -48,6 +48,7 @@
 
 ### 🔄 **DATA SYSTEMS**
 - **[📋 Overview](data-systems/index.md)** - Data management architecture
+- **[🏠 Unit Fields System](data-systems/unit-fields.md)** - Extended unit properties (layout, areas, features) ✨ **NEW**
 - **[🚨 Alert Engine](data-systems/alert-engine.md)** - Real-time monitoring & notifications
 - **[🌍 Polygon System](data-systems/polygon-system.md)** - Geographic drawing engine
 - **[🏗️ State Management](data-systems/state-management.md)** - Context providers & stores
@@ -114,7 +115,7 @@
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| **Total Systems** | 17 | ✅ **Complete** |
+| **Total Systems** | 18 | ✅ **Complete** |
 | **Total Code Lines** | 11,362+ | ✅ **Enterprise** |
 | **Documentation Files** | 20+ | ✅ **Modular** |
 | **Cross-Links** | 50+ | ✅ **Interconnected** |
@@ -123,6 +124,6 @@
 
 > **💡 Tip**: Bookmark this page για quick navigation στα centralized systems!
 >
-> **🔄 Last Updated**: 2026-01-01
+> **🔄 Last Updated**: 2026-01-24
 >
 > **👥 Maintainers**: Γιώργος Παγώνης + Claude Code (Anthropic AI)

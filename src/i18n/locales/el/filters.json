@@ -24,6 +24,55 @@
   "allRiskLevels": "Όλα τα Επίπεδα Κινδύνου",
   "allComplexities": "Όλες οι Πολυπλοκότητες",
   "allBuildings": "Όλα τα Κτίρια",
+  "allLevels": "Όλα τα Επίπεδα",
+  "common": {
+    "search": "Αναζήτηση",
+    "status": "Κατάσταση",
+    "type": "Τύπος",
+    "building": "Κτίριο",
+    "level": "Επίπεδο",
+    "project": "Έργο",
+    "area": "Εμβαδόν",
+    "price": "Τιμή",
+    "updateDate": "Ημ/νία Ενημέρωσης",
+    "from": "Από",
+    "to": "Έως",
+    "selectStatus": "Επιλέξτε κατάσταση",
+    "selectType": "Επιλέξτε τύπο",
+    "selectBuilding": "Επιλέξτε κτίριο",
+    "selectLevel": "Επιλέξτε επίπεδο",
+    "selectProject": "Επιλέξτε έργο"
+  },
+  "parking": {
+    "title": "Θέσεις Στάθμευσης",
+    "searchPlaceholder": "Αναζήτηση θέσεων...",
+    "ariaLabels": {
+      "search": "Αναζήτηση θέσεων στάθμευσης",
+      "status": "Φίλτρο κατάστασης θέσης",
+      "type": "Φίλτρο τύπου θέσης",
+      "building": "Φίλτρο κτιρίου",
+      "level": "Φίλτρο επιπέδου",
+      "project": "Φίλτρο έργου",
+      "area": "Φίλτρο εμβαδού",
+      "price": "Φίλτρο τιμής",
+      "date": "Φίλτρο ημερομηνίας ενημέρωσης"
+    }
+  },
+  "storage": {
+    "title": "Αποθήκες",
+    "searchPlaceholder": "Αναζήτηση αποθηκών...",
+    "ariaLabels": {
+      "search": "Αναζήτηση αποθηκών",
+      "status": "Φίλτρο κατάστασης αποθήκης",
+      "type": "Φίλτρο τύπου αποθήκης",
+      "building": "Φίλτρο κτιρίου",
+      "floor": "Φίλτρο ορόφου",
+      "project": "Φίλτρο έργου",
+      "area": "Φίλτρο εμβαδού",
+      "price": "Φίλτρο τιμής",
+      "date": "Φίλτρο ημερομηνίας ενημέρωσης"
+    }
+  },
   "status": {
     "available": "Διαθέσιμο",
     "sold": "Πωλημένο",
@@ -49,7 +98,10 @@
     "project": "Έργο",
     "building": "Κτίριο",
     "floor": "Όροφος",
-    "propertyType": "Τύπος Ακινήτου"
+    "propertyType": "Τύπος Ακινήτου",
+    "contactType": "Τύπος Επαφής",
+    "unitsCount": "Αριθμός Μονάδων",
+    "totalArea": "Συνολικό Εμβαδόν"
   },
   "placeholders": {
     "general": "Αναζήτηση...",
@@ -104,5 +156,21 @@
     "smsTooltip": "SMS μηνύματα",
     "telegram": "Telegram",
     "telegramTooltip": "Telegram μηνύματα"
+  },
+  "checkboxes": {
+    "showArchived": "Εμφάνιση αρχειοθετημένων",
+    "hasProperties": "Με ιδιοκτησίες",
+    "isFavorite": "Αγαπημένα"
+  },
+  "advancedOptions": {
+    "isFavoriteContacts": "Αγαπημένες επαφές",
+    "hasEmail": "Με email",
+    "hasPhone": "Με τηλέφωνο",
+    "recentActivity": "Πρόσφατη δραστηριότητα",
+    "parking": "Πάρκινγκ",
+    "storage": "Αποθήκη",
+    "fireplace": "Τζάκι",
+    "view": "Θέα",
+    "pool": "Πισίνα"
   }
 }

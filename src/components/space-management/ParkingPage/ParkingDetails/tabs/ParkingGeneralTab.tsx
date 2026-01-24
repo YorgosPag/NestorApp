@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { formatDate, formatCurrency } from '@/lib/intl-utils';
+import { formatDate, formatCurrency, formatFloorString } from '@/lib/intl-utils';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { Car, MapPin, Calendar, Euro, Layers } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -73,7 +73,7 @@ export function ParkingGeneralTab({ parking }: ParkingGeneralTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium text-muted-foreground">{t('general.fields.floor')}</label>
-            <p className="mt-1 text-sm">{parking.floor || 'N/A'}</p>
+            <p className="mt-1 text-sm">{parking.floor ? formatFloorString(parking.floor) : 'N/A'}</p>
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground">{t('general.fields.position')}</label>

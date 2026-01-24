@@ -77,7 +77,10 @@ export function UnitsSidebar({
             safeViewerProps,
             safeViewerPropsWithFloors,
             setShowHistoryPanel,
-            units
+            units,
+            // 🏢 ENTERPRISE: Pass onUpdateProperty directly for PropertyDetailsContent
+            // UniversalTabsRenderer spreads additionalData as props, so this is the correct pattern
+            onUpdateProperty: safeViewerPropsWithFloors.handleUpdateProperty,
           }}
           globalProps={{
             unitId: selectedUnit?.id

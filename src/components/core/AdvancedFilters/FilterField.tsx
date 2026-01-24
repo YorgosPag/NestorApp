@@ -51,7 +51,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange }: Fil
     if (label.includes('.')) {
       // Check if key has namespace prefix (e.g., 'units.operationalStatus.ready')
       const parts = label.split('.');
-      const knownNamespaces = ['units', 'common', 'navigation', 'properties', 'building', 'filters'];
+      const knownNamespaces = ['units', 'common', 'navigation', 'properties', 'building', 'filters', 'parking', 'storage'];
       if (parts.length >= 2 && knownNamespaces.includes(parts[0])) {
         const namespace = parts[0];
         const key = parts.slice(1).join('.');

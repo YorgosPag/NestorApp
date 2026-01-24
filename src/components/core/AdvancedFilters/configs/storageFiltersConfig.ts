@@ -42,8 +42,9 @@ export const defaultStorageFilters: StorageFilterState = {
 // Storage Filters Configuration
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 export const storageFiltersConfig: FilterPanelConfig = {
-  title: 'filters.storage.title',
-  searchPlaceholder: 'filters.storage.searchPlaceholder',
+  title: 'storage.title',
+  searchPlaceholder: 'storage.searchPlaceholder',
+  i18nNamespace: 'filters',
   rows: [
     {
       id: 'storage-basic',

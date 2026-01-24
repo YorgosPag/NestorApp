@@ -1,7 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Property, ExtendedPropertyDetails } from '@/types/property-viewer';
 import type { PropertyDetailsContentProps } from './types';
 // 🏢 ENTERPRISE: i18n support
@@ -21,6 +21,7 @@ import { ContactsBlock } from './components/ContactsBlock';
 import { DocumentsBlock } from './components/DocumentsBlock';
 import { DatesBlock } from './components/DatesBlock';
 import { BuildingSelectorCard } from './components/BuildingSelectorCard';
+import { UnitFieldsBlock } from './components/UnitFieldsBlock';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
@@ -47,6 +48,19 @@ export function PropertyDetailsContent({
   const notifications = useNotifications();
   const { quick } = useBorderTokens();
   const spacing = useSpacingTokens();
+
+  // 🏢 ENTERPRISE: Lifted edit mode state - single source of truth
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // 🏢 ENTERPRISE: Toggle edit mode callback
+  const handleToggleEditMode = useCallback(() => {
+    setIsEditMode(prev => !prev);
+  }, []);
+
+  // 🏢 ENTERPRISE: Exit edit mode callback (for save/cancel)
+  const handleExitEditMode = useCallback(() => {
+    setIsEditMode(false);
+  }, []);
 
   // Resolve the actual property from all possible sources (enterprise pattern)
   const resolvedProperty = property || unit || data;
@@ -98,6 +112,18 @@ export function PropertyDetailsContent({
       <PropertyMeta
         property={resolvedProperty}
         onUpdateProperty={safeOnUpdateProperty}
+        isEditMode={isEditMode}
+        onToggleEditMode={handleToggleEditMode}
+        // TODO: onNavigateToFloorPlan - implement when Floor Plan tab navigation is ready
+      />
+
+      {/* 🏢 ENTERPRISE: Unit Fields Block (bedrooms, bathrooms, orientations, etc) */}
+      <UnitFieldsBlock
+        property={resolvedProperty}
+        onUpdateProperty={safeOnUpdateProperty}
+        isReadOnly={isReadOnly}
+        isEditMode={isEditMode}
+        onExitEditMode={handleExitEditMode}
       />
 
       {/* 🏢 ENTERPRISE: Building Selector για σύνδεση Μονάδας→Κτιρίου */}

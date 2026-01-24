@@ -37,6 +37,7 @@ export const SUPPORTED_NAMESPACES = [
   'telegram',  // Telegram bot templates - PR1 centralization
   'files',     // File storage display names (ADR-031)
   'storage',   // 🏢 Storage management module
+  'parking',   // 🏢 Parking management module - added 2026-01-24
   'admin'      // 🏢 Admin tools (units, claims repair)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
@@ -136,6 +137,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
         case 'storage':
           translations = await import('./locales/el/storage.json');
           break;
+        case 'parking':
+          translations = await import('./locales/el/parking.json');
+          break;
         case 'admin':
           translations = await import('./locales/el/admin.json');
           break;
@@ -217,6 +221,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
           break;
         case 'storage':
           translations = await import('./locales/en/storage.json');
+          break;
+        case 'parking':
+          translations = await import('./locales/en/parking.json');
           break;
         case 'admin':
           translations = await import('./locales/en/admin.json');
@@ -326,6 +333,8 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'projects',      // Projects module
     'contacts',      // Contacts module
     'units',         // Units module
+    'storage',       // 🏢 Storage management module - added 2026-01-24
+    'parking',       // 🏢 Parking management module - added 2026-01-24
     // Note: 'crm' loads on-demand via useTranslation('crm')
   ];
 

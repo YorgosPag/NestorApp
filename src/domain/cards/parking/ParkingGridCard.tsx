@@ -1,18 +1,19 @@
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+// 🌐 i18n: All labels use i18n keys
 'use client';
 
 /**
- * 🅿️ ENTERPRISE PARKING LIST CARD - Domain Component
+ * 🅿️ ENTERPRISE PARKING GRID CARD - Domain Component
  *
- * Domain-specific card for parking spots in list views.
- * Extends ListCard with parking-specific defaults and stats.
+ * Domain-specific card for parking spots in grid/tile views.
+ * Extends GridCard with parking-specific defaults and stats.
  *
- * @fileoverview Parking domain card using centralized ListCard.
+ * @fileoverview Parking domain card using centralized GridCard.
  * @enterprise Fortune 500 compliant - ZERO hardcoded values
- * @see ListCard for base component
+ * @see GridCard for base component
+ * @see ParkingListCard for list view equivalent
  * @see NAVIGATION_ENTITIES for entity config
  * @author Enterprise Architecture Team
- * @since 2026-01-08
+ * @since 2026-01-24
  */
 
 import React, { useMemo } from 'react';
@@ -20,23 +21,29 @@ import React, { useMemo } from 'react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 DESIGN SYSTEM
-import { ListCard } from '@/design-system';
+import { GridCard } from '@/design-system';
 import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
 import { formatCurrency, formatFloorString } from '@/lib/intl-utils';
 
-// 🏢 ENTERPRISE: i18n support
+// 🏢 ENTERPRISE: i18n support (using custom hook with lazy loading)
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 DOMAIN TYPES
-// NOTE: Υπάρχουν 2 ParkingSpot types - @/types/parking & @/hooks/useFirestoreParkingSpots
-// Αυτό το component υποστηρίζει και τα δύο με adapter pattern
-// 🌐 i18n: Type/status labels now use t() directly instead of imported constants
+// NOTE: Using adapter pattern to support both ParkingSpot schemas
+// i18n keys are used directly instead of importing from @/types/parking
+
+// 🏢 BADGE VARIANT MAPPING
+import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
+
+// =============================================================================
+// 🏢 ADAPTER TYPE - Supports both ParkingSpot schemas
+// =============================================================================
 
 /**
- * 🏢 ADAPTER TYPE - Υποστηρίζει και τα δύο ParkingSpot schemas
- * TODO: Κεντρικοποίηση σε ένα ParkingSpot type
+ * 🏢 ADAPTER TYPE - Supports both @/types/parking and @/hooks schemas
+ * Shared with ParkingListCard for consistency
  */
 interface ParkingSpotAdapter {
   id: string;
@@ -56,22 +63,19 @@ interface ParkingSpotAdapter {
   price?: number;
 }
 
-// 🏢 BADGE VARIANT MAPPING
-import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
-
 // =============================================================================
 // 🏢 TYPES
 // =============================================================================
 
-export interface ParkingListCardProps {
+export interface ParkingGridCardProps {
   /** Parking spot data - supports both @/types/parking and @/hooks schemas */
   parking: ParkingSpotAdapter;
   /** Whether card is selected */
   isSelected?: boolean;
   /** Whether item is favorite */
   isFavorite?: boolean;
-  /** Click handler */
-  onSelect?: () => void;
+  /** Click handler - supports shift-click for multi-select */
+  onSelect?: (isShiftClick?: boolean) => void;
   /** Favorite toggle handler */
   onToggleFavorite?: () => void;
   /** Compact mode */
@@ -81,10 +85,10 @@ export interface ParkingListCardProps {
 }
 
 // =============================================================================
-// 🏢 STATUS TO BADGE VARIANT MAPPING (Centralized)
+// 🏢 STATUS TO BADGE VARIANT MAPPING (Shared with ParkingListCard)
 // =============================================================================
 
-const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
+const STATUS_BADGE_VARIANTS: Record<string, GridCardBadgeVariant> = {
   available: 'success',
   occupied: 'info',
   reserved: 'warning',
@@ -97,14 +101,14 @@ const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
 // =============================================================================
 
 /**
- * 🅿️ ParkingListCard Component
+ * 🅿️ ParkingGridCard Component
  *
- * Domain-specific card for parking spots.
- * Uses ListCard with parking defaults from NAVIGATION_ENTITIES.
+ * Domain-specific card for parking spots in grid views.
+ * Uses GridCard with parking defaults from NAVIGATION_ENTITIES.
  *
  * @example
  * ```tsx
- * <ParkingListCard
+ * <ParkingGridCard
  *   parking={parkingSpot}
  *   isSelected={selectedId === parkingSpot.id}
  *   onSelect={() => setSelectedId(parkingSpot.id)}
@@ -113,7 +117,7 @@ const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
  * />
  * ```
  */
-export function ParkingListCard({
+export function ParkingGridCard({
   parking,
   isSelected = false,
   isFavorite,
@@ -121,18 +125,18 @@ export function ParkingListCard({
   onToggleFavorite,
   compact = false,
   className,
-}: ParkingListCardProps) {
+}: ParkingGridCardProps) {
   const { t } = useTranslation('parking');
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
 
-  /** Build stats array from parking data */
+  /** Build stats array for grid view - vertical layout optimized */
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    // Level/Floor - 🏢 ENTERPRISE: Using centralized floor icon/color & formatFloorString
+    // Level/Floor with icon - 🏢 ENTERPRISE: Using formatFloorString for proper i18n
     const levelValue = parking.level || parking.floor;
     if (levelValue) {
       items.push({
@@ -143,7 +147,7 @@ export function ParkingListCard({
       });
     }
 
-    // Area - 🏢 ENTERPRISE: Using centralized area icon/color
+    // Area with icon
     if (parking.area) {
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
@@ -153,7 +157,7 @@ export function ParkingListCard({
       });
     }
 
-    // Price - 🏢 ENTERPRISE: Using centralized price icon/color
+    // Price with icon (optional - may not be shown in grid view)
     if (parking.price && parking.price > 0) {
       items.push({
         icon: NAVIGATION_ENTITIES.price.icon,
@@ -173,8 +177,8 @@ export function ParkingListCard({
   /** Build badges from status */
   const badges = useMemo(() => {
     const status = parking.status || 'available';
-    // 🏢 ENTERPRISE: Use t() to translate status labels
-    const statusLabel = t(`status.${status}`, { defaultValue: status });
+    // 🏢 ENTERPRISE: Use i18n for status labels
+    const statusLabel = t(`general.statuses.${status}`, { defaultValue: status });
     const variant = STATUS_BADGE_VARIANTS[status] || 'default';
 
     return [{ label: statusLabel, variant }];
@@ -183,9 +187,24 @@ export function ParkingListCard({
   /** Get type label for subtitle */
   const typeLabel = useMemo(() => {
     const type = parking.type || 'standard';
-    // 🏢 ENTERPRISE: Use t() to translate type labels
-    return t(`types.${type}`, { defaultValue: type });
+    // 🏢 ENTERPRISE: Use i18n for type labels
+    return t(`general.types.${type}`, { defaultValue: type });
   }, [parking.type, t]);
+
+  // ==========================================================================
+  // 🏢 HANDLERS
+  // ==========================================================================
+
+  const handleClick = () => {
+    onSelect?.(false);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect?.(event.shiftKey || event.metaKey);
+    }
+  };
 
   // ==========================================================================
   // 🏢 RENDER
@@ -195,14 +214,15 @@ export function ParkingListCard({
   const title = parking.code || parking.number || parking.id;
 
   return (
-    <ListCard
+    <GridCard
       entityType="parking"
       title={title}
       subtitle={typeLabel}
       badges={badges}
       stats={stats}
       isSelected={isSelected}
-      onClick={onSelect}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
       isFavorite={isFavorite}
       onToggleFavorite={onToggleFavorite}
       compact={compact}
@@ -212,6 +232,6 @@ export function ParkingListCard({
   );
 }
 
-ParkingListCard.displayName = 'ParkingListCard';
+ParkingGridCard.displayName = 'ParkingGridCard';
 
-export default ParkingListCard;
+export default ParkingGridCard;

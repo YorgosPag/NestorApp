@@ -1,4 +1,32 @@
 {
+  "card": {
+    "stats": {
+      "level": "Level",
+      "area": "Area",
+      "price": "Price"
+    },
+    "ariaLabel": "Parking card {{name}}"
+  },
+  "types": {
+    "underground": "Underground",
+    "covered": "Covered",
+    "open": "Open",
+    "standard": "Standard",
+    "compact": "Compact",
+    "handicapped": "Handicapped",
+    "motorcycle": "Motorcycle",
+    "electric": "Electric Vehicle",
+    "vip": "VIP",
+    "visitor": "Visitor"
+  },
+  "status": {
+    "sold": "Sold",
+    "owner": "Owner",
+    "available": "Available",
+    "reserved": "Reserved",
+    "occupied": "Occupied",
+    "maintenance": "Maintenance"
+  },
   "general": {
     "basicInfo": "Basic Information",
     "location": "Location",
@@ -30,13 +58,15 @@
       "motorcycle": "Motorcycle",
       "electric": "Electric Vehicle",
       "vip": "VIP",
-      "reserved": "Reserved"
+      "reserved": "Reserved",
+      "visitor": "Visitor"
     },
     "statuses": {
       "available": "Available",
       "occupied": "Occupied",
       "reserved": "Reserved",
-      "maintenance": "Maintenance"
+      "maintenance": "Maintenance",
+      "sold": "Sold"
     },
     "priceValues": {
       "shared": "Shared (Free)",

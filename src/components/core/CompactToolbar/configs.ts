@@ -156,53 +156,55 @@ function getSortOptionsForType(type: 'buildings' | 'projects' | 'contacts' | 'un
 }
 
 // 🏢 ENTERPRISE: Direct i18n key mappings for newItem labels per type
+// NOTE: Keys are relative to 'common' namespace (no 'common.' prefix needed)
 const NEW_ITEM_LABELS_BY_TYPE: Record<string, string> = {
-  buildings: 'common.actions.newBuilding',
-  projects: 'common.actions.newProject',
-  contacts: 'common.actions.newContact',
-  units: 'common.actions.newUnit',
-  storages: 'common.actions.newStorage',
-  parking: 'common.actions.newParking',
-  communications: 'common.actions.newMessage'
+  buildings: 'actions.newBuilding',
+  projects: 'actions.newProject',
+  contacts: 'actions.newContact',
+  units: 'actions.newUnit',
+  storages: 'actions.newStorage',
+  parking: 'actions.newParking',
+  communications: 'actions.newMessage'
 };
 
 // 🏢 ENTERPRISE: Direct i18n keys for entity-specific tooltips
+// NOTE: Keys are relative to 'common' namespace (no 'common.' prefix needed)
 const NEW_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
-  buildings: 'common.tooltips.newBuildingShortcut',
-  projects: 'common.tooltips.newProjectShortcut',
-  contacts: 'common.tooltips.newContactShortcut',
-  units: 'common.tooltips.newUnitShortcut',
-  storages: 'common.tooltips.newStorageShortcut',
-  parking: 'common.tooltips.newParkingShortcut',
-  communications: 'common.tooltips.newMessageShortcut'
+  buildings: 'tooltips.newBuildingShortcut',
+  projects: 'tooltips.newProjectShortcut',
+  contacts: 'tooltips.newContactShortcut',
+  units: 'tooltips.newUnitShortcut',
+  storages: 'tooltips.newStorageShortcut',
+  parking: 'tooltips.newParkingShortcut',
+  communications: 'tooltips.newMessageShortcut'
 };
 
 const EDIT_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   buildings: 'toolbar.actions.buildings.edit',
   projects: 'toolbar.actions.projects.edit',
-  contacts: 'common.tooltips.editContact',
+  contacts: 'tooltips.editContact',
   units: 'toolbar.actions.units.edit',
   storages: 'toolbar.actions.storage.edit',
-  parking: 'common.tooltips.editSelected',
-  communications: 'common.tooltips.editSelected'
+  parking: 'tooltips.editSelected',
+  communications: 'tooltips.editSelected'
 };
 
 const DELETE_ITEM_TOOLTIP_BY_TYPE: Record<string, string> = {
   buildings: 'toolbar.actions.buildings.delete',
   projects: 'toolbar.actions.projects.delete',
-  contacts: 'common.tooltips.deleteContact',
+  contacts: 'tooltips.deleteContact',
   units: 'toolbar.actions.units.delete',
   storages: 'toolbar.actions.storage.delete',
-  parking: 'common.tooltips.deleteSelected',
-  communications: 'common.tooltips.deleteSelected'
+  parking: 'tooltips.deleteSelected',
+  communications: 'tooltips.deleteSelected'
 };
 
 const SHARE_TOOLTIP_BY_TYPE: Record<string, string> = {
-  buildings: 'common.tooltips.shareBuilding',
-  projects: 'common.tooltips.shareProject',
-  contacts: 'common.tooltips.shareContact',
-  units: 'common.tooltips.shareUnit',
-  storages: 'common.tooltips.shareStorage',
+  buildings: 'tooltips.shareBuilding',
+  projects: 'tooltips.shareProject',
+  contacts: 'tooltips.shareContact',
+  units: 'tooltips.shareUnit',
+  storages: 'tooltips.shareStorage',
   parking: 'toolbar.labels.share',
   communications: 'toolbar.labels.share'
 };

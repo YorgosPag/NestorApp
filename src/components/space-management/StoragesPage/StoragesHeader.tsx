@@ -41,7 +41,7 @@ export function StoragesHeader({
   setShowFilters,
 }: StoragesHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('building');
+  const { t } = useTranslation('storage');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

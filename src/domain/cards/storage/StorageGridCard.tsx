@@ -1,18 +1,19 @@
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+// 🌐 i18n: All labels use i18n keys
 'use client';
 
 /**
- * 📦 ENTERPRISE STORAGE LIST CARD - Domain Component
+ * 📦 ENTERPRISE STORAGE GRID CARD - Domain Component
  *
- * Domain-specific card for storage units in list views.
- * Extends ListCard with storage-specific defaults and stats.
+ * Domain-specific card for storage units in grid/tile views.
+ * Extends GridCard with storage-specific defaults and stats.
  *
- * @fileoverview Storage domain card using centralized ListCard.
+ * @fileoverview Storage domain card using centralized GridCard.
  * @enterprise Fortune 500 compliant - ZERO hardcoded values
- * @see ListCard for base component
+ * @see GridCard for base component
+ * @see StorageListCard for list view equivalent
  * @see NAVIGATION_ENTITIES for entity config
  * @author Enterprise Architecture Team
- * @since 2026-01-08
+ * @since 2026-01-24
  */
 
 import React, { useMemo } from 'react';
@@ -20,7 +21,7 @@ import React, { useMemo } from 'react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
 // 🏢 DESIGN SYSTEM
-import { ListCard } from '@/design-system';
+import { GridCard } from '@/design-system';
 import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
@@ -30,24 +31,24 @@ import { formatCurrency, formatFloorString } from '@/lib/intl-utils';
 import type { Storage } from '@/types/storage/contracts';
 
 // 🏢 BADGE VARIANT MAPPING
-import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
+import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 
-// 🏢 ENTERPRISE: i18n support
+// 🏢 ENTERPRISE: i18n support (using custom hook with lazy loading)
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // =============================================================================
 // 🏢 TYPES
 // =============================================================================
 
-export interface StorageListCardProps {
+export interface StorageGridCardProps {
   /** Storage unit data */
   storage: Storage;
   /** Whether card is selected */
   isSelected?: boolean;
   /** Whether item is favorite */
   isFavorite?: boolean;
-  /** Click handler */
-  onSelect?: () => void;
+  /** Click handler - supports shift-click for multi-select */
+  onSelect?: (isShiftClick?: boolean) => void;
   /** Favorite toggle handler */
   onToggleFavorite?: () => void;
   /** Compact mode */
@@ -57,10 +58,10 @@ export interface StorageListCardProps {
 }
 
 // =============================================================================
-// 🏢 STATUS TO BADGE VARIANT MAPPING (Centralized)
+// 🏢 STATUS TO BADGE VARIANT MAPPING (Shared with StorageListCard)
 // =============================================================================
 
-const STATUS_BADGE_VARIANTS: Record<string, ListCardBadgeVariant> = {
+const STATUS_BADGE_VARIANTS: Record<string, GridCardBadgeVariant> = {
   available: 'success',
   occupied: 'info',
   reserved: 'warning',
@@ -79,7 +80,7 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
 };
 
 // =============================================================================
-// 🏢 TYPE LABELS (i18n keys)
+// 🏢 TYPE LABELS (i18n keys) - Consistent with StorageListCard
 // =============================================================================
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
@@ -95,14 +96,14 @@ const TYPE_LABEL_KEYS: Record<string, string> = {
 // =============================================================================
 
 /**
- * 📦 StorageListCard Component
+ * 📦 StorageGridCard Component
  *
- * Domain-specific card for storage units.
- * Uses ListCard with storage defaults from NAVIGATION_ENTITIES.
+ * Domain-specific card for storage units in grid views.
+ * Uses GridCard with storage defaults from NAVIGATION_ENTITIES.
  *
  * @example
  * ```tsx
- * <StorageListCard
+ * <StorageGridCard
  *   storage={storageUnit}
  *   isSelected={selectedId === storageUnit.id}
  *   onSelect={() => setSelectedId(storageUnit.id)}
@@ -111,7 +112,7 @@ const TYPE_LABEL_KEYS: Record<string, string> = {
  * />
  * ```
  */
-export function StorageListCard({
+export function StorageGridCard({
   storage,
   isSelected = false,
   isFavorite,
@@ -119,18 +120,28 @@ export function StorageListCard({
   onToggleFavorite,
   compact = false,
   className,
-}: StorageListCardProps) {
+}: StorageGridCardProps) {
   const { t } = useTranslation('storage');
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
 
-  /** Build stats array from storage data */
+  /** Build stats array for grid view - vertical layout optimized */
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    // Area - 🏢 ENTERPRISE: Using centralized area icon/color
+    // Floor with icon - 🏢 ENTERPRISE: Using formatFloorString for consistent localization
+    if (storage.floor) {
+      items.push({
+        icon: NAVIGATION_ENTITIES.floor.icon,
+        iconColor: NAVIGATION_ENTITIES.floor.color,
+        label: t('card.stats.floor'),
+        value: formatFloorString(storage.floor),
+      });
+    }
+
+    // Area with icon
     if (storage.area) {
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
@@ -140,7 +151,7 @@ export function StorageListCard({
       });
     }
 
-    // Price - 🏢 ENTERPRISE: Using centralized price icon/color
+    // Price with icon (optional - may not be shown in grid view)
     if (storage.price && storage.price > 0) {
       items.push({
         icon: NAVIGATION_ENTITIES.price.icon,
@@ -154,18 +165,8 @@ export function StorageListCard({
       });
     }
 
-    // Floor - 🏢 ENTERPRISE: Using formatFloorString for consistent localization
-    if (storage.floor) {
-      items.push({
-        icon: NAVIGATION_ENTITIES.floor.icon,
-        iconColor: NAVIGATION_ENTITIES.floor.color,
-        label: t('card.stats.floor'),
-        value: formatFloorString(storage.floor),
-      });
-    }
-
     return items;
-  }, [storage.area, storage.price, storage.floor, t]);
+  }, [storage.floor, storage.area, storage.price, t]);
 
   /** Build badges from status */
   const badges = useMemo(() => {
@@ -185,18 +186,34 @@ export function StorageListCard({
   }, [storage.type, t]);
 
   // ==========================================================================
+  // 🏢 HANDLERS
+  // ==========================================================================
+
+  const handleClick = () => {
+    onSelect?.(false);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect?.(event.shiftKey || event.metaKey);
+    }
+  };
+
+  // ==========================================================================
   // 🏢 RENDER
   // ==========================================================================
 
   return (
-    <ListCard
+    <GridCard
       entityType="storage"
       title={storage.name || storage.id}
       subtitle={typeLabel}
       badges={badges}
       stats={stats}
       isSelected={isSelected}
-      onClick={onSelect}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
       isFavorite={isFavorite}
       onToggleFavorite={onToggleFavorite}
       compact={compact}
@@ -206,6 +223,6 @@ export function StorageListCard({
   );
 }
 
-StorageListCard.displayName = 'StorageListCard';
+StorageGridCard.displayName = 'StorageGridCard';
 
-export default StorageListCard;
+export default StorageGridCard;

@@ -12,9 +12,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-// 🏢 ENTERPRISE: Grid view imports (PR: Projects Grid View)
+// 🏢 ENTERPRISE: Grid view imports - Using proper GridCard (PR: Enterprise Grid System)
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ProjectListCard } from '@/domain';
+import { ProjectGridCard } from '@/domain';
 
 // 🏢 ENTERPRISE: View mode type (matches useProjectsPageState)
 type ProjectsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
@@ -54,8 +54,8 @@ export function ProjectViewSwitch({
     };
   };
 
-  // 🏢 ENTERPRISE: Grid View Rendering (PR: Projects Grid View)
-  // Uses same ProjectListCard as list view, but in responsive grid layout
+  // 🏢 ENTERPRISE: Grid View Rendering - Using proper GridCard (PR: Enterprise Grid System)
+  // Uses ProjectGridCard (vertical layout) for grid view
   if (viewMode === 'grid') {
     return (
       <>
@@ -66,7 +66,7 @@ export function ProjectViewSwitch({
             aria-label={t('grid.ariaLabel')}
           >
             {projects.map((project: Project) => (
-              <ProjectListCard
+              <ProjectGridCard
                 key={project.id}
                 project={project}
                 isSelected={selectedProject?.id === project.id}

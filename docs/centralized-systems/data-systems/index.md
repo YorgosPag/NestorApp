@@ -12,12 +12,55 @@
 
 | System | Lines | Files | Status | Key Features |
 |--------|-------|-------|--------|--------------|
+| **Unit Fields System** | 875+ | 8 files | ✅ **Production** | Extended unit properties (layout, areas, features) ✨ **NEW** |
 | **Alert Engine** | 2,000+ | 6 subsystems | ✅ **Production** | Real-time monitoring ecosystem |
 | **Polygon System** | 800+ | 3 modules | ✅ **Enterprise** | Geographic drawing engine |
 | **Context Providers** | 900+ | 6 providers | ✅ **Complete** | Global state management |
 | **Config Systems** | 1,200+ | 50+ files | ✅ **Centralized** | Application configuration |
 
-**🏆 TOTAL**: **4 systems** | **4,900+ lines** | **Enterprise-grade** | **Real-time capable**
+**🏆 TOTAL**: **5 systems** | **5,775+ lines** | **Enterprise-grade** | **Real-time capable**
+
+---
+
+## 🏠 **UNIT FIELDS SYSTEM** ✨ NEW
+
+### 📁 **EXTENDED UNIT PROPERTIES**
+
+**📍 Location**: `src/features/property-details/components/UnitFieldsBlock.tsx` (875 lines)
+
+**🎯 Mission**: Complete unit property management με Firestore persistence
+
+#### **🏢 ARCHITECTURE:**
+
+```
+UnitFieldsBlock
+├── Phase 1: Layout (bedrooms, bathrooms, wc)
+├── Phase 2: Areas (gross, net, balcony, terrace, garden)
+├── Phase 3: Orientation (8 compass directions)
+├── Phase 4: Condition & Energy (A+ to G)
+└── Phase 5: Systems, Finishes, Features
+```
+
+#### **✅ ENTERPRISE FEATURES:**
+- ✅ **Edit/View Modes**: Inline editing με immediate save
+- ✅ **Firestore Persistence**: Real-time database updates
+- ✅ **i18n Support**: Full EL/EN translations (80+ keys)
+- ✅ **ADR-001 Compliance**: Radix Select για dropdowns
+- ✅ **Centralized Tokens**: useSpacingTokens, useIconSizes, useBorderTokens
+- ✅ **Type Safety**: Full TypeScript με enterprise types
+
+**🔗 API Usage:**
+```typescript
+import { UnitFieldsBlock } from '@/features/property-details/components/UnitFieldsBlock';
+
+<UnitFieldsBlock
+  property={selectedUnit}
+  onUpdateProperty={handleUpdateProperty}
+  isReadOnly={false}
+/>
+```
+
+**📚 Full Documentation**: **[Unit Fields Guide](unit-fields.md)**
 
 ---
 
@@ -215,6 +258,7 @@ User Interaction → Context Providers → Business Logic → Alert Engine → U
 ## 📚 **DETAILED DOCUMENTATION**
 
 ### 🎯 **SYSTEM-SPECIFIC GUIDES**
+- **[🏠 Unit Fields](unit-fields.md)** - Extended unit properties guide ✨ **NEW**
 - **[🚨 Alert Engine](alert-engine.md)** - Complete monitoring system guide
 - **[🌍 Polygon System](polygon-system.md)** - Drawing engine documentation
 - **[🏗️ State Management](state-management.md)** - Context providers detailed guide
@@ -248,7 +292,7 @@ User Interaction → Context Providers → Business Logic → Alert Engine → U
 
 ---
 
-> **📅 Last Updated**: 2025-12-28
+> **📅 Last Updated**: 2026-01-24
 >
 > **👥 Authors**: Γιώργος Παγώνης + Claude Code (Anthropic AI)
 >

@@ -1,28 +1,29 @@
-// 🌐 i18n: All labels converted to i18n keys - 2026-01-18
+// 🌐 i18n: All labels use i18n keys
 'use client';
 
 /**
- * 🏠 ENTERPRISE UNIT LIST CARD - Domain Component
+ * 🏠 ENTERPRISE UNIT GRID CARD - Domain Component
  *
- * Domain-specific card for units/properties in list views.
- * Extends ListCard with unit-specific defaults and stats.
+ * Domain-specific card for units/properties in grid/tile views.
+ * Extends GridCard with unit-specific defaults and stats.
  *
- * @fileoverview Unit domain card using centralized ListCard.
+ * @fileoverview Unit domain card using centralized GridCard.
  * @enterprise Fortune 500 compliant - ZERO hardcoded values
- * @see ListCard for base component
+ * @see GridCard for base component
+ * @see UnitListCard for list view equivalent
  * @see NAVIGATION_ENTITIES for entity config
  * @author Enterprise Architecture Team
- * @since 2026-01-08
+ * @since 2026-01-24
  */
 
 import React, { useMemo } from 'react';
 // 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-// 🏢 PHASE 1: Layout icons (not in NAVIGATION_ENTITIES yet)
-import { Bed, Compass } from 'lucide-react';
+// 🏢 PHASE 1 & 4: Layout and condition icons (not in NAVIGATION_ENTITIES yet)
+import { Bed, Bath, Wrench } from 'lucide-react';
 
 // 🏢 DESIGN SYSTEM
-import { ListCard } from '@/design-system';
+import { GridCard } from '@/design-system';
 import type { StatItem } from '@/design-system';
 
 // 🏢 CENTRALIZED FORMATTERS
@@ -32,7 +33,7 @@ import { formatNumber, formatFloorLabel } from '@/lib/intl-utils';
 import type { Property } from '@/types/property-viewer';
 
 // 🏢 BADGE VARIANT MAPPING
-import type { ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
+import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -41,7 +42,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 TYPES
 // =============================================================================
 
-export interface UnitListCardProps {
+export interface UnitGridCardProps {
   /** Unit/Property data */
   unit: Property;
   /** Whether card is selected */
@@ -64,11 +65,9 @@ export interface UnitListCardProps {
 
 /**
  * ✅ DOMAIN SEPARATION: Operational status mapping (construction/readiness)
- * Removed sales status mapping (for-sale/sold/reserved) per ChatGPT guidance
- *
- * @migration PR1 - Units List Cleanup
+ * Shared with UnitListCard for consistency
  */
-const OPERATIONAL_STATUS_VARIANTS: Record<string, ListCardBadgeVariant> = {
+const OPERATIONAL_STATUS_VARIANTS: Record<string, GridCardBadgeVariant> = {
   'ready': 'success',              // Έτοιμο
   'under-construction': 'warning', // υπό ολοκλήρωση
   'inspection': 'info',            // σε επιθεώρηση
@@ -80,10 +79,6 @@ const OPERATIONAL_STATUS_VARIANTS: Record<string, ListCardBadgeVariant> = {
 // 🏢 OPERATIONAL STATUS LABELS (i18n keys)
 // =============================================================================
 
-/**
- * ✅ DOMAIN SEPARATION: Operational status i18n keys
- * Removed sales status keys per domain separation
- */
 const OPERATIONAL_STATUS_LABEL_KEYS: Record<string, string> = {
   'ready': 'operationalStatus.ready',
   'under-construction': 'operationalStatus.underConstruction',
@@ -97,14 +92,14 @@ const OPERATIONAL_STATUS_LABEL_KEYS: Record<string, string> = {
 // =============================================================================
 
 /**
- * 🏠 UnitListCard Component
+ * 🏠 UnitGridCard Component
  *
- * Domain-specific card for units/properties.
- * Uses ListCard with unit defaults from NAVIGATION_ENTITIES.
+ * Domain-specific card for units/properties in grid views.
+ * Uses GridCard with unit defaults from NAVIGATION_ENTITIES.
  *
  * @example
  * ```tsx
- * <UnitListCard
+ * <UnitGridCard
  *   unit={property}
  *   isSelected={selectedId === property.id}
  *   onSelect={() => setSelectedId(property.id)}
@@ -113,7 +108,7 @@ const OPERATIONAL_STATUS_LABEL_KEYS: Record<string, string> = {
  * />
  * ```
  */
-export function UnitListCard({
+export function UnitGridCard({
   unit,
   isSelected = false,
   isFavorite,
@@ -121,27 +116,44 @@ export function UnitListCard({
   onToggleFavorite,
   compact = false,
   className,
-}: UnitListCardProps) {
+}: UnitGridCardProps) {
   const { t } = useTranslation('units');
 
   // ==========================================================================
   // 🏢 COMPUTED VALUES (Memoized)
   // ==========================================================================
 
-  /**
-   * 🏢 PR1.2: Build stats array with ICONS + VALUES for compact inline display
-   * Format: 🏠 Type | 📐 85 m² | 🏢 1ος
-   */
+  /** Build stats array for grid view - vertical layout optimized */
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
-    // Type with icon
-    if (unit.type) {
+    // Building with icon
+    if (unit.building) {
       items.push({
-        icon: NAVIGATION_ENTITIES.unit.icon, // 🏠 Unit icon for type
-        iconColor: NAVIGATION_ENTITIES.unit.color,
-        label: t('card.stats.type'),
-        value: t(`types.${unit.type}`, { defaultValue: unit.type }),
+        icon: NAVIGATION_ENTITIES.building.icon,
+        iconColor: NAVIGATION_ENTITIES.building.color,
+        label: t('card.stats.building'),
+        value: unit.building,
+      });
+    }
+
+    // Floor with icon
+    if (unit.floor !== undefined && unit.floor !== null) {
+      items.push({
+        icon: NAVIGATION_ENTITIES.floor.icon,
+        iconColor: NAVIGATION_ENTITIES.floor.color,
+        label: t('card.stats.floor'),
+        value: formatFloorLabel(unit.floor),
+      });
+    }
+
+    // Area with icon
+    if (unit.area) {
+      items.push({
+        icon: NAVIGATION_ENTITIES.area.icon,
+        iconColor: NAVIGATION_ENTITIES.area.color,
+        label: t('card.stats.area'),
+        value: `${formatNumber(unit.area)} m²`,
       });
     }
 
@@ -155,47 +167,38 @@ export function UnitListCard({
       });
     }
 
-    // Area with icon
-    if (unit.area) {
+    // 🚿 Bathrooms (Phase 1 Unit Fields)
+    if (unit.layout?.bathrooms !== undefined && unit.layout.bathrooms > 0) {
       items.push({
-        icon: NAVIGATION_ENTITIES.area.icon, // 📐 Area icon
-        iconColor: NAVIGATION_ENTITIES.area.color,
-        label: t('card.stats.area'),
-        value: `${formatNumber(unit.area)} m²`,
+        icon: Bath,
+        iconColor: 'text-cyan-600',
+        label: t('card.stats.bathrooms'),
+        value: String(unit.layout.bathrooms),
       });
     }
 
-    // Floor with icon
-    if (unit.floor !== undefined && unit.floor !== null) {
+    // 🔧 Condition (Phase 4 Unit Fields)
+    if (unit.condition) {
+      // Color coding based on condition
+      const conditionColors: Record<string, string> = {
+        'new': 'text-green-600',
+        'excellent': 'text-emerald-600',
+        'good': 'text-blue-600',
+        'needs-renovation': 'text-orange-600'
+      };
       items.push({
-        icon: NAVIGATION_ENTITIES.floor.icon, // 🏢 Floor icon
-        iconColor: NAVIGATION_ENTITIES.floor.color,
-        label: t('card.stats.floor'),
-        value: formatFloorLabel(unit.floor),
-      });
-    }
-
-    // 🧭 Orientation (Phase 3 Unit Fields) - compact display (Β, ΝΑ)
-    if (unit.orientations && unit.orientations.length > 0) {
-      const orientationLabels = unit.orientations
-        .slice(0, 2) // Max 2 orientations for compact display
-        .map(o => t(`orientation.short.${o}`, { defaultValue: o }))
-        .join(', ');
-      items.push({
-        icon: Compass,
-        iconColor: 'text-amber-600',
-        label: t('card.stats.orientation'),
-        value: orientationLabels,
+        icon: Wrench,
+        iconColor: conditionColors[unit.condition] || 'text-gray-600',
+        label: t('card.stats.condition'),
+        value: t(`condition.${unit.condition}`, { defaultValue: unit.condition }),
       });
     }
 
     return items;
-  }, [unit.type, unit.area, unit.floor, unit.layout, unit.orientations, t]);
+  }, [unit.building, unit.floor, unit.area, unit.layout, unit.condition, t]);
 
   /** Build badges from operational status */
   const badges = useMemo(() => {
-    // ✅ DOMAIN SEPARATION: Use operationalStatus (physical state)
-    // Fallback to 'ready' if not set (most units are construction-complete)
     const opStatus = unit.operationalStatus || 'ready';
     const labelKey = OPERATIONAL_STATUS_LABEL_KEYS[opStatus] || 'operationalStatus.ready';
     const statusLabel = t(labelKey);
@@ -223,13 +226,11 @@ export function UnitListCard({
   // 🏢 RENDER
   // ==========================================================================
 
-  // 🏢 PR1.2: Compact mobile-first layout (2 lines)
-  // Line 1: Name + Status chip (inline)
-  // Line 2: 🏠 Type | 📐 85 m² | 🏢 1ος (icons + values inline)
   return (
-    <ListCard
+    <GridCard
       entityType="unit"
       title={unit.name || unit.code || unit.id}
+      subtitle={t(`types.${unit.type}`, { defaultValue: unit.type })}
       badges={badges}
       stats={stats}
       isSelected={isSelected}
@@ -237,16 +238,13 @@ export function UnitListCard({
       onKeyDown={handleKeyDown}
       isFavorite={isFavorite}
       onToggleFavorite={onToggleFavorite}
-      compact={true} // 🏢 PR1.2: Always compact for mobile-first
-      hideStats={false} // 🏢 PR1.2: Show stats with icons + values
-      inlineBadges={true} // 🏢 PR1.2: Badge inline with title
-      hideIcon={true} // 🏢 PR1.2: Hide entity icon (icon-less compact)
+      compact={compact}
       className={className}
       aria-label={t('card.ariaLabel', { name: unit.name || unit.code || unit.id })}
     />
   );
 }
 
-UnitListCard.displayName = 'UnitListCard';
+UnitGridCard.displayName = 'UnitGridCard';
 
-export default UnitListCard;
+export default UnitGridCard;
