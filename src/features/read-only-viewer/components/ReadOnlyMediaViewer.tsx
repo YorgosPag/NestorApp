@@ -297,7 +297,7 @@ function TabContentWrapper({
         <figure className="text-center text-muted-foreground">
           <Loader2 className={cn(iconSizes.lg, 'mx-auto mb-3 animate-spin')} aria-hidden="true" />
           <figcaption className="text-sm">
-            {t('common:loading', 'Φόρτωση...')}
+            {t('common:loading.message', 'Φόρτωση...')}
           </figcaption>
         </figure>
       </div>
