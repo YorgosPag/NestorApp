@@ -6,7 +6,9 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS, HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: Centralized Shadcn Button (same as CompactToolbar)
+import { Button } from '@/components/ui/button';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
@@ -55,31 +57,30 @@ interface SnapButtonProps {
   t: TFunction;
 }
 
+// 🏢 ENTERPRISE: SnapButton using Shadcn Button (same pattern as CompactToolbar)
 const SnapButton: React.FC<SnapButtonProps> = ({ mode, enabled, onClick, compact = false, t }) => {
   const label = getSnapLabel(mode, t);
   const tooltip = getSnapTooltip(mode, t);
-  const { quick, getStatusBorder, radius } = useBorderTokens();
-  const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
 
   if (!label) return null;
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
+        <Button
+          variant={enabled ? 'default' : 'ghost'}
+          size="sm"
           onClick={onClick}
           className={`
-            ${compact ? `${PANEL_LAYOUT.HEIGHT.LG} ${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS}` : `${PANEL_LAYOUT.HEIGHT.XL} ${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}
-            ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}
-            flex items-center justify-center
-            ${enabled
-              ? `${colors.bg.primary} ${getStatusBorder('info')} ${colors.text.primary} ${PANEL_LAYOUT.SHADOW.MD} ${HOVER_BACKGROUND_EFFECTS.PRIMARY}`
-              : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
-            }
+            ${compact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'}
+            ${enabled ? HOVER_TEXT_EFFECTS.CYAN : ''}
           `}
         >
-          <span className={`${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>{label}</span>
-        </button>
+          <span className={`${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
+            {label}
+          </span>
+        </Button>
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
@@ -127,7 +128,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   compact = false,
 }) => {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder, radius } = useBorderTokens();
+  const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   // 🌐 i18n
   const { t } = useTranslation('dxf-viewer');
@@ -155,25 +156,31 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
 
   const enabledCount = useMemo(() => enabledModes?.size || 0, [enabledModes]);
   const advancedEnabledCount = useMemo(() => ADVANCED_MODES.filter(mode => enabledModes?.has(mode)).length, [enabledModes]);
-  
+
   return (
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${className}`}>
+      {/* 🏢 ENTERPRISE: Master SNAP toggle - Shadcn Button */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
+          <Button
+            variant={snapEnabled ? 'default' : 'ghost'}
+            size="sm"
             onClick={handleMasterToggle}
-            className={`${PANEL_LAYOUT.SPACING.COMPACT} ${radius.md} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${PANEL_LAYOUT.TRANSITION.COLORS} border flex items-center ${PANEL_LAYOUT.GAP.XS} ${
-              snapEnabled ? `${colors.bg.primary} ${colors.text.primary} ${getStatusBorder('info')} ${PANEL_LAYOUT.SHADOW.MD}` : `${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
-            }`}
+            className={`${PANEL_LAYOUT.GAP.XS} ${snapEnabled ? HOVER_TEXT_EFFECTS.CYAN : ''}`}
           >
-            <Target size={14} />
-            <span>SNAP</span>
-            {enabledCount > 0 && <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.OPACITY['80']}`}>({enabledCount})</span>}
-          </button>
+            <Target className={`${iconSizes.sm} ${HOVER_TEXT_EFFECTS.CYAN}`} />
+            <span className={PANEL_LAYOUT.FONT_WEIGHT.BOLD}>SNAP</span>
+            {enabledCount > 0 && (
+              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.OPACITY['80']}`}>
+                ({enabledCount})
+              </span>
+            )}
+          </Button>
         </TooltipTrigger>
         <TooltipContent>{t('overlayToolbar.objectSnap')}</TooltipContent>
       </Tooltip>
 
+      {/* 🏢 ENTERPRISE: Core snap modes */}
       <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
         {CORE_MODES.map(mode => (
           <SnapButton
@@ -187,38 +194,49 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
         ))}
       </div>
 
+      {/* 🏢 ENTERPRISE: Advanced modes toggle */}
       {ADVANCED_MODES.length > 0 && (
         <>
           <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleToggleAdvanced}
-                className={`${iconSizes.xl} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${
-                  showAdvanced || advancedEnabledCount > 0 ? `${colors.bg.muted} ${getStatusBorder('subtle')} ${colors.text.primary}` : `${colors.bg.secondary} ${getStatusBorder('default')} ${colors.text.muted} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`
-                }`}
+                className={`${iconSizes.xl} p-0 ${showAdvanced || advancedEnabledCount > 0 ? HOVER_TEXT_EFFECTS.PURPLE : ''}`}
               >
-                {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              </button>
+                {showAdvanced ? (
+                  <ChevronUp className={`${iconSizes.sm} ${HOVER_TEXT_EFFECTS.PURPLE}`} />
+                ) : (
+                  <ChevronDown className={`${iconSizes.sm} ${HOVER_TEXT_EFFECTS.INDIGO}`} />
+                )}
+              </Button>
             </TooltipTrigger>
-            <TooltipContent>{showAdvanced ? t('snapModes.ui.hideAdvanced') : t('snapModes.ui.showAdvanced')}</TooltipContent>
+            <TooltipContent>
+              {showAdvanced ? t('snapModes.ui.hideAdvanced') : t('snapModes.ui.showAdvanced')}
+            </TooltipContent>
           </Tooltip>
         </>
       )}
 
+      {/* 🏢 ENTERPRISE: Settings button */}
       <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleQuickEnable}
-            className={`${iconSizes.xl} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.ALL} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${colors.text.muted} ${HOVER_TEXT_EFFECTS.WHITE} ${colors.bg.secondary} ${getStatusBorder('default')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK}`}
+            className={`${iconSizes.xl} p-0`}
           >
-            <Settings size={14} />
-          </button>
+            <Settings className={`${iconSizes.sm} ${HOVER_TEXT_EFFECTS.VIOLET}`} />
+          </Button>
         </TooltipTrigger>
         <TooltipContent>{t('overlayToolbar.basicFunctions')}</TooltipContent>
       </Tooltip>
 
+      {/* 🏢 ENTERPRISE: Advanced modes panel */}
       {showAdvanced && (
         <div className={`flex ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.MARGIN.LEFT_XS} ${PANEL_LAYOUT.INPUT.PADDING_X} ${quick.separatorV}`}>
           {ADVANCED_MODES.map(mode => (
