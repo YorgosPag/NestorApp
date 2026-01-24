@@ -2167,6 +2167,98 @@ if (!envValidation.allowed) {
 
 ---
 
+### 📋 ADR-025: UNIT LINKING SYSTEM (2026-01-24) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Type**: Feature System | **Date**: 2026-01-24
+
+**Context**:
+Οι μονάδες (units) χρειάζονταν σύστημα σύνδεσης με:
+- Κτίρια (Buildings)
+- Ορόφους (Floors)
+- Parking spaces
+- Storage spaces
+
+**Decision**:
+```
+🏢 CANONICAL: Unit Linking System
+📍 Location: src/features/property-details/components/
+✅ Pattern: Dependency Injection + Real-time Firestore persistence
+```
+
+**Architecture**:
+```
+Unit Linking System (1,500+ lines)
+├── BuildingSelectorCard.tsx    # Building + Floor selection
+│   ├── Building dropdown (from /api/buildings)
+│   └── Floor dropdown (from /api/floors?buildingId=)
+│
+└── LinkedSpacesCard.tsx        # Parking + Storage linking
+    ├── Parking dropdown (from /api/parking?buildingId=)
+    ├── Storage dropdown (from /api/storages)
+    └── Inclusion types: included | optional | rented
+```
+
+**Components**:
+
+| Component | Lines | Purpose |
+|-----------|-------|---------|
+| `BuildingSelectorCard.tsx` | 250+ | Building & Floor selection |
+| `LinkedSpacesCard.tsx` | 500+ | Parking & Storage linking |
+| Total | 750+ | Full Unit Linking System |
+
+**Data Flow**:
+```typescript
+// Building/Floor Selection
+BuildingSelectorCard.handleSave()
+  → updateDoc(units/{id}, { buildingId, floorId })
+  → RealtimeService.dispatchUnitBuildingLinked()
+  → onBuildingChanged callback
+
+// Linked Spaces
+LinkedSpacesCard.handleSave()
+  → updateDoc(units/{id}, { linkedSpaces: [...] })
+  → onLinkedSpacesChanged callback
+```
+
+**Type Safety**:
+```typescript
+// From src/types/unit.ts
+export interface LinkedSpace {
+  spaceId: string;
+  spaceType: AllocationSpaceType;  // 'parking' | 'storage'
+  quantity: number;
+  inclusion: SpaceInclusionType;   // 'included' | 'optional' | 'rented'
+  allocationCode?: string;
+}
+```
+
+**APIs Used**:
+- `/api/buildings` - List all buildings
+- `/api/floors?buildingId=` - List floors per building
+- `/api/parking?buildingId=` - List parking per building
+- `/api/storages` - List all storages (filtered client-side)
+
+**i18n Support**:
+- `units.buildingSelector.*` - Building/Floor labels (EL/EN)
+- `units.linkedSpaces.*` - Parking/Storage labels (EL/EN)
+
+**Consequences**:
+- ✅ **Complete Unit-Building-Floor relationship** management
+- ✅ **Parking & Storage linking** με 3 inclusion types
+- ✅ **Real-time Firestore persistence** - changes saved immediately
+- ✅ **Full i18n support** - Greek and English translations
+- ✅ **Radix Select integration** - Following ADR-001 pattern
+- ✅ **Enterprise patterns** - Dependency Injection, centralized tokens
+
+**References**:
+- BuildingSelectorCard: `src/features/property-details/components/BuildingSelectorCard.tsx`
+- LinkedSpacesCard: `src/features/property-details/components/LinkedSpacesCard.tsx`
+- Integration: `src/features/property-details/PropertyDetailsContent.tsx`
+- Types: `src/types/unit.ts` (LinkedSpace interface)
+- Pattern: Enterprise CRM Unit Management Systems
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)
