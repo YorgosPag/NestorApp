@@ -179,7 +179,10 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   };
 
   return (
-    <div className={`border ${getStatusBorder('muted')} ${quick.card} ${colors.bg.secondary} ${PANEL_LAYOUT.SHADOW.LG} ${className}`}>  {/* ✅ ENTERPRISE: bg-gray-800 → CSS variable */}
+    <div
+      data-testid="dxf-main-toolbar"
+      className={`border ${getStatusBorder('muted')} ${quick.card} ${colors.bg.secondary} ${PANEL_LAYOUT.SHADOW.LG} ${className}`}
+    >  {/* ✅ ENTERPRISE: bg-gray-800 → CSS variable */}
       <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.SM}`}>
         <div className={`flex ${PANEL_LAYOUT.GAP.XS} flex-1`}>
           {/* 🏢 ENTERPRISE: Upload DXF - Shadcn Button (NO BORDERS) */}

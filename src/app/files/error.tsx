@@ -5,23 +5,28 @@
  *
  * Error boundary για το File Manager route.
  * Catches runtime errors και displays user-friendly error message.
- * Includes admin notification via email.
+ * Includes admin notification via email with provider selection.
  *
  * @route /files
  * @enterprise Error Boundary Pattern (React 18)
- * @updated 2026-01-24 - Added enterprise error reporting with admin email
+ * @updated 2026-01-24 - Added universal email provider selection
  */
 
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, RefreshCw, Home, Mail, Copy, Check } from 'lucide-react';
+import { AlertCircle, RefreshCw, Home, Mail, Copy, Check, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import Link from 'next/link';
 import { notificationConfig } from '@/config/error-reporting';
-import { useErrorReporting } from '@/components/ui/ErrorBoundary/ErrorBoundary';
+import {
+  useErrorReporting,
+  openEmailCompose,
+  EMAIL_PROVIDERS,
+  type EmailProvider
+} from '@/components/ui/ErrorBoundary/ErrorBoundary';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -39,7 +44,7 @@ export default function FileManagerError({ error, reset }: ErrorProps) {
   const { t: tFiles } = useTranslation('files');
   const { reportError } = useErrorReporting();
 
-  const [isSending, setIsSending] = useState(false);
+  const [showEmailOptions, setShowEmailOptions] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -55,12 +60,11 @@ export default function FileManagerError({ error, reset }: ErrorProps) {
     console.error('File Manager Error:', error);
   }, [error, reportError]);
 
-  const handleSendToAdmin = async () => {
-    setIsSending(true);
-    try {
-      const adminEmail = notificationConfig.channels.adminEmail;
-      const subject = encodeURIComponent(`🚨 File Manager Route Error - ${new Date().toISOString()}`);
-      const body = encodeURIComponent(`
+  // Prepare email data
+  const emailData = {
+    to: notificationConfig.channels.adminEmail,
+    subject: `🚨 File Manager Route Error - ${new Date().toISOString()}`,
+    body: `
 📋 ERROR REPORT - File Manager Route
 =====================================
 
@@ -77,15 +81,13 @@ ${error.stack || 'Not available'}
 
 ---
 Αυτό το email δημιουργήθηκε αυτόματα από το File Manager Error Boundary.
-      `.trim());
+    `.trim()
+  };
 
-      window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`, '_self');
-      setEmailSent(true);
-    } catch (sendError) {
-      console.error('Failed to send error report:', sendError);
-    } finally {
-      setIsSending(false);
-    }
+  const handleEmailProviderSelect = (provider: EmailProvider) => {
+    openEmailCompose(provider, emailData);
+    setEmailSent(true);
+    setShowEmailOptions(false);
   };
 
   const handleCopyError = async () => {
@@ -161,16 +163,11 @@ ${error.stack || 'Not available'}
             {/* 🏢 ENTERPRISE: Admin Notification Button */}
             <Button
               variant="outline"
-              onClick={handleSendToAdmin}
-              disabled={isSending || emailSent}
+              onClick={() => setShowEmailOptions(true)}
+              disabled={emailSent || showEmailOptions}
               className="w-full"
             >
-              {isSending ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  {tFiles('errorReporting.sending', 'Sending...')}
-                </>
-              ) : emailSent ? (
+              {emailSent ? (
                 <>
                   <Check className="h-4 w-4 mr-2 text-green-600" />
                   {tFiles('errorReporting.sent', 'Sent!')}
@@ -190,6 +187,38 @@ ${error.stack || 'Not available'}
               </Link>
             </Button>
           </nav>
+
+          {/* 🏢 ENTERPRISE: Email Provider Selection - Centralized UI */}
+          {showEmailOptions && (
+            <section className="p-4 bg-muted border border-border rounded-md">
+              <header className="flex items-center justify-center gap-2 mb-3">
+                <Mail className="h-4 w-4 text-foreground" />
+                <p className="font-medium text-foreground">
+                  Επιλέξτε τον πάροχο email σας:
+                </p>
+              </header>
+              <nav className="grid grid-cols-2 gap-2">
+                {EMAIL_PROVIDERS.map((provider) => {
+                  const IconComponent = provider.Icon;
+                  return (
+                    <Button
+                      key={provider.id}
+                      onClick={() => handleEmailProviderSelect(provider.id)}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center justify-start gap-2"
+                    >
+                      <IconComponent className="h-4 w-4" />
+                      <span>{provider.labelEl}</span>
+                    </Button>
+                  );
+                })}
+              </nav>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Θα ανοίξει νέα καρτέλα με το email έτοιμο προς αποστολή
+              </p>
+            </section>
+          )}
 
           {/* Admin Email Info */}
           <p className="text-center text-xs text-muted-foreground">

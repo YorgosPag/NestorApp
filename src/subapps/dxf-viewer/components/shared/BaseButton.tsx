@@ -160,25 +160,82 @@ export const BaseButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
 
 BaseButton.displayName = 'BaseButton';
 
-// Convenience components for common patterns
-export const ToolButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
-  ({ size = 'sm', variant = 'tool', ...props }, ref) => (
-    <BaseButton ref={ref} size={size} variant={variant} {...props} />
-  )
-);
+// ============================================================================
+// CONVENIENCE COMPONENTS
+// ============================================================================
 
+/**
+ * TabButton - For tab navigation buttons
+ * ✅ CANONICAL - Use this for tab-style buttons
+ */
 export const TabButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
   ({ size = 'sm', variant = 'tab', ...props }, ref) => (
     <BaseButton ref={ref} size={size} variant={variant} {...props} />
   )
 );
 
+TabButton.displayName = 'TabButton';
+
+// ============================================================================
+// ⚠️ DEPRECATED EXPORTS - ADR-028 MIGRATION
+// ============================================================================
+// These exports are DEPRECATED as of ADR-028 (2026-01-24)
+// For DXF Toolbar components, use: ui/toolbar/ToolButton.tsx instead
+// ============================================================================
+
+/**
+ * @deprecated ADR-028: Use `ui/toolbar/ToolButton` for toolbar tool buttons.
+ * This export will be removed in a future version.
+ *
+ * Migration:
+ * ```typescript
+ * // ❌ OLD (deprecated)
+ * import { ToolButton } from '@/subapps/dxf-viewer/components/shared/BaseButton';
+ *
+ * // ✅ NEW (canonical)
+ * import { ToolButton } from '@/subapps/dxf-viewer/ui/toolbar/ToolButton';
+ * ```
+ */
+export const ToolButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
+  ({ size = 'sm', variant = 'tool', ...props }, ref) => {
+    // Log deprecation warning in development
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[DEPRECATED] ToolButton from BaseButton.tsx is deprecated. ' +
+        'Use ToolButton from ui/toolbar/ToolButton.tsx instead. ' +
+        'See ADR-028 in centralized_systems.md'
+      );
+    }
+    return <BaseButton ref={ref} size={size} variant={variant} {...props} />;
+  }
+);
+
+/**
+ * @deprecated ADR-028: Use `ui/toolbar/ActionButton` for toolbar action buttons.
+ * This export will be removed in a future version.
+ *
+ * Migration:
+ * ```typescript
+ * // ❌ OLD (deprecated)
+ * import { ActionButton } from '@/subapps/dxf-viewer/components/shared/BaseButton';
+ *
+ * // ✅ NEW (canonical)
+ * import { ActionButton } from '@/subapps/dxf-viewer/ui/toolbar/ToolButton';
+ * ```
+ */
 export const ActionButton = forwardRef<HTMLButtonElement, BaseButtonProps>(
-  ({ size = 'sm', variant = 'action', ...props }, ref) => (
-    <BaseButton ref={ref} size={size} variant={variant} {...props} />
-  )
+  ({ size = 'sm', variant = 'action', ...props }, ref) => {
+    // Log deprecation warning in development
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[DEPRECATED] ActionButton from BaseButton.tsx is deprecated. ' +
+        'Use ActionButton from ui/toolbar/ToolButton.tsx instead. ' +
+        'See ADR-028 in centralized_systems.md'
+      );
+    }
+    return <BaseButton ref={ref} size={size} variant={variant} {...props} />;
+  }
 );
 
 ToolButton.displayName = 'ToolButton';
-TabButton.displayName = 'TabButton';
 ActionButton.displayName = 'ActionButton';

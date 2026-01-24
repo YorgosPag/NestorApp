@@ -53,7 +53,13 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { SearchInput } from '@/components/ui/search';
 
 // 🏢 ENTERPRISE: Error Boundary with Admin Notification
-import { PageErrorBoundary, useErrorReporting } from '@/components/ui/ErrorBoundary/ErrorBoundary';
+import {
+  PageErrorBoundary,
+  useErrorReporting,
+  openEmailCompose,
+  EMAIL_PROVIDERS,
+  type EmailProvider
+} from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { AlertTriangle, Mail, RefreshCw as RetryIcon } from 'lucide-react';
 import { notificationConfig } from '@/config/error-reporting';
 
@@ -165,24 +171,21 @@ interface FileManagerErrorViewProps {
 }
 
 function FileManagerErrorView({ error, onRetry, t }: FileManagerErrorViewProps) {
-  const [isSending, setIsSending] = useState(false);
+  const [showEmailOptions, setShowEmailOptions] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const { reportError } = useErrorReporting();
 
-  const handleSendToAdmin = async () => {
-    setIsSending(true);
-    try {
-      // Report error via enterprise error tracker
-      const errorId = reportError(error, {
-        component: 'FileManager',
-        action: 'Data Loading Error',
-        url: window.location.href
-      });
+  // Prepare email data
+  const errorId = reportError(error, {
+    component: 'FileManager',
+    action: 'Data Loading Error',
+    url: window.location.href
+  });
 
-      // Create mailto link for direct email (fallback)
-      const adminEmail = notificationConfig.channels.adminEmail;
-      const subject = encodeURIComponent(`🚨 File Manager Error - ${new Date().toISOString()}`);
-      const body = encodeURIComponent(`
+  const emailData = {
+    to: notificationConfig.channels.adminEmail,
+    subject: `🚨 File Manager Error - ${new Date().toISOString()}`,
+    body: `
 📋 ERROR REPORT - File Manager
 ================================
 
@@ -199,17 +202,13 @@ ${error.stack || 'Not available'}
 
 ---
 Αυτό το email δημιουργήθηκε αυτόματα από το File Manager.
-      `.trim());
+    `.trim()
+  };
 
-      // Open mailto (as backup to API call)
-      window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`, '_self');
-
-      setEmailSent(true);
-    } catch (sendError) {
-      console.error('Failed to send error report:', sendError);
-    } finally {
-      setIsSending(false);
-    }
+  const handleEmailProviderSelect = (provider: EmailProvider) => {
+    openEmailCompose(provider, emailData);
+    setEmailSent(true);
+    setShowEmailOptions(false);
   };
 
   return (
@@ -242,16 +241,11 @@ ${error.stack || 'Not available'}
 
               {/* Send to Admin Button */}
               <Button
-                onClick={handleSendToAdmin}
+                onClick={() => setShowEmailOptions(true)}
                 variant="outline"
-                disabled={isSending || emailSent}
+                disabled={emailSent || showEmailOptions}
               >
-                {isSending ? (
-                  <>
-                    <RetryIcon className="h-4 w-4 mr-2 animate-spin" />
-                    {t('errorReporting.sending')}
-                  </>
-                ) : emailSent ? (
+                {emailSent ? (
                   <>
                     <Mail className="h-4 w-4 mr-2 text-green-600" />
                     {t('errorReporting.sent')}
@@ -264,6 +258,36 @@ ${error.stack || 'Not available'}
                 )}
               </Button>
             </div>
+
+            {/* 🏢 ENTERPRISE: Email Provider Selection - Centralized Styles */}
+            {showEmailOptions && (
+              <div className="mt-4 p-4 bg-muted border border-border rounded-md text-left">
+                <p className="font-medium text-foreground mb-3 text-center flex items-center justify-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  <span>Επιλέξτε τον πάροχο email σας:</span>
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {EMAIL_PROVIDERS.map((provider) => {
+                    const IconComponent = provider.Icon;
+                    return (
+                      <Button
+                        key={provider.id}
+                        onClick={() => handleEmailProviderSelect(provider.id)}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center justify-start gap-2"
+                      >
+                        <IconComponent className="h-4 w-4" />
+                        <span>{provider.labelEl}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Θα ανοίξει νέα καρτέλα με το email έτοιμο προς αποστολή
+                </p>
+              </div>
+            )}
 
             {/* Admin Email Info */}
             <p className="text-xs text-muted-foreground mt-4">
@@ -285,6 +309,9 @@ export function FileManagerPageContent() {
   const { user } = useAuth();
   const { activeWorkspace } = useWorkspace();
   const iconSizes = useIconSizes();
+
+  // 🐛 DEBUG: State for triggering test error (Development Only)
+  const [triggerError, setTriggerError] = useState(false);
 
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('tree');
@@ -447,6 +474,11 @@ export function FileManagerPageContent() {
         t={t}
       />
     );
+  }
+
+  // 🐛 DEBUG: Trigger test error during render (caught by ErrorBoundary)
+  if (triggerError) {
+    throw new Error('🧪 TEST ERROR: Αυτό είναι δοκιμαστικό σφάλμα για testing του Error Reporting System. Κάνε κλικ στο "Αναφορά στον Διαχειριστή" για να στείλεις email στο georgios.pagonis@gmail.com');
   }
 
   return (
@@ -705,9 +737,7 @@ export function FileManagerPageContent() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => {
-                              throw new Error('🧪 TEST ERROR: Αυτό είναι δοκιμαστικό σφάλμα για testing του Error Reporting System');
-                            }}
+                            onClick={() => setTriggerError(true)}
                             aria-label="Test Error (Dev Only)"
                           >
                             <AlertTriangle className={iconSizes.sm} />

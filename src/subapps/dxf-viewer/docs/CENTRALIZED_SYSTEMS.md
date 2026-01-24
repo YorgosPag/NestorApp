@@ -2474,6 +2474,156 @@ switch (e.key.toLowerCase()) { case 's': ... }         // WRONG!
 
 ---
 
+### 📋 ADR-028: BUTTON COMPONENT CONSOLIDATION (2026-01-24) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Type**: UI Components | **Date**: 2026-01-24
+
+**Context** (Audit Findings):
+Button implementations ήταν διάσπαρτες σε πολλαπλά αρχεία με διαφορετικά patterns:
+- 63 αρχεία με `<button>` HTML elements
+- 11 αρχεία χρησιμοποιούν Shadcn Button (`@/components/ui/button`)
+- 3 αρχεία χρησιμοποιούν BaseButton (`components/shared/BaseButton.tsx`)
+- ~49 αρχεία με hardcoded buttons (inline styles, custom implementations)
+- 98 inline styles σε 35 αρχεία
+- **DUPLICATE**: Δύο `ToolButton` components με ίδιο όνομα σε διαφορετικά paths
+
+**Problematic Duplicates**:
+| Component | Location 1 | Location 2 | Conflict |
+|-----------|------------|------------|----------|
+| `ToolButton` | `ui/toolbar/ToolButton.tsx` | `components/shared/BaseButton.tsx` | Same name, different impl |
+| `ActionButton` | `ui/toolbar/ToolButton.tsx` | `components/shared/BaseButton.tsx` | Same name, different impl |
+
+**Decision**:
+```
+🏢 CANONICAL HIERARCHY:
+
+Level 1 (Global - Main App):
+├── @/components/ui/button (Shadcn Button)
+│   └── Used for: All main app components
+│
+Level 2 (DXF-Specific Wrappers):
+├── components/shared/BaseButton.tsx (DXF Base)
+│   ├── BaseButton       - Low-level DXF button
+│   ├── TabButton        - Tab navigation buttons
+│   └── Deprecated: ToolButton, ActionButton
+│
+Level 3 (Specialized DXF Components):
+├── ui/toolbar/ToolButton.tsx (CANONICAL for DXF Toolbar)
+│   ├── ToolButton       - Toolbar tool buttons with icons
+│   └── ActionButton     - Toolbar action buttons
+│
+❌ DEPRECATED: components/shared/BaseButton.tsx exports of ToolButton/ActionButton
+✅ CANONICAL: ui/toolbar/ToolButton.tsx for toolbar-specific components
+```
+
+**Architecture**:
+```
+Button System Architecture (Enterprise Standard)
+┌─────────────────────────────────────────────────────────────┐
+│                    SHADCN BUTTON (FOUNDATION)               │
+│              @/components/ui/button                         │
+│   Variants: default | destructive | outline | secondary     │
+│             ghost | link                                    │
+│   Sizes: default | sm | lg | icon                          │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+        ┌───────────────────┴───────────────────┐
+        │                                       │
+        ▼                                       ▼
+┌───────────────────┐               ┌───────────────────────────┐
+│   MAIN APP USE    │               │     DXF-SPECIFIC USE      │
+│                   │               │                           │
+│ Direct Shadcn     │               │ ui/toolbar/ToolButton.tsx │
+│ Button usage      │               │ ├── ToolButton            │
+│                   │               │ └── ActionButton          │
+└───────────────────┘               └───────────────────────────┘
+```
+
+**Migration Strategy**: "MIGRATE ON TOUCH"
+
+```
+⚠️ Strategy: Gradual Migration (Enterprise Standard)
+───────────────────────────────────────────────────
+1. DO NOT mass-refactor existing files
+2. When touching a file for OTHER work → migrate buttons
+3. New code MUST use canonical components
+4. Legacy files work until touched
+```
+
+**Migration Rules**:
+| Current Pattern | Migrate To | Priority |
+|-----------------|------------|----------|
+| Hardcoded `<button>` | Shadcn Button | On Touch |
+| Inline styles on buttons | Shadcn variants or tokens | On Touch |
+| `shared/BaseButton.ToolButton` | `ui/toolbar/ToolButton` | Immediate |
+| `shared/BaseButton.ActionButton` | `ui/toolbar/ActionButton` | Immediate |
+| Custom button implementations | Shadcn Button + tokens | On Touch |
+
+**Usage Pattern** (Enterprise Standard):
+```typescript
+// ✅ ENTERPRISE: Main app - Use Shadcn Button directly
+import { Button } from '@/components/ui/button';
+<Button variant="default" size="sm">Save</Button>
+<Button variant="destructive">Delete</Button>
+<Button variant="ghost" size="icon"><IconSettings /></Button>
+
+// ✅ ENTERPRISE: DXF Toolbar - Use specialized components
+import { ToolButton, ActionButton } from '@/subapps/dxf-viewer/ui/toolbar/ToolButton';
+<ToolButton tool={tool} isActive={active} onClick={onClick} />
+<ActionButton action={action} onClick={onClick} />
+
+// ✅ ENTERPRISE: With tokens for custom styling
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+<Button className={cn(colors.bg.primary, "custom-class")}>Styled</Button>
+
+// ❌ PROHIBITED: Hardcoded buttons
+<button style={{ background: 'blue' }}>Bad</button>
+<button className="bg-blue-500 p-2">Also Bad</button>
+
+// ❌ PROHIBITED: Using deprecated BaseButton exports
+import { ToolButton } from '@/subapps/dxf-viewer/components/shared/BaseButton'; // WRONG!
+```
+
+**Files Summary**:
+| Category | Count | Action |
+|----------|-------|--------|
+| Using Shadcn Button | 11 | ✅ Keep |
+| Using ui/toolbar/ToolButton | ~10 | ✅ Keep |
+| Using BaseButton (base only) | 3 | ✅ Keep |
+| Hardcoded `<button>` | ~49 | 🔄 Migrate on Touch |
+| With inline styles | 35 | 🔄 Migrate on Touch |
+
+**Canonical Files**:
+| File | Purpose |
+|------|---------|
+| `@/components/ui/button.tsx` | Global Shadcn Button (variants, sizes) |
+| `ui/toolbar/ToolButton.tsx` | DXF toolbar-specific buttons |
+| `components/shared/BaseButton.tsx` | BaseButton, TabButton only |
+
+**Industry Reference** (Design System Standard):
+- Material Design: Single `Button` with variants
+- Ant Design: Unified button component with types
+- Chakra UI: Composable button with style props
+- Radix UI: Unstyled primitives + application styling
+- Figma: Design token-based button system
+
+**Consequences**:
+- ✅ **Single Source of Truth** - Shadcn Button as foundation
+- ✅ **Zero Confusion** - Clear hierarchy for button usage
+- ✅ **No Duplicate Names** - ToolButton/ActionButton location clarified
+- ✅ **Design Token Integration** - All buttons use centralized tokens
+- ✅ **Gradual Migration** - No breaking changes, migrate on touch
+- ✅ **Enterprise Pattern** - Follows Material/Ant/Chakra standards
+
+**References**:
+- Global Button: `src/components/ui/button.tsx`
+- DXF Toolbar: `src/subapps/dxf-viewer/ui/toolbar/ToolButton.tsx`
+- Base Button: `src/subapps/dxf-viewer/components/shared/BaseButton.tsx`
+- Related: ADR-001 (Select/Dropdown Components)
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

@@ -87,6 +87,20 @@ export interface SystemConfiguration {
     readonly baseUrl: string;
     readonly apiUrl: string;
   };
+  /**
+   * 🏢 ENTERPRISE: Admin & Error Reporting Configuration
+   * Used for error notifications, system alerts, and admin communications
+   */
+  readonly admin: {
+    /** Firebase UID of the primary admin user */
+    readonly primaryAdminUid: string;
+    /** Email address for admin notifications */
+    readonly adminEmail: string;
+    /** Additional admin UIDs for system notifications */
+    readonly additionalAdminUids: readonly string[];
+    /** Enable error report notifications to admin */
+    readonly enableErrorReporting: boolean;
+  };
   readonly security: {
     readonly sessionTimeoutMinutes: number;
     readonly maxLoginAttempts: number;
@@ -228,6 +242,12 @@ export const DEFAULT_SYSTEM_CONFIG: SystemConfiguration = {
     environment: 'development',
     baseUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001',
     apiUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/api`
+  },
+  admin: {
+    primaryAdminUid: process.env.NEXT_PUBLIC_ADMIN_UID || '',
+    adminEmail: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'georgios.pagonis@gmail.com',
+    additionalAdminUids: [],
+    enableErrorReporting: true
   },
   security: {
     sessionTimeoutMinutes: 480, // 8 hours
@@ -397,6 +417,39 @@ export class EnterpriseConfigurationManager {
     } catch (error) {
       console.error('❌ Failed to load system config:', error);
       return DEFAULT_SYSTEM_CONFIG;
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Get Admin Configuration
+   * Returns admin UID and settings for system notifications
+   * Uses caching to avoid repeated Firestore reads
+   */
+  public async getAdminConfig(): Promise<SystemConfiguration['admin']> {
+    const cacheKey = 'admin_config';
+
+    if (this.configCache.has(cacheKey)) {
+      const cached = this.configCache.get(cacheKey) as SystemConfiguration['admin'];
+      return cached;
+    }
+
+    try {
+      const systemConfig = await this.getSystemConfig();
+      const adminConfig = systemConfig.admin;
+
+      // Validate admin UID is set
+      if (!adminConfig.primaryAdminUid) {
+        console.warn('⚠️ Admin UID not configured - using email as fallback');
+      }
+
+      this.configCache.set(cacheKey, adminConfig);
+      setTimeout(() => this.configCache.delete(cacheKey), this.cacheTimeout);
+
+      return adminConfig;
+
+    } catch (error) {
+      console.error('❌ Failed to load admin config:', error);
+      return DEFAULT_SYSTEM_CONFIG.admin;
     }
   }
 
@@ -684,6 +737,43 @@ export const ConfigurationAPI = {
   getApiEndpoints: async (): Promise<{ maps: string; weather: string; notifications: string }> => {
     const config = await getConfigManager().getSystemConfig();
     return config.integrations.apis;
+  },
+
+  /**
+   * 🏢 ENTERPRISE: Get Primary Admin UID
+   * Used for sending system notifications to admin
+   */
+  getAdminUid: async (): Promise<string> => {
+    const adminConfig = await getConfigManager().getAdminConfig();
+    if (!adminConfig.primaryAdminUid) {
+      throw new Error('CRITICAL: Admin UID not configured in system settings');
+    }
+    return adminConfig.primaryAdminUid;
+  },
+
+  /**
+   * Get Admin Email
+   */
+  getAdminEmail: async (): Promise<string> => {
+    const adminConfig = await getConfigManager().getAdminConfig();
+    return adminConfig.adminEmail;
+  },
+
+  /**
+   * Get All Admin UIDs (primary + additional)
+   */
+  getAllAdminUids: async (): Promise<readonly string[]> => {
+    const adminConfig = await getConfigManager().getAdminConfig();
+    const allUids = [adminConfig.primaryAdminUid, ...adminConfig.additionalAdminUids];
+    return allUids.filter(Boolean);
+  },
+
+  /**
+   * Check if error reporting is enabled
+   */
+  isErrorReportingEnabled: async (): Promise<boolean> => {
+    const adminConfig = await getConfigManager().getAdminConfig();
+    return adminConfig.enableErrorReporting;
   }
 } as const;
 

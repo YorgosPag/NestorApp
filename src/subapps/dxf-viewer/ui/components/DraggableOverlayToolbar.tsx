@@ -26,10 +26,10 @@ import { toolStyleStore } from '../../stores/ToolStyleStore';
 import { STATUS_COLORS_MAPPING, getKindFromLabel } from '../../config/color-mapping';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { getStatusColorButtonStyles } from '../DxfViewerComponents.styles';
-// 🏢 ENTERPRISE: Centralized Button Components (ZERO inline styles)
-import { ToolButton, ActionButton } from '../../components/shared/BaseButton';
-// 🏢 ENTERPRISE: Centralized spacing tokens
-import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Shadcn Button (same as main toolbar - consistent UI)
+import { Button } from '@/components/ui/button';
+// 🏢 ENTERPRISE: Centralized spacing tokens + Panel Anchoring System
+import { PANEL_LAYOUT, PanelPositionCalculator } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
@@ -48,10 +48,24 @@ const TOOLBAR_DIMENSIONS = {
   height: 110
 } as const;
 
-const TOOLBAR_POSITION = {
-  x: 450,
-  y: 150
-} as const;
+/**
+ * 🏢 ENTERPRISE: Client-side position calculator
+ * Position DIRECTLY BELOW the main toolbar at TOP-RIGHT
+ * 🎯 CRITICAL: Must not overlap with the main toolbar
+ *
+ * NOTE: This function is passed to useDraggable via getClientPosition
+ * and is called ONLY after mount on client side (solves SSR hydration issues)
+ */
+/**
+ * 🏢 ENTERPRISE: Panel Position Calculator (ADR-029)
+ * Uses centralized PanelPositionCalculator for consistent, DOM-based positioning
+ */
+const getToolbarPosition = () => {
+  return PanelPositionCalculator.getTopRightPosition(TOOLBAR_DIMENSIONS.width);
+};
+
+// 🏢 ENTERPRISE: SSR-safe fallback position (used only during initial render)
+const SSR_FALLBACK_POSITION = { x: 100, y: 150 };
 
 // ============================================================================
 // SEPARATOR COMPONENT - Semantic HTML
@@ -210,8 +224,11 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
   return (
     <FloatingPanel
-      defaultPosition={TOOLBAR_POSITION}
+      defaultPosition={SSR_FALLBACK_POSITION}
       dimensions={TOOLBAR_DIMENSIONS}
+      draggableOptions={{
+        getClientPosition: getToolbarPosition  // 🏢 ENTERPRISE: Client-side position calculation
+      }}
     >
       <FloatingPanel.Header
         title={t('toolbar.title')}
@@ -221,19 +238,23 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
       <FloatingPanel.Content>
         {/* 🎯 TOOLBAR CONTROLS */}
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-wrap`}>
-          {/* Drawing Modes - Using Centralized ToolButton */}
+          {/* Drawing Modes - Using Shadcn Button (same as main toolbar) */}
           <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.drawingModes')}>
             {modeButtons.map(({ mode: btnMode, icon: Icon, label, key }) => (
-              <ToolButton
-                key={btnMode}
-                onClick={() => handleModeChange(btnMode)}
-                title={`${label} (${key})`}
-                icon={Icon}
-                isActive={props.mode === btnMode}
-                size="sm"
-              >
-                <span className="hidden sm:inline">{label}</span>
-              </ToolButton>
+              <Tooltip key={btnMode}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={props.mode === btnMode ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleModeChange(btnMode)}
+                    className="gap-1"
+                  >
+                    <Icon className={iconSizes.sm} />
+                    <span className="hidden sm:inline">{label}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{`${label} (${key})`}</TooltipContent>
+              </Tooltip>
             ))}
 
             {/* 🎯 SAVE/CANCEL POLYGON - Inline with Draw/Edit buttons */}
@@ -244,20 +265,19 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                   {draftPolygonInfo.pointCount} σημεία
                 </span>
 
-                {/* Save Button - Large, enabled only when >= 3 points */}
+                {/* Save Button - Shadcn Button (same as main toolbar) */}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <ToolButton
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={handleSavePolygon}
                       disabled={!draftPolygonInfo.canSave}
-                      title="Αποθήκευση"
-                      icon={Save}
-                      isActive={false}
-                      size="sm"
-                      className={draftPolygonInfo.canSave ? 'text-green-600 hover:text-green-700 hover:bg-green-100 border-green-400' : 'opacity-50'}
+                      className={`gap-1 ${draftPolygonInfo.canSave ? 'text-green-600 hover:text-green-700 hover:bg-green-100' : 'opacity-50'}`}
                     >
+                      <Save className={iconSizes.sm} />
                       <span className="hidden sm:inline">Αποθήκευση</span>
-                    </ToolButton>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     {draftPolygonInfo.canSave
@@ -266,19 +286,18 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                   </TooltipContent>
                 </Tooltip>
 
-                {/* Cancel Button - Large */}
+                {/* Cancel Button - Shadcn Button (same as main toolbar) */}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <ToolButton
-                      onClick={handleCancelPolygon}
-                      title="Ακύρωση"
-                      icon={XCircle}
-                      isActive={false}
+                    <Button
+                      variant="ghost"
                       size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-red-100 border-red-400"
+                      onClick={handleCancelPolygon}
+                      className="gap-1 text-destructive hover:text-destructive hover:bg-red-100"
                     >
+                      <XCircle className={iconSizes.sm} />
                       <span className="hidden sm:inline">Ακύρωση</span>
-                    </ToolButton>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>Ακύρωση σχεδίασης</TooltipContent>
                 </Tooltip>
@@ -312,21 +331,26 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
-          {/* Kind Selection - Using Centralized ToolButton */}
+          {/* Kind Selection - Shadcn Button (same as main toolbar) */}
           <fieldset className={`flex items-center ${PANEL_LAYOUT.GAP.SM} border-none ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.MARGIN.NONE}`}>
             <legend className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-muted-foreground`}>{t('toolbar.type')}</legend>
             <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.overlayType')}>
               {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
                 const Icon = kindIcons[kind];
                 return (
-                  <ToolButton
-                    key={kind}
-                    onClick={() => props.onKindChange(kind)}
-                    title={t(KIND_LABELS[kind])}
-                    icon={Icon}
-                    isActive={props.currentKind === kind}
-                    size="xs"
-                  />
+                  <Tooltip key={kind}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={props.currentKind === kind ? 'default' : 'ghost'}
+                        size="icon"
+                        onClick={() => props.onKindChange(kind)}
+                        className={iconSizes.lg}
+                      >
+                        <Icon className={iconSizes.sm} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t(KIND_LABELS[kind])}</TooltipContent>
+                  </Tooltip>
                 );
               })}
             </nav>
@@ -334,43 +358,70 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
-          {/* Actions - Using Centralized ActionButton */}
+          {/* Actions - Shadcn Button (same as main toolbar) */}
           <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.overlayActions')}>
-            <ActionButton
-              onClick={props.onDuplicate}
-              disabled={!props.selectedOverlayId}
-              title={t('toolbar.duplicate', { key: getShortcutDisplayLabel('overlayDuplicate') })}
-              icon={Copy}
-              size="xs"
-            />
-            <ActionButton
-              onClick={props.onDelete}
-              disabled={!props.selectedOverlayId}
-              title={t('toolbar.delete', { key: getShortcutDisplayLabel('delete') })}
-              icon={X}
-              size="xs"
-              className="text-destructive hover:text-destructive"
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={props.onDuplicate}
+                  disabled={!props.selectedOverlayId}
+                  className={iconSizes.lg}
+                >
+                  <Copy className={iconSizes.sm} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('toolbar.duplicate', { key: getShortcutDisplayLabel('overlayDuplicate') })}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={props.onDelete}
+                  disabled={!props.selectedOverlayId}
+                  className={`${iconSizes.lg} text-destructive hover:text-destructive`}
+                >
+                  <X className={iconSizes.sm} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('toolbar.delete', { key: getShortcutDisplayLabel('delete') })}</TooltipContent>
+            </Tooltip>
           </nav>
 
           <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
-          {/* Undo/Redo - Using Centralized ActionButton */}
+          {/* Undo/Redo - Shadcn Button (same as main toolbar) */}
           <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.historyControls')}>
-            <ActionButton
-              onClick={props.onUndo}
-              disabled={!props.canUndo}
-              title={t('toolbar.undo', { key: getShortcutDisplayLabel('undo') })}
-              icon={RotateCcw}
-              size="xs"
-            />
-            <ActionButton
-              onClick={props.onRedo}
-              disabled={!props.canRedo}
-              title={t('toolbar.redo', { key: getShortcutDisplayLabel('redo') })}
-              icon={RotateCw}
-              size="xs"
-            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={props.onUndo}
+                  disabled={!props.canUndo}
+                  className={iconSizes.lg}
+                >
+                  <RotateCcw className={iconSizes.sm} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('toolbar.undo', { key: getShortcutDisplayLabel('undo') })}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={props.onRedo}
+                  disabled={!props.canRedo}
+                  className={iconSizes.lg}
+                >
+                  <RotateCw className={iconSizes.sm} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('toolbar.redo', { key: getShortcutDisplayLabel('redo') })}</TooltipContent>
+            </Tooltip>
           </nav>
         </div>
       </FloatingPanel.Content>

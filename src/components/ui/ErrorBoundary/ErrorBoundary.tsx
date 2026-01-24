@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Component, ErrorInfo as ReactErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check, Mail, Send } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check, Mail, Send, ChevronDown, Globe, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { errorTracker } from '@/services/ErrorTracker';
@@ -12,6 +12,84 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { generateErrorId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
+
+// ============================================================================
+// 🏢 ENTERPRISE: Universal Email Compose Helper
+// Supports: Gmail, Outlook, Yahoo, Apple Mail, and any desktop email client
+// ============================================================================
+
+export type EmailProvider = 'gmail' | 'outlook' | 'yahoo' | 'default';
+
+export interface EmailComposeOptions {
+  to: string;
+  subject: string;
+  body: string;
+}
+
+/**
+ * Opens email compose window for the specified provider
+ * @param provider - Email provider ('gmail' | 'outlook' | 'yahoo' | 'default')
+ * @param options - Email options (to, subject, body)
+ */
+export function openEmailCompose(provider: EmailProvider, options: EmailComposeOptions): void {
+  const { to, subject, body } = options;
+  const encodedSubject = encodeURIComponent(subject);
+  const encodedBody = encodeURIComponent(body);
+
+  let url: string;
+
+  switch (provider) {
+    case 'gmail':
+      // Gmail compose URL
+      url = `https://mail.google.com/mail/?view=cm&to=${to}&su=${encodedSubject}&body=${encodedBody}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      break;
+
+    case 'outlook':
+      // Outlook.com / Hotmail compose URL
+      url = `https://outlook.live.com/mail/0/deeplink/compose?to=${to}&subject=${encodedSubject}&body=${encodedBody}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      break;
+
+    case 'yahoo':
+      // Yahoo Mail compose URL
+      url = `https://compose.mail.yahoo.com/?to=${to}&subject=${encodedSubject}&body=${encodedBody}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      break;
+
+    case 'default':
+    default:
+      // Default: mailto: link (works with Outlook desktop, Apple Mail, Thunderbird, etc.)
+      // Use anchor element click for better browser compatibility
+      url = `mailto:${to}?subject=${encodedSubject}&body=${encodedBody}`;
+      const link = document.createElement('a');
+      link.href = url;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      break;
+  }
+
+  console.log(`[Email] Opened ${provider} compose for:`, to);
+}
+
+/**
+ * 🏢 ENTERPRISE: Email provider options with Lucide icons
+ */
+export interface EmailProviderConfig {
+  id: EmailProvider;
+  label: string;
+  labelEl: string; // Greek label
+  Icon: LucideIcon;
+}
+
+export const EMAIL_PROVIDERS: EmailProviderConfig[] = [
+  { id: 'gmail', label: 'Gmail', labelEl: 'Gmail', Icon: Mail },
+  { id: 'outlook', label: 'Outlook / Hotmail', labelEl: 'Outlook / Hotmail', Icon: Mail },
+  { id: 'yahoo', label: 'Yahoo Mail', labelEl: 'Yahoo Mail', Icon: Mail },
+  { id: 'default', label: 'Default Email App', labelEl: 'Εφαρμογή Email', Icon: Globe },
+];
 
 interface CustomErrorInfo {
   componentStack: string | null | undefined; // ✅ ENTERPRISE: Handle React's full nullable componentStack
@@ -31,6 +109,7 @@ interface ErrorBoundaryState {
   isSendingToAdmin: boolean;
   emailSent: boolean;
   copySuccess: boolean;
+  showEmailOptions: boolean; // 🏢 ENTERPRISE: Show email provider selection
 }
 
 interface ErrorBoundaryProps {
@@ -49,6 +128,7 @@ interface ErrorBoundaryProps {
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   private retryTimeoutId: NodeJS.Timeout | null = null;
+  private pendingEmailData: EmailComposeOptions | null = null; // 🏢 ENTERPRISE: Store email data for provider selection
 
   constructor(props: ErrorBoundaryProps) {
     super(props);
@@ -62,7 +142,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       errorId: null,
       isSendingToAdmin: false,
       emailSent: false,
-      copySuccess: false
+      copySuccess: false,
+      showEmailOptions: false
     };
   }
 
@@ -250,21 +331,22 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
     this.setState({ isSendingToAdmin: true });
 
-    try {
-      const errorDetails = {
-        errorId,
-        message: error.message,
-        stack: error.stack,
-        componentStack: errorInfo?.componentStack,
-        timestamp: new Date().toISOString(),
-        url: window.location.href,
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
-        userId: this.getUserId(),
-        component: this.props.componentName || 'Unknown',
-        severity: this.getErrorSeverity(error),
-        retryCount: this.state.retryCount
-      };
+    // Define errorDetails outside try block so it's accessible in catch
+    const errorDetails = {
+      errorId,
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo?.componentStack,
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
+      userId: this.getUserId(),
+      component: this.props.componentName || 'Unknown',
+      severity: this.getErrorSeverity(error),
+      retryCount: this.state.retryCount
+    };
 
+    try {
       const emailPayload = {
         to: notificationConfig.channels.adminEmail,
         subject: `🚨 ${this.getErrorSeverity(error).toUpperCase()} Error Report - ${this.props.componentName || 'Application'}`,
@@ -287,21 +369,47 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       );
 
     } catch (sendError) {
-      console.error('Failed to send error to admin:', sendError);
+      console.error('Failed to send error via API, falling back to mailto:', sendError);
 
-      // Track failed admin email
-      errorTracker.captureError(
-        sendError instanceof Error ? sendError : new Error(String(sendError)),
-        'error',
-        'system',
-        {
-          component: 'ErrorBoundary',
-          action: 'sendToAdmin',
-          metadata: { originalErrorId: errorId }
-        }
-      );
+      // 🏢 ENTERPRISE FALLBACK: Show email provider options
+      // Instead of assuming one provider, show options to user
+      try {
+        const adminEmail = notificationConfig.channels.adminEmail;
+        const subject = `🚨 ${this.getErrorSeverity(error).toUpperCase()} Error Report - ${this.props.componentName || 'Application'}`;
+        const body = this.formatErrorForEmail(errorDetails);
+
+        // Store email data for later use and show provider selection
+        this.pendingEmailData = { to: adminEmail, subject, body };
+        this.setState({ showEmailOptions: true, isSendingToAdmin: false });
+
+        console.log('📧 Showing email provider options for:', adminEmail);
+        return; // Exit early, user will select provider
+      } catch (mailtoError) {
+        console.error('Mailto fallback also failed:', mailtoError);
+
+        // Track failed admin email
+        errorTracker.captureError(
+          sendError instanceof Error ? sendError : new Error(String(sendError)),
+          'error',
+          'system',
+          {
+            component: 'ErrorBoundary',
+            action: 'sendToAdmin',
+            metadata: { originalErrorId: errorId }
+          }
+        );
+      }
     } finally {
       this.setState({ isSendingToAdmin: false });
+    }
+  };
+
+  // 🏢 ENTERPRISE: Handle email provider selection
+  private handleEmailProviderSelect = (provider: EmailProvider) => {
+    if (this.pendingEmailData) {
+      openEmailCompose(provider, this.pendingEmailData);
+      this.setState({ emailSent: true, showEmailOptions: false });
+      this.pendingEmailData = null;
     }
   };
 
@@ -507,7 +615,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                       </Button>
                       <Button
                         onClick={this.sendToAdmin}
-                        disabled={isSendingToAdmin || emailSent}
+                        disabled={isSendingToAdmin || emailSent || this.state.showEmailOptions}
                         variant={this.getErrorSeverity(error) === 'critical' ? 'destructive' : 'default'}
                         size="sm"
                         className="flex items-center space-x-2"
@@ -531,6 +639,36 @@ ${errorDetails.stack || 'Stack trace not available'}
                       </Button>
                     </div>
                   </div>
+
+                  {/* 🏢 ENTERPRISE: Email Provider Selection - Centralized Styles */}
+                  {this.state.showEmailOptions && (
+                    <div className={`p-4 bg-muted border ${borderTokens ? borderTokens.quick.default : 'border-border'} rounded-md`}>
+                      <p className={`font-medium ${colors ? colors.text.primary : 'text-foreground'} mb-3 flex items-center gap-2`}>
+                        <Mail className={componentSizes.icon.sm} />
+                        <span>Επιλέξτε τον πάροχο email σας:</span>
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {EMAIL_PROVIDERS.map((provider) => {
+                          const IconComponent = provider.Icon;
+                          return (
+                            <Button
+                              key={provider.id}
+                              onClick={() => this.handleEmailProviderSelect(provider.id)}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center justify-start gap-2"
+                            >
+                              <IconComponent className={componentSizes.icon.sm} />
+                              <span>{provider.labelEl}</span>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      <p className={`text-xs ${colors ? colors.text.muted : 'text-muted-foreground'} mt-2`}>
+                        Θα ανοίξει νέα καρτέλα με το email έτοιμο προς αποστολή
+                      </p>
+                    </div>
+                  )}
 
                   {/* Traditional Error Reporting */}
                   <div className="flex items-center justify-between p-4 bg-muted/50 rounded-md">

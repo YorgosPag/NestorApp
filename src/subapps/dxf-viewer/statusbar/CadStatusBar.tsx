@@ -104,7 +104,7 @@ export default function CadStatusBar({
 
   // ⌨️ ENTERPRISE: F-key display labels from centralized config
   return (
-    <div style={canvasUI.positioning.cadStatusBar.container}>
+    <div data-testid="cad-status-bar" style={canvasUI.positioning.cadStatusBar.container}>
       <StatusButton
         label="OSNAP"
         toggle={osnap}

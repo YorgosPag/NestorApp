@@ -51,6 +51,12 @@ export interface DraggableOptions {
   elementHeight?: number;
   /** Disable dragging */
   disabled?: boolean;
+  /**
+   * 🏢 ENTERPRISE: Client-side position calculator
+   * Called ONLY after mount on client side to get the correct position
+   * Solves SSR hydration issues where window is undefined during SSR
+   */
+  getClientPosition?: () => Position;
 }
 
 /** Hook return interface */
@@ -105,7 +111,8 @@ export function useDraggable(
     maxPosition,
     elementWidth = DEFAULT_ELEMENT_SIZE.width,
     elementHeight = DEFAULT_ELEMENT_SIZE.height,
-    disabled = false
+    disabled = false,
+    getClientPosition
   } = options;
 
   // ========================================================================
@@ -120,10 +127,29 @@ export function useDraggable(
   const elementRef = useRef<HTMLDivElement>(null);
 
   // ========================================================================
+  // 🏢 ENTERPRISE: CLIENT-SIDE POSITION CALCULATION
+  // Solves SSR hydration issues - calculates position AFTER mount
+  // ========================================================================
+
+  const [hasCalculatedClientPosition, setHasCalculatedClientPosition] = useState(false);
+
+  useEffect(() => {
+    // Only run once after mount, and only if getClientPosition is provided
+    if (getClientPosition && !hasCalculatedClientPosition && typeof window !== 'undefined') {
+      const clientPosition = getClientPosition();
+      setPosition(clientPosition);
+      setHasCalculatedClientPosition(true);
+    }
+  }, [getClientPosition, hasCalculatedClientPosition]);
+
+  // ========================================================================
   // AUTO-CENTERING LOGIC - Enterprise UX
   // ========================================================================
 
   useEffect(() => {
+    // Skip auto-centering if client position was calculated
+    if (hasCalculatedClientPosition) return;
+
     if (
       isVisible &&
       autoCenter &&
@@ -148,7 +174,8 @@ export function useDraggable(
     initialPosition,
     container,
     elementWidth,
-    elementHeight
+    elementHeight,
+    hasCalculatedClientPosition
   ]);
 
   // ========================================================================

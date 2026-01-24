@@ -15,7 +15,8 @@ import { Activity } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/floating';
 import { OverlayProperties } from '../OverlayProperties';
 import type { Overlay, UpdateOverlayData } from '../../overlays/types';
-import { PANEL_LAYOUT } from '../../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized tokens
+// 🏢 ENTERPRISE: Centralized tokens + Panel Anchoring System (ADR-029)
+import { PANEL_LAYOUT, PanelPositionCalculator } from '../../config/panel-tokens';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -37,15 +38,27 @@ const PANEL_DIMENSIONS = {
 } as const;
 
 /**
- * Calculate initial position on client side
+ * 🏢 ENTERPRISE: Client-side position calculator
+ * Position at BOTTOM-RIGHT corner of screen
+ * 🎯 CRITICAL: The BOTTOM of the panel must align with the app's status bar (not go below it)
+ *
+ * NOTE: This function is passed to useDraggable via getClientPosition
+ * and is called ONLY after mount on client side (solves SSR hydration issues)
  */
-const getInitialPosition = () => {
-  if (typeof window === 'undefined') return { x: 100, y: 100 };
-  return {
-    x: window.innerWidth - PANEL_DIMENSIONS.width - 30,
-    y: 100
-  };
+/**
+ * 🏢 ENTERPRISE: Panel Position Calculator (ADR-029)
+ * Uses centralized PanelPositionCalculator for consistent, DOM-based positioning
+ * Anchor: BOTTOM-RIGHT (panel bottom aligns with status bar top)
+ */
+const getClientPosition = () => {
+  return PanelPositionCalculator.getBottomRightPosition(
+    PANEL_DIMENSIONS.width,
+    PANEL_DIMENSIONS.height
+  );
 };
+
+// 🏢 ENTERPRISE: SSR-safe fallback position (used only during initial render)
+const SSR_FALLBACK_POSITION = { x: 100, y: 100 };
 
 // ============================================================================
 // COMPONENT - Enterprise FloatingPanel Pattern
@@ -64,10 +77,13 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
 }) => {
   return (
     <FloatingPanel
-      defaultPosition={getInitialPosition()}
+      defaultPosition={SSR_FALLBACK_POSITION}
       dimensions={PANEL_DIMENSIONS}
       onClose={onClose}
       className={PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_WIDTH_MD}
+      draggableOptions={{
+        getClientPosition  // 🏢 ENTERPRISE: Client-side position calculation
+      }}
     >
       <FloatingPanel.Header
         title="Overlay Properties"

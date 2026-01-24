@@ -4,7 +4,7 @@
 > **= -> LAST UPDATED**: 2026-01-24
 > **= -> TOTAL SYSTEMS**: 24 Major Enterprise Systems (incl. Unit Linking System)
 > **= -> TOTAL CODE**: 16,625+ Lines
-> **= -> TOTAL ADRs**: 17 Architectural Decision Records
+> **= -> TOTAL ADRs**: 19 Architectural Decision Records
 
 ---
 
@@ -30,6 +30,8 @@
 | **ADR-017** | Enterprise ID Generation 🏢 | `@/services/enterprise-id.service` | `Math.random()` patterns | 2026-01-11 |
 | **ADR-018** | Unified Upload Service 🏢 | `UnifiedUploadService` + `PhotosTabBase` | pdf-utils, scattered uploads | 2026-01-11 |
 | **ADR-023** | Centralized Spinner Component 🏢 | `@/components/ui/spinner` | Direct `Loader2` import | 2026-01-11 |
+| **ADR-027** | DXF Keyboard Shortcuts System 🏢 | `config/keyboard-shortcuts.ts` | Hardcoded shortcuts | 2026-01-24 |
+| **ADR-028** | Button Component Consolidation 🏢 | Shadcn Button + `ui/toolbar/ToolButton` | Hardcoded buttons, inline styles | 2026-01-24 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
@@ -42,6 +44,9 @@
 > **🚫 PROHIBITION**: `Math.random()` για ID generation **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `@/services/enterprise-id.service`.
 > **🚫 PROHIBITION**: Νέα standalone PhotosTab implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `PhotosTabBase`.
 > **🚫 PROHIBITION**: Direct `Loader2` import από `lucide-react` **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `Spinner` από `@/components/ui/spinner`.
+> **🚫 PROHIBITION**: Hardcoded keyboard shortcuts **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `matchesShortcut()` από `keyboard-shortcuts.ts`.
+> **🚫 PROHIBITION**: Hardcoded `<button>` με inline styles **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε Shadcn `Button` ή `ui/toolbar/ToolButton`.
+> **🚫 PROHIBITION**: Import `ToolButton/ActionButton` από `BaseButton.tsx` **DEPRECATED** - χρησιμοποιήστε `ui/toolbar/ToolButton.tsx`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
@@ -52,6 +57,8 @@
 > **🏢 ENTERPRISE**: ADR-017 - 40+ ID types, 8 files migrated, crypto-secure UUIDs, zero Math.random() for IDs.
 > **🏢 ENTERPRISE**: ADR-018 - UnifiedUploadService + PhotosTabBase, 79% code reduction, 3 PhotosTabs migrated.
 > **🏢 ENTERPRISE**: ADR-023 - Centralized Spinner, ESLint enforcement, 28 files to migrate on touch.
+> **🏢 ENTERPRISE**: ADR-027 - Keyboard Shortcuts SSOT, `matchesShortcut()`, AutoCAD F-key standards.
+> **🏢 ENTERPRISE**: ADR-028 - Button Consolidation, Shadcn Button foundation, 49 files migrate on touch.
 >
 > **📍 Full ADRs**: [centralized_systems.md](./centralized_systems.md)
 

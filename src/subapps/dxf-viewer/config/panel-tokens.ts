@@ -1559,6 +1559,126 @@ export const PanelTokenUtils = {
 } as const;
 
 // ============================================================================
+// 🏢 PANEL ANCHORING SYSTEM - ENTERPRISE ARCHITECTURE (ADR-029)
+// ============================================================================
+// Purpose: Centralized, declarative panel positioning system
+// Similar to: Autodesk AutoCAD palette anchoring, Bentley MicroStation docking
+// Benefits: No hardcoded positions, responsive, DOM-based measurements
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Panel Anchoring Configuration
+ * Defines how floating panels anchor to layout elements
+ */
+export const PANEL_ANCHORING = {
+  // ─────────────────────────────────────────────────────────────────────────
+  // LAYOUT ELEMENT SELECTORS (data-testid values)
+  // ─────────────────────────────────────────────────────────────────────────
+  SELECTORS: {
+    MAIN_TOOLBAR: '[data-testid="dxf-main-toolbar"]',
+    CAD_STATUS_BAR: '[data-testid="cad-status-bar"]',
+    CANVAS_CONTAINER: '[data-testid="dxf-canvas-container"]',
+    SIDEBAR: '[data-testid="dxf-sidebar"]',
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // OFFSET TOKENS (in pixels)
+  // ─────────────────────────────────────────────────────────────────────────
+  OFFSETS: {
+    /** Margin from viewport edges */
+    VIEWPORT_MARGIN: 8,
+    /** Margin between panels */
+    PANEL_GAP: 12,
+    /** Toolbar to panel gap */
+    TOOLBAR_GAP: 0,
+    /** Status bar to panel gap */
+    STATUSBAR_GAP: 4,
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FALLBACK VALUES (when DOM elements not found)
+  // ─────────────────────────────────────────────────────────────────────────
+  FALLBACKS: {
+    /** Main toolbar height (header + toolbar rows) */
+    TOOLBAR_BOTTOM: 140,
+    /** Status bar height from bottom */
+    STATUSBAR_HEIGHT: 32,
+    /** Windows taskbar height (approximate) */
+    WINDOWS_TASKBAR: 40,
+  },
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Panel Position Calculator
+ *
+ * Pure functions for calculating panel positions based on DOM measurements.
+ * Follows Autodesk/Bentley patterns for palette anchoring.
+ */
+export const PanelPositionCalculator = {
+  /**
+   * Calculate position for TOP-RIGHT anchored panel (below toolbar)
+   *
+   * Anchor: Panel TOP edge aligns with toolbar BOTTOM edge
+   * Horizontal: Panel RIGHT edge aligns with viewport RIGHT edge
+   */
+  getTopRightPosition: (panelWidth: number): { x: number; y: number } => {
+    const { SELECTORS, OFFSETS, FALLBACKS } = PANEL_ANCHORING;
+
+    // 🎯 Find toolbar bottom position via DOM
+    const toolbar = document.querySelector(SELECTORS.MAIN_TOOLBAR);
+    let toolbarBottom: number = FALLBACKS.TOOLBAR_BOTTOM;
+
+    if (toolbar) {
+      const rect = toolbar.getBoundingClientRect();
+      toolbarBottom = rect.bottom;
+    }
+
+    return {
+      x: window.innerWidth - panelWidth - OFFSETS.VIEWPORT_MARGIN,
+      y: toolbarBottom + OFFSETS.TOOLBAR_GAP,
+    };
+  },
+
+  /**
+   * Calculate position for BOTTOM-RIGHT anchored panel (above status bar)
+   *
+   * Anchor: Panel BOTTOM edge aligns with status bar TOP edge
+   * Horizontal: Panel RIGHT edge aligns with viewport RIGHT edge
+   */
+  getBottomRightPosition: (panelWidth: number, panelHeight: number): { x: number; y: number } => {
+    const { SELECTORS, OFFSETS, FALLBACKS } = PANEL_ANCHORING;
+
+    // 🎯 Find status bar top position via DOM
+    const statusBar = document.querySelector(SELECTORS.CAD_STATUS_BAR);
+
+    let panelBottomY: number;
+
+    if (statusBar) {
+      const rect = statusBar.getBoundingClientRect();
+      // Panel BOTTOM = Status bar TOP - gap
+      panelBottomY = rect.top - OFFSETS.STATUSBAR_GAP;
+    } else {
+      // Fallback: Use screen.availHeight which EXCLUDES Windows taskbar
+      // This is the most reliable cross-browser way to get usable screen height
+      const availableHeight = window.screen.availHeight;
+      const windowTop = window.screenY || window.screenTop || 0;
+
+      // Calculate where the bottom of usable area is relative to viewport
+      panelBottomY = availableHeight - windowTop - FALLBACKS.STATUSBAR_HEIGHT - OFFSETS.STATUSBAR_GAP;
+
+      // Clamp to viewport
+      panelBottomY = Math.min(panelBottomY, window.innerHeight - FALLBACKS.STATUSBAR_HEIGHT);
+    }
+
+    // y = panelBottom - panelHeight (top-left corner position)
+    return {
+      x: window.innerWidth - panelWidth - OFFSETS.VIEWPORT_MARGIN,
+      y: panelBottomY - panelHeight,
+    };
+  },
+} as const;
+
+// ============================================================================
 // EXPORTS - ENTERPRISE MODULE INTERFACE
 // ============================================================================
 
