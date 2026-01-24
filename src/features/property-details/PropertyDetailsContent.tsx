@@ -145,18 +145,23 @@ export function PropertyDetailsContent({
         onExitEditMode={handleExitEditMode}
       />
 
-      {/* 🏢 ENTERPRISE: Building Selector για σύνδεση Μονάδας→Κτιρίου */}
+      {/* 🏢 ENTERPRISE: Building & Floor Selector για σύνδεση Μονάδας→Κτιρίου→Ορόφου */}
       {/* Εμφανίζεται ΜΟΝΟ σε edit mode (Pattern A - entity header edit) */}
       {!isReadOnly && isEditMode && (
         <BuildingSelectorCard
           unitId={resolvedProperty?.id ?? ''}
           currentBuildingId={resolvedProperty?.buildingId}
+          currentFloorId={resolvedProperty?.floorId}
           isEditing={true}
-          onBuildingChanged={(newBuildingId) => {
-            console.log(`✅ Unit ${resolvedProperty?.id} linked to building ${newBuildingId}`);
+          onBuildingChanged={(newBuildingId, newFloorId) => {
+            console.log(`✅ Unit ${resolvedProperty?.id} linked to building ${newBuildingId}, floor ${newFloorId}`);
             // 🏢 ENTERPRISE: Trigger property update to refresh UI
             if (onUpdateProperty) {
-              onUpdateProperty(resolvedProperty.id, { buildingId: newBuildingId });
+              const updates: Partial<Property> = { buildingId: newBuildingId };
+              if (newFloorId) {
+                updates.floorId = newFloorId;
+              }
+              onUpdateProperty(resolvedProperty.id, updates);
             }
           }}
         />

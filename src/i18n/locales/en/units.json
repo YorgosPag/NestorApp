@@ -249,9 +249,23 @@
     }
   },
   "buildingSelector": {
-    "title": "Select Building",
+    "title": "Select Building & Floor",
     "selectLabel": "Select building",
-    "save": "Save"
+    "placeholder": "Select building...",
+    "noBuilding": "-- No building --",
+    "noName": "Unnamed",
+    "loading": "Loading buildings...",
+    "floor": "Floor",
+    "floorLabel": "Floor",
+    "floorPlaceholder": "Select floor...",
+    "noFloor": "-- No floor --",
+    "loadingFloors": "Loading floors...",
+    "noFloors": "No floors found for this building",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Saved!",
+    "error": "Error saving",
+    "currentBuilding": "Current building"
   },
   "header": {
     "title": "Unit Management",

@@ -4,11 +4,12 @@
 /**
  * 🏢 ENTERPRISE: BuildingSelectorCard Component
  *
- * Επιτρέπει τη σύνδεση μιας μονάδας (unit) με ένα κτίριο (building).
+ * Επιτρέπει τη σύνδεση μιας μονάδας (unit) με ένα κτίριο (building) και όροφο (floor).
  * Ακολουθεί το ίδιο pattern με το ProjectSelectorCard.
  *
  * @author Claude AI Assistant
  * @created 2026-01-07
+ * @updated 2026-01-24 - Added Floor Selector (Phase 1.1)
  * @pattern Follows ProjectSelectorCard pattern exactly
  */
 
@@ -43,13 +44,22 @@ interface BuildingOption {
   name: string;
 }
 
+interface FloorOption {
+  id: string;
+  name: string;
+  /** Floor number (API uses 'number' field) */
+  number: number;
+}
+
 interface BuildingSelectorCardProps {
   /** Unit ID για update */
   unitId: string;
   /** Τρέχον buildingId (αν υπάρχει) */
   currentBuildingId?: string;
+  /** Τρέχον floorId (αν υπάρχει) */
+  currentFloorId?: string;
   /** Callback μετά από επιτυχές update */
-  onBuildingChanged?: (newBuildingId: string) => void;
+  onBuildingChanged?: (newBuildingId: string, newFloorId?: string) => void;
   /** Αν είναι σε edit mode */
   isEditing?: boolean;
 }
@@ -71,6 +81,7 @@ interface BuildingSelectorCardProps {
 export function BuildingSelectorCard({
   unitId,
   currentBuildingId,
+  currentFloorId,
   onBuildingChanged,
   isEditing = true,
 }: BuildingSelectorCardProps) {
@@ -81,10 +92,17 @@ export function BuildingSelectorCard({
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
 
-  // 🏢 ENTERPRISE: State management
+  // 🏢 ENTERPRISE: State management - Buildings
   const [buildings, setBuildings] = useState<BuildingOption[]>([]);
   // 🏢 ENTERPRISE: Initialize with '__none__' if no building (Radix requires non-empty value)
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>(currentBuildingId || '__none__');
+
+  // 🏢 ENTERPRISE: State management - Floors (Phase 1.1)
+  const [floors, setFloors] = useState<FloorOption[]>([]);
+  const [selectedFloorId, setSelectedFloorId] = useState<string>(currentFloorId || '__none__');
+  const [loadingFloors, setLoadingFloors] = useState(false);
+
+  // 🏢 ENTERPRISE: Loading & Saving states
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -140,13 +158,77 @@ export function BuildingSelectorCard({
     }
   }, [currentBuildingId]);
 
+  // 🏢 ENTERPRISE: Sync with external currentFloorId changes
+  useEffect(() => {
+    if (currentFloorId !== undefined) {
+      setSelectedFloorId(currentFloorId || '__none__');
+    }
+  }, [currentFloorId]);
+
+  // 🏢 ENTERPRISE: Load floors when building changes (Phase 1.1)
+  useEffect(() => {
+    const loadFloors = async () => {
+      // Reset floors if no building selected
+      if (!selectedBuildingId || selectedBuildingId === '__none__') {
+        setFloors([]);
+        setSelectedFloorId('__none__');
+        return;
+      }
+
+      setLoadingFloors(true);
+      try {
+        // 🏢 ENTERPRISE: Fetch floors for selected building
+        interface FloorsApiResponse {
+          floors: Array<{ id: string; name?: string; number?: number; buildingId?: string }>;
+        }
+
+        const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${selectedBuildingId}`);
+        const floorsData = result?.floors || [];
+
+        // Filter floors that belong to this building and sort by floor number
+        const buildingFloors = floorsData
+          .filter(f => f.buildingId === selectedBuildingId)
+          .sort((a, b) => (a.number || 0) - (b.number || 0));
+
+        const floorOptions: FloorOption[] = buildingFloors.map(f => ({
+          id: String(f.id),
+          name: f.name || `${t('buildingSelector.floor')} ${f.number ?? 0}`,
+          number: f.number ?? 0,
+        }));
+
+        setFloors(floorOptions);
+        console.log(`✅ [BuildingSelectorCard] Loaded ${floorOptions.length} floors for building ${selectedBuildingId}`);
+
+        // If current floor is not in the new building, reset to none
+        if (currentFloorId && !floorOptions.find(f => f.id === currentFloorId)) {
+          setSelectedFloorId('__none__');
+        }
+      } catch (error) {
+        console.error('❌ [BuildingSelectorCard] Error loading floors:', error);
+        setFloors([]);
+      } finally {
+        setLoadingFloors(false);
+      }
+    };
+
+    loadFloors();
+  }, [selectedBuildingId, currentFloorId, t]);
+
   // 🏢 ENTERPRISE: Handle building selection
   const handleBuildingChange = useCallback((value: string) => {
     setSelectedBuildingId(value);
+    // Reset floor when building changes
+    setSelectedFloorId('__none__');
     setSaveStatus('idle');
   }, []);
 
-  // 🏢 ENTERPRISE: Save to Firestore
+  // 🏢 ENTERPRISE: Handle floor selection (Phase 1.1)
+  const handleFloorChange = useCallback((value: string) => {
+    setSelectedFloorId(value);
+    setSaveStatus('idle');
+  }, []);
+
+  // 🏢 ENTERPRISE: Save to Firestore (Building + Floor)
   const handleSave = useCallback(async () => {
     if (!unitId) {
       console.error('❌ [BuildingSelectorCard] No unitId provided');
@@ -161,13 +243,16 @@ export function BuildingSelectorCard({
 
       // 🏢 ENTERPRISE: Convert "__none__" back to null for Firestore
       const buildingIdToSave = selectedBuildingId === '__none__' ? null : selectedBuildingId || null;
+      const floorIdToSave = selectedFloorId === '__none__' ? null : selectedFloorId || null;
 
+      // 🏢 ENTERPRISE: Update both buildingId and floorId (Phase 1.1)
       await updateDoc(unitRef, {
         buildingId: buildingIdToSave,
+        floorId: floorIdToSave,
         updatedAt: new Date().toISOString(),
       });
 
-      console.log(`✅ [BuildingSelectorCard] Unit ${unitId} linked to building ${buildingIdToSave}`);
+      console.log(`✅ [BuildingSelectorCard] Unit ${unitId} linked to building ${buildingIdToSave}, floor ${floorIdToSave}`);
       setSaveStatus('success');
 
       // 🏢 ENTERPRISE: Dispatch real-time event for Navigation updates
@@ -179,7 +264,7 @@ export function BuildingSelectorCard({
       });
 
       if (onBuildingChanged && buildingIdToSave) {
-        onBuildingChanged(buildingIdToSave);
+        onBuildingChanged(buildingIdToSave, floorIdToSave || undefined);
       }
 
       // Reset success status after 3 seconds
@@ -190,13 +275,16 @@ export function BuildingSelectorCard({
     } finally {
       setSaving(false);
     }
-  }, [unitId, selectedBuildingId, currentBuildingId, onBuildingChanged]);
+  }, [unitId, selectedBuildingId, selectedFloorId, currentBuildingId, onBuildingChanged]);
 
   // 🏢 ENTERPRISE: Check if value changed (using '__none__' for empty values)
-  const hasChanges = selectedBuildingId !== (currentBuildingId || '__none__');
+  const hasBuildingChanges = selectedBuildingId !== (currentBuildingId || '__none__');
+  const hasFloorChanges = selectedFloorId !== (currentFloorId || '__none__');
+  const hasChanges = hasBuildingChanges || hasFloorChanges;
 
-  // 🏢 ENTERPRISE: Get current building name for display
+  // 🏢 ENTERPRISE: Get current building/floor names for display
   const currentBuildingName = buildings.find(b => b.id === currentBuildingId)?.name;
+  const currentFloorName = floors.find(f => f.id === currentFloorId)?.name;
 
   return (
     <Card className={cn(quick.card, colors.bg.card)}>
@@ -249,10 +337,64 @@ export function BuildingSelectorCard({
           )}
         </fieldset>
 
-        {/* Current building info (when not editing) */}
+        {/* 🏢 ENTERPRISE: Floor Selector (Phase 1.1) */}
+        {selectedBuildingId && selectedBuildingId !== '__none__' && (
+          <fieldset className={spacing.spaceBetween.sm}>
+            <Label htmlFor="floor-selector">
+              <NAVIGATION_ENTITIES.floor.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.floor.color, 'inline mr-1')} />
+              {t('buildingSelector.floorLabel', { defaultValue: 'Όροφος' })}
+            </Label>
+
+            {loadingFloors ? (
+              <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground`}>
+                <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+                <span>{t('buildingSelector.loadingFloors', { defaultValue: 'Φόρτωση ορόφων...' })}</span>
+              </section>
+            ) : floors.length === 0 ? (
+              <p className={cn('text-sm', colors.text.muted)}>
+                {t('buildingSelector.noFloors', { defaultValue: 'Δεν βρέθηκαν όροφοι για αυτό το κτίριο' })}
+              </p>
+            ) : (
+              <Select
+                value={selectedFloorId}
+                onValueChange={handleFloorChange}
+                disabled={!isEditing}
+              >
+                <SelectTrigger
+                  id="floor-selector"
+                  className={cn(
+                    !isEditing && 'bg-muted',
+                    saveStatus === 'success' && getStatusBorder('success'),
+                    saveStatus === 'error' && getStatusBorder('error')
+                  )}
+                >
+                  <SelectValue placeholder={t('buildingSelector.floorPlaceholder', { defaultValue: 'Επιλέξτε όροφο' })} />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Option for no floor */}
+                  <SelectItem value="__none__">
+                    {t('buildingSelector.noFloor', { defaultValue: '-- Χωρίς όροφο --' })}
+                  </SelectItem>
+
+                  {/* Floor options sorted by level */}
+                  {floors.map((floor) => (
+                    <SelectItem key={floor.id} value={floor.id}>
+                      {floor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </fieldset>
+        )}
+
+        {/* Current building/floor info (when not editing) */}
         {!isEditing && currentBuildingName && (
           <p className={cn('text-sm', colors.text.muted)}>
             {t('buildingSelector.currentBuilding')}: <strong>{currentBuildingName}</strong>
+            {currentFloorName && (
+              <> • {t('buildingSelector.floor', { defaultValue: 'Όροφος' })}: <strong>{currentFloorName}</strong></>
+            )}
           </p>
         )}
 
