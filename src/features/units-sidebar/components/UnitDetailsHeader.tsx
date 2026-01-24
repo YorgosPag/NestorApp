@@ -55,11 +55,13 @@ export function UnitDetailsHeader({ unit, isEditMode = false, onToggleEditMode }
           actions={[
             // 🏢 ENTERPRISE: Primary Edit action in entity header (Pattern A - Fortune 500)
             {
-              label: isEditMode ? t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία...' }) : t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }),
+              label: isEditMode
+                ? t('navigation.actions.view.label', { defaultValue: 'Τέλος Επεξεργασίας' })
+                : t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }),
               onClick: () => onToggleEditMode?.(),
               icon: Pencil,
               className: isEditMode
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-green-600 hover:bg-green-700 text-white'
                 : `bg-gradient-to-r from-amber-500 to-orange-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
             },
             {

@@ -2250,6 +2250,19 @@ export interface LinkedSpace {
 - ✅ **Radix Select integration** - Following ADR-001 pattern
 - ✅ **Enterprise patterns** - Dependency Injection, centralized tokens
 
+**⚠️ Current Status (2026-01-24)**:
+- **TEMPORARILY DISABLED** in `PropertyDetailsContent.tsx`
+- **Reason**: Infinite loop bug (Maximum update depth exceeded)
+- **Root Cause**: Radix Select `compose-refs.tsx` recursive setState
+- **TODO**: Re-enable after proper memoization fix
+
+**Bug Fixes Applied**:
+| Issue | Fix | Commit |
+|-------|-----|--------|
+| Firestore permissions | Added `buildingId`, `floorId`, `linkedSpaces` to allowlist | `81b11687` |
+| Infinite loop | Removed `t` from useEffect dependencies | `982d3a71` |
+| Workspace permissions | Added `workspaces` collection rules | `982d3a71` |
+
 **References**:
 - BuildingSelectorCard: `src/features/property-details/components/BuildingSelectorCard.tsx`
 - LinkedSpacesCard: `src/features/property-details/components/LinkedSpacesCard.tsx`

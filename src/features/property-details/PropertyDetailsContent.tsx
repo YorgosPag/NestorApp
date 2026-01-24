@@ -147,8 +147,9 @@ export function PropertyDetailsContent({
       />
 
       {/* 🏢 ENTERPRISE: Building & Floor Selector για σύνδεση Μονάδας→Κτιρίου→Ορόφου */}
+      {/* ⚠️ TEMPORARILY DISABLED - Debugging infinite loop issue */}
       {/* Εμφανίζεται ΜΟΝΟ σε edit mode (Pattern A - entity header edit) */}
-      {!isReadOnly && isEditMode && (
+      {/* {!isReadOnly && isEditMode && (
         <BuildingSelectorCard
           unitId={resolvedProperty?.id ?? ''}
           currentBuildingId={resolvedProperty?.buildingId}
@@ -166,11 +167,12 @@ export function PropertyDetailsContent({
             }
           }}
         />
-      )}
+      )} */}
 
       {/* 🏢 ENTERPRISE: LinkedSpaces για σύνδεση Parking & Storage (Phase 2) */}
+      {/* ⚠️ TEMPORARILY DISABLED - Debugging infinite loop issue */}
       {/* Εμφανίζεται ΜΟΝΟ σε edit mode και όταν υπάρχει buildingId */}
-      {!isReadOnly && isEditMode && resolvedProperty?.buildingId && (
+      {/* {!isReadOnly && isEditMode && resolvedProperty?.buildingId && (
         <LinkedSpacesCard
           unitId={resolvedProperty?.id ?? ''}
           buildingId={resolvedProperty?.buildingId}
@@ -184,7 +186,7 @@ export function PropertyDetailsContent({
             }
           }}
         />
-      )}
+      )} */}
 
       {/* Share Button - Always visible for easy sharing */}
       <div className="flex justify-end">
