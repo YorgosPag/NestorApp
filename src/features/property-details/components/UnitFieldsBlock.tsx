@@ -22,6 +22,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -152,6 +153,9 @@ export function UnitFieldsBlock({
 
   // Form state (initialized from property)
   const [formData, setFormData] = useState({
+    // 🏢 ENTERPRISE: Name & Description (editable unit identity)
+    name: property.name ?? '',
+    description: property.description ?? '',
     // Phase 1: Layout
     bedrooms: property.layout?.bedrooms ?? 0,
     bathrooms: property.layout?.bathrooms ?? 0,
@@ -185,6 +189,8 @@ export function UnitFieldsBlock({
     try {
       // 🏢 ENTERPRISE: Build updates object without undefined values (Firestore doesn't accept undefined)
       const updates: Partial<Property> = {
+        // 🏢 ENTERPRISE: Name & Description (editable unit identity)
+        name: formData.name,
         // Phase 1: Layout - always include (numbers default to 0)
         layout: {
           bedrooms: formData.bedrooms,
@@ -194,6 +200,11 @@ export function UnitFieldsBlock({
         // Phase 3: Orientation - always include (empty array is valid)
         orientations: formData.orientations as OrientationType[],
       };
+
+      // Description - only include if not empty
+      if (formData.description.trim()) {
+        updates.description = formData.description.trim();
+      }
 
       // Phase 2: Areas - only include non-zero values (Firestore doesn't accept undefined)
       const areasData: { gross: number; net?: number; balcony?: number; terrace?: number; garden?: number } = {
@@ -247,14 +258,31 @@ export function UnitFieldsBlock({
       } else {
         setLocalEditing(false);
       }
+      toast.success(t('save.success', 'Οι αλλαγές αποθηκεύτηκαν'));
+    } catch (error) {
+      // 🏢 ENTERPRISE: Proper error handling for permission denied
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.includes('permission') || errorMessage.includes('PERMISSION_DENIED')) {
+        // Permission denied - show clear error to user
+        toast.error(t('save.permissionDenied', 'Δεν έχετε δικαίωμα επεξεργασίας αυτής της μονάδας'));
+      } else {
+        // Generic error
+        toast.error(t('save.error', 'Σφάλμα κατά την αποθήκευση'));
+      }
+      console.error('UnitFieldsBlock save error:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [formData, property.id, onUpdateProperty, onExitEditMode]);
+  }, [formData, property.id, onUpdateProperty, onExitEditMode, t]);
 
   // Handle cancel
   const handleCancel = useCallback(() => {
     setFormData({
+      // 🏢 ENTERPRISE: Name & Description
+      name: property.name ?? '',
+      description: property.description ?? '',
+      // Layout
       bedrooms: property.layout?.bedrooms ?? 0,
       bathrooms: property.layout?.bathrooms ?? 0,
       wc: property.layout?.wc ?? 0,
@@ -337,6 +365,44 @@ export function UnitFieldsBlock({
             className={spacing.spaceBetween.sm}
             onSubmit={(e) => { e.preventDefault(); handleSave(); }}
           >
+            {/* ═══════════════════════════════════════════════════════════════
+                🏢 ENTERPRISE: NAME & DESCRIPTION (Unit Identity)
+            ═══════════════════════════════════════════════════════════════ */}
+            <fieldset className={spacing.spaceBetween.sm}>
+              <legend className="sr-only">{t('fields.identity.sectionTitle', { defaultValue: 'Ταυτότητα Μονάδας' })}</legend>
+
+              {/* Name */}
+              <article>
+                <Label htmlFor="unit-name" className={`text-xs font-medium ${spacing.margin.bottom.xs}`}>
+                  {t('fields.identity.name', { defaultValue: 'Όνομα Μονάδας' })}
+                </Label>
+                <Input
+                  id="unit-name"
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="h-8 text-sm"
+                  placeholder={t('fields.identity.namePlaceholder', { defaultValue: 'π.χ. Διαμέρισμα Α1' })}
+                />
+              </article>
+
+              {/* Description */}
+              <article>
+                <Label htmlFor="unit-description" className={`text-xs font-medium ${spacing.margin.bottom.xs}`}>
+                  {t('fields.identity.description', { defaultValue: 'Περιγραφή' })}
+                </Label>
+                <textarea
+                  id="unit-description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full h-20 text-sm px-3 py-2 rounded-md border border-input bg-background resize-none"
+                  placeholder={t('fields.identity.descriptionPlaceholder', { defaultValue: 'Προσθέστε περιγραφή για τη μονάδα...' })}
+                />
+              </article>
+            </fieldset>
+
+            <Separator />
+
             {/* ═══════════════════════════════════════════════════════════════
                 PHASE 1: LAYOUT (Bedrooms, Bathrooms, WC)
             ═══════════════════════════════════════════════════════════════ */}

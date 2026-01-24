@@ -69,6 +69,13 @@
     "ariaLabel": "Κάρτα μονάδας {name}"
   },
   "fields": {
+    "identity": {
+      "sectionTitle": "Ταυτότητα Μονάδας",
+      "name": "Όνομα Μονάδας",
+      "namePlaceholder": "π.χ. Διαμέρισμα Α1",
+      "description": "Περιγραφή",
+      "descriptionPlaceholder": "Προσθέστε περιγραφή για τη μονάδα..."
+    },
     "layout": {
       "bedrooms": "Υπνοδωμάτια",
       "bathrooms": "Μπάνια",
@@ -454,5 +461,10 @@
     "project": "Έργο",
     "price": "Τιμή",
     "idLabel": "ID"
+  },
+  "save": {
+    "success": "Οι αλλαγές αποθηκεύτηκαν",
+    "error": "Σφάλμα κατά την αποθήκευση",
+    "permissionDenied": "Δεν έχετε δικαίωμα επεξεργασίας αυτής της μονάδας"
   }
 }

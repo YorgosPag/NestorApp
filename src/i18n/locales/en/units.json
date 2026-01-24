@@ -69,6 +69,13 @@
     "ariaLabel": "Unit card {name}"
   },
   "fields": {
+    "identity": {
+      "sectionTitle": "Unit Identity",
+      "name": "Unit Name",
+      "namePlaceholder": "e.g. Apartment A1",
+      "description": "Description",
+      "descriptionPlaceholder": "Add a description for this unit..."
+    },
     "layout": {
       "bedrooms": "Bedrooms",
       "bathrooms": "Bathrooms",
@@ -454,5 +461,10 @@
     "project": "Project",
     "price": "Price",
     "idLabel": "ID"
+  },
+  "save": {
+    "success": "Changes saved successfully",
+    "error": "Error saving changes",
+    "permissionDenied": "You do not have permission to edit this unit"
   }
 }

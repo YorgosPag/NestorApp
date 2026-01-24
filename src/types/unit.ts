@@ -56,10 +56,25 @@ export type OperationalStatus =
 export type LegacySalesStatus = PropertyStatus | 'rented';
 
 // =============================================================================
-// 🏢 UNIT TYPE
+// 🏢 UNIT TYPE - CANONICAL ENGLISH CODES
 // =============================================================================
+// 📅 Updated 2026-01-24: Changed to canonical English codes
+// 🏢 ENTERPRISE: Data layer uses English codes, i18n handles translations
+// Legacy Greek values ('Στούντιο', 'Διαμέρισμα 2Δ', etc.) may still exist in Firestore
+// UI should use i18n mapping: t(`types.${unit.type}`, { defaultValue: unit.type })
 
-export type UnitType = 'Στούντιο' | 'Γκαρσονιέρα' | 'Διαμέρισμα 2Δ' | 'Διαμέρισμα 3Δ' | 'Μεζονέτα' | 'Κατάστημα' | 'Αποθήκη';
+export type UnitType =
+  | 'studio'          // Στούντιο
+  | 'apartment_1br'   // Γκαρσονιέρα
+  | 'apartment'       // Διαμέρισμα (generic)
+  | 'apartment_2br'   // Διαμέρισμα 2Δ
+  | 'apartment_3br'   // Διαμέρισμα 3Δ
+  | 'maisonette'      // Μεζονέτα
+  | 'shop'            // Κατάστημα
+  | 'office'          // Γραφείο
+  | 'storage'         // Αποθήκη
+  // Legacy Greek values (backward compatibility)
+  | 'Στούντιο' | 'Γκαρσονιέρα' | 'Διαμέρισμα 2Δ' | 'Διαμέρισμα 3Δ' | 'Μεζονέτα' | 'Κατάστημα' | 'Αποθήκη';
 
 // =============================================================================
 // 🏢 COVERAGE INTERFACE (Documentation Completeness)

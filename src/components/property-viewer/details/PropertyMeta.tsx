@@ -39,8 +39,12 @@ export function PropertyMeta({
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
   const statusInfo = PROPERTY_STATUS_CONFIG[property.status] || PROPERTY_STATUS_CONFIG.default;
-  // 🏢 ENTERPRISE: i18n support
+  // 🏢 ENTERPRISE: i18n support - properties + units namespaces
   const { t } = useTranslation('properties');
+  const { t: tUnits } = useTranslation('units');
+
+  // 🏢 ENTERPRISE: Use new areas schema with legacy fallback
+  const displayArea = property.areas?.gross ?? property.area;
 
   // 🏢 ENTERPRISE: Edit button now toggles full edit mode (not prompt-based rename)
   const handleEditClick = () => {
@@ -58,10 +62,22 @@ export function PropertyMeta({
 
   return (
     <div className={spacing.spaceBetween.sm}>
-      {/* Header */}
+      {/* Header - 🏢 ENTERPRISE: Edit button in header (Fortune 500 UX pattern) */}
       <div className={spacing.spaceBetween.sm}>
         <div className={`flex items-start justify-between ${spacing.gap.sm}`}>
-          <h3 className="font-semibold text-sm leading-tight">{property.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-sm leading-tight">{property.name}</h3>
+            {/* 🏢 ENTERPRISE: Edit button in header - single primary action */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={handleEditClick}
+              title={isEditMode ? t('meta.editing', { defaultValue: 'Επεξεργασία...' }) : t('meta.edit')}
+            >
+              <NAVIGATION_ACTIONS.edit.icon className={cn('h-3.5 w-3.5', isEditMode ? 'text-primary' : NAVIGATION_ACTIONS.edit.color)} />
+            </Button>
+          </div>
           <PropertyBadge
             status={property.status as PropertyStatus}
             variant="outline"
@@ -69,7 +85,10 @@ export function PropertyMeta({
             className="text-xs flex-shrink-0"
           />
         </div>
-        <p className="text-xs text-muted-foreground">{property.type}</p>
+        {/* 🏢 ENTERPRISE: Type translation via i18n (Fix "apartment" → "Διαμέρισμα") */}
+        <p className="text-xs text-muted-foreground">
+          {tUnits(`types.${property.type}`, { defaultValue: property.type })}
+        </p>
       </div>
 
       <Separator />
@@ -107,11 +126,11 @@ export function PropertyMeta({
         Migration: PR1.1 - Units Detail Cleanup - Price moved to /sales
         */}
         <div className={`grid grid-cols-2 ${spacing.gap.sm} text-xs`}>
-          {property.area && (
+          {/* 🏢 ENTERPRISE: Use new areas.gross with legacy fallback (Fix τ.μ. inconsistency) */}
+          {displayArea && (
             <div className={`flex items-center ${spacing.gap.sm}`}>
-              {/* 🏢 ENTERPRISE: Using centralized area icon/color */}
               <NAVIGATION_ENTITIES.area.icon className={cn(iconSizes.xs, NAVIGATION_ENTITIES.area.color)} />
-              <span>{property.area}{t('meta.sqm')}</span>
+              <span>{displayArea}{t('meta.sqm')}</span>
             </div>
           )}
           {property.rooms && (
@@ -157,27 +176,18 @@ export function PropertyMeta({
         </>
       )}
 
-      {/* Actions - 🏢 ENTERPRISE: Primary/Secondary layout per Fortune 500 UX */}
-      <Separator />
-      <div className={`flex ${spacing.gap.sm}`}>
-        {/* Primary: Edit Details - controls all unit fields */}
-        <Button
-          variant={isEditMode ? "default" : "outline"}
-          size="sm"
-          className="flex-1"
-          onClick={handleEditClick}
-        >
-          <NAVIGATION_ACTIONS.edit.icon className={cn(iconSizes.xs, isEditMode ? 'text-white' : NAVIGATION_ACTIONS.edit.color, spacing.margin.right.sm)} />
-          {isEditMode ? t('meta.editing', { defaultValue: 'Επεξεργασία...' }) : t('meta.edit')}
-        </Button>
-        {/* Secondary: Floor Plan - navigates to floor plan tab */}
-        {onNavigateToFloorPlan && (
-          <Button variant="outline" size="sm" className="flex-1" onClick={handleViewClick}>
-            <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.view.color, spacing.margin.right.sm)} />
-            {t('meta.floorPlan', { defaultValue: 'Κάτοψη' })}
-          </Button>
-        )}
-      </div>
+      {/* Actions - 🏢 ENTERPRISE: Only Floor Plan button here (Edit moved to header) */}
+      {onNavigateToFloorPlan && (
+        <>
+          <Separator />
+          <div className={`flex ${spacing.gap.sm}`}>
+            <Button variant="outline" size="sm" className="flex-1" onClick={handleViewClick}>
+              <NAVIGATION_ACTIONS.view.icon className={cn(iconSizes.xs, NAVIGATION_ACTIONS.view.color, spacing.margin.right.sm)} />
+              {t('meta.floorPlan', { defaultValue: 'Κάτοψη' })}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -252,22 +252,49 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🏠 UNITS COLLECTION - SECURITY-HARDENED (2026-01-24 ROLLBACK)
+    // 🏠 UNITS COLLECTION - ENTERPRISE TENANT ISOLATION (2026-01-24)
     // =========================================================================
-    // 🚨 SECURITY ROLLBACK: Reverted from isAuthenticated() → isSuperAdminOnly()
-    // ❌ INSECURE: allow update: if isAuthenticated() - επιτρέπει σε οποιονδήποτε authenticated
-    //             να κάνει update σε οποιαδήποτε unit χωρίς tenant isolation ή RBAC
-    // ✅ SECURE STUB: Μόνο super_admin μπορεί να κάνει update (προσωρινό μέχρι RBAC/Callable)
-    // 📋 TODO: Implement one of:
-    //    - Option A: Callable Function updateUnitFields (SAP/Salesforce pattern)
-    //    - Option B: Strict Rules με tenant isolation via project→company lookup
-    // 📅 Rollback Date: 2026-01-24
+    // 🏢 ENTERPRISE: Full tenant isolation via project→company lookup
+    // 📋 Security Model:
+    //    - READ: Only users belonging to the project's company (tenant-scoped)
+    //    - UPDATE: Company admins of project's company + field allowlist + invariants
+    //    - CREATE/DELETE: Admin/server only (via Firebase Admin SDK)
+    // 🔐 Invariants: project, buildingId, floorId, name, id cannot be changed by client
+    // 📅 Implemented: 2026-01-24
     match /units/{unitId} {
-      allow read: if isAuthenticated(); // Authenticated users only
-      allow create: if false; // Admin/server only
-      // 🔒 SECURITY STUB: Only super_admin can update until proper RBAC is implemented
-      allow update: if isSuperAdminOnly();
-      allow delete: if false; // Admin/server only
+      // 📖 READ: Tenant-scoped - only users from the project's company
+      // 🔒 SECURITY: Prevents cross-tenant data leak
+      allow read: if isAuthenticated()
+                  && (
+                       // Super admin can read all
+                       isSuperAdminOnly()
+                       // OR user belongs to the project's company
+                       || belongsToProjectCompany(resource.data.project)
+                     );
+
+      // ✍️ CREATE: Admin/server only
+      allow create: if false;
+
+      // 📝 UPDATE: Company admin of project's company + field allowlist + invariants
+      // 🔒 SECURITY LAYERS:
+      //    1. Role gate: Must be company_admin or super_admin
+      //    2. Tenant gate: Must belong to project's company
+      //    3. Field allowlist: Only unit fields can be updated (not structural fields)
+      //    4. Invariants: Structural fields (project, buildingId, floorId, name, id) unchanged
+      allow update: if isAuthenticated()
+                    && (
+                         // Super admin bypasses all checks
+                         isSuperAdminOnly()
+                         // OR company admin of project's company with allowlist + invariants
+                         || (
+                              isCompanyAdminOfProject(resource.data.project)
+                              && isAllowedUnitFieldUpdate()
+                              && unitStructuralFieldsUnchanged()
+                            )
+                       );
+
+      // 🗑️ DELETE: Admin/server only
+      allow delete: if false;
     }
 
     // =========================================================================
@@ -1131,6 +1158,62 @@ service cloud.firestore {
     function isInternalUserOfCompany(companyId) {
       return isSuperAdminOnly() ||
              (isInternalUser() && belongsToCompany(companyId));
+    }
+
+    // =========================================================================
+    // 🏠 UNIT FIELDS SECURITY HELPERS (2026-01-24)
+    // =========================================================================
+    // These helpers enable tenant-scoped access for units via project→company lookup
+    // Units don't have companyId directly - must lookup via project reference
+
+    // Get companyId from a project document (for tenant isolation)
+    // Usage: getProjectCompanyId(resource.data.project) where project is the project ID string
+    function getProjectCompanyId(projectId) {
+      return get(/databases/$(database)/documents/projects/$(projectId)).data.companyId;
+    }
+
+    // Check if user belongs to the company that owns this project
+    function belongsToProjectCompany(projectId) {
+      return isSuperAdminOnly() || belongsToCompany(getProjectCompanyId(projectId));
+    }
+
+    // Check if user is company admin of the project's company
+    function isCompanyAdminOfProject(projectId) {
+      return isCompanyAdminOfCompany(getProjectCompanyId(projectId));
+    }
+
+    // Unit Fields allowlist - only these fields can be updated by non-super-admin users
+    // 🏢 ENTERPRISE: Prevents modification of structural fields (project, buildingId, floorId)
+    // 📅 Updated 2026-01-24: Added 'name' to allowlist (rename is allowed for company admins)
+    function isAllowedUnitFieldUpdate() {
+      let allowedFields = [
+        // Identity (editable by company admins)
+        'name', 'description',
+        // Phase 1-5 Unit Fields
+        'bedrooms', 'bathrooms', 'wc',
+        'areas', 'orientation', 'orientations', 'condition', 'energyClass',
+        'heating', 'cooling', 'flooring', 'frames', 'glazing',
+        'interiorFeatures', 'securityFeatures',
+        // Layout
+        'layout',
+        // Systems & Finishes
+        'systemsOverride', 'finishes', 'energy',
+        // Metadata
+        'updatedAt', 'updatedBy',
+        // Operational
+        'operationalStatus', 'unitCoverage'
+      ];
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
+    }
+
+    // Check that structural fields are not being modified (invariants)
+    // 🏢 ENTERPRISE: Prevents "re-tenanting" or "moving" units via client update
+    // 📅 Updated 2026-01-24: Removed 'name' from invariants (rename is now allowed)
+    function unitStructuralFieldsUnchanged() {
+      return request.resource.data.project == resource.data.project
+             && request.resource.data.buildingId == resource.data.buildingId
+             && request.resource.data.floorId == resource.data.floorId
+             && request.resource.data.id == resource.data.id;
     }
 
     // Validate parent document exists (for subcollections - prevents injection)

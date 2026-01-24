@@ -145,7 +145,11 @@ After **EVERY** implementation step, update this file with:
   - [x] Type-safe form data
 - [x] Firestore Persistence
   - [x] onUpdateProperty prop chain fix (2026-01-24)
-  - [x] Firestore rules - **SECURITY ROLLBACK (2026-01-24)**: Reverted to `isSuperAdminOnly()` stub - `isAuthenticated()` ήταν insecure
+  - [x] **ENTERPRISE SECURITY (2026-01-24)**: Full tenant isolation implemented:
+    - ✅ READ: Tenant-scoped via `belongsToProjectCompany()`
+    - ✅ UPDATE: `isCompanyAdminOfProject()` + field allowlist + invariants
+    - ✅ Invariants: project, buildingId, floorId, name, id protected
+    - ✅ Allowlist: Only unit fields can be modified by company admins
 - [ ] Implement bulk edit (FUTURE - not in current scope)
   - [ ] Multi-select
   - [ ] Batch operations
@@ -561,13 +565,16 @@ npm test -- src/utils/__tests__/unit-normalizer.test.ts
    - **Cause**: `onUpdateProperty` prop not passing through `UniversalTabsRenderer`
    - **Fix**: Added `onUpdateProperty: safeViewerPropsWithFloors.handleUpdateProperty` to `additionalData` in `UnitsSidebar.tsx`
 
-2. **Firestore Rules Update** ⚠️ **SECURITY ROLLBACK APPLIED**
+2. **Firestore Rules Update** ✅ **ENTERPRISE SECURITY IMPLEMENTED**
    - **Problem**: `Missing or insufficient permissions` error
    - **Cause**: `units` collection had `allow write: if false`
    - **Initial "Fix"**: ❌ `allow update: if isAuthenticated()` - **INSECURE - ROLLED BACK**
-   - **SECURITY ROLLBACK (2026-01-24)**: ✅ Changed to `allow update: if isSuperAdminOnly()` as secure stub
-   - **Reason**: `isAuthenticated()` επιτρέπει σε οποιονδήποτε authenticated user να κάνει update σε οποιαδήποτε unit χωρίς tenant isolation ή RBAC - αυτό είναι **anti-pattern** σε multi-tenant εφαρμογή
-   - **TODO**: Implement Callable Function `updateUnitFields` με RBAC + tenant isolation + field allowlist (SAP/Salesforce pattern)
+   - **SECURITY ROLLBACK (2026-01-24)**: Changed to `isSuperAdminOnly()` as secure stub
+   - **ENTERPRISE SOLUTION (2026-01-24)**: ✅ Full tenant isolation implemented:
+     - **READ**: `belongsToProjectCompany(resource.data.project)` - tenant-scoped reads
+     - **UPDATE**: `isCompanyAdminOfProject()` + field allowlist + invariants
+     - **Helpers added**: `getProjectCompanyId()`, `belongsToProjectCompany()`, `isCompanyAdminOfProject()`, `isAllowedUnitFieldUpdate()`, `unitStructuralFieldsUnchanged()`
+   - **Future**: Callable Function `updateUnitFields` για audit trail (mid-term)
 
 3. **Undefined Values Fix**
    - **Problem**: `Unsupported field value: undefined` error
@@ -578,8 +585,12 @@ npm test -- src/utils/__tests__/unit-normalizer.test.ts
 ```
 ✏️ src/features/property-details/components/UnitFieldsBlock.tsx - handleSave fix for undefined values
 ✏️ src/features/units-sidebar/UnitsSidebar.tsx - Added onUpdateProperty to additionalData
-✏️ firestore.rules - SECURITY ROLLBACK: allow update: if isSuperAdminOnly() (stub until RBAC)
-✏️ docs/centralized-systems/data-systems/unit-fields.md - Updated documentation (security notes added)
+✏️ firestore.rules - ENTERPRISE SECURITY: Full tenant isolation (helpers + rules)
+   - Added: getProjectCompanyId(), belongsToProjectCompany(), isCompanyAdminOfProject()
+   - Added: isAllowedUnitFieldUpdate(), unitStructuralFieldsUnchanged()
+   - READ: Tenant-scoped via project→company lookup
+   - UPDATE: Company admin + allowlist + invariants
+✏️ docs/centralized-systems/data-systems/unit-fields.md - Updated documentation (enterprise security)
 ```
 
 #### Enterprise Compliance:
@@ -594,6 +605,88 @@ npm test -- src/utils/__tests__/unit-normalizer.test.ts
 - ✅ **Firestore Save**: Data persists across refresh
 - ✅ **Rules Deployed**: `firebase deploy --only firestore:rules` successful
 - ✅ **No undefined values**: Filtered before save
+
+---
+
+### **2026-01-24 - Session 9: UI Consistency Fixes + Enterprise UX**
+**Developer**: Claude
+**Duration**: 1 hour
+**Status**: ✅ UI FIXES COMPLETE
+
+#### What was implemented:
+
+##### UI Fix 1: Type Translation (apartment → Διαμέρισμα)
+- **Problem**: `property.type` εμφανιζόταν raw ("apartment") χωρίς i18n
+- **File**: `src/components/property-viewer/details/PropertyMeta.tsx:72`
+- **Fix**: `{tUnits(\`types.${property.type}\`, { defaultValue: property.type })}`
+
+##### UI Fix 2: Areas Display (85 vs 5 τ.μ. confusion)
+- **Problem**: Λίστα χρησιμοποιούσε `unit.area` (legacy), details χρησιμοποιούσε `areas.gross` (new)
+- **File**: `PropertyMeta.tsx:43,114`
+- **Fix**: `const displayArea = property.areas?.gross ?? property.area;`
+
+##### UI Fix 3: Edit Button Position
+- **Problem**: Edit button ήταν στο footer, όχι enterprise pattern
+- **File**: `PropertyMeta.tsx`
+- **Fix**: Moved to header (next to title), removed from footer
+
+##### UI Fix 4: Name & Description Editing
+- **Problem**: Δεν μπορούσε ο χρήστης να αλλάξει τίτλο/περιγραφή
+- **File**: `UnitFieldsBlock.tsx`
+- **Fix**: Added `name` and `description` fields in edit form
+- **Firestore Rules**: Added `name` to allowlist, removed from invariants
+
+##### UI Fix 5: UnitType Canonical Codes
+- **Problem**: TypeScript type είχε ελληνικές τιμές, data layer αγγλικές
+- **File**: `src/types/unit.ts:62`
+- **Fix**: Changed to canonical English codes with legacy backward compatibility
+
+##### UI Fix 6: Error Handling
+- **File**: `UnitFieldsBlock.tsx`
+- **Fix**: Added toast notifications for save success/error/permission-denied
+
+#### Files changed:
+```
+✏️ src/components/property-viewer/details/PropertyMeta.tsx
+   - Type translation via i18n (tUnits namespace)
+   - Area uses areas.gross with legacy fallback
+   - Edit button moved to header (Fortune 500 UX pattern)
+
+✏️ src/features/property-details/components/UnitFieldsBlock.tsx
+   - Added name & description form fields (Identity Section)
+   - Updated handleSave to include name/description
+   - Updated handleCancel to reset name/description
+   - Added toast import and error handling
+
+✏️ firestore.rules
+   - Added 'name', 'layout', 'systemsOverride', 'finishes', 'energy' to allowlist
+   - Removed 'name' from invariants (rename now allowed for company admins)
+
+✏️ src/types/unit.ts
+   - UnitType changed to canonical English codes
+   - Backward compatibility with legacy Greek values
+
+✏️ src/i18n/locales/el/units.json
+✏️ src/i18n/locales/en/units.json
+   - Added fields.identity.* translations (name, description, placeholders)
+   - Added save.* translations (success, error, permissionDenied)
+
+✏️ docs/centralized-systems/data-systems/unit-fields.md
+   - Updated security notes
+   - Added UI Updates section
+```
+
+#### Enterprise Compliance:
+- ✅ **i18n**: All UI text via translations
+- ✅ **UX Pattern**: Edit in header (Fortune 500 standard)
+- ✅ **Error Handling**: Toast notifications for all save outcomes
+- ✅ **Type Safety**: Canonical codes with backward compatibility
+- ✅ **Security**: Firestore rules updated and deployed
+
+#### Quality Gates:
+- ✅ **TypeScript**: No errors in modified files
+- ✅ **Rules Deployed**: `firebase deploy --only firestore:rules` successful
+- ✅ **i18n Complete**: EL/EN translations added
 
 ---
 

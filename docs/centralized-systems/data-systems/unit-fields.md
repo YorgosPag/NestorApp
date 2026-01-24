@@ -76,10 +76,45 @@ UnitsSidebar
 
 ### ⚠️ Important Notes
 
-1. **Firestore Rules**: ⚠️ **SECURITY UPDATE (2026-01-24)**: Η collection `units` χρησιμοποιεί `allow update: if isSuperAdminOnly()` ως **ασφαλές stub** μέχρι να υλοποιηθεί πλήρες RBAC+tenant isolation. Το `isAuthenticated()` **ΑΠΑΓΟΡΕΥΕΤΑΙ** σε multi-tenant εφαρμογή χωρίς tenant isolation.
+1. **Firestore Rules**: ✅ **ENTERPRISE SECURITY (2026-01-24)**: Η collection `units` έχει πλήρη tenant isolation:
+   - **READ**: Μόνο χρήστες που ανήκουν στην εταιρεία του project (via `belongsToProjectCompany`)
+   - **UPDATE**: Μόνο company admins της εταιρείας του project + field allowlist + invariants
+   - **Field Allowlist**: `name`, `description`, `layout`, `areas`, `orientations`, `condition`, `energyClass`, `systemsOverride`, `finishes`, `energy`, `interiorFeatures`, `securityFeatures`, `updatedAt`, `updatedBy`, `operationalStatus`, `unitCoverage`
+   - **Invariants Protected**: `project`, `buildingId`, `floorId`, `id` (δεν αλλάζουν από client)
+   - ⚠️ Το `isAuthenticated()` **ΑΠΑΓΟΡΕΥΕΤΑΙ** σε multi-tenant εφαρμογή χωρίς tenant isolation
 2. **Undefined Values**: Firestore ΔΕΝ δέχεται `undefined` - πρέπει να φιλτράρονται πριν το save
 3. **Prop Chain**: Το `onUpdateProperty` περνάει μέσω `additionalData` του `UniversalTabsRenderer`
-4. **TODO Security**: Μόνιμη λύση με Callable Function `updateUnitFields` ή Strict Rules με tenant isolation
+4. **Unit Type Translation**: Το `property.type` πρέπει να περνάει από i18n: `t(\`types.${property.type}\`)`
+5. **Areas Display**: Χρήση `areas.gross` με fallback στο legacy `area` field
+6. **Future Enhancement**: Callable Function `updateUnitFields` για πλήρες audit trail (mid-term)
+
+---
+
+## 🔄 **UI UPDATES (2026-01-24)**
+
+### PropertyMeta Component Changes
+| Change | Before | After |
+|--------|--------|-------|
+| **Type Translation** | `{property.type}` (raw) | `{tUnits(\`types.${property.type}\`)}` (i18n) |
+| **Area Display** | `property.area` (legacy) | `property.areas?.gross ?? property.area` |
+| **Edit Button** | In footer | In header (next to title) |
+
+### UnitFieldsBlock Component Changes
+| Change | Description |
+|--------|-------------|
+| **Name Field** | Νέο editable πεδίο για όνομα μονάδας |
+| **Description Field** | Νέο editable πεδίο για περιγραφή |
+| **Identity Section** | Νέα section στην αρχή του edit form |
+| **Error Handling** | Toast notifications για permission denied |
+
+### UnitType Canonical Codes
+```typescript
+// NEW: Canonical English codes (data layer)
+type UnitType = 'studio' | 'apartment' | 'apartment_1br' | 'apartment_2br' |
+                'apartment_3br' | 'maisonette' | 'shop' | 'office' | 'storage' |
+                // Legacy Greek (backward compatibility)
+                'Στούντιο' | 'Γκαρσονιέρα' | 'Διαμέρισμα 2Δ' | ...
+```
 
 ---
 
