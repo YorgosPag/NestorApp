@@ -62,22 +62,10 @@ export function PropertyMeta({
 
   return (
     <div className={spacing.spaceBetween.sm}>
-      {/* Header - 🏢 ENTERPRISE: Edit button in header (Fortune 500 UX pattern) */}
+      {/* Header - 🏢 ENTERPRISE: Edit button moved to entity header (UnitDetailsHeader) */}
       <div className={spacing.spaceBetween.sm}>
         <div className={`flex items-start justify-between ${spacing.gap.sm}`}>
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-sm leading-tight">{property.name}</h3>
-            {/* 🏢 ENTERPRISE: Edit button in header - single primary action */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={handleEditClick}
-              title={isEditMode ? t('meta.editing', { defaultValue: 'Επεξεργασία...' }) : t('meta.edit')}
-            >
-              <NAVIGATION_ACTIONS.edit.icon className={cn('h-3.5 w-3.5', isEditMode ? 'text-primary' : NAVIGATION_ACTIONS.edit.color)} />
-            </Button>
-          </div>
+          <h3 className="font-semibold text-sm leading-tight">{property.name}</h3>
           <PropertyBadge
             status={property.status as PropertyStatus}
             variant="outline"

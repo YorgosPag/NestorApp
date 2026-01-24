@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { PropertyBadge } from '@/core/badges';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
-import { Eye } from 'lucide-react';
+import { Eye, Pencil } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
 import { cn } from '@/lib/utils';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
@@ -18,7 +18,15 @@ const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
 // Removed hardcoded getStatusColor and getStatusLabel functions - using centralized UnitBadge instead
 
-export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
+interface UnitDetailsHeaderProps {
+  unit: Property | null;
+  /** 🏢 ENTERPRISE: Edit mode state - Pattern A (entity header) */
+  isEditMode?: boolean;
+  /** 🏢 ENTERPRISE: Toggle edit mode callback */
+  onToggleEditMode?: () => void;
+}
+
+export function UnitDetailsHeader({ unit, isEditMode = false, onToggleEditMode }: UnitDetailsHeaderProps) {
   const { t } = useTranslation('units');
 
   // Empty State - No unit selected
@@ -45,6 +53,15 @@ export function UnitDetailsHeader({ unit }: { unit: Property | null }) {
           icon={UnitIcon}
           title={unit.name}
           actions={[
+            // 🏢 ENTERPRISE: Primary Edit action in entity header (Pattern A - Fortune 500)
+            {
+              label: isEditMode ? t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία...' }) : t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }),
+              onClick: () => onToggleEditMode?.(),
+              icon: Pencil,
+              className: isEditMode
+                ? 'bg-primary text-primary-foreground'
+                : `bg-gradient-to-r from-amber-500 to-orange-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
+            },
             {
               label: t('details.showUnit'),
               onClick: () => console.log('Show unit details'),

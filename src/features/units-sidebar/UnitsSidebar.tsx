@@ -1,7 +1,7 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Edit, Trash2 } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
@@ -54,6 +54,11 @@ export function UnitsSidebar({
     safeViewerProps,
   } = useUnitsSidebar(floors, viewerProps);
 
+  // 🏢 ENTERPRISE: Edit mode state - lifted to sidebar level (Pattern A)
+  const [isEditMode, setIsEditMode] = useState(false);
+  const handleToggleEditMode = useCallback(() => setIsEditMode(prev => !prev), []);
+  const handleExitEditMode = useCallback(() => setIsEditMode(false), []);
+
   // Get units tabs from centralized config
   const unitsTabs = getSortedUnitsTabs();
 
@@ -61,7 +66,7 @@ export function UnitsSidebar({
   const detailsContent = (
     <DetailsContainer
       selectedItem={selectedUnit}
-      header={<UnitDetailsHeader unit={selectedUnit} />}
+      header={<UnitDetailsHeader unit={selectedUnit} isEditMode={isEditMode} onToggleEditMode={handleToggleEditMode} />}
       tabsRenderer={
         <UniversalTabsRenderer
           tabs={unitsTabs.map(convertToUniversalConfig)}
@@ -81,6 +86,10 @@ export function UnitsSidebar({
             // 🏢 ENTERPRISE: Pass onUpdateProperty directly for PropertyDetailsContent
             // UniversalTabsRenderer spreads additionalData as props, so this is the correct pattern
             onUpdateProperty: safeViewerPropsWithFloors.handleUpdateProperty,
+            // 🏢 ENTERPRISE: Edit mode state lifted to sidebar level (Pattern A - entity header)
+            isEditMode,
+            onToggleEditMode: handleToggleEditMode,
+            onExitEditMode: handleExitEditMode,
           }}
           globalProps={{
             unitId: selectedUnit?.id

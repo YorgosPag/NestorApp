@@ -36,8 +36,8 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-// 🏢 ENTERPRISE: Icons from lucide
-import { NAVIGATION_ACTIONS } from '@/components/navigation/config/navigation-entities';
+// 🏢 ENTERPRISE: Icons from lucide + centralized entity colors
+import { NAVIGATION_ACTIONS, NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import {
   Bed, Bath, Compass, Wrench, Zap, Save, X,
   Ruler, Thermometer, Snowflake, Home, Shield, Flame
@@ -465,7 +465,7 @@ export function UnitFieldsBlock({
             ═══════════════════════════════════════════════════════════════ */}
             <fieldset>
               <legend className="text-xs font-medium flex items-center gap-1 mb-2">
-                <Ruler className={cn(iconSizes.xs, 'text-blue-600')} />
+                <Ruler className={cn(iconSizes.xs, NAVIGATION_ENTITIES.area.color)} />
                 {t('fields.areas.sectionTitle')}
               </legend>
               <div className={`grid grid-cols-5 ${spacing.gap.sm}`}>
@@ -841,7 +841,7 @@ export function UnitFieldsBlock({
             <div className={`flex flex-wrap ${spacing.gap.md} text-xs`}>
               <div className="flex items-center gap-1">
                 <dt className="sr-only">{t('fields.areas.gross')}</dt>
-                <Ruler className={cn(iconSizes.xs, 'text-blue-600')} />
+                <Ruler className={cn(iconSizes.xs, NAVIGATION_ENTITIES.area.color)} />
                 <dd>{(property.areas?.gross ?? 0) > 0 ? `${property.areas?.gross} τ.μ.` : '— τ.μ.'}</dd>
               </div>
               {(property.areas?.net ?? 0) > 0 && (
