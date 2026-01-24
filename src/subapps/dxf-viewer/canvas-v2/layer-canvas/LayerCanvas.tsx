@@ -60,6 +60,7 @@ interface LayerCanvasProps {
   transform: ViewTransform;
   viewport?: Viewport; // ✅ CENTRALIZED: Optional viewport prop (if not provided, will calculate internally)
   activeTool?: string; // 🔥 ADD: Tool context για pan/select behavior
+  overlayMode?: 'select' | 'draw' | 'edit'; // 🎯 OVERLAY MODE: Pass overlay mode for drawing detection
   layersVisible?: boolean; // ✅ LAYER PERSISTENCE: Independent layer visibility state
   dxfScene?: DxfScene | null; // 🎯 SNAP FIX: DXF scene for snap engine initialization
   crosshairSettings: CrosshairSettings;
@@ -89,6 +90,7 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
   transform,
   viewport: viewportProp, // ✅ CENTRALIZED: Accept viewport prop
   activeTool, // 🔥 ADD: Tool context για pan/select behavior
+  overlayMode, // 🎯 OVERLAY MODE: Destructure overlay mode
   layersVisible = true, // ✅ LAYER PERSISTENCE: Default true - show colored layers by default
   dxfScene, // 🎯 SNAP FIX: DXF scene for snap engine initialization
   crosshairSettings,
@@ -206,6 +208,7 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
     transform,
     viewport,
     activeTool, // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan behavior
+    overlayMode, // 🎯 OVERLAY FIX: Pass overlayMode for drawing detection
     onTransformChange,
     onEntitySelect: handleLayerSelection,
     onMouseMove,

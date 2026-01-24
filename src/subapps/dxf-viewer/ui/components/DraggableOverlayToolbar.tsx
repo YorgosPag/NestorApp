@@ -12,8 +12,8 @@
  * @since 2026-01-02
  */
 
-import React, { useEffect } from 'react';
-import { Activity, Pen, Edit, Copy, RotateCcw, RotateCw, Square, Circle, Triangle, Grid, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Activity, Pen, Edit, Copy, RotateCcw, RotateCw, Square, Circle, Triangle, Grid, X, Save, XCircle } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { FloatingPanel } from '@/components/ui/floating';
@@ -34,14 +34,16 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+// 🎯 EVENT BUS: For polygon drawing communication with CanvasSection
+import { useEventBus } from '../../systems/events';
 
 // ============================================================================
 // CONSTANTS - Enterprise Design Tokens
 // ============================================================================
 
 const TOOLBAR_DIMENSIONS = {
-  width: 300,
-  height: 100
+  width: 520,  // 🔧 Increased for Save/Cancel buttons next to Draw/Edit
+  height: 110
 } as const;
 
 const TOOLBAR_POSITION = {
@@ -100,6 +102,34 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
   // 🎯 OVERLAY CREATION & STORE HOOKS
   const { startOverlayCreation } = useUnifiedOverlayCreation();
   const overlayStore = useOverlayStore();
+
+  // 🎯 EVENT BUS: Communication with CanvasSection for polygon drawing
+  const eventBus = useEventBus();
+
+  // 🎯 DRAFT POLYGON STATE: Track if user is drawing and can save
+  const [draftPolygonInfo, setDraftPolygonInfo] = useState({ pointCount: 0, canSave: false });
+
+  // 🎯 LISTEN FOR DRAFT POLYGON UPDATES FROM CANVAS
+  useEffect(() => {
+    const cleanup = eventBus.on('overlay:draft-polygon-update', (payload) => {
+      setDraftPolygonInfo({
+        pointCount: payload.pointCount,
+        canSave: payload.canSave
+      });
+    });
+
+    return cleanup;
+  }, [eventBus]);
+
+  // 🎯 SAVE POLYGON HANDLER
+  const handleSavePolygon = () => {
+    eventBus.emit('overlay:save-polygon', undefined as unknown as void);
+  };
+
+  // 🎯 CANCEL POLYGON HANDLER
+  const handleCancelPolygon = () => {
+    eventBus.emit('overlay:cancel-polygon', undefined as unknown as void);
+  };
 
   // 🎯 TOOLBAR CONFIGURATION
   const modeButtons = [
@@ -202,6 +232,55 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                 <span className="hidden sm:inline">{label}</span>
               </ToolButton>
             ))}
+
+            {/* 🎯 SAVE/CANCEL POLYGON - Inline with Draw/Edit buttons */}
+            {props.mode === 'draw' && draftPolygonInfo.pointCount > 0 && (
+              <>
+                {/* Point Counter */}
+                <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} text-muted-foreground px-2 ml-2`}>
+                  {draftPolygonInfo.pointCount} σημεία
+                </span>
+
+                {/* Save Button - Large, enabled only when >= 3 points */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ToolButton
+                      onClick={handleSavePolygon}
+                      disabled={!draftPolygonInfo.canSave}
+                      title="Αποθήκευση"
+                      icon={Save}
+                      isActive={false}
+                      size="sm"
+                      className={draftPolygonInfo.canSave ? 'text-green-600 hover:text-green-700 hover:bg-green-100 border-green-400' : 'opacity-50'}
+                    >
+                      <span className="hidden sm:inline">Αποθήκευση</span>
+                    </ToolButton>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {draftPolygonInfo.canSave
+                      ? 'Αποθήκευση πολυγώνου'
+                      : 'Χρειάζονται τουλάχιστον 3 σημεία'}
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Cancel Button - Large */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <ToolButton
+                      onClick={handleCancelPolygon}
+                      title="Ακύρωση"
+                      icon={XCircle}
+                      isActive={false}
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-red-100 border-red-400"
+                    >
+                      <span className="hidden sm:inline">Ακύρωση</span>
+                    </ToolButton>
+                  </TooltipTrigger>
+                  <TooltipContent>Ακύρωση σχεδίασης</TooltipContent>
+                </Tooltip>
+              </>
+            )}
           </nav>
 
           <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />

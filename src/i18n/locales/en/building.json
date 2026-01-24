@@ -867,7 +867,8 @@
       }
     },
     "floorplan": {
-      "title": "Floor Plan",
+      "title": "Building Floor Plan",
+      "noBuilding": "Select a building to view its floor plans.",
       "addFloorplan": "Add Floor Plan",
       "editFloorplan": "Edit Floor Plan",
       "loading": "Loading floor plan...",
@@ -886,6 +887,18 @@
       "fileList": "Floor plan files",
       "selectFile": "Select a file from the list",
       "filesCount": "{count, plural, =1 {# file} other {# files}}"
+    },
+    "photos": {
+      "title": "Building Photos",
+      "noBuilding": "Select a building to view its photos."
+    },
+    "videos": {
+      "title": "Building Videos",
+      "noBuilding": "Select a building to view its videos."
+    },
+    "contracts": {
+      "title": "Building Contracts",
+      "noBuilding": "Select a building to view its contracts."
     },
     "timeline": {
       "header": {
@@ -1352,5 +1365,14 @@
         "emergencyExits": "Emergency Exits"
       }
     }
+  },
+  "error": {
+    "title": "Building Management Error",
+    "message": "An unexpected error occurred while loading the buildings page. Please try again.",
+    "technicalDetails": "Technical Details",
+    "tryAgain": "Try Again",
+    "back": "Back",
+    "home": "Home",
+    "supportMessage": "If the problem persists, please contact support."
   }
 }

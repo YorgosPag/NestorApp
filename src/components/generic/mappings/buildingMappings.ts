@@ -29,13 +29,19 @@ import { StorageTab } from '@/components/building-management/StorageTab';
 import { BuildingCustomersTab } from '@/components/building-management/tabs/BuildingCustomersTab';
 
 // ============================================================================
-// SHARED COMPONENTS (reused from their original locations)
+// 🏢 ENTERPRISE: EntityFilesManager-based tabs (ADR-031)
 // ============================================================================
 
-import PhotosTabContent from '@/components/building-management/tabs/PhotosTabContent';
-import VideosTabContent from '@/components/building-management/tabs/VideosTabContent';
+import { BuildingFloorplanTab } from '@/components/building-management/tabs/BuildingFloorplanTab';
+import { BuildingPhotosTab } from '@/components/building-management/tabs/BuildingPhotosTab';
+import { BuildingVideosTab } from '@/components/building-management/tabs/BuildingVideosTab';
+import { BuildingContractsTab } from '@/components/building-management/tabs/BuildingContractsTab';
+
+// ============================================================================
+// LEGACY COMPONENTS (kept for backward compatibility)
+// ============================================================================
+
 import PlaceholderTab from '@/components/building-management/tabs/PlaceholderTab';
-import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTab';
 
 // ============================================================================
 // BUILDING COMPONENT MAPPING
@@ -46,19 +52,20 @@ export const BUILDING_COMPONENT_MAPPING: Record<string, ComponentType<TabCompone
   'GeneralTabContent': GeneralTabContent as ComponentType<TabComponentProps>,
   'TimelineTabContent': TimelineTabContent as ComponentType<TabComponentProps>,
   'AnalyticsTabContent': AnalyticsTabContent as ComponentType<TabComponentProps>,
-  'PhotosTabContent': PhotosTabContent as ComponentType<TabComponentProps>,
-  'VideosTabContent': VideosTabContent as ComponentType<TabComponentProps>,
+  'PhotosTabContent': BuildingPhotosTab as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Now uses EntityFilesManager
+  'VideosTabContent': BuildingVideosTab as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Now uses EntityFilesManager
   'PlaceholderTab': PlaceholderTab as ComponentType<TabComponentProps>,
-  'FloorplanViewerTab': FloorplanViewerTab as unknown as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Double assertion for component with specific props
+  'FloorplanViewerTab': BuildingFloorplanTab as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Uses EntityFilesManager
   'StorageTab': StorageTab as ComponentType<TabComponentProps>,
-  'BuildingCustomersTab': BuildingCustomersTab as unknown as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Double assertion for component with specific props
+  'BuildingCustomersTab': BuildingCustomersTab as unknown as ComponentType<TabComponentProps>,
 
-  // 🏢 ENTERPRISE: Unified Factory aliases - same components, different names
+  // 🏢 ENTERPRISE: Unified Factory aliases - all using EntityFilesManager (ADR-031)
   'BuildingGeneralTab': GeneralTabContent as ComponentType<TabComponentProps>,
   'BuildingFloorsTab': TimelineTabContent as ComponentType<TabComponentProps>,
-  'BuildingFloorplansTab': FloorplanViewerTab as unknown as ComponentType<TabComponentProps>, // 🏢 ENTERPRISE: Double assertion for component with specific props
-  'BuildingDocumentsTab': PlaceholderTab as ComponentType<TabComponentProps>,
-  'BuildingPhotosTab': PhotosTabContent as ComponentType<TabComponentProps>,
+  'BuildingFloorplansTab': BuildingFloorplanTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
+  'BuildingDocumentsTab': BuildingContractsTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
+  'BuildingPhotosTab': BuildingPhotosTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
+  'BuildingVideosTab': BuildingVideosTab as ComponentType<TabComponentProps>, // 🏢 EntityFilesManager
   'BuildingActivityTab': AnalyticsTabContent as ComponentType<TabComponentProps>,
 };
 

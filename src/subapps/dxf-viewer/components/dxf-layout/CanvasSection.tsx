@@ -44,6 +44,8 @@ import { canvasUI } from '@/styles/design-tokens/canvas';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 PDF BACKGROUND: Enterprise PDF background system
 import { PdfBackgroundCanvas, usePdfBackgroundStore } from '../../pdf-background';
+// 🎯 EVENT BUS: For polygon drawing communication with toolbar
+import { useEventBus } from '../../systems/events';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -80,6 +82,25 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const overlayStore = useOverlayStore();
   const levelManager = useLevels();
   const [draftPolygon, setDraftPolygon] = useState<Array<[number, number]>>([]);
+  // 🔧 FIX (2026-01-24): Ref for fresh polygon access in async operations
+  const draftPolygonRef = useRef<Array<[number, number]>>([]);
+  // 🔧 FIX (2026-01-24): Flag to track if we're in the process of saving
+  const [isSavingPolygon, setIsSavingPolygon] = useState(false);
+  // 🎯 EVENT BUS: For polygon drawing communication with toolbar
+  const eventBus = useEventBus();
+
+  // Keep ref in sync with state
+  React.useEffect(() => {
+    draftPolygonRef.current = draftPolygon;
+  }, [draftPolygon]);
+
+  // 🎯 POLYGON EVENTS (2026-01-24): Notify toolbar about draft polygon changes
+  React.useEffect(() => {
+    eventBus.emit('overlay:draft-polygon-update', {
+      pointCount: draftPolygon.length,
+      canSave: draftPolygon.length >= 3
+    });
+  }, [draftPolygon.length, eventBus]);
 
   // 🏢 ENTERPRISE: Provide zoom system to context
   const canvasContext = useCanvasContext();
@@ -114,7 +135,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           setViewport({ width: rect.width, height: rect.height });
           // 🏢 PDF BACKGROUND: Sync viewport to PDF store for fit-to-view
           setPdfViewport({ width: rect.width, height: rect.height });
-          console.log('✅ [Viewport] Updated:', rect.width, 'x', rect.height);
+          // Viewport updated silently
         }
       }
     };
@@ -185,7 +206,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // Only trigger ONCE after viewport is ready
     if (!hasTriggeredAutoFit.current && viewport.width > 0 && viewport.height > 0) {
       const timer = setTimeout(() => {
-        console.log('🎯 AUTO FIT TO VIEW: Dispatching canvas-fit-to-view event');
+        // Auto fit to view dispatched
         // ✅ ZERO DUPLICATES: Χρησιμοποιώ το ΥΠΑΡΧΟΝ event system
         document.dispatchEvent(new CustomEvent('canvas-fit-to-view', {
           detail: { viewport }
@@ -279,7 +300,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   } = props;
 
   // ✅ LAYER VISIBILITY: Show LayerCanvas controlled by debug toggle
-  const showLayerCanvas = showLayerCanvasDebug; // Debug toggleable
+  // 🔧 FIX (2026-01-24): ALWAYS show LayerCanvas when in draw/edit mode to ensure overlays are visible
+  // Debug toggle only applies when in 'select' mode (not actively drawing/editing)
+  const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
 
   // ✅ CONVERT RulersGridSystem grid settings to Canvas V2 GridSettings format
   // RulersGridSystem uses: gridSettings.visual.color
@@ -389,6 +412,57 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   };
 
   const colorLayers = convertToColorLayers(currentOverlays);
+
+  // 🔧 FIX (2026-01-24): Add draft preview layer so user sees polygon while drawing
+  // Without this, the draftPolygon is only stored in state but never rendered
+
+  // 🎯 GRIP CLOSE DETECTION: Check if mouse is near first point
+  const CLOSE_THRESHOLD = 20; // pixels in world coordinates (scaled by transform)
+  const isNearFirstPoint = React.useMemo(() => {
+    if (draftPolygon.length < 3 || !mouseWorld) return false;
+    const firstPoint = draftPolygon[0];
+    const dx = mouseWorld.x - firstPoint[0];
+    const dy = mouseWorld.y - firstPoint[1];
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    return distance < (CLOSE_THRESHOLD / transform.scale);
+  }, [draftPolygon, mouseWorld, transform.scale]);
+
+  const draftColorLayer: ColorLayer | null = React.useMemo(() => {
+    // Show grips from first point, but need at least 1 point
+    if (draftPolygon.length < 1) return null;
+
+    const statusColors = getStatusColors(currentStatus);
+    // 🔧 FIX: Default colors if status not found
+    const fillColor = statusColors?.fill ?? 'rgba(59, 130, 246, 0.3)'; // Default blue
+    const strokeColor = statusColors?.stroke ?? '#3b82f6';
+
+    return {
+      id: 'draft-polygon-preview',
+      name: 'Draft Polygon (Preview)',
+      color: fillColor,
+      opacity: 0.5, // Slightly transparent to indicate it's a preview
+      visible: true,
+      zIndex: 999, // On top of all other layers
+      status: currentStatus as 'for-sale' | 'for-rent' | 'reserved' | 'sold' | 'landowner',
+      // 🎯 DRAFT GRIPS: Enable grip rendering for draft polygons
+      isDraft: true,
+      showGrips: true,
+      isNearFirstPoint: isNearFirstPoint,
+      polygons: [{
+        id: 'draft-polygon-preview-0',
+        vertices: draftPolygon.map(([x, y]) => ({ x, y })),
+        fillColor: fillColor,
+        strokeColor: strokeColor,
+        strokeWidth: 2,
+        selected: false
+      }]
+    };
+  }, [draftPolygon, currentStatus, isNearFirstPoint]);
+
+  // Combine saved layers with draft preview
+  const colorLayersWithDraft = React.useMemo(() => {
+    return draftColorLayer ? [...colorLayers, draftColorLayer] : colorLayers;
+  }, [colorLayers, draftColorLayer]);
 
   // === 🎨 DRAWING SYSTEM ===
   // useDrawingHandlers για DXF entity drawing (Line, Circle, Rectangle, etc.)
@@ -611,32 +685,25 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const handleCanvasClick = (point: Point2D) => {
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing tools
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
-      || activeTool === 'rectangle' || activeTool === 'circle'; // ✅ Removed 'arc' - not in ToolType union
+      || activeTool === 'rectangle' || activeTool === 'circle';
 
     if (isDrawingTool && drawingHandlersRef.current) {
-      // 🔥 FIX: Use ONLY dxfCanvasRef for drawing tools (NOT overlayCanvasRef!)
-      // Drawing tools (Line/Circle/Rectangle) draw on DxfCanvas
-      // Color layers draw on LayerCanvas (overlayCanvasRef)
       const canvasElement = dxfCanvasRef.current?.getCanvas?.();
-      if (!canvasElement) {
-        return;
-      }
+      if (!canvasElement) return;
 
       const viewport = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
       const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewport);
-
-      // Call the centralized drawing handler - USE REF!
       drawingHandlersRef.current.onDrawingPoint(worldPoint);
       return;
     }
 
     // ✅ OVERLAY MODE: Use legacy overlay system with draftPolygon
     if (overlayMode === 'draw') {
-      // 🔧 Use UNIFIED CoordinateTransforms για consistency
+      if (isSavingPolygon) return;
+
       const canvasRef = dxfCanvasRef.current || overlayCanvasRef.current;
       if (!canvasRef) return;
 
-      // 🏢 ENTERPRISE: Type-safe canvas element access (DxfCanvasRef vs HTMLCanvasElement)
       const canvasElement = 'getCanvas' in canvasRef ? canvasRef.getCanvas() : canvasRef;
       if (!canvasElement) return;
 
@@ -644,70 +711,80 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewport);
       const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
 
-      // console.log('🔍 Adding point to draft polygon:', {
-      //   screenPoint: point,
-      //   worldPoint,
-      //   currentDraftLength: draftPolygon.length
-      // });
-
-      setDraftPolygon(prev => {
-        const newPolygon = [...prev, worldPointArray];
-        // console.log('🔍 Draft polygon updated:', {
-        //   oldLength: prev.length,
-        //   newLength: newPolygon.length,
-        //   newPolygon: newPolygon.slice(0, 3) // First 3 points
-        // });
-        return newPolygon;
-      });
-
-      // Close polygon if clicking near first point
-      if (draftPolygon.length >= 3) {
-        const firstPoint = draftPolygon[0];
-        const distance = calculateDistance(
-          { x: worldPointArray[0], y: worldPointArray[1] },
-          { x: firstPoint[0], y: firstPoint[1] }
-        );
-
-        // console.log('🔍 Checking polygon close:', {
-        //   distance,
-        //   threshold: 20 / transform.scale,
-        //   shouldClose: distance < (20 / transform.scale)
-        // });
-
-        if (distance < (20 / transform.scale)) { // Close threshold adjusted for scale
-          // console.log('🔍 Closing polygon - finishing drawing');
-          finishDrawing();
-          return;
-        }
-      }
+      // 🎯 SIMPLIFIED (2026-01-24): Just add points - user saves with toolbar button
+      setDraftPolygon(prev => [...prev, worldPointArray]);
     } else {
-      // Clicked on empty space - deselect
-      // console.log('🔍 Deselecting overlay (clicked empty space)');
       handleOverlaySelect(null);
     }
   };
 
+  // 🔧 FIX (2026-01-24): New function that accepts polygon as parameter to avoid stale closure
+  const finishDrawingWithPolygon = async (polygon: Array<[number, number]>) => {
+    // 🔧 FIX: Better error handling - notify user if level is not selected
+    if (polygon.length < 3) {
+      console.warn('⚠️ Cannot save polygon - need at least 3 points');
+      return false;
+    }
+
+    if (!levelManager.currentLevelId) {
+      console.error('❌ Cannot save polygon - no level selected!');
+      // TODO: Show notification to user
+      alert('Παρακαλώ επιλέξτε ένα επίπεδο (Level) πρώτα για να αποθηκευτεί το polygon.');
+      return false;
+    }
+
+    try {
+      await overlayStore.add({
+        levelId: levelManager.currentLevelId,
+        kind: currentKind,
+        polygon: polygon, // 🔧 FIX: Use passed polygon, not stale draftPolygon
+        status: currentStatus,
+        label: `Overlay ${Date.now()}`, // Temporary label
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Failed to create overlay:', error);
+      return false;
+    }
+    // Note: setDraftPolygon([]) is done in the calling setDraftPolygon callback
+  };
+
+  // Legacy function for Enter key support (uses current state, which is fine for keyboard)
   const finishDrawing = async () => {
-    // Debug disabled to prevent console spam
-
     if (draftPolygon.length >= 3 && levelManager.currentLevelId) {
-      try {
-        const newOverlay = await overlayStore.add({
-          levelId: levelManager.currentLevelId,
-          kind: currentKind,
-          polygon: draftPolygon,
-          status: currentStatus,
-          label: `Overlay ${Date.now()}`, // Temporary label
-        });
-
-        // console.log('🔍 New Overlay Created:', newOverlay);
-
-      } catch (error) {
-        console.error('Failed to create overlay:', error);
-      }
+      await finishDrawingWithPolygon(draftPolygon);
     }
     setDraftPolygon([]);
   };
+
+  // 🎯 POLYGON EVENTS (2026-01-24): Listen for save/cancel commands from toolbar
+  React.useEffect(() => {
+    // Handle save polygon command from toolbar "Αποθήκευση" button
+    const cleanupSave = eventBus.on('overlay:save-polygon', () => {
+      const polygon = draftPolygonRef.current;
+
+      if (polygon.length >= 3) {
+        setIsSavingPolygon(true);
+        finishDrawingWithPolygon(polygon).then(success => {
+          setIsSavingPolygon(false);
+          if (success) {
+            setDraftPolygon([]);
+          }
+        });
+      }
+    });
+
+    // Handle cancel polygon command from toolbar or Escape key
+    const cleanupCancel = eventBus.on('overlay:cancel-polygon', () => {
+      setDraftPolygon([]);
+    });
+
+    return () => {
+      cleanupSave();
+      cleanupCancel();
+    };
+  }, [eventBus]);
 
   // Handle fit-to-view event from useCanvasOperations fallback
   React.useEffect(() => {
@@ -809,10 +886,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           {showLayerCanvas && (
             <LayerCanvas
               ref={overlayCanvasRef}
-              layers={colorLayers}
+              layers={colorLayersWithDraft} // 🔧 FIX (2026-01-24): Include draft preview layer
               transform={transform}
               viewport={viewport} // ✅ CENTRALIZED: Pass centralized viewport
               activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
+              overlayMode={overlayMode} // 🎯 OVERLAY FIX: Pass overlayMode for drawing detection
               layersVisible={showLayers} // ✅ ΥΠΑΡΧΟΝ SYSTEM: Existing layer visibility
               dxfScene={dxfScene} // 🎯 SNAP FIX: Pass DXF scene for snap engine initialization
               enableUnifiedCanvas={true} // ✅ ΕΝΕΡΓΟΠΟΙΗΣΗ: Unified event system για debugging
@@ -858,6 +936,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               transform={transform}
               viewport={viewport} // ✅ CENTRALIZED: Pass centralized viewport
               activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
+              overlayMode={overlayMode} // 🎯 OVERLAY FIX: Pass overlayMode for drawing detection
               colorLayers={colorLayers} // ✅ FIX: Pass color layers για fit to view bounds
               crosshairSettings={crosshairSettings} // ✅ RESTORED: Crosshair enabled
               gridSettings={gridSettings} // ✅ RESTORED: Grid enabled
@@ -965,14 +1044,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               // 🏢 FIX (2026-01-04): forceRecalculate=true includes dynamically drawn entities
               const combinedBounds = createCombinedBounds(dxfScene, colorLayers, true);
 
-              // 🔍 DEBUG: Log bounds and entities (remove after fixing)
-              console.log('🎯 [ZoomToFit] dxfScene entities:', dxfScene?.entities?.length, dxfScene?.entities);
-              console.log('🎯 [ZoomToFit] combinedBounds:', combinedBounds);
-              console.log('🎯 [ZoomToFit] viewport:', viewport);
-
               if (combinedBounds && viewport.width > 0 && viewport.height > 0) {
-                const result = zoomSystem.zoomToFit(combinedBounds, viewport, true);
-                console.log('🎯 [ZoomToFit] result:', result);
+                zoomSystem.zoomToFit(combinedBounds, viewport, true);
               } else {
                 console.warn('🚨 [ZoomToFit] Invalid bounds or viewport!', { combinedBounds, viewport });
               }

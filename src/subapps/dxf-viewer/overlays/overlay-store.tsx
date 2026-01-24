@@ -54,16 +54,24 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
         const data = doc.data() as Record<string, unknown>;
         let polygon = data.polygon;
 
-        // 🔍 FIX: Normalize polygon format - convert flat array to coordinate pairs
-        // 🏢 ENTERPRISE: Type-safe array element check using unknown[]
-        if (Array.isArray(polygon) && polygon.length > 0 && typeof (polygon as unknown[])[0] === 'number') {
-          const nums = polygon as unknown as number[];
-          const coordPairs: [number, number][] = [];
-          for (let i = 0; i < nums.length; i += 2) {
-            coordPairs.push([nums[i], nums[i + 1]]);
+        // 🔧 FIX (2026-01-24): Normalize polygon format from various storage formats
+        if (Array.isArray(polygon) && polygon.length > 0) {
+          const firstElement = (polygon as unknown[])[0];
+
+          // Format 1: Array of {x, y} objects (new Firebase-compatible format)
+          if (typeof firstElement === 'object' && firstElement !== null && 'x' in firstElement) {
+            polygon = (polygon as Array<{x: number, y: number}>).map(p => [p.x, p.y] as [number, number]);
           }
-          polygon = coordPairs;
-          // Debug disabled: NORMALIZED POLYGON conversion
+          // Format 2: Flat array [x1, y1, x2, y2, ...] (legacy format)
+          else if (typeof firstElement === 'number') {
+            const nums = polygon as unknown as number[];
+            const coordPairs: [number, number][] = [];
+            for (let i = 0; i < nums.length; i += 2) {
+              coordPairs.push([nums[i], nums[i + 1]]);
+            }
+            polygon = coordPairs;
+          }
+          // Format 3: Already [[x,y], [x,y], ...] - use as-is
         }
 
         // ✅ ENTERPRISE FIX: Type-safe overlay creation with proper polygon type
@@ -87,16 +95,23 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
 
   const add = useCallback(async (overlayData: CreateOverlayData): Promise<string> => {
     if (!state.currentLevelId) throw new Error('No current level selected');
-    
-    const newOverlay: Omit<Overlay, 'id'> = {
-      ...overlayData,
+
+    // 🔧 FIX (2026-01-24): Convert nested array [[x,y], ...] to array of objects [{x,y}, ...]
+    // Firebase doesn't support nested arrays, but supports array of objects
+    const polygonForFirestore = overlayData.polygon.map(([x, y]) => ({ x, y }));
+
+    // 🔧 FIX (2026-01-24): Build object without undefined values - Firebase rejects undefined
+    const newOverlay: Record<string, unknown> = {
       levelId: state.currentLevelId,
       status: overlayData.status || 'for-sale',
       kind: overlayData.kind || 'unit',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      polygon: polygonForFirestore,
       createdBy: 'user@example.com',
     };
+
+    // Only add optional fields if they have values
+    if (overlayData.label !== undefined) newOverlay.label = overlayData.label;
+    if (overlayData.linked !== undefined) newOverlay.linked = overlayData.linked;
 
     const collectionRef = collection(db, `${COLLECTION_PREFIX}/${state.currentLevelId}/items`);
     const docRef = await addDoc(collectionRef, {
@@ -116,7 +131,12 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     // 🎯 TYPE-SAFE: Build clean patch object without undefined values
     const cleanPatch = Object.entries(patch).reduce((acc, [key, value]) => {
       if (value !== undefined) {
-        acc[key] = value;
+        // 🔧 FIX (2026-01-24): Convert polygon to Firebase-compatible format
+        if (key === 'polygon' && Array.isArray(value)) {
+          acc[key] = (value as [number, number][]).map(([x, y]) => ({ x, y }));
+        } else {
+          acc[key] = value;
+        }
       }
       return acc;
     }, {} as Record<string, unknown>);

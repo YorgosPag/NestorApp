@@ -49,6 +49,7 @@ interface DxfCanvasProps {
   renderOptions?: DxfRenderOptions;
   className?: string;
   activeTool?: string; // ✅ ADD: Tool context για pan/select behavior
+  overlayMode?: 'select' | 'draw' | 'edit'; // 🎯 OVERLAY MODE: Pass overlay mode for drawing detection
   colorLayers?: ColorLayer[]; // ✅ ADD: Color layers για fit to view bounds calculation
   onTransformChange?: (transform: ViewTransform) => void;
   onEntitySelect?: (entityId: string | null) => void;
@@ -74,6 +75,7 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
   renderOptions = DEFAULT_RENDER_OPTIONS,
   className = '',
   activeTool,
+  overlayMode, // 🎯 OVERLAY MODE: Destructure overlay mode
   colorLayers = [], // ✅ ADD: Color layers for fit to view
   onTransformChange,
   onEntitySelect,
@@ -142,6 +144,7 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
     transform,
     viewport,
     activeTool, // ✅ ADD: Pass activeTool για pan behavior
+    overlayMode, // 🎯 OVERLAY MODE: Pass overlay mode for drawing detection
     onTransformChange,
     onEntitySelect,
     onMouseMove,

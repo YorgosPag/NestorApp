@@ -527,6 +527,42 @@ export class LayerRenderer {
       this.ctx.setLineDash([]);
       // Debug disabled: console.log('🔍 Applied selection highlight');
     }
+
+    // 🔧 DRAFT POLYGON GRIPS (2026-01-24): Render grips at each vertex for draft polygons
+    if (layer.showGrips && polygon.vertices.length >= 1) {
+      const GRIP_SIZE = 10; // pixels
+      const GRIP_COLOR_NORMAL = UI_COLORS.GRIP_DEFAULT || '#3b82f6'; // Blue
+      const GRIP_COLOR_CLOSE = UI_COLORS.SUCCESS_BRIGHT || '#22c55e'; // Green for close highlight
+
+      for (let i = 0; i < screenVertices.length; i++) {
+        const vertex = screenVertices[i];
+        const isFirstGrip = i === 0;
+        const isHighlighted = isFirstGrip && layer.isNearFirstPoint;
+
+        // Draw grip square
+        this.ctx.save();
+        this.ctx.fillStyle = isHighlighted ? GRIP_COLOR_CLOSE : GRIP_COLOR_NORMAL;
+        this.ctx.strokeStyle = UI_COLORS.BLACK || '#000000';
+        this.ctx.lineWidth = 1;
+
+        // Draw filled square grip
+        const halfSize = GRIP_SIZE / 2;
+        this.ctx.fillRect(vertex.x - halfSize, vertex.y - halfSize, GRIP_SIZE, GRIP_SIZE);
+        this.ctx.strokeRect(vertex.x - halfSize, vertex.y - halfSize, GRIP_SIZE, GRIP_SIZE);
+
+        // Draw "close" indicator for first grip when highlighted
+        if (isHighlighted) {
+          // Draw a slightly larger outer ring to indicate "click to close"
+          this.ctx.strokeStyle = GRIP_COLOR_CLOSE;
+          this.ctx.lineWidth = 2;
+          const outerSize = GRIP_SIZE + 6;
+          const outerHalf = outerSize / 2;
+          this.ctx.strokeRect(vertex.x - outerHalf, vertex.y - outerHalf, outerSize, outerSize);
+        }
+
+        this.ctx.restore();
+      }
+    }
   }
 
   /**

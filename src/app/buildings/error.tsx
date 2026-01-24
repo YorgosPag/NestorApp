@@ -15,7 +15,7 @@ interface BuildingsErrorProps {
 export default function BuildingsError({ error, reset }: BuildingsErrorProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('buildings');
+  const { t } = useTranslation('building');
 
   React.useEffect(() => {
     console.error('Buildings page error:', error);

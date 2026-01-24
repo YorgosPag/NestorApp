@@ -159,32 +159,14 @@ export const createOverlayHandlers = (overlayStore: {
       const overlay = overlayStore.overlays[id];
       const overlayLevelId = overlay.levelId;
 
-      console.log('🔍 OVERLAY SELECTED:', {
-        overlayId: id,
-        overlay: overlay,
-        overlayLevelId: overlayLevelId,
-        allOverlays: Object.keys(overlayStore.overlays)
-      });
-
       // Καλώ ΑΠΕΥΘΕΙΑΣ την setCurrentLevel function (όπως στο κλικ της κάρτας επιπέδου)
-      console.log('🔄 DIRECT LEVEL SWITCH:', { from: 'unknown', to: overlayLevelId });
       levelSwitcher.setCurrentLevel(overlayLevelId);
-      console.log('✅ LEVEL SWITCHED DIRECTLY TO:', overlayLevelId);
 
       // 🔥 MISSING STEP: Καλώ τα ίδια functions που καλεί το level card click!
       // Dispatch του ίδιου event που στέλνει το level card click
       window.dispatchEvent(new CustomEvent('level-panel:layering-activate', {
         detail: { levelId: overlayLevelId, source: 'overlay-click' }
       }));
-      console.log('🚀 DISPATCHED LAYERING ACTIVATE EVENT FOR OVERLAY CLICK');
-
-    } else {
-      console.log('❌ OVERLAY NOT FOUND OR NO LEVEL SWITCHER:', {
-        id: id,
-        hasOverlays: Object.keys(overlayStore.overlays).length > 0,
-        overlayIds: Object.keys(overlayStore.overlays),
-        hasLevelSwitcher: !!levelSwitcher
-      });
     }
   },
   handleOverlayEdit: (id: string) => {

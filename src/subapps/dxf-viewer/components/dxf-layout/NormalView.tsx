@@ -10,12 +10,25 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 /**
  * Renders the DXF viewer in its normal, non-fullscreen layout.
+ *
+ * 🔧 FIX (2026-01-24): Uses props.overlayMode/setOverlayMode from parent when available
+ * to ensure Single Source of Truth with FloatingPanelsSection's DraggableOverlayToolbar.
+ * Falls back to local state only if props are not provided.
  */
 export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
-  // Shared overlay state between toolbar and canvas
-  const [overlayMode, setOverlayMode] = useState<OverlayEditorMode>('select');
-  const [currentStatus, setCurrentStatus] = useState<Status>('for-sale');
-  const [currentKind, setCurrentKind] = useState<OverlayKind>('unit');
+  // 🔧 FIX: Local state as FALLBACK only - prefer props from parent for Single Source of Truth
+  const [localOverlayMode, setLocalOverlayMode] = useState<OverlayEditorMode>('select');
+  const [localCurrentStatus, setLocalCurrentStatus] = useState<Status>('for-sale');
+  const [localCurrentKind, setLocalCurrentKind] = useState<OverlayKind>('unit');
+
+  // 🎯 ENTERPRISE: Use props when available, fallback to local state
+  // This ensures NormalView and FloatingPanelsSection share the same state
+  const overlayMode = props.overlayMode ?? localOverlayMode;
+  const setOverlayMode = props.setOverlayMode ?? setLocalOverlayMode;
+  const currentStatus = (props.overlayStatus ?? localCurrentStatus) as Status;
+  const setCurrentStatus = props.setOverlayStatus ?? setLocalCurrentStatus;
+  const currentKind = props.currentKind ?? localCurrentKind;
+  const setCurrentKind = props.setOverlayKind ?? setLocalCurrentKind;
 
   return (
     // ╔════════════════════════════════════════════════════════════════════════╗

@@ -18,6 +18,10 @@ export interface ColorLayer {
   zIndex: number;
   status?: RegionStatus;       // ✅ OPTIONAL: Status for STATUS_COLORS mapping (backward compatibility)
   polygons: LayerPolygon[];
+  // 🔧 DRAFT POLYGON GRIPS (2026-01-24): Show vertex grips during polygon drawing
+  isDraft?: boolean;           // True if this is a draft/preview layer
+  showGrips?: boolean;         // Show grips at each vertex
+  isNearFirstPoint?: boolean;  // True if cursor is near first point (for close polygon highlight)
 }
 
 export interface LayerPolygon {

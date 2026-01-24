@@ -50,6 +50,13 @@ export interface DrawingEventMap {
     mode: string;
     ids: string[];
   };
+  // 🎯 POLYGON DRAWING EVENTS (2026-01-24): Communication between CanvasSection and DraggableOverlayToolbar
+  'overlay:draft-polygon-update': {
+    pointCount: number;
+    canSave: boolean; // true if >= 3 points
+  };
+  'overlay:save-polygon': void; // Signal to save the current draft polygon
+  'overlay:cancel-polygon': void; // Signal to cancel the current draft polygon
 }
 
 export type DrawingEventType = keyof DrawingEventMap;
@@ -107,7 +114,7 @@ class EventBusCore {
     if (!this.handlers.has(eventType)) {
       this.handlers.set(eventType, new Set());
     }
-    
+
     const eventHandlers = this.handlers.get(eventType)!;
     eventHandlers.add(handler as EventHandler<keyof DrawingEventMap>);
 
@@ -117,7 +124,6 @@ class EventBusCore {
       if (eventHandlers.size === 0) {
         this.handlers.delete(eventType);
       }
-
     };
   }
 

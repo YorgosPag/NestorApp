@@ -41,6 +41,7 @@ interface CentralizedMouseHandlersProps {
   transform: ViewTransform;
   viewport: Viewport;
   activeTool?: string; // ✅ ADD: Tool context για pan/select behavior
+  overlayMode?: 'select' | 'draw' | 'edit'; // 🎯 OVERLAY MODE: Pass overlay mode for drawing detection
   onTransformChange?: (transform: ViewTransform) => void;
   onEntitySelect?: (entityId: string | null) => void;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
@@ -62,6 +63,7 @@ export function useCentralizedMouseHandlers({
   transform,
   viewport,
   activeTool,
+  overlayMode, // 🎯 OVERLAY MODE: Include in destructuring
   onTransformChange,
   onEntitySelect,
   onMouseMove,
@@ -180,12 +182,21 @@ export function useCentralizedMouseHandlers({
     // 🚀 INITIALIZE PAN STATE for high-performance panning
     // ✅ CAD STANDARD: Middle mouse button (wheel click) OR pan tool with left button
     // 🐛 FIX: Do NOT pan when drawing tools are active (prevents conflict)
+    // 🎯 OVERLAY FIX: Include overlayMode === 'draw' as a drawing tool
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
                           activeTool === 'polygon' || activeTool === 'circle' ||
                           activeTool === 'rectangle' || activeTool === 'arc' ||
                           activeTool === 'circle-diameter' || activeTool === 'circle-2p-diameter' ||
                           activeTool === 'measure-distance' || activeTool === 'measure-area' ||
-                          activeTool === 'measure-angle';
+                          activeTool === 'measure-angle' ||
+                          overlayMode === 'draw'; // 🎯 FIX: Overlay drawing mode is also a drawing tool
+
+    console.log('🔍 handleMouseDown:', {
+      button: e.button,
+      activeTool,
+      overlayMode,
+      isDrawingTool
+    });
 
     if ((e.button === 1 && !isDrawingTool) || (activeTool === 'pan' && e.button === 0)) {
       panStateRef.current.isPanning = true;
@@ -368,6 +379,14 @@ export function useCentralizedMouseHandlers({
 
     // 🎯 DRAWING TOOLS: Call onCanvasClick if provided (for drawing tools like Line, Circle, etc.)
     // 🏢 ENTERPRISE FIX (2026-01-06): Apply snap to click position for accurate drawing
+    console.log('🔍 handleMouseUp check:', {
+      hasOnCanvasClick: !!onCanvasClick,
+      isSelecting: cursor.isSelecting,
+      isPanning: panState.isPanning,
+      hasPosition: !!cursor.position,
+      overlayMode
+    });
+
     if (onCanvasClick && !cursor.isSelecting && !panState.isPanning && cursor.position) {
       let clickPoint = cursor.position; // Default: screen coordinates
 
