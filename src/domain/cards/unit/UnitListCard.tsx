@@ -135,6 +135,9 @@ export function UnitListCard({
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
+    // 🏢 ENTERPRISE: Use new areas schema with legacy fallback (Fix 85 vs 5.2 inconsistency)
+    const displayArea = unit.areas?.gross ?? unit.area;
+
     // Type with icon
     if (unit.type) {
       items.push({
@@ -155,13 +158,13 @@ export function UnitListCard({
       });
     }
 
-    // Area with icon
-    if (unit.area) {
+    // Area with icon - 🏢 ENTERPRISE: Use displayArea (areas.gross ?? area)
+    if (displayArea) {
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon, // 📐 Area icon
         iconColor: NAVIGATION_ENTITIES.area.color,
         label: t('card.stats.area'),
-        value: `${formatNumber(unit.area)} m²`,
+        value: `${formatNumber(displayArea)} m²`,
       });
     }
 
@@ -175,11 +178,11 @@ export function UnitListCard({
       });
     }
 
-    // 🧭 Orientation (Phase 3 Unit Fields) - compact display (Β, ΝΑ)
+    // 🧭 Orientation (Phase 3 Unit Fields) - Enterprise format: "Β (Βόρειος)"
     if (unit.orientations && unit.orientations.length > 0) {
       const orientationLabels = unit.orientations
         .slice(0, 2) // Max 2 orientations for compact display
-        .map(o => t(`orientation.short.${o}`, { defaultValue: o }))
+        .map(o => `${t(`orientation.short.${o}`, { defaultValue: o })} (${t(`orientation.${o}`, { defaultValue: o })})`)
         .join(', ');
       items.push({
         icon: Compass,
@@ -190,7 +193,7 @@ export function UnitListCard({
     }
 
     return items;
-  }, [unit.type, unit.area, unit.floor, unit.layout, unit.orientations, t]);
+  }, [unit.type, unit.area, unit.areas, unit.floor, unit.layout, unit.orientations, t]);
 
   /** Build badges from operational status */
   const badges = useMemo(() => {

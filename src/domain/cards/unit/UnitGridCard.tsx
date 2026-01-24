@@ -127,6 +127,9 @@ export function UnitGridCard({
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
 
+    // 🏢 ENTERPRISE: Use new areas schema with legacy fallback (Fix 85 vs 5.2 inconsistency)
+    const displayArea = unit.areas?.gross ?? unit.area;
+
     // Building with icon
     if (unit.building) {
       items.push({
@@ -147,13 +150,13 @@ export function UnitGridCard({
       });
     }
 
-    // Area with icon
-    if (unit.area) {
+    // Area with icon - 🏢 ENTERPRISE: Use displayArea (areas.gross ?? area)
+    if (displayArea) {
       items.push({
         icon: NAVIGATION_ENTITIES.area.icon,
         iconColor: NAVIGATION_ENTITIES.area.color,
         label: t('card.stats.area'),
-        value: `${formatNumber(unit.area)} m²`,
+        value: `${formatNumber(displayArea)} m²`,
       });
     }
 
@@ -195,7 +198,7 @@ export function UnitGridCard({
     }
 
     return items;
-  }, [unit.building, unit.floor, unit.area, unit.layout, unit.condition, t]);
+  }, [unit.building, unit.floor, unit.area, unit.areas, unit.layout, unit.condition, t]);
 
   /** Build badges from operational status */
   const badges = useMemo(() => {
