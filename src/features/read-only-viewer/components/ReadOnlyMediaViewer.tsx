@@ -24,7 +24,8 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -55,7 +56,32 @@ interface ReadOnlyMediaViewerProps {
   className?: string;
 }
 
-type MediaTab = 'floorplans' | 'photos' | 'videos';
+/**
+ * 🏢 ENTERPRISE: Media Tab Type
+ * Exported for parent components (e.g., ListLayout) to read from URL.
+ * URL Query Param: ?mediaTab=floorplans|photos|videos
+ */
+export type MediaTab = 'floorplans' | 'photos' | 'videos';
+
+/** 🏢 ENTERPRISE: URL Query Param key - centralized constant */
+export const MEDIA_TAB_PARAM = 'mediaTab' as const;
+
+/** 🏢 ENTERPRISE: Default tab when no URL param */
+export const DEFAULT_MEDIA_TAB: MediaTab = 'floorplans';
+
+/** 🏢 ENTERPRISE: Valid media tabs for URL validation */
+const VALID_MEDIA_TABS: readonly MediaTab[] = ['floorplans', 'photos', 'videos'] as const;
+
+/**
+ * 🏢 ENTERPRISE: Type-safe URL param parser
+ * Returns validated MediaTab or default
+ */
+export function parseMediaTabParam(value: string | null): MediaTab {
+  if (value && VALID_MEDIA_TABS.includes(value as MediaTab)) {
+    return value as MediaTab;
+  }
+  return DEFAULT_MEDIA_TAB;
+}
 
 // =============================================================================
 // COMPONENT
@@ -71,7 +97,33 @@ export function ReadOnlyMediaViewer({
   const iconSizes = useIconSizes();
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<MediaTab>('floorplans');
+  // ==========================================================================
+  // 🏢 ENTERPRISE: URL-Based State (Deep Linking Support)
+  // ==========================================================================
+  // Tab state is stored in URL for:
+  // - Persist across refresh
+  // - Shareable deep links
+  // - Browser back/forward navigation
+  // - SSR compatibility
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Read active tab from URL (with validation)
+  const activeTab = parseMediaTabParam(searchParams.get(MEDIA_TAB_PARAM));
+
+  // Update URL when tab changes (preserves other params)
+  const setActiveTab = useCallback((newTab: MediaTab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newTab === DEFAULT_MEDIA_TAB) {
+      // Remove param for default value (cleaner URLs)
+      params.delete(MEDIA_TAB_PARAM);
+    } else {
+      params.set(MEDIA_TAB_PARAM, newTab);
+    }
+    // Use replace to avoid polluting browser history
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [searchParams, router, pathname]);
 
   // ==========================================================================
   // 🏢 ENTERPRISE: Data Fetching with Centralized Hook (ADR-031)

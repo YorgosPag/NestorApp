@@ -2,12 +2,13 @@
 'use client';
 
 import React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PropertyList } from '@/components/property-viewer/PropertyList';
 import { PropertyDetailsPanel } from '@/components/property-viewer/PropertyDetailsPanel';
 import { PropertyHoverInfo } from '@/components/property-viewer/PropertyHoverInfo';
-import { ReadOnlyMediaViewer } from './ReadOnlyMediaViewer';
+import { ReadOnlyMediaViewer, MEDIA_TAB_PARAM, parseMediaTabParam } from './ReadOnlyMediaViewer';
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -48,6 +49,15 @@ export function ListLayout({
   // 🏢 ENTERPRISE: Centralized spacing tokens - NO hardcoded values
   const layout = useLayoutClasses();
   const spacing = useSpacingTokens();
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: URL-Based State for PropertyHoverInfo visibility
+  // ==========================================================================
+  // PropertyHoverInfo is only relevant for floorplan tab (has polygons to hover).
+  // Photos/Videos tabs don't have hoverable regions, so hide the info panel.
+  const searchParams = useSearchParams();
+  const activeMediaTab = parseMediaTabParam(searchParams.get(MEDIA_TAB_PARAM));
+  const showPropertyHoverInfo = activeMediaTab === 'floorplans';
 
   return (
     // 🏢 ENTERPRISE: gap-2 (8px) from centralized tokens
@@ -104,20 +114,23 @@ export function ListLayout({
             />
           </CardContent>
         </Card>
-        {/* 🏢 ENTERPRISE: Πληροφορίες Ακινήτου */}
-        <Card className="h-[280px] shrink-0">
-          {/* 🏢 ENTERPRISE: 8px padding from centralized tokens */}
-          <CardHeader className={spacing.padding.sm}>
-            <CardTitle className="text-sm">{t('viewer.propertyInfo')}</CardTitle>
-          </CardHeader>
-          {/* 🏢 ENTERPRISE: No padding - content handles internal padding (same pattern) */}
-          <CardContent className={`${spacing.padding.none} h-full`}>
-            <PropertyHoverInfo
-              propertyId={hoveredPropertyId}
-              properties={filteredProperties}
-            />
-          </CardContent>
-        </Card>
+        {/* 🏢 ENTERPRISE: Πληροφορίες Ακινήτου - Only visible on floorplan tab */}
+        {/* Hidden on photos/videos tabs because there are no hoverable regions */}
+        {showPropertyHoverInfo && (
+          <Card className="h-[280px] shrink-0">
+            {/* 🏢 ENTERPRISE: 8px padding from centralized tokens */}
+            <CardHeader className={spacing.padding.sm}>
+              <CardTitle className="text-sm">{t('viewer.propertyInfo')}</CardTitle>
+            </CardHeader>
+            {/* 🏢 ENTERPRISE: No padding - content handles internal padding (same pattern) */}
+            <CardContent className={`${spacing.padding.none} h-full`}>
+              <PropertyHoverInfo
+                propertyId={hoveredPropertyId}
+                properties={filteredProperties}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
