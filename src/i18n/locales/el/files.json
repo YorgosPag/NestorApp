@@ -82,6 +82,41 @@
       "allFailed": "Αποτυχία αποστολής {count, plural, =1 {1 αρχείου} other {{count} αρχείων}}"
     }
   },
+  "header": {
+    "title": "Διαχείριση Αρχείων",
+    "titleWithCount": "Διαχείριση Αρχείων ({{count}})",
+    "subtitle": "Όλα τα αρχεία της εταιρείας",
+    "newUpload": "Μεταφόρτωση Αρχείων"
+  },
+  "dashboard": {
+    "label": "Πίνακας Στατιστικών Αρχείων",
+    "totalFiles": "Σύνολο Αρχείων",
+    "totalSize": "Συνολικό Μέγεθος",
+    "inTrash": "Στον Κάδο",
+    "categories": "Κατηγορίες",
+    "projects": "Αρχεία Έργων",
+    "buildings": "Αρχεία Κτιρίων",
+    "units": "Αρχεία Μονάδων",
+    "contacts": "Αρχεία Επαφών"
+  },
+  "filters": {
+    "title": "Φίλτρα Αρχείων",
+    "desktop": "Πάνελ φίλτρων αρχείων",
+    "mobile": "Φίλτρα αρχείων κινητού",
+    "toggleFilters": "Εναλλαγή φίλτρων αρχείων",
+    "filesTitle": "Φίλτρα Αρχείων",
+    "category": "Κατηγορία",
+    "entityType": "Τύπος Οντότητας",
+    "fileSize": "Μέγεθος Αρχείου",
+    "uploadDate": "Ημερομηνία Μεταφόρτωσης",
+    "allCategories": "Όλες οι Κατηγορίες",
+    "allEntityTypes": "Όλοι οι Τύποι",
+    "placeholders": {
+      "filesSearch": "Αναζήτηση αρχείων με όνομα...",
+      "selectCategory": "Επιλογή κατηγορίας",
+      "selectEntityType": "Επιλογή τύπου οντότητας"
+    }
+  },
   "manager": {
     "filesTitle": "Αρχεία",
     "addFiles": "Προσθήκη Αρχείων",
@@ -110,7 +145,30 @@
     "file": "αρχείο",
     "files": "αρχεία",
     "noFiles": "Δεν υπάρχουν αρχεία",
-    "selectFileToPreview": "Επιλέξτε ένα αρχείο από τη λίστα για προεπισκόπηση"
+    "selectFileToPreview": "Επιλέξτε ένα αρχείο από τη λίστα για προεπισκόπηση",
+    "title": "Διαχείριση Αρχείων",
+    "allFiles": "Όλα τα αρχεία εταιρείας",
+    "noCompany": "Επιλέξτε εταιρεία για να δείτε τα αρχεία",
+    "loading": "Φόρτωση αρχείων...",
+    "retry": "Επανάληψη",
+    "searchPlaceholder": "Αναζήτηση αρχείων...",
+    "groupByEntity": "Ομαδοποίηση κατά Οντότητα",
+    "groupByCategory": "Ομαδοποίηση κατά Κατηγορία",
+    "filesTab": "Αρχεία",
+    "trashTab": "Κάδος",
+    "noSearchResults": "Δεν βρέθηκαν αρχεία με αυτά τα κριτήρια"
+  },
+  "stats": {
+    "totalFiles": "Σύνολο Αρχείων",
+    "totalSize": "Συνολικό Μέγεθος",
+    "trashedFiles": "Στον Κάδο",
+    "categories": "Κατηγορίες"
+  },
+  "entities": {
+    "projects": "Έργα",
+    "buildings": "Κτίρια",
+    "units": "Μονάδες",
+    "contacts": "Επαφές"
   },
   "list": {
     "file": "Αρχείο",
@@ -191,7 +249,12 @@
     "expand": "Ανάπτυξη φακέλου",
     "collapse": "Σύμπτυξη φακέλου",
     "folder": "Φάκελος",
-    "file": "Αρχείο"
+    "file": "Αρχείο",
+    "empty": "Δεν βρέθηκαν αρχεία",
+    "fileCount": "{{count}} αρχεία",
+    "expandAll": "Ανάπτυξη Όλων",
+    "collapseAll": "Σύμπτυξη Όλων",
+    "ariaLabel": "Δέντρο αρχείων"
   },
   "technical": {
     "storagePath": "Διαδρομή αποθήκευσης",
@@ -284,5 +347,14 @@
     "pdfViewer": "Προβολή PDF",
     "imageViewer": "Προβολή εικόνας",
     "keyboardNav": "Χρησιμοποιήστε τα βέλη αριστερά/δεξιά για πλοήγηση"
+  },
+  "errorReporting": {
+    "sending": "Αποστολή...",
+    "sent": "Εστάλη!",
+    "notifyAdmin": "Αναφορά στον Διαχειριστή",
+    "emailLabel": "Email",
+    "errorTitle": "Σφάλμα",
+    "reportSent": "Η αναφορά στάλθηκε",
+    "sendReport": "Αποστολή Αναφοράς"
   }
 }

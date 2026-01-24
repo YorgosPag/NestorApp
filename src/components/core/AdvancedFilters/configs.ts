@@ -1145,6 +1145,102 @@ export const defaultCommunicationsFilters: CommunicationsFilterState = {
 };
 
 // ====================================================================
+// [ENTERPRISE] File Manager Filters Configuration
+// For central file manager (/files page)
+// ====================================================================
+export const fileFiltersConfig: FilterPanelConfig = {
+  title: 'filters.filesTitle',
+  searchPlaceholder: 'filters.placeholders.filesSearch',
+  i18nNamespace: 'files', // 🏢 ENTERPRISE: Files domain namespace
+  rows: [
+    {
+      id: 'files-basic',
+      fields: [
+        {
+          id: 'searchTerm',
+          type: 'search',
+          label: FL.search,
+          placeholder: 'filters.placeholders.filesSearch',
+          ariaLabel: 'Search files',
+          width: 2
+        },
+        {
+          id: 'category',
+          type: 'select',
+          label: 'filters.category',
+          placeholder: 'filters.placeholders.selectCategory',
+          ariaLabel: 'File category filter',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.allCategories' },
+            { value: 'photos', label: 'files.categories.photos' },
+            { value: 'videos', label: 'files.categories.videos' },
+            { value: 'documents', label: 'files.categories.documents' },
+            { value: 'contracts', label: 'files.categories.contracts' },
+            { value: 'floorplans', label: 'files.categories.floorplans' }
+          ]
+        },
+        {
+          id: 'entityType',
+          type: 'select',
+          label: 'filters.entityType',
+          placeholder: 'filters.placeholders.selectEntityType',
+          ariaLabel: 'Entity type filter',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.allEntityTypes' },
+            { value: 'project', label: 'files.entityTypes.project' },
+            { value: 'building', label: 'files.entityTypes.building' },
+            { value: 'unit', label: 'files.entityTypes.unit' },
+            { value: 'contact', label: 'files.entityTypes.contact' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'files-details',
+      fields: [
+        {
+          id: 'sizeRange',
+          type: 'range',
+          label: 'filters.fileSize',
+          ariaLabel: 'File size range filter',
+          width: 1,
+          min: 0,
+          max: 100 // In MB
+        },
+        {
+          id: 'dateRange',
+          type: 'daterange',
+          label: 'filters.uploadDate',
+          ariaLabel: 'Upload date range filter',
+          width: 2
+        }
+      ]
+    }
+  ]
+};
+
+// File Filter State Interface
+export interface FileFilterState {
+  [key: string]: unknown;
+  searchTerm: string;
+  category: string;
+  entityType: string;
+  sizeRange: { min?: number; max?: number };
+  dateRange: { from?: Date; to?: Date };
+}
+
+// Default File Filters
+export const defaultFileFilters: FileFilterState = {
+  searchTerm: '',
+  category: 'all',
+  entityType: 'all',
+  sizeRange: { min: undefined, max: undefined },
+  dateRange: { from: undefined, to: undefined }
+};
+
+// ====================================================================
 // [ENTERPRISE] SUCCESS METRICS
 // ====================================================================
 //

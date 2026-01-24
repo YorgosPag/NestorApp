@@ -36,6 +36,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useTranslation } from 'react-i18next';
 // 🎯 EVENT BUS: For polygon drawing communication with CanvasSection
 import { useEventBus } from '../../systems/events';
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import { getShortcutDisplayLabel } from '../../config/keyboard-shortcuts';
 
 // ============================================================================
 // CONSTANTS - Enterprise Design Tokens
@@ -132,9 +134,10 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
   };
 
   // 🎯 TOOLBAR CONFIGURATION
+  // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
   const modeButtons = [
-    { mode: 'draw' as OverlayEditorMode, icon: Pen, label: t('toolbar.draw'), key: 'N' },
-    { mode: 'edit' as OverlayEditorMode, icon: Edit, label: t('toolbar.edit'), key: 'E' },
+    { mode: 'draw' as OverlayEditorMode, icon: Pen, label: t('toolbar.draw'), key: getShortcutDisplayLabel('overlayDraw') },
+    { mode: 'edit' as OverlayEditorMode, icon: Edit, label: t('toolbar.edit'), key: getShortcutDisplayLabel('overlayEdit') },
   ];
 
   const kindIcons = { unit: Square, parking: Circle, storage: Triangle, footprint: Grid };
@@ -336,14 +339,14 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             <ActionButton
               onClick={props.onDuplicate}
               disabled={!props.selectedOverlayId}
-              title={t('toolbar.duplicate', { key: 'D' })}
+              title={t('toolbar.duplicate', { key: getShortcutDisplayLabel('overlayDuplicate') })}
               icon={Copy}
               size="xs"
             />
             <ActionButton
               onClick={props.onDelete}
               disabled={!props.selectedOverlayId}
-              title={t('toolbar.delete', { key: 'Del' })}
+              title={t('toolbar.delete', { key: getShortcutDisplayLabel('delete') })}
               icon={X}
               size="xs"
               className="text-destructive hover:text-destructive"
@@ -357,14 +360,14 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
             <ActionButton
               onClick={props.onUndo}
               disabled={!props.canUndo}
-              title={t('toolbar.undo', { key: 'Ctrl+Z' })}
+              title={t('toolbar.undo', { key: getShortcutDisplayLabel('undo') })}
               icon={RotateCcw}
               size="xs"
             />
             <ActionButton
               onClick={props.onRedo}
               disabled={!props.canRedo}
-              title={t('toolbar.redo', { key: 'Ctrl+Y' })}
+              title={t('toolbar.redo', { key: getShortcutDisplayLabel('redo') })}
               icon={RotateCw}
               size="xs"
             />

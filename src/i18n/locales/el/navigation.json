@@ -247,7 +247,8 @@
     "obligations": "Συγγραφή Υποχρεώσεων",
     "dxf": "DXF Panel",
     "shortcuts": "Συντομεύσεις",
-    "geoCanvas": "Geo-Canvas System"
+    "geoCanvas": "Geo-Canvas System",
+    "fileManager": "Διαχείριση Αρχείων"
   },
   "badges": {
     "new": "Νέο",

@@ -82,6 +82,41 @@
       "allFailed": "{count, plural, =1 {Failed to upload 1 file} other {Failed to upload {count} files}}"
     }
   },
+  "header": {
+    "title": "File Manager",
+    "titleWithCount": "File Manager ({{count}})",
+    "subtitle": "All company files",
+    "newUpload": "Upload Files"
+  },
+  "dashboard": {
+    "label": "File Statistics Dashboard",
+    "totalFiles": "Total Files",
+    "totalSize": "Total Size",
+    "inTrash": "In Trash",
+    "categories": "Categories",
+    "projects": "Project Files",
+    "buildings": "Building Files",
+    "units": "Unit Files",
+    "contacts": "Contact Files"
+  },
+  "filters": {
+    "title": "File Filters",
+    "desktop": "File filters panel",
+    "mobile": "Mobile file filters",
+    "toggleFilters": "Toggle file filters",
+    "filesTitle": "File Filters",
+    "category": "Category",
+    "entityType": "Entity Type",
+    "fileSize": "File Size",
+    "uploadDate": "Upload Date",
+    "allCategories": "All Categories",
+    "allEntityTypes": "All Entity Types",
+    "placeholders": {
+      "filesSearch": "Search files by name...",
+      "selectCategory": "Select category",
+      "selectEntityType": "Select entity type"
+    }
+  },
   "manager": {
     "filesTitle": "Files",
     "addFiles": "Add Files",
@@ -110,7 +145,30 @@
     "file": "file",
     "files": "files",
     "noFiles": "No files",
-    "selectFileToPreview": "Select a file from the list to preview"
+    "selectFileToPreview": "Select a file from the list to preview",
+    "title": "File Manager",
+    "allFiles": "All company files",
+    "noCompany": "Select a company to view files",
+    "loading": "Loading files...",
+    "retry": "Retry",
+    "searchPlaceholder": "Search files...",
+    "groupByEntity": "Group by Entity",
+    "groupByCategory": "Group by Category",
+    "filesTab": "Files",
+    "trashTab": "Trash",
+    "noSearchResults": "No files match your search"
+  },
+  "stats": {
+    "totalFiles": "Total Files",
+    "totalSize": "Total Size",
+    "trashedFiles": "In Trash",
+    "categories": "Categories"
+  },
+  "entities": {
+    "projects": "Projects",
+    "buildings": "Buildings",
+    "units": "Units",
+    "contacts": "Contacts"
   },
   "list": {
     "file": "File",
@@ -191,7 +249,12 @@
     "expand": "Expand folder",
     "collapse": "Collapse folder",
     "folder": "Folder",
-    "file": "File"
+    "file": "File",
+    "empty": "No files found",
+    "fileCount": "{{count}} files",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "ariaLabel": "File tree"
   },
   "technical": {
     "storagePath": "Storage path",
@@ -284,5 +347,14 @@
     "pdfViewer": "PDF Viewer",
     "imageViewer": "Image Viewer",
     "keyboardNav": "Use left/right arrow keys to navigate"
+  },
+  "errorReporting": {
+    "sending": "Sending...",
+    "sent": "Sent!",
+    "notifyAdmin": "Notify Administrator",
+    "emailLabel": "Email",
+    "errorTitle": "Error",
+    "reportSent": "Report sent",
+    "sendReport": "Send Report"
   }
 }

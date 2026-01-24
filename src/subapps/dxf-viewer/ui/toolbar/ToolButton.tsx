@@ -4,9 +4,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ToolDefinition, ActionDefinition } from './types';
 import { ChevronDown } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
-import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { useSemanticColors } from '@/hooks/useSemanticColors';
+// 🏢 ENTERPRISE: Shadcn Button (same as CompactToolbar - NO BORDERS, clean minimal look)
+import { Button } from '@/components/ui/button';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -25,8 +25,7 @@ interface ToolButtonProps {
 export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, onDropdownSelect, disabled, activeTool }) => {
   // 🏢 ENTERPRISE HOOKS: Zero duplicates - using existing centralized systems
   const iconSizes = useIconSizes();
-  const { getStatusBorder, getElementBorder, getDirectionalBorder } = useBorderTokens();
-  const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized backgrounds - NO HARDCODED VALUES
+  const colors = useSemanticColors();
   // 🌐 i18n
   const { t } = useTranslation('dxf-viewer');
   // Determine which icon to show - if activeTool matches a dropdown option, use that icon
@@ -39,7 +38,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
   }
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+
   const hasDropdown = tool.dropdownOptions && tool.dropdownOptions.length > 0;
 
   useEffect(() => {
@@ -73,27 +72,30 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
     }
   };
 
+  // 🎨 ENTERPRISE: Apply color class to icon (only when NOT active - active state has its own colors)
+  const iconColorClass = !isActive && tool.colorClass ? tool.colorClass : '';
+
+  // 🏢 ENTERPRISE: Simple button without dropdown
   if (!hasDropdown) {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              variant={isActive ? 'default' : 'ghost'}
+              size="sm"
               onClick={onClick}
               disabled={disabled}
-              className={`
-                ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-                flex items-center justify-center
-                ${
-                  isActive
-                    ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                    : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-                }
-                ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
-              `}
+              className={`${iconSizes.xl} p-0`}
             >
-              {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{tool.label?.charAt(0) || '?'}</span>}
-            </button>
+              {IconComponent ? (
+                <IconComponent className={`${iconSizes.md} ${iconColorClass}`} />
+              ) : (
+                <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${iconColorClass}`}>
+                  {tool.label?.charAt(0) || '?'}
+                </span>
+              )}
+            </Button>
           </TooltipTrigger>
           <TooltipContent>{`${t(tool.label)} (${tool.hotkey})`}</TooltipContent>
         </Tooltip>
@@ -101,67 +103,63 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
     );
   }
 
+  // 🏢 ENTERPRISE: Button with dropdown (split button pattern)
   return (
     <TooltipProvider>
       <div className="relative" ref={dropdownRef}>
         <div className="flex">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant={isActive ? 'default' : 'ghost'}
+                size="sm"
                 onClick={handleMainClick}
                 disabled={disabled}
-                className={`
-                  ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.BUTTON_MD} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.LEFT_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-                  flex items-center justify-center
-                  ${
-                    isActive
-                      ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                      : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-                  }
-                  ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
-                `}
+                className="rounded-r-none px-2"
               >
-                {IconComponent ? <IconComponent className={`${iconSizes.md} text-current`} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{tool.label?.charAt(0) || '?'}</span>}
-              </button>
+                {IconComponent ? (
+                  <IconComponent className={`${iconSizes.md} ${iconColorClass}`} />
+                ) : (
+                  <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${iconColorClass}`}>
+                    {tool.label?.charAt(0) || '?'}
+                  </span>
+                )}
+              </Button>
             </TooltipTrigger>
             <TooltipContent>{`${t(tool.label)} (${tool.hotkey})`}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant={isActive ? 'default' : 'ghost'}
+                size="sm"
                 onClick={handleDropdownToggle}
                 disabled={disabled}
-                className={`
-                  ${PANEL_LAYOUT.BUTTON.HEIGHT} ${PANEL_LAYOUT.WIDTH.XS} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.RIGHT_MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-                  flex items-center justify-center
-                  ${
-                    isActive
-                      ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                      : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-                  }
-                  ${disabled ? `${PANEL_LAYOUT.OPACITY['50']} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}` : ''}
-                `}
+                className="rounded-l-none px-1"
               >
-                <ChevronDown className={`${iconSizes.xs} text-current`} />
-              </button>
+                <ChevronDown className={`${iconSizes.xs} ${iconColorClass}`} />
+              </Button>
             </TooltipTrigger>
             <TooltipContent>{t('entitiesSettings.moreOptions')}</TooltipContent>
           </Tooltip>
         </div>
 
+        {/* 🏢 ENTERPRISE: Dropdown menu */}
         {showDropdown && (
-          <nav className={`absolute ${PANEL_LAYOUT.POSITION.TOP_FULL} ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.MARGIN.TOP_XS} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.SHADOW.LG} ${PANEL_LAYOUT.Z_INDEX['50']} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.DROPDOWN_MIN_WIDTH} ${getStatusBorder('default')}`}>
+          <nav className={`absolute top-full left-0 mt-1 ${colors.bg.secondary} rounded-md shadow-lg z-50 min-w-[160px] border border-border`}>
             {tool.dropdownOptions!.map((option) => {
               const OptionIcon = option.icon;
               return (
-                <button
+                <Button
                   key={option.id}
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handleDropdownItemClick(option.id)}
-                  className={`w-full ${PANEL_LAYOUT.BUTTON.PADDING} text-left ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary} flex items-center ${PANEL_LAYOUT.GAP.SM} first:${PANEL_LAYOUT.ROUNDED.TOP_MD} last:${PANEL_LAYOUT.ROUNDED.BOTTOM_MD} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                  className="w-full justify-start rounded-none first:rounded-t-md last:rounded-b-md"
                 >
-                  {OptionIcon && <OptionIcon className={iconSizes.sm} />}
+                  {OptionIcon && <OptionIcon className={`${iconSizes.sm} mr-2 ${iconColorClass}`} />}
                   {t(option.label)}
-                </button>
+                </Button>
               );
             })}
           </nav>
@@ -177,8 +175,6 @@ interface ActionButtonProps {
 
 export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
   const iconSizes = useIconSizes();
-  const { getStatusBorder, getElementBorder } = useBorderTokens();
-  const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized colors for ActionButton
   // 🌐 i18n
   const { t } = useTranslation('dxf-viewer');
   const IconComponent = action.icon;
@@ -188,27 +184,28 @@ export const ActionButton: React.FC<ActionButtonProps> = ({ action }) => {
     ? t(action.label)
     : action.label;
 
+  // 🎨 ENTERPRISE: Apply color class to icon (only when NOT active - active state has its own colors)
+  const iconColorClass = !action.active && action.colorClass ? action.colorClass : '';
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
+          <Button
+            variant={action.active ? 'default' : 'ghost'}
+            size="sm"
             onClick={action.onClick}
             disabled={action.disabled ?? false}
-            className={`
-              ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${PANEL_LAYOUT.ROUNDED.MD} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-              flex items-center justify-center
-              ${
-                action.active
-                  ? `${colors.bg.info} ${colors.text.inverse} ${getStatusBorder('info')} ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                  : action.disabled
-                  ? `${colors.bg.secondary} ${colors.text.muted} ${getElementBorder('button', 'default')} ${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}`
-                  : `${colors.bg.hover} ${colors.text.secondary} ${getElementBorder('button', 'default')} ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`
-              }
-            `}
+            className={`${iconSizes.xl} p-0`}
           >
-            {IconComponent ? <IconComponent className={iconSizes.sm} /> : <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD}`}>{action.label?.charAt(0) || '?'}</span>}
-          </button>
+            {IconComponent ? (
+              <IconComponent className={`${iconSizes.sm} ${iconColorClass}`} />
+            ) : (
+              <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.BOLD} ${iconColorClass}`}>
+                {action.label?.charAt(0) || '?'}
+              </span>
+            )}
+          </Button>
         </TooltipTrigger>
         <TooltipContent>{action.hotkey ? `${translatedLabel} (${action.hotkey})` : translatedLabel}</TooltipContent>
       </Tooltip>

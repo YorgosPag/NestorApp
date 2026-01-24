@@ -29,6 +29,8 @@ import {
 // 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import { getShortcutDisplayLabel, DXF_OVERLAY_SHORTCUTS, DXF_CTRL_SHORTCUTS, DXF_SPECIAL_SHORTCUTS } from '../config/keyboard-shortcuts';
 
 interface OverlayToolbarProps {
   mode: OverlayEditorMode;
@@ -84,9 +86,10 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
   }, [selectedOverlayId, overlayStore, currentStatus, currentKind, onStatusChange, onKindChange]);
 
   // 🏢 ENTERPRISE: i18n-enabled mode buttons
+  // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
   const modeButtons = [
-    { mode: 'draw' as OverlayEditorMode, icon: Pen, label: t('toolbar.draw'), key: 'N' },
-    { mode: 'edit' as OverlayEditorMode, icon: Edit, label: t('toolbar.edit'), key: 'E' },
+    { mode: 'draw' as OverlayEditorMode, icon: Pen, label: t('toolbar.draw'), key: getShortcutDisplayLabel('overlayDraw') },
+    { mode: 'edit' as OverlayEditorMode, icon: Edit, label: t('toolbar.edit'), key: getShortcutDisplayLabel('overlayEdit') },
   ];
 
   const kindIcons = { unit: Square, parking: Circle, storage: Triangle, footprint: Grid };
@@ -285,7 +288,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 <Copy className={iconSizes.sm} />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{t('toolbar.duplicate', { key: 'D' })}</TooltipContent>
+            <TooltipContent>{t('toolbar.duplicate', { key: getShortcutDisplayLabel('overlayDuplicate') })}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -303,7 +306,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 <X className={iconSizes.sm} />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{t('toolbar.delete', { key: 'Del' })}</TooltipContent>
+            <TooltipContent>{t('toolbar.delete', { key: getShortcutDisplayLabel('delete') })}</TooltipContent>
           </Tooltip>
         </div>
 
@@ -326,7 +329,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 <RotateCcw className={iconSizes.sm} />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{t('toolbar.undo', { key: 'Ctrl+Z' })}</TooltipContent>
+            <TooltipContent>{t('toolbar.undo', { key: getShortcutDisplayLabel('undo') })}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -343,7 +346,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 <RotateCw className={iconSizes.sm} />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{t('toolbar.redo', { key: 'Ctrl+Y' })}</TooltipContent>
+            <TooltipContent>{t('toolbar.redo', { key: getShortcutDisplayLabel('redo') })}</TooltipContent>
           </Tooltip>
         </div>
       </div>

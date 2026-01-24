@@ -7,6 +7,8 @@ import { useNotifications } from '../../../providers/NotificationProvider';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import { matchesShortcut } from '../config/keyboard-shortcuts';
 
 // ✅ React stack suppression handled globally in layout.tsx via public/suppress-console.js
 
@@ -350,15 +352,11 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     canvasTransform
   });
 
-  // 🎯 KEYBOARD SHORTCUTS
+  // ⌨️ ENTERPRISE: Keyboard shortcuts using centralized keyboard-shortcuts.ts
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // 🎯 Multiple ways to detect Ctrl+F2
-      const isCtrlF2 = (event.key === 'F2' && event.ctrlKey) ||
-                       (event.keyCode === 113 && event.ctrlKey) ||
-                       (event.code === 'F2' && event.ctrlKey);
-
-      if (isCtrlF2) {
+      // ⌨️ Ctrl+F2 or Ctrl+Shift+T: Layering Workflow Test
+      if (matchesShortcut(event, 'debugLayeringTest') || matchesShortcut(event, 'debugLayeringTestAlt')) {
         event.preventDefault();
         event.stopPropagation();
 
@@ -385,23 +383,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         return;
       }
 
-      // 🎯 Alternative: Ctrl+Shift+T shortcut (F12 reserved for DevTools)
-      if (event.ctrlKey && event.shiftKey && event.key === 'T') {
-        event.preventDefault();
-        if (window.runLayeringWorkflowTest) {
-          window.runLayeringWorkflowTest().then((result) => {
-            const successSteps = result.steps.filter((s) => s.status === 'success').length;
-            const totalSteps = result.steps.length;
-            const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
-            showCopyableNotification(summary, result.success ? 'success' : 'error');
-          });
-        }
-        return;
-      }
-
-      // 🎯 F3 SHORTCUT: Cursor-Crosshair Alignment Test
-      const isF3 = event.key === 'F3' || event.keyCode === 114 || event.code === 'F3';
-      if (isF3) {
+      // ⌨️ F3: Cursor-Crosshair Alignment Test
+      if (matchesShortcut(event, 'debugCursorTest')) {
         event.preventDefault();
         event.stopPropagation();
 
@@ -427,8 +410,8 @@ Check console for detailed metrics`;
         return;
       }
 
-      // ESC to exit layering mode
-      if (event.key === 'Escape' && activeTool === 'layering') {
+      // ⌨️ ESC to exit layering mode
+      if (matchesShortcut(event, 'escape') && activeTool === 'layering') {
         handleToolChange('select');
       }
     };

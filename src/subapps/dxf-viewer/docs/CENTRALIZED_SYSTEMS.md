@@ -2267,8 +2267,210 @@ export interface LinkedSpace {
 - BuildingSelectorCard: `src/features/property-details/components/BuildingSelectorCard.tsx`
 - LinkedSpacesCard: `src/features/property-details/components/LinkedSpacesCard.tsx`
 - Integration: `src/features/property-details/PropertyDetailsContent.tsx`
+
+---
+
+### 📋 ADR-026: DXF TOOLBAR COLORS SYSTEM (2026-01-24) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Type**: Design System | **Date**: 2026-01-24
+
+**Context**:
+Τα εικονίδια της DXF Viewer toolbar χρειάζονταν χρωματική διαφοροποίηση για:
+- Visual grouping ανά κατηγορία εργαλείου
+- Καλύτερη UX με semantic colors (π.χ. RED για delete)
+- Enterprise consistency με υπάρχον `icon-colors.ts` pattern
+
+**Decision**:
+```
+🏢 CANONICAL: DXF Toolbar Colors System
+📍 Location: src/subapps/dxf-viewer/config/toolbar-colors.ts
+✅ Pattern: Single Source of Truth + Auto-assignment
+```
+
+**Architecture**:
+```
+toolbar-colors.ts (100+ lines)
+├── DXF_TOOL_GROUP_COLORS     # Group-based colors
+│   ├── SELECTION → SLATE
+│   ├── DRAWING → CYAN
+│   ├── TOOLS → VIOLET
+│   ├── MEASUREMENTS → AMBER
+│   └── ZOOM → EMERALD
+│
+├── DXF_ACTION_COLORS         # Action-specific colors
+│   ├── undo/redo → INDIGO
+│   ├── grid → GREEN
+│   ├── export → EMERALD
+│   └── ...more
+│
+├── DXF_TOOL_OVERRIDES        # Tool-specific overrides
+│   └── delete → RED (danger action)
+│
+├── getDxfToolColor()         # Auto-assign with override support
+└── getDxfActionColor()       # Action color getter
+```
+
+**Color Semantic Mapping** (CAD Industry Standard):
+
+| Group | Color | Semantic | Industry Reference |
+|-------|-------|----------|-------------------|
+| SELECTION | SLATE | Neutral, non-destructive | AutoCAD selection cursor |
+| DRAWING | CYAN | Creation, construction | AutoCAD draw commands |
+| TOOLS | VIOLET | Modification operations | MicroStation edit tools |
+| MEASUREMENTS | AMBER | Analysis, information | CAD measure tools |
+| ZOOM | EMERALD | View control | Navigation controls |
+| DELETE | RED | Danger action | Universal danger color |
+
+**Usage Pattern** (Zero Hardcoded Colors):
+```typescript
+// ✅ ENTERPRISE: Auto-assigned from config
+{ id: 'line', colorClass: DXF_TOOL_GROUP_COLORS.DRAWING }
+
+// ✅ ENTERPRISE: Override for danger actions
+{ id: 'delete', colorClass: getDxfToolColor('TOOLS', 'delete') }
+
+// ✅ ENTERPRISE: Action colors
+{ id: 'undo', colorClass: DXF_ACTION_COLORS.undo }
+
+// ❌ PROHIBITED: Hardcoded colors
+{ id: 'line', colorClass: HOVER_TEXT_EFFECTS.CYAN }
+```
+
+**Files**:
+| File | Purpose |
+|------|---------|
+| `config/toolbar-colors.ts` | Single source of truth for all DXF toolbar colors |
+| `ui/toolbar/toolDefinitions.tsx` | Uses `DXF_TOOL_GROUP_COLORS` and `DXF_ACTION_COLORS` |
+| `ui/toolbar/ToolButton.tsx` | Applies `colorClass` to icons |
+| `ui/UploadDxfButton.tsx` | Uses `DXF_ACTION_COLORS.import` |
+| `ui/toolbar/EnhancedDXFToolbar.tsx` | Uses `DXF_ACTION_COLORS.importEnhanced` |
+
+**Consequences**:
+- ✅ **Single Source of Truth** - One file controls all DXF toolbar colors
+- ✅ **Semantic Grouping** - Tools visually grouped by function
+- ✅ **Override Support** - Special cases (delete=RED) handled cleanly
+- ✅ **Enterprise Pattern** - Follows existing `icon-colors.ts` architecture
+- ✅ **Easy Theming** - Change colors in one place for entire toolbar
+
+**References**:
+- Pattern Source: `src/components/core/CompactToolbar/icon-colors.ts`
+- Implementation: `src/subapps/dxf-viewer/config/toolbar-colors.ts`
+- Consumer: `src/subapps/dxf-viewer/ui/toolbar/toolDefinitions.tsx`
 - Types: `src/types/unit.ts` (LinkedSpace interface)
 - Pattern: Enterprise CRM Unit Management Systems
+
+---
+
+### 📋 ADR-027: DXF KEYBOARD SHORTCUTS SYSTEM (2026-01-24) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Type**: Input System | **Date**: 2026-01-24
+
+**Context**:
+Τα keyboard shortcuts ήταν hardcoded σε πολλαπλά αρχεία:
+- `EnhancedDXFToolbar.tsx` - 100+ γραμμές inline switch/case
+- `useKeyboardShortcuts.ts` - zoom, nudging shortcuts
+- `useProSnapShortcuts.ts` - F9, F10, F11 shortcuts
+- Διπλότυπα shortcuts (F9, Delete, ESC σε πολλαπλά αρχεία)
+
+**Decision**:
+```
+🏢 CANONICAL: DXF Keyboard Shortcuts System
+📍 Location: src/subapps/dxf-viewer/config/keyboard-shortcuts.ts
+✅ Pattern: Single Source of Truth + Type-Safe Matching
+```
+
+**Architecture**:
+```
+keyboard-shortcuts.ts (650+ lines)
+├── DXF_TOOL_SHORTCUTS       # Tool activation (S, L, R, C, M...)
+│   ├── select → S
+│   ├── line → L
+│   ├── rectangle → R
+│   ├── circle → C
+│   └── ...more
+│
+├── DXF_ACTION_SHORTCUTS     # View toggles (no modifier)
+│   ├── grid → G
+│   ├── fit → F
+│   └── autocrop → A
+│
+├── DXF_CTRL_SHORTCUTS       # Ctrl/Cmd combinations
+│   ├── undo → Ctrl+Z
+│   ├── redo → Ctrl+Y / Ctrl+Shift+Z
+│   ├── copy → Ctrl+C
+│   └── ...more
+│
+├── DXF_FUNCTION_SHORTCUTS   # F-keys (AutoCAD pattern)
+│   ├── toggleGrid → F9
+│   ├── toggleOrtho → F10
+│   └── toggleAutoSnap → F11
+│
+├── DXF_ZOOM_SHORTCUTS       # Zoom controls
+├── DXF_NAVIGATION_SHORTCUTS # Arrow key nudging
+├── DXF_SPECIAL_SHORTCUTS    # Escape, Delete, Backspace
+│
+├── getShortcutDisplayLabel() # "Ctrl+Z", "S", "Shift+1"
+├── getToolHotkey()           # Get hotkey for toolType
+├── matchesShortcut()         # Type-safe event matching
+├── findShortcutByAction()    # Reverse lookup
+└── getShortcutsByCategory()  # Filter by category
+```
+
+**Type System**:
+```typescript
+export type ModifierKey = 'ctrl' | 'shift' | 'alt' | 'meta' | 'ctrlShift' | 'ctrlAlt' | 'none';
+export type ShortcutCategory = 'tool' | 'action' | 'snap' | 'zoom' | 'navigation' | 'special';
+
+export interface ShortcutDefinition {
+  key: string;           // 'S', 'F9', 'Delete'
+  modifier: ModifierKey; // 'ctrl', 'none', etc.
+  descriptionKey: string; // i18n key
+  action: string;        // 'tool:select', 'action:undo'
+  category: ShortcutCategory;
+  toolType?: ToolType;   // Optional for tools
+}
+```
+
+**Usage Pattern** (Zero Hardcoded Shortcuts):
+```typescript
+// ✅ ENTERPRISE: Display label from config
+{ hotkey: getShortcutDisplayLabel('select') }  // Returns "S"
+{ hotkey: getShortcutDisplayLabel('undo') }    // Returns "Ctrl+Z"
+
+// ✅ ENTERPRISE: Event matching
+if (matchesShortcut(event, 'undo')) { onAction('undo'); }
+if (matchesShortcut(event, 'select')) { onToolChange('select'); }
+
+// ❌ PROHIBITED: Hardcoded shortcuts
+if (e.ctrlKey && e.key === 'z') { onAction('undo'); }  // WRONG!
+switch (e.key.toLowerCase()) { case 's': ... }         // WRONG!
+```
+
+**Files**:
+| File | Purpose |
+|------|---------|
+| `config/keyboard-shortcuts.ts` | Single source of truth for all keyboard shortcuts |
+| `ui/toolbar/toolDefinitions.tsx` | Uses `getShortcutDisplayLabel()` for hotkey display |
+| `ui/toolbar/EnhancedDXFToolbar.tsx` | Uses `matchesShortcut()` for keyboard handling |
+
+**Industry Reference** (CAD Standard):
+- AutoCAD: Single-letter shortcuts (L=Line, C=Circle, M=Move)
+- MicroStation: F-keys for system toggles
+- Blender: Consistent modifier patterns
+- Figma: Ctrl+combinations for actions
+
+**Consequences**:
+- ✅ **Single Source of Truth** - One file controls all keyboard shortcuts
+- ✅ **Type-Safe Matching** - `matchesShortcut()` handles all edge cases
+- ✅ **Zero Duplicates** - No more F9/Delete/ESC conflicts
+- ✅ **Easy Customization** - Change shortcuts in one place
+- ✅ **i18n Ready** - Description keys for localization
+- ✅ **Enterprise Pattern** - Follows AutoCAD/Blender architecture
+
+**References**:
+- Implementation: `src/subapps/dxf-viewer/config/keyboard-shortcuts.ts`
+- Consumer: `src/subapps/dxf-viewer/ui/toolbar/EnhancedDXFToolbar.tsx`
+- Related: ADR-026 (DXF Toolbar Colors System)
 
 ---
 

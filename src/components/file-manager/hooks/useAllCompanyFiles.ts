@@ -21,9 +21,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { FileRecordService } from '@/services/file-record.service';
 import type { FileRecord } from '@/types/file-record';
-import type { EntityType, FileCategory } from '@/config/domain-constants';
+import type { FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FILE_STATUS } from '@/config/domain-constants';
+
+/**
+ * Supported entity types for file stats
+ */
+type FileEntityType = 'project' | 'building' | 'unit' | 'contact';
+
+/**
+ * Common file categories for grouping
+ */
+type FileGroupCategory = 'photos' | 'videos' | 'documents' | 'contracts' | 'floorplans' | 'other';
 
 // ============================================================================
 // MODULE LOGGER
@@ -66,7 +76,6 @@ export interface FilesByCategory {
   documents: FileRecord[];
   contracts: FileRecord[];
   floorplans: FileRecord[];
-  certificates: FileRecord[];
   other: FileRecord[];
 }
 
@@ -76,8 +85,8 @@ export interface FilesByCategory {
 export interface FileStats {
   totalFiles: number;
   totalSizeBytes: number;
-  byEntityType: Record<EntityType, number>;
-  byCategory: Record<FileCategory | 'other', number>;
+  byEntityType: Record<FileEntityType, number>;
+  byCategory: Record<FileGroupCategory, number>;
 }
 
 /**
@@ -122,11 +131,11 @@ function groupFilesByEntity(files: FileRecord[]): FilesByEntity {
   };
 
   for (const file of files) {
-    const entityType = file.entityType as EntityType;
+    const entityType = file.entityType as string;
     const entityId = file.entityId;
 
     // Map entity types to our structure
-    let targetGroup: Record<string, FileRecord[]>;
+    let targetGroup: Record<string, FileRecord[]> | undefined;
     switch (entityType) {
       case 'project':
         targetGroup = grouped.projects;
@@ -144,6 +153,8 @@ function groupFilesByEntity(files: FileRecord[]): FilesByEntity {
         // Skip unknown entity types
         continue;
     }
+
+    if (!targetGroup) continue;
 
     if (!targetGroup[entityId]) {
       targetGroup[entityId] = [];
@@ -164,12 +175,11 @@ function groupFilesByCategory(files: FileRecord[]): FilesByCategory {
     documents: [],
     contracts: [],
     floorplans: [],
-    certificates: [],
     other: [],
   };
 
   for (const file of files) {
-    const category = file.category as FileCategory;
+    const category = file.category as string;
 
     switch (category) {
       case 'photos':
@@ -186,9 +196,6 @@ function groupFilesByCategory(files: FileRecord[]): FilesByCategory {
         break;
       case 'floorplans':
         grouped.floorplans.push(file);
-        break;
-      case 'certificates':
-        grouped.certificates.push(file);
         break;
       default:
         grouped.other.push(file);
@@ -217,24 +224,26 @@ function calculateStats(files: FileRecord[]): FileStats {
       documents: 0,
       contracts: 0,
       floorplans: 0,
-      certificates: 0,
       other: 0,
     },
   };
+
+  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
+  const supportedCategories: FileGroupCategory[] = ['photos', 'videos', 'documents', 'contracts', 'floorplans'];
 
   for (const file of files) {
     stats.totalSizeBytes += file.sizeBytes || 0;
 
     // Count by entity type
-    const entityType = file.entityType as EntityType;
-    if (entityType in stats.byEntityType) {
-      stats.byEntityType[entityType]++;
+    const entityType = file.entityType as string;
+    if (supportedEntityTypes.includes(entityType as FileEntityType)) {
+      stats.byEntityType[entityType as FileEntityType]++;
     }
 
     // Count by category
-    const category = file.category as FileCategory;
-    if (category in stats.byCategory) {
-      stats.byCategory[category]++;
+    const category = file.category as string;
+    if (supportedCategories.includes(category as FileGroupCategory)) {
+      stats.byCategory[category as FileGroupCategory]++;
     } else {
       stats.byCategory.other++;
     }

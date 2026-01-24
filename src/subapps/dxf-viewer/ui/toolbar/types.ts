@@ -42,6 +42,8 @@ export interface ToolDefinition {
   icon: React.ComponentType<React.ComponentProps<'svg'>> | string;
   label: string;
   hotkey: string;
+  /** 🎨 ENTERPRISE: Color class for icon (from HOVER_TEXT_EFFECTS) */
+  colorClass?: string;
   dropdownOptions?: { id: ToolType; icon: React.ComponentType<React.ComponentProps<'svg'>> | string; label: string; }[];
 }
 
@@ -52,6 +54,8 @@ export interface ActionDefinition {
   hotkey?: string;  // ✅ ENTERPRISE: Fix type inconsistency - hotkey can be undefined
   active?: boolean;
   disabled?: boolean;
+  /** 🎨 ENTERPRISE: Color class for icon (from HOVER_TEXT_EFFECTS) */
+  colorClass?: string;
   onClick?: () => void;
 }
 

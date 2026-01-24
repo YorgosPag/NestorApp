@@ -14,6 +14,8 @@ import {
   DEFAULT_POLAR_SETTINGS,
   DEFAULT_CONSTRAINTS_SETTINGS
 } from './config';
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import { matchesShortcut } from '../../config/keyboard-shortcuts';
 import { setConstraintsContext, type ConstraintsHookReturn } from './useConstraints';
 import type { Point2D } from '../../rendering/types/Types';
 import { useConstraintsSystemState } from './useConstraintsSystemState';
@@ -112,18 +114,30 @@ function useConstraintsSystemStateIntegration({
     polarHook.togglePolar
   );
 
-  // Handle global hotkeys
+  // ⌨️ ENTERPRISE: Global hotkeys using centralized keyboard-shortcuts.ts
+  // Reference: AutoCAD F8=Ortho, F10=Polar standard
   useEffect(() => {
     if (!globalHotkeys) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Hotkey handling
-      if (event.key === 'F8') {
+      // ✅ GUARD: Skip if typing in input fields
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+        return;
+      }
+
+      // F8 - Ortho Mode (AutoCAD standard)
+      if (matchesShortcut(event, 'orthoMode')) {
         event.preventDefault();
         orthoHook.toggleOrtho();
-      } else if (event.key === 'F10') {
+        return;
+      }
+
+      // F10 - Polar Tracking (AutoCAD standard)
+      if (matchesShortcut(event, 'polarTracking')) {
         event.preventDefault();
         polarHook.togglePolar();
+        return;
       }
     };
 

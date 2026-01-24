@@ -2,6 +2,9 @@
  * useKeyboardShortcuts Hook
  * Handles all keyboard shortcuts for the DXF viewer
  * Extracted from DxfViewerContent.tsx for better separation of concerns
+ *
+ * ⌨️ ENTERPRISE: Now uses centralized keyboard-shortcuts.ts (Single Source of Truth)
+ * @version 2.0.0 - Centralized shortcuts migration
  */
 
 import { useEffect, useRef, useCallback } from 'react';
@@ -9,6 +12,8 @@ import type { Point2D } from '../rendering/types/Types';
 import type { SceneModel } from '../types/scene';
 import type { Overlay, CreateOverlayData, UpdateOverlayData } from '../overlays/types';
 import { useCanvasContext } from '../contexts/CanvasContext';
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import { matchesShortcut } from '../config/keyboard-shortcuts';
 
 // Hook parameters interface
 interface KeyboardShortcutsConfig {
@@ -24,9 +29,15 @@ interface KeyboardShortcutsConfig {
     update: (id: string, patch: UpdateOverlayData) => Promise<void>;
     remove: (id: string) => Promise<void>;
     setSelectedOverlay: (id: string | null) => void;
-    selectedOverlayId: string | null; // ✅ ENTERPRISE FIX: Add selectedOverlayId property
+    selectedOverlayId: string | null;
   } | null;
 }
+
+// ⌨️ ENTERPRISE: Nudge constants (could be moved to config if needed)
+const NUDGE_CONFIG = {
+  BASE_STEP: 0.1,      // Base nudge step (world units)
+  SHIFT_MULTIPLIER: 3, // Shift key multiplier (3x larger nudge)
+} as const;
 
 export const useKeyboardShortcuts = ({
   selectedEntityIds,
@@ -41,10 +52,6 @@ export const useKeyboardShortcuts = ({
   const canvasContext = useCanvasContext();
   const zoomManager = canvasContext?.zoomManager;
 
-  // Constants για nudging
-  const NUDGE_BASE = 0.1;         // μικρός βασικός βηματισμός (world units)
-  const NUDGE_SHIFT_MULT = 3;     // Shift => ×3
-
   // Mouse tracking για zoom
   const lastMouseRef = useRef<Point2D | null>(null);
 
@@ -53,90 +60,118 @@ export const useKeyboardShortcuts = ({
     lastMouseRef.current = pt;
   }, []);
 
-  // ESC για κλείσιμο palette + keyboard nudging + zoom
+  // ⌨️ ENTERPRISE: Centralized keyboard event handler
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // ✅ ΕΛΕΓΧΟΣ: Αν το focus είναι σε input field, ΜΗ διαχειριστείς shortcuts
+      // ✅ GUARD: Skip if typing in input fields
       const inputFocused = document.activeElement &&
         (document.activeElement.tagName === 'INPUT' ||
          document.activeElement.tagName === 'TEXTAREA' ||
          document.activeElement.getAttribute('contenteditable') === 'true');
 
-      // ESC κλείνει palette
-      if (e.key === 'Escape') {
+      // ⌨️ SPECIAL SHORTCUTS - Using centralized matchesShortcut()
+
+      // ESC - Close color palette
+      if (matchesShortcut(e, 'escape')) {
         onColorMenuClose();
         return;
       }
 
-      // Delete key για διαγραφή overlay σε edit mode
-      if (e.key === 'Delete' && activeTool === 'layering' && overlayMode === 'edit' && overlayStore?.selectedOverlayId) {
-        e.preventDefault();
-        overlayStore.remove(overlayStore.selectedOverlayId as string); // ✅ ENTERPRISE FIX: Type assertion for selectedOverlayId
-        return;
+      // Delete - Remove overlay in edit mode
+      if (matchesShortcut(e, 'delete') || matchesShortcut(e, 'backspace')) {
+        if (activeTool === 'layering' && overlayMode === 'edit' && overlayStore?.selectedOverlayId) {
+          e.preventDefault();
+          overlayStore.remove(overlayStore.selectedOverlayId);
+          return;
+        }
       }
 
-      // 🔥 ENTERPRISE SHORTCUTS: Shift+1 → Fit to view, Shift+0 → 100% zoom
-      if (e.shiftKey && (e.code === 'Digit1' || e.code === 'Numpad1')) {
+      // ⌨️ ZOOM SHORTCUTS - Using centralized matchesShortcut()
+
+      // Shift+1 → Fit to view
+      if (matchesShortcut(e, 'fitToView')) {
         if (inputFocused || !zoomManager) return;
         e.preventDefault();
-        // Trigger fit-to-view via custom event (CanvasSection handles it)
-        const event = new CustomEvent('canvas-fit-to-view', { detail: { viewport: { width: window.innerWidth, height: window.innerHeight } } });
+        const event = new CustomEvent('canvas-fit-to-view', {
+          detail: { viewport: { width: window.innerWidth, height: window.innerHeight } }
+        });
         document.dispatchEvent(event);
         return;
       }
 
-      if (e.shiftKey && (e.code === 'Digit0' || e.code === 'Numpad0')) {
+      // Shift+0 → 100% zoom
+      if (matchesShortcut(e, 'zoom100')) {
         if (inputFocused || !zoomManager) return;
         e.preventDefault();
-        // ✅ ENTERPRISE FIX: Use zoomTo100() method from context interface
         zoomManager.zoomTo100(lastMouseRef.current || undefined);
         return;
       }
 
-      // ❌ REMOVED: Ctrl/Cmd+± shortcuts (browser conflict - hijacks page zoom)
-      // Enterprise CAD systems (AutoCAD, Blender) don't use these shortcuts for this reason
-      // See: pos_proxorame.txt → Enterprise Architecture Migration section
-
-      // Bare +/- zoom (without Ctrl/Cmd) - PRIMARY keyboard zoom method
-      const modifierKey = e.ctrlKey || e.metaKey; // Ctrl (Windows/Linux) or Cmd (Mac)
-      const isPlus =
-        e.key === '+' ||
-        (e.key === '=' && !e.shiftKey) || // = χωρίς Shift (σε κάποια keyboards το + είναι Shift+=)
-        e.code === 'NumpadAdd';
-      const isMinus =
-        e.key === '-' ||
-        e.code === 'Minus' ||
-        e.code === 'NumpadSubtract';
-
-      if ((isPlus || isMinus) && !modifierKey && !e.shiftKey) {
+      // +/= → Zoom in (bare key, no modifiers)
+      if (matchesShortcut(e, 'zoomIn') || matchesShortcut(e, 'zoomInNumpad')) {
         if (inputFocused || !zoomManager) return;
         e.preventDefault();
-
-        if (isPlus) {
-          zoomManager.zoomIn();
-        } else {
-          zoomManager.zoomOut();
-        }
+        zoomManager.zoomIn();
         return;
       }
 
-      // Arrow keys για nudging
-      if (!selectedEntityIds?.length) return;
-      if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
-
-      e.preventDefault();
-
-      // Μικρό βήμα, Shift = ×3
-      const step = NUDGE_BASE * (e.shiftKey ? NUDGE_SHIFT_MULT : 1);
-
-      let dx = 0, dy = 0;
-      switch (e.key) {
-        case 'ArrowUp':    dy =  step; break;   // +Y προς τα πάνω
-        case 'ArrowDown':  dy = -step; break;
-        case 'ArrowLeft':  dx = -step; break;
-        case 'ArrowRight': dx =  step; break;
+      // - → Zoom out (bare key, no modifiers)
+      if (matchesShortcut(e, 'zoomOut') || matchesShortcut(e, 'zoomOutNumpad')) {
+        if (inputFocused || !zoomManager) return;
+        e.preventDefault();
+        zoomManager.zoomOut();
+        return;
       }
-      onNudgeSelection(dx, dy);
+
+      // ⌨️ NAVIGATION SHORTCUTS - Arrow keys for nudging
+      if (!selectedEntityIds?.length) return;
+
+      const step = NUDGE_CONFIG.BASE_STEP;
+      const largeStep = NUDGE_CONFIG.BASE_STEP * NUDGE_CONFIG.SHIFT_MULTIPLIER;
+
+      // Large nudge (Shift + Arrow)
+      if (matchesShortcut(e, 'nudgeUpLarge')) {
+        e.preventDefault();
+        onNudgeSelection(0, largeStep);
+        return;
+      }
+      if (matchesShortcut(e, 'nudgeDownLarge')) {
+        e.preventDefault();
+        onNudgeSelection(0, -largeStep);
+        return;
+      }
+      if (matchesShortcut(e, 'nudgeLeftLarge')) {
+        e.preventDefault();
+        onNudgeSelection(-largeStep, 0);
+        return;
+      }
+      if (matchesShortcut(e, 'nudgeRightLarge')) {
+        e.preventDefault();
+        onNudgeSelection(largeStep, 0);
+        return;
+      }
+
+      // Normal nudge (Arrow only)
+      if (matchesShortcut(e, 'nudgeUp')) {
+        e.preventDefault();
+        onNudgeSelection(0, step);
+        return;
+      }
+      if (matchesShortcut(e, 'nudgeDown')) {
+        e.preventDefault();
+        onNudgeSelection(0, -step);
+        return;
+      }
+      if (matchesShortcut(e, 'nudgeLeft')) {
+        e.preventDefault();
+        onNudgeSelection(-step, 0);
+        return;
+      }
+      if (matchesShortcut(e, 'nudgeRight')) {
+        e.preventDefault();
+        onNudgeSelection(step, 0);
+        return;
+      }
     };
 
     window.addEventListener('keydown', onKeyDown, { capture: true });

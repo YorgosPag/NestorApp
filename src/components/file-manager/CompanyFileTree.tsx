@@ -42,11 +42,17 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FileRecord } from '@/types/file-record';
-import type { EntityType, FileCategory } from '@/config/domain-constants';
+import type { FileCategory } from '@/config/domain-constants';
 
 // ============================================================================
 // TYPES
 // ============================================================================
+
+/**
+ * Supported entity types for file tree grouping
+ * Subset of EntityType that makes sense for file management
+ */
+type FileEntityType = 'project' | 'building' | 'unit' | 'contact';
 
 export type GroupingMode = 'entity' | 'category';
 export type ViewMode = 'business' | 'technical';
@@ -83,22 +89,32 @@ interface TreeNodeData {
 // ICON HELPERS
 // ============================================================================
 
-const ENTITY_ICONS: Record<EntityType, React.ReactNode> = {
+const ENTITY_ICONS: Record<FileEntityType, React.ReactNode> = {
   project: <Briefcase className="h-4 w-4 text-blue-500" />,
   building: <Building className="h-4 w-4 text-orange-500" />,
   unit: <Home className="h-4 w-4 text-green-500" />,
   contact: <Users className="h-4 w-4 text-purple-500" />,
 };
 
-const CATEGORY_ICONS: Record<FileCategory | 'other', React.ReactNode> = {
+/**
+ * Icons for file categories
+ * Only includes categories commonly used in file management
+ */
+const CATEGORY_ICONS: Partial<Record<FileCategory | 'other', React.ReactNode>> = {
   photos: <Camera className="h-4 w-4 text-pink-500" />,
   videos: <Film className="h-4 w-4 text-red-500" />,
   documents: <FileText className="h-4 w-4 text-blue-500" />,
   contracts: <FileSignature className="h-4 w-4 text-amber-500" />,
   floorplans: <Map className="h-4 w-4 text-teal-500" />,
-  certificates: <Award className="h-4 w-4 text-indigo-500" />,
   other: <File className="h-4 w-4 text-gray-500" />,
 };
+
+/**
+ * Get icon for category with fallback
+ */
+function getCategoryIcon(category: string): React.ReactNode {
+  return CATEGORY_ICONS[category as FileCategory] || CATEGORY_ICONS.other || <File className="h-4 w-4 text-gray-500" />;
+}
 
 function getFileIcon(file: FileRecord): React.ReactNode {
   const contentType = file.contentType || '';
@@ -120,20 +136,19 @@ function getFileIcon(file: FileRecord): React.ReactNode {
 // ENTITY LABELS
 // ============================================================================
 
-const ENTITY_LABELS: Record<EntityType, string> = {
+const ENTITY_LABELS: Record<FileEntityType, string> = {
   project: 'files.entities.projects',
   building: 'files.entities.buildings',
   unit: 'files.entities.units',
   contact: 'files.entities.contacts',
 };
 
-const CATEGORY_LABELS: Record<FileCategory | 'other', string> = {
+const CATEGORY_LABELS: Partial<Record<FileCategory | 'other', string>> = {
   photos: 'files.categories.photos',
   videos: 'files.categories.videos',
   documents: 'files.categories.documents',
   contracts: 'files.categories.contracts',
   floorplans: 'files.categories.floorplans',
-  certificates: 'files.categories.certificates',
   other: 'files.categories.other',
 };
 
@@ -273,28 +288,36 @@ function TreeNode({
 
 function buildTreeByEntity(files: FileRecord[], companyName: string): TreeNodeData {
   // Group files by entity type -> entity ID
-  const groupedByType: Record<EntityType, Record<string, FileRecord[]>> = {
+  const groupedByType: Record<FileEntityType, Record<string, FileRecord[]>> = {
     project: {},
     building: {},
     unit: {},
     contact: {},
   };
 
+  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
+
   for (const file of files) {
-    const entityType = file.entityType as EntityType;
+    const entityType = file.entityType as string;
     const entityId = file.entityId;
 
-    if (!groupedByType[entityType]) {
-      groupedByType[entityType] = {};
+    // Skip unsupported entity types
+    if (!supportedEntityTypes.includes(entityType as FileEntityType)) {
+      continue;
     }
-    if (!groupedByType[entityType][entityId]) {
-      groupedByType[entityType][entityId] = [];
+
+    const typedEntityType = entityType as FileEntityType;
+    if (!groupedByType[typedEntityType]) {
+      groupedByType[typedEntityType] = {};
     }
-    groupedByType[entityType][entityId].push(file);
+    if (!groupedByType[typedEntityType][entityId]) {
+      groupedByType[typedEntityType][entityId] = [];
+    }
+    groupedByType[typedEntityType][entityId].push(file);
   }
 
   // Build tree
-  const entityTypes: EntityType[] = ['project', 'building', 'unit', 'contact'];
+  const entityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
   const entityChildren: TreeNodeData[] = [];
 
   for (const entityType of entityTypes) {
@@ -307,7 +330,9 @@ function buildTreeByEntity(files: FileRecord[], companyName: string): TreeNodeDa
       const entityFiles = entitiesMap[entityId];
 
       // Get entity label from first file's entityLabel or use ID
-      const entityLabel = entityFiles[0]?.entityLabel || entityId;
+      // Note: entityLabel is an optional property that may not exist on all files
+      const firstFile = entityFiles[0];
+      const entityLabel = (firstFile as { entityLabel?: string })?.entityLabel || entityId;
 
       // Group by category within entity
       const categoryGroups: Record<string, FileRecord[]> = {};
@@ -368,11 +393,18 @@ function buildTreeByEntity(files: FileRecord[], companyName: string): TreeNodeDa
 
 function buildTreeByCategory(files: FileRecord[], companyName: string): TreeNodeData {
   // Group files by category -> entity type
-  const groupedByCategory: Record<string, Record<EntityType, FileRecord[]>> = {};
+  const groupedByCategory: Record<string, Record<FileEntityType, FileRecord[]>> = {};
+
+  const supportedEntityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
 
   for (const file of files) {
     const category = file.category || 'other';
-    const entityType = file.entityType as EntityType;
+    const entityType = file.entityType as string;
+
+    // Skip unsupported entity types
+    if (!supportedEntityTypes.includes(entityType as FileEntityType)) {
+      continue;
+    }
 
     if (!groupedByCategory[category]) {
       groupedByCategory[category] = {
@@ -382,7 +414,7 @@ function buildTreeByCategory(files: FileRecord[], companyName: string): TreeNode
         contact: [],
       };
     }
-    groupedByCategory[category][entityType].push(file);
+    groupedByCategory[category][entityType as FileEntityType].push(file);
   }
 
   // Build tree
@@ -391,7 +423,7 @@ function buildTreeByCategory(files: FileRecord[], companyName: string): TreeNode
 
   for (const category of categories) {
     const entityGroups = groupedByCategory[category];
-    const entityTypes: EntityType[] = ['project', 'building', 'unit', 'contact'];
+    const entityTypes: FileEntityType[] = ['project', 'building', 'unit', 'contact'];
 
     const entityFolders: TreeNodeData[] = [];
 

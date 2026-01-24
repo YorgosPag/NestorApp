@@ -11,12 +11,14 @@ export {
   projectFiltersConfig,
   communicationsFiltersConfig,
   propertyFiltersConfig,
+  fileFiltersConfig,
   defaultUnitFilters,
   defaultContactFilters,
   defaultBuildingFilters,
   defaultProjectFilters,
   defaultCommunicationsFilters,
-  defaultPropertyFilters
+  defaultPropertyFilters,
+  defaultFileFilters
 } from './configs';
 
 // Storage Configurations
@@ -43,7 +45,7 @@ export type {
 } from './types';
 
 // Communications Types (from configs.ts)
-export type { CommunicationsFilterState } from './configs';
+export type { CommunicationsFilterState, FileFilterState } from './configs';
 
 // Storage Types
 export type {

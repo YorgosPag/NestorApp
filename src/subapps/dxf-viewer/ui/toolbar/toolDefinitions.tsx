@@ -33,6 +33,22 @@ import { AngleMeasureGeomIcon } from './icons/AngleMeasureGeomIcon';
 import { AngleConstraintIcon } from './icons/AngleConstraintIcon';
 import type { ToolType, ActionDefinition, ToolDefinition } from './types';
 import * as React from 'react';
+// 🎨 ENTERPRISE: Centralized DXF toolbar colors - Single source of truth
+import {
+  DXF_TOOL_GROUP_COLORS,
+  DXF_ACTION_COLORS,
+  getDxfToolColor,
+  type DxfToolGroup
+} from '../../config/toolbar-colors';
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import {
+  DXF_TOOL_SHORTCUTS,
+  DXF_ACTION_SHORTCUTS,
+  DXF_CTRL_SHORTCUTS,
+  DXF_SPECIAL_SHORTCUTS,
+  DXF_ZOOM_SHORTCUTS,
+  getShortcutDisplayLabel
+} from '../../config/keyboard-shortcuts';
 
 // ✅ ENTERPRISE FIX: Type adapters για custom icons με SVGProps compatibility
 const AngleIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
@@ -119,21 +135,26 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
     name: DXF_TOOL_GROUP_KEYS.SELECTION,
     tools: [
       // ✅ CENTRALIZED: Using DXF_SELECTION_TOOL_LABELS from central system - ZERO HARDCODED VALUES
-      { id: 'select' as ToolType, icon: MousePointer, label: DXF_SELECTION_TOOL_LABELS.SELECT, hotkey: 'S' },
-      { id: 'pan' as ToolType, icon: Hand, label: DXF_SELECTION_TOOL_LABELS.PAN, hotkey: 'P' },
+      // 🎨 ENTERPRISE: Auto-assigned from DXF_TOOL_GROUP_COLORS.SELECTION
+      // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
+      { id: 'select' as ToolType, icon: MousePointer, label: DXF_SELECTION_TOOL_LABELS.SELECT, hotkey: getShortcutDisplayLabel('select'), colorClass: DXF_TOOL_GROUP_COLORS.SELECTION },
+      { id: 'pan' as ToolType, icon: Hand, label: DXF_SELECTION_TOOL_LABELS.PAN, hotkey: getShortcutDisplayLabel('pan'), colorClass: DXF_TOOL_GROUP_COLORS.SELECTION },
     ]
   },
   {
     name: DXF_TOOL_GROUP_KEYS.DRAWING,
     tools: [
       // ✅ CENTRALIZED: Using DXF_DRAWING_TOOL_LABELS from central system - ZERO HARDCODED VALUES
-      { id: 'line' as ToolType, icon: Minus, label: DXF_DRAWING_TOOL_LABELS.LINE, hotkey: 'L' },
-      { id: 'rectangle' as ToolType, icon: Square, label: DXF_DRAWING_TOOL_LABELS.RECTANGLE, hotkey: 'R' },
-      { 
-        id: 'circle' as ToolType, 
-        icon: CircleRadiusIcon, 
+      // 🎨 ENTERPRISE: Auto-assigned from DXF_TOOL_GROUP_COLORS.DRAWING
+      // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
+      { id: 'line' as ToolType, icon: Minus, label: DXF_DRAWING_TOOL_LABELS.LINE, hotkey: getShortcutDisplayLabel('line'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
+      { id: 'rectangle' as ToolType, icon: Square, label: DXF_DRAWING_TOOL_LABELS.RECTANGLE, hotkey: getShortcutDisplayLabel('rectangle'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
+      {
+        id: 'circle' as ToolType,
+        icon: CircleRadiusIcon,
         label: DXF_DRAWING_TOOL_LABELS.CIRCLE_RADIUS,
-        hotkey: 'C',
+        hotkey: getShortcutDisplayLabel('circle'),
+        colorClass: DXF_TOOL_GROUP_COLORS.DRAWING,
         dropdownOptions: [
           // ✅ CENTRALIZED: Circle tool variations - ZERO HARDCODED VALUES
           { id: 'circle' as ToolType, icon: CircleRadiusIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_RADIUS },
@@ -145,32 +166,38 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'circle-best-fit' as ToolType, icon: CircleBestFitIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_BEST_FIT }
         ]
       },
-      { id: 'polyline' as ToolType, icon: Pen, label: DXF_DRAWING_TOOL_LABELS.POLYLINE, hotkey: 'Y' },
-      { id: 'polygon' as ToolType, icon: Hexagon, label: DXF_DRAWING_TOOL_LABELS.POLYGON, hotkey: 'G' },
-      { id: 'layering' as ToolType, icon: Map, label: DXF_DRAWING_TOOL_LABELS.LAYERING, hotkey: 'O' }
+      { id: 'polyline' as ToolType, icon: Pen, label: DXF_DRAWING_TOOL_LABELS.POLYLINE, hotkey: getShortcutDisplayLabel('polyline'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
+      { id: 'polygon' as ToolType, icon: Hexagon, label: DXF_DRAWING_TOOL_LABELS.POLYGON, hotkey: getShortcutDisplayLabel('polygon'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
+      { id: 'layering' as ToolType, icon: Map, label: DXF_DRAWING_TOOL_LABELS.LAYERING, hotkey: getShortcutDisplayLabel('layering'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING }
     ]
   },
   {
     name: DXF_TOOL_GROUP_KEYS.TOOLS,
     tools: [
       // ✅ CENTRALIZED: Using DXF_EDITING_TOOL_LABELS from central system - ZERO HARDCODED VALUES
-      { id: 'grip-edit' as ToolType, icon: Edit, label: DXF_EDITING_TOOL_LABELS.GRIP_EDIT, hotkey: 'G' },
-      { id: 'move' as ToolType, icon: Move, label: DXF_EDITING_TOOL_LABELS.MOVE, hotkey: 'M' },
-      { id: 'copy' as ToolType, icon: Copy, label: DXF_EDITING_TOOL_LABELS.COPY, hotkey: 'Ctrl+C' },
-      { id: 'delete' as ToolType, icon: Trash2, label: DXF_EDITING_TOOL_LABELS.DELETE, hotkey: 'Del' },
+      // 🎨 ENTERPRISE: Auto-assigned from DXF_TOOL_GROUP_COLORS.TOOLS
+      // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
+      { id: 'grip-edit' as ToolType, icon: Edit, label: DXF_EDITING_TOOL_LABELS.GRIP_EDIT, hotkey: getShortcutDisplayLabel('gripEdit'), colorClass: DXF_TOOL_GROUP_COLORS.TOOLS },
+      { id: 'move' as ToolType, icon: Move, label: DXF_EDITING_TOOL_LABELS.MOVE, hotkey: getShortcutDisplayLabel('move'), colorClass: DXF_TOOL_GROUP_COLORS.TOOLS },
+      { id: 'copy' as ToolType, icon: Copy, label: DXF_EDITING_TOOL_LABELS.COPY, hotkey: getShortcutDisplayLabel('copy'), colorClass: DXF_TOOL_GROUP_COLORS.TOOLS },
+      // 🎨 ENTERPRISE: Delete uses getDxfToolColor with override (RED for danger)
+      { id: 'delete' as ToolType, icon: Trash2, label: DXF_EDITING_TOOL_LABELS.DELETE, hotkey: getShortcutDisplayLabel('delete'), colorClass: getDxfToolColor('TOOLS', 'delete') },
     ]
   },
   {
     name: DXF_TOOL_GROUP_KEYS.MEASUREMENTS,
     tools: [
       // ✅ CENTRALIZED: Using DXF_MEASUREMENT_TOOL_LABELS from central system - ZERO HARDCODED VALUES
-      { id: 'measure-distance' as ToolType, icon: Ruler, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_DISTANCE, hotkey: 'D' },
-      { id: 'measure-area' as ToolType, icon: Calculator, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_AREA, hotkey: 'A' },
+      // 🎨 ENTERPRISE: Auto-assigned from DXF_TOOL_GROUP_COLORS.MEASUREMENTS
+      // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
+      { id: 'measure-distance' as ToolType, icon: Ruler, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_DISTANCE, hotkey: getShortcutDisplayLabel('measureDistance'), colorClass: DXF_TOOL_GROUP_COLORS.MEASUREMENTS },
+      { id: 'measure-area' as ToolType, icon: Calculator, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_AREA, hotkey: getShortcutDisplayLabel('measureArea'), colorClass: DXF_TOOL_GROUP_COLORS.MEASUREMENTS },
       {
         id: 'measure-angle' as ToolType,
         icon: AngleIconAdapter,
         label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE,
-        hotkey: 'T',
+        hotkey: getShortcutDisplayLabel('measureAngle'),
+        colorClass: DXF_TOOL_GROUP_COLORS.MEASUREMENTS,
         dropdownOptions: [
           // ✅ CENTRALIZED: Angle measurement variations - ZERO HARDCODED VALUES
           { id: 'measure-angle' as ToolType, icon: AngleIconAdapter, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_ANGLE_BASIC },
@@ -186,10 +213,12 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
     name: DXF_TOOL_GROUP_KEYS.ZOOM,
     tools: [
       // ✅ CENTRALIZED: Using DXF_ZOOM_TOOL_LABELS from central system - ZERO HARDCODED VALUES
-      { id: 'zoom-in' as ToolType, icon: ZoomIn, label: DXF_ZOOM_TOOL_LABELS.ZOOM_IN, hotkey: '+' },
-      { id: 'zoom-out' as ToolType, icon: ZoomOut, label: DXF_ZOOM_TOOL_LABELS.ZOOM_OUT, hotkey: '-' },
-      { id: 'zoom-window' as ToolType, icon: Maximize2, label: DXF_ZOOM_TOOL_LABELS.ZOOM_WINDOW, hotkey: 'W' },
-      { id: 'zoom-extents' as ToolType, icon: Maximize, label: DXF_ZOOM_TOOL_LABELS.ZOOM_EXTENTS, hotkey: 'F' },
+      // 🎨 ENTERPRISE: Auto-assigned from DXF_TOOL_GROUP_COLORS.ZOOM
+      // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
+      { id: 'zoom-in' as ToolType, icon: ZoomIn, label: DXF_ZOOM_TOOL_LABELS.ZOOM_IN, hotkey: getShortcutDisplayLabel('zoomIn'), colorClass: DXF_TOOL_GROUP_COLORS.ZOOM },
+      { id: 'zoom-out' as ToolType, icon: ZoomOut, label: DXF_ZOOM_TOOL_LABELS.ZOOM_OUT, hotkey: getShortcutDisplayLabel('zoomOut'), colorClass: DXF_TOOL_GROUP_COLORS.ZOOM },
+      { id: 'zoom-window' as ToolType, icon: Maximize2, label: DXF_ZOOM_TOOL_LABELS.ZOOM_WINDOW, hotkey: getShortcutDisplayLabel('zoomWindow'), colorClass: DXF_TOOL_GROUP_COLORS.ZOOM },
+      { id: 'zoom-extents' as ToolType, icon: Maximize, label: DXF_ZOOM_TOOL_LABELS.ZOOM_EXTENTS, hotkey: getShortcutDisplayLabel('zoomExtents'), colorClass: DXF_TOOL_GROUP_COLORS.ZOOM },
     ]
   }
 ];
@@ -203,29 +232,34 @@ export const createActionButtons = (props: {
   showCursorSettings?: boolean;
   onAction: (action: string, data?: number | string | boolean) => void;
 }): ActionDefinition[] => [
-  { 
-    id: 'undo', 
-    icon: Undo, 
+  // ⌨️ ENTERPRISE: All hotkeys from centralized keyboard-shortcuts.ts
+  {
+    id: 'undo',
+    icon: Undo,
     // ✅ CENTRALIZED: Using DXF_UTILITY_TOOL_LABELS from central system - ZERO HARDCODED VALUES
     label: DXF_UTILITY_TOOL_LABELS.UNDO,
-    hotkey: 'Ctrl+Z',
+    hotkey: getShortcutDisplayLabel('undo'),
     disabled: !props.canUndo,
+    // 🎨 ENTERPRISE: Auto-assigned from DXF_ACTION_COLORS
+    colorClass: DXF_ACTION_COLORS.undo,
     onClick: () => props.onAction('undo')
   },
   {
     id: 'redo',
     icon: Redo,
     label: DXF_UTILITY_TOOL_LABELS.REDO,
-    hotkey: 'Ctrl+Y',
+    hotkey: getShortcutDisplayLabel('redo'),
     disabled: !props.canRedo,
+    colorClass: DXF_ACTION_COLORS.redo,
     onClick: () => props.onAction('redo')
   },
   {
     id: 'cursor-settings',
     icon: Crosshair,
     label: DXF_UTILITY_TOOL_LABELS.CURSOR_SETTINGS,
-    hotkey: 'Ctrl+Shift+C',
+    hotkey: getShortcutDisplayLabel('toggleCursorSettings'),
     active: props.showCursorSettings,
+    colorClass: DXF_ACTION_COLORS.cursorSettings,
     onClick: () => props.onAction('toggle-cursor-settings')
   },
   {
@@ -233,8 +267,9 @@ export const createActionButtons = (props: {
     icon: Grid,
     // 🏢 ENTERPRISE: i18n key - translated in ActionButton component
     label: props.showGrid ? 'actionButtons.hideGrid' : 'actionButtons.showGrid',
-    hotkey: 'G',
+    hotkey: getShortcutDisplayLabel('grid'),
     active: props.showGrid,
+    colorClass: DXF_ACTION_COLORS.grid,
     onClick: () => props.onAction('grid')
   },
   {
@@ -242,31 +277,35 @@ export const createActionButtons = (props: {
     icon: Crop,
     // 🏢 ENTERPRISE: i18n key - translated in ActionButton component
     label: props.autoCrop ? 'actionButtons.autoCropOn' : 'actionButtons.autoCropOff',
-    hotkey: 'A',
+    hotkey: getShortcutDisplayLabel('autocrop'),
     active: props.autoCrop,
+    colorClass: DXF_ACTION_COLORS.autocrop,
     onClick: () => props.onAction('autocrop')
   },
   {
     id: 'fit',
     icon: Focus,
     label: DXF_UTILITY_TOOL_LABELS.FIT_TO_VIEW,
-    hotkey: 'F',
+    hotkey: getShortcutDisplayLabel('fit'),
     active: false, // 🔥 Add active state - στιγμιαίο action, όχι toggle
     disabled: false, // 🔥 Ensure it's not disabled
+    colorClass: DXF_ACTION_COLORS.fit,
     onClick: () => props.onAction('fit-to-view')
   },
   {
     id: 'export',
     icon: Download,
     label: DXF_UTILITY_TOOL_LABELS.EXPORT,
-    hotkey: 'Ctrl+E',
+    hotkey: getShortcutDisplayLabel('export'),
+    colorClass: DXF_ACTION_COLORS.export,
     onClick: () => props.onAction('export')
   },
   {
     id: 'tests',
     icon: FlaskConical,
     label: DXF_UTILITY_TOOL_LABELS.RUN_TESTS,
-    hotkey: 'Ctrl+Shift+T',
+    hotkey: getShortcutDisplayLabel('runTests'),
+    colorClass: DXF_ACTION_COLORS.tests,
     onClick: () => props.onAction('run-tests')
   },
   // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern)
@@ -274,7 +313,8 @@ export const createActionButtons = (props: {
     id: 'toggle-perf',
     icon: Activity,
     label: DXF_UTILITY_TOOL_LABELS.TOGGLE_PERF,
-    hotkey: 'Ctrl+Shift+P',
+    hotkey: getShortcutDisplayLabel('togglePerf'),
+    colorClass: DXF_ACTION_COLORS.togglePerf,
     onClick: () => props.onAction('toggle-perf')
   },
   // 🏢 ENTERPRISE: PDF Background Controls (Independent pan/zoom/rotation)
@@ -283,7 +323,8 @@ export const createActionButtons = (props: {
     id: 'toggle-pdf-background',
     icon: FileUp,
     label: DXF_UTILITY_TOOL_LABELS.PDF_BACKGROUND,
-    hotkey: 'Ctrl+Alt+P',
+    hotkey: getShortcutDisplayLabel('togglePdfBackground'),
+    colorClass: DXF_ACTION_COLORS.pdfBackground,
     onClick: () => props.onAction('toggle-pdf-background')
   }
 ];

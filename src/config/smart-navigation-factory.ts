@@ -54,6 +54,7 @@ import {
   Users as UsersIcon,
   ShoppingCart,
   CheckCircle,
+  FolderTree,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
@@ -84,6 +85,9 @@ const NAVIGATION_LABELS = {
   // ✅ ENTERPRISE FIX: Legal Documents menu labels
   legal_documents: 'tools.legal',
   obligations_writing: 'tools.obligations',
+
+  // 🏢 ENTERPRISE: File Manager
+  file_manager: 'tools.fileManager',
 
   // Badges
   badge_new: 'badges.new',
@@ -450,6 +454,16 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
       return {
         baseItems: [
           {
+            icon: FolderTree,
+            href: "/files",
+            badge: null,
+            smartConfig: {
+              priority: 'medium',
+              displayOrder: 90,
+              analyticsKey: 'nav_file_manager'
+            }
+          },
+          {
             icon: FileText,
             href: "/legal-documents",
             badge: null,
@@ -601,6 +615,7 @@ function getLabelKeyForPath(path: string): string {
     'settings/shortcuts': 'shortcuts',
 
     // Tools paths
+    'files': 'file_manager',
     'geo/canvas': 'geo_canvas',
     'dxf/viewer': 'dxf_viewer',
     'login': 'login',

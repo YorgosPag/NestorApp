@@ -26,6 +26,8 @@ import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import { runAllTests, formatReportForCopy, type UnifiedTestReport } from './unified-test-runner';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import { matchesShortcut } from '../config/keyboard-shortcuts';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -121,26 +123,18 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
 
   // 🏢 ENTERPRISE: Performance Monitor Toggle (Bentley/Autodesk pattern - OFF by default)
   const { isEnabled: perfMonitorEnabled, toggle: togglePerfMonitor } = usePerformanceMonitorToggle();
-  // Keyboard shortcuts for testing (F2, F3, Ctrl+Shift+T)
+  // ⌨️ ENTERPRISE: Keyboard shortcuts using centralized keyboard-shortcuts.ts
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      console.log('🎯 DEBUG KEY EVENT:', { key: event.key, ctrlKey: event.ctrlKey, keyCode: event.keyCode });
-
-      // 🎯 Ctrl+F2: Layering Workflow Test
-      const isCtrlF2 = (event.key === 'F2' && event.ctrlKey) ||
-                       (event.keyCode === 113 && event.ctrlKey) ||
-                       (event.code === 'F2' && event.ctrlKey);
-
-      if (isCtrlF2) {
+      // ⌨️ Ctrl+F2 or Ctrl+Shift+T: Layering Workflow Test
+      if (matchesShortcut(event, 'debugLayeringTest') || matchesShortcut(event, 'debugLayeringTestAlt')) {
         event.preventDefault();
         event.stopPropagation();
-        console.log('🎯 Ctrl+F2 SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
 
         // Direct call to window function
         const windowWithTest = window as WindowWithLayeringTest;
         if (windowWithTest.runLayeringWorkflowTest) {
           windowWithTest.runLayeringWorkflowTest().then((result: LayeringWorkflowResult) => {
-            console.log('📊 LAYERING WORKFLOW RESULT:', result);
             const successSteps = result.steps.filter((s: WorkflowTestStep) => s.status === 'success').length;
             const totalSteps = result.steps.length;
             const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
@@ -151,7 +145,6 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
           import('./layering-workflow-test').then(module => {
             const runLayeringWorkflowTest = module.runLayeringWorkflowTest;
             runLayeringWorkflowTest().then((result: LayeringWorkflowResult) => {
-              console.log('📊 LAYERING WORKFLOW RESULT:', result);
               const successSteps = result.steps.filter((s: WorkflowTestStep) => s.status === 'success').length;
               const totalSteps = result.steps.length;
               const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
@@ -162,35 +155,15 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
         return;
       }
 
-      // 🎯 Ctrl+Shift+T: Layering Workflow Test (F12 reserved for DevTools)
-      if (event.ctrlKey && event.shiftKey && event.key === 'T') {
-        event.preventDefault();
-        console.log('🎯 Ctrl+Shift+T SHORTCUT: LAYERING WORKFLOW TEST TRIGGERED');
-        const windowWithTest = window as WindowWithLayeringTest;
-        if (windowWithTest.runLayeringWorkflowTest) {
-          windowWithTest.runLayeringWorkflowTest().then((result: LayeringWorkflowResult) => {
-            console.log('📊 LAYERING WORKFLOW RESULT:', result);
-            const successSteps = result.steps.filter((s: WorkflowTestStep) => s.status === 'success').length;
-            const totalSteps = result.steps.length;
-            const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
-            showCopyableNotification(summary, result.success ? 'success' : 'error');
-          });
-        }
-        return;
-      }
-
-      // 🎯 F3: Cursor-Crosshair Alignment Test
-      const isF3 = event.key === 'F3' || event.keyCode === 114 || event.code === 'F3';
-      if (isF3) {
+      // ⌨️ F3: Cursor-Crosshair Alignment Test
+      if (matchesShortcut(event, 'debugCursorTest')) {
         event.preventDefault();
         event.stopPropagation();
-        console.log('🎯 F3 SHORTCUT: CURSOR-CROSSHAIR ALIGNMENT TEST TRIGGERED');
 
         import('./enterprise-cursor-crosshair-test').then(module => {
           const defaultExport = module.default as EnterpriseCursorTestModule;
           const { runEnterpriseMouseCrosshairTests, startEnterpriseInteractiveTest } = defaultExport;
 
-          console.log('🔍 Running enterprise cursor-crosshair alignment tests...');
           const results = runEnterpriseMouseCrosshairTests();
 
           const summary = `Enterprise Test: ${results.overallStatus}
@@ -201,7 +174,6 @@ Min Pass Rate: ${(results.minPassRate * 100).toFixed(1)}%
 
 Check console for detailed metrics`;
 
-          console.log('🎮 Starting enterprise interactive test - Move mouse over canvas, press ESC to stop');
           startEnterpriseInteractiveTest();
 
           showCopyableNotification(summary, results.overallStatus === 'PASS' ? 'success' : 'warning');

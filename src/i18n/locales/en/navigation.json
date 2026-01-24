@@ -247,7 +247,8 @@
     "obligations": "Obligations Drafting",
     "dxf": "DXF Panel",
     "shortcuts": "Shortcuts",
-    "geoCanvas": "Geo-Canvas System"
+    "geoCanvas": "Geo-Canvas System",
+    "fileManager": "File Manager"
   },
   "badges": {
     "new": "New",

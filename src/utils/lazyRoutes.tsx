@@ -226,6 +226,12 @@ export const LazyRoutes = {
     () => import('@/app/units/page').then(mod => ({ default: mod.default })),
     { loadingType: 'dashboard', ssr: false }
   ),
+
+  // 🏢 ENTERPRISE: File Manager (company-wide file tree view)
+  FileManager: createLazyRoute(
+    () => import('@/components/file-manager/FileManagerPageContent').then(mod => ({ default: mod.FileManagerPageContent })),
+    { loadingType: 'list', ssr: false }
+  ),
 } as const;
 
 // Export types for TypeScript support

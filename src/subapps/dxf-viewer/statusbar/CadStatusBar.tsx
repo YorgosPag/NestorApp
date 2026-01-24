@@ -4,6 +4,8 @@ import React, { useEffect } from 'react';
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // 🏢 ENTERPRISE: Shadcn Tooltip (replaces native title attribute)
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import { matchesShortcut, getShortcutDisplayLabel } from '../config/keyboard-shortcuts';
 
 type Toggle = { on: boolean; toggle: () => void };
 
@@ -20,46 +22,56 @@ export default function CadStatusBar({
   osnap, grid, snap, ortho, polar, dynInput
 }: CadStatusBarProps) {
 
-  // 🎹 F-KEY SHORTCUTS (AutoCAD standard)
+  // ⌨️ ENTERPRISE: F-KEY SHORTCUTS using centralized keyboard-shortcuts.ts
+  // Reference: AutoCAD F7-F12 standard
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only trigger if no input/textarea is focused
+      // ✅ GUARD: Skip if typing in input fields
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
         return;
       }
 
-      switch (e.key) {
-        case 'F8':
-          e.preventDefault();
-          ortho.toggle();
+      // F7 - Grid Display toggle (AutoCAD standard)
+      if (matchesShortcut(e, 'gridDisplay')) {
+        e.preventDefault();
+        grid.toggle();
+        return;
+      }
 
-          break;
-        case 'F9':
-          e.preventDefault();
-          snap.toggle();
+      // F8 - Ortho Mode (AutoCAD standard)
+      if (matchesShortcut(e, 'orthoMode')) {
+        e.preventDefault();
+        ortho.toggle();
+        return;
+      }
 
-          break;
-        case 'F10':
-          e.preventDefault();
-          polar.toggle();
+      // F9 - Grid Snap toggle (AutoCAD standard)
+      if (matchesShortcut(e, 'gridSnap')) {
+        e.preventDefault();
+        snap.toggle();
+        return;
+      }
 
-          break;
-        case 'F11':
-          e.preventDefault();
-          osnap.toggle();
+      // F10 - Polar Tracking (AutoCAD standard)
+      if (matchesShortcut(e, 'polarTracking')) {
+        e.preventDefault();
+        polar.toggle();
+        return;
+      }
 
-          break;
-        case 'F7':
-          e.preventDefault();
-          grid.toggle();
+      // F11 - Object Snap (OSNAP) (AutoCAD standard)
+      if (matchesShortcut(e, 'objectSnap')) {
+        e.preventDefault();
+        osnap.toggle();
+        return;
+      }
 
-          break;
-        case 'F11':
-          e.preventDefault();
-          dynInput.toggle();
-
-          break;
+      // F12 - Dynamic Input (AutoCAD standard)
+      if (matchesShortcut(e, 'dynamicInput')) {
+        e.preventDefault();
+        dynInput.toggle();
+        return;
       }
     };
 
@@ -90,42 +102,43 @@ export default function CadStatusBar({
     </Tooltip>
   );
 
+  // ⌨️ ENTERPRISE: F-key display labels from centralized config
   return (
     <div style={canvasUI.positioning.cadStatusBar.container}>
-      <StatusButton 
-        label="OSNAP" 
-        toggle={osnap} 
-        fkey="F11"
+      <StatusButton
+        label="OSNAP"
+        toggle={osnap}
+        fkey={getShortcutDisplayLabel('objectSnap')}
         description="Object Snap - Snap to object points"
       />
-      <StatusButton 
-        label="GRID" 
-        toggle={grid} 
-        fkey="F7"
+      <StatusButton
+        label="GRID"
+        toggle={grid}
+        fkey={getShortcutDisplayLabel('gridDisplay')}
         description="Grid Display - Show/hide grid"
       />
-      <StatusButton 
-        label="SNAP" 
-        toggle={snap} 
-        fkey="F9"
+      <StatusButton
+        label="SNAP"
+        toggle={snap}
+        fkey={getShortcutDisplayLabel('gridSnap')}
         description="Grid Snap - Snap to grid points"
       />
-      <StatusButton 
-        label="ORTHO" 
-        toggle={ortho} 
-        fkey="F8"
+      <StatusButton
+        label="ORTHO"
+        toggle={ortho}
+        fkey={getShortcutDisplayLabel('orthoMode')}
         description="Orthogonal Mode - Constrain to 0/90/180/270 degrees"
       />
-      <StatusButton 
-        label="POLAR" 
-        toggle={polar} 
-        fkey="F10"
+      <StatusButton
+        label="POLAR"
+        toggle={polar}
+        fkey={getShortcutDisplayLabel('polarTracking')}
         description="Polar Tracking - Track along polar angles"
       />
       <StatusButton
         label="DYN"
         toggle={dynInput}
-        fkey="F11"
+        fkey={getShortcutDisplayLabel('dynamicInput')}
         description="Dynamic Input - Show coordinates near cursor"
       />
 

@@ -5,6 +5,8 @@ import { portalComponents } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import { matchesShortcut } from '../../config/keyboard-shortcuts';
 
 interface ElementMetrics {
   name: string;
@@ -136,13 +138,12 @@ export default function LayoutMapper() {
     };
   }, [isVisible]);
 
-  // Keyboard shortcut για toggle
+  // ⌨️ ENTERPRISE: Keyboard shortcut using centralized keyboard-shortcuts.ts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+      if (matchesShortcut(e, 'debugLayoutMapper')) {
         e.preventDefault();
         setIsVisible(prev => !prev);
-        console.log('🎯 Layout Debug:', isVisible ? 'OFF' : 'ON');
       }
     };
 

@@ -17,7 +17,14 @@ import { ScaleControls } from './ScaleControls';
 import { ToolButton, ActionButton } from './ToolButton';
 import { ToolbarStatusBar } from './ToolbarStatusBar';
 import { ProSnapToolbar } from '../components/ProSnapToolbar';
-import { HOVER_BACKGROUND_EFFECTS } from '../../../../components/ui/effects';
+// 🏢 ENTERPRISE: Shadcn Button (same as CompactToolbar - NO BORDERS)
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { FolderUp } from 'lucide-react';
+// 🎨 ENTERPRISE: Centralized DXF toolbar colors - Single source of truth
+import { DXF_ACTION_COLORS } from '../../config/toolbar-colors';
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import { matchesShortcut, DXF_TOOL_SHORTCUTS, DXF_CTRL_SHORTCUTS, DXF_SPECIAL_SHORTCUTS, DXF_ACTION_SHORTCUTS } from '../../config/keyboard-shortcuts';
 import UploadDxfButton from '../UploadDxfButton';
 import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
 import type { SceneModel } from '../../types/scene';
@@ -63,8 +70,8 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Centralized background management
   const [showSimpleDialog, setShowSimpleDialog] = React.useState(false);
 
-  // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Tool shortcuts (inline - local functionality)
-  // Zoom shortcuts μετακόμισαν στο hooks/useKeyboardShortcuts.ts
+  // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+  // Uses matchesShortcut() from keyboard-shortcuts.ts for ALL shortcut matching
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Prevent shortcuts when typing in inputs
@@ -73,98 +80,48 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
         return;
       }
 
-      // Tool shortcuts (S, P, L, R, C, M, D, W, G, F, F9, Delete, Escape)
-      if (e.ctrlKey || e.metaKey) {
-        // Ctrl shortcuts
-        switch (e.key.toLowerCase()) {
-          case 'z':
-            e.preventDefault();
-            onAction(e.shiftKey ? 'redo' : 'undo');
-            break;
-          case 'y':
-            e.preventDefault();
-            onAction('redo');
-            break;
-          case 'c':
-            if (activeTool === 'select') {
-              e.preventDefault();
-              onAction('copy-selected');
-            }
-            break;
-          case 'a':
-            e.preventDefault();
-            onAction('select-all');
-            break;
-          case 'l':
-            e.preventDefault();
-            onAction('toggle-layers');
-            break;
-          case 'p':
-            e.preventDefault();
-            onAction('toggle-properties');
-            break;
-          case 'e':
-            e.preventDefault();
-            onAction('export');
-            break;
-        }
-      } else {
-        // Normal shortcuts
-        switch (e.key.toLowerCase()) {
-          case 's':
-            e.preventDefault();
-            onToolChange('select');
-            break;
-          case 'p':
-            e.preventDefault();
-            onToolChange('pan');
-            break;
-          case 'l':
-            e.preventDefault();
-            onToolChange('line');
-            break;
-          case 'r':
-            e.preventDefault();
-            onToolChange('rectangle');
-            break;
-          case 'c':
-            e.preventDefault();
-            onToolChange('circle');
-            break;
-          case 'm':
-            e.preventDefault();
-            onToolChange('move');
-            break;
-          case 'd':
-            e.preventDefault();
-            onToolChange('measure');
-            break;
-          case 'w':
-            e.preventDefault();
-            onToolChange('zoom-window' as ToolType);
-            break;
-          case 'g':
-            e.preventDefault();
-            onAction('grid');
-            break;
-          case 'f':
-            e.preventDefault();
-            onAction('fit');
-            break;
-          case 'f9':
-            e.preventDefault();
-            onAction('toggle-snap');
-            break;
-          case 'delete':
-            e.preventDefault();
-            onAction('delete-selected');
-            break;
-          case 'escape':
-            e.preventDefault();
-            onToolChange('select');
-            onAction('clear-selection');
-            break;
-        }
+      // ⌨️ CTRL SHORTCUTS - Actions with Ctrl/Cmd modifier
+      if (matchesShortcut(e, 'undo')) { e.preventDefault(); onAction('undo'); return; }
+      if (matchesShortcut(e, 'redo')) { e.preventDefault(); onAction('redo'); return; }
+      if (matchesShortcut(e, 'redoAlt')) { e.preventDefault(); onAction('redo'); return; }
+      if (matchesShortcut(e, 'copy') && activeTool === 'select') { e.preventDefault(); onAction('copy-selected'); return; }
+      if (matchesShortcut(e, 'selectAll')) { e.preventDefault(); onAction('select-all'); return; }
+      if (matchesShortcut(e, 'toggleLayers')) { e.preventDefault(); onAction('toggle-layers'); return; }
+      if (matchesShortcut(e, 'toggleProperties')) { e.preventDefault(); onAction('toggle-properties'); return; }
+      if (matchesShortcut(e, 'export')) { e.preventDefault(); onAction('export'); return; }
+
+      // ⌨️ TOOL SHORTCUTS - Single letter tool activation
+      if (matchesShortcut(e, 'select')) { e.preventDefault(); onToolChange('select'); return; }
+      if (matchesShortcut(e, 'pan')) { e.preventDefault(); onToolChange('pan'); return; }
+      if (matchesShortcut(e, 'line')) { e.preventDefault(); onToolChange('line'); return; }
+      if (matchesShortcut(e, 'rectangle')) { e.preventDefault(); onToolChange('rectangle'); return; }
+      if (matchesShortcut(e, 'circle')) { e.preventDefault(); onToolChange('circle'); return; }
+      if (matchesShortcut(e, 'polyline')) { e.preventDefault(); onToolChange('polyline'); return; }
+      if (matchesShortcut(e, 'polygon')) { e.preventDefault(); onToolChange('polygon'); return; }
+      if (matchesShortcut(e, 'move')) { e.preventDefault(); onToolChange('move'); return; }
+      if (matchesShortcut(e, 'measureDistance')) { e.preventDefault(); onToolChange('measure-distance'); return; }
+      if (matchesShortcut(e, 'measureArea')) { e.preventDefault(); onToolChange('measure-area'); return; }
+      if (matchesShortcut(e, 'measureAngle')) { e.preventDefault(); onToolChange('measure-angle'); return; }
+      if (matchesShortcut(e, 'zoomWindow')) { e.preventDefault(); onToolChange('zoom-window' as ToolType); return; }
+      if (matchesShortcut(e, 'gripEdit')) { e.preventDefault(); onToolChange('grip-edit'); return; }
+      if (matchesShortcut(e, 'layering')) { e.preventDefault(); onToolChange('layering'); return; }
+
+      // ⌨️ ACTION SHORTCUTS - View toggles (no modifier)
+      if (matchesShortcut(e, 'grid')) { e.preventDefault(); onAction('grid'); return; }
+      if (matchesShortcut(e, 'fit')) { e.preventDefault(); onAction('fit'); return; }
+      if (matchesShortcut(e, 'autocrop')) { e.preventDefault(); onAction('autocrop'); return; }
+
+      // ⌨️ SPECIAL SHORTCUTS - Escape, Delete, etc.
+      if (matchesShortcut(e, 'escape')) {
+        e.preventDefault();
+        onToolChange('select');
+        onAction('clear-selection');
+        return;
+      }
+      if (matchesShortcut(e, 'delete') || matchesShortcut(e, 'backspace')) {
+        e.preventDefault();
+        onAction('delete-selected');
+        return;
       }
     };
 
@@ -225,19 +182,29 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
     <div className={`border ${getStatusBorder('muted')} ${quick.card} ${colors.bg.secondary} ${PANEL_LAYOUT.SHADOW.LG} ${className}`}>  {/* ✅ ENTERPRISE: bg-gray-800 → CSS variable */}
       <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.SM}`}>
         <div className={`flex ${PANEL_LAYOUT.GAP.XS} flex-1`}>
+          {/* 🏢 ENTERPRISE: Upload DXF - Shadcn Button (NO BORDERS) */}
           <UploadDxfButton
-            className={`${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${colors.bg.hover} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${colors.text.secondary} ${getStatusBorder('default')}`}  // ✅ ENTERPRISE: Centralized transition
             title="Upload DXF File (Legacy)"
             onFileSelect={onSceneImported}
           />
 
-          <button
-            onClick={() => setShowSimpleDialog(true)}
-            className={`${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${radius.md} border ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']} flex items-center justify-center ${colors.bg.info} ${HOVER_BACKGROUND_EFFECTS.PRIMARY} ${colors.text.inverse} ${getStatusBorder('info')}`}  // ✅ ENTERPRISE: Centralized transition
-            title="Enhanced DXF Import with Project Management"
-          >
-            🔺
-          </button>
+          {/* 🏢 ENTERPRISE: Enhanced Import - Shadcn Button (NO BORDERS) */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSimpleDialog(true)}
+                  className={`${iconSizes.xl} p-0`}
+                >
+                  {/* 🎨 ENTERPRISE: Auto-assigned from DXF_ACTION_COLORS.importEnhanced */}
+                  <FolderUp className={`${iconSizes.sm} ${DXF_ACTION_COLORS.importEnhanced}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Enhanced DXF Import with Project Management</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           <div className={`w-px ${colors.bg.active} ${PANEL_LAYOUT.MARGIN.X_XS} ${PANEL_LAYOUT.MARGIN.Y_XS}`} />
 

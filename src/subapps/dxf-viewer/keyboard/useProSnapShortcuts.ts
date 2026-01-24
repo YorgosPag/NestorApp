@@ -1,7 +1,19 @@
+/**
+ * useProSnapShortcuts Hook
+ * Handles F-key shortcuts for snap system toggles
+ *
+ * ⌨️ ENTERPRISE: Now uses centralized keyboard-shortcuts.ts (Single Source of Truth)
+ * @version 2.0.0 - Centralized shortcuts migration
+ *
+ * Industry Reference:
+ * - AutoCAD: F7=Grid, F8=Ortho, F9=Snap, F10=Polar, F11=Object Snap
+ */
 
 import { useEffect } from 'react';
 import { ExtendedSnapType } from '../snapping/extended-types';
 import { useSnapContext } from '../snapping/context/SnapContext';
+// ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
+import { matchesShortcut } from '../config/keyboard-shortcuts';
 
 interface ProSnapShortcutsProps {
   onToggleSnap?: (enabled: boolean) => void;
@@ -18,42 +30,43 @@ export function useProSnapShortcuts({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore αν γράφουμε σε input
+      // ✅ GUARD: Skip if typing in input fields
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
         return;
       }
 
-      switch (e.key) {
-        case 'Tab':
-          e.preventDefault();
-          onCycleSnap?.();
+      // ⌨️ ENTERPRISE: Using centralized matchesShortcut()
 
-          break;
+      // Tab - Cycle snap modes
+      if (matchesShortcut(e, 'cycleSnap')) {
+        e.preventDefault();
+        onCycleSnap?.();
+        return;
+      }
 
-        case 'F9':
-          e.preventDefault();
-          // Toggle Grid snap specifically
-          const gridEnabled = snapContext.enabledModes.has(ExtendedSnapType.GRID);
-          snapContext.toggleMode(ExtendedSnapType.GRID, !gridEnabled);
+      // F9 - Toggle Grid snap (AutoCAD standard)
+      if (matchesShortcut(e, 'gridSnap')) {
+        e.preventDefault();
+        const gridEnabled = snapContext.enabledModes.has(ExtendedSnapType.GRID);
+        snapContext.toggleMode(ExtendedSnapType.GRID, !gridEnabled);
+        return;
+      }
 
-          break;
+      // F10 - Toggle Polar/Ortho mode (AutoCAD standard)
+      if (matchesShortcut(e, 'polarTracking')) {
+        e.preventDefault();
+        const orthoEnabled = snapContext.enabledModes.has(ExtendedSnapType.ORTHO);
+        snapContext.toggleMode(ExtendedSnapType.ORTHO, !orthoEnabled);
+        return;
+      }
 
-        case 'F10':
-          e.preventDefault();
-          // Toggle Ortho mode
-          const orthoEnabled = snapContext.enabledModes.has(ExtendedSnapType.ORTHO);
-          snapContext.toggleMode(ExtendedSnapType.ORTHO, !orthoEnabled);
-
-          break;
-
-        case 'F11':
-          e.preventDefault();
-          // Toggle Auto mode
-          const autoEnabled = snapContext.enabledModes.has(ExtendedSnapType.AUTO);
-          snapContext.toggleMode(ExtendedSnapType.AUTO, !autoEnabled);
-
-          break;
+      // F11 - Toggle Object Snap (OSNAP in AutoCAD)
+      if (matchesShortcut(e, 'objectSnap')) {
+        e.preventDefault();
+        const autoEnabled = snapContext.enabledModes.has(ExtendedSnapType.AUTO);
+        snapContext.toggleMode(ExtendedSnapType.AUTO, !autoEnabled);
+        return;
       }
     };
 
