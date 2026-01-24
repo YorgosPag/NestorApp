@@ -1,0 +1,547 @@
+// 🌐 i18n: All labels converted to i18n keys - 2026-01-24
+'use client';
+
+/**
+ * 🏢 ENTERPRISE: LinkedSpacesCard Component
+ *
+ * Επιτρέπει τη σύνδεση/αποσύνδεση Parking και Storage χώρων με μια μονάδα (unit).
+ * Ακολουθεί το ίδιο pattern με το BuildingSelectorCard.
+ *
+ * @author Claude AI Assistant
+ * @created 2026-01-24
+ * @pattern Phase 2 - LinkedSpaces implementation
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Save, Loader2, CheckCircle, AlertCircle, Plus, X, Car, Package } from 'lucide-react';
+// 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
+import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+// 🏢 ENTERPRISE: Centralized API client with automatic authentication
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { useIconSizes } from '@/hooks/useIconSizes';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+// 🏢 ENTERPRISE: Domain constants for space types
+import { ALLOCATION_SPACE_TYPES, SPACE_INCLUSION_TYPES } from '@/config/domain-constants';
+import type { LinkedSpace } from '@/types/unit';
+import type { AllocationSpaceType, SpaceInclusionType } from '@/config/domain-constants';
+
+// ============================================================================
+// 🏢 ENTERPRISE: Type definitions (ZERO any)
+// ============================================================================
+
+interface ParkingOption {
+  id: string;
+  number: string;
+  type?: string;
+  status?: string;
+  floor?: string;
+}
+
+interface StorageOption {
+  id: string;
+  name: string;
+  type?: string;
+  status?: string;
+  floor?: string;
+  area?: number;
+}
+
+interface LinkedSpacesCardProps {
+  /** Unit ID για update */
+  unitId: string;
+  /** Building ID για φιλτράρισμα διαθέσιμων spaces */
+  buildingId?: string;
+  /** Τρέχοντα linkedSpaces (αν υπάρχουν) */
+  currentLinkedSpaces?: LinkedSpace[];
+  /** Callback μετά από επιτυχές update */
+  onLinkedSpacesChanged?: (newLinkedSpaces: LinkedSpace[]) => void;
+  /** Αν είναι σε edit mode */
+  isEditing?: boolean;
+}
+
+// ============================================================================
+// 🏢 ENTERPRISE: Component
+// ============================================================================
+
+/**
+ * LinkedSpacesCard Component
+ *
+ * Επιτρέπει τη σύνδεση Parking/Storage με μια μονάδα.
+ * Χρησιμοποιεί Radix Select (ADR-001 canonical) και Firestore για persistence.
+ */
+export function LinkedSpacesCard({
+  unitId,
+  buildingId,
+  currentLinkedSpaces = [],
+  onLinkedSpacesChanged,
+  isEditing = true,
+}: LinkedSpacesCardProps) {
+  // 🏢 ENTERPRISE: Centralized hooks (ZERO inline styles)
+  const { t } = useTranslation('units');
+  const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
+
+  // 🏢 ENTERPRISE: State management - Available options
+  const [parkingOptions, setParkingOptions] = useState<ParkingOption[]>([]);
+  const [storageOptions, setStorageOptions] = useState<StorageOption[]>([]);
+  const [loadingParking, setLoadingParking] = useState(false);
+  const [loadingStorage, setLoadingStorage] = useState(false);
+
+  // 🏢 ENTERPRISE: State management - Selected spaces
+  const [linkedSpaces, setLinkedSpaces] = useState<LinkedSpace[]>(currentLinkedSpaces);
+
+  // 🏢 ENTERPRISE: New space selection (for adding)
+  const [selectedParkingId, setSelectedParkingId] = useState<string>('__none__');
+  const [selectedStorageId, setSelectedStorageId] = useState<string>('__none__');
+  const [selectedInclusion, setSelectedInclusion] = useState<SpaceInclusionType>('included');
+
+  // 🏢 ENTERPRISE: Loading & Saving states
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // 🏢 ENTERPRISE: Load parking options when buildingId changes
+  useEffect(() => {
+    const loadParking = async () => {
+      if (!buildingId) {
+        setParkingOptions([]);
+        return;
+      }
+
+      setLoadingParking(true);
+      try {
+        interface ParkingApiResponse {
+          data?: {
+            parkingSpots?: Array<{ id: string; number: string; type?: string; status?: string; floor?: string }>;
+          };
+        }
+
+        const result = await apiClient.get<ParkingApiResponse>(`/api/parking?buildingId=${buildingId}`);
+        const parkingData = result?.data?.parkingSpots || [];
+
+        // Filter only available parking spots
+        const availableParking = parkingData.filter(p => p.status === 'available' || !p.status);
+
+        setParkingOptions(availableParking);
+        console.log(`✅ [LinkedSpacesCard] Loaded ${availableParking.length} available parking spots`);
+      } catch (error) {
+        console.error('❌ [LinkedSpacesCard] Error loading parking:', error);
+        setParkingOptions([]);
+      } finally {
+        setLoadingParking(false);
+      }
+    };
+
+    loadParking();
+  }, [buildingId]);
+
+  // 🏢 ENTERPRISE: Load storage options when buildingId changes
+  useEffect(() => {
+    const loadStorage = async () => {
+      if (!buildingId) {
+        setStorageOptions([]);
+        return;
+      }
+
+      setLoadingStorage(true);
+      try {
+        interface StorageApiResponse {
+          data?: {
+            storages?: Array<{ id: string; name: string; buildingId?: string; type?: string; status?: string; floor?: string; area?: number }>;
+          };
+        }
+
+        // Storages API uses projectId, but we can filter by buildingId client-side
+        const result = await apiClient.get<StorageApiResponse>('/api/storages');
+        const storageData = result?.data?.storages || [];
+
+        // Filter by buildingId and available status
+        const buildingStorages = storageData.filter(s =>
+          s.buildingId === buildingId &&
+          (s.status === 'available' || !s.status)
+        );
+
+        setStorageOptions(buildingStorages);
+        console.log(`✅ [LinkedSpacesCard] Loaded ${buildingStorages.length} available storages for building`);
+      } catch (error) {
+        console.error('❌ [LinkedSpacesCard] Error loading storages:', error);
+        setStorageOptions([]);
+      } finally {
+        setLoadingStorage(false);
+      }
+    };
+
+    loadStorage();
+  }, [buildingId]);
+
+  // 🏢 ENTERPRISE: Sync with external currentLinkedSpaces changes
+  useEffect(() => {
+    setLinkedSpaces(currentLinkedSpaces);
+  }, [currentLinkedSpaces]);
+
+  // 🏢 ENTERPRISE: Add parking space to linked list
+  const handleAddParking = useCallback(() => {
+    if (selectedParkingId === '__none__') return;
+
+    const parking = parkingOptions.find(p => p.id === selectedParkingId);
+    if (!parking) return;
+
+    // Check if already linked
+    if (linkedSpaces.some(ls => ls.spaceId === selectedParkingId)) {
+      console.warn('⚠️ [LinkedSpacesCard] Parking already linked');
+      return;
+    }
+
+    const newLinkedSpace: LinkedSpace = {
+      spaceId: selectedParkingId,
+      spaceType: ALLOCATION_SPACE_TYPES.PARKING,
+      quantity: 1,
+      inclusion: selectedInclusion,
+      allocationCode: parking.number,
+    };
+
+    setLinkedSpaces(prev => [...prev, newLinkedSpace]);
+    setSelectedParkingId('__none__');
+    setSaveStatus('idle');
+  }, [selectedParkingId, parkingOptions, linkedSpaces, selectedInclusion]);
+
+  // 🏢 ENTERPRISE: Add storage space to linked list
+  const handleAddStorage = useCallback(() => {
+    if (selectedStorageId === '__none__') return;
+
+    const storage = storageOptions.find(s => s.id === selectedStorageId);
+    if (!storage) return;
+
+    // Check if already linked
+    if (linkedSpaces.some(ls => ls.spaceId === selectedStorageId)) {
+      console.warn('⚠️ [LinkedSpacesCard] Storage already linked');
+      return;
+    }
+
+    const newLinkedSpace: LinkedSpace = {
+      spaceId: selectedStorageId,
+      spaceType: ALLOCATION_SPACE_TYPES.STORAGE,
+      quantity: 1,
+      inclusion: selectedInclusion,
+      allocationCode: storage.name,
+    };
+
+    setLinkedSpaces(prev => [...prev, newLinkedSpace]);
+    setSelectedStorageId('__none__');
+    setSaveStatus('idle');
+  }, [selectedStorageId, storageOptions, linkedSpaces, selectedInclusion]);
+
+  // 🏢 ENTERPRISE: Remove linked space
+  const handleRemoveSpace = useCallback((spaceId: string) => {
+    setLinkedSpaces(prev => prev.filter(ls => ls.spaceId !== spaceId));
+    setSaveStatus('idle');
+  }, []);
+
+  // 🏢 ENTERPRISE: Save to Firestore
+  const handleSave = useCallback(async () => {
+    if (!unitId) {
+      console.error('❌ [LinkedSpacesCard] No unitId provided');
+      return;
+    }
+
+    setSaving(true);
+    setSaveStatus('idle');
+
+    try {
+      const unitRef = doc(db, COLLECTIONS.UNITS, unitId);
+
+      // 🏢 ENTERPRISE: Update linkedSpaces array
+      await updateDoc(unitRef, {
+        linkedSpaces: linkedSpaces,
+        updatedAt: new Date().toISOString(),
+      });
+
+      console.log(`✅ [LinkedSpacesCard] Unit ${unitId} linkedSpaces updated with ${linkedSpaces.length} spaces`);
+      setSaveStatus('success');
+
+      if (onLinkedSpacesChanged) {
+        onLinkedSpacesChanged(linkedSpaces);
+      }
+
+      // Reset success status after 3 seconds
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (error) {
+      console.error('❌ [LinkedSpacesCard] Error saving:', error);
+      setSaveStatus('error');
+    } finally {
+      setSaving(false);
+    }
+  }, [unitId, linkedSpaces, onLinkedSpacesChanged]);
+
+  // 🏢 ENTERPRISE: Check if changes exist
+  const hasChanges = JSON.stringify(linkedSpaces) !== JSON.stringify(currentLinkedSpaces);
+
+  // 🏢 ENTERPRISE: Get space name for display
+  const getSpaceName = (space: LinkedSpace): string => {
+    if (space.allocationCode) return space.allocationCode;
+    if (space.spaceType === 'parking') {
+      const parking = parkingOptions.find(p => p.id === space.spaceId);
+      return parking?.number || space.spaceId;
+    } else {
+      const storage = storageOptions.find(s => s.id === space.spaceId);
+      return storage?.name || space.spaceId;
+    }
+  };
+
+  // 🏢 ENTERPRISE: Get inclusion label
+  const getInclusionLabel = (inclusion: SpaceInclusionType): string => {
+    return t(`linkedSpaces.inclusion.${inclusion}`, { defaultValue: inclusion });
+  };
+
+  // Don't render if no building is selected
+  if (!buildingId) {
+    return null;
+  }
+
+  return (
+    <Card className={cn(quick.card, colors.bg.card)}>
+      <CardHeader className="!p-2 flex flex-col space-y-2">
+        <CardTitle className={`flex items-center ${spacing.gap.sm} text-sm`}>
+          <Package className={cn(iconSizes.md, 'text-purple-600')} />
+          {t('linkedSpaces.title', { defaultValue: 'Συνδεδεμένοι Χώροι' })}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="!p-2 !pt-2 space-y-3">
+        {/* 🏢 ENTERPRISE: Currently linked spaces */}
+        {linkedSpaces.length > 0 && (
+          <section className={spacing.spaceBetween.sm}>
+            <Label className="text-xs text-muted-foreground">
+              {t('linkedSpaces.currentlyLinked', { defaultValue: 'Συνδεδεμένα' })}
+            </Label>
+            <ul className={`flex flex-wrap ${spacing.gap.sm}`}>
+              {linkedSpaces.map((space) => (
+                <li key={space.spaceId}>
+                  <Badge
+                    variant="secondary"
+                    className={`flex items-center ${spacing.gap.sm} pr-1`}
+                  >
+                    {space.spaceType === 'parking' ? (
+                      <Car className={cn(iconSizes.xs, 'text-blue-600')} />
+                    ) : (
+                      <Package className={cn(iconSizes.xs, 'text-amber-600')} />
+                    )}
+                    <span>{getSpaceName(space)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({getInclusionLabel(space.inclusion)})
+                    </span>
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSpace(space.spaceId)}
+                        className={cn(
+                          'ml-1 p-0.5 rounded-full hover:bg-destructive/20',
+                          'text-muted-foreground hover:text-destructive',
+                          'transition-colors'
+                        )}
+                        aria-label={t('linkedSpaces.remove', { defaultValue: 'Αφαίρεση' })}
+                      >
+                        <X className={iconSizes.xs} />
+                      </button>
+                    )}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* 🏢 ENTERPRISE: Add new spaces (only in edit mode) */}
+        {isEditing && (
+          <>
+            {/* Inclusion type selector */}
+            <fieldset className={spacing.spaceBetween.sm}>
+              <Label htmlFor="inclusion-selector" className="text-xs">
+                {t('linkedSpaces.inclusionLabel', { defaultValue: 'Τύπος σύνδεσης' })}
+              </Label>
+              <Select
+                value={selectedInclusion}
+                onValueChange={(value: SpaceInclusionType) => setSelectedInclusion(value)}
+              >
+                <SelectTrigger id="inclusion-selector" className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SPACE_INCLUSION_TYPES.INCLUDED}>
+                    {t('linkedSpaces.inclusion.included', { defaultValue: 'Συμπεριλαμβάνεται' })}
+                  </SelectItem>
+                  <SelectItem value={SPACE_INCLUSION_TYPES.OPTIONAL}>
+                    {t('linkedSpaces.inclusion.optional', { defaultValue: 'Προαιρετικό' })}
+                  </SelectItem>
+                  <SelectItem value={SPACE_INCLUSION_TYPES.RENTED}>
+                    {t('linkedSpaces.inclusion.rented', { defaultValue: 'Ενοικιαζόμενο' })}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </fieldset>
+
+            {/* Parking selector */}
+            <fieldset className={spacing.spaceBetween.sm}>
+              <Label className="text-xs flex items-center gap-1">
+                <Car className={cn(iconSizes.xs, 'text-blue-600')} />
+                {t('linkedSpaces.addParking', { defaultValue: 'Προσθήκη Parking' })}
+              </Label>
+              {loadingParking ? (
+                <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground text-sm`}>
+                  <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+                  <span>{t('linkedSpaces.loadingParking', { defaultValue: 'Φόρτωση...' })}</span>
+                </section>
+              ) : parkingOptions.length === 0 ? (
+                <p className={cn('text-xs', colors.text.muted)}>
+                  {t('linkedSpaces.noParkingAvailable', { defaultValue: 'Δεν υπάρχουν διαθέσιμες θέσεις parking' })}
+                </p>
+              ) : (
+                <div className={`flex ${spacing.gap.sm}`}>
+                  <Select
+                    value={selectedParkingId}
+                    onValueChange={setSelectedParkingId}
+                  >
+                    <SelectTrigger className="flex-1 h-8 text-sm">
+                      <SelectValue placeholder={t('linkedSpaces.selectParking', { defaultValue: 'Επιλογή parking...' })} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">
+                        {t('linkedSpaces.selectParking', { defaultValue: '-- Επιλέξτε --' })}
+                      </SelectItem>
+                      {parkingOptions
+                        .filter(p => !linkedSpaces.some(ls => ls.spaceId === p.id))
+                        .map((parking) => (
+                          <SelectItem key={parking.id} value={parking.id}>
+                            {parking.number} {parking.type && `(${parking.type})`}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAddParking}
+                    disabled={selectedParkingId === '__none__'}
+                    className="h-8"
+                  >
+                    <Plus className={iconSizes.xs} />
+                  </Button>
+                </div>
+              )}
+            </fieldset>
+
+            {/* Storage selector */}
+            <fieldset className={spacing.spaceBetween.sm}>
+              <Label className="text-xs flex items-center gap-1">
+                <Package className={cn(iconSizes.xs, 'text-amber-600')} />
+                {t('linkedSpaces.addStorage', { defaultValue: 'Προσθήκη Αποθήκης' })}
+              </Label>
+              {loadingStorage ? (
+                <section className={`flex items-center ${spacing.gap.sm} text-muted-foreground text-sm`}>
+                  <Loader2 className={cn(iconSizes.sm, 'animate-spin')} />
+                  <span>{t('linkedSpaces.loadingStorage', { defaultValue: 'Φόρτωση...' })}</span>
+                </section>
+              ) : storageOptions.length === 0 ? (
+                <p className={cn('text-xs', colors.text.muted)}>
+                  {t('linkedSpaces.noStorageAvailable', { defaultValue: 'Δεν υπάρχουν διαθέσιμες αποθήκες' })}
+                </p>
+              ) : (
+                <div className={`flex ${spacing.gap.sm}`}>
+                  <Select
+                    value={selectedStorageId}
+                    onValueChange={setSelectedStorageId}
+                  >
+                    <SelectTrigger className="flex-1 h-8 text-sm">
+                      <SelectValue placeholder={t('linkedSpaces.selectStorage', { defaultValue: 'Επιλογή αποθήκης...' })} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">
+                        {t('linkedSpaces.selectStorage', { defaultValue: '-- Επιλέξτε --' })}
+                      </SelectItem>
+                      {storageOptions
+                        .filter(s => !linkedSpaces.some(ls => ls.spaceId === s.id))
+                        .map((storage) => (
+                          <SelectItem key={storage.id} value={storage.id}>
+                            {storage.name} {storage.area && `(${storage.area} τ.μ.)`}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAddStorage}
+                    disabled={selectedStorageId === '__none__'}
+                    className="h-8"
+                  >
+                    <Plus className={iconSizes.xs} />
+                  </Button>
+                </div>
+              )}
+            </fieldset>
+
+            {/* Save button */}
+            <footer className={`flex items-center justify-between ${spacing.padding.top.sm}`}>
+              <Button
+                onClick={handleSave}
+                disabled={saving || !hasChanges}
+                variant={hasChanges ? 'default' : 'outline'}
+                size="sm"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className={cn(iconSizes.sm, spacing.margin.right.sm, 'animate-spin')} />
+                    {t('linkedSpaces.saving', { defaultValue: 'Αποθήκευση...' })}
+                  </>
+                ) : (
+                  <>
+                    <Save className={cn(iconSizes.sm, spacing.margin.right.sm)} />
+                    {t('linkedSpaces.save', { defaultValue: 'Αποθήκευση' })}
+                  </>
+                )}
+              </Button>
+
+              {/* Status indicators */}
+              {saveStatus === 'success' && (
+                <span className={`flex items-center ${spacing.gap.sm} text-sm text-green-600 dark:text-green-400`}>
+                  <CheckCircle className={iconSizes.sm} />
+                  {t('linkedSpaces.success', { defaultValue: 'Αποθηκεύτηκε!' })}
+                </span>
+              )}
+              {saveStatus === 'error' && (
+                <span className={`flex items-center ${spacing.gap.sm} text-sm text-red-600 dark:text-red-400`}>
+                  <AlertCircle className={iconSizes.sm} />
+                  {t('linkedSpaces.error', { defaultValue: 'Σφάλμα' })}
+                </span>
+              )}
+            </footer>
+          </>
+        )}
+
+        {/* Empty state */}
+        {linkedSpaces.length === 0 && !isEditing && (
+          <p className={cn('text-sm', colors.text.muted)}>
+            {t('linkedSpaces.noLinkedSpaces', { defaultValue: 'Δεν υπάρχουν συνδεδεμένοι χώροι' })}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default LinkedSpacesCard;

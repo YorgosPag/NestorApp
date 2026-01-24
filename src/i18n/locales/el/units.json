@@ -480,5 +480,29 @@
     "success": "Οι αλλαγές αποθηκεύτηκαν",
     "error": "Σφάλμα κατά την αποθήκευση",
     "permissionDenied": "Δεν έχετε δικαίωμα επεξεργασίας αυτής της μονάδας"
+  },
+  "linkedSpaces": {
+    "title": "Συνδεδεμένοι Χώροι",
+    "currentlyLinked": "Συνδεδεμένα",
+    "remove": "Αφαίρεση",
+    "inclusionLabel": "Τύπος σύνδεσης",
+    "inclusion": {
+      "included": "Συμπεριλαμβάνεται",
+      "optional": "Προαιρετικό",
+      "rented": "Ενοικιαζόμενο"
+    },
+    "addParking": "Προσθήκη Parking",
+    "loadingParking": "Φόρτωση...",
+    "noParkingAvailable": "Δεν υπάρχουν διαθέσιμες θέσεις parking",
+    "selectParking": "Επιλογή parking...",
+    "addStorage": "Προσθήκη Αποθήκης",
+    "loadingStorage": "Φόρτωση...",
+    "noStorageAvailable": "Δεν υπάρχουν διαθέσιμες αποθήκες",
+    "selectStorage": "Επιλογή αποθήκης...",
+    "save": "Αποθήκευση",
+    "saving": "Αποθήκευση...",
+    "success": "Αποθηκεύτηκε!",
+    "error": "Σφάλμα",
+    "noLinkedSpaces": "Δεν υπάρχουν συνδεδεμένοι χώροι"
   }
 }

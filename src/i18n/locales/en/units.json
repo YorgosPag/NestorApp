@@ -480,5 +480,29 @@
     "success": "Changes saved successfully",
     "error": "Error saving changes",
     "permissionDenied": "You do not have permission to edit this unit"
+  },
+  "linkedSpaces": {
+    "title": "Linked Spaces",
+    "currentlyLinked": "Currently Linked",
+    "remove": "Remove",
+    "inclusionLabel": "Link Type",
+    "inclusion": {
+      "included": "Included",
+      "optional": "Optional",
+      "rented": "Rented"
+    },
+    "addParking": "Add Parking",
+    "loadingParking": "Loading...",
+    "noParkingAvailable": "No parking spots available",
+    "selectParking": "Select parking...",
+    "addStorage": "Add Storage",
+    "loadingStorage": "Loading...",
+    "noStorageAvailable": "No storages available",
+    "selectStorage": "Select storage...",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Saved!",
+    "error": "Error",
+    "noLinkedSpaces": "No linked spaces"
   }
 }

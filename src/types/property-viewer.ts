@@ -23,6 +23,8 @@ import type {
   SecurityFeatureCodeType
 } from '@/constants/unit-features-enterprise';
 import type { Timestamp } from 'firebase/firestore';
+// 🏢 PHASE 2: LinkedSpaces type
+import type { LinkedSpace } from './unit';
 
 /**
  * ✅ DOMAIN SEPARATION: Operational status type (re-imported from unit.ts)
@@ -145,6 +147,10 @@ export interface Property {
     };
     interiorFeatures?: InteriorFeatureCodeType[];
     securityFeatures?: SecurityFeatureCodeType[];
+
+    // === LINKED SPACES - Phase 2 (Parking/Storage) ===
+    /** Relationships to parking and storage spaces */
+    linkedSpaces?: LinkedSpace[];
   }
   
 export interface StorageUnitStub {

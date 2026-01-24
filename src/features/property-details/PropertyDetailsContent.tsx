@@ -21,6 +21,7 @@ import { ContactsBlock } from './components/ContactsBlock';
 import { DocumentsBlock } from './components/DocumentsBlock';
 import { DatesBlock } from './components/DatesBlock';
 import { BuildingSelectorCard } from './components/BuildingSelectorCard';
+import { LinkedSpacesCard } from './components/LinkedSpacesCard';
 import { UnitFieldsBlock } from './components/UnitFieldsBlock';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -162,6 +163,24 @@ export function PropertyDetailsContent({
                 updates.floorId = newFloorId;
               }
               onUpdateProperty(resolvedProperty.id, updates);
+            }
+          }}
+        />
+      )}
+
+      {/* 🏢 ENTERPRISE: LinkedSpaces για σύνδεση Parking & Storage (Phase 2) */}
+      {/* Εμφανίζεται ΜΟΝΟ σε edit mode και όταν υπάρχει buildingId */}
+      {!isReadOnly && isEditMode && resolvedProperty?.buildingId && (
+        <LinkedSpacesCard
+          unitId={resolvedProperty?.id ?? ''}
+          buildingId={resolvedProperty?.buildingId}
+          currentLinkedSpaces={resolvedProperty?.linkedSpaces}
+          isEditing={true}
+          onLinkedSpacesChanged={(newLinkedSpaces) => {
+            console.log(`✅ Unit ${resolvedProperty?.id} linkedSpaces updated with ${newLinkedSpaces.length} spaces`);
+            // 🏢 ENTERPRISE: Trigger property update to refresh UI
+            if (onUpdateProperty) {
+              onUpdateProperty(resolvedProperty.id, { linkedSpaces: newLinkedSpaces });
             }
           }}
         />
