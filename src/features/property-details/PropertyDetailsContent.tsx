@@ -35,7 +35,11 @@ export function PropertyDetailsContent({
   data, // Support for UniversalTabsRenderer compatibility
   onSelectFloor,
   onUpdateProperty,
-  isReadOnly = false
+  isReadOnly = false,
+  // 🏢 ENTERPRISE: Edit mode props from parent (UnitsSidebar) - Pattern A
+  isEditMode: externalEditMode,
+  onToggleEditMode: externalToggleEditMode,
+  onExitEditMode: externalExitEditMode,
 }: Partial<PropertyDetailsContentProps> & {
   property?: ExtendedPropertyDetails & { buyerMismatch?: boolean };
   unit?: ExtendedPropertyDetails;
@@ -43,24 +47,39 @@ export function PropertyDetailsContent({
   onSelectFloor?: (floorId: string | null) => void;
   onUpdateProperty?: (propertyId: string, updates: Partial<Property>) => void;
   isReadOnly?: boolean;
+  // 🏢 ENTERPRISE: Edit mode props from parent
+  isEditMode?: boolean;
+  onToggleEditMode?: () => void;
+  onExitEditMode?: () => void;
 }) {
   const { t } = useTranslation(['common', 'properties']);
   const notifications = useNotifications();
   const { quick } = useBorderTokens();
   const spacing = useSpacingTokens();
 
-  // 🏢 ENTERPRISE: Lifted edit mode state - single source of truth
-  const [isEditMode, setIsEditMode] = useState(false);
+  // 🏢 ENTERPRISE: Edit mode - prefer external props (from UnitsSidebar), fallback to local state
+  const [localEditMode, setLocalEditMode] = useState(false);
 
-  // 🏢 ENTERPRISE: Toggle edit mode callback
+  // Use external edit mode if provided, otherwise local
+  const isEditMode = externalEditMode !== undefined ? externalEditMode : localEditMode;
+
+  // 🏢 ENTERPRISE: Toggle edit mode callback - use external if provided
   const handleToggleEditMode = useCallback(() => {
-    setIsEditMode(prev => !prev);
-  }, []);
+    if (externalToggleEditMode) {
+      externalToggleEditMode();
+    } else {
+      setLocalEditMode(prev => !prev);
+    }
+  }, [externalToggleEditMode]);
 
   // 🏢 ENTERPRISE: Exit edit mode callback (for save/cancel)
   const handleExitEditMode = useCallback(() => {
-    setIsEditMode(false);
-  }, []);
+    if (externalExitEditMode) {
+      externalExitEditMode();
+    } else {
+      setLocalEditMode(false);
+    }
+  }, [externalExitEditMode]);
 
   // Resolve the actual property from all possible sources (enterprise pattern)
   const resolvedProperty = property || unit || data;
@@ -127,10 +146,7 @@ export function PropertyDetailsContent({
       />
 
       {/* 🏢 ENTERPRISE: Building Selector για σύνδεση Μονάδας→Κτιρίου */}
-      {/* 🎯 PR1.2: Hidden by default - requires explicit edit mode toggle */}
-      {/* TODO: Add edit mode toggle button to show BuildingSelectorCard */}
-      {/* When edit mode is implemented, uncomment and use: !isReadOnly && isEditMode && (...) */}
-      {/*
+      {/* Εμφανίζεται ΜΟΝΟ σε edit mode (Pattern A - entity header edit) */}
       {!isReadOnly && isEditMode && (
         <BuildingSelectorCard
           unitId={resolvedProperty?.id ?? ''}
@@ -138,10 +154,13 @@ export function PropertyDetailsContent({
           isEditing={true}
           onBuildingChanged={(newBuildingId) => {
             console.log(`✅ Unit ${resolvedProperty?.id} linked to building ${newBuildingId}`);
+            // 🏢 ENTERPRISE: Trigger property update to refresh UI
+            if (onUpdateProperty) {
+              onUpdateProperty(resolvedProperty.id, { buildingId: newBuildingId });
+            }
           }}
         />
       )}
-      */}
 
       {/* Share Button - Always visible for easy sharing */}
       <div className="flex justify-end">
