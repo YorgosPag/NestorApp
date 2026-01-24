@@ -1,6 +1,20 @@
 {
   "indexes": [
     {
+      "collectionGroup": "workspaces",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "displayName",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "admin_building_templates",
       "queryScope": "COLLECTION",
       "fields": [

@@ -130,16 +130,42 @@ const SelectLabel = React.forwardRef<
 ))
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
+/**
+ * 🏢 ENTERPRISE: SelectItem with dev-only empty value assertion
+ *
+ * Radix Select FORBIDS <SelectItem value="" /> - it will crash at runtime.
+ * This wrapper catches the error early in development with a clear message.
+ *
+ * For "clear/no selection" options, use SELECT_CLEAR_VALUE from domain-constants.ts:
+ * @example
+ * ```tsx
+ * import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
+ * <SelectItem value={SELECT_CLEAR_VALUE}>No selection</SelectItem>
+ * ```
+ */
 const SelectItem = React.forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => {
+>(({ className, children, value, ...props }, ref) => {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+
+  // 🏢 ENTERPRISE: Dev-only guardrail - catch empty value early
+  if (process.env.NODE_ENV !== 'production') {
+    if (value === '' || value === undefined || value === null) {
+      throw new Error(
+        `[SelectItem] Empty value is forbidden by Radix Select.\n` +
+        `Use SELECT_CLEAR_VALUE from '@/config/domain-constants' for "no selection" options.\n` +
+        `Example: <SelectItem value={SELECT_CLEAR_VALUE}>No selection</SelectItem>\n` +
+        `Received value: ${JSON.stringify(value)}`
+      );
+    }
+  }
 
   return (
     <SelectPrimitive.Item
       ref={ref}
+      value={value}
       className={cn(
         `relative flex w-full cursor-default select-none items-center ${quick.rounded} py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50`,
         className
