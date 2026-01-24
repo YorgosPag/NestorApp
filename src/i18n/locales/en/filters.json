@@ -1,5 +1,6 @@
 {
   "title": "Filters",
+  "propertiesTitle": "Property Filters",
   "searchFilters": "Search Filters",
   "showAdvanced": "Show advanced",
   "hideAdvanced": "Hide advanced",
@@ -109,6 +110,7 @@
     "contactsSearch": "Search contacts...",
     "buildingsSearch": "Search buildings...",
     "projectsSearch": "Search projects...",
+    "propertiesSearch": "Search properties...",
     "selectStatus": "Select status",
     "selectProject": "Select project",
     "selectBuilding": "Select building",

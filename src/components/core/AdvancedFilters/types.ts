@@ -199,3 +199,21 @@ export interface ProjectFilterState extends GenericFilterState {
   isActive?: boolean;
   hasIssues?: boolean;
 }
+
+// 🏢 ENTERPRISE: Property Filter State for public property viewer
+// Used in /properties page for customer-facing property search
+export interface PropertyFilterState extends GenericFilterState {
+  searchTerm: string;
+  propertyType: string[];
+  status: string[];
+  priceRange: {
+    min?: number;
+    max?: number;
+  };
+  areaRange: {
+    min?: number;
+    max?: number;
+  };
+  floor: string[];
+  features: string[];
+}

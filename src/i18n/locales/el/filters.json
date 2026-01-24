@@ -1,5 +1,6 @@
 {
   "title": "Φίλτρα",
+  "propertiesTitle": "Φίλτρα Ακινήτων",
   "searchFilters": "Φίλτρα Αναζήτησης",
   "showAdvanced": "Εμφάνιση προχωρημένων",
   "hideAdvanced": "Απόκρυψη προχωρημένων",
@@ -109,6 +110,7 @@
     "contactsSearch": "Αναζήτηση επαφών...",
     "buildingsSearch": "Αναζήτηση κτιρίων...",
     "projectsSearch": "Αναζήτηση έργων...",
+    "propertiesSearch": "Αναζήτηση ακινήτων...",
     "selectStatus": "Επιλέξτε κατάσταση",
     "selectProject": "Επιλέξτε έργο",
     "selectBuilding": "Επιλέξτε κτίριο",

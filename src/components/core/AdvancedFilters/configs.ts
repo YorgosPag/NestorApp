@@ -40,7 +40,8 @@ import type {
   ContactFilterState,
   UnitFilterState,
   BuildingFilterState,
-  ProjectFilterState
+  ProjectFilterState,
+  PropertyFilterState
 } from './types';
 import {
   PROPERTY_FILTER_LABELS,
@@ -864,6 +865,118 @@ export const projectFiltersConfig: FilterPanelConfig = {
       ]
     }
   ]
+};
+
+// ====================================================================
+// [ENTERPRISE] Property Filters Configuration
+// For public property viewer (/properties page)
+// ====================================================================
+export const propertyFiltersConfig: FilterPanelConfig = {
+  title: 'filters.propertiesTitle',
+  searchPlaceholder: 'filters.placeholders.propertiesSearch',
+  i18nNamespace: 'properties', // 🏢 ENTERPRISE: Properties domain namespace
+  rows: [
+    {
+      id: 'property-basic',
+      fields: [
+        {
+          id: 'searchTerm',
+          type: 'search',
+          label: FL.search,
+          placeholder: 'filters.placeholders.propertiesSearch',
+          ariaLabel: 'Search properties',
+          width: 1
+        },
+        {
+          id: 'propertyType',
+          type: 'select',
+          label: FL.property_type,
+          placeholder: SP.type_placeholder,
+          ariaLabel: 'Property type filter',
+          width: 1,
+          options: [
+            { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_TYPES },
+            { value: 'apartment', label: PROPERTY_BUILDING_TYPE_LABELS.apartment },
+            { value: 'maisonette', label: PROPERTY_BUILDING_TYPE_LABELS.maisonette },
+            { value: 'studio', label: PROPERTY_BUILDING_TYPE_LABELS.studio },
+            { value: 'shop', label: PROPERTY_BUILDING_TYPE_LABELS.shop },
+            { value: 'office', label: PROPERTY_BUILDING_TYPE_LABELS.office }
+          ]
+        },
+        {
+          id: 'status',
+          type: 'select',
+          label: FL.status,
+          placeholder: SP.status_placeholder,
+          ariaLabel: 'Property status filter',
+          width: 1,
+          options: [
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'available', label: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE },
+            { value: 'reserved', label: UNIFIED_STATUS_FILTER_LABELS.RESERVED },
+            { value: 'sold', label: UNIFIED_STATUS_FILTER_LABELS.SOLD }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'property-ranges',
+      fields: [
+        {
+          id: 'priceRange',
+          type: 'range',
+          label: FL.price_range,
+          ariaLabel: 'Price range filter',
+          width: 1,
+          min: parseInt(process.env.NEXT_PUBLIC_FILTER_PRICE_MIN || '0'),
+          max: parseInt(process.env.NEXT_PUBLIC_FILTER_PRICE_MAX || '2000000')
+        },
+        {
+          id: 'areaRange',
+          type: 'range',
+          label: FL.area_range,
+          ariaLabel: 'Area range filter',
+          width: 1,
+          dropdownMode: true,
+          min: parseInt(process.env.NEXT_PUBLIC_FILTER_AREA_MIN || '0'),
+          max: parseInt(process.env.NEXT_PUBLIC_FILTER_AREA_MAX || '500')
+        },
+        {
+          id: 'floor',
+          type: 'select',
+          label: FL.floor,
+          placeholder: SP.floor_placeholder,
+          ariaLabel: 'Floor filter',
+          width: 1,
+          options: [
+            { value: 'all', label: PROPERTY_FILTER_LABELS.ALL_FLOORS }
+          ]
+        }
+      ]
+    }
+  ],
+  advancedFilters: {
+    show: true,
+    title: FT.advanced,
+    options: [
+      { id: 'parking', label: AFO.parking, category: 'features' },
+      { id: 'storage', label: AFO.storage, category: 'features' },
+      { id: 'view', label: AFO.view, category: 'features' },
+      { id: 'fireplace', label: AFO.fireplace, category: 'features' }
+    ],
+    categories: ['features']
+  }
+};
+
+// Default Property Filters
+export const defaultPropertyFilters: PropertyFilterState = {
+  searchTerm: '',
+  propertyType: [],
+  status: [],
+  priceRange: { min: undefined, max: undefined },
+  areaRange: { min: undefined, max: undefined },
+  floor: [],
+  features: []
 };
 
 // Default filter states - unchanged for backward compatibility
