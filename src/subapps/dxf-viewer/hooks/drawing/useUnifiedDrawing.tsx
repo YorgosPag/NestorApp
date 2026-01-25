@@ -30,8 +30,10 @@
 // DEBUG FLAG
 const DEBUG_UNIFIED_DRAWING = false;
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+// 🏢 ENTERPRISE (2026-01-25): Drawing State Machine integration
+import { useDrawingMachine, type DrawingStateType } from '../../core/state-machine';
 import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity } from '../../types/scene';
 // ✅ ENTERPRISE FIX: Import centralized PreviewGripPoint from entities
 import type { PreviewGripPoint } from '../../types/entities';
@@ -106,16 +108,45 @@ export interface DrawingState {
 }
 
 export function useUnifiedDrawing() {
-  const [state, setState] = useState<DrawingState>({
-    currentTool: 'select',
-    isDrawing: false,
+  // 🏢 ENTERPRISE (2026-01-25): Use Drawing State Machine for state management
+  // This replaces boolean flags with formal state machine (ADR-032)
+  const {
+    state: machineState,
+    context: machineContext,
+    isDrawing: machineIsDrawing,
+    canComplete,
+    canCancel,
+    canAddPoint,
+    selectTool: machineSelectTool,
+    deselectTool: machineDeselectTool,
+    addPoint: machineAddPoint,
+    moveCursor: machineMoveCursor,
+    complete: machineComplete,
+    cancel: machineCancel,
+    reset: machineReset,
+  } = useDrawingMachine({ useGlobal: true });
+
+  // Local state for preview entity and overlay mode (not part of state machine)
+  const [localState, setLocalState] = useState<{
+    previewEntity: ExtendedSceneEntity | null;
+    isOverlayMode: boolean;
+  }>({
     previewEntity: null,
-    tempPoints: [],
-    // ✅ ENTERPRISE: Initialize missing properties
-    currentPoints: [],
-    snapPoint: null,
-    snapType: null
+    isOverlayMode: false,
   });
+
+  // 🏢 ENTERPRISE: Derive DrawingState from state machine for backward compatibility
+  const state: DrawingState = useMemo(() => ({
+    currentTool: (machineContext.toolType as DrawingTool) || 'select',
+    isDrawing: machineIsDrawing,
+    previewEntity: localState.previewEntity,
+    tempPoints: machineContext.points as Point2D[],
+    isOverlayMode: localState.isOverlayMode,
+    // ✅ ENTERPRISE: Map state machine context to DrawingState
+    currentPoints: machineContext.points as Point2D[],
+    snapPoint: machineContext.snapInfo.snapPoint,
+    snapType: machineContext.snapInfo.snapType,
+  }), [machineContext, machineIsDrawing, localState]);
 
   const {
     currentLevelId,
@@ -138,7 +169,8 @@ export function useUnifiedDrawing() {
   // Applies ColorPalettePanel settings (DXF Settings → General + Specific Preview)
   // Used by: line, polyline, circle, rectangle entities
   // 🏢 ENTERPRISE: Type-safe entity with preview properties
-  const applyPreviewSettings = useCallback((entity: ExtendedSceneEntity & Record<string, unknown>) => {
+  // Using Record<string, unknown> for flexibility with different entity types
+  const applyPreviewSettings = useCallback((entity: Record<string, unknown>) => {
     // ✅ FIX (ChatGPT-5): Guard against undefined linePreviewStyles
     if (!linePreviewStyles) {
       return;
@@ -351,19 +383,21 @@ export function useUnifiedDrawing() {
     return null;
   }, []);
 
-  const addPoint = useCallback((worldPoint: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
-    // ✅ FIX RACE CONDITION: Έλεγχος βάσει currentTool αντί για isDrawing
-    // Το isDrawing είναι async (setState) και μπορεί να μην έχει ενημερωθεί ακόμα
-    // Το currentTool είναι πιο αξιόπιστο καθώς ενημερώνεται μαζί με το state
-    const isDrawingTool = state.currentTool && state.currentTool !== 'select';
-    if (!isDrawingTool) {
+  const addPoint = useCallback((worldPoint: Point2D, _transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
+    // 🏢 ENTERPRISE (2026-01-25): Use state machine guard instead of manual checks
+    // State machine provides canAddPoint which handles all edge cases
+    if (!canAddPoint) {
       return;
     }
 
     // Snap is handled at DxfCanvas level, use worldPoint directly
     const snappedPoint = worldPoint;
 
-    const newTempPoints = [...state.tempPoints, snappedPoint];
+    // 🏢 ENTERPRISE: Add point via state machine - this updates machineContext.points
+    machineAddPoint(snappedPoint);
+
+    // Calculate new points array for entity creation
+    const newTempPoints = [...machineContext.points, snappedPoint];
 
     const isComplete = (tool: DrawingTool, points: Point2D[]) => {
       switch (tool) {
@@ -385,11 +419,13 @@ export function useUnifiedDrawing() {
       }
     };
 
-    if (isComplete(state.currentTool, newTempPoints)) {
-      const newEntity = createEntityFromTool(state.currentTool, newTempPoints);
+    const currentTool = (machineContext.toolType as DrawingTool) || 'select';
+
+    if (isComplete(currentTool, newTempPoints)) {
+      const newEntity = createEntityFromTool(currentTool, newTempPoints);
       if (newEntity && currentLevelId) {
         // Apply completion settings from ColorPalettePanel (for line entities only)
-        if (newEntity.type === 'line' && state.currentTool === 'line' && lineCompletionStyles) {
+        if (newEntity.type === 'line' && currentTool === 'line' && lineCompletionStyles) {
           // ✅ ENTERPRISE: Type-safe property assignment with proper assertion
           const lineEntity = newEntity as LineEntity;
           lineEntity.color = lineCompletionStyles.color;
@@ -424,31 +460,29 @@ export function useUnifiedDrawing() {
         }
       }
       // Return to normal mode after entity completion
-
       setMode('normal');
 
-      // ✅ ENTERPRISE FIX: Reset state completely after entity completion
-      // Bug fix: isDrawing must be set to false when entity is complete
-      setState(prev => ({
+      // 🏢 ENTERPRISE: Use state machine to complete and reset
+      machineComplete();
+      machineReset();
+      machineDeselectTool();
+
+      // Reset local state (preview entity)
+      setLocalState(prev => ({
         ...prev,
-        isDrawing: false,
-        tempPoints: [],
         previewEntity: null,
-        currentPoints: [],
-        snapPoint: null,
-        snapType: null
       }));
     } else {
       // Create a partial preview after adding the point
       let partialPreview: ExtendedSceneEntity | null = null;
 
       // Line tool doesn't create partial preview on first click
-      if (state.currentTool === 'line' && newTempPoints.length === 1) {
+      if (currentTool === 'line' && newTempPoints.length === 1) {
         partialPreview = null;
       }
 
       // For measure-angle, show intermediate state
-      if (state.currentTool === 'measure-angle' && newTempPoints.length >= 1) {
+      if (currentTool === 'measure-angle' && newTempPoints.length >= 1) {
         if (newTempPoints.length === 1) {
           // After first click, show a dot
           partialPreview = {
@@ -490,34 +524,41 @@ export function useUnifiedDrawing() {
           partialPreview = extendedPartialPreview;
         }
       }
-      
-      setState(prev => ({
+
+      // 🏢 ENTERPRISE: Update local state for preview entity only
+      setLocalState(prev => ({
         ...prev,
-        tempPoints: newTempPoints,
-        previewEntity: partialPreview
+        previewEntity: partialPreview,
       }));
     }
-  }, [state, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, lineCompletionStyles]);
+  }, [canAddPoint, machineAddPoint, machineContext.points, machineContext.toolType, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, lineCompletionStyles, machineComplete, machineReset, machineDeselectTool]);
 
-  const updatePreview = useCallback((mousePoint: Point2D, transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
-    // ✅ FIX RACE CONDITION: Έλεγχος βάσει currentTool αντί για isDrawing
-    const isDrawingTool = state.currentTool && state.currentTool !== 'select';
+  const updatePreview = useCallback((mousePoint: Point2D, _transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
+    // 🏢 ENTERPRISE (2026-01-25): Use state machine for state checks
+    const currentTool = (machineContext.toolType as DrawingTool) || 'select';
+    const isDrawingTool = currentTool && currentTool !== 'select';
     if (!isDrawingTool) {
       return;
     }
 
+    // 🏢 ENTERPRISE: Update cursor position in state machine
+    machineMoveCursor(mousePoint);
+
     // Snap is handled at DxfCanvas level, use mousePoint directly
     const snappedPoint = mousePoint;
 
+    // Get current points from state machine
+    const tempPoints = machineContext.points;
+
     // For single-point preview (starting a shape)
-    if (state.tempPoints.length === 0) {
+    if (tempPoints.length === 0) {
       // Show a small preview indicator at the mouse position
       let previewEntity: ExtendedSceneEntity | null = null;
-      
-      if (state.currentTool === 'line' || state.currentTool === 'measure-distance' || state.currentTool === 'rectangle' || state.currentTool === 'circle' || state.currentTool === 'circle-diameter' || state.currentTool === 'circle-2p-diameter' || state.currentTool === 'polygon' || state.currentTool === 'polyline' || state.currentTool === 'measure-area' || state.currentTool === 'measure-angle') {
+
+      if (currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-area' || currentTool === 'measure-angle') {
         // For shapes that need two points, show a small dot at the start point
-        const isMeasurementTool = state.currentTool === 'measure-distance' || state.currentTool === 'measure-area' || state.currentTool === 'measure-angle';
-        
+        const isMeasurementTool = currentTool === 'measure-distance' || currentTool === 'measure-area' || currentTool === 'measure-angle';
+
         previewEntity = {
           id: 'preview_start',
           type: 'point',
@@ -530,36 +571,38 @@ export function useUnifiedDrawing() {
           ...(isMeasurementTool && { measurement: true })
         } as PreviewPoint;
       }
-      
-      setState(prev => ({ ...prev, previewEntity }));
+
+      // 🏢 ENTERPRISE: Update local state for preview entity
+      setLocalState(prev => ({ ...prev, previewEntity }));
       return;
     }
 
     // For multi-point preview (showing the shape being drawn)
-    const worldPoints = [...state.tempPoints, snappedPoint];
-    const previewEntity = createEntityFromTool(state.currentTool, worldPoints);
-    
+    const worldPoints = [...tempPoints, snappedPoint];
+    const previewEntity = createEntityFromTool(currentTool, worldPoints);
+
     // Mark preview entity for special preview rendering with distance labels
-    if (previewEntity && (state.currentTool === 'polygon' || state.currentTool === 'polyline' || state.currentTool === 'measure-angle' || state.currentTool === 'measure-area' || state.currentTool === 'line' || state.currentTool === 'measure-distance' || state.currentTool === 'rectangle' || state.currentTool === 'circle' || state.currentTool === 'circle-diameter' || state.currentTool === 'circle-2p-diameter')) {
+    if (previewEntity && (currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'measure-area' || currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter')) {
 
       // Handle different entity types appropriately
+      // 🏢 ENTERPRISE: Cast to Record<string, unknown> for applyPreviewSettings compatibility
       if (previewEntity.type === 'polyline') {
         const extendedPolyline = previewEntity as ExtendedPolylineEntity;
         extendedPolyline.preview = true;
         extendedPolyline.showEdgeDistances = true;
         extendedPolyline.showPreviewGrips = true;
-        extendedPolyline.isOverlayPreview = state.isOverlayMode === true;
-        applyPreviewSettings(extendedPolyline); // ✅ Κεντρικοποιημένο
+        extendedPolyline.isOverlayPreview = localState.isOverlayMode === true;
+        applyPreviewSettings(extendedPolyline as unknown as Record<string, unknown>);
       } else if (previewEntity.type === 'line') {
         const extendedLine = previewEntity as ExtendedLineEntity;
         extendedLine.preview = true;
         extendedLine.showEdgeDistances = true;
         extendedLine.showPreviewGrips = true;
-        extendedLine.isOverlayPreview = state.isOverlayMode === true;
-        applyPreviewSettings(extendedLine); // ✅ Κεντρικοποιημένο
+        extendedLine.isOverlayPreview = localState.isOverlayMode === true;
+        applyPreviewSettings(extendedLine as unknown as Record<string, unknown>);
 
         // Add grip points for line preview
-        if (state.currentTool === 'line' && worldPoints.length >= 2) {
+        if (currentTool === 'line' && worldPoints.length >= 2) {
           extendedLine.previewGripPoints = [
             { position: worldPoints[0], type: 'start' },
             { position: snappedPoint, type: 'cursor' }
@@ -569,7 +612,7 @@ export function useUnifiedDrawing() {
         const extendedCircle = previewEntity as ExtendedCircleEntity;
         extendedCircle.preview = true;
         extendedCircle.showPreviewGrips = true;
-        applyPreviewSettings(extendedCircle); // ✅ Κεντρικοποιημένο
+        applyPreviewSettings(extendedCircle as unknown as Record<string, unknown>);
       } else if (previewEntity.type === 'rectangle') {
         // ✅ ENTERPRISE: Type-safe rectangle entity (uses polyline internally)
         const extendedRectangle = previewEntity as unknown as {
@@ -578,14 +621,14 @@ export function useUnifiedDrawing() {
         } & typeof previewEntity;
         extendedRectangle.preview = true;
         extendedRectangle.showPreviewGrips = true;
-        applyPreviewSettings(extendedRectangle); // ✅ Κεντρικοποιημένο
+        applyPreviewSettings(extendedRectangle as unknown as Record<string, unknown>);
       }
 
       if (DEBUG_UNIFIED_DRAWING) {
         const debugInfo: Record<string, unknown> = {
           entityType: previewEntity.type,
-          currentTool: state.currentTool,
-          isOverlayMode: state.isOverlayMode
+          currentTool: currentTool,
+          isOverlayMode: localState.isOverlayMode
         };
 
         if (previewEntity.type === 'polyline') {
@@ -608,7 +651,7 @@ export function useUnifiedDrawing() {
       }
 
       // Add measurement flag for measurement tools
-      const isMeasurementTool = state.currentTool === 'measure-distance' || state.currentTool === 'measure-area' || state.currentTool === 'measure-angle';
+      const isMeasurementTool = currentTool === 'measure-distance' || currentTool === 'measure-area' || currentTool === 'measure-angle';
       if (isMeasurementTool) {
         if (previewEntity.type === 'polyline') {
           (previewEntity as ExtendedPolylineEntity).measurement = true;
@@ -620,65 +663,67 @@ export function useUnifiedDrawing() {
       }
     }
 
-    setState(prev => ({ ...prev, previewEntity }));
-  }, [state, createEntityFromTool, linePreviewStyles]);
+    // 🏢 ENTERPRISE: Update local state for preview entity
+    setLocalState(prev => ({ ...prev, previewEntity }));
+  }, [machineContext.toolType, machineContext.points, machineMoveCursor, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
-
     // Set preview mode when drawing starts
-
     setMode('preview');
 
-    setState(prev => {
-      const newState = {
-        ...prev,
-        currentTool: tool,
-        isDrawing: true,
-        tempPoints: [],
-        previewEntity: null,
-        isOverlayMode: false // ✅ ΔΙΟΡΘΩΣΗ: Reset overlay mode για κανονικές σχεδιάσεις
-      };
+    // 🏢 ENTERPRISE: Use state machine for tool selection
+    machineSelectTool(tool);
 
-      return newState;
+    // Reset local state
+    setLocalState({
+      previewEntity: null,
+      isOverlayMode: false, // ✅ ΔΙΟΡΘΩΣΗ: Reset overlay mode για κανονικές σχεδιάσεις
     });
-  }, [setMode]);
+  }, [setMode, machineSelectTool]);
 
   const cancelDrawing = useCallback(() => {
     // Return to normal mode on cancel
-
     setMode('normal');
 
-    setState(prev => ({
+    // 🏢 ENTERPRISE: Use state machine for cancel
+    machineCancel('User cancelled drawing');
+    machineReset();
+    machineDeselectTool();
+
+    // Reset local state
+    setLocalState(prev => ({
       ...prev,
-      isDrawing: false,
-      tempPoints: [],
-      previewEntity: null
+      previewEntity: null,
     }));
-  }, [setMode]);
+  }, [setMode, machineCancel, machineReset, machineDeselectTool]);
 
   const finishPolyline = useCallback(() => {
-    if ((state.currentTool === 'polyline' || state.currentTool === 'measure-angle' || state.currentTool === 'polygon' || state.currentTool === 'measure-area') && state.tempPoints.length >= 2) {
+    // 🏢 ENTERPRISE (2026-01-25): Use state machine context
+    const currentTool = (machineContext.toolType as DrawingTool) || 'select';
+    const tempPoints = machineContext.points;
+
+    if ((currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'polygon' || currentTool === 'measure-area') && tempPoints.length >= 2) {
       // Remove duplicate points that might be added by double-click
-      let cleanedPoints = [...state.tempPoints];
-      
+      let cleanedPoints = [...tempPoints];
+
       // If last two points are very close (duplicate from double-click), remove the last one
       if (cleanedPoints.length >= 2) {
         const lastPoint = cleanedPoints[cleanedPoints.length - 1];
         const secondLastPoint = cleanedPoints[cleanedPoints.length - 2];
-        
+
         const distance = Math.sqrt(
-          Math.pow(lastPoint.x - secondLastPoint.x, 2) + 
+          Math.pow(lastPoint.x - secondLastPoint.x, 2) +
           Math.pow(lastPoint.y - secondLastPoint.y, 2)
         );
-        
+
         // If points are closer than 1 pixel (likely duplicate from double-click)
         if (distance < 1.0) {
           cleanedPoints = cleanedPoints.slice(0, -1);
         }
       }
-      
-      const newEntity = createEntityFromTool(state.currentTool, cleanedPoints);
-      
+
+      const newEntity = createEntityFromTool(currentTool, cleanedPoints);
+
       // Σώσε entity για polygon και polyline
       if (newEntity && currentLevelId) {
         const scene = getLevelScene(currentLevelId);
@@ -692,24 +737,23 @@ export function useUnifiedDrawing() {
       }
 
       // Return to normal mode after polyline completion
-
       setMode('normal');
 
       cancelDrawing();
       return newEntity;
     }
     return null;
-  }, [state, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, cancelDrawing, setMode]);
+  }, [machineContext.toolType, machineContext.points, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, cancelDrawing, setMode]);
 
   // Wrapper function for starting polyline drawing with callback
   const startPolyline = useCallback((options: { onComplete?: (points: Point2D[]) => void; onCancel?: () => void } = {}) => {
     startDrawing('polyline');
-    
+
     return {
       stop: () => {
-        const points = state.tempPoints;
+        // 🏢 ENTERPRISE: Get points from state machine context (spread to convert readonly to mutable)
+        const points = [...machineContext.points];
         // Return to normal mode on polyline stop
-
         setMode('normal');
 
         cancelDrawing();
@@ -720,25 +764,26 @@ export function useUnifiedDrawing() {
         }
       }
     };
-  }, [startDrawing, cancelDrawing, state.tempPoints, setMode]);
+  }, [startDrawing, cancelDrawing, machineContext.points, setMode]);
 
   // Start Polygon method for overlay creation
   const startPolygon = useCallback((options: { onComplete?: (points: Point2D[]) => void; onCancel?: () => void; isOverlay?: boolean } = {}) => {
     // Set overlay mode before starting drawing
     const overlayMode = options.isOverlay || false;
 
-    setState(prev => ({ ...prev, isOverlayMode: overlayMode }));
+    // 🏢 ENTERPRISE: Use local state for overlay mode
+    setLocalState(prev => ({ ...prev, isOverlayMode: overlayMode }));
     startDrawing('polygon');
-    
+
     return {
       stop: () => {
-        const points = state.tempPoints;
+        // 🏢 ENTERPRISE: Get points from state machine context (spread to convert readonly to mutable)
+        const points = [...machineContext.points];
         // Return to normal mode on polygon stop
-
         setMode('normal');
 
         // Clear overlay mode
-        setState(prev => ({ ...prev, isOverlayMode: false }));
+        setLocalState(prev => ({ ...prev, isOverlayMode: false }));
         cancelDrawing();
         if (options.onComplete && points.length >= 3) {
           options.onComplete(points);
@@ -747,7 +792,7 @@ export function useUnifiedDrawing() {
         }
       }
     };
-  }, [startDrawing, cancelDrawing, state.tempPoints, setMode]);
+  }, [startDrawing, cancelDrawing, machineContext.points, setMode]);
 
   return {
     state,

@@ -60,6 +60,8 @@ import { useColorMenuState } from '../hooks/state/useColorMenuState';
 
 // Stores and Managers
 import { useOverlayStore } from '../overlays/overlay-store';
+// 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+import { useUniversalSelection } from '../systems/selection';
 import { useLevelManager } from '../systems/levels/useLevels';
 import { useGripContext } from '../providers/GripProvider';
 import { globalRulerStore } from '../settings-provider';
@@ -282,6 +284,8 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
   // Get overlay store and level manager
   const overlayStore = useOverlayStore();
+  // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+  const universalSelection = useUniversalSelection();
   const levelManager = useLevelManager();
 
   // Get grip context for manual control
@@ -683,7 +687,9 @@ Check console for detailed metrics`;
 
   // Handle overlay region click
   const handleRegionClick = React.useCallback((regionId: string) => {
-    // Enable selection in all overlay modes for bidirectional sync
+    // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+    universalSelection.select(regionId, 'overlay');
+    // Also update overlay store for backward compatibility during migration
     overlayStore.setSelectedOverlay(regionId);
 
     // Auto-open levels tab when clicking on overlay in canvas

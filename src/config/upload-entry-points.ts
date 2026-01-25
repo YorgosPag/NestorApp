@@ -30,6 +30,56 @@ import type { EntityType, FileDomain, FileCategory } from './domain-constants';
 // TYPES
 // ============================================================================
 
+// ============================================================================
+// 🏢 ENTERPRISE: Capture Source Types (ADR-031 Extension)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Allowed capture sources for Add/Capture Menu
+ * Determines what capture options appear in the menu per category
+ */
+export type CaptureSource = 'upload' | 'camera' | 'video' | 'microphone' | 'text';
+
+/**
+ * 🏢 ENTERPRISE: Capture mode for metadata tracking
+ */
+export type CaptureMode = 'file' | 'photo' | 'video' | 'audio' | 'text';
+
+/**
+ * 🏢 ENTERPRISE: File capture metadata (typed, no any)
+ * Attached to file records for system understanding
+ */
+export interface CaptureMetadata {
+  /** How the file was captured */
+  source: CaptureSource;
+  /** Specific capture mode */
+  captureMode: CaptureMode;
+  /** Duration in ms for audio/video */
+  durationMs?: number;
+  /** Original MIME type */
+  mimeType?: string;
+  /** Original filename before processing */
+  originalFilename?: string;
+  /** Capture timestamp */
+  capturedAt: string;
+}
+
+/**
+ * 🏢 ENTERPRISE: Category capture capabilities
+ * Defines which capture sources are allowed per file category
+ */
+export const CATEGORY_CAPTURE_CAPABILITIES: Record<FileCategory, CaptureSource[]> = {
+  photos: ['upload', 'camera'],
+  videos: ['upload', 'video'],
+  documents: ['upload', 'text', 'microphone'], // Documents can include text notes and voice notes
+  contracts: ['upload'],
+  permits: ['upload'],
+  floorplans: ['upload'],
+  invoices: ['upload', 'camera'], // Can photograph receipts
+  audio: ['upload', 'microphone'], // Voice recordings
+  drawings: ['upload', 'camera'], // Can photograph drawings
+} as const;
+
 /**
  * Upload Entry Point Definition
  * Defines what type of document the user wants to upload
@@ -61,6 +111,8 @@ export interface UploadEntryPoint {
   order: number;
   /** 🏢 ENTERPRISE: Requires mandatory custom title (e.g., για "Άλλο Έγγραφο") */
   requiresCustomTitle?: boolean;
+  /** 🏢 ENTERPRISE: Override default category capture capabilities */
+  allowedSources?: CaptureSource[];
 }
 
 /**
@@ -1037,4 +1089,57 @@ export function getSortedEntryPoints(
 ): UploadEntryPoint[] {
   const entryPoints = getEntryPointsForEntity(entityType);
   return [...entryPoints].sort((a, b) => a.order - b.order);
+}
+
+// ============================================================================
+// 🏢 ENTERPRISE: Capture Capabilities Utilities
+// ============================================================================
+
+/**
+ * Get allowed capture sources for a specific file category
+ * Uses entry point override if available, otherwise falls back to category defaults
+ */
+export function getCaptureSourcesForCategory(
+  category: FileCategory,
+  entryPoint?: UploadEntryPoint
+): CaptureSource[] {
+  // Entry point can override default category capabilities
+  if (entryPoint?.allowedSources) {
+    return entryPoint.allowedSources;
+  }
+  return CATEGORY_CAPTURE_CAPABILITIES[category] || ['upload'];
+}
+
+/**
+ * Check if a specific capture source is allowed for a category
+ */
+export function isCaptureSourceAllowed(
+  category: FileCategory,
+  source: CaptureSource,
+  entryPoint?: UploadEntryPoint
+): boolean {
+  const allowedSources = getCaptureSourcesForCategory(category, entryPoint);
+  return allowedSources.includes(source);
+}
+
+/**
+ * Create capture metadata for a file
+ */
+export function createCaptureMetadata(
+  source: CaptureSource,
+  captureMode: CaptureMode,
+  options?: {
+    durationMs?: number;
+    mimeType?: string;
+    originalFilename?: string;
+  }
+): CaptureMetadata {
+  return {
+    source,
+    captureMode,
+    durationMs: options?.durationMs,
+    mimeType: options?.mimeType,
+    originalFilename: options?.originalFilename,
+    capturedAt: new Date().toISOString(),
+  };
 }

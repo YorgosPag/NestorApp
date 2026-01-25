@@ -1599,5 +1599,27 @@
       "officeDirectory": "Κοινός Κατάλογος",
       "personal": "Προσωπικός"
     }
+  },
+  "search": {
+    "globalSearch": "Παγκόσμια Αναζήτηση",
+    "placeholder": "Αναζήτηση σε έργα, επαφές, κτίρια...",
+    "noResults": "Δεν βρέθηκαν αποτελέσματα",
+    "tryDifferent": "Δοκιμάστε διαφορετική αναζήτηση",
+    "results": "Αποτελέσματα αναζήτησης",
+    "resultsCount": "{{count}} αποτελέσματα",
+    "navigate": "πλοήγηση",
+    "select": "επιλογή",
+    "hints": {
+      "startTyping": "Πληκτρολογήστε για αναζήτηση...",
+      "minChars": "Τουλάχιστον {{count}} χαρακτήρες",
+      "escKey": "ESC"
+    },
+    "entityTypes": {
+      "project": "Έργο",
+      "building": "Κτίριο",
+      "unit": "Μονάδα",
+      "contact": "Επαφή",
+      "file": "Αρχείο"
+    }
   }
 }

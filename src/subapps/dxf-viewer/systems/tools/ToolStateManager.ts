@@ -9,7 +9,8 @@ import type { ToolType } from '../../ui/toolbar/types';
 import type { DrawingTool } from '../../hooks/drawing/useUnifiedDrawing';
 
 // Tool categories and validation
-export type ToolCategory = 'selection' | 'drawing' | 'measurement' | 'zoom' | 'utility';
+// 🏢 ENTERPRISE (Phase 3): Added 'editing' category for move/copy/delete operations
+export type ToolCategory = 'selection' | 'drawing' | 'measurement' | 'zoom' | 'utility' | 'editing';
 
 export interface ToolInfo {
   id: ToolType;
@@ -41,7 +42,13 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'zoom-extents': { id: 'zoom-extents', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false },
   'zoom-window': { id: 'zoom-window', category: 'zoom', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
   'pan': { id: 'pan', category: 'utility', requiresCanvas: true, canInterrupt: false, allowsContinuous: true },
-  'grid-toggle': { id: 'grid-toggle', category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false }
+  'grid-toggle': { id: 'grid-toggle', category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false },
+  // 🏢 ENTERPRISE (Phase 3): Editing tools for entity manipulation
+  'move': { id: 'move', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true },
+  'copy': { id: 'copy', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
+  'delete': { id: 'delete', category: 'editing', requiresCanvas: false, canInterrupt: false, allowsContinuous: false },
+  'grip-edit': { id: 'grip-edit', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true },
+  'layering': { id: 'layering', category: 'utility', requiresCanvas: true, canInterrupt: true, allowsContinuous: true },
 };
 
 export interface ToolStateManagerOptions {

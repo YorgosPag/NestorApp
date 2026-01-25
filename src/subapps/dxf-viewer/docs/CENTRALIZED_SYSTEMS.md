@@ -2942,6 +2942,55 @@ const {
 
 ---
 
+### 📋 ADR-033: HYBRID LAYER MOVEMENT SYSTEM (2026-01-25) - 🏢 PLANNING
+
+**Status**: 📋 **PLANNING** | **Decision Date**: 2026-01-25
+
+**Context**:
+Ο χρήστης χρειάζεται να μετακινεί ολόκληρα layers/entities με πολλαπλούς τρόπους, όπως
+κάνουν οι enterprise CAD εφαρμογές (AutoCAD, Adobe Illustrator, Figma).
+
+**Problem**:
+- ❌ Δεν υπάρχει MoveEntityCommand για ολόκληρες entities
+- ❌ Δεν υπάρχει Ctrl+A για Select All
+- ❌ Click στο Layer Panel δεν επιλέγει entities
+- ❌ Δεν μπορείς να κάνεις drag επιλεγμένα entities
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **HYBRID APPROACH** | Πολλαπλές μέθοδοι selection & movement |
+| **COMMAND PATTERN** | MoveEntityCommand για undo/redo |
+| **CENTRALIZED SHORTCUTS** | Extend keyboard-shortcuts.ts |
+
+**Supported Methods**:
+| Method | Description | Source |
+|--------|-------------|--------|
+| **Layer Panel Click** | Click layer → select all entities | Adobe/Figma |
+| **Window Selection** | Left→right rectangle | AutoCAD |
+| **Crossing Selection** | Right→left rectangle | AutoCAD |
+| **Ctrl+A** | Select All | Universal |
+| **Direct Drag** | Drag selected entities | Figma |
+| **Arrow Keys** | Nudge 1/10 units | Universal |
+| **M Key** | Move tool with base point | AutoCAD |
+
+**Implementation Phases**:
+| Phase | Description | Priority |
+|-------|-------------|----------|
+| Phase 1 | MoveEntityCommand (Foundation) | 🔴 CRITICAL |
+| Phase 2 | Selection Enhancements (Ctrl+A, Layer click) | 🟠 HIGH |
+| Phase 3 | Movement Methods (Drag, Nudge, Move tool) | 🟠 HIGH |
+| Phase 4 | Integration & Polish | 🟡 MEDIUM |
+
+**References**:
+- Full Documentation: `src/subapps/dxf-viewer/docs/HYBRID_LAYER_MOVEMENT_ARCHITECTURE.md`
+- Command System: `src/subapps/dxf-viewer/core/commands/`
+- Selection System: `src/subapps/dxf-viewer/systems/selection/`
+- Industry: AutoCAD, Adobe Illustrator, Figma, Bentley MicroStation
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

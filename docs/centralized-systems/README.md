@@ -4,7 +4,7 @@
 >
 > Complete documentation για όλα τα κεντρικοποιημένα συστήματα της εφαρμογής
 
-**📊 Quick Stats**: 18 Enterprise Systems | 12,237+ Lines | Fortune 500 Quality
+**📊 Quick Stats**: 19 Enterprise Systems | 12,837+ Lines | Fortune 500 Quality
 
 ---
 
@@ -48,7 +48,8 @@
 
 ### 🔄 **DATA SYSTEMS**
 - **[📋 Overview](data-systems/index.md)** - Data management architecture
-- **[🏠 Unit Fields System](data-systems/unit-fields.md)** - Extended unit properties (layout, areas, features) ✨ **NEW**
+- **[🏠 Unit Fields System](data-systems/unit-fields.md)** - Extended unit properties (layout, areas, features)
+- **[🎯 Multi-Selection System](../src/subapps/dxf-viewer/docs/HYBRID_LAYER_MOVEMENT_ARCHITECTURE.md#9-multi-selection--marquee-selection-system-2026-01-25)** - AutoCAD-style Window/Crossing selection ✨ **NEW**
 - **[🚨 Alert Engine](data-systems/alert-engine.md)** - Real-time monitoring & notifications
 - **[🌍 Polygon System](data-systems/polygon-system.md)** - Geographic drawing engine
 - **[🏗️ State Management](data-systems/state-management.md)** - Context providers & stores

@@ -1,12 +1,19 @@
-import type { 
-  SelectionState, 
+import type {
+  SelectionState,
   FilterState
 } from './config';
 import type { RegionStatus, UnitType } from '../../types/overlay';
+import type { SelectableEntityType, SelectionEntry, SelectionPayload } from './types';
+import { createSelectionEntry, matchesEntityType } from './types';
 
 // Combined context state
 export interface SelectionContextState extends SelectionState {
   filters: FilterState;
+
+  // 🏢 ENTERPRISE (2026-01-25): Universal selection state
+  // Stores ALL selected entities regardless of type
+  universalSelection: Map<string, SelectionEntry>;
+  primarySelectedId: string | null;
 }
 
 // Actions for reducer
@@ -26,7 +33,22 @@ export type SelectionAction =
   | { type: 'SET_UNIT_TYPE_FILTER'; unitTypes: UnitType[] }
   | { type: 'TOGGLE_STATUS_FILTER'; status: RegionStatus }
   | { type: 'TOGGLE_UNIT_TYPE_FILTER'; unitType: UnitType }
-  | { type: 'CLEAR_ALL_FILTERS' };
+  | { type: 'CLEAR_ALL_FILTERS' }
+  // 🏢 ENTERPRISE (Phase 2): Enhanced selection actions
+  | { type: 'SELECT_ALL_ENTITIES'; entityIds: string[] }
+  | { type: 'SELECT_BY_LAYER'; layerId: string; entityIds: string[] }
+  | { type: 'ADD_MULTIPLE_TO_SELECTION'; entityIds: string[] }
+
+  // 🏢 ENTERPRISE (2026-01-25): Universal Selection Actions
+  // These actions work with ANY entity type via SelectionPayload
+  | { type: 'UNIVERSAL_SELECT_ENTITY'; payload: SelectionPayload }
+  | { type: 'UNIVERSAL_SELECT_ENTITIES'; payloads: SelectionPayload[] }
+  | { type: 'UNIVERSAL_ADD_ENTITY'; payload: SelectionPayload }
+  | { type: 'UNIVERSAL_ADD_ENTITIES'; payloads: SelectionPayload[] }
+  | { type: 'UNIVERSAL_DESELECT_ENTITY'; id: string }
+  | { type: 'UNIVERSAL_TOGGLE_ENTITY'; payload: SelectionPayload }
+  | { type: 'UNIVERSAL_CLEAR_ALL' }
+  | { type: 'UNIVERSAL_CLEAR_BY_TYPE'; entityType: SelectableEntityType };
 
 // Selection reducer
 export function selectionReducer(state: SelectionContextState, action: SelectionAction): SelectionContextState {
@@ -175,11 +197,255 @@ export function selectionReducer(state: SelectionContextState, action: Selection
       return {
         ...state,
         filters: {
-          visibleStatuses: [],
-          visibleUnitTypes: [],
+          visibleStatuses: new Set(),
+          visibleUnitTypes: new Set(),
         },
       };
-      
+
+    // 🏢 ENTERPRISE (Phase 2): Select all entities
+    case 'SELECT_ALL_ENTITIES':
+      return {
+        ...state,
+        selectedRegionIds: action.entityIds,
+        editingRegionId: null,
+        draggedVertexIndex: null,
+      };
+
+    // 🏢 ENTERPRISE (Phase 2): Select entities by layer
+    case 'SELECT_BY_LAYER':
+      return {
+        ...state,
+        selectedRegionIds: action.entityIds,
+        editingRegionId: null,
+        draggedVertexIndex: null,
+      };
+
+    // 🏢 ENTERPRISE (Phase 2): Add multiple entities to selection
+    case 'ADD_MULTIPLE_TO_SELECTION':
+      const newIds = action.entityIds.filter(
+        id => !state.selectedRegionIds.includes(id)
+      );
+      if (newIds.length === 0) {
+        return state;
+      }
+      return {
+        ...state,
+        selectedRegionIds: [...state.selectedRegionIds, ...newIds],
+      };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // 🏢 ENTERPRISE (2026-01-25): Universal Selection Actions
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    case 'UNIVERSAL_SELECT_ENTITY': {
+      const entry = createSelectionEntry(action.payload);
+      const newUniversalSelection = new Map<string, SelectionEntry>();
+      newUniversalSelection.set(entry.id, entry);
+
+      // Also update legacy selectedRegionIds for backward compatibility
+      const newSelectedRegionIds = (action.payload.type === 'overlay' || action.payload.type === 'region')
+        ? [action.payload.id]
+        : state.selectedRegionIds;
+
+      return {
+        ...state,
+        universalSelection: newUniversalSelection,
+        primarySelectedId: entry.id,
+        selectedRegionIds: newSelectedRegionIds,
+        editingRegionId: null,
+        draggedVertexIndex: null,
+      };
+    }
+
+    case 'UNIVERSAL_SELECT_ENTITIES': {
+      const newUniversalSelection = new Map<string, SelectionEntry>();
+      const regionIds: string[] = [];
+
+      for (const payload of action.payloads) {
+        const entry = createSelectionEntry(payload);
+        newUniversalSelection.set(entry.id, entry);
+        // Collect region IDs for backward compatibility
+        if (payload.type === 'overlay' || payload.type === 'region') {
+          regionIds.push(payload.id);
+        }
+      }
+
+      const primaryId = action.payloads.length > 0 ? action.payloads[0].id : null;
+
+      return {
+        ...state,
+        universalSelection: newUniversalSelection,
+        primarySelectedId: primaryId,
+        selectedRegionIds: regionIds.length > 0 ? regionIds : state.selectedRegionIds,
+        editingRegionId: null,
+        draggedVertexIndex: null,
+      };
+    }
+
+    case 'UNIVERSAL_ADD_ENTITY': {
+      const entry = createSelectionEntry(action.payload);
+      const newUniversalSelection = new Map(state.universalSelection);
+      newUniversalSelection.set(entry.id, entry);
+
+      // Update legacy selectedRegionIds for backward compatibility
+      const newSelectedRegionIds = (action.payload.type === 'overlay' || action.payload.type === 'region')
+        ? [...state.selectedRegionIds.filter(id => id !== action.payload.id), action.payload.id]
+        : state.selectedRegionIds;
+
+      return {
+        ...state,
+        universalSelection: newUniversalSelection,
+        primarySelectedId: entry.id,
+        selectedRegionIds: newSelectedRegionIds,
+      };
+    }
+
+    case 'UNIVERSAL_ADD_ENTITIES': {
+      const newUniversalSelection = new Map(state.universalSelection);
+      const regionIds = [...state.selectedRegionIds];
+
+      for (const payload of action.payloads) {
+        const entry = createSelectionEntry(payload);
+        newUniversalSelection.set(entry.id, entry);
+        // Collect region IDs for backward compatibility
+        if ((payload.type === 'overlay' || payload.type === 'region') &&
+            !regionIds.includes(payload.id)) {
+          regionIds.push(payload.id);
+        }
+      }
+
+      const primaryId = action.payloads.length > 0
+        ? action.payloads[action.payloads.length - 1].id
+        : state.primarySelectedId;
+
+      return {
+        ...state,
+        universalSelection: newUniversalSelection,
+        primarySelectedId: primaryId,
+        selectedRegionIds: regionIds,
+      };
+    }
+
+    case 'UNIVERSAL_DESELECT_ENTITY': {
+      const newUniversalSelection = new Map(state.universalSelection);
+      const removedEntry = newUniversalSelection.get(action.id);
+      newUniversalSelection.delete(action.id);
+
+      // Update primary if we removed it
+      let newPrimaryId = state.primarySelectedId;
+      if (state.primarySelectedId === action.id) {
+        const remaining = Array.from(newUniversalSelection.keys());
+        newPrimaryId = remaining.length > 0 ? remaining[0] : null;
+      }
+
+      // Update legacy selectedRegionIds for backward compatibility
+      const newSelectedRegionIds = removedEntry &&
+        (removedEntry.type === 'overlay' || removedEntry.type === 'region')
+          ? state.selectedRegionIds.filter(id => id !== action.id)
+          : state.selectedRegionIds;
+
+      return {
+        ...state,
+        universalSelection: newUniversalSelection,
+        primarySelectedId: newPrimaryId,
+        selectedRegionIds: newSelectedRegionIds,
+      };
+    }
+
+    case 'UNIVERSAL_TOGGLE_ENTITY': {
+      const exists = state.universalSelection.has(action.payload.id);
+
+      if (exists) {
+        // Deselect - reuse the DESELECT logic
+        const newUniversalSelection = new Map(state.universalSelection);
+        const removedEntry = newUniversalSelection.get(action.payload.id);
+        newUniversalSelection.delete(action.payload.id);
+
+        let newPrimaryId = state.primarySelectedId;
+        if (state.primarySelectedId === action.payload.id) {
+          const remaining = Array.from(newUniversalSelection.keys());
+          newPrimaryId = remaining.length > 0 ? remaining[0] : null;
+        }
+
+        const newSelectedRegionIds = removedEntry &&
+          (removedEntry.type === 'overlay' || removedEntry.type === 'region')
+            ? state.selectedRegionIds.filter(id => id !== action.payload.id)
+            : state.selectedRegionIds;
+
+        return {
+          ...state,
+          universalSelection: newUniversalSelection,
+          primarySelectedId: newPrimaryId,
+          selectedRegionIds: newSelectedRegionIds,
+        };
+      } else {
+        // Add - reuse the ADD logic
+        const entry = createSelectionEntry(action.payload);
+        const newUniversalSelection = new Map(state.universalSelection);
+        newUniversalSelection.set(entry.id, entry);
+
+        const newSelectedRegionIds = (action.payload.type === 'overlay' || action.payload.type === 'region')
+          ? [...state.selectedRegionIds.filter(id => id !== action.payload.id), action.payload.id]
+          : state.selectedRegionIds;
+
+        return {
+          ...state,
+          universalSelection: newUniversalSelection,
+          primarySelectedId: entry.id,
+          selectedRegionIds: newSelectedRegionIds,
+        };
+      }
+    }
+
+    case 'UNIVERSAL_CLEAR_ALL': {
+      return {
+        ...state,
+        universalSelection: new Map(),
+        primarySelectedId: null,
+        selectedRegionIds: [],
+        editingRegionId: null,
+        draggedVertexIndex: null,
+      };
+    }
+
+    case 'UNIVERSAL_CLEAR_BY_TYPE': {
+      const newUniversalSelection = new Map<string, SelectionEntry>();
+      const remainingRegionIds: string[] = [];
+
+      // Keep entries that don't match the type being cleared
+      for (const [id, entry] of state.universalSelection) {
+        if (!matchesEntityType(entry.type, action.entityType)) {
+          newUniversalSelection.set(id, entry);
+          // Preserve region IDs that aren't being cleared
+          if (entry.type === 'overlay' || entry.type === 'region') {
+            remainingRegionIds.push(id);
+          }
+        }
+      }
+
+      // Update primary if it was of the cleared type
+      let newPrimaryId = state.primarySelectedId;
+      if (state.primarySelectedId) {
+        const primaryEntry = state.universalSelection.get(state.primarySelectedId);
+        if (primaryEntry && matchesEntityType(primaryEntry.type, action.entityType)) {
+          const remaining = Array.from(newUniversalSelection.keys());
+          newPrimaryId = remaining.length > 0 ? remaining[0] : null;
+        }
+      }
+
+      // Update selectedRegionIds based on whether we cleared overlay/region types
+      const newSelectedRegionIds = (action.entityType === 'overlay' || action.entityType === 'region')
+        ? remainingRegionIds
+        : state.selectedRegionIds;
+
+      return {
+        ...state,
+        universalSelection: newUniversalSelection,
+        primarySelectedId: newPrimaryId,
+        selectedRegionIds: newSelectedRegionIds,
+      };
+    }
+
     default:
       return state;
   }

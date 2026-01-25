@@ -50,8 +50,12 @@ interface CentralizedMouseHandlersProps {
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Marquee selection support για layers
   colorLayers?: ColorLayer[];
   onLayerSelected?: (layerId: string, position: Point2D) => void;
+  // 🏢 ENTERPRISE (2026-01-25): Multi-selection callback for marquee selection
+  onMultiLayerSelected?: (layerIds: string[]) => void;
   canvasRef?: React.RefObject<HTMLCanvasElement>; // ✅ ADD: Canvas reference για getBoundingClientRect
   onCanvasClick?: (point: Point2D) => void; // 🎯 DRAWING TOOLS: Click handler for drawing entities
+  // 🏢 ENTERPRISE (2026-01-25): Flag to prevent selection start during grip drag
+  isGripDragging?: boolean;
 }
 
 /**
@@ -71,8 +75,10 @@ export function useCentralizedMouseHandlers({
   hitTestCallback,
   colorLayers,
   onLayerSelected,
+  onMultiLayerSelected, // 🏢 ENTERPRISE (2026-01-25): Multi-selection callback
   canvasRef,
-  onCanvasClick
+  onCanvasClick,
+  isGripDragging = false // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
 }: CentralizedMouseHandlersProps) {
   const cursor = useCursor();
 
@@ -207,7 +213,8 @@ export function useCentralizedMouseHandlers({
       button: e.button,
       activeTool,
       overlayMode,
-      isDrawingTool
+      isDrawingTool,
+      isGripDragging // 🏢 ENTERPRISE (2026-01-25): Check if grip drag prevents selection
     });
 
     // 🏢 ENTERPRISE: Middle button (button === 1) ALWAYS starts pan - CAD industry standard!
@@ -236,10 +243,11 @@ export function useCentralizedMouseHandlers({
     // Handle selection start (left button ONLY) - disable in pan mode AND drawing tools
     // 🎯 BUG #2 FIX: Skip selection when drawing tools are active (reuse isDrawingTool from above)
     // 🏢 ENTERPRISE: Middle button (button === 1) NEVER starts selection - it's for pan only!
-    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isDrawingTool && !shouldStartPan) {
+    // 🏢 ENTERPRISE (2026-01-25): Skip selection when grip drag is in progress
+    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isDrawingTool && !shouldStartPan && !isGripDragging) {
       cursor.startSelection(screenPos);
     }
-  }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool]);
+  }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool, isGripDragging]);
 
   // 🚀 MOUSE MOVE HANDLER - HIGH PERFORMANCE CAD-style tracking
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -443,7 +451,12 @@ export function useCentralizedMouseHandlers({
     if (cursor.isSelecting && cursor.selectionStart && cursor.position) {
       // Χρήση canvas reference για getBoundingClientRect()
       const canvas = canvasRef?.current;
-      if (canvas && colorLayers && colorLayers.length > 0 && onLayerSelected) {
+
+      // 🏢 ENTERPRISE (2026-01-25): Support both multi-selection and single selection callbacks
+      const hasMultiCallback = !!onMultiLayerSelected;
+      const hasSingleCallback = !!onLayerSelected;
+
+      if (canvas && colorLayers && colorLayers.length > 0 && (hasMultiCallback || hasSingleCallback)) {
         // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CanvasBoundsService αντί για άμεση κλήση (performance optimization)
         const selectionResult = UniversalMarqueeSelector.performSelection(
           cursor.selectionStart,
@@ -454,16 +467,99 @@ export function useCentralizedMouseHandlers({
             colorLayers: colorLayers,
             tolerance: 5,
             enableDebugLogs: false,
-            onLayerSelected: onLayerSelected,
+            // 🏢 ENTERPRISE: Don't use individual callbacks in selector - we handle it below
+            onLayerSelected: undefined,
             currentPosition: cursor.position
           }
         );
 
-        console.log('🎯 CENTRALIZED: Marquee selection completed:', {
+        // 🏢 ENTERPRISE (2026-01-25): Call appropriate callback based on what's available
+        console.log('🔍 MARQUEE RESULT:', {
+          selectedCount: selectionResult.selectedIds.length,
           selectedIds: selectionResult.selectedIds,
-          selectionType: selectionResult.selectionType,
-          callbacksExecuted: selectionResult.callbacksExecuted
+          hasMultiCallback,
+          hasSingleCallback
         });
+
+        if (selectionResult.selectedIds.length > 0) {
+          if (hasMultiCallback) {
+            // Preferred: Call multi-selection callback with all IDs at once
+            console.log('✅ Calling onMultiLayerSelected with', selectionResult.selectedIds.length, 'IDs');
+            onMultiLayerSelected(selectionResult.selectedIds);
+          } else if (hasSingleCallback) {
+            // Fallback: Call single selection callback for each ID (legacy behavior)
+            // Note: This will only keep the last one selected due to store limitations
+            console.log('⚠️ Using LEGACY single callback');
+            selectionResult.selectedIds.forEach(layerId => {
+              onLayerSelected(layerId, cursor.position!);
+            });
+          }
+        } else {
+          // 🏢 ENTERPRISE (2026-01-25): Check if this was a "click" (small drag) vs actual marquee
+          // If the selection box is very small (< 5px), treat as single-click and do point hit-test
+          const selectionWidth = Math.abs(cursor.position.x - cursor.selectionStart.x);
+          const selectionHeight = Math.abs(cursor.position.y - cursor.selectionStart.y);
+          const MIN_MARQUEE_SIZE = 5; // pixels
+
+          const isSmallSelection = selectionWidth < MIN_MARQUEE_SIZE && selectionHeight < MIN_MARQUEE_SIZE;
+
+          if (isSmallSelection && colorLayers && colorLayers.length > 0) {
+            // 🎯 SINGLE CLICK: Do point-in-polygon hit-test for layer selection
+            console.log('🎯 Small selection detected - performing point hit-test for layer click');
+
+            // Convert screen point to world coordinates for hit-testing
+            const worldPoint = CoordinateTransforms.screenToWorld(cursor.position, transform, viewport);
+
+            // Check each layer for point containment
+            let hitLayerId: string | null = null;
+            for (const layer of colorLayers) {
+              if (!layer.polygons || layer.polygons.length === 0) continue;
+
+              for (const polygon of layer.polygons) {
+                if (!polygon.vertices || polygon.vertices.length < 3) continue;
+
+                // Point-in-polygon test using ray casting algorithm
+                const vertices = polygon.vertices;
+                let inside = false;
+                for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+                  const xi = vertices[i].x, yi = vertices[i].y;
+                  const xj = vertices[j].x, yj = vertices[j].y;
+
+                  if (((yi > worldPoint.y) !== (yj > worldPoint.y)) &&
+                      (worldPoint.x < (xj - xi) * (worldPoint.y - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                  }
+                }
+
+                if (inside) {
+                  hitLayerId = layer.id;
+                  break;
+                }
+              }
+              if (hitLayerId) break;
+            }
+
+            if (hitLayerId) {
+              console.log('✅ Layer hit detected:', hitLayerId);
+              if (hasMultiCallback) {
+                onMultiLayerSelected([hitLayerId]);
+              } else if (hasSingleCallback) {
+                onLayerSelected(hitLayerId, cursor.position);
+              }
+            } else {
+              console.log('⚠️ No layer hit - calling onCanvasClick for deselection');
+              if (onCanvasClick && cursor.position) {
+                onCanvasClick(cursor.position);
+              }
+            }
+          } else {
+            console.log('⚠️ No layers selected in marquee - calling onCanvasClick for deselection');
+            // 🏢 ENTERPRISE (2026-01-25): When marquee selects nothing, trigger canvas click for deselection
+            if (onCanvasClick && cursor.position) {
+              onCanvasClick(cursor.position);
+            }
+          }
+        }
       }
 
       cursor.endSelection();
@@ -478,7 +574,7 @@ export function useCentralizedMouseHandlers({
     } else {
       // Selection debug disabled for performance
     }
-  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, canvasRef, onCanvasClick, activeTool, snapEnabled, findSnapPoint]);
+  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef, onCanvasClick, activeTool, snapEnabled, findSnapPoint]);
 
   // 🚀 MOUSE LEAVE HANDLER - CAD-style area detection with pan cleanup
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {

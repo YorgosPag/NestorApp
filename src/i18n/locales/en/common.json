@@ -1599,5 +1599,27 @@
       "officeDirectory": "Office Directory",
       "personal": "Personal"
     }
+  },
+  "search": {
+    "globalSearch": "Global Search",
+    "placeholder": "Search projects, contacts, buildings...",
+    "noResults": "No results found",
+    "tryDifferent": "Try a different search",
+    "results": "Search results",
+    "resultsCount": "{{count}} results",
+    "navigate": "navigate",
+    "select": "select",
+    "hints": {
+      "startTyping": "Start typing to search...",
+      "minChars": "At least {{count}} characters",
+      "escKey": "ESC"
+    },
+    "entityTypes": {
+      "project": "Project",
+      "building": "Building",
+      "unit": "Unit",
+      "contact": "Contact",
+      "file": "File"
+    }
   }
 }

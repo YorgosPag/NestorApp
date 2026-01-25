@@ -1,11 +1,15 @@
 /**
  * SELECTION SYSTEM CONFIGURATION
  * Configuration options and constants for selection behavior
+ *
+ * 🏢 ENTERPRISE (2026-01-25): Extended with Universal Selection types
+ * @see types.ts for Selectable interface and SelectionEntry
  */
 
 import type { RegionStatus, UnitType } from '../../types/overlay';
 import type { Point2D } from '../../rendering/types/Types';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+import type { SelectableEntityType, SelectionEntry, SelectionPayload } from './types';
 
 // Selection tolerance settings (imported from central config)
 export const SELECTION_CONFIG = {
@@ -68,6 +72,21 @@ export interface SelectionActions {
   setDraggedVertex: (index: number | null) => void;
   isSelected: (regionId: string) => boolean;
   getSelectionCount: () => number;
+  /**
+   * 🏢 ENTERPRISE (Phase 2): Select all entities from provided IDs
+   * Usage: selectAllEntities(getAllEntityIdsFromCurrentLevel())
+   */
+  selectAllEntities: (entityIds: string[]) => void;
+  /**
+   * 🏢 ENTERPRISE (Phase 2): Select entities by layer ID
+   * Usage: selectByLayer(layerId, entitiesInLayer)
+   */
+  selectByLayer: (layerId: string, entityIds: string[]) => void;
+  /**
+   * 🏢 ENTERPRISE (Phase 2): Add multiple entities to selection
+   * Usage: addMultipleToSelection(entityIds)
+   */
+  addMultipleToSelection: (entityIds: string[]) => void;
 }
 
 // Filter actions interface
@@ -129,3 +148,103 @@ export const DEFAULT_SELECTION_PREFERENCES: SelectionPreferences = {
   multiSelectEnabled: true,
   snapToVertices: false,
 };
+
+// ============================================================================
+// 🏢 ENTERPRISE (2026-01-25): Universal Selection Types
+// Extends the selection system to support ALL entity types uniformly
+// ============================================================================
+
+/**
+ * Universal Selection Actions Interface
+ *
+ * Provides a unified API for selecting ANY entity type:
+ * - DXF entities, overlays, color layers, measurements, annotations
+ *
+ * This interface is the PRIMARY selection API going forward.
+ * Legacy APIs (selectRegions, etc.) are mapped to these internally.
+ */
+export interface UniversalSelectionActions {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PRIMARY UNIVERSAL API
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Select a single entity by ID and type
+   * Replaces current selection
+   */
+  selectEntity: (payload: SelectionPayload) => void;
+
+  /**
+   * Select multiple entities (replaces current selection)
+   */
+  selectEntities: (payloads: SelectionPayload[]) => void;
+
+  /**
+   * Add a single entity to current selection
+   */
+  addEntity: (payload: SelectionPayload) => void;
+
+  /**
+   * Add multiple entities to current selection
+   */
+  addEntities: (payloads: SelectionPayload[]) => void;
+
+  /**
+   * Remove an entity from selection by ID
+   */
+  deselectEntity: (id: string) => void;
+
+  /**
+   * Toggle entity selection state
+   */
+  toggleEntity: (payload: SelectionPayload) => void;
+
+  /**
+   * Clear all selections
+   */
+  clearAllSelections: () => void;
+
+  /**
+   * Clear selections of a specific entity type only
+   */
+  clearByType: (entityType: SelectableEntityType) => void;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // QUERY METHODS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Check if an entity is selected by ID
+   */
+  isEntitySelected: (id: string) => boolean;
+
+  /**
+   * Get all selected entries
+   */
+  getSelectedEntries: () => SelectionEntry[];
+
+  /**
+   * Get selected entries filtered by entity type
+   */
+  getSelectedByType: (entityType: SelectableEntityType) => SelectionEntry[];
+
+  /**
+   * Get count of all selected entities
+   */
+  getUniversalSelectionCount: () => number;
+
+  /**
+   * Get count of selected entities of a specific type
+   */
+  getSelectionCountByType: (entityType: SelectableEntityType) => number;
+
+  /**
+   * Get all selected IDs (convenience method)
+   */
+  getSelectedIds: () => string[];
+
+  /**
+   * Get all selected IDs of a specific type (convenience method)
+   */
+  getSelectedIdsByType: (entityType: SelectableEntityType) => string[];
+}

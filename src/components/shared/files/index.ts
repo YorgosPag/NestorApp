@@ -24,6 +24,9 @@ export type { FileUploadZoneProps } from './FileUploadZone';
 export { FilePathTree } from './FilePathTree';
 export type { FilePathTreeProps } from './FilePathTree';
 
+export { AddCaptureMenu } from './AddCaptureMenu';
+export type { AddCaptureMenuProps } from './AddCaptureMenu';
+
 // Hooks
 export { useEntityFiles } from './hooks/useEntityFiles';
 export type {

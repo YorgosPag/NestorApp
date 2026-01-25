@@ -16,7 +16,13 @@
  *
  * Usage:
  * ```tsx
- * import { useCommandHistory, CreateEntityCommand, MoveVertexCommand } from '@/subapps/dxf-viewer/core/commands';
+ * import {
+ *   useCommandHistory,
+ *   CreateEntityCommand,
+ *   MoveVertexCommand,
+ *   MoveEntityCommand,
+ *   MoveMultipleEntitiesCommand
+ * } from '@/subapps/dxf-viewer/core/commands';
  *
  * // In component
  * const { execute, undo, redo, canUndo, canRedo } = useCommandHistory();
@@ -26,6 +32,12 @@
  *
  * // Move vertex with undo support (consecutive moves merge)
  * execute(new MoveVertexCommand(entityId, vertexIndex, oldPos, newPos, sceneManager));
+ *
+ * // 🆕 Move entity by delta (supports merging for drag operations)
+ * execute(new MoveEntityCommand(entityId, { x: 10, y: 5 }, sceneManager, true));
+ *
+ * // 🆕 Move multiple entities at once
+ * execute(new MoveMultipleEntitiesCommand(['id1', 'id2'], { x: 10, y: 5 }, sceneManager, true));
  *
  * // Undo/Redo
  * if (canUndo) undo();
@@ -81,6 +93,7 @@ export {
 // Entity Commands
 export { CreateEntityCommand } from './entity-commands/CreateEntityCommand';
 export { DeleteEntityCommand, DeleteMultipleEntitiesCommand } from './entity-commands/DeleteEntityCommand';
+export { MoveEntityCommand, MoveMultipleEntitiesCommand } from './entity-commands/MoveEntityCommand';
 
 // Vertex Commands
 export { MoveVertexCommand } from './vertex-commands/MoveVertexCommand';

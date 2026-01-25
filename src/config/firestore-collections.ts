@@ -140,7 +140,10 @@ export const COLLECTIONS = {
   // 🤖 BOT CONFIGURATIONS (PR1: Telegram Enterprise Refactor)
   BOT_CONFIGS: process.env.NEXT_PUBLIC_BOT_CONFIGS_COLLECTION || 'bot_configs',
   BOT_CATALOGS: process.env.NEXT_PUBLIC_BOT_CATALOGS_COLLECTION || 'bot_catalogs',
-  BOT_INTENTS: process.env.NEXT_PUBLIC_BOT_INTENTS_COLLECTION || 'bot_intents'
+  BOT_INTENTS: process.env.NEXT_PUBLIC_BOT_INTENTS_COLLECTION || 'bot_intents',
+
+  // 🔍 SEARCH (Global Search v1)
+  SEARCH_DOCUMENTS: process.env.NEXT_PUBLIC_SEARCH_DOCUMENTS_COLLECTION || 'searchDocuments'
 } as const;
 
 // ============================================================================

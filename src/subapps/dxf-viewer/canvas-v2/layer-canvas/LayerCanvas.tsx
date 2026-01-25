@@ -73,7 +73,11 @@ interface LayerCanvasProps {
   className?: string;
   style?: React.CSSProperties;
   onLayerClick?: (layerId: string, point: Point2D) => void;
+  // 🏢 ENTERPRISE (2026-01-25): Multi-selection callback for marquee selection
+  onMultiLayerClick?: (layerIds: string[]) => void;
   onCanvasClick?: (point: Point2D) => void;
+  // 🏢 ENTERPRISE (2026-01-25): Flag to prevent selection start during grip drag
+  isGripDragging?: boolean;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
   onTransformChange?: (transform: ViewTransform) => void;
   onWheelZoom?: (wheelDelta: number, center: Point2D) => void; // ✅ ZOOM SYSTEM INTEGRATION
@@ -114,7 +118,9 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
   className = '',
   style,
   onLayerClick,
+  onMultiLayerClick, // 🏢 ENTERPRISE (2026-01-25): Multi-selection callback
   onCanvasClick,
+  isGripDragging = false, // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
   onMouseMove,
   onTransformChange,
   onWheelZoom,
@@ -218,8 +224,10 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
     hitTestCallback: layerHitTestCallback, // 🚀 Enable layer hit testing
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ MARQUEE SELECTION
     colorLayers: layers,
-    onLayerSelected: onLayerClick, // 🎯 USE onLayerClick για marquee selection
-    canvasRef: canvasRef // 🔧 FIX: Pass canvas ref για getBoundingClientRect
+    onLayerSelected: onLayerClick, // 🎯 USE onLayerClick για single selection
+    onMultiLayerSelected: onMultiLayerClick, // 🏢 ENTERPRISE (2026-01-25): Multi-selection
+    canvasRef: canvasRef, // 🔧 FIX: Pass canvas ref για getBoundingClientRect
+    isGripDragging // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
   });
 
   // ✅ SNAP FIX STEP 5: Extract snap results from mouse handlers

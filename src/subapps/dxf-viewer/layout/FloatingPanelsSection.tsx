@@ -25,6 +25,8 @@ import { TestResultsModal } from '../debug/TestResultsModal';
 import type { UnifiedTestReport } from '../debug/unified-test-runner';
 import { isFeatureEnabled } from '../config/experimental-features';
 import { LazyFullLayoutDebug } from '../ui/components/LazyLoadWrapper';
+// 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+import { useUniversalSelection } from '../systems/selection';
 
 // ✅ ENTERPRISE: Type-safe props interface
 interface FloatingPanelsSectionProps {
@@ -103,6 +105,9 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   // 🏢 ENTERPRISE: Local state for panel visibility
   const [showOverlayToolbar, setShowOverlayToolbar] = useState(true);
 
+  // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+  const universalSelection = useUniversalSelection();
+
   return (
     <>
       {/* COLOR MANAGER */}
@@ -165,6 +170,9 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
           overlayStore.update(overlayId, updates)
         }
         onClose={() => {
+          // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+          universalSelection.clearByType('overlay');
+          // Also update overlay store for backward compatibility during migration
           overlayStore.setSelectedOverlay(null);
         }}
       />

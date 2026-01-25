@@ -1,10 +1,10 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-24
-> **= -> TOTAL SYSTEMS**: 24 Major Enterprise Systems (incl. Unit Linking System)
-> **= -> TOTAL CODE**: 16,625+ Lines
-> **= -> TOTAL ADRs**: 19 Architectural Decision Records
+> **= -> LAST UPDATED**: 2026-01-25
+> **= -> TOTAL SYSTEMS**: 27 Major Enterprise Systems (incl. Universal Selection System)
+> **= -> TOTAL CODE**: 18,345+ Lines
+> **= -> TOTAL ADRs**: 21 Architectural Decision Records
 
 ---
 
@@ -32,6 +32,8 @@
 | **ADR-023** | Centralized Spinner Component 🏢 | `@/components/ui/spinner` | Direct `Loader2` import | 2026-01-11 |
 | **ADR-027** | DXF Keyboard Shortcuts System 🏢 | `config/keyboard-shortcuts.ts` | Hardcoded shortcuts | 2026-01-24 |
 | **ADR-028** | Button Component Consolidation 🏢 | Shadcn Button + `ui/toolbar/ToolButton` | Hardcoded buttons, inline styles | 2026-01-24 |
+| **ADR-029** | Global Search System v1 🏢 | `src/app/api/search/route.ts` + `src/types/search.ts` | Διάσπαρτο search code | 2026-01-25 |
+| **ADR-030** | Universal Selection System 🏢 | `systems/selection/` + `useUniversalSelection()` | Selection logic σε `overlay-store.tsx` | 2026-01-25 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
@@ -47,6 +49,7 @@
 > **🚫 PROHIBITION**: Hardcoded keyboard shortcuts **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `matchesShortcut()` από `keyboard-shortcuts.ts`.
 > **🚫 PROHIBITION**: Hardcoded `<button>` με inline styles **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε Shadcn `Button` ή `ui/toolbar/ToolButton`.
 > **🚫 PROHIBITION**: Import `ToolButton/ActionButton` από `BaseButton.tsx` **DEPRECATED** - χρησιμοποιήστε `ui/toolbar/ToolButton.tsx`.
+> **🚫 PROHIBITION**: Νέα selection implementations σε άλλα stores **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useUniversalSelection()` από `systems/selection/`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
@@ -97,6 +100,8 @@
 | **🔄 Spinner Component** | `src/components/ui/spinner.tsx` | 50+ | UI Component | 🏢 **ENTERPRISE** | 4 sizes, ESLint enforcement, no direct Loader2 | `import { Spinner } from '@/components/ui/spinner'` | **ADR-023: Migrate on touch** |
 | **🏠 Unit Fields System** | `src/features/property-details/components/` | 900+ | Data Entry | 🏢 **ENTERPRISE** | 8 sections (incl. Identity), tenant isolation, i18n, name/description editing | `import { UnitFieldsBlock } from '@/features/property-details/components'` | **2026-01-24: Full CRUD + UI Fixes + Security** |
 | **🔗 Unit Linking System** | `src/features/property-details/components/` | 1,000+ | Entity Linking | 🏢 **ENTERPRISE** | Building+Floor selector, LinkedSpaces (Parking/Storage), real-time events | `import { BuildingSelectorCard, LinkedSpacesCard } from '@/features/property-details/components'` | **2026-01-24: Full Unit→Building→Floor→Spaces linking** |
+| **🔍 Global Search v1** | `src/app/api/search/` + `src/types/search.ts` | 680+ | Search API | 🏢 **ENTERPRISE** | Greek-friendly, prefix matching, tenant isolation, audit logging | `GET /api/search?q=query&types=contact` | **ADR-029: PR#1 Complete** |
+| **🎯 Universal Selection System** | `src/subapps/dxf-viewer/systems/selection/` | 1,040+ | Selection Engine | 🏢 **ENTERPRISE** | Universal entity selection, Window/Crossing, multi-type support | `useUniversalSelection().select(id, 'overlay')` | **ADR-030: Single source of truth for ALL selections** |
 
 ---
 

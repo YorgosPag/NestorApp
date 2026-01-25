@@ -10,7 +10,13 @@
  *
  * @module functions/index
  * @enterprise ADR-032 - Enterprise Trash System
+ * @enterprise ADR-029 - Global Search v1
  */
+
+// =============================================================================
+// 🔍 SEARCH INDEX TRIGGERS (ADR-029)
+// =============================================================================
+export { onProjectWrite, onContactWrite } from './search/indexTriggers';
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';

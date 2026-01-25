@@ -356,5 +356,25 @@
     "errorTitle": "Error",
     "reportSent": "Report sent",
     "sendReport": "Send Report"
+  },
+  "capture": {
+    "title": "Add",
+    "upload": "Upload file",
+    "uploadDesc": "Select file from device",
+    "photo": "Take photo",
+    "photoDesc": "Use camera to capture photo",
+    "video": "Record video",
+    "videoDesc": "Use camera to record video",
+    "audio": "Voice note",
+    "audioDesc": "Record a voice message",
+    "recording": "Recording",
+    "clickToStop": "Click to stop",
+    "text": "Text note",
+    "textDesc": "Write a quick note",
+    "textPlaceholder": "Write your note here...",
+    "saveNote": "Save note"
+  },
+  "common": {
+    "cancel": "Cancel"
   }
 }

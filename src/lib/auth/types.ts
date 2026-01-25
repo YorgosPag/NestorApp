@@ -143,6 +143,9 @@ export const PERMISSIONS = {
   'reports:reports:view': true,
   'reports:reports:create': true,
 
+  // Search (Global Search v1)
+  'search:global:execute': true,
+
   // Photos & Progress
   'photos:photos:upload': true,
   'progress:progress:update': true,

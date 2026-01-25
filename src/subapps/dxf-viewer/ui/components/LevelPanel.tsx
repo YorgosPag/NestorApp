@@ -24,6 +24,8 @@ import type { SceneModel } from '../../types/scene';
 import { useLevels } from '../../systems/levels';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { createOverlayHandlers } from '../../overlays/types';
+// 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+import { useUniversalSelection } from '../../systems/selection';
 
 interface LevelPanelProps {
   currentTool?: ToolType;
@@ -99,11 +101,23 @@ export function LevelPanel({
   const notifications = useNotifications();
 
   const overlayStore = useOverlayStore();
+  // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+  const universalSelection = useUniversalSelection();
 
   // Use shared overlay handlers to eliminate duplicate code
+  // 🏢 ENTERPRISE (2026-01-25): Bridge to universal selection system - ADR-030
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete } =
     createOverlayHandlers({
-      setSelectedOverlay: overlayStore.setSelectedOverlay,
+      setSelectedOverlay: (id: string | null) => {
+        // Bridge: Route through universal selection system
+        if (id) {
+          universalSelection.select(id, 'overlay');
+        } else {
+          universalSelection.clearByType('overlay');
+        }
+        // Also update overlay store for backward compatibility during migration
+        overlayStore.setSelectedOverlay(id);
+      },
       remove: overlayStore.remove,
       update: overlayStore.update,
       getSelectedOverlay: overlayStore.getSelectedOverlay,

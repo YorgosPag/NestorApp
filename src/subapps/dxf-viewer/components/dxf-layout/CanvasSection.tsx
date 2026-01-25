@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 // === CANVAS V2 IMPORTS ===
 import { DxfCanvas, LayerCanvas, type ColorLayer, type SnapSettings, type GridSettings, type RulerSettings, type SelectionSettings, type DxfScene, type DxfEntityUnion, type DxfCanvasRef } from '../../canvas-v2';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
@@ -53,6 +53,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { PdfBackgroundCanvas, usePdfBackgroundStore } from '../../pdf-background';
 // 🎯 EVENT BUS: For polygon drawing communication with toolbar
 import { useEventBus } from '../../systems/events';
+// 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+import { useUniversalSelection } from '../../systems/selection';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -99,16 +101,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
 
   const overlayStore = useOverlayStore();
+  // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+  // Single source of truth for ALL entity selections
+  const universalSelection = useUniversalSelection();
   // 🏢 ENTERPRISE (2026-01-25): Ref for overlay store to avoid stale closures in callbacks
   const overlayStoreRef = useRef(overlayStore);
-  overlayStoreRef.current = overlayStore;
   const levelManager = useLevels();
 
   // 🏢 ENTERPRISE (2026-01-25): Moved BEFORE callbacks that use them to avoid hoisting issues
   const currentOverlays = levelManager.currentLevelId
     ? overlayStore.getByLevel(levelManager.currentLevelId)
     : [];
-  const selectedOverlay = overlayStore.getSelectedOverlay();
+  // 🏢 ENTERPRISE (2026-01-25): Multi-selection - getSelectedOverlay() replaced by isSelected() and getSelectedOverlays()
+  // const selectedOverlay = overlayStore.getSelectedOverlay(); // DEPRECATED - use overlayStore.isSelected(id) instead
 
   const [draftPolygon, setDraftPolygon] = useState<Array<[number, number]>>([]);
   // 🔧 FIX (2026-01-24): Ref for fresh polygon access in async operations
@@ -355,8 +360,25 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // Only in select/layering mode
     if (activeTool !== 'select' && activeTool !== 'layering') return;
 
-    // Need selected overlay
-    if (!selectedOverlay) return;
+    // 🏢 ENTERPRISE (2026-01-25): Check if hovered overlay is in multi-selection
+    const hoveredOverlayId = hoveredVertexInfo?.overlayId || hoveredEdgeInfo?.overlayId;
+    if (!hoveredOverlayId) {
+      // Clicked elsewhere → Deselect grip
+      if (selectedGrip) {
+        setSelectedGrip(null);
+      }
+      return;
+    }
+
+    // Check if the hovered overlay is selected (part of multi-selection)
+    // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+    if (!universalSelection.isSelected(hoveredOverlayId)) {
+      // Clicked on grip of non-selected overlay → Deselect grip
+      if (selectedGrip) {
+        setSelectedGrip(null);
+      }
+      return;
+    }
 
     const container = containerRef.current;
     if (!container) return;
@@ -366,7 +388,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
 
     // === VERTEX GRIP CLICK → IMMEDIATE DRAG ===
-    if (hoveredVertexInfo?.overlayId === selectedOverlay.id) {
+    if (hoveredVertexInfo) {
       e.preventDefault();
       e.stopPropagation();
 
@@ -386,7 +408,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
 
     // === EDGE MIDPOINT GRIP CLICK → IMMEDIATE DRAG ===
-    if (hoveredEdgeInfo?.overlayId === selectedOverlay.id) {
+    if (hoveredEdgeInfo) {
       e.preventDefault();
       e.stopPropagation();
 
@@ -406,12 +428,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setDragPreviewPosition(worldPos); // Initialize preview position
       return;
     }
-
-    // Clicked elsewhere → Deselect grip
-    if (selectedGrip) {
-      setSelectedGrip(null);
-    }
-  }, [activeTool, selectedOverlay, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip, transform, viewport]);
+  }, [activeTool, overlayStore, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip, transform, viewport]);
 
   // 🏢 ENTERPRISE (2026-01-25): Mouse up handler for grip drag end
   const handleContainerMouseUp = React.useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
@@ -546,14 +563,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // Autodesk pattern: Grip selection is contextual to current selection
   React.useEffect(() => {
     if (selectedGrip) {
-      // Clear if overlay changed or tool is not select/layering
-      if (selectedGrip.overlayId !== selectedOverlay?.id ||
+      // Clear if grip's overlay is no longer selected or tool is not select/layering
+      // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+      if (!universalSelection.isSelected(selectedGrip.overlayId) ||
           (activeTool !== 'select' && activeTool !== 'layering')) {
         setSelectedGrip(null);
         setDragPreviewPosition(null);
       }
     }
-  }, [selectedOverlay?.id, activeTool, selectedGrip]);
+  }, [universalSelection, activeTool, selectedGrip]);
 
   // ✅ CONVERT RulersGridSystem grid settings to Canvas V2 GridSettings format
   // RulersGridSystem uses: gridSettings.visual.color
@@ -628,7 +646,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         const vertices = overlay.polygon.map((point: [number, number]) => ({ x: point[0], y: point[1] }));
 
         // 🎯 ENTERPRISE: Χρήση Overlay.style properties αντί για non-existent properties
-        const isSelected = overlay.id === overlayStore.selectedOverlayId;
+        // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+        const isSelected = universalSelection.isSelected(overlay.id);
         const statusColors = overlay.status ? getStatusColors(overlay.status) : null;
         const fillColor = overlay.style?.fill || statusColors?.fill || UI_COLORS.BUTTON_PRIMARY;
         const strokeColor = overlay.style?.stroke || statusColors?.stroke || UI_COLORS.BLACK;
@@ -887,9 +906,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [props.currentScene]); // Use props instead of derived state to prevent infinite loop
 
   // Use shared overlay handlers to eliminate duplicate code
+  // 🏢 ENTERPRISE (2026-01-25): Bridge to universal selection system - ADR-030
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete, handleOverlayUpdate } =
     createOverlayHandlers({
-      setSelectedOverlay: overlayStore.setSelectedOverlay,
+      setSelectedOverlay: (id: string | null) => {
+        // Bridge: Route through universal selection system
+        if (id) {
+          universalSelection.select(id, 'overlay');
+        } else {
+          universalSelection.clearByType('overlay');
+        }
+        // Also update overlay store for backward compatibility during migration
+        overlayStore.setSelectedOverlay(id);
+      },
       remove: overlayStore.remove,
       update: overlayStore.update,
       getSelectedOverlay: overlayStore.getSelectedOverlay,
@@ -976,7 +1005,29 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   };
 
+  // 🏢 ENTERPRISE (2026-01-25): Multi-selection handler for marquee selection
+  const handleMultiOverlayClick = useCallback((layerIds: string[]) => {
+    console.log('🔍 handleMultiOverlayClick CALLED:', {
+      layerIds,
+      activeTool,
+      overlayMode,
+      count: layerIds.length
+    });
+
+    if (activeTool === 'select' || activeTool === 'layering' || overlayMode === 'select') {
+      // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+      universalSelection.selectMultiple(layerIds.map(id => ({ id, type: 'overlay' as const })));
+      // Also update overlay store for backward compatibility during migration
+      overlayStore.setSelectedOverlays(layerIds);
+      console.log('🎯 Multi-selection applied:', layerIds.length, 'overlays selected');
+    } else {
+      console.log('⚠️ Multi-selection SKIPPED - wrong tool/mode');
+    }
+  }, [activeTool, overlayMode, overlayStore]);
+
   const handleCanvasClick = (point: Point2D) => {
+    console.log('🖱️ handleCanvasClick CALLED:', { point, activeTool, overlayMode });
+
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing tools
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
       || activeTool === 'rectangle' || activeTool === 'circle';
@@ -1019,8 +1070,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       const hasSelectedGrip = selectedGrip !== null;
       const justFinishedDrag = justFinishedDragRef.current;
 
+      console.log('🔍 Deselection check:', { isClickOnGrip, hasSelectedGrip, justFinishedDrag });
+
       if (!isClickOnGrip && !hasSelectedGrip && !justFinishedDrag) {
-        handleOverlaySelect(null);
+        console.log('✅ DESELECTING all overlays');
+        // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+        universalSelection.clearByType('overlay');
+        // Also update overlay store for backward compatibility during migration
+        overlayStore.clearSelection();
         setSelectedGrip(null); // Clear grip selection when clicking empty space
       }
     }
@@ -1208,6 +1265,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               layersVisible={showLayers} // ✅ ΥΠΑΡΧΟΝ SYSTEM: Existing layer visibility
               dxfScene={dxfScene} // 🎯 SNAP FIX: Pass DXF scene for snap engine initialization
               enableUnifiedCanvas={true} // ✅ ΕΝΕΡΓΟΠΟΙΗΣΗ: Unified event system για debugging
+              // 🏢 ENTERPRISE (2026-01-25): Prevent selection when hovering over grip OR already dragging
+              // Note: We use hoveredVertexInfo/hoveredEdgeInfo because dragging state is set AFTER mousedown
+              isGripDragging={
+                draggingVertex !== null ||
+                draggingEdgeMidpoint !== null ||
+                hoveredVertexInfo !== null ||
+                hoveredEdgeInfo !== null
+              }
               data-canvas-type="layer" // 🎯 DEBUG: Identifier για alignment test
               onTransformChange={(newTransform) => {
                 setTransform(newTransform); // ✅ SYNC: Κοινό transform state για LayerCanvas
@@ -1235,6 +1300,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 gripSettings // 🎯 SINGLE SOURCE OF TRUTH
               }}
               onLayerClick={handleOverlayClick}
+              onMultiLayerClick={handleMultiOverlayClick}
               onCanvasClick={handleCanvasClick}
               onMouseMove={(screenPoint) => {
                 setMouseCss(screenPoint);
@@ -1243,17 +1309,22 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 const worldPoint = CoordinateTransforms.screenToWorld(screenPoint, transform, viewport);
                 setMouseWorld(worldPoint);
 
-                // 🏢 ENTERPRISE (2026-01-25): Grip hover detection for selected overlays
+                // 🏢 ENTERPRISE (2026-01-25): Grip hover detection for ALL selected overlays
                 // Uses CENTRALIZED gripSettings for tolerance calculation
-                if ((activeTool === 'select' || activeTool === 'layering') && selectedOverlay) {
-                  const overlay = currentOverlays.find(o => o.id === selectedOverlay.id);
-                  if (overlay?.polygon) {
-                    // 🎯 CENTRALIZED: Tolerance from grip settings (not hardcoded)
-                    const gripTolerancePx = (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1.0) + 2;
-                    const gripToleranceWorld = gripTolerancePx / transform.scale;
+                const selectedOverlays = overlayStore.getSelectedOverlays();
+                if ((activeTool === 'select' || activeTool === 'layering') && selectedOverlays.length > 0) {
+                  // 🎯 CENTRALIZED: Tolerance from grip settings (not hardcoded)
+                  const gripTolerancePx = (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1.0) + 2;
+                  const gripToleranceWorld = gripTolerancePx / transform.scale;
+
+                  // Check grips on ALL selected overlays
+                  let foundGripHover = false;
+
+                  for (const selectedOv of selectedOverlays) {
+                    const overlay = currentOverlays.find(o => o.id === selectedOv.id);
+                    if (!overlay?.polygon) continue;
 
                     // 1. Check vertex grips first (higher priority)
-                    let foundVertexHover = false;
                     for (let i = 0; i < overlay.polygon.length; i++) {
                       const vertex = overlay.polygon[i];
                       const dx = worldPoint.x - vertex[0];
@@ -1263,25 +1334,30 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                       if (distance < gripToleranceWorld) {
                         setHoveredVertexInfo({ overlayId: overlay.id, vertexIndex: i });
                         setHoveredEdgeInfo(null); // Clear edge hover
-                        foundVertexHover = true;
+                        foundGripHover = true;
                         break;
                       }
                     }
 
-                    // 2. If no vertex hover, check edge midpoints
-                    if (!foundVertexHover) {
-                      setHoveredVertexInfo(null);
-                      const edgeInfo = findOverlayEdgeForGrip(worldPoint, overlay.polygon, gripToleranceWorld);
+                    if (foundGripHover) break;
 
-                      if (edgeInfo) {
-                        setHoveredEdgeInfo({ overlayId: overlay.id, edgeIndex: edgeInfo.edgeIndex });
-                      } else {
-                        setHoveredEdgeInfo(null);
-                      }
+                    // 2. If no vertex hover, check edge midpoints
+                    const edgeInfo = findOverlayEdgeForGrip(worldPoint, overlay.polygon, gripToleranceWorld);
+                    if (edgeInfo) {
+                      setHoveredEdgeInfo({ overlayId: overlay.id, edgeIndex: edgeInfo.edgeIndex });
+                      setHoveredVertexInfo(null);
+                      foundGripHover = true;
+                      break;
                     }
                   }
+
+                  // Clear hover if not found on any selected overlay
+                  if (!foundGripHover) {
+                    if (hoveredEdgeInfo) setHoveredEdgeInfo(null);
+                    if (hoveredVertexInfo) setHoveredVertexInfo(null);
+                  }
                 } else {
-                  // Clear hover when not in select/layering mode
+                  // Clear hover when not in select/layering mode or no overlays selected
                   if (hoveredEdgeInfo) setHoveredEdgeInfo(null);
                   if (hoveredVertexInfo) setHoveredVertexInfo(null);
                 }

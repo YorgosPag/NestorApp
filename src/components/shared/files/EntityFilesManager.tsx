@@ -43,7 +43,8 @@ import { TrashView } from './TrashView'; // 🗑️ ENTERPRISE: Trash System (AD
 import { SearchInput } from '@/components/ui/search'; // 🔍 ENTERPRISE: Centralized Search System
 import { useNotifications } from '@/providers/NotificationProvider'; // 🏢 ENTERPRISE: Centralized Toast System
 import { FileRecordService } from '@/services/file-record.service';
-import type { UploadEntryPoint } from '@/config/upload-entry-points';
+import type { UploadEntryPoint, CaptureMetadata } from '@/config/upload-entry-points';
+import { AddCaptureMenu } from './AddCaptureMenu';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, auth } from '@/lib/firebase';
 import app from '@/lib/firebase'; // 🏢 ENTERPRISE: For diagnostic logging
@@ -512,6 +513,35 @@ export function EntityFilesManager({
   }, []);
 
   // =========================================================================
+  // CAPTURE HANDLER (Quick Capture - ADR-031 Extension)
+  // =========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Handle captured media (photo/video/audio/text)
+   * All captures flow through the canonical upload pipeline
+   *
+   * Pattern: Procore Quick Capture / BIM 360 Field
+   */
+  const handleCapture = useCallback(async (file: File, metadata: CaptureMetadata) => {
+    logger.info('CAPTURE_RECEIVED', {
+      source: metadata.source,
+      captureMode: metadata.captureMode,
+      mimeType: metadata.mimeType,
+      filename: file.name,
+      size: file.size,
+    });
+
+    // Pass captured file through canonical upload pipeline
+    await handleUpload([file]);
+
+    logger.info('CAPTURE_UPLOADED', {
+      source: metadata.source,
+      captureMode: metadata.captureMode,
+      filename: file.name,
+    });
+  }, [handleUpload]);
+
+  // =========================================================================
   // RENDER
   // =========================================================================
 
@@ -678,24 +708,16 @@ export function EntityFilesManager({
             </>
             )}
 
-            {/* Upload button - Only show when on files tab */}
+            {/* 🏢 ENTERPRISE: Add/Capture Menu - Quick capture + file upload (Procore/BIM360 pattern) */}
             {activeTab === 'files' && (
               <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => setShowUploadZone(!showUploadZone)}
-                      disabled={uploading}
-                      aria-label={t('manager.addFiles')}
-                    >
-                      <Upload className={`${iconSizes.sm} mr-2`} aria-hidden="true" />
-                      {t('manager.addFiles')}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('manager.addFilesTooltip')}</TooltipContent>
-                </Tooltip>
+                <AddCaptureMenu
+                  category={category}
+                  onUploadClick={() => setShowUploadZone(!showUploadZone)}
+                  onCapture={handleCapture}
+                  disabled={uploading}
+                  loading={uploading}
+                />
 
                 {/* Refresh button */}
                 <Tooltip>

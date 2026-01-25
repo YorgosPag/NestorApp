@@ -1,0 +1,523 @@
+/**
+ * =============================================================================
+ * 🔍 SEARCH INDEX BACKFILL API - PROTECTED (super_admin ONLY)
+ * =============================================================================
+ *
+ * Admin endpoint for backfilling search index documents.
+ * Indexes existing entities (projects, contacts, buildings, units, files)
+ * into the searchDocuments collection for Global Search.
+ *
+ * @module api/admin/search-backfill
+ * @enterprise ADR-029 - Global Search v1
+ *
+ * 🔒 SECURITY: Protected with RBAC
+ * - Permission: admin:migrations:execute (super_admin ONLY)
+ * - Comprehensive audit logging
+ *
+ * USAGE:
+ *   POST /api/admin/search-backfill
+ *   Body: { "dryRun": true }           - Preview what would be indexed
+ *   Body: { "dryRun": false }          - Execute indexing
+ *   Body: { "type": "contact" }        - Index only contacts
+ *   Body: { "companyId": "abc123" }    - Index only specific company
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db as getAdminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { COLLECTIONS } from '@/config/firestore-collections';
+
+/**
+ * Create error response with standard format.
+ */
+function createErrorResponse(message: string, status: number) {
+  return NextResponse.json(
+    { success: false, error: message },
+    { status }
+  );
+}
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+const SEARCH_ENTITY_TYPES = {
+  PROJECT: 'project',
+  BUILDING: 'building',
+  UNIT: 'unit',
+  CONTACT: 'contact',
+  FILE: 'file',
+} as const;
+
+type SearchEntityType = typeof SEARCH_ENTITY_TYPES[keyof typeof SEARCH_ENTITY_TYPES];
+
+const SEARCH_AUDIENCE = {
+  INTERNAL: 'internal',
+  EXTERNAL: 'external',
+} as const;
+
+type SearchAudience = typeof SEARCH_AUDIENCE[keyof typeof SEARCH_AUDIENCE];
+
+interface SearchFields {
+  normalized: string;
+  prefixes: string[];
+}
+
+interface SearchDocumentInput {
+  tenantId: string;
+  entityType: SearchEntityType;
+  entityId: string;
+  title: string;
+  subtitle: string;
+  status: string;
+  search: SearchFields;
+  audience: SearchAudience;
+  requiredPermission: string;
+  links: {
+    href: string;
+    routeParams: Record<string, string>;
+  };
+}
+
+interface BackfillRequest {
+  dryRun?: boolean;
+  type?: SearchEntityType;
+  companyId?: string;
+  limit?: number;
+}
+
+interface BackfillStats {
+  processed: number;
+  indexed: number;
+  skipped: number;
+  errors: number;
+}
+
+interface BackfillResponse {
+  mode: 'DRY_RUN' | 'EXECUTE';
+  stats: Record<SearchEntityType, BackfillStats>;
+  totalStats: BackfillStats;
+  duration: number;
+  timestamp: string;
+}
+
+// =============================================================================
+// INDEX CONFIG
+// =============================================================================
+
+type TitleFieldConfig = string | ((doc: Record<string, unknown>) => string);
+type AudienceFieldConfig = SearchAudience | ((doc: Record<string, unknown>) => SearchAudience);
+
+interface SearchIndexConfig {
+  collection: string;
+  titleField: TitleFieldConfig;
+  subtitleFields: string[];
+  searchableFields: string[];
+  statusField: string;
+  audience: AudienceFieldConfig;
+  requiredPermission: string;
+  routeTemplate: string;
+}
+
+const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
+  project: {
+    collection: COLLECTIONS.PROJECTS,
+    titleField: 'name',
+    subtitleFields: ['address', 'city'],
+    searchableFields: ['name', 'address', 'city', 'projectCode'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'projects:projects:view',
+    routeTemplate: '/projects/{id}',
+  },
+  building: {
+    collection: COLLECTIONS.BUILDINGS,
+    titleField: 'name',
+    subtitleFields: ['address'],
+    searchableFields: ['name', 'address', 'buildingCode'],
+    statusField: 'status',
+    audience: (doc) => (doc.isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL),
+    requiredPermission: 'buildings:buildings:view',
+    routeTemplate: '/buildings/{id}',
+  },
+  unit: {
+    collection: COLLECTIONS.UNITS,
+    titleField: 'name',
+    subtitleFields: ['floor', 'type'],
+    searchableFields: ['name', 'unitCode', 'floor'],
+    statusField: 'status',
+    audience: (doc) => (doc.isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL),
+    requiredPermission: 'units:units:view',
+    routeTemplate: '/units/{id}',
+  },
+  contact: {
+    collection: COLLECTIONS.CONTACTS,
+    titleField: (doc) => {
+      const displayName = doc.displayName as string | undefined;
+      const firstName = doc.firstName as string | undefined;
+      const lastName = doc.lastName as string | undefined;
+      return displayName || `${firstName || ''} ${lastName || ''}`.trim() || 'Unknown';
+    },
+    subtitleFields: ['email', 'phone'],
+    searchableFields: ['displayName', 'firstName', 'lastName', 'email', 'companyName'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'crm:contacts:view',
+    routeTemplate: '/contacts/{id}',
+  },
+  file: {
+    collection: COLLECTIONS.FILES,
+    titleField: 'displayName',
+    subtitleFields: ['category', 'domain'],
+    searchableFields: ['displayName', 'originalFilename'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'dxf:files:view',
+    routeTemplate: '/files/{id}',
+  },
+};
+
+// =============================================================================
+// TEXT NORMALIZATION (Greek-friendly)
+// =============================================================================
+
+const GREEK_ACCENT_MAP: Record<string, string> = {
+  'ά': 'α', 'έ': 'ε', 'ή': 'η', 'ί': 'ι', 'ό': 'ο', 'ύ': 'υ', 'ώ': 'ω',
+  'Ά': 'α', 'Έ': 'ε', 'Ή': 'η', 'Ί': 'ι', 'Ό': 'ο', 'Ύ': 'υ', 'Ώ': 'ω',
+  'ϊ': 'ι', 'ϋ': 'υ', 'ΐ': 'ι', 'ΰ': 'υ',
+};
+
+function normalizeSearchText(text: string): string {
+  if (!text) return '';
+  let result = text.toLowerCase();
+  for (const [accented, base] of Object.entries(GREEK_ACCENT_MAP)) {
+    result = result.replace(new RegExp(accented, 'g'), base);
+  }
+  return result.replace(/\s+/g, ' ').trim();
+}
+
+function generateSearchPrefixes(text: string, maxPrefixLength = 5): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const prefixes: Set<string> = new Set();
+  for (const word of words) {
+    for (let len = 3; len <= Math.min(maxPrefixLength, word.length); len++) {
+      prefixes.add(word.substring(0, len));
+    }
+  }
+  return Array.from(prefixes);
+}
+
+// =============================================================================
+// BUILDER FUNCTIONS
+// =============================================================================
+
+function extractTitle(doc: Record<string, unknown>, config: SearchIndexConfig): string {
+  if (typeof config.titleField === 'function') {
+    return config.titleField(doc);
+  }
+  return (doc[config.titleField] as string) || '';
+}
+
+function extractSubtitle(doc: Record<string, unknown>, config: SearchIndexConfig): string {
+  return config.subtitleFields
+    .map((field) => doc[field] as string | undefined)
+    .filter(Boolean)
+    .join(' - ');
+}
+
+function determineAudience(doc: Record<string, unknown>, config: SearchIndexConfig): SearchAudience {
+  if (typeof config.audience === 'function') {
+    return config.audience(doc);
+  }
+  return config.audience;
+}
+
+function extractSearchableText(doc: Record<string, unknown>, config: SearchIndexConfig): string {
+  const parts: string[] = [];
+  for (const field of config.searchableFields) {
+    const value = doc[field];
+    if (typeof value === 'string' && value.trim()) {
+      parts.push(value);
+    }
+  }
+  return parts.join(' ');
+}
+
+function buildSearchDocument(
+  entityType: SearchEntityType,
+  entityId: string,
+  data: Record<string, unknown>
+): SearchDocumentInput | null {
+  const config = SEARCH_INDEX_CONFIG[entityType];
+  if (!config) return null;
+
+  const tenantId = (data.companyId as string) || (data.tenantId as string);
+  if (!tenantId) return null;
+
+  const title = extractTitle(data, config);
+  const subtitle = extractSubtitle(data, config);
+  const status = (data[config.statusField] as string) || 'active';
+  const audience = determineAudience(data, config);
+  const searchableText = extractSearchableText(data, config);
+  const normalizedText = normalizeSearchText(searchableText);
+  const prefixes = generateSearchPrefixes(normalizedText);
+
+  return {
+    tenantId,
+    entityType,
+    entityId,
+    title,
+    subtitle,
+    status,
+    search: { normalized: normalizedText, prefixes },
+    audience,
+    requiredPermission: config.requiredPermission,
+    links: {
+      href: config.routeTemplate.replace('{id}', entityId),
+      routeParams: { id: entityId },
+    },
+  };
+}
+
+// =============================================================================
+// BACKFILL LOGIC
+// =============================================================================
+
+async function backfillEntityType(
+  entityType: SearchEntityType,
+  options: BackfillRequest
+): Promise<BackfillStats> {
+  const adminDb = getAdminDb();
+  if (!adminDb) {
+    throw new Error('Firebase Admin not initialized');
+  }
+
+  const config = SEARCH_INDEX_CONFIG[entityType];
+  const stats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, errors: 0 };
+
+  console.log(`📦 [Search Backfill] Processing ${entityType}...`);
+
+  // Build query
+  let query: FirebaseFirestore.Query = adminDb.collection(config.collection);
+
+  if (options.companyId) {
+    query = query.where('companyId', '==', options.companyId);
+  }
+
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
+
+  const snapshot = await query.get();
+  console.log(`   Found ${snapshot.size} documents`);
+
+  // Process in batches of 500
+  const BATCH_SIZE = 500;
+  let batch = adminDb.batch();
+  let batchCount = 0;
+
+  for (const doc of snapshot.docs) {
+    stats.processed++;
+    const data = doc.data() as Record<string, unknown>;
+
+    // Skip soft-deleted
+    if (data.isDeleted === true || data.deletedAt) {
+      stats.skipped++;
+      continue;
+    }
+
+    const searchDoc = buildSearchDocument(entityType, doc.id, data);
+    if (!searchDoc) {
+      stats.skipped++;
+      continue;
+    }
+
+    const searchDocId = `${entityType}_${doc.id}`;
+    const searchDocRef = adminDb.collection(COLLECTIONS.SEARCH_DOCUMENTS).doc(searchDocId);
+
+    if (options.dryRun) {
+      console.log(`   [DRY-RUN] Would index: ${searchDoc.title} (${searchDocId})`);
+      stats.indexed++;
+    } else {
+      batch.set(searchDocRef, {
+        ...searchDoc,
+        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+        indexedAt: FieldValue.serverTimestamp(),
+      });
+      batchCount++;
+      stats.indexed++;
+
+      // Commit batch every 500 documents
+      if (batchCount >= BATCH_SIZE) {
+        try {
+          await batch.commit();
+          console.log(`   ✅ Committed batch of ${batchCount} documents`);
+          batch = adminDb.batch();
+          batchCount = 0;
+        } catch (error) {
+          console.error(`   ❌ Batch commit failed:`, error);
+          stats.errors += batchCount;
+          stats.indexed -= batchCount;
+          batch = adminDb.batch();
+          batchCount = 0;
+        }
+      }
+    }
+  }
+
+  // Commit remaining documents
+  if (!options.dryRun && batchCount > 0) {
+    try {
+      await batch.commit();
+      console.log(`   ✅ Committed final batch of ${batchCount} documents`);
+    } catch (error) {
+      console.error(`   ❌ Final batch commit failed:`, error);
+      stats.errors += batchCount;
+      stats.indexed -= batchCount;
+    }
+  }
+
+  console.log(`   📊 ${entityType}: processed=${stats.processed}, indexed=${stats.indexed}, skipped=${stats.skipped}, errors=${stats.errors}`);
+
+  return stats;
+}
+
+// =============================================================================
+// API HANDLERS
+// =============================================================================
+
+/**
+ * POST /api/admin/search-backfill
+ *
+ * Execute search index backfill.
+ * Body: { dryRun?: boolean, type?: string, companyId?: string, limit?: number }
+ */
+export const POST = withAuth(
+  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    const startTime = Date.now();
+
+    // 🔐 ENTERPRISE: Only super_admin can execute backfill
+    if (ctx.globalRole !== 'super_admin') {
+      console.warn(
+        `🚫 [Search Backfill] BLOCKED: Non-super_admin attempted backfill: ` +
+        `${ctx.email} (${ctx.globalRole})`
+      );
+      return createErrorResponse('Forbidden: Only super_admin can execute search backfill', 403);
+    }
+
+    console.log(`🔐 [Search Backfill] Request from ${ctx.email} (${ctx.globalRole})`);
+
+    try {
+      const body = await request.json() as BackfillRequest;
+      const { dryRun = true, type, companyId, limit } = body;
+
+      console.log(`🔍 SEARCH INDEX BACKFILL`);
+      console.log(`   Mode: ${dryRun ? 'DRY-RUN' : 'EXECUTE'}`);
+      if (type) console.log(`   Type filter: ${type}`);
+      if (companyId) console.log(`   Company filter: ${companyId}`);
+      if (limit) console.log(`   Limit: ${limit}`);
+
+      const totalStats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, errors: 0 };
+      const statsByType: Record<string, BackfillStats> = {};
+
+      // Determine which types to process
+      const typesToProcess = type
+        ? [type]
+        : Object.values(SEARCH_ENTITY_TYPES);
+
+      for (const entityType of typesToProcess) {
+        const stats = await backfillEntityType(entityType, { dryRun, companyId, limit });
+        statsByType[entityType] = stats;
+        totalStats.processed += stats.processed;
+        totalStats.indexed += stats.indexed;
+        totalStats.skipped += stats.skipped;
+        totalStats.errors += stats.errors;
+      }
+
+      const duration = Date.now() - startTime;
+
+      console.log(`\n📊 FINAL SUMMARY`);
+      console.log(`   Total processed: ${totalStats.processed}`);
+      console.log(`   Total indexed:   ${totalStats.indexed}`);
+      console.log(`   Total skipped:   ${totalStats.skipped}`);
+      console.log(`   Total errors:    ${totalStats.errors}`);
+      console.log(`   Duration:        ${duration}ms`);
+
+      const response: BackfillResponse = {
+        mode: dryRun ? 'DRY_RUN' : 'EXECUTE',
+        stats: statsByType as Record<SearchEntityType, BackfillStats>,
+        totalStats,
+        duration,
+        timestamp: new Date().toISOString(),
+      };
+
+      return apiSuccess(response, dryRun
+        ? `Dry run complete. Would index ${totalStats.indexed} documents.`
+        : `Backfill complete. Indexed ${totalStats.indexed} documents.`
+      );
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`❌ [Search Backfill] Error:`, errorMessage);
+      return createErrorResponse(errorMessage, 500);
+    }
+  },
+  { permissions: 'admin:migrations:execute' }
+);
+
+/**
+ * GET /api/admin/search-backfill
+ *
+ * Get backfill status and configuration info.
+ */
+export const GET = withAuth(
+  async (_request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    // 🔐 ENTERPRISE: Only super_admin can view backfill info
+    if (ctx.globalRole !== 'super_admin') {
+      return createErrorResponse('Forbidden: Only super_admin can access search backfill', 403);
+    }
+
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+      return createErrorResponse('Firebase Admin not initialized', 500);
+    }
+
+    // Get current search document counts
+    const counts: Record<string, number> = {};
+    for (const entityType of Object.values(SEARCH_ENTITY_TYPES)) {
+      const snapshot = await adminDb
+        .collection(COLLECTIONS.SEARCH_DOCUMENTS)
+        .where('entityType', '==', entityType)
+        .count()
+        .get();
+      counts[entityType] = snapshot.data().count;
+    }
+
+    const totalCount = Object.values(counts).reduce((sum, c) => sum + c, 0);
+
+    return apiSuccess({
+      system: {
+        name: 'Search Index Backfill',
+        version: '1.0.0',
+        security: 'super_admin ONLY',
+      },
+      currentIndex: {
+        collection: COLLECTIONS.SEARCH_DOCUMENTS,
+        totalDocuments: totalCount,
+        byEntityType: counts,
+      },
+      availableTypes: Object.values(SEARCH_ENTITY_TYPES),
+      usage: {
+        dryRun: 'POST { "dryRun": true } - Preview what would be indexed',
+        execute: 'POST { "dryRun": false } - Execute indexing',
+        filterByType: 'POST { "type": "contact" } - Index only contacts',
+        filterByCompany: 'POST { "companyId": "abc123" } - Index only specific company',
+      },
+    }, 'Search backfill system ready');
+  },
+  { permissions: 'admin:migrations:execute' }
+);

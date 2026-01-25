@@ -12,13 +12,14 @@
 
 | System | Lines | Files | Status | Key Features |
 |--------|-------|-------|--------|--------------|
-| **Unit Fields System** | 875+ | 8 files | ✅ **Production** | Extended unit properties (layout, areas, features) ✨ **NEW** |
+| **Unit Fields System** | 875+ | 8 files | ✅ **Production** | Extended unit properties (layout, areas, features) |
 | **Alert Engine** | 2,000+ | 6 subsystems | ✅ **Production** | Real-time monitoring ecosystem |
 | **Polygon System** | 800+ | 3 modules | ✅ **Enterprise** | Geographic drawing engine |
 | **Context Providers** | 900+ | 6 providers | ✅ **Complete** | Global state management |
 | **Config Systems** | 1,200+ | 50+ files | ✅ **Centralized** | Application configuration |
+| **Multi-Selection System** | 600+ | 5 files | ✅ **Enterprise** | AutoCAD-style Window/Crossing selection ✨ **NEW** |
 
-**🏆 TOTAL**: **5 systems** | **5,775+ lines** | **Enterprise-grade** | **Real-time capable**
+**🏆 TOTAL**: **6 systems** | **6,375+ lines** | **Enterprise-grade** | **Real-time capable**
 
 ---
 
@@ -227,6 +228,58 @@ const isFeatureEnabled = FEATURE_FLAGS.NEW_SEARCH_UI;
 
 ---
 
+## 🎯 **MULTI-SELECTION SYSTEM** ✨ NEW
+
+### 📁 **AUTOCAD-STYLE SELECTION ENGINE**
+
+**📍 Location**: `src/subapps/dxf-viewer/stores/overlay-store.tsx` + `systems/selection/` (600+ lines)
+
+**🎯 Mission**: Professional multi-selection με Window/Crossing patterns (AutoCAD-style)
+
+#### **🏢 ARCHITECTURE:**
+
+```
+Multi-Selection System
+├── overlay-store.tsx         # State: selectedOverlayIds: Set<string>
+├── UniversalMarqueeSelection.ts # Polygon intersection algorithms
+├── useCentralizedMouseHandlers.ts # Mouse event handling
+└── CanvasSection.tsx         # Visual feedback (grips)
+```
+
+#### **✅ ENTERPRISE FEATURES:**
+- ✅ **Window Selection** (left→right): Επιλογή entities εντός του selection box
+- ✅ **Crossing Selection** (right→left): Επιλογή entities που τέμνονται
+- ✅ **Single-Click Selection**: Point-in-polygon hit-test (ray casting)
+- ✅ **Accurate Intersection**: Polygon-to-rectangle intersection (no bounding box)
+- ✅ **Grip Drag Prevention**: Hover state check για timing issues
+- ✅ **Multi-Grip Display**: Grips εμφανίζονται σε όλα τα επιλεγμένα layers
+
+**🔗 API Usage:**
+```typescript
+import { useOverlayStore } from '@/subapps/dxf-viewer/stores/overlay-store';
+
+const overlayStore = useOverlayStore();
+
+// Multi-select
+overlayStore.setSelectedOverlays(['overlay_1', 'overlay_2', 'overlay_3']);
+
+// Check selection
+if (overlayStore.isSelected('overlay_1')) { /* ... */ }
+
+// Get all selected
+const selected = overlayStore.getSelectedOverlays();
+
+// Toggle
+overlayStore.toggleSelection('overlay_2');
+
+// Clear all
+overlayStore.clearSelection();
+```
+
+**📚 Full Documentation**: **[HYBRID_LAYER_MOVEMENT_ARCHITECTURE.md](../../src/subapps/dxf-viewer/docs/HYBRID_LAYER_MOVEMENT_ARCHITECTURE.md#9-multi-selection--marquee-selection-system-2026-01-25)**
+
+---
+
 ## 🎯 **ENTERPRISE PATTERNS**
 
 ### ✅ **DATA FLOW ARCHITECTURE**
@@ -258,10 +311,11 @@ User Interaction → Context Providers → Business Logic → Alert Engine → U
 ## 📚 **DETAILED DOCUMENTATION**
 
 ### 🎯 **SYSTEM-SPECIFIC GUIDES**
-- **[🏠 Unit Fields](unit-fields.md)** - Extended unit properties guide ✨ **NEW**
+- **[🏠 Unit Fields](unit-fields.md)** - Extended unit properties guide
 - **[🚨 Alert Engine](alert-engine.md)** - Complete monitoring system guide
 - **[🌍 Polygon System](polygon-system.md)** - Drawing engine documentation
 - **[🏗️ State Management](state-management.md)** - Context providers detailed guide
+- **[🎯 Multi-Selection](../../src/subapps/dxf-viewer/docs/HYBRID_LAYER_MOVEMENT_ARCHITECTURE.md#9-multi-selection--marquee-selection-system-2026-01-25)** - AutoCAD-style selection ✨ **NEW**
 
 ### 🔗 **RELATED SYSTEMS**
 - **[📊 Original Documentation](../../src/subapps/dxf-viewer/docs/centralized_systems.md)** - Complete implementation details
@@ -292,7 +346,7 @@ User Interaction → Context Providers → Business Logic → Alert Engine → U
 
 ---
 
-> **📅 Last Updated**: 2026-01-24
+> **📅 Last Updated**: 2026-01-25
 >
 > **👥 Authors**: Γιώργος Παγώνης + Claude Code (Anthropic AI)
 >

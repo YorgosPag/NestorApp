@@ -941,7 +941,7 @@ src/subapps/dxf-viewer/core/
 
 ---
 
-### Phase 3: State Machine (DRAWING STATES) - 🏢 CORE IMPLEMENTED
+### Phase 3: State Machine (DRAWING STATES) - ✅ FULLY INTEGRATED
 **Στόχος**: Formal FSM αντί για boolean flags
 
 | Task | Περιγραφή | Status |
@@ -950,9 +950,9 @@ src/subapps/dxf-viewer/core/
 | 3.2 | Implement `DrawingStateMachine.ts` | ✅ DONE (250+ lines) |
 | 3.3 | Create `useDrawingMachine.ts` React hook | ✅ DONE (200+ lines) |
 | 3.4 | Create `index.ts` with public API | ✅ DONE |
-| 3.5 | Migrate `useUnifiedDrawing` → use state machine | ⏳ PENDING |
-| 3.6 | Update all drawing tools to use FSM | ⏳ PENDING |
-| 3.7 | Testing & debugging | ⏳ PENDING |
+| 3.5 | Migrate `useUnifiedDrawing` → use state machine | ✅ DONE (2026-01-25) |
+| 3.6 | Update all drawing tools to use FSM | ✅ DONE (via useUnifiedDrawing integration) |
+| 3.7 | Testing & debugging | ⏳ RUNTIME TESTING NEEDED |
 
 **Created Files** (2026-01-25):
 ```
@@ -978,9 +978,19 @@ src/subapps/dxf-viewer/core/state-machine/
 - ✅ Debug logging (configurable)
 - ✅ React hook integration
 
-**Deliverables Pending**:
-- ⏳ Migration of `useUnifiedDrawing` to use state machine
-- ⏳ Integration with drawing tools
+**Deliverables Completed (v3.1.0)**:
+- ✅ Full migration of `useUnifiedDrawing` to use state machine
+- ✅ Integration with all drawing tools via unified hook
+- ✅ **Changes in useUnifiedDrawing.tsx**:
+  - Replaced `useState<DrawingState>` with `useDrawingMachine({ useGlobal: true })`
+  - Added `localState` for preview entity and overlay mode
+  - Created derived `DrawingState` for backward compatibility (via `useMemo`)
+  - Updated `addPoint()`: Uses `canAddPoint`, `machineAddPoint`, `machineComplete`, `machineReset`, `machineDeselectTool`
+  - Updated `updatePreview()`: Uses `machineMoveCursor`, `machineContext.points`, `machineContext.toolType`
+  - Updated `finishPolyline()`: Uses `machineContext.toolType`, `machineContext.points`
+  - Updated `startPolyline/startPolygon()`: Uses `machineContext.points` (spread for mutable array)
+  - Eliminated all `setState` usage - now using `setLocalState` + machine state
+- ✅ TypeScript compilation verified with **zero errors** in useUnifiedDrawing.tsx
 
 ---
 
@@ -1282,6 +1292,7 @@ Entity Registry:
 | 2026-01-25 | 2.0.0 | ✅ Phase 2 COMPLETE: **Feature-Complete Command Pattern**. Created 13 files in `core/commands/`. Enterprise features: Serialization, CompoundCommand, AuditTrail, Persistence (IndexedDB), CommandRegistry. SAP/Salesforce/Autodesk-grade. |
 | 2026-01-25 | 2.1.0 | ✅ Phase 2 FINALIZED: **Full Serialization Support** for ALL commands. Added `type`, `serialize()`, `getAffectedEntityIds()`, `validate()` to: DeleteEntityCommand, DeleteMultipleEntitiesCommand, MoveVertexCommand, AddVertexCommand, RemoveVertexCommand. Updated main `index.ts` with all enterprise exports (ICompoundCommand, IAuditTrail, ICommandPersistence, ICommandRegistry). TypeScript compilation verified. |
 | 2026-01-25 | 3.0.0 | ✅ Phase 3 CORE IMPLEMENTED: **Drawing State Machine**. Created `core/state-machine/` with 4 files (750+ lines). Enterprise features: Type-safe states (7), Guard conditions, State history, useSyncExternalStore (React 18), Tool requirements config. Separation of Concerns: ToolStateManager (WHICH tool) vs DrawingStateMachine (WHAT it's doing). ADR-032 documented. |
+| 2026-01-25 | 3.1.0 | ✅ Phase 3 FULLY INTEGRATED: **State Machine Integration into useUnifiedDrawing**. Full integration of DrawingStateMachine into `hooks/drawing/useUnifiedDrawing.tsx`. Changes: (1) Replaced useState with useDrawingMachine hook, (2) Updated addPoint() to use machineAddPoint/machineComplete/machineReset, (3) Updated updatePreview() to use machineMoveCursor and machineContext.points, (4) Updated finishPolyline/startPolyline/startPolygon to use machineContext, (5) Created derived DrawingState for backward compatibility, (6) Eliminated setState usage - now using local state + machine state. TypeScript compilation verified with zero errors in useUnifiedDrawing.tsx. |
 
 ---
 
