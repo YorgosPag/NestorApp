@@ -62,6 +62,8 @@ export interface FloatingPanelProps {
   draggableOptions?: Partial<DraggableOptions>;
   /** Children components */
   children: React.ReactNode;
+  /** 🏢 ENTERPRISE: Test ID for Layout Mapper and testing */
+  'data-testid'?: string;
 }
 
 /** FloatingPanel Header props */
@@ -171,7 +173,8 @@ const FloatingPanelRoot: React.FC<FloatingPanelProps> = ({
   onClose,
   className,
   draggableOptions = {},
-  children
+  children,
+  'data-testid': dataTestId
 }) => {
   // ✅ ENTERPRISE: Hydration safety
   const [isMounted, setIsMounted] = useState(false);
@@ -240,6 +243,7 @@ const FloatingPanelRoot: React.FC<FloatingPanelProps> = ({
         style={panelStyles}
         role="dialog"
         aria-modal="false"
+        data-testid={dataTestId}
       >
         {children}
       </Card>
@@ -276,7 +280,8 @@ const FloatingPanelHeader: React.FC<FloatingPanelHeaderProps> = ({
       )}
       onMouseDown={handleMouseDown}
     >
-      <div className="flex items-center gap-3 flex-1">
+      {/* 🏢 ENTERPRISE: Single row flex - title and close button on same line */}
+      <div className="flex items-center gap-2 w-full">
         {/* Icon */}
         {icon && (
           <span className={cn(iconSizes.sm, 'text-primary flex-shrink-0')}>
@@ -286,7 +291,7 @@ const FloatingPanelHeader: React.FC<FloatingPanelHeaderProps> = ({
 
         {/* Title or custom children */}
         {children ?? (
-          <h3 className="text-sm font-semibold text-foreground m-0">
+          <h3 className="text-sm font-semibold text-foreground m-0 flex-1">
             {title}
           </h3>
         )}
@@ -296,14 +301,10 @@ const FloatingPanelHeader: React.FC<FloatingPanelHeaderProps> = ({
 
         {/* Drag Handle */}
         <FloatingPanelDragHandle />
-      </div>
 
-      {/* Close Button */}
-      {showClose && onClose && (
-        <div className="flex items-center gap-1">
-          <FloatingPanelClose />
-        </div>
-      )}
+        {/* Close Button - same row */}
+        {showClose && onClose && <FloatingPanelClose />}
+      </div>
     </CardHeader>
   );
 };

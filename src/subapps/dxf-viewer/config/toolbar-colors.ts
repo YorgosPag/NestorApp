@@ -112,8 +112,58 @@ export const getDxfActionColor = (
   return DXF_ACTION_COLORS[actionId] ?? '';
 };
 
+// ============================================================================
+// 🎨 OVERLAY TOOLBAR COLORS - For DraggableOverlayToolbar
+// ============================================================================
+
+/**
+ * 🎨 Overlay Toolbar Icon Colors
+ * Consistent with DXF main toolbar colors
+ * Based on CAD industry standards (Autodesk AutoCAD, Bentley MicroStation)
+ */
+export const OVERLAY_TOOLBAR_COLORS = {
+  // Drawing mode icons
+  draw: HOVER_TEXT_EFFECTS.CYAN,        // Same as DRAWING tools
+  edit: HOVER_TEXT_EFFECTS.VIOLET,      // Same as TOOLS
+
+  // Polygon actions
+  save: HOVER_TEXT_EFFECTS.GREEN,       // Success/save action
+  cancel: HOVER_TEXT_EFFECTS.RED,       // Cancel/destructive
+
+  // Overlay actions
+  copy: HOVER_TEXT_EFFECTS.INDIGO,      // Copy action (same as undo/redo)
+  delete: HOVER_TEXT_EFFECTS.RED,       // Delete/destructive
+
+  // History actions (same as main toolbar)
+  undo: HOVER_TEXT_EFFECTS.INDIGO,
+  redo: HOVER_TEXT_EFFECTS.INDIGO,
+
+  // Kind icons (overlay types)
+  unit: HOVER_TEXT_EFFECTS.BLUE,        // Unit overlays
+  parking: HOVER_TEXT_EFFECTS.AMBER,    // Parking overlays
+  storage: HOVER_TEXT_EFFECTS.TEAL,     // Storage overlays
+  footprint: HOVER_TEXT_EFFECTS.SLATE,  // Footprint overlays
+} as const;
+
+/**
+ * 🔧 Get color for an Overlay Toolbar icon
+ *
+ * @param iconId - The icon/action ID
+ * @returns The appropriate color class string
+ *
+ * @example
+ * getOverlayToolbarColor('draw') // Returns CYAN
+ * getOverlayToolbarColor('delete') // Returns RED
+ */
+export const getOverlayToolbarColor = (
+  iconId: keyof typeof OVERLAY_TOOLBAR_COLORS
+): string => {
+  return OVERLAY_TOOLBAR_COLORS[iconId] ?? '';
+};
+
 /**
  * 🎨 Type exports for TypeScript support
  */
 export type DxfToolGroup = keyof typeof DXF_TOOL_GROUP_COLORS;
 export type DxfActionId = keyof typeof DXF_ACTION_COLORS;
+export type OverlayToolbarIconId = keyof typeof OVERLAY_TOOLBAR_COLORS;

@@ -139,7 +139,7 @@ export function EnterpriseColorSlider({
           <label {...labelProps} className={colors.text.secondary}>
             {label || getDefaultLabel(channel)}
           </label>
-          <output {...outputProps} className={`${colors.text.muted} font-mono`}>
+          <output {...outputProps} className={`${colors.text.muted} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>
             {formatValue(channel, state.value.getChannelValue(channel))}
           </output>
         </div>

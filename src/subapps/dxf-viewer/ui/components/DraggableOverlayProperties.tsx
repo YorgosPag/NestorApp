@@ -80,6 +80,7 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
       defaultPosition={SSR_FALLBACK_POSITION}
       dimensions={PANEL_DIMENSIONS}
       onClose={onClose}
+      data-testid="overlay-properties-panel"
       className={PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_WIDTH_MD}
       draggableOptions={{
         getClientPosition  // 🏢 ENTERPRISE: Client-side position calculation
@@ -89,11 +90,11 @@ export const DraggableOverlayProperties: React.FC<DraggableOverlayPropertiesProp
         title="Overlay Properties"
         icon={<Activity />}
       />
+      {/* 🏢 ENTERPRISE: FloatingPanel.Content has !p-2 (8px) padding */}
       <FloatingPanel.Content>
         <OverlayProperties
           overlay={overlay}
           onUpdate={onUpdate}
-          onClose={onClose}
         />
       </FloatingPanel.Content>
     </FloatingPanel>

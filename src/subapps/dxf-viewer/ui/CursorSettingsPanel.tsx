@@ -79,7 +79,7 @@ function SliderRow({
     <div className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
       <div className={`flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>
         <label className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.tertiary}`}>{label}</label>
-        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} font-mono`}>{value}</span>
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{value}</span>
       </div>
       <input
         type="range"

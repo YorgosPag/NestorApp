@@ -327,9 +327,16 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   private sendToAdmin = async () => {
     const { error, errorInfo, errorId } = this.state;
-    if (!error || !errorId) return;
+
+    console.log('🔔 [sendToAdmin] Starting...', { hasError: !!error, errorId });
+
+    if (!error || !errorId) {
+      console.log('🔔 [sendToAdmin] Aborted - no error or errorId');
+      return;
+    }
 
     this.setState({ isSendingToAdmin: true });
+    console.log('🔔 [sendToAdmin] State set to isSendingToAdmin: true');
 
     // Define errorDetails outside try block so it's accessible in catch
     const errorDetails = {
@@ -370,7 +377,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         error?: string;
       }
 
+      console.log('🔔 [sendToAdmin] Calling API...', { errorId, component: notificationPayload.component });
+
       const response = await apiClient.post('/api/notifications/error-report', notificationPayload) as ErrorReportApiResponse;
+
+      console.log('🔔 [sendToAdmin] API response:', response);
 
       if (response.success) {
         this.setState({ emailSent: true });

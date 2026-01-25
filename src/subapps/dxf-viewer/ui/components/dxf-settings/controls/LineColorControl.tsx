@@ -151,7 +151,7 @@ export const LineColorControl: React.FC<LineColorControlProps> = ({
                       }
                     }}
                     placeholder={UI_COLORS.WHITE}
-                    className={`flex-1 ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')} ${colors.text.secondary} font-mono ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}
+                    className={`flex-1 ${colors.bg.secondary} ${getStatusBorder('muted').replace('border ', '')} ${colors.text.secondary} ${PANEL_LAYOUT.FONT_FAMILY.CODE} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}
                   />
                 </div>
               </div>

@@ -111,11 +111,11 @@ export function CurrentSettingsDisplay({
               <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.type')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineType}</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{lineSettings.lineType}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.color')}</span>
-                  <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {lineSettings.color}
                     <div
                       className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${lineColorBgClass}`}
@@ -124,27 +124,27 @@ export function CurrentSettingsDisplay({
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.width')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineWidth}px</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{lineSettings.lineWidth}px</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.opacity')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{Math.round(lineSettings.opacity * 100)}%</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{Math.round(lineSettings.opacity * 100)}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.scale')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{lineSettings.dashScale || 1.0}x</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{lineSettings.dashScale || 1.0}x</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.offset')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{lineSettings.dashOffset || 0}px</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{lineSettings.dashOffset || 0}px</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.lineCap')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineCap || 'butt'}</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{lineSettings.lineCap || 'butt'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.lineJoin')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{lineSettings.lineJoin || 'miter'}</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{lineSettings.lineJoin || 'miter'}</span>
                 </div>
               </div>
             </div>
@@ -159,7 +159,7 @@ export function CurrentSettingsDisplay({
               <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.color')}</span>
-                  <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {effectiveTextSettings.color}
                     <div
                       className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${textColorBgClass}`}
@@ -168,26 +168,26 @@ export function CurrentSettingsDisplay({
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.fontSize')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.fontSize}px</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{effectiveTextSettings.fontSize}px</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.fontFamily')}</span>
-                  <span className={`${colors.text.primary} font-mono ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>{effectiveTextSettings.fontFamily}</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>{effectiveTextSettings.fontFamily}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.style')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>
                     {effectiveTextSettings.isBold && 'B'}{effectiveTextSettings.isItalic && 'I'}{effectiveTextSettings.isUnderline && 'U'}
                     {!effectiveTextSettings.isBold && !effectiveTextSettings.isItalic && !effectiveTextSettings.isUnderline && t('currentSettings.labels.normal')}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.superscript')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.isSuperscript ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{effectiveTextSettings.isSuperscript ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.subscript')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{effectiveTextSettings.isSubscript ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{effectiveTextSettings.isSubscript ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
                 </div>
               </div>
             </div>
@@ -202,23 +202,23 @@ export function CurrentSettingsDisplay({
               <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.visible')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{gripSettings.showGrips ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{gripSettings.showGrips ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.size')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{gripSettings.gripSize}px</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{gripSettings.gripSize}px</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.shape')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{gripSettings.gripShape}</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{gripSettings.gripShape}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.fill')}</span>
-                  <span className={`${colors.text.primary} font-mono`}>{gripSettings.showFill ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{gripSettings.showFill ? t('currentSettings.labels.yes') : t('currentSettings.labels.no')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.coldColor')}</span>
-                  <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {gripSettings.colors.cold}
                     <div
                       className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${gripColdColorBgClass}`}
@@ -227,7 +227,7 @@ export function CurrentSettingsDisplay({
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.warmColor')}</span>
-                  <span className={`${colors.text.primary} font-mono flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     {gripSettings.colors.warm}
                     <div
                       className={`${PANEL_LAYOUT.ICON.SMALL} rounded ${getStatusBorder('muted')} ${gripWarmColorBgClass}`}

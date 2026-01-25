@@ -178,11 +178,12 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
     }
   };
 
+  // 🎨 ENTERPRISE: bg-card for consistency with FloatingPanel (Εργαλεία Σχεδίασης)
   return (
     <div
       data-testid="dxf-main-toolbar"
-      className={`border ${getStatusBorder('muted')} ${quick.card} ${colors.bg.secondary} ${PANEL_LAYOUT.SHADOW.LG} ${className}`}
-    >  {/* ✅ ENTERPRISE: bg-gray-800 → CSS variable */}
+      className={`border ${getStatusBorder('muted')} ${quick.card} bg-card ${PANEL_LAYOUT.SHADOW.LG} ${className}`}
+    >
       <div className={`flex flex-wrap ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.SM}`}>
         <div className={`flex ${PANEL_LAYOUT.GAP.XS} flex-1`}>
           {/* 🏢 ENTERPRISE: Upload DXF - Shadcn Button (NO BORDERS) */}

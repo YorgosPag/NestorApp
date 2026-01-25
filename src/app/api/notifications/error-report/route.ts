@@ -178,6 +178,10 @@ async function handleErrorReport(
     // Get admin UID from enterprise config
     const adminUid = await adminConfigService.getAdminUid();
 
+    console.log(`🔔 [ErrorReport] Admin UID from config: ${adminUid}`);
+    console.log(`🔔 [ErrorReport] Current user UID: ${ctx.uid}`);
+    console.log(`🔔 [ErrorReport] Are they the same? ${adminUid === ctx.uid}`);
+
     if (!adminUid) {
       console.error('❌ [ErrorReport] No admin UID configured');
       return NextResponse.json(

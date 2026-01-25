@@ -38,6 +38,8 @@ import { useTranslation } from 'react-i18next';
 import { useEventBus } from '../../systems/events';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import { getShortcutDisplayLabel } from '../../config/keyboard-shortcuts';
+// 🎨 ENTERPRISE: Centralized icon colors - Consistent with main toolbar
+import { OVERLAY_TOOLBAR_COLORS } from '../../config/toolbar-colors';
 
 // ============================================================================
 // CONSTANTS - Enterprise Design Tokens (Centralized)
@@ -101,6 +103,8 @@ interface DraggableOverlayToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
   onToolChange: (tool: ToolType) => void;
+  /** 🏢 ENTERPRISE: Optional close handler for panel visibility control */
+  onClose?: () => void;
 }
 
 // ============================================================================
@@ -147,12 +151,19 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
   // 🎯 TOOLBAR CONFIGURATION
   // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
+  // 🎨 ENTERPRISE: Colors from centralized toolbar-colors.ts
   const modeButtons = [
-    { mode: 'draw' as OverlayEditorMode, icon: Pen, label: t('toolbar.draw'), key: getShortcutDisplayLabel('overlayDraw') },
-    { mode: 'edit' as OverlayEditorMode, icon: Edit, label: t('toolbar.edit'), key: getShortcutDisplayLabel('overlayEdit') },
+    { mode: 'draw' as OverlayEditorMode, icon: Pen, label: t('toolbar.draw'), key: getShortcutDisplayLabel('overlayDraw'), color: OVERLAY_TOOLBAR_COLORS.draw },
+    { mode: 'edit' as OverlayEditorMode, icon: Edit, label: t('toolbar.edit'), key: getShortcutDisplayLabel('overlayEdit'), color: OVERLAY_TOOLBAR_COLORS.edit },
   ];
 
-  const kindIcons = { unit: Square, parking: Circle, storage: Triangle, footprint: Grid };
+  // 🎨 ENTERPRISE: Kind icons with centralized colors
+  const kindIcons: Record<OverlayKind, { icon: typeof Square; color: string }> = {
+    unit: { icon: Square, color: OVERLAY_TOOLBAR_COLORS.unit },
+    parking: { icon: Circle, color: OVERLAY_TOOLBAR_COLORS.parking },
+    storage: { icon: Triangle, color: OVERLAY_TOOLBAR_COLORS.storage },
+    footprint: { icon: Grid, color: OVERLAY_TOOLBAR_COLORS.footprint },
+  };
 
   // 🎯 MODE CHANGE HANDLER
   const handleModeChange = (newMode: OverlayEditorMode) => {
@@ -225,21 +236,27 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
       <FloatingPanel
         defaultPosition={SSR_FALLBACK_POSITION}
         dimensions={TOOLBAR_DIMENSIONS}
+        onClose={props.onClose}
+        data-testid="overlay-toolbar-panel"
         draggableOptions={{
           getClientPosition: getToolbarPosition  // 🏢 ENTERPRISE: Client-side position calculation
         }}
       >
-        <FloatingPanel.Header
-          title={t('toolbar.title')}
-          icon={<Activity />}
-          showClose={false}
-        />
+        {/* 🏢 ENTERPRISE: Custom header with centered title */}
+        <FloatingPanel.Header showClose={!!props.onClose}>
+          <div className="flex items-center justify-center flex-1">
+            <Activity className={iconSizes.sm} />
+            <h3 className="text-sm font-semibold text-foreground m-0 ml-2">
+              {t('toolbar.title')}
+            </h3>
+          </div>
+        </FloatingPanel.Header>
         <FloatingPanel.Content className={PANEL_LAYOUT.SPACING.SM}>
           {/* 🎯 TOOLBAR CONTROLS - 8px padding (p-2) */}
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} flex-wrap`}>
           {/* Drawing Modes - Icon-only buttons like main toolbar */}
           <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.drawingModes')}>
-            {modeButtons.map(({ mode: btnMode, icon: Icon, label, key }) => (
+            {modeButtons.map(({ mode: btnMode, icon: Icon, label, key, color }) => (
               <Tooltip key={btnMode}>
                 <TooltipTrigger asChild>
                   <Button
@@ -247,7 +264,8 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                     size="icon-sm"
                     onClick={() => handleModeChange(btnMode)}
                   >
-                    <Icon className={iconSizes.sm} />
+                    {/* 🎨 ENTERPRISE: Use centralized color when not active */}
+                    <Icon className={`${iconSizes.sm} ${props.mode !== btnMode ? color : ''}`} />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{`${label} (${key})`}</TooltipContent>
@@ -263,6 +281,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                 </span>
 
                 {/* Save Button - Icon-only */}
+                {/* 🎨 ENTERPRISE: Use centralized OVERLAY_TOOLBAR_COLORS.save */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -270,7 +289,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                       size="icon-sm"
                       onClick={handleSavePolygon}
                       disabled={!draftPolygonInfo.canSave}
-                      className={draftPolygonInfo.canSave ? 'text-green-600 hover:text-green-700 hover:bg-green-100' : 'opacity-50'}
+                      className={draftPolygonInfo.canSave ? `${OVERLAY_TOOLBAR_COLORS.save} hover:bg-green-100` : 'opacity-50'}
                     >
                       <Save className={iconSizes.sm} />
                     </Button>
@@ -283,13 +302,14 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                 </Tooltip>
 
                 {/* Cancel Button - Icon-only */}
+                {/* 🎨 ENTERPRISE: Use centralized OVERLAY_TOOLBAR_COLORS.cancel */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon-sm"
                       onClick={handleCancelPolygon}
-                      className="text-destructive hover:text-destructive hover:bg-red-100"
+                      className={`${OVERLAY_TOOLBAR_COLORS.cancel} hover:bg-red-100`}
                     >
                       <XCircle className={iconSizes.sm} />
                     </Button>
@@ -324,9 +344,10 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
           {/* Kind Selection - Icon-only buttons */}
+          {/* 🎨 ENTERPRISE: Centralized colors for overlay types */}
           <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.overlayType')}>
             {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
-              const Icon = kindIcons[kind];
+              const { icon: Icon, color } = kindIcons[kind];
               return (
                 <Tooltip key={kind}>
                   <TooltipTrigger asChild>
@@ -335,7 +356,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                       size="icon-sm"
                       onClick={() => props.onKindChange(kind)}
                     >
-                      <Icon className={iconSizes.sm} />
+                      <Icon className={`${iconSizes.sm} ${props.currentKind !== kind ? color : ''}`} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>{t(KIND_LABELS[kind])}</TooltipContent>
@@ -348,6 +369,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
 
           {/* Actions - Shadcn Button (same as main toolbar) */}
           {/* 🎯 ENTERPRISE: Wrap disabled buttons with span for tooltip to work */}
+          {/* 🎨 ENTERPRISE: Centralized colors for actions */}
           <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.overlayActions')}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -358,7 +380,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                     onClick={props.onDuplicate}
                     disabled={!props.selectedOverlayId}
                   >
-                    <Copy className={iconSizes.sm} />
+                    <Copy className={`${iconSizes.sm} ${OVERLAY_TOOLBAR_COLORS.copy}`} />
                   </Button>
                 </span>
               </TooltipTrigger>
@@ -372,9 +394,8 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                     size="icon-sm"
                     onClick={props.onDelete}
                     disabled={!props.selectedOverlayId}
-                    className="text-destructive hover:text-destructive"
                   >
-                    <X className={iconSizes.sm} />
+                    <X className={`${iconSizes.sm} ${OVERLAY_TOOLBAR_COLORS.delete}`} />
                   </Button>
                 </span>
               </TooltipTrigger>
@@ -385,6 +406,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
           <Separator orientation="vertical" className={`${PANEL_LAYOUT.HEIGHT.LG} ${quick.separatorV}`} />
 
           {/* Undo/Redo - Shadcn Button (same as main toolbar) */}
+          {/* 🎨 ENTERPRISE: Centralized colors for history actions */}
           <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} aria-label={t('toolbar.ariaLabels.historyControls')}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -395,7 +417,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                     onClick={props.onUndo}
                     disabled={!props.canUndo}
                   >
-                    <RotateCcw className={iconSizes.sm} />
+                    <RotateCcw className={`${iconSizes.sm} ${OVERLAY_TOOLBAR_COLORS.undo}`} />
                   </Button>
                 </span>
               </TooltipTrigger>
@@ -410,7 +432,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                     onClick={props.onRedo}
                     disabled={!props.canRedo}
                   >
-                    <RotateCw className={iconSizes.sm} />
+                    <RotateCw className={`${iconSizes.sm} ${OVERLAY_TOOLBAR_COLORS.redo}`} />
                   </Button>
                 </span>
               </TooltipTrigger>

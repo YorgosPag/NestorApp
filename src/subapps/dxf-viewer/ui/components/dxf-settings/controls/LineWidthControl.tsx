@@ -60,7 +60,7 @@ export const LineWidthControl: React.FC<LineWidthControlProps> = ({
           {label}
         </label>
         {showValue && (
-          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} font-mono`}>
+          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>
             {localValue.toFixed(2)}mm
           </span>
         )}

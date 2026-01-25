@@ -1,16 +1,24 @@
 'use client';
+/**
+ * 🏢 OVERLAY PROPERTIES CONTENT
+ *
+ * Content component για overlay properties editing.
+ * ΧΡΗΣΙΜΟΠΟΙΕΙΤΑΙ ΜΟΝΟ μέσα στο DraggableOverlayProperties (FloatingPanel wrapper).
+ * ΔΕΝ έχει δικό του Card wrapper - το FloatingPanel παρέχει τη δομή.
+ *
+ * @version 4.0.0 - Removed Card wrapper (used inside FloatingPanel)
+ * @since 2025-01-25
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useDynamicBackgroundClass } from '../../../components/ui/utils/dynamic-styles';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { Button } from '../../../components/ui/button';
 import { Separator } from '../../../components/ui/separator';
-import { X } from 'lucide-react';
 import { CommonBadge } from '../../../core/badges';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, OVERLAY_STATUS_KEYS, type Overlay, type Status, type OverlayKind } from '../overlays/types';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
@@ -70,7 +78,13 @@ function calculatePolygonPerimeter(polygon: unknown): number {
   return perimeter;
 }
 
-export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, onUpdate, onClose }) => {
+/**
+ * 🏢 OverlayProperties Content Component
+ *
+ * Renders overlay property fields WITHOUT Card wrapper.
+ * The parent DraggableOverlayProperties provides FloatingPanel structure.
+ */
+export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, onUpdate }) => {
   const { t } = useTranslation(['dxf-viewer', 'properties']);
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
@@ -84,14 +98,12 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
     }
   }, [overlay]);
 
+  // 🏢 ENTERPRISE: Empty state - no overlay selected
   if (!overlay) {
     return (
-      <Card className={PANEL_LAYOUT.WIDTH.PANEL_SM}>
-        <CardHeader><CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>{t('overlayProperties.title')}</CardTitle></CardHeader>
-        <CardContent>
-          <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} text-muted-foreground`}>{t('overlayProperties.selectOverlay')}</p>
-        </CardContent>
-      </Card>
+      <p className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} text-muted-foreground`}>
+        {t('overlayProperties.selectOverlay')}
+      </p>
     );
   }
 
@@ -111,105 +123,95 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
     onUpdate(overlay.id, { linked });
   };
 
+  // 🏢 ENTERPRISE: Content only - no Card wrapper (parent provides FloatingPanel)
+  // 🏢 COMPACT: space-y-1 = 4px vertical gaps between sections
   return (
-    <Card className={PANEL_LAYOUT.WIDTH.PANEL_SM}>
-      <CardHeader className={PANEL_LAYOUT.PADDING.BOTTOM_SM}>
-        <div className="flex items-center justify-between">
-          <CardTitle className={PANEL_LAYOUT.BUTTON.TEXT_SIZE}>{t('overlayProperties.title')}</CardTitle>
-          {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className={iconSizes.sm} />
-            </Button>
-          )}
+    <div className="space-y-1">
+      {/* Basic Info */}
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
+        <div
+          className={`${iconSizes.sm} rounded ${quick.button} ${useDynamicBackgroundClass(STATUS_COLORS[overlay.status || 'for-sale'] as string)}`}
+        />
+        <CommonBadge
+          status="company"
+          customLabel={typeof overlay.id === 'string' ? overlay.id.slice(0, 8) : String(overlay.id || '').slice(0, 8)}
+          variant="outline"
+        />
+      </div>
+
+      <Separator className="my-1" />
+
+      {/* Label */}
+      <div className={PANEL_LAYOUT.SPACING.GAP_XS}>
+        <Label htmlFor="label" className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.label')}</Label>
+        <Input
+          id="label"
+          value={label}
+          onChange={(e) => handleLabelChange(e.target.value)}
+          placeholder={t('overlayProperties.labelPlaceholder')}
+          className={PANEL_LAYOUT.HEIGHT.INPUT_SM}
+        />
+      </div>
+
+      {/* Status */}
+      <div className={PANEL_LAYOUT.SPACING.GAP_XS}>
+        <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.status')}</Label>
+        <Select value={overlay.status} onValueChange={handleStatusChange}>
+          <SelectTrigger className={PANEL_LAYOUT.HEIGHT.INPUT_SM}><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {OVERLAY_STATUS_KEYS.map(status => (
+              <SelectItem key={status} value={status}>
+                <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
+                  <div
+                    className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass(String(STATUS_COLORS[status] || ''))}`}
+                  />
+                  {t(STATUS_LABELS[status])}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Kind */}
+      <div className={PANEL_LAYOUT.SPACING.GAP_XS}>
+        <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.type')}</Label>
+        <Select value={overlay.kind} onValueChange={handleKindChange}>
+          <SelectTrigger className={PANEL_LAYOUT.HEIGHT.INPUT_SM}><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => (
+              <SelectItem key={kind} value={kind}>{t(KIND_LABELS[kind])}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator className="my-1" />
+
+      {/* Linked Entity (simplified) */}
+      <div className={PANEL_LAYOUT.SPACING.GAP_XS}>
+        <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.linkedUnit')}</Label>
+        <Input
+          value={linkedUnitId}
+          onChange={(e) => setLinkedUnitId(e.target.value)}
+          onBlur={handleLinkedEntityUpdate}
+          placeholder={t('overlayProperties.unitIdPlaceholder')}
+          className={`${PANEL_LAYOUT.HEIGHT.INPUT_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}
+        />
+      </div>
+
+      <Separator className="my-1" />
+
+      {/* Geometry Info */}
+      <div className={PANEL_LAYOUT.SPACING.GAP_XS}>
+        <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.geometry')}</Label>
+        <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} text-muted-foreground leading-tight`}>
+          <div>{t('overlayProperties.points')} {overlay && overlay.polygon ? overlay.polygon.length : 0}</div>
+          <div>{t('overlayProperties.area')} {area.toFixed(2)} m²</div>
+          <div>{t('overlayProperties.perimeter')} {perimeter.toFixed(2)} m</div>
         </div>
-      </CardHeader>
-      <CardContent className={PANEL_LAYOUT.SPACING.GAP_LG}>
-        {/* Basic Info */}
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <div
-            className={`${iconSizes.sm} rounded ${quick.button} ${useDynamicBackgroundClass(STATUS_COLORS[overlay.status || 'for-sale'] as string)}`}
-          />
-          <CommonBadge
-            status="company"
-            customLabel={typeof overlay.id === 'string' ? overlay.id.slice(0, 8) : String(overlay.id || '').slice(0, 8)}
-            variant="outline"
-          />
-        </div>
-
-        <Separator />
-
-        {/* Label */}
-        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label htmlFor="label" className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.label')}</Label>
-          <Input
-            id="label"
-            value={label}
-            onChange={(e) => handleLabelChange(e.target.value)}
-            placeholder={t('overlayProperties.labelPlaceholder')}
-            className={PANEL_LAYOUT.HEIGHT.XL}
-          />
-        </div>
-
-        {/* Status */}
-        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.status')}</Label>
-          <Select value={overlay.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className={PANEL_LAYOUT.HEIGHT.XL}><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {OVERLAY_STATUS_KEYS.map(status => (
-                <SelectItem key={status} value={status}>
-                  <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                    <div
-                      className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass(String(STATUS_COLORS[status] || ''))}`}
-                    />
-                    {t(STATUS_LABELS[status])}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Kind */}
-        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.type')}</Label>
-          <Select value={overlay.kind} onValueChange={handleKindChange}>
-            <SelectTrigger className={PANEL_LAYOUT.HEIGHT.XL}><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => (
-                <SelectItem key={kind} value={kind}>{t(KIND_LABELS[kind])}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Separator />
-
-        {/* Linked Entity (simplified) */}
-        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.linkedUnit')}</Label>
-          <Input
-            value={linkedUnitId}
-            onChange={(e) => setLinkedUnitId(e.target.value)}
-            onBlur={handleLinkedEntityUpdate}
-            placeholder={t('overlayProperties.unitIdPlaceholder')}
-            className={`${PANEL_LAYOUT.HEIGHT.INPUT_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}
-          />
-        </div>
-
-        <Separator />
-
-        {/* Geometry Info */}
-        <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
-          <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.geometry')}</Label>
-          <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} text-muted-foreground ${PANEL_LAYOUT.SPACING.GAP_XS}`}>
-            <div>{t('overlayProperties.points')} {overlay && overlay.polygon ? overlay.polygon.length : 0}</div>
-            <div>{t('overlayProperties.area')} {area.toFixed(2)} m²</div>
-            <div>{t('overlayProperties.perimeter')} {perimeter.toFixed(2)} m</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

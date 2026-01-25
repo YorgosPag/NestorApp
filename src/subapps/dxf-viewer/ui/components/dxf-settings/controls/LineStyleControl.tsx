@@ -70,7 +70,7 @@ export const LineStyleControl: React.FC<LineStyleControlProps> = ({
           {LINE_TYPE_OPTIONS.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               <span className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-                <span className={`font-mono ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.OPACITY['70']}`}>{option.preview}</span>
+                <span className={`${PANEL_LAYOUT.FONT_FAMILY.CODE} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.OPACITY['70']}`}>{option.preview}</span>
                 <span>{option.label}</span>
               </span>
             </SelectItem>

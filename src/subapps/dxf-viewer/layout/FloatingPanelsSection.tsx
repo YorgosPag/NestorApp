@@ -11,7 +11,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UI_COLORS } from '../config/color-config';
 import type { SceneModel } from '../types/scene';
 import type { OverlayEditorMode, OverlayKind, Status, Overlay } from '../overlays/types';
@@ -100,6 +100,9 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   testReport,
   formattedTestReport,
 }) => {
+  // 🏢 ENTERPRISE: Local state for panel visibility
+  const [showOverlayToolbar, setShowOverlayToolbar] = useState(true);
+
   return (
     <>
       {/* COLOR MANAGER */}
@@ -132,7 +135,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
       )}
 
       {/* DRAGGABLE OVERLAY TOOLBAR */}
-      {true && (
+      {showOverlayToolbar && (
         <DraggableOverlayToolbar
           mode={overlayMode}
           onModeChange={setOverlayMode}
@@ -150,6 +153,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
           onUndo={() => handleAction('undo')}
           onRedo={() => handleAction('redo')}
           onToolChange={handleToolChange}
+          onClose={() => setShowOverlayToolbar(false)}
         />
       )}
 

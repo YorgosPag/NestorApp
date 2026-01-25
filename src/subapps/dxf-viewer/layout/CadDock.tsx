@@ -127,7 +127,7 @@ const HistoryView = memo(() => {
   return (
     <section className={`${PANEL_LAYOUT.SPACING.MD} ${colors.bg.secondary} ${PANEL_COLORS.TEXT_PRIMARY}`}>
       <h3 className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} ${colors.text.muted}`}>{t('cadDock.history.title')}</h3>
-      <output className={`${PANEL_LAYOUT.SPACING.GAP_XS} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} font-mono block`}>
+      <output className={`${PANEL_LAYOUT.SPACING.GAP_XS} ${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${PANEL_LAYOUT.FONT_FAMILY.CODE} block`}>
         <p className={colors.text.muted}>{t('cadDock.history.commands.fit')}</p>
         <p className={colors.text.muted}>{t('cadDock.history.commands.zoomWindow')}</p>
         <p className={colors.text.muted}>{t('cadDock.history.commands.line')}</p>

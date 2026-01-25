@@ -4,12 +4,26 @@ import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 import { portalComponents } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import { matchesShortcut } from '../../config/keyboard-shortcuts';
+// 🎨 ENTERPRISE: Lucide icons instead of emoji
+import {
+  Crosshair,
+  Wrench,
+  Layers,
+  Image,
+  Box,
+  Home,
+  BarChart3,
+  FileText,
+  X
+} from 'lucide-react';
 
 interface ElementMetrics {
   name: string;
+  icon: React.ReactNode;
   element: HTMLElement | null;
   rect: DOMRect | null;
   className?: string;
@@ -36,24 +50,23 @@ const LAYOUT_MAPPER_STYLES = {
   },
 
   // Measurement box for each element
+  // 🏢 ENTERPRISE: Using FONT_FAMILY.BASE for consistency with app UI
   MEASUREMENT_BOX: {
     BASE: `absolute border border-dashed ${PANEL_LAYOUT.OPACITY['60']}`,
-    // ✅ ENTERPRISE: Label styled at runtime with colors.text.WHITE and bg-black
-    LABEL: `absolute ${PANEL_LAYOUT.POSITION.NEGATIVE_TOP_6} ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono bg-black ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} whitespace-nowrap`,
-    // ✅ ENTERPRISE: Coordinate badges styled at runtime with colors.text.WHITE
-    COORD_TOP_LEFT: `absolute ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
-    COORD_BOTTOM_RIGHT: `absolute ${PANEL_LAYOUT.POSITION.BOTTOM_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
+    LABEL: `absolute ${PANEL_LAYOUT.POSITION.NEGATIVE_TOP_6} ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_FAMILY.BASE} bg-black ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} whitespace-nowrap flex items-center gap-1`,
+    COORD_TOP_LEFT: `absolute ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_FAMILY.BASE} ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
+    COORD_BOTTOM_RIGHT: `absolute ${PANEL_LAYOUT.POSITION.BOTTOM_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_FAMILY.BASE} ${PANEL_LAYOUT.SPACING.HORIZONTAL_XS}`,
   },
 
-  // Info panel (right side)
+  // Info panel (right side) - 🎨 ENTERPRISE: bg-card + FONT_FAMILY.BASE for UI consistency
   INFO_PANEL: {
-    CONTAINER: `fixed ${PANEL_LAYOUT.POSITION.TOP_20} ${PANEL_LAYOUT.POSITION.RIGHT_4} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} font-mono max-w-md`,
+    CONTAINER: `fixed ${PANEL_LAYOUT.POSITION.TOP_20} ${PANEL_LAYOUT.POSITION.RIGHT_4} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.INPUT.BORDER_RADIUS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_FAMILY.BASE} max-w-md bg-card border border-border shadow-lg`,
     HEADER: `flex justify-between items-center ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`,
-    // ✅ ENTERPRISE: Header title uses font-bold, color applied via colors.text.WHITE runtime
-    HEADER_TITLE: PANEL_LAYOUT.FONT_WEIGHT.BOLD,
-    METRIC_ITEM: PANEL_LAYOUT.MARGIN.BOTTOM_XS,
-    METRIC_DETAILS: `${PANEL_LAYOUT.MARGIN.LEFT_HALF} ${PANEL_LAYOUT.MARGIN.LEFT_SM} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`,
-    FOOTER: `${PANEL_LAYOUT.MARGIN.TOP_LG} ${PANEL_LAYOUT.PADDING.TOP_SM}`,
+    HEADER_TITLE: `${PANEL_LAYOUT.FONT_WEIGHT.BOLD} flex items-center gap-2`,
+    METRIC_ITEM: `${PANEL_LAYOUT.MARGIN.BOTTOM_XS} flex items-start gap-2`,
+    METRIC_DETAILS: `${PANEL_LAYOUT.MARGIN.LEFT_HALF} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`,
+    // 🎨 ENTERPRISE: Centered footer
+    FOOTER: `${PANEL_LAYOUT.MARGIN.TOP_LG} ${PANEL_LAYOUT.PADDING.TOP_SM} text-center`,
   },
 } as const;
 
@@ -61,38 +74,43 @@ export default function LayoutMapper() {
   const [metrics, setMetrics] = useState<ElementMetrics[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout>();
-  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const iconSizes = useIconSizes();
 
   const measureElements = () => {
     // ✅ ENTERPRISE: All debug colors via centralized COLOR_BRIDGE tokens
+    // 🎨 ENTERPRISE: Lucide icons instead of emoji
     const elementsToMeasure = [
       // Core UI Elements
-      { name: '🔧 Central Toolbar', selector: '[class*="toolbar"], .toolbar-container', className: colors.bg.debugBlue },
-      { name: '📏 Horizontal Ruler', selector: '.horizontal-ruler, [class*="horizontal-ruler"]', className: colors.bg.debugYellow },
-      { name: '📐 Vertical Ruler', selector: '.vertical-ruler, [class*="vertical-ruler"]', className: colors.bg.debugYellow },
+      { name: 'Main Toolbar', icon: <Wrench className={iconSizes.xs} />, selector: '[data-testid="dxf-main-toolbar"]', className: colors.bg.debugBlue },
+
+      // 🏢 ENTERPRISE: Individual floating panels with unique data-testid
+      { name: 'Overlay Toolbar', icon: <Layers className={iconSizes.xs} />, selector: '[data-testid="overlay-toolbar-panel"]', className: colors.bg.debugYellow },
+      { name: 'Overlay Properties', icon: <Layers className={iconSizes.xs} />, selector: '[data-testid="overlay-properties-panel"]', className: colors.bg.debugPurple },
 
       // Canvas Elements
-      { name: '🎨 DXF Canvas', selector: '.dxf-canvas, canvas[class*="dxf"]', className: colors.bg.debugGreen },
-      { name: '🎭 Layer Canvas', selector: '.layer-canvas, canvas[class*="layer"]', className: colors.bg.debugPurple },
-      { name: '⭕ Crosshair Canvas', selector: 'canvas[class*="crosshair"]', className: colors.bg.debugRed },
+      { name: 'DXF Canvas', icon: <Image className={iconSizes.xs} />, selector: '.dxf-canvas', className: colors.bg.debugGreen },
+      { name: 'Layer Canvas', icon: <Layers className={iconSizes.xs} />, selector: '.layer-canvas', className: colors.bg.debugOrange },
 
       // Container Elements
-      { name: '📦 Canvas Section', selector: '[class*="canvas-section"], [class*="CanvasSection"]', className: colors.bg.debugOrange },
-      { name: '🏠 Canvas Container', selector: '[class*="canvas-container"], [class*="CanvasContainer"]', className: colors.bg.debugPink },
-      { name: '🖼️ Main Layout', selector: '[class*="dxf-layout"], [class*="DxfLayout"]', className: colors.bg.debugIndigo },
+      { name: 'Canvas Stack', icon: <Box className={iconSizes.xs} />, selector: '.canvas-stack', className: colors.bg.debugPink },
+      { name: 'Canvas Area', icon: <Home className={iconSizes.xs} />, selector: '.canvas-area', className: colors.bg.hover },
 
-      // Status & UI Elements
-      { name: '📊 Status Bar', selector: '[class*="status"], [class*="StatusBar"]', className: colors.bg.hover },
-      { name: '🎛️ Control Panel', selector: '[class*="control"], [class*="panel"]', className: colors.bg.debugTeal }
+      // Status Bar (may not be rendered)
+      { name: 'CAD Status Bar', icon: <BarChart3 className={iconSizes.xs} />, selector: '[data-testid="cad-status-bar"]', className: colors.bg.info },
+
+      // PDF Background (only when PDF loaded)
+      { name: 'PDF Background', icon: <FileText className={iconSizes.xs} />, selector: '[data-testid="pdf-background-canvas"]', className: colors.bg.debugRed }
     ];
 
-    const newMetrics: ElementMetrics[] = elementsToMeasure.map(({ name, selector, className }) => {
+    const newMetrics: ElementMetrics[] = elementsToMeasure.map(({ name, icon, selector, className }) => {
       const element = document.querySelector(selector) as HTMLElement;
       const rect = element?.getBoundingClientRect() || null;
 
       return {
         name,
+        icon,
         element,
         rect,
         className
@@ -124,7 +142,7 @@ export default function LayoutMapper() {
   useEffect(() => {
     if (isVisible) {
       measureElements();
-      intervalRef.current = setInterval(measureElements, 1000); // Μέτρηση κάθε δευτερόλεπτο
+      intervalRef.current = setInterval(measureElements, 1000);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -170,7 +188,7 @@ export default function LayoutMapper() {
           className={LAYOUT_MAPPER_STYLES.DEBUG_OVERLAY.CONTAINER}
           style={{ zIndex: portalComponents.overlay.debug.main.zIndex() }}
         >
-          {metrics.map(({ name, rect, className }) =>
+          {metrics.map(({ name, icon, rect, className }) =>
             rect && (
               <div
                 key={name}
@@ -186,7 +204,8 @@ export default function LayoutMapper() {
               >
                 {/* Ετικέτα με διαστάσεις */}
                 <div className={`${LAYOUT_MAPPER_STYLES.MEASUREMENT_BOX.LABEL} ${colors.text.WHITE}`}>
-                  {name}: {Math.round(rect.width)}x{Math.round(rect.height)}
+                  {icon}
+                  <span>{name}: {Math.round(rect.width)}x{Math.round(rect.height)}</span>
                 </div>
 
                 {/* Συντεταγμένες στις γωνίες */}
@@ -202,36 +221,43 @@ export default function LayoutMapper() {
         </div>
       )}
 
-      {/* Info Panel */}
+      {/* Info Panel - 🎨 ENTERPRISE: bg-card centralized background */}
       <div
-        className={`${LAYOUT_MAPPER_STYLES.INFO_PANEL.CONTAINER} ${colors.bg.overlay} ${colors.text.success}`}
+        className={LAYOUT_MAPPER_STYLES.INFO_PANEL.CONTAINER}
         style={{ zIndex: portalComponents.overlay.debug.controls.zIndex() }}
       >
         <div className={LAYOUT_MAPPER_STYLES.INFO_PANEL.HEADER}>
-          <h3 className={`${LAYOUT_MAPPER_STYLES.INFO_PANEL.HEADER_TITLE} ${colors.text.WHITE}`}>🎯 LAYOUT MAPPER</h3>
+          <h3 className={`${LAYOUT_MAPPER_STYLES.INFO_PANEL.HEADER_TITLE} ${colors.text.WHITE}`}>
+            <Crosshair className={iconSizes.sm} />
+            <span>LAYOUT MAPPER</span>
+          </h3>
           <button
             onClick={() => setIsVisible(false)}
-            className={`${colors.text.RED_LIGHT} ${HOVER_TEXT_EFFECTS.RED_LIGHT}`}
+            className={`${colors.text.RED_LIGHT} ${HOVER_TEXT_EFFECTS.RED_LIGHT} p-1`}
           >
-            x
+            <X className={iconSizes.xs} />
           </button>
         </div>
 
-        {metrics.map(({ name, rect }) => (
+        {metrics.map(({ name, icon, rect }) => (
           <div key={name} className={LAYOUT_MAPPER_STYLES.INFO_PANEL.METRIC_ITEM}>
-            <strong className={colors.text.info}>{name}:</strong>
-            {rect ? (
-              <div className={LAYOUT_MAPPER_STYLES.INFO_PANEL.METRIC_DETAILS}>
-                Position: ({Math.round(rect.x)}, {Math.round(rect.y)})<br/>
-                Size: {Math.round(rect.width)} x {Math.round(rect.height)}<br/>
-                Bounds: L{Math.round(rect.left)} T{Math.round(rect.top)} R{Math.round(rect.right)} B{Math.round(rect.bottom)}
-              </div>
-            ) : (
-              <span className={`${colors.text.danger} ${PANEL_LAYOUT.MARGIN.LEFT_SM}`}>NOT FOUND</span>
-            )}
+            <span className={colors.text.info}>{icon}</span>
+            <div>
+              <strong className={colors.text.info}>{name}:</strong>
+              {rect ? (
+                <div className={LAYOUT_MAPPER_STYLES.INFO_PANEL.METRIC_DETAILS}>
+                  Position: ({Math.round(rect.x)}, {Math.round(rect.y)})<br/>
+                  Size: {Math.round(rect.width)} x {Math.round(rect.height)}<br/>
+                  Bounds: L{Math.round(rect.left)} T{Math.round(rect.top)} R{Math.round(rect.right)} B{Math.round(rect.bottom)}
+                </div>
+              ) : (
+                <span className={`${colors.text.danger} ${PANEL_LAYOUT.MARGIN.LEFT_SM}`}>NOT FOUND</span>
+              )}
+            </div>
           </div>
         ))}
 
+        {/* 🎨 ENTERPRISE: Centered footer */}
         <div className={`${LAYOUT_MAPPER_STYLES.INFO_PANEL.FOOTER} ${getDirectionalBorder('muted', 'top')} ${colors.text.warning}`}>
           Ctrl+Shift+L: Toggle | Auto-refresh: 1s
         </div>

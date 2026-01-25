@@ -423,7 +423,7 @@ const RawTab: React.FC<{ formattedReport: string }> = ({ formattedReport }) => {
 
   return (
     <div className={PANEL_LAYOUT.HEIGHT.FULL}>
-      <pre className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary} font-mono whitespace-pre-wrap break-words ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.HEIGHT.FULL} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
+      <pre className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary} ${PANEL_LAYOUT.FONT_FAMILY.CODE} whitespace-pre-wrap break-words ${PANEL_LAYOUT.SPACING.LG} ${colors.bg.secondary} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.HEIGHT.FULL} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO}`}>
         {formattedReport}
       </pre>
     </div>

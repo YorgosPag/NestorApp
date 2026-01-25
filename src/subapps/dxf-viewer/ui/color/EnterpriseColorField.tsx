@@ -133,7 +133,7 @@ export function EnterpriseColorField({
         placeholder={UI_COLORS.BLACK}
         className={`
           flex-1 ${PANEL_LAYOUT.INPUT.PADDING} ${colors.bg.secondary} ${quick.input}
-          ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.primary} font-mono
+          ${PANEL_LAYOUT.INPUT.TEXT_SIZE} ${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}
           ${PANEL_LAYOUT.INPUT.FOCUS} focus:ring-2 ${colors.ring.info}
           disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
           ${error ? getStatusBorder('error').replace('border ', '') : ''}

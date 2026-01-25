@@ -526,6 +526,21 @@ export const PANEL_LAYOUT = {
   },
 
   // ============================================================================
+  // 🔠 FONT_FAMILY - Font family tokens (ENTERPRISE 2026-01-25)
+  // ============================================================================
+  // Pattern: Autodesk/Microsoft/Adobe - Semantic font tokens
+  // Single source of truth for all font families in the application
+  // ============================================================================
+  FONT_FAMILY: {
+    /** Default application font (Inter/system-ui via Tailwind) */
+    BASE: 'font-sans',
+    /** Technical/code font for coordinates, measurements, debug data */
+    CODE: 'font-mono',
+    /** Display font for headlines (if needed in future) */
+    DISPLAY: 'font-serif',
+  },
+
+  // ============================================================================
   // 🔡 FONT_WEIGHT - Font weight tokens (ENTERPRISE 2026-01-05)
   // ============================================================================
   FONT_WEIGHT: {
