@@ -5,6 +5,8 @@ import { db } from '@/lib/firebase';
 // ✅ ENTERPRISE: Pako compression library with type assertion
 // @ts-ignore - Pako module lacks TypeScript definitions
 import pako from 'pako';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // 🏢 ENTERPRISE: Floorplan file types
 export type FloorplanFileType = 'dxf' | 'pdf';
@@ -194,6 +196,19 @@ export class FloorplanService {
         fileType,
         compressionRatio: docData.compressed ? `${((1 - docData.compressedSize/docData.originalSize) * 100).toFixed(1)}%` : 'N/A (PDF)'
       });
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchFloorplanCreated({
+        floorplanId: docId,
+        floorplan: {
+          projectId,
+          type,
+          fileType,
+          fileName: data.fileName,
+        },
+        timestamp: Date.now(),
+      });
+
       return true;
     } catch (error) {
       // ✅ ENTERPRISE DEBUG: Log error details
@@ -324,7 +339,12 @@ export class FloorplanService {
         deletedAt: new Date().toISOString()
       });
 
-      // Debug logging removed - Successfully deleted floorplan
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchFloorplanDeleted({
+        floorplanId: docId,
+        timestamp: Date.now(),
+      });
+
       return true;
     } catch (error) {
       // Error logging removed //(`❌ Error deleting ${type} floorplan:`, error);

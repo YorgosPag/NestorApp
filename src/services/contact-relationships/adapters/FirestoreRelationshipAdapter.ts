@@ -30,6 +30,8 @@ import {
 import { db } from '@/lib/firebase';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // ============================================================================
 // CONFIGURATION
@@ -84,6 +86,18 @@ export class FirestoreRelationshipAdapter {
       await setDoc(docRef, firestoreData);
 
       console.log('✅ FIRESTORE: Relationship saved successfully:', relationship.id);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchRelationshipCreated({
+        relationshipId: relationship.id,
+        relationship: {
+          sourceContactId: relationship.sourceContactId,
+          targetContactId: relationship.targetContactId,
+          relationshipType: relationship.relationshipType,
+          status: relationship.status,
+        },
+        timestamp: Date.now(),
+      });
     } catch (error) {
       console.error('❌ FIRESTORE: Error saving relationship:', error);
       throw error;
@@ -127,6 +141,16 @@ export class FirestoreRelationshipAdapter {
 
       await updateDoc(docRef, updatesWithTimestamp);
       console.log('✅ FIRESTORE: Relationship updated successfully:', relationshipId);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchRelationshipUpdated({
+        relationshipId,
+        updates: {
+          relationshipType: updates.relationshipType,
+          status: updates.status,
+        },
+        timestamp: Date.now(),
+      });
     } catch (error) {
       console.error('❌ FIRESTORE: Error updating relationship:', error);
       throw error;
@@ -141,6 +165,12 @@ export class FirestoreRelationshipAdapter {
       const docRef = doc(db, RELATIONSHIPS_COLLECTION, relationshipId);
       await deleteDoc(docRef);
       console.log('✅ FIRESTORE: Relationship deleted successfully:', relationshipId);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchRelationshipDeleted({
+        relationshipId,
+        timestamp: Date.now(),
+      });
     } catch (error) {
       console.error('❌ FIRESTORE: Error deleting relationship:', error);
       throw error;

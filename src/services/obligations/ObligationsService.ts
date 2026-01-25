@@ -1,6 +1,8 @@
 import type { ObligationDocument, ObligationTemplate } from '@/types/obligations';
 import type { IObligationsService, IObligationsRepository, SearchFilters, ObligationStats } from './contracts';
 import { FirestoreObligationsRepository } from './InMemoryObligationsRepository';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 class ObligationsService implements IObligationsService {
   private static instance: ObligationsService;
@@ -27,16 +29,54 @@ class ObligationsService implements IObligationsService {
     return this.repository.getById(id);
   }
 
-  create(data: Partial<ObligationDocument>): Promise<ObligationDocument> {
-    return this.repository.create(data);
+  async create(data: Partial<ObligationDocument>): Promise<ObligationDocument> {
+    const result = await this.repository.create(data);
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatchObligationCreated({
+      obligationId: result.id,
+      obligation: {
+        title: result.title,
+        status: result.status,
+        type: result.type,
+      },
+      timestamp: Date.now(),
+    });
+
+    return result;
   }
 
-  update(id: string, data: Partial<ObligationDocument>): Promise<ObligationDocument | null> {
-    return this.repository.update(id, data);
+  async update(id: string, data: Partial<ObligationDocument>): Promise<ObligationDocument | null> {
+    const result = await this.repository.update(id, data);
+
+    if (result) {
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchObligationUpdated({
+        obligationId: id,
+        updates: {
+          title: data.title,
+          status: data.status,
+          type: data.type,
+        },
+        timestamp: Date.now(),
+      });
+    }
+
+    return result;
   }
 
-  delete(id: string): Promise<boolean> {
-    return this.repository.delete(id);
+  async delete(id: string): Promise<boolean> {
+    const result = await this.repository.delete(id);
+
+    if (result) {
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchObligationDeleted({
+        obligationId: id,
+        timestamp: Date.now(),
+      });
+    }
+
+    return result;
   }
 
   bulkDelete(ids: string[]): Promise<number> {

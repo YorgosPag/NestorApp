@@ -1,6 +1,8 @@
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 /**
  * Service για διαχείριση των εταιρειών που εμφανίζονται στην πλοήγηση
@@ -41,6 +43,16 @@ export class NavigationCompaniesService {
       // 🗑️ PERFORMANCE: Clear cache after modification
       this.clearCache();
 
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchWorkspaceUpdated({
+        workspaceId: 'navigation',
+        updates: {
+          action: 'company_added',
+          contactId,
+        },
+        timestamp: Date.now(),
+      });
+
       // Debug logging removed //(`✅ Company ${contactId} added to navigation`);
     } catch (error) {
       // Error logging removed //('Error adding company to navigation:', error);
@@ -64,6 +76,16 @@ export class NavigationCompaniesService {
 
       // 🗑️ PERFORMANCE: Clear cache after modification
       this.clearCache();
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchWorkspaceUpdated({
+        workspaceId: 'navigation',
+        updates: {
+          action: 'company_removed',
+          contactId,
+        },
+        timestamp: Date.now(),
+      });
 
       // Debug logging removed //(`✅ Company ${contactId} removed from navigation`);
     } catch (error) {

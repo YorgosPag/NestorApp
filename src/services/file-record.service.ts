@@ -59,6 +59,8 @@ import {
   ensureFilesNamespaceLoaded,
 } from '@/services/upload/utils/file-display-name';
 import { createModuleLogger } from '@/lib/telemetry';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // ============================================================================
 // MODULE LOGGER
@@ -236,6 +238,19 @@ export class FileRecordService {
         storagePath,
         displayName,
       });
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchFileCreated({
+        fileId,
+        file: {
+          displayName,
+          category: input.category,
+          entityType: input.entityType,
+          entityId: input.entityId,
+          status: FILE_STATUS.PENDING,
+        },
+        timestamp: Date.now(),
+      });
     } catch (error) {
       logger.error('Failed to write FileRecord to Firestore', {
         fileId,
@@ -295,6 +310,17 @@ export class FileRecordService {
     logger.info('FileRecord finalized successfully', {
       fileId: input.fileId,
       status: FILE_STATUS.READY,
+    });
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatchFileUpdated({
+      fileId: input.fileId,
+      updates: {
+        status: FILE_STATUS.READY,
+        sizeBytes: input.sizeBytes,
+        hasDownloadUrl: !!input.downloadUrl,
+      },
+      timestamp: Date.now(),
     });
   }
 
@@ -576,6 +602,14 @@ export class FileRecordService {
       purgeAt: purgeDate.toISOString(),
       retentionDays: RETENTION_BY_CATEGORY[category] ?? DEFAULT_RETENTION_POLICIES.TRASH_RETENTION_DAYS,
     });
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatchFileTrashed({
+      fileId,
+      trashedBy,
+      purgeAt: purgeDate.toISOString(),
+      timestamp: Date.now(),
+    });
   }
 
   /**
@@ -626,6 +660,13 @@ export class FileRecordService {
     });
 
     logger.info('FileRecord restored from trash', { fileId, restoredBy });
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatchFileRestored({
+      fileId,
+      restoredBy,
+      timestamp: Date.now(),
+    });
   }
 
   /**

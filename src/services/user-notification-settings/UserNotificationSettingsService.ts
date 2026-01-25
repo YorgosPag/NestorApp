@@ -34,6 +34,8 @@ import {
   NotificationCategory,
   getDefaultNotificationSettings,
 } from './user-notification-settings.types';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // ============================================================================
 // FIRESTORE COLLECTION
@@ -125,6 +127,18 @@ class UserNotificationSettingsService {
       const data = this.transformToFirestore(settings);
       await setDoc(docRef, data, { merge: true });
       console.log('✅ [NotificationSettings] Settings saved for user:', settings.userId);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchUserSettingsUpdated({
+        userId: settings.userId,
+        settingsType: 'notifications',
+        updates: {
+          globalEnabled: settings.globalEnabled,
+          emailEnabled: settings.emailEnabled,
+          pushEnabled: settings.pushEnabled,
+        },
+        timestamp: Date.now(),
+      });
     } catch (error) {
       console.error('❌ [NotificationSettings] Error saving settings:', error);
       throw error;
@@ -150,6 +164,14 @@ class UserNotificationSettingsService {
       };
       await updateDoc(docRef, updateData);
       console.log('✅ [NotificationSettings] Settings updated for user:', userId);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchUserSettingsUpdated({
+        userId,
+        settingsType: 'notifications',
+        updates,
+        timestamp: Date.now(),
+      });
     } catch (error) {
       console.error('❌ [NotificationSettings] Error updating settings:', error);
       throw error;

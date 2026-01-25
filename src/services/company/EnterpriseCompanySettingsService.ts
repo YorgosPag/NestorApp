@@ -17,6 +17,8 @@
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // ============================================================================
 // ENTERPRISE COMPANY TYPES
@@ -578,6 +580,16 @@ export class EnterpriseCompanySettingsService {
 
       // Invalidate cache
       this.invalidateCache(tenantId);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchWorkspaceUpdated({
+        workspaceId: docId,
+        updates: {
+          type: 'company_settings',
+          tenantId,
+        },
+        timestamp: Date.now(),
+      });
 
       console.log(`✅ Updated company settings: ${docId}`);
       return true;

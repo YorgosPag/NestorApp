@@ -54,6 +54,38 @@ import {
   type CommunicationCreatedPayload,
   type CommunicationUpdatedPayload,
   type CommunicationDeletedPayload,
+  // File payloads
+  type FileCreatedPayload,
+  type FileUpdatedPayload,
+  type FileTrashedPayload,
+  type FileRestoredPayload,
+  type FileDeletedPayload,
+  // Notification payloads
+  type NotificationCreatedPayload,
+  type NotificationUpdatedPayload,
+  type NotificationDeletedPayload,
+  // Obligation payloads
+  type ObligationCreatedPayload,
+  type ObligationUpdatedPayload,
+  type ObligationDeletedPayload,
+  // Workspace payloads
+  type WorkspaceCreatedPayload,
+  type WorkspaceUpdatedPayload,
+  type WorkspaceDeletedPayload,
+  // Relationship payloads
+  type RelationshipCreatedPayload,
+  type RelationshipUpdatedPayload,
+  type RelationshipDeletedPayload,
+  // Session payloads
+  type SessionCreatedPayload,
+  type SessionUpdatedPayload,
+  type SessionDeletedPayload,
+  // User Settings payloads
+  type UserSettingsUpdatedPayload,
+  // Floorplan payloads
+  type FloorplanCreatedPayload,
+  type FloorplanUpdatedPayload,
+  type FloorplanDeletedPayload,
 } from './types';
 
 // ============================================================================
@@ -1985,6 +2017,542 @@ class RealtimeServiceCore {
         window.removeEventListener('storage', handleStorageEvent);
       }
     };
+  }
+
+  // ==========================================================================
+  // FILE REAL-TIME SYNC (File Records)
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch file created event
+   * Notifies all listening components that a new file record was created
+   */
+  dispatchFileCreated(payload: FileCreatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching FILE_CREATED:', payload.fileId);
+
+    this.dispatchEvent(REALTIME_EVENTS.FILE_CREATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.FILE_CREATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch file updated event
+   * Notifies all listening components that a file record was updated
+   */
+  dispatchFileUpdated(payload: FileUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching FILE_UPDATED:', payload.fileId);
+
+    this.dispatchEvent(REALTIME_EVENTS.FILE_UPDATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.FILE_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch file trashed event
+   * Notifies all listening components that a file was moved to trash
+   */
+  dispatchFileTrashed(payload: FileTrashedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching FILE_TRASHED:', payload.fileId);
+
+    this.dispatchEvent(REALTIME_EVENTS.FILE_TRASHED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.FILE_TRASHED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch file restored event
+   * Notifies all listening components that a file was restored from trash
+   */
+  dispatchFileRestored(payload: FileRestoredPayload): void {
+    console.log('📤 [RealtimeService] Dispatching FILE_RESTORED:', payload.fileId);
+
+    this.dispatchEvent(REALTIME_EVENTS.FILE_RESTORED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.FILE_RESTORED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch file deleted event
+   * Notifies all listening components that a file was permanently deleted
+   */
+  dispatchFileDeleted(payload: FileDeletedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching FILE_DELETED:', payload.fileId);
+
+    this.dispatchEvent(REALTIME_EVENTS.FILE_DELETED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.FILE_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // NOTIFICATION REAL-TIME SYNC (In-app Notifications)
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch notification created event
+   * Notifies all listening components that a new notification was created
+   */
+  dispatchNotificationCreated(payload: NotificationCreatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching NOTIFICATION_CREATED:', payload.notificationId);
+
+    this.dispatchEvent(REALTIME_EVENTS.NOTIFICATION_CREATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.NOTIFICATION_CREATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch notification updated event
+   * Notifies all listening components that a notification was updated (e.g., marked as read)
+   */
+  dispatchNotificationUpdated(payload: NotificationUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching NOTIFICATION_UPDATED:', payload.notificationId);
+
+    this.dispatchEvent(REALTIME_EVENTS.NOTIFICATION_UPDATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.NOTIFICATION_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch notification deleted event
+   * Notifies all listening components that a notification was deleted
+   */
+  dispatchNotificationDeleted(payload: NotificationDeletedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching NOTIFICATION_DELETED:', payload.notificationId);
+
+    this.dispatchEvent(REALTIME_EVENTS.NOTIFICATION_DELETED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.NOTIFICATION_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // OBLIGATION REAL-TIME SYNC (Legal/Financial Obligations)
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch obligation created event
+   * Notifies all listening components that a new obligation was created
+   */
+  dispatchObligationCreated(payload: ObligationCreatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching OBLIGATION_CREATED:', payload.obligationId);
+
+    this.dispatchEvent(REALTIME_EVENTS.OBLIGATION_CREATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.OBLIGATION_CREATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch obligation updated event
+   * Notifies all listening components that an obligation was updated
+   */
+  dispatchObligationUpdated(payload: ObligationUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching OBLIGATION_UPDATED:', payload.obligationId);
+
+    this.dispatchEvent(REALTIME_EVENTS.OBLIGATION_UPDATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.OBLIGATION_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch obligation deleted event
+   * Notifies all listening components that an obligation was deleted
+   */
+  dispatchObligationDeleted(payload: ObligationDeletedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching OBLIGATION_DELETED:', payload.obligationId);
+
+    this.dispatchEvent(REALTIME_EVENTS.OBLIGATION_DELETED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.OBLIGATION_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // WORKSPACE REAL-TIME SYNC (Multi-tenant Workspaces)
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch workspace created event
+   * Notifies all listening components that a new workspace was created
+   */
+  dispatchWorkspaceCreated(payload: WorkspaceCreatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching WORKSPACE_CREATED:', payload.workspaceId);
+
+    this.dispatchEvent(REALTIME_EVENTS.WORKSPACE_CREATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.WORKSPACE_CREATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch workspace updated event
+   * Notifies all listening components that a workspace was updated
+   */
+  dispatchWorkspaceUpdated(payload: WorkspaceUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching WORKSPACE_UPDATED:', payload.workspaceId);
+
+    this.dispatchEvent(REALTIME_EVENTS.WORKSPACE_UPDATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.WORKSPACE_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch workspace deleted event
+   * Notifies all listening components that a workspace was deleted
+   */
+  dispatchWorkspaceDeleted(payload: WorkspaceDeletedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching WORKSPACE_DELETED:', payload.workspaceId);
+
+    this.dispatchEvent(REALTIME_EVENTS.WORKSPACE_DELETED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.WORKSPACE_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // RELATIONSHIP REAL-TIME SYNC (Entity Relationships)
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch relationship created event
+   * Notifies all listening components that a new relationship was created
+   */
+  dispatchRelationshipCreated(payload: RelationshipCreatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching RELATIONSHIP_CREATED:', payload.relationshipId);
+
+    this.dispatchEvent(REALTIME_EVENTS.RELATIONSHIP_CREATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.RELATIONSHIP_CREATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch relationship updated event
+   * Notifies all listening components that a relationship was updated
+   */
+  dispatchRelationshipUpdated(payload: RelationshipUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching RELATIONSHIP_UPDATED:', payload.relationshipId);
+
+    this.dispatchEvent(REALTIME_EVENTS.RELATIONSHIP_UPDATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.RELATIONSHIP_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch relationship deleted event
+   * Notifies all listening components that a relationship was deleted
+   */
+  dispatchRelationshipDeleted(payload: RelationshipDeletedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching RELATIONSHIP_DELETED:', payload.relationshipId);
+
+    this.dispatchEvent(REALTIME_EVENTS.RELATIONSHIP_DELETED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.RELATIONSHIP_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // SESSION REAL-TIME SYNC (User Sessions)
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch session created event
+   * Notifies all listening components that a new session was created
+   */
+  dispatchSessionCreated(payload: SessionCreatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching SESSION_CREATED:', payload.sessionId);
+
+    this.dispatchEvent(REALTIME_EVENTS.SESSION_CREATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.SESSION_CREATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch session updated event
+   * Notifies all listening components that a session was updated
+   */
+  dispatchSessionUpdated(payload: SessionUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching SESSION_UPDATED:', payload.sessionId);
+
+    this.dispatchEvent(REALTIME_EVENTS.SESSION_UPDATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.SESSION_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch session deleted event
+   * Notifies all listening components that a session was terminated
+   */
+  dispatchSessionDeleted(payload: SessionDeletedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching SESSION_DELETED:', payload.sessionId);
+
+    this.dispatchEvent(REALTIME_EVENTS.SESSION_DELETED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.SESSION_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // USER SETTINGS REAL-TIME SYNC
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch user settings updated event
+   * Notifies all listening components that user settings were updated
+   */
+  dispatchUserSettingsUpdated(payload: UserSettingsUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching USER_SETTINGS_UPDATED:', payload.userId);
+
+    this.dispatchEvent(REALTIME_EVENTS.USER_SETTINGS_UPDATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.USER_SETTINGS_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // FLOORPLAN REAL-TIME SYNC (DXF Floorplans)
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch floorplan created event
+   * Notifies all listening components that a new floorplan was created
+   */
+  dispatchFloorplanCreated(payload: FloorplanCreatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching FLOORPLAN_CREATED:', payload.floorplanId);
+
+    this.dispatchEvent(REALTIME_EVENTS.FLOORPLAN_CREATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.FLOORPLAN_CREATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch floorplan updated event
+   * Notifies all listening components that a floorplan was updated
+   */
+  dispatchFloorplanUpdated(payload: FloorplanUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching FLOORPLAN_UPDATED:', payload.floorplanId);
+
+    this.dispatchEvent(REALTIME_EVENTS.FLOORPLAN_UPDATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.FLOORPLAN_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch floorplan deleted event
+   * Notifies all listening components that a floorplan was deleted
+   */
+  dispatchFloorplanDeleted(payload: FloorplanDeletedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching FLOORPLAN_DELETED:', payload.floorplanId);
+
+    this.dispatchEvent(REALTIME_EVENTS.FLOORPLAN_DELETED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.FLOORPLAN_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
   }
 
   // ==========================================================================

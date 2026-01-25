@@ -21,6 +21,8 @@
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -345,6 +347,16 @@ class EnterpriseUserPreferencesService {
       // Invalidate cache για this user
       this.clearCacheForUser(userId);
 
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchUserSettingsUpdated({
+        userId,
+        settingsType: 'preferences',
+        updates: {
+          categories: Object.keys(preferences),
+        },
+        timestamp: Date.now(),
+      });
+
       console.log('✅ User preferences saved successfully:', docId);
     } catch (error) {
       console.error('❌ Error saving user preferences:', error);
@@ -374,6 +386,17 @@ class EnterpriseUserPreferencesService {
 
       // Invalidate cache για this user
       this.clearCacheForUser(userId);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchUserSettingsUpdated({
+        userId,
+        settingsType: 'preferences',
+        updates: {
+          category,
+          updatedKeys: Object.keys(updates),
+        },
+        timestamp: Date.now(),
+      });
 
       console.log('✅ User preferences updated successfully:', { userId, category });
     } catch (error) {

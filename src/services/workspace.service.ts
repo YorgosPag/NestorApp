@@ -51,6 +51,8 @@ import type {
   SPECIAL_WORKSPACE_IDS,
   DEFAULT_WORKSPACE_SETTINGS,
 } from '@/types/workspace';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // ============================================================================
 // WORKSPACE SERVICE
@@ -99,6 +101,18 @@ export class WorkspaceService {
     await setDoc(workspaceRef, workspace);
 
     console.log(`✅ [WorkspaceService] Created workspace: ${workspaceId} (${type})`);
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatchWorkspaceCreated({
+      workspaceId,
+      workspace: {
+        displayName,
+        type,
+        status: 'active',
+        companyId,
+      },
+      timestamp: Date.now(),
+    });
 
     return workspace;
   }
@@ -255,6 +269,16 @@ export class WorkspaceService {
     await updateDoc(workspaceRef, updates);
 
     console.log(`✅ [WorkspaceService] Updated workspace: ${workspaceId}`);
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatchWorkspaceUpdated({
+      workspaceId,
+      updates: {
+        displayName,
+        status,
+      },
+      timestamp: Date.now(),
+    });
   }
 
   /**

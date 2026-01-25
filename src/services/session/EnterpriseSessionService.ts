@@ -54,6 +54,8 @@ import type {
   OperatingSystem,
   LoginMethod
 } from './session.types';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // ============================================================================
 // CONSTANTS
@@ -403,6 +405,19 @@ export class EnterpriseSessionService {
 
     console.log(`🔐 Session created: ${sessionId} for user ${userId}`);
 
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatchSessionCreated({
+      sessionId,
+      session: {
+        userId,
+        deviceType: deviceInfo.type,
+        browser: deviceInfo.browser,
+        location: location.city,
+        status: 'active',
+      },
+      timestamp: Date.now(),
+    });
+
     return session;
   }
 
@@ -450,6 +465,13 @@ export class EnterpriseSessionService {
       });
 
       console.log(`🔐 Session revoked: ${sessionId}`);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchSessionDeleted({
+        sessionId,
+        reason: reason || 'user_requested',
+        timestamp: Date.now(),
+      });
 
       return {
         success: true,

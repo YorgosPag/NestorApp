@@ -22,6 +22,8 @@ import { db } from '@/lib/firebase';
 import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // =============================================================================
 // 🏢 ENTERPRISE LOGGER CONFIGURATION
@@ -155,6 +157,19 @@ export class BuildingFloorplanService {
         });
 
         floorplanLogger.info(`PDF save complete for ${type}`, { buildingId });
+
+        // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+        RealtimeService.dispatchFloorplanCreated({
+          floorplanId: docId,
+          floorplan: {
+            buildingId,
+            type,
+            fileType: 'pdf',
+            fileName: data.fileName,
+          },
+          timestamp: Date.now(),
+        });
+
         return true;
       }
 
@@ -170,6 +185,18 @@ export class BuildingFloorplanService {
 
       if (success) {
         floorplanLogger.info(`Enterprise save complete for ${type}`, { buildingId });
+
+        // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+        RealtimeService.dispatchFloorplanCreated({
+          floorplanId: fileId,
+          floorplan: {
+            buildingId,
+            type,
+            fileType: 'dxf',
+            fileName,
+          },
+          timestamp: Date.now(),
+        });
       } else {
         floorplanLogger.error(`Enterprise save failed for ${type}`, { buildingId });
       }
@@ -355,6 +382,13 @@ export class BuildingFloorplanService {
       });
 
       floorplanLogger.info(`Deleted ${type} floorplan`, { buildingId });
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchFloorplanDeleted({
+        floorplanId: docId,
+        timestamp: Date.now(),
+      });
+
       return true;
     } catch (error) {
       floorplanLogger.error(`Error deleting ${type} floorplan`, {
