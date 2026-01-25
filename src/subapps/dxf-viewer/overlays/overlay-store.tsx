@@ -6,9 +6,9 @@ import type { Overlay, CreateOverlayData, UpdateOverlayData, Status, OverlayKind
 
 interface OverlayStoreState {
   overlays: Record<string, Overlay>;
-  selectedOverlayId: string | null;
-  // 🏢 ENTERPRISE (2026-01-25): Multi-selection support for marquee selection
-  selectedOverlayIds: Set<string>;
+  // 🏢 ENTERPRISE (2026-01-25): Selection state REMOVED - ADR-030
+  // Selection is now handled by the universal selection system in systems/selection/
+  // Use useUniversalSelection() hook instead
   isLoading: boolean;
   currentLevelId: string | null;
 }
@@ -22,21 +22,16 @@ interface OverlayStoreActions {
   setStatus: (id: string, status: Status) => Promise<void>;
   setLabel: (id: string, label: string) => Promise<void>;
   setKind: (id: string, kind: OverlayKind) => Promise<void>;
-  setSelectedOverlay: (id: string | null) => void;
-  getSelectedOverlay: () => Overlay | null;
   setCurrentLevel: (levelId: string | null) => void;
   // 🏢 ENTERPRISE (2026-01-25): Vertex manipulation for polygon editing
   addVertex: (id: string, insertIndex: number, vertex: [number, number]) => Promise<void>;
   updateVertex: (id: string, vertexIndex: number, newPosition: [number, number]) => Promise<void>;
   removeVertex: (id: string, vertexIndex: number) => Promise<boolean>;
-  // 🏢 ENTERPRISE (2026-01-25): Multi-selection support for marquee selection
-  setSelectedOverlays: (ids: string[]) => void;
-  addToSelection: (id: string) => void;
-  removeFromSelection: (id: string) => void;
-  toggleSelection: (id: string) => void;
-  clearSelection: () => void;
-  getSelectedOverlays: () => Overlay[];
-  isSelected: (id: string) => boolean;
+  // 🏢 ENTERPRISE (2026-01-25): Selection REMOVED - ADR-030
+  // Selection is now handled by systems/selection/
+  // Use useUniversalSelection() hook for: select, selectMultiple, deselect, toggle, clearAll, clearByType, isSelected, getAll, getByType
+  // Legacy getSelectedOverlay kept for backward compatibility during migration
+  getSelectedOverlay: () => Overlay | null;
 }
 
 const OverlayStoreContext = createContext<(OverlayStoreState & OverlayStoreActions) | null>(null);
@@ -45,9 +40,8 @@ const COLLECTION_PREFIX = 'dxf-overlay-levels';
 export function OverlayStoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<OverlayStoreState>({
     overlays: {},
-    selectedOverlayId: null,
-    // 🏢 ENTERPRISE (2026-01-25): Multi-selection support
-    selectedOverlayIds: new Set<string>(),
+    // 🏢 ENTERPRISE (2026-01-25): Selection state REMOVED - ADR-030
+    // Use useUniversalSelection() from systems/selection/ instead
     isLoading: false,
     currentLevelId: null,
   });
@@ -195,27 +189,20 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     await update(id, { kind });
   }, [update]);
 
-  const setSelectedOverlay = useCallback((id: string | null) => {
-    setState(prev => ({
-      ...prev,
-      selectedOverlayId: id,
-      // 🏢 ENTERPRISE (2026-01-25): Sync single selection with multi-selection
-      // If id is null, clear all selections. If id is set, make it the only selection.
-      selectedOverlayIds: id ? new Set([id]) : new Set<string>()
-    }));
-  }, []);
-
+  // 🏢 ENTERPRISE (2026-01-25): getSelectedOverlay kept for backward compatibility - ADR-030
+  // Returns null - use useUniversalSelection().getPrimaryId() to get selected overlay ID
+  // then use overlayStore.overlays[id] to get the overlay object
   const getSelectedOverlay = useCallback((): Overlay | null => {
-    return state.selectedOverlayId ? state.overlays[state.selectedOverlayId] || null : null;
-  }, [state.selectedOverlayId, state.overlays]);
+    console.warn('⚠️ DEPRECATED: getSelectedOverlay() - Use useUniversalSelection() instead');
+    return null;
+  }, []);
 
   const setCurrentLevel = useCallback((levelId: string | null) => {
     setState(prev => ({
       ...prev,
       currentLevelId: levelId,
-      selectedOverlayId: null,
-      // 🏢 ENTERPRISE (2026-01-25): Clear multi-selection when level changes
-      selectedOverlayIds: new Set<string>(),
+      // 🏢 ENTERPRISE (2026-01-25): Selection clearing moved to universal selection system
+      // Components should call universalSelection.clearByType('overlay') when level changes
       overlays: {},
     }));
   }, []);
@@ -307,107 +294,20 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   }, [state.overlays, update]);
 
   // ============================================================================
-  // 🏢 ENTERPRISE (2026-01-25): Multi-Selection Functions
-  // Supports marquee selection, shift+click, and batch operations
+  // 🏢 ENTERPRISE (2026-01-25): Selection Functions REMOVED - ADR-030
+  // Selection is now handled by the universal selection system in systems/selection/
+  //
+  // MIGRATION GUIDE:
+  // OLD: overlayStore.setSelectedOverlays(ids)  → NEW: universalSelection.selectMultiple(ids.map(id => ({id, type: 'overlay'})))
+  // OLD: overlayStore.addToSelection(id)        → NEW: universalSelection.add(id, 'overlay')
+  // OLD: overlayStore.removeFromSelection(id)   → NEW: universalSelection.deselect(id)
+  // OLD: overlayStore.toggleSelection(id)       → NEW: universalSelection.toggle(id, 'overlay')
+  // OLD: overlayStore.clearSelection()          → NEW: universalSelection.clearByType('overlay')
+  // OLD: overlayStore.getSelectedOverlays()     → NEW: universalSelection.getByType('overlay').map(e => overlays[e.id])
+  // OLD: overlayStore.isSelected(id)            → NEW: universalSelection.isSelected(id)
+  // OLD: overlayStore.selectedOverlayId         → NEW: universalSelection.getPrimaryId()
+  // OLD: overlayStore.selectedOverlayIds        → NEW: new Set(universalSelection.getIdsByType('overlay'))
   // ============================================================================
-
-  /**
-   * Set multiple overlays as selected (replaces current selection)
-   * Used by marquee selection
-   */
-  const setSelectedOverlays = useCallback((ids: string[]) => {
-    setState(prev => ({
-      ...prev,
-      selectedOverlayIds: new Set(ids),
-      // Also set the first one as the "primary" selection for backward compatibility
-      selectedOverlayId: ids.length > 0 ? ids[0] : null
-    }));
-  }, []);
-
-  /**
-   * Add an overlay to current selection (for shift+click)
-   */
-  const addToSelection = useCallback((id: string) => {
-    setState(prev => {
-      const newSet = new Set(prev.selectedOverlayIds);
-      newSet.add(id);
-      return {
-        ...prev,
-        selectedOverlayIds: newSet,
-        // Update primary selection to the newly added one
-        selectedOverlayId: id
-      };
-    });
-  }, []);
-
-  /**
-   * Remove an overlay from current selection
-   */
-  const removeFromSelection = useCallback((id: string) => {
-    setState(prev => {
-      const newSet = new Set(prev.selectedOverlayIds);
-      newSet.delete(id);
-      // If removed the primary selection, update to first remaining or null
-      const newPrimary = prev.selectedOverlayId === id
-        ? (newSet.size > 0 ? Array.from(newSet)[0] : null)
-        : prev.selectedOverlayId;
-      return {
-        ...prev,
-        selectedOverlayIds: newSet,
-        selectedOverlayId: newPrimary
-      };
-    });
-  }, []);
-
-  /**
-   * Toggle overlay selection (for ctrl+click)
-   */
-  const toggleSelection = useCallback((id: string) => {
-    setState(prev => {
-      const newSet = new Set(prev.selectedOverlayIds);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      // Update primary selection
-      const newPrimary = newSet.has(id)
-        ? id
-        : (newSet.size > 0 ? Array.from(newSet)[0] : null);
-      return {
-        ...prev,
-        selectedOverlayIds: newSet,
-        selectedOverlayId: newPrimary
-      };
-    });
-  }, []);
-
-  /**
-   * Clear all selections
-   */
-  const clearSelection = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      selectedOverlayIds: new Set<string>(),
-      selectedOverlayId: null
-    }));
-  }, []);
-
-  /**
-   * Get all selected overlays
-   */
-  const getSelectedOverlays = useCallback((): Overlay[] => {
-    return Array.from(state.selectedOverlayIds)
-      .map(id => state.overlays[id])
-      .filter((overlay): overlay is Overlay => overlay !== undefined);
-  }, [state.selectedOverlayIds, state.overlays]);
-
-  /**
-   * Check if an overlay is selected
-   */
-  const isSelected = useCallback((id: string): boolean => {
-    return state.selectedOverlayIds.has(id);
-  }, [state.selectedOverlayIds]);
 
   const contextValue = {
     ...state,
@@ -419,21 +319,14 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     setStatus,
     setLabel,
     setKind,
-    setSelectedOverlay,
     getSelectedOverlay,
     setCurrentLevel,
     // 🏢 ENTERPRISE (2026-01-25): Vertex manipulation
     addVertex,
     updateVertex,
     removeVertex,
-    // 🏢 ENTERPRISE (2026-01-25): Multi-selection
-    setSelectedOverlays,
-    addToSelection,
-    removeFromSelection,
-    toggleSelection,
-    clearSelection,
-    getSelectedOverlays,
-    isSelected,
+    // 🏢 ENTERPRISE (2026-01-25): Selection REMOVED - ADR-030
+    // Use useUniversalSelection() from systems/selection/ for all selection operations
   };
 
   return (
@@ -452,50 +345,10 @@ export function useOverlayStore() {
 }
 
 // ============================================================================
-// 🏢 ENTERPRISE (2026-01-25): Bridge Hook για Migration προς Universal Selection
+// 🏢 ENTERPRISE (2026-01-25): Selection Logic REMOVED - ADR-030
 //
-// Αυτό το hook επιτρέπει τη σταδιακή μετάβαση από το overlay-store selection
-// προς το κεντρικοποιημένο SelectionSystem.
+// Selection is now fully handled by the universal selection system.
+// For all selection operations, use useUniversalSelection() from systems/selection/
 //
-// USAGE:
-// 1. Αντικατάσταση: overlayStore.isSelected(id) -> bridge.isSelected(id)
-// 2. Αντικατάσταση: overlayStore.setSelectedOverlays(ids) -> bridge.setSelectedOverlays(ids)
-//
-// MIGRATION PATH:
-// - Phase 1 (τώρα): Bridge hook διατηρεί backward compatibility
-// - Phase 2 (επόμενο PR): Migrate components να χρησιμοποιούν useUniversalSelection
-// - Phase 3 (τελικό PR): Αφαίρεση bridge και selection logic από overlay-store
-//
-// @see systems/selection/SelectionSystem.tsx για το νέο universal API
+// MIGRATION COMPLETE - Phase 3 done (2026-01-25)
 // ============================================================================
-
-/**
- * Bridge hook that connects overlay-store selection to the universal selection system
- *
- * @deprecated Για νέο κώδικα, χρησιμοποιήστε useUniversalSelection() από SelectionSystem
- */
-export function useOverlaySelectionBridge() {
-  const overlayStore = useOverlayStore();
-
-  // 🔄 BRIDGE: Προς το παρόν επιστρέφει τα ίδια functions από το overlay-store
-  // Στο Phase 2 θα αντικατασταθούν με calls στο SelectionSystem
-  return {
-    // Selection mutations
-    setSelectedOverlay: overlayStore.setSelectedOverlay,
-    setSelectedOverlays: overlayStore.setSelectedOverlays,
-    addToSelection: overlayStore.addToSelection,
-    removeFromSelection: overlayStore.removeFromSelection,
-    toggleSelection: overlayStore.toggleSelection,
-    clearSelection: overlayStore.clearSelection,
-
-    // Selection queries
-    isSelected: overlayStore.isSelected,
-    getSelectedOverlays: overlayStore.getSelectedOverlays,
-    selectedOverlayIds: overlayStore.selectedOverlayIds,
-    selectedOverlayId: overlayStore.selectedOverlayId,
-
-    // Data access (stays in overlay-store)
-    overlays: overlayStore.overlays,
-    getByLevel: overlayStore.getByLevel,
-  };
-}

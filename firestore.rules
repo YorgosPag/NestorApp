@@ -235,6 +235,26 @@ service cloud.firestore {
 
       // ✍️ CREATE/UPDATE/DELETE: ΌΧΙ από client - μόνο admin/server
       allow write: if false;
+
+      // =========================================================================
+      // 📋 AUDIT_LOGS SUBCOLLECTION - COMPANY-SCOPED AUDIT TRAIL
+      // =========================================================================
+      // 🏢 ENTERPRISE: Audit logs for company operations (ADR-029 Global Search)
+      // 📅 Added: 2026-01-26
+      // 🔒 SECURITY: Only users from the same company can read/write audit logs
+      match /audit_logs/{logId} {
+        // 📖 READ: Company members and super_admin
+        allow read: if isAuthenticated()
+                    && (belongsToCompany(companyId) || isSuperAdminOnly());
+
+        // ✍️ CREATE: Company members can create audit entries
+        // 🔐 SECURITY: Used by API routes for audit logging
+        allow create: if isAuthenticated()
+                      && belongsToCompany(companyId);
+
+        // 📝 UPDATE/DELETE: Not allowed - audit logs are immutable
+        allow update, delete: if false;
+      }
     }
 
     // =========================================================================
@@ -541,29 +561,64 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 📞 CONTACTS COLLECTION - PUBLIC READ ACCESS
+    // 📞 CONTACTS COLLECTION - ENTERPRISE TENANT ISOLATION (ADR-029)
+    // =========================================================================
+    // 🏢 ENTERPRISE: Multi-tenant security via companyId field
+    // 📅 Updated: 2026-01-26 (Global Search v1 - Tenant Isolation Fix)
+    //
+    // Security Model:
+    //   - READ: Only users from the same company (tenant-scoped)
+    //   - CREATE: Authenticated users, companyId auto-set from claims
+    //   - UPDATE: Creator or company admin
+    //   - DELETE: Creator or company admin
     // =========================================================================
     match /contacts/{contactId} {
 
-      // 📖 READ: Authenticated users can read contacts (for business operations)
-      // TODO: Refine to project-based access when relationships are implemented
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped - only users from the contact's company
+      // 🔒 SECURITY: Prevents cross-tenant data leak
+      // 🏢 ENTERPRISE: Follows SAP/Salesforce/Microsoft multi-tenant patterns
+      allow read: if isAuthenticated()
+                  && (
+                       // Super admin can read all contacts
+                       isSuperAdminOnly()
+                       // OR user belongs to the contact's company
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK: Contacts without companyId readable by creator only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
 
-      // ✍️ CREATE: Μόνο για τον εαυτό του
-      allow create: if request.auth != null
-                    && request.auth.uid == contactId
+      // ✍️ CREATE: Authenticated users with companyId from claims
+      // 🔐 SECURITY: companyId MUST match user's company claim (no cross-tenant creation)
+      allow create: if isAuthenticated()
                     && isValidContactData(request.resource.data)
+                    && request.resource.data.companyId == getUserCompanyId()
                     && resource == null;
 
-      // 📝 UPDATE: Μόνο ο ίδιος με system field protection
-      allow update: if request.auth != null
-                    && request.auth.uid == contactId
+      // 📝 UPDATE: Creator or company admin of contact's company
+      // 🔒 SECURITY: Prevents cross-tenant modification
+      allow update: if isAuthenticated()
                     && isValidContactData(request.resource.data)
-                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data);
+                    && (
+                         // Creator can always update their contacts
+                         resource.data.createdBy == request.auth.uid
+                         // OR company admin can update contacts in their company
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         // OR super admin can update any contact
+                         || isSuperAdminOnly()
+                       )
+                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data)
+                    // Prevent changing companyId (no re-tenanting)
+                    && request.resource.data.companyId == resource.data.companyId;
 
-      // 🗑️ DELETE: Μόνο ο ίδιος
-      allow delete: if request.auth != null
-                    && request.auth.uid == contactId;
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
@@ -947,6 +1002,34 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🔍 SEARCH_DOCUMENTS COLLECTION - GLOBAL SEARCH INDEX (ADR-029)
+    // =========================================================================
+    // 🏢 ENTERPRISE: Denormalized search index with tenant isolation
+    // 📅 Added: 2026-01-26 (Global Search v1)
+    //
+    // Architecture:
+    //   - Documents indexed by Cloud Functions triggers
+    //   - Tenant-scoped reads via tenantId field
+    //   - Write-only for server (Admin SDK)
+    // =========================================================================
+    match /searchDocuments/{searchDocId} {
+
+      // 📖 READ: Tenant-scoped - only users from the same company
+      // 🔒 SECURITY: Search results filtered by tenantId
+      allow read: if isAuthenticated()
+                  && (
+                       // Super admin can search all
+                       isSuperAdminOnly()
+                       // OR user belongs to the document's tenant
+                       || belongsToCompany(resource.data.tenantId)
+                     );
+
+      // 🚫 WRITE: Server-side only (Cloud Functions / Admin SDK)
+      // Search index is maintained by triggers, not client writes
+      allow create, update, delete: if false;
+    }
+
+    // =========================================================================
     // 🔒 HELPER FUNCTIONS - VALIDATION & SECURITY
     // =========================================================================
 
@@ -992,10 +1075,18 @@ service cloud.firestore {
     }
 
     // Contact Data Validation
+    // 🏢 ENTERPRISE: Updated for tenant isolation (ADR-029)
+    // companyId is required for new contacts (tenant isolation)
     function isValidContactData(data) {
-      return data.keys().hasAll(['email'])
-             && data.email is string
-             && data.email.matches('.*@.*\\..*'); // Basic email validation
+      return data.keys().hasAll(['companyId'])
+             && data.companyId is string
+             && data.companyId.size() > 0
+             // Email validation (if present)
+             && (!data.keys().hasAny(['email']) || (data.email is string && data.email.matches('.*@.*\\..*')))
+             // Type validation (if present)
+             && (!data.keys().hasAny(['type']) || data.type in ['individual', 'company', 'service'])
+             // Status validation (if present)
+             && (!data.keys().hasAny(['status']) || data.status in ['active', 'inactive', 'archived']);
     }
 
     // ✅ Task Data Validation (ADR-026: CRM Tasks Backend Fix)

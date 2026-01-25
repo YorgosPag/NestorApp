@@ -2,6 +2,8 @@
 import React from 'react';
 import { EnhancedDXFToolbar } from '../../ui/toolbar/EnhancedDXFToolbar';
 import { useOverlayStore } from '../../overlays/overlay-store';
+// 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+import { useUniversalSelection } from '../../systems/selection';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
@@ -27,16 +29,22 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
   } = props;
   
   const overlayStore = useOverlayStore();
+  // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+  const universalSelection = useUniversalSelection();
 
   const handleOverlayDuplicate = () => {
-    if (overlayStore.selectedOverlayId) {
-      overlayStore.duplicate(overlayStore.selectedOverlayId);
+    // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+    const primarySelectedId = universalSelection.getPrimaryId();
+    if (primarySelectedId) {
+      overlayStore.duplicate(primarySelectedId);
     }
   };
 
   const handleOverlayDelete = () => {
-    if (overlayStore.selectedOverlayId) {
-      overlayStore.remove(overlayStore.selectedOverlayId);
+    // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+    const primarySelectedId = universalSelection.getPrimaryId();
+    if (primarySelectedId) {
+      overlayStore.remove(primarySelectedId);
     }
   };
 

@@ -14,6 +14,8 @@ import type { Overlay, CreateOverlayData, UpdateOverlayData } from '../overlays/
 import { useCanvasContext } from '../contexts/CanvasContext';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import { matchesShortcut } from '../config/keyboard-shortcuts';
+// 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+import { useUniversalSelection } from '../systems/selection';
 
 // Hook parameters interface
 interface KeyboardShortcutsConfig {
@@ -28,8 +30,8 @@ interface KeyboardShortcutsConfig {
     add: (overlay: CreateOverlayData) => Promise<string>;
     update: (id: string, patch: UpdateOverlayData) => Promise<void>;
     remove: (id: string) => Promise<void>;
-    setSelectedOverlay: (id: string | null) => void;
-    selectedOverlayId: string | null;
+    // 🏢 ENTERPRISE (2026-01-25): Selection REMOVED - ADR-030
+    // Selection is now handled by useUniversalSelection() from systems/selection/
   } | null;
 }
 
@@ -51,6 +53,9 @@ export const useKeyboardShortcuts = ({
   // 🏢 ENTERPRISE: Get centralized zoom system from context
   const canvasContext = useCanvasContext();
   const zoomManager = canvasContext?.zoomManager;
+
+  // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
+  const universalSelection = useUniversalSelection();
 
   // Mouse tracking για zoom
   const lastMouseRef = useRef<Point2D | null>(null);
@@ -78,10 +83,12 @@ export const useKeyboardShortcuts = ({
       }
 
       // Delete - Remove overlay in edit mode
+      // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
       if (matchesShortcut(e, 'delete') || matchesShortcut(e, 'backspace')) {
-        if (activeTool === 'layering' && overlayMode === 'edit' && overlayStore?.selectedOverlayId) {
+        const primarySelectedId = universalSelection.getPrimaryId();
+        if (activeTool === 'layering' && overlayMode === 'edit' && primarySelectedId && overlayStore) {
           e.preventDefault();
-          overlayStore.remove(overlayStore.selectedOverlayId);
+          overlayStore.remove(primarySelectedId);
           return;
         }
       }

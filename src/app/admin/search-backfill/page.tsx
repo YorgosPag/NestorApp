@@ -46,6 +46,21 @@ interface BackfillStats {
   errors: number;
 }
 
+interface MigrationStats {
+  total: number;
+  migrated: number;
+  skipped: number;
+  errors: number;
+  noCreator: number;
+}
+
+interface MigrationResponse {
+  mode: 'DRY_RUN' | 'EXECUTE';
+  stats: MigrationStats;
+  duration: number;
+  timestamp: string;
+}
+
 interface BackfillResponse {
   mode: 'DRY_RUN' | 'EXECUTE';
   stats: Record<string, BackfillStats>;
@@ -91,7 +106,9 @@ export default function SearchBackfillPage() {
   const [status, setStatus] = useState<IndexStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
   const [result, setResult] = useState<BackfillResponse | null>(null);
+  const [migrationResult, setMigrationResult] = useState<MigrationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
 
@@ -162,6 +179,43 @@ export default function SearchBackfillPage() {
       addLog(`Error: ${message}`);
     } finally {
       setIsExecuting(false);
+    }
+  }, [addLog, fetchStatus]);
+
+  // =============================================================================
+  // CONTACT MIGRATION
+  // =============================================================================
+
+  const executeMigration = useCallback(async (dryRun: boolean) => {
+    setIsMigrating(true);
+    setError(null);
+    setMigrationResult(null);
+
+    const mode = dryRun ? 'DRY-RUN' : 'EXECUTE';
+    addLog(`Starting Contact Migration ${mode}...`);
+
+    try {
+      // 🏢 ENTERPRISE: Default companyId for orphan contacts
+      const DEFAULT_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
+
+      const response = await apiClient.patch<MigrationResponse>(
+        '/api/admin/search-backfill',
+        { dryRun, defaultCompanyId: DEFAULT_COMPANY_ID }
+      );
+
+      setMigrationResult(response);
+      addLog(`${mode} complete: ${response.stats.migrated} contacts migrated`);
+
+      // Refresh status after execute
+      if (!dryRun) {
+        await fetchStatus();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Migration failed';
+      setError(message);
+      addLog(`Error: ${message}`);
+    } finally {
+      setIsMigrating(false);
     }
   }, [addLog, fetchStatus]);
 
@@ -281,6 +335,109 @@ export default function SearchBackfillPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Contact Migration */}
+      <Card className="mb-6 border-orange-200">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <User className={cn(iconSizes.md, 'text-orange-500')} />
+            <CardTitle>Contact Tenant Migration</CardTitle>
+          </div>
+          <CardDescription>
+            Migrate contacts to add companyId from their creator. Required for tenant isolation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert className="mb-4">
+            <AlertTriangle className={iconSizes.sm} />
+            <AlertTitle>Enterprise Security Fix</AlertTitle>
+            <AlertDescription>
+              This migration adds companyId to contacts that don&apos;t have it, using the creator&apos;s companyId.
+              This enables proper tenant isolation for the Global Search.
+            </AlertDescription>
+          </Alert>
+
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="outline"
+              onClick={() => executeMigration(true)}
+              disabled={isMigrating}
+            >
+              <Eye className={cn(iconSizes.sm, 'mr-2')} />
+              Preview Migration
+            </Button>
+
+            <Button
+              variant="default"
+              className="bg-orange-500 hover:bg-orange-600"
+              onClick={() => executeMigration(false)}
+              disabled={isMigrating}
+            >
+              <PlayCircle className={cn(iconSizes.sm, 'mr-2')} />
+              Execute Migration
+            </Button>
+          </div>
+
+          {isMigrating && (
+            <div className="mt-4 flex items-center gap-2 text-muted-foreground">
+              <RefreshCw className={cn(iconSizes.sm, 'animate-spin')} />
+              <span>Migrating contacts... This may take a moment.</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Migration Results */}
+      {migrationResult && (
+        <Card className="mb-6 border-orange-200">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CheckCircle className={cn(iconSizes.md, 'text-green-500')} />
+              <CardTitle>
+                {migrationResult.mode === 'DRY_RUN' ? 'Migration Preview' : 'Migration Results'}
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+              <div className="text-center p-3 rounded-lg bg-blue-500/10">
+                <div className="text-2xl font-bold text-blue-600">
+                  {migrationResult.stats.total}
+                </div>
+                <div className="text-sm text-muted-foreground">Total</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-green-500/10">
+                <div className="text-2xl font-bold text-green-600">
+                  {migrationResult.stats.migrated}
+                </div>
+                <div className="text-sm text-muted-foreground">Migrated</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-yellow-500/10">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {migrationResult.stats.skipped}
+                </div>
+                <div className="text-sm text-muted-foreground">Skipped</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-orange-500/10">
+                <div className="text-2xl font-bold text-orange-600">
+                  {migrationResult.stats.noCreator}
+                </div>
+                <div className="text-sm text-muted-foreground">No Creator</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-red-500/10">
+                <div className="text-2xl font-bold text-red-600">
+                  {migrationResult.stats.errors}
+                </div>
+                <div className="text-sm text-muted-foreground">Errors</div>
+              </div>
+            </div>
+
+            <div className="mt-4 text-sm text-muted-foreground">
+              Duration: {migrationResult.duration}ms | {migrationResult.timestamp}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Results */}
       {result && (

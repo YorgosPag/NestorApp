@@ -56,11 +56,11 @@ interface FloatingPanelsSectionProps {
   canRedo: boolean;
 
   // Overlay Store
+  // 🏢 ENTERPRISE (2026-01-25): Selection REMOVED - ADR-030
+  // Selection is now handled by useUniversalSelection() from systems/selection/
   overlayStore: {
-    selectedOverlayId: string | null;
-    getSelectedOverlay: () => Overlay | null;
-    setSelectedOverlay: (id: string | null) => void;
     update: (id: string, updates: Partial<Overlay>) => void;
+    overlays: Record<string, Overlay>;
   };
 
   // Test Modal
@@ -150,7 +150,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
           onKindChange={setOverlayKind}
           snapEnabled={snapEnabled}
           onSnapToggle={() => handleAction('toggle-snap')}
-          selectedOverlayId={overlayStore.selectedOverlayId}
+          selectedOverlayId={universalSelection.getPrimaryId()}
           onDuplicate={() => {}}
           onDelete={() => {}}
           canUndo={canUndo}
@@ -163,17 +163,15 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
       )}
 
       {/* DRAGGABLE OVERLAY PROPERTIES - Only when overlay is selected */}
-      {/* 🏢 ENTERPRISE: No dummy data - show real overlay or pass null for empty state */}
+      {/* 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030 */}
       <DraggableOverlayProperties
-        overlay={overlayStore.getSelectedOverlay()}
+        overlay={universalSelection.getPrimaryId() ? overlayStore.overlays[universalSelection.getPrimaryId()!] ?? null : null}
         onUpdate={(overlayId, updates) =>
           overlayStore.update(overlayId, updates)
         }
         onClose={() => {
           // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
           universalSelection.clearByType('overlay');
-          // Also update overlay store for backward compatibility during migration
-          overlayStore.setSelectedOverlay(null);
         }}
       />
 

@@ -353,7 +353,15 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       setLevelScene: levelManager.setLevelScene,
       getLevelScene: levelManager.getLevelScene
     },
-    canvasTransform
+    canvasTransform,
+    // 🏢 ENTERPRISE (2026-01-25): Route overlay selection through universal selection - ADR-030
+    onOverlaySelect: (id: string | null) => {
+      if (id) {
+        universalSelection.select(id, 'overlay');
+      } else {
+        universalSelection.clearByType('overlay');
+      }
+    }
   });
 
   // ⌨️ ENTERPRISE: Keyboard shortcuts using centralized keyboard-shortcuts.ts
@@ -689,8 +697,6 @@ Check console for detailed metrics`;
   const handleRegionClick = React.useCallback((regionId: string) => {
     // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
     universalSelection.select(regionId, 'overlay');
-    // Also update overlay store for backward compatibility during migration
-    overlayStore.setSelectedOverlay(regionId);
 
     // Auto-open levels tab when clicking on overlay in canvas
     floatingRef.current?.showTab('levels');
@@ -750,14 +756,15 @@ Check console for detailed metrics`;
   // 🔺 AUTO-ACTIVATE LAYERING TOOL when overlay is selected
   // 🏢 ENTERPRISE (2026-01-25): Εξαίρεση για 'select' tool - δεν αλλάζει σε layering
   // ώστε να μην γίνεται auto-zoom όταν επιλέγεται overlay με το select tool
+  // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+  const primarySelectedId = universalSelection.getPrimaryId();
   React.useEffect(() => {
-    const selectedOverlay = overlayStore.getSelectedOverlay();
     // Αν είμαστε σε 'select' tool, ΔΕΝ αλλάζουμε σε layering (ο χρήστης θέλει απλή επιλογή)
-    if (selectedOverlay && activeTool !== 'layering' && activeTool !== 'select') {
+    if (primarySelectedId && activeTool !== 'layering' && activeTool !== 'select') {
       // Αυτόματη ενεργοποίηση layering tool όταν επιλέγεται overlay
       handleToolChange('layering');
     }
-  }, [overlayStore.selectedOverlayId, activeTool, handleToolChange]);
+  }, [primarySelectedId, activeTool, handleToolChange]);
 
 
   // 🔺 Bridge overlay edit mode to grip editing system (with guard to prevent loops)

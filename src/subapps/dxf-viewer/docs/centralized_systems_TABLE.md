@@ -1,10 +1,10 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-25
-> **= -> TOTAL SYSTEMS**: 27 Major Enterprise Systems (incl. Universal Selection System)
-> **= -> TOTAL CODE**: 18,345+ Lines
-> **= -> TOTAL ADRs**: 21 Architectural Decision Records
+> **= -> LAST UPDATED**: 2026-01-26
+> **= -> TOTAL SYSTEMS**: 28 Major Enterprise Systems (incl. Multi-Grip Selection System)
+> **= -> TOTAL CODE**: 18,500+ Lines
+> **= -> TOTAL ADRs**: 22 Architectural Decision Records
 
 ---
 
@@ -34,6 +34,7 @@
 | **ADR-028** | Button Component Consolidation 🏢 | Shadcn Button + `ui/toolbar/ToolButton` | Hardcoded buttons, inline styles | 2026-01-24 |
 | **ADR-029** | Global Search System v1 🏢 | `src/app/api/search/route.ts` + `src/types/search.ts` | Διάσπαρτο search code | 2026-01-25 |
 | **ADR-030** | Universal Selection System 🏢 | `systems/selection/` + `useUniversalSelection()` | Selection logic σε `overlay-store.tsx` | 2026-01-25 |
+| **ADR-031** | Multi-Grip Selection System 🏢 | `selectedGripIndices[]` + Shift+Click | Single `selectedGripIndex` | 2026-01-26 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
@@ -50,6 +51,7 @@
 > **🚫 PROHIBITION**: Hardcoded `<button>` με inline styles **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε Shadcn `Button` ή `ui/toolbar/ToolButton`.
 > **🚫 PROHIBITION**: Import `ToolButton/ActionButton` από `BaseButton.tsx` **DEPRECATED** - χρησιμοποιήστε `ui/toolbar/ToolButton.tsx`.
 > **🚫 PROHIBITION**: Νέα selection implementations σε άλλα stores **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useUniversalSelection()` από `systems/selection/`.
+> **✅ MIGRATION COMPLETE (2026-01-25)**: Selection logic αφαιρέθηκε πλήρως από `overlay-store.tsx` - όλα τα components χρησιμοποιούν τώρα `useUniversalSelection()`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.

@@ -38,9 +38,11 @@ interface UseOverlayDrawingConfig {
     add: (overlay: CreateOverlayData) => Promise<string>;
     update: (id: string, patch: UpdateOverlayData) => Promise<void>;
     remove: (id: string) => Promise<void>;
-    setSelectedOverlay: (id: string | null) => void;
     overlays?: { [id: string]: Overlay }; // ✅ ENTERPRISE FIX: Added overlays property για direct access
   } | null;
+  // 🏢 ENTERPRISE (2026-01-25): Selection callback - ADR-030
+  // Selection is now handled by the universal selection system
+  onOverlaySelect?: (id: string | null) => void;
   levelManager: {
     getCurrentLevel: () => { id: string } | null;
     setLevelScene: (levelId: string, scene: SceneModel) => void;
@@ -56,7 +58,8 @@ export const useOverlayDrawing = ({
   overlayStatus,
   overlayStore,
   levelManager,
-  canvasTransform
+  canvasTransform,
+  onOverlaySelect
 }: UseOverlayDrawingConfig) => {
   // Overlay canvas ref for snap manager
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -127,7 +130,8 @@ export const useOverlayDrawing = ({
 
       // Clear draft and auto-select new overlay
       setDraftPolygon([]);
-      overlayStore?.setSelectedOverlay(overlayId || null);
+      // 🏢 ENTERPRISE (2026-01-25): Use callback for selection - ADR-030
+      onOverlaySelect?.(overlayId || null);
 
       // Keep drawing mode active for continuous drawing
     } catch (error) {

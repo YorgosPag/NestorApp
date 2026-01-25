@@ -184,41 +184,54 @@ export const GET = withAuth<ApiSuccessResponse<SearchResponseData>>(
     const searchCollection = adminDb.collection(COLLECTIONS.SEARCH_DOCUMENTS);
 
     // === Execute Search Queries (one per entity type) ===
+    // 🏢 ENTERPRISE: Optimized Firestore queries with composite indexes
+    // Following Google/Microsoft/Salesforce patterns for search at scale
+    // Requires: firestore.indexes.json deployed with composite index for searchDocuments
     const allResults: SearchResult[] = [];
 
     for (const entityType of typesToSearch) {
       try {
-        // Build query with tenant isolation + type filter + prefix match
+        // 🏢 ENTERPRISE: Composite index query
+        // Index: tenantId + entityType + audience + search.prefixes (array-contains-any) + updatedAt
         let queryBuilder = searchCollection
           .where('tenantId', '==', tenantId)
           .where('entityType', '==', entityType)
-          .where('audience', '==', SEARCH_AUDIENCE.INTERNAL); // Only internal for authenticated users
+          .where('audience', '==', SEARCH_AUDIENCE.INTERNAL);
 
-        // Use prefix search if we have valid prefixes
-        // Note: Firestore array-contains-any has a limit of 10 items
+        // 🔍 Prefix-based search (Firestore array-contains-any)
+        // Limit to 10 prefixes per Firestore constraints
         if (searchPrefixes.length > 0) {
           const limitedPrefixes = searchPrefixes.slice(0, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
           queryBuilder = queryBuilder.where('search.prefixes', 'array-contains-any', limitedPrefixes);
         }
 
-        // Execute query with limit
+        // Execute with ordering and limit
         const snapshot = await queryBuilder
           .orderBy('updatedAt', 'desc')
           .limit(limit)
           .get();
 
-        // Transform and filter results
+        // Transform results with secondary normalized text filter
         for (const doc of snapshot.docs) {
           const searchDoc = doc.data() as SearchDocument;
 
-          // Secondary filter: check normalized text contains query
+          // Secondary precision filter: verify normalized text contains query
           if (searchDoc.search.normalized.includes(normalizedQuery)) {
             allResults.push(transformToSearchResult(searchDoc));
           }
         }
       } catch (error) {
-        // Log error but continue with other entity types
-        console.error(`🔍 [Search] Error searching ${entityType}:`, error);
+        // 🚨 Index missing error handling
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        if (errorMessage.includes('index') || errorMessage.includes('FAILED_PRECONDITION')) {
+          console.error(
+            `🔍 [Search] Missing Firestore index for ${entityType}. ` +
+            `Run: firebase deploy --only firestore:indexes`
+          );
+        } else {
+          console.error(`🔍 [Search] Error searching ${entityType}:`, error);
+        }
       }
     }
 

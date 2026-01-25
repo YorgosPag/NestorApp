@@ -26,9 +26,15 @@ export interface ColorLayer {
   showEdgeMidpoints?: boolean; // Show midpoint grips on edges for adding new vertices
   hoveredEdgeIndex?: number;   // Index of currently hovered edge (for visual feedback - WARM)
   hoveredVertexIndex?: number; // Index of currently hovered vertex grip (for visual feedback - WARM)
-  // 🏢 ENTERPRISE (2026-01-25): Selected grip state (HOT grip - Autodesk pattern)
-  selectedGripType?: 'vertex' | 'edge-midpoint'; // Type of selected grip
-  selectedGripIndex?: number;  // Index of selected grip (vertex or edge)
+  // 🏢 ENTERPRISE (2026-01-26): MULTI-selected grip state (HOT grips - Autodesk pattern)
+  // ADR-031: Multi-Grip Selection System - arrays for multiple selected grips
+  /** @deprecated Use selectedGripIndices instead */
+  selectedGripType?: 'vertex' | 'edge-midpoint'; // Type of selected grip (backwards compat)
+  /** @deprecated Use selectedGripIndices instead */
+  selectedGripIndex?: number;  // Index of selected grip (backwards compat)
+  // 🏢 NEW: Arrays for multi-grip selection
+  selectedGripIndices?: number[];  // Indices of selected vertex grips
+  selectedEdgeMidpointIndices?: number[];  // Indices of selected edge midpoint grips
   // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview
   dragPreviewPosition?: Point2D; // Current position during drag for real-time feedback
   isDragging?: boolean;         // True when grip is being dragged

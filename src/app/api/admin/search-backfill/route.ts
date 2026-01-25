@@ -24,7 +24,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db as getAdminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore as FirebaseFirestoreType, type Query, type DocumentData } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
@@ -131,7 +131,7 @@ const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
     statusField: 'status',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'projects:projects:view',
-    routeTemplate: '/projects/{id}',
+    routeTemplate: '/audit?projectId={id}&selected=true',
   },
   building: {
     collection: COLLECTIONS.BUILDINGS,
@@ -141,7 +141,7 @@ const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
     statusField: 'status',
     audience: (doc) => (doc.isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL),
     requiredPermission: 'buildings:buildings:view',
-    routeTemplate: '/buildings/{id}',
+    routeTemplate: '/buildings?buildingId={id}&selected=true',
   },
   unit: {
     collection: COLLECTIONS.UNITS,
@@ -151,7 +151,7 @@ const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
     statusField: 'status',
     audience: (doc) => (doc.isPublished ? SEARCH_AUDIENCE.EXTERNAL : SEARCH_AUDIENCE.INTERNAL),
     requiredPermission: 'units:units:view',
-    routeTemplate: '/units/{id}',
+    routeTemplate: '/units?unitId={id}&selected=true',
   },
   contact: {
     collection: COLLECTIONS.CONTACTS,
@@ -166,7 +166,7 @@ const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
     statusField: 'status',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'crm:contacts:view',
-    routeTemplate: '/contacts/{id}',
+    routeTemplate: '/contacts?contactId={id}&selected=true',
   },
   file: {
     collection: COLLECTIONS.FILES,
@@ -176,7 +176,7 @@ const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
     statusField: 'status',
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'dxf:files:view',
-    routeTemplate: '/files/{id}',
+    routeTemplate: '/files?fileId={id}&selected=true',
   },
 };
 
@@ -246,15 +246,110 @@ function extractSearchableText(doc: Record<string, unknown>, config: SearchIndex
   return parts.join(' ');
 }
 
-function buildSearchDocument(
+// 🏢 ENTERPRISE: User cache for createdBy lookup (performance optimization)
+const userCompanyCache = new Map<string, string | null>();
+
+/**
+ * Resolve tenant ID for an entity using multiple strategies.
+ * Enterprise pattern: explicit > relationship > creator
+ *
+ * @param entityType - Type of entity
+ * @param data - Entity data
+ * @param adminDb - Firestore admin instance (for lookups)
+ * @returns Promise<string | null> - Resolved tenant ID or null
+ */
+async function resolveTenantId(
+  entityType: SearchEntityType,
+  data: Record<string, unknown>,
+  adminDb: FirebaseFirestoreType
+): Promise<string | null> {
+  // Strategy 1: Direct field (preferred)
+  const directTenantId = (data.companyId as string) || (data.tenantId as string);
+  if (directTenantId) return directTenantId;
+
+  // Strategy 2: CreatedBy lookup (for contacts without companyId)
+  // 🏢 ENTERPRISE: Google/Microsoft pattern - inherit tenant from creator
+  const createdBy = data.createdBy as string | undefined;
+  if (createdBy) {
+    // Check cache first
+    if (userCompanyCache.has(createdBy)) {
+      return userCompanyCache.get(createdBy) || null;
+    }
+
+    try {
+      // Lookup user's company from their custom claims or user doc
+      const userDoc = await adminDb.collection('users').doc(createdBy).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        const userCompanyId = userData?.companyId as string | undefined;
+        userCompanyCache.set(createdBy, userCompanyId || null);
+        if (userCompanyId) return userCompanyId;
+      } else {
+        userCompanyCache.set(createdBy, null);
+      }
+    } catch (error) {
+      console.warn(`   ⚠️ Failed to lookup user ${createdBy}:`, error);
+      userCompanyCache.set(createdBy, null);
+    }
+  }
+
+  // Strategy 3: Project lookup (for units without direct companyId)
+  const projectId = data.project as string | undefined;
+  if (projectId) {
+    try {
+      const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+      if (projectDoc.exists) {
+        const projectData = projectDoc.data();
+        const projectCompanyId = projectData?.companyId as string | undefined;
+        if (projectCompanyId) return projectCompanyId;
+      }
+    } catch (error) {
+      console.warn(`   ⚠️ Failed to lookup project ${projectId}:`, error);
+    }
+  }
+
+  // Strategy 4: Building lookup (for units without project field)
+  // Chain: unit.buildingId → building.projectId → project.companyId
+  const buildingId = data.buildingId as string | undefined;
+  if (buildingId) {
+    try {
+      const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+      if (buildingDoc.exists) {
+        const buildingData = buildingDoc.data();
+        const buildingProjectId = buildingData?.projectId as string | undefined;
+        if (buildingProjectId) {
+          // Now lookup the project to get companyId
+          const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(buildingProjectId).get();
+          if (projectDoc.exists) {
+            const projectData = projectDoc.data();
+            const projectCompanyId = projectData?.companyId as string | undefined;
+            if (projectCompanyId) {
+              console.log(`   📌 Unit resolved via building chain: buildingId=${buildingId} → projectId=${buildingProjectId} → companyId=${projectCompanyId}`);
+              return projectCompanyId;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`   ⚠️ Failed to lookup building ${buildingId}:`, error);
+    }
+  }
+
+  // No tenant ID found
+  return null;
+}
+
+async function buildSearchDocument(
   entityType: SearchEntityType,
   entityId: string,
-  data: Record<string, unknown>
-): SearchDocumentInput | null {
+  data: Record<string, unknown>,
+  adminDb: FirebaseFirestoreType
+): Promise<SearchDocumentInput | null> {
   const config = SEARCH_INDEX_CONFIG[entityType];
   if (!config) return null;
 
-  const tenantId = (data.companyId as string) || (data.tenantId as string);
+  // 🏢 ENTERPRISE: Multi-strategy tenant resolution
+  const tenantId = await resolveTenantId(entityType, data, adminDb);
   if (!tenantId) return null;
 
   const title = extractTitle(data, config);
@@ -301,7 +396,7 @@ async function backfillEntityType(
   console.log(`📦 [Search Backfill] Processing ${entityType}...`);
 
   // Build query
-  let query: FirebaseFirestore.Query = adminDb.collection(config.collection);
+  let query: Query<DocumentData> = adminDb.collection(config.collection);
 
   if (options.companyId) {
     query = query.where('companyId', '==', options.companyId);
@@ -329,9 +424,14 @@ async function backfillEntityType(
       continue;
     }
 
-    const searchDoc = buildSearchDocument(entityType, doc.id, data);
+    const searchDoc = await buildSearchDocument(entityType, doc.id, data, adminDb);
     if (!searchDoc) {
       stats.skipped++;
+      // 🔍 DEBUG: Log why document was skipped
+      const hasCompanyId = !!(data.companyId || data.tenantId);
+      const hasProject = !!data.project;
+      const hasCreatedBy = !!data.createdBy;
+      console.log(`   ⏭️ Skipped ${doc.id}: companyId=${hasCompanyId}, project=${hasProject}, createdBy=${hasCreatedBy}`);
       continue;
     }
 
@@ -518,6 +618,202 @@ export const GET = withAuth(
         filterByCompany: 'POST { "companyId": "abc123" } - Index only specific company',
       },
     }, 'Search backfill system ready');
+  },
+  { permissions: 'admin:migrations:execute' }
+);
+
+// =============================================================================
+// CONTACT TENANT MIGRATION (PATCH)
+// =============================================================================
+
+interface MigrationStats {
+  total: number;
+  migrated: number;
+  skipped: number;
+  errors: number;
+  noCreator: number;
+}
+
+/**
+ * PATCH /api/admin/search-backfill
+ *
+ * Migrate contacts to add companyId from createdBy user.
+ * Enterprise pattern: CreatedBy Lookup for tenant resolution.
+ *
+ * Body: { "dryRun": true }  - Preview migration
+ * Body: { "dryRun": false } - Execute migration
+ * Body: { "limit": 100 }    - Limit number of contacts to process
+ */
+export const PATCH = withAuth(
+  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    const startTime = Date.now();
+
+    // 🔐 ENTERPRISE: Only super_admin can execute migration
+    if (ctx.globalRole !== 'super_admin') {
+      console.warn(
+        `🚫 [Contact Migration] BLOCKED: Non-super_admin attempted migration: ` +
+        `${ctx.email} (${ctx.globalRole})`
+      );
+      return createErrorResponse('Forbidden: Only super_admin can execute contact migration', 403);
+    }
+
+    console.log(`🔐 [Contact Migration] Request from ${ctx.email} (${ctx.globalRole})`);
+
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+      return createErrorResponse('Firebase Admin not initialized', 500);
+    }
+
+    try {
+      const body = await request.json() as { dryRun?: boolean; limit?: number; defaultCompanyId?: string };
+      const { dryRun = true, limit, defaultCompanyId } = body;
+
+      console.log(`\n🏢 CONTACT TENANT MIGRATION`);
+      console.log(`   Mode: ${dryRun ? 'DRY-RUN' : 'EXECUTE'}`);
+      if (limit) console.log(`   Limit: ${limit}`);
+      if (defaultCompanyId) console.log(`   Default companyId: ${defaultCompanyId}`);
+
+      const stats: MigrationStats = {
+        total: 0,
+        migrated: 0,
+        skipped: 0,
+        errors: 0,
+        noCreator: 0,
+      };
+
+      // Query contacts without companyId
+      let query = adminDb.collection(COLLECTIONS.CONTACTS) as Query<DocumentData>;
+
+      if (limit) {
+        query = query.limit(limit);
+      }
+
+      const snapshot = await query.get();
+      stats.total = snapshot.size;
+
+      console.log(`   Found ${stats.total} contacts to process`);
+
+      // Clear user cache for fresh lookups
+      userCompanyCache.clear();
+
+      // Process in batches
+      const BATCH_SIZE = 500;
+      let batch = adminDb.batch();
+      let batchCount = 0;
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data() as Record<string, unknown>;
+
+        // Skip if already has companyId
+        if (data.companyId) {
+          stats.skipped++;
+          continue;
+        }
+
+        const createdBy = data.createdBy as string | undefined;
+
+        // Determine companyId to use
+        let resolvedCompanyId: string | null = null;
+
+        if (createdBy) {
+          // Try to lookup creator's companyId
+          if (userCompanyCache.has(createdBy)) {
+            resolvedCompanyId = userCompanyCache.get(createdBy) || null;
+          } else {
+            try {
+              const userDoc = await adminDb.collection('users').doc(createdBy).get();
+              if (userDoc.exists) {
+                const userData = userDoc.data();
+                resolvedCompanyId = (userData?.companyId as string) || null;
+              }
+              userCompanyCache.set(createdBy, resolvedCompanyId);
+            } catch (error) {
+              console.warn(`   ⚠️ Failed to lookup user ${createdBy}:`, error);
+              userCompanyCache.set(createdBy, null);
+            }
+          }
+        }
+
+        // Fallback to defaultCompanyId if no creator or creator has no companyId
+        if (!resolvedCompanyId && defaultCompanyId) {
+          resolvedCompanyId = defaultCompanyId;
+          console.log(`   📌 Contact ${doc.id} using default companyId`);
+        }
+
+        if (!resolvedCompanyId) {
+          stats.noCreator++;
+          console.log(`   ⚠️ Contact ${doc.id} has no createdBy and no defaultCompanyId - skipping`);
+          continue;
+        }
+
+        const userCompanyId = resolvedCompanyId;
+
+        if (dryRun) {
+          console.log(`   [DRY-RUN] Would set companyId=${userCompanyId} for contact ${doc.id}`);
+          stats.migrated++;
+        } else {
+          batch.update(doc.ref, {
+            companyId: userCompanyId,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+          batchCount++;
+          stats.migrated++;
+
+          // Commit batch every 500 documents
+          if (batchCount >= BATCH_SIZE) {
+            try {
+              await batch.commit();
+              console.log(`   ✅ Committed batch of ${batchCount} contacts`);
+              batch = adminDb.batch();
+              batchCount = 0;
+            } catch (error) {
+              console.error(`   ❌ Batch commit failed:`, error);
+              stats.errors += batchCount;
+              stats.migrated -= batchCount;
+              batch = adminDb.batch();
+              batchCount = 0;
+            }
+          }
+        }
+      }
+
+      // Commit remaining documents
+      if (!dryRun && batchCount > 0) {
+        try {
+          await batch.commit();
+          console.log(`   ✅ Committed final batch of ${batchCount} contacts`);
+        } catch (error) {
+          console.error(`   ❌ Final batch commit failed:`, error);
+          stats.errors += batchCount;
+          stats.migrated -= batchCount;
+        }
+      }
+
+      const duration = Date.now() - startTime;
+
+      console.log(`\n📊 MIGRATION SUMMARY`);
+      console.log(`   Total contacts: ${stats.total}`);
+      console.log(`   Migrated:       ${stats.migrated}`);
+      console.log(`   Skipped:        ${stats.skipped} (already have companyId)`);
+      console.log(`   No creator:     ${stats.noCreator}`);
+      console.log(`   Errors:         ${stats.errors}`);
+      console.log(`   Duration:       ${duration}ms`);
+
+      return apiSuccess({
+        mode: dryRun ? 'DRY_RUN' : 'EXECUTE',
+        stats,
+        duration,
+        timestamp: new Date().toISOString(),
+      }, dryRun
+        ? `Dry run complete. Would migrate ${stats.migrated} contacts.`
+        : `Migration complete. Migrated ${stats.migrated} contacts.`
+      );
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`❌ [Contact Migration] Error:`, errorMessage);
+      return createErrorResponse(errorMessage, 500);
+    }
   },
   { permissions: 'admin:migrations:execute' }
 );

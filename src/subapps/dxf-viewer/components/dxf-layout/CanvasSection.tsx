@@ -104,8 +104,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
   // Single source of truth for ALL entity selections
   const universalSelection = useUniversalSelection();
-  // 🏢 ENTERPRISE (2026-01-25): Ref for overlay store to avoid stale closures in callbacks
+  // 🏢 ENTERPRISE (2026-01-25): Refs for stores to avoid stale closures in callbacks
+  // These refs are CRITICAL - they ensure callbacks always have access to the latest store state
   const overlayStoreRef = useRef(overlayStore);
+  const universalSelectionRef = useRef(universalSelection);
+
+  // 🏢 ENTERPRISE (2026-01-25): Keep refs in sync with current store values
+  // This is CRITICAL for updateVertex/addVertex to work with the latest polygon data
+  overlayStoreRef.current = overlayStore;
+  universalSelectionRef.current = universalSelection;
   const levelManager = useLevels();
 
   // 🏢 ENTERPRISE (2026-01-25): Moved BEFORE callbacks that use them to avoid hoisting issues
@@ -122,20 +129,33 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const [hoveredEdgeInfo, setHoveredEdgeInfo] = useState<{ overlayId: string; edgeIndex: number } | null>(null);
   const [hoveredVertexInfo, setHoveredVertexInfo] = useState<{ overlayId: string; vertexIndex: number } | null>(null);
 
-  // 🏢 ENTERPRISE (2026-01-25): State για selected grip (HOT grip - Autodesk pattern)
-  // Click 1: Select grip (becomes HOT) | Click 2: Start dragging
-  const [selectedGrip, setSelectedGrip] = useState<{
+  // 🏢 ENTERPRISE (2026-01-26): State για MULTIPLE selected grips (HOT grips - Autodesk pattern)
+  // Shift+Click: Add/remove grips to selection | Drag: Move all selected grips together
+  // ADR-031: Multi-Grip Selection System
+  const [selectedGrips, setSelectedGrips] = useState<Array<{
     type: 'vertex' | 'edge-midpoint';
     overlayId: string;
     index: number; // vertexIndex for vertex, edgeIndex for edge-midpoint
-  } | null>(null);
+  }>>([]);
 
-  // 🏢 ENTERPRISE (2026-01-25): State για vertex drag (vertex movement)
-  const [draggingVertex, setDraggingVertex] = useState<{
+  // 🏢 ENTERPRISE: Helper για backwards compatibility με single selectedGrip usage
+  const selectedGrip = selectedGrips.length > 0 ? selectedGrips[0] : null;
+
+  // 🏢 ENTERPRISE (2026-01-26): State για MULTI-vertex drag (vertex movement)
+  // ADR-031: Multi-Grip Selection System - supports moving multiple grips together
+  const [draggingVertices, setDraggingVertices] = useState<Array<{
     overlayId: string;
     vertexIndex: number;
     startPoint: Point2D;
-  } | null>(null);
+    originalPosition: Point2D; // Original vertex position for delta calculation
+  }> | null>(null);
+
+  // 🏢 ENTERPRISE: Helper για backwards compatibility
+  const draggingVertex = draggingVertices && draggingVertices.length > 0 ? {
+    overlayId: draggingVertices[0].overlayId,
+    vertexIndex: draggingVertices[0].vertexIndex,
+    startPoint: draggingVertices[0].startPoint
+  } : null;
   // 🏢 ENTERPRISE (2026-01-25): State για edge midpoint drag (vertex insertion)
   const [draggingEdgeMidpoint, setDraggingEdgeMidpoint] = useState<{
     overlayId: string;
@@ -351,8 +371,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     updatePosition(null);
   }, [setActive, updatePosition]);
 
-  // 🏢 ENTERPRISE (2026-01-25): Mouse down handler for IMMEDIATE grip drag
-  // Figma/Photoshop Pattern: Single click-and-hold = Select + Start Drag immediately
+  // 🏢 ENTERPRISE (2026-01-26): Mouse down handler for MULTI-GRIP selection and drag
+  // ADR-031: Multi-Grip Selection System
+  // Patterns:
+  // - Single click: Select single grip (replaces selection)
+  // - Shift+Click: Add/remove grip to/from selection (toggle)
+  // - Click+Drag: Start dragging ALL selected grips together
   const handleContainerMouseDown = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     // Only handle left click
     if (e.button !== 0) return;
@@ -360,22 +384,24 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // Only in select/layering mode
     if (activeTool !== 'select' && activeTool !== 'layering') return;
 
-    // 🏢 ENTERPRISE (2026-01-25): Check if hovered overlay is in multi-selection
+    const isShiftPressed = e.shiftKey;
+
+    // 🏢 ENTERPRISE (2026-01-26): Check if hovered overlay is in multi-selection
     const hoveredOverlayId = hoveredVertexInfo?.overlayId || hoveredEdgeInfo?.overlayId;
     if (!hoveredOverlayId) {
-      // Clicked elsewhere → Deselect grip
-      if (selectedGrip) {
-        setSelectedGrip(null);
+      // Clicked elsewhere → Deselect ALL grips (unless Shift is pressed to preserve selection)
+      if (!isShiftPressed && selectedGrips.length > 0) {
+        setSelectedGrips([]);
       }
       return;
     }
 
     // Check if the hovered overlay is selected (part of multi-selection)
-    // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
-    if (!universalSelection.isSelected(hoveredOverlayId)) {
-      // Clicked on grip of non-selected overlay → Deselect grip
-      if (selectedGrip) {
-        setSelectedGrip(null);
+    // 🏢 ENTERPRISE (2026-01-26): Use universal selection system via ref to avoid stale closures - ADR-030
+    if (!universalSelectionRef.current.isSelected(hoveredOverlayId)) {
+      // Clicked on grip of non-selected overlay → Deselect grips
+      if (!isShiftPressed && selectedGrips.length > 0) {
+        setSelectedGrips([]);
       }
       return;
     }
@@ -387,37 +413,85 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     const screenPos: Point2D = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
 
-    // === VERTEX GRIP CLICK → IMMEDIATE DRAG ===
+    // === VERTEX GRIP CLICK ===
     if (hoveredVertexInfo) {
       e.preventDefault();
       e.stopPropagation();
 
-      // 🎯 IMMEDIATE: Select grip (HOT) AND start dragging in one action
-      setSelectedGrip({
-        type: 'vertex',
+      const clickedGrip = {
+        type: 'vertex' as const,
         overlayId: hoveredVertexInfo.overlayId,
         index: hoveredVertexInfo.vertexIndex
-      });
-      setDraggingVertex({
-        overlayId: hoveredVertexInfo.overlayId,
-        vertexIndex: hoveredVertexInfo.vertexIndex,
-        startPoint: worldPos
-      });
-      setDragPreviewPosition(worldPos); // Initialize preview position
+      };
+
+      // 🏢 ENTERPRISE (2026-01-26): Check if this grip is already selected
+      const isGripAlreadySelected = selectedGrips.some(
+        g => g.type === 'vertex' && g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index
+      );
+
+      let newSelectedGrips: typeof selectedGrips;
+
+      if (isShiftPressed) {
+        // Shift+Click: Toggle grip in selection
+        if (isGripAlreadySelected) {
+          // Remove from selection
+          newSelectedGrips = selectedGrips.filter(
+            g => !(g.type === 'vertex' && g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index)
+          );
+        } else {
+          // Add to selection
+          newSelectedGrips = [...selectedGrips, clickedGrip];
+        }
+        setSelectedGrips(newSelectedGrips);
+      } else {
+        // Regular click: Replace selection with this grip
+        newSelectedGrips = [clickedGrip];
+        setSelectedGrips(newSelectedGrips);
+      }
+
+      // 🏢 ENTERPRISE (2026-01-26): Start dragging ALL selected vertex grips
+      // Filter to only vertex grips (not edge-midpoints) for movement
+      const gripsToMove = (isShiftPressed && isGripAlreadySelected)
+        ? selectedGrips.filter(g => g.type === 'vertex' && !(g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index))
+        : (isShiftPressed ? [...selectedGrips.filter(g => g.type === 'vertex'), clickedGrip] : [clickedGrip]);
+
+      if (gripsToMove.length > 0) {
+        const overlayStore = overlayStoreRef.current;
+        const draggingData = gripsToMove.map(grip => {
+          // Get original vertex position from overlay
+          const overlay = overlayStore.overlays[grip.overlayId];
+          const originalPosition = overlay?.polygon?.[grip.index]
+            ? { x: overlay.polygon[grip.index][0], y: overlay.polygon[grip.index][1] }
+            : worldPos;
+
+          return {
+            overlayId: grip.overlayId,
+            vertexIndex: grip.index,
+            startPoint: worldPos,
+            originalPosition
+          };
+        });
+
+        setDraggingVertices(draggingData);
+        setDragPreviewPosition(worldPos);
+      }
       return;
     }
 
-    // === EDGE MIDPOINT GRIP CLICK → IMMEDIATE DRAG ===
+    // === EDGE MIDPOINT GRIP CLICK → IMMEDIATE DRAG (single grip only) ===
     if (hoveredEdgeInfo) {
       e.preventDefault();
       e.stopPropagation();
 
-      // 🎯 IMMEDIATE: Select grip (HOT) AND start dragging in one action
-      setSelectedGrip({
-        type: 'edge-midpoint',
+      const clickedGrip = {
+        type: 'edge-midpoint' as const,
         overlayId: hoveredEdgeInfo.overlayId,
         index: hoveredEdgeInfo.edgeIndex
-      });
+      };
+
+      // 🏢 ENTERPRISE: Edge midpoints always replace selection (no multi-select for edge midpoints)
+      // This is because dragging edge midpoint creates a NEW vertex, not moves existing
+      setSelectedGrips([clickedGrip]);
       setDraggingEdgeMidpoint({
         overlayId: hoveredEdgeInfo.overlayId,
         edgeIndex: hoveredEdgeInfo.edgeIndex,
@@ -425,34 +499,46 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         startPoint: worldPos,
         newVertexCreated: false
       });
-      setDragPreviewPosition(worldPos); // Initialize preview position
+      setDragPreviewPosition(worldPos);
       return;
     }
-  }, [activeTool, overlayStore, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip, transform, viewport]);
+  }, [activeTool, hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, transform, viewport]);
 
-  // 🏢 ENTERPRISE (2026-01-25): Mouse up handler for grip drag end
+  // 🏢 ENTERPRISE (2026-01-26): Mouse up handler for MULTI-grip drag end
+  // ADR-031: Multi-Grip Selection System - updates all dragged vertices
   const handleContainerMouseUp = React.useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
     const overlayStore = overlayStoreRef.current;
 
-    // Handle vertex drag end
-    if (draggingVertex && overlayStore) {
+    // Handle MULTI-vertex drag end
+    if (draggingVertices && draggingVertices.length > 0 && overlayStore) {
       const container = containerRef.current;
       if (container) {
         const rect = container.getBoundingClientRect();
         const screenPos: Point2D = { x: e.clientX - rect.left, y: e.clientY - rect.top };
         const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
 
-        // Update vertex position in Firestore
-        await overlayStore.updateVertex(
-          draggingVertex.overlayId,
-          draggingVertex.vertexIndex,
-          [worldPos.x, worldPos.y]
-        );
+        // 🏢 ENTERPRISE (2026-01-26): Calculate delta from first grip's start point
+        const delta = {
+          x: worldPos.x - draggingVertices[0].startPoint.x,
+          y: worldPos.y - draggingVertices[0].startPoint.y
+        };
+
+        // 🏢 ENTERPRISE (2026-01-26): Update ALL dragged vertices with the same delta
+        // This moves all selected grips together as a group
+        const updatePromises = draggingVertices.map(drag => {
+          const newPosition: [number, number] = [
+            drag.originalPosition.x + delta.x,
+            drag.originalPosition.y + delta.y
+          ];
+          return overlayStore.updateVertex(drag.overlayId, drag.vertexIndex, newPosition);
+        });
+
+        // Wait for all updates to complete
+        await Promise.all(updatePromises);
       }
-      // 🏢 ENTERPRISE (2026-01-25): Clear ONLY drag-related states
-      // ⚠️ IMPORTANT: Do NOT clear selectedGrip - grips should remain visible
-      // User must click elsewhere on canvas to deselect the layer
-      setDraggingVertex(null);
+      // 🏢 ENTERPRISE (2026-01-26): Clear ONLY drag-related states
+      // ⚠️ IMPORTANT: Do NOT clear selectedGrips - grips should remain visible for further editing
+      setDraggingVertices(null);
       setDragPreviewPosition(null);
       // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
       justFinishedDragRef.current = true;
@@ -559,19 +645,28 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, [activeTool, draftPolygon.length]);
 
-  // 🏢 ENTERPRISE (2026-01-25): Clear selected grip when overlay or tool changes
-  // Autodesk pattern: Grip selection is contextual to current selection
+  // 🏢 ENTERPRISE (2026-01-26): Clear selected grips when overlay or tool changes
+  // ADR-031: Multi-Grip Selection System - clear grips that are no longer valid
   React.useEffect(() => {
-    if (selectedGrip) {
-      // Clear if grip's overlay is no longer selected or tool is not select/layering
-      // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
-      if (!universalSelection.isSelected(selectedGrip.overlayId) ||
-          (activeTool !== 'select' && activeTool !== 'layering')) {
-        setSelectedGrip(null);
+    if (selectedGrips.length > 0) {
+      // Filter out grips whose overlays are no longer selected
+      const validGrips = selectedGrips.filter(grip =>
+        universalSelection.isSelected(grip.overlayId)
+      );
+
+      // Clear all grips if tool is not select/layering
+      if (activeTool !== 'select' && activeTool !== 'layering') {
+        setSelectedGrips([]);
         setDragPreviewPosition(null);
+      } else if (validGrips.length !== selectedGrips.length) {
+        // Some grips became invalid - update selection
+        setSelectedGrips(validGrips);
+        if (validGrips.length === 0) {
+          setDragPreviewPosition(null);
+        }
       }
     }
-  }, [universalSelection, activeTool, selectedGrip]);
+  }, [universalSelection, activeTool, selectedGrips]);
 
   // ✅ CONVERT RulersGridSystem grid settings to Canvas V2 GridSettings format
   // RulersGridSystem uses: gridSettings.visual.color
@@ -668,9 +763,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           // WARM state (hover)
           hoveredEdgeIndex: hoveredEdgeInfo?.overlayId === overlay.id ? hoveredEdgeInfo.edgeIndex : undefined,
           hoveredVertexIndex: hoveredVertexInfo?.overlayId === overlay.id ? hoveredVertexInfo.vertexIndex : undefined,
-          // 🏢 ENTERPRISE (2026-01-25): HOT state (selected grip - Autodesk pattern)
-          selectedGripType: selectedGrip?.overlayId === overlay.id ? selectedGrip.type : undefined,
-          selectedGripIndex: selectedGrip?.overlayId === overlay.id ? selectedGrip.index : undefined,
+          // 🏢 ENTERPRISE (2026-01-26): HOT state (MULTI-selected grips - Autodesk pattern)
+          // ADR-031: Multi-Grip Selection System - array of selected grip indices
+          selectedGripIndices: selectedGrips
+            .filter(g => g.overlayId === overlay.id && g.type === 'vertex')
+            .map(g => g.index),
+          selectedEdgeMidpointIndices: selectedGrips
+            .filter(g => g.overlayId === overlay.id && g.type === 'edge-midpoint')
+            .map(g => g.index),
           // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview
           dragPreviewPosition: (draggingVertex?.overlayId === overlay.id || draggingEdgeMidpoint?.overlayId === overlay.id)
             ? dragPreviewPosition ?? undefined
@@ -910,14 +1010,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete, handleOverlayUpdate } =
     createOverlayHandlers({
       setSelectedOverlay: (id: string | null) => {
-        // Bridge: Route through universal selection system
+        // 🏢 ENTERPRISE (2026-01-25): Route through universal selection system - ADR-030
         if (id) {
           universalSelection.select(id, 'overlay');
         } else {
           universalSelection.clearByType('overlay');
         }
-        // Also update overlay store for backward compatibility during migration
-        overlayStore.setSelectedOverlay(id);
       },
       remove: overlayStore.remove,
       update: overlayStore.update,
@@ -1017,8 +1115,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (activeTool === 'select' || activeTool === 'layering' || overlayMode === 'select') {
       // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
       universalSelection.selectMultiple(layerIds.map(id => ({ id, type: 'overlay' as const })));
-      // Also update overlay store for backward compatibility during migration
-      overlayStore.setSelectedOverlays(layerIds);
       console.log('🎯 Multi-selection applied:', layerIds.length, 'overlays selected');
     } else {
       console.log('⚠️ Multi-selection SKIPPED - wrong tool/mode');
@@ -1076,9 +1172,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         console.log('✅ DESELECTING all overlays');
         // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
         universalSelection.clearByType('overlay');
-        // Also update overlay store for backward compatibility during migration
-        overlayStore.clearSelection();
-        setSelectedGrip(null); // Clear grip selection when clicking empty space
+        setSelectedGrips([]); // Clear grip selection when clicking empty space
       }
     }
   };
@@ -1311,7 +1405,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
                 // 🏢 ENTERPRISE (2026-01-25): Grip hover detection for ALL selected overlays
                 // Uses CENTRALIZED gripSettings for tolerance calculation
-                const selectedOverlays = overlayStore.getSelectedOverlays();
+                // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
+                const selectedOverlayIds = universalSelection.getIdsByType('overlay');
+                const selectedOverlays = selectedOverlayIds
+                  .map(id => currentOverlays.find(o => o.id === id))
+                  .filter((o): o is Overlay => o !== undefined);
                 if ((activeTool === 'select' || activeTool === 'layering') && selectedOverlays.length > 0) {
                   // 🎯 CENTRALIZED: Tolerance from grip settings (not hardcoded)
                   const gripTolerancePx = (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1.0) + 2;

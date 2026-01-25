@@ -470,22 +470,44 @@ export class LayerRenderer {
     }
 
     // Convert world coordinates to screen coordinates
-    // 🏢 ENTERPRISE (2026-01-25): Handle real-time drag preview for vertices
+    // 🏢 ENTERPRISE (2026-01-26): Handle real-time drag preview for MULTI-GRIP vertices
+    // ADR-031: Multi-Grip Selection System - calculates delta from first grip and applies to all
+    const selectedVertexIndices = layer.selectedGripIndices ??
+      (layer.selectedGripType === 'vertex' && layer.selectedGripIndex !== undefined ? [layer.selectedGripIndex] : []);
+
+    // 🏢 ENTERPRISE: Calculate drag delta from first selected grip (all grips move by same delta)
+    let dragDelta: Point2D | null = null;
+    if (layer.isDragging && layer.dragPreviewPosition && selectedVertexIndices.length > 0) {
+      const firstSelectedIndex = selectedVertexIndices[0];
+      const originalVertex = polygon.vertices[firstSelectedIndex];
+      if (originalVertex) {
+        dragDelta = {
+          x: layer.dragPreviewPosition.x - originalVertex.x,
+          y: layer.dragPreviewPosition.y - originalVertex.y
+        };
+      }
+    }
+
     let screenVertices = polygon.vertices.map((vertex: Point2D, index: number) => {
-      // Check if this vertex is being dragged (for vertex drag preview)
-      if (layer.isDragging && layer.dragPreviewPosition &&
-          layer.selectedGripType === 'vertex' && layer.selectedGripIndex === index) {
-        // Use drag preview position instead of actual vertex position
-        return CoordinateTransforms.worldToScreen(layer.dragPreviewPosition, transform, viewport);
+      // Check if this vertex is being dragged (for multi-grip vertex drag preview)
+      if (dragDelta && selectedVertexIndices.includes(index)) {
+        // Apply the same drag delta to all selected vertices
+        const previewPosition: Point2D = {
+          x: vertex.x + dragDelta.x,
+          y: vertex.y + dragDelta.y
+        };
+        return CoordinateTransforms.worldToScreen(previewPosition, transform, viewport);
       }
       return CoordinateTransforms.worldToScreen(vertex, transform, viewport);
     });
 
-    // 🏢 ENTERPRISE (2026-01-25): Handle edge midpoint drag (vertex insertion preview)
-    // When dragging an edge midpoint, we need to insert a temporary vertex for visual preview
-    if (layer.isDragging && layer.dragPreviewPosition &&
-        layer.selectedGripType === 'edge-midpoint' && layer.selectedGripIndex !== undefined) {
-      const insertIndex = layer.selectedGripIndex + 1;
+    // 🏢 ENTERPRISE (2026-01-26): Handle edge midpoint drag (vertex insertion preview)
+    // Note: Edge midpoint drag is always single-grip (creates new vertex)
+    const selectedEdgeMidpointIndex = layer.selectedEdgeMidpointIndices?.[0] ??
+      (layer.selectedGripType === 'edge-midpoint' ? layer.selectedGripIndex : undefined);
+
+    if (layer.isDragging && layer.dragPreviewPosition && selectedEdgeMidpointIndex !== undefined) {
+      const insertIndex = selectedEdgeMidpointIndex + 1;
       const previewVertex = CoordinateTransforms.worldToScreen(layer.dragPreviewPosition, transform, viewport);
       // Insert the preview vertex into the array
       screenVertices = [
@@ -595,21 +617,22 @@ export class LayerRenderer {
       const GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SUCCESS_BRIGHT ?? '#22c55e';
       const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK ?? '#000000';
 
+      // 🏢 ENTERPRISE (2026-01-26): Get selected grip indices for multi-grip support
+      const selectedVertexGripIndices = layer.selectedGripIndices ??
+        (layer.selectedGripType === 'vertex' && layer.selectedGripIndex !== undefined ? [layer.selectedGripIndex] : []);
+
       for (let i = 0; i < screenVertices.length; i++) {
         let vertex = screenVertices[i];
         const isFirstGrip = i === 0;
         const isCloseHighlighted = isFirstGrip && layer.isNearFirstPoint;
         const isHovered = layer.hoveredVertexIndex === i;
 
-        // 🏢 ENTERPRISE (2026-01-25): Check if this grip is SELECTED (HOT) - Autodesk pattern
-        const isSelected = layer.selectedGripType === 'vertex' && layer.selectedGripIndex === i;
+        // 🏢 ENTERPRISE (2026-01-26): Check if this grip is SELECTED (HOT) - Multi-grip support
+        // ADR-031: Multi-Grip Selection System - uses array of selected indices
+        const isSelected = selectedVertexGripIndices.includes(i);
 
-        // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview - use dragPreviewPosition when dragging
-        if (isSelected && layer.isDragging && layer.dragPreviewPosition && this.transform) {
-          // Convert dragPreviewPosition from world to screen coordinates
-          const previewScreen = this.worldToScreen(layer.dragPreviewPosition, this.transform, this.viewport);
-          vertex = previewScreen;
-        }
+        // 🏢 ENTERPRISE (2026-01-26): Real-time drag preview - handled earlier in screenVertices mapping
+        // The vertex position is already updated if this grip is being dragged
 
         // Determine grip state: hot (selected/close) > warm (hover) > cold (normal)
         // 🏢 ENTERPRISE: Selected grips are HOT even when not close to first point
@@ -679,8 +702,11 @@ export class LayerRenderer {
         // Check if this edge is hovered
         const isHovered = layer.hoveredEdgeIndex === i;
 
-        // 🏢 ENTERPRISE (2026-01-25): Check if this edge midpoint is SELECTED (HOT)
-        const isSelected = layer.selectedGripType === 'edge-midpoint' && layer.selectedGripIndex === i;
+        // 🏢 ENTERPRISE (2026-01-26): Check if this edge midpoint is SELECTED (HOT)
+        // ADR-031: Multi-Grip Selection System - edge midpoints use array for consistency
+        const selectedEdgeMidpointIdx = layer.selectedEdgeMidpointIndices ??
+          (layer.selectedGripType === 'edge-midpoint' && layer.selectedGripIndex !== undefined ? [layer.selectedGripIndex] : []);
+        const isSelected = selectedEdgeMidpointIdx.includes(i);
 
         // HOT grip size (larger than warm)
         const EDGE_GRIP_SIZE_HOT = Math.round(baseEdgeSize * 1.6);

@@ -109,14 +109,12 @@ export function LevelPanel({
   const { handleOverlaySelect, handleOverlayEdit, handleOverlayDelete } =
     createOverlayHandlers({
       setSelectedOverlay: (id: string | null) => {
-        // Bridge: Route through universal selection system
+        // 🏢 ENTERPRISE (2026-01-25): Route through universal selection system - ADR-030
         if (id) {
           universalSelection.select(id, 'overlay');
         } else {
           universalSelection.clearByType('overlay');
         }
-        // Also update overlay store for backward compatibility during migration
-        overlayStore.setSelectedOverlay(id);
       },
       remove: overlayStore.remove,
       update: overlayStore.update,
@@ -410,9 +408,10 @@ export function LevelPanel({
       {/* Editing Toolbox - shown when layering tool is active */}
       
       <div className={PANEL_TOKENS.LEVEL_PANEL.OVERLAY_SECTION}>
+        {/* 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030 */}
         <OverlayList
             overlays={currentOverlays}
-            selectedOverlayId={overlayStore.selectedOverlayId}
+            selectedOverlayId={universalSelection.getPrimaryId()}
             onSelect={handleOverlaySelect}
             onEdit={handleOverlayEdit}
             onDelete={handleOverlayDelete}

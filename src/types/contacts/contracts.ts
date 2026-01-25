@@ -19,6 +19,17 @@ export interface BaseContact {
   updatedAt: FirestoreishTimestamp;
   createdBy?: string;
   lastModifiedBy?: string;
+
+  // 🏢 ENTERPRISE TENANT ISOLATION (ADR-029: Global Search v1)
+  // Required for multi-tenant security and search indexing
+  // Derived from createdBy user's companyId during creation
+  // @see firestore.rules - contacts collection tenant-scoped reads
+  /**
+   * Company/Tenant ID for multi-tenant isolation.
+   * Set automatically from creator's companyId during contact creation.
+   * Required for: Firestore security rules, Global Search indexing
+   */
+  companyId?: string;
   // 🏢 ENTERPRISE: Common display properties for all contact types (2026-01-19)
   /** Computed display name - for UI consistency across contact types */
   name?: string;
