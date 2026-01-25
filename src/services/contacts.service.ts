@@ -18,6 +18,8 @@ import { getCol, mapDocs, chunk, asDate, startAfterDocId } from '@/lib/firestore
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Unit } from '@/types/unit';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions for Firestore Operations
@@ -457,6 +459,21 @@ export class ContactsService {
         id,
         sentEmptyMultiplePhotos: Array.isArray(updateData.multiplePhotoURLs) && updateData.multiplePhotoURLs.length === 0,
         sentEmptyPhotoURL: updateData.photoURL === ''
+      });
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      // Dispatch event for all components to update their local state
+      RealtimeService.dispatchContactUpdated({
+        contactId: id,
+        updates: {
+          firstName: updates.firstName,
+          lastName: updates.lastName,
+          companyName: updates.companyName,
+          serviceName: updates.serviceName,
+          status: updates.status,
+          isFavorite: updates.isFavorite,
+        },
+        timestamp: Date.now()
       });
 
     } catch (error) {

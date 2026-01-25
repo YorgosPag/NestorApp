@@ -1,12 +1,12 @@
 'use client';
 
 import { db } from '@/lib/firebase'; // Αλλαγή σε client-side db
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  doc, 
-  updateDoc, 
+import {
+  collection,
+  addDoc,
+  getDocs,
+  doc,
+  updateDoc,
   deleteDoc,
   writeBatch,
   query,
@@ -19,6 +19,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Property } from '@/types/property-viewer';
 import type { UnitModel } from '@/types/unit';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 const UNITS_COLLECTION = COLLECTIONS.UNITS;
 
@@ -129,6 +131,23 @@ export async function updateUnit(unitId: string, updates: Partial<Property>): Pr
       ...updates,
       updatedAt: serverTimestamp()
     });
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    // Dispatch event for all components to update their local state
+    RealtimeService.dispatchUnitUpdated({
+      unitId,
+      updates: {
+        name: updates.name,
+        type: updates.type,
+        status: updates.status,
+        area: updates.area,
+        floor: updates.floor,
+        buildingId: updates.buildingId,
+        soldTo: updates.soldTo,
+      },
+      timestamp: Date.now()
+    });
+
     return { success: true };
   } catch (error) {
     // Error logging removed

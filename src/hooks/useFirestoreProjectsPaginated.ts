@@ -3,6 +3,8 @@ import { collection, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { InfiniteScrollPagination, PaginatedResult } from '@/lib/pagination';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 
 // =============================================================================
 // 🚀 PAGINATED PROJECTS HOOK - ENTERPRISE PERFORMANCE
@@ -213,6 +215,27 @@ export function useFirestoreProjectsPaginated(
   // ==========================================================================
   // EFFECTS
   // ==========================================================================
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+  // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
+  useEffect(() => {
+    const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
+      console.log('🔄 [ProjectsPaginated] Applying update for project:', payload.projectId);
+
+      setProjects(prev => prev.map(project =>
+        project.id === payload.projectId
+          ? { ...project, ...payload.updates }
+          : project
+      ));
+    };
+
+    // Subscribe to project updates (same-page + cross-page)
+    const unsubscribe = RealtimeService.subscribeToProjectUpdates(handleProjectUpdate, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, []);
 
   // Initialize pagination on mount or filter change
   useEffect(() => {

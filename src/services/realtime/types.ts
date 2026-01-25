@@ -158,6 +158,8 @@ export interface RealtimeUnit {
 export const REALTIME_EVENTS = {
   BUILDING_UPDATED: 'realtime:building-updated',
   PROJECT_UPDATED: 'realtime:project-updated',
+  UNIT_UPDATED: 'realtime:unit-updated',
+  CONTACT_UPDATED: 'realtime:contact-updated',
   BUILDING_PROJECT_LINKED: 'realtime:building-project-linked',
   UNIT_BUILDING_LINKED: 'realtime:unit-building-linked',
   NAVIGATION_REFRESH: 'realtime:navigation-refresh',
@@ -200,9 +202,65 @@ export interface ProjectUpdatedPayload {
 }
 
 /**
- * 🏢 ENTERPRISE: localStorage key for cross-page sync
+ * 🏢 ENTERPRISE: Event payload for building update
+ * Used for real-time sync when building data changes
+ */
+export interface BuildingUpdatedPayload {
+  buildingId: string;
+  updates: {
+    name?: string;
+    address?: string;
+    city?: string;
+    status?: string;
+    totalArea?: number;
+    floors?: number;
+    projectId?: string | null;
+  };
+  timestamp: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: Event payload for unit update
+ * Used for real-time sync when unit data changes
+ */
+export interface UnitUpdatedPayload {
+  unitId: string;
+  updates: {
+    name?: string;
+    type?: string;
+    status?: string;
+    area?: number;
+    floor?: number;
+    buildingId?: string | null;
+    soldTo?: string | null;
+  };
+  timestamp: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: Event payload for contact update
+ * Used for real-time sync when contact data changes
+ */
+export interface ContactUpdatedPayload {
+  contactId: string;
+  updates: {
+    firstName?: string;
+    lastName?: string;
+    companyName?: string;
+    serviceName?: string;
+    status?: string;
+    isFavorite?: boolean;
+  };
+  timestamp: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: localStorage keys for cross-page sync
  * Using storage events to sync updates across browser tabs
  */
 export const REALTIME_STORAGE_KEYS = {
   PROJECT_UPDATED: 'realtime:project-updated',
+  BUILDING_UPDATED: 'realtime:building-updated',
+  UNIT_UPDATED: 'realtime:unit-updated',
+  CONTACT_UPDATED: 'realtime:contact-updated',
 } as const;

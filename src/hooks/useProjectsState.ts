@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import type { Project } from '@/types/project';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 
 export function useProjectsState(initialProjects: Project[]) {
-  
+
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [selectedProject, setSelectedProject] = useState<Project | null>(
     initialProjects && initialProjects.length > 0 ? initialProjects[0] : null
@@ -17,6 +19,34 @@ export function useProjectsState(initialProjects: Project[]) {
       setSelectedProject(initialProjects[0]);
     }
   }, [initialProjects, selectedProject]);
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+  // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
+  useEffect(() => {
+    const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
+      console.log('🔄 [useProjectsState] Applying update for project:', payload.projectId);
+
+      setProjects(prev => prev.map(project =>
+        project.id === payload.projectId
+          ? { ...project, ...payload.updates }
+          : project
+      ));
+
+      // Also update selectedProject if it's the one being updated
+      setSelectedProject(prev =>
+        prev?.id === payload.projectId
+          ? { ...prev, ...payload.updates }
+          : prev
+      );
+    };
+
+    // Subscribe to project updates (same-page + cross-page)
+    const unsubscribe = RealtimeService.subscribeToProjectUpdates(handleProjectUpdate, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, []);
   const [viewMode, setViewMode] = useState<'list'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCompany, setFilterCompany] = useState('all');

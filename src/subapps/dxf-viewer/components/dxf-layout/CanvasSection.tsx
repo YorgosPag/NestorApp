@@ -30,6 +30,9 @@ import { createOverlayHandlers } from '../../overlays/types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ENTERPRISE (2026-01-25): Edge detection for polygon vertex insertion
 import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
+// 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings via Provider (CANONICAL - SINGLE SOURCE OF TRUTH)
+import { useGripStyles } from '../../settings-provider';
+import type { LayerRenderOptions } from '../../canvas-v2/layer-canvas/layer-types';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { useZoom } from '../../systems/zoom';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -88,8 +91,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const [draftPolygon, setDraftPolygon] = useState<Array<[number, number]>>([]);
   // 🔧 FIX (2026-01-24): Ref for fresh polygon access in async operations
   const draftPolygonRef = useRef<Array<[number, number]>>([]);
-  // 🏢 ENTERPRISE (2026-01-25): State για edge midpoint hover detection
+  // 🏢 ENTERPRISE (2026-01-25): State για grip hover detection
   const [hoveredEdgeInfo, setHoveredEdgeInfo] = useState<{ overlayId: string; edgeIndex: number } | null>(null);
+  const [hoveredVertexInfo, setHoveredVertexInfo] = useState<{ overlayId: string; vertexIndex: number } | null>(null);
+  // 🏢 ENTERPRISE (2026-01-25): State για edge midpoint drag (vertex insertion)
+  const [draggingEdgeMidpoint, setDraggingEdgeMidpoint] = useState<{
+    overlayId: string;
+    edgeIndex: number;
+    startPoint: Point2D;
+    currentPoint: Point2D;
+  } | null>(null);
   // 🔧 FIX (2026-01-24): Flag to track if we're in the process of saving
   const [isSavingPolygon, setIsSavingPolygon] = useState(false);
   // 🎯 EVENT BUS: For polygon drawing communication with toolbar
@@ -242,6 +253,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // Get cursor settings from CursorSystem
   const { settings: cursorSettings } = useCursorSettings();
+
+  // 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings (SINGLE SOURCE OF TRUTH)
+  // Pattern: SAP/Autodesk - Provider-based settings for consistent grip appearance
+  const gripSettings = useGripStyles();
 
   /**
    * 🏢 ENTERPRISE: Container-level mouse tracking for CursorSystem
@@ -461,6 +476,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           // 🏢 ENTERPRISE (2026-01-25): Show edge midpoint grips for vertex insertion (Autodesk pattern)
           showEdgeMidpoints: isSelected,
           hoveredEdgeIndex: hoveredEdgeInfo?.overlayId === overlay.id ? hoveredEdgeInfo.edgeIndex : undefined,
+          hoveredVertexIndex: hoveredVertexInfo?.overlayId === overlay.id ? hoveredVertexInfo.vertexIndex : undefined,
           polygons: [{
             id: `polygon_${overlay.id}`,
             vertices,
@@ -1009,42 +1025,87 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               gridSettings={{ ...gridSettings, enabled: false }} // 🔧 FIX: Disable grid in LayerCanvas (now in DxfCanvas)
               rulerSettings={{ ...rulerSettings, enabled: false }} // 🔧 FIX: Disable rulers in LayerCanvas (now in DxfCanvas)
               selectionSettings={selectionSettings}
+              // 🏢 ENTERPRISE (2026-01-25): Pass centralized grip settings to LayerCanvas
+              renderOptions={{
+                showCrosshair: true,
+                showCursor: true,
+                showSnapIndicators: true,
+                showGrid: false,
+                showRulers: false,
+                showSelectionBox: false,
+                crosshairPosition: null,
+                cursorPosition: null,
+                snapResults: [],
+                selectionBox: null,
+                gripSettings // 🎯 SINGLE SOURCE OF TRUTH
+              }}
               onLayerClick={handleOverlayClick}
               onCanvasClick={handleCanvasClick}
-              onMouseMove={(point) => {
-                setMouseCss(point);
-                setMouseWorld(point); // TODO: Transform CSS to world coordinates
+              onMouseMove={(screenPoint) => {
+                setMouseCss(screenPoint);
 
-                // 🏢 ENTERPRISE (2026-01-25): Edge hover detection for selected overlays
+                // 🔧 FIX: Convert screen to world coordinates for grip detection
+                const worldPoint = CoordinateTransforms.screenToWorld(screenPoint, transform, viewport);
+                setMouseWorld(worldPoint);
+
+                // 🏢 ENTERPRISE (2026-01-25): Grip hover detection for selected overlays
+                // Uses CENTRALIZED gripSettings for tolerance calculation
                 if ((activeTool === 'select' || activeTool === 'layering') && selectedOverlay) {
                   const overlay = currentOverlays.find(o => o.id === selectedOverlay.id);
                   if (overlay?.polygon) {
-                    const EDGE_TOLERANCE = 15 / transform.scale; // 15 pixels in world units
-                    const edgeInfo = findOverlayEdgeForGrip(point, overlay.polygon, EDGE_TOLERANCE);
+                    // 🎯 CENTRALIZED: Tolerance from grip settings (not hardcoded)
+                    const gripTolerancePx = (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1.0) + 2;
+                    const gripToleranceWorld = gripTolerancePx / transform.scale;
 
-                    if (edgeInfo) {
-                      setHoveredEdgeInfo({ overlayId: overlay.id, edgeIndex: edgeInfo.edgeIndex });
-                    } else {
-                      setHoveredEdgeInfo(null);
+                    // 1. Check vertex grips first (higher priority)
+                    let foundVertexHover = false;
+                    for (let i = 0; i < overlay.polygon.length; i++) {
+                      const vertex = overlay.polygon[i];
+                      const dx = worldPoint.x - vertex[0];
+                      const dy = worldPoint.y - vertex[1];
+                      const distance = Math.sqrt(dx * dx + dy * dy);
+
+                      if (distance < gripToleranceWorld) {
+                        setHoveredVertexInfo({ overlayId: overlay.id, vertexIndex: i });
+                        setHoveredEdgeInfo(null); // Clear edge hover
+                        foundVertexHover = true;
+                        break;
+                      }
+                    }
+
+                    // 2. If no vertex hover, check edge midpoints
+                    if (!foundVertexHover) {
+                      setHoveredVertexInfo(null);
+                      const edgeInfo = findOverlayEdgeForGrip(worldPoint, overlay.polygon, gripToleranceWorld);
+
+                      if (edgeInfo) {
+                        setHoveredEdgeInfo({ overlayId: overlay.id, edgeIndex: edgeInfo.edgeIndex });
+                      } else {
+                        setHoveredEdgeInfo(null);
+                      }
                     }
                   }
                 } else {
                   // Clear hover when not in select/layering mode
-                  if (hoveredEdgeInfo) {
-                    setHoveredEdgeInfo(null);
-                  }
+                  if (hoveredEdgeInfo) setHoveredEdgeInfo(null);
+                  if (hoveredVertexInfo) setHoveredVertexInfo(null);
+                }
+
+                // 🏢 ENTERPRISE: Handle edge midpoint dragging
+                if (draggingEdgeMidpoint) {
+                  setDraggingEdgeMidpoint(prev => prev ? { ...prev, currentPoint: worldPoint } : null);
                 }
 
                 // ✅ ΔΙΟΡΘΩΣΗ: Καλώ και το props.onMouseMove για cursor-centered zoom
                 if (props.onMouseMove) {
                   // 🎯 TYPE-SAFE: Create proper mock event (event not available in this context)
                   const mockEvent = {
-                    clientX: point.x,
-                    clientY: point.y,
+                    clientX: screenPoint.x,
+                    clientY: screenPoint.y,
                     preventDefault: () => {},
                     stopPropagation: () => {}
                   } as React.MouseEvent;
-                  props.onMouseMove(point, mockEvent);
+                  props.onMouseMove(worldPoint, mockEvent);
                 }
               }}
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`} // 🎯 Z-INDEX FIX: LayerCanvas BACKGROUND (z-0)

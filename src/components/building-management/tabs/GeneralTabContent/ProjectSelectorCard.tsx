@@ -10,7 +10,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getProjectsList } from '../../building-services';
-import { RealtimeService } from '@/services/realtime';
+import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -87,6 +87,27 @@ export function ProjectSelectorCard({
       setSelectedProjectId(currentProjectId || '__none__');
     }
   }, [currentProjectId]);
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+  // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
+  useEffect(() => {
+    const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
+      console.log('🔄 [ProjectSelectorCard] Applying update for project:', payload.projectId);
+
+      setProjects(prev => prev.map(project =>
+        project.id === payload.projectId
+          ? { ...project, name: payload.updates.name || project.name }
+          : project
+      ));
+    };
+
+    // Subscribe to project updates (same-page + cross-page)
+    const unsubscribe = RealtimeService.subscribeToProjectUpdates(handleProjectUpdate, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, []);
 
   // 🏢 ENTERPRISE: Handle project selection
   const handleProjectChange = useCallback((value: string) => {

@@ -8,10 +8,12 @@
  * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
  */
 
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Building } from '@/types/building/contracts';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 /**
  * 🏗️ Ανάκτηση κτιρίων από Firebase
@@ -38,6 +40,70 @@ export async function getBuildings(limitCount: number = 100): Promise<Building[]
   } catch (error) {
     console.error('❌ Error fetching buildings from Firebase:', error);
     return []; // Επιστροφή κενού array αντί για sample data
+  }
+}
+
+/**
+ * 🏢 ENTERPRISE: Building update payload type
+ * Type-safe updates for building modifications
+ */
+export interface BuildingUpdatePayload {
+  name?: string;
+  description?: string;
+  totalArea?: number;
+  builtArea?: number;
+  floors?: number;
+  units?: number;
+  totalValue?: number;
+  startDate?: string;
+  completionDate?: string;
+  address?: string;
+  city?: string;
+  status?: string;
+}
+
+/**
+ * 🏗️ ENTERPRISE: Ενημέρωση κτιρίου στο Firebase
+ * Αποθηκεύει τα δεδομένα στη βάση και ενημερώνει το real-time service
+ */
+export async function updateBuilding(
+  buildingId: string,
+  updates: BuildingUpdatePayload
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log(`🏗️ [updateBuilding] Updating building ${buildingId}...`);
+
+    const buildingRef = doc(db, COLLECTIONS.BUILDINGS, buildingId);
+    await updateDoc(buildingRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+
+    console.log(`✅ [updateBuilding] Building ${buildingId} updated successfully`);
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    // Dispatch event for all components to update their local state
+    RealtimeService.dispatchBuildingUpdated({
+      buildingId,
+      updates: {
+        name: updates.name,
+        address: updates.address,
+        city: updates.city,
+        status: updates.status,
+        totalArea: updates.totalArea,
+        floors: updates.floors,
+      },
+      timestamp: Date.now()
+    });
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('❌ [updateBuilding] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
   }
 }
 

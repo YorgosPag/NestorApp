@@ -33,6 +33,8 @@ import { SelectionRenderer } from './selection/SelectionRenderer';
 import { UIRendererComposite, type UICategory } from '../../rendering/ui/core/UIRendererComposite';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/core/UIRenderContext';
 import type { UIRenderOptions, UIElementSettings } from '../../rendering/ui/core/UIRenderer';
+// 🏢 ENTERPRISE: Centralized GripSettings type
+import type { GripSettings } from '../../types/gripSettings';
 
 export class LayerRenderer {
   private ctx: CanvasRenderingContext2D;
@@ -48,6 +50,9 @@ export class LayerRenderer {
   // ✅ ΦΑΣΗ 6: Centralized UI Rendering System
   private uiComposite: UIRendererComposite;
   private useUnifiedRendering: boolean = false; // Feature flag για smooth transition
+
+  // 🏢 ENTERPRISE (2026-01-25): Centralized grip settings for rendering
+  private currentGripSettings: GripSettings | null = null;
 
   // ✅ ΦΑΣΗ 7: Unified canvas system integration
   private canvasInstance?: CanvasInstance;
@@ -172,6 +177,9 @@ export class LayerRenderer {
         options
       }, this.canvasInstance.id);
     }
+
+    // 🏢 ENTERPRISE: Store grip settings for use in polygon rendering
+    this.currentGripSettings = options.gripSettings ?? null;
 
     const startTime = performance.now();
 
@@ -528,34 +536,52 @@ export class LayerRenderer {
       // Debug disabled: console.log('🔍 Applied selection highlight');
     }
 
-    // 🔧 DRAFT POLYGON GRIPS (2026-01-24): Render grips at each vertex for draft polygons
+    // 🏢 ENTERPRISE (2026-01-25): Vertex grips using CENTRALIZED GripSettings
+    // Pattern: Autodesk/SAP - Single Source of Truth for grip appearance
     if (layer.showGrips && polygon.vertices.length >= 1) {
-      const GRIP_SIZE = 10; // pixels
-      const GRIP_COLOR_NORMAL = UI_COLORS.GRIP_DEFAULT || '#3b82f6'; // Blue
-      const GRIP_COLOR_CLOSE = UI_COLORS.SUCCESS_BRIGHT || '#22c55e'; // Green for close highlight
+      // 🎯 CENTRALIZED: Get grip settings from instance (passed via render options)
+      const gripSettings = this.currentGripSettings;
+      const dpiScale = gripSettings?.dpiScale ?? 1.0;
+      const baseSize = (gripSettings?.gripSize ?? 5) * dpiScale;
+
+      // Calculate sizes using centralized formula (cold→warm→hot multipliers)
+      const GRIP_SIZE_COLD = Math.round(baseSize);
+      const GRIP_SIZE_WARM = Math.round(baseSize * 1.2);
+      const GRIP_SIZE_HOT = Math.round(baseSize * 1.4);
+
+      // Get colors from centralized settings
+      const GRIP_COLOR_COLD = gripSettings?.colors?.cold ?? UI_COLORS.GRIP_DEFAULT ?? '#3b82f6';
+      const GRIP_COLOR_WARM = gripSettings?.colors?.warm ?? UI_COLORS.GRIP_HOVER ?? '#f59e0b';
+      const GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SUCCESS_BRIGHT ?? '#22c55e';
+      const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK ?? '#000000';
 
       for (let i = 0; i < screenVertices.length; i++) {
         const vertex = screenVertices[i];
         const isFirstGrip = i === 0;
-        const isHighlighted = isFirstGrip && layer.isNearFirstPoint;
+        const isCloseHighlighted = isFirstGrip && layer.isNearFirstPoint;
+        const isHovered = layer.hoveredVertexIndex === i;
+
+        // Determine grip state: hot (close) > warm (hover) > cold (normal)
+        const gripState: 'cold' | 'warm' | 'hot' = isCloseHighlighted ? 'hot' : isHovered ? 'warm' : 'cold';
+        const gripSize = gripState === 'hot' ? GRIP_SIZE_HOT : gripState === 'warm' ? GRIP_SIZE_WARM : GRIP_SIZE_COLD;
+        const fillColor = gripState === 'hot' ? GRIP_COLOR_HOT : gripState === 'warm' ? GRIP_COLOR_WARM : GRIP_COLOR_COLD;
 
         // Draw grip square
         this.ctx.save();
-        this.ctx.fillStyle = isHighlighted ? GRIP_COLOR_CLOSE : GRIP_COLOR_NORMAL;
-        this.ctx.strokeStyle = UI_COLORS.BLACK || '#000000';
-        this.ctx.lineWidth = 1;
+        this.ctx.fillStyle = fillColor;
+        this.ctx.strokeStyle = GRIP_COLOR_CONTOUR;
+        this.ctx.lineWidth = gripState !== 'cold' ? 2 : 1;
 
         // Draw filled square grip
-        const halfSize = GRIP_SIZE / 2;
-        this.ctx.fillRect(vertex.x - halfSize, vertex.y - halfSize, GRIP_SIZE, GRIP_SIZE);
-        this.ctx.strokeRect(vertex.x - halfSize, vertex.y - halfSize, GRIP_SIZE, GRIP_SIZE);
+        const halfSize = gripSize / 2;
+        this.ctx.fillRect(vertex.x - halfSize, vertex.y - halfSize, gripSize, gripSize);
+        this.ctx.strokeRect(vertex.x - halfSize, vertex.y - halfSize, gripSize, gripSize);
 
-        // Draw "close" indicator for first grip when highlighted
-        if (isHighlighted) {
-          // Draw a slightly larger outer ring to indicate "click to close"
-          this.ctx.strokeStyle = GRIP_COLOR_CLOSE;
+        // Draw "close" indicator for first grip when highlighted (hot state)
+        if (isCloseHighlighted) {
+          this.ctx.strokeStyle = GRIP_COLOR_HOT;
           this.ctx.lineWidth = 2;
-          const outerSize = GRIP_SIZE + 6;
+          const outerSize = gripSize + 6;
           const outerHalf = outerSize / 2;
           this.ctx.strokeRect(vertex.x - outerHalf, vertex.y - outerHalf, outerSize, outerSize);
         }
@@ -564,21 +590,21 @@ export class LayerRenderer {
       }
     }
 
-    // 🏢 ENTERPRISE (2026-01-25): Edge midpoint grips for vertex insertion (Autodesk pattern)
-    // ○ = Edge midpoint grip (circle) - click to add new vertex at this position
-    // 🔍 DEBUG: Log edge midpoint rendering conditions
-    console.log('🔍 Edge midpoints check:', {
-      showEdgeMidpoints: layer.showEdgeMidpoints,
-      verticesCount: polygon.vertices.length,
-      showGrips: layer.showGrips,
-      layerId: layer.id,
-      hoveredEdgeIndex: layer.hoveredEdgeIndex
-    });
+    // 🏢 ENTERPRISE (2026-01-25): Edge midpoint grips using CENTRALIZED settings (Autodesk pattern)
+    // ◇ = Diamond/rhombus grip - click to add new vertex at this position
     if (layer.showEdgeMidpoints && polygon.vertices.length >= 2) {
-      console.log('✅ RENDERING edge midpoints for layer:', layer.id, 'edges:', polygon.vertices.length);
-      const EDGE_GRIP_RADIUS = 5; // pixels - smaller than vertex grips
-      const EDGE_GRIP_COLOR_NORMAL = UI_COLORS.GRIP_EDGE || '#9ca3af'; // Gray for normal state
-      const EDGE_GRIP_COLOR_HOVER = UI_COLORS.GRIP_HOVER || '#f59e0b'; // Orange for hover state
+      const gripSettings = this.currentGripSettings;
+      const dpiScale = gripSettings?.dpiScale ?? 1.0;
+
+      // Edge grips are smaller than vertex grips (60% of base size)
+      const baseEdgeSize = ((gripSettings?.gripSize ?? 5) * 0.6) * dpiScale;
+      const EDGE_GRIP_SIZE_COLD = Math.round(baseEdgeSize);
+      const EDGE_GRIP_SIZE_WARM = Math.round(baseEdgeSize * 1.4); // More dramatic hover for edges
+
+      // Colors: Edge grips use dedicated edge color when cold, warm color when hovered
+      const EDGE_GRIP_COLOR_COLD = UI_COLORS.GRIP_EDGE ?? '#9ca3af';
+      const EDGE_GRIP_COLOR_WARM = gripSettings?.colors?.warm ?? UI_COLORS.GRIP_HOVER ?? '#f59e0b';
+      const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK ?? '#000000';
 
       // Iterate through edges (including closing edge for closed polygons)
       const edgeCount = screenVertices.length;
@@ -589,29 +615,38 @@ export class LayerRenderer {
         // Calculate midpoint in screen coordinates
         const midX = (startVertex.x + endVertex.x) / 2;
         const midY = (startVertex.y + endVertex.y) / 2;
-        console.log('🔵 Drawing edge midpoint at:', { i, midX, midY, startVertex, endVertex });
 
         // Check if this edge is hovered
         const isHovered = layer.hoveredEdgeIndex === i;
+        const gripSize = isHovered ? EDGE_GRIP_SIZE_WARM : EDGE_GRIP_SIZE_COLD;
 
-        // Draw circular grip at midpoint
+        // Draw diamond/rhombus grip at midpoint ◇
         this.ctx.save();
-        this.ctx.fillStyle = isHovered ? EDGE_GRIP_COLOR_HOVER : EDGE_GRIP_COLOR_NORMAL;
-        this.ctx.strokeStyle = UI_COLORS.BLACK || '#000000';
-        this.ctx.lineWidth = 1;
+        this.ctx.fillStyle = isHovered ? EDGE_GRIP_COLOR_WARM : EDGE_GRIP_COLOR_COLD;
+        this.ctx.strokeStyle = isHovered ? EDGE_GRIP_COLOR_WARM : GRIP_COLOR_CONTOUR;
+        this.ctx.lineWidth = isHovered ? 2 : 1;
 
-        // Draw filled circle grip
+        // Draw diamond shape (rotated square)
         this.ctx.beginPath();
-        this.ctx.arc(midX, midY, EDGE_GRIP_RADIUS, 0, Math.PI * 2);
+        this.ctx.moveTo(midX, midY - gripSize);        // Top
+        this.ctx.lineTo(midX + gripSize, midY);        // Right
+        this.ctx.lineTo(midX, midY + gripSize);        // Bottom
+        this.ctx.lineTo(midX - gripSize, midY);        // Left
+        this.ctx.closePath();
         this.ctx.fill();
         this.ctx.stroke();
 
-        // Draw hover highlight - larger outer ring
+        // Draw hover highlight - larger outer diamond with glow effect
         if (isHovered) {
-          this.ctx.strokeStyle = EDGE_GRIP_COLOR_HOVER;
+          this.ctx.strokeStyle = EDGE_GRIP_COLOR_WARM;
           this.ctx.lineWidth = 2;
+          const outerSize = gripSize + 4;
           this.ctx.beginPath();
-          this.ctx.arc(midX, midY, EDGE_GRIP_RADIUS + 3, 0, Math.PI * 2);
+          this.ctx.moveTo(midX, midY - outerSize);
+          this.ctx.lineTo(midX + outerSize, midY);
+          this.ctx.lineTo(midX, midY + outerSize);
+          this.ctx.lineTo(midX - outerSize, midY);
+          this.ctx.closePath();
           this.ctx.stroke();
         }
 

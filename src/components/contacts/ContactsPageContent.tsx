@@ -7,6 +7,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import type { Contact, IndividualContact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService, type ContactUpdatedPayload } from '@/services/realtime';
 
 // 🏢 ENTERPRISE: Type guard for contacts with photo URLs
 const hasMultiplePhotoURLs = (contact: Contact): contact is IndividualContact & { multiplePhotoURLs: string[] } => {
@@ -264,6 +266,35 @@ export function ContactsPageContent() {
       window.removeEventListener('contactsUpdated', handleContactsUpdate as EventListener);
     };
   }, [selectedContact]);
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+  // Subscribe to contact updates for cross-page sync (optimized - no full refresh)
+  useEffect(() => {
+    const handleContactUpdate = (payload: ContactUpdatedPayload) => {
+      console.log('🔄 [ContactsPageContent] Applying real-time update for contact:', payload.contactId);
+
+      // Update in contacts list (optimized - no full refresh)
+      setContacts(prev => prev.map(contact =>
+        contact.id === payload.contactId
+          ? { ...contact, ...payload.updates }
+          : contact
+      ));
+
+      // Also update selectedContact if it's the one being updated
+      if (selectedContact?.id === payload.contactId) {
+        setSelectedContact(prev =>
+          prev ? { ...prev, ...payload.updates } : prev
+        );
+      }
+    };
+
+    // Subscribe to contact updates (same-page + cross-page)
+    const unsubscribe = RealtimeService.subscribeToContactUpdates(handleContactUpdate, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, [selectedContact?.id]);
 
   // Update selected contact when contacts list changes
   useEffect(() => {

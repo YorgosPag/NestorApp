@@ -31,6 +31,9 @@ import {
   type BuildingProjectLinkPayload,
   type UnitBuildingLinkPayload,
   type ProjectUpdatedPayload,
+  type BuildingUpdatedPayload,
+  type UnitUpdatedPayload,
+  type ContactUpdatedPayload,
 } from './types';
 
 // ============================================================================
@@ -326,6 +329,268 @@ class RealtimeServiceCore {
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener(REALTIME_EVENTS.PROJECT_UPDATED, handleCustomEvent);
+        window.removeEventListener('storage', handleStorageEvent);
+      }
+    };
+  }
+
+  // ==========================================================================
+  // BUILDING REAL-TIME SYNC
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch building updated event (CENTRALIZED)
+   *
+   * Single source of truth for building updates across all pages.
+   * NOTE: Data is saved to Firestore, localStorage is ONLY for cross-tab notification.
+   */
+  dispatchBuildingUpdated(payload: BuildingUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching BUILDING_UPDATED:', payload.buildingId);
+
+    // 1. Same-page real-time update via CustomEvent
+    this.dispatchEvent(REALTIME_EVENTS.BUILDING_UPDATED, payload);
+
+    // 2. Cross-page notification via localStorage (client-side only)
+    // NOTE: This does NOT store data - it only triggers storage events in other tabs
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.BUILDING_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Subscribe to building updates (CENTRALIZED)
+   */
+  subscribeToBuildingUpdates(
+    onUpdate: (payload: BuildingUpdatedPayload) => void,
+    options?: { checkPendingOnMount?: boolean }
+  ): () => void {
+    const { checkPendingOnMount = true } = options || {};
+
+    const handleCustomEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<BuildingUpdatedPayload>;
+      if (customEvent.detail) {
+        console.log('📡 [RealtimeService] Same-page building update:', customEvent.detail.buildingId);
+        onUpdate(customEvent.detail);
+      }
+    };
+
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key !== REALTIME_STORAGE_KEYS.BUILDING_UPDATED || !event.newValue) return;
+
+      try {
+        const payload = JSON.parse(event.newValue) as BuildingUpdatedPayload;
+        console.log('📡 [RealtimeService] Cross-page building update:', payload.buildingId);
+        onUpdate(payload);
+      } catch (error) {
+        console.error('❌ [RealtimeService] Failed to parse building storage event:', error);
+      }
+    };
+
+    if (checkPendingOnMount && typeof window !== 'undefined') {
+      try {
+        const pendingUpdate = localStorage.getItem(REALTIME_STORAGE_KEYS.BUILDING_UPDATED);
+        if (pendingUpdate) {
+          const payload = JSON.parse(pendingUpdate) as BuildingUpdatedPayload;
+          if (Date.now() - payload.timestamp < 5000) {
+            console.log('📡 [RealtimeService] Applying pending building update:', payload.buildingId);
+            onUpdate(payload);
+          }
+          localStorage.removeItem(REALTIME_STORAGE_KEYS.BUILDING_UPDATED);
+        }
+      } catch (error) {
+        console.error('❌ [RealtimeService] Failed to process pending building update:', error);
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(REALTIME_EVENTS.BUILDING_UPDATED, handleCustomEvent);
+      window.addEventListener('storage', handleStorageEvent);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(REALTIME_EVENTS.BUILDING_UPDATED, handleCustomEvent);
+        window.removeEventListener('storage', handleStorageEvent);
+      }
+    };
+  }
+
+  // ==========================================================================
+  // UNIT REAL-TIME SYNC
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch unit updated event (CENTRALIZED)
+   *
+   * Single source of truth for unit updates across all pages.
+   * NOTE: Data is saved to Firestore, localStorage is ONLY for cross-tab notification.
+   */
+  dispatchUnitUpdated(payload: UnitUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching UNIT_UPDATED:', payload.unitId);
+
+    // 1. Same-page real-time update via CustomEvent
+    this.dispatchEvent(REALTIME_EVENTS.UNIT_UPDATED, payload);
+
+    // 2. Cross-page notification via localStorage (client-side only)
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.UNIT_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Subscribe to unit updates (CENTRALIZED)
+   */
+  subscribeToUnitUpdates(
+    onUpdate: (payload: UnitUpdatedPayload) => void,
+    options?: { checkPendingOnMount?: boolean }
+  ): () => void {
+    const { checkPendingOnMount = true } = options || {};
+
+    const handleCustomEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<UnitUpdatedPayload>;
+      if (customEvent.detail) {
+        console.log('📡 [RealtimeService] Same-page unit update:', customEvent.detail.unitId);
+        onUpdate(customEvent.detail);
+      }
+    };
+
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key !== REALTIME_STORAGE_KEYS.UNIT_UPDATED || !event.newValue) return;
+
+      try {
+        const payload = JSON.parse(event.newValue) as UnitUpdatedPayload;
+        console.log('📡 [RealtimeService] Cross-page unit update:', payload.unitId);
+        onUpdate(payload);
+      } catch (error) {
+        console.error('❌ [RealtimeService] Failed to parse unit storage event:', error);
+      }
+    };
+
+    if (checkPendingOnMount && typeof window !== 'undefined') {
+      try {
+        const pendingUpdate = localStorage.getItem(REALTIME_STORAGE_KEYS.UNIT_UPDATED);
+        if (pendingUpdate) {
+          const payload = JSON.parse(pendingUpdate) as UnitUpdatedPayload;
+          if (Date.now() - payload.timestamp < 5000) {
+            console.log('📡 [RealtimeService] Applying pending unit update:', payload.unitId);
+            onUpdate(payload);
+          }
+          localStorage.removeItem(REALTIME_STORAGE_KEYS.UNIT_UPDATED);
+        }
+      } catch (error) {
+        console.error('❌ [RealtimeService] Failed to process pending unit update:', error);
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(REALTIME_EVENTS.UNIT_UPDATED, handleCustomEvent);
+      window.addEventListener('storage', handleStorageEvent);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(REALTIME_EVENTS.UNIT_UPDATED, handleCustomEvent);
+        window.removeEventListener('storage', handleStorageEvent);
+      }
+    };
+  }
+
+  // ==========================================================================
+  // CONTACT REAL-TIME SYNC
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch contact updated event (CENTRALIZED)
+   *
+   * Single source of truth for contact updates across all pages.
+   * NOTE: Data is saved to Firestore, localStorage is ONLY for cross-tab notification.
+   */
+  dispatchContactUpdated(payload: ContactUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching CONTACT_UPDATED:', payload.contactId);
+
+    // 1. Same-page real-time update via CustomEvent
+    this.dispatchEvent(REALTIME_EVENTS.CONTACT_UPDATED, payload);
+
+    // 2. Cross-page notification via localStorage (client-side only)
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.CONTACT_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Subscribe to contact updates (CENTRALIZED)
+   */
+  subscribeToContactUpdates(
+    onUpdate: (payload: ContactUpdatedPayload) => void,
+    options?: { checkPendingOnMount?: boolean }
+  ): () => void {
+    const { checkPendingOnMount = true } = options || {};
+
+    const handleCustomEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<ContactUpdatedPayload>;
+      if (customEvent.detail) {
+        console.log('📡 [RealtimeService] Same-page contact update:', customEvent.detail.contactId);
+        onUpdate(customEvent.detail);
+      }
+    };
+
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key !== REALTIME_STORAGE_KEYS.CONTACT_UPDATED || !event.newValue) return;
+
+      try {
+        const payload = JSON.parse(event.newValue) as ContactUpdatedPayload;
+        console.log('📡 [RealtimeService] Cross-page contact update:', payload.contactId);
+        onUpdate(payload);
+      } catch (error) {
+        console.error('❌ [RealtimeService] Failed to parse contact storage event:', error);
+      }
+    };
+
+    if (checkPendingOnMount && typeof window !== 'undefined') {
+      try {
+        const pendingUpdate = localStorage.getItem(REALTIME_STORAGE_KEYS.CONTACT_UPDATED);
+        if (pendingUpdate) {
+          const payload = JSON.parse(pendingUpdate) as ContactUpdatedPayload;
+          if (Date.now() - payload.timestamp < 5000) {
+            console.log('📡 [RealtimeService] Applying pending contact update:', payload.contactId);
+            onUpdate(payload);
+          }
+          localStorage.removeItem(REALTIME_STORAGE_KEYS.CONTACT_UPDATED);
+        }
+      } catch (error) {
+        console.error('❌ [RealtimeService] Failed to process pending contact update:', error);
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(REALTIME_EVENTS.CONTACT_UPDATED, handleCustomEvent);
+      window.addEventListener('storage', handleStorageEvent);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(REALTIME_EVENTS.CONTACT_UPDATED, handleCustomEvent);
         window.removeEventListener('storage', handleStorageEvent);
       }
     };

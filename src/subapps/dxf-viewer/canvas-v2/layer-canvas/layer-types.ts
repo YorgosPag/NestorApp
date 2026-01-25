@@ -25,6 +25,7 @@ export interface ColorLayer {
   // 🏢 ENTERPRISE (2026-01-25): Edge midpoint grips for vertex insertion (Autodesk pattern)
   showEdgeMidpoints?: boolean; // Show midpoint grips on edges for adding new vertices
   hoveredEdgeIndex?: number;   // Index of currently hovered edge (for visual feedback)
+  hoveredVertexIndex?: number; // Index of currently hovered vertex grip (for visual feedback)
 }
 
 export interface LayerPolygon {
@@ -149,6 +150,9 @@ export interface SelectionBox {
 }
 
 // === LAYER RENDER OPTIONS ===
+// 🏢 ENTERPRISE: Import centralized GripSettings type
+import type { GripSettings } from '../../types/gripSettings';
+
 export interface LayerRenderOptions {
   showCrosshair: boolean;
   showCursor: boolean;
@@ -160,4 +164,6 @@ export interface LayerRenderOptions {
   cursorPosition: Point2D | null;
   snapResults: SnapResult[];
   selectionBox: SelectionBox | null;
+  // 🏢 ENTERPRISE (2026-01-25): Centralized grip settings for vertex/edge grips
+  gripSettings?: GripSettings;
 }

@@ -381,3 +381,98 @@ export function removeVertexFromOverlayPolygon(
 
   return newPolygon;
 }
+
+// ============================================================================
+// 🏢 ENTERPRISE (2026-01-25): OVERLAY ↔ REGION ADAPTERS
+// Adapter Pattern για integration με κεντρικοποιημένο Grip System
+// Μετατρέπει Overlay format σε Region format που χρησιμοποιούν τα hooks
+// ============================================================================
+
+import type { Overlay } from '../overlays/types';
+import type { Region } from '../types/overlay';
+
+/**
+ * 🏢 ENTERPRISE ADAPTER: Convert Overlay to Region format
+ * Επιτρέπει χρήση του κεντρικοποιημένου useGripDetection με Overlays
+ *
+ * @param overlay - Overlay με polygon: Array<[number, number]>
+ * @returns Region με vertices: Point2D[] (compatible με grip hooks)
+ */
+export function overlayToRegion(overlay: Overlay): Region {
+  return {
+    id: overlay.id,
+    vertices: overlay.polygon.map(overlayVertexToPoint2D),
+    status: overlay.status ?? 'for-sale',
+    layer: overlay.kind === 'unit' ? 'units'
+         : overlay.kind === 'parking' ? 'parking'
+         : overlay.kind === 'storage' ? 'storage'
+         : 'common',
+    metadata: overlay.linked ? { linked: overlay.linked } : undefined,
+    locked: false,
+    visible: true,
+    opacity: overlay.style?.opacity ?? 1.0,
+    color: overlay.style?.fill,
+    levelId: overlay.levelId,
+    createdAt: overlay.createdAt ? new Date(overlay.createdAt).toISOString() : undefined,
+    updatedAt: overlay.updatedAt ? new Date(overlay.updatedAt).toISOString() : undefined,
+  };
+}
+
+/**
+ * 🏢 ENTERPRISE ADAPTER: Convert multiple Overlays to Regions
+ * Batch conversion για efficiency
+ *
+ * @param overlays - Array of Overlays
+ * @returns Array of Regions (compatible με grip hooks)
+ */
+export function overlaysToRegions(overlays: Overlay[]): Region[] {
+  return overlays.map(overlayToRegion);
+}
+
+/**
+ * 🏢 ENTERPRISE: Update overlay vertex at specific index
+ * Χρησιμοποιείται από grip dragging για vertex move
+ *
+ * @param polygon - Original polygon Array<[number, number]>
+ * @param vertexIndex - Index of vertex to update
+ * @param newPosition - New position as Point2D
+ * @returns New polygon with updated vertex
+ */
+export function updateOverlayVertex(
+  polygon: Array<[number, number]>,
+  vertexIndex: number,
+  newPosition: Point2D
+): Array<[number, number]> {
+  if (vertexIndex < 0 || vertexIndex >= polygon.length) {
+    return polygon; // Invalid index, return unchanged
+  }
+
+  const newPolygon = [...polygon];
+  newPolygon[vertexIndex] = point2DToOverlayVertex(newPosition);
+  return newPolygon;
+}
+
+/**
+ * 🏢 ENTERPRISE: Calculate edge midpoint for overlay polygon
+ * Υπολογίζει το μεσαίο σημείο μιας ακμής
+ *
+ * @param polygon - Overlay polygon
+ * @param edgeIndex - Index of edge (0 = between vertex 0 and 1)
+ * @returns Midpoint as Point2D or null if invalid
+ */
+export function getOverlayEdgeMidpoint(
+  polygon: Array<[number, number]>,
+  edgeIndex: number
+): Point2D | null {
+  if (edgeIndex < 0 || edgeIndex >= polygon.length) {
+    return null;
+  }
+
+  const start = overlayVertexToPoint2D(polygon[edgeIndex]);
+  const end = overlayVertexToPoint2D(polygon[(edgeIndex + 1) % polygon.length]);
+
+  return {
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2
+  };
+}

@@ -8,6 +8,8 @@ import { getUnits } from '@/services/units.service';
 import type { Property } from '@/types/property-viewer';
 import { getContactDisplayName } from '@/types/contacts';
 import { normalizeToDate } from '@/lib/date-local';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService, type ContactUpdatedPayload } from '@/services/realtime';
 
 
 export type ViewMode = 'list' | 'grid';
@@ -75,7 +77,35 @@ export function useContactsState() {
     };
     fetchInitialData();
   }, [refreshKey]);
-  
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+  // Subscribe to contact updates for cross-page sync
+  useEffect(() => {
+    const handleContactUpdate = (payload: ContactUpdatedPayload) => {
+      console.log('🔄 [useContactsState] Applying update for contact:', payload.contactId);
+
+      setAllContacts(prev => prev.map(contact =>
+        contact.id === payload.contactId
+          ? { ...contact, ...payload.updates }
+          : contact
+      ));
+
+      // Also update selectedContact if it's the one being updated
+      setSelectedContact(prev =>
+        prev?.id === payload.contactId
+          ? { ...prev, ...payload.updates }
+          : prev
+      );
+    };
+
+    // Subscribe to contact updates (same-page + cross-page)
+    const unsubscribe = RealtimeService.subscribeToContactUpdates(handleContactUpdate, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, []);
+
   // Effect to handle initial contact selection from URL or default
   useEffect(() => {
     if (!allContacts.length) return;

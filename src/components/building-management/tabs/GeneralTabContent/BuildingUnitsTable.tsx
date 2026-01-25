@@ -13,6 +13,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService, type UnitUpdatedPayload } from '@/services/realtime';
 
 function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -49,7 +51,28 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
 
     fetchUnits();
   }, [buildingId]);
-  
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+  // Subscribe to unit updates for cross-page sync
+  useEffect(() => {
+    const handleUnitUpdate = (payload: UnitUpdatedPayload) => {
+      console.log('🔄 [BuildingUnitsTable] Applying update for unit:', payload.unitId);
+
+      setUnits(prev => prev.map(unit =>
+        unit.id === payload.unitId
+          ? { ...unit, ...payload.updates }
+          : unit
+      ));
+    };
+
+    // Subscribe to unit updates (same-page + cross-page)
+    const unsubscribe = RealtimeService.subscribeToUnitUpdates(handleUnitUpdate, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, []);
+
   const handleViewUnit = useCallback((unitId: string) => {
     router.push(`/units?unitId=${unitId}`);
   }, [router]);

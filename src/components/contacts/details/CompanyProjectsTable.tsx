@@ -13,6 +13,8 @@ import { getProjectLabel } from '@/lib/project-utils';
 import { useCompanyRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 
 
 function CompanyProjectsTable({ companyId }: { companyId: string }) {
@@ -40,13 +42,34 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
                 console.error("Failed to fetch projects for company:", error);
             }
         };
-        
+
         fetchProjects();
 
         return () => {
             isMounted = false;
         };
     }, [companyId]);
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+    // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
+    useEffect(() => {
+        const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
+            console.log('🔄 [CompanyProjectsTable] Applying update for project:', payload.projectId);
+
+            setProjects(prev => prev.map(project =>
+                project.id === payload.projectId
+                    ? { ...project, ...payload.updates }
+                    : project
+            ));
+        };
+
+        // Subscribe to project updates (same-page + cross-page)
+        const unsubscribe = RealtimeService.subscribeToProjectUpdates(handleProjectUpdate, {
+            checkPendingOnMount: false
+        });
+
+        return unsubscribe;
+    }, []);
 
     if (projects.length === 0) {
         return (
