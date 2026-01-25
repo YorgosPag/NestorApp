@@ -503,34 +503,32 @@ export class ErrorTracker {
     });
   }
 
-  // **🚀 ADMIN EMAIL FUNCTIONALITY - ENTERPRISE INTEGRATION**
+  // **🚀 ADMIN NOTIFICATION FUNCTIONALITY - ENTERPRISE INTEGRATION**
+  // 🏢 ENTERPRISE: Direct Firestore notification (no email dependency)
   private async sendToAdminAsync(errorReport: ErrorReport): Promise<void> {
     try {
-      // Dynamically import configuration to avoid circular deps
-      const { notificationConfig } = await import('@/config/error-reporting');
-
-      if (!notificationConfig.channels.adminEmail) {
-        this.log('No admin email configured, skipping admin notification');
-        return;
-      }
-
-      const emailPayload = {
-        to: notificationConfig.channels.adminEmail,
-        subject: `🚨 ${errorReport.severity.toUpperCase()} Error - ${errorReport.context.component || 'Application'}`,
-        templateId: 'error-report',
-        message: this.formatErrorForAdminEmail(errorReport),
-        priority: errorReport.severity === 'critical' ? 'high' : 'normal',
-        category: 'error-report'
+      // 🏢 ENTERPRISE: Use direct notification endpoint (replaces email-based flow)
+      const notificationPayload = {
+        errorId: errorReport.id,
+        message: errorReport.message,
+        stack: errorReport.stack,
+        componentStack: undefined, // ErrorTracker doesn't have component stack
+        component: errorReport.context.component || 'Application',
+        severity: errorReport.severity as 'critical' | 'error' | 'warning',
+        timestamp: new Date(errorReport.lastSeen).toISOString(),
+        url: errorReport.context.url || (typeof window !== 'undefined' ? window.location.href : 'unknown'),
+        userAgent: errorReport.context.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR'),
+        retryCount: errorReport.count - 1
       };
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      await apiClient.post('/api/communications/email', emailPayload);
+      await apiClient.post('/api/notifications/error-report', notificationPayload);
 
-      this.log('Admin email sent successfully', { errorId: errorReport.id });
+      this.log('Admin notification sent successfully', { errorId: errorReport.id });
 
     } catch (error) {
-      this.log('Failed to send admin email', error);
-      // Don't throw - we don't want admin email failure to break error tracking
+      this.log('Failed to send admin notification', error);
+      // Don't throw - we don't want admin notification failure to break error tracking
     }
   }
 

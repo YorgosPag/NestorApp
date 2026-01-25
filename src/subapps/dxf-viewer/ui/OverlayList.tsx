@@ -38,7 +38,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   onDelete,
   onToggleLayers,
 }) => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'properties']);
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

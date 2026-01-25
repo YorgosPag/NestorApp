@@ -27,8 +27,10 @@ const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>, 
       size: {
         default: "h-10 px-4 py-2 rounded-md",
         sm: "h-9 px-3 rounded-md",
+        xs: "h-7 px-2 py-1 rounded-md",           // 🏢 ENTERPRISE: Compact size (28px height, 8px padding)
         lg: "h-11 px-8 rounded-md",
         icon: "h-10 w-10 rounded-md",
+        "icon-sm": "h-7 w-7 rounded-md",          // 🏢 ENTERPRISE: Compact icon button (28x28px)
       },
     },
     defaultVariants: {
@@ -41,7 +43,7 @@ const createButtonVariants = (borderTokens: ReturnType<typeof useBorderTokens>, 
 // 🏢 ENTERPRISE: Button variant type definition
 export type ButtonVariantProps = {
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
-  size?: 'default' | 'sm' | 'lg' | 'icon';
+  size?: 'default' | 'sm' | 'xs' | 'lg' | 'icon' | 'icon-sm';
 }
 
 export interface ButtonProps

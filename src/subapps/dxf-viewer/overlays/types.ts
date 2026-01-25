@@ -50,12 +50,28 @@ export type CreateOverlayData = Omit<Overlay, 'id' | 'createdAt' | 'updatedAt' |
 export type UpdateOverlayData = Partial<Pick<Overlay, 'polygon' | 'status' | 'label' | 'kind' | 'linked' | 'style'>>;
 
 /**
+ * 🎯 OVERLAY STATUS KEYS - Only the 5 basic statuses for overlay toolbar
+ * These are the statuses that have proper colors and translations
+ */
+export const OVERLAY_STATUS_KEYS: Status[] = [
+  'for-sale',
+  'for-rent',
+  'reserved',
+  'sold',
+  'landowner'
+] as const;
+
+/**
  * Σταθερά χρώματα status - χρησιμοποιούμε τα κεντρικά
+ * ⚠️ CAUTION: This contains ALL enhanced statuses (27+)
+ * For overlay toolbar iteration, use OVERLAY_STATUS_KEYS instead
  */
 export const STATUS_COLORS = PROPERTY_STATUS_COLORS;
 
 /**
- * Display labels για UI - χρησιμοποιούμε τα κεντρικά  
+ * Display labels για UI - χρησιμοποιούμε τα κεντρικά
+ * ⚠️ CAUTION: This contains ALL enhanced statuses (27+)
+ * For overlay toolbar iteration, use OVERLAY_STATUS_KEYS instead
  */
 export const STATUS_LABELS = PROPERTY_STATUS_LABELS;
 

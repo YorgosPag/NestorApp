@@ -81,6 +81,7 @@ if (typeof window !== 'undefined') {
       'units',         // Units module
       'storage',       // 🏢 Storage module - added 2026-01-24
       'parking',       // 🏢 Parking module - added 2026-01-24
+      'properties',    // 🏢 Properties module - status labels used by DXF overlays
       'dxf-viewer',
       'geo-canvas',
     ];

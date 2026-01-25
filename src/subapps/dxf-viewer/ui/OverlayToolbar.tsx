@@ -15,7 +15,7 @@ const Separator = ({ orientation, className }: { orientation?: string; className
   <div className={className} />
 );
 import { MousePointer, Pen, X, Copy, Grid, Square, Circle, Triangle, Edit, RotateCcw, RotateCw } from 'lucide-react';
-import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Status, type OverlayKind, type OverlayEditorMode } from '../overlays/types';
+import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, OVERLAY_STATUS_KEYS, type Status, type OverlayKind, type OverlayEditorMode } from '../overlays/types';
 import type { PropertyStatus } from '../../../constants/property-statuses-enterprise';
 import { useUnifiedOverlayCreation } from '../hooks/overlay/useUnifiedOverlayCreation';
 import { toolStyleStore, type ToolStyle } from '../stores/ToolStyleStore';
@@ -57,7 +57,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
   snapEnabled, onSnapToggle, selectedOverlayId, onDuplicate, onDelete,
   canUndo, canRedo, onUndo, onRedo, onToolChange, disableFloating = false,
 }) => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'properties']);
   const iconSizes = useIconSizes();
   const { quick, radius, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -219,7 +219,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
           <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('toolbar.status')}</span>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-            {(Object.keys(STATUS_COLORS) as Status[]).map(status => (
+            {OVERLAY_STATUS_KEYS.map(status => (
               <Tooltip key={status}>
                 <TooltipTrigger asChild>
                   <button

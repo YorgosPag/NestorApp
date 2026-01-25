@@ -1606,6 +1606,32 @@ export const PANEL_ANCHORING = {
     /** Windows taskbar height (approximate) */
     WINDOWS_TASKBAR: 40,
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 🏢 PANEL DIMENSIONS - Centralized floating panel sizes (ADR-029)
+  // ─────────────────────────────────────────────────────────────────────────
+  DIMENSIONS: {
+    /** Overlay Drawing Toolbar (Εργαλεία Σχεδίασης) */
+    OVERLAY_TOOLBAR: {
+      width: 380,
+      height: 80,
+    },
+    /** Overlay Properties Panel (Ιδιότητες Overlay) */
+    OVERLAY_PROPERTIES: {
+      width: 320,
+      height: 400,
+    },
+    /** Performance Monitor Panel */
+    PERFORMANCE_MONITOR: {
+      width: 340,
+      height: 400,
+    },
+    /** Default panel dimensions */
+    DEFAULT: {
+      width: 340,
+      height: 400,
+    },
+  },
 } as const;
 
 /**

@@ -28,17 +28,18 @@ export type PropertyStatus =
 
 // 🏢 ENTERPRISE: i18n keys for property status labels
 // Labels are translated at runtime by components using useTranslation
+// 🌐 NOTE: Using ':' namespace separator for cross-namespace access
 export const PROPERTY_STATUS_LABELS: Record<PropertyStatus, string> = {
-  'for-sale': 'properties.status.forSale',
-  'for-rent': 'properties.status.forRent',
-  'reserved': 'properties.status.reserved',
-  'sold': 'properties.status.sold',
-  'landowner': 'properties.status.landowner',
-  'rented': 'properties.status.rented',
-  'under-negotiation': 'properties.status.underNegotiation',
-  'coming-soon': 'properties.status.comingSoon',
-  'off-market': 'properties.status.offMarket',
-  'unavailable': 'properties.status.unavailable',
+  'for-sale': 'properties:status.forSale',
+  'for-rent': 'properties:status.forRent',
+  'reserved': 'properties:status.reserved',
+  'sold': 'properties:status.sold',
+  'landowner': 'properties:status.landowner',
+  'rented': 'properties:status.rented',
+  'under-negotiation': 'properties:status.underNegotiation',
+  'coming-soon': 'properties:status.comingSoon',
+  'off-market': 'properties:status.offMarket',
+  'unavailable': 'properties:status.unavailable',
 };
 
 export const PROPERTY_STATUS_COLORS: Record<PropertyStatus, string> = {

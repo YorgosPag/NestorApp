@@ -347,32 +347,51 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     };
 
     try {
-      const emailPayload = {
-        to: notificationConfig.channels.adminEmail,
-        subject: `🚨 ${this.getErrorSeverity(error).toUpperCase()} Error Report - ${this.props.componentName || 'Application'}`,
-        templateId: 'error-report',
-        message: this.formatErrorForEmail(errorDetails),
-        priority: this.getErrorSeverity(error) === 'critical' ? 'high' : 'normal',
-        category: 'error-report'
+      // 🏢 ENTERPRISE: Direct Firestore notification (no email dependency)
+      // This creates an in-app notification for the admin instantly
+      const notificationPayload = {
+        errorId,
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo?.componentStack,
+        component: this.props.componentName || 'Unknown',
+        severity: this.getErrorSeverity(error),
+        timestamp: new Date().toISOString(),
+        url: window.location.href,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
+        retryCount: this.state.retryCount
       };
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      await apiClient.post('/api/communications/email', emailPayload);
+      // Type definition for API response
+      interface ErrorReportApiResponse {
+        success: boolean;
+        notificationId?: string;
+        error?: string;
+      }
 
-      this.setState({ emailSent: true });
+      const response = await apiClient.post('/api/notifications/error-report', notificationPayload) as ErrorReportApiResponse;
 
-      // Track successful admin email
-      errorTracker.captureUserError(
-        'Error report sent to admin',
-        'sendToAdmin',
-        { errorId, adminEmail: notificationConfig.channels.adminEmail }
-      );
+      if (response.success) {
+        this.setState({ emailSent: true });
+
+        // Track successful admin notification
+        errorTracker.captureUserError(
+          'Error report sent to admin (direct notification)',
+          'sendToAdmin',
+          { errorId, notificationId: response.notificationId ?? 'unknown' }
+        );
+
+        console.log('✅ Error report sent successfully:', response.notificationId);
+      } else {
+        throw new Error(response.error ?? 'Failed to create notification');
+      }
 
     } catch (sendError) {
-      console.error('Failed to send error via API, falling back to mailto:', sendError);
+      console.error('Failed to send error via direct notification, falling back to email:', sendError);
 
       // 🏢 ENTERPRISE FALLBACK: Show email provider options
-      // Instead of assuming one provider, show options to user
+      // If direct notification fails, allow user to send email manually
       try {
         const adminEmail = notificationConfig.channels.adminEmail;
         const subject = `🚨 ${this.getErrorSeverity(error).toUpperCase()} Error Report - ${this.props.componentName || 'Application'}`;
@@ -387,7 +406,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       } catch (mailtoError) {
         console.error('Mailto fallback also failed:', mailtoError);
 
-        // Track failed admin email
+        // Track failed admin notification
         errorTracker.captureError(
           sendError instanceof Error ? sendError : new Error(String(sendError)),
           'error',

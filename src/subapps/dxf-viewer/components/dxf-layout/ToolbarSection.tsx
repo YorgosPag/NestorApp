@@ -42,8 +42,8 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
 
   return (
     <div className={PANEL_LAYOUT.FLEX_SHRINK.NONE}>
-      <div className={PANEL_LAYOUT.SPACING.SM}>
-        <EnhancedDXFToolbar
+      {/* 🏢 ENTERPRISE: Removed wrapper padding (PANEL_LAYOUT.SPACING.SM) - toolbar has internal padding */}
+      <EnhancedDXFToolbar
           activeTool={dxfProps.activeTool}
           onToolChange={dxfProps.onToolChange}
           onAction={(action, data) => {
@@ -62,7 +62,6 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           onSceneImported={dxfProps.onSceneImported}
           // 🏢 ENTERPRISE: Removed unnecessary empty spread - all required props are passed explicitly
         />
-      </div>
 
       {/* Προσωρινά σχολιασμένο για debugging */}
       {/* <OverlayToolbar

@@ -318,7 +318,9 @@ const FloatingPanelContent: React.FC<FloatingPanelContentProps> = ({
   children
 }) => {
   return (
-    <CardContent className={cn('space-y-4', className)}>
+    // 🏢 ENTERPRISE: Override default CardContent padding (p-6) with custom className
+    // Using !p-2 ensures 8px padding even when CardContent has p-6 default
+    <CardContent className={cn('!p-2 space-y-2', className)}>
       {children}
     </CardContent>
   );

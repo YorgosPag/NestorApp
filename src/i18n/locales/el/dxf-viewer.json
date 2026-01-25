@@ -75,7 +75,18 @@
     },
     "levels": {
       "title": "Επίπεδα",
-      "description": "Επίπεδα διαχείρισης"
+      "description": "Επίπεδα διαχείρισης",
+      "loading": "Φόρτωση επιπέδων...",
+      "projectLevels": "Επίπεδα Έργου",
+      "defaultLevelName": "Επίπεδο {number}",
+      "emptyNameWarning": "Το όνομα δεν μπορεί να είναι κενό.",
+      "selectLevel": "Επιλογή επιπέδου {name}",
+      "elementsCount": "{count} στοιχεία",
+      "emptyLevel": "Κενό επίπεδο",
+      "renameLevel": "Μετονομασία επιπέδου",
+      "deleteLevel": "Διαγραφή επιπέδου",
+      "noLevels": "Δεν υπάρχουν επίπεδα",
+      "newLevelPlaceholder": "Όνομα νέου επιπέδου..."
     },
     "hierarchy": {
       "title": "Ιεραρχία",
@@ -455,7 +466,14 @@
     "delete": "Διαγραφή ({{key}})",
     "undo": "Αναίρεση ({{key}})",
     "redo": "Επανάληψη ({{key}})",
+    "duplicateAction": "Αντιγραφή",
+    "deleteAction": "Διαγραφή",
+    "undoAction": "Αναίρεση",
+    "redoAction": "Επανάληψη",
     "dragToMove": "Σύρετε για μετακίνηση",
+    "savePolygon": "Αποθήκευση πολυγώνου",
+    "needMorePoints": "Χρειάζονται τουλάχιστον 3 σημεία",
+    "cancelDrawing": "Ακύρωση σχεδίασης",
     "ariaLabels": {
       "drawingModes": "Λειτουργίες σχεδίασης",
       "overlayType": "Τύπος επικάλυψης",

@@ -12,7 +12,7 @@ import { Button } from '../../../components/ui/button';
 import { Separator } from '../../../components/ui/separator';
 import { X } from 'lucide-react';
 import { CommonBadge } from '../../../core/badges';
-import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, type Overlay, type Status, type OverlayKind } from '../overlays/types';
+import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, OVERLAY_STATUS_KEYS, type Overlay, type Status, type OverlayKind } from '../overlays/types';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 interface OverlayPropertiesProps {
@@ -71,7 +71,7 @@ function calculatePolygonPerimeter(polygon: unknown): number {
 }
 
 export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, onUpdate, onClose }) => {
-  const { t } = useTranslation('dxf-viewer');
+  const { t } = useTranslation(['dxf-viewer', 'properties']);
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const [label, setLabel] = useState('');
@@ -156,7 +156,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
           <Select value={overlay.status} onValueChange={handleStatusChange}>
             <SelectTrigger className={PANEL_LAYOUT.HEIGHT.XL}><SelectValue /></SelectTrigger>
             <SelectContent>
-              {(Object.keys(STATUS_LABELS) as Status[]).map(status => (
+              {OVERLAY_STATUS_KEYS.map(status => (
                 <SelectItem key={status} value={status}>
                   <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
                     <div
