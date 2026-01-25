@@ -211,6 +211,20 @@ export class ContactsService {
         sanitizationApplied: true
       });
 
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      // Dispatch event for all components to update their local state
+      RealtimeService.dispatchContactCreated({
+        contactId: docRef.id,
+        contact: {
+          type: sanitizedData.type,
+          firstName: sanitizedData.type === 'individual' ? sanitizedData.firstName : undefined,
+          lastName: sanitizedData.type === 'individual' ? sanitizedData.lastName : undefined,
+          companyName: sanitizedData.type === 'company' ? sanitizedData.companyName : undefined,
+          serviceName: sanitizedData.type === 'service' ? sanitizedData.serviceName : undefined,
+        },
+        timestamp: Date.now()
+      });
+
       return docRef.id;
 
     } catch (error) {
@@ -561,6 +575,13 @@ export class ContactsService {
   static async deleteContact(id: string): Promise<void> {
     try {
       await deleteDoc(doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id));
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      // Dispatch event for all components to remove the contact from their local state
+      RealtimeService.dispatchContactDeleted({
+        contactId: id,
+        timestamp: Date.now()
+      });
     } catch (error) {
       // Error logging removed //('Error deleting contact:', error);
       throw new Error('Failed to delete contact');

@@ -58,6 +58,18 @@ import { useEventBus } from '../../systems/events';
  * Renders the main canvas area, including the renderer and floating panels.
  */
 export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: OverlayEditorMode, currentStatus: Status, currentKind: OverlayKind }> = (props) => {
+  // 🏢 ENTERPRISE (2026-01-25): Destructure props FIRST to avoid "Cannot access before initialization" errors
+  // ΚΡΙΣΙΜΟ: Αυτά τα props χρησιμοποιούνται σε useCallback hooks παρακάτω
+  const {
+    activeTool,
+    showGrid,
+    showLayers, // ✅ ΥΠΑΡΧΟΝ SYSTEM: Layer visibility απο useDxfViewerState
+    overlayMode = 'select',
+    currentStatus = 'for-sale',
+    currentKind = 'unit',
+    ...restProps
+  } = props;
+
   // ✅ FIX: Use DxfCanvasRef type για getCanvas() method access
   const dxfCanvasRef = useRef<DxfCanvasRef>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -87,20 +99,54 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
 
   const overlayStore = useOverlayStore();
+  // 🏢 ENTERPRISE (2026-01-25): Ref for overlay store to avoid stale closures in callbacks
+  const overlayStoreRef = useRef(overlayStore);
+  overlayStoreRef.current = overlayStore;
   const levelManager = useLevels();
+
+  // 🏢 ENTERPRISE (2026-01-25): Moved BEFORE callbacks that use them to avoid hoisting issues
+  const currentOverlays = levelManager.currentLevelId
+    ? overlayStore.getByLevel(levelManager.currentLevelId)
+    : [];
+  const selectedOverlay = overlayStore.getSelectedOverlay();
+
   const [draftPolygon, setDraftPolygon] = useState<Array<[number, number]>>([]);
   // 🔧 FIX (2026-01-24): Ref for fresh polygon access in async operations
   const draftPolygonRef = useRef<Array<[number, number]>>([]);
-  // 🏢 ENTERPRISE (2026-01-25): State για grip hover detection
+  // 🏢 ENTERPRISE (2026-01-25): State για grip hover detection (WARM grip)
   const [hoveredEdgeInfo, setHoveredEdgeInfo] = useState<{ overlayId: string; edgeIndex: number } | null>(null);
   const [hoveredVertexInfo, setHoveredVertexInfo] = useState<{ overlayId: string; vertexIndex: number } | null>(null);
+
+  // 🏢 ENTERPRISE (2026-01-25): State για selected grip (HOT grip - Autodesk pattern)
+  // Click 1: Select grip (becomes HOT) | Click 2: Start dragging
+  const [selectedGrip, setSelectedGrip] = useState<{
+    type: 'vertex' | 'edge-midpoint';
+    overlayId: string;
+    index: number; // vertexIndex for vertex, edgeIndex for edge-midpoint
+  } | null>(null);
+
+  // 🏢 ENTERPRISE (2026-01-25): State για vertex drag (vertex movement)
+  const [draggingVertex, setDraggingVertex] = useState<{
+    overlayId: string;
+    vertexIndex: number;
+    startPoint: Point2D;
+  } | null>(null);
   // 🏢 ENTERPRISE (2026-01-25): State για edge midpoint drag (vertex insertion)
   const [draggingEdgeMidpoint, setDraggingEdgeMidpoint] = useState<{
     overlayId: string;
     edgeIndex: number;
+    insertIndex: number;
     startPoint: Point2D;
-    currentPoint: Point2D;
+    newVertexCreated: boolean; // True after vertex has been inserted
   } | null>(null);
+
+  // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview position
+  // Updates on every mouse move during drag for smooth visual feedback
+  const [dragPreviewPosition, setDragPreviewPosition] = useState<Point2D | null>(null);
+
+  // 🏢 ENTERPRISE (2026-01-25): Flag to prevent click event immediately after drag
+  // Prevents overlay deselection when releasing mouse after drag
+  const justFinishedDragRef = useRef(false);
   // 🔧 FIX (2026-01-24): Flag to track if we're in the process of saving
   const [isSavingPolygon, setIsSavingPolygon] = useState(false);
   // 🎯 EVENT BUS: For polygon drawing communication with toolbar
@@ -300,6 +346,136 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     updatePosition(null);
   }, [setActive, updatePosition]);
 
+  // 🏢 ENTERPRISE (2026-01-25): Mouse down handler for IMMEDIATE grip drag
+  // Figma/Photoshop Pattern: Single click-and-hold = Select + Start Drag immediately
+  const handleContainerMouseDown = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Only handle left click
+    if (e.button !== 0) return;
+
+    // Only in select/layering mode
+    if (activeTool !== 'select' && activeTool !== 'layering') return;
+
+    // Need selected overlay
+    if (!selectedOverlay) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const screenPos: Point2D = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+
+    // === VERTEX GRIP CLICK → IMMEDIATE DRAG ===
+    if (hoveredVertexInfo?.overlayId === selectedOverlay.id) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // 🎯 IMMEDIATE: Select grip (HOT) AND start dragging in one action
+      setSelectedGrip({
+        type: 'vertex',
+        overlayId: hoveredVertexInfo.overlayId,
+        index: hoveredVertexInfo.vertexIndex
+      });
+      setDraggingVertex({
+        overlayId: hoveredVertexInfo.overlayId,
+        vertexIndex: hoveredVertexInfo.vertexIndex,
+        startPoint: worldPos
+      });
+      setDragPreviewPosition(worldPos); // Initialize preview position
+      return;
+    }
+
+    // === EDGE MIDPOINT GRIP CLICK → IMMEDIATE DRAG ===
+    if (hoveredEdgeInfo?.overlayId === selectedOverlay.id) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // 🎯 IMMEDIATE: Select grip (HOT) AND start dragging in one action
+      setSelectedGrip({
+        type: 'edge-midpoint',
+        overlayId: hoveredEdgeInfo.overlayId,
+        index: hoveredEdgeInfo.edgeIndex
+      });
+      setDraggingEdgeMidpoint({
+        overlayId: hoveredEdgeInfo.overlayId,
+        edgeIndex: hoveredEdgeInfo.edgeIndex,
+        insertIndex: hoveredEdgeInfo.edgeIndex + 1,
+        startPoint: worldPos,
+        newVertexCreated: false
+      });
+      setDragPreviewPosition(worldPos); // Initialize preview position
+      return;
+    }
+
+    // Clicked elsewhere → Deselect grip
+    if (selectedGrip) {
+      setSelectedGrip(null);
+    }
+  }, [activeTool, selectedOverlay, hoveredVertexInfo, hoveredEdgeInfo, selectedGrip, transform, viewport]);
+
+  // 🏢 ENTERPRISE (2026-01-25): Mouse up handler for grip drag end
+  const handleContainerMouseUp = React.useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+    const overlayStore = overlayStoreRef.current;
+
+    // Handle vertex drag end
+    if (draggingVertex && overlayStore) {
+      const container = containerRef.current;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const screenPos: Point2D = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+
+        // Update vertex position in Firestore
+        await overlayStore.updateVertex(
+          draggingVertex.overlayId,
+          draggingVertex.vertexIndex,
+          [worldPos.x, worldPos.y]
+        );
+      }
+      // 🏢 ENTERPRISE (2026-01-25): Clear ONLY drag-related states
+      // ⚠️ IMPORTANT: Do NOT clear selectedGrip - grips should remain visible
+      // User must click elsewhere on canvas to deselect the layer
+      setDraggingVertex(null);
+      setDragPreviewPosition(null);
+      // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
+      justFinishedDragRef.current = true;
+      setTimeout(() => { justFinishedDragRef.current = false; }, 100);
+    }
+
+    // Handle edge midpoint drag end
+    if (draggingEdgeMidpoint && overlayStore) {
+      const container = containerRef.current;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const screenPos: Point2D = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+
+        if (!draggingEdgeMidpoint.newVertexCreated) {
+          // First time - insert new vertex
+          await overlayStore.addVertex(
+            draggingEdgeMidpoint.overlayId,
+            draggingEdgeMidpoint.insertIndex,
+            [worldPos.x, worldPos.y]
+          );
+        } else {
+          // Vertex already created - just update position
+          await overlayStore.updateVertex(
+            draggingEdgeMidpoint.overlayId,
+            draggingEdgeMidpoint.insertIndex,
+            [worldPos.x, worldPos.y]
+          );
+        }
+      }
+      // 🏢 ENTERPRISE (2026-01-25): Clear ONLY drag-related states
+      // ⚠️ IMPORTANT: Do NOT clear selectedGrip - grips should remain visible
+      setDraggingEdgeMidpoint(null);
+      setDragPreviewPosition(null);
+      // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
+      justFinishedDragRef.current = true;
+      setTimeout(() => { justFinishedDragRef.current = false; }, 100);
+    }
+  }, [draggingVertex, draggingEdgeMidpoint, transform, viewport]);
+
   // 🔺 CURSOR SYSTEM INTEGRATION - Σύνδεση με floating panel
   const crosshairSettings: CrosshairSettings = {
     enabled: cursorSettings.crosshair.enabled,
@@ -352,16 +528,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     unitsColor: rulerContextSettings?.horizontal?.unitsColor ?? UI_COLORS.WHITE // ✅ CENTRALIZED WHITE UNITS TEXT
   };
 
-  const {
-    activeTool,
-    showGrid,
-    showLayers, // ✅ ΥΠΑΡΧΟΝ SYSTEM: Layer visibility απο useDxfViewerState
-    overlayMode = 'select',
-    currentStatus = 'for-sale',
-    currentKind = 'unit',
-    ...restProps
-  } = props;
-
   // ✅ LAYER VISIBILITY: Show LayerCanvas controlled by debug toggle
   // 🔧 FIX (2026-01-24): ALWAYS show LayerCanvas when in draw/edit mode to ensure overlays are visible
   // Debug toggle only applies when in 'select' mode (not actively drawing/editing)
@@ -375,6 +541,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setDraftPolygon([]);
     }
   }, [activeTool, draftPolygon.length]);
+
+  // 🏢 ENTERPRISE (2026-01-25): Clear selected grip when overlay or tool changes
+  // Autodesk pattern: Grip selection is contextual to current selection
+  React.useEffect(() => {
+    if (selectedGrip) {
+      // Clear if overlay changed or tool is not select/layering
+      if (selectedGrip.overlayId !== selectedOverlay?.id ||
+          (activeTool !== 'select' && activeTool !== 'layering')) {
+        setSelectedGrip(null);
+        setDragPreviewPosition(null);
+      }
+    }
+  }, [selectedOverlay?.id, activeTool, selectedGrip]);
 
   // ✅ CONVERT RulersGridSystem grid settings to Canvas V2 GridSettings format
   // RulersGridSystem uses: gridSettings.visual.color
@@ -433,14 +612,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   };
 
-  // Get overlays for current level
-  const currentOverlays = levelManager.currentLevelId
-    ? overlayStore.getByLevel(levelManager.currentLevelId)
-    : [];
-
-  const selectedOverlay = overlayStore.getSelectedOverlay();
-
-
   // === CONVERT OVERLAYS TO CANVAS V2 FORMAT ===
   const convertToColorLayers = (overlays: Overlay[]): ColorLayer[] => {
     // Simple debug - only log count and first overlay sample (no infinite re-render)
@@ -475,8 +646,17 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           showGrips: isSelected,
           // 🏢 ENTERPRISE (2026-01-25): Show edge midpoint grips for vertex insertion (Autodesk pattern)
           showEdgeMidpoints: isSelected,
+          // WARM state (hover)
           hoveredEdgeIndex: hoveredEdgeInfo?.overlayId === overlay.id ? hoveredEdgeInfo.edgeIndex : undefined,
           hoveredVertexIndex: hoveredVertexInfo?.overlayId === overlay.id ? hoveredVertexInfo.vertexIndex : undefined,
+          // 🏢 ENTERPRISE (2026-01-25): HOT state (selected grip - Autodesk pattern)
+          selectedGripType: selectedGrip?.overlayId === overlay.id ? selectedGrip.type : undefined,
+          selectedGripIndex: selectedGrip?.overlayId === overlay.id ? selectedGrip.index : undefined,
+          // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview
+          dragPreviewPosition: (draggingVertex?.overlayId === overlay.id || draggingEdgeMidpoint?.overlayId === overlay.id)
+            ? dragPreviewPosition ?? undefined
+            : undefined,
+          isDragging: draggingVertex?.overlayId === overlay.id || draggingEdgeMidpoint?.overlayId === overlay.id,
           polygons: [{
             id: `polygon_${overlay.id}`,
             vertices,
@@ -829,7 +1009,20 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       // 🎯 SIMPLIFIED (2026-01-24): Just add points - user saves with toolbar button
       setDraftPolygon(prev => [...prev, worldPointArray]);
     } else {
-      handleOverlaySelect(null);
+      // 🏢 ENTERPRISE (2026-01-25): Only deselect overlay if clicking on EMPTY canvas space
+      // Do NOT deselect if:
+      // - A grip is selected (user might be about to drag)
+      // - User is hovering over a grip
+      // - Click was on the overlay itself (handled by handleOverlayClick)
+      // - Just finished a drag operation (prevent accidental deselection)
+      const isClickOnGrip = hoveredVertexInfo !== null || hoveredEdgeInfo !== null;
+      const hasSelectedGrip = selectedGrip !== null;
+      const justFinishedDrag = justFinishedDragRef.current;
+
+      if (!isClickOnGrip && !hasSelectedGrip && !justFinishedDrag) {
+        handleOverlaySelect(null);
+        setSelectedGrip(null); // Clear grip selection when clicking empty space
+      }
     }
   };
 
@@ -988,6 +1181,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           className={`canvas-stack relative w-full h-full ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}
           style={{ cursor: 'none' }} // ✅ ADR-008 CAD-GRADE: ALWAYS hide CSS cursor - crosshair is the only cursor
           onMouseMove={handleContainerMouseMove}
+          onMouseDown={handleContainerMouseDown}
+          onMouseUp={handleContainerMouseUp}
           onMouseEnter={handleContainerMouseEnter}
           onMouseLeave={handleContainerMouseLeave}
         >
@@ -1091,9 +1286,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                   if (hoveredVertexInfo) setHoveredVertexInfo(null);
                 }
 
-                // 🏢 ENTERPRISE: Handle edge midpoint dragging
-                if (draggingEdgeMidpoint) {
-                  setDraggingEdgeMidpoint(prev => prev ? { ...prev, currentPoint: worldPoint } : null);
+                // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview update
+                // Updates dragPreviewPosition on every mouse move for smooth visual feedback
+                if (draggingVertex || draggingEdgeMidpoint) {
+                  setDragPreviewPosition(worldPoint);
                 }
 
                 // ✅ ΔΙΟΡΘΩΣΗ: Καλώ και το props.onMouseMove για cursor-centered zoom

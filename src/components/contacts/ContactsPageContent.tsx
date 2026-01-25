@@ -273,17 +273,32 @@ export function ContactsPageContent() {
     const handleContactUpdate = (payload: ContactUpdatedPayload) => {
       console.log('🔄 [ContactsPageContent] Applying real-time update for contact:', payload.contactId);
 
+      // 🏢 ENTERPRISE: Type-safe partial update helper
+      const applyContactUpdates = <T extends Contact>(contact: T): T => {
+        const updates: Partial<T> = {} as Partial<T>;
+        if (payload.updates.firstName !== undefined) (updates as Record<string, unknown>).firstName = payload.updates.firstName;
+        if (payload.updates.lastName !== undefined) (updates as Record<string, unknown>).lastName = payload.updates.lastName;
+        if (payload.updates.companyName !== undefined) (updates as Record<string, unknown>).companyName = payload.updates.companyName;
+        if (payload.updates.serviceName !== undefined) (updates as Record<string, unknown>).serviceName = payload.updates.serviceName;
+        if (payload.updates.isFavorite !== undefined) (updates as Record<string, unknown>).isFavorite = payload.updates.isFavorite;
+        // Status requires type assertion due to union type
+        if (payload.updates.status !== undefined) {
+          (updates as Record<string, unknown>).status = payload.updates.status;
+        }
+        return { ...contact, ...updates };
+      };
+
       // Update in contacts list (optimized - no full refresh)
       setContacts(prev => prev.map(contact =>
         contact.id === payload.contactId
-          ? { ...contact, ...payload.updates }
+          ? applyContactUpdates(contact)
           : contact
       ));
 
       // Also update selectedContact if it's the one being updated
       if (selectedContact?.id === payload.contactId) {
         setSelectedContact(prev =>
-          prev ? { ...prev, ...payload.updates } : prev
+          prev ? applyContactUpdates(prev) : prev
         );
       }
     };

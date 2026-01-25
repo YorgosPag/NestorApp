@@ -24,8 +24,14 @@ export interface ColorLayer {
   isNearFirstPoint?: boolean;  // True if cursor is near first point (for close polygon highlight)
   // 🏢 ENTERPRISE (2026-01-25): Edge midpoint grips for vertex insertion (Autodesk pattern)
   showEdgeMidpoints?: boolean; // Show midpoint grips on edges for adding new vertices
-  hoveredEdgeIndex?: number;   // Index of currently hovered edge (for visual feedback)
-  hoveredVertexIndex?: number; // Index of currently hovered vertex grip (for visual feedback)
+  hoveredEdgeIndex?: number;   // Index of currently hovered edge (for visual feedback - WARM)
+  hoveredVertexIndex?: number; // Index of currently hovered vertex grip (for visual feedback - WARM)
+  // 🏢 ENTERPRISE (2026-01-25): Selected grip state (HOT grip - Autodesk pattern)
+  selectedGripType?: 'vertex' | 'edge-midpoint'; // Type of selected grip
+  selectedGripIndex?: number;  // Index of selected grip (vertex or edge)
+  // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview
+  dragPreviewPosition?: Point2D; // Current position during drag for real-time feedback
+  isDragging?: boolean;         // True when grip is being dragged
 }
 
 export interface LayerPolygon {

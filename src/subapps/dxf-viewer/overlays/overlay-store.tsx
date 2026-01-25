@@ -25,6 +25,7 @@ interface OverlayStoreActions {
   setCurrentLevel: (levelId: string | null) => void;
   // 🏢 ENTERPRISE (2026-01-25): Vertex manipulation for polygon editing
   addVertex: (id: string, insertIndex: number, vertex: [number, number]) => Promise<void>;
+  updateVertex: (id: string, vertexIndex: number, newPosition: [number, number]) => Promise<void>;
   removeVertex: (id: string, vertexIndex: number) => Promise<boolean>;
 }
 
@@ -222,6 +223,33 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     console.log('✅ addVertex: Vertex added at index', insertIndex);
   }, [state.overlays, update]);
 
+  // 🏢 ENTERPRISE (2026-01-25): Update vertex position (for drag operations)
+  const updateVertex = useCallback(async (id: string, vertexIndex: number, newPosition: [number, number]) => {
+    const overlay = state.overlays[id];
+    if (!overlay) {
+      console.error('❌ updateVertex: Overlay not found:', id);
+      return;
+    }
+
+    const currentPolygon = overlay.polygon;
+    if (!Array.isArray(currentPolygon)) {
+      console.error('❌ updateVertex: Invalid polygon format');
+      return;
+    }
+
+    if (vertexIndex < 0 || vertexIndex >= currentPolygon.length) {
+      console.error('❌ updateVertex: Invalid vertex index:', vertexIndex);
+      return;
+    }
+
+    // Update vertex at specified index
+    const newPolygon = [...currentPolygon];
+    newPolygon[vertexIndex] = newPosition;
+
+    // Use existing update function
+    await update(id, { polygon: newPolygon });
+  }, [state.overlays, update]);
+
   // 🏢 ENTERPRISE (2026-01-25): Remove vertex from polygon at specified index
   const removeVertex = useCallback(async (id: string, vertexIndex: number): Promise<boolean> => {
     const overlay = state.overlays[id];
@@ -273,6 +301,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     setCurrentLevel,
     // 🏢 ENTERPRISE (2026-01-25): Vertex manipulation
     addVertex,
+    updateVertex,
     removeVertex,
   };
 

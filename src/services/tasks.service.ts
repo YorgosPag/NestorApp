@@ -17,6 +17,8 @@
 
 import type { CrmTask } from '@/types/crm';
 import { TasksRepository } from './crm/tasks/repositories/TasksRepository';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // 🏢 ENTERPRISE: Singleton repository instance
 const tasksRepository = new TasksRepository();
@@ -28,6 +30,21 @@ export async function addTask(
   taskData: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>
 ): Promise<string> {
   const result = await tasksRepository.add(taskData);
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+  RealtimeService.dispatchTaskCreated({
+    taskId: result.id,
+    task: {
+      title: taskData.title,
+      type: taskData.type,
+      priority: taskData.priority,
+      status: taskData.status,
+      assignedTo: taskData.assignedTo,
+      leadId: taskData.leadId ?? null,
+    },
+    timestamp: Date.now()
+  });
+
   return result.id;
 }
 
@@ -70,14 +87,34 @@ export async function getOverdueTasks(): Promise<CrmTask[]> {
  * Update an existing task
  */
 export async function updateTask(id: string, updates: Partial<CrmTask>): Promise<void> {
-  return tasksRepository.update(id, updates);
+  await tasksRepository.update(id, updates);
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+  RealtimeService.dispatchTaskUpdated({
+    taskId: id,
+    updates: {
+      title: updates.title,
+      type: updates.type,
+      priority: updates.priority,
+      status: updates.status,
+      assignedTo: updates.assignedTo,
+      leadId: updates.leadId ?? null,
+    },
+    timestamp: Date.now()
+  });
 }
 
 /**
  * Delete a task
  */
 export async function deleteTask(id: string): Promise<void> {
-  return tasksRepository.delete(id);
+  await tasksRepository.delete(id);
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+  RealtimeService.dispatchTaskDeleted({
+    taskId: id,
+    timestamp: Date.now()
+  });
 }
 
 /**
@@ -94,6 +131,15 @@ export async function completeTask(id: string, notes = ''): Promise<void> {
   await tasksRepository.update(id, {
     status: 'completed',
     ...(notes && { 'metadata.completionNotes': notes } as Partial<CrmTask>)
+  });
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+  RealtimeService.dispatchTaskUpdated({
+    taskId: id,
+    updates: {
+      status: 'completed',
+    },
+    timestamp: Date.now()
   });
 }
 

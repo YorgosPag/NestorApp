@@ -56,6 +56,19 @@ export async function addUnit(unitData: Omit<Property, 'id'>): Promise<{ id: str
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    // Dispatch event for all components to add the unit to their local state
+    RealtimeService.dispatchUnitCreated({
+      unitId: docRef.id,
+      unit: {
+        name: unitData.name,
+        type: unitData.type,
+        buildingId: unitData.buildingId ?? null,
+      },
+      timestamp: Date.now()
+    });
+
     return { id: docRef.id, success: true };
   } catch (error) {
     // Error logging removed
@@ -183,6 +196,14 @@ export async function updateMultipleUnitsOwner(unitIds: string[], contactId: str
 export async function deleteUnit(unitId: string): Promise<{ success: boolean }> {
   try {
     await deleteDoc(doc(db, UNITS_COLLECTION, unitId));
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    // Dispatch event for all components to remove the unit from their local state
+    RealtimeService.dispatchUnitDeleted({
+      unitId,
+      timestamp: Date.now()
+    });
+
     return { success: true };
   } catch (error) {
     // Error logging removed

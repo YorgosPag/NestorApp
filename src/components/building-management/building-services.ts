@@ -8,7 +8,7 @@
  * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
  */
 
-import { collection, getDocs, query, orderBy, limit, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Building } from '@/types/building/contracts';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -100,6 +100,103 @@ export async function updateBuilding(
 
   } catch (error) {
     console.error('❌ [updateBuilding] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * 🏢 ENTERPRISE: Building create payload type
+ * Type-safe data for building creation
+ */
+export interface BuildingCreatePayload {
+  name: string;
+  description?: string;
+  address?: string;
+  city?: string;
+  totalArea?: number;
+  builtArea?: number;
+  floors?: number;
+  units?: number;
+  totalValue?: number;
+  startDate?: string;
+  completionDate?: string;
+  status?: string;
+  projectId?: string | null;
+  companyId: string;
+  company?: string;
+}
+
+/**
+ * 🏗️ ENTERPRISE: Δημιουργία νέου κτιρίου στο Firebase
+ * Αποθηκεύει τα δεδομένα στη βάση και ενημερώνει το real-time service
+ */
+export async function createBuilding(
+  data: BuildingCreatePayload
+): Promise<{ success: boolean; buildingId?: string; error?: string }> {
+  try {
+    console.log(`🏗️ [createBuilding] Creating new building...`);
+
+    const buildingsRef = collection(db, COLLECTIONS.BUILDINGS);
+    const docRef = await addDoc(buildingsRef, {
+      ...data,
+      progress: 0,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    console.log(`✅ [createBuilding] Building created with ID: ${docRef.id}`);
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatchBuildingCreated({
+      buildingId: docRef.id,
+      building: {
+        name: data.name,
+        address: data.address,
+        city: data.city,
+        projectId: data.projectId,
+      },
+      timestamp: Date.now()
+    });
+
+    return { success: true, buildingId: docRef.id };
+
+  } catch (error) {
+    console.error('❌ [createBuilding] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
+ * 🏗️ ENTERPRISE: Διαγραφή κτιρίου από το Firebase
+ * Διαγράφει τα δεδομένα από τη βάση και ενημερώνει το real-time service
+ */
+export async function deleteBuilding(
+  buildingId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log(`🏗️ [deleteBuilding] Deleting building ${buildingId}...`);
+
+    const buildingRef = doc(db, COLLECTIONS.BUILDINGS, buildingId);
+    await deleteDoc(buildingRef);
+
+    console.log(`✅ [deleteBuilding] Building ${buildingId} deleted successfully`);
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatchBuildingDeleted({
+      buildingId,
+      timestamp: Date.now()
+    });
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('❌ [deleteBuilding] Error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

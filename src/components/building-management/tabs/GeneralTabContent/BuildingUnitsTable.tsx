@@ -14,7 +14,7 @@ import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
-import { RealtimeService, type UnitUpdatedPayload } from '@/services/realtime';
+import { RealtimeService, type UnitUpdatedPayload, type UnitCreatedPayload, type UnitDeletedPayload } from '@/services/realtime';
 
 function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -58,15 +58,65 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
     const handleUnitUpdate = (payload: UnitUpdatedPayload) => {
       console.log('🔄 [BuildingUnitsTable] Applying update for unit:', payload.unitId);
 
-      setUnits(prev => prev.map(unit =>
-        unit.id === payload.unitId
-          ? { ...unit, ...payload.updates }
-          : unit
-      ));
+      setUnits(prev => prev.map(unit => {
+        if (unit.id !== payload.unitId) return unit;
+
+        // 🏢 ENTERPRISE: Type-safe partial update - only apply defined values
+        const updates: Partial<Property> = {};
+        if (payload.updates.name !== undefined) updates.name = payload.updates.name;
+        if (payload.updates.type !== undefined) updates.type = payload.updates.type;
+        if (payload.updates.area !== undefined) updates.area = payload.updates.area;
+        if (payload.updates.floor !== undefined) updates.floor = payload.updates.floor;
+        if (payload.updates.buildingId !== undefined) updates.buildingId = payload.updates.buildingId ?? unit.buildingId;
+        if (payload.updates.soldTo !== undefined) updates.soldTo = payload.updates.soldTo;
+        // Status requires type assertion due to union type
+        if (payload.updates.status !== undefined) {
+          updates.status = payload.updates.status as Property['status'];
+        }
+
+        return { ...unit, ...updates };
+      }));
     };
 
     // Subscribe to unit updates (same-page + cross-page)
     const unsubscribe = RealtimeService.subscribeToUnitUpdates(handleUnitUpdate, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // 🏢 ENTERPRISE: Subscribe to unit CREATED events for cross-page sync
+  useEffect(() => {
+    const handleUnitCreated = (payload: UnitCreatedPayload) => {
+      // Only care about units belonging to this building
+      if (payload.unit.buildingId !== `building-${buildingId}`) return;
+
+      console.log('➕ [BuildingUnitsTable] New unit created for this building:', payload.unitId);
+      // Refetch units for this building
+      const refetchUnits = async () => {
+        const buildingUnits = await buildingRelationships.getUnits();
+        setUnits(buildingUnits as Property[]);
+      };
+      refetchUnits();
+    };
+
+    const unsubscribe = RealtimeService.subscribeToUnitCreated(handleUnitCreated, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, [buildingId, buildingRelationships]);
+
+  // 🏢 ENTERPRISE: Subscribe to unit DELETED events for cross-page sync
+  useEffect(() => {
+    const handleUnitDeleted = (payload: UnitDeletedPayload) => {
+      console.log('🗑️ [BuildingUnitsTable] Unit deleted:', payload.unitId);
+      // Remove the deleted unit from the list
+      setUnits(prev => prev.filter(unit => unit.id !== payload.unitId));
+    };
+
+    const unsubscribe = RealtimeService.subscribeToUnitDeleted(handleUnitDeleted, {
       checkPendingOnMount: false
     });
 

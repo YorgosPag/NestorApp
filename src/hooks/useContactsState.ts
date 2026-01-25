@@ -9,7 +9,7 @@ import type { Property } from '@/types/property-viewer';
 import { getContactDisplayName } from '@/types/contacts';
 import { normalizeToDate } from '@/lib/date-local';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
-import { RealtimeService, type ContactUpdatedPayload } from '@/services/realtime';
+import { RealtimeService, type ContactUpdatedPayload, type ContactCreatedPayload, type ContactDeletedPayload } from '@/services/realtime';
 
 
 export type ViewMode = 'list' | 'grid';
@@ -84,22 +84,72 @@ export function useContactsState() {
     const handleContactUpdate = (payload: ContactUpdatedPayload) => {
       console.log('🔄 [useContactsState] Applying update for contact:', payload.contactId);
 
+      // 🏢 ENTERPRISE: Type-safe partial update helper
+      const applyContactUpdates = <T extends Contact>(contact: T): T => {
+        const updates: Partial<T> = {} as Partial<T>;
+        if (payload.updates.firstName !== undefined) (updates as Record<string, unknown>).firstName = payload.updates.firstName;
+        if (payload.updates.lastName !== undefined) (updates as Record<string, unknown>).lastName = payload.updates.lastName;
+        if (payload.updates.companyName !== undefined) (updates as Record<string, unknown>).companyName = payload.updates.companyName;
+        if (payload.updates.serviceName !== undefined) (updates as Record<string, unknown>).serviceName = payload.updates.serviceName;
+        if (payload.updates.isFavorite !== undefined) (updates as Record<string, unknown>).isFavorite = payload.updates.isFavorite;
+        if (payload.updates.status !== undefined) {
+          (updates as Record<string, unknown>).status = payload.updates.status;
+        }
+        return { ...contact, ...updates };
+      };
+
       setAllContacts(prev => prev.map(contact =>
         contact.id === payload.contactId
-          ? { ...contact, ...payload.updates }
+          ? applyContactUpdates(contact)
           : contact
       ));
 
       // Also update selectedContact if it's the one being updated
       setSelectedContact(prev =>
         prev?.id === payload.contactId
-          ? { ...prev, ...payload.updates }
+          ? applyContactUpdates(prev)
           : prev
       );
     };
 
     // Subscribe to contact updates (same-page + cross-page)
     const unsubscribe = RealtimeService.subscribeToContactUpdates(handleContactUpdate, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // 🏢 ENTERPRISE: Subscribe to contact CREATED events for cross-page sync
+  useEffect(() => {
+    const handleContactCreated = (payload: ContactCreatedPayload) => {
+      console.log('➕ [useContactsState] New contact created:', payload.contactId);
+      // Force refresh to fetch the new contact with all its data
+      forceDataRefresh();
+    };
+
+    const unsubscribe = RealtimeService.subscribeToContactCreated(handleContactCreated, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, [forceDataRefresh]);
+
+  // 🏢 ENTERPRISE: Subscribe to contact DELETED events for cross-page sync
+  useEffect(() => {
+    const handleContactDeleted = (payload: ContactDeletedPayload) => {
+      console.log('🗑️ [useContactsState] Contact deleted:', payload.contactId);
+
+      // Remove the deleted contact from the list
+      setAllContacts(prev => prev.filter(contact => contact.id !== payload.contactId));
+
+      // If the deleted contact was selected, clear selection
+      setSelectedContact(prev =>
+        prev?.id === payload.contactId ? null : prev
+      );
+    };
+
+    const unsubscribe = RealtimeService.subscribeToContactDeleted(handleContactDeleted, {
       checkPendingOnMount: false
     });
 

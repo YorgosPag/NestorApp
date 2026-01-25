@@ -54,6 +54,10 @@ export class LayerRenderer {
   // 🏢 ENTERPRISE (2026-01-25): Centralized grip settings for rendering
   private currentGripSettings: GripSettings | null = null;
 
+  // 🏢 ENTERPRISE (2026-01-25): Store transform/viewport for real-time drag preview
+  private transform: ViewTransform | null = null;
+  private viewport: Viewport | null = null;
+
   // ✅ ΦΑΣΗ 7: Unified canvas system integration
   private canvasInstance?: CanvasInstance;
   private eventSystem?: CanvasEventSystem;
@@ -121,6 +125,17 @@ export class LayerRenderer {
   }
 
   /**
+   * 🏢 ENTERPRISE (2026-01-25): Convert world coordinates to screen coordinates
+   * Helper method for real-time drag preview
+   */
+  private worldToScreen(point: Point2D, transform: ViewTransform, viewport: Viewport | null): Point2D {
+    if (!viewport) {
+      return { x: point.x * transform.scale + transform.offsetX, y: point.y * transform.scale + transform.offsetY };
+    }
+    return CoordinateTransforms.worldToScreen(point, transform, viewport);
+  }
+
+  /**
    * ✅ ΦΑΣΗ 7: Setup unified canvas event listeners
    */
   private setupEventListeners(): void {
@@ -180,6 +195,10 @@ export class LayerRenderer {
 
     // 🏢 ENTERPRISE: Store grip settings for use in polygon rendering
     this.currentGripSettings = options.gripSettings ?? null;
+
+    // 🏢 ENTERPRISE (2026-01-25): Store transform/viewport for real-time drag preview
+    this.transform = transform;
+    this.viewport = viewport;
 
     const startTime = performance.now();
 
@@ -451,9 +470,30 @@ export class LayerRenderer {
     }
 
     // Convert world coordinates to screen coordinates
-    const screenVertices = polygon.vertices.map((vertex: Point2D) =>
-      CoordinateTransforms.worldToScreen(vertex, transform, viewport)
-    );
+    // 🏢 ENTERPRISE (2026-01-25): Handle real-time drag preview for vertices
+    let screenVertices = polygon.vertices.map((vertex: Point2D, index: number) => {
+      // Check if this vertex is being dragged (for vertex drag preview)
+      if (layer.isDragging && layer.dragPreviewPosition &&
+          layer.selectedGripType === 'vertex' && layer.selectedGripIndex === index) {
+        // Use drag preview position instead of actual vertex position
+        return CoordinateTransforms.worldToScreen(layer.dragPreviewPosition, transform, viewport);
+      }
+      return CoordinateTransforms.worldToScreen(vertex, transform, viewport);
+    });
+
+    // 🏢 ENTERPRISE (2026-01-25): Handle edge midpoint drag (vertex insertion preview)
+    // When dragging an edge midpoint, we need to insert a temporary vertex for visual preview
+    if (layer.isDragging && layer.dragPreviewPosition &&
+        layer.selectedGripType === 'edge-midpoint' && layer.selectedGripIndex !== undefined) {
+      const insertIndex = layer.selectedGripIndex + 1;
+      const previewVertex = CoordinateTransforms.worldToScreen(layer.dragPreviewPosition, transform, viewport);
+      // Insert the preview vertex into the array
+      screenVertices = [
+        ...screenVertices.slice(0, insertIndex),
+        previewVertex,
+        ...screenVertices.slice(insertIndex)
+      ];
+    }
 
     // Debug disabled: Margins check for layer rendering
 
@@ -556,13 +596,24 @@ export class LayerRenderer {
       const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK ?? '#000000';
 
       for (let i = 0; i < screenVertices.length; i++) {
-        const vertex = screenVertices[i];
+        let vertex = screenVertices[i];
         const isFirstGrip = i === 0;
         const isCloseHighlighted = isFirstGrip && layer.isNearFirstPoint;
         const isHovered = layer.hoveredVertexIndex === i;
 
-        // Determine grip state: hot (close) > warm (hover) > cold (normal)
-        const gripState: 'cold' | 'warm' | 'hot' = isCloseHighlighted ? 'hot' : isHovered ? 'warm' : 'cold';
+        // 🏢 ENTERPRISE (2026-01-25): Check if this grip is SELECTED (HOT) - Autodesk pattern
+        const isSelected = layer.selectedGripType === 'vertex' && layer.selectedGripIndex === i;
+
+        // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview - use dragPreviewPosition when dragging
+        if (isSelected && layer.isDragging && layer.dragPreviewPosition && this.transform) {
+          // Convert dragPreviewPosition from world to screen coordinates
+          const previewScreen = this.worldToScreen(layer.dragPreviewPosition, this.transform, this.viewport);
+          vertex = previewScreen;
+        }
+
+        // Determine grip state: hot (selected/close) > warm (hover) > cold (normal)
+        // 🏢 ENTERPRISE: Selected grips are HOT even when not close to first point
+        const gripState: 'cold' | 'warm' | 'hot' = (isCloseHighlighted || isSelected) ? 'hot' : isHovered ? 'warm' : 'cold';
         const gripSize = gripState === 'hot' ? GRIP_SIZE_HOT : gripState === 'warm' ? GRIP_SIZE_WARM : GRIP_SIZE_COLD;
         const fillColor = gripState === 'hot' ? GRIP_COLOR_HOT : gripState === 'warm' ? GRIP_COLOR_WARM : GRIP_COLOR_COLD;
 
@@ -582,6 +633,15 @@ export class LayerRenderer {
           this.ctx.strokeStyle = GRIP_COLOR_HOT;
           this.ctx.lineWidth = 2;
           const outerSize = gripSize + 6;
+          const outerHalf = outerSize / 2;
+          this.ctx.strokeRect(vertex.x - outerHalf, vertex.y - outerHalf, outerSize, outerSize);
+        }
+
+        // 🏢 ENTERPRISE (2026-01-25): Draw selection indicator for HOT grip (without close)
+        if (isSelected && !isCloseHighlighted) {
+          this.ctx.strokeStyle = GRIP_COLOR_HOT;
+          this.ctx.lineWidth = 2;
+          const outerSize = gripSize + 4;
           const outerHalf = outerSize / 2;
           this.ctx.strokeRect(vertex.x - outerHalf, vertex.y - outerHalf, outerSize, outerSize);
         }
@@ -618,34 +678,55 @@ export class LayerRenderer {
 
         // Check if this edge is hovered
         const isHovered = layer.hoveredEdgeIndex === i;
-        const gripSize = isHovered ? EDGE_GRIP_SIZE_WARM : EDGE_GRIP_SIZE_COLD;
+
+        // 🏢 ENTERPRISE (2026-01-25): Check if this edge midpoint is SELECTED (HOT)
+        const isSelected = layer.selectedGripType === 'edge-midpoint' && layer.selectedGripIndex === i;
+
+        // HOT grip size (larger than warm)
+        const EDGE_GRIP_SIZE_HOT = Math.round(baseEdgeSize * 1.6);
+        const EDGE_GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SUCCESS_BRIGHT ?? '#22c55e';
+
+        // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview for edge midpoint
+        let drawMidX = midX;
+        let drawMidY = midY;
+        if (isSelected && layer.isDragging && layer.dragPreviewPosition && this.transform) {
+          // Convert dragPreviewPosition from world to screen coordinates
+          const previewScreen = this.worldToScreen(layer.dragPreviewPosition, this.transform, this.viewport);
+          drawMidX = previewScreen.x;
+          drawMidY = previewScreen.y;
+        }
+
+        // Determine grip state: hot (selected) > warm (hover) > cold (normal)
+        const gripState: 'cold' | 'warm' | 'hot' = isSelected ? 'hot' : isHovered ? 'warm' : 'cold';
+        const gripSize = gripState === 'hot' ? EDGE_GRIP_SIZE_HOT : gripState === 'warm' ? EDGE_GRIP_SIZE_WARM : EDGE_GRIP_SIZE_COLD;
+        const fillColor = gripState === 'hot' ? EDGE_GRIP_COLOR_HOT : gripState === 'warm' ? EDGE_GRIP_COLOR_WARM : EDGE_GRIP_COLOR_COLD;
 
         // Draw diamond/rhombus grip at midpoint ◇
         this.ctx.save();
-        this.ctx.fillStyle = isHovered ? EDGE_GRIP_COLOR_WARM : EDGE_GRIP_COLOR_COLD;
-        this.ctx.strokeStyle = isHovered ? EDGE_GRIP_COLOR_WARM : GRIP_COLOR_CONTOUR;
-        this.ctx.lineWidth = isHovered ? 2 : 1;
+        this.ctx.fillStyle = fillColor;
+        this.ctx.strokeStyle = gripState !== 'cold' ? fillColor : GRIP_COLOR_CONTOUR;
+        this.ctx.lineWidth = gripState !== 'cold' ? 2 : 1;
 
         // Draw diamond shape (rotated square)
         this.ctx.beginPath();
-        this.ctx.moveTo(midX, midY - gripSize);        // Top
-        this.ctx.lineTo(midX + gripSize, midY);        // Right
-        this.ctx.lineTo(midX, midY + gripSize);        // Bottom
-        this.ctx.lineTo(midX - gripSize, midY);        // Left
+        this.ctx.moveTo(drawMidX, drawMidY - gripSize);        // Top
+        this.ctx.lineTo(drawMidX + gripSize, drawMidY);        // Right
+        this.ctx.lineTo(drawMidX, drawMidY + gripSize);        // Bottom
+        this.ctx.lineTo(drawMidX - gripSize, drawMidY);        // Left
         this.ctx.closePath();
         this.ctx.fill();
         this.ctx.stroke();
 
-        // Draw hover highlight - larger outer diamond with glow effect
-        if (isHovered) {
-          this.ctx.strokeStyle = EDGE_GRIP_COLOR_WARM;
+        // Draw highlight for WARM or HOT grips
+        if (gripState !== 'cold') {
+          this.ctx.strokeStyle = fillColor;
           this.ctx.lineWidth = 2;
           const outerSize = gripSize + 4;
           this.ctx.beginPath();
-          this.ctx.moveTo(midX, midY - outerSize);
-          this.ctx.lineTo(midX + outerSize, midY);
-          this.ctx.lineTo(midX, midY + outerSize);
-          this.ctx.lineTo(midX - outerSize, midY);
+          this.ctx.moveTo(drawMidX, drawMidY - outerSize);
+          this.ctx.lineTo(drawMidX + outerSize, drawMidY);
+          this.ctx.lineTo(drawMidX, drawMidY + outerSize);
+          this.ctx.lineTo(drawMidX - outerSize, drawMidY);
           this.ctx.closePath();
           this.ctx.stroke();
         }
