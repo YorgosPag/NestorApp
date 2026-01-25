@@ -9,7 +9,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigationData } from './hooks/useNavigationData';
 import { useNavigationActions } from './hooks/useNavigationActions';
-import { useRealtimeBuildings, useRealtimeUnits, REALTIME_EVENTS } from '@/services/realtime';
+import { useRealtimeBuildings, useRealtimeUnits, REALTIME_EVENTS, RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import { NavigationApiService } from './services/navigationApi';
 // 🔐 ENTERPRISE: Auth hook for bootstrap gating
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -218,6 +218,35 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       window.removeEventListener(REALTIME_EVENTS.NAVIGATION_REFRESH, handleNavigationRefresh);
     };
   }, [refreshNavigation]);
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+  // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
+  useEffect(() => {
+    const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
+      console.log('🔄 [NavigationContext] Applying update for project:', payload.projectId);
+
+      setState(prev => ({
+        ...prev,
+        projects: prev.projects.map(project =>
+          project.id === payload.projectId
+            ? { ...project, ...payload.updates }
+            : project
+        ),
+        // Also update selectedProject if it's the one being updated
+        selectedProject: prev.selectedProject?.id === payload.projectId
+          ? { ...prev.selectedProject, ...payload.updates }
+          : prev.selectedProject
+      }));
+    };
+
+    // Subscribe to project updates (same-page + cross-page)
+    // Note: checkPendingOnMount=false to avoid interference with initial data load
+    const unsubscribe = RealtimeService.subscribeToProjectUpdates(handleProjectUpdate, {
+      checkPendingOnMount: false
+    });
+
+    return unsubscribe;
+  }, []);
 
   // 🏢 ENTERPRISE: Listen for auth:logout event to reset navigation state
   useEffect(() => {

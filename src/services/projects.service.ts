@@ -36,5 +36,44 @@ export async function debugProjectData(projectId: string) {
     return await service.debugProjectData(projectId);
 }
 
+/**
+ * 🏢 ENTERPRISE: Update project using Firebase Admin SDK (server-side)
+ *
+ * Pattern: SAP/Salesforce/Microsoft Dynamics - Server Action with validation
+ *
+ * @param projectId - The ID of the project to update
+ * @param updates - Partial project data to update
+ * @returns Promise<{ success: boolean; error?: string }>
+ *
+ * Security:
+ * - Runs on server (not exposed to client)
+ * - Uses Firebase Admin SDK (admin privileges)
+ * - Includes server-side validation
+ */
+export async function updateProject(
+    projectId: string,
+    updates: { name?: string; title?: string; status?: string }
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        console.log(`🏗️ SERVER ACTION: updateProject called for: "${projectId}"`);
+
+        // 🏢 ENTERPRISE: Use the Firestore repository with validation
+        await firestoreRepo.updateProject(projectId, updates);
+
+        console.log(`✅ SERVER ACTION: Project "${projectId}" updated successfully`);
+        return { success: true };
+
+    } catch (error) {
+        console.error(`❌ SERVER ACTION: Failed to update project "${projectId}":`, error);
+
+        // 🏢 ENTERPRISE: Return descriptive error message
+        const errorMessage = error instanceof Error
+            ? error.message
+            : 'Unknown error occurred while updating project';
+
+        return { success: false, error: errorMessage };
+    }
+}
+
 // 🏢 ENTERPRISE: Type re-exports NOT allowed in 'use server' files
 // Import types directly from: '@/services/projects/contracts'

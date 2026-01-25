@@ -374,6 +374,10 @@ export function useCentralizedMouseHandlers({
 
     // 🚀 CLEANUP PAN STATE for high-performance panning
     const panState = panStateRef.current;
+    // 🏢 ENTERPRISE (2026-01-25): Track if we were panning BEFORE resetting the flag
+    // This prevents onCanvasClick from being called after pan ends
+    const wasPanning = panState.isPanning;
+
     if (panState.isPanning) {
       panState.isPanning = false;
       panState.lastMousePos = null;
@@ -398,15 +402,22 @@ export function useCentralizedMouseHandlers({
 
     // 🎯 DRAWING TOOLS: Call onCanvasClick if provided (for drawing tools like Line, Circle, etc.)
     // 🏢 ENTERPRISE FIX (2026-01-06): Apply snap to click position for accurate drawing
+    // 🏢 ENTERPRISE FIX (2026-01-25): Only LEFT click (button === 0) triggers drawing
+    // Middle button (button === 1) is for pan only, not for adding polygon points
+    // Also skip if we just finished panning (wasPanning check)
+    const isLeftClick = e.button === 0;
+
     console.log('🔍 handleMouseUp check:', {
       hasOnCanvasClick: !!onCanvasClick,
       isSelecting: cursor.isSelecting,
-      isPanning: panState.isPanning,
+      wasPanning,
       hasPosition: !!cursor.position,
-      overlayMode
+      overlayMode,
+      button: e.button,
+      isLeftClick
     });
 
-    if (onCanvasClick && !cursor.isSelecting && !panState.isPanning && cursor.position) {
+    if (onCanvasClick && isLeftClick && !cursor.isSelecting && !wasPanning && cursor.position) {
       let clickPoint = cursor.position; // Default: screen coordinates
 
       // ✅ SNAP FIX: Convert screen→world, apply snap, convert back to screen

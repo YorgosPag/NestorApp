@@ -7,6 +7,10 @@ export const iconColors = {
   editItem: HOVER_TEXT_EFFECTS.BLUE,
   deleteItems: HOVER_TEXT_EFFECTS.RED,
 
+  // Visibility Actions - Ορατότητα (Eye/EyeOff icons)
+  visibilityOn: HOVER_TEXT_EFFECTS.GREEN,    // 👁️ Visible state - πράσινο
+  visibilityOff: HOVER_TEXT_EFFECTS.GRAY,    // 👁️‍🗨️ Hidden state - γκρι
+
   // Filters & Search - Φίλτρα και αναζήτηση
   filters: HOVER_TEXT_EFFECTS.PURPLE,
   sorting: HOVER_TEXT_EFFECTS.INDIGO,

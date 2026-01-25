@@ -86,9 +86,10 @@ const UI_COLORS_BASE = {
   
   // Grip colors
   GRIP_DEFAULT: '#00ff80',
-  GRIP_HOVER: '#ffffff',
+  GRIP_HOVER: '#f59e0b',        // Orange for hover state (Autodesk pattern)
   GRIP_SELECTED: '#ffffff',
   GRIP_OUTLINE: '#000000',
+  GRIP_EDGE: '#9ca3af',         // 🏢 ENTERPRISE: Gray for edge midpoint grips (Autodesk pattern)
   
   // Snap indicator colors
   SNAP_MIDPOINT: '#00ff00',      // Green for midpoints

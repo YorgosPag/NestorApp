@@ -742,9 +742,12 @@ Check console for detailed metrics`;
   }, [levelManager.currentLevelId, overlayStore]);
 
   // 🔺 AUTO-ACTIVATE LAYERING TOOL when overlay is selected
+  // 🏢 ENTERPRISE (2026-01-25): Εξαίρεση για 'select' tool - δεν αλλάζει σε layering
+  // ώστε να μην γίνεται auto-zoom όταν επιλέγεται overlay με το select tool
   React.useEffect(() => {
     const selectedOverlay = overlayStore.getSelectedOverlay();
-    if (selectedOverlay && activeTool !== 'layering') {
+    // Αν είμαστε σε 'select' tool, ΔΕΝ αλλάζουμε σε layering (ο χρήστης θέλει απλή επιλογή)
+    if (selectedOverlay && activeTool !== 'layering' && activeTool !== 'select') {
       // Αυτόματη ενεργοποίηση layering tool όταν επιλέγεται overlay
       handleToolChange('layering');
     }

@@ -38,6 +38,29 @@ export function useProjectsPageState(initialProjects: Project[]) {
     }
   }, [initialProjects, projectIdFromUrl]);
 
+  // 🏢 ENTERPRISE: Sync selectedProject with updated data from initialProjects
+  // Pattern: Local State Synchronization (instant UI update after project save)
+  // This ensures selectedProject stays in sync when projects array is updated
+  useEffect(() => {
+    if (!selectedProject || !initialProjects.length) return;
+
+    // Find the updated version of the selected project
+    const updatedProject = initialProjects.find(p => p.id === selectedProject.id);
+
+    if (updatedProject) {
+      // Check if data actually changed to avoid unnecessary re-renders
+      const hasChanged =
+        updatedProject.name !== selectedProject.name ||
+        updatedProject.title !== selectedProject.title ||
+        updatedProject.status !== selectedProject.status;
+
+      if (hasChanged) {
+        console.log('🔄 [useProjectsPageState] Syncing selectedProject with updated data:', updatedProject.name);
+        setSelectedProject(updatedProject);
+      }
+    }
+  }, [initialProjects]);
+
   const filteredProjects = useMemo(() => {
     return initialProjects.filter(project => {
       // Search filter - εκτεταμένη αναζήτηση

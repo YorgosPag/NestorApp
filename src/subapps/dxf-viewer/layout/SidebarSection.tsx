@@ -105,11 +105,12 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
         - flex flex-col: Vertical stacking
         - h-full: Fill parent height
       */}
+      {/* 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds */}
       <section
         className={`
           h-full
           flex flex-col
-          ${colors.bg.secondary}
+          ${colors.bg.card}
           ${quick.card}
           ${PANEL_LAYOUT.SHADOW.XL}
           ${getStatusBorder('default')}
@@ -136,12 +137,13 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
           STATUS BAR - Fixed at bottom
           - flex-shrink-0: Never shrink, always visible
         */}
+        {/* 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds */}
         <footer
           className={`
             flex-shrink-0
             ${PANEL_LAYOUT.SPACING.GAP_SM}
             ${PANEL_LAYOUT.ROUNDED.BOTTOM_LG}
-            ${colors.bg.secondary}
+            ${colors.bg.card}
             ${quick.separatorH}
             ${PANEL_LAYOUT.SPACING.LG}
           `}

@@ -27,6 +27,10 @@ interface GeneralProjectHeaderProps {
     projectCode?: string;
     /** 🏢 ENTERPRISE: Technical Firestore document ID (for support/debugging) */
     projectId?: string;
+    /** 🏢 ENTERPRISE: Indicates if save operation is in progress */
+    isSaving?: boolean;
+    /** 🏢 ENTERPRISE: Error message from failed save operation */
+    saveError?: string | null;
 }
 
 export function GeneralProjectHeader({
@@ -36,7 +40,9 @@ export function GeneralProjectHeader({
     setIsEditing,
     handleSave,
     projectCode,
-    projectId
+    projectId,
+    isSaving = false,
+    saveError = null
 }: GeneralProjectHeaderProps) {
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
@@ -127,14 +133,28 @@ export function GeneralProjectHeader({
                 </Button>
                 ) : (
                 <>
-                    <Button variant="outline" size="sm" onClick={handleCancel}>
+                    <Button variant="outline" size="sm" onClick={handleCancel} disabled={isSaving}>
                         <X className={`${iconSizes.sm} mr-2`} />
                         {t('projectHeader.cancel')}
                     </Button>
-                    <Button size="sm" onClick={handleSave}>
-                        <Save className={`${iconSizes.sm} mr-2`} />
-                        {t('projectHeader.save')}
+                    <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                        {isSaving ? (
+                            <>
+                                <AnimatedSpinner size="small" className="mr-2" />
+                                {t('projectHeader.saving')}
+                            </>
+                        ) : (
+                            <>
+                                <Save className={`${iconSizes.sm} mr-2`} />
+                                {t('projectHeader.save')}
+                            </>
+                        )}
                     </Button>
+                    {saveError && (
+                        <span className={`text-xs ${colors.text.error}`}>
+                            {saveError}
+                        </span>
+                    )}
                 </>
                 )}
             </div>

@@ -184,3 +184,25 @@ export interface UnitBuildingLinkPayload {
   newBuildingId: string | null;
   timestamp: number;
 }
+
+/**
+ * 🏢 ENTERPRISE: Event payload for project update
+ * Used for real-time sync across all pages (Navigation, Audit, DXF Viewer)
+ */
+export interface ProjectUpdatedPayload {
+  projectId: string;
+  updates: {
+    name?: string;
+    title?: string;
+    status?: string;
+  };
+  timestamp: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: localStorage key for cross-page sync
+ * Using storage events to sync updates across browser tabs
+ */
+export const REALTIME_STORAGE_KEYS = {
+  PROJECT_UPDATED: 'realtime:project-updated',
+} as const;

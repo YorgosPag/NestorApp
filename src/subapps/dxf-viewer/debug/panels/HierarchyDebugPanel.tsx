@@ -3,12 +3,14 @@ import React from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
-import { Building, Building2, FolderIcon, Home, Package, ParkingCircle, Target } from 'lucide-react';
-import { CraneIcon } from '../../components/icons';
+import { Building, Construction, Factory, Home, Package, ParkingCircle, Target } from 'lucide-react';
 import { useProjectHierarchy } from '../../contexts/ProjectHierarchyContext';
 import { useTranslation } from '../../../../i18n';
-import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Centralized BaseButton for error retry
+import { BaseButton } from '../../components/shared/BaseButton';
+// 🏢 ENTERPRISE: Centralized ListCard for hierarchy items (same as contacts, projects, buildings lists)
+import { ListCard } from '@/design-system/components/ListCard/ListCard';
 
 export function HierarchyDebugPanel() {
   const iconSizes = useIconSizes();
@@ -37,9 +39,11 @@ export function HierarchyDebugPanel() {
 
   if (loading) {
     return (
-      <section className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
+      // 🏢 ENTERPRISE: SPACING.MS = 6px padding, bg.card for darker background
+      <section className={`${colors.bg.card} ${PANEL_LAYOUT.SPACING.MS} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
         <h3 className={`${colors.text.inverse} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <CraneIcon className={`${iconSizes.md} ${colors.text.warning}`} />
+          {/* 🏢 ENTERPRISE: Factory icon (blue) - same as company cards */}
+          <Factory className={`${iconSizes.md} text-blue-600`} />
           <span>{t('panels.hierarchy.projectHierarchy')}</span>
         </h3>
         <p className={`${colors.text.muted}`}>{t('panels.hierarchy.loading')}</p>
@@ -49,23 +53,29 @@ export function HierarchyDebugPanel() {
 
   if (error) {
     return (
-      <section className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('error')}`}>
+      // 🏢 ENTERPRISE: SPACING.MS = 6px padding, bg.card for darker background
+      <section className={`${colors.bg.card} ${PANEL_LAYOUT.SPACING.MS} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('error')}`}>
         <h3 className={`${colors.text.inverse} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM}`}>{t('panels.hierarchy.error')}</h3>
         <p className={`${colors.text.error}`}>{error}</p>
-        <button
+        {/* 🏢 ENTERPRISE: Centralized BaseButton for error retry */}
+        <BaseButton
+          variant="primary"
+          size="sm"
           onClick={loadCompanies}
-          className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.BUTTON.PADDING_COMPACT} ${colors.bg.info} ${colors.text.inverse} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${HOVER_BACKGROUND_EFFECTS.BLUE_BUTTON}`}
+          className={PANEL_LAYOUT.MARGIN.TOP_SM}
         >
           {t('panels.hierarchy.retry')}
-        </button>
+        </BaseButton>
       </section>
     );
   }
 
   return (
-    <article className={`${colors.bg.secondary} ${PANEL_LAYOUT.SPACING.LG} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
+    // 🏢 ENTERPRISE: SPACING.MS = 6px padding, bg.card for darker background
+    <article className={`${colors.bg.card} ${PANEL_LAYOUT.SPACING.MS} ${PANEL_LAYOUT.ROUNDED.LG} ${getStatusBorder('muted')}`}>
       <h3 className={`${colors.text.inverse} ${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${PANEL_LAYOUT.MARGIN.BOTTOM_LG} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-        <CraneIcon className={`${iconSizes.md} ${colors.text.warning}`} />
+        {/* 🏢 ENTERPRISE: Factory icon (blue) - same as company cards */}
+        <Factory className={`${iconSizes.md} text-blue-600`} />
         <span>{t('panels.hierarchy.projectHierarchy')}</span>
       </h3>
 
@@ -75,22 +85,20 @@ export function HierarchyDebugPanel() {
         {companies.length === 0 ? (
           <p className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.SM}`}>{t('panels.hierarchy.noCompanies')}</p>
         ) : (
-          <nav className={PANEL_LAYOUT.SPACING.GAP_XS}>
+          <nav className={`flex flex-col ${PANEL_LAYOUT.GAP.XS}`}>
+            {/* 🏢 ENTERPRISE: Centralized ListCard - same as contacts/projects lists */}
             {companies.map(company => (
-              <button
+              <ListCard
                 key={company.id}
+                entityType="company"
+                title={company.companyName}
+                subtitle={company.industry}
+                isSelected={selectedCompany?.id === company.id}
                 onClick={() => selectCompany(company.id!)}
-                className={`w-full text-left ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${
-                  selectedCompany?.id === company.id
-                    ? `${colors.bg.warning} ${colors.text.inverse}`
-                    : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
-                }`}
-              >
-                <Building className={`${iconSizes.sm} inline ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />{company.companyName}
-                <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.SPACING.GAP_H_SM} ${PANEL_LAYOUT.OPACITY['75']}`}>
-                  {company.industry}
-                </span>
-              </button>
+                compact
+                hideStats
+                className="[&_header]:!mb-0"
+              />
             ))}
           </nav>
         )}
@@ -115,22 +123,20 @@ export function HierarchyDebugPanel() {
             {projects.length === 0 ? (
               <p className={`${colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>{t('panels.hierarchy.noProjects')}</p>
             ) : (
-              <menu className={PANEL_LAYOUT.SPACING.GAP_XS}>
+              <menu className={`flex flex-col ${PANEL_LAYOUT.GAP.XS} list-none`}>
+                {/* 🏢 ENTERPRISE: Centralized ListCard - same as projects list */}
                 {projects.map(project => (
                   <li key={project.id} className="list-none">
-                    <button
+                    <ListCard
+                      entityType="project"
+                      title={project.name}
+                      subtitle={`${project.buildings.length} ${t('panels.hierarchy.buildingsCount', { count: project.buildings.length })}`}
+                      isSelected={selectedProject?.id === project.id}
                       onClick={() => selectProject(project.id)}
-                      className={`w-full text-left ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${
-                        selectedProject?.id === project.id
-                          ? `${colors.bg.info} ${colors.text.inverse}`
-                          : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
-                      }`}
-                    >
-                      <FolderIcon className={`${iconSizes.sm} inline ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />{project.name}
-                      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.SPACING.GAP_H_SM} ${PANEL_LAYOUT.OPACITY['75']}`}>
-                        ({project.buildings.length} {t('panels.hierarchy.buildingsCount', { count: project.buildings.length })})
-                      </span>
-                    </button>
+                      compact
+                      hideStats
+                      className="[&_header]:!mb-0"
+                    />
                   </li>
                 ))}
               </menu>
@@ -141,10 +147,10 @@ export function HierarchyDebugPanel() {
 
       {/* Selected Project Info */}
       {selectedProject && (
-        <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${getDirectionalBorder('info', 'left')}`}>
-          {/* ✅ ADR-003: Removed nested div - h4 is now directly flex */}
-          <h4 className={`${colors.text.info} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-            <Building2 className={iconSizes.sm} />
+        <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_LG} ${getDirectionalBorder('success', 'left')}`}>
+          {/* 🏢 ENTERPRISE: Construction icon (green) - same as project cards in NAVIGATION_ENTITIES */}
+          <h4 className={`text-green-600 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+            <Construction className={iconSizes.sm} />
             <span>{selectedProject.name}</span>
           </h4>
 
@@ -152,22 +158,20 @@ export function HierarchyDebugPanel() {
           {selectedProject.buildings.length > 0 && (
             <nav className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
               <h5 className={`${colors.text.secondary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>{t('panels.hierarchy.buildings')}</h5>
-              <menu className={PANEL_LAYOUT.SPACING.GAP_XS}>
+              {/* 🏢 ENTERPRISE: Centralized ListCard - same as buildings list */}
+              <menu className={`flex flex-col ${PANEL_LAYOUT.GAP.XS} list-none`}>
                 {selectedProject.buildings.map(building => (
                   <li key={building.id} className="list-none">
-                    <button
+                    <ListCard
+                      entityType="building"
+                      title={building.name}
+                      subtitle={`${building.floors.length} ${t('panels.hierarchy.floorsCount', { count: building.floors.length })}`}
+                      isSelected={selectedBuilding?.id === building.id}
                       onClick={() => selectBuilding(building.id)}
-                      className={`w-full text-left ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${
-                        selectedBuilding?.id === building.id
-                          ? `${colors.bg.success} ${colors.text.inverse}`
-                          : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
-                      }`}
-                    >
-                      <Building2 className={`${iconSizes.sm} inline ${PANEL_LAYOUT.MARGIN.LEFT_HALF}`} />{building.name}
-                      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.SPACING.GAP_H_SM} ${PANEL_LAYOUT.OPACITY['75']}`}>
-                        ({building.floors.length} {t('panels.hierarchy.floorsCount', { count: building.floors.length })})
-                      </span>
-                    </button>
+                      compact
+                      hideStats
+                      className="[&_header]:!mb-0"
+                    />
                   </li>
                 ))}
               </menu>
@@ -186,10 +190,10 @@ export function HierarchyDebugPanel() {
 
       {/* Selected Building Info */}
       {selectedBuilding && (
-        <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_XL} ${getDirectionalBorder('success', 'left')}`}>
-          {/* ✅ ADR-003: Removed nested div - h4 is now directly flex */}
-          <h4 className={`${colors.text.success} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-            <Building2 className={iconSizes.sm} />
+        <section className={`${PANEL_LAYOUT.MARGIN.BOTTOM_LG} ${PANEL_LAYOUT.MARGIN.LEFT_XL} ${getDirectionalBorder('info', 'left')}`}>
+          {/* 🏢 ENTERPRISE: Building icon (purple) - same as building cards in NAVIGATION_ENTITIES */}
+          <h4 className={`text-purple-600 ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_SM} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+            <Building className={iconSizes.sm} />
             <span>{selectedBuilding.name}</span>
           </h4>
 
@@ -197,22 +201,20 @@ export function HierarchyDebugPanel() {
           {selectedBuilding.floors.length > 0 && (
             <nav className={PANEL_LAYOUT.MARGIN.BOTTOM_MD}>
               <h5 className={`${colors.text.tertiary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.MARGIN.BOTTOM_XS}`}>{t('panels.hierarchy.floors')}</h5>
-              <menu className={PANEL_LAYOUT.SPACING.GAP_XS}>
+              {/* 🏢 ENTERPRISE: Centralized ListCard - same as floors/units list */}
+              <menu className={`flex flex-col ${PANEL_LAYOUT.GAP.XS} list-none`}>
                 {selectedBuilding.floors.map(floor => (
                   <li key={floor.id} className="list-none">
-                    <button
+                    <ListCard
+                      entityType="floor"
+                      title={floor.name}
+                      subtitle={`${Array.isArray(floor.units) ? floor.units.length : 0} ${t('panels.hierarchy.unitsCount', { count: Array.isArray(floor.units) ? floor.units.length : 0 })}`}
+                      isSelected={selectedFloor?.id === floor.id}
                       onClick={() => selectFloor(floor.id)}
-                      className={`w-full text-left ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${
-                        selectedFloor?.id === floor.id
-                          ? `${colors.bg.info} ${colors.text.inverse}`
-                          : `${colors.bg.hover} ${colors.text.secondary} ${HOVER_BACKGROUND_EFFECTS.GRAY_PANEL}`
-                      }`}
-                    >
-                      <Home className={`${iconSizes.sm} inline ${PANEL_LAYOUT.MARGIN.RIGHT_XS}`} />{floor.name}
-                      <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.LEFT_SM} ${PANEL_LAYOUT.OPACITY['75']}`}>
-                      ({Array.isArray(floor.units) ? floor.units.length : 0} {t('panels.hierarchy.unitsCount', { count: Array.isArray(floor.units) ? floor.units.length : 0 })})
-                      </span>
-                    </button>
+                      compact
+                      hideStats
+                      className="[&_header]:!mb-0"
+                    />
                   </li>
                 ))}
               </menu>

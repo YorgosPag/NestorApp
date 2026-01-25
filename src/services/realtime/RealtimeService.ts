@@ -27,8 +27,10 @@ import {
   type RealtimeDocOptions,
   type SubscriptionStatus,
   REALTIME_EVENTS,
+  REALTIME_STORAGE_KEYS,
   type BuildingProjectLinkPayload,
   type UnitBuildingLinkPayload,
+  type ProjectUpdatedPayload,
 } from './types';
 
 // ============================================================================
@@ -222,6 +224,111 @@ class RealtimeServiceCore {
     this.dispatchEvent(REALTIME_EVENTS.UNIT_BUILDING_LINKED, payload);
     // Also trigger navigation refresh
     this.dispatchEvent(REALTIME_EVENTS.NAVIGATION_REFRESH, { timestamp: Date.now() });
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch project updated event (CENTRALIZED)
+   *
+   * Single source of truth for project updates across all pages:
+   * - Navigation (/navigation)
+   * - Audit (/audit)
+   * - DXF Viewer (/dxf/viewer)
+   * - Any future page that needs project data
+   *
+   * Features:
+   * 1. Same-page sync via CustomEvent
+   * 2. Cross-page sync via localStorage (storage events)
+   * 3. Pending update check for page loads
+   */
+  dispatchProjectUpdated(payload: ProjectUpdatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching PROJECT_UPDATED:', payload.projectId);
+
+    // 1. Same-page real-time update via CustomEvent
+    this.dispatchEvent(REALTIME_EVENTS.PROJECT_UPDATED, payload);
+
+    // 2. Cross-page sync via localStorage (client-side only)
+    // Storage events propagate to OTHER tabs automatically
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.PROJECT_UPDATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage write failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Subscribe to project updates (CENTRALIZED)
+   *
+   * Creates listeners for both same-page and cross-page updates.
+   * Returns cleanup function for React useEffect.
+   *
+   * @param onUpdate - Callback when project is updated
+   * @param options - Optional configuration
+   */
+  subscribeToProjectUpdates(
+    onUpdate: (payload: ProjectUpdatedPayload) => void,
+    options?: { checkPendingOnMount?: boolean }
+  ): () => void {
+    const { checkPendingOnMount = true } = options || {};
+
+    // 1. Same-page listener (CustomEvent)
+    const handleCustomEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<ProjectUpdatedPayload>;
+      if (customEvent.detail) {
+        console.log('📡 [RealtimeService] Same-page project update:', customEvent.detail.projectId);
+        onUpdate(customEvent.detail);
+      }
+    };
+
+    // 2. Cross-page listener (localStorage storage event)
+    const handleStorageEvent = (event: StorageEvent) => {
+      if (event.key !== REALTIME_STORAGE_KEYS.PROJECT_UPDATED || !event.newValue) return;
+
+      try {
+        const payload = JSON.parse(event.newValue) as ProjectUpdatedPayload;
+        console.log('📡 [RealtimeService] Cross-page project update:', payload.projectId);
+        onUpdate(payload);
+      } catch (error) {
+        console.error('❌ [RealtimeService] Failed to parse storage event:', error);
+      }
+    };
+
+    // 3. Check for pending updates on mount (client-side only)
+    if (checkPendingOnMount && typeof window !== 'undefined') {
+      try {
+        const pendingUpdate = localStorage.getItem(REALTIME_STORAGE_KEYS.PROJECT_UPDATED);
+        if (pendingUpdate) {
+          const payload = JSON.parse(pendingUpdate) as ProjectUpdatedPayload;
+          // Only apply if update was recent (within last 5 seconds)
+          if (Date.now() - payload.timestamp < 5000) {
+            console.log('📡 [RealtimeService] Applying pending project update:', payload.projectId);
+            onUpdate(payload);
+          }
+          // Clear after processing
+          localStorage.removeItem(REALTIME_STORAGE_KEYS.PROJECT_UPDATED);
+        }
+      } catch (error) {
+        console.error('❌ [RealtimeService] Failed to process pending update:', error);
+      }
+    }
+
+    // Register listeners (client-side only)
+    if (typeof window !== 'undefined') {
+      window.addEventListener(REALTIME_EVENTS.PROJECT_UPDATED, handleCustomEvent);
+      window.addEventListener('storage', handleStorageEvent);
+    }
+
+    // Return cleanup function
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(REALTIME_EVENTS.PROJECT_UPDATED, handleCustomEvent);
+        window.removeEventListener('storage', handleStorageEvent);
+      }
+    };
   }
 
   // ==========================================================================

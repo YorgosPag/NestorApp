@@ -20,7 +20,9 @@ import React, { useMemo, forwardRef } from 'react';
 // 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 PHASE 1: Additional icons (not in NAVIGATION_ENTITIES yet)
-import { Maximize2, Link2, Footprints, Eye, EyeOff, Edit3, Trash2 } from 'lucide-react';
+import { Maximize2, Link2, Footprints, Eye, EyeOff, Edit, Trash2 } from 'lucide-react';
+// 🏢 ENTERPRISE: Centralized action icon colors
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 // 🏢 DESIGN SYSTEM
 import { ListCard } from '@/design-system';
@@ -294,34 +296,37 @@ export const OverlayListCard = forwardRef<HTMLElement, OverlayListCardProps>(fun
   const actions = useMemo<ListCardAction[]>(() => {
     const items: ListCardAction[] = [];
 
-    // Visibility toggle action
+    // Visibility toggle action - 🏢 ENTERPRISE: Dynamic color based on state
+    // Visible = GREEN (πράσινο), Hidden = GRAY (γκρι)
     if (onToggleVisibility) {
       items.push({
         id: 'visibility',
         label: isVisible ? t('overlayList.hide') : t('overlayList.show'),
         icon: isVisible ? Eye : EyeOff,
         onClick: onToggleVisibility,
+        className: isVisible ? HOVER_TEXT_EFFECTS.GREEN : HOVER_TEXT_EFFECTS.GRAY,
       });
     }
 
-    // Edit action
+    // Edit action - 🏢 ENTERPRISE: Centralized BLUE color
     if (onEdit) {
       items.push({
         id: 'edit',
         label: t('overlayList.edit'),
-        icon: Edit3,
+        icon: Edit,
         onClick: onEdit,
+        className: HOVER_TEXT_EFFECTS.BLUE,
       });
     }
 
-    // Delete action
+    // Delete action - 🏢 ENTERPRISE: Centralized RED color
     if (onDelete) {
       items.push({
         id: 'delete',
         label: t('overlayList.delete'),
         icon: Trash2,
         onClick: onDelete,
-        className: 'hover:text-red-500',
+        className: HOVER_TEXT_EFFECTS.RED,
       });
     }
 

@@ -21,6 +21,8 @@ import React, { useMemo } from 'react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 Action icons
 import { Edit, Trash2, Layers } from 'lucide-react';
+// 🏢 ENTERPRISE: Centralized action icon colors
+import { HOVER_TEXT_EFFECTS } from '@/components/ui/effects';
 
 // 🏢 DESIGN SYSTEM
 import { ListCard } from '@/design-system';
@@ -140,24 +142,25 @@ export function LevelListCard({
   const actions = useMemo<ListCardAction[]>(() => {
     const items: ListCardAction[] = [];
 
-    // Edit/Rename action
+    // Edit/Rename action - 🏢 ENTERPRISE: Centralized BLUE color
     if (onEdit) {
       items.push({
         id: 'edit',
         label: t('panels.levels.renameLevel'),
         icon: Edit,
         onClick: onEdit,
+        className: HOVER_TEXT_EFFECTS.BLUE,
       });
     }
 
-    // Delete action (only if not the only level)
+    // Delete action (only if not the only level) - 🏢 ENTERPRISE: Centralized RED color
     if (onDelete && !isOnlyLevel) {
       items.push({
         id: 'delete',
         label: t('panels.levels.deleteLevel'),
         icon: Trash2,
         onClick: onDelete,
-        className: 'hover:text-red-500',
+        className: HOVER_TEXT_EFFECTS.RED,
       });
     }
 

@@ -10,6 +10,8 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 import type { CompanyContact } from '../../../types/contacts';
 // 🔐 ENTERPRISE: Auth hook for authentication-ready gating
 import { useAuth } from '@/auth/hooks/useAuth';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 
 // Mock function για getBuildingsByProjectId (προσωρινά)
 const getBuildingsByProjectId = async (projectId: string) => {
@@ -394,6 +396,32 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       loadProjects();
     }
   }, [user, authLoading]);
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+  // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
+  useEffect(() => {
+    const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
+      console.log('🔄 [ProjectHierarchy] Applying update for project:', payload.projectId);
+
+      setHierarchy(prev => ({
+        ...prev,
+        projects: prev.projects.map(project =>
+          project.id === payload.projectId
+            ? { ...project, ...payload.updates }
+            : project
+        ),
+        // Also update selectedProject if it's the one being updated
+        selectedProject: prev.selectedProject?.id === payload.projectId
+          ? { ...prev.selectedProject, ...payload.updates }
+          : prev.selectedProject
+      }));
+    };
+
+    // Subscribe to project updates (same-page + cross-page)
+    const unsubscribe = RealtimeService.subscribeToProjectUpdates(handleProjectUpdate);
+
+    return unsubscribe;
+  }, []);
 
   const contextValue: ProjectHierarchyContextType = {
     ...hierarchy,

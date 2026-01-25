@@ -89,6 +89,14 @@ export interface ProjectStats {
 
 export type ProjectSortKey = 'name' | 'progress' | 'totalValue' | 'status' | 'area';
 
+/**
+ * 🏢 ENTERPRISE: Project update payload for Firestore operations
+ * Follows contacts.service.ts pattern for type-safe updates
+ */
+export type ProjectUpdatePayload = Partial<Omit<Project, 'id' | 'createdAt' | 'updatedAt'>> & {
+  updatedAt?: unknown; // FieldValue from Firestore
+};
+
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
     planning: 'Σχεδιασμός',
     in_progress: 'Σε εξέλιξη',

@@ -22,6 +22,9 @@ export interface ColorLayer {
   isDraft?: boolean;           // True if this is a draft/preview layer
   showGrips?: boolean;         // Show grips at each vertex
   isNearFirstPoint?: boolean;  // True if cursor is near first point (for close polygon highlight)
+  // 🏢 ENTERPRISE (2026-01-25): Edge midpoint grips for vertex insertion (Autodesk pattern)
+  showEdgeMidpoints?: boolean; // Show midpoint grips on edges for adding new vertices
+  hoveredEdgeIndex?: number;   // Index of currently hovered edge (for visual feedback)
 }
 
 export interface LayerPolygon {

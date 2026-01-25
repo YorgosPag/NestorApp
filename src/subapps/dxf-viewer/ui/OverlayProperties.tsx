@@ -14,7 +14,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useIconSizes } from '../../../hooks/useIconSizes';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
-import { useDynamicBackgroundClass } from '../../../components/ui/utils/dynamic-styles';
+import { getDynamicBackgroundClass } from '../../../components/ui/utils/dynamic-styles';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
@@ -130,7 +130,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
       {/* Basic Info */}
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
         <div
-          className={`${iconSizes.sm} rounded ${quick.button} ${useDynamicBackgroundClass(STATUS_COLORS[overlay.status || 'for-sale'] as string)}`}
+          className={`${iconSizes.sm} rounded ${quick.button} ${getDynamicBackgroundClass(STATUS_COLORS[overlay.status || 'for-sale'] as string)}`}
         />
         <CommonBadge
           status="company"
@@ -163,7 +163,7 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
               <SelectItem key={status} value={status}>
                 <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
                   <div
-                    className={`${iconSizes.xs} rounded ${useDynamicBackgroundClass(String(STATUS_COLORS[status] || ''))}`}
+                    className={`${iconSizes.xs} rounded ${getDynamicBackgroundClass(String(STATUS_COLORS[status] || ''))}`}
                   />
                   {t(STATUS_LABELS[status])}
                 </div>

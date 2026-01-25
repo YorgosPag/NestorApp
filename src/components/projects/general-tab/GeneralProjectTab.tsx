@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
@@ -26,8 +27,14 @@ import { ProjectBuildingsCard } from './parts/ProjectBuildingsCard';
 import type { GeneralProjectTabProps } from './types';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Project update server action (SAP/Salesforce pattern)
+import { updateProject } from '@/services/projects.service';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
+  // 🏢 ENTERPRISE: Router for soft refresh after save
+  const router = useRouter();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   const [isEditing, setIsEditing] = useState(false);
@@ -65,10 +72,56 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
     }));
   }, [project]);
 
-  const handleSave = () => {
-    setIsEditing(false);
-    console.log("Saving data...", projectData);
-    // In a real app, you would call the update service here
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  /**
+   * 🏢 ENTERPRISE: Handle project save using Server Action
+   *
+   * Pattern: SAP/Salesforce/Microsoft Dynamics
+   * - Client calls Server Action (not direct database access)
+   * - Server validates and writes to database
+   * - Returns success/error to client
+   */
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      setSaveError(null);
+      console.log('🏗️ Saving project via Server Action...', projectData);
+
+      // 🏢 ENTERPRISE: Call server action with update payload
+      const result = await updateProject(project.id, {
+        name: projectData.name,
+        title: projectData.licenseTitle,
+        status: projectData.status,
+      });
+
+      if (!result.success) {
+        // 🏢 ENTERPRISE: Handle server-side validation errors
+        throw new Error(result.error || 'Failed to save project');
+      }
+
+      console.log('✅ Project saved successfully via Server Action');
+      setIsEditing(false);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+      // Single source of truth for project updates across all pages
+      RealtimeService.dispatchProjectUpdated({
+        projectId: project.id,
+        updates: {
+          name: projectData.name,
+          title: projectData.licenseTitle,
+          status: projectData.status,
+        },
+        timestamp: Date.now()
+      });
+
+    } catch (error) {
+      console.error('❌ Error saving project:', error);
+      setSaveError(error instanceof Error ? error.message : 'Failed to save project');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const salesPercentage = stats && stats.totalUnits > 0 ? (stats.soldUnits / stats.totalUnits) * 100 : 0;
@@ -87,6 +140,8 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         handleSave={handleSave}
         projectCode={project.projectCode}
         projectId={project.id}
+        isSaving={isSaving}
+        saveError={saveError}
       />
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 my-6">

@@ -41,6 +41,10 @@ export class FirestoreProjectsRepository implements Pick<IProjectsRepository, 'g
       return []; // Επιστροφή κενού array αντί για sample data
     }
   }
+
+  // 🏢 ENTERPRISE NOTE: Project updates use Server Actions only (not client-side)
+  // See: src/services/projects.service.ts → updateProject() server action
+  // Reason: Firestore Security Rules block client-side writes to projects collection
 }
 
 // 🚨 DEPRECATED: SampleProjectsRepository - Αντικαταστάθηκε με FirestoreProjectsRepository

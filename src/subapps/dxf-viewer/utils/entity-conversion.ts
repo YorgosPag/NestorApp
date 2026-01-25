@@ -235,6 +235,149 @@ export function canPolylineBeClosedByConnection(
   
   const firstVertex = polyline.vertices[0];
   const lastVertex = polyline.vertices[polyline.vertices.length - 1];
-  
+
   return arePointsConnectable(firstVertex, lastVertex, tolerance);
+}
+
+// ============================================================================
+// 🏢 ENTERPRISE (2026-01-25): OVERLAY POLYGON UTILITIES
+// Επέκταση για Overlay polygon format: Array<[number, number]>
+// Χρησιμοποιεί τις υπάρχουσες geometry utilities με format conversion
+// ============================================================================
+
+/**
+ * Convert overlay polygon vertex to Point2D
+ * @param vertex - Overlay vertex format [x, y]
+ * @returns Point2D format { x, y }
+ */
+export function overlayVertexToPoint2D(vertex: [number, number]): Point2D {
+  return { x: vertex[0], y: vertex[1] };
+}
+
+/**
+ * Convert Point2D to overlay polygon vertex
+ * @param point - Point2D format { x, y }
+ * @returns Overlay vertex format [x, y]
+ */
+export function point2DToOverlayVertex(point: Point2D): [number, number] {
+  return [point.x, point.y];
+}
+
+/**
+ * Find which edge of an overlay polygon is closest to a point
+ * Uses existing geometry utilities with format conversion
+ * @param point - The point to test (world coordinates)
+ * @param polygon - Overlay polygon format Array<[number, number]>
+ * @param tolerance - Distance tolerance (in world units)
+ * @returns Edge info for vertex insertion or null if no close edge found
+ */
+export function findOverlayEdgeForGrip(
+  point: Point2D,
+  polygon: Array<[number, number]>,
+  tolerance: number
+): { edgeIndex: number; insertPoint: Point2D; insertIndex: number } | null {
+  if (polygon.length < 2) return null;
+
+  let closestEdge: {
+    edgeIndex: number;
+    insertPoint: Point2D;
+    insertIndex: number;
+    distance: number
+  } | null = null;
+
+  // Check each edge of the polygon (including closing edge for closed polygons)
+  const edgeCount = polygon.length; // For closed polygons, last edge connects last→first
+
+  for (let i = 0; i < edgeCount; i++) {
+    const startVertex = polygon[i];
+    const endVertex = polygon[(i + 1) % polygon.length]; // Wrap around for closed polygon
+
+    const start = overlayVertexToPoint2D(startVertex);
+    const end = overlayVertexToPoint2D(endVertex);
+
+    // Use existing utility for edge detection
+    if (isPointNearLineSegment(point, start, end, tolerance)) {
+      const insertPoint = getClosestPointOnLineSegment(point, start, end);
+      const distance = Math.sqrt(
+        Math.pow(point.x - insertPoint.x, 2) +
+        Math.pow(point.y - insertPoint.y, 2)
+      );
+
+      // Don't allow insertion too close to existing vertices
+      const startDist = Math.sqrt(
+        Math.pow(insertPoint.x - start.x, 2) +
+        Math.pow(insertPoint.y - start.y, 2)
+      );
+      const endDist = Math.sqrt(
+        Math.pow(insertPoint.x - end.x, 2) +
+        Math.pow(insertPoint.y - end.y, 2)
+      );
+
+      // Minimum distance from existing vertices (2x tolerance)
+      if (startDist > tolerance * 2 && endDist > tolerance * 2) {
+        if (!closestEdge || distance < closestEdge.distance) {
+          closestEdge = {
+            edgeIndex: i,
+            insertPoint,
+            insertIndex: i + 1, // Insert after vertex i
+            distance
+          };
+        }
+      }
+    }
+  }
+
+  return closestEdge ? {
+    edgeIndex: closestEdge.edgeIndex,
+    insertPoint: closestEdge.insertPoint,
+    insertIndex: closestEdge.insertIndex
+  } : null;
+}
+
+/**
+ * Add a vertex to an overlay polygon at the specified position
+ * @param polygon - The overlay polygon Array<[number, number]>
+ * @param insertIndex - Index where to insert the new vertex
+ * @param newVertex - The new vertex to insert (Point2D or [x, y])
+ * @returns New polygon array with inserted vertex
+ */
+export function addVertexToOverlayPolygon(
+  polygon: Array<[number, number]>,
+  insertIndex: number,
+  newVertex: Point2D | [number, number]
+): Array<[number, number]> {
+  const newPolygon = [...polygon];
+  const vertexToInsert: [number, number] = Array.isArray(newVertex)
+    ? newVertex
+    : point2DToOverlayVertex(newVertex);
+
+  newPolygon.splice(insertIndex, 0, vertexToInsert);
+
+  return newPolygon;
+}
+
+/**
+ * Remove a vertex from an overlay polygon
+ * @param polygon - The overlay polygon Array<[number, number]>
+ * @param vertexIndex - Index of vertex to remove
+ * @param minVertices - Minimum vertices required (default 3 for triangle)
+ * @returns New polygon array or null if removal would violate minimum
+ */
+export function removeVertexFromOverlayPolygon(
+  polygon: Array<[number, number]>,
+  vertexIndex: number,
+  minVertices: number = 3
+): Array<[number, number]> | null {
+  if (polygon.length <= minVertices) {
+    return null; // Cannot remove - would violate minimum
+  }
+
+  if (vertexIndex < 0 || vertexIndex >= polygon.length) {
+    return null; // Invalid index
+  }
+
+  const newPolygon = [...polygon];
+  newPolygon.splice(vertexIndex, 1);
+
+  return newPolygon;
 }

@@ -192,6 +192,7 @@ export const PANEL_LAYOUT = {
 
     // Uniform padding (all sides)
     XS: 'p-1',                         // 4px  - Micro spacing
+    MS: 'p-1.5',                       // 6px  - Medium-small spacing (panels, cards)
     SM: 'p-2',                         // 8px  - Compact spacing
     MD: 'p-3',                         // 12px - Default spacing
     LG: 'p-4',                         // 16px - Comfortable spacing
@@ -1274,11 +1275,12 @@ export const LEVEL_PANEL_TOKENS = {
   },
 
   ADD_INPUT: {
-    // 🏢 ENTERPRISE: BG_TERTIARY (colors.bg.card) for consistency with ListCard backgrounds
+    // 🏢 ENTERPRISE: BG_PRIMARY (bg-background) for consistency with centralized Input component
+    // @see src/components/ui/input.tsx - uses colors.bg.primary (bg-background)
     BASE: [
       'flex-1',
       PANEL_LAYOUT.INPUT.PADDING,
-      `${PANEL_COLORS.BG_TERTIARY} border ${PANEL_COLORS.BORDER_PRIMARY}`,
+      `${PANEL_COLORS.BG_PRIMARY} border ${PANEL_COLORS.BORDER_PRIMARY}`,
       PANEL_LAYOUT.INPUT.BORDER_RADIUS,
       `${PANEL_COLORS.TEXT_PRIMARY} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`,
       `placeholder-${PANEL_COLORS.TEXT_MUTED}`,

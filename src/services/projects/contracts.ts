@@ -1,6 +1,6 @@
 // 🏢 ENTERPRISE: Type definitions for Projects module
 // NOTE: No 'use server' - types are shared between client and server
-import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
+import type { Project, ProjectCustomer, ProjectStats, ProjectUpdatePayload } from '@/types/project';
 import type { Contact } from '@/types/contacts';
 import type { Building } from '@/types/building/contracts';
 import type { Property } from '@/types/property-viewer';
@@ -56,6 +56,8 @@ export interface IProjectsRepository {
   getBuildingsByProjectId(projectId: string): Promise<Building[]>;
   getUnitsByBuildingId(buildingId: string): Promise<Property[]>;
   getContactsByIds(ids: string[]): Promise<Contact[]>;
+  /** 🏢 ENTERPRISE: Update project in Firestore */
+  updateProject?(projectId: string, updates: ProjectUpdatePayload): Promise<void>;
 }
 
 export interface IProjectsService {

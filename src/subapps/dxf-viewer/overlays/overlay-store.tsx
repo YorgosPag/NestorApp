@@ -23,6 +23,9 @@ interface OverlayStoreActions {
   setSelectedOverlay: (id: string | null) => void;
   getSelectedOverlay: () => Overlay | null;
   setCurrentLevel: (levelId: string | null) => void;
+  // 🏢 ENTERPRISE (2026-01-25): Vertex manipulation for polygon editing
+  addVertex: (id: string, insertIndex: number, vertex: [number, number]) => Promise<void>;
+  removeVertex: (id: string, vertexIndex: number) => Promise<boolean>;
 }
 
 const OverlayStoreContext = createContext<(OverlayStoreState & OverlayStoreActions) | null>(null);
@@ -188,13 +191,72 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   }, [state.selectedOverlayId, state.overlays]);
 
   const setCurrentLevel = useCallback((levelId: string | null) => {
-    setState(prev => ({ 
-      ...prev, 
+    setState(prev => ({
+      ...prev,
       currentLevelId: levelId,
       selectedOverlayId: null,
       overlays: {},
     }));
   }, []);
+
+  // 🏢 ENTERPRISE (2026-01-25): Add vertex to polygon at specified index
+  const addVertex = useCallback(async (id: string, insertIndex: number, vertex: [number, number]) => {
+    const overlay = state.overlays[id];
+    if (!overlay) {
+      console.error('❌ addVertex: Overlay not found:', id);
+      return;
+    }
+
+    const currentPolygon = overlay.polygon;
+    if (!Array.isArray(currentPolygon)) {
+      console.error('❌ addVertex: Invalid polygon format');
+      return;
+    }
+
+    // Insert vertex at specified index
+    const newPolygon = [...currentPolygon];
+    newPolygon.splice(insertIndex, 0, vertex);
+
+    // Use existing update function
+    await update(id, { polygon: newPolygon });
+    console.log('✅ addVertex: Vertex added at index', insertIndex);
+  }, [state.overlays, update]);
+
+  // 🏢 ENTERPRISE (2026-01-25): Remove vertex from polygon at specified index
+  const removeVertex = useCallback(async (id: string, vertexIndex: number): Promise<boolean> => {
+    const overlay = state.overlays[id];
+    if (!overlay) {
+      console.error('❌ removeVertex: Overlay not found:', id);
+      return false;
+    }
+
+    const currentPolygon = overlay.polygon;
+    if (!Array.isArray(currentPolygon)) {
+      console.error('❌ removeVertex: Invalid polygon format');
+      return false;
+    }
+
+    // Minimum 3 vertices for a valid polygon
+    const MIN_VERTICES = 3;
+    if (currentPolygon.length <= MIN_VERTICES) {
+      console.warn('⚠️ removeVertex: Cannot remove - minimum vertices reached');
+      return false;
+    }
+
+    if (vertexIndex < 0 || vertexIndex >= currentPolygon.length) {
+      console.error('❌ removeVertex: Invalid vertex index:', vertexIndex);
+      return false;
+    }
+
+    // Remove vertex at specified index
+    const newPolygon = [...currentPolygon];
+    newPolygon.splice(vertexIndex, 1);
+
+    // Use existing update function
+    await update(id, { polygon: newPolygon });
+    console.log('✅ removeVertex: Vertex removed at index', vertexIndex);
+    return true;
+  }, [state.overlays, update]);
 
   const contextValue = {
     ...state,
@@ -209,6 +271,9 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     setSelectedOverlay,
     getSelectedOverlay,
     setCurrentLevel,
+    // 🏢 ENTERPRISE (2026-01-25): Vertex manipulation
+    addVertex,
+    removeVertex,
   };
 
   return (

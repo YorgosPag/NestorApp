@@ -19,6 +19,8 @@ import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLevels } from '../../systems/levels';
 import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
 import { useCursorSettings, useCursorActions } from '../../systems/cursor';
+// 🏢 ENTERPRISE (2026-01-25): Immediate position store για zero-latency crosshair
+import { setImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { globalRulerStore } from '../../settings-provider';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind, Overlay } from '../../overlays/types';
@@ -26,6 +28,8 @@ import type { RegionStatus } from '../../types/overlay';
 import { getStatusColors } from '../../config/color-mapping';
 import { createOverlayHandlers } from '../../overlays/types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ENTERPRISE (2026-01-25): Edge detection for polygon vertex insertion
+import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { useZoom } from '../../systems/zoom';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -84,6 +88,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const [draftPolygon, setDraftPolygon] = useState<Array<[number, number]>>([]);
   // 🔧 FIX (2026-01-24): Ref for fresh polygon access in async operations
   const draftPolygonRef = useRef<Array<[number, number]>>([]);
+  // 🏢 ENTERPRISE (2026-01-25): State για edge midpoint hover detection
+  const [hoveredEdgeInfo, setHoveredEdgeInfo] = useState<{ overlayId: string; edgeIndex: number } | null>(null);
   // 🔧 FIX (2026-01-24): Flag to track if we're in the process of saving
   const [isSavingPolygon, setIsSavingPolygon] = useState(false);
   // 🎯 EVENT BUS: For polygon drawing communication with toolbar
@@ -250,6 +256,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   /**
    * 🏢 ENTERPRISE: Container mouse move handler
    * Updates CursorSystem position for all overlays (CrosshairOverlay, etc.)
+   * FIX (2026-01-25): Also updates immediate position για zero-latency crosshair
    */
   const handleContainerMouseMove = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const container = containerRef.current;
@@ -261,6 +268,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       y: e.clientY - rect.top
     };
 
+    // 🚀 IMMEDIATE: Update immediate store για zero-latency crosshair
+    setImmediatePosition(screenPos);
+    // React state update (για components που το χρειάζονται)
     updatePosition(screenPos);
   }, [updatePosition]);
 
@@ -270,6 +280,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   const handleContainerMouseLeave = React.useCallback(() => {
     setActive(false);
+    // 🚀 IMMEDIATE: Clear immediate position για zero-latency crosshair
+    setImmediatePosition(null);
     updatePosition(null);
   }, [setActive, updatePosition]);
 
@@ -339,6 +351,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🔧 FIX (2026-01-24): ALWAYS show LayerCanvas when in draw/edit mode to ensure overlays are visible
   // Debug toggle only applies when in 'select' mode (not actively drawing/editing)
   const showLayerCanvas = showLayerCanvasDebug || overlayMode === 'draw' || overlayMode === 'edit';
+
+  // 🏢 ENTERPRISE (2026-01-25): Clear draft polygon when switching to select tool
+  // Αποτρέπει το bug όπου η διαδικασία σχεδίασης συνεχίζεται μετά την αλλαγή tool
+  React.useEffect(() => {
+    if (activeTool === 'select' && draftPolygon.length > 0) {
+      console.log('🧹 Clearing draft polygon on tool change to select');
+      setDraftPolygon([]);
+    }
+  }, [activeTool, draftPolygon.length]);
 
   // ✅ CONVERT RulersGridSystem grid settings to Canvas V2 GridSettings format
   // RulersGridSystem uses: gridSettings.visual.color
@@ -435,6 +456,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           zIndex: index,
           // 🎯 ΚΡΙΣΙΜΟ: Περνάμε το status για STATUS_COLORS mapping στο LayerRenderer
           status: overlay.status as RegionStatus | undefined,
+          // 🏢 ENTERPRISE (2026-01-25): Show grips when layer is selected with select tool
+          showGrips: isSelected,
+          // 🏢 ENTERPRISE (2026-01-25): Show edge midpoint grips for vertex insertion (Autodesk pattern)
+          showEdgeMidpoints: isSelected,
+          hoveredEdgeIndex: hoveredEdgeInfo?.overlayId === overlay.id ? hoveredEdgeInfo.edgeIndex : undefined,
           polygons: [{
             id: `polygon_${overlay.id}`,
             vertices,
@@ -701,20 +727,56 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   };
 
 
+  // 🏢 ENTERPRISE (2026-01-25): Edge midpoint click handler for vertex insertion
+  const handleEdgeMidpointClick = async (overlayId: string, edgeIndex: number, insertPoint: Point2D) => {
+    const overlay = currentOverlays.find(o => o.id === overlayId);
+    if (!overlay) return;
+
+    // Convert Point2D to [number, number] for overlay store
+    const vertex: [number, number] = [insertPoint.x, insertPoint.y];
+    const insertIndex = edgeIndex + 1; // Insert after the edge start vertex
+
+    console.log('🏢 Adding vertex at edge midpoint:', { overlayId, edgeIndex, insertIndex, vertex });
+
+    try {
+      await overlayStore.addVertex(overlayId, insertIndex, vertex);
+      console.log('✅ Vertex added successfully');
+    } catch (error) {
+      console.error('❌ Failed to add vertex:', error);
+    }
+  };
+
   // Drawing logic
   const handleOverlayClick = (overlayId: string, point: Point2D) => {
     // console.log('🔍 handleOverlayClick called:', { overlayId, point, overlayMode, activeTool });
 
-    // 🚀 PROFESSIONAL CAD: Αυτόματη επιλογή layers όταν layering tool είναι ενεργό
-    if (activeTool === 'layering' || overlayMode === 'select') {
+    // 🏢 ENTERPRISE (2026-01-25): Check for edge midpoint click first (vertex insertion)
+    if ((activeTool === 'select' || activeTool === 'layering') && hoveredEdgeInfo?.overlayId === overlayId) {
+      const overlay = currentOverlays.find(o => o.id === overlayId);
+      if (overlay?.polygon) {
+        const EDGE_TOLERANCE = 15 / transform.scale; // 15 pixels in world units
+        const edgeInfo = findOverlayEdgeForGrip(point, overlay.polygon, EDGE_TOLERANCE);
+
+        if (edgeInfo && edgeInfo.edgeIndex === hoveredEdgeInfo.edgeIndex) {
+          // Click was on the hovered edge midpoint - add vertex
+          handleEdgeMidpointClick(overlayId, edgeInfo.edgeIndex, edgeInfo.insertPoint);
+          return; // Don't proceed with selection
+        }
+      }
+    }
+
+    // 🚀 PROFESSIONAL CAD: Αυτόματη επιλογή layers όταν select/layering tool είναι ενεργό
+    // 🏢 ENTERPRISE (2026-01-25): Προσθήκη 'select' tool για επιλογή layers με grips
+    if (activeTool === 'select' || activeTool === 'layering' || overlayMode === 'select') {
       // console.log('🔍 Selecting overlay:', overlayId);
       handleOverlaySelect(overlayId);
-      // 🔧 AUTO FIT TO VIEW - Zoom to selected overlay
-      // console.log('🔍 Calling fitToOverlay in 100ms...');
-      setTimeout(() => {
-        // console.log('🔍 Now calling fitToOverlay:', overlayId);
-        fitToOverlay(overlayId);
-      }, 100); // Small delay to ensure selection state updates
+
+      // 🔧 AUTO FIT TO VIEW - Zoom to selected overlay (only for layering tool)
+      if (activeTool === 'layering') {
+        setTimeout(() => {
+          fitToOverlay(overlayId);
+        }, 100); // Small delay to ensure selection state updates
+      }
     }
   };
 
@@ -734,7 +796,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
 
     // ✅ OVERLAY MODE: Use legacy overlay system with draftPolygon
-    if (overlayMode === 'draw') {
+    // 🏢 ENTERPRISE (2026-01-25): Block drawing when select tool is active
+    if (overlayMode === 'draw' && activeTool !== 'select') {
       if (isSavingPolygon) return;
 
       const canvasRef = dxfCanvasRef.current || overlayCanvasRef.current;
@@ -951,6 +1014,27 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               onMouseMove={(point) => {
                 setMouseCss(point);
                 setMouseWorld(point); // TODO: Transform CSS to world coordinates
+
+                // 🏢 ENTERPRISE (2026-01-25): Edge hover detection for selected overlays
+                if ((activeTool === 'select' || activeTool === 'layering') && selectedOverlay) {
+                  const overlay = currentOverlays.find(o => o.id === selectedOverlay.id);
+                  if (overlay?.polygon) {
+                    const EDGE_TOLERANCE = 15 / transform.scale; // 15 pixels in world units
+                    const edgeInfo = findOverlayEdgeForGrip(point, overlay.polygon, EDGE_TOLERANCE);
+
+                    if (edgeInfo) {
+                      setHoveredEdgeInfo({ overlayId: overlay.id, edgeIndex: edgeInfo.edgeIndex });
+                    } else {
+                      setHoveredEdgeInfo(null);
+                    }
+                  }
+                } else {
+                  // Clear hover when not in select/layering mode
+                  if (hoveredEdgeInfo) {
+                    setHoveredEdgeInfo(null);
+                  }
+                }
+
                 // ✅ ΔΙΟΡΘΩΣΗ: Καλώ και το props.onMouseMove για cursor-centered zoom
                 if (props.onMouseMove) {
                   // 🎯 TYPE-SAFE: Create proper mock event (event not available in this context)

@@ -5,10 +5,9 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle } from '../../../components/ui/card';
 import { CommonBadge } from '../../../core/badges';
 import { ScrollArea } from '../../../components/ui/scroll-area';
-import { Input } from '../../../components/ui/input';
-import { Search } from 'lucide-react';
+// 🏢 ENTERPRISE: Centralized SearchInput (same as UnitsList/CompactToolbar)
+import { SearchInput } from '@/components/ui/search';
 import { STATUS_LABELS, KIND_LABELS, type Overlay } from '../overlays/types';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
@@ -37,7 +36,6 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   onToggleLayers,
 }) => {
   const { t } = useTranslation(['dxf-viewer', 'properties']);
-  const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Centralized spacing (same pattern as UnitsList)
@@ -108,13 +106,12 @@ export const OverlayList: React.FC<OverlayListProps> = ({
           />
         </div>
 
-        <div className={`relative ${PANEL_LAYOUT.MARGIN.TOP_SM}`}>
-          <Search className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_2} ${PANEL_LAYOUT.POSITION.TOP_2_5} ${iconSizes.sm} ${colors.text.muted}`} />
-          <Input
-            placeholder={t('overlayList.search')}
+        {/* 🏢 ENTERPRISE: Centralized SearchInput (same as UnitsList/CompactToolbar) */}
+        <div className={PANEL_LAYOUT.MARGIN.TOP_SM}>
+          <SearchInput
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${PANEL_LAYOUT.PADDING.LEFT_XL} ${iconSizes.xl} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.bg.primary} ${quick.input} ${colors.text.primary} placeholder:${colors.text.muted}`}
+            onChange={setSearchQuery}
+            placeholder={t('overlayList.search')}
           />
         </div>
       </CardHeader>

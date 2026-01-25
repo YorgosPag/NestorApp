@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 
 /**
  * 🏗️ FIRESTORE PROJECTS HOOK
@@ -58,9 +60,39 @@ export function useFirestoreProjects() {
   const [projects, setProjects] = useState<FirestoreProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 🏢 ENTERPRISE: Trigger for manual refetch
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // 🏢 ENTERPRISE: AbortController ref για proper cleanup
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  /**
+   * 🏢 ENTERPRISE: Manual refetch function
+   * Call this after successful updates to refresh the projects list
+   */
+  const refetch = () => {
+    console.log('🔄 [useFirestoreProjects] Manual refetch triggered');
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // 🏢 ENTERPRISE: Centralized Real-time Service (ZERO DUPLICATES)
+  // Uses RealtimeService.subscribeToProjectUpdates() for cross-page sync
+  useEffect(() => {
+    const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
+      console.log('🔄 [useFirestoreProjects] Applying update for project:', payload.projectId);
+
+      setProjects(prev => prev.map(project =>
+        project.id === payload.projectId
+          ? { ...project, ...payload.updates }
+          : project
+      ));
+    };
+
+    // Subscribe to project updates (same-page + cross-page)
+    const unsubscribe = RealtimeService.subscribeToProjectUpdates(handleProjectUpdate);
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     async function fetchProjects() {
@@ -150,7 +182,7 @@ export function useFirestoreProjects() {
         abortControllerRef.current.abort();
       }
     };
-  }, [authLoading, user]); // Re-fetch when auth state changes
+  }, [authLoading, user, refreshTrigger]); // Re-fetch when auth state changes or manual trigger
 
-  return { projects, loading, error };
+  return { projects, loading, error, refetch };
 }

@@ -188,7 +188,8 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
   const handleLayerSelection = useCallback((layerId: string | null) => {
     // Layer selection handling - debug disabled for performance
     // 🚀 PROFESSIONAL CAD: Όταν επιλέγεται layer, καλούμε το onLayerClick
-    if (layerId && onLayerClick && activeTool === 'layering') {
+    // 🏢 ENTERPRISE (2026-01-25): Επιλογή layer με 'select' ή 'layering' tool
+    if (layerId && onLayerClick && (activeTool === 'select' || activeTool === 'layering')) {
       // Χρήση cursor system για το position
       const currentPos = cursor.position;
       // Calling onLayerClick - debug disabled for performance
@@ -498,15 +499,19 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
   ]);
 
   // Render όταν αλλάζουν τα data - RE-ENABLED with stable dependencies
+  // 🏢 ENTERPRISE FIX (2026-01-25): IMMEDIATE render χωρίς setTimeout
+  // Το setTimeout(10ms) προκαλούσε καθυστέρηση κατά το panning - τα layers
+  // δεν μετακινούνταν ταυτόχρονα με το DxfCanvas.
+  // Τώρα χρησιμοποιούμε requestAnimationFrame για optimal frame timing.
   useEffect(() => {
     // Only render if we have valid viewport dimensions AND renderer
     if (viewport.width > 0 && viewport.height > 0 && rendererRef.current) {
-      // Small delay to ensure DOM is fully settled
-      const timeoutId = setTimeout(() => {
+      // 🚀 IMMEDIATE: Use requestAnimationFrame for optimal frame timing (no delay)
+      const frameId = requestAnimationFrame(() => {
         renderLayers();
-      }, 10); // 10ms delay
+      });
 
-      return () => clearTimeout(timeoutId);
+      return () => cancelAnimationFrame(frameId);
     }
   }, [renderLayers, viewport.width, viewport.height]); // Also depend on viewport changes
 

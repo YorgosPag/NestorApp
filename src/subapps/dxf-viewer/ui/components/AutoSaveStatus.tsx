@@ -75,7 +75,8 @@ export function AutoSaveStatus() {
   };
   
   return (
-    <div className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
+    // 🏢 ENTERPRISE: bg.hover (bg-accent) for consistency with cards and CentralizedAutoSaveStatus
+    <div className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.hover} ${quick.card} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}>
       <div className="flex flex-col">
         <div className="flex items-center">
           <span className={`${colors.text.secondary} ${PANEL_LAYOUT.MARGIN.RIGHT_SM}`}>📁 {currentFileName}</span>

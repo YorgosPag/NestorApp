@@ -563,6 +563,61 @@ export class LayerRenderer {
         this.ctx.restore();
       }
     }
+
+    // 🏢 ENTERPRISE (2026-01-25): Edge midpoint grips for vertex insertion (Autodesk pattern)
+    // ○ = Edge midpoint grip (circle) - click to add new vertex at this position
+    // 🔍 DEBUG: Log edge midpoint rendering conditions
+    console.log('🔍 Edge midpoints check:', {
+      showEdgeMidpoints: layer.showEdgeMidpoints,
+      verticesCount: polygon.vertices.length,
+      showGrips: layer.showGrips,
+      layerId: layer.id,
+      hoveredEdgeIndex: layer.hoveredEdgeIndex
+    });
+    if (layer.showEdgeMidpoints && polygon.vertices.length >= 2) {
+      console.log('✅ RENDERING edge midpoints for layer:', layer.id, 'edges:', polygon.vertices.length);
+      const EDGE_GRIP_RADIUS = 5; // pixels - smaller than vertex grips
+      const EDGE_GRIP_COLOR_NORMAL = UI_COLORS.GRIP_EDGE || '#9ca3af'; // Gray for normal state
+      const EDGE_GRIP_COLOR_HOVER = UI_COLORS.GRIP_HOVER || '#f59e0b'; // Orange for hover state
+
+      // Iterate through edges (including closing edge for closed polygons)
+      const edgeCount = screenVertices.length;
+      for (let i = 0; i < edgeCount; i++) {
+        const startVertex = screenVertices[i];
+        const endVertex = screenVertices[(i + 1) % screenVertices.length];
+
+        // Calculate midpoint in screen coordinates
+        const midX = (startVertex.x + endVertex.x) / 2;
+        const midY = (startVertex.y + endVertex.y) / 2;
+        console.log('🔵 Drawing edge midpoint at:', { i, midX, midY, startVertex, endVertex });
+
+        // Check if this edge is hovered
+        const isHovered = layer.hoveredEdgeIndex === i;
+
+        // Draw circular grip at midpoint
+        this.ctx.save();
+        this.ctx.fillStyle = isHovered ? EDGE_GRIP_COLOR_HOVER : EDGE_GRIP_COLOR_NORMAL;
+        this.ctx.strokeStyle = UI_COLORS.BLACK || '#000000';
+        this.ctx.lineWidth = 1;
+
+        // Draw filled circle grip
+        this.ctx.beginPath();
+        this.ctx.arc(midX, midY, EDGE_GRIP_RADIUS, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Draw hover highlight - larger outer ring
+        if (isHovered) {
+          this.ctx.strokeStyle = EDGE_GRIP_COLOR_HOVER;
+          this.ctx.lineWidth = 2;
+          this.ctx.beginPath();
+          this.ctx.arc(midX, midY, EDGE_GRIP_RADIUS + 3, 0, Math.PI * 2);
+          this.ctx.stroke();
+        }
+
+        this.ctx.restore();
+      }
+    }
   }
 
   /**
