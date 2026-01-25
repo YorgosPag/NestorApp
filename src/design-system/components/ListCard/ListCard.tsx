@@ -15,7 +15,7 @@
  * @since 2026-01-08
  */
 
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Star } from 'lucide-react';
 
@@ -66,7 +66,7 @@ import type { ListCardProps, ListCardAction } from './ListCard.types';
  * />
  * ```
  */
-export function ListCard({
+export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard({
   // Identity
   entityType,
   customIcon,
@@ -96,7 +96,7 @@ export function ListCard({
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
   tabIndex = 0,
-}: ListCardProps) {
+}, ref) {
   // ==========================================================================
   // 🏢 CENTRALIZED HOOKS
   // ==========================================================================
@@ -151,6 +151,7 @@ export function ListCard({
   // ==========================================================================
   return (
     <article
+      ref={ref}
       className={cn(
         // Base styles using centralized tokens
         'relative group cursor-pointer overflow-hidden w-full',
@@ -334,8 +335,6 @@ export function ListCard({
       )}
     </article>
   );
-}
-
-ListCard.displayName = 'ListCard';
+});
 
 export default ListCard;

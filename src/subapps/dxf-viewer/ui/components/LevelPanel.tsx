@@ -1,4 +1,5 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-19
+// 🏢 ENTERPRISE: Refactored to use LevelListCard - 2026-01-25
 'use client';
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
@@ -6,11 +7,11 @@ const DEBUG_LEVEL_PANEL = false;
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trash2, Plus, Edit, MousePointer, Pen, Move, Info, Shapes } from 'lucide-react';
-// 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Plus } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
+// 🏢 ENTERPRISE: Centralized LevelListCard from domain cards
+import { LevelListCard } from '@/domain/cards';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { PANEL_TOKENS, PANEL_LAYOUT, PanelTokenUtils } from '../../config/panel-tokens';
@@ -274,19 +275,20 @@ export function LevelPanel({
       {Array.isArray(levels) && levels.length > 0 ? (
         <div className={PANEL_TOKENS.LEVEL_PANEL.CONTAINER.SECTION}>
           {levels.map((level) => {
-
             const scene = levelScenes[level.id];
-            const hasContent = scene && scene.entities && scene.entities.length > 0;
+            const entityCount = scene?.entities?.length || 0;
             const isEditing = editingLevelId === level.id;
             const isOnlyLevel = levels.length === 1;
+            const isSelected = currentLevelId === level.id;
 
-            return (
-              <div
-                key={level.id}
-                className={PanelTokenUtils.getLevelCardClasses(currentLevelId === level.id)}
-              >
-                <div className={`flex items-center justify-between ${PANEL_LAYOUT.FLEX_UTILS.ALLOW_SHRINK}`}>
-                  {isEditing ? (
+            // 🏢 ENTERPRISE: Inline editing mode - keep input field for rename
+            if (isEditing) {
+              return (
+                <div
+                  key={level.id}
+                  className={PanelTokenUtils.getLevelCardClasses(isSelected)}
+                >
+                  <div className={`flex items-center justify-between ${PANEL_LAYOUT.FLEX_UTILS.ALLOW_SHRINK}`}>
                     <div className="flex-1">
                       <input
                         type="text"
@@ -298,61 +300,36 @@ export function LevelPanel({
                         autoFocus
                       />
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className={`flex-1 ${PANEL_LAYOUT.CURSOR.POINTER} text-left bg-transparent border-none`}
-                      onClick={() => {
-                        setCurrentLevel(level.id);
-                        if (currentTool !== 'grip-edit' && onToolChange) onToolChange('grip-edit');
-                        // ✅ FIX (ChatGPT-5): ONLY one activation path - via event (removed direct call to handleLayeringActivation)
-                        window.dispatchEvent(new CustomEvent('level-panel:layering-activate', {
-                          detail: { levelId: level.id, origin: 'card' }
-                        }));
-                      }}
-                      aria-label={t('panels.levels.selectLevel', { name: level.name })}
-                    >
-                      <div className={PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}>{level.name}</div>
-                      <div className={`${PANEL_TOKENS.TABS.TAB_LABEL.SIZE} ${PANEL_LAYOUT.OPACITY['75']}`}>
-                        {hasContent ? t('panels.levels.elementsCount', { count: scene.entities.length }) : t('panels.levels.emptyLevel')}
-                      </div>
-                    </button>
-                  )}
-                  
-                  <nav className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.LEFT_SM}`}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startEditing(level);
-                          }}
-                          className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.EDIT}
-                        >
-                          <Edit className={iconSizes.sm} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t('panels.levels.renameLevel')}</TooltipContent>
-                    </Tooltip>
-                    {!isOnlyLevel && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteLevel(level.id);
-                            }}
-                            className={PANEL_TOKENS.LEVEL_PANEL.ACTION_BUTTON.DELETE}
-                          >
-                            <Trash2 className={iconSizes.sm} />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t('panels.levels.deleteLevel')}</TooltipContent>
-                      </Tooltip>
-                    )}
-                  </nav>
+                  </div>
                 </div>
-              </div>
+              );
+            }
+
+            // 🏢 ENTERPRISE: Normal mode - use LevelListCard
+            return (
+              <LevelListCard
+                key={level.id}
+                level={level}
+                entityCount={entityCount}
+                isSelected={isSelected}
+                isOnlyLevel={isOnlyLevel}
+                onSelect={() => {
+                  setCurrentLevel(level.id);
+                  if (currentTool !== 'grip-edit' && onToolChange) onToolChange('grip-edit');
+                  window.dispatchEvent(new CustomEvent('level-panel:layering-activate', {
+                    detail: { levelId: level.id, origin: 'card' }
+                  }));
+                }}
+                onEdit={(e) => {
+                  e.stopPropagation();
+                  startEditing(level);
+                }}
+                onDelete={(e) => {
+                  e.stopPropagation();
+                  handleDeleteLevel(level.id);
+                }}
+                compact
+              />
             );
           })}
         </div>

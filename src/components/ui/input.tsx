@@ -33,9 +33,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const { quick } = useBorderTokens();
     const colors = useSemanticColors();
 
-    // 🏢 ENTERPRISE: Base styles (no horizontal padding - padding added separately)
+    // 🏢 ENTERPRISE: Base styles WITHOUT hardcoded height - allows className override
+    // Pattern: Autodesk/Adobe - height should be customizable via className
     const baseStyles = [
-      "flex h-12 md:h-9 w-full py-3 md:py-2",
+      "flex w-full",
       "text-base md:text-sm",
       quick.input,
       colors.bg.primary,
@@ -51,6 +52,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           baseStyles,
+          "h-12 md:h-9 py-3 md:py-2", // Default height - can be overridden by className
           // 🏢 ENTERPRISE: Explicit padding based on icon configuration
           hasLeftIcon && hasRightIcon && INPUT_PADDING.bothIcons,
           hasLeftIcon && !hasRightIcon && INPUT_PADDING.leftIcon,

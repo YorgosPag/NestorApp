@@ -607,6 +607,8 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
         mouseHandlers.handleMouseUp(e);
       }}
       onWheel={(e) => mouseHandlers.handleWheel(e)}
+      // 🏢 ENTERPRISE: Prevent browser auto-scroll on middle-click
+      onAuxClick={(e) => e.preventDefault()}
     />
   );
 });

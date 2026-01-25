@@ -3,6 +3,11 @@
  * ✅ ΕΝΟΠΟΙΗΜΕΝΟ: Χωρίς διπλογραφίες - Single Source of Truth
  * ✅ CHATGPT FIXES: Y-axis και viewport-based calculations
  * ✅ MARGINS SYSTEM: From old backup για consistency με rulers
+ *
+ * ⚠️ ΠΡΟΣΟΧΗ - ΜΗΝ ΑΛΛΑΞΕΙΣ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ ΧΩΡΙΣ ΛΟΓΟ! ⚠️
+ * 🏆 ZOOM-TO-CURSOR: Λειτουργεί τέλεια μετά από πολλές διορθώσεις (2026-01-25)
+ * - calculateZoomTransform(): Y-axis inversion fix - ΤΟ ΣΗΜΕΙΟ ΚΑΤΩ ΑΠΟ ΤΟ CURSOR ΜΕΝΕΙ ΣΤΑΘΕΡΟ
+ * - worldToScreen/screenToWorld: Margins + Y-inversion - ΔΟΚΙΜΑΣΜΕΝΑ
  */
 
 import type { Point2D, ViewTransform, Viewport } from '../types/Types';
@@ -97,11 +102,21 @@ export class CoordinateTransforms {
   ): ViewTransform {
     const newScale = currentTransform.scale * zoomFactor;
 
-    // 🎯 ENTERPRISE: Adjust zoomCenter για margins
-    // Το zoomCenter είναι canvas-relative, αλλά πρέπει να γίνει viewport-relative
+    // 🎯 ENTERPRISE: Adjust zoomCenter για margins AND Y-axis inversion
+    // Το zoomCenter είναι canvas-relative (screen coordinates)
+    // Πρέπει να το μετατρέψουμε σε "offset-space" για τη zoom formula
     const { left, top } = COORDINATE_LAYOUT.MARGINS;
+
+    // 🏢 X-axis: Απλή αφαίρεση margin (screen X αυξάνει προς τα δεξιά)
+    // Formula: screenX = left + worldX * scale + offsetX
+    // Άρα: adjustedX = screenX - left = worldX * scale + offsetX
     const adjustedCenterX = zoomCenter.x - left;
-    const adjustedCenterY = zoomCenter.y - top;
+
+    // 🏢 Y-axis: INVERTED! (screen Y αυξάνει προς τα κάτω, world Y προς τα πάνω)
+    // Formula: screenY = (height - top) - worldY * scale - offsetY
+    // Άρα: adjustedY = (height - top) - screenY = worldY * scale + offsetY
+    // 🐛 FIX (2026-01-25): Ήταν λάθος: zoomCenter.y - top (δεν λάμβανε υπόψη Y-inversion)
+    const adjustedCenterY = (viewport.height - top) - zoomCenter.y;
 
     // ✅ CLASSIC CAD FORMULA: offsetNew = center - (center - offsetOld) * zoomFactor
     // Με adjusted center, το world point κάτω από το zoomCenter παραμένει σταθερό

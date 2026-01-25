@@ -1274,10 +1274,11 @@ export const LEVEL_PANEL_TOKENS = {
   },
 
   ADD_INPUT: {
+    // 🏢 ENTERPRISE: BG_TERTIARY (colors.bg.card) for consistency with ListCard backgrounds
     BASE: [
       'flex-1',
       PANEL_LAYOUT.INPUT.PADDING,
-      `${PANEL_COLORS.BG_SECONDARY} border ${PANEL_COLORS.BORDER_PRIMARY}`,
+      `${PANEL_COLORS.BG_TERTIARY} border ${PANEL_COLORS.BORDER_PRIMARY}`,
       PANEL_LAYOUT.INPUT.BORDER_RADIUS,
       `${PANEL_COLORS.TEXT_PRIMARY} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`,
       `placeholder-${PANEL_COLORS.TEXT_MUTED}`,

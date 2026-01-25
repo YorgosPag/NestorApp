@@ -1,7 +1,18 @@
 'use client';
 
+/**
+ * 🏢 ENTERPRISE: Canvas Context
+ *
+ * Provides centralized canvas references and transform state.
+ * Uses DxfCanvasRef from canvas-v2 (modern, simplified API).
+ *
+ * @version 2.0.0 - Migrated from legacy canvas/ to canvas-v2/
+ * @since 2025-01-25
+ */
+
 import React, { createContext, useContext, useRef, useState, type ReactNode } from 'react';
-import type { DxfCanvasImperativeAPI } from '../canvas/DxfCanvasCore';
+// ✅ ENTERPRISE MIGRATION: Using DxfCanvasRef from canvas-v2 (modern API)
+import type { DxfCanvasRef } from '../canvas-v2';
 
 // Mock missing types
 type OverlayCanvasImperativeAPI = {
@@ -19,12 +30,12 @@ type ViewTransform = {
 };
 
 interface CanvasContextType {
-  dxfRef: React.RefObject<DxfCanvasImperativeAPI>;
+  dxfRef: React.RefObject<DxfCanvasRef>;
   overlayRef: React.RefObject<OverlayCanvasImperativeAPI>;
   transform: ViewTransform;
   setTransform: (transform: ViewTransform) => void;
   // ✅ ENTERPRISE: Alias for dxfRef (used in DxfCanvas.tsx)
-  canvasRef: React.RefObject<DxfCanvasImperativeAPI>;
+  canvasRef: React.RefObject<DxfCanvasRef>;
 
   // ✅ ENTERPRISE FIX: Missing zoomManager for useKeyboardShortcuts TS2339 error
   zoomManager?: {
@@ -53,7 +64,8 @@ interface CanvasProviderProps {
 }
 
 export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
-  const dxfRef = useRef<DxfCanvasImperativeAPI>(null);
+  // ✅ ENTERPRISE MIGRATION: Using DxfCanvasRef from canvas-v2
+  const dxfRef = useRef<DxfCanvasRef>(null);
   const overlayRef = useRef<OverlayCanvasImperativeAPI>(null);
   const [transform, setTransform] = useState<ViewTransform>({ x: 0, y: 0, scale: 1, rotation: 0, offsetX: 0, offsetY: 0 });
 

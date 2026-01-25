@@ -1,13 +1,24 @@
 /**
- * Canvas Operations Hook
- * Provides imperative operations for canvas manipulation
- * Uses DxfCanvasCore imperative API through context
+ * 🏢 ENTERPRISE: Canvas Operations Hook
+ *
+ * Provides imperative operations for canvas manipulation.
+ * Uses DxfCanvasRef (V2 API) from canvas-v2/ module.
+ *
+ * @version 2.0.0 - Migrated from legacy DxfCanvasImperativeAPI to DxfCanvasRef
+ * @since 2025-01-25
+ *
+ * MIGRATION NOTES:
+ * - DxfCanvasRef (V2) has: getCanvas, getTransform, fitToView, zoomAtScreenPoint
+ * - Legacy methods (zoomIn, zoomOut, resetToOrigin) now implemented via zoomAtScreenPoint
+ * - setTransform handled via context
  */
 
 import { useCallback } from 'react';
 // ✅ ENTERPRISE FIX: Import from centralized types
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { useCanvasContext } from '../../contexts/CanvasContext';
+// ✅ ENTERPRISE: Import zoom constants for consistent zoom factors
+import { ZOOM_FACTORS } from '../../config/transform-config';
 
 export interface CanvasOperations {
   getCanvas: () => HTMLCanvasElement | null;
@@ -91,55 +102,86 @@ export const useCanvasOperations = (): CanvasOperations => {
     document.dispatchEvent(zoomEvent);
   }, [context, dxfRef, overlayRef]);
 
+  // ✅ ENTERPRISE: Helper to get canvas center point
+  const getCanvasCenter = useCallback((): Point2D => {
+    const canvas = getCanvas();
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      return { x: rect.width / 2, y: rect.height / 2 };
+    }
+    return { x: 400, y: 300 }; // Fallback center
+  }, [getCanvas]);
+
+  /**
+   * 🏢 ENTERPRISE: Zoom In
+   * Uses zoomAtScreenPoint with BUTTON_IN factor (20% increase)
+   * Zooms towards canvas center
+   */
   const zoomIn = useCallback(() => {
-    if (dxfRef?.current) {
-      dxfRef.current.zoomIn();
-    } else {
-      // Fallback: trigger event
-      const event = new CustomEvent('dxf-zoom', { detail: { action: 'in' } });
-      document.dispatchEvent(event);
+    const center = getCanvasCenter();
+    if (dxfRef?.current?.zoomAtScreenPoint) {
+      dxfRef.current.zoomAtScreenPoint(ZOOM_FACTORS.BUTTON_IN, center);
+    } else if (context?.setTransform && context?.transform) {
+      // Fallback: update transform directly via context
+      const newScale = context.transform.scale * ZOOM_FACTORS.BUTTON_IN;
+      context.setTransform({ ...context.transform, scale: newScale });
     }
-  }, [dxfRef]);
+  }, [dxfRef, context, getCanvasCenter]);
 
+  /**
+   * 🏢 ENTERPRISE: Zoom Out
+   * Uses zoomAtScreenPoint with BUTTON_OUT factor (20% decrease)
+   * Zooms towards canvas center
+   */
   const zoomOut = useCallback(() => {
-    if (dxfRef?.current) {
-      dxfRef.current.zoomOut();
-    } else {
-      // Fallback: trigger event
-      const event = new CustomEvent('dxf-zoom', { detail: { action: 'out' } });
-      document.dispatchEvent(event);
+    const center = getCanvasCenter();
+    if (dxfRef?.current?.zoomAtScreenPoint) {
+      dxfRef.current.zoomAtScreenPoint(ZOOM_FACTORS.BUTTON_OUT, center);
+    } else if (context?.setTransform && context?.transform) {
+      // Fallback: update transform directly via context
+      const newScale = context.transform.scale * ZOOM_FACTORS.BUTTON_OUT;
+      context.setTransform({ ...context.transform, scale: newScale });
     }
-  }, [dxfRef]);
+  }, [dxfRef, context, getCanvasCenter]);
 
+  /**
+   * 🏢 ENTERPRISE: Zoom At Screen Point
+   * Uses DxfCanvasRef.zoomAtScreenPoint directly
+   */
   const zoomAtScreenPoint = useCallback((factor: number, screenPt: Point2D) => {
-    if (dxfRef?.current) {
+    if (dxfRef?.current?.zoomAtScreenPoint) {
       dxfRef.current.zoomAtScreenPoint(factor, screenPt);
-    } else {
-      // Fallback: trigger event
-      const event = new CustomEvent('dxf-zoom', {
-        detail: { action: 'at-point', factor, point: screenPt }
-      });
-      document.dispatchEvent(event);
+    } else if (context?.setTransform && context?.transform) {
+      // Fallback: simple scale update (without point preservation)
+      const newScale = context.transform.scale * factor;
+      context.setTransform({ ...context.transform, scale: newScale });
     }
-  }, [dxfRef]);
+  }, [dxfRef, context]);
 
+  /**
+   * 🏢 ENTERPRISE: Reset To Origin
+   * Sets transform to identity (scale: 1, offset: 0,0)
+   */
   const resetToOrigin = useCallback(() => {
-    if (dxfRef?.current) {
-      dxfRef.current.resetToOrigin();
-    } else {
-      // Fallback: trigger event
-      const event = new CustomEvent('dxf-zoom', { detail: { action: 'reset' } });
-      document.dispatchEvent(event);
+    if (context?.setTransform) {
+      context.setTransform({
+        x: 0,
+        y: 0,
+        scale: 1,
+        rotation: 0,
+        offsetX: 0,
+        offsetY: 0
+      });
     }
-  }, [dxfRef]);
+  }, [context]);
 
+  /**
+   * 🏢 ENTERPRISE: Fit To View
+   * Uses DxfCanvasRef.fitToView directly
+   */
   const fitToView = useCallback(() => {
-    if (dxfRef?.current) {
+    if (dxfRef?.current?.fitToView) {
       dxfRef.current.fitToView();
-    } else {
-      // Fallback: trigger event
-      const event = new CustomEvent('dxf-zoom', { detail: { action: 'fit' } });
-      document.dispatchEvent(event);
     }
   }, [dxfRef]);
 

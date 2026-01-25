@@ -14,6 +14,21 @@ export * from './core/RenderPipeline';
 export * from './passes';
 export * from './adapters/canvas2d/Canvas2DContext';
 
+// ===== ENTERPRISE: UNIFIED FRAME SCHEDULER (ADR-029) =====
+export {
+  UnifiedFrameScheduler,
+  useFrameScheduler,
+  registerRenderCallback,
+  RENDER_PRIORITIES
+} from './core/UnifiedFrameScheduler';
+export type {
+  RenderPriority,
+  RenderCallback,
+  DirtyCheckFn,
+  FrameMetrics,
+  SchedulerConfig
+} from './core/UnifiedFrameScheduler';
+
 // ===== ENTITY RENDERERS =====
 export * from './entities/BaseEntityRenderer';
 export * from './core/EntityRendererComposite';

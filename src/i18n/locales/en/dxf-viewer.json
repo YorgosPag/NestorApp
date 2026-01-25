@@ -739,7 +739,18 @@
     "notFound": "No overlays found",
     "empty": "No overlays",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "hide": "Hide",
+    "show": "Show"
+  },
+  "levelCard": {
+    "stats": {
+      "elements": "Elements"
+    },
+    "badges": {
+      "default": "Default"
+    },
+    "ariaLabel": "Level card {name}"
   },
   "selectionSettings": {
     "tabs": {
@@ -1094,6 +1105,18 @@
       "storage": "Storage",
       "footprint": "Footprint"
     }
+  },
+  "overlayCard": {
+    "stats": {
+      "kind": "Type",
+      "area": "Area",
+      "linked": "Link",
+      "linkedYes": "Linked",
+      "linkedNo": "Not linked",
+      "vertices": "Vertices",
+      "perimeter": "Perimeter"
+    },
+    "ariaLabel": "Region card {name}"
   },
   "entitiesSettings": {
     "moreOptions": "More options",

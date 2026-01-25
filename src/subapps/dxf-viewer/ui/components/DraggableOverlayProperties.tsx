@@ -23,7 +23,8 @@ import { PANEL_LAYOUT, PanelPositionCalculator } from '../../config/panel-tokens
 // ============================================================================
 
 interface DraggableOverlayPropertiesProps {
-  overlay: Overlay;
+  /** Overlay to display, or null for empty state */
+  overlay: Overlay | null;
   onUpdate: (overlayId: string, updates: UpdateOverlayData) => void;
   onClose: () => void;
 }

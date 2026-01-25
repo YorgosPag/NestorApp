@@ -18,7 +18,7 @@ import { OverlayProperties } from '../../ui/OverlayProperties';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLevels } from '../../systems/levels';
 import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
-import { useCursorSettings } from '../../systems/cursor';
+import { useCursorSettings, useCursorActions } from '../../systems/cursor';
 import { globalRulerStore } from '../../settings-provider';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind, Overlay } from '../../overlays/types';
@@ -236,6 +236,42 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // Get cursor settings from CursorSystem
   const { settings: cursorSettings } = useCursorSettings();
+
+  /**
+   * 🏢 ENTERPRISE: Container-level mouse tracking for CursorSystem
+   * Pattern: Autodesk/Adobe - Global cursor position tracking
+   *
+   * This ensures CursorSystem position is ALWAYS updated, regardless of
+   * which child canvas is active or whether DxfCanvas/LayerCanvas are mounted.
+   */
+  const { updatePosition, setActive } = useCursorActions();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * 🏢 ENTERPRISE: Container mouse move handler
+   * Updates CursorSystem position for all overlays (CrosshairOverlay, etc.)
+   */
+  const handleContainerMouseMove = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const screenPos: Point2D = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+
+    updatePosition(screenPos);
+  }, [updatePosition]);
+
+  const handleContainerMouseEnter = React.useCallback(() => {
+    setActive(true);
+  }, [setActive]);
+
+  const handleContainerMouseLeave = React.useCallback(() => {
+    setActive(false);
+    updatePosition(null);
+  }, [setActive, updatePosition]);
 
   // 🔺 CURSOR SYSTEM INTEGRATION - Σύνδεση με floating panel
   const crosshairSettings: CrosshairSettings = {
@@ -869,8 +905,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         {/* DEBUG BUTTONS MOVED TO HEADER */}
 
         <div
+          ref={containerRef}
           className={`canvas-stack relative w-full h-full ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}
           style={{ cursor: 'none' }} // ✅ ADR-008 CAD-GRADE: ALWAYS hide CSS cursor - crosshair is the only cursor
+          onMouseMove={handleContainerMouseMove}
+          onMouseEnter={handleContainerMouseEnter}
+          onMouseLeave={handleContainerMouseLeave}
         >
           {/* 🏢 PDF BACKGROUND: Lowest layer in canvas stack (z-[-10]) */}
           <PdfBackgroundCanvas

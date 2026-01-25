@@ -1,12 +1,33 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+/**
+ * 🏢 ENTERPRISE CROSSHAIR OVERLAY
+ *
+ * CAD-grade crosshair rendering with centralized cursor position from CursorSystem.
+ * Pattern: Autodesk AutoCAD/Revit - Single Source of Truth for cursor position
+ *
+ * @module CrosshairOverlay
+ * @version 3.0.0 - Enterprise UnifiedFrameScheduler Integration (ADR-030)
+ * @since 2025-01-25
+ *
+ * 🏆 ENTERPRISE FEATURES:
+ * - Uses centralized CursorSystem for mouse position (ZERO duplicate tracking)
+ * - Uses UnifiedFrameScheduler for coordinated rendering (ADR-030)
+ * - ADR-008 compliant: CSS→Canvas coordinate contract
+ * - High-DPI support with setTransform(dpr)
+ * - Dirty-flag optimized (skips render if position unchanged)
+ * - Full TypeScript support (ZERO any)
+ */
+
+import React, { useRef, useEffect, useCallback } from 'react';
 import { getCursorSettings, subscribeToCursorSettings, type CursorSettings } from '../../systems/cursor/config';
+import { useCursorState } from '../../systems/cursor/useCursor';
 import { useGripContext } from '../../providers/GripProvider';
-import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
+import { portalComponents } from '@/styles/design-tokens';
 import type { Point2D } from '../../rendering/types/Types';
-// 🏢 ENTERPRISE: Centralized layout tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// ✅ ADR-030: UnifiedFrameScheduler Integration
+import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 
 interface Viewport {
   width: number;
@@ -16,15 +37,12 @@ interface Viewport {
 interface CrosshairOverlayProps {
   className?: string;
   isActive?: boolean;
-  // ✅ ADR-008: REMOVED cursorPosition prop - now tracked internally for pixel-perfect alignment
-  // cursorPosition?: Point2D | null;  // ❌ REMOVED - causes coordinate mismatch
-  // mouseWorld?: Point2D | null;      // ❌ REMOVED - not needed for crosshair
   viewport?: Viewport;
   /** ✅ ENTERPRISE: Ruler margins για να μην σχεδιάζεται το crosshair πάνω στους rulers */
   rulerMargins?: {
-    left: number;   // Κάθετος χάρακας (αριστερά)
-    top: number;    // ΔΕΝ υπάρχει πάνω χάρακας, αλλά κρατάμε για toolbar offset
-    bottom: number; // Οριζόντιος χάρακας (ΚΑΤΩ)
+    left: number;
+    top: number;
+    bottom: number;
   };
   /** ✅ ADR-007: Style prop για CAD-grade layout (height excludes ruler) */
   style?: React.CSSProperties;
@@ -38,55 +56,43 @@ export default function CrosshairOverlay({
   style,
 }: CrosshairOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [settings, setSettings] = useState<CursorSettings>(getCursorSettings());
-  const rafRef = useRef<number>();
 
-  // ✅ ADR-008: INTERNAL MOUSE TRACKING - Canvas-local coordinates for pixel-perfect alignment
-  const [mousePos, setMousePos] = useState<Point2D | null>(null);
+  // ============================================================================
+  // 🏢 ENTERPRISE: Centralized Cursor Position from CursorSystem
+  // Pattern: Autodesk/Adobe - Single Source of Truth
+  // ============================================================================
+
+  const { position: cursorPosition } = useCursorState();
+
+  // ✅ ENTERPRISE: Combine component isActive with cursor position
+  const effectiveIsActive = isActive && cursorPosition !== null;
+
+  // ✅ ADR-030: Track previous state for dirty check
+  const prevPositionRef = useRef<Point2D | null>(null);
+  const prevIsActiveRef = useRef<boolean>(false); // Start false - first render always dirty
+  const hasRenderedOnceRef = useRef<boolean>(false); // Track first render
+
+  // ============================================================================
+  // 🏢 ENTERPRISE: Settings Subscription (singleton pattern)
+  // ============================================================================
+
+  const settingsRef = useRef<CursorSettings>(getCursorSettings());
+
+  useEffect(() => {
+    const unsubscribe = subscribeToCursorSettings((newSettings) => {
+      settingsRef.current = newSettings;
+    });
+    return unsubscribe;
+  }, []);
 
   // === GRIP SETTINGS INTEGRATION ===
   const { gripSettings } = useGripContext();
 
-  // Subscribe to settings changes
-  useEffect(() => {
-    const unsubscribe = subscribeToCursorSettings(setSettings);
-    return unsubscribe;
-  }, []);
+  // ============================================================================
+  // 🏢 ENTERPRISE: Canvas Size Management via ResizeObserver
+  // Pattern: ADR-008 - Canvas size from actual layout, not from props
+  // ============================================================================
 
-  // ✅ ADR-008 + micro-ADR CSS→Canvas Coordinate Contract
-  // The canvas uses setTransform(dpr) for HiDPI rendering, so we draw in CSS pixels
-  // and the transform automatically scales to device pixels
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // ✅ CAD-GRADE: Listen on window for mouse events
-    // Get canvas-local CSS coordinates (NOT scaled by DPR)
-    const handleWindowMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-
-      // ✅ CSS→Canvas mapping: Get position relative to canvas element
-      // These are CSS pixels - the setTransform(dpr) in render will handle HiDPI
-      const cssX = e.clientX - rect.left;
-      const cssY = e.clientY - rect.top;
-
-      // Check if mouse is inside canvas CSS bounds
-      if (cssX >= 0 && cssX <= rect.width && cssY >= 0 && cssY <= rect.height) {
-        setMousePos({ x: cssX, y: cssY });
-      } else {
-        setMousePos(null);
-      }
-    };
-
-    window.addEventListener('mousemove', handleWindowMouseMove);
-
-    return () => {
-      window.removeEventListener('mousemove', handleWindowMouseMove);
-    };
-  }, []);
-
-  // ✅ ADR-008: Canvas size from ACTUAL layout, not from props
-  // This ensures the canvas matches exactly what CSS layout provides
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -95,7 +101,6 @@ export default function CrosshairOverlay({
       const rect = canvas.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
 
-      // ✅ Use actual CSS size from layout (not viewport prop)
       const cssWidth = rect.width;
       const cssHeight = rect.height;
 
@@ -104,7 +109,6 @@ export default function CrosshairOverlay({
       const w = Math.round(cssWidth * dpr);
       const h = Math.round(cssHeight * dpr);
 
-      // Only update if size changed
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -112,28 +116,31 @@ export default function CrosshairOverlay({
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          ctx.imageSmoothingEnabled = settings.performance.precision_mode;
+          ctx.imageSmoothingEnabled = settingsRef.current.performance.precision_mode;
         }
       }
     };
 
-    // Initial size
     updateCanvasSize();
 
-    // Update on resize
     const resizeObserver = new ResizeObserver(updateCanvasSize);
     resizeObserver.observe(canvas);
 
     return () => resizeObserver.disconnect();
-  }, [settings.performance.precision_mode]);
+  }, []);
 
-  // Clean render function
+  // ============================================================================
+  // 🏢 ENTERPRISE: Crosshair Render Function
+  // CAD-grade rendering with pixel-perfect alignment
+  // ============================================================================
+
   const renderCrosshair = useCallback((opts: {
     isActive: boolean;
-    pos: {x: number; y: number} | null;
-    margins: {left: number; top: number; bottom?: number};
+    pos: Point2D | null;
+    margins: { left: number; top: number; bottom?: number };
   }) => {
-    const { isActive, pos, margins } = opts;
+    const { isActive: active, pos, margins } = opts;
+    const settings = settingsRef.current;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -143,17 +150,15 @@ export default function CrosshairOverlay({
 
     const dpr = window.devicePixelRatio || 1;
 
-    // ✅ CAD-GRADE FIX: Reset transform και clear ΟΛΟΥ του canvas ΠΡΙΝ από οτιδήποτε
+    // ✅ CAD-GRADE: Reset transform and clear entire canvas
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // ✅ RESTORE DPR TRANSFORM
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // ✅ Early exit ΜΕΤΑ το clear
-    if (!isActive || !pos) return;
-
-    // Skip if crosshair disabled
+    // ✅ Early exit after clear
+    if (!active || !pos) return;
     if (!settings.crosshair?.enabled) return;
 
     const activeSettings = settings.crosshair;
@@ -163,7 +168,7 @@ export default function CrosshairOverlay({
     const canvasWidth = canvas.width / dpr;
     const canvasHeight = canvas.height / dpr;
 
-    // ✅ ADR-008: Pixel-perfect alignment - round to nearest pixel + 0.5 for crisp lines
+    // ✅ ADR-008: Pixel-perfect alignment
     const mouseX = Math.round(pos.x) + 0.5;
     const mouseY = Math.round(pos.y) + 0.5;
 
@@ -236,74 +241,133 @@ export default function CrosshairOverlay({
     }
 
     ctx.globalAlpha = 1;
-  }, [settings, gripSettings]);
+  }, [gripSettings]);
 
-  // Track state for optimization
-  const prevIsActiveRef = useRef<boolean>(isActive);
-  const didRenderOnceRef = useRef<boolean>(false);
-  const prevSettingsRef = useRef<string>(JSON.stringify(settings.crosshair));
-  const prevMousePosRef = useRef<Point2D | null>(null);
+  // ============================================================================
+  // 🏢 ENTERPRISE: UnifiedFrameScheduler Integration (ADR-030)
+  // Single RAF loop coordinates all render systems
+  // ============================================================================
 
-  // RAF-optimized rendering - ✅ ADR-008: Uses internal mousePos instead of prop
+  // ✅ Store current render args in ref for scheduler callback
+  // 🏢 ENTERPRISE FIX: Update SYNCHRONOUSLY during render (not in useEffect)
+  // This ensures RAF callback always has the latest state
+  const renderArgsRef = useRef<{
+    isActive: boolean;
+    pos: Point2D | null;
+    margins: { left: number; top: number; bottom?: number };
+  }>({
+    isActive: false,
+    pos: null,
+    margins: rulerMargins
+  });
+
+  // ✅ SYNCHRONOUS UPDATE: Write to ref during render phase (not in useEffect)
+  // This ensures the RAF callback always reads the current React state
+  renderArgsRef.current = {
+    isActive: effectiveIsActive,
+    pos: cursorPosition,
+    margins: rulerMargins
+  };
+
+  // ✅ ADR-030: Register with UnifiedFrameScheduler
   useEffect(() => {
-    const hasActiveChanged = prevIsActiveRef.current !== isActive;
-    const hasPositionChanged =
-      !prevMousePosRef.current !== !mousePos ||
-      (prevMousePosRef.current && mousePos &&
-       (Math.abs(prevMousePosRef.current.x - mousePos.x) > 0.5 ||
-        Math.abs(prevMousePosRef.current.y - mousePos.y) > 0.5));
+    /**
+     * 🏢 ENTERPRISE: Dirty Check Function
+     * Returns true only if crosshair needs to be redrawn
+     * Pattern: Autodesk/Adobe - Skip render if nothing changed
+     */
+    const isDirty = (): boolean => {
+      const currentPos = renderArgsRef.current.pos;
+      const currentActive = renderArgsRef.current.isActive;
 
-    const settingsString = JSON.stringify(settings.crosshair);
-    const settingsChangedSinceLastFrame = prevSettingsRef.current !== settingsString;
-    prevSettingsRef.current = settingsString;
-
-    if (!hasActiveChanged && !settingsChangedSinceLastFrame && !hasPositionChanged) {
-      if (didRenderOnceRef.current) {
-        return;
+      // 🏢 ENTERPRISE: First render is ALWAYS dirty (to clear canvas initially)
+      if (!hasRenderedOnceRef.current) {
+        return true;
       }
-    }
 
-    const renderArgs = {
-      isActive,
-      pos: mousePos, // ✅ ADR-008: Use internal mousePos (canvas-local coordinates)
-      margins: rulerMargins
+      // Check if active state changed
+      if (prevIsActiveRef.current !== currentActive) {
+        return true;
+      }
+
+      // Check if position changed significantly (> 0.5px movement)
+      const prevPos = prevPositionRef.current;
+
+      // If one is null and the other isn't, it's dirty
+      if ((prevPos === null) !== (currentPos === null)) {
+        return true;
+      }
+
+      // Both are non-null - check for significant movement
+      if (prevPos && currentPos) {
+        const dx = Math.abs(prevPos.x - currentPos.x);
+        const dy = Math.abs(prevPos.y - currentPos.y);
+        if (dx > 0.5 || dy > 0.5) {
+          return true;
+        }
+      }
+
+      return false;
     };
 
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-    }
+    /**
+     * 🏢 ENTERPRISE: Render Callback
+     * Called by UnifiedFrameScheduler on each frame (if dirty)
+     */
+    const onRender = (): void => {
+      const args = renderArgsRef.current;
 
-    if (settings.performance.use_raf) {
-      rafRef.current = requestAnimationFrame(() => renderCrosshair(renderArgs));
-    } else {
-      renderCrosshair(renderArgs);
-    }
+      // Mark first render complete
+      hasRenderedOnceRef.current = true;
 
-    didRenderOnceRef.current = true;
-    prevIsActiveRef.current = isActive;
-    prevMousePosRef.current = mousePos;
+      // Update previous state after render
+      prevIsActiveRef.current = args.isActive;
+      prevPositionRef.current = args.pos ? { ...args.pos } : null;
+
+      // Perform the actual render
+      renderCrosshair(args);
+    };
+
+    // ✅ Register with CRITICAL priority (crosshair must render every frame when dirty)
+    const unsubscribe = registerRenderCallback(
+      'crosshair-overlay',
+      'Crosshair Overlay',
+      RENDER_PRIORITIES.CRITICAL,
+      onRender,
+      isDirty
+    );
 
     return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
+      unsubscribe();
     };
-  }, [
-    isActive,
-    mousePos, // ✅ ADR-008: Dependency on internal mousePos
-    settings.crosshair,
-    settings.performance.use_raf,
-    renderCrosshair,
-    rulerMargins
-    // ✅ ADR-008: REMOVED validViewport deps - canvas size now from ResizeObserver
-  ]);
+  }, [renderCrosshair]);
 
   return (
     <canvas
       ref={canvasRef}
-      // 🏢 ENTERPRISE: pointer-events-none για να μην εμποδίζει mouse events στο canvas κάτω
       className={`${className} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
-      style={{ ...style, zIndex: portalComponents.overlay.crosshair.zIndex() }}
+      style={{
+        ...style,
+        width: '100%',
+        height: '100%',
+        zIndex: portalComponents.overlay.crosshair.zIndex()
+      }}
     />
   );
 }
+
+/**
+ * 🏢 ENTERPRISE COMPLIANCE CHECKLIST:
+ *
+ * ✅ Uses centralized CursorSystem for mouse position (ZERO duplicate tracking)
+ * ✅ Uses UnifiedFrameScheduler for coordinated rendering (ADR-030)
+ * ✅ ADR-008 compliant: CSS→Canvas coordinate contract
+ * ✅ Dirty-flag optimization (skips render if position unchanged)
+ * ✅ CRITICAL priority (renders every frame when dirty)
+ * ✅ ResizeObserver for canvas sizing
+ * ✅ High-DPI support with setTransform(dpr)
+ * ✅ Pixel-perfect alignment (+0.5 for crisp lines)
+ * ✅ Full TypeScript support (ZERO any)
+ * ✅ Settings via singleton pattern with subscription
+ * ✅ Proper cleanup via unsubscribe
+ */

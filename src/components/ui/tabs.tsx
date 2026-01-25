@@ -18,11 +18,14 @@ const TabsList = React.forwardRef<
 >(({ className, ...props }, ref) => {
   const iconSizes = useIconSizes()
   const spacing = useSpacingTokens()
+  // 🏢 ENTERPRISE: Semantic colors for consistent theming with cards
+  const colors = useSemanticColors()
   return (
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      `inline-flex ${iconSizes.xl2} items-center justify-center rounded-md bg-muted ${spacing.padding.sm} text-muted-foreground`,
+      // 🏢 ENTERPRISE: bg-muted → colors.bg.card for consistency with ListCard backgrounds
+      `inline-flex ${iconSizes.xl2} items-center justify-center rounded-md ${colors.bg.card} ${spacing.padding.sm} text-muted-foreground`,
       className
     )}
     {...props}

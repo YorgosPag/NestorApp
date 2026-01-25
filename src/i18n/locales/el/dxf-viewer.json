@@ -597,7 +597,18 @@
     "notFound": "Δεν βρέθηκαν overlays",
     "empty": "Κανένα overlay",
     "edit": "Επεξεργασία",
-    "delete": "Διαγραφή"
+    "delete": "Διαγραφή",
+    "hide": "Απόκρυψη",
+    "show": "Εμφάνιση"
+  },
+  "levelCard": {
+    "stats": {
+      "elements": "Στοιχεία"
+    },
+    "badges": {
+      "default": "Προεπιλογή"
+    },
+    "ariaLabel": "Κάρτα επιπέδου {name}"
   },
   "selectionSettings": {
     "tabs": {
@@ -952,6 +963,18 @@
       "storage": "Αποθήκη",
       "footprint": "Αποτύπωμα"
     }
+  },
+  "overlayCard": {
+    "stats": {
+      "kind": "Τύπος",
+      "area": "Εμβαδόν",
+      "linked": "Σύνδεση",
+      "linkedYes": "Συνδεδεμένο",
+      "linkedNo": "Μη συνδεδεμένο",
+      "vertices": "Κορυφές",
+      "perimeter": "Περίμετρος"
+    },
+    "ariaLabel": "Κάρτα περιοχής {name}"
   },
   "entitiesSettings": {
     "moreOptions": "Περισσότερες επιλογές",

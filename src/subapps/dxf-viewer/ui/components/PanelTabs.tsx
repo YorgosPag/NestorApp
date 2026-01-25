@@ -70,12 +70,13 @@ export function PanelTabs({ activePanel, onTabClick, disabledPanels, isCollapsed
     onTabClick(tabId as FloatingPanelType);
   };
 
+  // 🏢 ENTERPRISE: theme="clean" removes container border for seamless integration
   return (
     <TabsOnlyTriggers
       tabs={tabs}
       value={activePanel}
       onTabChange={handleTabChange}
-      theme="dark"
+      theme="clean"
       alwaysShowLabels={!isCollapsed}
     />
   );

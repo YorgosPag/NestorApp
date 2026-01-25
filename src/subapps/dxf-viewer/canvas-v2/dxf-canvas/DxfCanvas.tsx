@@ -380,6 +380,8 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
       onMouseUp={mouseHandlers.handleMouseUp}
       onMouseLeave={(e) => mouseHandlers.handleMouseLeave(e)}
       onWheel={(e) => mouseHandlers.handleWheel(e)}
+      // 🏢 ENTERPRISE: Prevent browser auto-scroll on middle-click
+      onAuxClick={(e) => e.preventDefault()}
     />
   );
 });

@@ -137,6 +137,15 @@ export function useCentralizedMouseHandlers({
 
   // ✅ MOUSE DOWN HANDLER - Professional CAD style
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    // 🔍 DEBUG: Log ALL mouse down events
+    console.log('🔍 MOUSE DOWN EVENT:', {
+      button: e.button,
+      buttons: e.buttons,
+      type: e.type,
+      activeTool,
+      target: (e.target as HTMLElement).tagName
+    });
+
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας bounds caching
     const rect = canvasBoundsService.getBounds(e.currentTarget);
     // Canvas-relative coordinates (CoordinateTransforms handles margins internally)
@@ -181,15 +190,18 @@ export function useCentralizedMouseHandlers({
 
     // 🚀 INITIALIZE PAN STATE for high-performance panning
     // ✅ CAD STANDARD: Middle mouse button (wheel click) OR pan tool with left button
-    // 🐛 FIX: Do NOT pan when drawing tools are active (prevents conflict)
-    // 🎯 OVERLAY FIX: Include overlayMode === 'draw' as a drawing tool
+    //
+    // 🏢 ENTERPRISE FIX (2026-01-25): Middle button ALWAYS pans, regardless of active tool!
+    // This is the CAD industry standard (AutoCAD, Revit, MicroStation, etc.)
+    // Drawing tools only affect LEFT button behavior, not middle button.
+    //
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
                           activeTool === 'polygon' || activeTool === 'circle' ||
                           activeTool === 'rectangle' || activeTool === 'arc' ||
                           activeTool === 'circle-diameter' || activeTool === 'circle-2p-diameter' ||
                           activeTool === 'measure-distance' || activeTool === 'measure-area' ||
                           activeTool === 'measure-angle' ||
-                          overlayMode === 'draw'; // 🎯 FIX: Overlay drawing mode is also a drawing tool
+                          overlayMode === 'draw';
 
     console.log('🔍 handleMouseDown:', {
       button: e.button,
@@ -198,11 +210,17 @@ export function useCentralizedMouseHandlers({
       isDrawingTool
     });
 
-    if ((e.button === 1 && !isDrawingTool) || (activeTool === 'pan' && e.button === 0)) {
+    // 🏢 ENTERPRISE: Middle button (button === 1) ALWAYS starts pan - CAD industry standard!
+    // Left button (button === 0) only pans when pan tool is active
+    const shouldStartPan = (e.button === 1) || (activeTool === 'pan' && e.button === 0);
+
+    if (shouldStartPan) {
+      console.log('🖱️ PAN STARTED with button:', e.button);
       panStateRef.current.isPanning = true;
       panStateRef.current.lastMousePos = screenPos;
       panStateRef.current.pendingTransform = { ...transform };
       e.preventDefault(); // Prevent default middle-click behavior (scroll)
+      e.stopPropagation(); // 🏢 ENTERPRISE: Stop event bubbling to prevent browser auto-scroll
     }
 
     // Calculate world position
@@ -215,9 +233,10 @@ export function useCentralizedMouseHandlers({
       onEntitySelect(hitEntityId);
     }
 
-    // Handle selection start (left button) - disable in pan mode AND drawing tools
+    // Handle selection start (left button ONLY) - disable in pan mode AND drawing tools
     // 🎯 BUG #2 FIX: Skip selection when drawing tools are active (reuse isDrawingTool from above)
-    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isDrawingTool) {
+    // 🏢 ENTERPRISE: Middle button (button === 1) NEVER starts selection - it's for pan only!
+    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isDrawingTool && !shouldStartPan) {
       cursor.startSelection(screenPos);
     }
   }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool]);

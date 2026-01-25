@@ -146,6 +146,19 @@ const DEFAULT_POSITION: FloatingPanelPosition = {
   y: 100
 } as const;
 
+/**
+ * 🏢 ENTERPRISE: Minimum Visible Header Pattern (ADR-030)
+ * Pattern: Autodesk/Adobe/Microsoft
+ *
+ * Panels can move partially off-screen, but the header must ALWAYS remain visible.
+ * This allows users to "rescue" panels that are pushed too far.
+ *
+ * @see AutoCAD - Floating toolbars behavior
+ * @see Adobe Photoshop - Panel dragging constraints
+ * @see Microsoft VS Code - Side panel positioning
+ */
+const MINIMUM_VISIBLE_HEADER = 40; // px - Header height that must always be visible
+
 // ============================================================================
 // ROOT COMPONENT - FloatingPanel
 // ============================================================================
@@ -200,10 +213,12 @@ const FloatingPanelRoot: React.FC<FloatingPanelProps> = ({
     autoCenter: false,
     elementWidth: dimensions.width,
     elementHeight: dimensions.height,
-    minPosition: { x: 0, y: 0 },
+    // 🏢 ENTERPRISE: Minimum Visible Header Pattern (Autodesk/Adobe/Microsoft)
+    // Panel can move partially off-screen, but header (40px) must ALWAYS remain visible
+    minPosition: { x: -dimensions.width + MINIMUM_VISIBLE_HEADER, y: 0 },
     maxPosition: {
-      x: typeof window !== 'undefined' ? window.innerWidth - dimensions.width : 1000,
-      y: typeof window !== 'undefined' ? window.innerHeight - dimensions.height : 600
+      x: typeof window !== 'undefined' ? window.innerWidth - MINIMUM_VISIBLE_HEADER : 1000,
+      y: typeof window !== 'undefined' ? window.innerHeight - MINIMUM_VISIBLE_HEADER : 600
     },
     ...draggableOptions
   });

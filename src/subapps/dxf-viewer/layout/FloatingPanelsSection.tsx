@@ -157,19 +157,10 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
         />
       )}
 
-      {/* DRAGGABLE OVERLAY PROPERTIES - ALWAYS VISIBLE */}
+      {/* DRAGGABLE OVERLAY PROPERTIES - Only when overlay is selected */}
+      {/* 🏢 ENTERPRISE: No dummy data - show real overlay or pass null for empty state */}
       <DraggableOverlayProperties
-        overlay={overlayStore.getSelectedOverlay() || {
-          id: 'dummy-overlay',
-          type: 'rectangle',
-          status: 'for-sale',
-          kind: 'measurement',
-          visible: true,
-          locked: false,
-          layer: 'base',
-          style: { strokeColor: UI_COLORS.BUTTON_PRIMARY, fillColor: UI_COLORS.BUTTON_PRIMARY, strokeWidth: 2 },
-          vertices: [{ x: 100, y: 100 }, { x: 200, y: 100 }, { x: 200, y: 200 }, { x: 100, y: 200 }]
-        }}
+        overlay={overlayStore.getSelectedOverlay()}
         onUpdate={(overlayId, updates) =>
           overlayStore.update(overlayId, updates)
         }

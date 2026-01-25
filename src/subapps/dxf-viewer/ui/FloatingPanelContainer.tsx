@@ -126,8 +126,11 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   }
 
   return (
-    <div className={`${PANEL_LAYOUT.WIDTH.PANEL_LG} ${PANEL_LAYOUT.HEIGHT.FULL} flex flex-col ${colors.bg.primary} ${quick.card} relative`}>
-      <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${colors.bg.primary} ${quick.card} ${getStatusBorder('default')}`}>
+    // 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds
+    // 🧪 TEST: Removed quick.card to hide outer border
+    <div className={`${PANEL_LAYOUT.WIDTH.PANEL_LG} ${PANEL_LAYOUT.HEIGHT.FULL} flex flex-col ${colors.bg.card} rounded-lg relative`}>
+      {/* 🏢 ENTERPRISE: Only bottom border on tabs container (quick.borderB) */}
+      <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${colors.bg.card} ${quick.borderB}`}>
         <PanelTabs
           activePanel={activePanel}
           onTabClick={panelNavigation.handleTabClick}
@@ -137,7 +140,8 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
       </div>
 
       {/* ✅ ENTERPRISE: Centralized spacing from PANEL_LAYOUT (ADR-003) */}
-      <div className={`flex-1 ${PANEL_LAYOUT.FLEX_UTILS.ALLOW_SCROLL} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${colors.bg.primary} ${colors.text.primary} ${PANEL_LAYOUT.CONTAINER.PADDING}`}>
+      {/* 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds */}
+      <div className={`flex-1 ${PANEL_LAYOUT.FLEX_UTILS.ALLOW_SCROLL} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${colors.bg.card} ${colors.text.primary} ${PANEL_LAYOUT.CONTAINER.PADDING}`}>
         {renderPanelContent()}
       </div>
 

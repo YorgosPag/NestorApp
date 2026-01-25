@@ -2624,6 +2624,133 @@ import { ToolButton } from '@/subapps/dxf-viewer/components/shared/BaseButton'; 
 
 ---
 
+### 📋 ADR-029: CANVAS V2 MIGRATION (2026-01-25) - 🏢 ENTERPRISE
+
+**Status**: ✅ **COMPLETED** | **Decision Date**: 2026-01-25
+
+**Context**:
+Εντοπίστηκαν δύο canvas systems στο dxf-viewer:
+- **canvas/** (Legacy V1): DxfCanvasCore, DxfCanvas, CanvasOverlays - Complex imperative API (11 methods)
+- **canvas-v2/** (Modern V2): DxfCanvas, LayerCanvas, overlays/ - Simplified API (4 methods)
+
+**Problem**:
+- Dual canvas systems δημιουργούσαν confusion και maintenance burden
+- CanvasContext χρησιμοποιούσε DxfCanvasImperativeAPI από legacy canvas/
+- Κίνδυνος duplicate implementations και inconsistent behavior
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `canvas-v2/` είναι το ΜΟΝΑΔΙΚΟ canonical canvas system |
+| **DEPRECATED** | `canvas/` folder μετονομάστηκε σε `_canvas_LEGACY/` και excluded από TypeScript |
+| **API** | `DxfCanvasRef` (V2) αντικατέστησε `DxfCanvasImperativeAPI` (V1) |
+
+**DxfCanvasRef API (V2 - Simplified)**:
+```typescript
+export interface DxfCanvasRef {
+  getCanvas: () => HTMLCanvasElement | null;
+  getTransform: () => ViewTransform;
+  fitToView: () => void;
+  zoomAtScreenPoint: (factor: number, screenPoint: Point2D) => void;
+}
+```
+
+**Migration Changes**:
+| File | Change |
+|------|--------|
+| `contexts/CanvasContext.tsx` | Import DxfCanvasRef from canvas-v2 |
+| `hooks/interfaces/useCanvasOperations.ts` | Updated zoomIn/zoomOut/resetToOrigin to use zoomAtScreenPoint |
+| `tsconfig.json` | Added `_canvas_LEGACY/**` to exclude |
+
+**Consequences**:
+- ✅ **Single Canvas System** - Only canvas-v2/ is active
+- ✅ **Simplified API** - 4 methods vs 11 methods
+- ✅ **Backward Compatible** - useCanvasOperations maintains same interface
+- ✅ **Zero Breaking Changes** - Legacy folder preserved for reference
+- ✅ **Clean Architecture** - No more dual system confusion
+
+**References**:
+- Canvas V2: `src/subapps/dxf-viewer/canvas-v2/`
+- Context: `src/subapps/dxf-viewer/contexts/CanvasContext.tsx`
+- Operations: `src/subapps/dxf-viewer/hooks/interfaces/useCanvasOperations.ts`
+- Legacy (excluded): `src/subapps/dxf-viewer/_canvas_LEGACY/`
+
+---
+
+### 📋 ADR-030: UNIFIED FRAME SCHEDULER (2026-01-25) - 🏢 ENTERPRISE
+
+**Status**: ✅ **IMPLEMENTED** | **Decision Date**: 2026-01-25
+
+**Context**:
+Εντοπίστηκαν 25 αρχεία με ανεξάρτητα `requestAnimationFrame` calls και 4 κεντρικοποιημένα systems
+(SceneUpdateManager, RenderPipeline, CanvasManager, SmartBoundsManager) που ΔΕΝ συντονίζονται.
+
+**Problem**:
+- 25 διαφορετικά RAF loops → frame scheduling chaos
+- Κανένας κεντρικός orchestrator
+- Σπατάλη frames σε systems που δεν χρειάζονται render
+- Δυσκολία στο global performance optimization
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `UnifiedFrameScheduler` είναι ο ΜΟΝΑΔΙΚΟΣ central render coordinator |
+| **PATTERN** | Autodesk Revit / Adobe Illustrator - Single RAF orchestrator |
+| **INTEGRATION** | Orchestrates existing systems (δεν τα αντικαθιστά) |
+
+**Architecture**:
+```
+UnifiedFrameScheduler (Singleton)
+  │
+  ├─ register() → Add render system with priority
+  ├─ isDirty() → Skip if not dirty (optimization)
+  └─ singleRAF() → Process all systems in priority order
+```
+
+**API**:
+```typescript
+import {
+  UnifiedFrameScheduler,
+  registerRenderCallback,
+  RENDER_PRIORITIES
+} from '@/subapps/dxf-viewer/rendering';
+
+// Register a render system
+const unsubscribe = registerRenderCallback(
+  'crosshair',
+  'Crosshair Overlay',
+  RENDER_PRIORITIES.CRITICAL,
+  (deltaTime, frame) => renderCrosshair(),
+  () => cursorMoved // isDirty check
+);
+```
+
+**Priority Levels**:
+| Priority | Value | Use Case |
+|----------|-------|----------|
+| CRITICAL | 0 | Cursor, crosshair (every frame) |
+| HIGH | 1 | Selection, grips |
+| NORMAL | 2 | Entities, layers |
+| LOW | 3 | Grid, rulers |
+| BACKGROUND | 4 | PDF, images |
+
+**Consequences**:
+- ✅ **Single RAF Loop** - One coordinated render cycle
+- ✅ **Dirty Flag Optimization** - Skip unchanged systems
+- ✅ **Priority Queue** - Critical UI renders first
+- ✅ **Performance Metrics** - Built-in FPS tracking
+- ✅ **Auto Start/Stop** - Based on registered systems
+- ✅ **Frame Throttling** - Under load optimization
+
+**References**:
+- Scheduler: `src/subapps/dxf-viewer/rendering/core/UnifiedFrameScheduler.ts`
+- Exports: `src/subapps/dxf-viewer/rendering/index.ts`
+- Related: ADR-029 (Canvas V2 Migration)
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)
