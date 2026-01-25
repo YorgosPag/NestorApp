@@ -941,23 +941,46 @@ src/subapps/dxf-viewer/core/
 
 ---
 
-### Phase 3: State Machine (DRAWING STATES)
+### Phase 3: State Machine (DRAWING STATES) - 🏢 CORE IMPLEMENTED
 **Στόχος**: Formal FSM αντί για boolean flags
 
-| Task | Περιγραφή | Εκτίμηση |
-|------|-----------|----------|
-| 3.1 | Create `core/state-machine/interfaces.ts` | 30min |
-| 3.2 | Implement `DrawingStateMachine.ts` | 1.5h |
-| 3.3 | Create `useDrawingMachine.ts` React hook | 30min |
-| 3.4 | Migrate `useUnifiedDrawing` → use state machine | 1h |
-| 3.5 | Update all drawing tools to use FSM | 30min |
-| 3.6 | Testing & debugging | 30min |
+| Task | Περιγραφή | Status |
+|------|-----------|--------|
+| 3.1 | Create `core/state-machine/interfaces.ts` | ✅ DONE (300+ lines) |
+| 3.2 | Implement `DrawingStateMachine.ts` | ✅ DONE (250+ lines) |
+| 3.3 | Create `useDrawingMachine.ts` React hook | ✅ DONE (200+ lines) |
+| 3.4 | Create `index.ts` with public API | ✅ DONE |
+| 3.5 | Migrate `useUnifiedDrawing` → use state machine | ⏳ PENDING |
+| 3.6 | Update all drawing tools to use FSM | ⏳ PENDING |
+| 3.7 | Testing & debugging | ⏳ PENDING |
 
-**Deliverables**:
-- Formal state machine
-- Predictable state transitions
-- Debug-friendly state logging
-- Removal of boolean flags
+**Created Files** (2026-01-25):
+```
+src/subapps/dxf-viewer/core/state-machine/
+├── index.ts               # Public API
+├── interfaces.ts          # 🏢 State/Event/Context types (300+ lines)
+├── DrawingStateMachine.ts # 🏢 Class with guards, history, subscriptions
+└── useDrawingMachine.ts   # 🏢 React hook with useSyncExternalStore
+```
+
+**Enterprise Features**:
+- ✅ **Type-Safe States**: `IDLE` | `TOOL_READY` | `COLLECTING_POINTS` | `PREVIEWING` | `COMPLETING` | `COMPLETED` | `CANCELLED`
+- ✅ **Guard Conditions**: Conditional state transitions
+- ✅ **State History**: Time-travel debugging support
+- ✅ **useSyncExternalStore**: React 18 best practice
+- ✅ **Tool Requirements**: Configurable min/max points per tool
+- ✅ **Singleton + Factory**: Flexible instantiation patterns
+
+**Deliverables Completed**:
+- ✅ Formal state machine with 7 states
+- ✅ 8 event types with typed payloads
+- ✅ Transition rules with guards
+- ✅ Debug logging (configurable)
+- ✅ React hook integration
+
+**Deliverables Pending**:
+- ⏳ Migration of `useUnifiedDrawing` to use state machine
+- ⏳ Integration with drawing tools
 
 ---
 
@@ -1257,6 +1280,8 @@ Entity Registry:
 | 2026-01-25 | 1.1.0 | ✅ Phase 1.1 COMPLETE: Deleted legacy `hooks/drawing/useEntityCreation.ts` (dead code). Enterprise Facade Pattern implemented. |
 | 2026-01-25 | 1.2.0 | ✅ Phase 1.2 COMPLETE: Cleaned `utils.ts` - removed 250+ lines of dead code (createEntityFromPoints, duplicate types, unused utilities). Only `generateEntityId()` retained. Single Source of Truth: `useUnifiedDrawing.tsx`. |
 | 2026-01-25 | 2.0.0 | ✅ Phase 2 COMPLETE: **Feature-Complete Command Pattern**. Created 13 files in `core/commands/`. Enterprise features: Serialization, CompoundCommand, AuditTrail, Persistence (IndexedDB), CommandRegistry. SAP/Salesforce/Autodesk-grade. |
+| 2026-01-25 | 2.1.0 | ✅ Phase 2 FINALIZED: **Full Serialization Support** for ALL commands. Added `type`, `serialize()`, `getAffectedEntityIds()`, `validate()` to: DeleteEntityCommand, DeleteMultipleEntitiesCommand, MoveVertexCommand, AddVertexCommand, RemoveVertexCommand. Updated main `index.ts` with all enterprise exports (ICompoundCommand, IAuditTrail, ICommandPersistence, ICommandRegistry). TypeScript compilation verified. |
+| 2026-01-25 | 3.0.0 | ✅ Phase 3 CORE IMPLEMENTED: **Drawing State Machine**. Created `core/state-machine/` with 4 files (750+ lines). Enterprise features: Type-safe states (7), Guard conditions, State history, useSyncExternalStore (React 18), Tool requirements config. Separation of Concerns: ToolStateManager (WHICH tool) vs DrawingStateMachine (WHAT it's doing). ADR-032 documented. |
 
 ---
 

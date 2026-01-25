@@ -208,6 +208,14 @@ export const REALTIME_EVENTS = {
   BUILDING_PROJECT_LINKED: 'realtime:building-project-linked',
   UNIT_BUILDING_LINKED: 'realtime:unit-building-linked',
   NAVIGATION_REFRESH: 'realtime:navigation-refresh',
+  // Association link events (contact_links, file_links)
+  CONTACT_LINK_CREATED: 'realtime:contact-link-created',
+  CONTACT_LINK_DELETED: 'realtime:contact-link-deleted',
+  FILE_LINK_CREATED: 'realtime:file-link-created',
+  FILE_LINK_DELETED: 'realtime:file-link-deleted',
+  // Entity linking events (Building-Project, Unit-Building, etc.)
+  ENTITY_LINKED: 'realtime:entity-linked',
+  ENTITY_UNLINKED: 'realtime:entity-unlinked',
 } as const;
 
 export type RealtimeEventType = typeof REALTIME_EVENTS[keyof typeof REALTIME_EVENTS];
@@ -837,6 +845,85 @@ export interface FloorplanDeletedPayload {
   timestamp: number;
 }
 
+// ============================================================================
+// ASSOCIATION LINK EVENT PAYLOADS (contact_links, file_links)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Event payload for contact link creation
+ * Used for real-time sync when contact is linked to an entity
+ */
+export interface ContactLinkCreatedPayload {
+  linkId: string;
+  link: {
+    sourceContactId: string;
+    sourceWorkspaceId?: string;
+    targetEntityType: string;
+    targetEntityId: string;
+    targetWorkspaceId?: string;
+  };
+  timestamp: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: Event payload for contact link deletion
+ */
+export interface ContactLinkDeletedPayload {
+  linkId: string;
+  timestamp: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: Event payload for file link creation
+ * Used for real-time sync when file is linked to an entity
+ */
+export interface FileLinkCreatedPayload {
+  linkId: string;
+  link: {
+    sourceFileId: string;
+    sourceWorkspaceId?: string;
+    targetEntityType: string;
+    targetEntityId: string;
+    targetWorkspaceId?: string;
+  };
+  timestamp: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: Event payload for file link deletion
+ */
+export interface FileLinkDeletedPayload {
+  linkId: string;
+  timestamp: number;
+}
+
+// ============================================================================
+// ENTITY LINKING EVENT PAYLOADS (Building-Project, Unit-Building, etc.)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Event payload for entity linking
+ * Used by EntityLinkingService for centralized real-time sync
+ */
+export interface EntityLinkedPayload {
+  entityId: string;
+  entityType: string;
+  parentId: string;
+  parentType: string;
+  previousParentId: string | null;
+  timestamp: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: Event payload for entity unlinking
+ */
+export interface EntityUnlinkedPayload {
+  entityId: string;
+  entityType: string;
+  previousParentId: string | null;
+  timestamp: number;
+}
+
 /**
  * 🏢 ENTERPRISE: localStorage keys for cross-page sync
  * Using storage events to sync updates across browser tabs
@@ -890,4 +977,12 @@ export const REALTIME_STORAGE_KEYS = {
   RELATIONSHIP_DELETED: 'realtime:relationship-deleted',
   SESSION_DELETED: 'realtime:session-deleted',
   FLOORPLAN_DELETED: 'realtime:floorplan-deleted',
+  // Association link events
+  CONTACT_LINK_CREATED: 'realtime:contact-link-created',
+  CONTACT_LINK_DELETED: 'realtime:contact-link-deleted',
+  FILE_LINK_CREATED: 'realtime:file-link-created',
+  FILE_LINK_DELETED: 'realtime:file-link-deleted',
+  // Entity linking events
+  ENTITY_LINKED: 'realtime:entity-linked',
+  ENTITY_UNLINKED: 'realtime:entity-unlinked',
 } as const;

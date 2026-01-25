@@ -5,8 +5,12 @@
  *
  * Contains:
  * - Command Pattern (Undo/Redo)
- * - Future: State Machine, Entity Registry, Event Bus
+ * - State Machine (Drawing States)
+ * - Future: Entity Registry, Event Bus
  */
 
 // Command Pattern System
 export * from './commands';
+
+// State Machine System
+export * from './state-machine';

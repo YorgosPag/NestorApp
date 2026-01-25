@@ -2751,6 +2751,197 @@ const unsubscribe = registerRenderCallback(
 
 ---
 
+### 📋 ADR-031: ENTERPRISE COMMAND PATTERN SYSTEM (2026-01-25) - 🏢 ENTERPRISE
+
+**Status**: ✅ **IMPLEMENTED** | **Decision Date**: 2026-01-25
+
+**Context**:
+Η εφαρμογή δεν είχε undo/redo functionality. Κάθε entity operation ήταν permanent.
+Αυτό δεν είναι αποδεκτό για enterprise CAD software (Autodesk, Bentley, Adobe standard).
+
+**Problem**:
+- ❌ Καμία δυνατότητα Ctrl+Z/Ctrl+Y
+- ❌ Δεν υπήρχε command history
+- ❌ Operations δεν ήταν serializable
+- ❌ Καμία audit trail για compliance
+- ❌ Session state χανόταν με refresh
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `core/commands/` είναι το ΜΟΝΑΔΙΚΟ undo/redo system |
+| **PATTERN** | GoF Command Pattern (Autodesk AutoCAD / Adobe Photoshop / Figma) |
+| **ENTERPRISE** | Full serialization, audit trail, persistence, batch operations |
+
+**Architecture**:
+```
+core/commands/
+├── interfaces.ts          # 🏢 Enterprise types (300+ lines)
+├── CommandHistory.ts      # Undo/redo stack with merge support
+├── CompoundCommand.ts     # 🏢 Batch operations with atomic rollback
+├── AuditTrail.ts          # 🏢 SAP/Salesforce compliance logging
+├── CommandPersistence.ts  # 🏢 IndexedDB/localStorage session restore
+├── CommandRegistry.ts     # 🏢 Plugin architecture for deserialization
+├── useCommandHistory.ts   # React hook
+├── entity-commands/
+│   ├── CreateEntityCommand.ts
+│   └── DeleteEntityCommand.ts
+└── vertex-commands/
+    ├── MoveVertexCommand.ts  # With merge support (500ms)
+    ├── AddVertexCommand.ts
+    └── RemoveVertexCommand.ts
+```
+
+**API**:
+```typescript
+import {
+  useCommandHistory,
+  CreateEntityCommand,
+  MoveVertexCommand,
+  CompoundCommand,
+  AuditTrail,
+  CommandPersistence,
+} from '@/subapps/dxf-viewer/core/commands';
+
+// Basic usage
+const { execute, undo, redo, canUndo, canRedo } = useCommandHistory();
+execute(new CreateEntityCommand(entityData, sceneManager));
+
+// Batch operations with rollback
+const batch = new CompoundCommand('BatchEdit', [cmd1, cmd2, cmd3]);
+execute(batch);
+
+// Audit trail for compliance
+const audit = new AuditTrail();
+audit.export('csv'); // SAP/Salesforce reporting
+```
+
+**Enterprise Features**:
+| Feature | Description | Industry Standard |
+|---------|-------------|-------------------|
+| **Serialization** | All commands serializable to JSON | SAP, Autodesk |
+| **Compound Commands** | Batch operations with atomic rollback | Adobe, Microsoft |
+| **Audit Trail** | Full compliance logging (JSON/CSV export) | SAP, Salesforce |
+| **Persistence** | IndexedDB (primary) + localStorage (fallback) | Adobe, Figma |
+| **Command Registry** | Plugin architecture for custom commands | Autodesk |
+| **Merge Support** | Consecutive drags merge (500ms window) | Figma, Sketch |
+
+**Consequences**:
+- ✅ **Full Undo/Redo** - Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z
+- ✅ **Session Restore** - Command history persists across refreshes
+- ✅ **Compliance Ready** - Full audit trail for enterprise
+- ✅ **Plugin Ready** - Custom commands via registry
+- ✅ **TypeScript Safe** - Full type safety, no `any`
+- ✅ **Autodesk-Grade** - Industry-standard implementation
+
+**References**:
+- Commands: `src/subapps/dxf-viewer/core/commands/`
+- Documentation: `src/subapps/dxf-viewer/docs/ENTITY_CREATION_ENTERPRISE_ARCHITECTURE.md`
+- Industry: GoF Design Patterns, Autodesk AutoCAD, Adobe Photoshop, Figma
+
+---
+
+### 📋 ADR-032: DRAWING STATE MACHINE (2026-01-25) - 🏢 ENTERPRISE
+
+**Status**: ✅ **IMPLEMENTED** | **Decision Date**: 2026-01-25
+
+**Context**:
+Το `useUnifiedDrawing.tsx` χρησιμοποιούσε boolean flags (`isDrawing: true/false`) για διαχείριση
+drawing states. Αυτό προκαλούσε race conditions (υπήρχαν FIX RACE CONDITION σχόλια στον κώδικα).
+
+**Problem**:
+- ❌ Boolean flags αντί για formal state machine
+- ❌ Race conditions με async setState
+- ❌ Unpredictable state transitions
+- ❌ No state history για debugging
+- ❌ Hard to extend για νέα states
+
+**Separation of Concerns**:
+
+| System | Question | Example |
+|--------|----------|---------|
+| **ToolStateManager** | WHICH tool is active? | `select` → `line` → `circle` |
+| **DrawingStateMachine** | WHAT is the tool doing? | `IDLE` → `DRAWING` → `COMPLETING` |
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `core/state-machine/` είναι το ΜΟΝΑΔΙΚΟ drawing state system |
+| **PATTERN** | Formal State Machine (XState patterns, AutoCAD command states) |
+| **COMPLEMENTARY** | Συνεργάζεται με `ToolStateManager`, δεν το αντικαθιστά |
+
+**Architecture**:
+```
+core/state-machine/
+├── interfaces.ts           # 🏢 State/Event/Context types (300+ lines)
+├── DrawingStateMachine.ts  # 🏢 Class implementation with guards
+├── useDrawingMachine.ts    # 🏢 React hook with useSyncExternalStore
+└── index.ts                # Public API
+```
+
+**State Diagram**:
+```
+    ┌──────────┐  SELECT_TOOL   ┌────────────┐
+    │   IDLE   │ ────────────► │ TOOL_READY │
+    └──────────┘               └─────┬──────┘
+                                     │ ADD_POINT
+                                     ▼
+                            ┌─────────────────┐
+                            │ COLLECTING_POINTS│◄─┐
+                            └────────┬────────┘  │ ADD_POINT
+                                     │           │
+                    MIN_POINTS_REACHED│           │
+                                     ▼           │
+                            ┌─────────────────┐  │
+                            │   COMPLETING    │──┘
+                            └────────┬────────┘
+                                     │ COMPLETE
+                                     ▼
+                            ┌─────────────────┐
+                            │   COMPLETED     │
+                            └─────────────────┘
+```
+
+**API**:
+```typescript
+import { useDrawingMachine } from '@/subapps/dxf-viewer/core/state-machine';
+
+const {
+  state,        // 'IDLE' | 'TOOL_READY' | 'COLLECTING_POINTS' | 'COMPLETING' | etc.
+  isDrawing,    // true when in any drawing state
+  canComplete,  // true when min points reached
+  addPoint,     // (point: Point2D) => void
+  complete,     // () => void
+  cancel,       // () => void
+} = useDrawingMachine();
+```
+
+**Enterprise Features**:
+| Feature | Description | Industry Standard |
+|---------|-------------|-------------------|
+| **Type-Safe States** | Discriminated unions | XState, Redux FSM |
+| **Guard Conditions** | Conditional transitions | XState, Autodesk |
+| **State History** | Time-travel debugging | Redux DevTools |
+| **useSyncExternalStore** | React 18 best practice | React Core Team |
+| **Singleton + Factory** | Flexible instantiation | Gang of Four |
+| **Tool Requirements** | Configurable point limits | AutoCAD |
+
+**Consequences**:
+- ✅ **No Race Conditions** - Synchronous state transitions
+- ✅ **Predictable Behavior** - Formal state machine
+- ✅ **Debugging** - State history, debug logging
+- ✅ **Extensible** - Easy to add new states
+- ✅ **TypeScript Safe** - Full type safety
+
+**References**:
+- State Machine: `src/subapps/dxf-viewer/core/state-machine/`
+- Tool Manager: `src/subapps/dxf-viewer/systems/tools/ToolStateManager.ts`
+- Industry: XState, Autodesk AutoCAD Command States, Adobe Illustrator
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

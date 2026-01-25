@@ -84,6 +84,14 @@ export {
   type RelationshipDeletedPayload,
   type SessionDeletedPayload,
   type FloorplanDeletedPayload,
+  // Association link payloads
+  type ContactLinkCreatedPayload,
+  type ContactLinkDeletedPayload,
+  type FileLinkCreatedPayload,
+  type FileLinkDeletedPayload,
+  // Entity linking payloads
+  type EntityLinkedPayload,
+  type EntityUnlinkedPayload,
   type RealtimeEventType,
   REALTIME_EVENTS,
   REALTIME_STORAGE_KEYS,

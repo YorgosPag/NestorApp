@@ -2,6 +2,8 @@
 
 import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 
 // 🏢 ENTERPRISE: DXF scene data structure
 interface DxfSceneData {
@@ -40,6 +42,19 @@ export class UnitFloorplanService {
       });
 
       // Debug logging removed //(`✅ Successfully saved unit floorplan for unit:`, unitId);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchFloorplanCreated({
+        floorplanId: docId,
+        floorplan: {
+          unitId,
+          type: 'unit',
+          fileType: 'dxf',
+          fileName: data.fileName,
+        },
+        timestamp: Date.now(),
+      });
+
       return true;
     } catch (error) {
       // Error logging removed //(`❌ Error saving unit floorplan:`, error);
@@ -100,6 +115,13 @@ export class UnitFloorplanService {
       });
 
       // Debug logging removed //(`✅ Successfully deleted unit floorplan for unit:`, unitId);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchFloorplanDeleted({
+        floorplanId: docId,
+        timestamp: Date.now(),
+      });
+
       return true;
     } catch (error) {
       // Error logging removed //(`❌ Error deleting unit floorplan:`, error);

@@ -86,6 +86,14 @@ import {
   type FloorplanCreatedPayload,
   type FloorplanUpdatedPayload,
   type FloorplanDeletedPayload,
+  // Association link payloads
+  type ContactLinkCreatedPayload,
+  type ContactLinkDeletedPayload,
+  type FileLinkCreatedPayload,
+  type FileLinkDeletedPayload,
+  // Entity linking payloads
+  type EntityLinkedPayload,
+  type EntityUnlinkedPayload,
 } from './types';
 
 // ============================================================================
@@ -2547,6 +2555,137 @@ class RealtimeServiceCore {
       try {
         localStorage.setItem(
           REALTIME_STORAGE_KEYS.FLOORPLAN_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // ASSOCIATION LINK EVENT DISPATCH (contact_links, file_links)
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch contact link created event
+   * Used when a contact is linked to an entity via AssociationService
+   */
+  dispatchContactLinkCreated(payload: ContactLinkCreatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching CONTACT_LINK_CREATED:', payload.linkId);
+
+    this.dispatchEvent(REALTIME_EVENTS.CONTACT_LINK_CREATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.CONTACT_LINK_CREATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch contact link deleted event
+   */
+  dispatchContactLinkDeleted(payload: ContactLinkDeletedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching CONTACT_LINK_DELETED:', payload.linkId);
+
+    this.dispatchEvent(REALTIME_EVENTS.CONTACT_LINK_DELETED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.CONTACT_LINK_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch file link created event
+   * Used when a file is linked to an entity via AssociationService
+   */
+  dispatchFileLinkCreated(payload: FileLinkCreatedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching FILE_LINK_CREATED:', payload.linkId);
+
+    this.dispatchEvent(REALTIME_EVENTS.FILE_LINK_CREATED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.FILE_LINK_CREATED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch file link deleted event
+   */
+  dispatchFileLinkDeleted(payload: FileLinkDeletedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching FILE_LINK_DELETED:', payload.linkId);
+
+    this.dispatchEvent(REALTIME_EVENTS.FILE_LINK_DELETED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.FILE_LINK_DELETED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  // ==========================================================================
+  // ENTITY LINKING EVENT DISPATCH (Building-Project, Unit-Building, etc.)
+  // ==========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch entity linked event
+   * Used by EntityLinkingService for centralized real-time sync
+   */
+  dispatchEntityLinked(payload: EntityLinkedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching ENTITY_LINKED:', payload.entityType, payload.entityId, '→', payload.parentType, payload.parentId);
+
+    this.dispatchEvent(REALTIME_EVENTS.ENTITY_LINKED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.ENTITY_LINKED,
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn('⚠️ [RealtimeService] localStorage notification failed:', error);
+      }
+    }
+  }
+
+  /**
+   * 🏢 ENTERPRISE: Dispatch entity unlinked event
+   */
+  dispatchEntityUnlinked(payload: EntityUnlinkedPayload): void {
+    console.log('📤 [RealtimeService] Dispatching ENTITY_UNLINKED:', payload.entityType, payload.entityId);
+
+    this.dispatchEvent(REALTIME_EVENTS.ENTITY_UNLINKED, payload);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          REALTIME_STORAGE_KEYS.ENTITY_UNLINKED,
           JSON.stringify(payload)
         );
       } catch (error) {

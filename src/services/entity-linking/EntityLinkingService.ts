@@ -42,6 +42,8 @@ import {
   getRelationshipKey,
   isEnterpriseId,
 } from './config';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 import type {
   EntityType,
   LinkEntityParams,
@@ -175,8 +177,19 @@ export class EntityLinkingService {
     // 📋 STEP 4: Invalidate cache
     EntityLinkingCache.invalidateOnLink(entityType, entityId, parentId);
 
-    // 📋 STEP 5: Dispatch success event
-    this.dispatchLinkEvent(config.successEvent, {
+    // 📋 STEP 5: Dispatch success event via centralized RealtimeService
+    // 🏢 ENTERPRISE: Using centralized RealtimeService for cross-page/cross-tab sync
+    RealtimeService.dispatchEntityLinked({
+      entityId,
+      entityType,
+      parentId,
+      parentType,
+      previousParentId,
+      timestamp: Date.now(),
+    });
+
+    // Also dispatch the legacy event for backward compatibility
+    this.dispatchLegacyLinkEvent(config.successEvent, {
       entityId,
       entityType,
       previousParentId,
@@ -304,8 +317,17 @@ export class EntityLinkingService {
       EntityLinkingCache.invalidateOnLink(entityType, entityId, previousParentId);
     }
 
-    // Dispatch event
-    this.dispatchLinkEvent(config.successEvent, {
+    // Dispatch event via centralized RealtimeService
+    // 🏢 ENTERPRISE: Using centralized RealtimeService for cross-page/cross-tab sync
+    RealtimeService.dispatchEntityUnlinked({
+      entityId,
+      entityType,
+      previousParentId,
+      timestamp: Date.now(),
+    });
+
+    // Also dispatch the legacy event for backward compatibility
+    this.dispatchLegacyLinkEvent(config.successEvent, {
       entityId,
       entityType,
       previousParentId,
@@ -579,9 +601,11 @@ export class EntityLinkingService {
   }
 
   /**
-   * Dispatch a custom event for real-time updates
+   * 🏢 ENTERPRISE: Legacy event dispatch for backward compatibility
+   * @deprecated Use RealtimeService.dispatchEntityLinked/Unlinked for new code
+   * Maintained for existing listeners that depend on specific event names
    */
-  private static dispatchLinkEvent(
+  private static dispatchLegacyLinkEvent(
     eventName: string,
     payload: {
       entityId: string;
@@ -599,7 +623,7 @@ export class EntityLinkingService {
           },
         })
       );
-      console.log(`📡 [EntityLinkingService] Dispatched event: ${eventName}`);
+      console.log(`📡 [EntityLinkingService] Dispatched legacy event: ${eventName}`);
     }
   }
 }

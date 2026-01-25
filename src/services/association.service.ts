@@ -55,6 +55,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
+import { RealtimeService } from '@/services/realtime';
 import { contactLinkConverter, fileLinkConverter } from '@/lib/firestore/converters/association.converter';
 import type {
   ContactLink,
@@ -121,6 +123,19 @@ export class AssociationService {
       await setDoc(linkRef, contactLink);
 
       console.log(`✅ [AssociationService] Created contact link: ${linkId}`);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchContactLinkCreated({
+        linkId,
+        link: {
+          sourceContactId,
+          sourceWorkspaceId,
+          targetEntityType,
+          targetEntityId,
+          targetWorkspaceId,
+        },
+        timestamp: Date.now(),
+      });
 
       return {
         success: true,
@@ -283,6 +298,19 @@ export class AssociationService {
       await setDoc(linkRef, fileLink);
 
       console.log(`✅ [AssociationService] Created file link: ${linkId}`);
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchFileLinkCreated({
+        linkId,
+        link: {
+          sourceFileId,
+          sourceWorkspaceId,
+          targetEntityType,
+          targetEntityId,
+          targetWorkspaceId,
+        },
+        timestamp: Date.now(),
+      });
 
       return {
         success: true,
