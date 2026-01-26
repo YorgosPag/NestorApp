@@ -344,35 +344,13 @@ export function useCentralizedMouseHandlers({
       if (!panState.animationId) {
         panState.animationId = requestAnimationFrame(applyPendingTransform);
       }
-    } else {
-      // 🔥 LEGACY PANNING for non-pan tools (φάλμπακ για backwards compatibility)
-      const shouldPan = cursor.isDown && cursor.button === 0 && (
-        (!cursor.isSelecting && activeTool !== 'select') // Non-selection tools
-      );
-
-      if (shouldPan) {
-        const previousPos = cursor.position;
-        if (previousPos) {
-          const deltaX = screenPos.x - previousPos.x;
-          const deltaY = screenPos.y - previousPos.y;
-
-          const newTransform = {
-            scale: transform.scale,
-            offsetX: transform.offsetX + deltaX,
-            offsetY: transform.offsetY - deltaY // ✅ CORRECTED: Mouse up → deltaY negative → offsetY increases → Drawing moves UP
-          };
-
-          onTransformChange?.(newTransform);
-
-          // ✅ EMIT CENTRALIZED TRANSFORM EVENT
-          canvasEventBus.emitTransformChange(
-            newTransform,
-            viewport,
-            'dxf-canvas'
-          );
-        }
-      }
     }
+    // 🏢 ENTERPRISE (2026-01-26): LEGACY PANNING REMOVED - ADR-035
+    // Left click should execute the active tool (measure, draw, etc.), NOT pan!
+    // Pan with left click is ONLY allowed when activeTool === 'pan'
+    // Pan with MIDDLE button (handled above) or WHEEL (ZoomManager) is the CAD standard
+    // The old code was: shouldPan = cursor.isDown && button === 0 && activeTool !== 'select'
+    // This incorrectly made ALL tools except 'select' pan instead of executing their function
   }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, applyPendingTransform, snapEnabled, findSnapPoint]);
 
   // 🚀 MOUSE UP HANDLER - CAD-style release with pan cleanup

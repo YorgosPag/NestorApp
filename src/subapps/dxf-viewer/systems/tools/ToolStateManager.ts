@@ -18,38 +18,95 @@ export interface ToolInfo {
   requiresCanvas: boolean;
   canInterrupt: boolean;
   allowsContinuous: boolean;
+  /** 🏢 ENTERPRISE (2026-01-26): ADR-033 - Whether this tool preserves overlay draw mode when active */
+  preservesOverlayMode: boolean;
 }
 
 // Centralized tool definitions
+// 🏢 ENTERPRISE (2026-01-26): ADR-033 - Added preservesOverlayMode metadata for overlay draw mode lifecycle
 const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
-  'select': { id: 'select', category: 'selection', requiresCanvas: true, canInterrupt: false, allowsContinuous: true },
-  'line': { id: 'line', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'rectangle': { id: 'rectangle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'circle': { id: 'circle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'circle-diameter': { id: 'circle-diameter', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'circle-2p-diameter': { id: 'circle-2p-diameter', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'polyline': { id: 'polyline', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true },
-  'polygon': { id: 'polygon', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'measure-distance': { id: 'measure-distance', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'measure-area': { id: 'measure-area', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'measure-angle': { id: 'measure-angle', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'measure-angle-line-arc': { id: 'measure-angle-line-arc', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'measure-angle-two-arcs': { id: 'measure-angle-two-arcs', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'measure-angle-measuregeom': { id: 'measure-angle-measuregeom', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'measure-angle-constraint': { id: 'measure-angle-constraint', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'zoom-in': { id: 'zoom-in', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false },
-  'zoom-out': { id: 'zoom-out', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false },
-  'zoom-extents': { id: 'zoom-extents', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false },
-  'zoom-window': { id: 'zoom-window', category: 'zoom', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'pan': { id: 'pan', category: 'utility', requiresCanvas: true, canInterrupt: false, allowsContinuous: true },
-  'grid-toggle': { id: 'grid-toggle', category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false },
+  // Selection tools - preserve overlay mode for editing
+  'select': { id: 'select', category: 'selection', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: true },
+
+  // Drawing tools - cancel overlay mode (CAD drawing ≠ overlay drawing)
+  'line': { id: 'line', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'rectangle': { id: 'rectangle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'circle': { id: 'circle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'circle-diameter': { id: 'circle-diameter', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'circle-2p-diameter': { id: 'circle-2p-diameter', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'polyline': { id: 'polyline', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'polygon': { id: 'polygon', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+
+  // Measurement tools - cancel overlay mode (measurement ≠ overlay drawing)
+  'measure-distance': { id: 'measure-distance', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'measure-area': { id: 'measure-area', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'measure-angle': { id: 'measure-angle', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'measure-angle-line-arc': { id: 'measure-angle-line-arc', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'measure-angle-two-arcs': { id: 'measure-angle-two-arcs', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'measure-angle-measuregeom': { id: 'measure-angle-measuregeom', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'measure-angle-constraint': { id: 'measure-angle-constraint', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+
+  // Zoom tools - cancel overlay mode (zoom interaction ≠ overlay drawing)
+  'zoom-in': { id: 'zoom-in', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
+  'zoom-out': { id: 'zoom-out', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
+  'zoom-extents': { id: 'zoom-extents', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
+  'zoom-window': { id: 'zoom-window', category: 'zoom', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+
+  // Utility tools - pan/grid don't interact with overlay drawing
+  'pan': { id: 'pan', category: 'utility', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false },
+  'grid-toggle': { id: 'grid-toggle', category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
+
   // 🏢 ENTERPRISE (Phase 3): Editing tools for entity manipulation
-  'move': { id: 'move', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true },
-  'copy': { id: 'copy', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false },
-  'delete': { id: 'delete', category: 'editing', requiresCanvas: false, canInterrupt: false, allowsContinuous: false },
-  'grip-edit': { id: 'grip-edit', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true },
-  'layering': { id: 'layering', category: 'utility', requiresCanvas: true, canInterrupt: true, allowsContinuous: true },
+  'move': { id: 'move', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'copy': { id: 'copy', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'delete': { id: 'delete', category: 'editing', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
+  'grip-edit': { id: 'grip-edit', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: true },
+
+  // 🏢 ENTERPRISE: Layering tool - ALWAYS preserves overlay mode (it's the overlay management tool!)
+  'layering': { id: 'layering', category: 'utility', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: true },
 };
+
+// ============================================================================
+// 🏢 ENTERPRISE HELPER FUNCTIONS (ADR-033)
+// Standalone functions for tool metadata access without hook dependency
+// ============================================================================
+
+/**
+ * Get tool metadata from centralized definitions
+ * @param tool - The tool type to query
+ * @returns ToolInfo for the specified tool, defaults to 'select' if not found
+ */
+export function getToolMetadata(tool: ToolType): ToolInfo {
+  return TOOL_DEFINITIONS[tool] ?? TOOL_DEFINITIONS['select'];
+}
+
+/**
+ * Check if a tool preserves overlay draw mode when activated
+ * Used by DxfViewerContent to determine overlay mode lifecycle
+ *
+ * @param tool - The tool type to check
+ * @returns true if the tool keeps overlay draw mode active, false if it should cancel
+ *
+ * @example
+ * // In DxfViewerContent.tsx:
+ * if (overlayMode === 'draw' && !preservesOverlayMode(activeTool)) {
+ *   setOverlayMode('select');
+ *   eventBus.emit('overlay:cancel-polygon', undefined);
+ * }
+ */
+export function preservesOverlayMode(tool: ToolType): boolean {
+  return getToolMetadata(tool).preservesOverlayMode;
+}
+
+/**
+ * Get all tools that preserve overlay mode (for debugging/documentation)
+ * @returns Array of tool types that preserve overlay draw mode
+ */
+export function getOverlayCompatibleTools(): ToolType[] {
+  return (Object.keys(TOOL_DEFINITIONS) as ToolType[]).filter(
+    tool => TOOL_DEFINITIONS[tool].preservesOverlayMode
+  );
+}
 
 export interface ToolStateManagerOptions {
   initialTool?: ToolType;

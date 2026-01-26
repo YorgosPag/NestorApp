@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Component, ErrorInfo as ReactErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check, Mail, Send, ChevronDown, Globe, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check, Mail, Send, Globe, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { errorTracker } from '@/services/ErrorTracker';
@@ -562,10 +562,10 @@ ${errorDetails.stack || 'Stack trace not available'}
                 </div>
                 <div>
                   <h1 className={`text-2xl font-bold ${colors ? colors.text.error : 'text-red-600'}`}>
-                    Something went wrong
+                    Κάτι πήγε στραβά
                   </h1>
                   <p className={`${colors ? colors.text.error : 'text-red-600'}`}>
-                    {componentName ? `Error in ${componentName}` : 'An unexpected error occurred'}
+                    {componentName ? `Σφάλμα στο ${componentName}` : 'Παρουσιάστηκε απρόσμενο σφάλμα'}
                   </p>
                 </div>
               </div>
@@ -580,32 +580,32 @@ ${errorDetails.stack || 'Stack trace not available'}
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 mb-6">
                 {enableRetry && retryCount < maxRetries && (
-                  <Button 
+                  <Button
                     onClick={this.retry}
                     variant="default"
                     className="flex items-center space-x-2"
                   >
                     <RefreshCw className={componentSizes.icon.sm} />
-                    <span>Try Again {retryCount > 0 && `(${retryCount + 1}/${maxRetries + 1})`}</span>
+                    <span>Δοκιμάστε ξανά {retryCount > 0 && `(${retryCount + 1}/${maxRetries + 1})`}</span>
                   </Button>
                 )}
 
-                <Button 
+                <Button
                   onClick={this.goBack}
                   variant="outline"
                   className="flex items-center space-x-2"
                 >
                   <ArrowLeft className={componentSizes.icon.sm} />
-                  <span>Go Back</span>
+                  <span>Πίσω</span>
                 </Button>
 
-                <Button 
+                <Button
                   onClick={this.goHome}
                   variant="outline"
                   className="flex items-center space-x-2"
                 >
                   <Home className={componentSizes.icon.sm} />
-                  <span>Go Home</span>
+                  <span>Αρχική</span>
                 </Button>
               </div>
 
@@ -613,17 +613,17 @@ ${errorDetails.stack || 'Stack trace not available'}
               {enableReporting && (
                 <div className="space-y-4">
                   {/* Copy & Admin Email Actions */}
-                  <div className="flex items-center justify-between p-4 bg-muted rounded-md">
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-md flex-wrap gap-3">
                     <div className="flex items-center space-x-3">
                       <Bug className={`${componentSizes.icon.md} text-muted-foreground`} />
                       <div>
-                        <p className="font-medium">Error Actions</p>
+                        <p className="font-medium">Ενέργειες σφάλματος</p>
                         <p className="text-sm text-muted-foreground">
-                          Copy details or notify administrator
+                          Αντιγραφή στοιχείων ή ειδοποίηση διαχειριστή
                         </p>
                       </div>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={this.copyErrorDetails}
                         disabled={copySuccess}
@@ -634,12 +634,12 @@ ${errorDetails.stack || 'Stack trace not available'}
                         {copySuccess ? (
                           <>
                             <Check className={`${componentSizes.icon.sm} ${colors ? colors.text.success : 'text-green-600'}`} />
-                            <span>Copied!</span>
+                            <span>Αντιγράφηκε!</span>
                           </>
                         ) : (
                           <>
                             <Copy className={componentSizes.icon.sm} />
-                            <span>Copy Details</span>
+                            <span>Αντιγραφή</span>
                           </>
                         )}
                       </Button>
@@ -653,19 +653,29 @@ ${errorDetails.stack || 'Stack trace not available'}
                         {isSendingToAdmin ? (
                           <>
                             <RefreshCw className={`${componentSizes.icon.sm} animate-spin`} />
-                            <span>Sending...</span>
+                            <span>Αποστολή...</span>
                           </>
                         ) : emailSent ? (
                           <>
                             <Check className={`${componentSizes.icon.sm} ${colors ? colors.text.success : 'text-green-600'}`} />
-                            <span>Sent to Admin</span>
+                            <span>Στάλθηκε</span>
                           </>
                         ) : (
                           <>
                             <Mail className={componentSizes.icon.sm} />
-                            <span>Notify Admin</span>
+                            <span>Ειδοποίηση Διαχ.</span>
                           </>
                         )}
+                      </Button>
+                      <Button
+                        onClick={() => this.setState({ showEmailOptions: true })}
+                        disabled={this.state.showEmailOptions}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center space-x-2"
+                      >
+                        <Mail className={componentSizes.icon.sm} />
+                        <span>Αποστολή Email</span>
                       </Button>
                     </div>
                   </div>
@@ -701,13 +711,13 @@ ${errorDetails.stack || 'Stack trace not available'}
                   )}
 
                   {/* Traditional Error Reporting */}
-                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-md">
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-md flex-wrap gap-3">
                     <div className="flex items-center space-x-3">
                       <Send className={`${componentSizes.icon.md} text-muted-foreground`} />
                       <div>
-                        <p className="font-medium">Anonymous Report</p>
+                        <p className="font-medium">Ανώνυμη Αναφορά</p>
                         <p className="text-sm text-muted-foreground">
-                          Send anonymous report to help improve the system
+                          Στείλτε ανώνυμη αναφορά για βελτίωση του συστήματος
                         </p>
                       </div>
                     </div>
@@ -720,15 +730,15 @@ ${errorDetails.stack || 'Stack trace not available'}
                       {isReporting ? (
                         <>
                           <RefreshCw className={`${componentSizes.icon.sm} mr-2 animate-spin`} />
-                          Sending...
+                          Αποστολή...
                         </>
                       ) : reportSent ? (
                         <>
                           <Check className={`${componentSizes.icon.sm} mr-2 ${colors ? colors.text.success : 'text-green-600'}`} />
-                          Sent
+                          Στάλθηκε
                         </>
                       ) : (
-                        'Report Error'
+                        'Αναφορά'
                       )}
                     </Button>
                   </div>
@@ -739,12 +749,12 @@ ${errorDetails.stack || 'Stack trace not available'}
               {showErrorDetails && (
                 <details className="mt-6">
                   <summary className={`cursor-pointer text-muted-foreground ${INTERACTIVE_PATTERNS.TEXT_HOVER} mb-3`}>
-                    Technical Details
+                    Τεχνικές λεπτομέρειες
                   </summary>
                   <div className="space-y-4">
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">Error Stack</h4>
+                        <h4 className="font-medium">Stack σφάλματος</h4>
                         <Button
                           onClick={this.copyErrorDetails}
                           variant="ghost"
@@ -762,10 +772,10 @@ ${errorDetails.stack || 'Stack trace not available'}
                         {error.stack}
                       </pre>
                     </div>
-                    
+
                     {errorInfo?.componentStack && (
                       <div>
-                        <h4 className="font-medium mb-2">Component Stack</h4>
+                        <h4 className="font-medium mb-2">Stack component</h4>
                         <pre className="text-xs bg-muted p-3 rounded overflow-auto max-h-40">
                           {errorInfo.componentStack}
                         </pre>
@@ -773,8 +783,8 @@ ${errorDetails.stack || 'Stack trace not available'}
                     )}
 
                     <div className="text-xs text-muted-foreground space-y-1">
-                      <p><strong>Error ID:</strong> {this.state.errorId}</p>
-                      <p><strong>Timestamp:</strong> {new Date().toISOString()}</p>
+                      <p><strong>ID Σφάλματος:</strong> {this.state.errorId}</p>
+                      <p><strong>Χρονοσήμανση:</strong> {new Date().toISOString()}</p>
                       <p><strong>URL:</strong> {window.location.href}</p>
                     </div>
                   </div>
@@ -923,6 +933,565 @@ export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundar
     >
       {children}
     </ErrorBoundary>
+  );
+}
+
+// ============================================================================
+// 🏢 ENTERPRISE: Route Error Fallback for Next.js error.tsx files
+// ============================================================================
+// This component provides the SAME UI as ErrorBoundary but for Next.js App Router
+// route-level error handling (error.tsx files).
+//
+// @pattern SAP/Salesforce/Microsoft - Single Source of Truth for Error UI
+// @usage Import in any error.tsx file for consistent error experience
+// ============================================================================
+
+/**
+ * Props for RouteErrorFallback component
+ * Compatible with Next.js App Router error.tsx convention
+ */
+export interface RouteErrorFallbackProps {
+  /** The error object from Next.js */
+  error: Error & { digest?: string };
+  /** Reset function to retry rendering */
+  reset: () => void;
+  /** Component/route name for context */
+  componentName?: string;
+  /** Enable error reporting features */
+  enableReporting?: boolean;
+  /** Show technical details (default: development only) */
+  showErrorDetails?: boolean;
+}
+
+/**
+ * 🏢 ENTERPRISE: Route Error Fallback Component
+ *
+ * Provides consistent error UI across all Next.js route error boundaries.
+ * Features:
+ * - Email provider selection (Gmail, Outlook, Yahoo, Default)
+ * - Copy error details to clipboard
+ * - Notify administrator (via API + email fallback)
+ * - Anonymous error reporting
+ * - Technical details (development mode)
+ * - Notification bell integration
+ *
+ * @example
+ * ```tsx
+ * // src/app/files/error.tsx
+ * import { RouteErrorFallback } from '@/components/ui/ErrorBoundary/ErrorBoundary';
+ *
+ * export default function FileManagerError({ error, reset }: ErrorProps) {
+ *   return <RouteErrorFallback error={error} reset={reset} componentName="FileManager" />;
+ * }
+ * ```
+ *
+ * @enterprise SAP/Salesforce/Microsoft error handling standard
+ */
+export function RouteErrorFallback({
+  error,
+  reset,
+  componentName = 'Route',
+  enableReporting = true,
+  showErrorDetails = process.env.NODE_ENV === 'development',
+}: RouteErrorFallbackProps) {
+  // === Hooks ===
+  const borderTokens = useBorderTokens();
+  const colors = useSemanticColors();
+  const { reportError } = useErrorReporting();
+
+  // === State ===
+  const [errorId] = React.useState(() => generateErrorId());
+  const [isReporting, setIsReporting] = React.useState(false);
+  const [reportSent, setReportSent] = React.useState(false);
+  const [isSendingToAdmin, setIsSendingToAdmin] = React.useState(false);
+  const [emailSent, setEmailSent] = React.useState(false);
+  const [copySuccess, setCopySuccess] = React.useState(false);
+  const [showEmailOptions, setShowEmailOptions] = React.useState(false);
+  const [pendingEmailData, setPendingEmailData] = React.useState<EmailComposeOptions | null>(null);
+
+  // === Effects ===
+  React.useEffect(() => {
+    // Log error to enterprise error reporting service
+    reportError(error, {
+      component: componentName,
+      action: 'Route Error Boundary',
+      digest: error.digest,
+      url: typeof window !== 'undefined' ? window.location.href : ''
+    });
+
+    console.error(`🚨 Route Error in ${componentName}:`, error);
+  }, [error, componentName, reportError]);
+
+  // === Helper Functions ===
+  const getUserId = (): string | null => {
+    try {
+      const userData = localStorage.getItem('currentUser');
+      if (userData) {
+        const user = JSON.parse(userData);
+        return user.email || user.id || null;
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+    return null;
+  };
+
+  const getErrorSeverity = (err: Error): 'critical' | 'error' | 'warning' => {
+    const message = err.message.toLowerCase();
+
+    if (message.includes('authentication') ||
+        message.includes('authorization') ||
+        message.includes('security') ||
+        message.includes('payment') ||
+        message.includes('data corruption')) {
+      return 'critical';
+    }
+
+    if (message.includes('network') ||
+        message.includes('api') ||
+        message.includes('database')) {
+      return 'error';
+    }
+
+    return 'warning';
+  };
+
+  const formatErrorForEmail = (errorDetails: {
+    errorId: string;
+    message: string;
+    stack?: string;
+    timestamp: string;
+    url: string;
+    userAgent: string;
+    userId: string | null;
+    component: string;
+    severity: string;
+    digest?: string;
+  }): string => {
+    return `
+🚨 ERROR REPORT - NESTOR PLATFORM
+=====================================
+
+📋 ERROR DETAILS:
+• Error ID: ${errorDetails.errorId}
+• Message: ${errorDetails.message}
+• Component: ${errorDetails.component}
+• Severity: ${errorDetails.severity.toUpperCase()}
+${errorDetails.digest ? `• Digest: ${errorDetails.digest}` : ''}
+
+⏰ OCCURRENCE:
+• Timestamp: ${errorDetails.timestamp}
+• URL: ${errorDetails.url}
+• User ID: ${errorDetails.userId || 'Anonymous'}
+
+🔧 TECHNICAL DETAILS:
+• User Agent: ${errorDetails.userAgent}
+
+📚 ERROR STACK:
+${errorDetails.stack || 'Stack trace not available'}
+
+---
+Αυτό το email στάλθηκε αυτόματα από το Nestor Error Reporting System.
+    `.trim();
+  };
+
+  // === Action Handlers ===
+  const handleCopyDetails = async () => {
+    const errorDetails = {
+      errorId,
+      message: error.message,
+      stack: error.stack,
+      digest: error.digest,
+      timestamp: new Date().toISOString(),
+      url: typeof window !== 'undefined' ? window.location.href : 'SSR',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
+      userId: getUserId(),
+      component: componentName,
+    };
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(errorDetails, null, 2));
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (copyError) {
+      console.error('Failed to copy error details:', copyError);
+    }
+  };
+
+  const handleSendToAdmin = async () => {
+    setIsSendingToAdmin(true);
+
+    const errorDetails = {
+      errorId,
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+      url: typeof window !== 'undefined' ? window.location.href : 'SSR',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
+      userId: getUserId(),
+      component: componentName,
+      severity: getErrorSeverity(error),
+      digest: error.digest,
+    };
+
+    try {
+      // 🏢 ENTERPRISE: Direct Firestore notification via API
+      interface ErrorReportApiResponse {
+        success: boolean;
+        notificationId?: string;
+        error?: string;
+      }
+
+      const notificationPayload = {
+        errorId,
+        message: error.message,
+        stack: error.stack,
+        component: componentName,
+        severity: getErrorSeverity(error),
+        timestamp: new Date().toISOString(),
+        url: typeof window !== 'undefined' ? window.location.href : 'SSR',
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
+        digest: error.digest,
+      };
+
+      const response = await apiClient.post('/api/notifications/error-report', notificationPayload) as ErrorReportApiResponse;
+
+      if (response.success) {
+        setEmailSent(true);
+        errorTracker.captureUserError(
+          'Error report sent to admin (route error)',
+          'sendToAdmin',
+          { errorId, notificationId: response.notificationId ?? 'unknown' }
+        );
+        console.log('✅ Error report sent successfully:', response.notificationId);
+      } else {
+        throw new Error(response.error ?? 'Failed to create notification');
+      }
+
+    } catch (sendError) {
+      console.error('Failed to send error via API, falling back to email:', sendError);
+
+      // 🏢 ENTERPRISE FALLBACK: Show email provider options
+      const adminEmail = notificationConfig.channels.adminEmail;
+      const subject = `🚨 ${getErrorSeverity(error).toUpperCase()} Route Error - ${componentName}`;
+      const body = formatErrorForEmail(errorDetails);
+
+      setPendingEmailData({ to: adminEmail, subject, body });
+      setShowEmailOptions(true);
+    } finally {
+      setIsSendingToAdmin(false);
+    }
+  };
+
+  const handleEmailProviderSelect = (provider: EmailProvider) => {
+    if (pendingEmailData) {
+      openEmailCompose(provider, pendingEmailData);
+      setEmailSent(true);
+      setShowEmailOptions(false);
+      setPendingEmailData(null);
+    }
+  };
+
+  /**
+   * 🏢 ENTERPRISE: Show email provider options directly (user choice)
+   * Allows user to manually select email provider without API fallback
+   */
+  const handleShowEmailOptions = () => {
+    const errorDetails = {
+      errorId,
+      message: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+      url: typeof window !== 'undefined' ? window.location.href : 'SSR',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
+      userId: getUserId(),
+      component: componentName,
+      severity: getErrorSeverity(error),
+      digest: error.digest,
+    };
+
+    const adminEmail = notificationConfig.channels.adminEmail;
+    const subject = `🚨 ${getErrorSeverity(error).toUpperCase()} Route Error - ${componentName}`;
+    const body = formatErrorForEmail(errorDetails);
+
+    setPendingEmailData({ to: adminEmail, subject, body });
+    setShowEmailOptions(true);
+  };
+
+  const handleReportError = async () => {
+    setIsReporting(true);
+
+    try {
+      // Simulate error reporting API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const errorReport = {
+        errorId,
+        message: error.message,
+        stack: error.stack,
+        component: componentName,
+        timestamp: new Date().toISOString(),
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR',
+        url: typeof window !== 'undefined' ? window.location.href : 'SSR',
+        userId: getUserId(),
+      };
+
+      console.log('Error report sent:', errorReport);
+      setReportSent(true);
+    } catch (reportingError) {
+      console.error('Failed to report error:', reportingError);
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
+  const handleGoHome = () => {
+    window.location.href = '/';
+  };
+
+  const handleGoBack = () => {
+    window.history.back();
+  };
+
+  // === Render ===
+  return (
+    <main className={`min-h-screen ${colors.bg.primary} flex items-center justify-center p-4`}>
+      <article className="max-w-2xl w-full">
+        <section className={`bg-card ${borderTokens.quick.error} p-8 shadow-lg rounded-lg`}>
+          {/* Error Header */}
+          <header className="flex items-center space-x-3 mb-6">
+            <figure className={`p-3 ${colors.bg.error} rounded-full`}>
+              <AlertTriangle className={`${componentSizes.icon.xl} ${colors.text.error}`} />
+            </figure>
+            <div>
+              <h1 className={`text-2xl font-bold ${colors.text.error}`}>
+                Παρουσιάστηκε σφάλμα
+              </h1>
+              <p className={colors.text.error}>
+                {componentName ? `Σφάλμα στο ${componentName}` : 'Παρουσιάστηκε απροσδόκητο σφάλμα'}
+              </p>
+            </div>
+          </header>
+
+          {/* Error Message */}
+          <section className={`mb-6 p-4 ${colors.bg.error} ${borderTokens.quick.error} rounded-md`}>
+            <p className={`${colors.text.error} font-medium`}>
+              {error.message}
+            </p>
+          </section>
+
+          {/* Action Buttons */}
+          <nav className="flex flex-wrap gap-3 mb-6">
+            <Button
+              onClick={reset}
+              variant="default"
+              className="flex items-center space-x-2"
+            >
+              <RefreshCw className={componentSizes.icon.sm} />
+              <span>Δοκιμάστε Ξανά</span>
+            </Button>
+
+            <Button
+              onClick={handleGoBack}
+              variant="outline"
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className={componentSizes.icon.sm} />
+              <span>Πίσω</span>
+            </Button>
+
+            <Button
+              onClick={handleGoHome}
+              variant="outline"
+              className="flex items-center space-x-2"
+            >
+              <Home className={componentSizes.icon.sm} />
+              <span>Αρχική</span>
+            </Button>
+          </nav>
+
+          {/* Enterprise Error Reporting & Admin Notification */}
+          {enableReporting && (
+            <section className="space-y-4">
+              {/* Copy & Admin Email Actions */}
+              <div className="flex items-center justify-between p-4 bg-muted rounded-md">
+                <div className="flex items-center space-x-3">
+                  <Bug className={`${componentSizes.icon.md} text-muted-foreground`} />
+                  <div>
+                    <p className="font-medium">Ενέργειες Σφάλματος</p>
+                    <p className="text-sm text-muted-foreground">
+                      Αντιγραφή λεπτομερειών ή ειδοποίηση διαχειριστή
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={handleCopyDetails}
+                    disabled={copySuccess}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center space-x-2"
+                  >
+                    {copySuccess ? (
+                      <>
+                        <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
+                        <span>Αντιγράφηκε!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className={componentSizes.icon.sm} />
+                        <span>Αντιγραφή</span>
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleSendToAdmin}
+                    disabled={isSendingToAdmin || emailSent}
+                    variant={getErrorSeverity(error) === 'critical' ? 'destructive' : 'default'}
+                    size="sm"
+                    className="flex items-center space-x-2"
+                  >
+                    {isSendingToAdmin ? (
+                      <>
+                        <RefreshCw className={`${componentSizes.icon.sm} animate-spin`} />
+                        <span>Αποστολή...</span>
+                      </>
+                    ) : emailSent ? (
+                      <>
+                        <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
+                        <span>Στάλθηκε!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className={componentSizes.icon.sm} />
+                        <span>Ειδοποίηση Admin</span>
+                      </>
+                    )}
+                  </Button>
+                  {/* 🏢 ENTERPRISE: Direct Email Button - Always visible */}
+                  <Button
+                    onClick={handleShowEmailOptions}
+                    disabled={showEmailOptions || emailSent}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center space-x-2"
+                  >
+                    <Mail className={componentSizes.icon.sm} />
+                    <span>Αποστολή Email</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* 🏢 ENTERPRISE: Email Provider Selection - User Choice */}
+              {showEmailOptions && (
+                <div className={`p-4 bg-muted border ${borderTokens.quick.default} rounded-md`}>
+                  <p className={`font-medium ${colors.text.primary} mb-3 flex items-center gap-2`}>
+                    <Mail className={componentSizes.icon.sm} />
+                    <span>Επιλέξτε τον πάροχο email σας:</span>
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {EMAIL_PROVIDERS.map((provider) => {
+                      const IconComponent = provider.Icon;
+                      return (
+                        <Button
+                          key={provider.id}
+                          onClick={() => handleEmailProviderSelect(provider.id)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center justify-start gap-2"
+                        >
+                          <IconComponent className={componentSizes.icon.sm} />
+                          <span>{provider.labelEl}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <p className={`text-xs ${colors.text.muted} mt-2`}>
+                    Θα ανοίξει νέα καρτέλα με το email έτοιμο προς αποστολή
+                  </p>
+                </div>
+              )}
+
+              {/* Anonymous Error Reporting */}
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-md">
+                <div className="flex items-center space-x-3">
+                  <Send className={`${componentSizes.icon.md} text-muted-foreground`} />
+                  <div>
+                    <p className="font-medium">Ανώνυμη Αναφορά</p>
+                    <p className="text-sm text-muted-foreground">
+                      Αποστολή ανώνυμης αναφοράς για βελτίωση του συστήματος
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleReportError}
+                  disabled={isReporting || reportSent}
+                  variant="outline"
+                  size="sm"
+                >
+                  {isReporting ? (
+                    <>
+                      <RefreshCw className={`${componentSizes.icon.sm} mr-2 animate-spin`} />
+                      Αποστολή...
+                    </>
+                  ) : reportSent ? (
+                    <>
+                      <Check className={`${componentSizes.icon.sm} mr-2 ${colors.text.success}`} />
+                      Στάλθηκε
+                    </>
+                  ) : (
+                    'Αναφορά Σφάλματος'
+                  )}
+                </Button>
+              </div>
+            </section>
+          )}
+
+          {/* Error Details (Development) */}
+          {showErrorDetails && (
+            <details className="mt-6">
+              <summary className={`cursor-pointer text-muted-foreground ${INTERACTIVE_PATTERNS.TEXT_HOVER} mb-3`}>
+                Τεχνικές Λεπτομέρειες
+              </summary>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium">Error Stack</h4>
+                    <Button
+                      onClick={handleCopyDetails}
+                      variant="ghost"
+                      size="sm"
+                      disabled={copySuccess}
+                    >
+                      {copySuccess ? (
+                        <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
+                      ) : (
+                        <Copy className={componentSizes.icon.sm} />
+                      )}
+                    </Button>
+                  </div>
+                  <pre className="text-xs bg-muted p-3 rounded overflow-auto max-h-40">
+                    {error.stack}
+                  </pre>
+                </div>
+
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p><strong>Error ID:</strong> {errorId}</p>
+                  {error.digest && <p><strong>Digest:</strong> {error.digest}</p>}
+                  <p><strong>Timestamp:</strong> {new Date().toISOString()}</p>
+                  <p><strong>URL:</strong> {typeof window !== 'undefined' ? window.location.href : 'SSR'}</p>
+                </div>
+              </div>
+            </details>
+          )}
+
+          {/* Admin Email Info */}
+          <footer className="mt-6 pt-4 border-t text-center text-xs text-muted-foreground">
+            <p>Email Διαχειριστή: {notificationConfig.channels.adminEmail}</p>
+          </footer>
+        </section>
+      </article>
+    </main>
   );
 }
 

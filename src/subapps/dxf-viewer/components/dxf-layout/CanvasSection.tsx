@@ -97,6 +97,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const zoomSystem = useZoom({
     initialTransform,
     onTransformChange: (newTransform) => {
+      // 🔍 DEBUG: Track ALL transform changes
+      console.log('🔄 TRANSFORM CHANGE:', {
+        from: transform,
+        to: newTransform,
+        stack: new Error().stack?.split('\n').slice(1, 5).join('\n')
+      });
       setTransform(newTransform); // ✅ SYNC WITH STATE
     },
     // 🏢 ENTERPRISE: Inject viewport για accurate zoom-to-cursor
@@ -925,21 +931,31 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [drawingHandlers]);
 
   // === 🚀 AUTO-START DRAWING ===
-  // Όταν επιλέγεται drawing tool, ξεκινά αυτόματα το drawing mode
+  // Όταν επιλέγεται drawing tool ή measurement tool, ξεκινά αυτόματα το drawing mode
   React.useEffect(() => {
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
                           activeTool === 'polygon' || activeTool === 'circle' ||
-                          activeTool === 'rectangle'; // ✅ Removed 'arc' - not in ToolType union
-    if (isDrawingTool && drawingHandlersRef.current?.startDrawing) {
-      // 🎯 TYPE-SAFE: activeTool is already narrowed to drawing tools by if statement
-      drawingHandlersRef.current.startDrawing(activeTool);
+                          activeTool === 'rectangle';
+    // 🏢 ENTERPRISE (2026-01-26): Measurement tools use the same drawing system
+    const isMeasurementTool = activeTool === 'measure-distance' ||
+                               activeTool === 'measure-area' ||
+                               activeTool === 'measure-angle';
+
+    console.log('🚀 AUTO-START CHECK:', { activeTool, isDrawingTool, isMeasurementTool, hasStartDrawing: !!drawingHandlersRef.current?.startDrawing });
+
+    if ((isDrawingTool || isMeasurementTool) && drawingHandlersRef.current?.startDrawing) {
+      console.log('🚀 CALLING startDrawing with:', activeTool);
+      // 🎯 TYPE-SAFE: activeTool is already narrowed to DrawingTool by if statement
+      drawingHandlersRef.current.startDrawing(activeTool as import('../../hooks/drawing/useUnifiedDrawing').DrawingTool);
     }
   }, [activeTool]);
 
   // === CONVERT SCENE TO CANVAS V2 FORMAT ===
-  const dxfScene: DxfScene | null = props.currentScene ? {
+  // 🏢 ENTERPRISE (2026-01-26): Always create dxfScene for preview entities, even without loaded DXF
+  // This allows measurement/drawing tools to work even when no DXF file is loaded
+  const dxfScene: DxfScene = {
     entities: [
-      ...(props.currentScene.entities?.map((entity): DxfEntityUnion | null => {
+      ...(props.currentScene?.entities?.map((entity): DxfEntityUnion | null => {
         // Get layer color information
         const layerInfo = entity.layer ? props.currentScene?.layers?.[entity.layer] : null;
 
@@ -991,6 +1007,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       // 🎯 ADD PREVIEW ENTITY: Include preview entity from drawing state for real-time rendering
       ...(drawingHandlers.drawingState.previewEntity ? (() => {
         const preview = drawingHandlers.drawingState.previewEntity;
+        console.log('🎨 PREVIEW ENTITY DETECTED:', {
+          type: preview.type,
+          id: preview.id,
+          hasStart: 'start' in preview,
+          hasEnd: 'end' in preview,
+          start: (preview as { start?: Point2D }).start,
+          end: (preview as { end?: Point2D }).end,
+          fullPreview: preview
+        });
 
         // Type-safe preview entity mapping based on entity type
         if (preview.type === 'line') {
@@ -1017,9 +1042,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         return [];
       })() : [])
     ],
-    layers: Object.keys(props.currentScene.layers || {}), // ✅ FIX: Convert layers object to array
-    bounds: props.currentScene.bounds // ✅ FIX: Use actual bounds from scene
-  } : null;
+    layers: Object.keys(props.currentScene?.layers || {}), // ✅ FIX: Convert layers object to array (optional chaining for null safety)
+    bounds: props.currentScene?.bounds ?? null // ✅ FIX: Convert undefined to null for type compatibility
+  };
+
+  // 🔍 ENTERPRISE DEBUG: Log dxfScene entities count for measurement/drawing debugging
+  if (drawingHandlers.drawingState.previewEntity) {
+    console.log('📊 DXFSCENE DEBUG:', {
+      entitiesCount: dxfScene.entities.length,
+      hasPreviewEntity: !!drawingHandlers.drawingState.previewEntity,
+      previewType: drawingHandlers.drawingState.previewEntity?.type,
+      entitiesTypes: dxfScene.entities.map(e => e.type)
+    });
+  }
 
   // 🔍 DEBUG - Check if DXF scene has entities and auto-fit to view
   React.useEffect(() => {
@@ -1176,16 +1211,27 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const handleCanvasClick = (point: Point2D) => {
     console.log('🖱️ handleCanvasClick CALLED:', { point, activeTool, overlayMode });
 
-    // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing tools
+    // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing AND measurement tools
+    // 🏢 ENTERPRISE (2026-01-26): Added measurement tools - they use the same unified drawing system
     const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
       || activeTool === 'rectangle' || activeTool === 'circle';
+    const isMeasurementTool = activeTool === 'measure-distance' || activeTool === 'measure-area' || activeTool === 'measure-angle';
 
-    if (isDrawingTool && drawingHandlersRef.current) {
+    if ((isDrawingTool || isMeasurementTool) && drawingHandlersRef.current) {
       const canvasElement = dxfCanvasRef.current?.getCanvas?.();
       if (!canvasElement) return;
 
-      const viewport = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
-      const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewport);
+      const viewportLocal = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
+      const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewportLocal);
+
+      // 🔍 DEBUG: Log coordinate conversion
+      console.log('📍 COORDINATE DEBUG:', {
+        screenPoint: point,
+        worldPoint,
+        transform,
+        viewport: viewportLocal,
+        canvasClientRect: canvasElement.getBoundingClientRect()
+      });
       drawingHandlersRef.current.onDrawingPoint(worldPoint);
       return;
     }
@@ -1696,10 +1742,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 setMouseWorld(worldPos);
 
                 // 🎯 FIX: Call onDrawingHover για preview phase rendering
+                // 🏢 ENTERPRISE (2026-01-26): Measurement tools use the same drawing system
                 const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
                   || activeTool === 'rectangle' || activeTool === 'circle';
+                const isMeasurementTool = activeTool === 'measure-distance' ||
+                                           activeTool === 'measure-area' ||
+                                           activeTool === 'measure-angle';
 
-                if (isDrawingTool && worldPos && drawingHandlersRef.current?.onDrawingHover) {
+                if ((isDrawingTool || isMeasurementTool) && worldPos && drawingHandlersRef.current?.onDrawingHover) {
+                  // 🔍 DEBUG: Uncomment below line to debug hover calls (very verbose!)
+                  // console.log('🖱️ onDrawingHover called:', { activeTool, worldPos });
                   drawingHandlersRef.current.onDrawingHover(worldPos);
                 }
               }}

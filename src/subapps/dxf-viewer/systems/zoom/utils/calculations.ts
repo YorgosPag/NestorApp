@@ -30,6 +30,10 @@ import { ZOOM_FACTORS, TRANSFORM_SCALE_LIMITS, FIT_TO_VIEW_DEFAULTS } from '../.
 /**
  * ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Υπολογισμός fit-to-bounds transform - WRAPPER για κεντρική υπηρεσία
  * 🔥 ΔΙΠΛΟΤΥΠΟ ΑΦΑΙΡΕΘΗΚΕ: Αντικαταστάθηκε με FitToViewService
+ *
+ * 🏢 ENTERPRISE FIX (2026-01-26): Returns null instead of default transform on failure
+ * This prevents DxfCanvas from detecting "default transform" and triggering unwanted initial transform
+ * which causes canvas to "jump" during measurement tool usage
  */
 export function calculateFitTransform(
   bounds: { min: Point2D; max: Point2D },
@@ -38,11 +42,11 @@ export function calculateFitTransform(
   maxScale: number = TRANSFORM_SCALE_LIMITS.MAX_SCALE,
   minScale: number = TRANSFORM_SCALE_LIMITS.MIN_SCALE,
   alignToOrigin: boolean = false
-): ViewTransform {
+): ViewTransform | null {
   // 🛡️ GUARD: Validate viewport before calculations
   if (!viewport || viewport.width <= 0 || viewport.height <= 0 || !isFinite(viewport.width) || !isFinite(viewport.height)) {
     console.error('🚨 calculateFitTransform: Invalid viewport!');
-    return { scale: 1, offsetX: 0, offsetY: 0 };
+    return null; // 🏢 FIX: Return null instead of default transform
   }
 
   // 🏢 FIX (2026-01-04): Use centralized padding from FIT_TO_VIEW_DEFAULTS
@@ -52,7 +56,7 @@ export function calculateFitTransform(
 
   if (!isFinite(paddingPercentage)) {
     console.error('🚨 calculateFitTransform: Invalid paddingPercentage!');
-    return { scale: 1, offsetX: 0, offsetY: 0 };
+    return null; // 🏢 FIX: Return null instead of default transform
   }
 
   const result = FitToViewService.calculateFitToViewFromBounds(
@@ -70,21 +74,29 @@ export function calculateFitTransform(
     return result.transform;
   }
 
-  // Fallback για edge cases
-  console.warn('🚨 calculateFitTransform: FitToViewService failed, using fallback', result);
-  return { scale: 1, offsetX: 0, offsetY: 0 };
+  // 🏢 ENTERPRISE FIX (2026-01-26): Return null on failure instead of default transform
+  // Returning default {scale:1, offsetX:0, offsetY:0} caused DxfCanvas to trigger initial transform
+  // which moved the canvas during measurement tool usage
+  console.warn('🚨 calculateFitTransform: FitToViewService failed, preserving current transform', result);
+  return null;
 }
 
 /**
  * Υπολογισμός bounds normalization (bottom-left to origin)
  * 🏢 ENTERPRISE: Uses centralized ZOOM_FACTORS.FIT_PADDING as default
+ * 🏢 ENTERPRISE FIX (2026-01-26): Returns null if fit calculation fails
  */
 export function calculateNormalizedTransform(
   bounds: { min: Point2D; max: Point2D },
   viewport: { width: number; height: number },
   padding: number = ZOOM_FACTORS.FIT_PADDING
-): ViewTransform {
+): ViewTransform | null {
   const fitTransform = calculateFitTransform(bounds, viewport, padding);
+
+  // 🏢 ENTERPRISE FIX (2026-01-26): Return null if fit calculation failed
+  if (fitTransform === null) {
+    return null;
+  }
 
   // Additional offset to move bottom-left corner to origin
   const offsetX = -bounds.min.x * fitTransform.scale + padding;

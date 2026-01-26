@@ -52,6 +52,8 @@ import { useCursor } from '../systems/cursor';
 import { useSnapContext } from '../snapping/context/SnapContext';
 import { useCanvasOperations } from '../hooks/interfaces/useCanvasOperations';
 import { useEventBus } from '../systems/events/EventBus';
+// 🏢 ENTERPRISE (2026-01-26): Centralized tool metadata - ADR-033
+import { preservesOverlayMode } from '../systems/tools/ToolStateManager';
 
 // ✅ ENTERPRISE: State Management Hooks (PHASE 4)
 import { useOverlayState } from '../hooks/state/useOverlayState';
@@ -774,12 +776,26 @@ Check console for detailed metrics`;
     if (activeTool === 'layering') {
       return;
     }
-    
+
     if (activeTool === 'grip-edit' && overlayMode !== 'edit') {
       // If we're in grip-edit but overlay mode changed away from edit, go back to layering
       handleToolChange('layering');
     }
   }, [overlayMode, activeTool, handleToolChange]);
+
+  // 🏢 ENTERPRISE (2026-01-26): Cancel overlay drawing when switching to non-overlay tools - ADR-033
+  // Uses centralized tool metadata from ToolStateManager.ts (preservesOverlayMode property)
+  // Fixes bug where overlay draw mode persists when switching to measure-distance, etc.
+  React.useEffect(() => {
+    // Use centralized tool metadata - NO hardcoded arrays!
+    // preservesOverlayMode() checks TOOL_DEFINITIONS[tool].preservesOverlayMode
+    if (overlayMode === 'draw' && !preservesOverlayMode(activeTool)) {
+      console.log('🔄 Cancelling overlay draw mode - switched to non-overlay tool:', activeTool);
+      setOverlayMode('select');
+      // Also emit cancel event to clear any draft polygon
+      eventBus.emit('overlay:cancel-polygon', undefined as unknown as void);
+    }
+  }, [activeTool, overlayMode, setOverlayMode, eventBus]);
 
   // Listen for tool change requests from LevelPanel
   React.useEffect(() => {

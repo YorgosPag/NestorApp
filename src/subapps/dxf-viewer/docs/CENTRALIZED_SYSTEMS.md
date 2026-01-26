@@ -3075,6 +3075,79 @@ geometry-rendering-utils.ts ──imports──→ geometry-utils.ts
 
 ---
 
+### 📋 ADR-035: TOOL OVERLAY MODE METADATA (2026-01-26) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-26
+
+**Context**:
+Bug εντοπίστηκε: Όταν ο χρήστης είναι σε overlay draw mode (σχεδίαση έγχρωμων πολυγώνων) και αλλάζει σε άλλο εργαλείο (π.χ. measure-distance), το overlay draw mode παρέμενε ενεργό, με αποτέλεσμα τα clicks να σχεδιάζουν πολύγωνα αντί να μετράνε αποστάσεις.
+
+**Problem**:
+- ❌ Αρχική λύση με hardcoded array: `const overlayTools = ['layering', 'grip-edit', 'select']`
+- ❌ Παραβίαση SSOT (Single Source of Truth)
+- ❌ Μη επεκτάσιμο - νέα εργαλεία απαιτούν manual update σε πολλαπλά σημεία
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **SSOT** | `ToolStateManager.ts` = Single Source of Truth για tool metadata |
+| **METADATA** | Νέο property `preservesOverlayMode: boolean` στο `ToolInfo` interface |
+| **HELPER** | `preservesOverlayMode(tool: ToolType): boolean` για easy access |
+| **NO HARDCODED** | Καμία hardcoded λίστα εργαλείων σε components |
+
+**Architecture**:
+```
+ToolStateManager.ts (SSOT)
+├── interface ToolInfo { ..., preservesOverlayMode: boolean }
+├── TOOL_DEFINITIONS[tool].preservesOverlayMode
+├── preservesOverlayMode(tool: ToolType): boolean  // Helper
+└── getOverlayCompatibleTools(): ToolType[]        // Debug utility
+
+DxfViewerContent.tsx
+└── Uses: import { preservesOverlayMode } from '../systems/tools/ToolStateManager'
+```
+
+**Tool Configuration**:
+
+| Tool | preservesOverlayMode | Reason |
+|------|---------------------|--------|
+| `select` | ✅ `true` | Επιλογή overlays |
+| `grip-edit` | ✅ `true` | Edit overlay vertices |
+| `layering` | ✅ `true` | Overlay management tool |
+| `line, rectangle, etc.` | ❌ `false` | CAD drawing ≠ overlay drawing |
+| `measure-*` | ❌ `false` | Measurement mode |
+| `zoom-*, pan` | ❌ `false` | Navigation tools |
+
+**Implementation**:
+
+```typescript
+// ToolStateManager.ts - Enterprise helper function
+export function preservesOverlayMode(tool: ToolType): boolean {
+  return getToolMetadata(tool).preservesOverlayMode;
+}
+
+// DxfViewerContent.tsx - Usage
+if (overlayMode === 'draw' && !preservesOverlayMode(activeTool)) {
+  setOverlayMode('select');
+  eventBus.emit('overlay:cancel-polygon', undefined);
+}
+```
+
+**Consequences**:
+- ✅ Single Source of Truth - tool behavior metadata in one place
+- ✅ Type-safe - compiler enforces property on all tools
+- ✅ Self-documenting - metadata next to tool definition
+- ✅ Extensible - new tools automatically need to specify behavior
+- ✅ Maintainable - one place to update tool behavior
+
+**References**:
+- Tool Metadata: `src/subapps/dxf-viewer/systems/tools/ToolStateManager.ts`
+- Usage: `src/subapps/dxf-viewer/app/DxfViewerContent.tsx`
+- Industry: AutoCAD Tool Properties, Blender Tool Settings, Figma Plugin API
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

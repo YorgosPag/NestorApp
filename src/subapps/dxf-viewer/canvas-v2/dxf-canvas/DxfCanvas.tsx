@@ -256,9 +256,17 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
         offsetY: viewport.height - RULER_HEIGHT  // viewport height - 30px (ruler height)
       };
 
+      // 🔍 DEBUG: Log when initial transform is set
+      console.log('⚠️ DXFCANVAS INITIAL TRANSFORM:', {
+        currentTransform: transform,
+        newTransform: initialTransform,
+        viewport,
+        isDefault: transform.offsetX === 0 && transform.offsetY === 0 && transform.scale === 1
+      });
+
       onTransformChange(initialTransform);
     }
-  }, [viewport.width, viewport.height]); // Run when viewport is established
+  }, [viewport.width, viewport.height, transform.offsetX, transform.offsetY, transform.scale, onTransformChange]); // 🏢 ENTERPRISE FIX: Include transform in deps to avoid stale closure
 
   // Computed styles check disabled for performance
 

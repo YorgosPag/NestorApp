@@ -99,6 +99,9 @@ export class ZoomManager implements IZoomManager {
   /**
    * Zoom to Fit - Fit όλα τα contents στην οθόνη
    * @param alignToOrigin - If true, positions (0,0) at bottom-left corner (axis intersection)
+   *
+   * 🏢 ENTERPRISE FIX (2026-01-26): Now preserves current transform if calculation fails
+   * This prevents canvas from "jumping" during measurement tool usage
    */
   zoomToFit(
     bounds: { min: Point2D; max: Point2D },
@@ -113,6 +116,13 @@ export class ZoomManager implements IZoomManager {
       this.config.minScale,
       alignToOrigin
     );
+
+    // 🏢 ENTERPRISE FIX (2026-01-26): If calculation failed, return current state without change
+    // This prevents the canvas from "jumping" when zoomToFit is called with invalid bounds
+    if (transform === null) {
+      console.warn('🚨 ZoomManager.zoomToFit: Calculation failed, preserving current transform');
+      return this.createZoomResult('fit'); // Return current state, no change
+    }
 
     return this.applyZoom({
       mode: 'fit',

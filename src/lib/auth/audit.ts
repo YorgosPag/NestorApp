@@ -33,6 +33,41 @@ import type {
 const AUDIT_COLLECTION = 'audit_logs';
 
 // =============================================================================
+// 🏢 ENTERPRISE: Firestore Data Sanitization
+// =============================================================================
+
+/**
+ * Remove undefined values from object (Firestore compatibility).
+ *
+ * Firestore throws error on undefined values. This function recursively
+ * removes undefined values while preserving null values (which are valid).
+ *
+ * @enterprise SAP/Salesforce/Microsoft pattern: Data sanitization before persistence
+ */
+function removeUndefinedValues<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) {
+      continue; // Skip undefined values
+    }
+
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      // Recursively clean nested objects
+      const cleaned = removeUndefinedValues(value as Record<string, unknown>);
+      // Only include if object has keys after cleaning
+      if (Object.keys(cleaned).length > 0) {
+        result[key] = cleaned;
+      }
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return result as Partial<T>;
+}
+
+// =============================================================================
 // FIRESTORE ACCESS
 // =============================================================================
 
@@ -96,7 +131,8 @@ export async function logAuditEvent(
     return;
   }
 
-  const entry: Omit<AuditLogEntry, 'timestamp'> & { timestamp: FieldValue } = {
+  // 🏢 ENTERPRISE: Build entry and sanitize undefined values for Firestore
+  const rawEntry = {
     companyId: ctx.companyId,
     action,
     actorId: ctx.uid,
@@ -105,13 +141,21 @@ export async function logAuditEvent(
     previousValue: options.previousValue ?? null,
     newValue: options.newValue ?? null,
     timestamp: FieldValue.serverTimestamp(),
-    metadata: {
+    metadata: removeUndefinedValues({
       ipAddress: options.metadata?.ipAddress,
       userAgent: options.metadata?.userAgent,
       path: options.metadata?.path,
       reason: options.metadata?.reason,
-    },
+    }),
   };
+
+  // Remove undefined from top-level (metadata might be empty object)
+  const entry = removeUndefinedValues(rawEntry) as Omit<AuditLogEntry, 'timestamp'> & { timestamp: FieldValue };
+
+  // Ensure required fields are present (Firestore compatibility)
+  if (!entry.metadata || Object.keys(entry.metadata).length === 0) {
+    entry.metadata = {};
+  }
 
   try {
     // Write to tenant-scoped collection: /companies/{companyId}/audit_logs/{autoId}
@@ -484,29 +528,37 @@ export async function logWebhookEvent(
   // Extract request metadata
   const metadata = extractRequestMetadata(request);
 
-  // Create system-level audit entry
-  const entry: Omit<AuditLogEntry, 'timestamp'> & { timestamp: FieldValue } = {
+  // 🏢 ENTERPRISE: Build entry and sanitize undefined values for Firestore
+  const rawEntry = {
     companyId: 'system',  // System-level event (not tenant-specific)
-    action: 'webhook_received',
+    action: 'webhook_received' as const,
     actorId: `webhook:${webhookSource}`,  // Actor = external service
     targetId: webhookId,
-    targetType: 'webhook',
+    targetType: 'webhook' as const,
     previousValue: null,
     newValue: {
-      type: 'webhook',
+      type: 'webhook' as const,
       value: {
         source: webhookSource,
         ...details,
       },
     },
     timestamp: FieldValue.serverTimestamp(),
-    metadata: {
+    metadata: removeUndefinedValues({
       ipAddress: metadata.ipAddress,
       userAgent: metadata.userAgent,
       path: metadata.path,
       reason: `Webhook event received from ${webhookSource}`,
-    },
+    }),
   };
+
+  // Remove undefined from top-level
+  const entry = removeUndefinedValues(rawEntry) as Omit<AuditLogEntry, 'timestamp'> & { timestamp: FieldValue };
+
+  // Ensure metadata exists
+  if (!entry.metadata || Object.keys(entry.metadata).length === 0) {
+    entry.metadata = { reason: `Webhook event received from ${webhookSource}` };
+  }
 
   try {
     // Write to system-level audit logs collection

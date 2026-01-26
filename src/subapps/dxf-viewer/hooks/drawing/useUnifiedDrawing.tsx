@@ -579,7 +579,20 @@ export function useUnifiedDrawing() {
 
     // For multi-point preview (showing the shape being drawn)
     const worldPoints = [...tempPoints, snappedPoint];
+    console.log('🔍 UPDATEPREVIEW MULTIPOINT:', {
+      tool: currentTool,
+      tempPointsCount: tempPoints.length,
+      worldPointsCount: worldPoints.length,
+      tempPoints,
+      worldPoints
+    });
     const previewEntity = createEntityFromTool(currentTool, worldPoints);
+    console.log('🔍 PREVIEW ENTITY CREATED:', {
+      hasPreview: !!previewEntity,
+      type: previewEntity?.type,
+      start: (previewEntity as { start?: Point2D })?.start,
+      end: (previewEntity as { end?: Point2D })?.end
+    });
 
     // Mark preview entity for special preview rendering with distance labels
     if (previewEntity && (currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'measure-area' || currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter')) {
