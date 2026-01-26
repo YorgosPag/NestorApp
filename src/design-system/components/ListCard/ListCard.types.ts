@@ -209,4 +209,20 @@ export interface ListCardProps {
    * @see ADR-029 Global Search - Card hover effects
    */
   allowOverflow?: boolean;
+
+  /**
+   * 🏢 ENTERPRISE: Hover effect variant
+   *
+   * Different contexts require different hover behaviors:
+   * - 'standard': Scale + shadow (default, for standalone cards like ParkingsList)
+   * - 'subtle': Background color only (for command palettes, dropdowns, search dialogs)
+   * - 'none': No hover effect (for embedded cards in other interactive elements)
+   *
+   * Pattern used by: VS Code Command Palette, Salesforce Global Search,
+   * SAP Fiori Command Palette, Microsoft Fluent ComboBox
+   *
+   * @default 'standard'
+   * @see ADR-029 Global Search - Enterprise hover patterns
+   */
+  hoverVariant?: 'standard' | 'subtle' | 'none';
 }

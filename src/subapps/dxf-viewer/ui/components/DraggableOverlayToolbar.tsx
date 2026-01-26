@@ -98,6 +98,8 @@ interface DraggableOverlayToolbarProps {
   selectedOverlayId: string | null;
   onDuplicate: () => void;
   onDelete: () => void;
+  /** 🏢 ENTERPRISE (2026-01-26): Delete enabled when overlays OR grips are selected - ADR-032 */
+  canDelete?: boolean;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -213,9 +215,10 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
   };
 
   // 🎯 SYNC TOOLBAR WITH SELECTED OVERLAY
+  // 🏢 ENTERPRISE (2026-01-26): Use overlayStore.overlays directly instead of deprecated getSelectedOverlay() - ADR-030
   useEffect(() => {
     if (props.selectedOverlayId) {
-      const selectedOverlay = overlayStore.getSelectedOverlay();
+      const selectedOverlay = overlayStore.overlays[props.selectedOverlayId];
       if (selectedOverlay) {
         if (selectedOverlay.status && selectedOverlay.status !== props.currentStatus) {
           props.onStatusChange(selectedOverlay.status);
@@ -229,7 +232,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
         }
       }
     }
-  }, [props.selectedOverlayId, overlayStore, props.currentStatus, props.currentKind, props.onStatusChange, props.onKindChange]);
+  }, [props.selectedOverlayId, overlayStore.overlays, props.currentStatus, props.currentKind, props.onStatusChange, props.onKindChange]);
 
   return (
     <TooltipProvider delayDuration={100}>
@@ -393,7 +396,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
                     variant="ghost"
                     size="icon-sm"
                     onClick={props.onDelete}
-                    disabled={!props.selectedOverlayId}
+                    disabled={props.canDelete !== undefined ? !props.canDelete : !props.selectedOverlayId}
                   >
                     <X className={`${iconSizes.sm} ${OVERLAY_TOOLBAR_COLORS.delete}`} />
                   </Button>

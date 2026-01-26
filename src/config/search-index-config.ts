@@ -154,6 +154,62 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
       { field: 'area', label: 'storage.card.stats.area', iconKey: 'area', formatter: 'area' },
     ],
   },
+
+  // =========================================================================
+  // OPPORTUNITY (ADR-029 Global Search v1 Phase 2 - CRM)
+  // =========================================================================
+  [SEARCH_ENTITY_TYPES.OPPORTUNITY]: {
+    collection: COLLECTIONS.OPPORTUNITIES,
+    titleField: 'title',
+    subtitleFields: ['stage', 'status'],
+    searchableFields: ['title', 'fullName', 'email', 'phone', 'notes'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'crm:opportunities:view' satisfies PermissionId,
+    routeTemplate: '/crm/opportunities/{id}',
+    // 🏢 ENTERPRISE: Stats for card display
+    statsFields: [
+      { field: 'estimatedValue', label: 'opportunity.card.stats.value', iconKey: 'price', formatter: 'currency' },
+      { field: 'stage', label: 'opportunity.card.stats.stage', iconKey: 'status' },
+    ],
+  },
+
+  // =========================================================================
+  // COMMUNICATION (ADR-029 Global Search v1 Phase 2 - CRM)
+  // =========================================================================
+  [SEARCH_ENTITY_TYPES.COMMUNICATION]: {
+    collection: COLLECTIONS.COMMUNICATIONS,
+    titleField: (doc) => {
+      const subject = doc.subject as string | undefined;
+      const type = doc.type as string | undefined;
+      return subject || `${type || 'communication'}`;
+    },
+    subtitleFields: ['type', 'direction'],
+    searchableFields: ['subject', 'content', 'from', 'to'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'crm:communications:view' satisfies PermissionId,
+    routeTemplate: '/crm/communications/{id}',
+  },
+
+  // =========================================================================
+  // TASK (ADR-029 Global Search v1 Phase 2 - CRM)
+  // =========================================================================
+  [SEARCH_ENTITY_TYPES.TASK]: {
+    collection: COLLECTIONS.TASKS,
+    titleField: 'title',
+    subtitleFields: ['type', 'priority'],
+    searchableFields: ['title', 'description'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'crm:tasks:view' satisfies PermissionId,
+    routeTemplate: '/crm/tasks/{id}',
+    // 🏢 ENTERPRISE: Stats for card display
+    statsFields: [
+      { field: 'priority', label: 'task.card.stats.priority', iconKey: 'priority' },
+      { field: 'dueDate', label: 'task.card.stats.dueDate', iconKey: 'calendar' },
+    ],
+  },
 };
 
 // =============================================================================

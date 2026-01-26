@@ -24,11 +24,23 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db as getAdminDb } from '@/lib/firebase-admin';
-import { FieldValue, type Firestore as FirebaseFirestoreType, type Query, type DocumentData } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore as FirebaseFirestoreType, type Query, type DocumentData, type BulkWriter } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: Import from centralized search types (ADR-029 - ZERO duplicates)
+import {
+  SEARCH_ENTITY_TYPES,
+  SEARCH_AUDIENCE,
+  type SearchEntityType,
+  type SearchAudience,
+  type SearchFields,
+  type SearchDocumentInput,
+  type TitleFieldConfig,
+  type AudienceFieldConfig,
+  type SearchIndexConfig,
+} from '@/types/search';
 
 /**
  * Create error response with standard format.
@@ -42,58 +54,10 @@ function createErrorResponse(message: string, status: number) {
 }
 
 // =============================================================================
-// TYPES
+// TYPES (🏢 ENTERPRISE: Imported from @/types/search - ZERO duplicates)
 // =============================================================================
-
-const SEARCH_ENTITY_TYPES = {
-  PROJECT: 'project',
-  BUILDING: 'building',
-  UNIT: 'unit',
-  CONTACT: 'contact',
-  FILE: 'file',
-  PARKING: 'parking',
-  STORAGE: 'storage',
-} as const;
-
-type SearchEntityType = typeof SEARCH_ENTITY_TYPES[keyof typeof SEARCH_ENTITY_TYPES];
-
-const SEARCH_AUDIENCE = {
-  INTERNAL: 'internal',
-  EXTERNAL: 'external',
-} as const;
-
-type SearchAudience = typeof SEARCH_AUDIENCE[keyof typeof SEARCH_AUDIENCE];
-
-interface SearchFields {
-  normalized: string;
-  prefixes: string[];
-}
-
-interface SearchDocumentInput {
-  tenantId: string;
-  entityType: SearchEntityType;
-  entityId: string;
-  title: string;
-  subtitle: string;
-  status: string;
-  search: SearchFields;
-  audience: SearchAudience;
-  requiredPermission: string;
-  links: {
-    href: string;
-    routeParams: Record<string, string>;
-  };
-  /**
-   * 🏢 ENTERPRISE: Raw entity metadata for stats display
-   * Used for floor, area, price in parking/storage cards
-   */
-  metadata?: {
-    floor?: string | number;
-    area?: number;
-    price?: number;
-    type?: string;
-  };
-}
+// SearchEntityType, SearchAudience, SearchFields, SearchDocumentInput
+// are imported from centralized types (ADR-029)
 
 interface BackfillRequest {
   dryRun?: boolean;
@@ -184,22 +148,9 @@ type BackfillStatusApiResponse = ApiSuccessResponse<BackfillStatusResponse> | Er
 type MigrationApiResponse = ApiSuccessResponse<MigrationResponse> | ErrorResponse;
 
 // =============================================================================
-// INDEX CONFIG
+// INDEX CONFIG (🏢 ENTERPRISE: Types imported from @/types/search)
+// Note: routeTemplates here use query params for backfill navigation
 // =============================================================================
-
-type TitleFieldConfig = string | ((doc: Record<string, unknown>) => string);
-type AudienceFieldConfig = SearchAudience | ((doc: Record<string, unknown>) => SearchAudience);
-
-interface SearchIndexConfig {
-  collection: string;
-  titleField: TitleFieldConfig;
-  subtitleFields: string[];
-  searchableFields: string[];
-  statusField: string;
-  audience: AudienceFieldConfig;
-  requiredPermission: string;
-  routeTemplate: string;
-}
 
 const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
   project: {
@@ -281,6 +232,43 @@ const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
     audience: SEARCH_AUDIENCE.INTERNAL,
     requiredPermission: 'spaces:storage:view',
     routeTemplate: '/spaces/storages?storageId={id}&selected=true',
+  },
+  // =========================================================================
+  // ADR-029 Global Search v1 Phase 2 - CRM Entities
+  // =========================================================================
+  opportunity: {
+    collection: COLLECTIONS.OPPORTUNITIES,
+    titleField: 'title',
+    subtitleFields: ['stage', 'status'],
+    searchableFields: ['title', 'fullName', 'email', 'phone', 'notes'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'crm:opportunities:view',
+    routeTemplate: '/crm/opportunities?opportunityId={id}&selected=true',
+  },
+  communication: {
+    collection: COLLECTIONS.COMMUNICATIONS,
+    titleField: (doc) => {
+      const subject = doc.subject as string | undefined;
+      const type = doc.type as string | undefined;
+      return subject || `${type || 'communication'}`;
+    },
+    subtitleFields: ['type', 'direction'],
+    searchableFields: ['subject', 'content', 'from', 'to'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'crm:communications:view',
+    routeTemplate: '/crm/communications?communicationId={id}&selected=true',
+  },
+  task: {
+    collection: COLLECTIONS.TASKS,
+    titleField: 'title',
+    subtitleFields: ['type', 'priority'],
+    searchableFields: ['title', 'description'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'crm:tasks:view',
+    routeTemplate: '/crm/tasks?taskId={id}&selected=true',
   },
 };
 
@@ -401,15 +389,17 @@ async function resolveTenantId(
   // Strategy 2: CreatedBy lookup (for contacts without companyId)
   // 🏢 ENTERPRISE: Google/Microsoft pattern - inherit tenant from creator
   const createdBy = data.createdBy as string | undefined;
+  console.log(`   🔍 [DEBUG] Strategy 2 (CreatedBy): createdBy=${createdBy || 'NONE'}, entityType=${entityType}`);
   if (createdBy) {
     // Check cache first - but only return if we found a valid companyId
     // 🏢 FIX: If cache has null, continue to next strategies instead of returning null
     if (userCompanyCache.has(createdBy)) {
       const cachedCompanyId = userCompanyCache.get(createdBy);
+      console.log(`   🔍 [DEBUG] Strategy 2: Cache HIT for ${createdBy} → companyId=${cachedCompanyId || 'NULL'}`);
       if (cachedCompanyId) {
         return cachedCompanyId; // Only return if we have a valid companyId
       }
-      // If cachedCompanyId is null, continue to Strategy 3/4 (don't return!)
+      // If cachedCompanyId is null, continue to Strategy 2.5/3/4 (don't return!)
     } else {
       // Not in cache - lookup user
       try {
@@ -419,8 +409,10 @@ async function resolveTenantId(
           const userData = userDoc.data();
           const userCompanyId = userData?.companyId as string | undefined;
           userCompanyCache.set(createdBy, userCompanyId || null);
+          console.log(`   🔍 [DEBUG] Strategy 2: User lookup ${createdBy} → companyId=${userCompanyId || 'NULL'}`);
           if (userCompanyId) return userCompanyId;
         } else {
+          console.log(`   🔍 [DEBUG] Strategy 2: User ${createdBy} NOT FOUND`);
           userCompanyCache.set(createdBy, null);
         }
       } catch (error) {
@@ -430,11 +422,72 @@ async function resolveTenantId(
     }
   }
 
-  // Strategy 3: Project lookup (for units, parking, storage without direct companyId)
+  // Strategy 2.5: AssignedTo lookup (for CRM entities like opportunities, tasks)
+  // 🏢 ENTERPRISE ADR-029 Phase 2: CRM entities may use assignedTo instead of createdBy
+  const assignedTo = data.assignedTo as string | undefined;
+  console.log(`   🔍 [DEBUG] Strategy 2.5 (AssignedTo): assignedTo=${assignedTo || 'NONE'}, entityType=${entityType}`);
+  if (assignedTo) {
+    // Check cache first
+    if (userCompanyCache.has(assignedTo)) {
+      const cachedCompanyId = userCompanyCache.get(assignedTo);
+      console.log(`   🔍 [DEBUG] Strategy 2.5: Cache HIT for ${assignedTo} → companyId=${cachedCompanyId || 'NULL'}`);
+      if (cachedCompanyId) {
+        console.log(`   📌 Entity resolved via assignedTo: userId=${assignedTo} → companyId=${cachedCompanyId}`);
+        return cachedCompanyId;
+      }
+    } else {
+      // Not in cache - lookup user
+      try {
+        const userDoc = await adminDb.collection('users').doc(assignedTo).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          const userCompanyId = userData?.companyId as string | undefined;
+          userCompanyCache.set(assignedTo, userCompanyId || null);
+          console.log(`   🔍 [DEBUG] Strategy 2.5: User lookup ${assignedTo} → companyId=${userCompanyId || 'NULL'}`);
+          if (userCompanyId) {
+            console.log(`   📌 Entity resolved via assignedTo: userId=${assignedTo} → companyId=${userCompanyId}`);
+            return userCompanyId;
+          }
+        } else {
+          console.log(`   🔍 [DEBUG] Strategy 2.5: User ${assignedTo} NOT FOUND`);
+          userCompanyCache.set(assignedTo, null);
+        }
+      } catch (error) {
+        console.warn(`   ⚠️ Failed to lookup assignedTo user ${assignedTo}:`, error);
+        userCompanyCache.set(assignedTo, null);
+      }
+    }
+  }
+
+  // Strategy 3: Contact lookup (for opportunities, communications, tasks)
+  // 🏢 ENTERPRISE ADR-029 Phase 2: CRM entities inherit tenant from contact
+  const contactId = data.contactId as string | undefined;
+  console.log(`   🔍 [DEBUG] Strategy 3 (Contact): contactId=${contactId || 'NONE'}, entityType=${entityType}`);
+  if (contactId) {
+    try {
+      const contactDoc = await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
+      if (contactDoc.exists) {
+        const contactData = contactDoc.data();
+        const contactCompanyId = contactData?.companyId as string | undefined;
+        if (contactCompanyId) {
+          console.log(`   📌 Entity resolved via contact: contactId=${contactId} → companyId=${contactCompanyId}`);
+          return contactCompanyId;
+        } else {
+          console.log(`   ⚠️ Contact "${contactId}" exists but has NO companyId - falling through`);
+        }
+      } else {
+        console.log(`   ⚠️ Contact "${contactId}" NOT FOUND`);
+      }
+    } catch (error) {
+      console.warn(`   ⚠️ Failed to lookup contact ${contactId}:`, error);
+    }
+  }
+
+  // Strategy 4: Project lookup (for units, parking, storage without direct companyId)
   // Supports both 'project' field (units) and 'projectId' field (parking/storage)
   // 🏢 ENTERPRISE: Handles both prefixed (project_xxx) and non-prefixed (xxx) IDs
   const projectRef = (data.project as string | undefined) || (data.projectId as string | undefined);
-  console.log(`   🔍 [DEBUG] Strategy 3: projectRef=${projectRef || 'NONE'}, entityType=${entityType}`);
+  console.log(`   🔍 [DEBUG] Strategy 4 (Project): projectRef=${projectRef || 'NONE'}, entityType=${entityType}`);
   if (projectRef) {
     try {
       // Try with original ID first
@@ -482,11 +535,11 @@ async function resolveTenantId(
     }
   }
 
-  // Strategy 4: Building lookup (for units without project field)
+  // Strategy 5: Building lookup (for units without project field)
   // Chain: unit.buildingId → building.projectId → project.companyId
   // 🏢 ENTERPRISE: Handles both prefixed (building_xxx) and non-prefixed (xxx) IDs
   const buildingId = data.buildingId as string | undefined;
-  console.log(`   🔍 [DEBUG] Strategy 4: buildingId=${buildingId || 'NONE'}`);
+  console.log(`   🔍 [DEBUG] Strategy 5 (Building): buildingId=${buildingId || 'NONE'}`);
   if (buildingId) {
     try {
       // Try with original ID first
@@ -606,12 +659,34 @@ async function buildSearchDocument(
 }
 
 // =============================================================================
-// BACKFILL LOGIC
+// BACKFILL LOGIC - 🏢 ENTERPRISE: BulkWriter + Parallel Processing
 // =============================================================================
 
+/**
+ * 🏢 ENTERPRISE: BulkWriter Configuration
+ * Based on Google Cloud best practices for high-throughput writes
+ *
+ * @see https://cloud.google.com/firestore/docs/bulk-writes
+ */
+const BULK_WRITER_CONFIG = {
+  /** Maximum concurrent operations (Google default: 500) */
+  MAX_CONCURRENT_OPS: 500,
+  /** Throttling enabled for rate limiting protection */
+  THROTTLING_ENABLED: true,
+  /** Initial operations per second */
+  INITIAL_OPS_PER_SECOND: 500,
+  /** Maximum operations per second */
+  MAX_OPS_PER_SECOND: 10000,
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Backfill single entity type using BulkWriter
+ * BulkWriter provides automatic retry, batching, and rate limiting
+ */
 async function backfillEntityType(
   entityType: SearchEntityType,
-  options: BackfillRequest
+  options: BackfillRequest,
+  sharedBulkWriter?: BulkWriter
 ): Promise<BackfillStats> {
   const adminDb = getAdminDb();
   if (!adminDb) {
@@ -637,10 +712,17 @@ async function backfillEntityType(
   const snapshot = await query.get();
   console.log(`   Found ${snapshot.size} documents`);
 
-  // Process in batches of 500
-  const BATCH_SIZE = 500;
-  let batch = adminDb.batch();
-  let batchCount = 0;
+  // 🏢 ENTERPRISE: Use shared BulkWriter or create new one
+  // BulkWriter automatically handles batching, retries, and rate limiting
+  const bulkWriter = sharedBulkWriter || adminDb.bulkWriter({
+    throttling: {
+      initialOpsPerSecond: BULK_WRITER_CONFIG.INITIAL_OPS_PER_SECOND,
+      maxOpsPerSecond: BULK_WRITER_CONFIG.MAX_OPS_PER_SECOND,
+    },
+  });
+
+  // Track write promises for error handling
+  const writePromises: Promise<void>[] = [];
 
   for (const doc of snapshot.docs) {
     stats.processed++;
@@ -666,6 +748,8 @@ async function backfillEntityType(
           projectId: data.projectId || null,
           buildingId: data.buildingId || null,
           createdBy: data.createdBy || null,
+          assignedTo: data.assignedTo || null,  // 🏢 ADR-029: CRM entities
+          contactId: data.contactId || null,    // 🏢 ADR-029: CRM entities
         },
       });
       console.log(`   ⏭️ Skipped ${doc.id}: projectId="${data.projectId}", buildingId="${data.buildingId}"`);
@@ -682,48 +766,92 @@ async function backfillEntityType(
       // 🏢 ENTERPRISE: Remove undefined values recursively for Firestore compatibility
       const firestoreDoc = removeUndefinedValues(searchDoc as unknown as Record<string, unknown>);
 
-      batch.set(searchDocRef, {
+      // Count as indexed optimistically
+      stats.indexed++;
+
+      // 🏢 ENTERPRISE: BulkWriter.set() - non-blocking, auto-batched
+      const writePromise = bulkWriter.set(searchDocRef, {
         ...firestoreDoc,
         updatedAt: FieldValue.serverTimestamp(),
         createdAt: FieldValue.serverTimestamp(),
         indexedAt: FieldValue.serverTimestamp(),
+      }).catch((error) => {
+        console.error(`   ❌ Write failed for ${searchDocId}:`, error);
+        // Revert optimistic count on error
+        stats.indexed--;
+        stats.errors++;
       });
-      batchCount++;
-      stats.indexed++;
 
-      // Commit batch every 500 documents
-      if (batchCount >= BATCH_SIZE) {
-        try {
-          await batch.commit();
-          console.log(`   ✅ Committed batch of ${batchCount} documents`);
-          batch = adminDb.batch();
-          batchCount = 0;
-        } catch (error) {
-          console.error(`   ❌ Batch commit failed:`, error);
-          stats.errors += batchCount;
-          stats.indexed -= batchCount;
-          batch = adminDb.batch();
-          batchCount = 0;
-        }
-      }
+      writePromises.push(writePromise);
     }
   }
 
-  // Commit remaining documents
-  if (!options.dryRun && batchCount > 0) {
-    try {
-      await batch.commit();
-      console.log(`   ✅ Committed final batch of ${batchCount} documents`);
-    } catch (error) {
-      console.error(`   ❌ Final batch commit failed:`, error);
-      stats.errors += batchCount;
-      stats.indexed -= batchCount;
+  // 🏢 ENTERPRISE: Wait for all writes to complete
+  if (!options.dryRun && writePromises.length > 0) {
+    // Wait for all individual write promises to resolve
+    await Promise.all(writePromises);
+
+    // Close BulkWriter only if we created it (not shared)
+    if (!sharedBulkWriter) {
+      await bulkWriter.close();
     }
   }
 
   console.log(`   📊 ${entityType}: processed=${stats.processed}, indexed=${stats.indexed}, skipped=${stats.skipped}, errors=${stats.errors}`);
 
   return stats;
+}
+
+/**
+ * 🏢 ENTERPRISE: Parallel backfill all entity types
+ * Uses Promise.all for concurrent processing with shared BulkWriter
+ */
+async function backfillAllTypesParallel(
+  types: SearchEntityType[],
+  options: BackfillRequest
+): Promise<{ statsByType: Record<string, BackfillStats>; totalStats: BackfillStats }> {
+  const adminDb = getAdminDb();
+  if (!adminDb) {
+    throw new Error('Firebase Admin not initialized');
+  }
+
+  console.log(`🚀 [Search Backfill] PARALLEL MODE - Processing ${types.length} entity types concurrently`);
+
+  // 🏢 ENTERPRISE: Shared BulkWriter for all entity types
+  // This maximizes throughput by allowing cross-type batching
+  const bulkWriter = adminDb.bulkWriter({
+    throttling: {
+      initialOpsPerSecond: BULK_WRITER_CONFIG.INITIAL_OPS_PER_SECOND,
+      maxOpsPerSecond: BULK_WRITER_CONFIG.MAX_OPS_PER_SECOND,
+    },
+  });
+
+  // 🏢 ENTERPRISE: Process all entity types in parallel
+  const resultsArray = await Promise.all(
+    types.map((entityType) => backfillEntityType(entityType, options, bulkWriter))
+  );
+
+  // 🏢 ENTERPRISE: Close BulkWriter and wait for all writes
+  if (!options.dryRun) {
+    console.log(`   ⏳ Flushing all pending writes...`);
+    await bulkWriter.close();
+    console.log(`   ✅ All writes completed`);
+  }
+
+  // Aggregate results
+  const statsByType: Record<string, BackfillStats> = {};
+  const totalStats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, errors: 0 };
+
+  types.forEach((entityType, index) => {
+    const stats = resultsArray[index];
+    statsByType[entityType] = stats;
+    totalStats.processed += stats.processed;
+    totalStats.indexed += stats.indexed;
+    totalStats.skipped += stats.skipped;
+    totalStats.errors += stats.errors;
+  });
+
+  return { statsByType, totalStats };
 }
 
 // =============================================================================
@@ -761,22 +889,18 @@ export const POST = withAuth<BackfillApiResponse>(
       if (companyId) console.log(`   Company filter: ${companyId}`);
       if (limit) console.log(`   Limit: ${limit}`);
 
-      const totalStats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, errors: 0 };
-      const statsByType: Record<string, BackfillStats> = {};
-
       // Determine which types to process
       const typesToProcess = type
         ? [type]
         : Object.values(SEARCH_ENTITY_TYPES);
 
-      for (const entityType of typesToProcess) {
-        const stats = await backfillEntityType(entityType, { dryRun, companyId, limit });
-        statsByType[entityType] = stats;
-        totalStats.processed += stats.processed;
-        totalStats.indexed += stats.indexed;
-        totalStats.skipped += stats.skipped;
-        totalStats.errors += stats.errors;
-      }
+      // 🏢 ENTERPRISE: Use parallel processing for maximum throughput
+      console.log(`🚀 Processing ${typesToProcess.length} entity types in PARALLEL mode`);
+
+      const { statsByType, totalStats } = await backfillAllTypesParallel(
+        typesToProcess,
+        { dryRun, companyId, limit }
+      );
 
       const duration = Date.now() - startTime;
 

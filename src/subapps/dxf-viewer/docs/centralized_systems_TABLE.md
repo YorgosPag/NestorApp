@@ -2,9 +2,9 @@
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
 > **= -> LAST UPDATED**: 2026-01-26
-> **= -> TOTAL SYSTEMS**: 28 Major Enterprise Systems (incl. Multi-Grip Selection System)
-> **= -> TOTAL CODE**: 18,500+ Lines
-> **= -> TOTAL ADRs**: 22 Architectural Decision Records
+> **= -> TOTAL SYSTEMS**: 29 Major Enterprise Systems (incl. Smart Delete System)
+> **= -> TOTAL CODE**: 18,600+ Lines
+> **= -> TOTAL ADRs**: 23 Architectural Decision Records
 
 ---
 
@@ -35,6 +35,7 @@
 | **ADR-029** | Global Search System v1 🏢 | `src/app/api/search/route.ts` + `src/types/search.ts` | Διάσπαρτο search code | 2026-01-25 |
 | **ADR-030** | Universal Selection System 🏢 | `systems/selection/` + `useUniversalSelection()` | Selection logic σε `overlay-store.tsx` | 2026-01-25 |
 | **ADR-031** | Multi-Grip Selection System 🏢 | `selectedGripIndices[]` + Shift+Click | Single `selectedGripIndex` | 2026-01-26 |
+| **ADR-032** | Smart Delete + Undo System 🏢 | `handleSmartDelete()` + `DeleteOverlayCommand` + Ctrl+Z | Direct `overlayStore.remove()` without undo | 2026-01-26 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.

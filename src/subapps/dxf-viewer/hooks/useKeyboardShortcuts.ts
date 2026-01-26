@@ -82,16 +82,11 @@ export const useKeyboardShortcuts = ({
         return;
       }
 
-      // Delete - Remove overlay in edit mode
-      // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
-      if (matchesShortcut(e, 'delete') || matchesShortcut(e, 'backspace')) {
-        const primarySelectedId = universalSelection.getPrimaryId();
-        if (activeTool === 'layering' && overlayMode === 'edit' && primarySelectedId && overlayStore) {
-          e.preventDefault();
-          overlayStore.remove(primarySelectedId);
-          return;
-        }
-      }
+      // 🏢 ENTERPRISE (2026-01-26): Delete handling MOVED to CanvasSection
+      // CanvasSection has access to selectedGrips and handles smart delete:
+      // - If grips selected → delete vertices
+      // - Else if overlay selected → delete overlay
+      // This provides Single Responsibility - CanvasSection knows what to delete
 
       // ⌨️ ZOOM SHORTCUTS - Using centralized matchesShortcut()
 

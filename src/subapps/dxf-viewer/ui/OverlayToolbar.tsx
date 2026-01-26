@@ -65,9 +65,10 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
   const overlayStore = useOverlayStore();
 
   // Συγχρονισμός toolbar με επιλεγμένο overlay
+  // 🏢 ENTERPRISE (2026-01-26): Use overlayStore.overlays directly instead of deprecated getSelectedOverlay() - ADR-030
   React.useEffect(() => {
     if (selectedOverlayId) {
-      const selectedOverlay = overlayStore.getSelectedOverlay();
+      const selectedOverlay = overlayStore.overlays[selectedOverlayId];
       if (selectedOverlay) {
         // Ενημέρωση εργαλειοθήκης με status του επιλεγμένου overlay
         if (selectedOverlay.status && selectedOverlay.status !== currentStatus) {
@@ -83,7 +84,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
         }
       }
     }
-  }, [selectedOverlayId, overlayStore, currentStatus, currentKind, onStatusChange, onKindChange]);
+  }, [selectedOverlayId, overlayStore.overlays, currentStatus, currentKind, onStatusChange, onKindChange]);
 
   // 🏢 ENTERPRISE: i18n-enabled mode buttons
   // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts

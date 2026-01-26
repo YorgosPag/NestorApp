@@ -33,6 +33,10 @@ export const SEARCH_ENTITY_TYPES = {
   FILE: 'file',
   PARKING: 'parking',
   STORAGE: 'storage',
+  // ADR-029 Global Search v1 Phase 2 - CRM Entities
+  OPPORTUNITY: 'opportunity',
+  COMMUNICATION: 'communication',
+  TASK: 'task',
 } as const;
 
 export type SearchEntityType = typeof SEARCH_ENTITY_TYPES[keyof typeof SEARCH_ENTITY_TYPES];
@@ -174,6 +178,17 @@ export interface SearchDocumentInput {
   audience: SearchAudience;
   requiredPermission: string;
   links: SearchResultLinks;
+  /**
+   * 🏢 ENTERPRISE: Raw entity metadata for stats display
+   * Used for floor, area, price in parking/storage cards
+   * @see ADR-029 Global Search v1
+   */
+  metadata?: {
+    floor?: string | number;
+    area?: number;
+    price?: number;
+    type?: string;
+  };
 }
 
 // =============================================================================

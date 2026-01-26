@@ -25,17 +25,14 @@ import {
   AlertTriangle,
   RefreshCw,
   Database,
-  Building2,
-  FolderKanban,
-  Home,
   User,
-  FileText,
   Car,
-  Warehouse,
 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Import from centralized navigation entities (ZERO duplicates)
+import { NAVIGATION_ENTITIES, type NavigationEntityType } from '@/components/navigation/config/navigation-entities';
 
 // =============================================================================
 // TYPES
@@ -106,18 +103,20 @@ interface IndexStatus {
 }
 
 // =============================================================================
-// ENTITY ICONS
+// ENTITY ICONS (🏢 ENTERPRISE: Uses centralized NAVIGATION_ENTITIES)
 // =============================================================================
 
-const ENTITY_ICONS: Record<string, React.ElementType> = {
-  project: FolderKanban,
-  building: Building2,
-  unit: Home,
-  contact: User,
-  file: FileText,
-  parking: Car,
-  storage: Warehouse,
-};
+/**
+ * Get icon for entity type from centralized config.
+ * Falls back to a generic icon if entity type not found.
+ */
+function getEntityIcon(entityType: string): React.ElementType {
+  if (entityType in NAVIGATION_ENTITIES) {
+    return NAVIGATION_ENTITIES[entityType as NavigationEntityType].icon;
+  }
+  // Fallback for unknown types
+  return NAVIGATION_ENTITIES.file.icon;
+}
 
 // =============================================================================
 // COMPONENT
@@ -189,9 +188,12 @@ export default function SearchBackfillPage() {
     addLog(`Starting ${mode}...`);
 
     try {
+      // 🏢 ENTERPRISE: Extended timeout (120s) for admin backfill operations
+      // User lookups for tenant resolution may take longer than default 30s
       const response = await apiClient.post<BackfillResponse>(
         '/api/admin/search-backfill',
-        { dryRun }
+        { dryRun },
+        { timeout: 120000 }  // 2 minutes
       );
 
       setResult(response);
@@ -226,9 +228,11 @@ export default function SearchBackfillPage() {
       // 🏢 ENTERPRISE: Default companyId for orphan contacts
       const DEFAULT_COMPANY_ID = 'pzNUy8ksddGCtcQMqumR';
 
+      // 🏢 ENTERPRISE: Extended timeout (120s) for admin migration operations
       const response = await apiClient.patch<MigrationResponse>(
         '/api/admin/search-backfill',
-        { dryRun, defaultCompanyId: DEFAULT_COMPANY_ID }
+        { dryRun, defaultCompanyId: DEFAULT_COMPANY_ID },
+        { timeout: 120000 }  // 2 minutes
       );
 
       setMigrationResult(response);
@@ -388,7 +392,7 @@ export default function SearchBackfillPage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 {Object.entries(status.currentIndex.byEntityType).map(([type, count]) => {
-                  const Icon = ENTITY_ICONS[type] || FileText;
+                  const Icon = getEntityIcon(type);
                   return (
                     <div
                       key={type}
@@ -723,7 +727,7 @@ export default function SearchBackfillPage() {
             <h4 className="font-medium mb-3">By Entity Type</h4>
             <div className="space-y-2">
               {Object.entries(result.stats).map(([type, stats]) => {
-                const Icon = ENTITY_ICONS[type] || FileText;
+                const Icon = getEntityIcon(type);
                 return (
                   <div
                     key={type}

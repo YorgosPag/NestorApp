@@ -22,7 +22,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { AlertCircle, Search } from 'lucide-react';
+import { AlertCircle, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -39,6 +39,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SearchInput } from '@/components/ui/search';
@@ -393,6 +394,7 @@ export function GlobalSearchDialog({
           colors.bg.primary
         )}
         onKeyDown={handleKeyDown}
+        hideCloseButton
       >
         {/* Visually hidden title for accessibility */}
         <DialogTitle className="sr-only">
@@ -408,14 +410,17 @@ export function GlobalSearchDialog({
           // Centralized borders
           borders.quick.borderB
         )}>
-          {/* Loading indicator overlay */}
-          {isLoading && (
-            <div className="absolute left-7 top-1/2 -translate-y-1/2 z-10">
-              <Spinner size="small" className="text-muted-foreground" />
-            </div>
-          )}
-
           <div className="flex items-center gap-3">
+            {/* 🏢 ENTERPRISE: Search icon / Spinner - VS Code pattern */}
+            {/* Spinner REPLACES the search icon when loading (not overlay) */}
+            <div className="shrink-0 flex items-center justify-center w-5 h-5">
+              {isLoading ? (
+                <Spinner size="small" className="text-muted-foreground" />
+              ) : (
+                <Search className={cn(iconSizes.sm, 'text-muted-foreground')} />
+              )}
+            </div>
+
             <SearchInput
               value={query}
               onChange={setQuery}
@@ -425,33 +430,48 @@ export function GlobalSearchDialog({
               onClear={() => setQuery('')}
               className={cn(
                 'flex-1',
-                // Hide built-in icon when loading
-                isLoading && '[&>svg:first-child]:opacity-0'
+                // 🏢 ENTERPRISE: Hide built-in search icon (we use our own above)
+                '[&_.absolute.left-4]:hidden'
               )}
             />
 
-            {/* 🏢 ENTERPRISE: Keyboard shortcut hint using centralized KBD_STYLES */}
-            <kbd className={cn(
-              'hidden sm:inline-flex shrink-0',
-              KBD_STYLES.base,
-              KBD_STYLES.md,
-              'text-muted-foreground'
-            )}>
-              {t('search.hints.escKey', 'ESC')}
-            </kbd>
+            {/* 🏢 ENTERPRISE: ESC hint + Close button inline */}
+            <div className="flex items-center gap-3 shrink-0">
+              <kbd className={cn(
+                'hidden sm:inline-flex',
+                KBD_STYLES.base,
+                KBD_STYLES.md,
+                'text-muted-foreground'
+              )}>
+                {t('search.hints.escKey', 'ESC')}
+              </kbd>
+              <DialogClose className={cn(
+                // 🏢 ENTERPRISE: Override default absolute positioning
+                'static',
+                'inline-flex items-center justify-center',
+                'rounded-md p-1.5',
+                'text-muted-foreground hover:text-foreground',
+                'hover:bg-muted transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-ring'
+              )}>
+                <X className={iconSizes.sm} />
+                <span className="sr-only">{t('buttons.close', 'Κλείσιμο')}</span>
+              </DialogClose>
+            </div>
           </div>
         </div>
 
-        {/* Results Area - 🏢 ENTERPRISE: Using ScrollArea like ParkingsList for proper hover effects */}
+        {/* Results Area - 🏢 ENTERPRISE: Command palette pattern */}
         <ScrollArea
           className="max-h-[60vh]"
           role="listbox"
           aria-label={t('search.results', 'Αποτελέσματα αναζήτησης')}
         >
           <div className={cn(
-            // 🏢 ENTERPRISE: Same pattern as ParkingsList - p-2 space-y-2
-            spacing.padding.sm, // p-2
-            'space-y-2',
+            // 🏢 ENTERPRISE: Standard padding for command palette
+            // No extra padding needed since hoverVariant="subtle" doesn't scale
+            spacing.padding.sm,
+            'space-y-1',
             // Centralized transitions
             TRANSITION_PRESETS.SMOOTH_ALL
           )}>
@@ -489,7 +509,10 @@ export function GlobalSearchDialog({
               </span>
             </div>
             <span>
-              {t('search.resultsCount', { count: totalResults, defaultValue: `${totalResults} αποτελέσματα` })}
+              {totalResults === 1
+                ? t('search.resultsCount_one', '1 αποτέλεσμα').replace('{{count}}', '1')
+                : t('search.resultsCount_other', `${totalResults} αποτελέσματα`).replace('{{count}}', String(totalResults))
+              }
             </span>
           </div>
         )}

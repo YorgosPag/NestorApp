@@ -27,6 +27,8 @@ import { isFeatureEnabled } from '../config/experimental-features';
 import { LazyFullLayoutDebug } from '../ui/components/LazyLoadWrapper';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../systems/selection';
+// 🏢 ENTERPRISE (2026-01-26): Event Bus for delete command to CanvasSection - ADR-032
+import { useEventBus } from '../systems/events';
 
 // ✅ ENTERPRISE: Type-safe props interface
 interface FloatingPanelsSectionProps {
@@ -108,6 +110,16 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
   const universalSelection = useUniversalSelection();
 
+  // 🏢 ENTERPRISE (2026-01-26): Event Bus for delete command - ADR-032
+  const eventBus = useEventBus();
+
+  // 🏢 ENTERPRISE (2026-01-26): Smart Delete Handler - ADR-032
+  // Emits event to CanvasSection which has access to selectedGrips state
+  // CanvasSection's handleSmartDelete handles grips + overlays with undo/redo
+  const handleDelete = () => {
+    eventBus.emit('toolbar:delete', undefined as unknown as void);
+  };
+
   return (
     <>
       {/* COLOR MANAGER */}
@@ -152,7 +164,8 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
           onSnapToggle={() => handleAction('toggle-snap')}
           selectedOverlayId={universalSelection.getPrimaryId()}
           onDuplicate={() => {}}
-          onDelete={() => {}}
+          onDelete={handleDelete}
+          canDelete={universalSelection.getByType('overlay').length > 0}
           canUndo={canUndo}
           canRedo={canRedo}
           onUndo={() => handleAction('undo')}

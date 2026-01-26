@@ -21,7 +21,9 @@
  *   CreateEntityCommand,
  *   MoveVertexCommand,
  *   MoveEntityCommand,
- *   MoveMultipleEntitiesCommand
+ *   MoveMultipleEntitiesCommand,
+ *   MoveMultipleOverlayVerticesCommand,
+ *   type VertexMovement
  * } from '@/subapps/dxf-viewer/core/commands';
  *
  * // In component
@@ -38,6 +40,13 @@
  *
  * // 🆕 Move multiple entities at once
  * execute(new MoveMultipleEntitiesCommand(['id1', 'id2'], { x: 10, y: 5 }, sceneManager, true));
+ *
+ * // 🆕 Move multiple overlay vertices (multi-grip) with undo support
+ * const movements: VertexMovement[] = [
+ *   { overlayId: 'id1', vertexIndex: 0, oldPosition: [0, 0], newPosition: [10, 10] },
+ *   { overlayId: 'id1', vertexIndex: 1, oldPosition: [5, 5], newPosition: [15, 15] }
+ * ];
+ * execute(new MoveMultipleOverlayVerticesCommand(movements, overlayStore));
  *
  * // Undo/Redo
  * if (canUndo) undo();
@@ -99,6 +108,13 @@ export { MoveEntityCommand, MoveMultipleEntitiesCommand } from './entity-command
 export { MoveVertexCommand } from './vertex-commands/MoveVertexCommand';
 export { AddVertexCommand } from './vertex-commands/AddVertexCommand';
 export { RemoveVertexCommand } from './vertex-commands/RemoveVertexCommand';
+
+// 🏢 ENTERPRISE (2026-01-26): Overlay Commands - ADR-032
+export { DeleteOverlayCommand, DeleteMultipleOverlaysCommand } from './overlay-commands';
+// 🏢 ENTERPRISE (2026-01-26): Overlay Vertex Commands - ADR-032
+export { DeleteOverlayVertexCommand, DeleteMultipleOverlayVerticesCommand } from './overlay-commands';
+// 🏢 ENTERPRISE (2026-01-26): Overlay Vertex Move Commands with Undo/Redo - ADR-032
+export { MoveOverlayVertexCommand, MoveMultipleOverlayVerticesCommand, type VertexMovement } from './overlay-commands';
 
 // React Hooks
 export {

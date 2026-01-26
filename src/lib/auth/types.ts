@@ -102,6 +102,16 @@ export const PERMISSIONS = {
   'crm:contacts:create': true,
   'crm:contacts:update': true,
   'crm:contacts:export': true,
+  // CRM - Opportunities (ADR-029 Global Search v1 Phase 2)
+  'crm:opportunities:view': true,
+  'crm:opportunities:create': true,
+  'crm:opportunities:update': true,
+  // CRM - Communications (ADR-029 Global Search v1 Phase 2)
+  'crm:communications:view': true,
+  // CRM - Tasks (ADR-029 Global Search v1 Phase 2)
+  'crm:tasks:view': true,
+  'crm:tasks:create': true,
+  'crm:tasks:update': true,
 
   // Notifications
   'notifications:notifications:view': true,

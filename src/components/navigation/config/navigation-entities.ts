@@ -51,6 +51,10 @@ import {
   Building2,
   Landmark,
   FileText, // 🏢 ADR-029: Global Search
+  // 🏢 ADR-029 Phase 2: CRM Entities
+  Target,
+  MessageSquare,
+  CheckSquare,
 } from 'lucide-react';
 
 // =============================================================================
@@ -78,7 +82,11 @@ export type NavigationEntityType =
   | 'contactIndividual'
   | 'contactCompany'
   | 'contactService'
-  | 'file'; // 🏢 ADR-029: File entity for Global Search
+  | 'file' // 🏢 ADR-029: File entity for Global Search
+  // 🏢 ADR-029 Phase 2: CRM Entities
+  | 'opportunity'
+  | 'communication'
+  | 'task';
 
 /**
  * Navigation action types - for toolbar and context menu actions
@@ -283,6 +291,30 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
     label: 'navigation.entities.file.label',
     pluralLabel: 'navigation.entities.file.plural',
     description: 'navigation.entities.file.description'
+  },
+  // =========================================================================
+  // 🏢 ADR-029 Phase 2: CRM Entities
+  // =========================================================================
+  opportunity: {
+    icon: Target,
+    color: 'text-emerald-500',
+    label: 'navigation.entities.opportunity.label',
+    pluralLabel: 'navigation.entities.opportunity.plural',
+    description: 'navigation.entities.opportunity.description'
+  },
+  communication: {
+    icon: MessageSquare,
+    color: 'text-sky-500',
+    label: 'navigation.entities.communication.label',
+    pluralLabel: 'navigation.entities.communication.plural',
+    description: 'navigation.entities.communication.description'
+  },
+  task: {
+    icon: CheckSquare,
+    color: 'text-orange-500',
+    label: 'navigation.entities.task.label',
+    pluralLabel: 'navigation.entities.task.plural',
+    description: 'navigation.entities.task.description'
   }
 } as const;
 

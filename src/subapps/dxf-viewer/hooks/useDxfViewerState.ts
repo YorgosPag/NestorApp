@@ -14,10 +14,14 @@ import { useToolbarState } from './common/useToolbarState';
 import { useSceneState } from './scene/useSceneState';
 import { useDrawingHandlers } from './drawing/useDrawingHandlers';
 import { useSnapContext } from '../snapping/context/SnapContext';
+// 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
+import { useCommandHistory } from '../core/commands';
 
 export function useDxfViewerState() {
   const { gripSettings } = useGripContext();
   const canvasOps = useCanvasOperations();
+  // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
+  const { undo, redo, canUndo, canRedo } = useCommandHistory();
 
   // Manage activeTool state locally
   const [activeTool, setActiveTool] = useState<ToolType>('select');
@@ -47,19 +51,24 @@ export function useDxfViewerState() {
   );
 
   // Canvas actions through new API
+  // 🏢 ENTERPRISE (2026-01-26): Undo/Redo connected to Command History - ADR-032
   const canvasActions = {
     zoomIn: canvasOps.zoomIn,
     zoomOut: canvasOps.zoomOut,
     fitToView: canvasOps.fitToView,
     resetToOrigin: canvasOps.resetToOrigin,
     undo: useCallback(() => {
-      // TODO: Implement undo through new architecture
-
-    }, []),
+      if (canUndo) {
+        console.log('↩️ Undo action triggered');
+        undo();
+      }
+    }, [canUndo, undo]),
     redo: useCallback(() => {
-      // TODO: Implement redo through new architecture
-
-    }, [])
+      if (canRedo) {
+        console.log('↪️ Redo action triggered');
+        redo();
+      }
+    }, [canRedo, redo])
   };
 
   // Enhanced tool change handler
@@ -160,9 +169,9 @@ export function useDxfViewerState() {
     onMeasurementCancel: drawingHandlers.onDrawingCancel,
     // ✅ CENTRALIZED: Snap system from SnapContext
     snapEnabled,
-    // TODO: Still need centralization
-    canUndo: false, // TODO: Implement undo/redo system
-    canRedo: false,
+    // 🏢 ENTERPRISE (2026-01-26): Undo/Redo from Command History - ADR-032
+    canUndo,
+    canRedo,
     currentZoom: 1, // TODO: Get from ZoomManager
     handleCalibrationToggle: toolbarState.toggleCalibration
   };

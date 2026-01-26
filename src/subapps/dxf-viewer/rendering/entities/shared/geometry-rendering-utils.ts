@@ -61,6 +61,19 @@ export function calculateAngle(from: Point2D, to: Point2D): number {
   return Math.atan2(to.y - from.y, to.x - from.x);
 }
 
+// ============================================================================
+// 🏢 ENTERPRISE NOTE (2026-01-26): Polygon Calculations Centralized
+// ============================================================================
+// The following functions are available from geometry-utils.ts (Single Source of Truth):
+// - calculatePolygonArea()
+// - calculatePolylineLength()
+// - calculatePolygonPerimeter()
+// - calculatePolygonCentroid()
+//
+// Import from: './geometry-utils' for polygon calculations
+// This file focuses on RENDERING utilities (canvas operations, grips, labels)
+// ============================================================================
+
 /**
  * Rotate a point around another point
  */

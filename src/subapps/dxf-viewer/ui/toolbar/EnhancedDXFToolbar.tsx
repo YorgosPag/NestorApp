@@ -118,11 +118,10 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
         onAction('clear-selection');
         return;
       }
-      if (matchesShortcut(e, 'delete') || matchesShortcut(e, 'backspace')) {
-        e.preventDefault();
-        onAction('delete-selected');
-        return;
-      }
+      // 🏢 ENTERPRISE (2026-01-26): Delete/Backspace handling MOVED to CanvasSection - ADR-032
+      // CanvasSection has access to selectedGrips and handles smart delete:
+      // - If grips selected → delete vertices
+      // - Else if overlay selected → delete overlay
     };
 
     window.addEventListener('keydown', handleKeyDown);

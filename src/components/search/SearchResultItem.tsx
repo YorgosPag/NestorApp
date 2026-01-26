@@ -222,6 +222,9 @@ export function SearchResultItem({
       compact
       hideStats={!hasStats}
       inlineBadges
+      // 🏢 ENTERPRISE: Command palette hover pattern (VS Code, Salesforce, SAP Fiori)
+      // Subtle hover = background only, no scale effect
+      hoverVariant="subtle"
       className={className}
     />
   );

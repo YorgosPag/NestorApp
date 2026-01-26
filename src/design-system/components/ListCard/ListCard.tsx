@@ -93,6 +93,7 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
   hideStats = false,
   inlineBadges = false,
   allowOverflow = false,
+  hoverVariant = 'standard',
   className,
   // Accessibility
   'aria-label': ariaLabel,
@@ -114,6 +115,27 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
   // 🏢 COMPUTED VALUES FROM CENTRALIZED SYSTEMS
   // ==========================================================================
   const entityConfig = entityType ? NAVIGATION_ENTITIES[entityType] : null;
+
+  // ==========================================================================
+  // 🏢 ENTERPRISE: Hover variant patterns
+  // Pattern used by: VS Code, Salesforce, SAP Fiori, Microsoft Fluent
+  // ==========================================================================
+  const getHoverClasses = () => {
+    switch (hoverVariant) {
+      case 'subtle':
+        // Command palette/dropdown style: background only, no scale
+        // Used in: VS Code Cmd+K, Salesforce Global Search, Slack search
+        return 'transition-colors duration-150 hover:bg-accent/50';
+      case 'none':
+        // No hover effect - for embedded cards in other interactive elements
+        return '';
+      case 'standard':
+      default:
+        // Full card hover with scale and shadow
+        // Used in: Standalone lists like ParkingsList, BuildingsList
+        return INTERACTIVE_PATTERNS.CARD_STANDARD;
+    }
+  };
 
   // ==========================================================================
   // 🏢 EVENT HANDLERS
@@ -165,8 +187,8 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
         'border',
         // Spacing based on compact mode - 🏢 ENTERPRISE: Centralized spacing
         spacing.padding.sm,
-        // Interactive patterns from centralized system
-        INTERACTIVE_PATTERNS.CARD_STANDARD,
+        // 🏢 ENTERPRISE: Hover variant from prop (standard/subtle/none)
+        getHoverClasses(),
         // Selection state using centralized colors
         isSelected
           ? cn(getStatusBorder('info'), colors.bg.info, 'shadow-sm')

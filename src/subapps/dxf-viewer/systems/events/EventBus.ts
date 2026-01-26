@@ -57,6 +57,8 @@ export interface DrawingEventMap {
   };
   'overlay:save-polygon': void; // Signal to save the current draft polygon
   'overlay:cancel-polygon': void; // Signal to cancel the current draft polygon
+  // 🏢 ENTERPRISE (2026-01-26): Toolbar delete command - ADR-032
+  'toolbar:delete': void; // Signal to delete selected grips/overlays with undo support
 }
 
 export type DrawingEventType = keyof DrawingEventMap;

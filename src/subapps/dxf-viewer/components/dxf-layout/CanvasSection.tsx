@@ -55,6 +55,17 @@ import { PdfBackgroundCanvas, usePdfBackgroundStore } from '../../pdf-background
 import { useEventBus } from '../../systems/events';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
+// 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
+import {
+  useCommandHistory,
+  useCommandHistoryKeyboard,
+  DeleteOverlayCommand,
+  DeleteMultipleOverlaysCommand,
+  DeleteOverlayVertexCommand,
+  DeleteMultipleOverlayVerticesCommand,
+  MoveMultipleOverlayVerticesCommand,
+  type VertexMovement
+} from '../../core/commands';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -104,6 +115,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
   // Single source of truth for ALL entity selections
   const universalSelection = useUniversalSelection();
+  // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
+  const { execute: executeCommand } = useCommandHistory();
+  // 🏢 ENTERPRISE (2026-01-26): Enable Ctrl+Z/Ctrl+Y keyboard shortcuts for undo/redo
+  useCommandHistoryKeyboard();
   // 🏢 ENTERPRISE (2026-01-25): Refs for stores to avoid stale closures in callbacks
   // These refs are CRITICAL - they ensure callbacks always have access to the latest store state
   const overlayStoreRef = useRef(overlayStore);
@@ -526,18 +541,21 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           y: worldPos.y - draggingVertices[0].startPoint.y
         };
 
-        // 🏢 ENTERPRISE (2026-01-26): Update ALL dragged vertices with the same delta
-        // This moves all selected grips together as a group
-        const updatePromises = draggingVertices.map(drag => {
-          const newPosition: [number, number] = [
+        // 🏢 ENTERPRISE (2026-01-26): Command Pattern for multi-grip movement - ADR-032
+        // Uses MoveMultipleOverlayVerticesCommand for UNDO/REDO support
+        const movements: VertexMovement[] = draggingVertices.map(drag => ({
+          overlayId: drag.overlayId,
+          vertexIndex: drag.vertexIndex,
+          oldPosition: [drag.originalPosition.x, drag.originalPosition.y] as [number, number],
+          newPosition: [
             drag.originalPosition.x + delta.x,
             drag.originalPosition.y + delta.y
-          ];
-          return overlayStore.updateVertex(drag.overlayId, drag.vertexIndex, newPosition);
-        });
+          ] as [number, number]
+        }));
 
-        // Wait for all updates to complete
-        await Promise.all(updatePromises);
+        // Execute command through history for undo/redo support
+        const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore);
+        executeCommand(command);
       }
       // 🏢 ENTERPRISE (2026-01-26): Clear ONLY drag-related states
       // ⚠️ IMPORTANT: Do NOT clear selectedGrips - grips should remain visible for further editing
@@ -580,7 +598,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       justFinishedDragRef.current = true;
       setTimeout(() => { justFinishedDragRef.current = false; }, 100);
     }
-  }, [draggingVertex, draggingEdgeMidpoint, transform, viewport]);
+  }, [draggingVertex, draggingVertices, draggingEdgeMidpoint, transform, viewport, executeCommand]);
 
   // 🔺 CURSOR SYSTEM INTEGRATION - Σύνδεση με floating panel
   const crosshairSettings: CrosshairSettings = {
@@ -657,12 +675,21 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         universalSelection.isSelected(grip.overlayId)
       );
 
+      console.log('🔍 Grip validation effect:', {
+        selectedGripsCount: selectedGrips.length,
+        validGripsCount: validGrips.length,
+        activeTool,
+        selectedOverlays: universalSelection.getIdsByType('overlay')
+      });
+
       // Clear all grips if tool is not select/layering
       if (activeTool !== 'select' && activeTool !== 'layering') {
+        console.log('🧹 Clearing grips - wrong tool:', activeTool);
         setSelectedGrips([]);
         setDragPreviewPosition(null);
       } else if (validGrips.length !== selectedGrips.length) {
         // Some grips became invalid - update selection
+        console.log('🧹 Grips became invalid, updating:', { before: selectedGrips.length, after: validGrips.length });
         setSelectedGrips(validGrips);
         if (validGrips.length === 0) {
           setDragPreviewPosition(null);
@@ -1306,12 +1333,102 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     return () => document.removeEventListener('canvas-fit-to-view', handleFitToView as EventListener);
   }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
 
-  // Handle keyboard shortcuts for drawing and zoom
+  // 🏢 ENTERPRISE (2026-01-26): Smart Delete Handler - ADR-032
+  // Handles Delete/Backspace with intelligent context awareness:
+  // - If grips selected → delete vertices (from highest index to lowest)
+  // - Else if overlay selected → delete entire overlay
+  // Pattern: AutoCAD/Figma - context-aware deletion
+  const handleSmartDelete = React.useCallback(async () => {
+    const overlayStoreInstance = overlayStoreRef.current;
+
+    // PRIORITY 1: Delete selected grips (vertices) with UNDO SUPPORT
+    if (selectedGrips.length > 0) {
+      // 🏢 ENTERPRISE: Sort by index DESCENDING to avoid index shifting
+      // When deleting vertex[5], then vertex[3], indices stay correct
+      const vertexGrips = selectedGrips
+        .filter(g => g.type === 'vertex')
+        .sort((a, b) => {
+          // Group by overlayId first, then sort by index descending within each overlay
+          if (a.overlayId !== b.overlayId) return a.overlayId.localeCompare(b.overlayId);
+          return b.index - a.index; // Descending order
+        });
+
+      if (vertexGrips.length > 0) {
+        // 🏢 ENTERPRISE (2026-01-26): Use Command System for undo support - ADR-032
+        // Execute command via Command History for Ctrl+Z undo capability
+        if (vertexGrips.length === 1) {
+          // Single vertex delete
+          executeCommand(new DeleteOverlayVertexCommand(
+            vertexGrips[0].overlayId,
+            vertexGrips[0].index,
+            overlayStoreInstance
+          ));
+        } else {
+          // Batch vertex delete
+          executeCommand(new DeleteMultipleOverlayVerticesCommand(
+            vertexGrips.map(g => ({ overlayId: g.overlayId, vertexIndex: g.index })),
+            overlayStoreInstance
+          ));
+        }
+
+        // Clear grip selection after deletion
+        setSelectedGrips([]);
+        return true;
+      }
+    }
+
+    // PRIORITY 2: Delete selected overlays (entire entities) with UNDO SUPPORT
+    // 🏢 ENTERPRISE: Use getIdsByType('overlay') from Universal Selection System - ADR-030
+    // 🏢 ENTERPRISE (2026-01-26): Delete works REGARDLESS of current tool
+    // Pattern: AutoCAD/Figma/Revit - Delete ALWAYS removes selected entities
+    // The current tool determines what you CREATE, not what you can DELETE
+    const selectedOverlayIds = universalSelectionRef.current.getIdsByType('overlay');
+    if (selectedOverlayIds.length > 0) {
+      // 🏢 ENTERPRISE (2026-01-26): Use Command System for undo support - ADR-032
+      // Execute command via Command History for Ctrl+Z undo capability
+      if (selectedOverlayIds.length === 1) {
+        // Single overlay delete
+        executeCommand(new DeleteOverlayCommand(selectedOverlayIds[0], overlayStoreInstance));
+      } else {
+        // Batch overlay delete
+        executeCommand(new DeleteMultipleOverlaysCommand(selectedOverlayIds, overlayStoreInstance));
+      }
+
+      // Clear selection after deletion
+      // 🏢 ENTERPRISE: Use clearAll() from Universal Selection System - ADR-030
+      universalSelectionRef.current.clearAll();
+      return true;
+    }
+
+    return false;
+  }, [selectedGrips, executeCommand]); // 🏢 ENTERPRISE: No tool dependency - delete works in all modes
+
+  // 🏢 ENTERPRISE (2026-01-26): Listen for delete command from floating toolbar - ADR-032
   React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const cleanupDelete = eventBus.on('toolbar:delete', () => {
+      handleSmartDelete();
+    });
+
+    return () => {
+      cleanupDelete();
+    };
+  }, [eventBus, handleSmartDelete]);
+
+  // Handle keyboard shortcuts for drawing, delete, and local operations
+  React.useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       // Prevent shortcuts when typing in inputs
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+        return;
+      }
+
+      // 🏢 ENTERPRISE (2026-01-26): Smart Delete - ADR-032
+      // Delete/Backspace: Context-aware deletion (grips first, then overlays)
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        e.stopPropagation(); // 🏢 Prevent other handlers from receiving this event
+        await handleSmartDelete();
         return;
       }
 
@@ -1321,6 +1438,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       switch (e.key) {
         case 'Escape':
           setDraftPolygon([]);
+          // 🏢 ENTERPRISE: Escape also clears grip selection
+          if (selectedGrips.length > 0) {
+            setSelectedGrips([]);
+          }
           break;
         case 'Enter':
           if (draftPolygon.length >= 3) {
@@ -1330,9 +1451,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [draftPolygon, finishDrawing]);
+    // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips]);
 
 
   // ❌ REMOVED: Duplicate zoom handlers - now using centralized zoomSystem.handleKeyboardZoom()

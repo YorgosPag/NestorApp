@@ -2787,10 +2787,14 @@ core/commands/
 ├── entity-commands/
 │   ├── CreateEntityCommand.ts
 │   └── DeleteEntityCommand.ts
-└── vertex-commands/
-    ├── MoveVertexCommand.ts  # With merge support (500ms)
-    ├── AddVertexCommand.ts
-    └── RemoveVertexCommand.ts
+├── vertex-commands/
+│   ├── MoveVertexCommand.ts  # With merge support (500ms)
+│   ├── AddVertexCommand.ts
+│   └── RemoveVertexCommand.ts
+└── overlay-commands/          # 🏢 ENTERPRISE (2026-01-26): Overlay-specific commands
+    ├── DeleteOverlayCommand.ts       # Single/batch overlay delete
+    ├── DeleteOverlayVertexCommand.ts # Single/batch vertex delete
+    └── MoveOverlayVertexCommand.ts   # Single/batch vertex move (multi-grip)
 ```
 
 **API**:
@@ -2802,6 +2806,11 @@ import {
   CompoundCommand,
   AuditTrail,
   CommandPersistence,
+  // 🏢 Overlay commands (2026-01-26)
+  DeleteOverlayCommand,
+  DeleteOverlayVertexCommand,
+  MoveMultipleOverlayVerticesCommand,
+  type VertexMovement,
 } from '@/subapps/dxf-viewer/core/commands';
 
 // Basic usage
@@ -2811,6 +2820,13 @@ execute(new CreateEntityCommand(entityData, sceneManager));
 // Batch operations with rollback
 const batch = new CompoundCommand('BatchEdit', [cmd1, cmd2, cmd3]);
 execute(batch);
+
+// 🏢 Multi-grip vertex movement with undo/redo
+const movements: VertexMovement[] = [
+  { overlayId: 'id1', vertexIndex: 0, oldPosition: [0, 0], newPosition: [10, 10] },
+  { overlayId: 'id1', vertexIndex: 1, oldPosition: [5, 5], newPosition: [15, 15] },
+];
+execute(new MoveMultipleOverlayVerticesCommand(movements, overlayStore));
 
 // Audit trail for compliance
 const audit = new AuditTrail();
@@ -2988,6 +3004,74 @@ const {
 - Command System: `src/subapps/dxf-viewer/core/commands/`
 - Selection System: `src/subapps/dxf-viewer/systems/selection/`
 - Industry: AutoCAD, Adobe Illustrator, Figma, Bentley MicroStation
+
+---
+
+### 📋 ADR-034: GEOMETRY CALCULATIONS CENTRALIZATION (2026-01-26) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-26
+
+**Context**:
+Εντοπίστηκαν διπλότυπα geometry calculations σε πολλαπλά αρχεία:
+- `geometry-utils.ts` - Pure math calculations
+- `geometry-rendering-utils.ts` - Mixed rendering + calculations
+- `OverlayProperties.tsx` - Local duplicate functions
+
+**Problem**:
+- ❌ `calculatePolygonArea` υπήρχε σε 3 τοποθεσίες
+- ❌ `calculatePolylineLength` χωρίς `isClosed` parameter
+- ❌ `calculatePolygonPerimeter` δεν υπήρχε centralized
+- ❌ Wrong dependency direction: math module importing from rendering module
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **SSOT** | `geometry-utils.ts` = Single Source of Truth για όλα τα polygon calculations |
+| **SEPARATION** | Math (geometry-utils) ↔ Rendering (geometry-rendering-utils) |
+| **ADAPTER** | `overlayVertexToPoint2D` για tuple→Point2D conversion |
+| **NO DUPLICATES** | Αφαίρεση όλων των διπλοτύπων |
+
+**Architecture (Dependency Inversion)**:
+```
+geometry-rendering-utils.ts ──imports──→ geometry-utils.ts
+         ↑                                     ↑
+    RENDERING ONLY                        PURE MATH
+    (canvas, grips, labels)          (distance, area, centroid)
+```
+
+**Centralized Functions** (`geometry-utils.ts`):
+
+| Function | Parameters | Returns | Purpose |
+|----------|------------|---------|---------|
+| `calculatePolygonArea` | `Point2D[]` | `number` | Shoelace formula (Gauss) |
+| `calculatePolylineLength` | `Point2D[], isClosed?` | `number` | Sum of segment distances |
+| `calculatePolygonPerimeter` | `Point2D[]` | `number` | Closed polyline length |
+| `calculatePolygonCentroid` | `Point2D[]` | `Point2D` | Center of mass |
+
+**Adapter Function** (`entity-conversion.ts`):
+
+| Function | Converts | Usage |
+|----------|----------|-------|
+| `overlayVertexToPoint2D` | `[number, number]` → `Point2D` | Overlay tuple conversion |
+
+**Migration**:
+- ✅ `geometry-rendering-utils.ts` - Duplicates removed, note added
+- ✅ `geometry-utils.ts` - Enhanced with isClosed, perimeter, documentation
+- ✅ `OverlayProperties.tsx` - Now uses centralized imports + adapter
+
+**Consequences**:
+- ✅ Single Source of Truth για geometry calculations
+- ✅ Correct dependency direction (SOLID principles)
+- ✅ No dead code (removed unused duplicates)
+- ✅ Consistent API across application
+- ✅ Adapter Pattern για type conversion
+
+**References**:
+- Math Module: `src/subapps/dxf-viewer/rendering/entities/shared/geometry-utils.ts`
+- Rendering Module: `src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts`
+- Adapter: `src/subapps/dxf-viewer/utils/entity-conversion.ts`
+- Industry: Autodesk AutoCAD, Bentley MicroStation, CGAL Library
 
 ---
 

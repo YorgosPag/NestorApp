@@ -242,9 +242,15 @@ export function isAngleBetween(angle: number, startAngle: number, endAngle: numb
 // ===== POLYLINE GEOMETRY =====
 
 /**
- * Calculate total length of polyline
+ * Calculate total length of a polyline (sum of segment distances)
+ * ✅ CENTRALIZED (2026-01-26): Single source of truth για polyline length calculation
+ * Used by: measurement tools, drawing info, entity properties
+ *
+ * @param points - Array of polyline vertices
+ * @param isClosed - Whether to include closing segment (last point to first)
+ * @returns Total length in linear units
  */
-export function calculatePolylineLength(points: Point2D[]): number {
+export function calculatePolylineLength(points: Point2D[], isClosed = false): number {
   if (points.length < 2) return 0;
 
   let totalLength = 0;
@@ -252,11 +258,35 @@ export function calculatePolylineLength(points: Point2D[]): number {
     totalLength += calculateDistance(points[i - 1], points[i]);
   }
 
+  // Add closing segment if closed
+  if (isClosed && points.length > 2) {
+    totalLength += calculateDistance(points[points.length - 1], points[0]);
+  }
+
   return totalLength;
 }
 
 /**
- * Calculate area of polygon using shoelace formula
+ * Calculate perimeter of a polygon (always closed)
+ * ✅ CENTRALIZED (2026-01-26): Convenience function for polygon perimeter
+ *
+ * @param points - Array of polygon vertices
+ * @returns Perimeter length in linear units
+ */
+export function calculatePolygonPerimeter(points: Point2D[]): number {
+  return calculatePolylineLength(points, true);
+}
+
+/**
+ * Calculate polygon area using Shoelace formula (Gauss's area formula)
+ * ✅ CENTRALIZED (2026-01-26): Single source of truth για area calculation
+ * Used by: measurement tools, overlay properties, selection info
+ *
+ * @param points - Array of polygon vertices (closed or open - will auto-close)
+ * @returns Area in square units (always positive)
+ *
+ * Algorithm: Shoelace formula - sum of (x[i] * y[i+1] - x[i+1] * y[i]) / 2
+ * Reference: https://en.wikipedia.org/wiki/Shoelace_formula
  */
 export function calculatePolygonArea(points: Point2D[]): number {
   if (points.length < 3) return 0;
@@ -272,7 +302,12 @@ export function calculatePolygonArea(points: Point2D[]): number {
 }
 
 /**
- * Calculate centroid of polygon
+ * Calculate centroid (center of mass) of a polygon
+ * ✅ CENTRALIZED (2026-01-26): Single source of truth για centroid calculation
+ * Used by: measurement labels, entity positioning, selection indicators
+ *
+ * @param points - Array of polygon vertices
+ * @returns Centroid point
  */
 export function calculatePolygonCentroid(points: Point2D[]): Point2D {
   if (points.length === 0) return { x: 0, y: 0 };

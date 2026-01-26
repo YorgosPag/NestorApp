@@ -54,10 +54,15 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  /** Hide the default close button (useful when providing custom close UI) */
+  hideCloseButton?: boolean;
+}
+
 const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+  DialogContentProps
+>(({ className, children, hideCloseButton = false, ...props }, ref) => {
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -73,7 +78,7 @@ const DialogContent = React.forwardRef<
         {...props}
       >
         {children}
-        <DialogClose />
+        {!hideCloseButton && <DialogClose />}
       </DialogPrimitive.Content>
     </DialogPortal>
   );

@@ -1,7 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { db } from '../../../lib/firebase';
-import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, doc, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import type { Overlay, CreateOverlayData, UpdateOverlayData, Status, OverlayKind } from './types';
 
 interface OverlayStoreState {
@@ -27,6 +27,8 @@ interface OverlayStoreActions {
   addVertex: (id: string, insertIndex: number, vertex: [number, number]) => Promise<void>;
   updateVertex: (id: string, vertexIndex: number, newPosition: [number, number]) => Promise<void>;
   removeVertex: (id: string, vertexIndex: number) => Promise<boolean>;
+  // 🏢 ENTERPRISE (2026-01-26): Restore overlay for undo support - ADR-032
+  restore: (overlay: Overlay) => Promise<void>;
   // 🏢 ENTERPRISE (2026-01-25): Selection REMOVED - ADR-030
   // Selection is now handled by systems/selection/
   // Use useUniversalSelection() hook for: select, selectMultiple, deselect, toggle, clearAll, clearByType, isSelected, getAll, getByType
@@ -159,6 +161,43 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     const docRef = doc(db, `${COLLECTION_PREFIX}/${state.currentLevelId}/items`, id);
     await deleteDoc(docRef);
   }, [state.currentLevelId]);
+
+  /**
+   * 🏢 ENTERPRISE (2026-01-26): Restore overlay for undo support - ADR-032
+   * Uses setDoc to restore overlay with its ORIGINAL ID
+   * Pattern: SAP/Salesforce - Soft delete with restore capability
+   */
+  const restore = useCallback(async (overlay: Overlay): Promise<void> => {
+    if (!overlay.levelId) {
+      console.error('❌ restore: Overlay has no levelId');
+      return;
+    }
+
+    // 🔧 Convert polygon to Firebase-compatible format
+    const polygonForFirestore = overlay.polygon.map(([x, y]) => ({ x, y }));
+
+    // 🏢 ENTERPRISE: Build clean document without undefined values
+    const overlayDoc: Record<string, unknown> = {
+      levelId: overlay.levelId,
+      status: overlay.status || 'for-sale',
+      kind: overlay.kind || 'unit',
+      polygon: polygonForFirestore,
+      createdBy: overlay.createdBy || 'user@example.com',
+      restoredAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    // Add optional fields if they exist
+    if (overlay.label !== undefined) overlayDoc.label = overlay.label;
+    if (overlay.linked !== undefined) overlayDoc.linked = overlay.linked;
+    if (overlay.createdAt !== undefined) overlayDoc.createdAt = overlay.createdAt;
+
+    // 🏢 CRITICAL: Use setDoc with original ID to restore exact document
+    const docRef = doc(db, `${COLLECTION_PREFIX}/${overlay.levelId}/items`, overlay.id);
+    await setDoc(docRef, overlayDoc);
+
+    console.log(`✅ restore: Overlay ${overlay.id} restored successfully`);
+  }, []);
 
   const duplicate = useCallback(async (id: string): Promise<string | null> => {
     const overlay = state.overlays[id];
@@ -315,6 +354,7 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
     add,
     update,
     remove,
+    restore, // 🏢 ENTERPRISE (2026-01-26): Restore for undo support - ADR-032
     duplicate,
     setStatus,
     setLabel,

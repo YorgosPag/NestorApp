@@ -22,6 +22,9 @@ import { Separator } from '../../../components/ui/separator';
 import { CommonBadge } from '../../../core/badges';
 import { STATUS_COLORS, STATUS_LABELS, KIND_LABELS, OVERLAY_STATUS_KEYS, type Overlay, type Status, type OverlayKind } from '../overlays/types';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+// 🏢 ENTERPRISE (2026-01-26): Use centralized geometry functions - ADR Geometry Centralization
+import { calculatePolygonArea, calculatePolygonPerimeter } from '../rendering/entities/shared/geometry-utils';
+import { overlayVertexToPoint2D } from '../utils/entity-conversion';
 
 interface OverlayPropertiesProps {
   overlay: Overlay | null;
@@ -29,54 +32,14 @@ interface OverlayPropertiesProps {
   onClose?: () => void;
 }
 
-/**
- * Enterprise-grade type guard for polygon validation
- * Implements defensive programming principles used by major software companies
- */
-function isValidPolygon(polygon: unknown): polygon is Array<[number, number]> {
-  return (
-    Array.isArray(polygon) &&
-    polygon.length >= 3 &&
-    polygon.every(point =>
-      Array.isArray(point) &&
-      point.length === 2 &&
-      typeof point[0] === 'number' &&
-      typeof point[1] === 'number'
-    )
-  );
-}
-
-/**
- * Safe polygon area calculation with enterprise error handling
- * Uses Shoelace formula with comprehensive input validation
- */
-function calculatePolygonArea(polygon: unknown): number {
-  if (!isValidPolygon(polygon)) return 0;
-
-  let area = 0;
-  for (let i = 0; i < polygon.length; i++) {
-    const j = (i + 1) % polygon.length;
-    area += polygon[i][0] * polygon[j][1] - polygon[j][0] * polygon[i][1];
-  }
-  return Math.abs(area) / 2;
-}
-
-/**
- * Safe polygon perimeter calculation with enterprise error handling
- * Uses Euclidean distance formula with comprehensive input validation
- */
-function calculatePolygonPerimeter(polygon: unknown): number {
-  if (!isValidPolygon(polygon)) return 0;
-
-  let perimeter = 0;
-  for (let i = 0; i < polygon.length; i++) {
-    const j = (i + 1) % polygon.length;
-    const dx = polygon[j][0] - polygon[i][0];
-    const dy = polygon[j][1] - polygon[i][1];
-    perimeter += Math.sqrt(dx * dx + dy * dy);
-  }
-  return perimeter;
-}
+// ============================================================================
+// 🏢 ENTERPRISE NOTE (2026-01-26): Polygon Calculations Centralized
+// ============================================================================
+// Local polygon functions REMOVED - now using centralized geometry-utils.ts
+// Import: calculatePolygonArea, calculatePolygonPerimeter from geometry-utils
+// Adapter: overlayVertexToPoint2D converts [number, number][] to Point2D[]
+// Pattern: Adapter Pattern (GoF) for type conversion
+// ============================================================================
 
 /**
  * 🏢 OverlayProperties Content Component
@@ -107,8 +70,10 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
     );
   }
 
-  const area = calculatePolygonArea(overlay.polygon);
-  const perimeter = calculatePolygonPerimeter(overlay.polygon);
+  // 🏢 ENTERPRISE: Convert tuple array to Point2D[] using centralized adapter
+  const polygonPoints = overlay.polygon?.map(overlayVertexToPoint2D) ?? [];
+  const area = calculatePolygonArea(polygonPoints);
+  const perimeter = calculatePolygonPerimeter(polygonPoints);
 
   const handleLabelChange = (newLabel: string) => {
     setLabel(newLabel);
