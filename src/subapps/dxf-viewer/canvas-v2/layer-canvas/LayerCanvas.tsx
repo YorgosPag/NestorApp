@@ -82,6 +82,9 @@ interface LayerCanvasProps {
   onTransformChange?: (transform: ViewTransform) => void;
   onWheelZoom?: (wheelDelta: number, center: Point2D) => void; // ✅ ZOOM SYSTEM INTEGRATION
 
+  // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback for measurement/drawing tools
+  onDrawingHover?: (worldPos: Point2D) => void;
+
   // ✅ ΦΑΣΗ 6: Feature flag για centralized UI rendering
   useUnifiedUIRendering?: boolean;
 
@@ -124,6 +127,7 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
   onMouseMove,
   onTransformChange,
   onWheelZoom,
+  onDrawingHover, // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback
   useUnifiedUIRendering = false, // ✅ ΦΑΣΗ 6: Default disabled για smooth transition
   enableUnifiedCanvas = false, // ✅ ΦΑΣΗ 7: Default disabled για smooth transition
   ...props // 🎯 PASS THROUGH: Περνάω όλα τα extra props (όπως data-canvas-type)
@@ -227,7 +231,8 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
     onLayerSelected: onLayerClick, // 🎯 USE onLayerClick για single selection
     onMultiLayerSelected: onMultiLayerClick, // 🏢 ENTERPRISE (2026-01-25): Multi-selection
     canvasRef: canvasRef, // 🔧 FIX: Pass canvas ref για getBoundingClientRect
-    isGripDragging // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
+    isGripDragging, // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
+    onDrawingHover // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback
   });
 
   // ✅ SNAP FIX STEP 5: Extract snap results from mouse handlers
@@ -332,7 +337,6 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
             return;
           }
 
-          console.log('🎯 LayerCanvas: Triggering render...');
           renderer.render(
             layersVisible ? layers : [],
             transform,
@@ -345,7 +349,6 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
             selectionSettings,
             renderOptions
           );
-          console.log('🎯 LayerCanvas: Render complete!');
         });
       } else {
         console.warn('🎯 LayerCanvas: No renderer ref available');
@@ -362,8 +365,6 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
   // 🛠️ Subscribe to Ruler Debug toggle event
   useEffect(() => {
     const handleRulerDebugToggle = (event: CustomEvent) => {
-      console.log('🛠️ LayerCanvas: Ruler Debug toggled, triggering re-render', event.detail);
-
       // Force re-render to show/hide ruler debug overlays
       if (rendererRef.current) {
         requestAnimationFrame(() => {

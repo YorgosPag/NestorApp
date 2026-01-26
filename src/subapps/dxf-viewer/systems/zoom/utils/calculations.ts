@@ -77,7 +77,7 @@ export function calculateFitTransform(
   // 🏢 ENTERPRISE FIX (2026-01-26): Return null on failure instead of default transform
   // Returning default {scale:1, offsetX:0, offsetY:0} caused DxfCanvas to trigger initial transform
   // which moved the canvas during measurement tool usage
-  console.warn('🚨 calculateFitTransform: FitToViewService failed, preserving current transform', result);
+  // 🏢 ENTERPRISE (2026-01-26): Silent return - missing bounds is normal state (no DXF loaded)
   return null;
 }
 

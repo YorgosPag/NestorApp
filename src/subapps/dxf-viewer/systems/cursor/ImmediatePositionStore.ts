@@ -52,15 +52,9 @@ class ImmediatePositionStoreClass {
 
     this.position = pos ? { x: pos.x, y: pos.y } : null;
 
-    // 🔍 DEBUG: Log every 30th call to avoid console spam
+    // 🏢 ENTERPRISE (2026-01-26): Debug logging removed - mouse position updates are too frequent
+    // Debug counter kept for potential future debugging needs
     this.debugCallCount++;
-    if (this.debugCallCount % 30 === 0) {
-      console.log('🎯 ImmediatePositionStore.setPosition:', {
-        pos: this.position,
-        hasDirectRender: !!this.directRenderCallback,
-        callCount: this.debugCallCount
-      });
-    }
 
     // 🚀 DIRECT RENDER: Call crosshair render IMMEDIATELY (no RAF wait!)
     if (this.directRenderCallback) {
@@ -109,10 +103,6 @@ class ImmediatePositionStoreClass {
     this.currentTransform = { ...transform };
     this.currentViewport = { ...viewport };
 
-    console.log('🔒 PAN LOCK: Started', {
-      lockedWorldPosition: this.lockedWorldPosition,
-      transform: this.currentTransform
-    });
   }
 
   /**
@@ -144,7 +134,6 @@ class ImmediatePositionStoreClass {
    * Called when middle button is released
    */
   endPan(): void {
-    console.log('🔓 PAN LOCK: Ended');
     this.isPanning = false;
     this.lockedWorldPosition = null;
     // Keep transform/viewport for reference

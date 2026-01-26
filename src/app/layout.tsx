@@ -13,6 +13,7 @@ import { FloorplanProvider } from "@/contexts/FloorplanContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext"; // 🏢 ENTERPRISE: Workspace-based Multi-Tenancy (ADR-032)
 import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
+import { TourProvider, TourRenderer } from '@/components/ui/ProductTour';
 // 🏢 ENTERPRISE: Performance Monitor moved to DXF Viewer only (Bentley/Autodesk pattern)
 // import { PerformanceCategory } from '@/core/performance/types/performance.types';
 // import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
@@ -74,6 +75,8 @@ export default function RootLayout({
           storageKey="theme-preference"
         >
           <I18nProvider>
+            {/* 🏢 ENTERPRISE: Product Tour System (ADR-037) - Global tour state management */}
+            <TourProvider>
             <AuthProvider>
               <UserRoleProvider>
                 {/* 🏢 ENTERPRISE: Workspace-based Multi-Tenancy (ADR-032)
@@ -101,6 +104,10 @@ export default function RootLayout({
                   {/* 🚨 GLOBAL ERROR TRACKER SETUP */}
                   <GlobalErrorSetup />
 
+                  {/* 🏢 ENTERPRISE: Product Tour Renderer (ADR-037)
+                      Renders active tours globally - positioned via Floating UI */}
+                  <TourRenderer />
+
                   {/* 🏢 ENTERPRISE: Performance Monitor moved to DXF Viewer only
                       Following Bentley/Autodesk pattern - design tools only, not globally
                       Toggle available in DXF Viewer status bar */}
@@ -111,6 +118,7 @@ export default function RootLayout({
                 </WorkspaceProvider>
               </UserRoleProvider>
             </AuthProvider>
+            </TourProvider>
           </I18nProvider>
         </ThemeProvider>
       </body>

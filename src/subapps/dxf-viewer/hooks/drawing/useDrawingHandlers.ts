@@ -50,7 +50,7 @@
 // DEBUG FLAG
 const DEBUG_DRAWING_HANDLERS = false; // 🔍 DISABLED - set to true only for debugging
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
@@ -100,6 +100,15 @@ export function useDrawingHandlers(
     }
   });
 
+  // 🚀 PERFORMANCE: Throttle preview updates to requestAnimationFrame rate
+  const previewThrottleRef = useRef<{
+    rafId: number | null;
+    pendingPoint: Pt | null;
+  }>({
+    rafId: null,
+    pendingPoint: null
+  });
+
   // Unified snap function
   const applySnap = useCallback((point: Pt): Pt => {
     if (!snapEnabled || !findSnapPoint) {
@@ -133,35 +142,27 @@ export function useDrawingHandlers(
     if (DEBUG_DRAWING_HANDLERS) console.log('🔍 [onDrawingHover] Called with point:', p);
 
     if (p) {
-      const transformUtils = canvasOps.getTransformUtils();
-      updatePreview(p, transformUtils);
+      // 🚀 PERFORMANCE: Throttle preview updates using requestAnimationFrame
+      // This coalesces multiple mousemove events into a single preview update per frame
+      const throttle = previewThrottleRef.current;
+      throttle.pendingPoint = p;
 
-      // 🎯 ENTERPRISE: Update snap result for visual feedback (SnapIndicatorOverlay)
-      if (DEBUG_DRAWING_HANDLERS) console.log('🔍 [onDrawingHover] snapEnabled:', snapEnabled, 'findSnapPoint:', !!findSnapPoint);
+      if (!throttle.rafId) {
+        throttle.rafId = requestAnimationFrame(() => {
+          const point = throttle.pendingPoint;
+          throttle.rafId = null;
+          throttle.pendingPoint = null;
 
-      if (snapEnabled && findSnapPoint) {
-        try {
-          const snapResult = findSnapPoint(p.x, p.y);
-          if (DEBUG_DRAWING_HANDLERS) console.log('🔍 [onDrawingHover] snapResult:', snapResult);
-
-          if (snapResult && snapResult.found) {
-            if (DEBUG_DRAWING_HANDLERS) console.log('✅ [onDrawingHover] Setting snap result:', snapResult.snappedPoint, snapResult.activeMode);
-            setCurrentSnapResult(snapResult);
-          } else {
-            setCurrentSnapResult(null);
+          if (point) {
+            const transformUtils = canvasOps.getTransformUtils();
+            updatePreview(point, transformUtils);
           }
-        } catch (error) {
-          console.warn('🔺 Snap detection error:', error);
-          setCurrentSnapResult(null);
-        }
-      } else {
-        setCurrentSnapResult(null);
+        });
       }
-    } else {
-      // Mouse left canvas - clear snap result
-      setCurrentSnapResult(null);
+      // 🚀 PERFORMANCE: Snap detection is now handled in useCentralizedMouseHandlers
+      // to avoid duplicate calls on every mousemove (ADR-039)
     }
-  }, [updatePreview, canvasOps, snapEnabled, findSnapPoint, setCurrentSnapResult]);
+  }, [updatePreview, canvasOps]);
   
   const onDrawingCancel = useCallback(() => {
     cancelDrawing();

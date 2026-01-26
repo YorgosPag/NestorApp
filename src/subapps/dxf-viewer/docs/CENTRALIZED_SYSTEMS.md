@@ -3148,6 +3148,307 @@ if (overlayMode === 'draw' && !preservesOverlayMode(activeTool)) {
 
 ---
 
+### 📋 ADR-036: ENTERPRISE STRUCTURED LOGGING (2026-01-26) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-26
+
+**Context**:
+Εντοπίστηκε τεράστιος θόρυβος στην κονσόλα (5,455 console calls σε 772 αρχεία).
+- `console.log` δεν έχει log levels
+- `console.log` δεν μπορεί να απενεργοποιηθεί εύκολα σε production
+- `console.log` δεν έχει structured metadata
+- `console.log` δημιουργεί θόρυβο που δυσκολεύει το debugging
+
+**Enterprise Standards Reference**:
+| Company | Solution |
+|---------|----------|
+| **SAP** | SAP Cloud Logging Service |
+| **Microsoft** | ILogger + Application Insights |
+| **Google** | Cloud Logging + Structured Logs |
+| **Salesforce** | Salesforce Debug Logs + Splunk |
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `Logger` από `@/lib/telemetry` = ΜΟΝΑΔΙΚΟ logging system |
+| **DEPRECATED** | `console.log/warn/info/debug` είναι legacy / υπό απόσυρση |
+| **PROHIBITION** | ❌ Κάθε νέος κώδικας **ΑΠΑΓΟΡΕΥΕΤΑΙ** να χρησιμοποιεί console |
+| **EXCEPTION** | `console.error` επιτρέπεται για critical unhandled errors |
+
+**Log Levels**:
+
+| Level | Method | When to Use |
+|-------|--------|-------------|
+| ERROR | `logger.error()` | Runtime errors, exceptions |
+| WARN | `logger.warn()` | Warnings, deprecations |
+| INFO | `logger.info()` | Important events, state changes |
+| DEBUG | `logger.debug()` | Development debugging (disabled in production) |
+
+**Implementation**:
+
+```typescript
+// ❌ DEPRECATED - Avoid
+console.log('User logged in', userId);
+
+// ✅ ENTERPRISE - Use Logger
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('AUTH_SERVICE');
+logger.info('User logged in', { userId, timestamp: Date.now() });
+```
+
+**Enforcement**:
+
+| Mechanism | Status | Description |
+|-----------|--------|-------------|
+| ESLint Rule | ✅ Active | `custom/no-console-log` - warn mode |
+| Code Review | ✅ Active | Reject PRs με νέα console calls |
+| Migration Script | ✅ Created | `scripts/migrate-console-to-logger.js` |
+
+**Migration Strategy** (Gradual Migration):
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| **Phase 1** | ESLint rule (warn) - block new console usage | ✅ DONE |
+| **Phase 2** | Migrate on Touch - when editing file, migrate to Logger | 🔄 ONGOING |
+| **Phase 3** | Upgrade ESLint to error - block all console | ⏳ PLANNED |
+| **Phase 4** | Bulk migration of remaining files | ⏳ PLANNED |
+
+**Current State (2026-01-26)**:
+- Files with console: **772**
+- Total console calls: **5,455**
+- Files using Logger: **1**
+- ESLint rule: **active (warn)**
+
+**Consequences**:
+- ✅ Structured logging με metadata
+- ✅ Environment-based log levels (DEBUG in dev, ERROR in prod)
+- ✅ Clean console σε production
+- ✅ Correlation IDs για request tracing
+- ✅ Performance markers για timing
+- ✅ Module-based prefixes για filtering
+
+**References**:
+- Logger: `src/lib/telemetry/Logger.ts`
+- ESLint Rule: `eslint-rules/no-console-log.js`
+- Migration Script: `scripts/migrate-console-to-logger.js`
+- Industry: Microsoft ILogger, Google Cloud Logging, DataDog, Sentry
+
+---
+
+### 📋 ADR-037: PRODUCT TOUR SYSTEM (2026-01-26) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-26
+
+**Context**:
+Χρειάζεται σύστημα για guided user onboarding (product tours) σε complex UI elements.
+- Π.χ. Error Dialog με 7 κουμπιά - ο χρήστης χρειάζεται καθοδήγηση
+- Δεν υπάρχει κεντρικό σύστημα για τέτοια tours
+- Η τεκμηρίωση μέσω tooltips δεν είναι αρκετή
+
+**Enterprise Standards Reference**:
+| Company | Solution |
+|---------|----------|
+| **Pendo** | Product Tours - Industry leader |
+| **WalkMe** | Digital Adoption Platform |
+| **Intercom** | Product Tours + Messenger |
+| **Appcues** | User Onboarding Flows |
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL** | `ProductTour` από `@/components/ui/ProductTour` = ΜΟΝΑΔΙΚΟ tour system |
+| **PATTERN** | Context-based state + Floating UI positioning + Spotlight overlay |
+| **PROHIBITION** | ❌ Νέα tour/coach-mark implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** |
+| **EXTENSION** | Για νέες tours, δημιουργήστε TourConfig και χρησιμοποιήστε `useTour()` |
+
+**Architecture**:
+
+```
+TourProvider (Context)
+    │
+    ├── TourRenderer (Floating overlay)
+    │       ├── SpotlightOverlay (CSS clip-path cutout)
+    │       └── TourTooltip (Floating UI positioned)
+    │
+    └── useTour() Hook (Consumer interface)
+            ├── startTour(config)
+            ├── shouldShowTour(id)
+            └── resetTour(key)
+```
+
+**Implementation**:
+
+```typescript
+// 1. Define tour configuration
+import { createTourConfig, createButtonStep } from '@/components/ui/ProductTour';
+
+const myTour = createTourConfig({
+  tourId: 'my-feature-tour',
+  persistenceKey: 'my-tour-v1',
+  showDontShowAgain: true,
+  steps: [
+    createButtonStep('step-1', 'my-button-id', 'tour.step1.title', 'tour.step1.desc'),
+    // ... more steps
+  ],
+});
+
+// 2. Start the tour
+const { startTour } = useTour();
+startTour(myTour);
+```
+
+**Features**:
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Spotlight Overlay | ✅ | CSS clip-path για cutout around target |
+| Arrow Tooltips | ✅ | Floating UI με βελάκι pointing |
+| Keyboard Navigation | ✅ | Arrows, Escape, Enter |
+| Persistence | ✅ | localStorage "don't show again" |
+| i18n Ready | ✅ | Translation keys για titles/descriptions |
+| Analytics Hooks | ✅ | `onAnalyticsEvent` callback |
+| Step Indicators | ✅ | 1/7, 2/7, etc. |
+| Theme-aware | ✅ | Uses design tokens |
+
+**Files**:
+- `src/components/ui/ProductTour/ProductTour.tsx` - Main component
+- `src/components/ui/ProductTour/ProductTour.context.tsx` - Context provider
+- `src/components/ui/ProductTour/ProductTour.types.ts` - TypeScript types
+- `src/components/ui/ProductTour/useTour.ts` - Consumer hook
+- `src/components/ui/ProductTour/index.ts` - Public API
+
+**i18n Keys**:
+- `productTour.next` - "Επόμενο"
+- `productTour.previous` - "Προηγούμενο"
+- `productTour.skip` - "Παράλειψη"
+- `productTour.finish` - "Τέλος"
+- `productTour.dontShowAgain` - "Να μην εμφανιστεί ξανά"
+
+**First Implementation**: Error Dialog Tour
+- Guides users through 7 action buttons
+- Explains retry, back, home, copy, email, notify, report functions
+- Help button (❓) starts the tour
+
+**Consequences**:
+- ✅ Enterprise-grade onboarding system
+- ✅ Zero external dependencies (uses existing Radix/Floating-UI)
+- ✅ Full TypeScript support (ZERO any)
+- ✅ Accessible (ARIA, keyboard navigation)
+- ✅ Reusable across all complex UI elements
+- ✅ Analytics integration ready
+
+**References**:
+- Components: `src/components/ui/ProductTour/`
+- Error Dialog Tour: `src/components/ui/ErrorBoundary/errorDialogTour.ts`
+- i18n: `common.json` → `productTour.*`
+- Industry: Pendo, WalkMe, Appcues, Intercom
+
+---
+
+### 📋 ADR-038: CENTRALIZED TOOL DETECTION FUNCTIONS (2026-01-26) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-26
+
+**Context**:
+Εντοπίστηκαν διπλότυπες λίστες εργαλείων σε πολλαπλά αρχεία:
+
+```typescript
+// ❌ ΔΙΠΛΟΤΥΠΟ - Υπήρχε σε 4+ σημεία!
+const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
+                      activeTool === 'polygon' || activeTool === 'circle' ||
+                      activeTool === 'rectangle' || activeTool === 'arc' ...;
+```
+
+**Problem**:
+- ❌ Duplicate tool lists in `useCentralizedMouseHandlers.ts` (2 occurrences)
+- ❌ Duplicate tool lists in `CanvasSection.tsx` (4 occurrences)
+- ❌ Παραβίαση SSOT (Single Source of Truth)
+- ❌ Νέα εργαλεία απαιτούν manual update σε 6+ σημεία!
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **SSOT** | `ToolStateManager.ts` = Single Source of Truth για tool detection |
+| **FUNCTIONS** | Standalone functions για use χωρίς hooks |
+| **NO INLINE LISTS** | ❌ Καμία inline λίστα εργαλείων σε components |
+| **IMPORT** | Χρήση `import { isDrawingTool, isMeasurementTool, isInteractiveTool }` |
+
+**Architecture**:
+```
+ToolStateManager.ts (SSOT)
+├── TOOL_DEFINITIONS[tool].category = 'drawing' | 'measurement' | ...
+├── isDrawingTool(tool: string): boolean          // Standalone
+├── isMeasurementTool(tool: string): boolean      // Standalone
+├── isInteractiveTool(tool: string): boolean      // Standalone (drawing OR measurement)
+└── allowsContinuous(tool: string): boolean       // Standalone
+```
+
+**Implementation**:
+
+```typescript
+// ToolStateManager.ts - Enterprise standalone functions
+export function isDrawingTool(tool: string | undefined | null): boolean {
+  if (!tool) return false;
+  const info = TOOL_DEFINITIONS[tool as ToolType];
+  return info?.category === 'drawing';
+}
+
+export function isMeasurementTool(tool: string | undefined | null): boolean {
+  if (!tool) return false;
+  const info = TOOL_DEFINITIONS[tool as ToolType];
+  return info?.category === 'measurement';
+}
+
+export function isInteractiveTool(tool: string | undefined | null): boolean {
+  return isDrawingTool(tool) || isMeasurementTool(tool);
+}
+```
+
+**Usage**:
+```typescript
+// useCentralizedMouseHandlers.ts
+import { isInteractiveTool } from '../tools/ToolStateManager';
+
+if (onDrawingHover && isInteractiveTool(activeTool)) {
+  onDrawingHover(worldPos);
+}
+
+// CanvasSection.tsx
+import { isDrawingTool, isMeasurementTool, isInteractiveTool } from '../../systems/tools/ToolStateManager';
+
+if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {
+  // Handle drawing/measurement click
+}
+```
+
+**Benefits**:
+
+| Benefit | Description |
+|---------|-------------|
+| ✅ **SSOT** | Tool detection in ONE place |
+| ✅ **Zero Duplicates** | Eliminated 6 inline tool lists |
+| ✅ **Type-Safe** | Accepts `string | undefined | null` for flexibility |
+| ✅ **Extensible** | New tools automatically included via category |
+| ✅ **Standalone** | Works without React hooks |
+
+**Files Changed**:
+- `src/subapps/dxf-viewer/systems/tools/ToolStateManager.ts` - Added standalone functions
+- `src/subapps/dxf-viewer/systems/cursor/useCentralizedMouseHandlers.ts` - Using centralized functions
+- `src/subapps/dxf-viewer/components/dxf-layout/CanvasSection.tsx` - Using centralized functions
+
+**Related ADRs**:
+- ADR-035: Tool Overlay Mode Metadata (same SSOT file)
+
+**References**:
+- SSOT: `src/subapps/dxf-viewer/systems/tools/ToolStateManager.ts`
+- Industry: AutoCAD Tool Properties, SolidWorks Tool Categories, Bentley Tool Registry
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

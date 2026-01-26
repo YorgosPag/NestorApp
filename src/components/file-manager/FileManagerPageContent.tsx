@@ -478,7 +478,7 @@ export function FileManagerPageContent() {
 
   // 🐛 DEBUG: Trigger test error during render (caught by ErrorBoundary)
   if (triggerError) {
-    throw new Error('🧪 TEST ERROR: Αυτό είναι δοκιμαστικό σφάλμα για testing του Error Reporting System. Κάνε κλικ στο "Αναφορά στον Διαχειριστή" για να στείλεις email στο georgios.pagonis@gmail.com');
+    throw new Error('[ΔΟΚΙΜΗ] Αυτό είναι δοκιμαστικό σφάλμα για testing του Error Reporting System. Κάνε κλικ στο "Ειδοποίηση Admin" για να στείλεις email στο georgios.pagonis@gmail.com');
   }
 
   return (

@@ -111,7 +111,7 @@
   "toolbar": {
     "title": "Drawing Tools",
     "select": "Select",
-    "pan": "Pan",
+    "pan": "Pan View",
     "line": "Line",
     "rectangle": "Rectangle",
     "circle": "Circle",
@@ -1238,7 +1238,7 @@
     "line": "Line",
     "rectangle": "Rectangle",
     "circle": "Circle",
-    "pan": "Pan",
+    "pan": "Pan View",
     "zoomWindow": "Zoom Window",
     "layering": "Layers"
   },
@@ -1360,7 +1360,7 @@
   },
   "tools": {
     "select": "Select",
-    "pan": "Pan",
+    "pan": "Pan View",
     "line": "Line",
     "rectangle": "Rectangle",
     "circleRadius": "Circle (Radius)",
@@ -1374,7 +1374,7 @@
     "polygon": "Polygon",
     "layering": "Layers",
     "gripEdit": "Grip Edit",
-    "move": "Move",
+    "move": "Move Objects",
     "copy": "Copy",
     "delete": "Delete",
     "measureDistance": "Measure Distance",

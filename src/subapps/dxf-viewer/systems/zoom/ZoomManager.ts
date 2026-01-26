@@ -119,8 +119,8 @@ export class ZoomManager implements IZoomManager {
 
     // 🏢 ENTERPRISE FIX (2026-01-26): If calculation failed, return current state without change
     // This prevents the canvas from "jumping" when zoomToFit is called with invalid bounds
+    // 🏢 ENTERPRISE (2026-01-26): Silent return - missing bounds is normal state (no DXF loaded)
     if (transform === null) {
-      console.warn('🚨 ZoomManager.zoomToFit: Calculation failed, preserving current transform');
       return this.createZoomResult('fit'); // Return current state, no change
     }
 

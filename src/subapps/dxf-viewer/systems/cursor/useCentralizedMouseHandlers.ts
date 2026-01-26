@@ -14,6 +14,8 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import { UniversalMarqueeSelector } from '../selection/UniversalMarqueeSelection';
+// 🏢 ENTERPRISE (2026-01-26): ADR-038 - Centralized tool & mode detection (Single Source of Truth)
+import { isInDrawingMode } from '../tools/ToolStateManager';
 
 // 🏢 ENTERPRISE: Type-safe snap result interface
 export interface SnapResultItem {
@@ -56,6 +58,9 @@ interface CentralizedMouseHandlersProps {
   onCanvasClick?: (point: Point2D) => void; // 🎯 DRAWING TOOLS: Click handler for drawing entities
   // 🏢 ENTERPRISE (2026-01-25): Flag to prevent selection start during grip drag
   isGripDragging?: boolean;
+  // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback for measurement/drawing tools
+  // Called on every mouse move during drawing mode to update preview line
+  onDrawingHover?: (worldPos: Point2D) => void;
 }
 
 /**
@@ -78,7 +83,8 @@ export function useCentralizedMouseHandlers({
   onMultiLayerSelected, // 🏢 ENTERPRISE (2026-01-25): Multi-selection callback
   canvasRef,
   onCanvasClick,
-  isGripDragging = false // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
+  isGripDragging = false, // 🏢 ENTERPRISE (2026-01-25): Prevent selection during grip drag
+  onDrawingHover // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback
 }: CentralizedMouseHandlersProps) {
   const cursor = useCursor();
 
@@ -121,6 +127,17 @@ export function useCentralizedMouseHandlers({
     clickCount: 0
   });
 
+  // 🚀 PERFORMANCE: Throttle snap detection to max 60fps (16ms interval)
+  const snapThrottleRef = useRef<{
+    lastSnapTime: number;
+    pendingWorldPos: Point2D | null;
+    rafId: number | null;
+  }>({
+    lastSnapTime: 0,
+    pendingWorldPos: null,
+    rafId: null
+  });
+
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας αντί για local caching
 
   // 🚀 OPTIMIZED PAN ANIMATION FRAME
@@ -143,15 +160,6 @@ export function useCentralizedMouseHandlers({
 
   // ✅ MOUSE DOWN HANDLER - Professional CAD style
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    // 🔍 DEBUG: Log ALL mouse down events
-    console.log('🔍 MOUSE DOWN EVENT:', {
-      button: e.button,
-      buttons: e.buttons,
-      type: e.type,
-      activeTool,
-      target: (e.target as HTMLElement).tagName
-    });
-
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας bounds caching
     const rect = canvasBoundsService.getBounds(e.currentTarget);
     // Canvas-relative coordinates (CoordinateTransforms handles margins internally)
@@ -173,8 +181,6 @@ export function useCentralizedMouseHandlers({
 
       if (timeSinceLastClick < DOUBLE_CLICK_THRESHOLD) {
         // 🎯 DOUBLE CLICK DETECTED! Trigger Fit to View
-        console.log('🎯 MIDDLE BUTTON DOUBLE-CLICK DETECTED - Triggering Fit to View');
-
         // Dispatch fit-to-view event
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('canvas-fit-to-view', {
@@ -201,28 +207,14 @@ export function useCentralizedMouseHandlers({
     // This is the CAD industry standard (AutoCAD, Revit, MicroStation, etc.)
     // Drawing tools only affect LEFT button behavior, not middle button.
     //
-    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
-                          activeTool === 'polygon' || activeTool === 'circle' ||
-                          activeTool === 'rectangle' || activeTool === 'arc' ||
-                          activeTool === 'circle-diameter' || activeTool === 'circle-2p-diameter' ||
-                          activeTool === 'measure-distance' || activeTool === 'measure-area' ||
-                          activeTool === 'measure-angle' ||
-                          overlayMode === 'draw';
-
-    console.log('🔍 handleMouseDown:', {
-      button: e.button,
-      activeTool,
-      overlayMode,
-      isDrawingTool,
-      isGripDragging // 🏢 ENTERPRISE (2026-01-25): Check if grip drag prevents selection
-    });
+    // 🏢 ENTERPRISE (2026-01-26): ADR-038 - Using centralized isInDrawingMode (Single Source of Truth)
+    const isToolInteractive = isInDrawingMode(activeTool, overlayMode);
 
     // 🏢 ENTERPRISE: Middle button (button === 1) ALWAYS starts pan - CAD industry standard!
     // Left button (button === 0) only pans when pan tool is active
     const shouldStartPan = (e.button === 1) || (activeTool === 'pan' && e.button === 0);
 
     if (shouldStartPan) {
-      console.log('🖱️ PAN STARTED with button:', e.button);
       panStateRef.current.isPanning = true;
       panStateRef.current.lastMousePos = screenPos;
       panStateRef.current.pendingTransform = { ...transform };
@@ -241,13 +233,14 @@ export function useCentralizedMouseHandlers({
     }
 
     // Handle selection start (left button ONLY) - disable in pan mode AND drawing tools
-    // 🎯 BUG #2 FIX: Skip selection when drawing tools are active (reuse isDrawingTool from above)
+    // 🎯 BUG #2 FIX: Skip selection when drawing tools are active
     // 🏢 ENTERPRISE: Middle button (button === 1) NEVER starts selection - it's for pan only!
     // 🏢 ENTERPRISE (2026-01-25): Skip selection when grip drag is in progress
-    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isDrawingTool && !shouldStartPan && !isGripDragging) {
+    // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized isToolInteractive
+    if (e.button === 0 && !e.shiftKey && activeTool !== 'pan' && !isToolInteractive && !shouldStartPan && !isGripDragging) {
       cursor.startSelection(screenPos);
     }
-  }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool, isGripDragging]);
+  }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool, overlayMode, isGripDragging]);
 
   // 🚀 MOUSE MOVE HANDLER - HIGH PERFORMANCE CAD-style tracking
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -285,38 +278,50 @@ export function useCentralizedMouseHandlers({
     // Call parent callback
     onMouseMove?.(screenPos, worldPos);
 
-    // ✅ SNAP DETECTION: Find snap points near cursor (Step 3)
+    // 🏢 ENTERPRISE (2026-01-26): ADR-038 - Call drawing hover for preview line
+    // Uses centralized isInDrawingMode (Single Source of Truth)
+    if (onDrawingHover && isInDrawingMode(activeTool, overlayMode)) {
+      onDrawingHover(worldPos);
+    }
+
+    // 🚀 PERFORMANCE: Throttled snap detection (max 60fps)
+    // Snap detection is expensive - only run every 16ms
+    const SNAP_THROTTLE_MS = 16;
+    const snapThrottle = snapThrottleRef.current;
+    const now = performance.now();
+
     if (snapEnabled && findSnapPoint) {
-      try {
-        // ✅ FIX: Use WORLD coordinates for snap detection (not screen coordinates)
-        const snap = findSnapPoint(worldPos.x, worldPos.y);
+      // Store the latest position
+      snapThrottle.pendingWorldPos = worldPos;
 
-        if (snap && snap.found && snap.snappedPoint) {
-          // 🏢 ENTERPRISE FIX (2026-01-06): Store WORLD coordinates in context
-          // The overlay will convert to screen coords on each render (handles zoom correctly)
-          setSnapResults([{
-            point: snap.snappedPoint, // ✅ Store WORLD coordinates (overlay converts to screen)
-            type: snap.activeMode || 'default',
-            entityId: snap.snapPoint?.entityId || null,
-            distance: snap.snapPoint?.distance || 0,
-            priority: 0
-          }]);
+      // Only run snap detection if enough time has passed
+      if (now - snapThrottle.lastSnapTime >= SNAP_THROTTLE_MS) {
+        snapThrottle.lastSnapTime = now;
 
-          // 🎯 ENTERPRISE FIX: Update SnapContext for visual feedback (SnapIndicatorOverlay)
-          // Keep WORLD coordinates - overlay will convert to screen on each render
-          setCurrentSnapResult(snap); // ✅ Keep original snap result with WORLD coords
-        } else {
+        try {
+          const snap = findSnapPoint(worldPos.x, worldPos.y);
+
+          if (snap && snap.found && snap.snappedPoint) {
+            setSnapResults([{
+              point: snap.snappedPoint,
+              type: snap.activeMode || 'default',
+              entityId: snap.snapPoint?.entityId || null,
+              distance: snap.snapPoint?.distance || 0,
+              priority: 0
+            }]);
+            setCurrentSnapResult(snap);
+          } else {
+            setSnapResults([]);
+            setCurrentSnapResult(null);
+          }
+        } catch {
           setSnapResults([]);
-          setCurrentSnapResult(null); // 🎯 Clear snap result when no snap found
+          setCurrentSnapResult(null);
         }
-      } catch (err) {
-        console.warn('⚠️ Snap detection error:', err);
-        setSnapResults([]);
-        setCurrentSnapResult(null); // 🎯 Clear snap result on error
       }
     } else {
       setSnapResults([]);
-      setCurrentSnapResult(null); // 🎯 Clear snap result when snap disabled
+      setCurrentSnapResult(null);
     }
 
     // Handle selection update - disable in pan mode
@@ -351,7 +356,7 @@ export function useCentralizedMouseHandlers({
     // Pan with MIDDLE button (handled above) or WHEEL (ZoomManager) is the CAD standard
     // The old code was: shouldPan = cursor.isDown && button === 0 && activeTool !== 'select'
     // This incorrectly made ALL tools except 'select' pan instead of executing their function
-  }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, applyPendingTransform, snapEnabled, findSnapPoint]);
+  }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover]);
 
   // 🚀 MOUSE UP HANDLER - CAD-style release with pan cleanup
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
@@ -392,16 +397,6 @@ export function useCentralizedMouseHandlers({
     // Middle button (button === 1) is for pan only, not for adding polygon points
     // Also skip if we just finished panning (wasPanning check)
     const isLeftClick = e.button === 0;
-
-    console.log('🔍 handleMouseUp check:', {
-      hasOnCanvasClick: !!onCanvasClick,
-      isSelecting: cursor.isSelecting,
-      wasPanning,
-      hasPosition: !!cursor.position,
-      overlayMode,
-      button: e.button,
-      isLeftClick
-    });
 
     if (onCanvasClick && isLeftClick && !cursor.isSelecting && !wasPanning && cursor.position) {
       let clickPoint = cursor.position; // Default: screen coordinates
@@ -451,23 +446,12 @@ export function useCentralizedMouseHandlers({
           }
         );
 
-        // 🏢 ENTERPRISE (2026-01-25): Call appropriate callback based on what's available
-        console.log('🔍 MARQUEE RESULT:', {
-          selectedCount: selectionResult.selectedIds.length,
-          selectedIds: selectionResult.selectedIds,
-          hasMultiCallback,
-          hasSingleCallback
-        });
-
         if (selectionResult.selectedIds.length > 0) {
           if (hasMultiCallback) {
             // Preferred: Call multi-selection callback with all IDs at once
-            console.log('✅ Calling onMultiLayerSelected with', selectionResult.selectedIds.length, 'IDs');
             onMultiLayerSelected(selectionResult.selectedIds);
           } else if (hasSingleCallback) {
             // Fallback: Call single selection callback for each ID (legacy behavior)
-            // Note: This will only keep the last one selected due to store limitations
-            console.log('⚠️ Using LEGACY single callback');
             selectionResult.selectedIds.forEach(layerId => {
               onLayerSelected(layerId, cursor.position!);
             });
@@ -483,8 +467,6 @@ export function useCentralizedMouseHandlers({
 
           if (isSmallSelection && colorLayers && colorLayers.length > 0) {
             // 🎯 SINGLE CLICK: Do point-in-polygon hit-test for layer selection
-            console.log('🎯 Small selection detected - performing point hit-test for layer click');
-
             // Convert screen point to world coordinates for hit-testing
             const worldPoint = CoordinateTransforms.screenToWorld(cursor.position, transform, viewport);
 
@@ -518,20 +500,17 @@ export function useCentralizedMouseHandlers({
             }
 
             if (hitLayerId) {
-              console.log('✅ Layer hit detected:', hitLayerId);
               if (hasMultiCallback) {
                 onMultiLayerSelected([hitLayerId]);
               } else if (hasSingleCallback) {
                 onLayerSelected(hitLayerId, cursor.position);
               }
             } else {
-              console.log('⚠️ No layer hit - calling onCanvasClick for deselection');
               if (onCanvasClick && cursor.position) {
                 onCanvasClick(cursor.position);
               }
             }
           } else {
-            console.log('⚠️ No layers selected in marquee - calling onCanvasClick for deselection');
             // 🏢 ENTERPRISE (2026-01-25): When marquee selects nothing, trigger canvas click for deselection
             if (onCanvasClick && cursor.position) {
               onCanvasClick(cursor.position);

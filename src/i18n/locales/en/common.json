@@ -1625,5 +1625,47 @@
       "parking": "Parking",
       "storage": "Storage"
     }
+  },
+  "productTour": {
+    "next": "Next",
+    "previous": "Previous",
+    "skip": "Skip",
+    "finish": "Finish",
+    "dontShowAgain": "Don't show again",
+    "stepIndicator": "Step {{current}} of {{total}}",
+    "errorDialog": {
+      "intro": {
+        "title": "Welcome to Error Management",
+        "description": "Let's explore your options when an error occurs. Each button has a different function."
+      },
+      "retry": {
+        "title": "Try Again",
+        "description": "Attempt to retry the action that caused the error. Useful for temporary network issues."
+      },
+      "back": {
+        "title": "Go Back",
+        "description": "Return to the previous page. Use this if you want to avoid the error."
+      },
+      "home": {
+        "title": "Go Home",
+        "description": "Navigate to the application's home page. A safe option for a fresh start."
+      },
+      "copy": {
+        "title": "Copy Details",
+        "description": "Copy the technical error details to your clipboard. Useful for sending to support."
+      },
+      "email": {
+        "title": "Send Email",
+        "description": "Send an email with the error details to the support team."
+      },
+      "notify": {
+        "title": "Notify Admin",
+        "description": "Send an automatic notification to the system administrator about the error."
+      },
+      "report": {
+        "title": "Anonymous Report",
+        "description": "Submit an anonymous error report to help improve the application."
+      }
+    }
   }
 }

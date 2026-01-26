@@ -34,17 +34,27 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'circle': { id: 'circle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'circle-diameter': { id: 'circle-diameter', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'circle-2p-diameter': { id: 'circle-2p-diameter', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'circle-3p': { id: 'circle-3p', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'circle-chord-sagitta': { id: 'circle-chord-sagitta', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'circle-2p-radius': { id: 'circle-2p-radius', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'circle-best-fit': { id: 'circle-best-fit', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'polyline': { id: 'polyline', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'polygon': { id: 'polygon', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  'ellipse': { id: 'ellipse', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 
   // Measurement tools - cancel overlay mode (measurement ≠ overlay drawing)
-  'measure-distance': { id: 'measure-distance', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
-  'measure-area': { id: 'measure-area', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
-  'measure-angle': { id: 'measure-angle', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
-  'measure-angle-line-arc': { id: 'measure-angle-line-arc', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
-  'measure-angle-two-arcs': { id: 'measure-angle-two-arcs', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
-  'measure-angle-measuregeom': { id: 'measure-angle-measuregeom', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
-  'measure-angle-constraint': { id: 'measure-angle-constraint', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // 🏢 ENTERPRISE FIX (2026-01-26): allowsContinuous: true for consecutive measurements
+  // Pattern: AutoCAD/BricsCAD - measurement tools stay active for multiple measurements
+  'measure': { id: 'measure', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'measure-distance': { id: 'measure-distance', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'measure-area': { id: 'measure-area', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'measure-angle': { id: 'measure-angle', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'measure-angle-line-arc': { id: 'measure-angle-line-arc', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'measure-angle-two-arcs': { id: 'measure-angle-two-arcs', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'measure-angle-measuregeom': { id: 'measure-angle-measuregeom', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'measure-angle-constraint': { id: 'measure-angle-constraint', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'measure-radius': { id: 'measure-radius', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'measure-perimeter': { id: 'measure-perimeter', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 
   // Zoom tools - cancel overlay mode (zoom interaction ≠ overlay drawing)
   'zoom-in': { id: 'zoom-in', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
@@ -52,9 +62,8 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'zoom-extents': { id: 'zoom-extents', category: 'zoom', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
   'zoom-window': { id: 'zoom-window', category: 'zoom', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
 
-  // Utility tools - pan/grid don't interact with overlay drawing
+  // Utility tools - pan doesn't interact with overlay drawing
   'pan': { id: 'pan', category: 'utility', requiresCanvas: true, canInterrupt: false, allowsContinuous: true, preservesOverlayMode: false },
-  'grid-toggle': { id: 'grid-toggle', category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
 
   // 🏢 ENTERPRISE (Phase 3): Editing tools for entity manipulation
   'move': { id: 'move', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
@@ -106,6 +115,119 @@ export function getOverlayCompatibleTools(): ToolType[] {
   return (Object.keys(TOOL_DEFINITIONS) as ToolType[]).filter(
     tool => TOOL_DEFINITIONS[tool].preservesOverlayMode
   );
+}
+
+// ============================================================================
+// 🏢 ENTERPRISE (2026-01-26): STANDALONE TOOL CATEGORY FUNCTIONS
+// Single Source of Truth for tool type detection - use these everywhere!
+// ADR-036: Centralized Tool Detection - eliminates duplicate tool lists
+// ============================================================================
+
+/**
+ * Check if a tool is a drawing tool (line, circle, polygon, etc.)
+ * ENTERPRISE: This is the SINGLE SOURCE OF TRUTH for drawing tool detection
+ *
+ * @param tool - The tool type to check (can be string for flexibility)
+ * @returns true if the tool is in the 'drawing' category
+ *
+ * @example
+ * if (isDrawingTool(activeTool)) {
+ *   // Handle drawing-specific logic
+ * }
+ */
+export function isDrawingTool(tool: string | undefined | null): boolean {
+  if (!tool) return false;
+  const info = TOOL_DEFINITIONS[tool as ToolType];
+  return info?.category === 'drawing';
+}
+
+/**
+ * Check if a tool is a measurement tool (measure-distance, measure-area, etc.)
+ * ENTERPRISE: This is the SINGLE SOURCE OF TRUTH for measurement tool detection
+ *
+ * @param tool - The tool type to check (can be string for flexibility)
+ * @returns true if the tool is in the 'measurement' category
+ *
+ * @example
+ * if (isMeasurementTool(activeTool)) {
+ *   // Handle measurement-specific logic
+ * }
+ */
+export function isMeasurementTool(tool: string | undefined | null): boolean {
+  if (!tool) return false;
+  const info = TOOL_DEFINITIONS[tool as ToolType];
+  return info?.category === 'measurement';
+}
+
+/**
+ * Check if a tool is an interactive tool (requires canvas clicks for operation)
+ * Interactive tools are: drawing + measurement tools
+ * ENTERPRISE: This is the SINGLE SOURCE OF TRUTH for interactive tool detection
+ *
+ * @param tool - The tool type to check (can be string for flexibility)
+ * @returns true if the tool is drawing or measurement category
+ *
+ * @example
+ * if (isInteractiveTool(activeTool)) {
+ *   onDrawingHover(worldPos); // Show preview during drawing/measurement
+ * }
+ */
+export function isInteractiveTool(tool: string | undefined | null): boolean {
+  return isDrawingTool(tool) || isMeasurementTool(tool);
+}
+
+/**
+ * Check if the application is in ANY drawing mode
+ * This includes: CAD drawing tools, measurement tools, AND overlay polygon drawing
+ * ENTERPRISE: This is the SINGLE SOURCE OF TRUTH for "should we show preview/handle drawing events?"
+ *
+ * @param tool - The active tool type
+ * @param overlayMode - The current overlay mode ('select' | 'draw' | 'edit')
+ * @returns true if ANY drawing/measurement operation is active
+ *
+ * @example
+ * // In mouse handlers:
+ * if (isInDrawingMode(activeTool, overlayMode)) {
+ *   onDrawingHover(worldPos); // Show preview line
+ * }
+ *
+ * @example
+ * // In selection handlers:
+ * if (!isInDrawingMode(activeTool, overlayMode)) {
+ *   cursor.startSelection(screenPos); // Only allow selection when NOT drawing
+ * }
+ */
+export function isInDrawingMode(
+  tool: string | undefined | null,
+  overlayMode?: 'select' | 'draw' | 'edit' | null
+): boolean {
+  // CAD drawing/measurement tools
+  if (isInteractiveTool(tool)) return true;
+
+  // Overlay polygon drawing mode
+  if (overlayMode === 'draw') return true;
+
+  return false;
+}
+
+/**
+ * Check if a tool allows continuous operation (multiple uses without reselecting)
+ * ENTERPRISE: Use this to determine if tool should stay active after completing an action
+ *
+ * @param tool - The tool type to check (can be string for flexibility)
+ * @returns true if the tool supports continuous operation
+ *
+ * @example
+ * if (allowsContinuous(activeTool)) {
+ *   startNewDrawing(); // Start next measurement immediately
+ * } else {
+ *   setActiveTool('select'); // Return to select after completion
+ * }
+ */
+export function allowsContinuous(tool: string | undefined | null): boolean {
+  if (!tool) return false;
+  const info = TOOL_DEFINITIONS[tool as ToolType];
+  return info?.allowsContinuous ?? false;
 }
 
 export interface ToolStateManagerOptions {

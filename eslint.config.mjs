@@ -58,6 +58,15 @@ export default defineConfig([
       "react/self-closing-comp": "error",
       "react/jsx-boolean-value": ["error", "never"],
       "react/jsx-curly-brace-presence": ["error", { "props": "never", "children": "never" }],
+
+      // 🏢 ENTERPRISE: SAP/Microsoft/Google Pattern - Structured Logging
+      // Απαγορεύει console.log - Χρήση Logger από @/lib/telemetry
+      // Phase 1: "warn" για σταδιακή migration (4446 console calls exist)
+      // Phase 2: "error" όταν ολοκληρωθεί η migration
+      "custom/no-console-log": ["warn", {
+        allowError: true,      // Επιτρέπει console.error για critical errors
+        allowInTests: true,    // Επιτρέπει σε test files
+      }],
     },
   },
   {
@@ -106,6 +115,18 @@ export default defineConfig([
       "prefer-const": "off",       // Allow let in internal code
       "react/display-name": "off",
       "react/no-unescaped-entities": "off", // Allow " in JSX for internal pages
+      // 🏢 ENTERPRISE: Disable no-console-log για internal/debug code
+      "custom/no-console-log": "off",
+    },
+  },
+  {
+    // 🏢 ENTERPRISE: Specific exception for Logger implementation itself
+    files: [
+      "src/lib/telemetry/**/*",         // Logger uses console internally
+      "public/suppress-console.js",     // Console suppression system
+    ],
+    rules: {
+      "custom/no-console-log": "off",
     },
   },
 ]);

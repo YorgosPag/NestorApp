@@ -34,6 +34,9 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ENTERPRISE (2026-01-25): Drawing State Machine integration
 import { useDrawingMachine, type DrawingStateType } from '../../core/state-machine';
+// 🏢 ENTERPRISE (2026-01-26): Centralized tool configuration for continuous mode support
+import { getToolMetadata } from '../../systems/tools/ToolStateManager';
+import type { ToolType } from '../../ui/toolbar/types';
 import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity } from '../../types/scene';
 // ✅ ENTERPRISE FIX: Import centralized PreviewGripPoint from entities
 import type { PreviewGripPoint } from '../../types/entities';
@@ -465,7 +468,20 @@ export function useUnifiedDrawing() {
       // 🏢 ENTERPRISE: Use state machine to complete and reset
       machineComplete();
       machineReset();
-      machineDeselectTool();
+
+      // 🏢 ENTERPRISE FIX (2026-01-26): Use centralized TOOL_DEFINITIONS for continuous mode
+      // Pattern: AutoCAD/BricsCAD - tools with allowsContinuous=true stay active after completion
+      // - Drawing tools (line, rectangle, circle, polygon): allowsContinuous=false → deselect
+      // - Measurement tools (measure-*): allowsContinuous=true → remain active for consecutive use
+      // - Polyline, Move, Pan: allowsContinuous=true → remain active
+      const toolMetadata = getToolMetadata(currentTool as ToolType);
+      if (!toolMetadata.allowsContinuous) {
+        machineDeselectTool();
+      } else {
+        // 🏢 For continuous tools: re-select to restart the drawing process
+        // This allows consecutive operations without manually re-selecting the tool
+        machineSelectTool(currentTool);
+      }
 
       // Reset local state (preview entity)
       setLocalState(prev => ({
@@ -579,20 +595,7 @@ export function useUnifiedDrawing() {
 
     // For multi-point preview (showing the shape being drawn)
     const worldPoints = [...tempPoints, snappedPoint];
-    console.log('🔍 UPDATEPREVIEW MULTIPOINT:', {
-      tool: currentTool,
-      tempPointsCount: tempPoints.length,
-      worldPointsCount: worldPoints.length,
-      tempPoints,
-      worldPoints
-    });
     const previewEntity = createEntityFromTool(currentTool, worldPoints);
-    console.log('🔍 PREVIEW ENTITY CREATED:', {
-      hasPreview: !!previewEntity,
-      type: previewEntity?.type,
-      start: (previewEntity as { start?: Point2D })?.start,
-      end: (previewEntity as { end?: Point2D })?.end
-    });
 
     // Mark preview entity for special preview rendering with distance labels
     if (previewEntity && (currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'measure-area' || currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter')) {

@@ -32,6 +32,8 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-rend
 import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
 // 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings via Provider (CANONICAL - SINGLE SOURCE OF TRUTH)
 import { useGripStyles } from '../../settings-provider';
+// 🏢 ENTERPRISE (2026-01-26): ADR-036 - Centralized tool detection (Single Source of Truth)
+import { isDrawingTool, isMeasurementTool, isInteractiveTool, isInDrawingMode } from '../../systems/tools/ToolStateManager';
 import type { LayerRenderOptions } from '../../canvas-v2/layer-canvas/layer-types';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { useZoom } from '../../systems/zoom';
@@ -97,13 +99,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const zoomSystem = useZoom({
     initialTransform,
     onTransformChange: (newTransform) => {
-      // 🔍 DEBUG: Track ALL transform changes
-      console.log('🔄 TRANSFORM CHANGE:', {
-        from: transform,
-        to: newTransform,
-        stack: new Error().stack?.split('\n').slice(1, 5).join('\n')
-      });
-      setTransform(newTransform); // ✅ SYNC WITH STATE
+      setTransform(newTransform);
     },
     // 🏢 ENTERPRISE: Inject viewport για accurate zoom-to-cursor
     viewport
@@ -667,7 +663,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // Αποτρέπει το bug όπου η διαδικασία σχεδίασης συνεχίζεται μετά την αλλαγή tool
   React.useEffect(() => {
     if (activeTool === 'select' && draftPolygon.length > 0) {
-      console.log('🧹 Clearing draft polygon on tool change to select');
       setDraftPolygon([]);
     }
   }, [activeTool, draftPolygon.length]);
@@ -681,21 +676,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         universalSelection.isSelected(grip.overlayId)
       );
 
-      console.log('🔍 Grip validation effect:', {
-        selectedGripsCount: selectedGrips.length,
-        validGripsCount: validGrips.length,
-        activeTool,
-        selectedOverlays: universalSelection.getIdsByType('overlay')
-      });
-
       // Clear all grips if tool is not select/layering
       if (activeTool !== 'select' && activeTool !== 'layering') {
-        console.log('🧹 Clearing grips - wrong tool:', activeTool);
         setSelectedGrips([]);
         setDragPreviewPosition(null);
       } else if (validGrips.length !== selectedGrips.length) {
         // Some grips became invalid - update selection
-        console.log('🧹 Grips became invalid, updating:', { before: selectedGrips.length, after: validGrips.length });
         setSelectedGrips(validGrips);
         if (validGrips.length === 0) {
           setDragPreviewPosition(null);
@@ -932,19 +918,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // === 🚀 AUTO-START DRAWING ===
   // Όταν επιλέγεται drawing tool ή measurement tool, ξεκινά αυτόματα το drawing mode
+  // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized tool detection (Single Source of Truth)
   React.useEffect(() => {
-    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' ||
-                          activeTool === 'polygon' || activeTool === 'circle' ||
-                          activeTool === 'rectangle';
-    // 🏢 ENTERPRISE (2026-01-26): Measurement tools use the same drawing system
-    const isMeasurementTool = activeTool === 'measure-distance' ||
-                               activeTool === 'measure-area' ||
-                               activeTool === 'measure-angle';
+    const isDrawing = isDrawingTool(activeTool);
+    const isMeasurement = isMeasurementTool(activeTool);
 
-    console.log('🚀 AUTO-START CHECK:', { activeTool, isDrawingTool, isMeasurementTool, hasStartDrawing: !!drawingHandlersRef.current?.startDrawing });
-
-    if ((isDrawingTool || isMeasurementTool) && drawingHandlersRef.current?.startDrawing) {
-      console.log('🚀 CALLING startDrawing with:', activeTool);
+    if ((isDrawing || isMeasurement) && drawingHandlersRef.current?.startDrawing) {
       // 🎯 TYPE-SAFE: activeTool is already narrowed to DrawingTool by if statement
       drawingHandlersRef.current.startDrawing(activeTool as import('../../hooks/drawing/useUnifiedDrawing').DrawingTool);
     }
@@ -1007,15 +986,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       // 🎯 ADD PREVIEW ENTITY: Include preview entity from drawing state for real-time rendering
       ...(drawingHandlers.drawingState.previewEntity ? (() => {
         const preview = drawingHandlers.drawingState.previewEntity;
-        console.log('🎨 PREVIEW ENTITY DETECTED:', {
-          type: preview.type,
-          id: preview.id,
-          hasStart: 'start' in preview,
-          hasEnd: 'end' in preview,
-          start: (preview as { start?: Point2D }).start,
-          end: (preview as { end?: Point2D }).end,
-          fullPreview: preview
-        });
 
         // Type-safe preview entity mapping based on entity type
         if (preview.type === 'line') {
@@ -1046,15 +1016,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     bounds: props.currentScene?.bounds ?? null // ✅ FIX: Convert undefined to null for type compatibility
   };
 
-  // 🔍 ENTERPRISE DEBUG: Log dxfScene entities count for measurement/drawing debugging
-  if (drawingHandlers.drawingState.previewEntity) {
-    console.log('📊 DXFSCENE DEBUG:', {
-      entitiesCount: dxfScene.entities.length,
-      hasPreviewEntity: !!drawingHandlers.drawingState.previewEntity,
-      previewType: drawingHandlers.drawingState.previewEntity?.type,
-      entitiesTypes: dxfScene.entities.map(e => e.type)
-    });
-  }
 
   // 🔍 DEBUG - Check if DXF scene has entities and auto-fit to view
   React.useEffect(() => {
@@ -1146,13 +1107,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     const vertex: [number, number] = [insertPoint.x, insertPoint.y];
     const insertIndex = edgeIndex + 1; // Insert after the edge start vertex
 
-    console.log('🏢 Adding vertex at edge midpoint:', { overlayId, edgeIndex, insertIndex, vertex });
-
     try {
       await overlayStore.addVertex(overlayId, insertIndex, vertex);
-      console.log('✅ Vertex added successfully');
     } catch (error) {
-      console.error('❌ Failed to add vertex:', error);
+      console.error('Failed to add vertex:', error);
     }
   };
 
@@ -1192,46 +1150,22 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // 🏢 ENTERPRISE (2026-01-25): Multi-selection handler for marquee selection
   const handleMultiOverlayClick = useCallback((layerIds: string[]) => {
-    console.log('🔍 handleMultiOverlayClick CALLED:', {
-      layerIds,
-      activeTool,
-      overlayMode,
-      count: layerIds.length
-    });
-
     if (activeTool === 'select' || activeTool === 'layering' || overlayMode === 'select') {
       // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
       universalSelection.selectMultiple(layerIds.map(id => ({ id, type: 'overlay' as const })));
-      console.log('🎯 Multi-selection applied:', layerIds.length, 'overlays selected');
-    } else {
-      console.log('⚠️ Multi-selection SKIPPED - wrong tool/mode');
     }
   }, [activeTool, overlayMode, overlayStore]);
 
   const handleCanvasClick = (point: Point2D) => {
-    console.log('🖱️ handleCanvasClick CALLED:', { point, activeTool, overlayMode });
-
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing AND measurement tools
-    // 🏢 ENTERPRISE (2026-01-26): Added measurement tools - they use the same unified drawing system
-    const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
-      || activeTool === 'rectangle' || activeTool === 'circle';
-    const isMeasurementTool = activeTool === 'measure-distance' || activeTool === 'measure-area' || activeTool === 'measure-angle';
-
-    if ((isDrawingTool || isMeasurementTool) && drawingHandlersRef.current) {
+    // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized tool detection (Single Source of Truth)
+    if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {
       const canvasElement = dxfCanvasRef.current?.getCanvas?.();
       if (!canvasElement) return;
 
       const viewportLocal = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
       const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewportLocal);
 
-      // 🔍 DEBUG: Log coordinate conversion
-      console.log('📍 COORDINATE DEBUG:', {
-        screenPoint: point,
-        worldPoint,
-        transform,
-        viewport: viewportLocal,
-        canvasClientRect: canvasElement.getBoundingClientRect()
-      });
       drawingHandlersRef.current.onDrawingPoint(worldPoint);
       return;
     }
@@ -1264,10 +1198,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       const hasSelectedGrip = selectedGrip !== null;
       const justFinishedDrag = justFinishedDragRef.current;
 
-      console.log('🔍 Deselection check:', { isClickOnGrip, hasSelectedGrip, justFinishedDrag });
-
       if (!isClickOnGrip && !hasSelectedGrip && !justFinishedDrag) {
-        console.log('✅ DESELECTING all overlays');
         // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
         universalSelection.clearByType('overlay');
         setSelectedGrips([]); // Clear grip selection when clicking empty space
@@ -1589,6 +1520,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               onLayerClick={handleOverlayClick}
               onMultiLayerClick={handleMultiOverlayClick}
               onCanvasClick={handleCanvasClick}
+              // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Drawing hover callback for preview line
+              // Note: Tool check happens inside useCentralizedMouseHandlers via isInteractiveTool()
+              onDrawingHover={drawingHandlersRef.current?.onDrawingHover}
               onMouseMove={(screenPoint) => {
                 setMouseCss(screenPoint);
 
@@ -1741,17 +1675,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 setMouseCss(screenPos);
                 setMouseWorld(worldPos);
 
-                // 🎯 FIX: Call onDrawingHover για preview phase rendering
-                // 🏢 ENTERPRISE (2026-01-26): Measurement tools use the same drawing system
-                const isDrawingTool = activeTool === 'line' || activeTool === 'polyline' || activeTool === 'polygon'
-                  || activeTool === 'rectangle' || activeTool === 'circle';
-                const isMeasurementTool = activeTool === 'measure-distance' ||
-                                           activeTool === 'measure-area' ||
-                                           activeTool === 'measure-angle';
-
-                if ((isDrawingTool || isMeasurementTool) && worldPos && drawingHandlersRef.current?.onDrawingHover) {
-                  // 🔍 DEBUG: Uncomment below line to debug hover calls (very verbose!)
-                  // console.log('🖱️ onDrawingHover called:', { activeTool, worldPos });
+                // 🏢 ENTERPRISE (2026-01-26): ADR-038 - Call onDrawingHover for preview line
+                // Using centralized isInDrawingMode (Single Source of Truth)
+                if (isInDrawingMode(activeTool, overlayMode) && worldPos && drawingHandlersRef.current?.onDrawingHover) {
                   drawingHandlersRef.current.onDrawingHover(worldPos);
                 }
               }}
