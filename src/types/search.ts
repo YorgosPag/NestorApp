@@ -31,6 +31,8 @@ export const SEARCH_ENTITY_TYPES = {
   UNIT: 'unit',
   CONTACT: 'contact',
   FILE: 'file',
+  PARKING: 'parking',
+  STORAGE: 'storage',
 } as const;
 
 export type SearchEntityType = typeof SEARCH_ENTITY_TYPES[keyof typeof SEARCH_ENTITY_TYPES];
@@ -144,6 +146,18 @@ export interface SearchDocument {
 
   /** Last indexing timestamp */
   indexedAt: Timestamp;
+
+  /**
+   * 🏢 ENTERPRISE: Raw entity data for card display
+   * Stores floor, area, price, etc. for stats display in search results
+   * @see ADR-029 Global Search v1
+   */
+  metadata?: {
+    floor?: string | number;
+    area?: number;
+    price?: number;
+    type?: string;
+  };
 }
 
 /**
@@ -181,6 +195,19 @@ export interface SearchQueryParams {
 }
 
 /**
+ * Search result stat item for display in cards.
+ * Matches the StatItem interface from design system.
+ */
+export interface SearchResultStat {
+  /** Stat label */
+  label: string;
+  /** Stat value */
+  value: string;
+  /** Icon key from NAVIGATION_ENTITIES (e.g., 'floor', 'area', 'price') */
+  iconKey?: string;
+}
+
+/**
  * Single search result returned by the API.
  */
 export interface SearchResult {
@@ -198,6 +225,20 @@ export interface SearchResult {
 
   /** Navigation href */
   href: string;
+
+  /**
+   * 🏢 ENTERPRISE: Entity status for badge display
+   * e.g., 'available', 'sold', 'reserved' for parking/storage
+   * @see ADR-029 Global Search v1
+   */
+  status?: string;
+
+  /**
+   * 🏢 ENTERPRISE: Optional stats for display (floor, area, price, etc.)
+   * Used by ListCard to show additional info like ParkingListCard does
+   * @see ADR-029 Global Search v1
+   */
+  stats?: SearchResultStat[];
 }
 
 /**
@@ -267,6 +308,21 @@ export type TitleFieldConfig = string | ((doc: Record<string, unknown>) => strin
 export type AudienceFieldConfig = SearchAudience | ((doc: Record<string, unknown>) => SearchAudience);
 
 /**
+ * Stats field configuration for search results.
+ * Maps document fields to display stats.
+ */
+export interface SearchStatsFieldConfig {
+  /** Document field to read value from */
+  field: string;
+  /** Label for the stat (i18n key or literal) */
+  label: string;
+  /** Icon key from NAVIGATION_ENTITIES */
+  iconKey: string;
+  /** Optional formatter: 'floor' | 'area' | 'currency' | 'number' */
+  formatter?: 'floor' | 'area' | 'currency' | 'number';
+}
+
+/**
  * Index configuration for a searchable entity type.
  *
  * @enterprise Centralized configuration pattern
@@ -295,6 +351,13 @@ export interface SearchIndexConfig {
 
   /** Route template with {id} placeholder */
   routeTemplate: string;
+
+  /**
+   * 🏢 ENTERPRISE: Optional stats fields for card display
+   * Used for parking, storage, units to show floor/area/price
+   * @see ADR-029 Global Search v1
+   */
+  statsFields?: SearchStatsFieldConfig[];
 }
 
 /**

@@ -28,9 +28,11 @@ import {
   isSearchEntityType,
   type SearchEntityType,
   type SearchResult,
+  type SearchResultStat,
   type SearchDocument,
   type SearchAuditMetadata,
 } from '@/types/search';
+import { getSearchIndexConfig, extractStats } from '@/config/search-index-config';
 
 // =============================================================================
 // TYPES
@@ -107,17 +109,40 @@ function generateSearchPrefixes(text: string): string[] {
 
 /**
  * Transform SearchDocument to SearchResult.
+ * 🏢 ENTERPRISE: Includes stats and status for card display
  *
  * @param doc - SearchDocument from Firestore
  * @returns SearchResult for API response
  */
 function transformToSearchResult(doc: SearchDocument): SearchResult {
+  // 🏢 ENTERPRISE: Extract stats from metadata if available
+  let stats: SearchResultStat[] | undefined;
+
+  if (doc.metadata) {
+    const config = getSearchIndexConfig(doc.entityType);
+    if (config) {
+      // Convert metadata to Record<string, unknown> for extractStats
+      const metadataRecord: Record<string, unknown> = {
+        floor: doc.metadata.floor,
+        area: doc.metadata.area,
+        price: doc.metadata.price,
+        type: doc.metadata.type,
+      };
+      const extractedStats = extractStats(metadataRecord, config);
+      if (extractedStats.length > 0) {
+        stats = extractedStats;
+      }
+    }
+  }
+
   return {
     entityType: doc.entityType,
     entityId: doc.entityId,
     title: doc.title,
     subtitle: doc.subtitle,
     href: doc.links.href,
+    status: doc.status, // 🏢 ENTERPRISE: Include status for badge display
+    stats,
   };
 }
 

@@ -21,21 +21,27 @@
 
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Search, X, AlertCircle } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { AlertCircle, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 import { useGlobalSearch } from '@/hooks/useGlobalSearch';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized UI components
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { SearchInput } from '@/components/ui/search';
 import {
   SearchResultItem,
   SearchResultGroup,
@@ -71,7 +77,25 @@ const ENTITY_DISPLAY_ORDER: SearchEntityType[] = [
   SEARCH_ENTITY_TYPES.BUILDING,
   SEARCH_ENTITY_TYPES.UNIT,
   SEARCH_ENTITY_TYPES.FILE,
+  SEARCH_ENTITY_TYPES.PARKING,
+  SEARCH_ENTITY_TYPES.STORAGE,
 ];
+
+/**
+ * 🏢 ENTERPRISE: Centralized keyboard hint styling
+ * Single source of truth for kbd element appearance in search dialog
+ *
+ * @design Based on macOS/Windows keyboard shortcut UI patterns
+ * @see SAP Fiori, Salesforce Lightning Design System kbd patterns
+ */
+const KBD_STYLES = {
+  /** Base classes for all kbd elements */
+  base: 'inline-flex items-center justify-center font-medium bg-muted border rounded',
+  /** Small kbd for arrow keys and single characters */
+  sm: 'min-w-[1.5rem] h-6 px-1.5 text-xs',
+  /** Medium kbd for text labels like "ESC" */
+  md: 'min-w-[2rem] h-7 px-2 text-xs',
+} as const;
 
 // =============================================================================
 // COMPONENT
@@ -105,11 +129,13 @@ export function GlobalSearchDialog({
   const { t } = useTranslation('common');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
+  const typography = useTypography();
+  const borders = useBorderTokens();
 
   // === State ===
   const [internalOpen, setInternalOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Determine if controlled or uncontrolled
   const isControlled = controlledOpen !== undefined;
@@ -218,7 +244,7 @@ export function GlobalSearchDialog({
         case 'Enter':
           event.preventDefault();
           if (flatResults[selectedIndex]) {
-            handleResultClick(flatResults[selectedIndex]);
+            handleResultClick();
             // Navigation handled by SearchResultItem
           }
           break;
@@ -236,17 +262,6 @@ export function GlobalSearchDialog({
   useKeyboardShortcut('k', openDialog);
 
   // === Effects ===
-
-  // Focus input when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      // Small delay to ensure dialog is rendered
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
 
   // Reset selected index when results change
   useEffect(() => {
@@ -302,12 +317,16 @@ export function GlobalSearchDialog({
   const renderEmptyState = () => {
     if (query.length < SEARCH_CONFIG.MIN_QUERY_LENGTH) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Search className={cn(iconSizes.lg, 'text-muted-foreground/40 mb-3')} />
-          <p className="text-sm text-muted-foreground">
+        <div className={cn(
+          'flex flex-col items-center justify-center text-center',
+          // py-12 = 48px = 2xl spacing
+          spacing.padding.y['2xl']
+        )}>
+          <Search className={cn(iconSizes.lg, 'text-muted-foreground/40', spacing.margin.bottom.sm)} />
+          <p className={cn(typography.body.sm, 'text-muted-foreground')}>
             {t('search.hints.startTyping', 'Πληκτρολογήστε για αναζήτηση...')}
           </p>
-          <p className="text-xs text-muted-foreground/60 mt-1">
+          <p className={cn(typography.body.xs, 'text-muted-foreground/60', spacing.margin.top.xs)}>
             {t('search.hints.minChars', 'Τουλάχιστον {{count}} χαρακτήρες', { count: SEARCH_CONFIG.MIN_QUERY_LENGTH })}
           </p>
         </div>
@@ -316,12 +335,15 @@ export function GlobalSearchDialog({
 
     if (!isLoading && totalResults === 0 && !error) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Search className={cn(iconSizes.lg, 'text-muted-foreground/40 mb-3')} />
-          <p className="text-sm text-muted-foreground">
+        <div className={cn(
+          'flex flex-col items-center justify-center text-center',
+          spacing.padding.y['2xl']
+        )}>
+          <Search className={cn(iconSizes.lg, 'text-muted-foreground/40', spacing.margin.bottom.sm)} />
+          <p className={cn(typography.body.sm, 'text-muted-foreground')}>
             {t('search.noResults', 'Δεν βρέθηκαν αποτελέσματα')}
           </p>
-          <p className="text-xs text-muted-foreground/60 mt-1">
+          <p className={cn(typography.body.xs, 'text-muted-foreground/60', spacing.margin.top.xs)}>
             {t('search.tryDifferent', 'Δοκιμάστε διαφορετική αναζήτηση')}
           </p>
         </div>
@@ -338,7 +360,20 @@ export function GlobalSearchDialog({
     if (!error) return null;
 
     return (
-      <div className="flex items-center gap-2 px-4 py-3 text-sm text-destructive bg-destructive/10 rounded-md mx-3 my-2">
+      <div className={cn(
+        'flex items-center',
+        // Centralized spacing
+        spacing.gap.sm, // gap-2
+        spacing.padding.x.md, // px-4
+        'py-3', // py-3 = 12px (not in tokens, keeping for visual consistency)
+        // Centralized typography & colors
+        typography.body.sm,
+        'text-destructive bg-destructive/10',
+        // Centralized borders
+        borders.radiusClass.md,
+        // Margins (mx-3 my-2 are micro values, keeping hardcoded)
+        'mx-3 my-2'
+      )}>
         <AlertCircle className={iconSizes.sm} />
         <span>{error}</span>
       </div>
@@ -349,7 +384,12 @@ export function GlobalSearchDialog({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
         className={cn(
-          'max-w-2xl p-0 gap-0 overflow-hidden',
+          // Layout constraints (max-w-2xl is semantic for dialog width)
+          'max-w-2xl',
+          // Centralized spacing
+          spacing.padding.none,
+          spacing.gap.none,
+          // Centralized colors
           colors.bg.primary
         )}
         onKeyDown={handleKeyDown}
@@ -359,90 +399,97 @@ export function GlobalSearchDialog({
           {t('search.globalSearch', 'Παγκόσμια Αναζήτηση')}
         </DialogTitle>
 
-        {/* Search Input */}
-        <div className={cn('flex items-center gap-3 px-4 py-3 border-b', colors.border.default)}>
-          {isLoading ? (
-            <Spinner size="small" className="text-muted-foreground" />
-          ) : (
-            <Search className={cn(iconSizes.md, 'text-muted-foreground')} />
+        {/* 🏢 ENTERPRISE: Centralized Search Input */}
+        <div className={cn(
+          'relative',
+          // Centralized spacing
+          spacing.padding.x.md, // px-4
+          'py-3', // py-3 = 12px (not in tokens, keeping for visual consistency)
+          // Centralized borders
+          borders.quick.borderB
+        )}>
+          {/* Loading indicator overlay */}
+          {isLoading && (
+            <div className="absolute left-7 top-1/2 -translate-y-1/2 z-10">
+              <Spinner size="small" className="text-muted-foreground" />
+            </div>
           )}
 
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('search.placeholder', 'Αναζήτηση σε έργα, επαφές, κτίρια...')}
-            className={cn(
-              'flex-1 bg-transparent border-0 outline-none text-base',
-              colors.text.primary,
-              'placeholder:text-muted-foreground'
-            )}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-          />
-
-          {query && (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery('');
-                inputRef.current?.focus();
-              }}
+          <div className="flex items-center gap-3">
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder={t('search.placeholder', 'Αναζήτηση σε έργα, επαφές, κτίρια...')}
+              debounceMs={0} // Debouncing handled by useGlobalSearch hook
+              showClearButton={true}
+              onClear={() => setQuery('')}
               className={cn(
-                'p-1 rounded-md text-muted-foreground',
-                TRANSITION_PRESETS.STANDARD_COLORS,
-                'hover:text-foreground hover:bg-muted'
+                'flex-1',
+                // Hide built-in icon when loading
+                isLoading && '[&>svg:first-child]:opacity-0'
               )}
-              aria-label={t('buttons.clear', 'Καθαρισμός')}
-            >
-              <X className={iconSizes.sm} />
-            </button>
-          )}
+            />
 
-          {/* Keyboard shortcut hint */}
-          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground bg-muted rounded border">
-            {t('search.hints.escKey', 'ESC')}
-          </kbd>
+            {/* 🏢 ENTERPRISE: Keyboard shortcut hint using centralized KBD_STYLES */}
+            <kbd className={cn(
+              'hidden sm:inline-flex shrink-0',
+              KBD_STYLES.base,
+              KBD_STYLES.md,
+              'text-muted-foreground'
+            )}>
+              {t('search.hints.escKey', 'ESC')}
+            </kbd>
+          </div>
         </div>
 
-        {/* Results Area */}
-        <div
-          className={cn(
-            'max-h-[60vh] overflow-y-auto p-2',
-            TRANSITION_PRESETS.SMOOTH_ALL
-          )}
+        {/* Results Area - 🏢 ENTERPRISE: Using ScrollArea like ParkingsList for proper hover effects */}
+        <ScrollArea
+          className="max-h-[60vh]"
           role="listbox"
           aria-label={t('search.results', 'Αποτελέσματα αναζήτησης')}
         >
-          {renderError()}
-          {renderEmptyState()}
-          {totalResults > 0 && renderResults()}
-        </div>
+          <div className={cn(
+            // 🏢 ENTERPRISE: Same pattern as ParkingsList - p-2 space-y-2
+            spacing.padding.sm, // p-2
+            'space-y-2',
+            // Centralized transitions
+            TRANSITION_PRESETS.SMOOTH_ALL
+          )}>
+            {renderError()}
+            {renderEmptyState()}
+            {totalResults > 0 && renderResults()}
+          </div>
+        </ScrollArea>
 
         {/* Footer with keyboard hints */}
         {totalResults > 0 && (
           <div
             className={cn(
-              'flex items-center justify-between px-4 py-2 border-t text-xs text-muted-foreground',
-              colors.border.default
+              'flex items-center justify-between',
+              // Centralized spacing
+              spacing.padding.x.md, // px-4
+              spacing.padding.y.sm, // py-2
+              // Centralized borders
+              borders.quick.borderT,
+              // Centralized typography
+              typography.body.xs,
+              'text-muted-foreground'
             )}
           >
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-medium">↑</kbd>
-                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-medium">↓</kbd>
-                <span className="ml-1">{t('search.navigate', 'πλοήγηση')}</span>
+            <div className={cn('flex items-center', spacing.gap.md)}>
+              {/* 🏢 ENTERPRISE: Using centralized KBD_STYLES for consistent keyboard hints */}
+              <span className={cn('flex items-center', spacing.gap.xs)}>
+                <kbd className={cn(KBD_STYLES.base, KBD_STYLES.sm)}>↑</kbd>
+                <kbd className={cn(KBD_STYLES.base, KBD_STYLES.sm)}>↓</kbd>
+                <span className={spacing.margin.left.xs}>{t('search.navigate', 'πλοήγηση')}</span>
               </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-medium">↵</kbd>
-                <span className="ml-1">{t('search.select', 'επιλογή')}</span>
+              <span className={cn('flex items-center', spacing.gap.xs)}>
+                <kbd className={cn(KBD_STYLES.base, KBD_STYLES.sm)}>↵</kbd>
+                <span className={spacing.margin.left.xs}>{t('search.select', 'επιλογή')}</span>
               </span>
             </div>
             <span>
-              {t('search.resultsCount', '{{count}} αποτελέσματα', { count: totalResults })}
+              {t('search.resultsCount', { count: totalResults, defaultValue: `${totalResults} αποτελέσματα` })}
             </span>
           </div>
         )}

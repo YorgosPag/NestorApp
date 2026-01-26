@@ -471,30 +471,31 @@ export class LayerRenderer {
 
     // Convert world coordinates to screen coordinates
     // 🏢 ENTERPRISE (2026-01-26): Handle real-time drag preview for MULTI-GRIP vertices
-    // ADR-031: Multi-Grip Selection System - calculates delta from first grip and applies to all
+    // Pattern: Autodesk Inventor - Uses IMMUTABLE original positions + computed delta
+    // This ensures preview is always accurate, even if Firestore updates during drag
     const selectedVertexIndices = layer.selectedGripIndices ??
       (layer.selectedGripType === 'vertex' && layer.selectedGripIndex !== undefined ? [layer.selectedGripIndex] : []);
 
-    // 🏢 ENTERPRISE: Calculate drag delta from first selected grip (all grips move by same delta)
-    let dragDelta: Point2D | null = null;
-    if (layer.isDragging && layer.dragPreviewPosition && selectedVertexIndices.length > 0) {
-      const firstSelectedIndex = selectedVertexIndices[0];
-      const originalVertex = polygon.vertices[firstSelectedIndex];
-      if (originalVertex) {
-        dragDelta = {
-          x: layer.dragPreviewPosition.x - originalVertex.x,
-          y: layer.dragPreviewPosition.y - originalVertex.y
-        };
-      }
-    }
+    // 🏢 ENTERPRISE: Get drag state with original positions
+    const dragState = layer.isDragging ? layer.dragState : null;
 
     let screenVertices = polygon.vertices.map((vertex: Point2D, index: number) => {
       // Check if this vertex is being dragged (for multi-grip vertex drag preview)
-      if (dragDelta && selectedVertexIndices.includes(index)) {
-        // Apply the same drag delta to all selected vertices
+      if (dragState && selectedVertexIndices.includes(index)) {
+        // 🏢 CRITICAL: Use ORIGINAL position (immutable) + delta, NOT current vertex position
+        // This prevents visual jumping when Firestore updates during drag
+        const originalPosition = dragState.originalPositions.get(index);
+        if (originalPosition) {
+          const previewPosition: Point2D = {
+            x: originalPosition.x + dragState.delta.x,
+            y: originalPosition.y + dragState.delta.y
+          };
+          return CoordinateTransforms.worldToScreen(previewPosition, transform, viewport);
+        }
+        // Fallback: use current vertex + delta (legacy behavior)
         const previewPosition: Point2D = {
-          x: vertex.x + dragDelta.x,
-          y: vertex.y + dragDelta.y
+          x: vertex.x + dragState.delta.x,
+          y: vertex.y + dragState.delta.y
         };
         return CoordinateTransforms.worldToScreen(previewPosition, transform, viewport);
       }

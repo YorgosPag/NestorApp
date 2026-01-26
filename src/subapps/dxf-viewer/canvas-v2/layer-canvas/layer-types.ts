@@ -35,9 +35,24 @@ export interface ColorLayer {
   // 🏢 NEW: Arrays for multi-grip selection
   selectedGripIndices?: number[];  // Indices of selected vertex grips
   selectedEdgeMidpointIndices?: number[];  // Indices of selected edge midpoint grips
-  // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview
-  dragPreviewPosition?: Point2D; // Current position during drag for real-time feedback
-  isDragging?: boolean;         // True when grip is being dragged
+  // 🏢 ENTERPRISE (2026-01-26): Real-time drag preview for MULTI-GRIP movement
+  // Pattern: Autodesk Inventor/Fusion 360 - Grip drag state encapsulation
+  isDragging?: boolean;                    // True when grip is being dragged
+  /** @deprecated Use dragState instead */
+  dragPreviewPosition?: Point2D;           // Legacy: Current position during drag
+  /** @deprecated Use dragState instead */
+  dragDelta?: Point2D;                     // Legacy: Delta from start position
+  /**
+   * 🏢 ENTERPRISE: Complete drag state for multi-grip movement
+   * Contains all information needed for accurate preview rendering
+   * Pattern: Autodesk - Immutable original positions + computed delta
+   */
+  dragState?: {
+    /** Delta from drag start point - applies to ALL dragging vertices */
+    delta: Point2D;
+    /** Original positions for each dragging vertex index - IMMUTABLE during drag */
+    originalPositions: Map<number, Point2D>;
+  };
 }
 
 export interface LayerPolygon {

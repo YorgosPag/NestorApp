@@ -136,6 +136,9 @@ export interface ListCardProps {
   /** Keyboard handler for accessibility */
   onKeyDown?: (event: React.KeyboardEvent) => void;
 
+  /** 🏢 ENTERPRISE: Mouse enter handler for keyboard navigation (ADR-029 Global Search) */
+  onMouseEnter?: () => void;
+
   // ==========================================================================
   // FAVORITES
   // ==========================================================================
@@ -188,4 +191,22 @@ export interface ListCardProps {
 
   /** Tab index */
   tabIndex?: number;
+
+  /**
+   * 🏢 ENTERPRISE: Role for ARIA semantics (ADR-029 Global Search)
+   * - 'button' (default): Standard clickable card
+   * - 'option': For listbox items (e.g., search results)
+   */
+  role?: 'button' | 'option';
+
+  /**
+   * 🏢 ENTERPRISE: Allow hover effects to extend beyond card boundaries
+   * When true, removes overflow-hidden to allow scale/shadow hover effects
+   * to be fully visible. Use in contexts like search dialogs where cards
+   * need visual feedback that extends beyond their bounds.
+   *
+   * @default false
+   * @see ADR-029 Global Search - Card hover effects
+   */
+  allowOverflow?: boolean;
 }

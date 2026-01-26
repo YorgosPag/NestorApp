@@ -1607,6 +1607,8 @@
     "tryDifferent": "Try a different search",
     "results": "Search results",
     "resultsCount": "{{count}} results",
+    "resultsCount_one": "{{count}} result",
+    "resultsCount_other": "{{count}} results",
     "navigate": "navigate",
     "select": "select",
     "hints": {
@@ -1619,7 +1621,9 @@
       "building": "Building",
       "unit": "Unit",
       "contact": "Contact",
-      "file": "File"
+      "file": "File",
+      "parking": "Parking",
+      "storage": "Storage"
     }
   }
 }

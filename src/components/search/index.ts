@@ -17,12 +17,14 @@ export type { GlobalSearchDialogProps } from './GlobalSearchDialog';
 export {
   SearchResultItem,
   SearchResultGroup,
-  ENTITY_ICONS,
   ENTITY_LABELS,
-  ENTITY_COLORS,
   ENTITY_LABEL_KEYS,
+  SEARCH_TO_NAVIGATION_ENTITY,
 } from './SearchResultItem';
 export type {
   SearchResultItemProps,
   SearchResultGroupProps,
 } from './SearchResultItem';
+
+// 🏢 ENTERPRISE: Entity icons/colors are now centralized in NAVIGATION_ENTITIES
+// Use: import { NAVIGATION_ENTITIES } from '@/components/navigation/config';

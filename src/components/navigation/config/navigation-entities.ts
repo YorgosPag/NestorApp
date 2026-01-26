@@ -49,7 +49,8 @@ import {
   Receipt,
   User,
   Building2,
-  Landmark
+  Landmark,
+  FileText, // 🏢 ADR-029: Global Search
 } from 'lucide-react';
 
 // =============================================================================
@@ -73,9 +74,11 @@ export type NavigationEntityType =
   | 'phone'
   | 'email'
   | 'vat'
+  | 'contact' // 🏢 ADR-029: Generic contact for Global Search
   | 'contactIndividual'
   | 'contactCompany'
-  | 'contactService';
+  | 'contactService'
+  | 'file'; // 🏢 ADR-029: File entity for Global Search
 
 /**
  * Navigation action types - for toolbar and context menu actions
@@ -263,6 +266,23 @@ export const NAVIGATION_ENTITIES: NavigationEntitiesConfig = {
     label: 'navigation.entities.contactService.label',
     pluralLabel: 'navigation.entities.contactService.plural',
     description: 'navigation.entities.contactService.description'
+  },
+  // =========================================================================
+  // 🏢 ADR-029: Global Search Entity Types
+  // =========================================================================
+  contact: {
+    icon: User,
+    color: 'text-violet-500',
+    label: 'navigation.entities.contact.label',
+    pluralLabel: 'navigation.entities.contact.plural',
+    description: 'navigation.entities.contact.description'
+  },
+  file: {
+    icon: FileText,
+    color: 'text-slate-500',
+    label: 'navigation.entities.file.label',
+    pluralLabel: 'navigation.entities.file.plural',
+    description: 'navigation.entities.file.description'
   }
 } as const;
 

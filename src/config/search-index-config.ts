@@ -116,6 +116,44 @@ export const SEARCH_INDEX_CONFIG: SearchIndexConfigMap = {
     requiredPermission: 'dxf:files:view' satisfies PermissionId,
     routeTemplate: '/files/{id}',
   },
+
+  // =========================================================================
+  // PARKING (ADR-029 Global Search v1)
+  // =========================================================================
+  [SEARCH_ENTITY_TYPES.PARKING]: {
+    collection: COLLECTIONS.PARKING_SPACES,
+    titleField: 'parkingNumber',
+    subtitleFields: ['type', 'status'],
+    searchableFields: ['parkingNumber', 'type', 'notes'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
+    routeTemplate: '/parking/{id}',
+    // 🏢 ENTERPRISE: Stats for card display (like ParkingListCard)
+    statsFields: [
+      { field: 'floor', label: 'parking.card.stats.level', iconKey: 'floor', formatter: 'floor' },
+      { field: 'area', label: 'parking.card.stats.area', iconKey: 'area', formatter: 'area' },
+    ],
+  },
+
+  // =========================================================================
+  // STORAGE (ADR-029 Global Search v1)
+  // =========================================================================
+  [SEARCH_ENTITY_TYPES.STORAGE]: {
+    collection: COLLECTIONS.STORAGE,
+    titleField: 'storageNumber',
+    subtitleFields: ['type', 'status'],
+    searchableFields: ['storageNumber', 'type', 'notes'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'buildings:buildings:view' satisfies PermissionId,
+    routeTemplate: '/storage/{id}',
+    // 🏢 ENTERPRISE: Stats for card display (like StorageListCard)
+    statsFields: [
+      { field: 'floor', label: 'storage.card.stats.level', iconKey: 'floor', formatter: 'floor' },
+      { field: 'area', label: 'storage.card.stats.area', iconKey: 'area', formatter: 'area' },
+    ],
+  },
 };
 
 // =============================================================================
@@ -204,6 +242,58 @@ export function buildSearchResultHref(
   entityId: string
 ): string {
   return config.routeTemplate.replace('{id}', entityId);
+}
+
+/**
+ * 🏢 ENTERPRISE: Extract stats from document using config.
+ * Used for parking/storage to show floor/area info in search results.
+ *
+ * @param doc - Document data
+ * @param config - Index configuration
+ * @returns Array of SearchResultStat objects
+ */
+export function extractStats(
+  doc: Record<string, unknown>,
+  config: SearchIndexConfig
+): Array<{ label: string; value: string; iconKey?: string }> {
+  if (!config.statsFields) return [];
+
+  return config.statsFields
+    .map((statConfig) => {
+      const rawValue = doc[statConfig.field];
+      if (rawValue === undefined || rawValue === null || rawValue === '') {
+        return null;
+      }
+
+      let formattedValue: string;
+
+      switch (statConfig.formatter) {
+        case 'floor':
+          // Format floor number (e.g., "0" → "Ισόγειο", "-1" → "Υπόγειο 1")
+          formattedValue = String(rawValue);
+          break;
+        case 'area':
+          // Format area with m² suffix
+          formattedValue = `${rawValue} m²`;
+          break;
+        case 'currency':
+          // Format as currency (basic)
+          formattedValue = `€${Number(rawValue).toLocaleString()}`;
+          break;
+        case 'number':
+          formattedValue = Number(rawValue).toLocaleString();
+          break;
+        default:
+          formattedValue = String(rawValue);
+      }
+
+      return {
+        label: statConfig.label,
+        value: formattedValue,
+        iconKey: statConfig.iconKey,
+      };
+    })
+    .filter((stat): stat is NonNullable<typeof stat> => stat !== null);
 }
 
 /**

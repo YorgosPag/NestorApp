@@ -1607,6 +1607,8 @@
     "tryDifferent": "Δοκιμάστε διαφορετική αναζήτηση",
     "results": "Αποτελέσματα αναζήτησης",
     "resultsCount": "{{count}} αποτελέσματα",
+    "resultsCount_one": "{{count}} αποτέλεσμα",
+    "resultsCount_other": "{{count}} αποτελέσματα",
     "navigate": "πλοήγηση",
     "select": "επιλογή",
     "hints": {
@@ -1619,7 +1621,9 @@
       "building": "Κτίριο",
       "unit": "Μονάδα",
       "contact": "Επαφή",
-      "file": "Αρχείο"
+      "file": "Αρχείο",
+      "parking": "Πάρκινγκ",
+      "storage": "Αποθήκη"
     }
   }
 }

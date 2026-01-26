@@ -81,6 +81,7 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
   isSelected = false,
   onClick,
   onKeyDown,
+  onMouseEnter,
   // Favorites
   isFavorite,
   onToggleFavorite,
@@ -91,11 +92,13 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
   hideIcon = false,
   hideStats = false,
   inlineBadges = false,
+  allowOverflow = false,
   className,
   // Accessibility
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
   tabIndex = 0,
+  role = 'button',
 }, ref) {
   // ==========================================================================
   // 🏢 CENTRALIZED HOOKS
@@ -154,7 +157,10 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
       ref={ref}
       className={cn(
         // Base styles using centralized tokens
-        'relative group cursor-pointer overflow-hidden w-full',
+        // 🏢 ENTERPRISE: overflow-hidden is conditional via allowOverflow prop
+        // When allowOverflow=true, hover effects (scale/shadow) can extend beyond card
+        'relative group cursor-pointer w-full',
+        !allowOverflow && 'overflow-hidden',
         quick.card,
         'border',
         // Spacing based on compact mode - 🏢 ENTERPRISE: Centralized spacing
@@ -169,7 +175,8 @@ export const ListCard = forwardRef<HTMLElement, ListCardProps>(function ListCard
       )}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      role="button"
+      onMouseEnter={onMouseEnter}
+      role={role}
       tabIndex={tabIndex}
       aria-label={ariaLabel || title}
       aria-describedby={ariaDescribedBy}

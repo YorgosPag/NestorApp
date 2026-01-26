@@ -429,32 +429,35 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         g => g.type === 'vertex' && g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index
       );
 
-      let newSelectedGrips: typeof selectedGrips;
-
       if (isShiftPressed) {
-        // Shift+Click: Toggle grip in selection
+        // 🏢 FIX (2026-01-26): Shift+Click = ONLY toggle selection, NO drag
+        // This allows building multi-selection without accidentally moving grips
         if (isGripAlreadySelected) {
           // Remove from selection
-          newSelectedGrips = selectedGrips.filter(
+          setSelectedGrips(selectedGrips.filter(
             g => !(g.type === 'vertex' && g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index)
-          );
+          ));
         } else {
           // Add to selection
-          newSelectedGrips = [...selectedGrips, clickedGrip];
+          setSelectedGrips([...selectedGrips, clickedGrip]);
         }
-        setSelectedGrips(newSelectedGrips);
-      } else {
-        // Regular click: Replace selection with this grip
-        newSelectedGrips = [clickedGrip];
-        setSelectedGrips(newSelectedGrips);
+        // 🏢 CRITICAL: Do NOT start dragging on Shift+Click
+        return;
       }
 
-      // 🏢 ENTERPRISE (2026-01-26): Start dragging ALL selected vertex grips
-      // Filter to only vertex grips (not edge-midpoints) for movement
-      const gripsToMove = (isShiftPressed && isGripAlreadySelected)
-        ? selectedGrips.filter(g => g.type === 'vertex' && !(g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index))
-        : (isShiftPressed ? [...selectedGrips.filter(g => g.type === 'vertex'), clickedGrip] : [clickedGrip]);
+      // 🏢 ENTERPRISE (2026-01-26): Regular click (no Shift)
+      // If clicking on already-selected grip: drag ALL selected grips
+      // If clicking on non-selected grip: replace selection and drag single grip
+      const gripsToMove = isGripAlreadySelected
+        ? selectedGrips.filter(g => g.type === 'vertex')  // Move all selected vertex grips
+        : [clickedGrip];  // Just the clicked grip
 
+      // Update selection if clicking on non-selected grip
+      if (!isGripAlreadySelected) {
+        setSelectedGrips([clickedGrip]);
+      }
+
+      // 🏢 ENTERPRISE (2026-01-26): Start dragging selected vertex grips
       if (gripsToMove.length > 0) {
         const overlayStore = overlayStoreRef.current;
         const draggingData = gripsToMove.map(grip => {
@@ -771,11 +774,33 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           selectedEdgeMidpointIndices: selectedGrips
             .filter(g => g.overlayId === overlay.id && g.type === 'edge-midpoint')
             .map(g => g.index),
-          // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview
+          // 🏢 ENTERPRISE (2026-01-26): Real-time drag preview for MULTI-GRIP movement
+          // Pattern: Autodesk Inventor - Immutable original positions + computed delta
+          isDragging: draggingVertex?.overlayId === overlay.id || draggingEdgeMidpoint?.overlayId === overlay.id,
+          // Legacy support
           dragPreviewPosition: (draggingVertex?.overlayId === overlay.id || draggingEdgeMidpoint?.overlayId === overlay.id)
             ? dragPreviewPosition ?? undefined
             : undefined,
-          isDragging: draggingVertex?.overlayId === overlay.id || draggingEdgeMidpoint?.overlayId === overlay.id,
+          // 🏢 ENTERPRISE: Complete drag state with original positions
+          dragState: (draggingVertices && draggingVertices.length > 0 && dragPreviewPosition)
+            ? (() => {
+                // Build original positions map for this overlay's dragging vertices
+                const originalPositions = new Map<number, Point2D>();
+                draggingVertices
+                  .filter(dv => dv.overlayId === overlay.id)
+                  .forEach(dv => {
+                    originalPositions.set(dv.vertexIndex, dv.originalPosition);
+                  });
+
+                // Calculate delta from first grip's start point
+                const delta = {
+                  x: dragPreviewPosition.x - draggingVertices[0].startPoint.x,
+                  y: dragPreviewPosition.y - draggingVertices[0].startPoint.y
+                };
+
+                return { delta, originalPositions };
+              })()
+            : undefined,
           polygons: [{
             id: `polygon_${overlay.id}`,
             vertices,

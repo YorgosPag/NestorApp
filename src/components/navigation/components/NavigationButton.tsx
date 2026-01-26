@@ -35,6 +35,21 @@ interface NavigationButtonProps {
   // 🔗 ENTERPRISE: Navigation to entity source page
   navigationHref?: string; // e.g., '/contacts/123' for companies
   navigationTooltip?: string; // e.g., 'Άνοιγμα στις Επαφές'
+
+  // 🏢 ENTERPRISE: Keyboard navigation support (ADR-029 Global Search)
+  onMouseEnter?: () => void; // For hover-based selection in lists
+  onKeyDown?: (event: React.KeyboardEvent) => void; // Custom keyboard handling
+
+  // 🏢 ENTERPRISE: Accessibility for listbox pattern
+  role?: 'option' | 'button'; // Default: 'button', use 'option' for listbox items
+  ariaSelected?: boolean; // For role="option" items
+  ariaLabel?: string; // Custom accessible label
+
+  // 🏢 ENTERPRISE: Additional styling
+  className?: string; // Merge with internal classes
+
+  // 🏢 ENTERPRISE: Entity type label badge (for search results)
+  entityTypeLabel?: string; // e.g., "ΕΡΓΟ", "ΕΠΑΦΗ" - displayed as badge on right
 }
 
 export function NavigationButton({
@@ -53,7 +68,18 @@ export function NavigationButton({
   warningText,
   // Navigation props
   navigationHref,
-  navigationTooltip
+  navigationTooltip,
+  // 🏢 ENTERPRISE: Keyboard navigation (ADR-029)
+  onMouseEnter,
+  onKeyDown,
+  // 🏢 ENTERPRISE: Accessibility
+  role = 'button',
+  ariaSelected,
+  ariaLabel,
+  // 🏢 ENTERPRISE: Styling
+  className,
+  // 🏢 ENTERPRISE: Entity type label
+  entityTypeLabel,
 }: NavigationButtonProps) {
   const router = useRouter();
   const baseClasses = cn(
@@ -103,12 +129,19 @@ export function NavigationButton({
 
   return (
     <button
+      type="button"
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onKeyDown={onKeyDown}
+      role={role}
+      aria-selected={role === 'option' ? ariaSelected : undefined}
+      aria-label={ariaLabel}
       className={cn(
         baseClasses,
         stateClasses,
         'relative group',
-        variant === 'compact' ? 'p-3' : 'p-4'
+        variant === 'compact' ? 'p-3' : 'p-4',
+        className
       )}
     >
       {/* 🔗 ENTERPRISE: Navigation Icon - Enterprise Pattern */}
@@ -125,7 +158,7 @@ export function NavigationButton({
               {subtitle}
             </div>
           )}
-          {(extraInfo || effectiveBadgeStatus) && (
+          {(extraInfo || effectiveBadgeStatus || entityTypeLabel) && (
             <div className="flex items-center justify-between gap-2 mt-1">
               {extraInfo ? (
                 <div className={cn(
@@ -138,6 +171,17 @@ export function NavigationButton({
                 </div>
               ) : (
                 <div className="flex-1" aria-hidden="true" />
+              )}
+              {/* 🏢 ENTERPRISE: Entity type label badge (ADR-029 Global Search) */}
+              {entityTypeLabel && (
+                <span className={cn(
+                  'shrink-0 uppercase tracking-wider',
+                  'text-[10px] font-medium',
+                  'px-2 py-0.5',
+                  'rounded bg-muted text-muted-foreground'
+                )}>
+                  {entityTypeLabel}
+                </span>
               )}
               {effectiveBadgeStatus && (
                 <div className="shrink-0">

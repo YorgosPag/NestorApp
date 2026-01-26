@@ -27,15 +27,16 @@ import { db as getAdminDb } from '@/lib/firebase-admin';
 import { FieldValue, type Firestore as FirebaseFirestoreType, type Query, type DocumentData } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { apiSuccess } from '@/lib/api/ApiErrorHandler';
+import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
  * Create error response with standard format.
+ * 🏢 ENTERPRISE: Uses literal type for success to satisfy TypeScript strict mode.
  */
 function createErrorResponse(message: string, status: number) {
   return NextResponse.json(
-    { success: false, error: message },
+    { success: false as const, error: message },
     { status }
   );
 }
@@ -50,6 +51,8 @@ const SEARCH_ENTITY_TYPES = {
   UNIT: 'unit',
   CONTACT: 'contact',
   FILE: 'file',
+  PARKING: 'parking',
+  STORAGE: 'storage',
 } as const;
 
 type SearchEntityType = typeof SEARCH_ENTITY_TYPES[keyof typeof SEARCH_ENTITY_TYPES];
@@ -80,6 +83,16 @@ interface SearchDocumentInput {
     href: string;
     routeParams: Record<string, string>;
   };
+  /**
+   * 🏢 ENTERPRISE: Raw entity metadata for stats display
+   * Used for floor, area, price in parking/storage cards
+   */
+  metadata?: {
+    floor?: string | number;
+    area?: number;
+    price?: number;
+    type?: string;
+  };
 }
 
 interface BackfillRequest {
@@ -94,6 +107,11 @@ interface BackfillStats {
   indexed: number;
   skipped: number;
   errors: number;
+  skippedDetails?: Array<{
+    id: string;
+    reason: string;
+    fields: Record<string, unknown>;
+  }>;
 }
 
 interface BackfillResponse {
@@ -103,6 +121,67 @@ interface BackfillResponse {
   duration: number;
   timestamp: string;
 }
+
+/**
+ * GET response type for backfill system status.
+ */
+interface BackfillStatusResponse {
+  system: {
+    name: string;
+    version: string;
+    security: string;
+  };
+  currentIndex: {
+    collection: string;
+    totalDocuments: number;
+    byEntityType: Record<string, number>;
+  };
+  availableTypes: SearchEntityType[];
+  usage: {
+    dryRun: string;
+    execute: string;
+    filterByType: string;
+    filterByCompany: string;
+  };
+}
+
+/**
+ * PATCH response type for migration.
+ */
+interface MigrationResponse {
+  mode: string;
+  stats: MigrationStats;
+  duration: number;
+  timestamp: string;
+}
+
+/**
+ * Standard error response type.
+ */
+interface ErrorResponse {
+  success: false;
+  error: string;
+}
+
+// =============================================================================
+// 🏢 ENTERPRISE: API Response Union Types
+// Provides type-safe responses for withAuth middleware
+// =============================================================================
+
+/**
+ * POST handler response type
+ */
+type BackfillApiResponse = ApiSuccessResponse<BackfillResponse> | ErrorResponse;
+
+/**
+ * GET handler response type
+ */
+type BackfillStatusApiResponse = ApiSuccessResponse<BackfillStatusResponse> | ErrorResponse;
+
+/**
+ * PATCH handler response type
+ */
+type MigrationApiResponse = ApiSuccessResponse<MigrationResponse> | ErrorResponse;
 
 // =============================================================================
 // INDEX CONFIG
@@ -178,6 +257,31 @@ const SEARCH_INDEX_CONFIG: Record<SearchEntityType, SearchIndexConfig> = {
     requiredPermission: 'dxf:files:view',
     routeTemplate: '/files?fileId={id}&selected=true',
   },
+  parking: {
+    collection: COLLECTIONS.PARKING_SPACES,
+    titleField: 'number',  // 🏢 Fixed: parking spots have 'number' field (e.g., 'P-001')
+    subtitleFields: ['floor', 'type'],  // Fixed: parking has 'floor' not 'level'
+    searchableFields: ['number', 'type', 'floor', 'location', 'notes'],  // Fixed field names
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'spaces:parking:view',
+    routeTemplate: '/spaces/parking?parkingId={id}&selected=true',
+  },
+  storage: {
+    collection: COLLECTIONS.STORAGE,
+    titleField: (doc) => {
+      const name = doc.name as string | undefined;
+      const code = doc.code as string | undefined;
+      const identifier = doc.identifier as string | undefined;
+      return name || code || identifier || 'Unknown';
+    },
+    subtitleFields: ['floor', 'type'],
+    searchableFields: ['name', 'code', 'identifier', 'floor', 'notes'],
+    statusField: 'status',
+    audience: SEARCH_AUDIENCE.INTERNAL,
+    requiredPermission: 'spaces:storage:view',
+    routeTemplate: '/spaces/storages?storageId={id}&selected=true',
+  },
 };
 
 // =============================================================================
@@ -197,6 +301,33 @@ function normalizeSearchText(text: string): string {
     result = result.replace(new RegExp(accented, 'g'), base);
   }
   return result.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * 🏢 ENTERPRISE: Remove undefined values recursively from object.
+ * Firestore throws error on undefined values.
+ */
+function removeUndefinedValues<T extends Record<string, unknown>>(obj: T): T {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) {
+      continue; // Skip undefined
+    }
+
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      // Recursively clean nested objects
+      const cleaned = removeUndefinedValues(value as Record<string, unknown>);
+      // Only include if object has keys after cleaning
+      if (Object.keys(cleaned).length > 0) {
+        result[key] = cleaned;
+      }
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return result as T;
 }
 
 function generateSearchPrefixes(text: string, maxPrefixLength = 5): string[] {
@@ -271,60 +402,137 @@ async function resolveTenantId(
   // 🏢 ENTERPRISE: Google/Microsoft pattern - inherit tenant from creator
   const createdBy = data.createdBy as string | undefined;
   if (createdBy) {
-    // Check cache first
+    // Check cache first - but only return if we found a valid companyId
+    // 🏢 FIX: If cache has null, continue to next strategies instead of returning null
     if (userCompanyCache.has(createdBy)) {
-      return userCompanyCache.get(createdBy) || null;
-    }
-
-    try {
-      // Lookup user's company from their custom claims or user doc
-      const userDoc = await adminDb.collection('users').doc(createdBy).get();
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        const userCompanyId = userData?.companyId as string | undefined;
-        userCompanyCache.set(createdBy, userCompanyId || null);
-        if (userCompanyId) return userCompanyId;
-      } else {
+      const cachedCompanyId = userCompanyCache.get(createdBy);
+      if (cachedCompanyId) {
+        return cachedCompanyId; // Only return if we have a valid companyId
+      }
+      // If cachedCompanyId is null, continue to Strategy 3/4 (don't return!)
+    } else {
+      // Not in cache - lookup user
+      try {
+        // Lookup user's company from their custom claims or user doc
+        const userDoc = await adminDb.collection('users').doc(createdBy).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          const userCompanyId = userData?.companyId as string | undefined;
+          userCompanyCache.set(createdBy, userCompanyId || null);
+          if (userCompanyId) return userCompanyId;
+        } else {
+          userCompanyCache.set(createdBy, null);
+        }
+      } catch (error) {
+        console.warn(`   ⚠️ Failed to lookup user ${createdBy}:`, error);
         userCompanyCache.set(createdBy, null);
       }
-    } catch (error) {
-      console.warn(`   ⚠️ Failed to lookup user ${createdBy}:`, error);
-      userCompanyCache.set(createdBy, null);
     }
   }
 
-  // Strategy 3: Project lookup (for units without direct companyId)
-  const projectId = data.project as string | undefined;
-  if (projectId) {
+  // Strategy 3: Project lookup (for units, parking, storage without direct companyId)
+  // Supports both 'project' field (units) and 'projectId' field (parking/storage)
+  // 🏢 ENTERPRISE: Handles both prefixed (project_xxx) and non-prefixed (xxx) IDs
+  const projectRef = (data.project as string | undefined) || (data.projectId as string | undefined);
+  console.log(`   🔍 [DEBUG] Strategy 3: projectRef=${projectRef || 'NONE'}, entityType=${entityType}`);
+  if (projectRef) {
     try {
-      const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+      // Try with original ID first
+      console.log(`   🔍 [DEBUG] Looking up project: ${COLLECTIONS.PROJECTS}/${projectRef}`);
+      let projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectRef).get();
+      console.log(`   🔍 [DEBUG] Project lookup result: exists=${projectDoc.exists}`);
+
+      // 🏢 ENTERPRISE: If not found and has prefix, try without prefix (legacy support)
+      if (!projectDoc.exists && projectRef.startsWith('project_')) {
+        const unprefixedId = projectRef.replace('project_', '');
+        console.log(`   🔄 [LEGACY] Trying unprefixed project ID: ${unprefixedId}`);
+        projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(unprefixedId).get();
+        console.log(`   🔍 [DEBUG] Unprefixed lookup result: exists=${projectDoc.exists}`);
+        if (projectDoc.exists) {
+          console.warn(`   ⚠️ [MIGRATION NEEDED] Project "${unprefixedId}" should be migrated to "${projectRef}"`);
+        }
+      }
+
+      // 🏢 ENTERPRISE: If not found and doesn't have prefix, try with prefix
+      if (!projectDoc.exists && !projectRef.startsWith('project_')) {
+        const prefixedId = `project_${projectRef}`;
+        console.log(`   🔄 [LEGACY] Trying prefixed project ID: ${prefixedId}`);
+        projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(prefixedId).get();
+        console.log(`   🔍 [DEBUG] Prefixed lookup result: exists=${projectDoc.exists}`);
+      }
+
       if (projectDoc.exists) {
         const projectData = projectDoc.data();
         const projectCompanyId = projectData?.companyId as string | undefined;
-        if (projectCompanyId) return projectCompanyId;
+        // 🔍 DEBUG: Log project data for troubleshooting
+        console.log(`   🔍 [DEBUG] Project found: ${projectDoc.id}`);
+        console.log(`   🔍 [DEBUG] Project data keys: ${Object.keys(projectData || {}).join(', ')}`);
+        console.log(`   🔍 [DEBUG] Project companyId: ${projectCompanyId || 'MISSING'}`);
+        if (projectCompanyId) {
+          console.log(`   📌 Entity resolved via project: projectId=${projectDoc.id} → companyId=${projectCompanyId}`);
+          return projectCompanyId;
+        } else {
+          console.log(`   ⚠️ Project "${projectDoc.id}" exists but has NO companyId - falling through to Strategy 4`);
+        }
+      } else {
+        console.log(`   ⚠️ [DEBUG] Project NOT FOUND with any ID variant: ${projectRef}`);
       }
     } catch (error) {
-      console.warn(`   ⚠️ Failed to lookup project ${projectId}:`, error);
+      console.warn(`   ⚠️ Failed to lookup project ${projectRef}:`, error);
     }
   }
 
   // Strategy 4: Building lookup (for units without project field)
   // Chain: unit.buildingId → building.projectId → project.companyId
+  // 🏢 ENTERPRISE: Handles both prefixed (building_xxx) and non-prefixed (xxx) IDs
   const buildingId = data.buildingId as string | undefined;
+  console.log(`   🔍 [DEBUG] Strategy 4: buildingId=${buildingId || 'NONE'}`);
   if (buildingId) {
     try {
-      const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+      // Try with original ID first
+      let buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+
+      // 🏢 ENTERPRISE: If not found and has prefix, try without prefix (legacy support)
+      if (!buildingDoc.exists && buildingId.startsWith('building_')) {
+        const unprefixedId = buildingId.replace('building_', '');
+        console.log(`   🔄 [LEGACY] Trying unprefixed building ID: ${unprefixedId}`);
+        buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(unprefixedId).get();
+        if (buildingDoc.exists) {
+          console.warn(`   ⚠️ [MIGRATION NEEDED] Building "${unprefixedId}" should be migrated to "${buildingId}"`);
+        }
+      }
+
+      // 🏢 ENTERPRISE: If not found and doesn't have prefix, try with prefix
+      if (!buildingDoc.exists && !buildingId.startsWith('building_')) {
+        const prefixedId = `building_${buildingId}`;
+        console.log(`   🔄 [LEGACY] Trying prefixed building ID: ${prefixedId}`);
+        buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(prefixedId).get();
+      }
+
       if (buildingDoc.exists) {
         const buildingData = buildingDoc.data();
         const buildingProjectId = buildingData?.projectId as string | undefined;
         if (buildingProjectId) {
-          // Now lookup the project to get companyId
-          const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(buildingProjectId).get();
+          // Now lookup the project to get companyId (also with prefix fallback)
+          let projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(buildingProjectId).get();
+
+          // Try without prefix if not found
+          if (!projectDoc.exists && buildingProjectId.startsWith('project_')) {
+            const unprefixedProjectId = buildingProjectId.replace('project_', '');
+            projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(unprefixedProjectId).get();
+          }
+
+          // Try with prefix if not found
+          if (!projectDoc.exists && !buildingProjectId.startsWith('project_')) {
+            const prefixedProjectId = `project_${buildingProjectId}`;
+            projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(prefixedProjectId).get();
+          }
+
           if (projectDoc.exists) {
             const projectData = projectDoc.data();
             const projectCompanyId = projectData?.companyId as string | undefined;
             if (projectCompanyId) {
-              console.log(`   📌 Unit resolved via building chain: buildingId=${buildingId} → projectId=${buildingProjectId} → companyId=${projectCompanyId}`);
+              console.log(`   📌 Entity resolved via building chain: buildingId=${buildingId} → projectId=${buildingProjectId} → companyId=${projectCompanyId}`);
               return projectCompanyId;
             }
           }
@@ -360,6 +568,25 @@ async function buildSearchDocument(
   const normalizedText = normalizeSearchText(searchableText);
   const prefixes = generateSearchPrefixes(normalizedText);
 
+  // 🏢 ENTERPRISE: Extract metadata for parking/storage card stats
+  let metadata: SearchDocumentInput['metadata'] | undefined;
+  if (entityType === 'parking' || entityType === 'storage') {
+    metadata = {
+      floor: data.floor as string | number | undefined,
+      area: data.area as number | undefined,
+      price: data.price as number | undefined,
+      type: data.type as string | undefined,
+    };
+    // Remove undefined values
+    metadata = Object.fromEntries(
+      Object.entries(metadata).filter(([, v]) => v !== undefined)
+    ) as SearchDocumentInput['metadata'];
+    // If empty, set to undefined
+    if (Object.keys(metadata || {}).length === 0) {
+      metadata = undefined;
+    }
+  }
+
   return {
     tenantId,
     entityType,
@@ -374,6 +601,7 @@ async function buildSearchDocument(
       href: config.routeTemplate.replace('{id}', entityId),
       routeParams: { id: entityId },
     },
+    metadata,
   };
 }
 
@@ -391,7 +619,7 @@ async function backfillEntityType(
   }
 
   const config = SEARCH_INDEX_CONFIG[entityType];
-  const stats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, errors: 0 };
+  const stats: BackfillStats = { processed: 0, indexed: 0, skipped: 0, errors: 0, skippedDetails: [] };
 
   console.log(`📦 [Search Backfill] Processing ${entityType}...`);
 
@@ -427,11 +655,20 @@ async function backfillEntityType(
     const searchDoc = await buildSearchDocument(entityType, doc.id, data, adminDb);
     if (!searchDoc) {
       stats.skipped++;
-      // 🔍 DEBUG: Log why document was skipped
-      const hasCompanyId = !!(data.companyId || data.tenantId);
-      const hasProject = !!data.project;
-      const hasCreatedBy = !!data.createdBy;
-      console.log(`   ⏭️ Skipped ${doc.id}: companyId=${hasCompanyId}, project=${hasProject}, createdBy=${hasCreatedBy}`);
+      // 🔍 DEBUG: Collect skipped document details for response
+      stats.skippedDetails?.push({
+        id: doc.id,
+        reason: 'No tenant ID resolved',
+        fields: {
+          companyId: data.companyId || null,
+          tenantId: data.tenantId || null,
+          project: data.project || null,
+          projectId: data.projectId || null,
+          buildingId: data.buildingId || null,
+          createdBy: data.createdBy || null,
+        },
+      });
+      console.log(`   ⏭️ Skipped ${doc.id}: projectId="${data.projectId}", buildingId="${data.buildingId}"`);
       continue;
     }
 
@@ -442,8 +679,11 @@ async function backfillEntityType(
       console.log(`   [DRY-RUN] Would index: ${searchDoc.title} (${searchDocId})`);
       stats.indexed++;
     } else {
+      // 🏢 ENTERPRISE: Remove undefined values recursively for Firestore compatibility
+      const firestoreDoc = removeUndefinedValues(searchDoc as unknown as Record<string, unknown>);
+
       batch.set(searchDocRef, {
-        ...searchDoc,
+        ...firestoreDoc,
         updatedAt: FieldValue.serverTimestamp(),
         createdAt: FieldValue.serverTimestamp(),
         indexedAt: FieldValue.serverTimestamp(),
@@ -496,8 +736,8 @@ async function backfillEntityType(
  * Execute search index backfill.
  * Body: { dryRun?: boolean, type?: string, companyId?: string, limit?: number }
  */
-export const POST = withAuth(
-  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+export const POST = withAuth<BackfillApiResponse>(
+  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<BackfillApiResponse>> => {
     const startTime = Date.now();
 
     // 🔐 ENTERPRISE: Only super_admin can execute backfill
@@ -574,8 +814,8 @@ export const POST = withAuth(
  *
  * Get backfill status and configuration info.
  */
-export const GET = withAuth(
-  async (_request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+export const GET = withAuth<BackfillStatusApiResponse>(
+  async (_request: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<BackfillStatusApiResponse>> => {
     // 🔐 ENTERPRISE: Only super_admin can view backfill info
     if (ctx.globalRole !== 'super_admin') {
       return createErrorResponse('Forbidden: Only super_admin can access search backfill', 403);
@@ -644,8 +884,8 @@ interface MigrationStats {
  * Body: { "dryRun": false } - Execute migration
  * Body: { "limit": 100 }    - Limit number of contacts to process
  */
-export const PATCH = withAuth(
-  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+export const PATCH = withAuth<MigrationApiResponse>(
+  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<MigrationApiResponse>> => {
     const startTime = Date.now();
 
     // 🔐 ENTERPRISE: Only super_admin can execute migration
