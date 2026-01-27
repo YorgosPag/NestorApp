@@ -17,6 +17,8 @@ import type { MenuItem } from "@/types/sidebar"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy'
+// 🚀 ENTERPRISE: Route prefetching on hover (SAP/Salesforce/Google pattern)
+import { preloadOnHover, getPreloadableRouteFromHref } from '@/utils/preloadRoutes'
 
 interface SidebarMenuItemProps {
   item: MenuItem
@@ -53,6 +55,15 @@ export function SidebarMenuItem({
     if (isMobile) {
       setOpenMobile(false);
     }
+  };
+
+  // 🚀 ENTERPRISE: Get hover prefetch handlers for a given href
+  // Pattern: Salesforce Lightning, SAP Fiori - Prefetch routes on hover
+  // Returns empty object if href is not preloadable (safe spreading)
+  const getHoverPrefetchHandlers = (href: string) => {
+    const preloadableRoute = getPreloadableRouteFromHref(href);
+    if (!preloadableRoute) return {};
+    return preloadOnHover(preloadableRoute);
   };
   return (
     <SidebarMenuItemPrimitive>
@@ -95,7 +106,11 @@ export function SidebarMenuItem({
                       isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
                     )}
                   >
-                    <Link href={subItem.href} onClick={handleNavigationClick}>
+                    <Link
+                      href={subItem.href}
+                      onClick={handleNavigationClick}
+                      {...getHoverPrefetchHandlers(subItem.href)}
+                    >
                       <subItem.icon className={iconSizes.sm} />
                       <span>{translateTitle(subItem.title)}</span>
                     </Link>
@@ -114,7 +129,11 @@ export function SidebarMenuItem({
             isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
           )}
         >
-          <Link href={item.href} onClick={handleNavigationClick}>
+          <Link
+            href={item.href}
+            onClick={handleNavigationClick}
+            {...getHoverPrefetchHandlers(item.href)}
+          >
             <item.icon
               className={cn(
                 TRANSITION_PRESETS.STANDARD_ALL,

@@ -42,6 +42,8 @@ import type {
 
 // Centralized configuration
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 
 // Style hooks
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
@@ -280,7 +282,7 @@ export class PhaseManager {
    */
   private applyNormalStyle(entity: Entity): void {
     // ✅ ENTERPRISE FIX: Always render with full opacity
-    this.ctx.lineWidth = 1;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
     this.ctx.setLineDash([]);
     // ✅ Use entity.color if available, fallback to WHITE (not dark colors!)
     this.ctx.strokeStyle = entity.color || '#FFFFFF';
@@ -291,7 +293,7 @@ export class PhaseManager {
    * Apply measurement phase styling
    */
   private applyMeasurementStyle(): void {
-    this.ctx.lineWidth = 1;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
     this.ctx.setLineDash([]);
     this.ctx.strokeStyle = UI_COLORS.WHITE;
   }

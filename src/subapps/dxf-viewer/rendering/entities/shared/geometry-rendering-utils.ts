@@ -9,6 +9,8 @@ import type { AngleMeasurementEntity } from '../../../types/entities';
 import type { EntityModel } from '../../types/Types';
 import { UI_COLORS } from '../../../config/color-config';
 import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle';
+// 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
+import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../../config/text-rendering-config';
 
 /**
  * Extract and validate angle measurement points from entity
@@ -171,7 +173,7 @@ export function renderMeasurementLabel(
 ): void {
   ctx.save();
   ctx.fillStyle = color;
-  ctx.font = '11px Arial';
+  ctx.font = UI_FONTS.ARIAL.SMALL; // 🏢 ADR-042: Centralized UI Font
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   renderStyledTextWithOverride(ctx, text, x, y);
@@ -237,7 +239,7 @@ export function renderSquareGrip(
   ctx.save();
   ctx.fillStyle = fillColor;
   ctx.strokeStyle = strokeColor;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = RENDER_LINE_WIDTHS.GRIP_OUTLINE; // 🏢 ADR-044
 
   ctx.fillRect(position.x - size/2, position.y - size/2, size, size);
   ctx.strokeRect(position.x - size/2, position.y - size/2, size, size);

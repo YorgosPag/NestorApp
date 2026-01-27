@@ -37,8 +37,16 @@
 | **ADR-031** | Multi-Grip Selection System 🏢 | `selectedGripIndices[]` + Shift+Click | Single `selectedGripIndex` | 2026-01-26 |
 | **ADR-032** | Smart Delete + Undo System 🏢 | `handleSmartDelete()` + `DeleteOverlayCommand` + Ctrl+Z | Direct `overlayStore.remove()` without undo | 2026-01-26 |
 | **ADR-040** | Preview Canvas Performance 🏢 | `canvas-v2/preview-canvas/` + `PreviewRenderer` | React state for previews (~250ms/frame) | 2026-01-27 |
-| **ADR-041** | CanvasBoundsService Performance 🏢 | `services/CanvasBoundsService.ts` (event-based) | Per-frame invalidation (~150-300ms lag) | 2026-01-27 |
+| **ADR-041** | Distance Label Centralization 🏢 | `rendering/entities/shared/distance-label-utils.ts` | Duplicate implementations (PreviewRenderer vs BaseEntityRenderer) | 2026-01-27 |
+| **ADR-042** | UI Fonts Centralization 🏢 | `config/text-rendering-config.ts` → `UI_FONTS` | 20+ hardcoded font strings | 2026-01-27 |
+| **ADR-043** | Zoom Constants Consolidation 🏢 | `config/transform-config.ts` (SSOT) | `zoom-constants.ts` middleman + `_canvas_LEGACY/` orphan | 2026-01-27 |
+| **ADR-044** | Canvas Line Widths Centralization 🏢 | `config/text-rendering-config.ts` → `RENDER_LINE_WIDTHS` | 32 hardcoded `ctx.lineWidth` σε 15 αρχεία | 2026-01-27 |
+| **ADR-045** | Viewport Ready Guard 🏢 | `CanvasSection.tsx` + `useCentralizedMouseHandlers.ts` + **`DxfViewerContent.tsx`** → Fresh viewport + COORDINATE_LAYOUT | First-click offset bug (~80px) - ROOT CAUSE: hardcoded `MARGIN_LEFT=80` | 2026-01-27 |
 
+> **🚫 PROHIBITION**: Click handlers without `viewportReady` check **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - block interactions until viewport valid.
+> **🚫 PROHIBITION**: Hardcoded layout stabilization delays **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `PANEL_LAYOUT.TIMING.VIEWPORT_LAYOUT_STABILIZATION`.
+> **🚫 PROHIBITION**: Using stale `viewport` prop for coordinate transforms **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε fresh dimensions από `canvas.clientWidth/clientHeight` ή `canvasBoundsService`.
+> **🚫 PROHIBITION**: Hardcoded margin values (80px, 30px) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `COORDINATE_LAYOUT.MARGINS` από `CoordinateTransforms.ts`.
 > **🚫 PROHIBITION**: Direct `getBoundingClientRect()` calls **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `canvasBoundsService.getBounds()`.
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
@@ -58,7 +66,12 @@
 > **✅ MIGRATION COMPLETE (2026-01-25)**: Selection logic αφαιρέθηκε πλήρως από `overlay-store.tsx` - όλα τα components χρησιμοποιούν τώρα `useUniversalSelection()`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
 > **🚀 PERFORMANCE**: ADR-040 - Dedicated PreviewCanvas για 60fps drawing (~250ms→<16ms per frame).
-> **🚀 PERFORMANCE**: ADR-041 - Event-based CanvasBoundsService, ~99% cache hit rate, eliminates 150-300ms mousemove lag.
+> **🚫 PROHIBITION**: Hardcoded distance label rendering **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `renderDistanceLabel()` από `distance-label-utils.ts`.
+> **🚫 PROHIBITION**: Hardcoded `ctx.font = '12px Arial'` **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `UI_FONTS` από `text-rendering-config.ts`.
+> **🚫 PROHIBITION**: Import από `zoom-constants.ts` **ΑΠΑΓΟΡΕΥΕΤΑΙ** (DELETED) - χρησιμοποιήστε `transform-config.ts` απευθείας.
+> **🏢 ENTERPRISE**: ADR-043 - Zoom system fully centralized σε `transform-config.ts`, zero middleman files.
+> **🚫 PROHIBITION**: Hardcoded `ctx.lineWidth = X` **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `RENDER_LINE_WIDTHS` από `text-rendering-config.ts`.
+> **🏢 ENTERPRISE**: ADR-044 - Canvas line widths fully centralized, 32 hardcoded values → 17 files migrated.
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
 > **🏢 ENTERPRISE**: ADR-014 - 19 files migrated, 8 entity types, centralized icons & colors.

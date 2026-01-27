@@ -31,7 +31,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { WorkspaceService } from '@/services/workspace.service';
 import type { Workspace, ActiveWorkspaceContext } from '@/types/workspace';
 import { useAuth } from '@/auth/contexts/AuthContext';
@@ -241,10 +241,15 @@ export function useWorkspace(): ActiveWorkspaceContext {
     throw new Error('useWorkspace must be used within WorkspaceProvider');
   }
 
-  // ⚡ ENTERPRISE: Trigger lazy activation on first use
+  // ⚡ ENTERPRISE: Trigger lazy activation ONLY ONCE on first use
+  // Using ref to prevent re-activation on every render (avoids dependency recalculation)
+  const activatedRef = useRef(false);
   useEffect(() => {
-    context.activate();
-  }, [context]);
+    if (!activatedRef.current) {
+      context.activate();
+      activatedRef.current = true;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- Intentionally empty: activate only on mount
 
   return context;
 }

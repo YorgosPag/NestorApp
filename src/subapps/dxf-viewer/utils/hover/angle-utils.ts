@@ -6,6 +6,8 @@
 import { HOVER_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { calculateAngleData, calculateAngleBisector } from '../angle-calculation';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 
 export function renderHoverAngleAtVertex(
   ctx: CanvasRenderingContext2D,
@@ -24,7 +26,7 @@ export function renderHoverAngleAtVertex(
 
   // Draw arc with orange color
   ctx.strokeStyle = HOVER_CONFIG.colors.angle;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
   ctx.beginPath();
   ctx.arc(currentScreen.x, currentScreen.y, HOVER_CONFIG.offsets.arcRadius, startAngle, endAngle, clockwise);
   ctx.stroke();

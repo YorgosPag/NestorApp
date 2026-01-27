@@ -11,7 +11,8 @@ import { SelectionSystem } from './systems/selection';
 import { CursorSystem } from './systems/cursor';
 import { ToolbarsSystem } from './systems/toolbars';
 import { RulersGridSystem } from './systems/rulers-grid/RulersGridSystem';
-import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
+// 🏢 ENTERPRISE (2026-01-27): Use ErrorBoundary with Tour support for consistent UX
+import { EnterpriseErrorBoundaryWithTour } from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { ProjectHierarchyProvider } from './contexts/ProjectHierarchyContext';
 // ✅ ΑΦΑΙΡΕΣΗ ΠΑΛΙΩΝ PREVIEW SETTINGS PROVIDERS - ΔΙΑΓΡΑΜΜΕΝΑ
 // LineSettingsProvider REMOVED - χρησιμοποιείται πλέον μόνο το DxfSettingsProvider
@@ -51,7 +52,7 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
   // Debug logging removed for performance
   return (
     <NotificationProvider>
-      <ErrorBoundary
+      <EnterpriseErrorBoundaryWithTour
         componentName="DxfViewer"
         enableRetry={true}
         maxRetries={2}
@@ -95,7 +96,7 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
                 </DxfSettingsProvider>
               </ProjectHierarchyProvider>
           {/* 🗑️ REMOVED: ConfigurationProvider closing tag */}
-      </ErrorBoundary>
+      </EnterpriseErrorBoundaryWithTour>
     </NotificationProvider>
   );
 }

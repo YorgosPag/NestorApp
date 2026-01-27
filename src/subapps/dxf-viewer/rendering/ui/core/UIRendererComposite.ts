@@ -14,6 +14,8 @@ import type {
 } from './UIRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from './UIRenderContext';
 import { UI_COLORS, withOpacity } from '../../../config/color-config';
+// 🏢 ADR-042: Centralized UI Fonts
+import { UI_FONTS } from '../../../config/text-rendering-config';
 
 /**
  * 🔺 UI RENDERER REGISTRY ENTRY
@@ -211,7 +213,7 @@ export class UIRendererComposite {
     this.ctx.fillStyle = withOpacity(UI_COLORS.BLACK, 0.8);
     this.ctx.fillRect(10, 10, 200, 60);
     this.ctx.fillStyle = UI_COLORS.WHITE;
-    this.ctx.font = '12px monospace';
+    this.ctx.font = UI_FONTS.MONOSPACE.NORMAL; // 🏢 ADR-042: Centralized UI Font
     this.ctx.fillText(`UI Render: ${totalTime.toFixed(2)}ms`, 15, 25);
     this.ctx.fillText(`Renderers: ${this.renderers.size}`, 15, 40);
     this.ctx.fillText(`Metrics: ${this.metrics.length}`, 15, 55);

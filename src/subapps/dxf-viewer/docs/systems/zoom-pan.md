@@ -209,7 +209,7 @@ Priority 3: Custom events (legacy fallback)
 
 **Implementation**:
 ```typescript
-// zoom-constants.ts
+// config/transform-config.ts (SSOT - ADR-043)
 export const ZOOM_FACTORS = {
   WHEEL_IN: 1.1,        // Normal: 10% per step
   WHEEL_OUT: 0.9,
@@ -531,13 +531,23 @@ console.log('New scale:', result.scale)
 systems/zoom/
 ├── ZoomManager.ts              // Core manager class
 ├── zoom-types.ts               // TypeScript interfaces
-├── zoom-constants.ts           // Zoom factors & defaults
+├── index.ts                    // Exports (re-exports from transform-config)
 ├── hooks/
 │   └── useZoom.ts             // React hook wrapper
 └── utils/
     ├── calculations.ts         // Zoom math
-    └── transforms.ts          // Transform utilities
+    ├── bounds.ts              // Bounds utilities (SSOT)
+    └── index.ts               // Utils exports
+
+config/
+└── transform-config.ts         // 🏢 SSOT: ALL zoom constants (ADR-043)
+    ├── ZOOM_FACTORS           // Wheel, keyboard, button factors
+    ├── ZOOM_LIMITS            // Min/max scale
+    ├── DEFAULT_ZOOM_CONFIG    // Full zoom configuration
+    └── ...                    // Other transform constants
 ```
+
+> **⚠️ ADR-043 (2026-01-27)**: `zoom-constants.ts` DELETED - all constants moved to `transform-config.ts`
 
 ### 🔗 Dependencies
 

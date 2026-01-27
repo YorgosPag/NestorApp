@@ -6,6 +6,8 @@
 
 import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 
 export interface VisualTestOptions {
   seed?: number;
@@ -99,7 +101,7 @@ async function renderTestGrid(
   const gridSize = 50; // Fixed grid size για consistency
 
   ctx.strokeStyle = UI_COLORS.LIGHT_GRAY;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
   ctx.setLineDash([]);
 
   ctx.beginPath();
@@ -120,7 +122,7 @@ async function renderTestGrid(
 
   // Major grid lines
   ctx.strokeStyle = UI_COLORS.RULER_LIGHT_GRAY;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
   ctx.beginPath();
 
   const majorInterval = 5;
@@ -150,7 +152,7 @@ async function renderTestCrosshair(
   const centerY = viewport.height / 2;
 
   ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
   ctx.setLineDash([5, 5]);
 
   ctx.beginPath();

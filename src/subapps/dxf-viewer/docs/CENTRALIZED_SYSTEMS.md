@@ -3343,8 +3343,19 @@ startTour(myTour);
 **References**:
 - Components: `src/components/ui/ProductTour/`
 - Error Dialog Tour: `src/components/ui/ErrorBoundary/errorDialogTour.ts`
+- **EnterpriseErrorBoundaryWithTour**: `src/components/ui/ErrorBoundary/ErrorBoundary.tsx` - ErrorBoundary με ενσωματωμένο tour support (2026-01-27)
 - i18n: `common.json` → `productTour.*`
 - Industry: Pendo, WalkMe, Appcues, Intercom
+
+**Usage in DXF Viewer**:
+```typescript
+// ✅ ENTERPRISE: Use EnterpriseErrorBoundaryWithTour for consistent tour UX
+import { EnterpriseErrorBoundaryWithTour } from '@/components/ui/ErrorBoundary/ErrorBoundary';
+
+<EnterpriseErrorBoundaryWithTour componentName="DxfViewer">
+  <DxfViewerContent />
+</EnterpriseErrorBoundaryWithTour>
+```
 
 ---
 
@@ -3621,6 +3632,300 @@ private renderDistanceLabelFromWorld(...): void {
 **References**:
 - SSOT: `src/subapps/dxf-viewer/rendering/entities/shared/distance-label-utils.ts`
 - Integrates with: TextStyleStore, useTextPreviewStyle
+
+---
+
+### 📋 ADR-042: CENTRALIZED UI FONTS (2026-01-27) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-27
+
+**Context**:
+20+ hardcoded font strings διάσπαρτα στο codebase (e.g., `'bold 12px monospace'`, `'14px Arial'`).
+Κάθε renderer είχε τα δικά του font strings χωρίς κεντρικό έλεγχο.
+
+**Problem Analysis**:
+- `LayerRenderer.ts` - `'bold 12px monospace'` hardcoded
+- `DxfRenderer.ts` - `'bold 12px monospace'` hardcoded
+- `SnapRenderer.ts` - `'12px Arial'` hardcoded
+- `OriginMarkersRenderer.ts` - 4 different font strings hardcoded
+- `UIRendererComposite.ts` - `'12px monospace'` hardcoded
+- `geometry-rendering-utils.ts` - `'11px Arial'` hardcoded
+
+**Decision**:
+
+| Component | Role | Pattern |
+|-----------|------|---------|
+| **text-rendering-config.ts** | SSOT for UI fonts | Extended existing config |
+| **UI_FONTS constant** | Predefined font strings | Object with categories |
+| **All UI renderers** | Consumers | Import and use constants |
+
+**Implementation**:
+
+**1. Extended text-rendering-config.ts with UI_FONTS**:
+```typescript
+export const UI_FONTS = {
+  MONOSPACE: {
+    SMALL: '10px monospace',
+    NORMAL: '12px monospace',
+    LARGE: '14px monospace',
+    BOLD: 'bold 12px monospace',
+    BOLD_LARGE: 'bold 14px monospace',
+  },
+  ARIAL: {
+    SMALL: '11px Arial',
+    NORMAL: '12px Arial',
+    LARGE: '14px Arial',
+    BOLD: 'bold 12px Arial',
+  },
+  SYSTEM: {
+    NORMAL: '12px system-ui, -apple-system, sans-serif',
+  },
+} as const;
+```
+
+**2. Usage Pattern**:
+```typescript
+// Before (HARDCODED)
+ctx.font = 'bold 12px monospace';
+
+// After (CENTRALIZED)
+import { UI_FONTS } from '../../config/text-rendering-config';
+ctx.font = UI_FONTS.MONOSPACE.BOLD;
+```
+
+**Files Changed**:
+- `src/subapps/dxf-viewer/config/text-rendering-config.ts` - Added UI_FONTS section
+- `src/subapps/dxf-viewer/canvas-v2/layer-canvas/LayerRenderer.ts` - Uses UI_FONTS
+- `src/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfRenderer.ts` - Uses UI_FONTS
+- `src/subapps/dxf-viewer/rendering/ui/snap/SnapRenderer.ts` - Uses UI_FONTS
+- `src/subapps/dxf-viewer/rendering/ui/core/UIRendererComposite.ts` - Uses UI_FONTS
+- `src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts` - Uses UI_FONTS
+- `src/subapps/dxf-viewer/rendering/ui/origin/OriginMarkersRenderer.ts` - Uses UI_FONTS
+
+**Benefits**:
+
+| Benefit | Description |
+|---------|-------------|
+| ✅ **Zero Hardcoding** | All UI fonts from central config |
+| ✅ **Consistent Typography** | Same fonts everywhere |
+| ✅ **Easy Changes** | Change font in one place |
+| ✅ **TypeScript Safe** | Autocomplete for font options |
+| ✅ **Categorized** | Monospace, Arial, System |
+
+**Note**: Debug overlay files (OriginMarkersDebugOverlay, CursorSnapDebugOverlay, etc.) still have hardcoded fonts - these are lower priority as they are development tools, not production code.
+
+**References**:
+- SSOT: `src/subapps/dxf-viewer/config/text-rendering-config.ts`
+- Industry: Google Material Design Typography, Autodesk UI Guidelines
+
+---
+
+### 📋 ADR-043: ZOOM CONSTANTS CONSOLIDATION (2026-01-27) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-27
+
+**Context**:
+Legacy `zoom-constants.ts` was a middleman re-exporting values from `transform-config.ts`.
+This added unnecessary indirection and file maintenance overhead.
+
+**Problem Analysis**:
+- `systems/zoom/zoom-constants.ts` - 56 lines of PURE re-exports
+- Every value came from `config/transform-config.ts`
+- ZoomManager imported from zoom-constants instead of direct source
+- Violation of "Single Source of Truth" principle
+
+**Decision**:
+
+| Before | After |
+|--------|-------|
+| ZoomManager → zoom-constants → transform-config | ZoomManager → transform-config |
+| Extra middleman file | Direct import |
+
+**Implementation**:
+
+**1. Added to transform-config.ts**:
+```typescript
+// 🏢 ADR-043: Migrated from zoom-constants.ts
+export const DEFAULT_ZOOM_CONFIG = { ... };
+export const ZOOM_LIMITS = { ... };
+export const ZOOM_KEYS = TRANSFORM_KEYS;
+export const ZOOM_ANIMATION = TRANSFORM_ANIMATION;
+```
+
+**2. Updated ZoomManager.ts**:
+```typescript
+// Before
+import { DEFAULT_ZOOM_CONFIG, ZOOM_FACTORS, ZOOM_LIMITS } from './zoom-constants';
+
+// After
+import { DEFAULT_ZOOM_CONFIG, ZOOM_FACTORS, ZOOM_LIMITS } from '../../config/transform-config';
+```
+
+**Files Deleted**:
+- ❌ `src/subapps/dxf-viewer/systems/zoom/zoom-constants.ts` - DELETED (was pure re-export)
+- ❌ `src/subapps/dxf-viewer/_canvas_LEGACY/` - DELETED (zero usage, completely orphan)
+
+**Files Changed**:
+- `src/subapps/dxf-viewer/config/transform-config.ts` - Added zoom configs
+- `src/subapps/dxf-viewer/systems/zoom/ZoomManager.ts` - Direct import
+- `src/subapps/dxf-viewer/systems/zoom/index.ts` - Direct export
+
+**Benefits**:
+
+| Benefit | Description |
+|---------|-------------|
+| ✅ **No Middleman** | Direct import from SSOT |
+| ✅ **Less Files** | -1 file (zoom-constants.ts) |
+| ✅ **Less Confusion** | One place for all zoom config |
+| ✅ **Enterprise Pattern** | Autodesk/SAP-grade architecture |
+
+**Legacy Cleanup**:
+- `_canvas_LEGACY/` folder with 0 imports was also deleted
+- Total cleanup: **2 deprecated items removed**
+
+**References**:
+- SSOT: `src/subapps/dxf-viewer/config/transform-config.ts`
+- Related: ADR-009 (Transform Constants Consolidation 2025-10-04)
+
+---
+
+### 📋 ADR-044: CENTRALIZED CANVAS LINE WIDTHS (2026-01-27) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-27
+
+**Context**:
+Εντοπίστηκαν **32 hardcoded `ctx.lineWidth = X`** values διάσπαρτα σε **15 αρχεία**:
+- `lineWidth = 1` (thin lines, grips, rulers)
+- `lineWidth = 2` (normal strokes, selection)
+- `lineWidth = 3` (thick borders, emphasis)
+- `lineWidth = 12/15` (overlay polygons)
+
+**Decision**:
+
+| Rule | Description |
+|------|-------------|
+| **SINGLE SOURCE OF TRUTH** | `config/text-rendering-config.ts` → `RENDER_LINE_WIDTHS` |
+| **PROHIBITION** | ❌ Hardcoded `ctx.lineWidth = X` **ΑΠΑΓΟΡΕΥΕΤΑΙ** |
+| **USAGE** | `import { RENDER_LINE_WIDTHS } from 'config/text-rendering-config'` |
+
+**RENDER_LINE_WIDTHS Constants**:
+
+```typescript
+export const RENDER_LINE_WIDTHS = {
+  // Core rendering
+  THIN: 1,           // Grid lines, rulers, minor elements
+  NORMAL: 2,         // Standard entities, shapes
+  THICK: 3,          // Emphasis, borders
+
+  // Special purpose
+  PREVIEW: 1,        // Drawing preview lines
+  RULER_TICK: 1,     // Ruler tick marks
+  SELECTION: 2,      // Selection rectangles
+  GRIP_OUTLINE: 1,   // Grip point outlines
+  DEBUG: 2,          // Debug overlays
+
+  // Overlays
+  OVERLAY: 12,       // Polygon overlay stroke
+  OVERLAY_SELECTED: 15,
+
+  // Ghost entities
+  GHOST: 1,
+  DELTA: 1,
+} as const;
+```
+
+**Files Changed (17 files)**:
+- `config/text-rendering-config.ts` - Added RENDER_LINE_WIDTHS
+- `overlays/types.ts` - Uses centralized OVERLAY/OVERLAY_SELECTED
+- `rendering/utils/ghost-entity-renderer.ts` - Uses GHOST/DELTA
+- `rendering/ui/ruler/RulerRenderer.ts` - Uses RULER_TICK
+- `canvas-v2/layer-canvas/LayerRenderer.ts` - Uses THIN/NORMAL/THICK
+- `canvas-v2/dxf-canvas/DxfRenderer.ts` - Uses THICK/NORMAL
+- `canvas-v2/preview-canvas/PreviewRenderer.ts` - Uses GRIP_OUTLINE
+- And 10 more files...
+
+**Benefits**:
+
+| Benefit | Description |
+|---------|-------------|
+| ✅ **Consistency** | Same line width values everywhere |
+| ✅ **Maintainability** | One place to change all line widths |
+| ✅ **Enterprise Pattern** | Autodesk AutoCAD / Bentley MicroStation standard |
+| ✅ **Zero Hardcoding** | All values from centralized config |
+
+**References**:
+- SSOT: `src/subapps/dxf-viewer/config/text-rendering-config.ts`
+- Pattern: Autodesk AutoCAD LWDEFAULT system variable
+- Pattern: Bentley MicroStation MS_SYMBOLOGY
+
+---
+
+### 📋 ADR-045: VIEWPORT READY GUARD (2026-01-27) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-27
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - Figma/Google Pattern
+
+**Problem**:
+Μετά από server restart, η πρώτη χρήση του distance measurement tool προκαλεί μετατόπιση ~80px.
+
+**Root Cause Analysis (2026-01-27 UPDATE)**:
+1. Το `viewport` prop σε hooks μπορεί να είναι stale (captured in closure)
+2. Στο `handleMouseUp`, η snap detection κάνει **double conversion** (screen→world→screen)
+3. Αν το `viewport` prop είναι `{0, 0}` ή λάθος, η conversion δίνει corrupted clickPoint
+4. Αυτό συμβαίνει ΠΡΙΝ φτάσει στο `handleCanvasClick` με το fresh `viewportLocal`
+
+**Solution (Autodesk/Bentley Pattern)**:
+
+| Component | Implementation |
+|-----------|----------------|
+| **Fresh viewport in handleMouseUp** | `canvas.clientWidth/clientHeight` αντί για `viewport` prop |
+| **Fresh viewport in handleMouseMove** | `rect.width/height` από `canvasBoundsService` |
+| **viewportReady flag** | `viewport.width > 0 && viewport.height > 0` |
+| **Double-RAF pattern** | `RAF → setTimeout → RAF` for layout stabilization |
+| **Interaction blocking** | Early return if `!viewportReady` |
+| **Validation in CoordinateTransforms** | Fallback for invalid viewport |
+| **Centralized timing** | `PANEL_LAYOUT.TIMING.VIEWPORT_LAYOUT_STABILIZATION` |
+
+**Files Modified**:
+- `config/panel-tokens.ts` - Added `VIEWPORT_LAYOUT_STABILIZATION: 50`
+- `components/dxf-layout/CanvasSection.tsx` - Added viewportReady blocking
+- `rendering/core/CoordinateTransforms.ts` - Added viewport validation
+- `systems/cursor/useCentralizedMouseHandlers.ts` - **CRITICAL FIX**: Use fresh viewport dimensions
+- `app/DxfViewerContent.tsx` - **ROOT CAUSE FIX**: Hardcoded `MARGIN_LEFT = 80` → `COORDINATE_LAYOUT.MARGINS.left`
+
+**Usage**:
+```typescript
+// 🏢 ADR-045: Block interactions until viewport ready
+const viewportReady = viewport.width > 0 && viewport.height > 0;
+
+const handleCanvasClick = (point: Point2D) => {
+  if (!viewportReady) {
+    console.warn('Click blocked: viewport not ready');
+    return;
+  }
+  // ... continue with coordinate transforms
+};
+```
+
+**Consequences**:
+
+| Benefit | Description |
+|---------|-------------|
+| ✅ **No offset bug** | Clicks blocked until valid dimensions |
+| ✅ **Enterprise pattern** | Same as Figma, Google Maps |
+| ✅ **Centralized timing** | Uses PANEL_LAYOUT.TIMING constants |
+| ✅ **Defensive transforms** | CoordinateTransforms validates viewport |
+
+**❌ ΑΠΑΓΟΡΕΥΕΤΑΙ μετά το ADR**:
+- ⛔ Hardcoded timeout values for layout stabilization
+- ⛔ Coordinate transforms without viewport validation
+- ⛔ Click handlers without viewportReady check
+
+**References**:
+- Pattern: Figma ResizeObserver + RAF
+- Pattern: Google Maps `tilesloaded` event
+- SSOT: `PANEL_LAYOUT.TIMING.VIEWPORT_LAYOUT_STABILIZATION`
 
 ---
 

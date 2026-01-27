@@ -20,10 +20,11 @@ import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from "@/components/ui/ef
 // ⚡ ENTERPRISE PERFORMANCE (2026-01-27): Dynamic import for GlobalSearchDialog
 // Pattern: Google, Vercel, Microsoft - Heavy dialogs loaded only when opened
 // Impact: 532 lines (25KB) deferred until user clicks search button
-// This saves ~200-300ms on every page load
+// NOTE: Using `loading: () => null` instead of `ssr: false` to avoid
+// double TypeScript compilation overhead (server + client separate passes)
 const GlobalSearchDialog = dynamic(
   () => import("@/components/search").then(mod => ({ default: mod.GlobalSearchDialog })),
-  { ssr: false }
+  { loading: () => null }
 )
 
 export function AppHeader() {

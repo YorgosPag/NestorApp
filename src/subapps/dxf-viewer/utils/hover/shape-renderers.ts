@@ -12,6 +12,8 @@ import { drawVerticesPath } from '../../rendering/entities/shared/geometry-rende
 import { validateArcEntity, validateEllipseEntity } from '../../rendering/entities/shared/entity-validation-utils';
 import { renderMeasurementLabel } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import type { HoverRenderContext } from './types';
 import {
   isCircleEntity,
@@ -57,12 +59,12 @@ export function renderCircleHover({ entity, ctx, worldToScreen, options }: Hover
   
   if (isDashed) {
     // Hover: white dashed (like preview but white instead of blue)
-    ctx.lineWidth = 2;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
     ctx.setLineDash([5, 5]); // Same dash pattern as preview
-    ctx.strokeStyle = UI_COLORS.HOVERED_ENTITY; 
+    ctx.strokeStyle = UI_COLORS.HOVERED_ENTITY;
   } else {
     // Selection: exactly like 2nd phase normal rendering (white, thin, solid)
-    ctx.lineWidth = 1; // Thin line like normal entity
+    ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044: Thin line like normal entity
     ctx.setLineDash([]);
     ctx.strokeStyle = UI_COLORS.HOVERED_ENTITY; // White like normal entity
   }
@@ -202,7 +204,7 @@ export function renderRectangleHover({ entity, ctx, worldToScreen, options }: Ho
   ctx.save();
   ctx.setLineDash([8, 6]);
   ctx.strokeStyle = UI_COLORS.WHITE;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
   
   // Draw simple dashed rectangle without measurements
   drawVerticesPath(ctx, screenVertices, true);

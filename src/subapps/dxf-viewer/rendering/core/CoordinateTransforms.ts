@@ -33,6 +33,10 @@ export class CoordinateTransforms {
   /**
    * Μετατροπή από world coordinates σε screen coordinates
    * ✅ ARCHITECTURAL FIX: offsetX/offsetY are SCREEN offsets (pixels), not world!
+   *
+   * 🏢 ENTERPRISE FIX (2026-01-27): Viewport Validation
+   * PROBLEM: Όταν viewport.height = 0, η φόρμουλα δίνει λανθασμένες screen positions.
+   * SOLUTION: Validation check - επιστρέφει fallback αν το viewport δεν είναι έτοιμο.
    */
   static worldToScreen(
     worldPoint: Point2D,
@@ -43,8 +47,20 @@ export class CoordinateTransforms {
     const { left, top } = COORDINATE_LAYOUT.MARGINS;
     if (!worldPoint) {
       console.warn("worldToScreen received undefined point. Returning (0,0)");
-      return { x: left, y: viewport.height - top };
+      return { x: left, y: viewport?.height ? viewport.height - top : top };
     }
+
+    // 🏢 ENTERPRISE FIX (2026-01-27): Viewport validation
+    // Αν το viewport δεν είναι έτοιμο, χρησιμοποιεί fallback υπολογισμό
+    if (!viewport || viewport.height <= 0 || viewport.width <= 0) {
+      console.warn("worldToScreen: Invalid viewport dimensions", viewport);
+      // Fallback: Use simple conversion without Y-inversion
+      return {
+        x: left + worldPoint.x * transform.scale + transform.offsetX,
+        y: top + worldPoint.y * transform.scale + transform.offsetY
+      };
+    }
+
     // 🎯 CRITICAL: offsetX/offsetY are SCREEN OFFSETS (pixels)
     // Formula: screenX = left + worldX * scale + offsetX
     //          screenY = (height - top) - worldY * scale - offsetY
@@ -58,6 +74,11 @@ export class CoordinateTransforms {
   /**
    * Μετατροπή από screen coordinates σε world coordinates
    * ✅ ARCHITECTURAL FIX: offsetX/offsetY are SCREEN offsets (pixels), not world!
+   *
+   * 🏢 ENTERPRISE FIX (2026-01-27): Viewport Validation
+   * PROBLEM: Όταν viewport.height = 0 (πριν αρχικοποιηθεί), η φόρμουλα δίνει λανθασμένα Y.
+   *          Αυτό προκαλεί μετατόπιση ~80px στο distance measurement την πρώτη φορά.
+   * SOLUTION: Validation check - επιστρέφει fallback αν το viewport δεν είναι έτοιμο.
    */
   static screenToWorld(
     screenPoint: Point2D,
@@ -70,6 +91,21 @@ export class CoordinateTransforms {
       console.warn("screenToWorld received undefined point. Returning origin offset");
       return { x: -transform.offsetX / transform.scale, y: -transform.offsetY / transform.scale };
     }
+
+    // 🏢 ENTERPRISE FIX (2026-01-27): Viewport validation
+    // Αν το viewport δεν είναι έτοιμο (width ή height = 0), επιστρέφει fallback
+    // που βασίζεται μόνο στο X coordinate (Y θα είναι 0)
+    // Αυτό αποτρέπει λανθασμένες μετατροπές πριν το layout stabilize
+    if (!viewport || viewport.height <= 0 || viewport.width <= 0) {
+      console.warn("screenToWorld: Invalid viewport dimensions", viewport);
+      // Fallback: Use screen position as world position (1:1 mapping)
+      // This is better than returning wildly incorrect values
+      return {
+        x: (screenPoint.x - left - transform.offsetX) / transform.scale,
+        y: (screenPoint.y - top - transform.offsetY) / transform.scale
+      };
+    }
+
     // 🎯 CRITICAL: offsetX/offsetY are SCREEN OFFSETS (pixels)
     // Formula: worldX = (screenX - left - offsetX) / scale
     //          worldY = ((height - top) - screenY - offsetY) / scale

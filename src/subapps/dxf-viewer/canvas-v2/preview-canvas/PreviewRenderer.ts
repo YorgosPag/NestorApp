@@ -29,6 +29,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ADR-041: Centralized Distance Label Rendering
 import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -436,7 +438,7 @@ export class PreviewRenderer {
 
     // Stroke with darker border
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.GRIP_OUTLINE; // 🏢 ADR-044
     ctx.stroke(path);
 
     ctx.restore();

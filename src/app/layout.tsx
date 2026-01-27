@@ -3,22 +3,38 @@ import { Roboto } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { NotificationDrawer } from "@/components/NotificationDrawer.enterprise";
-// 🔧 TEMPORARY: Keep react-hot-toast Toaster until full migration to NotificationProvider
-import { ToasterClient } from "@/components/ToasterClient";
-import { NotificationProvider } from "../providers/NotificationProvider";
-import { SharedPropertiesProvider } from "@/contexts/SharedPropertiesProvider";
 import { AuthProvider, UserRoleProvider } from "@/auth";
-import { FloorplanProvider } from "@/contexts/FloorplanContext";
-import { WorkspaceProvider } from "@/contexts/WorkspaceContext"; // 🏢 ENTERPRISE: Workspace-based Multi-Tenancy (ADR-032)
 import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { TourProvider, TourRenderer } from '@/components/ui/ProductTour';
-// 🏢 ENTERPRISE: Performance Monitor moved to DXF Viewer only (Bentley/Autodesk pattern)
-// import { PerformanceCategory } from '@/core/performance/types/performance.types';
-// import { ClientOnlyPerformanceDashboard } from '@/core/performance/components/ClientOnlyPerformanceDashboard';
-import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 import { ConditionalAppShell } from './components/ConditionalAppShell';
+
+/**
+ * =============================================================================
+ * 🏢 ENTERPRISE: Root Layout - Minimal Provider Stack
+ * =============================================================================
+ *
+ * Pattern: SAP, Salesforce, Microsoft Azure Portal, Google Cloud Console
+ *
+ * ESSENTIAL PROVIDERS ONLY (always needed):
+ * - ThemeProvider: Dark/light mode
+ * - I18nProvider: Translations
+ * - TourProvider: Product tours (needed by ErrorBoundary)
+ * - AuthProvider: Firebase authentication
+ * - UserRoleProvider: Role-based access
+ *
+ * HEAVY PROVIDERS MOVED TO ConditionalAppShell (only for app routes):
+ * - WorkspaceProvider: Firestore queries
+ * - FloorplanProvider: Complex state
+ * - NotificationProvider: Real-time subscriptions
+ * - SharedPropertiesProvider: Data caching
+ *
+ * This architecture ensures auth routes (/login) have minimal bundle size
+ * and don't trigger unnecessary Firestore queries.
+ *
+ * @file layout.tsx
+ * @updated 2026-01-27 - ADR-040 Provider Separation
+ */
 
 // 🏢 ENTERPRISE: Type-safe Window extension for arc patch diagnostic
 declare global {
@@ -47,17 +63,12 @@ export default function RootLayout({
   if (typeof window !== 'undefined' && !window.__ARC_PATCHED__) {
     window.__ARC_PATCHED__ = true;
     const proto = CanvasRenderingContext2D.prototype;
-    const origArc = proto.arc;
 
-    proto.arc = function patchedArc(x: number, y: number, r: number, s: number, e: number, ccw?: boolean): void {
+    proto.arc = function patchedArc(): void {
       // ✅ ΚΑΘΑΡΟ: Χωρίς console noise
-
       // Kill-switch: σχολίασέ το για να ΞΑΝΑΦΑΝΕΙ ο κύκλος
       // Ενεργό => ΔΕΝ ζωγραφίζονται καθόλου κύκλοι
-      return; // ⬅️ προσωρινό hard stop (now with explicit void return type)
-
-      // Αν θέλεις να επαναφέρεις το default συμπεριφορά:
-      // return origArc.apply(this, arguments as any);
+      return; // ⬅️ προσωρινό hard stop
     };
   }
 
@@ -67,6 +78,7 @@ export default function RootLayout({
         <Script src="/suppress-console.js" strategy="beforeInteractive" />
       </head>
       <body className={cn("font-sans overflow-x-hidden", roboto.variable)}>
+        {/* 🏢 ENTERPRISE: Minimal provider stack - essential providers only */}
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -75,49 +87,21 @@ export default function RootLayout({
           storageKey="theme-preference"
         >
           <I18nProvider>
-            {/* 🏢 ENTERPRISE: Product Tour System (ADR-037) - Global tour state management */}
+            {/* 🏢 ENTERPRISE: TourProvider needed by ErrorBoundary's useTour() */}
             <TourProvider>
-            <AuthProvider>
-              <UserRoleProvider>
-                {/* 🏢 ENTERPRISE: Workspace-based Multi-Tenancy (ADR-032)
-                    Placed after Auth/UserRole providers (requires userId for queries)
-                    Provides active workspace context to all app components */}
-                <WorkspaceProvider>
-                  <FloorplanProvider>
-                  {/* 🏢 ENTERPRISE: Κεντρικοποιημένο Notification System */}
-                  <NotificationProvider>
-                    <SharedPropertiesProvider>
-                      {/* 🏢 ENTERPRISE: ConditionalAppShell handles layout based on route type
-                          - Auth routes (/login): Standalone layout (no sidebar/header)
-                          - App routes: Full layout (sidebar + header + content) */}
-                      <ConditionalAppShell>
-                        {children}
-                      </ConditionalAppShell>
-                    </SharedPropertiesProvider>
-
-                  {/* ✅ Notification Drawer - Outside all containers for proper z-index */}
-                  <NotificationDrawer />
-
-                  {/* 🔧 TEMPORARY: Both toast systems until migration completes - Client-side only */}
-                  <ToasterClient />
-
-                  {/* 🚨 GLOBAL ERROR TRACKER SETUP */}
-                  <GlobalErrorSetup />
-
-                  {/* 🏢 ENTERPRISE: Product Tour Renderer (ADR-037)
-                      Renders active tours globally - positioned via Floating UI */}
-                  <TourRenderer />
-
-                  {/* 🏢 ENTERPRISE: Performance Monitor moved to DXF Viewer only
-                      Following Bentley/Autodesk pattern - design tools only, not globally
-                      Toggle available in DXF Viewer status bar */}
-
-                  {/* ✅ το κεντρικοποιημένο NotificationProvider (sonner-based) */}
-                  </NotificationProvider>
-                  </FloorplanProvider>
-                </WorkspaceProvider>
-              </UserRoleProvider>
-            </AuthProvider>
+              <AuthProvider>
+                <UserRoleProvider>
+                  {/* 🏢 ENTERPRISE: ConditionalAppShell handles:
+                      - Route-based layout (auth vs app)
+                      - Heavy providers (Workspace, Floorplan, Notification, SharedProperties)
+                      - Global components (NotificationDrawer, ToasterClient, GlobalErrorSetup) */}
+                  <ConditionalAppShell>
+                    {children}
+                  </ConditionalAppShell>
+                </UserRoleProvider>
+              </AuthProvider>
+              {/* 🏢 ENTERPRISE: TourRenderer needs TourProvider, stays at root */}
+              <TourRenderer />
             </TourProvider>
           </I18nProvider>
         </ThemeProvider>

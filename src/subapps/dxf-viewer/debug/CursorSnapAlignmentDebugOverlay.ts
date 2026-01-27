@@ -12,6 +12,8 @@ import type { Point2D } from '../rendering/types/Types';
 import type { CanvasConfig } from '../rendering/types/Types';
 import { CanvasUtils } from '../rendering/canvas/utils/CanvasUtils';
 import { UI_COLORS, CANVAS_THEME } from '../config/color-config';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
 
 interface AlignmentDebugState {
   enabled: boolean;
@@ -299,7 +301,7 @@ class CursorSnapAlignmentDebugger {
     // Draw circle
     ctx.strokeStyle = color;
     ctx.fillStyle = color + '33'; // 20% opacity
-    ctx.lineWidth = 2;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.DEBUG; // 🏢 ADR-044
 
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
@@ -333,7 +335,7 @@ class CursorSnapAlignmentDebugger {
   ): void {
     ctx.save();
     ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
     ctx.setLineDash([5, 5]);
 
     ctx.beginPath();

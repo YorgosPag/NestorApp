@@ -145,6 +145,165 @@ export const TEXT_FONTS = {
 } as const;
 
 // ============================================
+// 🏢 ADR-042: UI OVERLAY FONTS (2026-01-27)
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: UI Overlay Font Configuration
+ *
+ * Centralized font strings for canvas UI elements (NOT DXF text entities).
+ * Used for: coordinate labels, layer names, snap indicators, debug overlays.
+ *
+ * Pattern: Autodesk AutoCAD / Bentley MicroStation - Consistent UI typography
+ *
+ * @see ADR-042: Centralized UI Fonts
+ * @since 2026-01-27
+ */
+export const UI_FONTS = {
+  /**
+   * Monospace fonts - For coordinate displays, debug info, code-like text
+   * Consistent character width for aligned columns
+   */
+  MONOSPACE: {
+    /** 10px - Small labels, secondary info */
+    SMALL: '10px monospace',
+    /** 12px - Standard UI text, coordinates */
+    NORMAL: '12px monospace',
+    /** 14px - Emphasized text, headers */
+    LARGE: '14px monospace',
+    /** Bold 12px - Layer names, important labels */
+    BOLD: 'bold 12px monospace',
+    /** Bold 14px - Section headers, titles */
+    BOLD_LARGE: 'bold 14px monospace',
+  },
+
+  /**
+   * Arial fonts - For general UI text, measurements, snap labels
+   * Better readability for mixed text
+   */
+  ARIAL: {
+    /** 11px - Compact labels */
+    SMALL: '11px Arial',
+    /** 12px - Standard labels */
+    NORMAL: '12px Arial',
+    /** 14px - Larger labels */
+    LARGE: '14px Arial',
+    /** Bold 12px - Emphasized labels */
+    BOLD: 'bold 12px Arial',
+  },
+
+  /**
+   * System UI fonts - For native-looking UI elements
+   * Best rendering on each platform
+   */
+  SYSTEM: {
+    /** 12px - Standard system font */
+    NORMAL: '12px system-ui, -apple-system, sans-serif',
+  },
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Build custom UI font string
+ *
+ * For cases where predefined constants don't fit.
+ * Use sparingly - prefer predefined constants.
+ *
+ * @param size - Font size in pixels
+ * @param family - Font family ('monospace' | 'Arial' | 'system-ui')
+ * @param weight - Optional font weight ('normal' | 'bold')
+ * @returns CSS font string for canvas.font property
+ */
+export function buildUIFont(
+  size: number,
+  family: 'monospace' | 'Arial' | 'system-ui' = 'monospace',
+  weight: 'normal' | 'bold' = 'normal'
+): string {
+  const weightPrefix = weight === 'bold' ? 'bold ' : '';
+  return `${weightPrefix}${size}px ${family}`;
+}
+
+// ============================================
+// 🏢 ADR-044: CANVAS LINE WIDTHS (2026-01-27)
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: Canvas Line Width Configuration
+ *
+ * Centralized line width constants for Canvas 2D rendering.
+ * Eliminates 32+ hardcoded `ctx.lineWidth = X` values across 15 files.
+ *
+ * Pattern: Autodesk AutoCAD / Bentley MicroStation - Unified symbology
+ *
+ * RATIONALE:
+ * - THIN (1px): Minimum visible line - rulers, grid, minor elements
+ * - NORMAL (2px): Standard stroke - entities, shapes, selection
+ * - THICK (3px): Emphasis - borders, highlights, layer names
+ *
+ * @see ADR-044: Centralized Canvas Line Widths
+ * @see Autodesk AutoCAD LWDEFAULT system variable
+ * @see Bentley MicroStation MS_SYMBOLOGY
+ * @since 2026-01-27
+ */
+export const RENDER_LINE_WIDTHS = {
+  // ────────────────────────────────────────────
+  // CORE RENDERING (Canvas 2D ctx.lineWidth)
+  // ────────────────────────────────────────────
+
+  /** 1px - Minimum visible: grid lines, ruler ticks, construction lines */
+  THIN: 1,
+
+  /** 2px - Standard stroke: entities, shapes, selection rectangles */
+  NORMAL: 2,
+
+  /** 3px - Emphasis: borders, highlights, layer name backgrounds */
+  THICK: 3,
+
+  // ────────────────────────────────────────────
+  // SPECIAL PURPOSE
+  // ────────────────────────────────────────────
+
+  /** Drawing preview lines (during tool operation) */
+  PREVIEW: 1,
+
+  /** Ruler tick marks */
+  RULER_TICK: 1,
+
+  /** Selection marquee/rectangle stroke */
+  SELECTION: 2,
+
+  /** Grip point outlines */
+  GRIP_OUTLINE: 1,
+
+  /** Debug/development overlays */
+  DEBUG: 2,
+
+  // ────────────────────────────────────────────
+  // OVERLAY RENDERING (Thick for visibility)
+  // ────────────────────────────────────────────
+
+  /** Polygon overlay stroke (property boundaries, zones) */
+  OVERLAY: 12,
+
+  /** Selected overlay stroke (highlighted polygons) */
+  OVERLAY_SELECTED: 15,
+
+  // ────────────────────────────────────────────
+  // GHOST ENTITY RENDERING
+  // ────────────────────────────────────────────
+
+  /** Ghost entity stroke (move/copy preview) */
+  GHOST: 1,
+
+  /** Delta comparison lines */
+  DELTA: 1,
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Line width type
+ */
+export type RenderLineWidth = typeof RENDER_LINE_WIDTHS[keyof typeof RENDER_LINE_WIDTHS];
+
+// ============================================
 // HIT TESTING CONFIGURATION
 // ============================================
 
@@ -287,6 +446,8 @@ export const TEXT_RENDERING_CONFIG = {
   hitTesting: TEXT_HIT_TESTING,
   behavior: TEXT_RENDERING_BEHAVIOR,
   annotationScaling: ANNOTATION_SCALING,
+  // 🏢 ADR-044: Canvas line widths
+  lineWidths: RENDER_LINE_WIDTHS,
 } as const;
 
 // ============================================

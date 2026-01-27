@@ -4,6 +4,8 @@ import type { ViewTransform } from '../rendering/types/Types';
 import type { GripSettings } from '../types/gripSettings';
 import { getStatusColors } from '../config/color-mapping'; // 🔺 Κεντρική function για ελληνικά/αγγλικά mapping
 import { CAD_UI_COLORS, UI_COLORS } from '../config/color-config';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
 import { drawVerticesPath } from '../rendering/entities/shared/geometry-rendering-utils';
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
@@ -139,7 +141,7 @@ export class OverlayDrawingEngine {
     // 🔺 ΚΕΝΤΡΙΚΗ ΛΟΓΙΚΗ: Χρήση getStatusColors() για drawing preview
     const statusColors = getStatusColors(status);
     ctx.strokeStyle = statusColors?.stroke || UI_COLORS.BUTTON_PRIMARY;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
 
     drawVerticesPath(ctx, screenVertices, false);
     if (mousePosition) {
@@ -278,7 +280,7 @@ export class OverlayDrawingEngine {
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = isSelected ? UI_COLORS.ERROR : UI_COLORS.UPLOAD_AREA_BG;
     ctx.strokeStyle = UI_COLORS.WHITE;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
 
     const padding = 6;
     const text = region.name ?? '';

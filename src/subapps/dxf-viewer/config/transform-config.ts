@@ -309,6 +309,69 @@ export const TRANSFORM_HISTORY = {
 } as const;
 
 // ============================================
+// 🏢 ADR-043: ZOOM CONFIG CONSOLIDATION (2026-01-27)
+// Migrated from deprecated zoom-constants.ts
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: Default Zoom Configuration
+ *
+ * Complete configuration object for ZoomManager initialization.
+ * Replaces the deprecated zoom-constants.ts DEFAULT_ZOOM_CONFIG.
+ *
+ * @see systems/zoom/ZoomManager.ts - Primary consumer
+ */
+export const DEFAULT_ZOOM_CONFIG = {
+  /** Minimum scale (uses UI limits for toolbar controls) */
+  minScale: UI_ZOOM_LIMITS.MIN_SCALE,
+  /** Maximum scale */
+  maxScale: UI_ZOOM_LIMITS.MAX_SCALE,
+  /** Wheel zoom factor (10% increase) */
+  wheelFactor: ZOOM_FACTORS.WHEEL_IN,
+  /** Keyboard zoom factor (10% increase) */
+  keyboardFactor: ZOOM_FACTORS.KEYBOARD_IN,
+  /** Enable zoom animation */
+  animated: TRANSFORM_ANIMATION.ENABLED,
+  /** Animation duration in ms */
+  animationDuration: TRANSFORM_ANIMATION.DURATION,
+  /** Zoom to cursor position (CAD standard) */
+  zoomToCursor: TRANSFORM_BEHAVIOR.ZOOM_TO_CURSOR,
+  /** Restrict panning to content bounds */
+  restrictToContent: TRANSFORM_BEHAVIOR.RESTRICT_TO_CONTENT,
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Zoom Limits (UI-specific)
+ *
+ * Consolidated limits for zoom UI controls.
+ * Includes history size for zoom previous/next.
+ *
+ * @see systems/zoom/ZoomManager.ts - Primary consumer
+ */
+export const ZOOM_LIMITS = {
+  /** Minimum scale for UI controls */
+  MIN_SCALE: UI_ZOOM_LIMITS.MIN_SCALE,
+  /** Maximum scale for UI controls */
+  MAX_SCALE: UI_ZOOM_LIMITS.MAX_SCALE,
+  /** Maximum history entries for zoom previous/next */
+  HISTORY_SIZE: TRANSFORM_HISTORY.MAX_SIZE,
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Zoom Keys (alias for TRANSFORM_KEYS)
+ *
+ * Backward compatibility alias for keyboard shortcuts.
+ */
+export const ZOOM_KEYS = TRANSFORM_KEYS;
+
+/**
+ * 🏢 ENTERPRISE: Zoom Animation (alias for TRANSFORM_ANIMATION)
+ *
+ * Backward compatibility alias.
+ */
+export const ZOOM_ANIMATION = TRANSFORM_ANIMATION;
+
+// ============================================
 // COMBINED CONFIGS
 // ============================================
 

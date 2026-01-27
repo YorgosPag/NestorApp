@@ -3,6 +3,8 @@
 
 import { PropertyStatus, ENHANCED_STATUS_LABELS as PROPERTY_STATUS_LABELS, ENHANCED_STATUS_COLORS as PROPERTY_STATUS_COLORS, DEFAULT_PROPERTY_STATUS } from '../../../constants/property-statuses-enterprise';
 import type { Point2D } from '../rendering/types/Types';
+// 🏢 ADR-044: Centralized line widths (import at top of file to avoid hoisting issues)
+import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
 
 export type Scope = 'project' | 'building' | 'floor' | 'unit' | 'parking' | 'storage';
 export type OverlayKind = 'unit' | 'parking' | 'storage' | 'footprint';
@@ -88,10 +90,12 @@ export const KIND_LABELS: Record<OverlayKind, string> = {
 
 /**
  * Rendering constants
+ * 🏢 ADR-044: Using centralized RENDER_LINE_WIDTHS (backward compatibility)
  */
 export const OVERLAY_ALPHA_FILL = 0.05;        // πολύ διαφανές γέμισμα
-export const OVERLAY_STROKE_WIDTH = 12;        // πολύ χοντρό περίγραμμα
-export const OVERLAY_SELECTED_STROKE_WIDTH = 15; // ακόμα πιο χοντρό όταν επιλεγμένο
+// 🏢 ADR-044: Use centralized line widths
+export const OVERLAY_STROKE_WIDTH = RENDER_LINE_WIDTHS.OVERLAY;
+export const OVERLAY_SELECTED_STROKE_WIDTH = RENDER_LINE_WIDTHS.OVERLAY_SELECTED;
 
 /**
  * Validation constants

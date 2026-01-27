@@ -17,6 +17,8 @@ import type {
   SnapRenderMode,
   SnapType
 } from './SnapTypes';
+// 🏢 ADR-042: Centralized UI Fonts
+import { UI_FONTS } from '../../../config/text-rendering-config';
 
 /**
  * 🔺 CENTRALIZED SNAP RENDERER
@@ -237,7 +239,7 @@ export class SnapRenderer implements UIRenderer {
     const { x, y } = snap.point;
     const text = this.getSnapTooltipText(snap.type);
 
-    ctx.font = '12px Arial';
+    ctx.font = UI_FONTS.ARIAL.NORMAL; // 🏢 ADR-042: Centralized UI Font
     ctx.fillStyle = settings.color;
     ctx.fillText(
       text,

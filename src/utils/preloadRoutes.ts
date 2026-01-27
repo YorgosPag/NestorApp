@@ -28,6 +28,60 @@ const routePreloaders: Record<PreloadableRoute, () => Promise<DynamicModuleImpor
   'obligations-edit': () => import('@/components/obligations/ObligationEditForm'),
 };
 
+// ============================================================================
+// 🏢 ENTERPRISE: HREF TO PRELOADABLE ROUTE MAPPING
+// ============================================================================
+// Pattern: SAP Fiori, Salesforce Lightning - Centralized route mapping
+// Single source of truth for href → PreloadableRoute conversion
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Mapping από navigation hrefs → PreloadableRoute types
+ * Used by sidebar hover prefetching για type-safe route preloading
+ */
+const HREF_TO_PRELOADABLE_ROUTE: Record<string, PreloadableRoute> = {
+  // Critical routes
+  '/buildings': 'buildings',
+  '/contacts': 'contacts',
+  '/properties': 'properties',
+
+  // CRM routes
+  '/crm/dashboard': 'crm-dashboard',
+  '/crm': 'crm-dashboard', // Parent route also preloads dashboard
+
+  // Tools routes
+  '/dxf/viewer': 'dxf-viewer',
+
+  // Form routes
+  '/obligations/new': 'obligations-new',
+  '/obligations/edit': 'obligations-edit',
+};
+
+/**
+ * 🏢 ENTERPRISE: Get PreloadableRoute from navigation href
+ * Returns undefined if href doesn't have a preloadable route
+ *
+ * @param href - Navigation href (e.g., '/buildings', '/crm/dashboard')
+ * @returns PreloadableRoute or undefined
+ *
+ * @example
+ * const route = getPreloadableRouteFromHref('/buildings'); // 'buildings'
+ * const route = getPreloadableRouteFromHref('/settings');  // undefined
+ */
+export function getPreloadableRouteFromHref(href: string): PreloadableRoute | undefined {
+  return HREF_TO_PRELOADABLE_ROUTE[href];
+}
+
+/**
+ * 🏢 ENTERPRISE: Check if href has a preloadable route
+ *
+ * @param href - Navigation href to check
+ * @returns true if href has a preloadable route
+ */
+export function isPreloadableHref(href: string): boolean {
+  return href in HREF_TO_PRELOADABLE_ROUTE;
+}
+
 // Preload a specific route
 export async function preloadRoute(route: PreloadableRoute): Promise<void> {
   try {
@@ -59,11 +113,10 @@ export function preloadUserRoutes(userRole?: UserRole, tenantId?: string): void 
           tenantId
         );
 
-        console.log(`🚀 Preloading ${routes.length} routes for role: ${userRole}`);
         await preloadRoutes(routes);
 
       } catch (error) {
-        console.warn('⚠️ Database route loading failed, using fallback:', error);
+        console.warn('[RoutePreload] Database route loading failed, using fallback:', error);
 
         // Fallback to hardcoded routes if database fails
         const commonRoutes: PreloadableRoute[] = CRITICAL_ROUTES;

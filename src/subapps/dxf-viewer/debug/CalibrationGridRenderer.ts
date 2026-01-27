@@ -8,6 +8,8 @@ import type { UIRenderer, UIRenderContext, UIRenderMetrics } from '../rendering/
 import type { Viewport, ViewTransform } from '../rendering/types/Types';
 import type { RulerDebugSettings, CalibrationGridSettings } from './RulerDebugTypes';
 import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
 
 export class CalibrationGridRenderer implements UIRenderer {
   readonly type = 'calibration-grid';
@@ -146,7 +148,7 @@ export class CalibrationGridRenderer implements UIRenderer {
 
     // Draw crosshair at origin
     ctx.strokeStyle = settings.originMarkerColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.DEBUG; // 🏢 ADR-044
     ctx.beginPath();
     ctx.moveTo(originScreenX - 15, originScreenY);
     ctx.lineTo(originScreenX + 15, originScreenY);

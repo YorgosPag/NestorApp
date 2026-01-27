@@ -261,6 +261,12 @@ export function useCentralizedMouseHandlers({
       y: e.clientY - rect.top
     };
 
+    // 🏢 ENTERPRISE FIX (2026-01-27): ADR-045 - Use FRESH viewport from canvas rect
+    // PROBLEM: The `viewport` prop may be stale on first interactions after mount.
+    // SOLUTION: Derive viewport from the fresh `rect` we already fetched.
+    // PATTERN: Autodesk/Bentley - Always use current canvas dimensions for transforms
+    const freshViewport = { width: rect.width, height: rect.height };
+
     // 🚀 PERFORMANCE (2026-01-27): Update ImmediatePositionStore for zero-latency crosshair
     // This triggers direct crosshair render WITHOUT React re-render
     setImmediatePosition(screenPos);
@@ -276,13 +282,13 @@ export function useCentralizedMouseHandlers({
       // ✅ UPDATE CENTRALIZED POSITION (React Context - for other consumers)
       cursor.updatePosition(screenPos);
 
-      // Calculate world position using proper coordinate transforms
-      const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+      // Calculate world position using FRESH viewport (not stale prop!)
+      const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport);
       cursor.updateWorldPosition(worldPos);
 
-      // Update viewport if changed
-      if (viewport.width !== cursor.viewport.width || viewport.height !== cursor.viewport.height) {
-        cursor.updateViewport(viewport);
+      // Update cursor context viewport with fresh dimensions
+      if (freshViewport.width !== cursor.viewport.width || freshViewport.height !== cursor.viewport.height) {
+        cursor.updateViewport(freshViewport);
       }
 
       // Emit centralized mouse move event (throttled)
@@ -293,8 +299,8 @@ export function useCentralizedMouseHandlers({
       });
     }
 
-    // Calculate world position (needed for callbacks even when throttled)
-    const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+    // Calculate world position using FRESH viewport (needed for callbacks even when throttled)
+    const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport);
 
     // Call parent callback (pass through - let parent decide throttling)
     onMouseMove?.(screenPos, worldPos);
@@ -436,19 +442,33 @@ export function useCentralizedMouseHandlers({
     if (onCanvasClick && isLeftClick && !cursor.isSelecting && !wasPanning && cursor.position) {
       let clickPoint = cursor.position; // Default: screen coordinates
 
+      // 🏢 ENTERPRISE FIX (2026-01-27): ADR-045 - Use FRESH viewport dimensions for snap conversion
+      // PROBLEM: The `viewport` prop may be stale (captured in closure) on first click after mount.
+      //          This causes ~80px offset in coordinate transforms.
+      // SOLUTION: Get fresh dimensions directly from canvas element via canvasBoundsService.
+      // PATTERN: Autodesk AutoCAD / Bentley MicroStation - Always use current canvas dimensions
+      const canvas = canvasRef?.current;
+      const freshViewport = canvas
+        ? { width: canvas.clientWidth, height: canvas.clientHeight }
+        : viewport; // Fallback to prop if canvas not available
+
+      // 🏢 ENTERPRISE: Validate viewport before any coordinate conversion
+      // Skip snap conversion if viewport is invalid (prevents corrupted click positions)
+      const viewportValid = freshViewport.width > 0 && freshViewport.height > 0;
+
       // ✅ SNAP FIX: Convert screen→world, apply snap, convert back to screen
       // NOTE: cursor.position is SCREEN coords, findSnapPoint expects WORLD coords,
       //       onCanvasClick expects SCREEN coords (it converts to world internally)
-      if (snapEnabled && findSnapPoint) {
-        // 1. Convert screen → world for snap detection
-        const worldPos = CoordinateTransforms.screenToWorld(cursor.position, transform, viewport);
+      if (snapEnabled && findSnapPoint && viewportValid) {
+        // 1. Convert screen → world for snap detection (using FRESH viewport!)
+        const worldPos = CoordinateTransforms.screenToWorld(cursor.position, transform, freshViewport);
 
         // 2. Find snap point (in world coordinates)
         const snapResult = findSnapPoint(worldPos.x, worldPos.y);
 
-        // 3. If snap found, convert snapped world point back to screen
+        // 3. If snap found, convert snapped world point back to screen (using FRESH viewport!)
         if (snapResult && snapResult.found && snapResult.snappedPoint) {
-          clickPoint = CoordinateTransforms.worldToScreen(snapResult.snappedPoint, transform, viewport);
+          clickPoint = CoordinateTransforms.worldToScreen(snapResult.snappedPoint, transform, freshViewport);
         }
       }
 

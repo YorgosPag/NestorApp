@@ -8,6 +8,8 @@ import type { UIRenderer, UIRenderContext, UIRenderMetrics } from '../core/UIRen
 import type { Viewport, ViewTransform } from '../../types/Types';
 import type { OriginMarkersSettings } from './OriginMarkersTypes';
 import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
+// 🏢 ADR-042: Centralized UI Fonts
+import { UI_FONTS } from '../../../config/text-rendering-config';
 
 export class OriginMarkersRenderer implements UIRenderer {
   readonly type = 'origin-markers';
@@ -92,7 +94,7 @@ export class OriginMarkersRenderer implements UIRenderer {
       // 🎯 AXIS LABELS (only if lines are visible)
       if (settings.showLabel) {
         ctx.fillStyle = settings.axisColor;
-        ctx.font = '14px monospace';
+        ctx.font = UI_FONTS.MONOSPACE.LARGE; // 🏢 ADR-042: Centralized UI Font
 
         // X-Axis label (only if horizontal line is visible)
         if (originScreenY >= 0 && originScreenY <= viewport.height) {
@@ -149,7 +151,7 @@ export class OriginMarkersRenderer implements UIRenderer {
     // Debug label
     if (settings.showLabel) {
       ctx.fillStyle = settings.color;
-      ctx.font = '12px monospace';
+      ctx.font = UI_FONTS.MONOSPACE.NORMAL; // 🏢 ADR-042: Centralized UI Font
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
 
@@ -160,14 +162,14 @@ export class OriginMarkersRenderer implements UIRenderer {
       ctx.fillText('(0,0)', labelX, labelY);
 
       // Additional debug info
-      ctx.font = '10px monospace';
+      ctx.font = UI_FONTS.MONOSPACE.SMALL; // 🏢 ADR-042: Centralized UI Font
       ctx.fillText(`Screen: (${originScreenX.toFixed(1)}, ${originScreenY.toFixed(1)})`, labelX, labelY + 15);
     }
 
     // 🎯 ORIGIN LABEL ENHANCEMENT
     if (settings.showAxisLines && settings.showLabel) {
       ctx.fillStyle = settings.axisColor;
-      ctx.font = '14px monospace';
+      ctx.font = UI_FONTS.MONOSPACE.LARGE; // 🏢 ADR-042: Centralized UI Font
       ctx.globalAlpha = settings.axisOpacity;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';

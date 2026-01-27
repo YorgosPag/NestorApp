@@ -9,6 +9,8 @@ import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Typ
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
+import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 
 // ✅ ΝΕΟ: Import unified rendering system
@@ -82,7 +84,7 @@ export class DxfRenderer {
 
     this.ctx.save();
     this.ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT; // ✅ CENTRALIZED: Orange highlight για DXF origin marker
-    this.ctx.lineWidth = 3;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THICK; // 🏢 ADR-044
     this.ctx.beginPath();
     // TOP vertical line (up from origin)
     this.ctx.moveTo(originX, originY);
@@ -93,7 +95,7 @@ export class DxfRenderer {
     this.ctx.stroke();
     // Label
     this.ctx.fillStyle = UI_COLORS.DRAWING_HIGHLIGHT; // ✅ CENTRALIZED: Orange text για DXF label
-    this.ctx.font = 'bold 12px monospace';
+    this.ctx.font = UI_FONTS.MONOSPACE.BOLD; // 🏢 ADR-042: Centralized UI Font
     this.ctx.fillText('DXF', originX - 45, originY - 10);
     this.ctx.restore();
 
@@ -252,7 +254,7 @@ export class DxfRenderer {
 
     this.ctx.save();
     this.ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT;
-    this.ctx.lineWidth = 2;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
     this.ctx.setLineDash([5, 5]);
 
     for (const entityId of options.selectedEntityIds) {

@@ -6,6 +6,8 @@ const DEBUG_DXF_VIEWER_CONTENT = false;
 import { useNotifications } from '../../../providers/NotificationProvider';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+// 🏢 ENTERPRISE FIX (2026-01-27): ADR-045 - Use centralized margins (was hardcoded 80px!)
+import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
 import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import { matchesShortcut } from '../config/keyboard-shortcuts';
@@ -529,8 +531,11 @@ Check console for detailed metrics`;
       height: rect.height
     };
 
-    const MARGIN_LEFT = 80;  // Left margin for vertical ruler
-    const MARGIN_TOP = 30;   // Top margin for horizontal ruler
+    // 🏢 ENTERPRISE FIX (2026-01-27): ADR-045 - Use CENTRALIZED margins (was hardcoded 80px!)
+    // PROBLEM: Hardcoded 80px caused ~50px offset (actual rulers are 30px)
+    // SOLUTION: Use COORDINATE_LAYOUT.MARGINS from CoordinateTransforms.ts (Single Source of Truth)
+    const MARGIN_LEFT = COORDINATE_LAYOUT.MARGINS.left;   // 30px - synced with actual ruler width
+    const MARGIN_TOP = COORDINATE_LAYOUT.MARGINS.top;     // 30px - synced with actual ruler height
 
     // Calculate offsets to center world (0,0) in viewport
     const screenCenterX = viewport.width / 2;

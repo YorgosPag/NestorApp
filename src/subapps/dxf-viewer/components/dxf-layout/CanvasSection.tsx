@@ -100,6 +100,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ✅ CENTRALIZED VIEWPORT: Single source of truth για viewport dimensions
   const [viewport, setViewport] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
+  // 🏢 ENTERPRISE FIX (2026-01-27): Viewport readiness check για coordinate transforms
+  // Αποτρέπει λανθασμένες μετατροπές coordinates ΠΡΙΝ το viewport αρχικοποιηθεί σωστά
+  // PROBLEM: Την πρώτη φορά μετά από server restart, το viewport είναι {0,0}
+  //          και η screenToWorld επιστρέφει λάθος τιμές (π.χ. Y-offset ~80px)
+  // SOLUTION: Το viewportReady flag αποκλείει τα clicks μέχρι το viewport να είναι valid
+  const viewportReady = viewport.width > 0 && viewport.height > 0;
+
   const zoomSystem = useZoom({
     initialTransform,
     onTransformChange: (newTransform) => {
@@ -337,6 +344,41 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       }
     };
   }, []); // 🏢 FIX: Empty deps - setup once, ResizeObserver handles updates
+
+  // 🏢 ENTERPRISE FIX (2026-01-27): Force viewport update after browser layout stabilization
+  // PROBLEM: getBoundingClientRect() επιστρέφει stale values την πρώτη φορά μετά από server restart
+  //          γιατί ο browser δεν έχει ακόμα ολοκληρώσει το layout calculation
+  // SOLUTION: Χρησιμοποιούμε requestAnimationFrame + setTimeout για να περιμένουμε
+  //           1. RAF: Περιμένει το επόμενο paint frame
+  //           2. setTimeout: Δίνει χρόνο στον browser να κάνει reflow
+  // RESULT: Το viewport έχει σωστές dimensions ΠΡΙΝ ο χρήστης κάνει click
+  React.useEffect(() => {
+    let rafId: number;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const forceViewportUpdate = () => {
+      const dxfCanvas = dxfCanvasRef.current?.getCanvas?.();
+      if (dxfCanvas && dxfCanvas instanceof HTMLCanvasElement) {
+        const rect = dxfCanvas.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          setViewport({ width: rect.width, height: rect.height });
+        }
+      }
+    };
+
+    // Double-RAF pattern για σίγουρη layout stabilization
+    // 🏢 ADR-045: Using centralized TIMING constant (not hardcoded value)
+    rafId = requestAnimationFrame(() => {
+      timeoutId = setTimeout(() => {
+        requestAnimationFrame(forceViewportUpdate);
+      }, PANEL_LAYOUT.TIMING.VIEWPORT_LAYOUT_STABILIZATION);
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timeoutId);
+    };
+  }, []); // Empty deps - run once on mount
 
   // ✅ AUTO FIT TO VIEW: Trigger existing fit-to-view event after canvas mount
   // ⚠️ DISABLED: Αφαιρέθηκε γιατί προκαλούσε issues με origin marker visibility
@@ -1181,6 +1223,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [activeTool, overlayMode, overlayStore]);
 
   const handleCanvasClick = (point: Point2D) => {
+    // 🏢 ADR-045: Block interactions until viewport is ready
+    // PROBLEM: Clicks before layout stabilization cause incorrect coordinate transforms
+    // SOLUTION: Early return if viewport dimensions are invalid (0x0)
+    if (!viewportReady) {
+      console.warn('🚫 [CanvasSection] Click blocked: viewport not ready', viewport);
+      return;
+    }
+
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing AND measurement tools
     // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized tool detection (Single Source of Truth)
     if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {

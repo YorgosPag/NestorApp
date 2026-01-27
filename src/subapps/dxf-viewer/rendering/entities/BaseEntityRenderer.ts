@@ -14,6 +14,8 @@ import type { Entity } from '../../types/entities';
 import { calculateSplitLineGap } from './shared/line-utils';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { renderSquareGrip } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride, getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
@@ -466,7 +468,7 @@ export abstract class BaseEntityRenderer {
   protected applyArcStyle(): void {
     this.ctx.strokeStyle = UI_COLORS.DRAWING_TEMP; // Πορτοκαλί χρώμα
     this.ctx.setLineDash([3, 3]); // Διακεκομμένες γραμμές
-    this.ctx.lineWidth = 1;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
   }
 
   /**

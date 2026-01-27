@@ -17,6 +17,8 @@ import { SplineRenderer } from '../entities/SplineRenderer';
 import { AngleMeasurementRenderer } from '../entities/AngleMeasurementRenderer';
 import { PointRenderer } from '../entities/PointRenderer';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { hitTestingService } from '../../services/HitTestingService';
 
 export class EntityRendererComposite {
@@ -186,7 +188,7 @@ export class EntityRendererComposite {
       
       this.ctx.save();
       this.ctx.strokeStyle = UI_COLORS.SELECTION_HIGHLIGHT;
-      this.ctx.lineWidth = 1;
+      this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
       
       // ⚡ NUCLEAR: GENERIC POINT CIRCLE ELIMINATED
       

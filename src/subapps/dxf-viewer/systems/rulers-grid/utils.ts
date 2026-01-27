@@ -20,6 +20,8 @@ import {
 } from './config';
 import type { Point2D, ViewTransform } from './config';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-044: Centralized Line Widths
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 
 // Helper function to generate grid line (eliminates code duplication)
 function createGridLine(
@@ -576,7 +578,7 @@ export const RulersGridRendering = {
     ctx.strokeStyle = settings.tickColor || settings.color || UI_COLORS.RULER_DARK_GRAY;
     ctx.fillStyle = settings.textColor || settings.color || UI_COLORS.RULER_TEXT_GRAY;
     ctx.font = `${settings.fontSize || 10}px ${settings.fontFamily || 'monospace'}`;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK; // 🏢 ADR-044
     
     // Βελτιωμένη λογική για ομοιόμορφη κατανομή labels
     const shouldShowLabel = (tick: RulerTick, ticks: RulerTick[], type: string, scale: number) => {

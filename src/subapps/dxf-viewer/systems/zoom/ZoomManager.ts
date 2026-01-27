@@ -26,7 +26,8 @@ import type {
   ZoomConstraints,
   ZoomMode
 } from './zoom-types';
-import { DEFAULT_ZOOM_CONFIG, ZOOM_FACTORS, ZOOM_LIMITS } from './zoom-constants';
+// 🏢 ADR-043: Direct import from centralized config (eliminated zoom-constants middleman)
+import { DEFAULT_ZOOM_CONFIG, ZOOM_FACTORS, ZOOM_LIMITS } from '../../config/transform-config';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση centralized CoordinateTransforms για zoom calculations
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import {

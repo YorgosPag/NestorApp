@@ -23,6 +23,7 @@ export type {
 } from './zoom-types';
 
 // === CONSTANTS ===
+// 🏢 ADR-043: Direct export from centralized config (eliminated zoom-constants middleman)
 export {
   DEFAULT_ZOOM_CONFIG,
   ZOOM_FACTORS,
@@ -30,7 +31,7 @@ export {
   ZOOM_KEYS,
   ZOOM_ANIMATION,
   VIEWPORT_DEFAULTS
-} from './zoom-constants';
+} from '../../config/transform-config';
 
 // === UTILITIES ===
 export * from './utils';

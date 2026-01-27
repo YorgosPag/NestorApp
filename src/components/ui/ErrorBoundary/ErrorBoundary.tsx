@@ -1588,5 +1588,108 @@ ${errorDetails.stack || 'Stack trace not available'}
   );
 }
 
+// ============================================================================
+// 🏢 ENTERPRISE: ErrorBoundary with Tour Support
+// ============================================================================
+// This component provides CENTRALIZED tour integration for class-based ErrorBoundary
+// It wraps the class component and provides a fallback with tour functionality
+// ============================================================================
+
+/**
+ * Props for the fallback component used by EnterpriseErrorBoundaryWithTour
+ */
+interface ErrorFallbackWithTourProps {
+  error: Error;
+  errorInfo: CustomErrorInfo;
+  retry: () => void;
+  componentName?: string;
+}
+
+/**
+ * 🏢 ENTERPRISE: Fallback component with Tour support
+ * This provides the same UI as RouteErrorFallback but compatible with ErrorBoundary fallback prop
+ */
+function ErrorFallbackWithTour({ error, retry, componentName = 'Component' }: ErrorFallbackWithTourProps) {
+  // Wrap the error to match RouteErrorFallback props
+  const wrappedError = Object.assign(error, { digest: undefined }) as Error & { digest?: string };
+
+  return (
+    <RouteErrorFallback
+      error={wrappedError}
+      reset={retry}
+      componentName={componentName}
+      enableReporting={true}
+      showErrorDetails={process.env.NODE_ENV === 'development'}
+    />
+  );
+}
+
+/**
+ * 🏢 ENTERPRISE: ErrorBoundary with Tour Support
+ *
+ * This is the RECOMMENDED ErrorBoundary for use throughout the application.
+ * It provides:
+ * - All features of EnterpriseErrorBoundary (design tokens, i18n)
+ * - Product Tour integration (ADR-037)
+ * - Consistent error UI across the entire application
+ *
+ * @example
+ * ```tsx
+ * // In DxfViewerApp.tsx or any component
+ * <EnterpriseErrorBoundaryWithTour componentName="DxfViewer">
+ *   <MyComponent />
+ * </EnterpriseErrorBoundaryWithTour>
+ * ```
+ *
+ * @enterprise SAP/Microsoft/Salesforce - Centralized Error Handling with Guided Recovery
+ */
+export function EnterpriseErrorBoundaryWithTour({
+  children,
+  componentName = 'Component',
+  enableRetry = true,
+  maxRetries = 2,
+  enableReporting = true,
+  showErrorDetails = process.env.NODE_ENV === 'development',
+  onError,
+}: Omit<ErrorBoundaryProps, 'borderTokens' | 'colors' | 'typography' | 'spacingTokens' | 't' | 'fallback'>) {
+  const borderTokens = useBorderTokens();
+  const colors = useSemanticColors();
+  const typography = useTypography();
+  const spacingTokens = useSpacingTokens();
+  const { t } = useTranslation('errors');
+
+  // 🏢 ENTERPRISE: Custom fallback with tour support
+  const fallbackWithTour = React.useCallback(
+    (error: Error, errorInfo: CustomErrorInfo, retry: () => void) => (
+      <ErrorFallbackWithTour
+        error={error}
+        errorInfo={errorInfo}
+        retry={retry}
+        componentName={componentName}
+      />
+    ),
+    [componentName]
+  );
+
+  return (
+    <ErrorBoundary
+      componentName={componentName}
+      enableRetry={enableRetry}
+      maxRetries={maxRetries}
+      enableReporting={enableReporting}
+      showErrorDetails={showErrorDetails}
+      onError={onError}
+      fallback={fallbackWithTour}
+      borderTokens={borderTokens}
+      colors={colors}
+      typography={typography}
+      spacingTokens={spacingTokens}
+      t={t}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 // Export both raw class και enterprise wrapper
 export default EnterpriseErrorBoundary;

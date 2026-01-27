@@ -19,6 +19,8 @@ import type {
   RulerPosition
 } from './RulerTypes';
 import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
+// 🏢 ADR-044: Centralized line widths
+import { RENDER_LINE_WIDTHS } from '../../../config/text-rendering-config';
 
 /**
  * 🔺 CENTRALIZED RULER RENDERER
@@ -213,7 +215,7 @@ export class RulerRenderer implements UIRenderer {
     const markerSize = Math.min(cornerRect.width, cornerRect.height) * 0.3;
 
     ctx.strokeStyle = settings.textColor || settings.color;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
     ctx.globalAlpha = 0.6;
 
     // Horizontal line of origin marker
@@ -266,7 +268,7 @@ export class RulerRenderer implements UIRenderer {
       // Major ticks
       if (settings.showMajorTicks) {
         ctx.strokeStyle = settings.majorTickColor;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
         ctx.beginPath();
         ctx.moveTo(x, rect.y + rect.height - settings.majorTickLength);
         ctx.lineTo(x, rect.y + rect.height);
@@ -300,7 +302,7 @@ export class RulerRenderer implements UIRenderer {
           const minorX = x + (i * minorStep);
           if (minorX <= viewport.width) {
             ctx.strokeStyle = settings.minorTickColor;
-            ctx.lineWidth = 1;
+            ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
             ctx.beginPath();
             ctx.moveTo(minorX, rect.y + rect.height - settings.minorTickLength);
             ctx.lineTo(minorX, rect.y + rect.height);
@@ -347,7 +349,7 @@ export class RulerRenderer implements UIRenderer {
       // Major ticks
       if (settings.showMajorTicks) {
         ctx.strokeStyle = settings.majorTickColor;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
         ctx.beginPath();
         ctx.moveTo(rect.x + rect.width - settings.majorTickLength, y);
         ctx.lineTo(rect.x + rect.width, y);
@@ -385,7 +387,7 @@ export class RulerRenderer implements UIRenderer {
           const minorY = y + (i * minorStep);
           if (minorY <= viewport.height) {
             ctx.strokeStyle = settings.minorTickColor;
-            ctx.lineWidth = 1;
+            ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
             ctx.beginPath();
             ctx.moveTo(rect.x + rect.width - settings.minorTickLength, minorY);
             ctx.lineTo(rect.x + rect.width, minorY);

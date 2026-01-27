@@ -931,6 +931,7 @@ export const PANEL_LAYOUT = {
     // MICRO DELAYS (10-50ms) - Focus/DOM updates
     // ─────────────────────────────────────────────────────────────────────────
     FOCUS_DELAY: 10,                     // Focus after DOM update (DynamicInputOverlay)
+    VIEWPORT_LAYOUT_STABILIZATION: 50,   // 🏢 ADR-045: Wait for browser layout stabilization (CanvasSection)
     TOOL_TRANSITION: 50,                 // Tool state transition (ToolStateManager)
 
     // ─────────────────────────────────────────────────────────────────────────

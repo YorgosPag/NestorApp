@@ -33,6 +33,8 @@
  */
 
 import type { Point2D } from '../types/Types';
+// 🏢 ADR-044: Centralized line widths
+import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration
@@ -46,12 +48,12 @@ export const GHOST_RENDER_CONFIG = {
   GHOST_FILL: 'rgba(0, 120, 255, 0.15)',
   /** Default ghost stroke color */
   GHOST_STROKE: 'rgba(0, 120, 255, 0.6)',
-  /** Ghost stroke width (pixels) */
-  GHOST_STROKE_WIDTH: 1,
+  /** Ghost stroke width (pixels) - 🏢 ADR-044: Use centralized constant */
+  GHOST_STROKE_WIDTH: RENDER_LINE_WIDTHS.GHOST,
   /** Delta line color */
   DELTA_LINE_COLOR: 'rgba(255, 165, 0, 0.8)',
-  /** Delta line width */
-  DELTA_LINE_WIDTH: 1,
+  /** Delta line width - 🏢 ADR-044: Use centralized constant */
+  DELTA_LINE_WIDTH: RENDER_LINE_WIDTHS.DELTA,
   /** Delta line dash pattern */
   DELTA_LINE_DASH: [4, 4],
   /** Coordinate readout font */

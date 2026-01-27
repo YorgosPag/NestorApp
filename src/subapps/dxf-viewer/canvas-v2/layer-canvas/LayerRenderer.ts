@@ -19,6 +19,8 @@ import type { CursorSettings } from '../../systems/cursor/config';
 import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { getStatusColors } from '../../config/color-mapping';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
+import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 
 // ✅ ΦΑΣΗ 7: Import unified canvas system
@@ -216,7 +218,7 @@ export class LayerRenderer {
     // Debug disabled: origin marker values
     this.ctx.save();
     this.ctx.strokeStyle = UI_COLORS.BUTTON_PRIMARY; // ✅ CENTRALIZED: Blue για LayerRenderer origin marker
-    this.ctx.lineWidth = 3;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THICK; // 🏢 ADR-044
     this.ctx.beginPath();
     // BOTTOM vertical line (down from origin)
     this.ctx.moveTo(originX, originY);
@@ -227,7 +229,7 @@ export class LayerRenderer {
     this.ctx.stroke();
     // Label
     this.ctx.fillStyle = UI_COLORS.BUTTON_PRIMARY; // ✅ CENTRALIZED: Blue text για LayerRenderer label
-    this.ctx.font = 'bold 12px monospace';
+    this.ctx.font = UI_FONTS.MONOSPACE.BOLD; // 🏢 ADR-042: Centralized UI Font
     this.ctx.fillText('LAYER', originX + 5, originY + 30);
     this.ctx.restore();
 
@@ -592,7 +594,7 @@ export class LayerRenderer {
     // Selection highlight
     if (polygon.selected) {
       this.ctx.strokeStyle = UI_COLORS.BRIGHT_GREEN;
-      this.ctx.lineWidth = 2;
+      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
       this.ctx.setLineDash([5, 5]);
       this.ctx.stroke();
       this.ctx.setLineDash([]);
@@ -655,7 +657,7 @@ export class LayerRenderer {
         // Draw "close" indicator for first grip when highlighted (hot state)
         if (isCloseHighlighted) {
           this.ctx.strokeStyle = GRIP_COLOR_HOT;
-          this.ctx.lineWidth = 2;
+          this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
           const outerSize = gripSize + 6;
           const outerHalf = outerSize / 2;
           this.ctx.strokeRect(vertex.x - outerHalf, vertex.y - outerHalf, outerSize, outerSize);
@@ -664,7 +666,7 @@ export class LayerRenderer {
         // 🏢 ENTERPRISE (2026-01-25): Draw selection indicator for HOT grip (without close)
         if (isSelected && !isCloseHighlighted) {
           this.ctx.strokeStyle = GRIP_COLOR_HOT;
-          this.ctx.lineWidth = 2;
+          this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
           const outerSize = gripSize + 4;
           const outerHalf = outerSize / 2;
           this.ctx.strokeRect(vertex.x - outerHalf, vertex.y - outerHalf, outerSize, outerSize);
@@ -747,7 +749,7 @@ export class LayerRenderer {
         // Draw highlight for WARM or HOT grips
         if (gripState !== 'cold') {
           this.ctx.strokeStyle = fillColor;
-          this.ctx.lineWidth = 2;
+          this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
           const outerSize = gripSize + 4;
           this.ctx.beginPath();
           this.ctx.moveTo(drawMidX, drawMidY - outerSize);
@@ -775,7 +777,7 @@ export class LayerRenderer {
 
     this.ctx.strokeStyle = settings.color;
     this.ctx.globalAlpha = settings.opacity;
-    this.ctx.lineWidth = 1;
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
 
     const gridSize = settings.size * transform.scale;
 
