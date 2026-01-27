@@ -25,6 +25,19 @@ const nextConfig = {
   // Fixes: "Object.defineProperty called on non-object" error
   transpilePackages: ['pdfjs-dist'],
 
+  // =========================================================================
+  // [TURBOPACK] ENTERPRISE TURBOPACK CONFIGURATION (Next.js 15.5+)
+  // =========================================================================
+  // Reference: https://nextjs.org/docs/app/api-reference/next-config-js/turbopack
+  // Pattern used by: Vercel, Microsoft, Google enterprise applications
+  // NOTE: This config is used when running `next dev --turbopack`
+  //       Webpack config below is used for production builds
+  turbopack: {
+    // Turbopack resolves Node.js built-in modules automatically
+    // No need for explicit fallbacks - Turbopack handles this natively
+    // Path aliases are read from tsconfig.json automatically
+  },
+
   // [ENTERPRISE] PERFORMANCE OPTIMIZATIONS - Fortune 500 Standard
   experimental: {
     // [ENTERPRISE] Optimized imports - Prevents barrel export overhead
@@ -70,14 +83,29 @@ const nextConfig = {
       'firebase-admin',
       'class-variance-authority',
     ],
-
-    // [NOTE] Turbopack handles Node.js module fallbacks automatically
-    // No turbo config needed - webpack fallbacks are only used in production build
   },
 
   // [BUNDLE] BUNDLE OPTIMIZATION
+  // =========================================================================
+  // [WEBPACK] WEBPACK-ONLY CONFIGURATION - PRODUCTION BUILDS ONLY
+  // =========================================================================
+  // ENTERPRISE PATTERN: Separate bundler configs for dev vs production
+  // - Development: Turbopack (fast, native ESM support)
+  // - Production: Webpack (optimized, with plugins)
+  // This eliminates "Webpack is configured while Turbopack is not" warning
+  // Pattern: Vercel, Microsoft Azure DevOps, Google Cloud Build
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // [ENTERPRISE] ENTERPRISE: pdf.js configuration for Next.js
+    // [ENTERPRISE] Skip all webpack customizations in development
+    // Turbopack handles these natively - no configuration needed
+    if (dev) {
+      return config;
+    }
+
+    // =========================================================================
+    // PRODUCTION-ONLY CONFIGURATIONS BELOW
+    // =========================================================================
+
+    // [ENTERPRISE] pdf.js configuration for Next.js (production)
     // Fixes ESM compatibility issues with pdfjs-dist
 
     // Resolve fallbacks for browser-only modules (needed by pdfjs-dist)
@@ -90,9 +118,8 @@ const nextConfig = {
       url: false,
     };
 
-    // [ENTERPRISE] ENTERPRISE: Fix ESM compatibility for .mjs files (pdfjs-dist)
+    // [ENTERPRISE] Fix ESM compatibility for .mjs files (pdfjs-dist)
     // This prevents "Object.defineProperty called on non-object" error
-    // by letting Webpack handle .mjs as ESM without extra wrapping
     if (!isServer) {
       config.module.rules.push({
         test: /\.mjs$/,
@@ -101,13 +128,16 @@ const nextConfig = {
       });
     }
 
-    // Copy worker to public folder for self-hosted PDF processing
-    // Eliminates CDN dependency (offline support, version lock, security)
+    // [ENTERPRISE] Copy PDF worker to public folder
+    // =========================================================================
+    // PDF files exist in public/ (committed to git) for development
+    // CopyPlugin ensures latest version from node_modules for production builds
+    // Pattern: Vercel, Google Cloud Build - hermetic production builds
     if (!isServer) {
       const path = require('path');
       const CopyPlugin = require('copy-webpack-plugin');
 
-      // [ENTERPRISE] ENTERPRISE: Copy pdf.js files to public
+      // [ENTERPRISE] Copy pdf.js files to public
       // Uses the version from react-pdf's pdfjs-dist dependency
       const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
 
@@ -183,8 +213,9 @@ const nextConfig = {
       });
     }
 
-    // Bundle analyzer για development
-    if (dev && process.env.ANALYZE === 'true') {
+    // [ENTERPRISE] Bundle analyzer for production analysis
+    // Usage: ANALYZE=true pnpm build
+    if (process.env.ANALYZE === 'true') {
       const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
       config.plugins.push(
         new BundleAnalyzerPlugin({

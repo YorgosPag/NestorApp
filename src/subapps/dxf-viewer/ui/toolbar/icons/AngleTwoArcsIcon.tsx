@@ -3,6 +3,11 @@
  */
 
 import * as React from 'react';
+// 🏢 ENTERPRISE: Centralized icon sizes - Zero hardcoded values (ADR-002)
+import { componentSizes } from '../../../../../styles/design-tokens';
+
+// 🏢 ENTERPRISE: Default icon size from centralized design tokens
+const DEFAULT_ICON_SIZE = componentSizes.icon.numeric.sm; // 16px
 
 interface AngleTwoArcsIconProps {
   size?: number;
@@ -10,7 +15,7 @@ interface AngleTwoArcsIconProps {
   strokeWidth?: number;
 }
 
-export function AngleTwoArcsIcon({ size = 16, color = "currentColor", strokeWidth = 1.5 }: AngleTwoArcsIconProps) {
+export function AngleTwoArcsIcon({ size = DEFAULT_ICON_SIZE, color = "currentColor", strokeWidth = 1.5 }: AngleTwoArcsIconProps) {
   return (
     <svg
       width={size}

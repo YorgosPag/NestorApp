@@ -27,6 +27,8 @@ import type { ExtendedSceneEntity, ExtendedLineEntity, ExtendedCircleEntity, Ext
 // 🏢 ENTERPRISE: Centralized CAD colors & coordinate transforms
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+// 🏢 ADR-041: Centralized Distance Label Rendering
+import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -167,11 +169,24 @@ export class PreviewRenderer {
   }
 
   /**
-   * 🏢 ENTERPRISE: Clear preview
+   * 🏢 ENTERPRISE: Clear preview IMMEDIATELY
+   * Pattern: Autodesk AutoCAD - Immediate visual feedback on command completion
+   *
+   * CRITICAL: Must clear canvas IMMEDIATELY, not wait for frame scheduler!
+   * This prevents the "two distance labels" bug where preview stays visible
+   * for one frame after drawing completion.
    */
   clear(): void {
     this.currentPreview = null;
-    this.isDirty = true;
+    this.isDirty = false; // Already clean after immediate clear
+
+    // 🔧 FIX (2026-01-27): IMMEDIATE clearRect - don't wait for scheduler
+    if (this.ctx && this.canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
   }
 
   /**
@@ -428,8 +443,10 @@ export class PreviewRenderer {
   }
 
   /**
-   * 🏢 ENTERPRISE: Render distance label using WORLD coordinates
-   * 🚀 PERFORMANCE FIX (2026-01-27): Uses world coordinates for correct distance calculation
+   * 🏢 ADR-041: Render distance label using CENTRALIZED utility
+   *
+   * Uses shared distance-label-utils for consistent rendering across
+   * PreviewCanvas and main canvas. Single source of truth!
    *
    * @param worldP1 - First point in WORLD coordinates (for distance calculation)
    * @param worldP2 - Second point in WORLD coordinates (for distance calculation)
@@ -443,41 +460,8 @@ export class PreviewRenderer {
     screenP1: Point2D,
     screenP2: Point2D
   ): void {
-    // 🎯 FIX: Calculate distance from WORLD coordinates (not screen)
-    const worldDist = Math.sqrt(
-      Math.pow(worldP2.x - worldP1.x, 2) +
-      Math.pow(worldP2.y - worldP1.y, 2)
-    );
-
-    // Format distance
-    const distText = worldDist.toFixed(2);
-
-    // Calculate midpoint for label (use screen coordinates for positioning)
-    const midX = (screenP1.x + screenP2.x) / 2;
-    const midY = (screenP1.y + screenP2.y) / 2;
-
-    // Draw label background
-    ctx.save();
-    ctx.font = '11px Inter, system-ui, sans-serif';
-    const textMetrics = ctx.measureText(distText);
-    const padding = 4;
-    const bgWidth = textMetrics.width + padding * 2;
-    const bgHeight = 16;
-
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-    ctx.fillRect(
-      midX - bgWidth / 2,
-      midY - bgHeight / 2 - 10, // Offset above the line
-      bgWidth,
-      bgHeight
-    );
-
-    // Draw text
-    ctx.fillStyle = '#FFFFFF';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(distText, midX, midY - 10);
-    ctx.restore();
+    // 🏢 ADR-041: Use centralized distance label rendering
+    renderDistanceLabel(ctx, worldP1, worldP2, screenP1, screenP2, PREVIEW_LABEL_DEFAULTS);
   }
 
   /**

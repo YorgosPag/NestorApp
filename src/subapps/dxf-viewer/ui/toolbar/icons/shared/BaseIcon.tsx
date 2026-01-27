@@ -1,4 +1,9 @@
 import React from 'react';
+// 🏢 ENTERPRISE: Centralized icon sizes - Zero hardcoded values (ADR-002)
+import { componentSizes } from '../../../../../../styles/design-tokens';
+
+// 🏢 ENTERPRISE: Default icon size from centralized design tokens
+const DEFAULT_ICON_SIZE_LG = componentSizes.icon.numeric.lg; // 24px
 
 export interface BaseIconProps {
   className?: string;
@@ -15,7 +20,7 @@ export interface BaseIconConfig {
   variants: IconVariant[];
 }
 
-function BaseSvgWrapper({ className = "", size = 24, children }: {
+function BaseSvgWrapper({ className = "", size = DEFAULT_ICON_SIZE_LG, children }: {
   className?: string;
   size?: number;
   children: React.ReactNode;
@@ -38,7 +43,7 @@ function BaseSvgWrapper({ className = "", size = 24, children }: {
 }
 
 export function createIcon(config: BaseIconConfig) {
-  return ({ className = "", size = 24 }: BaseIconProps & { variant?: string }) => {
+  return ({ className = "", size = DEFAULT_ICON_SIZE_LG }: BaseIconProps & { variant?: string }) => {
     // For backward compatibility, default to the first variant if no variant specified
     const variant = config.defaultVariant;
     const selectedVariant = config.variants.find(v => v.name === variant) || config.variants[0];
@@ -52,7 +57,7 @@ export function createIcon(config: BaseIconConfig) {
 }
 
 export function createVariantIcon(config: BaseIconConfig) {
-  return ({ className = "", size = 24, variant }: BaseIconProps & { variant: string }) => {
+  return ({ className = "", size = DEFAULT_ICON_SIZE_LG, variant }: BaseIconProps & { variant: string }) => {
     const selectedVariant = config.variants.find(v => v.name === variant) || config.variants[0];
     
     return (

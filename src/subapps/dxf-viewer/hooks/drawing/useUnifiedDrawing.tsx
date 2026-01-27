@@ -37,6 +37,8 @@ import { useDrawingMachine, type DrawingStateType } from '../../core/state-machi
 // 🏢 ENTERPRISE (2026-01-26): Centralized tool configuration for continuous mode support
 import { getToolMetadata } from '../../systems/tools/ToolStateManager';
 import type { ToolType } from '../../ui/toolbar/types';
+// 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
+import { EventBus } from '../../systems/events';
 import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity } from '../../types/scene';
 // ✅ ENTERPRISE FIX: Import centralized PreviewGripPoint from entities
 import type { PreviewGripPoint } from '../../types/entities';
@@ -396,11 +398,16 @@ export function useUnifiedDrawing() {
     return null;
   }, []);
 
-  const addPoint = useCallback((worldPoint: Point2D, _transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
+  /**
+   * 🏢 ENTERPRISE: Add point to current drawing
+   * @returns {boolean} true if drawing was completed (for immediate preview clear)
+   * Also emits 'drawing:complete' event for other listeners (Event Bus pattern)
+   */
+  const addPoint = useCallback((worldPoint: Point2D, _transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }): boolean => {
     // 🏢 ENTERPRISE (2026-01-25): Use state machine guard instead of manual checks
     // State machine provides canAddPoint which handles all edge cases
     if (!canAddPoint) {
-      return;
+      return false;
     }
 
     // Snap is handled at DxfCanvas level, use worldPoint directly
@@ -463,6 +470,15 @@ export function useUnifiedDrawing() {
           lineEntity.breakAtCenter = lineCompletionStyles.breakAtCenter;
         }
 
+        // 🏢 ENTERPRISE (2026-01-27): CRITICAL - Clear preview FIRST before any state updates!
+        // Pattern: Autodesk AutoCAD - Visual feedback must be synchronous
+        // This MUST happen BEFORE setLevelScene() to prevent "two numbers" bug
+        previewEntityRef.current = null;
+        EventBus.emit('drawing:complete', {
+          tool: currentTool,
+          entityId: newEntity?.id ?? 'unknown'
+        });
+
         const scene = getLevelScene(currentLevelId);
         if (scene) {
           // Filter out extended types that are not compatible with AnySceneEntity
@@ -498,6 +514,8 @@ export function useUnifiedDrawing() {
         ...prev,
         previewEntity: null,
       }));
+
+      return true; // Drawing completed
     } else {
       // Create a partial preview after adding the point
       let partialPreview: ExtendedSceneEntity | null = null;
@@ -556,6 +574,8 @@ export function useUnifiedDrawing() {
         ...prev,
         previewEntity: partialPreview,
       }));
+
+      return false; // Drawing not yet complete
     }
   }, [canAddPoint, machineAddPoint, machineContext.points, machineContext.toolType, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, lineCompletionStyles, machineComplete, machineReset, machineDeselectTool]);
 

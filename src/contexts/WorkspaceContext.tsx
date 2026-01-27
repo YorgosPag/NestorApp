@@ -70,8 +70,13 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const { user } = useAuth();
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
   const [availableWorkspaces, setAvailableWorkspaces] = useState<Workspace[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // ⚡ ENTERPRISE: Start false for lazy loading
   const [error, setError] = useState<Error | null>(null);
+
+  // ⚡ ENTERPRISE PERFORMANCE (2026-01-27): Lazy initialization
+  // Pattern: SharedPropertiesProvider - Only load when needed
+  // This prevents Firestore queries on login/landing pages
+  const [activated, setActivated] = useState(false);
 
   // ==========================================================================
   // LOAD WORKSPACES
@@ -125,10 +130,22 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     }
   }, [user]);
 
-  // Load workspaces on mount and when user changes
+  // ⚡ ENTERPRISE PERFORMANCE: Activate function - called by useWorkspace hook
+  const activate = useCallback(() => {
+    if (!activated) {
+      console.log('🔌 [WorkspaceContext] Lazy activation triggered');
+      setActivated(true);
+    }
+  }, [activated]);
+
+  // ⚡ ENTERPRISE: Load workspaces ONLY when activated (not on mount)
+  // This prevents Firestore queries on login/landing pages
   useEffect(() => {
+    if (!activated) {
+      return; // Skip if not activated (lazy initialization)
+    }
     loadWorkspaces();
-  }, [loadWorkspaces]);
+  }, [activated, loadWorkspaces]);
 
   // ==========================================================================
   // SWITCH WORKSPACE
@@ -192,8 +209,9 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       error,
       switchWorkspace,
       refreshWorkspaces,
+      activate, // ⚡ ENTERPRISE: Lazy activation
     }),
-    [activeWorkspace, availableWorkspaces, loading, error, switchWorkspace, refreshWorkspaces]
+    [activeWorkspace, availableWorkspaces, loading, error, switchWorkspace, refreshWorkspaces, activate]
   );
 
   // ==========================================================================
@@ -210,6 +228,9 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 /**
  * Hook to access workspace context
  *
+ * ⚡ ENTERPRISE PERFORMANCE: This hook triggers lazy activation.
+ * Firestore queries only run when a component actually uses workspaces.
+ *
  * @throws Error if used outside WorkspaceProvider
  * @returns Active workspace context
  */
@@ -219,6 +240,11 @@ export function useWorkspace(): ActiveWorkspaceContext {
   if (!context) {
     throw new Error('useWorkspace must be used within WorkspaceProvider');
   }
+
+  // ⚡ ENTERPRISE: Trigger lazy activation on first use
+  useEffect(() => {
+    context.activate();
+  }, [context]);
 
   return context;
 }

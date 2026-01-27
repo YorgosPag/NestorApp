@@ -15,6 +15,9 @@ import type { PropertyStatus } from '../../../constants/property-statuses-enterp
 import { BUTTON_STATUS_COLORS } from '../config/color-mapping';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_COLORS, PANEL_LAYOUT } from '../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized border colors & typography
+// 🏢 ENTERPRISE: Centralized z-index systems (ADR-002 compliance)
+import { zIndex as globalZIndex } from '../../../styles/design-tokens';
+import { dxfZIndex } from '../styles/DxfZIndexSystem.styles';
 // ✅ ENTERPRISE FIX: useBorderTokens is a React hook and cannot be used in styles file
 
 // 🏢 ENTERPRISE: CSS Custom Properties για κεντρικοποιημένα χρώματα
@@ -129,7 +132,7 @@ export const getTestResultsModalBackdropStyles = () => ({
   justifyContent: 'center',
   backgroundColor: UI_COLORS.MODAL_OVERLAY_MEDIUM,
   pointerEvents: 'auto' as const,
-  zIndex: 999999 // Πολύ ψηλό z-index για να είναι πάνω από όλα
+  zIndex: globalZIndex.critical // 🏢 ENTERPRISE: Centralized z-index (ADR-002) - replaces hardcoded 999999
 });
 
 /**
@@ -149,7 +152,7 @@ export const getTestResultsModalContentStyles = () => ({
   height: '85vh',
   maxHeight: '900px',
   pointerEvents: 'auto' as const,
-  zIndex: 1000000 // Ακόμα πιο ψηλό για το modal content
+  zIndex: globalZIndex.critical // 🏢 ENTERPRISE: Centralized z-index (ADR-002) - replaces hardcoded 1000000
 });
 
 /**
@@ -234,7 +237,7 @@ export const getEnterpriseContactDropdownStyles = (buttonRect: DOMRect) => ({
   minWidth: '200px',
   maxHeight: '400px',
   overflow: 'hidden' as const,
-  zIndex: 99999, // Enterprise-grade portal z-index
+  zIndex: globalZIndex.tooltip, // 🏢 ENTERPRISE: Centralized z-index (1800) - replaces hardcoded 99999
   backgroundColor: 'hsl(var(--popover))',
   color: 'hsl(var(--popover-foreground))',
   border: '1px solid hsl(var(--border))',
@@ -690,7 +693,7 @@ export const getCrosshairOverlayCanvasStyles = (displayStatus: string) => ({
   display: displayStatus,
   width: '100%',
   height: '100%',
-  zIndex: 100
+  zIndex: dxfZIndex.overlays.crosshair // 🏢 ENTERPRISE: Centralized z-index (30) - replaces hardcoded 100
 });
 
 /**
@@ -756,7 +759,7 @@ export const getCalibrationTestMarkerStyles = (x: number, y: number, isSuccess: 
   backgroundColor: isSuccess ? UI_COLORS.SUCCESS_GREEN : UI_COLORS.ERROR, // green-500 : red-500
   border: '2px solid white',
   transform: 'translate(-50%, -50%)',
-  zIndex: 1000,
+  zIndex: globalZIndex.dropdown, // 🏢 ENTERPRISE: Centralized z-index (1000) - replaces hardcoded 1000
   pointerEvents: 'none' as const,
   animation: 'pulse 2s infinite'
 });

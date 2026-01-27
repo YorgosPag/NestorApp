@@ -3,14 +3,11 @@ import type { Config } from 'tailwindcss';
 export default {
   darkMode: ['class'],
   // 🏢 ENTERPRISE: Safelist for dynamically generated classes from hooks
+  // NOTE: Entity list patterns removed - classes are explicitly defined in design-tokens.ts
+  //       which is included in content[] array, so Tailwind finds them automatically
   safelist: [
     'pl-10', 'pl-11', 'pl-12', 'pr-10', 'pr-11', 'pr-12',  // Input icon padding
     '!pl-10', '!pl-11', '!pl-12', '!pr-10', '!pr-11', '!pr-12',  // Input icon padding with !important
-    // 🏢 ENTERPRISE: Entity List Column width constraints (CSS variables)
-    // Pattern-based safelist for future extensibility - no manual updates needed
-    { pattern: /^min-w-\[var\(--entity-list-.*\)\]$/ },
-    { pattern: /^max-w-\[var\(--entity-list-.*\)\]$/ },
-    { pattern: /^w-\[calc\(100%-var\(--entity-list-.*\)\)\]$/ },
   ],
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',

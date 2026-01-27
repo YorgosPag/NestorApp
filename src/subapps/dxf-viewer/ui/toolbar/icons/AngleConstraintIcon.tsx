@@ -4,6 +4,11 @@
 
 import * as React from 'react';
 import { AngleIconBase } from './shared/AngleIconBase';
+// 🏢 ENTERPRISE: Centralized icon sizes - Zero hardcoded values (ADR-002)
+import { componentSizes } from '../../../../../styles/design-tokens';
+
+// 🏢 ENTERPRISE: Default icon size from centralized design tokens
+const DEFAULT_ICON_SIZE = componentSizes.icon.numeric.sm; // 16px
 
 interface AngleConstraintIconProps {
   size?: number;
@@ -11,7 +16,7 @@ interface AngleConstraintIconProps {
   strokeWidth?: number;
 }
 
-export function AngleConstraintIcon({ size = 16, color = "currentColor", strokeWidth = 1.5 }: AngleConstraintIconProps) {
+export function AngleConstraintIcon({ size = DEFAULT_ICON_SIZE, color = "currentColor", strokeWidth = 1.5 }: AngleConstraintIconProps) {
   return (
     <AngleIconBase
       size={size}

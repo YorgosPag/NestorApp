@@ -19,3 +19,6 @@ export * from './grip-utils';
 // Text utilities
 export * from './circle-text-utils';
 export * from './phase-text-utils';
+
+// 🏢 ADR-041: Centralized Distance Label Rendering
+export * from './distance-label-utils';

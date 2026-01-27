@@ -92,7 +92,9 @@ interface LayerCanvasProps {
   enableUnifiedCanvas?: boolean;
 }
 
-export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>(({
+// 🚀 PERFORMANCE (2026-01-27): Wrap forwardRef with memo to prevent unnecessary re-renders
+// Parent state changes (mouseCss, mouseWorld) should NOT trigger canvas re-render
+export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerCanvasProps>(({
   layers,
   transform,
   viewport: viewportProp, // ✅ CENTRALIZED: Accept viewport prop
@@ -625,4 +627,7 @@ export const LayerCanvas = React.forwardRef<HTMLCanvasElement, LayerCanvasProps>
       onAuxClick={(e) => e.preventDefault()}
     />
   );
-});
+}));
+
+// 🚀 PERFORMANCE (2026-01-27): Display name for React DevTools debugging
+LayerCanvas.displayName = 'LayerCanvas';

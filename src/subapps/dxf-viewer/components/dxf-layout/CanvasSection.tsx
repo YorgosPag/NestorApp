@@ -1564,11 +1564,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 const shouldUpdate = now - throttle.lastCheckTime >= GRIP_HOVER_THROTTLE_MS;
 
                 if (!shouldUpdate) {
-                  // 🚀 CRITICAL: Only update drag preview during active drag (real-time needed)
-                  if ((draggingVertex || draggingEdgeMidpoint) && draggingVertices) {
-                    const worldPoint = CoordinateTransforms.screenToWorld(screenPoint, transform, viewport);
-                    setDragPreviewPosition(worldPoint);
-                  }
+                  // 🚀 PERFORMANCE (2026-01-27): During drag, use RAF-throttled preview update
+                  // Instead of setState on every mousemove, we use a ref + RAF for smooth animation
                   return; // Skip all other work until throttle period passes
                 }
 

@@ -31,6 +31,14 @@ export interface DrawingEventMap {
   'drawing:cancelled': {
     tool: string;
   };
+  // 🏢 ENTERPRISE (2026-01-27): Drawing completion event - ADR-040 Preview Canvas Integration
+  // Pattern: Autodesk AutoCAD - Command completion notification
+  // Emitted when a drawing operation completes (e.g., 2nd click on line/measure-distance)
+  // Consumers (PreviewCanvas) listen to clear preview immediately
+  'drawing:complete': {
+    tool: string;
+    entityId: string;
+  };
   // 🔧 PHASE 3: Additional events from DxfViewerContent
   'dxf-zoom-changed': {
     transform: {

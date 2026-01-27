@@ -31,6 +31,8 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/useUnifiedDrawing';
 import { portalComponents } from '@/styles/design-tokens';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
+import { EventBus } from '../../systems/events';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -205,6 +207,36 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
         onRender,
         isDirty
       );
+
+      return () => {
+        unsubscribe();
+      };
+    }, []);
+
+    // ============================================================================
+    // EVENT BUS INTEGRATION - Drawing Completion Listener (ADR-040)
+    // ============================================================================
+
+    useEffect(() => {
+      /**
+       * 🏢 ENTERPRISE (2026-01-27): Listen for drawing completion events
+       * Pattern: Autodesk AutoCAD - Command completion notification
+       *
+       * When a drawing operation completes (e.g., 2nd click on line/measure-distance),
+       * the useUnifiedDrawing hook emits 'drawing:complete'. We listen here and
+       * immediately clear the preview canvas to prevent the "two numbers" bug.
+       *
+       * This is the CORRECT enterprise pattern:
+       * - Decoupled: PreviewCanvas doesn't need to know about addPoint() internals
+       * - Synchronous: Clear happens in the same event loop as completion
+       * - Type-safe: Event Bus provides TypeScript type checking
+       */
+      const unsubscribe = EventBus.on('drawing:complete', () => {
+        const renderer = rendererRef.current;
+        if (renderer) {
+          renderer.clear();
+        }
+      });
 
       return () => {
         unsubscribe();

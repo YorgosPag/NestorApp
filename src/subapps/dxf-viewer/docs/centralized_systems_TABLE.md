@@ -1,10 +1,10 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-26
-> **= -> TOTAL SYSTEMS**: 29 Major Enterprise Systems (incl. Smart Delete System)
-> **= -> TOTAL CODE**: 18,600+ Lines
-> **= -> TOTAL ADRs**: 23 Architectural Decision Records
+> **= -> LAST UPDATED**: 2026-01-27
+> **= -> TOTAL SYSTEMS**: 30 Major Enterprise Systems (incl. CanvasBoundsService Performance)
+> **= -> TOTAL CODE**: 18,800+ Lines
+> **= -> TOTAL ADRs**: 24 Architectural Decision Records
 
 ---
 
@@ -37,7 +37,9 @@
 | **ADR-031** | Multi-Grip Selection System 🏢 | `selectedGripIndices[]` + Shift+Click | Single `selectedGripIndex` | 2026-01-26 |
 | **ADR-032** | Smart Delete + Undo System 🏢 | `handleSmartDelete()` + `DeleteOverlayCommand` + Ctrl+Z | Direct `overlayStore.remove()` without undo | 2026-01-26 |
 | **ADR-040** | Preview Canvas Performance 🏢 | `canvas-v2/preview-canvas/` + `PreviewRenderer` | React state for previews (~250ms/frame) | 2026-01-27 |
+| **ADR-041** | CanvasBoundsService Performance 🏢 | `services/CanvasBoundsService.ts` (event-based) | Per-frame invalidation (~150-300ms lag) | 2026-01-27 |
 
+> **🚫 PROHIBITION**: Direct `getBoundingClientRect()` calls **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `canvasBoundsService.getBounds()`.
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
 > **🚫 PROHIBITION**: Νέα drawing implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useUnifiedDrawing`.
@@ -56,6 +58,7 @@
 > **✅ MIGRATION COMPLETE (2026-01-25)**: Selection logic αφαιρέθηκε πλήρως από `overlay-store.tsx` - όλα τα components χρησιμοποιούν τώρα `useUniversalSelection()`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
 > **🚀 PERFORMANCE**: ADR-040 - Dedicated PreviewCanvas για 60fps drawing (~250ms→<16ms per frame).
+> **🚀 PERFORMANCE**: ADR-041 - Event-based CanvasBoundsService, ~99% cache hit rate, eliminates 150-300ms mousemove lag.
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
 > **🏢 ENTERPRISE**: ADR-014 - 19 files migrated, 8 entity types, centralized icons & colors.

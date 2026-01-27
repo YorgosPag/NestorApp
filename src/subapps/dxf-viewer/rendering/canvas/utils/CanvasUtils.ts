@@ -1,9 +1,12 @@
 /**
  * CANVAS UTILITIES - Centralized canvas utilities
  * ✅ ΦΑΣΗ 7: Μετακίνηση από canvas-v2/shared/utils.ts
+ * 🏢 ENTERPRISE (2026-01-27): Uses CanvasBoundsService for cached getBoundingClientRect
  */
 
 import type { CanvasConfig, Point2D } from '../../types/Types';
+// 🏢 ENTERPRISE: Centralized bounds service για performance optimization
+import { canvasBoundsService } from '../../../services/CanvasBoundsService';
 
 // ✅ ENTERPRISE: Vendor-specific canvas context properties for HiDPI support
 interface VendorCanvasRenderingContext2D extends CanvasRenderingContext2D {
@@ -23,6 +26,7 @@ interface VendorCanvasRenderingContext2D extends CanvasRenderingContext2D {
 export class CanvasUtils {
   /**
    * Setup canvas με proper DPI scaling
+   * 🏢 ENTERPRISE: Uses CanvasBoundsService for cached bounds
    */
   static setupCanvasContext(
     canvas: HTMLCanvasElement,
@@ -37,7 +41,8 @@ export class CanvasUtils {
     if (!ctx) throw new Error('Could not get canvas context');
 
     const dpr = config.enableHiDPI ? (config.devicePixelRatio || window.devicePixelRatio || 1) : 1;
-    const rect = canvas.getBoundingClientRect();
+    // 🏢 ENTERPRISE: Use cached bounds service
+    const rect = canvasBoundsService.getBounds(canvas);
 
     // ✅ DON'T OVERRIDE CSS SIZE - respect existing CSS
     // Only set backing store size for HiDPI
@@ -56,6 +61,7 @@ export class CanvasUtils {
   /**
    * Καθαρισμός canvas με σωστή διάσταση (CSS dimensions, όχι backing store)
    * 🔧 FIXED: Use logical dimensions, not physical backing store dimensions
+   * 🏢 ENTERPRISE: Uses CanvasBoundsService for cached bounds
    */
   static clearCanvas(
     ctx: CanvasRenderingContext2D,
@@ -67,7 +73,8 @@ export class CanvasUtils {
       console.error('CanvasUtils.clearCanvas: Invalid canvas element provided');
       return;
     }
-    const rect = canvas.getBoundingClientRect();
+    // 🏢 ENTERPRISE: Use cached bounds service
+    const rect = canvasBoundsService.getBounds(canvas);
     const logicalWidth = rect.width;
     const logicalHeight = rect.height;
 
@@ -81,6 +88,7 @@ export class CanvasUtils {
 
   /**
    * Get canvas logical dimensions (CSS dimensions)
+   * 🏢 ENTERPRISE: Uses CanvasBoundsService for cached bounds
    */
   static getCanvasDimensions(canvas: HTMLCanvasElement): { width: number; height: number } {
     // ✅ SAFETY: Check if canvas is valid before proceeding
@@ -88,7 +96,8 @@ export class CanvasUtils {
       console.error('CanvasUtils.getCanvasDimensions: Invalid canvas element provided');
       return { width: 0, height: 0 };
     }
-    const rect = canvas.getBoundingClientRect();
+    // 🏢 ENTERPRISE: Use cached bounds service
+    const rect = canvasBoundsService.getBounds(canvas);
     return {
       width: rect.width,
       height: rect.height
@@ -126,6 +135,7 @@ export class CanvasUtils {
 
   /**
    * Convert screen coordinates to canvas coordinates
+   * 🏢 ENTERPRISE: Uses CanvasBoundsService for cached bounds
    */
   static screenToCanvas(
     point: Point2D,
@@ -136,7 +146,8 @@ export class CanvasUtils {
       console.error('CanvasUtils.screenToCanvas: Invalid canvas element provided');
       return { x: 0, y: 0 };
     }
-    const rect = canvas.getBoundingClientRect();
+    // 🏢 ENTERPRISE: Use cached bounds service
+    const rect = canvasBoundsService.getBounds(canvas);
     return {
       x: point.x - rect.left,
       y: point.y - rect.top
@@ -145,6 +156,7 @@ export class CanvasUtils {
 
   /**
    * Convert canvas coordinates to screen coordinates
+   * 🏢 ENTERPRISE: Uses CanvasBoundsService for cached bounds
    */
   static canvasToScreen(
     point: Point2D,
@@ -155,7 +167,8 @@ export class CanvasUtils {
       console.error('CanvasUtils.canvasToScreen: Invalid canvas element provided');
       return { x: 0, y: 0 };
     }
-    const rect = canvas.getBoundingClientRect();
+    // 🏢 ENTERPRISE: Use cached bounds service
+    const rect = canvasBoundsService.getBounds(canvas);
     return {
       x: point.x + rect.left,
       y: point.y + rect.top
@@ -164,6 +177,7 @@ export class CanvasUtils {
 
   /**
    * Check if point is inside canvas bounds
+   * 🏢 ENTERPRISE: Uses CanvasBoundsService for cached bounds
    */
   static isPointInCanvas(
     point: Point2D,
@@ -174,7 +188,8 @@ export class CanvasUtils {
       console.error('CanvasUtils.isPointInCanvas: Invalid canvas element provided');
       return false;
     }
-    const rect = canvas.getBoundingClientRect();
+    // 🏢 ENTERPRISE: Use cached bounds service
+    const rect = canvasBoundsService.getBounds(canvas);
     const canvasPoint = this.screenToCanvas(point, canvas);
 
     return canvasPoint.x >= 0 &&
@@ -185,6 +200,7 @@ export class CanvasUtils {
 
   /**
    * Get canvas center point
+   * 🏢 ENTERPRISE: Uses CanvasBoundsService for cached bounds
    */
   static getCanvasCenter(canvas: HTMLCanvasElement): Point2D {
     // ✅ SAFETY: Check if canvas is valid before proceeding
@@ -192,7 +208,8 @@ export class CanvasUtils {
       console.error('CanvasUtils.getCanvasCenter: Invalid canvas element provided');
       return { x: 0, y: 0 };
     }
-    const rect = canvas.getBoundingClientRect();
+    // 🏢 ENTERPRISE: Use cached bounds service
+    const rect = canvasBoundsService.getBounds(canvas);
     return {
       x: rect.width / 2,
       y: rect.height / 2
@@ -220,6 +237,7 @@ export class CanvasUtils {
 
   /**
    * Resize canvas maintaining aspect ratio
+   * 🏢 ENTERPRISE: Invalidates cache after resize
    */
   static resizeCanvas(
     canvas: HTMLCanvasElement,
@@ -240,9 +258,11 @@ export class CanvasUtils {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
     // Update canvas size
-    const rect = canvas.getBoundingClientRect();
     canvas.style.width = `${newWidth}px`;
     canvas.style.height = `${newHeight}px`;
+
+    // 🏢 ENTERPRISE: Invalidate cache after programmatic resize
+    canvasBoundsService.clearCache(canvas);
 
     // Re-setup context with new dimensions
     this.setupCanvasContext(canvas, config);

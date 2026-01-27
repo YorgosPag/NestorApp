@@ -49,73 +49,78 @@ import {
   DXF_ZOOM_SHORTCUTS,
   getShortcutDisplayLabel
 } from '../../config/keyboard-shortcuts';
+// 🏢 ENTERPRISE: Centralized icon sizes - Zero hardcoded values (ADR-002)
+import { componentSizes } from '../../../../styles/design-tokens';
+
+// 🏢 ENTERPRISE: Default icon size from centralized design tokens
+const DEFAULT_ICON_SIZE = componentSizes.icon.numeric.sm; // 16px
 
 // ✅ ENTERPRISE FIX: Type adapters για custom icons με SVGProps compatibility
 const AngleIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
-  width = 16,
-  height = 16,
+  width = DEFAULT_ICON_SIZE,
+  height = DEFAULT_ICON_SIZE,
   color = 'currentColor',
   strokeWidth = 1.5,
   ...props
 }) => (
   <AngleIcon
-    size={Number(width) || 16}
+    size={Number(width) || DEFAULT_ICON_SIZE}
     color={color as string}
     strokeWidth={typeof strokeWidth === 'string' ? parseFloat(strokeWidth) : Number(strokeWidth) || 1.5}
   />
 );
 
 const AngleLineArcIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
-  width = 16,
-  height = 16,
+  width = DEFAULT_ICON_SIZE,
+  height = DEFAULT_ICON_SIZE,
   color = 'currentColor',
   strokeWidth = 1.5,
   ...props
 }) => (
   <AngleLineArcIcon
-    size={Number(width) || 16}
+    size={Number(width) || DEFAULT_ICON_SIZE}
     color={color as string}
     strokeWidth={typeof strokeWidth === 'string' ? parseFloat(strokeWidth) : Number(strokeWidth) || 1.5}
   />
 );
 
 const AngleTwoArcsIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
-  width = 16,
-  height = 16,
+  width = DEFAULT_ICON_SIZE,
+  height = DEFAULT_ICON_SIZE,
   color = 'currentColor',
   strokeWidth = 1.5,
   ...props
 }) => (
   <AngleTwoArcsIcon
-    size={Number(width) || 16}
+    size={Number(width) || DEFAULT_ICON_SIZE}
     color={color as string}
     strokeWidth={typeof strokeWidth === 'string' ? parseFloat(strokeWidth) : Number(strokeWidth) || 1.5}
   />
 );
 
 const AngleMeasureGeomIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
-  width = 16,
-  height = 16,
+  width = DEFAULT_ICON_SIZE,
+  height = DEFAULT_ICON_SIZE,
   color = 'currentColor',
   strokeWidth = 1.5,
   ...props
 }) => (
   <AngleMeasureGeomIcon
-    size={Number(width) || 16}
+    size={Number(width) || DEFAULT_ICON_SIZE}
     color={color as string}
     strokeWidth={typeof strokeWidth === 'string' ? parseFloat(strokeWidth) : Number(strokeWidth) || 1.5}
   />
 );
 
 const AngleConstraintIconAdapter: React.ComponentType<React.SVGProps<SVGSVGElement>> = ({
-  width = 16,
-  height = 16,
+  width = DEFAULT_ICON_SIZE,
+  height = DEFAULT_ICON_SIZE,
   color = 'currentColor',
   strokeWidth = 1.5,
   ...props
 }) => (
   <AngleConstraintIcon
-    size={Number(width) || 16}
+    size={Number(width) || DEFAULT_ICON_SIZE}
     color={color as string}
     strokeWidth={typeof strokeWidth === 'string' ? parseFloat(strokeWidth) : Number(strokeWidth) || 1.5}
   />

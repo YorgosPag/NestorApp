@@ -138,11 +138,20 @@ export function useDrawingHandlers(
   }, [snapEnabled, findSnapPoint]);
 
   // Drawing handlers
+  // 🏢 ENTERPRISE (2026-01-27): IMMEDIATE preview clear on drawing completion
+  // Pattern: Autodesk AutoCAD - Visual feedback must be synchronous
+  // The return value from addPoint() indicates if drawing completed (e.g., 2nd click on line)
   const onDrawingPoint = useCallback((p: Pt) => {
     const snappedPoint = applySnap(p);
     const transformUtils = canvasOps.getTransformUtils();
-    addPoint(snappedPoint, transformUtils);
-  }, [addPoint, canvasOps, applySnap]);
+    const completed = addPoint(snappedPoint, transformUtils);
+
+    // 🔧 FIX (2026-01-27): IMMEDIATE clear prevents "two numbers" bug
+    // This is the SYNCHRONOUS path - Event Bus is backup for other listeners
+    if (completed && previewCanvasRef?.current) {
+      previewCanvasRef.current.clear();
+    }
+  }, [addPoint, canvasOps, applySnap, previewCanvasRef]);
 
   const onDrawingHover = useCallback((p: Pt | null) => {
     if (DEBUG_DRAWING_HANDLERS) console.log('🔍 [onDrawingHover] Called with point:', p);
@@ -162,6 +171,11 @@ export function useDrawingHandlers(
         const previewEntity = getLatestPreviewEntity();
         if (previewEntity) {
           previewCanvasRef.current.drawPreview(previewEntity);
+        } else {
+          // 🔧 FIX (2026-01-27): Clear canvas when preview entity is null
+          // This happens when drawing is completed (2nd click on line/measure-distance)
+          // Without this, the old preview distance label stays visible
+          previewCanvasRef.current.clear();
         }
       }
     } else {

@@ -19,7 +19,7 @@
 //
 // =============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -132,6 +132,15 @@ export function AuthForm({
     verifyMfaCode,
     cancelMfaVerification
   } = useAuth();
+
+  // ⚡ ENTERPRISE PERFORMANCE: Prefetch redirect target while user fills credentials
+  // This starts compiling the home page in the background, reducing perceived wait time
+  // Pattern: Google, Vercel - prefetch likely navigation targets
+  useEffect(() => {
+    if (redirectTo) {
+      router.prefetch(redirectTo);
+    }
+  }, [router, redirectTo]);
 
   // Form state
   const [mode, setMode] = useState<AuthFormMode>(defaultMode);

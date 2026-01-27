@@ -188,6 +188,9 @@ export interface ActiveWorkspaceContext {
 
   /** Refresh workspaces list */
   refreshWorkspaces: () => Promise<void>;
+
+  /** ⚡ ENTERPRISE PERFORMANCE: Activate lazy loading (called by useWorkspace hook) */
+  activate: () => void;
 }
 
 // ============================================================================

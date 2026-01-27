@@ -3449,6 +3449,181 @@ if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {
 
 ---
 
+### 📋 ADR-040: PREVIEW CANVAS EVENT BUS INTEGRATION (2026-01-27) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-27
+
+**Context**:
+Bug "Two Distance Numbers": Κατά τη σχεδίαση γραμμής μέτρησης (measure-distance), στο δεύτερο κλικ εμφανίζονταν ΔΥΟ distance labels - ένα από το PreviewCanvas (preview) και ένα από το DxfRenderer (τελική γραμμή). Το preview δεν καθαριζόταν αμέσως.
+
+**Problem Analysis**:
+- `useUnifiedDrawing.addPoint()` ολοκληρώνει τη γραμμή
+- `DxfRenderer` σχεδιάζει την τελική γραμμή με distance label
+- `PreviewCanvas` ΔΕΝ καθαριζόταν μέχρι το επόμενο mouse move
+- Αποτέλεσμα: 2 αριθμοί για ένα frame
+
+**Decision**:
+
+| Component | Role | Pattern |
+|-----------|------|---------|
+| **EventBus** | Notification hub | Singleton, Type-safe |
+| **useUnifiedDrawing** | Producer | Emits `drawing:complete` |
+| **PreviewCanvas** | Consumer | Listens and clears |
+
+**Implementation**:
+
+**1. Event Type Definition** (`systems/events/EventBus.ts`):
+```typescript
+'drawing:complete': {
+  tool: string;
+  entityId: string;
+};
+```
+
+**2. Event Producer** (`hooks/drawing/useUnifiedDrawing.tsx`):
+```typescript
+// On completion
+EventBus.emit('drawing:complete', {
+  tool: currentTool,
+  entityId: newEntity?.id ?? 'unknown'
+});
+```
+
+**3. Event Consumer** (`canvas-v2/preview-canvas/PreviewCanvas.tsx`):
+```typescript
+useEffect(() => {
+  const unsubscribe = EventBus.on('drawing:complete', () => {
+    rendererRef.current?.clear();
+  });
+  return unsubscribe;
+}, []);
+```
+
+**Enterprise Pattern Justification**:
+
+| Aspect | Implementation | Industry Standard |
+|--------|---------------|-------------------|
+| **Decoupling** | Components don't know each other | Autodesk AutoCAD, Adobe Illustrator |
+| **Synchronous** | Clear in same event loop | Google Docs, Microsoft Office |
+| **Type-Safe** | TypeScript generics | Salesforce Lightning, SAP Fiori |
+| **Centralized** | Uses existing EventBus | Bentley MicroStation, SolidWorks |
+
+**Benefits**:
+
+| Benefit | Description |
+|---------|-------------|
+| ✅ **Zero Delay** | Preview clears IMMEDIATELY on completion |
+| ✅ **Decoupled** | PreviewCanvas doesn't import useUnifiedDrawing |
+| ✅ **Extensible** | Other consumers can also listen |
+| ✅ **Type-Safe** | TypeScript enforces event payload types |
+| ✅ **Testable** | Easy to mock EventBus in unit tests |
+
+**Files Changed**:
+- `src/subapps/dxf-viewer/systems/events/EventBus.ts` - Added `drawing:complete` event type
+- `src/subapps/dxf-viewer/hooks/drawing/useUnifiedDrawing.tsx` - Emit event on completion
+- `src/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas.tsx` - Listen and clear
+
+**Rejected Alternatives**:
+
+| Alternative | Why Rejected |
+|-------------|--------------|
+| Return boolean from `addPoint()` | Tight coupling, not scalable |
+| Callback parameter | Props drilling, not enterprise |
+| Polling/interval check | Performance overhead |
+| React Context | Unnecessary re-renders |
+
+**References**:
+- SSOT: `src/subapps/dxf-viewer/systems/events/EventBus.ts`
+- Industry: Adobe Creative Suite Event System, Autodesk Command Pattern, Google Event Bus
+
+---
+
+### 📋 ADR-041: CENTRALIZED DISTANCE LABEL RENDERING (2026-01-27) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED** | **Decision Date**: 2026-01-27
+
+**Context**:
+Duplicate distance label implementations: PreviewRenderer (preview canvas) και BaseEntityRenderer (main canvas) είχαν ΞΕΧΩΡΙΣΤΕΣ υλοποιήσεις για distance labels με διαφορετικό styling.
+
+**Problem Analysis**:
+- `PreviewRenderer.renderDistanceLabelFromWorld()` - HARDCODED styling (font, colors, background)
+- `BaseEntityRenderer.renderDistanceTextCommon()` - Used centralized TextStyleStore
+- Δύο διαφορετικές υλοποιήσεις για την ΙΔΙΑ λειτουργικότητα = **DUPLICATE CODE**
+
+**Decision**:
+
+| Component | Role | Pattern |
+|-----------|------|---------|
+| **distance-label-utils.ts** | Single Source of Truth | Shared utility |
+| **PreviewRenderer** | Consumer | Calls `renderDistanceLabel()` |
+| **BaseEntityRenderer** | Consumer | Can also use same utility |
+
+**Implementation**:
+
+**1. Centralized Utility** (`rendering/entities/shared/distance-label-utils.ts`):
+```typescript
+// Single function for all distance labels
+export function renderDistanceLabel(
+  ctx: CanvasRenderingContext2D,
+  worldP1: Point2D,
+  worldP2: Point2D,
+  screenP1: Point2D,
+  screenP2: Point2D,
+  options: DistanceLabelOptions
+): void;
+
+// Presets for different phases
+export const PREVIEW_LABEL_DEFAULTS: Required<DistanceLabelOptions>;
+export const FINAL_LABEL_DEFAULTS: Required<DistanceLabelOptions>;
+```
+
+**2. PreviewRenderer Integration**:
+```typescript
+private renderDistanceLabelFromWorld(...): void {
+  // 🏢 ADR-041: Use centralized distance label rendering
+  renderDistanceLabel(ctx, worldP1, worldP2, screenP1, screenP2, PREVIEW_LABEL_DEFAULTS);
+}
+```
+
+**Configuration Options**:
+
+| Option | Preview Default | Final Default | Description |
+|--------|-----------------|---------------|-------------|
+| `showBackground` | `true` | `false` | Background box behind text |
+| `rotateWithLine` | `false` | `true` | Rotate text to align with line |
+| `verticalOffset` | `-10` | `0` | Offset from midpoint |
+| `decimals` | `2` | `2` | Decimal precision |
+
+**Enterprise Pattern Justification**:
+
+| Aspect | Implementation | Industry Standard |
+|--------|---------------|-------------------|
+| **Single Source of Truth** | One utility for all | Autodesk AutoCAD, Bentley |
+| **Configuration Pattern** | Options object | SAP Fiori, Salesforce |
+| **Integration with Stores** | Uses TextStyleStore | Google Material, Adobe |
+| **Zero Duplication** | Removed hardcoded code | Microsoft, Oracle |
+
+**Benefits**:
+
+| Benefit | Description |
+|---------|-------------|
+| ✅ **Zero Duplication** | One implementation for all distance labels |
+| ✅ **Consistent Styling** | Same appearance everywhere |
+| ✅ **Configurable** | Options for different phases/contexts |
+| ✅ **Maintainable** | Change in one place affects all |
+| ✅ **TypeScript Safe** | Full type checking (ZERO any) |
+
+**Files Changed**:
+- `src/subapps/dxf-viewer/rendering/entities/shared/distance-label-utils.ts` - **NEW** centralized utility
+- `src/subapps/dxf-viewer/rendering/entities/shared/index.ts` - Added export
+- `src/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewRenderer.ts` - Uses centralized utility
+
+**References**:
+- SSOT: `src/subapps/dxf-viewer/rendering/entities/shared/distance-label-utils.ts`
+- Integrates with: TextStyleStore, useTextPreviewStyle
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

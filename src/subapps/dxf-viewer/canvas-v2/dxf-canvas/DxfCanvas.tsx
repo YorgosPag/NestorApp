@@ -65,7 +65,9 @@ export interface DxfCanvasRef {
   zoomAtScreenPoint: (factor: number, screenPoint: Point2D) => void;
 }
 
-export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
+// 🚀 PERFORMANCE (2026-01-27): Wrap forwardRef with memo to prevent unnecessary re-renders
+// Parent state changes (mouseCss, mouseWorld, dragPreviewPosition) should NOT trigger canvas re-render
+export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
   scene,
   transform,
   viewport: viewportProp, // ✅ CENTRALIZED: Accept viewport prop
@@ -384,4 +386,7 @@ export const DxfCanvas = React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
       onAuxClick={(e) => e.preventDefault()}
     />
   );
-});
+}));
+
+// 🚀 PERFORMANCE (2026-01-27): Display name for React DevTools debugging
+DxfCanvas.displayName = 'DxfCanvas';

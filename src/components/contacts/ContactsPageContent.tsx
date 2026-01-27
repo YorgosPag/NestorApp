@@ -28,17 +28,15 @@ import { ContactsService } from '@/services/contacts.service';
 import { CONTACT_TYPES } from '@/constants/contacts';
 import { ContactsHeader } from './page/ContactsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+// ⚡ ENTERPRISE: Only import used icons - removed UserPlus, BrainCircuit, Crown (unused)
 import {
   Users,
   Building2,
   Landmark,
   Activity,
-  UserPlus,
   X,
   Filter,
-  BrainCircuit,
   TrendingUp,
-  Crown,
   Calendar,
   Star,
   Briefcase,
@@ -50,10 +48,25 @@ import { ContactsList } from './list/ContactsList';
 import { ContactGridCard } from '@/domain';
 import { ContactDetails } from './details/ContactDetails';
 import { MobileDetailsSlideIn } from '@/core/layouts';
-import { TabbedAddNewContactDialog } from './dialogs/TabbedAddNewContactDialog';
-import { EditContactDialog } from './dialogs/EditContactDialog';
-import { DeleteContactDialog } from './dialogs/DeleteContactDialog';
-import { ArchiveContactDialog } from './dialogs/ArchiveContactDialog';
+// ⚡ ENTERPRISE PERFORMANCE: Dynamic imports for dialogs - loaded on demand
+// Pattern: Vercel, Salesforce - dialogs are loaded only when user opens them
+import dynamic from 'next/dynamic';
+const TabbedAddNewContactDialog = dynamic(
+  () => import('./dialogs/TabbedAddNewContactDialog').then(mod => ({ default: mod.TabbedAddNewContactDialog })),
+  { ssr: false }
+);
+const EditContactDialog = dynamic(
+  () => import('./dialogs/EditContactDialog').then(mod => ({ default: mod.EditContactDialog })),
+  { ssr: false }
+);
+const DeleteContactDialog = dynamic(
+  () => import('./dialogs/DeleteContactDialog').then(mod => ({ default: mod.DeleteContactDialog })),
+  { ssr: false }
+);
+const ArchiveContactDialog = dynamic(
+  () => import('./dialogs/ArchiveContactDialog').then(mod => ({ default: mod.ArchiveContactDialog })),
+  { ssr: false }
+);
 import { AdvancedFiltersPanel, type ContactFilterState, contactFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { MobileCompactHeader } from '@/core/headers';
