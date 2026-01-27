@@ -48,16 +48,16 @@ export function useToolbarState() {
     
     // activeTool is now managed by parent - no local setActiveTool
 
-    if (tool === 'measure-distance') {
-      // measure-distance uses same logic as line tool but keeps its own identity
-
-      onDrawingStart('measure-distance');
+    if (tool === 'measure-distance' || tool === 'measure-distance-continuous') {
+      // 🏢 ENTERPRISE (2026-01-27): Distance measurement tools (single + continuous)
+      // Both use same drawing logic but continuous doesn't stop after 2nd point
+      onDrawingStart(tool as DrawingTool);
     } else if (tool === 'measure-area') {
 
       onDrawingStart('measure-area');
     } else if (tool === 'measure-angle') {
       // measure-angle uses same logic as polyline tool but keeps its own identity
-
+      console.log('🎯 [useToolbarState] measure-angle selected, calling onDrawingStart("measure-angle")');
       onDrawingStart('measure-angle');
     } else if (tool.startsWith('measure-')) {
       const measurementType = tool.replace('measure-', '') as MeasurementType;

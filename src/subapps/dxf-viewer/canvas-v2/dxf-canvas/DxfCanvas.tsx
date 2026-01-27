@@ -235,6 +235,26 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   useEffect(() => {
     setupCanvas();
 
+    // 🔧 FIX (2026-01-27): Force initial render after setup
+    // Without this, the canvas may not render until a resize event occurs (e.g., opening DevTools)
+    // This ensures the scene is rendered immediately on mount
+    requestAnimationFrame(() => {
+      const renderer = rendererRef.current;
+      const canvas = canvasRef.current;
+      if (renderer && canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const currentViewport = { width: rect.width, height: rect.height };
+        if (currentViewport.width > 0 && currentViewport.height > 0) {
+          try {
+            renderer.render(scene, transform, currentViewport, renderOptions);
+            console.log('🎨 [DxfCanvas] Force render on mount:', currentViewport);
+          } catch (error) {
+            console.error('🚨 [DxfCanvas] Force render failed:', error);
+          }
+        }
+      }
+    });
+
     const handleResize = () => setupCanvas();
     window.addEventListener('resize', handleResize);
 
@@ -293,6 +313,12 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
           // 🏢 ENTERPRISE: Type-safe UIElementSettings cast for GridRenderer
           gridRendererRef.current.render(context, viewport, gridSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
         }
+      } else {
+        console.log('🚫 [DxfCanvas] Grid NOT rendered:', {
+          hasRenderer: !!gridRendererRef.current,
+          enabled: gridSettings?.enabled,
+          gridSettings
+        });
       }
 
       // 3️⃣ RENDER RULERS (after grid, so it's on top of grid)

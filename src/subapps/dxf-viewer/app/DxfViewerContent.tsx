@@ -898,6 +898,7 @@ Check console for detailed metrics`;
     currentScene,
     onNudgeSelection: nudgeSelection,
     onColorMenuClose: closeColorMenu,
+    onDrawingCancel: state.onDrawingCancel, // 🎯 ADR-047: Cancel drawing on Escape
     activeTool,
     overlayMode,
     overlayStore

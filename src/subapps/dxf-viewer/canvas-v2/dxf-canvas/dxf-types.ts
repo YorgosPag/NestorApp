@@ -8,7 +8,7 @@ import type { Point2D } from '../../rendering/types/Types';
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement';
   layer: string;
   color: string;
   lineWidth: number;
@@ -49,7 +49,15 @@ export interface DxfText extends DxfEntity {
   rotation?: number; // in degrees
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText;
+export interface DxfAngleMeasurement extends DxfEntity {
+  type: 'angle-measurement';
+  vertex: Point2D; // Center point of the angle
+  point1: Point2D; // First arm endpoint
+  point2: Point2D; // Second arm endpoint
+  angle: number; // Angle in degrees
+}
+
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement;
 
 // === DXF SCENE ===
 export interface DxfScene {

@@ -1378,6 +1378,8 @@
     "copy": "Copy",
     "delete": "Delete",
     "measureDistance": "Measure Distance",
+    "measureDistance2P": "Distance Between 2 Points",
+    "measureDistanceContinuous": "Continuous Distance Measurement",
     "measureArea": "Measure Area",
     "measureAngle": "Measure Angle",
     "measureAngleBasic": "Basic Angle",

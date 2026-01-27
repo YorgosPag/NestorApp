@@ -1,55 +1,77 @@
 /**
  * Angle Measurement Entity Renderer
- * Handles rendering of angle measurement entities with green dots, arc, and angle display
+ * 🏢 ENTERPRISE REFACTORING (2026-01-27): Phase-Aware Unified Rendering
+ *
+ * Pattern: AutoCAD/BricsCAD - Consistent rendering across preview/normal/selected phases
+ * - Preview phase: Green lines, fuchsia angle text, white distance labels, grips visible
+ * - Normal phase: Entity color lines, fuchsia angle text, white distance labels, no grips
+ * - Selected phase: Orange highlight, all measurements visible, grips visible
+ *
+ * ✅ Uses ONLY centralized methods from BaseEntityRenderer:
+ *    - renderWithPhases (template method)
+ *    - PhaseManager (phase detection)
+ *    - renderDistanceTextPhaseAware (distance labels)
+ *    - shouldRenderSplitLine (split line detection)
+ *    - renderSplitLineWithGap (split line rendering)
+ *    - drawCentralizedArc (arc rendering)
+ *    - applyDimensionTextStyle (fuchsia text)
+ *    - renderGrips (grip rendering - automatic via renderWithPhases)
  */
 
 import { BaseEntityRenderer } from './BaseEntityRenderer';
-import type { EntityModel, RenderOptions } from '../types/Types';
-import type { GripInfo } from '../types/Types';
-import type { Point2D } from '../types/Types';
-import { pointToLineDistance } from './shared/geometry-utils';
+import type { EntityModel, RenderOptions, GripInfo, Point2D } from '../types/Types';
 import { extractAngleMeasurementPoints } from './shared';
-import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
 export class AngleMeasurementRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (entity.type !== 'angle-measurement') return;
-    
+
     const angleMeasurement = extractAngleMeasurementPoints(entity);
     if (!angleMeasurement) return;
-    
+
     const { vertex, point1, point2, angle } = angleMeasurement;
-    
-    const screenVertex = this.worldToScreen(vertex);
-    const screenPoint1 = this.worldToScreen(point1);
-    const screenPoint2 = this.worldToScreen(point2);
-    
-    // 🔺 Χρήση 3-phase system όπως όλες οι άλλες οντότητες
+
+    // 🏢 ENTERPRISE: Use unified 3-phase rendering system
     this.renderWithPhases(
       entity,
       options,
-      // Geometry rendering
-      () => this.renderAngleGeometry(vertex, point1, point2, screenVertex, screenPoint1, screenPoint2, options, entity),
-      // Measurements rendering (arc + text + distance labels for both lines)
+      // Phase 1: Geometry rendering (lines with phase-aware colors)
+      () => this.renderAngleGeometry(vertex, point1, point2, entity, options),
+      // Phase 2: Measurements rendering (arc + angle text + distance labels)
       () => this.renderAngleMeasurements(vertex, point1, point2, angle, entity, options),
-      // Dots rendering (centralized color)
-      () => this.renderAngleDots([screenVertex, screenPoint1, screenPoint2])
+      // Phase 3: Yellow dots (disabled for angle measurements)
+      undefined
     );
   }
-  
-  private renderAngleGeometry(vertex: Point2D, point1: Point2D, point2: Point2D, screenVertex: Point2D, screenPoint1: Point2D, screenPoint2: Point2D, options: RenderOptions, entity: EntityModel): void {
-    // 🔺 Έλεγχος αν οι γραμμές είναι ενεργοποιημένες
+
+  /**
+   * 🏢 ENTERPRISE: Phase-aware geometry rendering
+   * Uses centralized split line logic for consistent preview/normal behavior
+   */
+  private renderAngleGeometry(
+    vertex: Point2D,
+    point1: Point2D,
+    point2: Point2D,
+    entity: EntityModel,
+    options: RenderOptions
+  ): void {
+    // Check if lines are enabled (respects line style settings)
     if (!this.shouldRenderLines(entity, options)) {
-      return; // Δεν σχεδιάζουμε καθόλου γραμμές
+      return;
     }
 
-    // 🔺 Χρήση κεντρικοποιημένης λογικής split line
+    const screenVertex = this.worldToScreen(vertex);
+    const screenPoint1 = this.worldToScreen(point1);
+    const screenPoint2 = this.worldToScreen(point2);
+
+    // 🏢 ENTERPRISE: Use centralized split line logic
+    // Preview phase: Split lines with gaps for distance text (via PhaseManager)
+    // Normal phase: Solid lines without gaps
     if (this.shouldRenderSplitLine(entity, options)) {
-      // Κατά την προεπισκόπηση, χρήση κεντρικοποιημένης split line με distance text
       this.renderSplitLineWithGap(screenVertex, screenPoint1, entity, options);
       this.renderSplitLineWithGap(screenVertex, screenPoint2, entity, options);
     } else {
-      // Final measurement, draw simple lines without distances
+      // Normal/Selected phase: Simple solid lines with entity color
       this.ctx.beginPath();
       this.ctx.moveTo(screenVertex.x, screenVertex.y);
       this.ctx.lineTo(screenPoint1.x, screenPoint1.y);
@@ -58,75 +80,96 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
       this.ctx.stroke();
     }
   }
-  
-  private renderAngleMeasurements(vertex: Point2D, point1: Point2D, point2: Point2D, angle: number, entity: EntityModel, options: RenderOptions): void {
+
+  /**
+   * 🏢 ENTERPRISE: Unified measurements rendering
+   * Uses centralized methods for arc, angle text, and distance labels
+   */
+  private renderAngleMeasurements(
+    vertex: Point2D,
+    point1: Point2D,
+    point2: Point2D,
+    angle: number,
+    entity: EntityModel,
+    options: RenderOptions
+  ): void {
     const screenVertex = this.worldToScreen(vertex);
     const screenPoint1 = this.worldToScreen(point1);
     const screenPoint2 = this.worldToScreen(point2);
-    
-    // 🔺 Προσθήκη distance labels για τις δύο γραμμές της γωνίας (με phase-aware positioning)
+
+    // 🏢 ENTERPRISE: Phase-aware distance labels (centralized)
+    // Preview: Inline positioning (on the line)
+    // Normal/Selected: Offset positioning (beside the line)
     this.renderDistanceTextPhaseAware(vertex, point1, screenVertex, screenPoint1, entity, options);
     this.renderDistanceTextPhaseAware(vertex, point2, screenVertex, screenPoint2, entity, options);
-    
-    // 🔺 Χρήση ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗΣ μεθόδου για τόξα (πορτοκαλί, διακεκομμένα)
-    const arcRadius = 40; // Screen pixels - μεγαλύτερη τιμή
+
+    // 🏢 ENTERPRISE: Centralized arc rendering (orange dashed arc)
+    const arcRadius = 40; // Screen pixels
     const angle1 = Math.atan2(point1.y - vertex.y, point1.x - vertex.x);
     const angle2 = Math.atan2(point2.y - vertex.y, point2.x - vertex.x);
-    
-    // Χρήση κεντρικοποιημένης μεθόδου για αυτόματο εσωτερικό τόξο
-    // Μετατροπή από screen pixels σε world coordinates
+
+    // Convert to world coordinates for consistent appearance at all zoom levels
     const arcRadiusWorld = arcRadius / this.transform.scale;
     this.drawCentralizedArc(vertex.x, vertex.y, arcRadiusWorld, angle1, angle2);
-    
-    // Draw angle text
+
+    // 🏢 ENTERPRISE: Centralized angle text rendering (fuchsia)
     this.drawAngleText(screenVertex, screenPoint1, screenPoint2, angle);
   }
-  
-  private renderAngleDots(points: Point2D[]): void {
-    // 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ ΧΡΏΜΑ - το fillStyle έχει ήδη οριστεί από το renderWithPhases
-    // ⚡ NUCLEAR: ANGLE MEASUREMENT DOTS ELIMINATED
-  }
 
-
-
-
-  private drawAngleText(vertex: Point2D, point1: Point2D, point2: Point2D, angleDegrees: number): void {
+  /**
+   * 🏢 ENTERPRISE: Centralized angle text rendering
+   * Uses applyDimensionTextStyle for consistent fuchsia color
+   * Positions text on EXTERIOR bisector (CAD standard)
+   */
+  private drawAngleText(
+    vertex: Point2D,
+    point1: Point2D,
+    point2: Point2D,
+    angleDegrees: number
+  ): void {
     this.ctx.save();
-    this.applyDimensionTextStyle(); // Use centralized fuchsia color and styling
-    
-    // Calculate text position (midway between the two arms, offset from vertex)
+
+    // 🏢 ENTERPRISE: Use centralized dimension text style (fuchsia color)
+    this.applyDimensionTextStyle();
+
+    // Calculate text position (exterior bisector for CAD compliance)
     const angle1 = Math.atan2(point1.y - vertex.y, point1.x - vertex.x);
     const angle2 = Math.atan2(point2.y - vertex.y, point2.x - vertex.x);
-    
+
     // Calculate bisector angle
     let bisectorAngle = (angle1 + angle2) / 2;
-    
-    // Handle angle wrapping
+
+    // Normalize angle difference to [-π, π]
     let angleDiff = angle2 - angle1;
-    if (angleDiff > Math.PI) {
+    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+    // If angle is > 180°, flip bisector to exterior
+    if (Math.abs(angleDiff) > Math.PI) {
       bisectorAngle += Math.PI;
-    } else if (angleDiff < -Math.PI) {
-      bisectorAngle -= Math.PI;
     }
-    
-    // Text offset from vertex
-    const textDistance = 50 / this.transform.scale;
-    const screenTextDistance = textDistance * this.transform.scale;
-    
-    const textX = vertex.x + Math.cos(bisectorAngle) * screenTextDistance;
-    const textY = vertex.y + Math.sin(bisectorAngle) * screenTextDistance;
-    
-    // Format angle text
+
+    // Text offset from vertex (screen pixels for consistent appearance)
+    const textDistance = 50;
+    const textX = vertex.x + Math.cos(bisectorAngle) * textDistance;
+    const textY = vertex.y + Math.sin(bisectorAngle) * textDistance;
+
+    // Format and render angle text
     const angleText = `${angleDegrees.toFixed(1)}°`;
-    
-    // Center the text
+
+    // 🏢 ENTERPRISE: Use fillText directly to preserve fuchsia color
+    // (renderStyledTextWithOverride would override with white text style)
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
-    renderStyledTextWithOverride(this.ctx, angleText, textX, textY);
-    
+    this.ctx.fillText(angleText, textX, textY);
+
     this.ctx.restore();
   }
 
+  /**
+   * 🏢 ENTERPRISE: Grip positions for angle measurement
+   * Returns 3 grips: vertex (center), point1, point2
+   */
   getGrips(entity: EntityModel): GripInfo[] {
     if (entity.type !== 'angle-measurement') return [];
 
@@ -160,19 +203,23 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
     ];
   }
 
+  /**
+   * 🏢 ENTERPRISE: Hit test for angle measurement selection
+   * Tests proximity to vertex, point1, and point2
+   */
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
     if (entity.type !== 'angle-measurement') return false;
 
     const angleMeasurement = extractAngleMeasurementPoints(entity);
     if (!angleMeasurement) return false;
 
-    // Simple tolerance-based hit testing για angle measurement
     const { vertex, point1, point2 } = angleMeasurement;
+
+    // Test proximity to all 3 points
     const distance1 = Math.sqrt(Math.pow(point.x - vertex.x, 2) + Math.pow(point.y - vertex.y, 2));
     const distance2 = Math.sqrt(Math.pow(point.x - point1.x, 2) + Math.pow(point.y - point1.y, 2));
     const distance3 = Math.sqrt(Math.pow(point.x - point2.x, 2) + Math.pow(point.y - point2.y, 2));
 
     return distance1 <= tolerance || distance2 <= tolerance || distance3 <= tolerance;
   }
-
 }

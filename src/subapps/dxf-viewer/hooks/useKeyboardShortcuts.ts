@@ -23,6 +23,7 @@ interface KeyboardShortcutsConfig {
   currentScene: SceneModel | null;
   onNudgeSelection: (dx: number, dy: number) => void;
   onColorMenuClose: () => void;
+  onDrawingCancel?: () => void; // 🎯 ADR-047: Cancel drawing on Escape
   activeTool: string;
   overlayMode: string;
   overlayStore: {
@@ -46,6 +47,7 @@ export const useKeyboardShortcuts = ({
   currentScene,
   onNudgeSelection,
   onColorMenuClose,
+  onDrawingCancel, // 🎯 ADR-047: Cancel drawing on Escape
   activeTool,
   overlayMode,
   overlayStore
@@ -76,8 +78,31 @@ export const useKeyboardShortcuts = ({
 
       // ⌨️ SPECIAL SHORTCUTS - Using centralized matchesShortcut()
 
-      // ESC - Close color palette
+      // 🎯 ADR-047: ESC - Cancel drawing OR close color palette
       if (matchesShortcut(e, 'escape')) {
+        console.log(`⌨️ [useKeyboardShortcuts] ESC pressed! State:`, {
+          activeTool,
+          overlayMode,
+          hasOnDrawingCancel: !!onDrawingCancel
+        });
+
+        // PRIORITY 1: Cancel active drawing (measure-area, polyline, polygon, etc.)
+        const isDrawingTool = ['line', 'polyline', 'polygon', 'measure-area', 'measure-distance', 'measure-angle', 'rectangle', 'circle'].includes(activeTool);
+
+        console.log(`🔍 [useKeyboardShortcuts] ESC check:`, {
+          isDrawingTool,
+          willCallCancel: isDrawingTool && !!onDrawingCancel
+        });
+
+        if (isDrawingTool && onDrawingCancel) {
+          console.log(`🚫 [useKeyboardShortcuts] ESC → Cancel drawing (tool: ${activeTool})`);
+          e.preventDefault();
+          onDrawingCancel();
+          return;
+        }
+
+        // PRIORITY 2: Close color palette (fallback if not drawing)
+        console.log(`🎨 [useKeyboardShortcuts] ESC → Close color palette (fallback)`);
         onColorMenuClose();
         return;
       }

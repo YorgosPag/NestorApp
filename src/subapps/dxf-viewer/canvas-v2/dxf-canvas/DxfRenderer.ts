@@ -235,6 +235,15 @@ export class DxfRenderer {
           rotation: entity.rotation
         };
 
+      case 'angle-measurement':
+        // 🏢 ENTERPRISE (2026-01-27): Angle measurement entity support
+        return {
+          vertex: entity.vertex,
+          point1: entity.point1,
+          point2: entity.point2,
+          angle: entity.angle
+        };
+
       default:
         return {};
     }

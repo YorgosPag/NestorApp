@@ -195,7 +195,18 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
       // ✅ CENTRALIZED: Using DXF_MEASUREMENT_TOOL_LABELS from central system - ZERO HARDCODED VALUES
       // 🎨 ENTERPRISE: Auto-assigned from DXF_TOOL_GROUP_COLORS.MEASUREMENTS
       // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
-      { id: 'measure-distance' as ToolType, icon: Ruler, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_DISTANCE, hotkey: getShortcutDisplayLabel('measureDistance'), colorClass: DXF_TOOL_GROUP_COLORS.MEASUREMENTS },
+      {
+        id: 'measure-distance' as ToolType,
+        icon: Ruler,
+        label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_DISTANCE,
+        hotkey: getShortcutDisplayLabel('measureDistance'),
+        colorClass: DXF_TOOL_GROUP_COLORS.MEASUREMENTS,
+        dropdownOptions: [
+          // 🏢 ENTERPRISE (2026-01-27): Distance measurement variations - ZERO HARDCODED VALUES
+          { id: 'measure-distance' as ToolType, icon: Ruler, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_DISTANCE_2P },
+          { id: 'measure-distance-continuous' as ToolType, icon: Ruler, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_DISTANCE_CONTINUOUS }
+        ]
+      },
       { id: 'measure-area' as ToolType, icon: Calculator, label: DXF_MEASUREMENT_TOOL_LABELS.MEASURE_AREA, hotkey: getShortcutDisplayLabel('measureArea'), colorClass: DXF_TOOL_GROUP_COLORS.MEASUREMENTS },
       {
         id: 'measure-angle' as ToolType,

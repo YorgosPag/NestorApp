@@ -10,23 +10,17 @@
  * @since 2025-01-25
  */
 
-import React, { createContext, useContext, useRef, useState, type ReactNode } from 'react';
+import React, { createContext, useContext, useRef, useState, useMemo, useCallback, type ReactNode } from 'react';
 // ✅ ENTERPRISE MIGRATION: Using DxfCanvasRef from canvas-v2 (modern API)
 import type { DxfCanvasRef } from '../canvas-v2';
+// 🏢 ENTERPRISE FIX (2026-01-27): Use canonical ViewTransform from centralized types
+// REMOVED duplicate type definition - using Single Source of Truth
+import type { ViewTransform } from '../rendering/types/Types';
 
 // Mock missing types
 type OverlayCanvasImperativeAPI = {
   clear: () => void;
   render: () => void;
-};
-
-type ViewTransform = {
-  x: number;
-  y: number;
-  scale: number;
-  rotation: number;
-  offsetX?: number;
-  offsetY?: number;
 };
 
 interface CanvasContextType {
@@ -67,10 +61,27 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
   // ✅ ENTERPRISE MIGRATION: Using DxfCanvasRef from canvas-v2
   const dxfRef = useRef<DxfCanvasRef>(null);
   const overlayRef = useRef<OverlayCanvasImperativeAPI>(null);
-  const [transform, setTransform] = useState<ViewTransform>({ x: 0, y: 0, scale: 1, rotation: 0, offsetX: 0, offsetY: 0 });
+  // 🏢 ENTERPRISE FIX (2026-01-27): Use canonical ViewTransform format (scale, offsetX, offsetY only)
+  const [transform, setTransformInternal] = useState<ViewTransform>({ scale: 1, offsetX: 0, offsetY: 0 });
+
+  // 🏢 ENTERPRISE (2026-01-27): Stable setTransform reference
+  // ADR: Context transform is TELEMETRY only, imperative API is control plane
+  const setTransform = useCallback((newTransform: ViewTransform) => {
+    setTransformInternal(newTransform);
+  }, []);
+
+  // 🏢 ENTERPRISE (2026-01-27): Memoize context value to prevent DxfCanvas from unmounting
+  // Only recreate when transform changes, not on every render
+  const contextValue = useMemo(() => ({
+    dxfRef,
+    overlayRef,
+    transform,
+    setTransform,
+    canvasRef: dxfRef
+  }), [transform]);
 
   return (
-    <CanvasContext.Provider value={{ dxfRef, overlayRef, transform, setTransform, canvasRef: dxfRef }}>
+    <CanvasContext.Provider value={contextValue}>
       {children}
     </CanvasContext.Provider>
   );

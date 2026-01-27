@@ -24,8 +24,9 @@ export type ToolType =
   | 'copy' 
   | 'delete' 
   | 'measure'
-  | 'measure-distance' 
-  | 'measure-area' 
+  | 'measure-distance'
+  | 'measure-distance-continuous'
+  | 'measure-area'
   | 'measure-angle' 
   | 'measure-angle-line-arc'
   | 'measure-angle-two-arcs'
@@ -73,9 +74,10 @@ export interface ToolbarState {
 }
 
 // MEASUREMENT TOOLS - Προσθήκη νέων εργαλείων
-export type MeasurementTool = 
-  | 'measure-distance' 
-  | 'measure-area' 
+export type MeasurementTool =
+  | 'measure-distance'
+  | 'measure-distance-continuous'
+  | 'measure-area'
   | 'measure-angle' 
   | 'measure-angle-line-arc'
   | 'measure-angle-two-arcs'
@@ -103,6 +105,15 @@ export const MEASUREMENT_TOOL_CONFIGS: Record<MeasurementTool, MeasurementToolCo
     icon: 'Ruler',
     shortcut: 'D',
     description: 'Μέτρηση απόστασης μεταξύ 2 σημείων',
+    requiredPoints: 2
+  },
+  // 🏢 ENTERPRISE (2026-01-27): Continuous distance measurement
+  'measure-distance-continuous': {
+    id: 'measure-distance-continuous',
+    name: 'Συνεχόμενη Απόσταση',
+    icon: 'Ruler',
+    shortcut: 'D',
+    description: 'Συνεχόμενη μέτρηση απόστασης (πολλαπλά σημεία)',
     requiredPoints: 2
   },
   'measure-area': {

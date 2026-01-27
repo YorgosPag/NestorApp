@@ -52,11 +52,14 @@ export function useDxfViewerState() {
 
   // Canvas actions through new API
   // 🏢 ENTERPRISE (2026-01-26): Undo/Redo connected to Command History - ADR-032
+  // 🏢 ENTERPRISE (2026-01-27): Added getTransform/setTransform for direct scale setting - ADR-043
   const canvasActions = {
     zoomIn: canvasOps.zoomIn,
     zoomOut: canvasOps.zoomOut,
     fitToView: canvasOps.fitToView,
     resetToOrigin: canvasOps.resetToOrigin,
+    getTransform: canvasOps.getTransform,
+    setTransform: canvasOps.setTransform,
     undo: useCallback(() => {
       if (canUndo) {
         console.log('↩️ Undo action triggered');
@@ -83,18 +86,20 @@ export function useDxfViewerState() {
       else if (action === 'zoom-reset') canvasActions.resetToOrigin();
     };
 
+    // 🏢 ENTERPRISE (2026-01-27): Connect drawing/measurement tools to unified drawing system
+    // Both onMeasurementStart and onDrawingStart call the same startDrawing from useUnifiedDrawing
+    // This enables measure-angle, measure-area, measure-distance, line, rectangle, etc.
     toolbarState.handleToolChange(
       tool,
-      () => {}, // No measurement system - empty function
-      () => {}, // No drawing system - empty function
+      drawingHandlers.startDrawing, // ✅ MEASUREMENT TOOLS: measure-angle, measure-area, measure-distance
+      drawingHandlers.startDrawing, // ✅ DRAWING TOOLS: line, rectangle, circle, polyline, polygon
       onZoomAction,
-      () => {} // No cancel operations - empty function
+      drawingHandlers.cancelAllOperations // ✅ CANCEL: Stop any ongoing drawing/measurement
     );
-  }, [toolbarState, canvasActions]);
+  }, [toolbarState, canvasActions, drawingHandlers]);
 
   // Enhanced action handler
   const handleAction = useCallback((action: string, data?: number | string | Record<string, unknown>) => {
-    console.log('🎯 useDxfViewerState handleAction called:', action, data); // DEBUG - shows actual values
     switch (action) {
       case 'grid':
         toolbarState.toggleGrid();
@@ -120,9 +125,7 @@ export function useDxfViewerState() {
         break;
       case 'fit-to-view':
       case 'zoom-extents':
-        console.log('🎯 ENTERING fit-to-view case, calling canvasActions.fitToView()'); // DEBUG
         canvasActions.fitToView();
-        console.log('🎯 FINISHED calling canvasActions.fitToView()'); // DEBUG
         break;
       case 'zoom-in':
         canvasActions.zoomIn();
@@ -132,6 +135,17 @@ export function useDxfViewerState() {
         break;
       case 'zoom-reset':
         canvasActions.resetToOrigin();
+        break;
+      case 'set-zoom':
+        // 🏢 ENTERPRISE: Direct scale setting from ZoomControls input
+        // data is a decimal value (e.g., 1.0 = 100%, 0.5 = 50%)
+        if (typeof data === 'number' && !isNaN(data)) {
+          const currentTransform = canvasActions.getTransform();
+          canvasActions.setTransform({
+            ...currentTransform,
+            scale: data
+          });
+        }
         break;
       case 'zoom-window':
         // Zoom window tool is handled by tool change, not direct action
@@ -144,7 +158,7 @@ export function useDxfViewerState() {
       default:
         console.warn('Unknown action:', action);
     }
-  }, [toolbarState, canvasActions, snapEnabled, setSnapEnabled]);
+  }, [toolbarState, canvasActions, snapEnabled, setSnapEnabled, handleToolChange]);
 
   return {
     ...sceneState,

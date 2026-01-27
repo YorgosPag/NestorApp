@@ -15,7 +15,7 @@
  *
  * 🏆 ENTERPRISE FEATURES:
  * - Direct 2D canvas API calls (no React re-renders)
- * - Supports line, circle, rectangle, polyline previews
+ * - Supports line, circle, rectangle, polyline, angle-measurement previews
  * - Color/style from centralized settings
  * - High-DPI support with devicePixelRatio
  * - Path2D caching for performance
@@ -254,6 +254,9 @@ export class PreviewRenderer {
       case 'rectangle':
         this.renderRectangle(ctx, entity, transform, opts);
         break;
+      case 'angle-measurement':
+        this.renderAngleMeasurement(ctx, entity as any, transform, opts);
+        break;
       case 'point':
         this.renderPoint(ctx, entity as PreviewPoint, transform, opts);
         break;
@@ -400,6 +403,70 @@ export class PreviewRenderer {
       this.renderGrip(ctx, { x, y: y + height }, opts);
       this.renderGrip(ctx, { x: x + width, y: y + height }, opts);
     }
+  }
+
+  /**
+   * 🏢 ENTERPRISE (2026-01-27): Render angle measurement preview
+   */
+  private renderAngleMeasurement(
+    ctx: CanvasRenderingContext2D,
+    entity: { vertex: Point2D; point1: Point2D; point2: Point2D; angle: number },
+    transform: ViewTransform,
+    opts: Required<PreviewRenderOptions>
+  ): void {
+    const screenVertex = this.worldToScreen(entity.vertex, transform);
+    const screenPoint1 = this.worldToScreen(entity.point1, transform);
+    const screenPoint2 = this.worldToScreen(entity.point2, transform);
+
+    // Draw two lines (vertex → point1, vertex → point2)
+    ctx.beginPath();
+    ctx.moveTo(screenVertex.x, screenVertex.y);
+    ctx.lineTo(screenPoint1.x, screenPoint1.y);
+    ctx.moveTo(screenVertex.x, screenVertex.y);
+    ctx.lineTo(screenPoint2.x, screenPoint2.y);
+    ctx.stroke();
+
+    // Draw arc for angle visualization (40px radius in screen space)
+    const arcRadius = 40;
+    const angle1 = Math.atan2(entity.point1.y - entity.vertex.y, entity.point1.x - entity.vertex.x);
+    const angle2 = Math.atan2(entity.point2.y - entity.vertex.y, entity.point2.x - entity.vertex.x);
+
+    ctx.save();
+    ctx.strokeStyle = '#FFA500'; // Orange for arc (CAD standard)
+    ctx.setLineDash([5, 5]); // Dashed arc
+    ctx.beginPath();
+    ctx.arc(screenVertex.x, screenVertex.y, arcRadius, angle1, angle2, false);
+    ctx.stroke();
+    ctx.restore();
+
+    // Draw grips at 3 points
+    if (opts.showGrips) {
+      this.renderGrip(ctx, screenVertex, opts);
+      this.renderGrip(ctx, screenPoint1, opts);
+      this.renderGrip(ctx, screenPoint2, opts);
+    }
+
+    // Draw distance labels for both lines
+    if (entity.vertex && entity.point1) {
+      this.renderDistanceLabelFromWorld(ctx, entity.vertex, entity.point1, screenVertex, screenPoint1);
+    }
+    if (entity.vertex && entity.point2) {
+      this.renderDistanceLabelFromWorld(ctx, entity.vertex, entity.point2, screenVertex, screenPoint2);
+    }
+
+    // Draw angle text at bisector
+    const bisectorAngle = (angle1 + angle2) / 2;
+    const textDistance = 50;
+    const textX = screenVertex.x + Math.cos(bisectorAngle) * textDistance;
+    const textY = screenVertex.y + Math.sin(bisectorAngle) * textDistance;
+
+    ctx.save();
+    ctx.fillStyle = '#FF00FF'; // Fuchsia for angle text (measurement standard)
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${entity.angle.toFixed(1)}°`, textX, textY);
+    ctx.restore();
   }
 
   /**

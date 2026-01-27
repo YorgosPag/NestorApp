@@ -6,9 +6,11 @@
 import type { Point2D } from '../rendering/types/Types';
 
 // ✅ ENTERPRISE FIX: Enhanced grip point interface for preview system
+// 🎯 ADR-047: Added 'close' type and optional color for close-on-first-point indicator
 export interface PreviewGripPoint {
   position: Point2D;
-  type: 'start' | 'end' | 'cursor' | 'vertex';
+  type: 'start' | 'end' | 'cursor' | 'vertex' | 'close'; // 🎯 ADR-047: 'close' for polygon closing
+  color?: string; // 🎯 ADR-047: Optional custom color (e.g., '#00ff00' for close indicator)
 }
 
 // Base entity interface

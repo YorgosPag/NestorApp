@@ -50,7 +50,7 @@
 // DEBUG FLAG
 const DEBUG_DRAWING_HANDLERS = false; // 🔍 DISABLED - set to true only for debugging
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useMemo } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
@@ -61,6 +61,8 @@ import { useCanvasOperations } from '../interfaces/useCanvasOperations';
 import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
 // 🏢 ADR-040: PreviewCanvas for direct preview rendering (performance optimization)
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
+// 🎯 ADR-047: Distance calculation for close-on-first-point
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 type Pt = { x: number, y: number };
 
@@ -141,8 +143,61 @@ export function useDrawingHandlers(
   // 🏢 ENTERPRISE (2026-01-27): IMMEDIATE preview clear on drawing completion
   // Pattern: Autodesk AutoCAD - Visual feedback must be synchronous
   // The return value from addPoint() indicates if drawing completed (e.g., 2nd click on line)
+  // 🎯 ENTERPRISE (2026-01-27): ADR-047 - Close polygon on first-point click
   const onDrawingPoint = useCallback((p: Pt) => {
+    // 🔍 DEBUG (2026-01-27): Diagnostic logging for coordinate offset issue
+    console.log(`🎯 [onDrawingPoint] Received WORLD point: x=${p.x.toFixed(2)}, y=${p.y.toFixed(2)}`);
+
+    // 🎯 ADR-047: CLOSE POLYGON ON FIRST-POINT CLICK (AutoCAD/BricsCAD pattern)
+    // CRITICAL: Check distance BEFORE snap, using RAW point!
+    const isAreaTool = activeTool === 'measure-area';
+    const hasMinPoints = drawingState.tempPoints.length >= 3; // Need at least 3 points to close
+
+    console.log(`🔍 [onDrawingPoint] ADR-047 STATE CHECK:`, JSON.stringify({
+      activeTool,
+      isAreaTool,
+      tempPointsCount: drawingState.tempPoints.length,
+      hasMinPoints,
+      firstPoint: drawingState.tempPoints[0],
+      allConditionsMet: isAreaTool && hasMinPoints && !!drawingState.tempPoints[0]
+    }, null, 2));
+
+    if (isAreaTool && hasMinPoints && drawingState.tempPoints[0]) {
+      const firstPoint = drawingState.tempPoints[0];
+      const distance = calculateDistance(p, firstPoint); // ✅ Use RAW point, NOT snapped!
+      const CLOSE_TOLERANCE = 20; // 20 world units tolerance (generous for user-friendly closing)
+
+      console.log(`🔄 [onDrawingPoint] ADR-047 Close check:`, {
+        rawPoint: p,
+        firstPoint,
+        distance: distance.toFixed(2),
+        tolerance: CLOSE_TOLERANCE,
+        willClose: distance < CLOSE_TOLERANCE
+      });
+
+      if (distance < CLOSE_TOLERANCE) {
+        // 🎯 AUTO-CLOSE: User clicked near first point - close the polygon!
+        console.log(`✅ [onDrawingPoint] ADR-047 AUTO-CLOSE: Closing polygon at first point`);
+        const newEntity = finishPolyline();
+        if (newEntity && 'type' in newEntity && typeof newEntity.type === 'string') {
+          onEntityCreated(newEntity as Entity);
+        }
+        onToolChange('select');
+
+        // Clear preview canvas
+        if (previewCanvasRef?.current) {
+          previewCanvasRef.current.clear();
+        }
+        return;
+      }
+    } else {
+      console.log(`❌ [onDrawingPoint] ADR-047 SKIPPED: Conditions not met for auto-close`);
+    }
+
+    // Normal point addition (not closing)
     const snappedPoint = applySnap(p);
+    console.log(`🎯 [onDrawingPoint] After snap: x=${snappedPoint.x.toFixed(2)}, y=${snappedPoint.y.toFixed(2)}`);
+
     const transformUtils = canvasOps.getTransformUtils();
     const completed = addPoint(snappedPoint, transformUtils);
 
@@ -151,7 +206,7 @@ export function useDrawingHandlers(
     if (completed && previewCanvasRef?.current) {
       previewCanvasRef.current.clear();
     }
-  }, [addPoint, canvasOps, applySnap, previewCanvasRef]);
+  }, [activeTool, drawingState.tempPoints, addPoint, finishPolyline, onEntityCreated, onToolChange, canvasOps, applySnap, previewCanvasRef]);
 
   const onDrawingHover = useCallback((p: Pt | null) => {
     if (DEBUG_DRAWING_HANDLERS) console.log('🔍 [onDrawingHover] Called with point:', p);
@@ -187,14 +242,19 @@ export function useDrawingHandlers(
   }, [updatePreview, canvasOps, getLatestPreviewEntity, previewCanvasRef]);
   
   const onDrawingCancel = useCallback(() => {
+    console.log(`🚫 [onDrawingCancel] ADR-047 CANCEL DRAWING CALLED!`, {
+      activeTool,
+      tempPointsCount: drawingState.tempPoints.length
+    });
     cancelDrawing();
     onToolChange('select');
-  }, [cancelDrawing, onToolChange]);
+  }, [cancelDrawing, onToolChange, activeTool, drawingState.tempPoints]);
 
   // Double click handler for finishing operations
   const onDrawingDoubleClick = useCallback(() => {
 
-    if (activeTool === 'polyline' || activeTool === 'polygon' || activeTool === 'measure-area' || activeTool === 'measure-angle') {
+    // 🏢 ENTERPRISE (2026-01-27): Continuous tools that finish with double-click
+    if (activeTool === 'polyline' || activeTool === 'polygon' || activeTool === 'measure-area' || activeTool === 'measure-angle' || activeTool === 'measure-distance-continuous') {
       // Check for overlay completion callback first
       const { toolStyleStore } = require('../../stores/ToolStyleStore');
       const isOverlayCompletion = toolStyleStore.triggerOverlayCompletion();

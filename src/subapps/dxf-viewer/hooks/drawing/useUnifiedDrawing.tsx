@@ -97,7 +97,7 @@ import { useLineStyles } from '../../settings-provider';
 // 🏢 ENTERPRISE: Import centralized CAD colors - ADR-014 color token migration
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
-export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-area' | 'measure-angle';
+export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-distance-continuous' | 'measure-area' | 'measure-angle';
 
 export interface DrawingState {
   currentTool: DrawingTool;
@@ -234,6 +234,30 @@ export function useUnifiedDrawing() {
           } as LineEntity;
         }
         break;
+
+      // 🏢 ENTERPRISE (2026-01-27): Continuous distance measurement
+      // Pattern: AutoCAD MEASUREGEOM continuous mode - multiple distance measurements
+      // Creates line entity for every 2 consecutive points
+      case 'measure-distance-continuous':
+        if (points.length >= 2) {
+          // For continuous mode, always return preview for LAST 2 points
+          const lastTwoPoints = points.slice(-2);
+          return {
+            id,
+            type: 'line',
+            start: lastTwoPoints[0],
+            end: lastTwoPoints[1],
+            visible: true,
+            layer: '0',
+            measurement: true, // Mark as measurement entity
+            // 🏢 ENTERPRISE: Use bright green color for measurement lines
+            color: '#00FF00', // MEASUREMENT_LINE color from color-config.ts
+            lineweight: 1,
+            showEdgeDistances: true, // Show distance label on the measurement line
+          } as LineEntity;
+        }
+        break;
+
       case 'rectangle':
         if (points.length >= 2) {
           const [p1, p2] = points;
@@ -430,10 +454,11 @@ export function useUnifiedDrawing() {
           return points.length >= 2;
         case 'measure-angle':
           return points.length >= 3; // Complete after exactly 3 points for angle measurement
+        case 'measure-distance-continuous':
         case 'polyline':
         case 'polygon':
         case 'measure-area':
-          return false; // These tools continue until manually finished
+          return false; // These tools continue until manually finished (double-click or Escape)
         default:
           return false;
       }
@@ -441,9 +466,84 @@ export function useUnifiedDrawing() {
 
     const currentTool = (machineContext.toolType as DrawingTool) || 'select';
 
+    // 🔍 DEBUG (2026-01-27): Diagnostic logging for measure-angle completion issue
+    console.log('🎯 [addPoint] DEBUG:', {
+      currentTool,
+      machineContextToolType: machineContext.toolType,
+      pointsCount: newTempPoints.length,
+      isCompleteResult: isComplete(currentTool, newTempPoints)
+    });
+
+    // 🏢 ENTERPRISE (2026-01-27): CONTINUOUS DISTANCE MEASUREMENT - AutoCAD Pattern
+    // Pattern: AutoCAD MEASUREGEOM continuous mode
+    // - Every 2nd point → create measurement entity
+    // - Keep last point for next measurement
+    // - Continue until double-click/Escape
+
+    // 🔍 DIAGNOSTIC (2026-01-27): Debug continuous distance
+    console.log('🔍 [addPoint] Auto-completion check:', {
+      currentTool,
+      isContinuous: currentTool === 'measure-distance-continuous',
+      tempPointsLength: newTempPoints.length,
+      isEven: newTempPoints.length % 2 === 0,
+      willAutoComplete: currentTool === 'measure-distance-continuous' && newTempPoints.length >= 2 && newTempPoints.length % 2 === 0
+    });
+
+    if (currentTool === 'measure-distance-continuous' && newTempPoints.length >= 2 && newTempPoints.length % 2 === 0) {
+      console.log('✅ [addPoint] CONTINUOUS MODE: Auto-creating measurement entity');
+      // Get the last 2 points for this measurement
+      const lastTwoPoints = newTempPoints.slice(-2);
+
+      // Create measurement entity
+      const measurementEntity = createEntityFromTool('measure-distance', lastTwoPoints);
+
+      const isMeasurementTool = true;
+      const effectiveLevelId = currentLevelId || '0';
+
+      if (measurementEntity && effectiveLevelId) {
+        const scene = getLevelScene(effectiveLevelId);
+        if (scene) {
+          if ('type' in measurementEntity && typeof measurementEntity.type === 'string') {
+            const updatedScene = { ...scene, entities: [...scene.entities, measurementEntity as AnySceneEntity] };
+            setLevelScene(effectiveLevelId, updatedScene);
+          }
+        } else if (isMeasurementTool) {
+          const defaultScene = { entities: [measurementEntity as AnySceneEntity] };
+          setLevelScene(effectiveLevelId, defaultScene);
+        }
+
+        // 🏢 ENTERPRISE: Emit event for each measurement
+        EventBus.emit('drawing:complete', {
+          tool: currentTool,
+          entityId: measurementEntity?.id ?? 'unknown'
+        });
+      }
+
+      // 🏢 ENTERPRISE: Keep last point for next measurement (AutoCAD pattern)
+      // Reset machine to have only the last point
+      machineReset();
+      machineSelectTool(currentTool);
+      machineAddPoint(newTempPoints[newTempPoints.length - 1]);
+
+      // Update preview for next measurement
+      const nextPreview = createEntityFromTool(currentTool, [newTempPoints[newTempPoints.length - 1]]);
+      if (nextPreview) {
+        previewEntityRef.current = nextPreview as ExtendedSceneEntity;
+      }
+
+      return; // Early return - don't execute standard completion logic
+    }
+
     if (isComplete(currentTool, newTempPoints)) {
       const newEntity = createEntityFromTool(currentTool, newTempPoints);
-      if (newEntity && currentLevelId) {
+
+      // 🏢 ENTERPRISE (2026-01-27): CRITICAL FIX - Measurement tools fallback for missing level
+      // Pattern: AutoCAD - Measurements can exist without active layer, defaulting to "0" (DXF standard)
+      // If no currentLevelId, use default level "0" for measurement entities
+      const isMeasurementTool = currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'measure-angle' || currentTool === 'measure-area';
+      const effectiveLevelId = currentLevelId || (isMeasurementTool ? '0' : null);
+
+      if (newEntity && effectiveLevelId) {
         // Apply completion settings from ColorPalettePanel (for line entities only)
         if (newEntity.type === 'line' && currentTool === 'line' && lineCompletionStyles) {
           // ✅ ENTERPRISE: Type-safe property assignment with proper assertion
@@ -479,13 +579,18 @@ export function useUnifiedDrawing() {
           entityId: newEntity?.id ?? 'unknown'
         });
 
-        const scene = getLevelScene(currentLevelId);
+        const scene = getLevelScene(effectiveLevelId);
         if (scene) {
           // Filter out extended types that are not compatible with AnySceneEntity
           if ('type' in newEntity && typeof newEntity.type === 'string') {
             const updatedScene = { ...scene, entities: [...scene.entities, newEntity as AnySceneEntity] };
-            setLevelScene(currentLevelId, updatedScene);
+            setLevelScene(effectiveLevelId, updatedScene);
           }
+        } else if (isMeasurementTool) {
+          // 🏢 ENTERPRISE (2026-01-27): CRITICAL FIX - Create default level "0" for measurements
+          // Pattern: DXF Standard - Layer "0" is always present for entities without explicit layer
+          const defaultScene = { entities: [newEntity as AnySceneEntity] };
+          setLevelScene(effectiveLevelId, defaultScene);
         }
       }
       // Return to normal mode after entity completion
@@ -601,9 +706,9 @@ export function useUnifiedDrawing() {
       // Show a small preview indicator at the mouse position
       let previewEntity: ExtendedSceneEntity | null = null;
 
-      if (currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-area' || currentTool === 'measure-angle') {
+      if (currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-area' || currentTool === 'measure-angle') {
         // For shapes that need two points, show a small dot at the start point
-        const isMeasurementTool = currentTool === 'measure-distance' || currentTool === 'measure-area' || currentTool === 'measure-angle';
+        const isMeasurementTool = currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'measure-area' || currentTool === 'measure-angle';
 
         previewEntity = {
           id: 'preview_start',
@@ -630,7 +735,7 @@ export function useUnifiedDrawing() {
     const previewEntity = createEntityFromTool(currentTool, worldPoints);
 
     // Mark preview entity for special preview rendering with distance labels
-    if (previewEntity && (currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'measure-area' || currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter')) {
+    if (previewEntity && (currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'measure-area' || currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter')) {
 
       // Handle different entity types appropriately
       // 🏢 ENTERPRISE: Cast to Record<string, unknown> for applyPreviewSettings compatibility
@@ -641,6 +746,15 @@ export function useUnifiedDrawing() {
         extendedPolyline.showPreviewGrips = true;
         extendedPolyline.isOverlayPreview = localState.isOverlayMode === true;
         applyPreviewSettings(extendedPolyline as unknown as Record<string, unknown>);
+
+        // 🎯 ADR-047: Highlight first point for measure-area when 3+ points (close indicator)
+        if (currentTool === 'measure-area' && worldPoints.length >= 3) {
+          extendedPolyline.previewGripPoints = [
+            { position: worldPoints[0], type: 'close', color: '#00ff00' }, // 🟢 Green circle = clickable close point
+            { position: snappedPoint, type: 'cursor' }
+          ];
+          console.log(`🟢 [updatePreview] ADR-047: Added close grip at first point`, worldPoints[0]);
+        }
       } else if (previewEntity.type === 'line') {
         const extendedLine = previewEntity as ExtendedLineEntity;
         extendedLine.preview = true;
@@ -650,7 +764,8 @@ export function useUnifiedDrawing() {
         applyPreviewSettings(extendedLine as unknown as Record<string, unknown>);
 
         // Add grip points for line preview
-        if (currentTool === 'line' && worldPoints.length >= 2) {
+        // 🏢 ENTERPRISE (2026-01-27): Include continuous distance measurement
+        if ((currentTool === 'line' || currentTool === 'measure-distance-continuous') && worldPoints.length >= 2) {
           extendedLine.previewGripPoints = [
             { position: worldPoints[0], type: 'start' },
             { position: snappedPoint, type: 'cursor' }
@@ -670,6 +785,15 @@ export function useUnifiedDrawing() {
         extendedRectangle.preview = true;
         extendedRectangle.showPreviewGrips = true;
         applyPreviewSettings(extendedRectangle as unknown as Record<string, unknown>);
+      } else if (previewEntity.type === 'angle-measurement') {
+        // 🏢 ENTERPRISE (2026-01-27): Angle measurement preview support
+        const extendedAngle = previewEntity as unknown as {
+          preview?: boolean;
+          showPreviewGrips?: boolean;
+        } & typeof previewEntity;
+        extendedAngle.preview = true;
+        extendedAngle.showPreviewGrips = true;
+        applyPreviewSettings(extendedAngle as unknown as Record<string, unknown>);
       }
 
       if (DEBUG_UNIFIED_DRAWING) {
@@ -718,11 +842,17 @@ export function useUnifiedDrawing() {
   }, [machineContext.toolType, machineContext.points, machineMoveCursor, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
+    // 🔍 DEBUG (2026-01-27): Diagnostic logging for measure-angle tool activation
+    console.log('🎯 [startDrawing] Called with tool:', tool);
+
     // Set preview mode when drawing starts
     setMode('preview');
 
     // 🏢 ENTERPRISE: Use state machine for tool selection
     machineSelectTool(tool);
+
+    // 🔍 DEBUG: Verify state machine updated
+    console.log('🎯 [startDrawing] After machineSelectTool, machineContext.toolType:', machineContext.toolType);
 
     // Reset local state
     setLocalState({

@@ -149,33 +149,55 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
     }
   });
 
-  const handleZoomIn = () => onAction('zoom-in-action');
-  const handleZoomOut = () => onAction('zoom-out-action');
+  // 🏢 ENTERPRISE: Action names must match useDxfViewerState.ts handleAction() cases
+  const handleZoomIn = () => onAction('zoom-in'); // → canvasActions.zoomIn()
+  const handleZoomOut = () => onAction('zoom-out'); // → canvasActions.zoomOut()
   const handleSetZoom = (zoom: number) => onAction('set-zoom', zoom);
   
+  // 🏢 ENTERPRISE: Centralized zoom tool handling - ADR-043
+  // Uses centralized zoom system from transform-config.ts + useDxfViewerState
   const handleToolChange = (tool: ToolType) => {
+    // 🎯 ZOOM TOOLS: Execute zoom actions instead of changing tool
+    // Pattern: AutoCAD/Revit - zoom buttons execute immediately
+    // Action names must match useDxfViewerState.ts handleAction() switch cases
+    if (tool === 'zoom-in') {
+      onAction('zoom-in'); // → canvasActions.zoomIn() uses ZOOM_FACTORS.BUTTON_IN
+      return;
+    }
+    if (tool === 'zoom-out') {
+      onAction('zoom-out'); // → canvasActions.zoomOut() uses ZOOM_FACTORS.BUTTON_OUT
+      return;
+    }
     if (tool === 'zoom-window') {
-      onAction('zoom-window');
-    } else if (tool === 'layering') {
-      // UPDATED: Layering tool now uses Unified Grips System (UGS)
+      onAction('zoom-window'); // Activates window selection mode
+      return;
+    }
+    if (tool === 'zoom-extents') {
+      onAction('fit-to-view'); // → canvasActions.fitToView() uses FitToViewService
+      return;
+    }
 
+    // 🗂️ LAYERING TOOL: Toggle layers panel
+    if (tool === 'layering') {
       if (activeTool === 'layering') {
-
         onToolChange('select'); // Toggle off to select mode
-        onAction('toggle-layers'); // ✅ ΔΙΟΡΘΩΣΗ: Hide layers panel όταν απενεργοποιείται
+        onAction('toggle-layers'); // Hide layers panel
       } else {
-
         onToolChange(tool); // Activate layering tool with UGS
         onAction('toggle-layers'); // Show layers panel
       }
-    } else if (tool === 'grip-edit') {
-      // Custom handling για το grip editing tool
+      return;
+    }
 
+    // ✏️ GRIP EDIT: Custom handling
+    if (tool === 'grip-edit') {
       onToolChange(tool);
       onAction('grip-edit');
-    } else {
-      onToolChange(tool);
+      return;
     }
+
+    // 🔧 DEFAULT: Standard tool change
+    onToolChange(tool);
   };
 
   // 🎨 ENTERPRISE: bg-card for consistency with FloatingPanel (Εργαλεία Σχεδίασης)

@@ -27,18 +27,14 @@ import { UI_COLORS } from '../../../config/color-config';
 import { getGripPreviewStyleWithOverride } from '../../../hooks/useGripPreviewStyle';
 import { renderSquareGrip } from '../../../rendering/entities/shared/geometry-rendering-utils';
 
+// 🏢 ADR-048: Unified Grip Rendering System
+import { UnifiedGripRenderer, type GripRenderConfig } from '../../../rendering/grips';
+
 // ============================================================================
-// CONFIGURATION CONSTANTS (Centralized - NO hardcoded values in logic)
+// CONFIGURATION CONSTANTS
 // ============================================================================
-
-/** Size multiplier for hot (active/dragging) grips */
-const HOT_GRIP_SIZE_MULTIPLIER = 1.5;
-
-/** Size multiplier for warm (hovered) grips */
-const WARM_GRIP_SIZE_MULTIPLIER = 1.25;
-
-/** Size multiplier for cold (normal) grips */
-const COLD_GRIP_SIZE_MULTIPLIER = 1.0;
+// 🏢 ADR-048: Grip size multipliers moved to UnifiedGripRenderer system
+// (See: rendering/grips/constants.ts)
 
 // ============================================================================
 // GRIP PHASE RENDERER CLASS
@@ -55,6 +51,7 @@ const COLD_GRIP_SIZE_MULTIPLIER = 1.0;
 export class GripPhaseRenderer {
   private ctx: CanvasRenderingContext2D;
   private worldToScreen: (point: Point2D) => Point2D;
+  private gripRenderer: UnifiedGripRenderer; // 🏢 ADR-048: Unified renderer
 
   constructor(
     ctx: CanvasRenderingContext2D,
@@ -62,6 +59,7 @@ export class GripPhaseRenderer {
   ) {
     this.ctx = ctx;
     this.worldToScreen = worldToScreen;
+    this.gripRenderer = new UnifiedGripRenderer(ctx, worldToScreen); // 🏢 ADR-048
   }
 
   // ==========================================================================
@@ -141,6 +139,7 @@ export class GripPhaseRenderer {
    * Render preview-specific grip points
    * Used when entity has custom previewGripPoints defined
    * Handles both Point2D and PreviewGripPoint types
+   * 🎯 ADR-047: Supports custom colors for special grips (e.g., close indicator)
    */
   private renderPreviewGripPoints(
     previewGrips: PreviewGripPointInput[],
@@ -151,8 +150,14 @@ export class GripPhaseRenderer {
       const point2D = this.extractPoint2DFromGripPoint(gripPoint);
       const screenPos = this.worldToScreen(point2D);
 
-      // Preview grips use cold color from settings
-      this.drawGrip(screenPos, 'cold', state, undefined);
+      // 🎯 ADR-047: Check if gripPoint has custom color (PreviewGripPoint with color property)
+      const customColor = ('color' in gripPoint && gripPoint.color) ? gripPoint.color : undefined;
+
+      // 🎯 ADR-047: Check if it's a 'close' type grip (for polygon closing)
+      const gripType = ('type' in gripPoint && gripPoint.type) ? gripPoint.type : undefined;
+
+      // Preview grips use cold color from settings (or custom color if provided)
+      this.drawGrip(screenPos, 'cold', state, gripType, customColor);
     }
   }
 
@@ -206,79 +211,49 @@ export class GripPhaseRenderer {
 
   /**
    * Draw a single grip with appropriate styling
+   * 🏢 ADR-048: Now uses UnifiedGripRenderer
    *
-   * @param position - Screen position for the grip
+   * @param position - Screen position for the grip (ALREADY in screen coordinates!)
    * @param temperature - Current temperature state (cold/warm/hot)
    * @param state - Phase rendering state for style lookup
    * @param gripType - Optional type identifier (vertex/edge)
+   * @param customColor - 🎯 ADR-047: Optional custom color override (e.g., '#00ff00' for close indicator)
    */
   private drawGrip(
     position: Point2D,
     temperature: GripTemperature,
     state: PhaseRenderingState,
-    gripType: string | undefined
+    gripType: string | undefined,
+    customColor?: string // 🎯 ADR-047: Custom color support
   ): void {
     // Get grip style from centralized hook (respects override settings)
-    const gripStyle = getGripPreviewStyleWithOverride();
-    const baseSize = gripStyle.gripSize;
+    const gripPreviewStyle = getGripPreviewStyleWithOverride();
 
-    // Calculate size based on temperature
-    const size = this.calculateGripSize(baseSize, temperature);
+    // 🏢 ADR-048: Use UnifiedGripRenderer
+    // Note: Position is already in screen coords, so we use identity transform
+    const identityTransform = (p: Point2D) => p;
+    const tempRenderer = new UnifiedGripRenderer(this.ctx, identityTransform);
 
-    // Get fill color based on temperature and grip type
-    const fillColor = this.getGripFillColor(temperature, gripType, gripStyle.colors);
+    // Convert GripPreviewStyle to GripSettings format
+    const gripSettings = {
+      colors: gripPreviewStyle.colors,
+      gripSize: gripPreviewStyle.gripSize,
+      dpiScale: 1.0, // Default DPI scale
+    };
 
-    // Render using centralized rendering utility
-    renderSquareGrip(this.ctx, position, size, fillColor);
+    tempRenderer.renderGrip(
+      {
+        position,
+        type: (gripType || 'vertex') as 'vertex' | 'edge' | 'midpoint' | 'center' | 'corner' | 'close',
+        temperature,
+        customColor,
+      },
+      gripSettings
+    );
   }
 
-  /**
-   * Calculate grip size based on temperature state
-   */
-  private calculateGripSize(baseSize: number, temperature: GripTemperature): number {
-    switch (temperature) {
-      case 'hot':
-        return Math.round(baseSize * HOT_GRIP_SIZE_MULTIPLIER);
-      case 'warm':
-        return Math.round(baseSize * WARM_GRIP_SIZE_MULTIPLIER);
-      case 'cold':
-      default:
-        return Math.round(baseSize * COLD_GRIP_SIZE_MULTIPLIER);
-    }
-  }
-
-  /**
-   * Get fill color for grip based on temperature and type
-   */
-  private getGripFillColor(
-    temperature: GripTemperature,
-    gripType: string | undefined,
-    colors: { cold: string; warm: string; hot: string }
-  ): string {
-    // Edge/midpoint grips use specific colors
-    if (gripType === 'edge') {
-      switch (temperature) {
-        case 'hot':
-          return colors.hot;
-        case 'warm':
-          return colors.warm;
-        case 'cold':
-        default:
-          return UI_COLORS.SUCCESS_BRIGHT; // Green for edge grips (special case)
-      }
-    }
-
-    // Vertex grips use standard temperature colors
-    switch (temperature) {
-      case 'hot':
-        return colors.hot;
-      case 'warm':
-        return colors.warm;
-      case 'cold':
-      default:
-        return colors.cold;
-    }
-  }
+  // 🏢 ADR-048: calculateGripSize() and getGripFillColor() removed
+  // These are now handled by UnifiedGripRenderer's GripSizeCalculator and GripColorManager
 }
 
 // ============================================================================
@@ -299,9 +274,5 @@ export function createGripPhaseRenderer(
 // ============================================================================
 // CONFIGURATION EXPORTS
 // ============================================================================
-
-export const GRIP_SIZE_MULTIPLIERS = {
-  HOT: HOT_GRIP_SIZE_MULTIPLIER,
-  WARM: WARM_GRIP_SIZE_MULTIPLIER,
-  COLD: COLD_GRIP_SIZE_MULTIPLIER
-} as const;
+// 🏢 ADR-048: GRIP_SIZE_MULTIPLIERS moved to UnifiedGripRenderer system
+// Import from: import { GRIP_SIZE_MULTIPLIERS } from '../../../rendering/grips';

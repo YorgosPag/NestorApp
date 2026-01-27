@@ -8,6 +8,9 @@ import { CAD_UI_COLORS, UI_COLORS } from '../config/color-config';
 import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
 import { drawVerticesPath } from '../rendering/entities/shared/geometry-rendering-utils';
 
+// 🏢 ADR-048: Unified Grip Rendering System
+import { UnifiedGripRenderer, type GripRenderConfig } from '../rendering/grips';
+
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_OVERLAY_DRAWING = false;
 
@@ -29,9 +32,12 @@ export interface OverlayRenderOptions {
 
 export class OverlayDrawingEngine {
   private ctx: CanvasRenderingContext2D;
+  private gripRenderer: UnifiedGripRenderer; // 🏢 ADR-048: Unified renderer
 
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
+    // 🏢 ADR-048: Identity transform for overlay (already in screen coords)
+    this.gripRenderer = new UnifiedGripRenderer(ctx, (p) => p);
   }
 
   drawRegion(
@@ -155,7 +161,7 @@ export class OverlayDrawingEngine {
     this.drawAutoCADVertexDots(screenVertices, gripSettings);
   }
 
-  // ——— ENHANCED AutoCAD-STYLE HANDLES με LIVE GRIP SETTINGS ———
+  // ——— 🏢 ADR-048: UNIFIED GRIP RENDERING ———
   private drawAutoCADHandles(
     screenVertices: Point2D[],
     isEditing: boolean,
@@ -163,108 +169,38 @@ export class OverlayDrawingEngine {
     entityId?: string,
     gripInteractionState?: { hovered?: { entityId: string; gripIndex: number }; active?: { entityId: string; gripIndex: number } }
   ): void {
-    const ctx = this.ctx;
-    
-    // === USE LIVE GRIP SETTINGS ΑΝ ΔΙΑΘΕΣΙΜΑ ===
-    const size = gripSettings ? 
-      Math.round(gripSettings.gripSize * gripSettings.dpiScale) : 
-      CAD_UI_COLORS.grips.size_px; // Fallback
-      
-    const colorUnselected = gripSettings?.colors.cold || CAD_UI_COLORS.grips.color_unselected;
-    const colorHot = gripSettings?.colors.hot || CAD_UI_COLORS.grips.color_hot;
-    const colorSelected = gripSettings?.colors.warm || CAD_UI_COLORS.grips.color_selected;
-    const outlineColor = gripSettings?.colors.contour || CAD_UI_COLORS.grips.outline_color;
-    const outlineWidth = CAD_UI_COLORS.grips.outline_width;
+    // Convert vertices to grip configs
+    const vertexGrips: GripRenderConfig[] = screenVertices.map((vertex, i) => ({
+      position: vertex,
+      type: 'vertex',
+      entityId: entityId || '',
+      gripIndex: i,
+    }));
 
-    ctx.save();
-    ctx.strokeStyle = outlineColor;
-    ctx.lineWidth = outlineWidth;
+    // Render vertex grips with UnifiedGripRenderer
+    this.gripRenderer.renderGripSet(vertexGrips, gripInteractionState, gripSettings);
 
-    // Vertex handles - ΤΕΤΡΑΓΩΝΑ όπως στο AutoCAD με hover effects
-    for (let i = 0; i < screenVertices.length; i++) {
-      const vertex = screenVertices[i];
-      
-      // Check if this grip is hovered or active
-      const isHovered = gripInteractionState?.hovered?.entityId === entityId && gripInteractionState?.hovered?.gripIndex === i;
-      const isActive = gripInteractionState?.active?.entityId === entityId && gripInteractionState?.active?.gripIndex === i;
-      
-      // Choose color based on state
-      if (isActive) {
-        ctx.fillStyle = colorSelected; // Hot orange for active grip
-      } else if (isHovered) {
-        ctx.fillStyle = colorHot; // Orange for hovered grip
-      } else {
-        ctx.fillStyle = colorUnselected; // Cold blue/green for normal grip
-      }
-      
-      ctx.beginPath();
-      ctx.rect(vertex.x - size / 2, vertex.y - size / 2, size, size);
-      ctx.fill();
-      ctx.stroke();
-      
-      if (isHovered || isActive) {
-
-      }
-    }
-
-    // Edge handles (midpoints) - μικρότερα τετράγωνα με hover effects
+    // Render midpoint grips if enabled
     if (gripSettings?.multiGripEdit !== false) { // Default true
-      const midSize = Math.max(3, size - 2);
-      const numVertices = screenVertices.length;
-      
-      for (let i = 0; i < screenVertices.length; i++) {
-        const current = screenVertices[i];
-        const next = screenVertices[(i + 1) % screenVertices.length];
-        const midX = (current.x + next.x) / 2;
-        const midY = (current.y + next.y) / 2;
-        
-        // Check if this midpoint grip is hovered or active
-        const midpointGripIndex = numVertices + i;
-        const isHovered = gripInteractionState?.hovered?.entityId === entityId && gripInteractionState?.hovered?.gripIndex === midpointGripIndex;
-        const isActive = gripInteractionState?.active?.entityId === entityId && gripInteractionState?.active?.gripIndex === midpointGripIndex;
-        
-        // Choose color based on state
-        if (isActive) {
-          ctx.fillStyle = colorSelected; // Hot orange for active grip
-        } else if (isHovered) {
-          ctx.fillStyle = colorHot; // Orange for hovered grip
-        } else {
-          ctx.fillStyle = colorUnselected; // Cold blue/green for normal grip
-        }
-
-        ctx.beginPath();
-        ctx.rect(midX - midSize / 2, midY - midSize / 2, midSize, midSize);
-        ctx.fill();
-        ctx.stroke();
-        
-        if (isHovered || isActive) {
-
-        }
-      }
+      this.gripRenderer.renderMidpoints(
+        screenVertices,
+        { enabled: true },
+        gripSettings
+      );
     }
-
-    ctx.restore();
   }
 
+  // 🏢 ADR-048: Unified vertex dots rendering
   private drawAutoCADVertexDots(screenVertices: Point2D[], gripSettings?: GripSettings): void {
-    const ctx = this.ctx;
-    
-    // === USE LIVE GRIP SETTINGS ===
-    const baseSize = gripSettings ? 
-      Math.round(gripSettings.gripSize * gripSettings.dpiScale) : 
-      CAD_UI_COLORS.grips.size_px;
-    const dotSize = Math.max(2, baseSize - 3);
-    const color = gripSettings?.colors.contour || CAD_UI_COLORS.grips.outline_color;
-    
-    ctx.save();
-    ctx.fillStyle = color;
-    
-    for (const v of screenVertices) {
-      ctx.beginPath();
-      ctx.rect(v.x - dotSize / 2, v.y - dotSize / 2, dotSize, dotSize);
-      ctx.fill();
-    }
-    ctx.restore();
+    // Convert vertices to small grip configs (for preview drawing)
+    const dotGrips: GripRenderConfig[] = screenVertices.map((vertex, i) => ({
+      position: vertex,
+      type: 'vertex',
+      sizeMultiplier: 0.5, // Smaller size for preview dots
+    }));
+
+    // Render using UnifiedGripRenderer
+    this.gripRenderer.renderGripSet(dotGrips, undefined, gripSettings);
   }
 
   private drawLabel(region: { name?: string }, screenVertices: Point2D[], isSelected: boolean): void {

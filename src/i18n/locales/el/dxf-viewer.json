@@ -1383,6 +1383,8 @@
     "copy": "Αντιγραφή",
     "delete": "Διαγραφή",
     "measureDistance": "Μέτρηση Απόστασης",
+    "measureDistance2P": "Απόσταση 2 Σημείων",
+    "measureDistanceContinuous": "Συνεχόμενη Μέτρηση Απόστασης",
     "measureArea": "Μέτρηση Εμβαδού",
     "measureAngle": "Μέτρηση Γωνίας",
     "measureAngleBasic": "Βασική Γωνία",

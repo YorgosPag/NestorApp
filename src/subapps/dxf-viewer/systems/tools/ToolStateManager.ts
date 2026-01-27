@@ -47,6 +47,9 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // Pattern: AutoCAD/BricsCAD - measurement tools stay active for multiple measurements
   'measure': { id: 'measure', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'measure-distance': { id: 'measure-distance', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // 🏢 ENTERPRISE (2026-01-27): Continuous distance measurement - AutoCAD MEASUREGEOM pattern
+  // Creates separate measurement entities for each pair of points, continues until double-click/Escape
+  'measure-distance-continuous': { id: 'measure-distance-continuous', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'measure-area': { id: 'measure-area', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'measure-angle': { id: 'measure-angle', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'measure-angle-line-arc': { id: 'measure-angle-line-arc', category: 'measurement', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },

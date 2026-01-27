@@ -42,8 +42,12 @@
 | **ADR-043** | Zoom Constants Consolidation 🏢 | `config/transform-config.ts` (SSOT) | `zoom-constants.ts` middleman + `_canvas_LEGACY/` orphan | 2026-01-27 |
 | **ADR-044** | Canvas Line Widths Centralization 🏢 | `config/text-rendering-config.ts` → `RENDER_LINE_WIDTHS` | 32 hardcoded `ctx.lineWidth` σε 15 αρχεία | 2026-01-27 |
 | **ADR-045** | Viewport Ready Guard 🏢 | `CanvasSection.tsx` + `useCentralizedMouseHandlers.ts` + **`DxfViewerContent.tsx`** → Fresh viewport + COORDINATE_LAYOUT | First-click offset bug (~80px) - ROOT CAUSE: hardcoded `MARGIN_LEFT=80` | 2026-01-27 |
+| **ADR-046** | Single Coordinate Transform 🏢 | `useCentralizedMouseHandlers.ts` → Pass WORLD coords to `onCanvasClick` | **FINAL ROOT CAUSE**: Double conversion (world→screen→world) με mismatched viewports (LayerCanvas vs DxfCanvas) προκαλούσε ~80px X-axis offset. DevTools resize masked bug. | 2026-01-27 |
+| **ADR-047** | Close Polygon on First-Point Click 🏢 | `useDrawingHandlers.ts` → Auto-close on first-point + temporary snap entity | Area measurement tool: Click στο πρώτο σημείο → snap και κλείνει αυτόματα το πολύγωνο (AutoCAD/BricsCAD pattern) | 2026-01-27 |
+| **ADR-048** | Unified Grip Rendering System 🏢 | `rendering/grips/` → UnifiedGripRenderer (Facade Pattern) | Zero duplicate code (~90 lines removed), Single source of truth, ADR-047 custom colors work automatically, SOLID compliant | 2027-01-27 |
 
 > **🚫 PROHIBITION**: Click handlers without `viewportReady` check **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - block interactions until viewport valid.
+> **🚫 PROHIBITION**: Double coordinate conversion (world→screen→world) **ΑΠΑΓΟΡΕΥΕΤΑΙ** - single conversion at source per ADR-046.
 > **🚫 PROHIBITION**: Hardcoded layout stabilization delays **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `PANEL_LAYOUT.TIMING.VIEWPORT_LAYOUT_STABILIZATION`.
 > **🚫 PROHIBITION**: Using stale `viewport` prop for coordinate transforms **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε fresh dimensions από `canvas.clientWidth/clientHeight` ή `canvasBoundsService`.
 > **🚫 PROHIBITION**: Hardcoded margin values (80px, 30px) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `COORDINATE_LAYOUT.MARGINS` από `CoordinateTransforms.ts`.
@@ -71,6 +75,7 @@
 > **🚫 PROHIBITION**: Import από `zoom-constants.ts` **ΑΠΑΓΟΡΕΥΕΤΑΙ** (DELETED) - χρησιμοποιήστε `transform-config.ts` απευθείας.
 > **🏢 ENTERPRISE**: ADR-043 - Zoom system fully centralized σε `transform-config.ts`, zero middleman files.
 > **🚫 PROHIBITION**: Hardcoded `ctx.lineWidth = X` **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `RENDER_LINE_WIDTHS` από `text-rendering-config.ts`.
+> **🚫 PROHIBITION**: Duplicate grip rendering logic **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `UnifiedGripRenderer` από `rendering/grips/`.
 > **🏢 ENTERPRISE**: ADR-044 - Canvas line widths fully centralized, 32 hardcoded values → 17 files migrated.
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.

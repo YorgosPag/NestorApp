@@ -1424,8 +1424,14 @@ export const DXF_EDITING_TOOL_LABELS = {
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 export const DXF_MEASUREMENT_TOOL_LABELS = {
+  // 🏢 ENTERPRISE (2026-01-27): Distance measurement variations
   MEASURE_DISTANCE: 'tools.measureDistance',
+  MEASURE_DISTANCE_2P: 'tools.measureDistance2P', // Απόσταση 2 σημείων (default)
+  MEASURE_DISTANCE_CONTINUOUS: 'tools.measureDistanceContinuous', // Συνεχόμενη μέτρηση απόστασης
+
   MEASURE_AREA: 'tools.measureArea',
+
+  // Angle measurement variations
   MEASURE_ANGLE: 'tools.measureAngle',
   MEASURE_ANGLE_BASIC: 'tools.measureAngleBasic',
   MEASURE_ANGLE_LINE_ARC: 'tools.measureAngleLineArc',

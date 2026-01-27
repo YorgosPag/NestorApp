@@ -41,6 +41,14 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
 
   const hasDropdown = tool.dropdownOptions && tool.dropdownOptions.length > 0;
 
+  // 🔍 DIAGNOSTIC (2026-01-27): Debug ALL tools
+  console.log(`🔍 [ToolButton] Rendering tool: ${tool.id}`, {
+    hasDropdownOptions: !!tool.dropdownOptions,
+    dropdownOptionsLength: tool.dropdownOptions?.length,
+    hasDropdown,
+    isMeasureDistance: tool.id === 'measure-distance'
+  });
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -66,9 +74,13 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ tool, isActive, onClick,
   };
 
   const handleDropdownItemClick = (toolId: string) => {
+    console.log('🔍 [ToolButton] Dropdown item clicked:', toolId);
     setShowDropdown(false);
     if (onDropdownSelect) {
+      console.log('🔍 [ToolButton] Calling onDropdownSelect with:', toolId);
       onDropdownSelect(toolId);
+    } else {
+      console.warn('⚠️ [ToolButton] onDropdownSelect is undefined!');
     }
   };
 

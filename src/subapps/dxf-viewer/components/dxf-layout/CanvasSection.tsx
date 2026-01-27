@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 // === CANVAS V2 IMPORTS ===
 import { DxfCanvas, LayerCanvas, type ColorLayer, type SnapSettings, type GridSettings, type RulerSettings, type SelectionSettings, type DxfScene, type DxfEntityUnion, type DxfCanvasRef } from '../../canvas-v2';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
@@ -87,15 +87,38 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     ...restProps
   } = props;
 
-  // ✅ FIX: Use DxfCanvasRef type για getCanvas() method access
-  const dxfCanvasRef = useRef<DxfCanvasRef>(null);
+  // 🏢 ENTERPRISE FIX (2026-01-27): Use dxfRef from CanvasContext for centralized zoom operations
+  // ARCHITECTURE: CanvasProvider MUST wrap CanvasSection (see DxfViewerApp.tsx:81, DxfViewerContent.tsx:907)
+  // This enables useCanvasOperations hook to access the actual DxfCanvas imperative API
+  // CRITICAL: The context's dxfRef must be connected to DxfCanvas for zoom buttons to work
+  const canvasContext = useCanvasContext();
+
+  // 🏢 ENTERPRISE: Ensure CanvasProvider is in the component tree (ADR-043)
+  // Development warning for architectural violations
+  if (process.env.NODE_ENV === 'development' && !canvasContext) {
+    console.warn('[CanvasSection] ⚠️ ARCHITECTURE WARNING: CanvasProvider not found. Zoom buttons and centralized canvas operations may not work correctly.');
+  }
+
+  // 🏢 ENTERPRISE (2026-01-27): ALWAYS use context ref - NO fallback!
+  // ADR: Imperative API = Source of Truth
+  // The ref MUST be stable across renders to maintain the imperative handle
+  const dxfCanvasRef = canvasContext?.dxfRef;
+
+  if (!dxfCanvasRef) {
+    console.error('[CanvasSection] 🚨 CRITICAL: CanvasContext.dxfRef is null! Zoom buttons will not work!');
+  }
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   // 🏢 ADR-040: PreviewCanvas ref for direct preview rendering (bypasses React state)
   const previewCanvasRef = useRef<PreviewCanvasHandle>(null);
 
-  // === NEW ZOOM SYSTEM ===
-  const initialTransform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
-  const [transform, setTransform] = useState<ViewTransform>(initialTransform);
+  // 🏢 ENTERPRISE (2026-01-27): Context transform is TELEMETRY ONLY
+  // ADR: Imperative API controls zoom, context tracks last known state
+  // DxfCanvas receives transform prop but imperative methods are the primary control
+  const defaultTransform = useMemo(() => ({ scale: 1, offsetX: 0, offsetY: 0 }), []);
+  const transform = canvasContext?.transform || defaultTransform;
+  const setTransform = canvasContext?.setTransform || (() => {
+    console.error('[CanvasSection] setTransform called but CanvasContext not available');
+  });
 
   // ✅ CENTRALIZED VIEWPORT: Single source of truth για viewport dimensions
   const [viewport, setViewport] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
@@ -108,7 +131,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const viewportReady = viewport.width > 0 && viewport.height > 0;
 
   const zoomSystem = useZoom({
-    initialTransform,
+    initialTransform: transform, // 🏢 ENTERPRISE: Use context transform as initial value
     onTransformChange: (newTransform) => {
       setTransform(newTransform);
     },
@@ -144,6 +167,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🎯 Canvas visibility από parent props (με fallback στα defaults)
   const showDxfCanvas = props.dxfCanvasVisible ?? true;
   const showLayerCanvasDebug = props.layerCanvasVisible ?? true;
+
+  // 🏢 ENTERPRISE (2026-01-27): CRITICAL DEBUG - Verify DxfCanvas render state
+  if (!showDxfCanvas) {
+    console.error('[CanvasSection] 🚨 CRITICAL: DxfCanvas is HIDDEN! showDxfCanvas =', showDxfCanvas, '- Zoom buttons will NOT work!');
+  } else {
+    console.log('[CanvasSection] ✅ DxfCanvas is VISIBLE - showDxfCanvas =', showDxfCanvas);
+  }
 
 
   const overlayStore = useOverlayStore();
@@ -251,7 +281,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, [draftPolygon.length, eventBus]);
 
   // 🏢 ENTERPRISE: Provide zoom system to context
-  const canvasContext = useCanvasContext();
+  // NOTE: canvasContext already retrieved at line 93 for centralized zoom operations
   // 🎯 SNAP INDICATOR: Get current snap result for visual feedback
   const { currentSnapResult } = useSnapContext();
   // 🏢 PDF BACKGROUND: Get PDF background state and setViewport action
@@ -1068,6 +1098,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             const textHeight = textEntity.height || textEntity.fontSize || 12;
             return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textHeight, rotation: textEntity.rotation } as DxfEntityUnion;
           }
+          case 'angle-measurement': {
+            // 🏢 ENTERPRISE (2026-01-27): Angle measurement entity support
+            // Type guard: Entity με type 'angle-measurement' έχει vertex, point1, point2, angle
+            const angleMeasurementEntity = entity as typeof entity & { vertex: Point2D; point1: Point2D; point2: Point2D; angle: number };
+            return { ...base, type: 'angle-measurement' as const, vertex: angleMeasurementEntity.vertex, point1: angleMeasurementEntity.point1, point2: angleMeasurementEntity.point2, angle: angleMeasurementEntity.angle } as DxfEntityUnion;
+          }
           default:
             console.warn('🔍 Unsupported entity type for DxfCanvas:', entity.type);
             return null;
@@ -1222,10 +1258,25 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, [activeTool, overlayMode, overlayStore]);
 
-  const handleCanvasClick = (point: Point2D) => {
+  const handleCanvasClick = (worldPoint: Point2D) => {
+    // 🏢 ADR-046: ENTERPRISE FIX - onCanvasClick now receives WORLD coordinates directly!
+    //
+    // PROBLEM (ROOT CAUSE - 2026-01-27):
+    //   - handleMouseUp (in useCentralizedMouseHandlers) used LayerCanvas for world→screen conversion
+    //   - handleCanvasClick used DxfCanvas for screen→world conversion
+    //   - These are TWO DIFFERENT canvas elements with potentially different dimensions!
+    //   - Double conversion with mismatched viewports caused ~80px X-axis offset on first use
+    //   - Opening DevTools triggered resize which synced both canvas dimensions, masking the bug
+    //
+    // SOLUTION (ENTERPRISE - Autodesk/Bentley pattern):
+    //   - handleMouseUp now passes WORLD coordinates directly (single conversion at source)
+    //   - handleCanvasClick receives WORLD coordinates - no conversion needed!
+    //   - Pattern: Single coordinate transform per operation (CAD industry standard)
+    //
+    // NOTE: The `worldPoint` parameter is already in WORLD coordinate system!
+
     // 🏢 ADR-045: Block interactions until viewport is ready
-    // PROBLEM: Clicks before layout stabilization cause incorrect coordinate transforms
-    // SOLUTION: Early return if viewport dimensions are invalid (0x0)
+    // This guard is still useful to prevent early initialization issues
     if (!viewportReady) {
       console.warn('🚫 [CanvasSection] Click blocked: viewport not ready', viewport);
       return;
@@ -1234,12 +1285,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing AND measurement tools
     // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized tool detection (Single Source of Truth)
     if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {
-      const canvasElement = dxfCanvasRef.current?.getCanvas?.();
-      if (!canvasElement) return;
-
-      const viewportLocal = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
-      const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewportLocal);
-
+      // 🏢 ADR-046: worldPoint is already in WORLD coordinates - no conversion needed!
+      // 🔍 DEBUG (2026-01-27): Diagnostic logging for coordinate offset issue
+      console.log(
+        `🎯 [handleCanvasClick] ADR-046 Receiving WORLD coords:\n` +
+        `  worldPoint: x=${worldPoint.x.toFixed(2)}, y=${worldPoint.y.toFixed(2)}\n` +
+        `  viewport: w=${viewport.width.toFixed(0)}, h=${viewport.height.toFixed(0)}\n` +
+        `  viewportReady: ${viewportReady}\n` +
+        `  activeTool: ${activeTool}`
+      );
       drawingHandlersRef.current.onDrawingPoint(worldPoint);
       return;
     }
@@ -1249,14 +1303,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (overlayMode === 'draw' && activeTool !== 'select') {
       if (isSavingPolygon) return;
 
-      const canvasRef = dxfCanvasRef.current || overlayCanvasRef.current;
-      if (!canvasRef) return;
-
-      const canvasElement = 'getCanvas' in canvasRef ? canvasRef.getCanvas() : canvasRef;
-      if (!canvasElement) return;
-
-      const viewport = { width: canvasElement.clientWidth, height: canvasElement.clientHeight };
-      const worldPoint = CoordinateTransforms.screenToWorld(point, transform, viewport);
+      // 🏢 ADR-046: worldPoint is already in WORLD coordinates - use directly!
       const worldPointArray: [number, number] = [worldPoint.x, worldPoint.y];
 
       // 🎯 SIMPLIFIED (2026-01-24): Just add points - user saves with toolbar button
@@ -1567,7 +1614,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               }
               data-canvas-type="layer" // 🎯 DEBUG: Identifier για alignment test
               onTransformChange={(newTransform) => {
-                setTransform(newTransform); // ✅ SYNC: Κοινό transform state για LayerCanvas
+                // 🏢 ENTERPRISE: Single source of truth - setTransform writes to CanvasContext
+                setTransform(newTransform);
                 zoomSystem.setTransform(newTransform);
               }}
               onWheelZoom={zoomSystem.handleWheelZoom} // ✅ CONNECT ZOOM SYSTEM
@@ -1772,7 +1820,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`} // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!
               onCanvasClick={handleCanvasClick} // 🎯 FIX: Connect canvas clicks για drawing tools!
               onTransformChange={(newTransform) => {
-                setTransform(newTransform); // ✅ SYNC: Κοινό transform state για DxfCanvas
+                // 🏢 ENTERPRISE: Single source of truth - setTransform writes to CanvasContext
+                setTransform(newTransform);
                 zoomSystem.setTransform(newTransform);
               }}
               onWheelZoom={zoomSystem.handleWheelZoom} // ✅ CONNECT ZOOM SYSTEM

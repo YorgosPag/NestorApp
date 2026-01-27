@@ -13,7 +13,7 @@
  * - setTransform handled via context
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 // ✅ ENTERPRISE FIX: Import from centralized types
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { useCanvasContext } from '../../contexts/CanvasContext';
@@ -43,16 +43,22 @@ export interface CanvasOperations {
 export const useCanvasOperations = (): CanvasOperations => {
   // 🎯 PHASE 1: Ενοποιημένο API με κοινό transform για DXF+Overlays
   const context = useCanvasContext();
-  const dxfRef = context?.dxfRef || null;
-  const overlayRef = context?.overlayRef || null;
+
+  // 🏢 ENTERPRISE FIX (2026-01-27): Don't store refs in variables - causes stale closures!
+  // Always read from context to get the LATEST ref value inside callbacks
+  // This ensures we always get the current ref after DxfCanvas mounts
+  // const dxfRef = context?.dxfRef || null; // ❌ STALE CLOSURE
+  // const overlayRef = context?.overlayRef || null; // ❌ STALE CLOSURE
 
   const getCanvas = useCallback((): HTMLCanvasElement | null => {
+    // 🏢 ENTERPRISE FIX: Read from context to avoid stale closure
+    const dxfRef = context?.dxfRef;
     if (dxfRef?.current) {
       return dxfRef.current.getCanvas();
     }
     // Fallback: find canvas directly from DOM
     return document.querySelector('canvas[data-canvas-type="dxf-main"]') as HTMLCanvasElement || null;
-  }, [dxfRef]);
+  }, [context]);
 
   const getTransform = useCallback((): ViewTransform => {
     if (context?.transform) {
@@ -64,11 +70,13 @@ export const useCanvasOperations = (): CanvasOperations => {
       };
     }
     // Fallback: get from DxfCanvasCore
+    // 🏢 ENTERPRISE FIX: Read from context to avoid stale closure
+    const dxfRef = context?.dxfRef;
     if (dxfRef?.current?.getTransform) {
       return dxfRef.current.getTransform();
     }
     return { scale: 1, offsetX: 0, offsetY: 0 };
-  }, [context, dxfRef]);
+  }, [context]);
 
   const setTransform = useCallback((transform: ViewTransform) => {
     // Update shared context state first
@@ -85,6 +93,10 @@ export const useCanvasOperations = (): CanvasOperations => {
       context.setTransform(contextTransform);
     }
 
+    // 🏢 ENTERPRISE FIX: Read from context to avoid stale closure
+    const dxfRef = context?.dxfRef;
+    const overlayRef = context?.overlayRef;
+
     // ✅ ENTERPRISE FIX: Use getTransform instead of non-existent setTransform
     // Apply to both DXF and Overlay canvases using proper API
     if (dxfRef?.current?.getTransform) {
@@ -100,7 +112,7 @@ export const useCanvasOperations = (): CanvasOperations => {
       detail: { scale: transform.scale, transform }
     });
     document.dispatchEvent(zoomEvent);
-  }, [context, dxfRef, overlayRef]);
+  }, [context]);
 
   // ✅ ENTERPRISE: Helper to get canvas center point
   const getCanvasCenter = useCallback((): Point2D => {
@@ -116,39 +128,57 @@ export const useCanvasOperations = (): CanvasOperations => {
    * 🏢 ENTERPRISE: Zoom In
    * Uses zoomAtScreenPoint with BUTTON_IN factor (20% increase)
    * Zooms towards canvas center
+   *
+   * ADR: Imperative API = Source of Truth
    */
   const zoomIn = useCallback(() => {
     const center = getCanvasCenter();
-    if (dxfRef?.current?.zoomAtScreenPoint) {
-      dxfRef.current.zoomAtScreenPoint(ZOOM_FACTORS.BUTTON_IN, center);
-    } else if (context?.setTransform && context?.transform) {
-      // Fallback: update transform directly via context
-      const newScale = context.transform.scale * ZOOM_FACTORS.BUTTON_IN;
-      context.setTransform({ ...context.transform, scale: newScale });
+    const dxfRef = context?.dxfRef;
+
+    // 🏢 ENTERPRISE (2026-01-27): Detailed diagnostic logging
+    console.log('🔍 [zoomIn] DEBUG:', {
+      hasContext: !!context,
+      hasRef: !!dxfRef,
+      hasCurrent: !!dxfRef?.current,
+      hasZoomMethod: !!dxfRef?.current?.zoomAtScreenPoint,
+      refValue: dxfRef,
+      currentValue: dxfRef?.current
+    });
+
+    if (!dxfRef?.current?.zoomAtScreenPoint) {
+      console.error('🚨 [zoomIn] CRITICAL: dxfRef.current not available! Zoom disabled. Check if DxfCanvas is mounted and visible.');
+      return;
     }
-  }, [dxfRef, context, getCanvasCenter]);
+
+    dxfRef.current.zoomAtScreenPoint(ZOOM_FACTORS.BUTTON_IN, center);
+  }, [context, getCanvasCenter]);
 
   /**
    * 🏢 ENTERPRISE: Zoom Out
    * Uses zoomAtScreenPoint with BUTTON_OUT factor (20% decrease)
    * Zooms towards canvas center
+   *
+   * ADR: Imperative API = Source of Truth
    */
   const zoomOut = useCallback(() => {
     const center = getCanvasCenter();
-    if (dxfRef?.current?.zoomAtScreenPoint) {
-      dxfRef.current.zoomAtScreenPoint(ZOOM_FACTORS.BUTTON_OUT, center);
-    } else if (context?.setTransform && context?.transform) {
-      // Fallback: update transform directly via context
-      const newScale = context.transform.scale * ZOOM_FACTORS.BUTTON_OUT;
-      context.setTransform({ ...context.transform, scale: newScale });
+    const dxfRef = context?.dxfRef;
+
+    if (!dxfRef?.current?.zoomAtScreenPoint) {
+      console.error('🚨 [zoomOut] CRITICAL: dxfRef.current not available! Zoom disabled.');
+      return;
     }
-  }, [dxfRef, context, getCanvasCenter]);
+
+    dxfRef.current.zoomAtScreenPoint(ZOOM_FACTORS.BUTTON_OUT, center);
+  }, [context, getCanvasCenter]);
 
   /**
    * 🏢 ENTERPRISE: Zoom At Screen Point
    * Uses DxfCanvasRef.zoomAtScreenPoint directly
    */
   const zoomAtScreenPoint = useCallback((factor: number, screenPt: Point2D) => {
+    // 🏢 ENTERPRISE FIX: Read from context to avoid stale closure
+    const dxfRef = context?.dxfRef;
     if (dxfRef?.current?.zoomAtScreenPoint) {
       dxfRef.current.zoomAtScreenPoint(factor, screenPt);
     } else if (context?.setTransform && context?.transform) {
@@ -156,7 +186,7 @@ export const useCanvasOperations = (): CanvasOperations => {
       const newScale = context.transform.scale * factor;
       context.setTransform({ ...context.transform, scale: newScale });
     }
-  }, [dxfRef, context]);
+  }, [context]);
 
   /**
    * 🏢 ENTERPRISE: Reset To Origin
@@ -178,12 +208,19 @@ export const useCanvasOperations = (): CanvasOperations => {
   /**
    * 🏢 ENTERPRISE: Fit To View
    * Uses DxfCanvasRef.fitToView directly
+   *
+   * ADR: Imperative API = Source of Truth
    */
   const fitToView = useCallback(() => {
-    if (dxfRef?.current?.fitToView) {
-      dxfRef.current.fitToView();
+    const dxfRef = context?.dxfRef;
+
+    if (!dxfRef?.current?.fitToView) {
+      console.error('🚨 [fitToView] CRITICAL: dxfRef.current not available! Fit disabled.');
+      return;
     }
-  }, [dxfRef]);
+
+    dxfRef.current.fitToView();
+  }, [context]);
 
   // ✅ ENTERPRISE FIX: Transform utilities for drawing operations
   const getTransformUtils = useCallback(() => {

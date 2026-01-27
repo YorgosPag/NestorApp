@@ -400,7 +400,8 @@ export function useCentralizedMouseHandlers({
   }, [transform, viewport, onMouseMove, onTransformChange, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover]);
 
   // 🚀 MOUSE UP HANDLER - CAD-style release with pan cleanup
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+  // 🏢 ENTERPRISE FIX (2026-01-27): ADR-046 - Use e.currentTarget for consistent viewport
+  const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     // ✅ UPDATE CENTRALIZED STATE
     cursor.setMouseDown(false);
 
@@ -439,40 +440,71 @@ export function useCentralizedMouseHandlers({
     // Also skip if we just finished panning (wasPanning check)
     const isLeftClick = e.button === 0;
 
-    if (onCanvasClick && isLeftClick && !cursor.isSelecting && !wasPanning && cursor.position) {
-      let clickPoint = cursor.position; // Default: screen coordinates
+    // 🔍 DEBUG (2026-01-27): Log conditions for ADR-046 flow
+    console.log(`🔍 [handleMouseUp] CONDITIONS: onCanvasClick=${!!onCanvasClick}, isLeftClick=${isLeftClick}, isSelecting=${cursor.isSelecting}, wasPanning=${wasPanning}, hasPosition=${!!cursor.position}`);
 
-      // 🏢 ENTERPRISE FIX (2026-01-27): ADR-045 - Use FRESH viewport dimensions for snap conversion
-      // PROBLEM: The `viewport` prop may be stale (captured in closure) on first click after mount.
-      //          This causes ~80px offset in coordinate transforms.
-      // SOLUTION: Get fresh dimensions directly from canvas element via canvasBoundsService.
-      // PATTERN: Autodesk AutoCAD / Bentley MicroStation - Always use current canvas dimensions
-      const canvas = canvasRef?.current;
-      const freshViewport = canvas
-        ? { width: canvas.clientWidth, height: canvas.clientHeight }
-        : viewport; // Fallback to prop if canvas not available
+    if (onCanvasClick && isLeftClick && !cursor.isSelecting && !wasPanning) {
+      // 🏢 ENTERPRISE FIX (2026-01-27): ADR-046 - Pass WORLD coordinates directly to onCanvasClick
+      // PROBLEM (ROOT CAUSE IDENTIFIED):
+      //   - cursor.position is calculated in handleMouseMove using e.currentTarget's bounding rect
+      //   - But handleMouseUp was using canvasRef?.current for viewport (POTENTIALLY DIFFERENT!)
+      //   - If the event target canvas differs from canvasRef, coordinates become inconsistent
+      //   - Opening DevTools triggers resize which syncs both canvas dimensions, "fixing" the bug
+      //
+      // SOLUTION (ENTERPRISE - Autodesk/Bentley pattern):
+      //   - Calculate FRESH screen coordinates from e.currentTarget in handleMouseUp
+      //   - Use e.currentTarget (the canvas that received the event) for CONSISTENT viewport
+      //   - This ensures screen coordinates and viewport come from the SAME element
+      //   - Eliminate the unnecessary double conversion (world→screen→world)
+      //   - Pass WORLD coordinates directly to onCanvasClick
+      //
+      // PATTERN: Single coordinate transform per operation (CAD industry standard)
 
-      // 🏢 ENTERPRISE: Validate viewport before any coordinate conversion
-      // Skip snap conversion if viewport is invalid (prevents corrupted click positions)
+      // 🏢 CRITICAL FIX: Calculate FRESH screen coordinates from e.currentTarget
+      // Don't use cursor.position which may have been calculated from a DIFFERENT element!
+      // This fixes the ~80px offset bug where cursor.position was relative to one canvas
+      // but the mouseUp event arrived on a different canvas with different dimensions.
+      const eventTarget = e.currentTarget;
+      const rect = canvasBoundsService.getBounds(eventTarget);
+      const freshScreenPos = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+      const freshViewport = { width: rect.width, height: rect.height };
+
+      // Validate viewport before any coordinate conversion
       const viewportValid = freshViewport.width > 0 && freshViewport.height > 0;
 
-      // ✅ SNAP FIX: Convert screen→world, apply snap, convert back to screen
-      // NOTE: cursor.position is SCREEN coords, findSnapPoint expects WORLD coords,
-      //       onCanvasClick expects SCREEN coords (it converts to world internally)
-      if (snapEnabled && findSnapPoint && viewportValid) {
-        // 1. Convert screen → world for snap detection (using FRESH viewport!)
-        const worldPos = CoordinateTransforms.screenToWorld(cursor.position, transform, freshViewport);
+      if (!viewportValid) {
+        console.warn('🚫 [handleMouseUp] Click blocked: viewport not ready', freshViewport);
+        return;
+      }
 
-        // 2. Find snap point (in world coordinates)
-        const snapResult = findSnapPoint(worldPos.x, worldPos.y);
+      // Convert screen → world ONCE using FRESH coordinates from the same element
+      let worldPoint = CoordinateTransforms.screenToWorld(freshScreenPos, transform, freshViewport);
 
-        // 3. If snap found, convert snapped world point back to screen (using FRESH viewport!)
+      // Apply snap detection (in world coordinates)
+      if (snapEnabled && findSnapPoint) {
+        const snapResult = findSnapPoint(worldPoint.x, worldPoint.y);
         if (snapResult && snapResult.found && snapResult.snappedPoint) {
-          clickPoint = CoordinateTransforms.worldToScreen(snapResult.snappedPoint, transform, freshViewport);
+          worldPoint = snapResult.snappedPoint; // Use snapped WORLD coordinates
         }
       }
 
-      onCanvasClick(clickPoint);
+      // Pass WORLD coordinates directly - no more double conversion!
+      // 🔍 DEBUG (2026-01-27): Diagnostic logging for coordinate offset issue
+      console.log(
+        `🎯 [handleMouseUp] ADR-046 WORLD coords:\n` +
+        `  freshScreenPos: x=${freshScreenPos.x.toFixed(2)}, y=${freshScreenPos.y.toFixed(2)}\n` +
+        `  worldPoint: x=${worldPoint.x.toFixed(2)}, y=${worldPoint.y.toFixed(2)}\n` +
+        `  freshViewport: w=${freshViewport.width.toFixed(0)}, h=${freshViewport.height.toFixed(0)}\n` +
+        `  transform: scale=${transform.scale.toFixed(4)}, offsetX=${transform.offsetX.toFixed(2)}, offsetY=${transform.offsetY.toFixed(2)}\n` +
+        `  eventTargetSize: w=${rect.width.toFixed(0)}, h=${rect.height.toFixed(0)}\n` +
+        `  cursorPosition: ${cursor.position ? `x=${cursor.position.x.toFixed(2)}, y=${cursor.position.y.toFixed(2)}` : 'null'}\n` +
+        `  clientXY: clientX=${e.clientX}, clientY=${e.clientY}\n` +
+        `  rectLeftTop: left=${rect.left.toFixed(2)}, top=${rect.top.toFixed(2)}`
+      );
+      onCanvasClick(worldPoint);
     }
 
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ MARQUEE SELECTION - Χρήση UniversalMarqueeSelector
@@ -561,14 +593,21 @@ export function useCentralizedMouseHandlers({
                 onLayerSelected(hitLayerId, cursor.position);
               }
             } else {
+              // 🏢 ADR-046: Pass WORLD coordinates to onCanvasClick
               if (onCanvasClick && cursor.position) {
-                onCanvasClick(cursor.position);
+                onCanvasClick(worldPoint); // worldPoint already calculated above (line 534)
               }
             }
           } else {
             // 🏢 ENTERPRISE (2026-01-25): When marquee selects nothing, trigger canvas click for deselection
+            // 🏢 ADR-046: Convert to WORLD coordinates before calling onCanvasClick
             if (onCanvasClick && cursor.position) {
-              onCanvasClick(cursor.position);
+              const canvas = canvasRef?.current;
+              const freshViewport = canvas
+                ? { width: canvas.clientWidth, height: canvas.clientHeight }
+                : viewport;
+              const worldPt = CoordinateTransforms.screenToWorld(cursor.position, transform, freshViewport);
+              onCanvasClick(worldPt);
             }
           }
         }
