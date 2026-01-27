@@ -138,6 +138,11 @@ export function useUnifiedDrawing() {
     isOverlayMode: false,
   });
 
+  // 🏢 ADR-040: Preview entity ref for direct access (bypasses React state)
+  // This ref is updated synchronously in updatePreview() for immediate access
+  // Used by PreviewCanvas for zero-latency rendering
+  const previewEntityRef = useRef<ExtendedSceneEntity | null>(null);
+
   // 🏢 ENTERPRISE: Derive DrawingState from state machine for backward compatibility
   const state: DrawingState = useMemo(() => ({
     currentTool: (machineContext.toolType as DrawingTool) || 'select',
@@ -219,6 +224,11 @@ export function useUnifiedDrawing() {
             visible: true,
             layer: '0',
             measurement: true, // Mark as measurement entity
+            // 🏢 ENTERPRISE (2026-01-27): Use bright green color for measurement lines
+            // This matches the preview color and AutoCAD standard for measurements
+            color: '#00FF00', // MEASUREMENT_LINE color from color-config.ts
+            lineweight: 1,
+            showEdgeDistances: true, // Show distance label on the measurement line
           } as LineEntity;
         }
         break;
@@ -588,8 +598,10 @@ export function useUnifiedDrawing() {
         } as PreviewPoint;
       }
 
-      // 🏢 ENTERPRISE: Update local state for preview entity
-      setLocalState(prev => ({ ...prev, previewEntity }));
+      // 🏢 ADR-040: Update ref ONLY for immediate access (bypasses React async batching)
+      // 🚀 PERFORMANCE (2026-01-27): Removed setLocalState to eliminate React re-renders on mouse move
+      // PreviewCanvas reads directly from previewEntityRef - no state update needed
+      previewEntityRef.current = previewEntity;
       return;
     }
 
@@ -679,8 +691,10 @@ export function useUnifiedDrawing() {
       }
     }
 
-    // 🏢 ENTERPRISE: Update local state for preview entity
-    setLocalState(prev => ({ ...prev, previewEntity }));
+    // 🏢 ADR-040: Update ref ONLY for immediate access (bypasses React async batching)
+    // 🚀 PERFORMANCE (2026-01-27): Removed setLocalState to eliminate React re-renders on mouse move
+    // PreviewCanvas reads directly from previewEntityRef - no state update needed
+    previewEntityRef.current = previewEntity;
   }, [machineContext.toolType, machineContext.points, machineMoveCursor, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
@@ -705,6 +719,10 @@ export function useUnifiedDrawing() {
     machineCancel('User cancelled drawing');
     machineReset();
     machineDeselectTool();
+
+    // 🚀 PERFORMANCE (2026-01-27): Clear preview ref for PreviewCanvas
+    // CRITICAL: PreviewCanvas reads from ref, not state!
+    previewEntityRef.current = null;
 
     // Reset local state
     setLocalState(prev => ({
@@ -810,6 +828,12 @@ export function useUnifiedDrawing() {
     };
   }, [startDrawing, cancelDrawing, machineContext.points, setMode]);
 
+  // 🏢 ADR-040: Get latest preview entity directly from ref (bypasses React state)
+  // Used by PreviewCanvas for zero-latency rendering
+  const getLatestPreviewEntity = useCallback(() => {
+    return previewEntityRef.current;
+  }, []);
+
   return {
     state,
     addPoint,
@@ -825,5 +849,7 @@ export function useUnifiedDrawing() {
     finishDrawing: finishPolyline, // Alias για compatibility
     // ✅ ENTERPRISE FIX: Add snapConfig for entity creation compatibility
     snapConfig: null, // Placeholder - Snap config handled at DxfCanvas level
+    // 🏢 ADR-040: Direct access to preview entity (bypasses React state for performance)
+    getLatestPreviewEntity,
   };
 }

@@ -24,7 +24,8 @@
  */
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
-const DEBUG_PHASE_MANAGER = true;
+// 🏢 ENTERPRISE (2026-01-27): Disabled to reduce console noise and improve performance
+const DEBUG_PHASE_MANAGER = false;
 
 // ============================================================================
 // IMPORTS - Centralized Types & Modules

@@ -37,6 +37,8 @@ import { canvasBoundsService } from '../../services/CanvasBoundsService';
 // ✅ SNAP DETECTION: Import snap context and manager
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
+// 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
+import { setImmediatePosition } from './ImmediatePositionStore';
 
 interface CentralizedMouseHandlersProps {
   scene: DxfScene | null;
@@ -132,11 +134,17 @@ export function useCentralizedMouseHandlers({
     lastSnapTime: number;
     pendingWorldPos: Point2D | null;
     rafId: number | null;
+    lastSnapFound: boolean; // 🚀 PERFORMANCE (2026-01-27): Track last snap state to avoid unnecessary state updates
   }>({
     lastSnapTime: 0,
     pendingWorldPos: null,
-    rafId: null
+    rafId: null,
+    lastSnapFound: false
   });
+
+  // 🚀 PERFORMANCE (2026-01-27): Separate throttle for cursor context updates
+  // This reduces React re-renders from CursorSystem context consumers
+  const cursorThrottleRef = useRef<{ lastUpdateTime: number }>({ lastUpdateTime: 0 });
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας αντί για local caching
 
@@ -243,6 +251,7 @@ export function useCentralizedMouseHandlers({
   }, [scene, transform, viewport, onEntitySelect, hitTestCallback, cursor, activeTool, overlayMode, isGripDragging]);
 
   // 🚀 MOUSE MOVE HANDLER - HIGH PERFORMANCE CAD-style tracking
+  // 🏢 ENTERPRISE (2026-01-27): Optimized to reduce React re-renders
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας bounds caching
     const rect = canvasBoundsService.getBounds(e.currentTarget);
@@ -252,30 +261,42 @@ export function useCentralizedMouseHandlers({
       y: e.clientY - rect.top
     };
 
-    // ✅ CACHED BOUNDS: High performance automatic invalidation
+    // 🚀 PERFORMANCE (2026-01-27): Update ImmediatePositionStore for zero-latency crosshair
+    // This triggers direct crosshair render WITHOUT React re-render
+    setImmediatePosition(screenPos);
 
-    // ✅ UPDATE CENTRALIZED POSITION
-    cursor.updatePosition(screenPos);
+    // 🚀 PERFORMANCE (2026-01-27): Throttle React Context updates to reduce re-renders
+    // CursorSystem context updates trigger re-renders in ALL consumers
+    // Throttle to 50ms (20fps) - sufficient for UI feedback, reduces re-render overhead
+    const CURSOR_UPDATE_THROTTLE_MS = 50;
+    const now = performance.now();
 
-    // Selection position updates - debug disabled for performance
+    if (now - cursorThrottleRef.current.lastUpdateTime >= CURSOR_UPDATE_THROTTLE_MS) {
+      cursorThrottleRef.current.lastUpdateTime = now;
+      // ✅ UPDATE CENTRALIZED POSITION (React Context - for other consumers)
+      cursor.updatePosition(screenPos);
 
-    // Calculate world position using proper coordinate transforms
-    const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
-    cursor.updateWorldPosition(worldPos);
+      // Calculate world position using proper coordinate transforms
+      const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+      cursor.updateWorldPosition(worldPos);
 
-    // Update viewport if changed
-    if (viewport.width !== cursor.viewport.width || viewport.height !== cursor.viewport.height) {
-      cursor.updateViewport(viewport);
+      // Update viewport if changed
+      if (viewport.width !== cursor.viewport.width || viewport.height !== cursor.viewport.height) {
+        cursor.updateViewport(viewport);
+      }
+
+      // Emit centralized mouse move event (throttled)
+      canvasEventBus.emit(CANVAS_EVENTS.MOUSE_MOVE, {
+        screenPos,
+        worldPos,
+        canvas: 'dxf'
+      });
     }
 
-    // Emit centralized mouse move event
-    canvasEventBus.emit(CANVAS_EVENTS.MOUSE_MOVE, {
-      screenPos,
-      worldPos,
-      canvas: 'dxf'
-    });
+    // Calculate world position (needed for callbacks even when throttled)
+    const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
 
-    // Call parent callback
+    // Call parent callback (pass through - let parent decide throttling)
     onMouseMove?.(screenPos, worldPos);
 
     // 🏢 ENTERPRISE (2026-01-26): ADR-038 - Call drawing hover for preview line
@@ -288,20 +309,21 @@ export function useCentralizedMouseHandlers({
     // Snap detection is expensive - only run every 16ms
     const SNAP_THROTTLE_MS = 16;
     const snapThrottle = snapThrottleRef.current;
-    const now = performance.now();
+    const snapNow = performance.now();
 
     if (snapEnabled && findSnapPoint) {
       // Store the latest position
       snapThrottle.pendingWorldPos = worldPos;
 
       // Only run snap detection if enough time has passed
-      if (now - snapThrottle.lastSnapTime >= SNAP_THROTTLE_MS) {
-        snapThrottle.lastSnapTime = now;
+      if (snapNow - snapThrottle.lastSnapTime >= SNAP_THROTTLE_MS) {
+        snapThrottle.lastSnapTime = snapNow;
 
         try {
           const snap = findSnapPoint(worldPos.x, worldPos.y);
 
           if (snap && snap.found && snap.snappedPoint) {
+            // 🚀 PERFORMANCE (2026-01-27): Always update on snap found
             setSnapResults([{
               point: snap.snappedPoint,
               type: snap.activeMode || 'default',
@@ -310,18 +332,31 @@ export function useCentralizedMouseHandlers({
               priority: 0
             }]);
             setCurrentSnapResult(snap);
+            snapThrottle.lastSnapFound = true;
           } else {
-            setSnapResults([]);
-            setCurrentSnapResult(null);
+            // 🚀 PERFORMANCE (2026-01-27): Only clear state if we previously had a snap
+            // This avoids unnecessary re-renders when continuously moving without snap
+            if (snapThrottle.lastSnapFound) {
+              setSnapResults([]);
+              setCurrentSnapResult(null);
+              snapThrottle.lastSnapFound = false;
+            }
           }
         } catch {
-          setSnapResults([]);
-          setCurrentSnapResult(null);
+          if (snapThrottle.lastSnapFound) {
+            setSnapResults([]);
+            setCurrentSnapResult(null);
+            snapThrottle.lastSnapFound = false;
+          }
         }
       }
     } else {
-      setSnapResults([]);
-      setCurrentSnapResult(null);
+      // 🚀 PERFORMANCE (2026-01-27): Only clear state if we previously had a snap
+      if (snapThrottle.lastSnapFound) {
+        setSnapResults([]);
+        setCurrentSnapResult(null);
+        snapThrottle.lastSnapFound = false;
+      }
     }
 
     // Handle selection update - disable in pan mode

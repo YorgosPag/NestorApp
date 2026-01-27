@@ -61,5 +61,37 @@
   "actions": {
     "tryAgain": "Δοκιμάστε ξανά",
     "backToHome": "Επιστροφή στην αρχική"
+  },
+  "boundary": {
+    "title": "Παρουσιάστηκε σφάλμα",
+    "subtitle": "Κάτι πήγε στραβά",
+    "subtitleWithComponent": "Σφάλμα στο {component}",
+    "unexpectedError": "Παρουσιάστηκε απροσδόκητο σφάλμα",
+    "tryAgain": "Δοκιμάστε Ξανά",
+    "tryAgainCount": "Δοκιμάστε Ξανά ({current}/{max})",
+    "back": "Πίσω",
+    "home": "Αρχική",
+    "guide": "Οδηγός",
+    "errorActions": "Ενέργειες Σφάλματος",
+    "errorActionsDesc": "Αντιγραφή λεπτομερειών ή ειδοποίηση διαχειριστή",
+    "copy": "Αντιγραφή",
+    "copied": "Αντιγράφηκε!",
+    "notifyAdmin": "Ειδοποίηση Admin",
+    "sending": "Αποστολή...",
+    "sent": "Στάλθηκε!",
+    "sendEmail": "Αποστολή Email",
+    "selectEmailProvider": "Επιλέξτε τον πάροχο email σας:",
+    "emailWillOpen": "Θα ανοίξει νέα καρτέλα με το email έτοιμο προς αποστολή",
+    "anonymousReport": "Ανώνυμη Αναφορά",
+    "anonymousReportDesc": "Αποστολή ανώνυμης αναφοράς για βελτίωση του συστήματος",
+    "reportError": "Αναφορά Σφάλματος",
+    "technicalDetails": "Τεχνικές Λεπτομέρειες",
+    "errorStack": "Error Stack",
+    "componentStack": "Component Stack",
+    "errorId": "ID Σφάλματος",
+    "timestamp": "Χρονοσήμανση",
+    "url": "URL",
+    "digest": "Digest",
+    "adminEmail": "Email Διαχειριστή"
   }
 }

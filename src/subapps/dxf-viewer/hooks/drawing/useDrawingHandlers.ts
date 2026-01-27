@@ -54,20 +54,24 @@ import { useCallback, useRef } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
-import { useUnifiedDrawing } from './useUnifiedDrawing';
+import { useUnifiedDrawing, type ExtendedSceneEntity, type DrawingTool } from './useUnifiedDrawing';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
 import { useCanvasOperations } from '../interfaces/useCanvasOperations';
 import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
+// 🏢 ADR-040: PreviewCanvas for direct preview rendering (performance optimization)
+import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 
 type Pt = { x: number, y: number };
 
 // 🏢 ENTERPRISE: Type-safe entity created callback
+// 🏢 ADR-040: Optional previewCanvasRef for direct preview rendering (performance optimization)
 export function useDrawingHandlers(
   activeTool: ToolType,
   onEntityCreated: (entity: Entity) => void,
   onToolChange: (tool: ToolType) => void,
-  currentScene?: SceneModel
+  currentScene?: SceneModel,
+  previewCanvasRef?: React.RefObject<PreviewCanvasHandle>
 ) {
   // Canvas operations hook
   const canvasOps = useCanvasOperations();
@@ -80,7 +84,9 @@ export function useDrawingHandlers(
     finishEntity,
     finishPolyline,
     cancelDrawing,
-    updatePreview
+    updatePreview,
+    // 🏢 ADR-040: Direct access to preview entity (bypasses React state)
+    getLatestPreviewEntity
   } = useUnifiedDrawing();
 
   // Snap functionality
@@ -142,27 +148,29 @@ export function useDrawingHandlers(
     if (DEBUG_DRAWING_HANDLERS) console.log('🔍 [onDrawingHover] Called with point:', p);
 
     if (p) {
-      // 🚀 PERFORMANCE: Throttle preview updates using requestAnimationFrame
-      // This coalesces multiple mousemove events into a single preview update per frame
-      const throttle = previewThrottleRef.current;
-      throttle.pendingPoint = p;
+      // 🚀 PERFORMANCE (2026-01-27): REMOVED RAF throttling for synchronous preview rendering
+      // Now that CrosshairOverlay uses ImmediatePositionStore for zero-latency updates,
+      // the preview grips must also update synchronously to avoid visible lag.
+      // The mouse event handler is already called on each mousemove - no need to batch.
+      const transformUtils = canvasOps.getTransformUtils();
 
-      if (!throttle.rafId) {
-        throttle.rafId = requestAnimationFrame(() => {
-          const point = throttle.pendingPoint;
-          throttle.rafId = null;
-          throttle.pendingPoint = null;
+      // Update the preview entity (calculates geometry, updates ref)
+      updatePreview(p, transformUtils);
 
-          if (point) {
-            const transformUtils = canvasOps.getTransformUtils();
-            updatePreview(point, transformUtils);
-          }
-        });
+      // 🏢 ADR-040: Direct rendering to PreviewCanvas (ZERO React overhead)
+      if (previewCanvasRef?.current) {
+        const previewEntity = getLatestPreviewEntity();
+        if (previewEntity) {
+          previewCanvasRef.current.drawPreview(previewEntity);
+        }
       }
-      // 🚀 PERFORMANCE: Snap detection is now handled in useCentralizedMouseHandlers
-      // to avoid duplicate calls on every mousemove (ADR-039)
+    } else {
+      // 🏢 ADR-040: Clear preview when mouse leaves
+      if (previewCanvasRef?.current) {
+        previewCanvasRef.current.clear();
+      }
     }
-  }, [updatePreview, canvasOps]);
+  }, [updatePreview, canvasOps, getLatestPreviewEntity, previewCanvasRef]);
   
   const onDrawingCancel = useCallback(() => {
     cancelDrawing();

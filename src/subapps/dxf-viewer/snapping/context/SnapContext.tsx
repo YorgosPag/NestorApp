@@ -63,7 +63,9 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     return initialState;
   });
 
-  const [snapEnabled, setSnapEnabled] = useState<boolean>(true); // Start with snapping enabled
+  // 🏢 ENTERPRISE (2026-01-27): Snap disabled by default on app start/refresh
+  // User requested snap to be OFF initially for better performance during exploration
+  const [snapEnabled, setSnapEnabled] = useState<boolean>(false);
 
   // 🎯 ENTERPRISE: Current snap result for visual feedback
   const [currentSnapResult, setCurrentSnapResultState] = useState<ProSnapResult | null>(null);

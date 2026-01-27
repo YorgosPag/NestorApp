@@ -54,13 +54,19 @@ export function AppHeader() {
           )}
         >
           <Search className="h-4 w-4" />
-          <span className="hidden md:inline">{t('search.placeholder', 'Αναζήτηση...')}</span>
+          {/* 🏢 ENTERPRISE (2026-01-27): suppressHydrationWarning for i18n content
+              Server renders with default locale (en), client renders with user locale (el)
+              This is expected behavior for i18n - suppress the hydration warning */}
+          <span className="hidden md:inline" suppressHydrationWarning>
+            {t('search.placeholder', 'Search...')}
+          </span>
           <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-background rounded border">
             ⌘K
           </kbd>
         </button>
 
         {/* 🔍 Mobile Search Icon */}
+        {/* 🏢 ENTERPRISE (2026-01-27): suppressHydrationWarning for i18n aria-label */}
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
@@ -69,7 +75,8 @@ export function AppHeader() {
             TRANSITION_PRESETS.STANDARD_COLORS,
             "hover:text-foreground hover:bg-muted"
           )}
-          aria-label={t('search.globalSearch', 'Παγκόσμια Αναζήτηση')}
+          aria-label={t('search.globalSearch', 'Global Search')}
+          suppressHydrationWarning
         >
           <Search className="h-5 w-5" />
         </button>

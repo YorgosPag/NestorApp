@@ -16,7 +16,7 @@ import { FloatingPanel } from '@/components/ui/floating';
 import { OverlayProperties } from '../OverlayProperties';
 import type { Overlay, UpdateOverlayData } from '../../overlays/types';
 // 🏢 ENTERPRISE: Centralized tokens + Panel Anchoring System (ADR-029)
-import { PANEL_LAYOUT, PanelPositionCalculator } from '../../config/panel-tokens';
+import { PANEL_LAYOUT, PANEL_ANCHORING, PanelPositionCalculator } from '../../config/panel-tokens';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -30,13 +30,11 @@ interface DraggableOverlayPropertiesProps {
 }
 
 // ============================================================================
-// CONSTANTS - Enterprise Design Tokens
+// CONSTANTS - Enterprise Design Tokens (Centralized)
 // ============================================================================
 
-const PANEL_DIMENSIONS = {
-  width: 340,
-  height: 500
-} as const;
+// 🏢 ENTERPRISE: Use centralized panel dimensions (ADR-029)
+const PANEL_DIMENSIONS = PANEL_ANCHORING.DIMENSIONS.OVERLAY_PROPERTIES;
 
 /**
  * 🏢 ENTERPRISE: Client-side position calculator

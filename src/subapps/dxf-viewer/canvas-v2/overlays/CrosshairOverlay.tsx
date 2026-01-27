@@ -28,6 +28,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // ✅ ADR-030: UnifiedFrameScheduler Integration
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
+// 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
+import { registerDirectRender, getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 
 interface Viewport {
   width: number;
@@ -269,7 +271,39 @@ export default function CrosshairOverlay({
     margins: rulerMargins
   };
 
-  // ✅ ADR-030: Register with UnifiedFrameScheduler
+  // ============================================================================
+  // 🚀 PERFORMANCE (2026-01-27): IMMEDIATE RENDER via ImmediatePositionStore
+  // Bypasses React state and RAF scheduler for zero-latency crosshair movement
+  // This is called SYNCHRONOUSLY from mouse event handlers
+  // ============================================================================
+  useEffect(() => {
+    /**
+     * 🚀 DIRECT RENDER: Called immediately when position changes
+     * No React re-render, no RAF wait - pure synchronous canvas update
+     */
+    const directRenderCallback = (pos: Point2D | null): void => {
+      // Use the render function with current settings from refs
+      renderCrosshair({
+        isActive: isActive && pos !== null,
+        pos,
+        margins: rulerMargins
+      });
+
+      // Update prev refs for dirty check
+      prevPositionRef.current = pos ? { ...pos } : null;
+      prevIsActiveRef.current = isActive && pos !== null;
+      hasRenderedOnceRef.current = true;
+    };
+
+    // Register the direct render callback
+    const unregister = registerDirectRender(directRenderCallback);
+
+    return () => {
+      unregister();
+    };
+  }, [renderCrosshair, isActive, rulerMargins]);
+
+  // ✅ ADR-030: Register with UnifiedFrameScheduler (FALLBACK for non-ImmediatePositionStore updates)
   useEffect(() => {
     /**
      * 🏢 ENTERPRISE: Dirty Check Function
@@ -277,7 +311,10 @@ export default function CrosshairOverlay({
      * Pattern: Autodesk/Adobe - Skip render if nothing changed
      */
     const isDirty = (): boolean => {
-      const currentPos = renderArgsRef.current.pos;
+      // 🚀 PERFORMANCE (2026-01-27): Get position from ImmediatePositionStore
+      // This provides the latest position without React state delay
+      const immediatePos = getImmediatePosition();
+      const currentPos = immediatePos || renderArgsRef.current.pos;
       const currentActive = renderArgsRef.current.isActive;
 
       // 🏢 ENTERPRISE: First render is ALWAYS dirty (to clear canvas initially)
@@ -315,7 +352,12 @@ export default function CrosshairOverlay({
      * Called by UnifiedFrameScheduler on each frame (if dirty)
      */
     const onRender = (): void => {
-      const args = renderArgsRef.current;
+      // 🚀 PERFORMANCE (2026-01-27): Prefer ImmediatePositionStore position
+      const immediatePos = getImmediatePosition();
+      const args = {
+        ...renderArgsRef.current,
+        pos: immediatePos || renderArgsRef.current.pos
+      };
 
       // Mark first render complete
       hasRenderedOnceRef.current = true;

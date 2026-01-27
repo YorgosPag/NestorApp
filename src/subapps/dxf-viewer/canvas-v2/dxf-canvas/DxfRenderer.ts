@@ -136,6 +136,13 @@ export class DxfRenderer {
     // Type guard: Τα DXF entities μπορεί να έχουν optional lineType property
     const entityWithLineType = entity as typeof entity & { lineType?: string };
 
+    // 🏢 ENTERPRISE (2026-01-27): Type guard for measurement properties
+    // Measurement entities (from useUnifiedDrawing) have these flags for distance label rendering
+    const entityWithMeasurement = entity as typeof entity & {
+      measurement?: boolean;
+      showEdgeDistances?: boolean;
+    };
+
     const entityModel: EntityModel = {
       id: entity.id,
       type: entity.type,
@@ -145,6 +152,11 @@ export class DxfRenderer {
       color: entity.color,
       lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
       lineweight: entity.lineWidth, // ✅ ENTERPRISE FIX: Use correct property name 'lineweight' not 'lineWeight'
+
+      // 🏢 ENTERPRISE (2026-01-27): Pass measurement flags for distance label rendering
+      // These flags come from useUnifiedDrawing when creating measurement entities
+      ...(entityWithMeasurement.measurement !== undefined && { measurement: entityWithMeasurement.measurement }),
+      ...(entityWithMeasurement.showEdgeDistances !== undefined && { showEdgeDistances: entityWithMeasurement.showEdgeDistances }),
 
       // Geometry mapping βάσει τύπου
       ...this.mapEntityGeometry(entity)

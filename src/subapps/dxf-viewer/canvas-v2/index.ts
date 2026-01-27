@@ -11,6 +11,9 @@ import type { Point2D } from '../rendering/types/Types';
 export { DxfCanvas } from './dxf-canvas/DxfCanvas';
 export type { DxfCanvasRef } from './dxf-canvas/DxfCanvas';  // 🏢 ENTERPRISE: Type-safe ref
 export { LayerCanvas } from './layer-canvas/LayerCanvas';
+// 🏢 ADR-040: PreviewCanvas for direct preview rendering (performance optimization)
+export { PreviewCanvas, PreviewRenderer } from './preview-canvas';
+export type { PreviewCanvasHandle, PreviewCanvasProps, PreviewRenderOptions } from './preview-canvas';
 
 // === RENDERERS ===
 export { DxfRenderer } from './dxf-canvas/DxfRenderer';

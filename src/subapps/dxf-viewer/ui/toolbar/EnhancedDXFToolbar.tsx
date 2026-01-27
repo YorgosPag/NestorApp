@@ -1,7 +1,8 @@
 'use client';
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
-const DEBUG_ENHANCED_DXF_TOOLBAR = true;
+// 🏢 ENTERPRISE (2026-01-27): Disabled to reduce console noise and improve performance
+const DEBUG_ENHANCED_DXF_TOOLBAR = false;
 
 import React from 'react';
 import { useIconSizes } from '../../../../hooks/useIconSizes';

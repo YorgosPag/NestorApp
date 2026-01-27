@@ -61,5 +61,37 @@
   "actions": {
     "tryAgain": "Try again",
     "backToHome": "Back to home"
+  },
+  "boundary": {
+    "title": "An error occurred",
+    "subtitle": "Something went wrong",
+    "subtitleWithComponent": "Error in {component}",
+    "unexpectedError": "An unexpected error occurred",
+    "tryAgain": "Try Again",
+    "tryAgainCount": "Try Again ({current}/{max})",
+    "back": "Back",
+    "home": "Home",
+    "guide": "Guide",
+    "errorActions": "Error Actions",
+    "errorActionsDesc": "Copy details or notify administrator",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "notifyAdmin": "Notify Admin",
+    "sending": "Sending...",
+    "sent": "Sent!",
+    "sendEmail": "Send Email",
+    "selectEmailProvider": "Select your email provider:",
+    "emailWillOpen": "A new tab will open with the email ready to send",
+    "anonymousReport": "Anonymous Report",
+    "anonymousReportDesc": "Send an anonymous report to improve the system",
+    "reportError": "Report Error",
+    "technicalDetails": "Technical Details",
+    "errorStack": "Error Stack",
+    "componentStack": "Component Stack",
+    "errorId": "Error ID",
+    "timestamp": "Timestamp",
+    "url": "URL",
+    "digest": "Digest",
+    "adminEmail": "Administrator Email"
   }
 }

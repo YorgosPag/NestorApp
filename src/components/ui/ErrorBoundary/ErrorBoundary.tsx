@@ -11,6 +11,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTypography, type UseTypographyReturn } from '@/hooks/useTypography';
 import { useSpacingTokens, type SpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { generateErrorId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -131,6 +133,7 @@ interface ErrorBoundaryProps {
   colors?: ReturnType<typeof useSemanticColors>; // 🏢 ENTERPRISE: Semantic colors injection
   typography?: UseTypographyReturn; // 🏢 ENTERPRISE: Typography tokens injection
   spacingTokens?: SpacingTokens; // 🏢 ENTERPRISE: Spacing tokens injection
+  t?: TFunction; // 🏢 ENTERPRISE: i18n translation function injection
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -550,7 +553,8 @@ ${errorDetails.stack || 'Stack trace not available'}
       borderTokens,
       colors,
       typography,
-      spacingTokens
+      spacingTokens,
+      t
     } = this.props;
 
     if (hasError && error) {
@@ -583,10 +587,12 @@ ${errorDetails.stack || 'Stack trace not available'}
                 </figure>
                 <div>
                   <h1 className={`${headingLg} ${colors ? colors.text.error : 'text-red-600'}`}>
-                    Κάτι πήγε στραβά
+                    {t ? t('boundary.subtitle') : 'Something went wrong'}
                   </h1>
                   <p className={colors ? colors.text.error : 'text-red-600'}>
-                    {componentName ? `Σφάλμα στο ${componentName}` : 'Παρουσιάστηκε απρόσμενο σφάλμα'}
+                    {componentName
+                      ? (t ? t('boundary.subtitleWithComponent', { component: componentName }) : `Error in ${componentName}`)
+                      : (t ? t('boundary.unexpectedError') : 'An unexpected error occurred')}
                   </p>
                 </div>
               </header>
@@ -607,7 +613,11 @@ ${errorDetails.stack || 'Stack trace not available'}
                     className={`flex items-center ${gapSm}`}
                   >
                     <RefreshCw className={componentSizes.icon.sm} />
-                    <span>Δοκιμάστε ξανά {retryCount > 0 && `(${retryCount + 1}/${maxRetries + 1})`}</span>
+                    <span>
+                      {retryCount > 0
+                        ? (t ? t('boundary.tryAgainCount', { current: retryCount + 1, max: maxRetries + 1 }) : `Try Again (${retryCount + 1}/${maxRetries + 1})`)
+                        : (t ? t('boundary.tryAgain') : 'Try Again')}
+                    </span>
                   </Button>
                 )}
 
@@ -617,7 +627,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                   className={`flex items-center ${gapSm}`}
                 >
                   <ArrowLeft className={componentSizes.icon.sm} />
-                  <span>Πίσω</span>
+                  <span>{t ? t('boundary.back') : 'Back'}</span>
                 </Button>
 
                 <Button
@@ -626,7 +636,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                   className={`flex items-center ${gapSm}`}
                 >
                   <Home className={componentSizes.icon.sm} />
-                  <span>Αρχική</span>
+                  <span>{t ? t('boundary.home') : 'Home'}</span>
                 </Button>
               </nav>
 
@@ -638,9 +648,9 @@ ${errorDetails.stack || 'Stack trace not available'}
                     <div className={`flex items-center ${gapSm}`}>
                       <Bug className={`${componentSizes.icon.md} text-muted-foreground`} />
                       <div>
-                        <p className={labelSm}>Ενέργειες σφάλματος</p>
+                        <p className={labelSm}>{t ? t('boundary.errorActions') : 'Error Actions'}</p>
                         <p className={`${bodySm} text-muted-foreground`}>
-                          Αντιγραφή στοιχείων ή ειδοποίηση διαχειριστή
+                          {t ? t('boundary.errorActionsDesc') : 'Copy details or notify administrator'}
                         </p>
                       </div>
                     </div>
@@ -655,12 +665,12 @@ ${errorDetails.stack || 'Stack trace not available'}
                         {copySuccess ? (
                           <>
                             <Check className={`${componentSizes.icon.sm} ${colors ? colors.text.success : 'text-green-600'}`} />
-                            <span>Αντιγράφηκε!</span>
+                            <span>{t ? t('boundary.copied') : 'Copied!'}</span>
                           </>
                         ) : (
                           <>
                             <Copy className={componentSizes.icon.sm} />
-                            <span>Αντιγραφή</span>
+                            <span>{t ? t('boundary.copy') : 'Copy'}</span>
                           </>
                         )}
                       </Button>
@@ -674,17 +684,17 @@ ${errorDetails.stack || 'Stack trace not available'}
                         {isSendingToAdmin ? (
                           <>
                             <RefreshCw className={`${componentSizes.icon.sm} animate-spin`} />
-                            <span>Αποστολή...</span>
+                            <span>{t ? t('boundary.sending') : 'Sending...'}</span>
                           </>
                         ) : emailSent ? (
                           <>
                             <Check className={`${componentSizes.icon.sm} ${colors ? colors.text.success : 'text-green-600'}`} />
-                            <span>Στάλθηκε</span>
+                            <span>{t ? t('boundary.sent') : 'Sent!'}</span>
                           </>
                         ) : (
                           <>
                             <Mail className={componentSizes.icon.sm} />
-                            <span>Ειδοποίηση Διαχ.</span>
+                            <span>{t ? t('boundary.notifyAdmin') : 'Notify Admin'}</span>
                           </>
                         )}
                       </Button>
@@ -696,7 +706,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                         className={`flex items-center ${gapSm}`}
                       >
                         <Mail className={componentSizes.icon.sm} />
-                        <span>Αποστολή Email</span>
+                        <span>{t ? t('boundary.sendEmail') : 'Send Email'}</span>
                       </Button>
                     </div>
                   </div>
@@ -706,7 +716,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                     <div className={`${paddingMd} bg-muted border ${borderTokens ? borderTokens.quick.default : 'border-border'} ${radiusMd}`}>
                       <p className={`${labelSm} ${colors ? colors.text.primary : 'text-foreground'} ${spacingTokens?.margin.bottom.sm || 'mb-2'} flex items-center ${gapSm}`}>
                         <Mail className={componentSizes.icon.sm} />
-                        <span>Επιλέξτε τον πάροχο email σας:</span>
+                        <span>{t ? t('boundary.selectEmailProvider') : 'Select your email provider:'}</span>
                       </p>
                       <div className={`grid grid-cols-2 ${gapSm}`}>
                         {EMAIL_PROVIDERS.map((provider) => {
@@ -720,13 +730,13 @@ ${errorDetails.stack || 'Stack trace not available'}
                               className={`flex items-center justify-start ${gapSm}`}
                             >
                               <IconComponent className={componentSizes.icon.sm} />
-                              <span>{provider.labelEl}</span>
+                              <span>{provider.label}</span>
                             </Button>
                           );
                         })}
                       </div>
                       <p className={`${bodyXs} ${colors ? colors.text.muted : 'text-muted-foreground'} ${spacingTokens?.margin.top.sm || 'mt-2'}`}>
-                        Θα ανοίξει νέα καρτέλα με το email έτοιμο προς αποστολή
+                        {t ? t('boundary.emailWillOpen') : 'A new tab will open with the email ready to send'}
                       </p>
                     </div>
                   )}
@@ -736,9 +746,9 @@ ${errorDetails.stack || 'Stack trace not available'}
                     <div className={`flex items-center ${gapSm}`}>
                       <Send className={`${componentSizes.icon.md} text-muted-foreground`} />
                       <div>
-                        <p className={labelSm}>Ανώνυμη Αναφορά</p>
+                        <p className={labelSm}>{t ? t('boundary.anonymousReport') : 'Anonymous Report'}</p>
                         <p className={`${bodySm} text-muted-foreground`}>
-                          Στείλτε ανώνυμη αναφορά για βελτίωση του συστήματος
+                          {t ? t('boundary.anonymousReportDesc') : 'Send an anonymous report to improve the system'}
                         </p>
                       </div>
                     </div>
@@ -751,15 +761,15 @@ ${errorDetails.stack || 'Stack trace not available'}
                       {isReporting ? (
                         <>
                           <RefreshCw className={`${componentSizes.icon.sm} ${spacingTokens?.margin.right.sm || 'mr-2'} animate-spin`} />
-                          Αποστολή...
+                          {t ? t('boundary.sending') : 'Sending...'}
                         </>
                       ) : reportSent ? (
                         <>
                           <Check className={`${componentSizes.icon.sm} ${spacingTokens?.margin.right.sm || 'mr-2'} ${colors ? colors.text.success : 'text-green-600'}`} />
-                          Στάλθηκε
+                          {t ? t('boundary.sent') : 'Sent!'}
                         </>
                       ) : (
-                        'Αναφορά'
+                        t ? t('boundary.reportError') : 'Report Error'
                       )}
                     </Button>
                   </div>
@@ -770,12 +780,12 @@ ${errorDetails.stack || 'Stack trace not available'}
               {showErrorDetails && (
                 <details className={spacingTokens?.margin.top.lg || 'mt-6'}>
                   <summary className={`cursor-pointer text-muted-foreground ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${spacingTokens?.margin.bottom.sm || 'mb-2'}`}>
-                    Τεχνικές λεπτομέρειες
+                    {t ? t('boundary.technicalDetails') : 'Technical Details'}
                   </summary>
                   <div className={spacingTokens?.spaceBetween.md || 'space-y-4'}>
                     <div>
                       <div className={`flex items-center justify-between ${spacingTokens?.margin.bottom.sm || 'mb-2'}`}>
-                        <h4 className={labelSm}>Stack σφάλματος</h4>
+                        <h4 className={labelSm}>{t ? t('boundary.errorStack') : 'Error Stack'}</h4>
                         <Button
                           onClick={this.copyErrorDetails}
                           variant="ghost"
@@ -796,7 +806,7 @@ ${errorDetails.stack || 'Stack trace not available'}
 
                     {errorInfo?.componentStack && (
                       <div>
-                        <h4 className={`${labelSm} ${spacingTokens?.margin.bottom.sm || 'mb-2'}`}>Stack component</h4>
+                        <h4 className={`${labelSm} ${spacingTokens?.margin.bottom.sm || 'mb-2'}`}>{t ? t('boundary.componentStack') : 'Component Stack'}</h4>
                         <pre className={`${bodyXs} bg-muted ${paddingSm} ${borderTokens?.radiusClass.default || 'rounded'} overflow-auto max-h-40`}>
                           {errorInfo.componentStack}
                         </pre>
@@ -804,9 +814,9 @@ ${errorDetails.stack || 'Stack trace not available'}
                     )}
 
                     <div className={`${bodyXs} text-muted-foreground ${spacingTokens?.spaceBetween.xs || 'space-y-1'}`}>
-                      <p><strong>ID Σφάλματος:</strong> {this.state.errorId}</p>
-                      <p><strong>Χρονοσήμανση:</strong> {new Date().toISOString()}</p>
-                      <p><strong>URL:</strong> {window.location.href}</p>
+                      <p><strong>{t ? t('boundary.errorId') : 'Error ID'}:</strong> {this.state.errorId}</p>
+                      <p><strong>{t ? t('boundary.timestamp') : 'Timestamp'}:</strong> {new Date().toISOString()}</p>
+                      <p><strong>{t ? t('boundary.url') : 'URL'}:</strong> {window.location.href}</p>
                     </div>
                   </div>
                 </details>
@@ -897,26 +907,28 @@ export function useErrorReporting() {
 
 // OLD specialized error boundaries removed - replaced with Enterprise versions below
 
-// 🏢 ENTERPRISE: Wrapper component που inject τα design tokens (borders, colors, typography, spacing)
-export function EnterpriseErrorBoundary(props: Omit<ErrorBoundaryProps, 'borderTokens' | 'colors' | 'typography' | 'spacingTokens'>) {
+// 🏢 ENTERPRISE: Wrapper component που inject τα design tokens (borders, colors, typography, spacing, i18n)
+export function EnterpriseErrorBoundary(props: Omit<ErrorBoundaryProps, 'borderTokens' | 'colors' | 'typography' | 'spacingTokens' | 't'>) {
   const borderTokens = useBorderTokens();
   const colors = useSemanticColors();
   const typography = useTypography();
   const spacingTokens = useSpacingTokens();
+  const { t } = useTranslation('errors');
 
-  return <ErrorBoundary {...props} borderTokens={borderTokens} colors={colors} typography={typography} spacingTokens={spacingTokens} />;
+  return <ErrorBoundary {...props} borderTokens={borderTokens} colors={colors} typography={typography} spacingTokens={spacingTokens} t={t} />;
 }
 
 // 🏢 ENTERPRISE: Enhanced specialized error boundaries
-export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'componentName' | 'borderTokens' | 'colors' | 'typography' | 'spacingTokens'>) {
+export function PageErrorBoundary({ children, componentName = 'Page', ...props }: Omit<ErrorBoundaryProps, 'borderTokens' | 'colors' | 'typography' | 'spacingTokens' | 't'>) {
   const borderTokens = useBorderTokens();
   const colors = useSemanticColors();
   const typography = useTypography();
   const spacingTokens = useSpacingTokens();
+  const { t } = useTranslation('errors');
 
   return (
     <ErrorBoundary
-      componentName="Page"
+      componentName={componentName}
       enableRetry={true}
       maxRetries={2}
       enableReporting={true}
@@ -924,6 +936,7 @@ export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProp
       colors={colors}
       typography={typography}
       spacingTokens={spacingTokens}
+      t={t}
       {...props}
     >
       {children}
@@ -931,11 +944,12 @@ export function PageErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProp
   );
 }
 
-export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'isolateError' | 'borderTokens' | 'colors' | 'typography' | 'spacingTokens'>) {
+export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundaryProps, 'isolateError' | 'borderTokens' | 'colors' | 'typography' | 'spacingTokens' | 't'>) {
   const borderTokens = useBorderTokens();
   const colors = useSemanticColors();
   const typography = useTypography();
   const spacingTokens = useSpacingTokens();
+  const { t } = useTranslation('errors');
 
   return (
     <ErrorBoundary
@@ -947,11 +961,12 @@ export function ComponentErrorBoundary({ children, ...props }: Omit<ErrorBoundar
       colors={colors}
       typography={typography}
       spacingTokens={spacingTokens}
+      t={t}
       fallback={(error, _, retry) => (
         <div className={`${spacingTokens.padding.md} ${borderTokens.quick.error} ${colors.bg.error}`}>
           <div className={`flex items-center justify-between ${spacingTokens.gap.sm}`}>
             <div>
-              <p className={`${typography.label.sm} ${colors.text.error}`}>Component Error</p>
+              <p className={`${typography.label.sm} ${colors.text.error}`}>{t('boundary.title')}</p>
               <p className={`${typography.body.sm} ${colors.text.error}`}>{error.message}</p>
             </div>
             <Button onClick={retry} variant="outline" size="sm">
@@ -1025,11 +1040,12 @@ export function RouteErrorFallback({
   enableReporting = true,
   showErrorDetails = process.env.NODE_ENV === 'development',
 }: RouteErrorFallbackProps) {
-  // === Hooks - 🏢 ENTERPRISE: Centralized Design Tokens ===
+  // === Hooks - 🏢 ENTERPRISE: Centralized Design Tokens + i18n ===
   const borderTokens = useBorderTokens();
   const colors = useSemanticColors();
   const typography = useTypography();
   const spacingTokens = useSpacingTokens();
+  const { t } = useTranslation('errors');
   const { reportError } = useErrorReporting();
   const { startTour, shouldShowTour } = useTour();
 
@@ -1321,10 +1337,12 @@ ${errorDetails.stack || 'Stack trace not available'}
             </figure>
             <div>
               <h1 className={`${typography.heading.lg} ${colors.text.error}`}>
-                Παρουσιάστηκε σφάλμα
+                {t('boundary.title')}
               </h1>
               <p className={colors.text.error}>
-                {componentName ? `Σφάλμα στο ${componentName}` : 'Παρουσιάστηκε απροσδόκητο σφάλμα'}
+                {componentName
+                  ? t('boundary.subtitleWithComponent', { component: componentName })
+                  : t('boundary.unexpectedError')}
               </p>
             </div>
           </header>
@@ -1345,7 +1363,7 @@ ${errorDetails.stack || 'Stack trace not available'}
               className={`flex items-center ${spacingTokens.gap.sm}`}
             >
               <RefreshCw className={componentSizes.icon.sm} />
-              <span>Δοκιμάστε Ξανά</span>
+              <span>{t('boundary.tryAgain')}</span>
             </Button>
 
             <Button
@@ -1355,7 +1373,7 @@ ${errorDetails.stack || 'Stack trace not available'}
               className={`flex items-center ${spacingTokens.gap.sm}`}
             >
               <ArrowLeft className={componentSizes.icon.sm} />
-              <span>Πίσω</span>
+              <span>{t('boundary.back')}</span>
             </Button>
 
             <Button
@@ -1365,7 +1383,7 @@ ${errorDetails.stack || 'Stack trace not available'}
               className={`flex items-center ${spacingTokens.gap.sm}`}
             >
               <Home className={componentSizes.icon.sm} />
-              <span>Αρχική</span>
+              <span>{t('boundary.home')}</span>
             </Button>
 
             {/* 🏢 ENTERPRISE: Help Tour Button (ADR-037) - Shows tour again */}
@@ -1374,10 +1392,10 @@ ${errorDetails.stack || 'Stack trace not available'}
               onClick={handleStartTour}
               variant="ghost"
               className={`flex items-center ${spacingTokens.gap.sm}`}
-              title="Εμφάνιση οδηγού βοήθειας"
+              title={t('boundary.guide')}
             >
               <HelpCircle className={componentSizes.icon.sm} />
-              <span>Οδηγός</span>
+              <span>{t('boundary.guide')}</span>
             </Button>
           </nav>
 
@@ -1389,9 +1407,9 @@ ${errorDetails.stack || 'Stack trace not available'}
                 <div className={`flex items-center ${spacingTokens.gap.sm}`}>
                   <Bug className={`${componentSizes.icon.md} text-muted-foreground`} />
                   <div>
-                    <p className={typography.label.sm}>Ενέργειες Σφάλματος</p>
+                    <p className={typography.label.sm}>{t('boundary.errorActions')}</p>
                     <p className={`${typography.body.sm} text-muted-foreground`}>
-                      Αντιγραφή λεπτομερειών ή ειδοποίηση διαχειριστή
+                      {t('boundary.errorActionsDesc')}
                     </p>
                   </div>
                 </div>
@@ -1407,12 +1425,12 @@ ${errorDetails.stack || 'Stack trace not available'}
                     {copySuccess ? (
                       <>
                         <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
-                        <span>Αντιγράφηκε!</span>
+                        <span>{t('boundary.copied')}</span>
                       </>
                     ) : (
                       <>
                         <Copy className={componentSizes.icon.sm} />
-                        <span>Αντιγραφή</span>
+                        <span>{t('boundary.copy')}</span>
                       </>
                     )}
                   </Button>
@@ -1427,17 +1445,17 @@ ${errorDetails.stack || 'Stack trace not available'}
                     {isSendingToAdmin ? (
                       <>
                         <RefreshCw className={`${componentSizes.icon.sm} animate-spin`} />
-                        <span>Αποστολή...</span>
+                        <span>{t('boundary.sending')}</span>
                       </>
                     ) : emailSent ? (
                       <>
                         <Check className={`${componentSizes.icon.sm} ${colors.text.success}`} />
-                        <span>Στάλθηκε!</span>
+                        <span>{t('boundary.sent')}</span>
                       </>
                     ) : (
                       <>
                         <Send className={componentSizes.icon.sm} />
-                        <span>Ειδοποίηση Admin</span>
+                        <span>{t('boundary.notifyAdmin')}</span>
                       </>
                     )}
                   </Button>
@@ -1451,7 +1469,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                     className={`flex items-center ${spacingTokens.gap.sm}`}
                   >
                     <Mail className={componentSizes.icon.sm} />
-                    <span>Αποστολή Email</span>
+                    <span>{t('boundary.sendEmail')}</span>
                   </Button>
                 </div>
               </div>
@@ -1461,7 +1479,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                 <div className={`${spacingTokens.padding.md} bg-muted border ${borderTokens.quick.default} ${borderTokens.radiusClass.md}`}>
                   <p className={`${typography.label.sm} ${colors.text.primary} ${spacingTokens.margin.bottom.sm} flex items-center ${spacingTokens.gap.sm}`}>
                     <Mail className={componentSizes.icon.sm} />
-                    <span>Επιλέξτε τον πάροχο email σας:</span>
+                    <span>{t('boundary.selectEmailProvider')}</span>
                   </p>
                   <div className={`grid grid-cols-2 ${spacingTokens.gap.sm}`}>
                     {EMAIL_PROVIDERS.map((provider) => {
@@ -1475,13 +1493,13 @@ ${errorDetails.stack || 'Stack trace not available'}
                           className={`flex items-center justify-start ${spacingTokens.gap.sm}`}
                         >
                           <IconComponent className={componentSizes.icon.sm} />
-                          <span>{provider.labelEl}</span>
+                          <span>{provider.label}</span>
                         </Button>
                       );
                     })}
                   </div>
                   <p className={`${typography.body.xs} ${colors.text.muted} ${spacingTokens.margin.top.sm}`}>
-                    Θα ανοίξει νέα καρτέλα με το email έτοιμο προς αποστολή
+                    {t('boundary.emailWillOpen')}
                   </p>
                 </div>
               )}
@@ -1491,9 +1509,9 @@ ${errorDetails.stack || 'Stack trace not available'}
                 <div className={`flex items-center ${spacingTokens.gap.sm}`}>
                   <Send className={`${componentSizes.icon.md} text-muted-foreground`} />
                   <div>
-                    <p className={typography.label.sm}>Ανώνυμη Αναφορά</p>
+                    <p className={typography.label.sm}>{t('boundary.anonymousReport')}</p>
                     <p className={`${typography.body.sm} text-muted-foreground`}>
-                      Αποστολή ανώνυμης αναφοράς για βελτίωση του συστήματος
+                      {t('boundary.anonymousReportDesc')}
                     </p>
                   </div>
                 </div>
@@ -1507,15 +1525,15 @@ ${errorDetails.stack || 'Stack trace not available'}
                   {isReporting ? (
                     <>
                       <RefreshCw className={`${componentSizes.icon.sm} ${spacingTokens.margin.right.sm} animate-spin`} />
-                      Αποστολή...
+                      {t('boundary.sending')}
                     </>
                   ) : reportSent ? (
                     <>
                       <Check className={`${componentSizes.icon.sm} ${spacingTokens.margin.right.sm} ${colors.text.success}`} />
-                      Στάλθηκε
+                      {t('boundary.sent')}
                     </>
                   ) : (
-                    'Αναφορά Σφάλματος'
+                    t('boundary.reportError')
                   )}
                 </Button>
               </div>
@@ -1526,12 +1544,12 @@ ${errorDetails.stack || 'Stack trace not available'}
           {showErrorDetails && (
             <details className={spacingTokens.margin.top.lg}>
               <summary className={`cursor-pointer text-muted-foreground ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${spacingTokens.margin.bottom.sm}`}>
-                Τεχνικές Λεπτομέρειες
+                {t('boundary.technicalDetails')}
               </summary>
               <div className={spacingTokens.spaceBetween.md}>
                 <div>
                   <div className={`flex items-center justify-between ${spacingTokens.margin.bottom.sm}`}>
-                    <h4 className={typography.label.sm}>Error Stack</h4>
+                    <h4 className={typography.label.sm}>{t('boundary.errorStack')}</h4>
                     <Button
                       onClick={handleCopyDetails}
                       variant="ghost"
@@ -1551,10 +1569,10 @@ ${errorDetails.stack || 'Stack trace not available'}
                 </div>
 
                 <div className={`${typography.body.xs} text-muted-foreground ${spacingTokens.spaceBetween.xs}`}>
-                  <p><strong>Error ID:</strong> {errorId}</p>
-                  {error.digest && <p><strong>Digest:</strong> {error.digest}</p>}
-                  <p><strong>Timestamp:</strong> {new Date().toISOString()}</p>
-                  <p><strong>URL:</strong> {typeof window !== 'undefined' ? window.location.href : 'SSR'}</p>
+                  <p><strong>{t('boundary.errorId')}:</strong> {errorId}</p>
+                  {error.digest && <p><strong>{t('boundary.digest')}:</strong> {error.digest}</p>}
+                  <p><strong>{t('boundary.timestamp')}:</strong> {new Date().toISOString()}</p>
+                  <p><strong>{t('boundary.url')}:</strong> {typeof window !== 'undefined' ? window.location.href : 'SSR'}</p>
                 </div>
               </div>
             </details>
@@ -1562,7 +1580,7 @@ ${errorDetails.stack || 'Stack trace not available'}
 
           {/* Admin Email Info */}
           <footer className={`${spacingTokens.margin.top.lg} ${spacingTokens.padding.top.md} border-t text-center ${typography.body.xs} text-muted-foreground`}>
-            <p>Email Διαχειριστή: {notificationConfig.channels.adminEmail}</p>
+            <p>{t('boundary.adminEmail')}: {notificationConfig.channels.adminEmail}</p>
           </footer>
         </section>
       </article>

@@ -1636,8 +1636,13 @@ export const PANEL_ANCHORING = {
     },
     /** Overlay Properties Panel (Ιδιότητες Overlay) */
     OVERLAY_PROPERTIES: {
-      width: 320,
-      height: 400,
+      width: 340,
+      height: 500,
+    },
+    /** PDF Background Controls Panel (Ρυθμίσεις PDF) */
+    PDF_CONTROLS: {
+      width: 280,
+      height: 450,
     },
     /** Performance Monitor Panel */
     PERFORMANCE_MONITOR: {

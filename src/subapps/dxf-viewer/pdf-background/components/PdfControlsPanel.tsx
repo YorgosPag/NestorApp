@@ -26,6 +26,8 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { usePdfBackgroundStore } from '../stores/pdfBackgroundStore';
 import { PDF_RENDER_CONFIG, type PdfBackgroundTransform } from '../types/pdf.types';
+// 🏢 ENTERPRISE: Centralized panel dimensions (ADR-029)
+import { PANEL_ANCHORING } from '../../config/panel-tokens';
 
 // ============================================================================
 // CONSTANTS
@@ -48,9 +50,9 @@ const DEFAULT_POSITION = { x: 20, y: 100 };
 
 /**
  * Panel dimensions
- * Note: Using fixed height since FloatingPanelDimensions requires number
+ * 🏢 ENTERPRISE: Use centralized panel dimensions (ADR-029)
  */
-const PANEL_DIMENSIONS = { width: 280, height: 450 };
+const PANEL_DIMENSIONS = PANEL_ANCHORING.DIMENSIONS.PDF_CONTROLS;
 
 // ============================================================================
 // COMPONENT PROPS

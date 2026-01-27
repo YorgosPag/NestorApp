@@ -36,6 +36,7 @@
 | **ADR-030** | Universal Selection System 🏢 | `systems/selection/` + `useUniversalSelection()` | Selection logic σε `overlay-store.tsx` | 2026-01-25 |
 | **ADR-031** | Multi-Grip Selection System 🏢 | `selectedGripIndices[]` + Shift+Click | Single `selectedGripIndex` | 2026-01-26 |
 | **ADR-032** | Smart Delete + Undo System 🏢 | `handleSmartDelete()` + `DeleteOverlayCommand` + Ctrl+Z | Direct `overlayStore.remove()` without undo | 2026-01-26 |
+| **ADR-040** | Preview Canvas Performance 🏢 | `canvas-v2/preview-canvas/` + `PreviewRenderer` | React state for previews (~250ms/frame) | 2026-01-27 |
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 > **🚫 PROHIBITION**: Hardcoded canvas backgrounds **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `CANVAS_THEME`.
@@ -54,6 +55,7 @@
 > **🚫 PROHIBITION**: Νέα selection implementations σε άλλα stores **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useUniversalSelection()` από `systems/selection/`.
 > **✅ MIGRATION COMPLETE (2026-01-25)**: Selection logic αφαιρέθηκε πλήρως από `overlay-store.tsx` - όλα τα components χρησιμοποιούν τώρα `useUniversalSelection()`.
 > **🏢 WORLD-CLASS**: ADR-004 χρησιμοποιεί CSS Variables για runtime theme switching (Figma/AutoCAD level).
+> **🚀 PERFORMANCE**: ADR-040 - Dedicated PreviewCanvas για 60fps drawing (~250ms→<16ms per frame).
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
 > **🏢 ENTERPRISE**: ADR-014 - 19 files migrated, 8 entity types, centralized icons & colors.
