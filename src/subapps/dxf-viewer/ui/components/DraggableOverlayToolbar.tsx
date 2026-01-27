@@ -1,6 +1,19 @@
 'use client';
 
 /**
+ * ⚠️ DEPRECATED - ADR-050: Unified Toolbar Integration (2027-01-27)
+ *
+ * This component is DEPRECATED and will be removed in a future release.
+ * Use the unified toolbar instead: EnhancedDXFToolbar with OverlayToolbarSection
+ *
+ * Migration: Set USE_UNIFIED_OVERLAY_TOOLBAR = true in ToolbarSection.tsx
+ *
+ * @deprecated Use EnhancedDXFToolbar with overlay section instead
+ * @see ui/toolbar/EnhancedDXFToolbar.tsx
+ * @see ui/toolbar/overlay-section/OverlayToolbarSection.tsx
+ *
+ * ---
+ *
  * 🏢 DRAGGABLE OVERLAY TOOLBAR
  *
  * Floating toolbar για overlay drawing και editing.

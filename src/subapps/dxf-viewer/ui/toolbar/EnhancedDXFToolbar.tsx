@@ -29,6 +29,9 @@ import { matchesShortcut, DXF_TOOL_SHORTCUTS, DXF_CTRL_SHORTCUTS, DXF_SPECIAL_SH
 import UploadDxfButton from '../UploadDxfButton';
 import { SimpleProjectDialog } from '../../components/SimpleProjectDialog';
 import type { SceneModel } from '../../types/scene';
+// 🏢 ADR-050: Overlay Toolbar Integration
+import { OverlayToolbarSection } from './overlay-section';
+import type { EnhancedDXFToolbarPropsExtended } from './types';
 
 interface EnhancedDXFToolbarProps {
   activeTool: ToolType;
@@ -48,7 +51,7 @@ interface EnhancedDXFToolbarProps {
   showCoordinates?: boolean;
 }
 
-export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
+export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarPropsExtended> = ({
   activeTool,
   onToolChange,
   onAction,
@@ -64,6 +67,14 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
   onSceneImported,
   mouseCoordinates,
   showCoordinates = false,
+
+  // 🏢 ADR-050: Overlay toolbar props (optional)
+  overlayToolbarState,
+  overlayToolbarHandlers,
+  showOverlaySection = false,
+  selectedOverlayId,
+  isOverlaySectionCollapsed = false,
+  onToggleOverlaySection
 }) => {
   // 🏢 ENTERPRISE HOOKS: Design system integration
   const iconSizes = useIconSizes();
@@ -280,7 +291,19 @@ export const EnhancedDXFToolbar: React.FC<EnhancedDXFToolbarProps> = ({
           />
         </div>
       </div>
-      
+
+      {/* 🏢 ADR-050: Row 2 - Overlay Section (collapsible) */}
+      {showOverlaySection && overlayToolbarState && overlayToolbarHandlers && onToggleOverlaySection && (
+        <OverlayToolbarSection
+          state={overlayToolbarState}
+          handlers={overlayToolbarHandlers}
+          selectedOverlayId={selectedOverlayId ?? null}
+          canDelete={!!selectedOverlayId}
+          isCollapsed={isOverlaySectionCollapsed}
+          onToggleCollapse={onToggleOverlaySection}
+        />
+      )}
+
       <ToolbarStatusBar
         activeTool={activeTool}
         currentZoom={currentZoom}

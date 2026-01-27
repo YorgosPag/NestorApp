@@ -23,6 +23,11 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
   const iconSizes = useIconSizes();
   const { quick, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
+
+  // 🏢 ADR-050: Overlay section collapse state (fullscreen mode)
+  const [isOverlaySectionCollapsed, setIsOverlaySectionCollapsed] = React.useState(false);
+  const showOverlayToolbar = props.activeTool === 'layering';
+
   return (
   <div className={`fixed ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.Z_INDEX['50']} ${colors.bg.accent} flex flex-col`}>
     <ToolbarSection
@@ -33,6 +38,9 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
       setCurrentStatus={() => {}}
       currentKind={"unit" as OverlayKind}
       setCurrentKind={() => {}}
+      showOverlayToolbar={showOverlayToolbar}
+      isOverlaySectionCollapsed={isOverlaySectionCollapsed}
+      onToggleOverlaySection={() => setIsOverlaySectionCollapsed(prev => !prev)}
     />
     <div className={`flex justify-between items-center ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${getDirectionalBorder('muted', 'bottom')}`}>
       <div className={`flex ${PANEL_LAYOUT.GAP.SM} items-center`}>

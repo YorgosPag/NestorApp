@@ -9,6 +9,12 @@ import { useCommandHistory, DeleteOverlayCommand } from '../../core/commands';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
+// 🏢 ADR-050: Overlay Toolbar Integration (2027-01-27)
+import type { OverlayToolbarState, OverlayToolbarHandlers } from '../../ui/toolbar/overlay-section/types';
+
+// 🏢 ADR-050: Feature flag for unified toolbar integration
+// Set to true to use new unified toolbar, false to use old floating toolbar
+const USE_UNIFIED_OVERLAY_TOOLBAR = false; // TODO: Change to true after testing
 
 interface ToolbarSectionProps extends DXFViewerLayoutProps {
   overlayMode: OverlayEditorMode;
@@ -17,6 +23,10 @@ interface ToolbarSectionProps extends DXFViewerLayoutProps {
   setCurrentStatus: (status: Status) => void;
   currentKind: OverlayKind;
   setCurrentKind: (kind: OverlayKind) => void;
+  // 🏢 ADR-050: Overlay section collapse state
+  showOverlayToolbar?: boolean;
+  isOverlaySectionCollapsed?: boolean;
+  onToggleOverlaySection?: () => void;
 }
 
 export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
@@ -27,6 +37,9 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
     setCurrentStatus,
     currentKind,
     setCurrentKind,
+    showOverlayToolbar = false,
+    isOverlaySectionCollapsed = false,
+    onToggleOverlaySection,
     ...dxfProps
   } = props;
 
@@ -55,6 +68,27 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
     }
   };
 
+  // 🏢 ADR-050: Prepare overlay toolbar state (only if feature flag enabled)
+  const overlayToolbarState: OverlayToolbarState | undefined = (USE_UNIFIED_OVERLAY_TOOLBAR && showOverlayToolbar) ? {
+    mode: overlayMode,
+    currentStatus: currentStatus,
+    currentKind: currentKind,
+    draftPolygonInfo: {
+      pointCount: 0, // Will be updated via EventBus
+      canSave: false
+    }
+  } : undefined;
+
+  // 🏢 ADR-050: Prepare overlay toolbar handlers (only if feature flag enabled)
+  const overlayToolbarHandlers: OverlayToolbarHandlers | undefined = (USE_UNIFIED_OVERLAY_TOOLBAR && showOverlayToolbar) ? {
+    onModeChange: setOverlayMode,
+    onStatusChange: setCurrentStatus,
+    onKindChange: setCurrentKind,
+    onDuplicate: handleOverlayDuplicate,
+    onDelete: handleOverlayDelete,
+    onToolChange: dxfProps.onToolChange
+  } : undefined;
+
   return (
     <div className={PANEL_LAYOUT.FLEX_SHRINK.NONE}>
       {/* 🏢 ENTERPRISE: Removed wrapper padding (PANEL_LAYOUT.SPACING.SM) - toolbar has internal padding */}
@@ -75,6 +109,13 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           currentZoom={dxfProps.currentZoom}
           commandCount={0}
           onSceneImported={dxfProps.onSceneImported}
+          // 🏢 ADR-050: Overlay toolbar integration (only if feature flag enabled)
+          overlayToolbarState={overlayToolbarState}
+          overlayToolbarHandlers={overlayToolbarHandlers}
+          showOverlaySection={USE_UNIFIED_OVERLAY_TOOLBAR && showOverlayToolbar}
+          selectedOverlayId={universalSelection.getPrimaryId()}
+          isOverlaySectionCollapsed={isOverlaySectionCollapsed}
+          onToggleOverlaySection={onToggleOverlaySection}
           // 🏢 ENTERPRISE: Removed unnecessary empty spread - all required props are passed explicitly
         />
 

@@ -180,3 +180,40 @@ export const MEASUREMENT_TOOL_CONFIGS: Record<MeasurementTool, MeasurementToolCo
     requiredPoints: 3
   }
 };
+
+// ============================================================================
+// 🏢 ADR-050: OVERLAY TOOLBAR INTEGRATION (2027-01-27)
+// Extended props for unified toolbar with overlay section
+// ============================================================================
+
+import type { OverlayToolbarState, OverlayToolbarHandlers } from './overlay-section/types';
+
+/**
+ * Extended props for EnhancedDXFToolbar (backward compatible)
+ * These props are optional for gradual migration
+ */
+export interface EnhancedDXFToolbarPropsExtended {
+  activeTool: ToolType;
+  onToolChange: (tool: ToolType) => void;
+  onAction: (action: string, data?: number | string | Record<string, unknown>) => void;
+  showGrid: boolean;
+  autoCrop: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  snapEnabled: boolean;
+  showCursorSettings?: boolean;
+  currentZoom: number;
+  commandCount?: number;
+  className?: string;
+  onSceneImported?: (file: File, encoding?: string) => void;
+  mouseCoordinates?: { x: number; y: number } | null;
+  showCoordinates?: boolean;
+
+  // 🏢 ADR-050: Overlay toolbar integration (optional for feature flag)
+  overlayToolbarState?: OverlayToolbarState;
+  overlayToolbarHandlers?: OverlayToolbarHandlers;
+  showOverlaySection?: boolean;
+  selectedOverlayId?: string | null;
+  isOverlaySectionCollapsed?: boolean;
+  onToggleOverlaySection?: () => void;
+}
