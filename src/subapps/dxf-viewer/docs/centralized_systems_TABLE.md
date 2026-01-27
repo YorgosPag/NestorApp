@@ -1,10 +1,10 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-27
+> **= -> LAST UPDATED**: 2027-01-27
 > **= -> TOTAL SYSTEMS**: 30 Major Enterprise Systems (incl. CanvasBoundsService Performance)
-> **= -> TOTAL CODE**: 18,800+ Lines
-> **= -> TOTAL ADRs**: 24 Architectural Decision Records
+> **= -> TOTAL CODE**: 19,200+ Lines (incl. MoveOverlayCommand 380+ lines)
+> **= -> TOTAL ADRs**: 25 Architectural Decision Records (incl. ADR-049)
 
 ---
 
@@ -36,15 +36,16 @@
 | **ADR-030** | Universal Selection System 🏢 | `systems/selection/` + `useUniversalSelection()` | Selection logic σε `overlay-store.tsx` | 2026-01-25 |
 | **ADR-031** | Multi-Grip Selection System 🏢 | `selectedGripIndices[]` + Shift+Click | Single `selectedGripIndex` | 2026-01-26 |
 | **ADR-032** | Smart Delete + Undo System 🏢 | `handleSmartDelete()` + `DeleteOverlayCommand` + Ctrl+Z | Direct `overlayStore.remove()` without undo | 2026-01-26 |
-| **ADR-040** | Preview Canvas Performance 🏢 | `canvas-v2/preview-canvas/` + `PreviewRenderer` | React state for previews (~250ms/frame) | 2026-01-27 |
-| **ADR-041** | Distance Label Centralization 🏢 | `rendering/entities/shared/distance-label-utils.ts` | Duplicate implementations (PreviewRenderer vs BaseEntityRenderer) | 2026-01-27 |
-| **ADR-042** | UI Fonts Centralization 🏢 | `config/text-rendering-config.ts` → `UI_FONTS` | 20+ hardcoded font strings | 2026-01-27 |
-| **ADR-043** | Zoom Constants Consolidation 🏢 | `config/transform-config.ts` (SSOT) | `zoom-constants.ts` middleman + `_canvas_LEGACY/` orphan | 2026-01-27 |
-| **ADR-044** | Canvas Line Widths Centralization 🏢 | `config/text-rendering-config.ts` → `RENDER_LINE_WIDTHS` | 32 hardcoded `ctx.lineWidth` σε 15 αρχεία | 2026-01-27 |
-| **ADR-045** | Viewport Ready Guard 🏢 | `CanvasSection.tsx` + `useCentralizedMouseHandlers.ts` + **`DxfViewerContent.tsx`** → Fresh viewport + COORDINATE_LAYOUT | First-click offset bug (~80px) - ROOT CAUSE: hardcoded `MARGIN_LEFT=80` | 2026-01-27 |
-| **ADR-046** | Single Coordinate Transform 🏢 | `useCentralizedMouseHandlers.ts` → Pass WORLD coords to `onCanvasClick` | **FINAL ROOT CAUSE**: Double conversion (world→screen→world) με mismatched viewports (LayerCanvas vs DxfCanvas) προκαλούσε ~80px X-axis offset. DevTools resize masked bug. | 2026-01-27 |
-| **ADR-047** | Close Polygon on First-Point Click 🏢 | `useDrawingHandlers.ts` → Auto-close on first-point + temporary snap entity | Area measurement tool: Click στο πρώτο σημείο → snap και κλείνει αυτόματα το πολύγωνο (AutoCAD/BricsCAD pattern) | 2026-01-27 |
+| **ADR-040** | Preview Canvas Performance 🏢 | `canvas-v2/preview-canvas/` + `PreviewRenderer` | React state for previews (~250ms/frame) | 2027-01-27 |
+| **ADR-041** | Distance Label Centralization 🏢 | `rendering/entities/shared/distance-label-utils.ts` | Duplicate implementations (PreviewRenderer vs BaseEntityRenderer) | 2027-01-27 |
+| **ADR-042** | UI Fonts Centralization 🏢 | `config/text-rendering-config.ts` → `UI_FONTS` | 20+ hardcoded font strings | 2027-01-27 |
+| **ADR-043** | Zoom Constants Consolidation 🏢 | `config/transform-config.ts` (SSOT) | `zoom-constants.ts` middleman + `_canvas_LEGACY/` orphan | 2027-01-27 |
+| **ADR-044** | Canvas Line Widths Centralization 🏢 | `config/text-rendering-config.ts` → `RENDER_LINE_WIDTHS` | 32 hardcoded `ctx.lineWidth` σε 15 αρχεία | 2027-01-27 |
+| **ADR-045** | Viewport Ready Guard 🏢 | `CanvasSection.tsx` + `useCentralizedMouseHandlers.ts` + **`DxfViewerContent.tsx`** → Fresh viewport + COORDINATE_LAYOUT | First-click offset bug (~80px) - ROOT CAUSE: hardcoded `MARGIN_LEFT=80` | 2027-01-27 |
+| **ADR-046** | Single Coordinate Transform 🏢 | `useCentralizedMouseHandlers.ts` → Pass WORLD coords to `onCanvasClick` | **FINAL ROOT CAUSE**: Double conversion (world→screen→world) με mismatched viewports (LayerCanvas vs DxfCanvas) προκαλούσε ~80px X-axis offset. DevTools resize masked bug. | 2027-01-27 |
+| **ADR-047** | Close Polygon on First-Point Click 🏢 | `useDrawingHandlers.ts` → Auto-close on first-point + temporary snap entity | Area measurement tool: Click στο πρώτο σημείο → snap και κλείνει αυτόματα το πολύγωνο (AutoCAD/BricsCAD pattern) | 2027-01-27 |
 | **ADR-048** | Unified Grip Rendering System 🏢 | `rendering/grips/` → UnifiedGripRenderer (Facade Pattern) | Zero duplicate code (~90 lines removed), Single source of truth, ADR-047 custom colors work automatically, SOLID compliant | 2027-01-27 |
+| **ADR-049** | Unified Move Tool for DXF + Overlays 🏢 | `core/commands/overlay-commands/MoveOverlayCommand.ts` (380+ lines) | Single move tool για DXF entities ΚΑΙ colored overlays, Full Command Pattern με undo/redo, Real-time ghost rendering (AutoCAD/Figma), Command merging (500ms), Zero duplicate code | 2027-01-27 |
 
 > **🚫 PROHIBITION**: Click handlers without `viewportReady` check **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - block interactions until viewport valid.
 > **🚫 PROHIBITION**: Double coordinate conversion (world→screen→world) **ΑΠΑΓΟΡΕΥΕΤΑΙ** - single conversion at source per ADR-046.
@@ -76,6 +77,7 @@
 > **🏢 ENTERPRISE**: ADR-043 - Zoom system fully centralized σε `transform-config.ts`, zero middleman files.
 > **🚫 PROHIBITION**: Hardcoded `ctx.lineWidth = X` **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `RENDER_LINE_WIDTHS` από `text-rendering-config.ts`.
 > **🚫 PROHIBITION**: Duplicate grip rendering logic **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `UnifiedGripRenderer` από `rendering/grips/`.
+> **🚫 PROHIBITION**: Direct overlay.polygon manipulation for movement **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `MoveOverlayCommand` για undo/redo support.
 > **🏢 ENTERPRISE**: ADR-044 - Canvas line widths fully centralized, 32 hardcoded values → 17 files migrated.
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.

@@ -85,6 +85,13 @@ interface LayerCanvasProps {
   // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback for measurement/drawing tools
   onDrawingHover?: (worldPos: Point2D) => void;
 
+  // 🏢 ENTERPRISE (2027-01-27): Overlay body drag preview - Unified Toolbar Integration
+  // Pass dragging state for real-time ghost rendering during move tool drag
+  draggingOverlay?: {
+    overlayId: string;
+    delta: Point2D; // Movement delta for ghost rendering
+  } | null;
+
   // ✅ ΦΑΣΗ 6: Feature flag για centralized UI rendering
   useUnifiedUIRendering?: boolean;
 
@@ -130,6 +137,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   onTransformChange,
   onWheelZoom,
   onDrawingHover, // 🏢 ENTERPRISE (2026-01-26): Drawing preview callback
+  draggingOverlay = null, // 🏢 ENTERPRISE (2027-01-27): Ghost rendering during move tool drag
   useUnifiedUIRendering = false, // ✅ ΦΑΣΗ 6: Default disabled για smooth transition
   enableUnifiedCanvas = false, // ✅ ΦΑΣΗ 7: Default disabled για smooth transition
   ...props // 🎯 PASS THROUGH: Περνάω όλα τα extra props (όπως data-canvas-type)
@@ -201,7 +209,8 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     // Layer selection handling - debug disabled for performance
     // 🚀 PROFESSIONAL CAD: Όταν επιλέγεται layer, καλούμε το onLayerClick
     // 🏢 ENTERPRISE (2026-01-25): Επιλογή layer με 'select' ή 'layering' tool
-    if (layerId && onLayerClick && (activeTool === 'select' || activeTool === 'layering')) {
+    // 🏢 ENTERPRISE (2027-01-27): Add 'move' tool support for overlay drag - Unified Toolbar Integration
+    if (layerId && onLayerClick && (activeTool === 'select' || activeTool === 'layering' || activeTool === 'move')) {
       // Χρήση cursor system για το position
       const currentPos = cursor.position;
       // Calling onLayerClick - debug disabled for performance
@@ -465,7 +474,28 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
       const isPanToolActive = activeTool === 'pan';
 
       // ✅ LAYER PERSISTENCE: Show colored layers βασει persistent state
-      const filteredLayers = layersVisible ? layers : []; // Layers βασει persistent visibility
+      let filteredLayers = layersVisible ? layers : []; // Layers βασει persistent visibility
+
+      // 🏢 ENTERPRISE (2027-01-27): Apply drag delta for ghost rendering - Unified Toolbar Integration
+      // When move tool is active and user is dragging, render overlay at new position
+      if (draggingOverlay && draggingOverlay.delta) {
+        filteredLayers = filteredLayers.map(layer => {
+          if (layer.id === draggingOverlay.overlayId) {
+            // Create ghost layer with shifted polygons
+            return {
+              ...layer,
+              polygons: layer.polygons.map(poly => ({
+                ...poly,
+                vertices: poly.vertices.map((vertex: Point2D) => ({
+                  x: vertex.x + draggingOverlay.delta.x,
+                  y: vertex.y + draggingOverlay.delta.y
+                }))
+              }))
+            };
+          }
+          return layer;
+        });
+      }
 
       // Layer filtering logic - debug disabled for performance
 

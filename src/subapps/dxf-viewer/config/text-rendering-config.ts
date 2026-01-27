@@ -304,6 +304,37 @@ export const RENDER_LINE_WIDTHS = {
 export type RenderLineWidth = typeof RENDER_LINE_WIDTHS[keyof typeof RENDER_LINE_WIDTHS];
 
 // ============================================
+// 🏢 ADR-048: RENDERING GEOMETRY CONSTANTS (2027-01-27)
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: Rendering Geometry Configuration
+ *
+ * Centralized geometric constants for entity rendering.
+ * Eliminates hardcoded magic numbers in rendering logic.
+ *
+ * Pattern: Autodesk AutoCAD / Bentley MicroStation - Unified rendering constants
+ *
+ * RATIONALE:
+ * - SPLIT_LINE_GAP: 30px standard gap for distance text in preview mode
+ *   (Distance between split line segments to show measurement text)
+ *
+ * @see ADR-048: Hardcoded Values Centralization
+ * @see BaseEntityRenderer.renderSplitLineWithGap()
+ * @since 2027-01-27
+ */
+export const RENDER_GEOMETRY = {
+  /**
+   * Gap size in pixels for split lines (distance measurement preview)
+   * Used when rendering lines/segments with inline distance text
+   *
+   * USAGE: Preview mode shows split line with 30px gap in center for text
+   * STANDARD: AutoCAD dimension lines use similar gap patterns
+   */
+  SPLIT_LINE_GAP: 30,
+} as const;
+
+// ============================================
 // HIT TESTING CONFIGURATION
 // ============================================
 

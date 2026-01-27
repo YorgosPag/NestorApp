@@ -67,6 +67,7 @@ import {
   DeleteMultipleOverlaysCommand,
   DeleteOverlayVertexCommand,
   DeleteMultipleOverlayVerticesCommand,
+  MoveOverlayCommand, // 🏢 ENTERPRISE (2027-01-27): Move entire overlay with undo/redo - Unified Toolbar Integration
   MoveMultipleOverlayVerticesCommand,
   type VertexMovement
 } from '../../core/commands';
@@ -248,6 +249,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview position
   // Updates on every mouse move during drag for smooth visual feedback
   const [dragPreviewPosition, setDragPreviewPosition] = useState<Point2D | null>(null);
+
+  // 🏢 ENTERPRISE (2027-01-27): State για OVERLAY BODY drag (move tool) - Unified Toolbar Integration
+  // ADR-032: Move entire overlay with Command Pattern for undo/redo support
+  const [draggingOverlayBody, setDraggingOverlayBody] = useState<{
+    overlayId: string;
+    startPoint: Point2D;    // Mouse start position in world coordinates
+    startPolygon: Array<[number, number]>; // Original polygon for delta calculation
+  } | null>(null);
 
   // 🚀 PERFORMANCE (2026-01-27): Throttle ref for grip hover detection
   // Grip hover detection is O(selectedOverlays × vertices) - expensive on every mouse move
@@ -506,8 +515,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // Only handle left click
     if (e.button !== 0) return;
 
-    // Only in select/layering mode
-    if (activeTool !== 'select' && activeTool !== 'layering') return;
+    // Only in select/layering/move mode
+    // 🏢 ENTERPRISE (2027-01-27): Add 'move' tool support for overlay drag - Unified Toolbar Integration
+    if (activeTool !== 'select' && activeTool !== 'layering' && activeTool !== 'move') return;
 
     const isShiftPressed = e.shiftKey;
 
@@ -708,7 +718,44 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       justFinishedDragRef.current = true;
       setTimeout(() => { justFinishedDragRef.current = false; }, 100);
     }
-  }, [draggingVertex, draggingVertices, draggingEdgeMidpoint, transform, viewport, executeCommand]);
+
+    // 🏢 ENTERPRISE (2027-01-27): Handle overlay body drag end - Unified Toolbar Integration
+    // ADR-032: Move entire overlay with Command Pattern for undo/redo support
+    if (draggingOverlayBody && overlayStore) {
+      const container = containerRef.current;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const screenPos: Point2D = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+
+        // Calculate delta from start position
+        const delta = {
+          x: worldPos.x - draggingOverlayBody.startPoint.x,
+          y: worldPos.y - draggingOverlayBody.startPoint.y
+        };
+
+        // 🏢 ENTERPRISE: Only execute command if there was actual movement (avoid no-op commands)
+        const hasMovement = Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001;
+        if (hasMovement) {
+          // Execute MoveOverlayCommand through history for undo/redo support
+          const command = new MoveOverlayCommand(
+            draggingOverlayBody.overlayId,
+            delta,
+            overlayStore,
+            true // isDragging = true for smooth drag operations
+          );
+          executeCommand(command);
+        }
+      }
+
+      // Clear drag state
+      setDraggingOverlayBody(null);
+      setDragPreviewPosition(null);
+      // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
+      justFinishedDragRef.current = true;
+      setTimeout(() => { justFinishedDragRef.current = false; }, 100);
+    }
+  }, [draggingVertex, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, transform, viewport, executeCommand]);
 
   // 🔺 CURSOR SYSTEM INTEGRATION - Σύνδεση με floating panel
   const crosshairSettings: CrosshairSettings = {
@@ -1235,11 +1282,26 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       }
     }
 
-    // 🚀 PROFESSIONAL CAD: Αυτόματη επιλογή layers όταν select/layering tool είναι ενεργό
+    // 🚀 PROFESSIONAL CAD: Αυτόματη επιλογή layers όταν select/layering/move tool είναι ενεργό
     // 🏢 ENTERPRISE (2026-01-25): Προσθήκη 'select' tool για επιλογή layers με grips
-    if (activeTool === 'select' || activeTool === 'layering' || overlayMode === 'select') {
+    // 🏢 ENTERPRISE (2027-01-27): Προσθήκη 'move' tool για overlay drag - Unified Toolbar Integration
+    if (activeTool === 'select' || activeTool === 'layering' || activeTool === 'move' || overlayMode === 'select') {
       // console.log('🔍 Selecting overlay:', overlayId);
       handleOverlaySelect(overlayId);
+
+      // 🏢 ENTERPRISE (2027-01-27): Start overlay body drag if move tool is active - Unified Toolbar Integration
+      if (activeTool === 'move') {
+        const overlay = currentOverlays.find(o => o.id === overlayId);
+        if (overlay?.polygon) {
+          // Start dragging the entire overlay body
+          setDraggingOverlayBody({
+            overlayId,
+            startPoint: point,
+            startPolygon: JSON.parse(JSON.stringify(overlay.polygon)) // Deep copy for undo
+          });
+          setDragPreviewPosition(point);
+        }
+      }
 
       // 🔧 AUTO FIT TO VIEW - Zoom to selected overlay (only for layering tool)
       if (activeTool === 'layering') {
@@ -1645,6 +1707,18 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Drawing hover callback for preview line
               // Note: Tool check happens inside useCentralizedMouseHandlers via isInteractiveTool()
               onDrawingHover={drawingHandlersRef.current?.onDrawingHover}
+              // 🏢 ENTERPRISE (2027-01-27): Pass dragging state for ghost rendering - Unified Toolbar Integration
+              draggingOverlay={
+                draggingOverlayBody && dragPreviewPosition
+                  ? {
+                      overlayId: draggingOverlayBody.overlayId,
+                      delta: {
+                        x: dragPreviewPosition.x - draggingOverlayBody.startPoint.x,
+                        y: dragPreviewPosition.y - draggingOverlayBody.startPoint.y
+                      }
+                    }
+                  : null
+              }
               onMouseMove={(screenPoint) => {
                 // 🚀 PERFORMANCE (2026-01-27): ENTERPRISE OPTIMIZATION
                 // Reduced unnecessary work in mousemove handler to achieve <16ms per frame
@@ -1755,7 +1829,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 }
 
                 // 🏢 ENTERPRISE: Drag preview update (already throttled by above check)
-                if (draggingVertex || draggingEdgeMidpoint) {
+                // 🏢 ENTERPRISE (2027-01-27): Add overlay body drag support - Unified Toolbar Integration
+                if (draggingVertex || draggingEdgeMidpoint || draggingOverlayBody) {
                   setDragPreviewPosition(worldPoint);
                 }
 

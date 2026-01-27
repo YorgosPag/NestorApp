@@ -15,7 +15,8 @@ import { calculateSplitLineGap } from './shared/line-utils';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-048: Centralized Rendering Geometry (2027-01-27)
+import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 import { renderSquareGrip } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride, getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
@@ -110,9 +111,10 @@ export abstract class BaseEntityRenderer {
 
   /**
    * Style για μετρήσεις διαστάσεων (δίπλα στα grips)
+   * 🏢 ADR-048: Uses centralized DIMENSION_TEXT color (2027-01-27)
    */
   protected applyDimensionTextStyle(): void {
-    this.ctx.fillStyle = 'fuchsia';  // Fuchsia
+    this.ctx.fillStyle = UI_COLORS.DIMENSION_TEXT;  // 🏢 Centralized fuchsia color
     this.ctx.font = `${this.getBaseFontSize()}px Arial`;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
@@ -429,8 +431,9 @@ export abstract class BaseEntityRenderer {
   /**
    * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ ΜΈΘΟΔΟΣ ΣΠΑΣΜΈΝΗΣ ΓΡΑΜΜΉΣ ΓΙΑ ΌΛΕΣ ΤΙΣ ΟΝΤΌΤΗΤΕΣ
    * Σχεδιάζει γραμμή με κενό στο κέντρο για distance text - για όλες τις οντότητες κατά την προεπισκόπηση
+   * 🏢 ADR-048: Uses centralized SPLIT_LINE_GAP constant (2027-01-27)
    */
-  protected renderSplitLineWithGap(screenStart: Point2D, screenEnd: Point2D, entity: EntityModel, options: RenderOptions = {}, gapSize: number = 30): void {
+  protected renderSplitLineWithGap(screenStart: Point2D, screenEnd: Point2D, entity: EntityModel, options: RenderOptions = {}, gapSize: number = RENDER_GEOMETRY.SPLIT_LINE_GAP): void {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // ✅ PHASE AWARE: Χρήση WithOverride για preview phase

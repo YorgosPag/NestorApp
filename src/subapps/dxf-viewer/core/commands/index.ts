@@ -113,6 +113,8 @@ export { RemoveVertexCommand } from './vertex-commands/RemoveVertexCommand';
 export { DeleteOverlayCommand, DeleteMultipleOverlaysCommand } from './overlay-commands';
 // 🏢 ENTERPRISE (2026-01-26): Overlay Vertex Commands - ADR-032
 export { DeleteOverlayVertexCommand, DeleteMultipleOverlayVerticesCommand } from './overlay-commands';
+// 🏢 ENTERPRISE (2027-01-27): Overlay Move Commands with Undo/Redo - Unified Toolbar Integration
+export { MoveOverlayCommand, MoveMultipleOverlaysCommand } from './overlay-commands';
 // 🏢 ENTERPRISE (2026-01-26): Overlay Vertex Move Commands with Undo/Redo - ADR-032
 export { MoveOverlayVertexCommand, MoveMultipleOverlayVerticesCommand, type VertexMovement } from './overlay-commands';
 

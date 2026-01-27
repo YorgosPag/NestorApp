@@ -4200,6 +4200,188 @@ const completed = addPoint(snappedPoint, transformUtils);
 
 ---
 
+### 📋 ADR-049: UNIFIED MOVE TOOL FOR DXF ENTITIES & OVERLAYS (2027-01-27) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2027-01-27
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - AutoCAD/Figma/Adobe Unified Toolbar Pattern
+
+**Problem**:
+Το **move tool** (`move`) δεν λειτουργούσε για colored overlays (layers). Ο χρήστης έκανε κλικ σε overlay με το move tool ενεργό αλλά δεν άρχιζε drag operation.
+
+**Root Cause Analysis**:
+Βρέθηκαν **3 bugs** που εμπόδιζαν το overlay movement:
+1. `handleContainerMouseDown()` έκανε early return αν `activeTool !== 'select' && activeTool !== 'layering'`
+2. `handleOverlayClick()` επέλεγε overlays μόνο σε select/layering modes
+3. Δεν υπήρχε `MoveOverlayCommand` (μόνο `MoveOverlayVertexCommand` για grips)
+
+**User Requirement**:
+Ο Γιώργος ζήτησε: **"Unified move tool που δουλεύει και για DXF entities ΚΑΙ για colored overlays"** (AutoCAD/Figma pattern)
+
+**Solution (CAD Industry Standard)**:
+
+**Pattern**: Single Move Tool για όλα τα objects (AutoCAD, Figma, Adobe Illustrator, Sketch)
+
+```
+ENTERPRISE FLOW (ADR-049):
+────────────────────────────────────────────────────────────────────
+1. User επιλέγει "Μετακίνηση Αντικειμένων" (Move tool)
+2. User κάνει click σε overlay body (όχι σε grip)
+   → Overlay επιλέγεται
+   → Drag αρχίζει (draggingOverlayBody state)
+3. User κάνει drag
+   → Real-time ghost rendering (overlay μετακινείται σε preview)
+   → Smooth visual feedback (AutoCAD pattern)
+4. User αφήνει mouse
+   → MoveOverlayCommand executes
+   → Full undo/redo support
+   → Firestore update (real-time sync)
+
+CRITICAL: Full Command Pattern with undo/redo + ghost rendering!
+────────────────────────────────────────────────────────────────────
+```
+
+**Implementation Details**:
+
+**Phase 1: Mouse Handler Fix**
+```typescript
+// ❌ BEFORE (BUG):
+if (activeTool !== 'select' && activeTool !== 'layering') return;
+
+// ✅ AFTER (FIXED):
+if (activeTool !== 'select' && activeTool !== 'layering' && activeTool !== 'move') return;
+```
+
+**Phase 2: MoveOverlayCommand (380+ lines)**
+```typescript
+// 🏢 NEW FILE: core/commands/overlay-commands/MoveOverlayCommand.ts
+export class MoveOverlayCommand implements ICommand {
+  readonly id: string;
+  readonly name = 'MoveOverlay';
+  readonly type = 'move-overlay';
+
+  private originalPolygon: Array<[number, number]> | null = null;
+
+  constructor(
+    private readonly overlayId: string,
+    private readonly delta: Point2D,
+    private readonly overlayStore: OverlayStoreMoveOperations,
+    private readonly isDragging: boolean = false
+  ) { }
+
+  execute(): void {
+    // Store original for undo
+    if (!this.wasExecuted) {
+      this.originalPolygon = JSON.parse(JSON.stringify(overlay.polygon));
+    }
+
+    // Calculate new polygon: add delta to all vertices
+    const newPolygon = overlay.polygon.map(([x, y]) => [
+      x + this.delta.x,
+      y + this.delta.y
+    ]);
+
+    this.overlayStore.update(this.overlayId, { polygon: newPolygon });
+  }
+
+  undo(): void {
+    this.overlayStore.update(this.overlayId, { polygon: this.originalPolygon });
+  }
+
+  // ✅ Command merging για smooth drag (500ms window)
+  canMergeWith(other: ICommand): boolean { }
+  mergeWith(other: ICommand): ICommand { }
+}
+```
+
+**Phase 3: Drag Handler Integration**
+```typescript
+// 🏢 NEW STATE: Overlay body drag tracking
+const [draggingOverlayBody, setDraggingOverlayBody] = useState<{
+  overlayId: string;
+  startPoint: Point2D;
+  startPolygon: Array<[number, number]>;
+} | null>(null);
+
+// 🏢 START DRAG: In handleOverlayClick
+if (activeTool === 'move') {
+  setDraggingOverlayBody({
+    overlayId,
+    startPoint: point,
+    startPolygon: JSON.parse(JSON.stringify(overlay.polygon))
+  });
+}
+
+// 🏢 END DRAG: In handleContainerMouseUp
+if (draggingOverlayBody && overlayStore) {
+  const delta = { x: worldPos.x - startPoint.x, y: worldPos.y - startPoint.y };
+  const command = new MoveOverlayCommand(overlayId, delta, overlayStore, true);
+  executeCommand(command); // ✅ Full undo/redo support!
+}
+```
+
+**Phase 4: Real-time Visual Feedback (Ghost Rendering)**
+```typescript
+// 🏢 GHOST RENDERING: In LayerCanvas.tsx
+if (draggingOverlay && draggingOverlay.delta) {
+  filteredLayers = filteredLayers.map(layer => {
+    if (layer.id === draggingOverlay.overlayId) {
+      return {
+        ...layer,
+        polygons: layer.polygons.map(poly => ({
+          ...poly,
+          vertices: poly.vertices.map((vertex: Point2D) => ({
+            x: vertex.x + draggingOverlay.delta.x,
+            y: vertex.y + draggingOverlay.delta.y
+          }))
+        }))
+      };
+    }
+    return layer;
+  });
+}
+```
+
+**Files Modified**:
+| File | Change |
+|------|--------|
+| `core/commands/overlay-commands/MoveOverlayCommand.ts` | **NEW** - 380+ lines Command Pattern |
+| `core/commands/overlay-commands/index.ts` | Export MoveOverlayCommand |
+| `core/commands/index.ts` | Export MoveOverlayCommand |
+| `components/dxf-layout/CanvasSection.tsx` | Mouse handler fixes + drag state + drag logic |
+| `canvas-v2/layer-canvas/LayerCanvas.tsx` | Move tool support + ghost rendering |
+
+**User Experience**:
+
+| Action | Visual Feedback | Result |
+|--------|----------------|--------|
+| Click move tool | Cursor changes | Move mode active |
+| Click overlay | Grips appear | Overlay selected + drag starts |
+| Drag overlay | Ghost rendering (real-time preview) | Smooth visual feedback |
+| Release mouse | Ghost disappears | Command executes, overlay moves |
+| Press Ctrl+Z | Overlay returns | Undo works perfectly |
+| Press Ctrl+Y | Overlay moves again | Redo works perfectly |
+
+**Enterprise Benefits**:
+- ✅ **Unified Tool** - Single move tool για DXF + Overlays (AutoCAD pattern)
+- ✅ **Command Pattern** - Full undo/redo support (industry standard)
+- ✅ **Ghost Rendering** - Real-time visual feedback (Adobe/Figma pattern)
+- ✅ **Command Merging** - Smooth drag operations (500ms window)
+- ✅ **Fire-and-forget Async** - Firestore real-time listeners
+- ✅ **Type-safe** - Zero `any` types, full TypeScript
+- ✅ **Single Source of Truth** - Centralized command system
+
+**Toolbar Integration** (Future):
+Next step: Merge floating "Εργαλεία Σχεδίασης" toolbar into main EnhancedDXFToolbar for unified tool experience.
+
+**References**:
+- AutoCAD: Unified move tool for all objects
+- Figma: Single selection/move tool
+- Adobe Illustrator: Unified transform tools
+- ADR-032: Command Pattern for overlay operations
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

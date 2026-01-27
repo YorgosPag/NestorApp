@@ -209,6 +209,9 @@ const UI_COLORS_BASE = {
   OVERLAY_AXIS_X: '#ff0000',    // Red for X axis
   OVERLAY_AXIS_Y: '#00ff00',    // Green for Y axis
   OVERLAY_ORIGIN: '#0000ff',    // Blue for origin
+
+  // 🏢 ENTERPRISE (2027-01-27): Dimension Text Color - ADR-048 Hardcoded Values Centralization
+  DIMENSION_TEXT: 'fuchsia',    // Fuchsia for dimension measurements (area, perimeter, angles)
 } as const;
 
 // ✅ ENTERPRISE FIX: Export UI_COLORS moved after CAD_UI_COLORS and LEGACY_COLORS

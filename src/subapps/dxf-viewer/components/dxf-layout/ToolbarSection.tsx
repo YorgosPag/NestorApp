@@ -4,6 +4,8 @@ import { EnhancedDXFToolbar } from '../../ui/toolbar/EnhancedDXFToolbar';
 import { useOverlayStore } from '../../overlays/overlay-store';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
+// 🏢 ENTERPRISE (2027-01-27): Command Pattern for Undo/Redo - ADR-032
+import { useCommandHistory, DeleteOverlayCommand } from '../../core/commands';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
@@ -27,10 +29,12 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
     setCurrentKind,
     ...dxfProps
   } = props;
-  
+
   const overlayStore = useOverlayStore();
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
   const universalSelection = useUniversalSelection();
+  // 🏢 ENTERPRISE (2027-01-27): Command Pattern for Undo/Redo - ADR-032
+  const { execute } = useCommandHistory();
 
   const handleOverlayDuplicate = () => {
     // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
@@ -44,7 +48,10 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
     // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
     const primarySelectedId = universalSelection.getPrimaryId();
     if (primarySelectedId) {
-      overlayStore.remove(primarySelectedId);
+      // 🏢 ENTERPRISE (2027-01-27): Use Command Pattern for undo support - ADR-032
+      // ❌ OLD: overlayStore.remove(primarySelectedId); // NO UNDO SUPPORT
+      // ✅ NEW: Command Pattern with full undo/redo support
+      execute(new DeleteOverlayCommand(primarySelectedId, overlayStore));
     }
   };
 
