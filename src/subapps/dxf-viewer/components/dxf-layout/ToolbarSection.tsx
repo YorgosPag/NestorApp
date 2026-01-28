@@ -13,8 +13,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Ce
 import type { OverlayToolbarState, OverlayToolbarHandlers } from '../../ui/toolbar/overlay-section/types';
 
 // 🏢 ADR-050: Feature flag for unified toolbar integration
-// Set to true to use new unified toolbar, false to use old floating toolbar
-const USE_UNIFIED_OVERLAY_TOOLBAR = false; // TODO: Change to true after testing
+// ✅ ENABLED (2027-01-27): Unified toolbar is now LIVE in production
+const USE_UNIFIED_OVERLAY_TOOLBAR = true; // Unified toolbar active!
 
 interface ToolbarSectionProps extends DXFViewerLayoutProps {
   overlayMode: OverlayEditorMode;
