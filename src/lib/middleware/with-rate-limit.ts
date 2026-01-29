@@ -1,35 +1,35 @@
 /**
- * 🔒 PR-1C: Rate Limited API Handler Wrapper
+ * 🔒 PR-1C: Rate Limited API Handler Wrapper (v2.0 - Secure Keying)
  *
  * Higher-order function that adds rate limiting to API handlers.
- * Designed to work with the existing `withAuth` middleware pattern.
+ * Production-grade for Vercel/serverless with Upstash Redis.
  *
  * @module lib/middleware/with-rate-limit
- * @version 1.0.0
- * @since 2026-01-29 - Security Gate Phase 1 (PR-1C)
+ * @version 2.0.0
+ * @since 2026-01-29 - PR-1C Re-Architecture
  *
- * Usage:
- * ```typescript
- * // Method 1: Wrap withAuth handler
- * export const GET = withRateLimit(
- *   withAuth(handler, { permissions: 'projects:view' }),
- *   { category: 'HIGH' }
- * );
- *
- * // Method 2: Standalone rate limiting
- * export const GET = withRateLimit(handler, { category: 'STANDARD' });
- * ```
- *
- * @enterprise Follows Local_Protocol: NO hardcoded values, centralized config
+ * @enterprise Local_Protocol compliant:
+ * - Secure keying: companyId+userId (no token substring!)
+ * - Privacy-safe: hashed IP for anonymous requests
+ * - No PII stored in rate limit keys
  */
 
 import type { NextRequest } from 'next/server';
+import { createHash } from 'crypto';
 import {
   checkRateLimit,
   createRateLimitResponse,
   getRateLimitHeaders,
-  type RateLimitCategory,
+  type RateLimitResult,
 } from './rate-limiter';
+import { type RateLimitCategory } from './rate-limit-config';
+import { createModuleLogger } from '@/lib/telemetry';
+
+// =============================================================================
+// LOGGER (Centralized - NO console.*)
+// =============================================================================
+
+const logger = createModuleLogger('RATE_LIMIT_WRAPPER');
 
 // =============================================================================
 // TYPES
@@ -44,44 +44,99 @@ type ApiHandler = (
 ) => Promise<Response> | Response;
 
 /**
+ * User identity from auth context (passed from withAuth middleware)
+ */
+interface UserIdentity {
+  uid: string;
+  companyId?: string;
+}
+
+/**
  * Rate limit options for the wrapper
  */
 export interface WithRateLimitOptions {
   /** Override the auto-detected category */
   category?: RateLimitCategory;
-  /** Custom key extractor (default: uses Authorization header UID or IP) */
+  /**
+   * Custom key extractor.
+   * SECURITY: Must return a secure identifier (companyId:userId or hashed value).
+   * DO NOT use token substrings!
+   */
   getKey?: (request: NextRequest) => string | null;
   /** Skip rate limiting for certain conditions */
   skip?: (request: NextRequest) => boolean;
 }
 
 // =============================================================================
-// DEFAULT KEY EXTRACTION
+// SECURE KEY EXTRACTION
 // =============================================================================
 
 /**
- * Extract user identifier from request.
- * Priority: Authorization token UID > IP address
- *
- * @note For production, consider using Firebase App Check token
+ * Hash an IP address for privacy-safe storage.
+ * Uses SHA-256 with a salt to prevent rainbow table attacks.
  */
-function extractDefaultKey(request: NextRequest): string {
-  // Try to get user ID from authorization header
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    // Use token hash as key (we don't decode here, just use for identification)
-    // In practice, the actual UID would be extracted in withAuth
-    const token = authHeader.substring(7);
-    // Use first 32 chars of token as identifier (sufficient for uniqueness)
-    return `token:${token.substring(0, 32)}`;
+function hashIpAddress(ip: string): string {
+  const salt = process.env.RATE_LIMIT_IP_SALT || 'nestor-default-salt';
+  return createHash('sha256').update(`${salt}:${ip}`).digest('hex').substring(0, 16);
+}
+
+/**
+ * Extract user identity from Firebase auth header.
+ * This assumes the request has been processed by withAuth middleware.
+ *
+ * @returns User identity or null if not authenticated
+ */
+function extractUserIdentity(request: NextRequest): UserIdentity | null {
+  // Check for user info set by withAuth middleware
+  // These are typically set as custom headers after token verification
+  const uid = request.headers.get('x-user-uid');
+  const companyId = request.headers.get('x-user-company-id');
+
+  if (uid) {
+    return { uid, companyId: companyId || undefined };
   }
 
-  // Fallback to IP address
+  return null;
+}
+
+/**
+ * Extract secure identifier from request.
+ *
+ * Priority:
+ * 1. Authenticated user: companyId:userId (most secure)
+ * 2. Anonymous: hashed IP address (privacy-safe)
+ *
+ * SECURITY: This function NEVER uses token substrings.
+ * Token-based identification is insecure because:
+ * - Tokens change (rotation)
+ * - Tokens are sensitive data
+ * - First 32 chars are not unique across users
+ *
+ * @param request - Next.js request
+ * @returns Secure identifier string
+ */
+function extractSecureIdentifier(request: NextRequest): string {
+  // Try to get authenticated user identity
+  const userIdentity = extractUserIdentity(request);
+
+  if (userIdentity) {
+    // Use companyId:userId format for tenant isolation
+    const { uid, companyId } = userIdentity;
+    if (companyId) {
+      return `user:${companyId}:${uid}`;
+    }
+    // Fallback to uid only (should rarely happen in production)
+    return `user:${uid}`;
+  }
+
+  // Anonymous request: use hashed IP
   const forwardedFor = request.headers.get('x-forwarded-for');
   const realIp = request.headers.get('x-real-ip');
   const ip = forwardedFor?.split(',')[0]?.trim() || realIp || 'unknown';
 
-  return `ip:${ip}`;
+  // Hash the IP for privacy
+  const hashedIp = hashIpAddress(ip);
+  return `anon:${hashedIp}`;
 }
 
 // =============================================================================
@@ -100,14 +155,9 @@ function extractDefaultKey(request: NextRequest): string {
  * // With explicit category
  * export const GET = withRateLimit(myHandler, { category: 'SENSITIVE' });
  *
- * // With custom key extraction
+ * // Skip rate limiting for internal requests
  * export const GET = withRateLimit(myHandler, {
- *   getKey: (req) => req.headers.get('x-api-key'),
- * });
- *
- * // Skip rate limiting for certain requests
- * export const GET = withRateLimit(myHandler, {
- *   skip: (req) => req.headers.get('x-bypass-rate-limit') === 'secret',
+ *   skip: (req) => req.headers.get('x-internal-service') === process.env.INTERNAL_SECRET,
  * });
  * ```
  */
@@ -121,13 +171,13 @@ export function withRateLimit(
       return handler(request, context);
     }
 
-    // Extract identifier key
-    const key = options.getKey?.(request) ?? extractDefaultKey(request);
+    // Extract secure identifier
+    const identifier = options.getKey?.(request) ?? extractSecureIdentifier(request);
 
-    // If we couldn't extract a key, proceed without rate limiting
-    // (this shouldn't happen in practice)
-    if (!key) {
-      console.warn('[RATE_LIMIT] Could not extract key, skipping rate limit');
+    // If we couldn't extract an identifier, log and proceed
+    // This is a safety fallback, should not happen in practice
+    if (!identifier) {
+      logger.warn('Could not extract identifier, skipping rate limit');
       return handler(request, context);
     }
 
@@ -135,14 +185,26 @@ export function withRateLimit(
     const url = new URL(request.url);
     const endpointPath = url.pathname;
 
-    // Check rate limit
-    const result = checkRateLimit(key, endpointPath);
+    // Check rate limit (async for Upstash)
+    let result: RateLimitResult;
+    try {
+      result = await checkRateLimit(identifier, endpointPath);
+    } catch (error) {
+      // Log error but don't block the request
+      logger.error('Check failed, allowing request', { error: String(error) });
+      return handler(request, context);
+    }
 
     // If rate limited, return 429 response
     if (!result.allowed) {
-      console.log(
-        `🚫 [RATE_LIMIT] Denied: ${key} on ${endpointPath} (${result.current}/${result.limit})`
-      );
+      // PII-safe: hash identifier for logging (no raw userId/email)
+      const identifierHash = createHash('sha256').update(identifier).digest('hex').substring(0, 8);
+      logger.warn('Request denied', {
+        identifierHash,
+        endpoint: endpointPath,
+        current: result.current,
+        limit: result.limit,
+      });
       return createRateLimitResponse(result);
     }
 
@@ -150,12 +212,11 @@ export function withRateLimit(
     const response = await handler(request, context);
 
     // Add rate limit headers to successful responses
-    // Clone response to add headers (responses are immutable)
     const headers = new Headers(response.headers);
     const rateLimitHeaders = getRateLimitHeaders(result);
 
-    for (const [key, value] of Object.entries(rateLimitHeaders)) {
-      headers.set(key, value);
+    for (const [headerKey, value] of Object.entries(rateLimitHeaders)) {
+      headers.set(headerKey, value);
     }
 
     return new Response(response.body, {
@@ -210,9 +271,17 @@ export function withWebhookRateLimit(handler: ApiHandler): ApiHandler {
   return withRateLimit(handler, { category: 'WEBHOOK' });
 }
 
+/**
+ * Rate limiter for Telegram bot endpoints.
+ * Limit: 15 requests/minute
+ */
+export function withTelegramRateLimit(handler: ApiHandler): ApiHandler {
+  return withRateLimit(handler, { category: 'TELEGRAM' });
+}
+
 // =============================================================================
-// EXPORT FOR INDEX
+// RE-EXPORTS
 // =============================================================================
 
 export { checkRateLimit, getRateLimitHeaders, createRateLimitResponse };
-export type { RateLimitCategory };
+export type { RateLimitCategory, RateLimitResult };

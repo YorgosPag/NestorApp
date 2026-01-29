@@ -4,7 +4,7 @@ import { storeMessageInCRM } from '../crm/store';
 import { handleEnhancedPropertySearch } from '../search/service';
 import { isPropertySearchQuery } from '../search/detect';
 import { createRateLimitResponse, createStartResponse, createHelpResponse, createContactResponse, createSearchMenuResponse, createDefaultResponse } from './responses';
-import { checkRateLimit } from './rate-limit';
+import { checkRateLimit } from '@/lib/middleware/rate-limiter';
 import { security } from './security-adapter';
 import type { TelegramSendPayload, TelegramMessageObject } from '../telegram/types';
 import { createStatsResponse } from '../stats/service';
@@ -42,8 +42,14 @@ export async function processMessage(message: TelegramMessageObject): Promise<Te
     }
   }
 
-  // Rate limiting check
-  if (!checkRateLimit(userId)) {
+  // Rate limiting check (using centralized middleware)
+  // Identifier: telegram:userId for per-user rate limiting
+  const rateLimitResult = await checkRateLimit(
+    `telegram:${userId}`,
+    '/api/communications/webhooks/telegram'
+  );
+  if (!rateLimitResult.allowed) {
+    // Logging handled by centralized middleware
     return createRateLimitResponse(chatId);
   }
 
