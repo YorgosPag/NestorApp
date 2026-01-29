@@ -4,7 +4,9 @@
 >
 > Complete documentation για όλα τα κεντρικοποιημένα συστήματα της εφαρμογής
 
-**📊 Quick Stats**: 19 Enterprise Systems | 12,837+ Lines | Fortune 500 Quality
+**📊 Quick Stats**: 31 Enterprise Systems | 20,380+ Lines | Fortune 500 Quality
+
+> **🆕 Latest**: ADR-051 Enterprise Filter System Centralization (2026-01-29)
 
 ---
 
@@ -116,8 +118,9 @@
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| **Total Systems** | 18 | ✅ **Complete** |
-| **Total Code Lines** | 11,362+ | ✅ **Enterprise** |
+| **Total Systems** | 31 | ✅ **Complete** |
+| **Total ADRs** | 28 | ✅ **Documented** |
+| **Total Code Lines** | 20,380+ | ✅ **Enterprise** |
 | **Documentation Files** | 20+ | ✅ **Modular** |
 | **Cross-Links** | 50+ | ✅ **Interconnected** |
 
@@ -125,6 +128,6 @@
 
 > **💡 Tip**: Bookmark this page για quick navigation στα centralized systems!
 >
-> **🔄 Last Updated**: 2026-01-24
+> **🔄 Last Updated**: 2026-01-29
 >
 > **👥 Maintainers**: Γιώργος Παγώνης + Claude Code (Anthropic AI)

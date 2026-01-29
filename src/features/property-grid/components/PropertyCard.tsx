@@ -10,11 +10,12 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
-import type { FilterableProperty } from '../utils/filtering';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Use canonical Property type from property-viewer
+import type { Property } from '@/types/property-viewer';
 
-export function PropertyCard({ property, onViewFloorPlan }: { property: FilterableProperty; onViewFloorPlan: (id: string) => void; }) {
+export function PropertyCard({ property, onViewFloorPlan }: { property: Property; onViewFloorPlan: (id: string) => void; }) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const { quick, radius } = useBorderTokens();

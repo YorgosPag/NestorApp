@@ -557,6 +557,7 @@ class EnterpriseUserPreferencesService {
   getFallbackPreferences(): UserPreferences {
     return {
       propertyViewer: {
+        // 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
         defaultFilters: {
           searchTerm: '',
           project: [],
@@ -564,8 +565,8 @@ class EnterpriseUserPreferencesService {
           floor: [],
           propertyType: [],
           status: [],
-          priceRange: { min: null, max: null },
-          areaRange: { min: null, max: null },
+          priceRange: { min: undefined, max: undefined },
+          areaRange: { min: undefined, max: undefined },
           features: []
         },
         defaultStats: {

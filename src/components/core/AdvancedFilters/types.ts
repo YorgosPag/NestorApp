@@ -77,6 +77,131 @@ export interface DateFromToRange {
 // Union type for all range types
 export type FilterRange = NumericRange | DateRange | DateFromToRange;
 
+// ============================================================================
+// ADR-051: ENTERPRISE TYPE GUARDS & NORMALIZATION
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Type guard for NumericRange
+ * Validates that an object conforms to the NumericRange interface
+ * @param value - Unknown value to validate
+ * @returns True if value is a valid NumericRange
+ */
+export function isNumericRange(value: unknown): value is NumericRange {
+  if (value === null || value === undefined) return false;
+  if (typeof value !== 'object') return false;
+
+  const obj = value as Record<string, unknown>;
+  const hasMin = 'min' in obj && (obj.min === undefined || typeof obj.min === 'number');
+  const hasMax = 'max' in obj && (obj.max === undefined || typeof obj.max === 'number');
+
+  // Must have at least one range property (min or max)
+  return hasMin || hasMax;
+}
+
+/**
+ * 🏢 ENTERPRISE: Type guard for DateRange (start/end pattern)
+ * @param value - Unknown value to validate
+ * @returns True if value is a valid DateRange
+ */
+export function isDateRange(value: unknown): value is DateRange {
+  if (value === null || value === undefined) return false;
+  if (typeof value !== 'object') return false;
+
+  const obj = value as Record<string, unknown>;
+  const hasStart = 'start' in obj && (obj.start === undefined || obj.start instanceof Date);
+  const hasEnd = 'end' in obj && (obj.end === undefined || obj.end instanceof Date);
+
+  return hasStart || hasEnd;
+}
+
+/**
+ * 🏢 ENTERPRISE: Type guard for DateFromToRange (from/to pattern)
+ * @param value - Unknown value to validate
+ * @returns True if value is a valid DateFromToRange
+ */
+export function isDateFromToRange(value: unknown): value is DateFromToRange {
+  if (value === null || value === undefined) return false;
+  if (typeof value !== 'object') return false;
+
+  const obj = value as Record<string, unknown>;
+  const hasFrom = 'from' in obj && (obj.from === undefined || obj.from instanceof Date);
+  const hasTo = 'to' in obj && (obj.to === undefined || obj.to instanceof Date);
+
+  return hasFrom || hasTo;
+}
+
+/**
+ * 🏢 ENTERPRISE: Normalize range values (null → undefined)
+ * Converts null values to undefined for consistent handling
+ * This addresses the type inconsistency between FilterState (null) and GenericFilterState (undefined)
+ *
+ * @param range - Range object with potentially null values
+ * @returns Normalized range with undefined instead of null
+ *
+ * @example
+ * // Input: { min: null, max: 100 }
+ * // Output: { min: undefined, max: 100 }
+ */
+export function normalizeNumericRange(range: { min?: number | null; max?: number | null } | null | undefined): NumericRange {
+  if (!range) return { min: undefined, max: undefined };
+
+  return {
+    min: range.min === null ? undefined : range.min,
+    max: range.max === null ? undefined : range.max,
+  };
+}
+
+/**
+ * 🏢 ENTERPRISE: Normalize date range (from/to → from/to, null → undefined)
+ * @param range - Date range with potentially null values
+ * @returns Normalized date range
+ */
+export function normalizeDateFromToRange(range: { from?: Date | null; to?: Date | null } | null | undefined): DateFromToRange {
+  if (!range) return { from: undefined, to: undefined };
+
+  return {
+    from: range.from === null ? undefined : range.from,
+    to: range.to === null ? undefined : range.to,
+  };
+}
+
+/**
+ * 🏢 ENTERPRISE: Check if a numeric range has any active values
+ * @param range - NumericRange to check
+ * @returns True if either min or max is defined
+ */
+export function hasActiveNumericRange(range: NumericRange | null | undefined): boolean {
+  if (!range) return false;
+  return range.min !== undefined || range.max !== undefined;
+}
+
+/**
+ * 🏢 ENTERPRISE: Check if a date range has any active values
+ * @param range - DateFromToRange to check
+ * @returns True if either from or to is defined
+ */
+export function hasActiveDateRange(range: DateFromToRange | null | undefined): boolean {
+  if (!range) return false;
+  return range.from !== undefined || range.to !== undefined;
+}
+
+/**
+ * 🏢 ENTERPRISE: Create empty numeric range
+ * Factory function for consistent range initialization
+ */
+export function createEmptyNumericRange(): NumericRange {
+  return { min: undefined, max: undefined };
+}
+
+/**
+ * 🏢 ENTERPRISE: Create empty date range
+ * Factory function for consistent range initialization
+ */
+export function createEmptyDateRange(): DateFromToRange {
+  return { from: undefined, to: undefined };
+}
+
 // Generic filter state
 export interface GenericFilterState {
   [key: string]: unknown;

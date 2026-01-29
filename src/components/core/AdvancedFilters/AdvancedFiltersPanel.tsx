@@ -83,7 +83,6 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
       // 🔧 ENTERPRISE FIX: Handle range dropdown mode (preset selections)
       // Check if value is a complete range object from dropdown
       if (value && typeof value === 'object' && 'min' in value && 'max' in value) {
-        console.log('🚀 RANGE DROPDOWN MODE - Field:', fieldId, 'Value:', value); // Debug log
         // Direct range object from dropdown preset selection
         handleFilterChange(fieldId as keyof T, value as T[keyof T]);
         return;
@@ -106,7 +105,6 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
   };
 
   const handleFieldRangeChange = (fieldId: string, subKey: 'min' | 'max', value: string) => {
-    console.log('🔄 FIELD RANGE CHANGE:', { fieldId, subKey, value }); // Debug log
     handleRangeChange(fieldId, subKey, value);
   };
 

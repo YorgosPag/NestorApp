@@ -1,9 +1,12 @@
-
+// 🏢 ADR-051: Import GenericFilterState for type compatibility
+import type { GenericFilterState, NumericRange } from '@/components/core/AdvancedFilters/types';
 
 // Re-export PropertyStats from property.ts
 export type { PropertyStats } from './property';
 // Re-export UnitCoverage from unit.ts for property compatibility
-export type { UnitCoverage } from './unit';
+// Also import for local use in Property interface
+import type { UnitCoverage } from './unit';
+export type { UnitCoverage };
 
 // 🏢 PHASE 3-5: Import all unit feature types
 import type {
@@ -194,15 +197,23 @@ export interface ExtendedPropertyDetails extends Property {
     }>;
   }
 
-export interface FilterState {
+/**
+ * 🏢 ADR-051: FilterState extends GenericFilterState for centralized filter system compatibility
+ * Uses NumericRange (undefined) instead of null for enterprise-grade type consistency
+ *
+ * @see centralized_systems.md ADR-051
+ */
+export interface FilterState extends GenericFilterState {
   searchTerm: string;
   project: string[];
   building: string[];
   floor: string[];
   propertyType: string[];
   status: string[];
-  priceRange: { min: number | null; max: number | null };
-  areaRange: { min: number | null; max: number | null };
+  /** 🏢 ADR-051: Uses NumericRange for type compatibility with useGenericFilters */
+  priceRange: NumericRange;
+  /** 🏢 ADR-051: Uses NumericRange for type compatibility with useGenericFilters */
+  areaRange: NumericRange;
   features: string[];
 
   /** ✅ ENTERPRISE: Coverage filters for "missing X" functionality

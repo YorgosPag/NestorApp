@@ -9,6 +9,7 @@ import type { FilterState } from '@/types/property-viewer';
 const PUBLIC_ALLOWED_STATUSES = ['for-sale', 'for-rent', 'reserved'] as const;
 type PublicAllowedStatus = typeof PUBLIC_ALLOWED_STATUSES[number];
 
+// 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
 const DEFAULT_PUBLIC_FILTERS: FilterState = {
   searchTerm: '',
   project: [],
@@ -16,8 +17,8 @@ const DEFAULT_PUBLIC_FILTERS: FilterState = {
   floor: [],
   propertyType: [],
   status: [],
-  priceRange: { min: null, max: null },
-  areaRange: { min: null, max: null },
+  priceRange: { min: undefined, max: undefined },
+  areaRange: { min: undefined, max: undefined },
   features: [],
 };
 

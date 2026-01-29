@@ -44,6 +44,7 @@ export interface AdminContext {
   role: AdminRole;
   operationId: string;
   environment: string;
+  mfaEnrolled: boolean;
 }
 
 /**
@@ -100,6 +101,23 @@ export interface AuditEntry {
 
 const ADMIN_ROLES: AdminRole[] = ['admin', 'broker', 'builder'];
 const AUTHORIZATION_HEADER = 'authorization';
+
+/**
+ * 🔐 PR-1B: MFA ENFORCEMENT CONFIGURATION
+ *
+ * Roles that REQUIRE MFA enrollment for access.
+ * Per Local_Protocol: mandatory MFA for broker/builder/admin.
+ *
+ * @since 2026-01-29 - Security Gate Phase 1 (PR-1B)
+ */
+const MFA_REQUIRED_ROLES: AdminRole[] = ['admin', 'broker', 'builder'];
+
+/**
+ * Check if a role requires MFA enrollment
+ */
+function roleRequiresMfa(role: AdminRole): boolean {
+  return MFA_REQUIRED_ROLES.includes(role);
+}
 
 // ============================================================================
 // SERVER-ONLY COLLECTIONS (ZERO HARDCODED STRINGS IN ROUTES)
@@ -359,6 +377,7 @@ export async function requireAdminContext(
         role: 'admin',
         operationId,
         environment,
+        mfaEnrolled: true, // Dev bypass assumes MFA enrolled
       },
     };
   }
@@ -388,6 +407,20 @@ export async function requireAdminContext(
     };
   }
 
+  // Gate 5: MFA Enforcement (PR-1B)
+  // 🔐 SECURITY: Mandatory MFA for broker/builder/admin roles
+  const mfaEnrolled = decodedToken.mfaEnrolled === true;
+
+  if (roleRequiresMfa(role) && !mfaEnrolled) {
+    // Log MFA denial for audit
+    console.log(`🔐 [ADMIN_GUARDS] MFA DENIED: User ${decodedToken.email} (${role}) - MFA not enrolled`);
+
+    return {
+      success: false,
+      error: `MFA enrollment required for ${role} role. Please enable two-factor authentication.`,
+    };
+  }
+
   // Success - return admin context
   return {
     success: true,
@@ -397,6 +430,7 @@ export async function requireAdminContext(
       role,
       operationId,
       environment,
+      mfaEnrolled,
     },
   };
 }

@@ -28,7 +28,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-import { usePropertyGridFilters } from './hooks/usePropertyGridFilters';
+// 🏢 ADR-051: Use centralized usePropertyGridFilters from Enterprise Filter System
+import { usePropertyGridFilters } from '@/components/core/AdvancedFilters';
 import { PropertyCard } from './components/PropertyCard';
 import { PropertyListCard } from '@/domain';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -39,8 +40,8 @@ import {
   defaultPropertyFilters
 } from '@/components/core/AdvancedFilters';
 import type { PropertyFilterState } from '@/components/core/AdvancedFilters';
-import type { FilterableProperty } from './utils/filtering';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
+import type { Property } from '@/types/property-viewer';
 
 export function PropertyGridView() {
   const router = useRouter();
@@ -194,7 +195,7 @@ export function PropertyGridView() {
         <div className="w-full max-w-screen-sm mx-auto overflow-hidden">
           {filteredProperties.length > 0 ? (
             <ul className="flex flex-col gap-4" role="list" aria-label={t('grid.header.title')}>
-              {filteredProperties.map((property: FilterableProperty) => (
+              {filteredProperties.map((property) => (
                 <li key={property.id} className="w-full min-w-0 overflow-hidden">
                   {viewMode === 'grid'
                     ? <PropertyCard property={property} onViewFloorPlan={handleViewFloorPlan} />

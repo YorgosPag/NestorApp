@@ -15,7 +15,8 @@ import { UnitGridCard } from '@/domain';
 
 // 🚀 ENTERPRISE: PropertyGridView features integration (conditional imports)
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
-import { usePropertyGridFilters } from './usePropertyGridFilters';
+// 🏢 ADR-051: Use centralized usePropertyGridFilters from Enterprise Filter System
+import { usePropertyGridFilters } from '@/components/core/AdvancedFilters';
 
 
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color (for empty state)
@@ -53,7 +54,8 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
   const [filters] = React.useState(enhancedFilters);
 
   // Only use PropertyGridView features if enhanced mode is enabled
-  const gridFilters = enhanced ? usePropertyGridFilters(properties, filters) : null;
+  // 🏢 ADR-051: Use { includeViewMode: false } for Single Source of Truth - page controls viewMode
+  const gridFilters = enhanced ? usePropertyGridFilters(properties, filters, { includeViewMode: false }) : null;
 
   const displayProperties = enhanced && gridFilters
     ? gridFilters.filteredProperties

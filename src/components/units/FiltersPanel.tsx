@@ -5,7 +5,8 @@ import React from 'react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Filter } from 'lucide-react';
-import { PropertyViewerFilters, type FilterState } from '@/components/property-viewer/PropertyViewerFilters';
+import { PropertyViewerFilters } from '@/components/property-viewer/PropertyViewerFilters';
+import type { FilterState } from '@/types/property-viewer';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 // 🏢 ENTERPRISE: i18n support

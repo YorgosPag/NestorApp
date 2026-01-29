@@ -4540,6 +4540,119 @@ const overlayToolbarHandlers: OverlayToolbarHandlers = {
 
 ---
 
+### 📋 ADR-051: ENTERPRISE FILTER SYSTEM CENTRALIZATION (2026-01-29) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-29
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - SAP/Salesforce/Microsoft Dynamics Pattern
+
+**Problem**:
+Εντοπίστηκαν **διάσπαρτες implementations** του filtering system:
+- 5 ad-hoc filter hooks (useFilterState, useFilteredProjects, usePublicPropertyFilters, useSearchFilter, filtering.ts)
+- 3 duplicate components (2x AdvancedFiltersPanel, 2x usePropertyGridFilters)
+- 4 range type inconsistencies (null vs undefined, min/max vs from/to)
+- Console.log statements σε production code
+
+**Decision**:
+Centralized Enterprise Filter System με **single source of truth**.
+
+**Architecture** (Centralized Filter System):
+
+```
+src/components/core/AdvancedFilters/       (Canonical Location)
+├── AdvancedFiltersPanel.tsx               - Generic filter panel component
+├── FilterField.tsx                        - Universal field renderer (8 types)
+├── useGenericFilters.ts                   - Generic filter hook + usePropertyGridFilters
+├── types.ts                               - Unified type definitions + type guards
+├── configs.ts                             - Centralized filter configurations
+├── configs/                               - Domain-specific configs
+│   ├── parkingFiltersConfig.ts
+│   └── storageFiltersConfig.ts
+├── utils/
+│   └── applyFilters.ts                    - Centralized filtering utility (280+ lines)
+└── index.ts                               - Central export point
+```
+
+**Key Components**:
+
+| Component | Purpose | Lines |
+|-----------|---------|-------|
+| `useGenericFilters` | Generic filter hook with 15+ methods | 324 |
+| `usePropertyGridFilters` | TypeScript overloads for grid filtering | 100 |
+| `applyFilters` | Centralized filtering utility | 280+ |
+| `types.ts` | Type guards, normalizers, range types | 200+ |
+
+**Type System** (ADR-051 Unified):
+
+```typescript
+// Canonical Range Types (null → undefined)
+export interface NumericRange { min?: number; max?: number; }
+export interface DateFromToRange { from?: Date; to?: Date; }
+
+// Type Guards
+export function isNumericRange(value: unknown): value is NumericRange;
+export function normalizeNumericRange(range: { min?: number | null; max?: number | null } | null): NumericRange;
+export function hasActiveNumericRange(range: NumericRange | null | undefined): boolean;
+```
+
+**Usage Example**:
+
+```typescript
+// 🏢 CANONICAL: Import from centralized system
+import {
+  usePropertyGridFilters,
+  applyPropertyFilters,
+  matchesSearchTerm,
+  matchesNumericRange
+} from '@/components/core/AdvancedFilters';
+
+// With viewMode (default)
+const { viewMode, setViewMode, filteredProperties } = usePropertyGridFilters(properties, filters);
+
+// Without viewMode (Single Source of Truth pages)
+const { filteredProperties } = usePropertyGridFilters(properties, filters, { includeViewMode: false });
+
+// Direct filtering utility
+const filtered = applyPropertyFilters(entities, filters, searchTerm, { priceRange, areaRange });
+```
+
+**Deleted Duplicates** (Phase 1-4 Complete):
+- ❌ `property-viewer/AdvancedFiltersPanel.tsx`
+- ❌ `hooks/useFilteredProjects.ts` (0 consumers - dead code)
+- ❌ `hooks/useFilterState.ts` (migrated to useGenericFilters)
+- ❌ `property-viewer/filters/AdvancedFilters.tsx`
+- ❌ `property-filters/public/` (6 files - dead code)
+- ❌ `features/property-grid/utils/filtering.ts`
+- ❌ `features/property-grid/hooks/usePropertyGridFilters.ts`
+- ❌ `components/property-viewer/usePropertyGridFilters.ts`
+
+**Benefits**:
+- ✅ **Zero Duplicates** - Single source of truth for all filtering
+- ✅ **Type-safe** - TypeScript function overloads for type inference
+- ✅ **Unified Types** - Consistent null/undefined handling
+- ✅ **No Debug Logs** - Removed all console.log from production
+- ✅ **Enterprise Quality** - SAP/Salesforce patterns
+
+**Consumers** (16 files total):
+- `PropertyGridView.tsx` → `usePropertyGridFilters` (with viewMode)
+- `PropertyGrid.tsx` → `usePropertyGridFilters({ includeViewMode: false })`
+- `PropertyViewerFilters.tsx` → `useGenericFilters` (migrated from useFilterState)
+- `usePropertyFilters.ts` → Centralized utilities (matchesSearchTerm, matchesNumericRange, etc.)
+- `ContactsPageContent.tsx`, `FileManagerPageContent.tsx`, `BuildingsPageContent.tsx`
+- `projects-page-content.tsx`, `PropertyManagementPageContent.tsx`
+- `units/page.tsx`, `parking/page.tsx`, `storage/page.tsx`, `crm/communications/page.tsx`
+- `useProjectsPageState.ts`, `useBuildingsPageState.ts`
+
+**References**:
+- SAP Fiori Elements: Filter Bar Component
+- Salesforce Lightning: Data Tables with Filtering
+- Microsoft Dynamics 365: Advanced Find
+- Google Workspace: Search & Filter Patterns
+
+**Location**: `src/components/core/AdvancedFilters/`
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

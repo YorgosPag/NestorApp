@@ -17,9 +17,10 @@
 | **Polygon System** | 800+ | 3 modules | ✅ **Enterprise** | Geographic drawing engine |
 | **Context Providers** | 900+ | 6 providers | ✅ **Complete** | Global state management |
 | **Config Systems** | 1,200+ | 50+ files | ✅ **Centralized** | Application configuration |
-| **Multi-Selection System** | 600+ | 5 files | ✅ **Enterprise** | AutoCAD-style Window/Crossing selection ✨ **NEW** |
+| **Multi-Selection System** | 600+ | 5 files | ✅ **Enterprise** | AutoCAD-style Window/Crossing selection |
+| **Filter System** | 800+ | 7 files | ✅ **Enterprise** | ADR-051 Centralized Filtering ✨ **NEW** |
 
-**🏆 TOTAL**: **6 systems** | **6,375+ lines** | **Enterprise-grade** | **Real-time capable**
+**🏆 TOTAL**: **7 systems** | **7,175+ lines** | **Enterprise-grade** | **Real-time capable**
 
 ---
 
@@ -280,6 +281,80 @@ overlayStore.clearSelection();
 
 ---
 
+## 🔍 **ENTERPRISE FILTER SYSTEM (ADR-051)** ✨ NEW
+
+### 📁 **CENTRALIZED FILTERING ENGINE**
+
+**📍 Location**: `src/components/core/AdvancedFilters/` (800+ lines)
+
+**🎯 Mission**: Single source of truth για filtering operations across the application
+
+#### **🏢 ARCHITECTURE:**
+
+```
+src/components/core/AdvancedFilters/
+├── AdvancedFiltersPanel.tsx    # Universal filter panel component
+├── useGenericFilters.ts        # Enterprise filtering hook (330+ lines)
+├── FilterField.tsx             # Universal field renderer (8 field types)
+├── types.ts                    # Type definitions & guards (200+ lines)
+├── configs.ts                  # Centralized filter configurations
+├── utils/applyFilters.ts       # Filter application utilities
+└── index.ts                    # Central export point
+```
+
+#### **✅ ENTERPRISE FEATURES:**
+- ✅ **Generic Hook**: `useGenericFilters<T>` με 12+ methods
+- ✅ **Type-Safe Ranges**: `NumericRange`, `DateRange` με type guards
+- ✅ **Configurable Features**: `handleFeatureChange(id, checked, featureKey)`
+- ✅ **Filter Utilities**: `matchesSearchTerm`, `matchesNumericRange`, `matchesArrayFilter`
+- ✅ **Batch Operations**: `batchUpdate`, `clearAllFilters`
+- ✅ **Active Filter Detection**: `hasActiveFilters`, `activeFilterCount`
+
+#### **❌ DELETED (DUPLICATES):**
+- ❌ `useFilterState.ts` - Replaced by `useGenericFilters`
+- ❌ `useFilteredProjects.ts` - Dead code (0 consumers)
+- ❌ `property-viewer/AdvancedFiltersPanel.tsx` - Use core version
+
+**🔗 API Usage:**
+```typescript
+import {
+  useGenericFilters,
+  matchesSearchTerm,
+  matchesNumericRange,
+  matchesArrayFilter,
+  matchesFeatures,
+  NumericRange,
+  GenericFilterState
+} from '@/components/core/AdvancedFilters';
+
+// 🏢 ENTERPRISE: Type-safe filtering
+const {
+  handleFilterChange,
+  handleRangeChange,
+  handleFeatureChange,
+  clearAllFilters,
+  hasActiveFilters,
+  activeFilterCount,
+  setNumericRange,
+  setDateRange,
+  toggleArrayValue,
+  batchUpdate
+} = useGenericFilters(filters, onFiltersChange);
+
+// 🏢 ENTERPRISE: Use centralized filter utilities
+const filtered = items.filter(item => {
+  const searchMatch = matchesSearchTerm(item, searchTerm, ['name', 'description']);
+  const priceMatch = matchesNumericRange(item.price, priceRange);
+  const typeMatch = matchesArrayFilter(item.type, selectedTypes);
+  const featuresMatch = matchesFeatures(item.features, requiredFeatures);
+  return searchMatch && priceMatch && typeMatch && featuresMatch;
+});
+```
+
+**📋 Consumers**: PropertyViewerFilters, usePropertyFilters, FilterControls, AdvancedFiltersPanel (16+ files)
+
+---
+
 ## 🎯 **ENTERPRISE PATTERNS**
 
 ### ✅ **DATA FLOW ARCHITECTURE**
@@ -346,7 +421,7 @@ User Interaction → Context Providers → Business Logic → Alert Engine → U
 
 ---
 
-> **📅 Last Updated**: 2026-01-25
+> **📅 Last Updated**: 2026-01-29
 >
 > **👥 Authors**: Γιώργος Παγώνης + Claude Code (Anthropic AI)
 >

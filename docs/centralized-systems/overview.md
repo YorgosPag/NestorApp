@@ -13,6 +13,7 @@
 | ADR | Decision | Canonical | Deprecated | Status |
 |-----|----------|-----------|------------|--------|
 | **ADR-001** | Select/Dropdown Component | `@/components/ui/select` (Radix) | `EnterpriseComboBox` | ✅ **APPROVED** |
+| **ADR-051** | Enterprise Filter System | `@/components/core/AdvancedFilters` | useFilterState, useFilteredProjects | ✅ **APPROVED** |
 
 ### 📋 **ADR-001: CANONICAL SELECT COMPONENT** (2026-01-01)
 
@@ -34,8 +35,9 @@
 
 | Metric | Value | Industry Standard |
 |--------|-------|------------------|
-| **Total Systems** | 17 enterprise systems | ✅ **Exceeds Fortune 500** |
-| **Total Code** | 11,362+ lines | ✅ **Enterprise scale** |
+| **Total Systems** | 31 enterprise systems | ✅ **Exceeds Fortune 500** |
+| **Total Code** | 20,380+ lines | ✅ **Enterprise scale** |
+| **Total ADRs** | 28 architectural decisions | ✅ **Enterprise governance** |
 | **Type Safety** | 100% TypeScript | ✅ **Zero `any` types** |
 | **Code Duplication** | 0% duplicates | ✅ **Single source of truth** |
 | **Documentation** | 3,165+ lines | ✅ **Enterprise standard** |
@@ -187,8 +189,8 @@
 
 ---
 
-> **📅 Last Updated**: 2025-12-28
+> **📅 Last Updated**: 2026-01-29
 >
 > **👥 Authors**: Γιώργος Παγώνης + Claude Code (Anthropic AI)
 >
-> **🔄 Version**: 2.0 - Enterprise Architecture
+> **🔄 Version**: 3.0 - Enterprise Architecture + ADR-051 Filter Centralization

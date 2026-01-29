@@ -22,27 +22,70 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 📁 PROJECTS COLLECTION - DEV-FRIENDLY ACCESS
+    // 📁 PROJECTS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
+    // =========================================================================
+    // 🔒 SECURITY: Tenant-scoped access via companyId field
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
+    // 🏢 ENTERPRISE: Follows /files pattern (lines 121-226)
+    //
+    // Security Model:
+    //   - READ: Only users from the project's company (tenant-scoped)
+    //   - CREATE: companyId must match user's company claim
+    //   - UPDATE: Creator or company admin, companyId immutable
+    //   - DELETE: Creator or company admin
     // =========================================================================
     match /projects/{projectId} {
 
-      // 📖 READ: Authenticated users only (Production mode)
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped - only users from the project's company
+      // 🔒 SECURITY: Prevents cross-tenant data leak
+      allow read: if isAuthenticated()
+                  && (
+                       // Super admin can read all projects
+                       isSuperAdminOnly()
+                       // OR user belongs to the project's company
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK (TRANSITIONAL - STRICT):
+                       // Projects without companyId - creator-only get access
+                       // ⚠️ NOTE: Requires data migration
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
 
-      // ✍️ CREATE: Μόνο authenticated users με validated data
-      allow create: if request.auth != null
+      // ✍️ CREATE: Authenticated users with companyId from claims
+      // 🔐 SECURITY: companyId MUST match user's company claim (no cross-tenant creation)
+      allow create: if isAuthenticated()
                     && isValidProjectData(request.resource.data)
-                    && resource == null; // Ensure document doesn't exist
+                    && request.resource.data.companyId == getUserCompanyId()
+                    && resource == null;
 
-      // 📝 UPDATE: Μόνο authenticated users με validation
-      allow update: if request.auth != null
+      // 📝 UPDATE: Creator or company admin with tenant check
+      // 🔐 SECURITY: companyId is immutable (no re-tenanting)
+      allow update: if isAuthenticated()
                     && isValidProjectData(request.resource.data)
-                    && resource != null  // Ensure document exists
-                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data);
+                    && resource != null
+                    && (
+                         // Creator can always update
+                         resource.data.createdBy == request.auth.uid
+                         // OR company admin of project's company
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         // OR super admin
+                         || isSuperAdminOnly()
+                       )
+                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data)
+                    // Prevent changing companyId (no re-tenanting)
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
 
-      // 🗑️ DELETE: Μόνο authenticated users
-      allow delete: if request.auth != null
-                    && resource != null; // Ensure document exists
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
@@ -258,17 +301,70 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🏠 BUILDINGS, FLOORS & UNITS - PUBLIC READ ACCESS
+    // 🏠 BUILDINGS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1A Critical Hotfix)
+    // =========================================================================
+    // 🔒 SECURITY: Removed public read (was: `allow read: if true;`)
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1A)
+    // 🏢 ENTERPRISE: Follows /files pattern (lines 121-226)
+    //
+    // Security Model:
+    //   - READ: Only users from the building's company (tenant-scoped)
+    //   - WRITE: Admin/server only (via Firebase Admin SDK)
     // =========================================================================
     match /buildings/{buildingId} {
-      allow read: if true; // Public read for API routes (server-side)
-      allow write: if false; // Admin/server only
+
+      // 📖 READ: Tenant-scoped - only users from the building's company
+      // 🔒 SECURITY: Prevents cross-tenant data leak
+      allow read: if isAuthenticated()
+                  && (
+                       // Super admin can read all buildings
+                       isSuperAdminOnly()
+                       // OR user belongs to the building's company (PRIMARY path)
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK (TRANSITIONAL - STRICT):
+                       // Buildings without companyId but with projectId - lookup via project
+                       // ⚠️ NOTE: Requires data migration - see docs/architecture-review/migration-companyId.md
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['projectId'])
+                           && resource.data.projectId is string
+                           && belongsToProjectCompany(resource.data.projectId))
+                     );
+
+      // 🚫 WRITE: Admin/server only (via Firebase Admin SDK)
+      // 🏢 ENTERPRISE: Building creation/modification requires admin privileges
+      allow write: if false;
     }
 
-    // 🏢 FLOORS: Ορόφοι κτιρίων - Navigation hierarchy support
+    // =========================================================================
+    // 🏢 FLOORS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1D)
+    // =========================================================================
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
+    // 🏢 ENTERPRISE: Tenant-scoped via building→company lookup
+    //
+    // Security Model:
+    //   - READ: Only users from the building's company (tenant-scoped)
+    //   - WRITE: Admin/server only (via Firebase Admin SDK)
+    // =========================================================================
     match /floors/{floorId} {
-      allow read: if isAuthenticated(); // Authenticated users only
-      allow write: if false; // Admin/server only
+      // 📖 READ: Tenant-scoped via building lookup
+      // 🔒 SECURITY: Prevents cross-tenant data leak
+      allow read: if isAuthenticated()
+                  && (
+                       // Super admin can read all
+                       isSuperAdminOnly()
+                       // OR user belongs to the building's company
+                       || (resource.data.keys().hasAny(['buildingId'])
+                           && resource.data.buildingId is string
+                           && belongsToBuildingCompany(resource.data.buildingId))
+                       // LEGACY FALLBACK: Creator-only for floors without buildingId
+                       || (!resource.data.keys().hasAny(['buildingId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // 🚫 WRITE: Admin/server only
+      allow write: if false;
     }
 
     // =========================================================================
@@ -318,24 +414,64 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 📦 STORAGE_UNITS COLLECTION - PARALLEL CATEGORY (local_4.log)
+    // 📦 STORAGE_UNITS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1D)
     // =========================================================================
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
     // 🏢 ENTERPRISE: Storage units are a PARALLEL category to Units, not nested
     // Architecture: Building → [Units | Storage | Parking] (parallel)
+    //
+    // Security Model:
+    //   - READ: Only users from the building's company (tenant-scoped)
+    //   - WRITE: Admin/server only (via Firebase Admin SDK)
+    // =========================================================================
     match /storage_units/{storageId} {
-      allow read: if isAuthenticated(); // Authenticated users only
-      allow write: if false; // Admin/server only
+      // 📖 READ: Tenant-scoped via building lookup
+      // 🔒 SECURITY: Prevents cross-tenant data leak
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['buildingId'])
+                           && resource.data.buildingId is string
+                           && belongsToBuildingCompany(resource.data.buildingId))
+                       // LEGACY FALLBACK: Creator-only
+                       || (!resource.data.keys().hasAny(['buildingId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // 🚫 WRITE: Admin/server only
+      allow write: if false;
     }
 
     // =========================================================================
-    // 🚗 PARKING_SPOTS COLLECTION - PARALLEL CATEGORY (local_4.log)
+    // 🚗 PARKING_SPOTS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1D)
     // =========================================================================
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
     // 🏢 ENTERPRISE: Parking spaces are a PARALLEL category to Units, not nested
     // Architecture: Building → [Units | Storage | Parking] (parallel)
     // 📍 Collection name: parking_spots (με underscore - όπως στη Firestore)
+    //
+    // Security Model:
+    //   - READ: Only users from the building's company (tenant-scoped)
+    //   - WRITE: Admin/server only (via Firebase Admin SDK)
+    // =========================================================================
     match /parking_spots/{parkingId} {
-      allow read: if isAuthenticated(); // Authenticated users only
-      allow write: if false; // Admin/server only (use Firebase Admin SDK for seeding)
+      // 📖 READ: Tenant-scoped via building lookup
+      // 🔒 SECURITY: Prevents cross-tenant data leak
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['buildingId'])
+                           && resource.data.buildingId is string
+                           && belongsToBuildingCompany(resource.data.buildingId))
+                       // LEGACY FALLBACK: Creator-only
+                       || (!resource.data.keys().hasAny(['buildingId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // 🚫 WRITE: Admin/server only
+      allow write: if false;
     }
 
     // =========================================================================
@@ -381,125 +517,463 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // ✅ TASKS COLLECTION - CRM TASK MANAGEMENT
+    // ✅ TASKS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
     // 🏢 ENTERPRISE: Task management για CRM leads, projects, και users
-    // 🔒 AUTHENTICATED: Μόνο authenticated users έχουν πρόσβαση
+    // 🔒 SECURITY: Tenant-scoped via companyId field
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
     // 📋 ADR-026: CRM Tasks Backend Fix - Added 2026-01-13
+    //
+    // Security Model:
+    //   - READ: Only users from the task's company + assignedTo
+    //   - CREATE: companyId must match user's company claim
+    //   - UPDATE: Creator, assignedTo, or company admin
+    //   - DELETE: Creator or company admin
+    // =========================================================================
     match /tasks/{taskId} {
 
-      // 📖 READ: Authenticated users can read tasks
-      // TODO: Future enhancement - filter by assignedTo or leadId ownership
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped + assignee access
+      // 🔒 SECURITY: Prevents cross-tenant data leak
+      allow read: if isAuthenticated()
+                  && (
+                       // Super admin can read all tasks
+                       isSuperAdminOnly()
+                       // OR user belongs to the task's company
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // OR user is assigned to this task
+                       || (resource.data.keys().hasAny(['assignedTo'])
+                           && resource.data.assignedTo == request.auth.uid)
+                       // LEGACY FALLBACK: Tasks without companyId - assignee or creator only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && (resource.data.assignedTo == request.auth.uid
+                               || resource.data.createdBy == request.auth.uid))
+                     );
 
-      // ✍️ CREATE: Authenticated users can create tasks
+      // ✍️ CREATE: Authenticated users with companyId from claims
+      // 🔐 SECURITY: companyId MUST match user's company claim
       allow create: if isAuthenticated()
                     && isValidTaskData(request.resource.data)
+                    && request.resource.data.companyId == getUserCompanyId()
                     && resource == null;
 
-      // 📝 UPDATE: Authenticated users can update tasks
+      // 📝 UPDATE: Creator, assignee, or company admin
       allow update: if isAuthenticated()
                     && isValidTaskData(request.resource.data)
-                    && resource != null;
+                    && resource != null
+                    && (
+                         // Creator can update
+                         resource.data.createdBy == request.auth.uid
+                         // OR assignee can update
+                         || resource.data.assignedTo == request.auth.uid
+                         // OR company admin
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         // OR super admin
+                         || isSuperAdminOnly()
+                       )
+                    // Prevent changing companyId
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
 
-      // 🗑️ DELETE: Authenticated users can delete tasks
+      // 🗑️ DELETE: Creator or company admin
       allow delete: if isAuthenticated()
-                    && resource != null;
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 📐 PROJECT_FLOORPLANS COLLECTION - DXF/PDF FLOORPLAN STORAGE
+    // 📐 PROJECT_FLOORPLANS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
-    // 🏢 ENTERPRISE: Floorplans for projects, buildings, units
+    // 🏢 ENTERPRISE: Floorplans for projects with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
+    // ⚠️ NOTE: Requires companyId migration - derive from projectId
     match /project_floorplans/{floorplanId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated(); // Authenticated users can manage floorplans
+      // 📖 READ: Tenant-scoped via companyId or projectId lookup
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Fallback via projectId lookup
+                       || (resource.data.keys().hasAny(['projectId'])
+                           && resource.data.projectId is string
+                           && belongsToProjectCompany(resource.data.projectId))
+                       // Legacy: creator-only
+                       || (!resource.data.keys().hasAny(['companyId', 'projectId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 📐 BUILDING_FLOORPLANS COLLECTION - BUILDING-LEVEL FLOORPLANS
+    // 📐 BUILDING_FLOORPLANS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
     match /building_floorplans/{floorplanId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped via companyId or buildingId lookup
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy: creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 📐 UNIT_FLOORPLANS COLLECTION - UNIT-LEVEL FLOORPLANS
+    // 📐 UNIT_FLOORPLANS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
     match /unit_floorplans/{floorplanId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped via companyId
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy: creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 🎚️ DXF-VIEWER-LEVELS COLLECTION - DXF VIEWER LAYER/LEVEL SYSTEM
+    // 🎚️ DXF-VIEWER-LEVELS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
-    // 🏢 ENTERPRISE: Levels for DXF viewer layer management
+    // 🏢 ENTERPRISE: Levels for DXF viewer layer management with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
     match /dxf-viewer-levels/{levelId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy: creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 🎨 DXF OVERLAY LEVELS COLLECTION - DXF OVERLAY SYSTEM
+    // 🎨 DXF OVERLAY LEVELS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
-    // 🏢 ENTERPRISE: Overlay levels for DXF viewer (with items subcollection)
-    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    // 🏢 ENTERPRISE: Overlay levels for DXF viewer with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
     // ⚠️ BOTH naming conventions supported for backwards compatibility
 
     // Kebab-case version (used by overlay-store.tsx)
     match /dxf-overlay-levels/{levelId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
 
-      // 📁 Items subcollection for overlay items
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
+
+      // 📁 Items subcollection - inherits parent tenant isolation
       match /items/{itemId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated();
+        allow read: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || belongsToCompany(get(/databases/$(database)/documents/dxf-overlay-levels/$(levelId)).data.companyId)
+                       );
+        allow create: if isAuthenticated()
+                      && request.resource.data.companyId == getUserCompanyId();
+        allow update, delete: if isAuthenticated()
+                              && (
+                                   resource.data.createdBy == request.auth.uid
+                                   || isCompanyAdminOfCompany(resource.data.companyId)
+                                   || isSuperAdminOnly()
+                                 );
       }
     }
 
     // CamelCase version (legacy support)
     match /dxfOverlayLevels/{levelId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
 
-      // 📁 Items subcollection for overlay items
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
+
+      // 📁 Items subcollection - inherits parent tenant isolation
       match /items/{itemId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated();
+        allow read: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || belongsToCompany(get(/databases/$(database)/documents/dxfOverlayLevels/$(levelId)).data.companyId)
+                       );
+        allow create: if isAuthenticated()
+                      && request.resource.data.companyId == getUserCompanyId();
+        allow update, delete: if isAuthenticated()
+                              && (
+                                   resource.data.createdBy == request.auth.uid
+                                   || isCompanyAdminOfCompany(resource.data.companyId)
+                                   || isSuperAdminOnly()
+                                 );
       }
     }
 
     // =========================================================================
-    // 🎨 LAYERS COLLECTION - LEGACY LAYER SYSTEM
+    // 🎨 LAYERS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
-    // 🏢 ENTERPRISE: Legacy layers for property visualization
-    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    // 🏢 ENTERPRISE: Legacy layers for property visualization with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
     match /layers/{layerId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 📋 LAYER EVENTS COLLECTION - LAYER SYNC EVENTS
+    // 📋 LAYER EVENTS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
-    // 🏢 ENTERPRISE: Events for layer synchronization
-    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    // 🏢 ENTERPRISE: Events for layer synchronization with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
     match /layer-events/{eventId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 🏠 PROPERTY LAYERS COLLECTION - PROPERTY VISUALIZATION
+    // 🏠 PROPERTY LAYERS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
-    // 🏢 ENTERPRISE: Property-specific layers
-    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    // 🏢 ENTERPRISE: Property-specific layers with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
     match /property-layers/{layerId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
@@ -548,15 +1022,23 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🏢 WORKSPACES COLLECTION - AUTHENTICATED READ ACCESS
+    // 🏢 WORKSPACES COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
-    // 📅 Added 2026-01-24: Fix WorkspaceContext permission error
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
+    // 🏢 ENTERPRISE: Workspaces are company-scoped
     match /workspaces/{workspaceId} {
-      // 📖 READ: Authenticated users can read workspaces
-      // TODO: Refine to workspace membership when implemented
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy fallback: all authenticated until migration
+                       // ⚠️ NOTE: Remove after companyId migration
+                       || !resource.data.keys().hasAny(['companyId'])
+                     );
 
-      // ✍️ WRITE: Admin/server only for now
+      // ✍️ WRITE: Admin/server only (via Firebase Admin SDK)
       allow write: if false;
     }
 
@@ -622,13 +1104,45 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 💬 COMMUNICATIONS COLLECTION - LEGACY CRM COMMUNICATIONS
     // =========================================================================
-    // 🏢 ENTERPRISE: Legacy communications collection
-    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    // 💬 COMMUNICATIONS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
+    // =========================================================================
+    // 🏢 ENTERPRISE: Legacy CRM communications with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
+    // ⚠️ NOTE: Requires companyId migration for legacy docs
     match /communications/{communicationId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy fallback: creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
@@ -658,110 +1172,264 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🎯 LEADS COLLECTION - CRM LEADS
+    // 🎯 LEADS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
-    // 🏢 ENTERPRISE: CRM lead management
-    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    // 🏢 ENTERPRISE: CRM lead management with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
     match /leads/{leadId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy fallback: creator or assignee
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && (resource.data.createdBy == request.auth.uid
+                               || resource.data.assignedTo == request.auth.uid))
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator, assignee, or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || resource.data.assignedTo == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 💼 OPPORTUNITIES COLLECTION - CRM OPPORTUNITIES
+    // 💼 OPPORTUNITIES COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
-    // 🏢 ENTERPRISE: CRM opportunity management
-    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    // 🏢 ENTERPRISE: CRM opportunity management with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
     match /opportunities/{opportunityId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy fallback: creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 📋 ACTIVITIES COLLECTION - CRM ACTIVITIES
+    // 📋 ACTIVITIES COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
-    // 🏢 ENTERPRISE: CRM activity tracking
-    // 📅 Added: 2026-01-17 (Permission-denied fix)
+    // 🏢 ENTERPRISE: CRM activity tracking with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
     match /activities/{activityId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy fallback: creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 💬 CONVERSATIONS - CRM COMMUNICATIONS
+    // 💬 CONVERSATIONS - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
-    // 🏢 ENTERPRISE: Telegram/email conversations για CRM
-    // 🔒 DEV-FRIENDLY: Authenticated users έχουν πρόσβαση (για development/testing)
-    // 📅 Added: 2026-01-15
-    // ⚠️ TODO (PHASE 2): Μετάβαση σε isInternalUser() όταν setup custom claims (globalRole)
+    // 🏢 ENTERPRISE: Telegram/email conversations για CRM with tenant isolation
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
+    // ⚠️ NOTE: Requires companyId migration for legacy docs
     match /conversations/{conversationId} {
-      // 📖 READ: Authenticated users (dev-friendly για realtime listener)
-      // TODO: Change to isInternalUser() after custom claims setup
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy fallback: creator or participant
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && (resource.data.createdBy == request.auth.uid
+                               || resource.data.assignedTo == request.auth.uid))
+                     );
 
-      // ✍️ CREATE: Authenticated users can create new conversations
+      // ✍️ CREATE: companyId required
       allow create: if isAuthenticated()
                     && isValidConversationData(request.resource.data)
+                    && request.resource.data.companyId == getUserCompanyId()
                     && resource == null;
 
-      // 📝 UPDATE: Authenticated users can update conversation metadata
+      // 📝 UPDATE: Creator, assignee, or company admin
       allow update: if isAuthenticated()
                     && isValidConversationData(request.resource.data)
-                    && resource != null;
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || resource.data.assignedTo == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
 
-      // 🗑️ DELETE: Authenticated users (prevent accidental deletions by guests)
+      // 🗑️ DELETE: Creator or company admin
       allow delete: if isAuthenticated()
-                    && resource != null;
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 💬 MESSAGES (ROOT COLLECTION) - CRM COMMUNICATIONS
+    // 💬 MESSAGES - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
-    // 🏢 ENTERPRISE: Messages stored in ROOT collection (not subcollection)
+    // 🏢 ENTERPRISE: Messages stored in ROOT collection with tenant isolation
     // Architecture: messages/{messageId} with conversationId field
-    // 🔒 DEV-FRIENDLY: Authenticated users έχουν πρόσβαση
     // 📋 REAL-TIME UPDATES: Supports Firestore onSnapshot για instant message updates
-    // 📅 Added: 2026-01-15
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
     match /messages/{messageId} {
-      // 📖 READ: Authenticated users (supports real-time listener)
-      // TODO: Change to isInternalUser() after custom claims setup
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped via companyId or conversation lookup
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy fallback: sender only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.senderId == request.auth.uid)
+                     );
 
-      // ✍️ CREATE: Authenticated users can send messages
+      // ✍️ CREATE: companyId required
       allow create: if isAuthenticated()
                     && isValidMessageData(request.resource.data)
+                    && request.resource.data.companyId == getUserCompanyId()
                     && resource == null;
 
-      // 📝 UPDATE: Authenticated users can update message delivery status
+      // 📝 UPDATE: Sender or company admin
       allow update: if isAuthenticated()
                     && isValidMessageData(request.resource.data)
-                    && resource != null;
+                    && resource != null
+                    && (
+                         resource.data.senderId == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
 
-      // 🗑️ DELETE: Authenticated users
+      // 🗑️ DELETE: Sender or company admin
       allow delete: if isAuthenticated()
-                    && resource != null;
+                    && resource != null
+                    && (
+                         resource.data.senderId == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 🔐 EXTERNAL IDENTITIES - TELEGRAM USER MAPPINGS
+    // 🔐 EXTERNAL IDENTITIES - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - CRITICAL collection)
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
     // 🏢 ENTERPRISE: Maps external platform IDs (Telegram chatId) to internal contacts
+    // ⚠️ NOTE: Requires companyId migration for legacy docs
     match /external_identities/{identityId} {
-      // 📖 READ: Authenticated users (CRM needs to lookup identities)
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy fallback: creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
 
-      // ✍️ CREATE: Only system/admin can create identity mappings
+      // ✍️ CREATE: companyId required
       allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId()
                     && resource == null;
 
-      // 📝 UPDATE: Only system/admin can update identity mappings
+      // 📝 UPDATE: Creator or company admin
       allow update: if isAuthenticated()
-                    && resource != null;
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
 
-      // 🗑️ DELETE: Only admin can delete identity mappings
+      // 🗑️ DELETE: Creator or company admin
       allow delete: if isAuthenticated()
-                    && resource != null;
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
@@ -778,26 +1446,47 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🔗 RELATIONSHIPS - ENTITY RELATIONSHIPS (GENERIC)
+    // 🔗 RELATIONSHIPS - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - CRITICAL collection)
-    // 🏢 ENTERPRISE: General-purpose relationships between entities
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
+    // 🏢 ENTERPRISE: General-purpose relationships between entities with tenant isolation
     // ⚠️ Note: contact_relationships has separate, more strict rules above
     match /relationships/{relationshipId} {
-      // 📖 READ: Authenticated users
-      allow read: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy fallback: creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
 
-      // ✍️ CREATE: Authenticated users
+      // ✍️ CREATE: companyId required
       allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId()
                     && resource == null;
 
-      // 📝 UPDATE: Authenticated users
+      // 📝 UPDATE: Creator or company admin
       allow update: if isAuthenticated()
-                    && resource != null;
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
 
-      // 🗑️ DELETE: Authenticated users
+      // 🗑️ DELETE: Creator or company admin
       allow delete: if isAuthenticated()
-                    && resource != null;
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
@@ -832,72 +1521,324 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 📊 ANALYTICS - SENDGRID WEBHOOK ANALYTICS
+    // 📊 ANALYTICS - ENTERPRISE TENANT ISOLATION (PR-1B)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - HIGH priority)
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
+    // 🏢 ENTERPRISE: SendGrid webhook analytics with tenant isolation
     match /analytics/{analyticsId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy fallback: creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 📋 OBLIGATIONS & TEMPLATES
+    // 📋 OBLIGATIONS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1D)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - HIGH priority)
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
+    // 🏢 ENTERPRISE: Obligations with tenant isolation via project lookup
+    //
+    // Security Model:
+    //   - READ: Tenant-scoped via projectId→company or companyId
+    //   - CREATE: companyId required from claims
+    //   - UPDATE: Creator or company admin, companyId immutable
+    //   - DELETE: Creator or company admin
+    // =========================================================================
     match /obligations/{obligationId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && resource == null;
-      allow update: if isAuthenticated() && resource != null;
-      allow delete: if isAuthenticated() && resource != null;
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       // Direct companyId check
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // OR via projectId lookup
+                       || (resource.data.keys().hasAny(['projectId'])
+                           && resource.data.projectId is string
+                           && belongsToProjectCompany(resource.data.projectId))
+                       // LEGACY FALLBACK: Creator-only
+                       || (!resource.data.keys().hasAny(['companyId', 'projectId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
+    // =========================================================================
+    // 📋 OBLIGATION_TEMPLATES COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1D)
+    // =========================================================================
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
+    // 🏢 ENTERPRISE: Templates are company-scoped
+    // =========================================================================
     match /obligationTemplates/{templateId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && resource == null;
-      allow update: if isAuthenticated() && resource != null;
-      allow delete: if isAuthenticated() && resource != null;
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK: Creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
-    // 📋 OBLIGATION-SECTIONS - Obligation sections (dash naming convention)
-    // 📅 Added: 2026-01-17 (Missing collection from Firestore audit)
+    // =========================================================================
+    // 📋 OBLIGATION-SECTIONS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1D)
+    // =========================================================================
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
+    // 🏢 ENTERPRISE: Sections are company-scoped (linked to templates)
+    // =========================================================================
     match /obligation-sections/{sectionId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && resource == null;
-      allow update: if isAuthenticated() && resource != null;
-      allow delete: if isAuthenticated() && resource != null;
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK: Creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 💼 OPPORTUNITIES - CRM SALES PIPELINE
+    // 💼 OPPORTUNITIES - ENTERPRISE TENANT ISOLATION (PR-1D FIX)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - HIGH priority)
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
+    // 🏢 ENTERPRISE: CRM sales pipeline with tenant isolation
+    // =========================================================================
     match /opportunities/{opportunityId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && resource == null;
-      allow update: if isAuthenticated() && resource != null;
-      allow delete: if isAuthenticated() && resource != null;
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK: Creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 👥 LEADS - CRM LEAD MANAGEMENT
+    // 👥 LEADS - ENTERPRISE TENANT ISOLATION (PR-1D FIX)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
+    // 🏢 ENTERPRISE: CRM lead management with tenant isolation
+    // =========================================================================
     match /leads/{leadId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && resource == null;
-      allow update: if isAuthenticated() && resource != null;
-      allow delete: if isAuthenticated() && resource != null;
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK: Creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 📆 ACTIVITIES - CRM ACTIVITY TRACKING
+    // 📆 ACTIVITIES - ENTERPRISE TENANT ISOLATION (PR-1D FIX)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
+    // 🏢 ENTERPRISE: CRM activity tracking with tenant isolation
+    // =========================================================================
     match /activities/{activityId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && resource == null;
-      allow update: if isAuthenticated() && resource != null;
-      allow delete: if isAuthenticated() && resource != null;
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK: Creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
@@ -911,21 +1852,81 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🗂️ LAYER GROUPS - DXF LAYER MANAGEMENT
+    // 🗂️ LAYER GROUPS - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
+    // 🏢 ENTERPRISE: DXF layer management with tenant isolation
     match /layerGroups/{groupId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
-    // 🗺️ FLOORPLANS - FLOOR PLAN STORAGE
+    // 🗺️ FLOORPLANS - ENTERPRISE TENANT ISOLATION (PR-1C)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Permission-denied fix - MEDIUM priority)
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1C)
+    // 🏢 ENTERPRISE: Floor plan storage with tenant isolation
     match /floorplans/{floorplanId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
@@ -938,9 +1939,46 @@ service cloud.firestore {
       allow write: if false; // Server-side only
     }
 
+    // =========================================================================
+    // 🏢 ADMIN_BUILDING_TEMPLATES - ENTERPRISE TENANT ISOLATION (PR-1D)
+    // =========================================================================
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
+    // 🏢 ENTERPRISE: Building templates with tenant isolation
+    // =========================================================================
     match /admin_building_templates/{templateId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated(); // Admin UI needs write access
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK: Creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     match /audit_logs/{logId} {
@@ -966,13 +2004,45 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 👥 TEAMS - TEAM MANAGEMENT
+    // 👥 TEAMS - ENTERPRISE TENANT ISOLATION (PR-1D)
     // =========================================================================
-    // 📅 Added: 2026-01-17 (Final 2 collections fix)
-    // 🏢 ENTERPRISE: Team management for EnterpriseTeamsService
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
+    // 🏢 ENTERPRISE: Team management with tenant isolation
+    // =========================================================================
     match /teams/{teamId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // 📖 READ: Tenant-scoped
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // LEGACY FALLBACK: Creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.keys().hasAny(['createdBy'])
+                           && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin, companyId immutable
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
     }
 
     // =========================================================================
@@ -1284,6 +2354,28 @@ service cloud.firestore {
     // Check if user is company admin of the project's company
     function isCompanyAdminOfProject(projectId) {
       return isCompanyAdminOfCompany(getProjectCompanyId(projectId));
+    }
+
+    // =========================================================================
+    // 🏢 BUILDING LOOKUP HELPERS (PR-1D: floors, storage_units, parking_spots)
+    // =========================================================================
+    // 📅 Added: 2026-01-29 (Security Gate Phase 1 - PR-1D)
+    // 🏢 ENTERPRISE: Similar pattern to project lookup, with project fallback
+    //
+    // Get the companyId from a building document
+    // Handles both direct companyId and projectId fallback
+    function getBuildingCompanyId(buildingId) {
+      let building = get(/databases/$(database)/documents/buildings/$(buildingId)).data;
+      // If building has direct companyId, use it
+      // Otherwise, fall back to project lookup
+      return building.keys().hasAny(['companyId'])
+             ? building.companyId
+             : getProjectCompanyId(building.projectId);
+    }
+
+    // Check if user belongs to the company that owns this building
+    function belongsToBuildingCompany(buildingId) {
+      return isSuperAdminOnly() || belongsToCompany(getBuildingCompanyId(buildingId));
     }
 
     // Unit Fields allowlist - only these fields can be updated by non-super-admin users

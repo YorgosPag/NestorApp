@@ -22,6 +22,36 @@
 | 09 | [Quality Gates & Production](./09-quality-gates-production-readiness.md) | ✅ Complete | 🔴 Critical | CI/CD, tests, build, observability |
 | 10 | [Risk Register & Decisions](./10-risk-register-and-decisions.md) | ✅ Complete | 🔴 Critical | Decision matrix, risk assessment |
 
+### 📋 MIGRATION PLANS
+
+| Document | Status | Description |
+|----------|--------|-------------|
+| [migration-companyId.md](./migration-companyId.md) | ✅ Rules Complete | Data migration for tenant isolation (companyId backfill) |
+
+### 🎯 STRATEGY DOCUMENTS (Technology Decisions)
+
+| Document | Decision | Priority |
+|----------|----------|----------|
+| [00-index](../strategy/00-index.md) | Master index | - |
+| [01-dxf-technology-decision](../strategy/01-dxf-technology-decision.md) | **ezdxf** (Python service) | High |
+| [02-ocr-document-ingestion](../strategy/02-ocr-document-ingestion.md) | **PaddleOCR** + Tesseract | High |
+| [03-ai-layer-architecture](../strategy/03-ai-layer-architecture.md) | **Genkit + RAG** (pgvector) | Medium |
+| [04-orchestrator-n8n](../strategy/04-orchestrator-n8n.md) | **n8n self-hosted** | High |
+| [05-messaging-unification](../strategy/05-messaging-unification.md) | **Meta Cloud API** (WhatsApp) | Medium |
+| [06-web-monitoring-agents](../strategy/06-web-monitoring-agents.md) | **n8n scheduled** workflows | Low |
+
+### 🔒 SECURITY GATE STATUS (2026-01-29)
+
+| PR | Status | Collections |
+|----|--------|-------------|
+| **PR-1A** | ✅ Complete | buildings (critical hotfix - removed public read) |
+| **PR-1B** | ✅ Complete | projects, tasks, communications, conversations, messages, external_identities, relationships, analytics, workspaces, floorplans |
+| **PR-1C** | ✅ Complete | project_floorplans, building_floorplans, unit_floorplans, layers, layerGroups, dxf-viewer-levels, dxf-overlay-levels, dxfOverlayLevels, layer-events, property-layers |
+| **PR-1D** | ✅ Complete | floors, storage_units, parking_spots, obligations, obligationTemplates, obligation-sections, teams, admin_building_templates, opportunities (FIX), leads (FIX), activities (FIX) |
+
+**Total Collections with Tenant Isolation**: 35+ ✅
+**Next Step**: Data migration to backfill `companyId` for legacy documents
+
 ---
 
 ## 🎯 HOW TO READ THIS REVIEW

@@ -4,6 +4,13 @@
 import { useMemo } from 'react';
 import type { Property, FilterState } from '@/types/property-viewer';
 import type { PropertyStats } from '@/types/property';
+// 🏢 ADR-051: Use centralized filter utilities
+import {
+  matchesSearchTerm,
+  matchesNumericRange,
+  matchesArrayFilter,
+  matchesFeatures
+} from '@/components/core/AdvancedFilters';
 
 
 /**
@@ -17,12 +24,10 @@ const STORAGE_TYPES = ['storage', 'αποθήκη', 'αποθηκη'] as const;
  * Storage units should NOT appear in the Units list (per local_4.log)
  */
 function isStorageUnit(property: Property): boolean {
+  // 🏢 ENTERPRISE: Check only property.type (propertyType doesn't exist on Property interface)
   const type = (property.type || '').toLowerCase();
-  const propertyType = (property.propertyType || '').toLowerCase();
 
-  return STORAGE_TYPES.some(storageType =>
-    type.includes(storageType) || propertyType.includes(storageType)
-  );
+  return STORAGE_TYPES.some(storageType => type.includes(storageType));
 }
 
 export function usePropertyFilters(
@@ -54,6 +59,7 @@ export function usePropertyFilters(
       ? properties.filter(p => !isStorageUnit(p))
       : properties;
 
+    // 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
     const {
       searchTerm = '',
       project = [],
@@ -61,45 +67,36 @@ export function usePropertyFilters(
       floor = [],
       propertyType = [],
       status = [],
-      priceRange = { min: null, max: null },
-      areaRange = { min: null, max: null },
+      priceRange = { min: undefined, max: undefined },
+      areaRange = { min: undefined, max: undefined },
       features = [],
       coverage = {},
     } = filters;
 
+    // 🏢 ADR-051: Use centralized filter utilities
     const filtered = baseProperties.filter(property => {
-      const searchMatch = !searchTerm ||
-        (property.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (property.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      // Cast property to FilterableEntity for centralized utilities
+      const entity = property as unknown as { id: string; [key: string]: unknown };
 
-      const projectMatch = !project || project.length === 0 || project.includes(property.project);
-      const buildingMatch = !building || building.length === 0 || building.includes(property.building);
-      const floorMatch = !floor || floor.length === 0 || floor.includes(String(property.floor));
-      const typeMatch = !propertyType || propertyType.length === 0 || propertyType.includes(property.type);
-      const statusMatch = !status || status.length === 0 || status.includes(property.status);
-      
-      const priceMatch =
-        (!priceRange || priceRange.min === null || priceRange.min === undefined || (property.price ?? 0) >= priceRange.min) &&
-        (!priceRange || priceRange.max === null || priceRange.max === undefined || (property.price ?? 0) <= priceRange.max);
-        
-      const areaMatch =
-        (!areaRange || areaRange.min === null || areaRange.min === undefined || (property.area ?? 0) >= areaRange.min) &&
-        (!areaRange || areaRange.max === null || areaRange.max === undefined || (property.area ?? 0) <= areaRange.max);
+      // 🏢 CENTRALIZED: Search match using matchesSearchTerm
+      const searchMatch = matchesSearchTerm(entity, searchTerm, ['name', 'description']);
 
-      // 🐛 DEBUG: Area filtering
-      if (areaRange?.min !== null || areaRange?.max !== null) {
-        console.log('🔍 AREA FILTER DEBUG:', {
-          property: property.name,
-          propertyArea: property.area,
-          filterMin: areaRange?.min,
-          filterMax: areaRange?.max,
-          areaMatch
-        });
-      }
+      // 🏢 CENTRALIZED: Array filters using matchesArrayFilter
+      const projectMatch = matchesArrayFilter(property.project, project);
+      const buildingMatch = matchesArrayFilter(property.building, building);
+      const floorMatch = matchesArrayFilter(String(property.floor), floor);
+      const typeMatch = matchesArrayFilter(property.type, propertyType);
+      const statusMatch = matchesArrayFilter(property.status, status);
 
-      const featuresMatch = !features || features.length === 0 || features.every(feature => (property.features || []).includes(feature));
+      // 🏢 CENTRALIZED: Range filters using matchesNumericRange
+      const priceMatch = matchesNumericRange(property.price, priceRange);
+      const areaMatch = matchesNumericRange(property.area, areaRange);
 
-      // ✅ ENTERPRISE: Coverage filters for "missing X" functionality
+      // 🏢 CENTRALIZED: Features filter using matchesFeatures
+      const featuresMatch = matchesFeatures(property.features, features);
+
+      // ✅ DOMAIN-SPECIFIC: Coverage filters for "missing X" functionality
+      // This is property-specific logic, not generic filtering
       const coverageMatch = !coverage || Object.keys(coverage).length === 0 || (() => {
         const { missingPhotos, missingFloorplans, missingDocuments } = coverage;
 

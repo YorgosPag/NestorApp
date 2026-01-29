@@ -1,4 +1,19 @@
 "use client";
+
+/**
+ * 🏢 ADR-051: PUBLIC-FACING FILTER HANDLERS
+ *
+ * This hook is INTENTIONALLY SEPARATE from the centralized useGenericFilters because:
+ * 1. It provides specialized slider handlers with null-on-boundary logic
+ * 2. It's designed for public-facing UI (customer portal)
+ * 3. It does NOT perform filtering - only provides UI state handlers
+ *
+ * The actual filtering is done by usePropertyFilters which uses centralized utilities.
+ *
+ * @see @/components/core/AdvancedFilters/useGenericFilters for internal admin filters
+ * @see @/hooks/usePropertyFilters for centralized filtering logic
+ */
+
 import { useCallback } from "react";
 import type { FilterState } from "@/types/property-viewer";
 import { PRICE_MIN, PRICE_MAX, AREA_MIN, AREA_MAX } from "../constants";
@@ -29,20 +44,22 @@ export function usePublicPropertyFilters(
     set({ status: next });
   }, [filters.status, set]);
 
+  // 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
   const onPriceRange = useCallback((vals: [number, number]) => {
     set({
       priceRange: {
-        min: vals[0] === PRICE_MIN ? null : vals[0],
-        max: vals[1] === PRICE_MAX ? null : vals[1],
+        min: vals[0] === PRICE_MIN ? undefined : vals[0],
+        max: vals[1] === PRICE_MAX ? undefined : vals[1],
       }
     });
   }, [set]);
 
+  // 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
   const onAreaRange = useCallback((vals: [number, number]) => {
     set({
       areaRange: {
-        min: vals[0] === AREA_MIN ? null : vals[0],
-        max: vals[1] === AREA_MAX ? null : vals[1],
+        min: vals[0] === AREA_MIN ? undefined : vals[0],
+        max: vals[1] === AREA_MAX ? undefined : vals[1],
       }
     });
   }, [set]);

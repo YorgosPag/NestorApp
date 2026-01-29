@@ -155,21 +155,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
               (typeof rangeValue === 'object' && Object.keys(rangeValue).length === 0) ||
               (rangeValue.min === undefined && rangeValue.max === undefined);
 
-            console.log('🔍 ENTERPRISE DEBUG:', {
-              rangeValue,
-              rangeValueType: typeof rangeValue,
-              rangeValueKeys: rangeValue ? Object.keys(rangeValue) : 'null',
-              hasMin: rangeValue?.min !== undefined,
-              hasMax: rangeValue?.max !== undefined,
-              minValue: rangeValue?.min,
-              maxValue: rangeValue?.max,
-              isClearEvent,
-              selectedPreset,
-              trigger: 'useEffect'
-            });
-
             if (isClearEvent) {
-              console.log('🔄 CLEAR EVENT DETECTED - Resetting to "all"');
               setSelectedPreset('all');
               // 🏢 ENTERPRISE: Reset controlled input state on clear
               setMinValue('');
@@ -212,14 +198,14 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
                   const preset = areaPresets.find(p => p.id === selectedValue);
 
                   if (preset && selectedValue !== 'custom') {
-                    // Set predefined range
-                    onValueChange({ min: preset.min, max: preset.max });
-                  } else if (selectedValue === 'custom') {
-                    // Switch to custom mode - DON'T send undefined values that break filtering
-                    // Just update the dropdown state, let user type values
-                    // This avoids sending {min: undefined, max: undefined} which breaks filtering
-                    console.log('🔄 SWITCHING TO CUSTOM MODE - not sending undefined values');
+                    // Set predefined range (normalize null → undefined for type safety)
+                    onValueChange({
+                      min: preset.min === null ? undefined : preset.min,
+                      max: preset.max === null ? undefined : preset.max
+                    });
                   }
+                  // Custom mode: Just update the dropdown state, let user type values
+                  // This avoids sending {min: undefined, max: undefined} which breaks filtering
                 }}
                 value={selectedPreset}
               >
@@ -248,10 +234,6 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
                     value={minValue}
                     onChange={(e) => {
                       const value = e.target.value;
-                      console.log('🔢 CONTROLLED MIN INPUT:', {
-                        value,
-                        currentPreset: selectedPreset
-                      });
 
                       // 🏢 ENTERPRISE: Update controlled state immediately (no remount)
                       setMinValue(value);
@@ -274,10 +256,6 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
                     value={maxValue}
                     onChange={(e) => {
                       const value = e.target.value;
-                      console.log('🔢 CONTROLLED MAX INPUT:', {
-                        value,
-                        currentPreset: selectedPreset
-                      });
 
                       // 🏢 ENTERPRISE: Update controlled state immediately (no remount)
                       setMaxValue(value);

@@ -65,6 +65,7 @@ import type { FilterState, PropertyStats } from '@/types/property-viewer';
  */
 const FALLBACK_FLOOR_ID = process.env.NEXT_PUBLIC_DEFAULT_FLOOR_ID || 'floor-1' as const;
 
+// 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
 export const DEFAULT_FILTERS: FilterState = {
   searchTerm: '',
   project: [],
@@ -72,8 +73,8 @@ export const DEFAULT_FILTERS: FilterState = {
   floor: [],
   propertyType: [],
   status: [],
-  priceRange: { min: null, max: null },
-  areaRange: { min: null, max: null },
+  priceRange: { min: undefined, max: undefined },
+  areaRange: { min: undefined, max: undefined },
   features: []
 };
 

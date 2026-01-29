@@ -1,10 +1,10 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2027-01-27
-> **= -> TOTAL SYSTEMS**: 30 Major Enterprise Systems (incl. CanvasBoundsService Performance)
-> **= -> TOTAL CODE**: 19,680+ Lines (incl. MoveOverlayCommand 380+ lines + OverlayToolbarSection 480+ lines)
-> **= -> TOTAL ADRs**: 26 Architectural Decision Records (incl. ADR-050)
+> **= -> LAST UPDATED**: 2026-01-29
+> **= -> TOTAL SYSTEMS**: 31 Major Enterprise Systems (incl. Enterprise Filter System Centralization)
+> **= -> TOTAL CODE**: 20,380+ Lines (incl. applyFilters 280+ lines + usePropertyGridFilters 100+ lines)
+> **= -> TOTAL ADRs**: 28 Architectural Decision Records (incl. ADR-051 Filter Centralization)
 
 ---
 
@@ -47,6 +47,7 @@
 | **ADR-048** | Unified Grip Rendering System 🏢 | `rendering/grips/` → UnifiedGripRenderer (Facade Pattern) | Zero duplicate code (~90 lines removed), Single source of truth, ADR-047 custom colors work automatically, SOLID compliant | 2027-01-27 |
 | **ADR-049** | Unified Move Tool for DXF + Overlays 🏢 | `core/commands/overlay-commands/MoveOverlayCommand.ts` (380+ lines) | Single move tool για DXF entities ΚΑΙ colored overlays, Full Command Pattern με undo/redo, Real-time ghost rendering (AutoCAD/Figma), Command merging (500ms), Zero duplicate code | 2027-01-27 |
 | **ADR-050** | Unified Toolbar Integration 🏢 | `ui/toolbar/overlay-section/` (480+ lines, 8 files) → Merged floating overlay toolbar into EnhancedDXFToolbar as collapsible Row 2 | Better UX (no floating windows), mobile responsive, zero duplication, AutoCAD Ribbon pattern, Feature flag migration, Modular architecture (6 components) | 2027-01-27 |
+| **ADR-051** | Enterprise Filter System Centralization 🏢 | `@/components/core/AdvancedFilters/` → `useGenericFilters` + `usePropertyGridFilters` + `applyFilters` + type guards | **7 files deleted**: useFilterState, useFilteredProjects, 2x usePropertyGridFilters, filtering.ts, 2x AdvancedFiltersPanel. **16 consumers** now use centralized. usePropertyFilters refactored with centralized utilities (matchesSearchTerm, matchesNumericRange, matchesArrayFilter, matchesFeatures) | 2026-01-29 |
 
 > **🚫 PROHIBITION**: Click handlers without `viewportReady` check **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - block interactions until viewport valid.
 > **🚫 PROHIBITION**: Double coordinate conversion (world→screen→world) **ΑΠΑΓΟΡΕΥΕΤΑΙ** - single conversion at source per ADR-046.
@@ -80,6 +81,8 @@
 > **🚫 PROHIBITION**: Duplicate grip rendering logic **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `UnifiedGripRenderer` από `rendering/grips/`.
 > **🚫 PROHIBITION**: Direct overlay.polygon manipulation for movement **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `MoveOverlayCommand` για undo/redo support.
 > **🚫 PROHIBITION**: Creating new floating toolbars **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `EnhancedDXFToolbar` με `OverlayToolbarSection` για collapsible sections (ADR-050).
+> **🚫 PROHIBITION**: Standalone filter implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useGenericFilters` + `applyFilters` από `@/components/core/AdvancedFilters` (ADR-051).
+> **🚫 PROHIBITION**: console.log σε filter components **ΑΠΑΓΟΡΕΥΕΤΑΙ** - αφαιρέθηκαν όλα τα debug logs με ADR-051.
 > **🏢 ENTERPRISE**: ADR-044 - Canvas line widths fully centralized, 32 hardcoded values → 17 files migrated.
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
