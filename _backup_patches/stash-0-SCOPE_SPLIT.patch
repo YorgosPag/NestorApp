@@ -1,0 +1,777 @@
+diff --git a/.gitignore b/.gitignore
+index 278a88c8..140b3b33 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -122,3 +122,7 @@ tmpclaude-*
+ firebase-service-account*
+ google-credentials*
+ gcp-key*
++
++# Quality Gates Artifacts - DO NOT COMMIT
++quality-gates-*.txt
++quality-gates-*.md
+diff --git a/reports/visual/combined-1920x1080.report.json b/reports/visual/combined-1920x1080.report.json
+index 91b491e4..9dc2d517 100644
+--- a/reports/visual/combined-1920x1080.report.json
++++ b/reports/visual/combined-1920x1080.report.json
+@@ -9,8 +9,8 @@
+     "width": 1920,
+     "height": 1080
+   },
+-  "timestamp": "2026-01-17T09:34:01.347Z",
+-  "duration": 26927,
++  "timestamp": "2026-01-17T11:37:05.744Z",
++  "duration": 14827,
+   "artifacts": {
+     "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+     "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.baseline.png",
+diff --git a/reports/visual/combined-320x240.report.json b/reports/visual/combined-320x240.report.json
+index 322bd881..855bbace 100644
+--- a/reports/visual/combined-320x240.report.json
++++ b/reports/visual/combined-320x240.report.json
+@@ -9,8 +9,8 @@
+     "width": 320,
+     "height": 240
+   },
+-  "timestamp": "2026-01-17T09:34:06.741Z",
+-  "duration": 618,
++  "timestamp": "2026-01-17T11:37:10.482Z",
++  "duration": 582,
+   "artifacts": {
+     "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+     "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.baseline.png",
+diff --git a/reports/visual/combined-800x600.report.json b/reports/visual/combined-800x600.report.json
+index 66a4e8a0..f41fa0a2 100644
+--- a/reports/visual/combined-800x600.report.json
++++ b/reports/visual/combined-800x600.report.json
+@@ -9,8 +9,8 @@
+     "width": 800,
+     "height": 600
+   },
+-  "timestamp": "2026-01-17T09:33:20.508Z",
+-  "duration": 8925,
++  "timestamp": "2026-01-17T11:36:44.186Z",
++  "duration": 6304,
+   "artifacts": {
+     "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+     "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-800x600.baseline.png",
+diff --git a/reports/visual/crosshair-800x800.report.json b/reports/visual/crosshair-800x800.report.json
+index 0ed81180..900ad619 100644
+--- a/reports/visual/crosshair-800x800.report.json
++++ b/reports/visual/crosshair-800x800.report.json
+@@ -9,8 +9,8 @@
+     "width": 800,
+     "height": 800
+   },
+-  "timestamp": "2026-01-17T09:34:06.112Z",
+-  "duration": 4758,
++  "timestamp": "2026-01-17T11:37:09.892Z",
++  "duration": 4139,
+   "artifacts": {
+     "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+     "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.baseline.png",
+diff --git a/reports/visual/grid-1024x768.report.json b/reports/visual/grid-1024x768.report.json
+index 3149f4e3..bfdfee8c 100644
+--- a/reports/visual/grid-1024x768.report.json
++++ b/reports/visual/grid-1024x768.report.json
+@@ -9,8 +9,8 @@
+     "width": 1024,
+     "height": 768
+   },
+-  "timestamp": "2026-01-17T09:34:12.156Z",
+-  "duration": 5409,
++  "timestamp": "2026-01-17T11:37:15.493Z",
++  "duration": 5007,
+   "artifacts": {
+     "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+     "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.baseline.png",
+diff --git a/reports/visual/grid-800x600.report.json b/reports/visual/grid-800x600.report.json
+index 23bed320..c80ebb35 100644
+--- a/reports/visual/grid-800x600.report.json
++++ b/reports/visual/grid-800x600.report.json
+@@ -9,8 +9,8 @@
+     "width": 800,
+     "height": 600
+   },
+-  "timestamp": "2026-01-17T09:33:34.389Z",
+-  "duration": 6797,
++  "timestamp": "2026-01-17T11:36:50.897Z",
++  "duration": 3206,
+   "artifacts": {
+     "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+     "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\grid-800x600.baseline.png",
+diff --git a/reports/visual/origin-800x600.report.json b/reports/visual/origin-800x600.report.json
+index 88be7695..2f18b339 100644
+--- a/reports/visual/origin-800x600.report.json
++++ b/reports/visual/origin-800x600.report.json
+@@ -9,8 +9,8 @@
+     "width": 800,
+     "height": 600
+   },
+-  "timestamp": "2026-01-17T09:33:27.585Z",
+-  "duration": 7046,
++  "timestamp": "2026-01-17T11:36:47.686Z",
++  "duration": 3492,
+   "artifacts": {
+     "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+     "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.baseline.png",
+diff --git a/reports/visual/test-suite-report.json b/reports/visual/test-suite-report.json
+index 0fcf8a06..08563fd5 100644
+--- a/reports/visual/test-suite-report.json
++++ b/reports/visual/test-suite-report.json
+@@ -1,6 +1,6 @@
+ {
+-  "timestamp": "2026-01-17T09:34:12.248Z",
+-  "duration": 60676,
++  "timestamp": "2026-01-17T11:37:15.583Z",
++  "duration": 37741,
+   "total": 7,
+   "passed": 7,
+   "failed": 0,
+@@ -17,8 +17,8 @@
+         "width": 800,
+         "height": 600
+       },
+-      "timestamp": "2026-01-17T09:33:20.508Z",
+-      "duration": 8925,
++      "timestamp": "2026-01-17T11:36:44.186Z",
++      "duration": 6304,
+       "artifacts": {
+         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-800x600.baseline.png",
+@@ -44,8 +44,8 @@
+         "width": 800,
+         "height": 600
+       },
+-      "timestamp": "2026-01-17T09:33:27.585Z",
+-      "duration": 7046,
++      "timestamp": "2026-01-17T11:36:47.686Z",
++      "duration": 3492,
+       "artifacts": {
+         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.baseline.png",
+@@ -71,8 +71,8 @@
+         "width": 800,
+         "height": 600
+       },
+-      "timestamp": "2026-01-17T09:33:34.389Z",
+-      "duration": 6797,
++      "timestamp": "2026-01-17T11:36:50.897Z",
++      "duration": 3206,
+       "artifacts": {
+         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\grid-800x600.baseline.png",
+@@ -98,8 +98,8 @@
+         "width": 1920,
+         "height": 1080
+       },
+-      "timestamp": "2026-01-17T09:34:01.347Z",
+-      "duration": 26927,
++      "timestamp": "2026-01-17T11:37:05.744Z",
++      "duration": 14827,
+       "artifacts": {
+         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.baseline.png",
+@@ -125,8 +125,8 @@
+         "width": 800,
+         "height": 800
+       },
+-      "timestamp": "2026-01-17T09:34:06.112Z",
+-      "duration": 4758,
++      "timestamp": "2026-01-17T11:37:09.892Z",
++      "duration": 4139,
+       "artifacts": {
+         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.baseline.png",
+@@ -152,8 +152,8 @@
+         "width": 320,
+         "height": 240
+       },
+-      "timestamp": "2026-01-17T09:34:06.741Z",
+-      "duration": 618,
++      "timestamp": "2026-01-17T11:37:10.482Z",
++      "duration": 582,
+       "artifacts": {
+         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.baseline.png",
+@@ -179,8 +179,8 @@
+         "width": 1024,
+         "height": 768
+       },
+-      "timestamp": "2026-01-17T09:34:12.156Z",
+-      "duration": 5409,
++      "timestamp": "2026-01-17T11:37:15.493Z",
++      "duration": 5007,
+       "artifacts": {
+         "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+         "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.baseline.png",
+diff --git a/src/app/api/admin/set-user-claims/route.ts b/src/app/api/admin/set-user-claims/route.ts
+index 820e30f5..031babdf 100644
+--- a/src/app/api/admin/set-user-claims/route.ts
++++ b/src/app/api/admin/set-user-claims/route.ts
+@@ -17,12 +17,58 @@
+  */
+ 
+ import { NextRequest, NextResponse } from 'next/server';
+-import { withAuth, isValidGlobalRole } from '@/lib/auth';
++import { withAuth, isValidGlobalRole, GLOBAL_ROLES } from '@/lib/auth';
+ import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
+ import { logClaimsUpdated, extractRequestMetadata } from '@/lib/auth';
+ import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
+ import { COLLECTIONS } from '@/config/firestore-collections';
+ 
++// ============================================================================
++// VALIDATION
++// ============================================================================
++
++/**
++ * Validate SetClaimsRequest body
++ * 🔒 ENTERPRISE: Rejects hardcoded default values
++ */
++function validateSetClaimsRequest(data: unknown): { valid: boolean; errors: string[] } {
++  const errors: string[] = [];
++
++  if (!data || typeof data !== 'object') {
++    errors.push('Invalid request body');
++    return { valid: false, errors };
++  }
++
++  const req = data as Partial<SetUserClaimsRequest>;
++
++  // Validate globalRole against CENTRALIZED constants
++  if (!req.globalRole || !GLOBAL_ROLES.includes(req.globalRole as GlobalRole)) {
++    errors.push(`Invalid globalRole. Must be one of: ${GLOBAL_ROLES.join(', ')}`);
++  }
++
++  // Validate companyId format (no hardcoded values accepted)
++  if (!req.companyId || typeof req.companyId !== 'string' || req.companyId.length < 3) {
++    errors.push('Invalid companyId format');
++  }
++
++  // ✅ ENTERPRISE: Reject hardcoded "default" values
++  if (req.companyId === 'default-company' || req.companyId === 'default') {
++    errors.push('Hardcoded default values not allowed. Provide actual companyId.');
++  }
++
++  // Validate uid
++  if (!req.uid || typeof req.uid !== 'string' || req.uid.length < 10) {
++    errors.push('Invalid uid format');
++  }
++
++  // Validate email
++  if (!req.email || typeof req.email !== 'string' || !req.email.includes('@')) {
++    errors.push('Invalid email format');
++  }
++
++  return { valid: errors.length === 0, errors };
++}
++
+ // ============================================================================
+ // TYPES
+ // ============================================================================
+@@ -88,49 +134,25 @@ async function handleSetUserClaims(
+     // STEP 1: Parse and validate request body
+     // ========================================================================
+ 
+-    const body: SetUserClaimsRequest = await request.json();
+-    const { uid, companyId, globalRole, email } = body;
+-
+-    // ========================================================================
+-    // INPUT VALIDATION
+-    // ========================================================================
+-
+-    if (!uid || typeof uid !== 'string') {
+-      console.warn(`⚠️ [SET_USER_CLAIMS] Invalid uid: ${uid}`);
+-      return NextResponse.json(
+-        { success: false, message: 'Invalid uid', error: 'uid is required and must be a string' },
+-        { status: 400 }
+-      );
+-    }
+-
+-    if (!companyId || typeof companyId !== 'string') {
+-      console.warn(`⚠️ [SET_USER_CLAIMS] Invalid companyId: ${companyId}`);
+-      return NextResponse.json(
+-        { success: false, message: 'Invalid companyId', error: 'companyId is required and must be a string' },
+-        { status: 400 }
+-      );
+-    }
+-
+-    if (!email || typeof email !== 'string') {
+-      console.warn(`⚠️ [SET_USER_CLAIMS] Invalid email: ${email}`);
+-      return NextResponse.json(
+-        { success: false, message: 'Invalid email', error: 'email is required and must be a string' },
+-        { status: 400 }
+-      );
+-    }
++    const body = await request.json();
+ 
+-    if (!isValidGlobalRole(globalRole)) {
+-      console.warn(`⚠️ [SET_USER_CLAIMS] Invalid globalRole: ${globalRole}`);
++    // 🔒 ENTERPRISE: Comprehensive validation
++    const validation = validateSetClaimsRequest(body);
++    if (!validation.valid) {
++      console.warn(`⚠️ [SET_USER_CLAIMS] Validation failed:`, validation.errors);
+       return NextResponse.json(
+         {
+           success: false,
+-          message: 'Invalid globalRole',
+-          error: `globalRole must be one of: super_admin, company_admin, company_staff, company_user`
++          message: 'Validation failed',
++          error: validation.errors.join(', '),
++          errors: validation.errors
+         },
+         { status: 400 }
+       );
+     }
+ 
++    const { uid, companyId, globalRole, email } = body as SetUserClaimsRequest;
++
+     // ========================================================================
+     // TENANT ISOLATION - ENTERPRISE SECURITY
+     // ========================================================================
+diff --git a/src/app/auth/action/page.tsx b/src/app/auth/action/page.tsx
+index 14db08c2..6f59dc4d 100644
+--- a/src/app/auth/action/page.tsx
++++ b/src/app/auth/action/page.tsx
+@@ -44,6 +44,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
+ import { LanguageSwitcher } from '@/components/header/language-switcher';
+ import { ThemeToggle } from '@/components/header/theme-toggle';
+ import { Lock, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
++// 🏢 ENTERPRISE: Centralized route constants
++import { AUTH_ROUTES } from '@/lib/routes';
+ 
+ // =============================================================================
+ // TYPES
+@@ -442,7 +444,7 @@ export default function AuthActionPage() {
+             {state.status === 'success' && (
+               <nav className={`${layout.flexColGap2} ${layout.textCenter}`}>
+                 <Button
+-                  onClick={() => router.push('/login')}
++                  onClick={() => router.push(AUTH_ROUTES.login)}
+                   className={layout.widthFull}
+                 >
+                   {t('action.buttons.goToLogin')}
+@@ -454,7 +456,7 @@ export default function AuthActionPage() {
+             {state.status === 'error' && (
+               <nav className={`${layout.flexColGap2} ${layout.textCenter}`}>
+                 <Button
+-                  onClick={() => router.push('/login')}
++                  onClick={() => router.push(AUTH_ROUTES.login)}
+                   className={layout.widthFull}
+                 >
+                   {t('action.buttons.goToLogin')}
+diff --git a/src/app/components/ConditionalAppShell.tsx b/src/app/components/ConditionalAppShell.tsx
+index 62a12309..6dfb0abe 100644
+--- a/src/app/components/ConditionalAppShell.tsx
++++ b/src/app/components/ConditionalAppShell.tsx
+@@ -23,27 +23,30 @@ import { MainContentBridge } from './MainContentBridge';
+ // 🏢 ENTERPRISE: Centralized design system hooks
+ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
++// 🏢 ENTERPRISE: Centralized route constants
++import { AUTH_ROUTES } from '@/lib/routes';
+ 
+ /**
+  * Routes that should display standalone (no sidebar/header)
+  * Enterprise pattern: Authentication pages are always standalone
++ * NOTE: Using centralized AUTH_ROUTES from @/lib/routes
+  */
+-const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password'] as const;
++const STANDALONE_ROUTES = [AUTH_ROUTES.login] as const;
+ 
+ interface ConditionalAppShellProps {
+   children: React.ReactNode;
+ }
+ 
+ /**
+- * Checks if the current path is an auth route
++ * Checks if the current path is a standalone route (no shell)
+  */
+-function isAuthRoute(pathname: string): boolean {
+-  return AUTH_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`));
++function isStandaloneRouteCheck(pathname: string): boolean {
++  return STANDALONE_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`));
+ }
+ 
+ export function ConditionalAppShell({ children }: ConditionalAppShellProps) {
+   const pathname = usePathname();
+-  const isStandaloneRoute = isAuthRoute(pathname);
++  const isStandaloneRoute = isStandaloneRouteCheck(pathname);
+   // 🏢 ENTERPRISE: Centralized design system hooks
+   const layout = useLayoutClasses();
+   const colors = useSemanticColors();
+diff --git a/src/auth/components/ProtectedRoute.tsx b/src/auth/components/ProtectedRoute.tsx
+index db71d637..e404c893 100644
+--- a/src/auth/components/ProtectedRoute.tsx
++++ b/src/auth/components/ProtectedRoute.tsx
+@@ -15,6 +15,8 @@ import { useUserRole } from '../contexts/UserRoleContext';
+ import { Loader2 } from 'lucide-react';
+ import { useIconSizes } from '@/hooks/useIconSizes';
+ import type { ProtectedRouteProps, UserRole } from '../types/auth.types';
++// 🏢 ENTERPRISE: Centralized route constants
++import { AUTH_ROUTES } from '@/lib/routes';
+ 
+ // =============================================================================
+ // PROTECTED ROUTE COMPONENT
+@@ -24,7 +26,7 @@ export function ProtectedRoute({
+   children,
+   fallback,
+   requiredRole,
+-  redirectTo = '/login'
++  redirectTo = AUTH_ROUTES.login
+ }: ProtectedRouteProps) {
+   const iconSizes = useIconSizes();
+   const { user, isLoading, isAuthenticated, isAdmin } = useUserRole();
+diff --git a/src/components/header/user-menu.tsx b/src/components/header/user-menu.tsx
+index 48285dee..630f8ad7 100644
+--- a/src/components/header/user-menu.tsx
++++ b/src/components/header/user-menu.tsx
+@@ -41,7 +41,7 @@ import { Spinner } from '@/components/ui/spinner';
+ // 🏢 ENTERPRISE: i18n - Full internationalization support
+ import { useTranslation } from '@/i18n/hooks/useTranslation';
+ // 🏢 ENTERPRISE: Centralized routes
+-import { ACCOUNT_ROUTES } from '@/lib/routes';
++import { ACCOUNT_ROUTES, AUTH_ROUTES } from '@/lib/routes';
+ 
+ export function UserMenu() {
+   // 🏢 ENTERPRISE: i18n hook
+@@ -70,7 +70,7 @@ export function UserMenu() {
+     console.log('🔐 [UserMenu] Starting optimistic logout');
+ 
+     // 🚀 OPTIMISTIC: Redirect immediately for instant feedback
+-    router.push('/login');
++    router.push(AUTH_ROUTES.login);
+ 
+     // 🔥 FIRE & FORGET: SignOut in background
+     try {
+diff --git a/src/features/public-sidebar/PublicSidebar.tsx b/src/features/public-sidebar/PublicSidebar.tsx
+index eabacb0a..aaef7516 100644
+--- a/src/features/public-sidebar/PublicSidebar.tsx
++++ b/src/features/public-sidebar/PublicSidebar.tsx
+@@ -13,6 +13,9 @@ import { CompanyInfo } from './components/CompanyInfo';
+ import { QuickStats as QuickStatsComponent } from './components/QuickStats';
+ import { useIconSizes } from '@/hooks/useIconSizes';
+ import { useBorderTokens } from '@/hooks/useBorderTokens';
++import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
++// 🏢 ENTERPRISE: Centralized route constants
++import { AUTH_ROUTES } from '@/lib/routes';
+ 
+ interface PublicSidebarProps {
+   isAuthenticated?: boolean;
+@@ -75,7 +78,7 @@ export function PublicSidebar({ isAuthenticated = false, userEmail }: PublicSide
+           </div>
+         ) : (
+           <Button variant="outline" className="w-full" asChild>
+-            <Link href="/login">
++            <Link href={AUTH_ROUTES.login}>
+               <LogIn className={`mr-2 ${iconSizes.sm}`} />
+               Σύνδεση
+             </Link>
+diff --git a/src/hooks/useLayoutClasses.ts b/src/hooks/useLayoutClasses.ts
+index 3bce6b98..e3e503e6 100644
+--- a/src/hooks/useLayoutClasses.ts
++++ b/src/hooks/useLayoutClasses.ts
+@@ -166,6 +166,18 @@ export interface UseLayoutClassesReturn {
+   readonly responsivePagePadding: string;
+   /** Gap 6 - "gap-6" - Section gaps */
+   readonly gap6: string;
++  /** Padding 6 - "p-6" (24px) - Large page padding */
++  readonly padding6: string;
++  /** Margin bottom 2 - "mb-2" (8px) */
++  readonly marginBottom2: string;
++  /** Margin bottom 3 - "mb-3" (12px) */
++  readonly marginBottom3: string;
++  /** Margin bottom 6 - "mb-6" (24px) */
++  readonly marginBottom6: string;
++  /** Margin bottom 8 - "mb-8" (32px) */
++  readonly marginBottom8: string;
++  /** Flex column gap 3 - "flex flex-col gap-3" */
++  readonly flexColGap3: string;
+ 
+   // ==========================================================================
+   // 📐 LAYOUT PRIMITIVES - Single source of truth for common utilities
+@@ -307,6 +319,12 @@ export function useLayoutClasses(): UseLayoutClassesReturn {
+     paddingNavLink: "px-3 py-2",                       // Nav link padding
+     responsivePagePadding: "p-4 sm:p-6 md:p-8",        // Responsive page padding
+     gap6: "gap-6",                                     // Section gaps
++    padding6: "p-6",                                   // Large page padding (24px)
++    marginBottom2: "mb-2",                             // Margin bottom 2 (8px)
++    marginBottom3: "mb-3",                             // Margin bottom 3 (12px)
++    marginBottom6: "mb-6",                             // Margin bottom 6 (24px)
++    marginBottom8: "mb-8",                             // Margin bottom 8 (32px)
++    flexColGap3: "flex flex-col gap-3",                // Flex column gap 3
+ 
+     // ========================================================================
+     // 📐 LAYOUT PRIMITIVES - Single source of truth for common utilities
+diff --git a/src/hooks/useTypography.ts b/src/hooks/useTypography.ts
+index f5132d40..2c9b0b54 100644
+--- a/src/hooks/useTypography.ts
++++ b/src/hooks/useTypography.ts
+@@ -165,8 +165,12 @@ export interface UseTypographyReturn {
+ 
+   // 💰 SPECIAL PURPOSE PATTERNS
+   readonly special: {
++    /** "text-6xl font-bold" - Hero/404 large headings */
++    readonly heroHeading: string;
+     /** "text-xl font-semibold text-foreground" - Main container titles */
+     readonly containerTitle: string;
++    /** "text-xl font-semibold" - Page titles */
++    readonly pageTitle: string;
+     /** "text-sm font-medium truncate flex-1" - Mobile titles */
+     readonly mobileTitle: string;
+     /** "font-mono text-xs" - Code/ID display */
+@@ -250,8 +254,10 @@ export function useTypography(): UseTypographyReturn {
+ 
+     // 💰 SPECIAL PURPOSE PATTERNS - Using centralized semantic tokens where possible
+     special: {
++      heroHeading: "text-6xl font-bold",                     // Hero/404 large headings
+       containerTitle: h4Token.tailwind + " text-foreground", // "text-xl font-semibold text-foreground" (semantic token + semantic color)
+-      mobileTitle: "text-sm font-medium truncate flex-1",     // "text-sm font-medium truncate flex-1" (caption + custom)
++      pageTitle: h4Token.tailwind,                           // "text-xl font-semibold" (page titles without color)
++      mobileTitle: "text-sm font-medium truncate flex-1",    // "text-sm font-medium truncate flex-1" (caption + custom)
+       codeId: "font-mono text-xs",                           // Version IDs, codes (mono font not in tokens)
+       price: "font-medium text-green-600",                   // Price displays (color will be handled by color tokens)
+       secondary: "text-sm text-muted-foreground",            // "text-sm text-muted-foreground" (caption + semantic color)
+diff --git a/src/i18n/lazy-config.ts b/src/i18n/lazy-config.ts
+index 38294613..40ef25fe 100644
+--- a/src/i18n/lazy-config.ts
++++ b/src/i18n/lazy-config.ts
+@@ -33,7 +33,8 @@ export const SUPPORTED_NAMESPACES = [
+   'contacts',
+   'units',
+   'landing',
+-  'telegram'  // Telegram bot templates - PR1 centralization
++  'telegram',  // Telegram bot templates - PR1 centralization
++  'admin'      // Admin UI (claims repair, user management)
+ ] as const;
+ export type Namespace = typeof SUPPORTED_NAMESPACES[number];
+ 
+@@ -122,6 +123,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
+         case 'telegram':
+           translations = await import('./locales/el/telegram.json');
+           break;
++        case 'admin':
++          translations = await import('./locales/el/admin.json');
++          break;
+         default:
+           console.warn(`Namespace ${namespace} not found for language ${language}`);
+           return {};
+@@ -192,6 +196,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
+         case 'telegram':
+           translations = await import('./locales/en/telegram.json');
+           break;
++        case 'admin':
++          translations = await import('./locales/en/admin.json');
++          break;
+         default:
+           console.warn(`Namespace ${namespace} not found for language ${language}`);
+           return {};
+diff --git a/src/i18n/locales/el/errors.json b/src/i18n/locales/el/errors.json
+index 9025e0f9..eadd2e3d 100644
+--- a/src/i18n/locales/el/errors.json
++++ b/src/i18n/locales/el/errors.json
+@@ -2,10 +2,16 @@
+   "http": {
+     "400": "Κακό αίτημα",
+     "401": "Μη εξουσιοδοτημένη πρόσβαση",
+-    "403": "Απαγορευμένη πρόσβαση", 
++    "403": "Απαγορευμένη πρόσβαση",
+     "404": "Δεν βρέθηκε",
+     "500": "Σφάλμα διακομιστή"
+   },
++  "notFound": {
++    "title": "Η σελίδα δεν βρέθηκε",
++    "description": "Η σελίδα που αναζητάτε δεν υπάρχει ή έχει μετακινηθεί.",
++    "goBack": "Επιστροφή",
++    "goHome": "Αρχική Σελίδα"
++  },
+   "auth": {
+     "tokenExpired": "Η συνεδρία έχει λήξει. Παρακαλώ συνδεθείτε ξανά.",
+     "invalidCredentials": "Μη έγκυρα διαπιστευτήρια",
+diff --git a/src/i18n/locales/en/errors.json b/src/i18n/locales/en/errors.json
+index b038e094..d7b423c5 100644
+--- a/src/i18n/locales/en/errors.json
++++ b/src/i18n/locales/en/errors.json
+@@ -2,10 +2,16 @@
+   "http": {
+     "400": "Bad request",
+     "401": "Unauthorized access",
+-    "403": "Forbidden access", 
++    "403": "Forbidden access",
+     "404": "Not found",
+     "500": "Server error"
+   },
++  "notFound": {
++    "title": "Page not found",
++    "description": "The page you are looking for doesn't exist or has been moved.",
++    "goBack": "Go back",
++    "goHome": "Home Page"
++  },
+   "auth": {
+     "tokenExpired": "Session has expired. Please log in again.",
+     "invalidCredentials": "Invalid credentials",
+diff --git a/src/lib/api/enterprise-api-client.ts b/src/lib/api/enterprise-api-client.ts
+index 558021d5..f1c89384 100644
+--- a/src/lib/api/enterprise-api-client.ts
++++ b/src/lib/api/enterprise-api-client.ts
+@@ -436,10 +436,11 @@ export class EnterpriseApiClient {
+     // Error responses - normalize based on status code
+     let errorMessage = statusText || 'Request failed';
+     let errorCode = `HTTP_${status}`;
++    let errorBody: Record<string, unknown> | null = null;
+ 
+     try {
+       // Try to parse error response body
+-      const errorBody = await response.json();
++      errorBody = await response.json();
+ 
+       if (errorBody && typeof errorBody === 'object') {
+         errorMessage = (errorBody as Record<string, unknown>).error as string || errorMessage;
+@@ -452,6 +453,19 @@ export class EnterpriseApiClient {
+     // Throw normalized error based on status code
+     switch (status) {
+       case 401:
++        // 🔐 ENTERPRISE: Log 401 Unauthorized με detailed evidence
++        const details = errorBody?.details as Record<string, unknown> | undefined;
++        console.log('[API_EVIDENCE] 401 Unauthorized:', {
++          url: context.url,
++          status: response.status,
++          reason: details?.reason || 'unknown',
++          hint: details?.hint || 'no hint provided',
++          timestamp: new Date().toISOString(),
++          headers: {
++            'x-auth-failure-reason': response.headers.get('X-Auth-Failure-Reason') || 'not set'
++          }
++        });
++
+         // Clear token cache on 401 (expired/invalid token)
+         this.tokenCache = null;
+         throw new ApiClientError(
+@@ -561,15 +575,14 @@ export class EnterpriseApiClient {
+         }
+ 
+         // 🚨 CONTRACT VIOLATION: 200 OK but not canonical format
+-        // This helps identify endpoints that need migration to canonical format
++        // MIGRATION MODE: Log warning but allow raw response for backwards compatibility
++        // TODO: Switch to strict enforcement after all 71 endpoints migrate to apiSuccess()
++        // SEE: src/lib/api/ApiErrorHandler.ts - apiSuccess() helper
+         console.warn(
+-          `⚠️ [API Contract] ${context.url} returned 200 but not canonical format. Keys: [${keys.join(', ')}]`
++          `⚠️ [API Contract] ${context.url} returned 200 but not canonical format. ` +
++          `Keys: [${keys.join(', ')}]. Migrate to apiSuccess() from ApiErrorHandler.`
+         );
+ 
+-        // For backwards compatibility, still return the raw response
+-        // TODO: After all endpoints are migrated, throw ContractViolationError here
+-        // throw new ContractViolationError(context.url, response.status, context.requestId, keys);
+-
+         return json as T;
+       }
+ 
+diff --git a/src/lib/auth/auth-context.ts b/src/lib/auth/auth-context.ts
+index baaab163..9a3f6f90 100644
+--- a/src/lib/auth/auth-context.ts
++++ b/src/lib/auth/auth-context.ts
+@@ -72,7 +72,11 @@ function getAdminApp(): App | null {
+   }
+ 
+   // No app initialized - caller should ensure centralized init was called
+-  console.warn('[AUTH_CONTEXT] Firebase Admin not initialized. Ensure admin-guards.ts or firebase-admin.ts is imported first.');
++  // ✅ PRODUCTION: Dev-only logging (gated by NODE_ENV)
++  // TODO: Implement server-side centralized logger for production
++  if (process.env.NODE_ENV !== 'production') {
++    console.warn('[AUTH_CONTEXT] Firebase Admin not initialized. Ensure admin-guards.ts or firebase-admin.ts is imported first.');
++  }
+   return null;
+ }
+ 
+@@ -114,14 +118,20 @@ async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
+   try {
+     const app = getAdminApp();
+     if (!app) {
+-      console.log('[AUTH_CONTEXT] Cannot verify token - Admin SDK not initialized');
++      // ✅ PRODUCTION: Dev-only logging (NO PII)
++      if (process.env.NODE_ENV !== 'production') {
++        console.warn('[AUTH_CONTEXT] Cannot verify token - Admin SDK not initialized');
++      }
+       return null;
+     }
+ 
+     const auth = getAuth(app);
+     return await auth.verifyIdToken(token);
+   } catch (error) {
+-    console.log('[AUTH_CONTEXT] Token verification failed:', (error as Error).message);
++    // ✅ PRODUCTION: Dev-only logging (NO PII - only error message)
++    if (process.env.NODE_ENV !== 'production') {
++      console.warn('[AUTH_CONTEXT] Token verification failed:', (error as Error).message);
++    }
+     return null;
+   }
+ }
+@@ -140,14 +150,20 @@ function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
+   // Extract companyId (required for multi-tenant)
+   const companyId = token.companyId as string | undefined;
+   if (!companyId || typeof companyId !== 'string') {
+-    console.log('[AUTH_CONTEXT] Missing companyId claim');
++    // ✅ PRODUCTION: Dev-only logging (NO PII)
++    if (process.env.NODE_ENV !== 'production') {
++      console.warn('[AUTH_CONTEXT] Missing companyId claim');
++    }
+     return null;
+   }
+ 
+   // Extract globalRole (required)
+   const globalRoleRaw = token.globalRole as string | undefined;
+   if (!globalRoleRaw || !isValidGlobalRole(globalRoleRaw)) {
+-    console.log('[AUTH_CONTEXT] Invalid globalRole claim:', globalRoleRaw);
++    // ✅ PRODUCTION: Dev-only logging (NO PII - only validation result)
++    if (process.env.NODE_ENV !== 'production') {
++      console.warn('[AUTH_CONTEXT] Invalid globalRole claim:', globalRoleRaw);
++    }
+     return null;
+   }
+ 
+@@ -209,6 +225,11 @@ export async function buildRequestContext(
+   // Step 3: Extract RFC v6 claims
+   const claims = extractCustomClaims(decodedToken);
+   if (!claims) {
++    // ✅ PRODUCTION: Minimal server-side logging (NO PII)
++    // Use centralized logger in production environments
++    if (process.env.NODE_ENV !== 'production') {
++      console.warn('[AUTH] Missing claims detected');
++    }
+     return createUnauthenticatedContext('missing_claims');
+   }
+ 
+diff --git a/src/lib/auth/middleware.ts b/src/lib/auth/middleware.ts
+index ca1f80b9..afc52ae7 100644
+--- a/src/lib/auth/middleware.ts
++++ b/src/lib/auth/middleware.ts
+@@ -75,13 +75,17 @@ interface ErrorResponse {
+ 
+ /**
+  * Create 401 Unauthorized response.
++ * 🔐 SECURITY: Opaque error - no information disclosure to prevent enumeration.
++ * Server-side logs contain diagnostic details with correlation ID.
+  */
+ function createUnauthorizedResponse(reason: string): NextResponse<ErrorResponse> {
++  // ✅ PRODUCTION: Opaque error, no hints/reason exposed
++  // ✅ Server logs have full diagnostic details (see auth-context.ts)
+   return NextResponse.json(
+     {
+       error: 'Authentication required',
+       code: 'UNAUTHORIZED',
+-      details: { reason },
++      // NO details, NO reason, NO hints - prevents enumeration
+     },
+     { status: 401 }
+   );
+diff --git a/src/lib/routes/index.ts b/src/lib/routes/index.ts
+index 737906b7..0563414b 100644
+--- a/src/lib/routes/index.ts
++++ b/src/lib/routes/index.ts
+@@ -9,3 +9,4 @@
+  */
+ 
+ export * from './accountRoutes';
++export * from './authRoutes';

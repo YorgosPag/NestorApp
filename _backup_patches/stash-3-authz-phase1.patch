@@ -1,0 +1,150 @@
+diff --git a/src/app/crm/communications/page.tsx b/src/app/crm/communications/page.tsx
+index eaa91878..b34a1b8e 100644
+--- a/src/app/crm/communications/page.tsx
++++ b/src/app/crm/communications/page.tsx
+@@ -19,7 +19,7 @@
+  */
+ 
+ import React, { useState, useCallback, useMemo } from 'react';
+-import { MessageSquare, Inbox, Mail, AlertCircle, RefreshCw, Filter, History, User } from 'lucide-react';
++import { MessageSquare, Inbox, Mail, AlertCircle, RefreshCw, Filter, History } from 'lucide-react';
+ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+ import { TooltipProvider } from '@/components/ui/tooltip';
+ import { Button } from '@/components/ui/button';
+@@ -38,6 +38,7 @@ import { AdvancedFiltersPanel, type CommunicationsFilterState, communicationsFil
+ // 🏢 ENTERPRISE: Inbox components (REUSE)
+ import { ThreadView } from '@/components/crm/inbox/ThreadView';
+ import { ReplyComposer } from '@/components/crm/inbox/ReplyComposer';
++import { ContactActivityTimeline } from '@/components/crm/inbox/ContactActivityTimeline';
+ 
+ // 🏢 ENTERPRISE: Design system hooks
+ import { useIconSizes } from '@/hooks/useIconSizes';
+@@ -570,41 +571,11 @@ export default function CrmCommunicationsPage() {
+ 
+                   {/* Tab 2: Ιστορικό Επαφής (Activity Timeline) */}
+                   <TabsContent value="history" className="flex-1 overflow-auto p-4">
+-                    {selectedConversation ? (
+-                      <div className="space-y-4">
+-                        {/* Contact Info Header */}
+-                        <div className={`p-4 rounded-lg ${colors.bg.secondary} flex items-center gap-3`}>
+-                          <div className={`w-10 h-10 rounded-full ${colors.bg.accent} flex items-center justify-center`}>
+-                            <User className={`${iconSizes.md} ${colors.text.accent}`} />
+-                          </div>
+-                          <div>
+-                            <p className="font-medium">
+-                              {selectedConversation.participants.find(p => !p.isInternal)?.displayName || t('inbox.thread.participants')}
+-                            </p>
+-                            <p className={`text-sm ${colors.text.muted}`}>
+-                              {selectedConversation.channel.toUpperCase()}
+-                            </p>
+-                          </div>
+-                        </div>
+-
+-                        {/* Activity Timeline Placeholder */}
+-                        <div className={`p-6 rounded-lg border ${colors.border.default} text-center`}>
+-                          <History className={`${iconSizes.xl} ${colors.text.muted} mx-auto mb-3 opacity-50`} />
+-                          <p className={`font-medium ${colors.text.foreground}`}>
+-                            {t('inbox.historyTitle')}
+-                          </p>
+-                          <p className={`text-sm ${colors.text.muted} mt-1`}>
+-                            {t('inbox.tabs.contactHistory')}
+-                          </p>
+-                          {/* TODO: Replace with ContactActivityTimeline component */}
+-                        </div>
+-                      </div>
+-                    ) : (
+-                      <div className="flex flex-col items-center justify-center h-full">
+-                        <History className={`${iconSizes.xl2} ${colors.text.muted} mb-4 opacity-30`} />
+-                        <p className={colors.text.muted}>{t('inbox.thread.selectConversation')}</p>
+-                      </div>
+-                    )}
++                    <ContactActivityTimeline
++                      conversation={selectedConversation}
++                      messages={messages}
++                      loading={messagesLoading}
++                    />
+                   </TabsContent>
+                 </Tabs>
+               </section>
+diff --git a/src/i18n/locales/el/crm.json b/src/i18n/locales/el/crm.json
+index 97c868ed..7d58ac55 100644
+--- a/src/i18n/locales/el/crm.json
++++ b/src/i18n/locales/el/crm.json
+@@ -180,6 +180,36 @@
+       "loadFailed": "Αποτυχία φόρτωσης",
+       "sendFailed": "Αποτυχία αποστολής μηνύματος",
+       "notAuthenticated": "Δεν είστε συνδεδεμένοι"
++    },
++    "noActivity": "Δεν υπάρχει ιστορικό δραστηριοτήτων",
++    "activity": {
++      "overview": "Επισκόπηση Ιστορικού",
++      "timeline": "Χρονολόγιο Γεγονότων",
++      "summary": "Σύνοψη Συνομιλίας",
++      "totalEvents": "Συνολικά",
++      "received": "Εισερχόμενα",
++      "sent": "Εξερχόμενα",
++      "assignments": "Αναθέσεις",
++      "channel": "Κανάλι",
++      "status": "Κατάσταση",
++      "created": "Δημιουργήθηκε",
++      "assignedTo": "Ανατέθηκε σε",
++      "lastUpdated": "Τελευταία Ενημέρωση",
++      "participants": "Συμμετέχοντες",
++      "conversationOpened": "Έναρξη Συνομιλίας",
++      "conversationOpenedDesc": "Ξεκίνησε νέα συνομιλία μέσω {{channel}}",
++      "conversationClosed": "Κλείσιμο Συνομιλίας",
++      "conversationClosedDesc": "Η συνομιλία έκλεισε",
++      "messageReceived": "Λήψη Μηνύματος",
++      "messageSent": "Αποστολή Μηνύματος",
++      "agentAssigned": "Ανάθεση Πράκτορα",
++      "agentAssignedDesc": "Η συνομιλία ανατέθηκε στον {{agent}}",
++      "system": "Σύστημα",
++      "unknown": "Άγνωστος",
++      "statusCompleted": "Ολοκληρώθηκε",
++      "statusInProgress": "Σε εξέλιξη",
++      "statusPending": "Εκκρεμεί",
++      "statusFailed": "Απέτυχε"
+     }
+   },
+   "leads": {
+diff --git a/src/i18n/locales/en/crm.json b/src/i18n/locales/en/crm.json
+index 9489a877..27d12678 100644
+--- a/src/i18n/locales/en/crm.json
++++ b/src/i18n/locales/en/crm.json
+@@ -180,6 +180,36 @@
+       "loadFailed": "Failed to load",
+       "sendFailed": "Failed to send message",
+       "notAuthenticated": "Not authenticated"
++    },
++    "noActivity": "No activity history",
++    "activity": {
++      "overview": "Activity Overview",
++      "timeline": "Event Timeline",
++      "summary": "Conversation Summary",
++      "totalEvents": "Total",
++      "received": "Received",
++      "sent": "Sent",
++      "assignments": "Assignments",
++      "channel": "Channel",
++      "status": "Status",
++      "created": "Created",
++      "assignedTo": "Assigned To",
++      "lastUpdated": "Last Updated",
++      "participants": "Participants",
++      "conversationOpened": "Conversation Opened",
++      "conversationOpenedDesc": "New conversation started via {{channel}}",
++      "conversationClosed": "Conversation Closed",
++      "conversationClosedDesc": "The conversation was closed",
++      "messageReceived": "Message Received",
++      "messageSent": "Message Sent",
++      "agentAssigned": "Agent Assigned",
++      "agentAssignedDesc": "Conversation assigned to {{agent}}",
++      "system": "System",
++      "unknown": "Unknown",
++      "statusCompleted": "Completed",
++      "statusInProgress": "In Progress",
++      "statusPending": "Pending",
++      "statusFailed": "Failed"
+     }
+   },
+   "leads": {

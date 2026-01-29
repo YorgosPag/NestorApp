@@ -1,0 +1,915 @@
+diff --git a/src/app/api/communications/webhooks/telegram/handler.ts b/src/app/api/communications/webhooks/telegram/handler.ts
+index 9379a9b6..c4a2a4d7 100644
+--- a/src/app/api/communications/webhooks/telegram/handler.ts
++++ b/src/app/api/communications/webhooks/telegram/handler.ts
+@@ -21,6 +21,9 @@ import { storeMessageInCRM } from './crm/store';
+ import { BOT_IDENTITY } from '@/config/domain-constants';
+ import type { TelegramMessage, TelegramSendPayload } from './telegram/types';
+ 
++// 🏢 ENTERPRISE: Audit logging for webhook events
++import { logWebhookEvent } from '@/lib/auth';
++
+ // ============================================================================
+ // SECURITY: SECRET TOKEN VALIDATION (B5 - Enterprise Policy Documentation)
+ // ============================================================================
+@@ -179,7 +182,24 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
+     const secretValidation = validateSecretToken(request);
+     if (!secretValidation.valid) {
+       // AUDIT LOG: Security rejection event
+-      console.error(`🚫 Webhook rejected: ${secretValidation.error} | IP: ${request.headers.get('x-forwarded-for') || 'unknown'}`);
++      const clientIP = request.headers.get('x-forwarded-for') || 'unknown';
++      console.error(`🚫 Webhook rejected: ${secretValidation.error} | IP: ${clientIP}`);
++
++      // 🏢 ENTERPRISE: Audit logging for security rejection (non-blocking)
++      logWebhookEvent(
++        'telegram',
++        'rejected-webhook',
++        {
++          rejectionReason: secretValidation.error,
++          clientIP,
++          success: false,
++          securityEvent: true,
++        },
++        request
++      ).catch((err: unknown) => {
++        console.error('⚠️ Audit logging failed (non-blocking):', err);
++      });
++
+       // B7 FIX: Return 200 to stop Telegram retries, with rejection metadata for audit
+       // Enterprise policy: Acknowledge receipt but indicate rejection in body
+       return NextResponse.json({ ok: true, rejected: true, error: secretValidation.error }, { status: 200 });
+@@ -197,10 +217,46 @@ export async function handlePOST(request: NextRequest): Promise<NextResponse> {
+ 
+     await processTelegramUpdate(webhookData);
+ 
++    // 🏢 ENTERPRISE: Audit logging for successful webhook (non-blocking)
++    const updateId = webhookData.update_id;
++    const messageId = webhookData.message?.message_id || webhookData.callback_query?.message?.message_id;
++    const chatId = webhookData.message?.chat?.id || webhookData.callback_query?.message?.chat?.id;
++
++    logWebhookEvent(
++      'telegram',
++      updateId ? String(updateId) : 'telegram-webhook',
++      {
++        updateId,
++        messageId,
++        chatId,
++        hasMessage: !!webhookData.message,
++        hasCallbackQuery: !!webhookData.callback_query,
++        success: true,
++      },
++      request
++    ).catch((err: unknown) => {
++      console.error('⚠️ Audit logging failed (non-blocking):', err);
++    });
++
+     return NextResponse.json({ ok: true });
+ 
+   } catch (error) {
+     console.error('❌ Telegram webhook error:', error);
++
++    // 🏢 ENTERPRISE: Audit logging for failed webhook (non-blocking)
++    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
++    logWebhookEvent(
++      'telegram',
++      'error-webhook',
++      {
++        error: errorMessage,
++        success: false,
++      },
++      request
++    ).catch((err: unknown) => {
++      console.error('⚠️ Audit logging failed (non-blocking):', err);
++    });
++
+     return NextResponse.json({ ok: true, error: 'internal_error' });
+   }
+ }
+diff --git a/src/app/api/enterprise-ids/migrate/route.ts b/src/app/api/enterprise-ids/migrate/route.ts
+index ed598dc2..a55fa602 100644
+--- a/src/app/api/enterprise-ids/migrate/route.ts
++++ b/src/app/api/enterprise-ids/migrate/route.ts
+@@ -1,9 +1,28 @@
+ /**
+- * 🚀 ENTERPRISE ID MIGRATION API ENDPOINT
++ * =============================================================================
++ * ENTERPRISE ID MIGRATION - PROTECTED (AUTHZ Phase 2)
++ * =============================================================================
+  *
+- * ✅ PURE HTTP: μόνο Request/Response (40 γραμμές)
+- * ✅ NO DUPLICATES: όλη η λογική στον MigrationController
+- * ✅ CLEAN: Route → Controller pattern
++ * @purpose Executes Enterprise ID migration for multi-tenancy
++ * @author Enterprise Architecture Team
++ * @protection withAuth + super_admin + audit logging
++ * @classification Database migration operation
++ *
++ * This endpoint:
++ * - Migrates legacy IDs to enterprise format
++ * - Supports phased rollout (dual support → full migration)
++ * - Processes multiple entity types (company, project, building, unit, contact)
++ *
++ * @method GET - Get migration status (read-only)
++ * @method POST - Execute migration (writes to database)
++ *
++ * @security Multi-layer protection:
++ *   - Layer 1: withAuth (admin:migrations:execute permission)
++ *   - Layer 2: super_admin role check (explicit)
++ *   - Layer 3: Audit logging (logMigrationExecuted)
++ *
++ * @classification CRITICAL - Database migration operation
++ * =============================================================================
+  */
+ 
+ import { NextRequest, NextResponse } from 'next/server';
+@@ -11,22 +30,69 @@ import { MigrationPhase, type MigrationStats } from '@/services/enterprise-id-mi
+ import { EntityType, isValidEntityType } from '@/services/relationships/enterprise-relationship-engine.contracts';
+ import { MigrationController, type MigrationConfig } from './migration-controller';
+ 
++// 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
++import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
++import type { AuthContext, PermissionCache } from '@/lib/auth';
++
+ const controller = new MigrationController();
+ 
+-export async function GET(): Promise<NextResponse> {
+-  try {
+-    const { stats, phase } = controller.getMigrationStatus();
+-    return NextResponse.json({ success: true, message: 'Status retrieved', stats, phase });
+-  } catch (error) {
+-    return NextResponse.json({
+-      success: false,
+-      message: 'Failed to get status',
+-      errors: [error instanceof Error ? error.message : 'Unknown error']
+-    }, { status: 500 });
++/**
++ * GET - Get Migration Status (withAuth protected)
++ * Returns current migration status (read-only).
++ *
++ * @security withAuth + admin:migrations:execute permission
++ */
++export const GET = withAuth(
++  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
++    try {
++      const { stats, phase } = controller.getMigrationStatus();
++      return NextResponse.json({ success: true, message: 'Status retrieved', stats, phase });
++    } catch (error) {
++      return NextResponse.json({
++        success: false,
++        message: 'Failed to get status',
++        errors: [error instanceof Error ? error.message : 'Unknown error']
++      }, { status: 500 });
++    }
++  },
++  { permissions: 'admin:migrations:execute' }
++);
++
++/**
++ * POST - Execute Migration (withAuth protected)
++ * Executes Enterprise ID migration with audit logging.
++ *
++ * @security withAuth + super_admin check + audit logging + admin:migrations:execute permission
++ */
++export const POST = withAuth(
++  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
++    return handleMigrationExecute(req, ctx);
++  },
++  { permissions: 'admin:migrations:execute' }
++);
++
++/**
++ * Internal handler for POST (execute migration).
++ */
++async function handleMigrationExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
++  const startTime = Date.now();
++
++  // 🏢 ENTERPRISE: Super_admin-only check (explicit)
++  if (ctx.globalRole !== 'super_admin') {
++    console.warn(
++      `🚫 [POST /api/enterprise-ids/migrate] BLOCKED: Non-super_admin attempted migration`,
++      { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole }
++    );
++    return NextResponse.json(
++      {
++        success: false,
++        message: 'Forbidden: This CRITICAL migration operation requires super_admin role',
++        errors: ['SUPER_ADMIN_REQUIRED']
++      },
++      { status: 403 }
++    );
+   }
+-}
+ 
+-export async function POST(request: NextRequest): Promise<NextResponse> {
+   try {
+     const body = await request.json();
+     const config: MigrationConfig = {
+@@ -37,12 +103,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
+     };
+ 
+     const result = await controller.executeMigration(config);
+-    return NextResponse.json(result);
++    const duration = Date.now() - startTime;
++
++    // 🏢 ENTERPRISE: Audit logging (non-blocking)
++    const metadata = extractRequestMetadata(request);
++    await logMigrationExecuted(
++      ctx,
++      `enterprise_id_migration_${config.phase}`,
++      {
++        operation: 'enterprise-id-migration',
++        phase: config.phase,
++        entityTypes: config.entityTypes,
++        dryRun: config.dryRun,
++        batchSize: config.batchSize,
++        result: result.success ? 'success' : 'failed',
++        stats: result.stats,
++        executionTimeMs: duration,
++        metadata,
++      },
++      `Enterprise ID migration by ${ctx.globalRole} ${ctx.email}`
++    ).catch((err: unknown) => {
++      console.error('⚠️ Audit logging failed (non-blocking):', err);
++    });
++
++    return NextResponse.json({ ...result, executionTimeMs: duration });
+   } catch (error) {
++    const duration = Date.now() - startTime;
+     return NextResponse.json({
+       success: false,
+       message: 'Migration failed',
+-      errors: [error instanceof Error ? error.message : 'Unknown error']
++      errors: [error instanceof Error ? error.message : 'Unknown error'],
++      executionTimeMs: duration
+     }, { status: 500 });
+   }
+ }
+diff --git a/src/app/api/run-jest/route.ts b/src/app/api/run-jest/route.ts
+deleted file mode 100644
+index f2200bbe..00000000
+--- a/src/app/api/run-jest/route.ts
++++ /dev/null
+@@ -1,83 +0,0 @@
+-/**
+- * 🧪 API ENDPOINT: Run Jest Tests
+- *
+- * Executes Jest test suite server-side and returns JSON results
+- * Used by TestsModal "Unit Tests" tab
+- */
+-
+-import { NextResponse } from 'next/server';
+-import { exec } from 'child_process';
+-import { promisify } from 'util';
+-
+-const execAsync = promisify(exec);
+-
+-export async function POST(request: Request) {
+-  try {
+-    console.log('🧪 Starting Jest test execution...');
+-
+-    const { testFile } = await request.json().catch(() => ({}));
+-
+-    // Build command
+-    const command = testFile
+-      ? `npx jest ${testFile} --json --testPathPattern=dxf-viewer`
+-      : `npx jest --json --testPathPattern=dxf-viewer`;
+-
+-    console.log(`🎯 Running: ${command}`);
+-
+-    // Execute with timeout
+-    const { stdout, stderr } = await execAsync(command, {
+-      timeout: 60000, // 60 second timeout
+-      cwd: process.cwd()
+-    });
+-
+-    // Parse JSON output
+-    let results;
+-    try {
+-      // Jest --json outputs to stdout
+-      results = JSON.parse(stdout);
+-    } catch (parseError) {
+-      console.error('❌ Failed to parse Jest JSON output:', parseError);
+-      return NextResponse.json({
+-        success: false,
+-        error: 'Failed to parse test results',
+-        rawOutput: stdout,
+-        rawError: stderr
+-      }, { status: 500 });
+-    }
+-
+-    console.log('✅ Jest tests completed');
+-
+-    return NextResponse.json({
+-      success: results.success || false,
+-      numTotalTests: results.numTotalTests || 0,
+-      numPassedTests: results.numPassedTests || 0,
+-      numFailedTests: results.numFailedTests || 0,
+-      testResults: results.testResults || [],
+-      duration: results.duration || 0,
+-      timestamp: new Date().toISOString()
+-    });
+-
+-  } catch (error) {
+-    console.error('❌ Jest execution failed:', error);
+-
+-    const errorMessage = error instanceof Error ? error.message : String(error);
+-
+-    return NextResponse.json({
+-      success: false,
+-      error: errorMessage,
+-      timestamp: new Date().toISOString()
+-    }, { status: 500 });
+-  }
+-}
+-
+-export async function GET() {
+-  return NextResponse.json({
+-    message: 'Use POST to run Jest tests',
+-    usage: {
+-      method: 'POST',
+-      body: {
+-        testFile: 'Optional: specific test file to run (e.g., "cursor-crosshair-alignment.test.ts")'
+-      }
+-    }
+-  });
+-}
+diff --git a/src/app/api/run-playwright/route.ts b/src/app/api/run-playwright/route.ts
+deleted file mode 100644
+index 95d3824c..00000000
+--- a/src/app/api/run-playwright/route.ts
++++ /dev/null
+@@ -1,116 +0,0 @@
+-/**
+- * 🎭 API ENDPOINT: Run Playwright E2E Tests
+- *
+- * Executes Playwright test suite server-side and returns JSON results
+- * Used by TestsModal "E2E Tests" tab
+- */
+-
+-import { NextResponse } from 'next/server';
+-import { exec } from 'child_process';
+-import { promisify } from 'util';
+-
+-const execAsync = promisify(exec);
+-
+-export async function POST(request: Request) {
+-  try {
+-    console.log('🎭 Starting Playwright test execution...');
+-
+-    const { testFile, updateSnapshots } = await request.json().catch(() => ({}));
+-
+-    // Build command
+-    let command = testFile
+-      ? `npx playwright test ${testFile} --reporter=json`
+-      : `npx playwright test --reporter=json`;
+-
+-    // Add update snapshots flag if requested
+-    if (updateSnapshots) {
+-      command += ' --update-snapshots';
+-    }
+-
+-    console.log(`🎯 Running: ${command}`);
+-
+-    // Execute with longer timeout (E2E tests take longer)
+-    const { stdout, stderr } = await execAsync(command, {
+-      timeout: 180000, // 3 minute timeout
+-      cwd: process.cwd()
+-    });
+-
+-    // Parse JSON output
+-    let results;
+-    try {
+-      // Playwright JSON reporter outputs to stdout
+-      results = JSON.parse(stdout);
+-    } catch (parseError) {
+-      console.error('❌ Failed to parse Playwright JSON output:', parseError);
+-      return NextResponse.json({
+-        success: false,
+-        error: 'Failed to parse test results',
+-        rawOutput: stdout,
+-        rawError: stderr
+-      }, { status: 500 });
+-    }
+-
+-    console.log('✅ Playwright tests completed');
+-
+-    // 🏢 ENTERPRISE: Playwright test result types
+-    interface PlaywrightTest {
+-      status: 'passed' | 'failed' | 'skipped' | 'timedOut';
+-      title?: string;
+-      duration?: number;
+-    }
+-
+-    interface PlaywrightSuite {
+-      title?: string;
+-      tests?: PlaywrightTest[];
+-      suites?: PlaywrightSuite[];
+-    }
+-
+-    interface TestSummary {
+-      total: number;
+-      passed: number;
+-      failed: number;
+-    }
+-
+-    // Extract summary from Playwright results
+-    const summary = results.suites?.reduce((acc: TestSummary, suite: PlaywrightSuite) => {
+-      acc.total += suite.tests?.length || 0;
+-      acc.passed += suite.tests?.filter((t: PlaywrightTest) => t.status === 'passed').length || 0;
+-      acc.failed += suite.tests?.filter((t: PlaywrightTest) => t.status === 'failed').length || 0;
+-      return acc;
+-    }, { total: 0, passed: 0, failed: 0 } as TestSummary);
+-
+-    return NextResponse.json({
+-      success: summary?.failed === 0,
+-      numTotalTests: summary?.total || 0,
+-      numPassedTests: summary?.passed || 0,
+-      numFailedTests: summary?.failed || 0,
+-      suites: results.suites || [],
+-      duration: results.duration || 0,
+-      timestamp: new Date().toISOString()
+-    });
+-
+-  } catch (error) {
+-    console.error('❌ Playwright execution failed:', error);
+-
+-    const errorMessage = error instanceof Error ? error.message : String(error);
+-
+-    return NextResponse.json({
+-      success: false,
+-      error: errorMessage,
+-      timestamp: new Date().toISOString()
+-    }, { status: 500 });
+-  }
+-}
+-
+-export async function GET() {
+-  return NextResponse.json({
+-    message: 'Use POST to run Playwright E2E tests',
+-    usage: {
+-      method: 'POST',
+-      body: {
+-        testFile: 'Optional: specific test file to run (e.g., "visual-cross-browser.spec.ts")',
+-        updateSnapshots: 'Optional: true to update visual snapshots'
+-      }
+-    }
+-  });
+-}
+diff --git a/src/app/api/run-vitest/route.ts b/src/app/api/run-vitest/route.ts
+deleted file mode 100644
+index 3e561380..00000000
+--- a/src/app/api/run-vitest/route.ts
++++ /dev/null
+@@ -1,84 +0,0 @@
+-/**
+- * 🧪 API ENDPOINT: Run Vitest Tests
+- *
+- * Executes Vitest test suite server-side and returns JSON results
+- * Used by TestsModal "Unit Tests" tab
+- */
+-
+-import { NextResponse } from 'next/server';
+-import { exec } from 'child_process';
+-import { promisify } from 'util';
+-
+-const execAsync = promisify(exec);
+-
+-export async function POST(request: Request) {
+-  try {
+-    console.log('🧪 Starting Vitest test execution...');
+-
+-    const { testFile } = await request.json().catch(() => ({}));
+-
+-    // Build command
+-    const command = testFile
+-      ? `npx vitest run ${testFile} --reporter=json --config src/subapps/dxf-viewer/vitest.config.enterprise.ts`
+-      : `npx vitest run --reporter=json --config src/subapps/dxf-viewer/vitest.config.enterprise.ts`;
+-
+-    console.log(`🎯 Running: ${command}`);
+-
+-    // Execute with timeout
+-    const { stdout, stderr } = await execAsync(command, {
+-      timeout: 60000, // 60 second timeout
+-      cwd: process.cwd()
+-    });
+-
+-    // Parse JSON output
+-    let results;
+-    try {
+-      // Vitest JSON reporter outputs to stdout
+-      results = JSON.parse(stdout);
+-    } catch (parseError) {
+-      // Fallback: parse stderr or return raw output
+-      console.error('❌ Failed to parse Vitest JSON output:', parseError);
+-      return NextResponse.json({
+-        success: false,
+-        error: 'Failed to parse test results',
+-        rawOutput: stdout,
+-        rawError: stderr
+-      }, { status: 500 });
+-    }
+-
+-    console.log('✅ Vitest tests completed');
+-
+-    return NextResponse.json({
+-      success: results.success || false,
+-      numTotalTests: results.numTotalTests || 0,
+-      numPassedTests: results.numPassedTests || 0,
+-      numFailedTests: results.numFailedTests || 0,
+-      testResults: results.testResults || [],
+-      duration: results.duration || 0,
+-      timestamp: new Date().toISOString()
+-    });
+-
+-  } catch (error) {
+-    console.error('❌ Vitest execution failed:', error);
+-
+-    const errorMessage = error instanceof Error ? error.message : String(error);
+-
+-    return NextResponse.json({
+-      success: false,
+-      error: errorMessage,
+-      timestamp: new Date().toISOString()
+-    }, { status: 500 });
+-  }
+-}
+-
+-export async function GET() {
+-  return NextResponse.json({
+-    message: 'Use POST to run Vitest tests',
+-    usage: {
+-      method: 'POST',
+-      body: {
+-        testFile: 'Optional: specific test file to run (e.g., "coord.prop.test.ts")'
+-      }
+-    }
+-  });
+-}
+diff --git a/src/lib/auth/types.ts b/src/lib/auth/types.ts
+index 2142aefd..385e1218 100644
+--- a/src/lib/auth/types.ts
++++ b/src/lib/auth/types.ts
+@@ -239,7 +239,7 @@ export type AuditTargetType = keyof typeof AUDIT_TARGET_TYPES;
+  * Typed audit change value (NO any!).
+  */
+ export interface AuditChangeValue {
+-  type: 'role' | 'permission' | 'grant' | 'status' | 'membership';
++  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook';
+   value: string | string[] | Record<string, unknown>;
+ }
+ 
+diff --git a/src/subapps/dxf-viewer/ui/components/TestsModal.tsx b/src/subapps/dxf-viewer/ui/components/TestsModal.tsx
+index 817c52b9..e2f384d6 100644
+--- a/src/subapps/dxf-viewer/ui/components/TestsModal.tsx
++++ b/src/subapps/dxf-viewer/ui/components/TestsModal.tsx
+@@ -21,14 +21,12 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
+ // Custom hooks (extracted)
+ import { useTestState } from './tests-modal/hooks/useTestState';
+ import { useDraggableModal } from './tests-modal/hooks/useDraggableModal';
+-import { useApiTests } from './tests-modal/hooks/useApiTests';
+ import { useTestExecution } from './tests-modal/hooks/useTestExecution';
+ import { useStandaloneTests } from './tests-modal/hooks/useStandaloneTests';
+ 
+ // Components (extracted)
+ import { TestTabs } from './tests-modal/components/TestTabs';
+ import { AutomatedTestsTab } from './tests-modal/components/AutomatedTestsTab';
+-import { UnitTestsTab } from './tests-modal/components/UnitTestsTab';
+ import { StandaloneTestsTab } from './tests-modal/components/StandaloneTestsTab';
+ 
+ // Constants (extracted)
+@@ -53,7 +51,6 @@ export const TestsModal: React.FC<TestsModalProps> = ({
+   const testState = useTestState();
+   const draggable = useDraggableModal(isOpen);
+   const { handleRunTest, handleRunAllTests } = useTestExecution(showCopyableNotification, testState);
+-  const apiTests = useApiTests(showCopyableNotification, testState);
+   const standaloneTests = useStandaloneTests(showCopyableNotification, testState);
+ 
+   if (!isOpen) return null;
+@@ -116,15 +113,7 @@ export const TestsModal: React.FC<TestsModalProps> = ({
+             />
+           )}
+ 
+-          {/* TAB 2: Unit & E2E Tests */}
+-          {testState.activeTab === 'unit' && (
+-            <UnitTestsTab
+-              testState={testState}
+-              apiTests={apiTests}
+-            />
+-          )}
+-
+-          {/* TAB 3: Standalone Tests */}
++          {/* TAB 2: Standalone Tests */}
+           {testState.activeTab === 'standalone' && (
+             <StandaloneTestsTab
+               testState={testState}
+diff --git a/src/subapps/dxf-viewer/ui/components/tests-modal/components/TestTabs.tsx b/src/subapps/dxf-viewer/ui/components/tests-modal/components/TestTabs.tsx
+index c1fee311..ea22f5bc 100644
+--- a/src/subapps/dxf-viewer/ui/components/tests-modal/components/TestTabs.tsx
++++ b/src/subapps/dxf-viewer/ui/components/tests-modal/components/TestTabs.tsx
+@@ -37,17 +37,6 @@ export const TestTabs: React.FC<TestTabsProps> = ({ activeTab, onTabChange }) =>
+         <ClipboardList className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.RIGHT_XS}`} />
+         Automated Tests
+       </button>
+-      <button
+-        onClick={() => onTabChange('unit')}
+-        className={`${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TRANSITION.COLORS} relative ${
+-          activeTab === 'unit'
+-            ? `${colors.text.accent} ${getDirectionalBorder('info', 'bottom')}`
+-            : `${colors.text.muted} ${HOVER_TEXT_EFFECTS.BLUE_LIGHT}`
+-        }`}
+-      >
+-        <FlaskConical className={`${iconSizes.sm} ${PANEL_LAYOUT.MARGIN.RIGHT_XS}`} />
+-        Unit & E2E Tests
+-      </button>
+       <button
+         onClick={() => onTabChange('standalone')}
+         className={`${PANEL_LAYOUT.BUTTON.PADDING} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${PANEL_LAYOUT.TRANSITION.COLORS} relative ${
+diff --git a/src/subapps/dxf-viewer/ui/components/tests-modal/components/UnitTestsTab.tsx b/src/subapps/dxf-viewer/ui/components/tests-modal/components/UnitTestsTab.tsx
+deleted file mode 100644
+index 2ca49c33..00000000
+--- a/src/subapps/dxf-viewer/ui/components/tests-modal/components/UnitTestsTab.tsx
++++ /dev/null
+@@ -1,143 +0,0 @@
+-/**
+- * 🧪 UnitTestsTab Component
+- *
+- * Tab για Unit Tests (Vitest/Jest) και E2E Tests (Playwright)
+- */
+-
+-import React from 'react';
+-import { Play, CheckCircle2, Loader2, FlaskConical, Zap, Drama } from 'lucide-react';
+-import type { TestState, ApiTestHandlers } from '../types/tests.types';
+-import { HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
+-import { useIconSizes } from '@/hooks/useIconSizes';
+-import { useBorderTokens } from '@/hooks/useBorderTokens';
+-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+-import { PANEL_LAYOUT } from '../../../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
+-
+-interface UnitTestsTabProps {
+-  testState: TestState;
+-  apiTests: ApiTestHandlers;
+-}
+-
+-export const UnitTestsTab: React.FC<UnitTestsTabProps> = ({ testState, apiTests }) => {
+-  const iconSizes = useIconSizes();
+-  const { getStatusBorder, quick, radius } = useBorderTokens();
+-  const colors = useSemanticColors();
+-
+-  // Enterprise helper για test button states
+-  const getTestButtonBorder = (testId: string) => {
+-    if (testState.runningTests.has(testId)) {
+-      return getStatusBorder('warning'); // Yellow border for running
+-    }
+-    if (testState.completedTests.has(testId)) {
+-      return getStatusBorder('success'); // Green border for completed
+-    }
+-    return getStatusBorder('default'); // Gray border for default
+-  };
+-
+-  return (
+-    <>
+-      {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
+-      <section>
+-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase ${PANEL_LAYOUT.TRACKING.WIDE} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+-          <FlaskConical className={iconSizes.sm} /> Unit Tests (Vitest/Jest)
+-        </h3>
+-
+-        <div className={`grid ${PANEL_LAYOUT.GRID.COLS_2} ${PANEL_LAYOUT.GAP.MD}`}>
+-          {/* Vitest Button */}
+-          <button
+-            onClick={apiTests.handleRunVitest}
+-            disabled={testState.runningTests.has('run-vitest')}
+-            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} text-left ${
+-              testState.runningTests.has('run-vitest')
+-                ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-vitest')} ${PANEL_LAYOUT.CURSOR.WAIT}`
+-                : testState.completedTests.has('run-vitest')
+-                ? `${colors.bg.success} ${colors.bg.success} ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+-                : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-vitest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+-            }`}
+-          >
+-            <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
+-              {testState.runningTests.has('run-vitest') ? (
+-                <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
+-              ) : testState.completedTests.has('run-vitest') ? (
+-                <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
+-              ) : (
+-                <Play className={`${iconSizes.md} ${colors.text.muted}`} />
+-              )}
+-            </div>
+-            <div className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
+-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.LEADING.TIGHT} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Zap className={iconSizes.sm} /> Run Vitest Tests</div>
+-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Property-based + ServiceRegistry tests</div>
+-            </div>
+-          </button>
+-
+-          {/* Jest Button */}
+-          <button
+-            onClick={apiTests.handleRunJest}
+-            disabled={testState.runningTests.has('run-jest')}
+-            className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${quick.card} ${PANEL_LAYOUT.TRANSITION.ALL} text-left ${
+-              testState.runningTests.has('run-jest')
+-                ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-jest')} ${PANEL_LAYOUT.CURSOR.WAIT}`
+-                : testState.completedTests.has('run-jest')
+-                ? `${colors.bg.success} ${colors.bg.success} ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+-                : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-jest')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+-            }`}
+-          >
+-            <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
+-              {testState.runningTests.has('run-jest') ? (
+-                <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
+-              ) : testState.completedTests.has('run-jest') ? (
+-                <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
+-              ) : (
+-                <Play className={`${iconSizes.md} ${colors.text.muted}`} />
+-              )}
+-            </div>
+-            <div className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
+-              <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.LEADING.TIGHT} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Zap className={iconSizes.sm} /> Run Jest Tests</div>
+-              <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression + cursor alignment tests</div>
+-            </div>
+-          </button>
+-        </div>
+-      </section>
+-
+-      {/* ✅ ENTERPRISE: Χρήση semantic <section> αντί κενού <div> (ADR-003) */}
+-      <section>
+-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.SEMIBOLD} ${colors.text.muted} uppercase ${PANEL_LAYOUT.TRACKING.WIDE} ${PANEL_LAYOUT.MARGIN.BOTTOM_MD} flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+-          <Drama className={iconSizes.sm} /> E2E Tests (Playwright)
+-        </h3>
+-
+-        <button
+-          onClick={apiTests.handleRunPlaywright}
+-          disabled={testState.runningTests.has('run-playwright')}
+-          className={`flex items-start ${PANEL_LAYOUT.GAP.MD} ${PANEL_LAYOUT.SPACING.MD} ${radius.lg} ${PANEL_LAYOUT.TRANSITION.ALL} text-left w-full ${
+-            testState.runningTests.has('run-playwright')
+-              ? `${colors.bg.warning} ${colors.bg.warning} ${getTestButtonBorder('run-playwright')} ${PANEL_LAYOUT.CURSOR.WAIT}`
+-              : testState.completedTests.has('run-playwright')
+-              ? `${colors.bg.success} ${colors.bg.success} ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.SUCCESS_SUBTLE}`
+-              : `${colors.bg.secondary} ${colors.bg.hover} ${getTestButtonBorder('run-playwright')} ${HOVER_BACKGROUND_EFFECTS.MUTED_DARK} ${HOVER_BORDER_EFFECTS.MUTED}`
+-          }`}
+-        >
+-          <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${PANEL_LAYOUT.MARGIN.TOP_HALF}`}>
+-            {testState.runningTests.has('run-playwright') ? (
+-              <Loader2 className={`${iconSizes.md} ${colors.text.warning} ${PANEL_LAYOUT.ANIMATE.SPIN}`} />
+-            ) : testState.completedTests.has('run-playwright') ? (
+-              <CheckCircle2 className={`${iconSizes.md} ${colors.text.success}`} />
+-            ) : (
+-              <Play className={`${iconSizes.md} ${colors.text.muted}`} />
+-            )}
+-          </div>
+-          <div className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
+-            <div className={`${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.LEADING.TIGHT} flex items-center ${PANEL_LAYOUT.GAP.XS}`}><Drama className={iconSizes.sm} /> Run Playwright Cross-Browser Tests</div>
+-            <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>Visual regression across Chromium/Firefox/WebKit (2-3 min)</div>
+-          </div>
+-        </button>
+-      </section>
+-
+-      {/* ✅ ENTERPRISE: Χρήση semantic <aside> για info box (ADR-003) */}
+-      <aside className={`${colors.bg.info} ${quick.info} ${PANEL_LAYOUT.SPACING.LG} ${getStatusBorder('info')}`}>
+-        <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.info}`}>
+-          <strong>Note:</strong> Unit & E2E tests run server-side via API endpoints. Check server logs for detailed output.
+-        </p>
+-      </aside>
+-    </>
+-  );
+-};
+diff --git a/src/subapps/dxf-viewer/ui/components/tests-modal/hooks/useApiTests.ts b/src/subapps/dxf-viewer/ui/components/tests-modal/hooks/useApiTests.ts
+deleted file mode 100644
+index 86df0b9b..00000000
+--- a/src/subapps/dxf-viewer/ui/components/tests-modal/hooks/useApiTests.ts
++++ /dev/null
+@@ -1,108 +0,0 @@
+-/**
+- * 🧪 useApiTests Hook
+- * Handles API-based test execution (Vitest, Jest, Playwright)
+- */
+-
+-import type { NotificationFn, TestState, ApiTestHandlers } from '../types/tests.types';
+-
+-export function useApiTests(
+-  showNotification: NotificationFn,
+-  state: TestState
+-): ApiTestHandlers {
+-
+-  const handleRunVitest = async () => {
+-    const testId = 'run-vitest';
+-    state.startTest(testId);
+-
+-    try {
+-      showNotification('Running Vitest tests... Please wait.', 'info');
+-
+-      const response = await fetch('/api/run-vitest', { method: 'POST' });
+-      const results = await response.json();
+-
+-      if (results.success) {
+-        showNotification(
+-          `Vitest Complete: ${results.numPassedTests}✅ / ${results.numFailedTests}❌ (${results.numTotalTests} total)\n\nDuration: ${results.duration}ms`,
+-          'success'
+-        );
+-        state.completeTest(testId);
+-      } else {
+-        showNotification(
+-          `Vitest Failed: ${results.error || 'Unknown error'}`,
+-          'error'
+-        );
+-        state.failTest(testId);
+-      }
+-    } catch (error) {
+-      console.error('Failed to run Vitest:', error);
+-      showNotification('Failed to run Vitest tests', 'error');
+-      state.failTest(testId);
+-    }
+-  };
+-
+-  const handleRunJest = async () => {
+-    const testId = 'run-jest';
+-    state.startTest(testId);
+-
+-    try {
+-      showNotification('Running Jest tests... Please wait.', 'info');
+-
+-      const response = await fetch('/api/run-jest', { method: 'POST' });
+-      const results = await response.json();
+-
+-      if (results.success) {
+-        showNotification(
+-          `Jest Complete: ${results.numPassedTests}✅ / ${results.numFailedTests}❌ (${results.numTotalTests} total)\n\nDuration: ${results.duration}ms`,
+-          'success'
+-        );
+-        state.completeTest(testId);
+-      } else {
+-        showNotification(
+-          `Jest Failed: ${results.error || 'Unknown error'}`,
+-          'error'
+-        );
+-        state.failTest(testId);
+-      }
+-    } catch (error) {
+-      console.error('Failed to run Jest:', error);
+-      showNotification('Failed to run Jest tests', 'error');
+-      state.failTest(testId);
+-    }
+-  };
+-
+-  const handleRunPlaywright = async () => {
+-    const testId = 'run-playwright';
+-    state.startTest(testId);
+-
+-    try {
+-      showNotification('Running Playwright E2E tests... Please wait (this may take 2-3 minutes).', 'info');
+-
+-      const response = await fetch('/api/run-playwright', { method: 'POST' });
+-      const results = await response.json();
+-
+-      if (results.success) {
+-        showNotification(
+-          `Playwright Complete: ${results.numPassedTests}✅ / ${results.numFailedTests}❌ (${results.numTotalTests} total)\n\nDuration: ${(results.duration / 1000).toFixed(1)}s`,
+-          'success'
+-        );
+-        state.completeTest(testId);
+-      } else {
+-        showNotification(
+-          `Playwright Failed: ${results.error || 'Unknown error'}`,
+-          'error'
+-        );
+-        state.failTest(testId);
+-      }
+-    } catch (error) {
+-      console.error('Failed to run Playwright:', error);
+-      showNotification('Failed to run Playwright E2E tests', 'error');
+-      state.failTest(testId);
+-    }
+-  };
+-
+-  return {
+-    handleRunVitest,
+-    handleRunJest,
+-    handleRunPlaywright
+-  };
+-}
+diff --git a/src/subapps/dxf-viewer/ui/components/tests-modal/types/tests.types.ts b/src/subapps/dxf-viewer/ui/components/tests-modal/types/tests.types.ts
+index b5a2fc83..2fd4f7f2 100644
+--- a/src/subapps/dxf-viewer/ui/components/tests-modal/types/tests.types.ts
++++ b/src/subapps/dxf-viewer/ui/components/tests-modal/types/tests.types.ts
+@@ -7,7 +7,7 @@
+ 
+ import type { LucideIcon } from 'lucide-react';
+ 
+-export type TabType = 'automated' | 'unit' | 'standalone';
++export type TabType = 'automated' | 'standalone';
+ 
+ export type NotificationFn = (message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
+ 
+@@ -37,12 +37,6 @@ export interface DraggableState {
+   handleMouseDown: (e: React.MouseEvent) => void;
+ }
+ 
+-export interface ApiTestHandlers {
+-  handleRunVitest: () => Promise<void>;
+-  handleRunJest: () => Promise<void>;
+-  handleRunPlaywright: () => Promise<void>;
+-}
+-
+ export interface TestExecutionHandlers {
+   handleRunTest: (testId: string, testFunction: () => Promise<void>) => Promise<void>;
+   handleRunAllTests: () => Promise<void>;
