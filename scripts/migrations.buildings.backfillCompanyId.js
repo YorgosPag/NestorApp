@@ -43,9 +43,11 @@
 const admin = require('firebase-admin');
 const { loadEnvLocal } = require('./_shared/loadEnvLocal');
 const { getCompanyId, getDryRun, getNumericEnv, printHeader, printFooter } = require('./_shared/validateInputs');
+const { DEFAULTS } = require('./_shared/migrationConfig');
+const { createReportWriter } = require('./_shared/reportWriter');
 
 // =============================================================================
-// CONFIGURATION - ALL FROM ENV/ARGV (ZERO HARDCODED)
+// CONFIGURATION - ALL FROM ENV/CENTRALIZED CONFIG (ZERO HARDCODED)
 // =============================================================================
 
 const SCRIPT_NAME = 'migrations.buildings.backfillCompanyId.js';
@@ -54,8 +56,8 @@ const SCRIPT_NAME = 'migrations.buildings.backfillCompanyId.js';
 const envVars = loadEnvLocal();
 const COMPANY_ID = getCompanyId(SCRIPT_NAME);
 const DRY_RUN = getDryRun();
-const PAGE_SIZE = getNumericEnv('PAGE_SIZE', 100);
-const BATCH_SIZE = getNumericEnv('BATCH_SIZE', 500);
+const PAGE_SIZE = getNumericEnv('PAGE_SIZE', DEFAULTS.PAGE_SIZE);
+const BATCH_SIZE = getNumericEnv('BATCH_SIZE', DEFAULTS.BATCH_SIZE);
 
 // 🔒 ENTERPRISE: Collection name REQUIRED (no hardcoded default)
 const COLLECTION_BUILDINGS = process.env.COLLECTION_BUILDINGS;
