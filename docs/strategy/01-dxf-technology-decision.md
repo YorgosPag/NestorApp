@@ -276,8 +276,8 @@ Before any PR implementing this strategy:
 | **P0.1** | DXF Subsystem Audit Report | ✅ Complete | `docs/architecture-review/06-dxf-subsystem-review.md` |
 | **P0.2** | ADR: DXF Export Architecture | ✅ Complete | This document |
 | **P0.3** | API Contract (types/schemas) | 🟡 Pending | `src/subapps/dxf-viewer/types/dxf-export.types.ts` |
-| **P0.4** | Test Strategy (Golden Files) | 🟡 Pending | Section 13 below |
-| **P0.5** | Storage Strategy Document | 🟡 Pending | Canonical paths, metadata schema |
+| **P0.4** | Test Strategy (Golden Files) | ✅ Complete | [DXF_EXPORT_TEST_STRATEGY.md](../testing/DXF_EXPORT_TEST_STRATEGY.md) |
+| **P0.5** | Storage Strategy Document | ✅ Complete | [DXF_EXPORT_STORAGE_STRATEGY.md](./DXF_EXPORT_STORAGE_STRATEGY.md) |
 
 **Acceptance**: All docs reviewed and approved before Phase 1.
 
@@ -367,6 +367,13 @@ Phase 4 (Harden)    ░░░░░░░░░░░░░░░░░░░░
 ## 13. Test Strategy (Golden Files)
 
 > **🚫 NO DXF CODING BEFORE PR-1C PASS** — This section is documentation-only until Security Gates complete.
+
+> **📚 COMPREHENSIVE DOCUMENTATION**: For full enterprise test strategy, see **[DXF_EXPORT_TEST_STRATEGY.md](../testing/DXF_EXPORT_TEST_STRATEGY.md)** which includes:
+> - 20 Golden File fixtures specification
+> - Round-trip testing methodology
+> - CAD compatibility matrix (AutoCAD, BricsCAD, LibreCAD)
+> - CI/CD pipeline configuration
+> - Performance benchmarks
 
 ### 13.1 Golden File Approach
 

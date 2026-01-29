@@ -1,10 +1,10 @@
 # = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
-> **= -> LAST UPDATED**: 2026-01-29
-> **= -> TOTAL SYSTEMS**: 31 Major Enterprise Systems (incl. Enterprise Filter System Centralization)
-> **= -> TOTAL CODE**: 20,380+ Lines (incl. applyFilters 280+ lines + usePropertyGridFilters 100+ lines)
-> **= -> TOTAL ADRs**: 28 Architectural Decision Records (incl. ADR-051 Filter Centralization)
+> **= -> LAST UPDATED**: 2026-01-30
+> **= -> TOTAL SYSTEMS**: 32 Major Enterprise Systems (incl. DXF Export API Contract)
+> **= -> TOTAL CODE**: 20,980+ Lines (incl. dxf-export.types.ts 600+ lines)
+> **= -> TOTAL ADRs**: 29 Architectural Decision Records (incl. ADR-052 DXF Export)
 
 ---
 
@@ -48,6 +48,7 @@
 | **ADR-049** | Unified Move Tool for DXF + Overlays 🏢 | `core/commands/overlay-commands/MoveOverlayCommand.ts` (380+ lines) | Single move tool για DXF entities ΚΑΙ colored overlays, Full Command Pattern με undo/redo, Real-time ghost rendering (AutoCAD/Figma), Command merging (500ms), Zero duplicate code | 2027-01-27 |
 | **ADR-050** | Unified Toolbar Integration 🏢 | `ui/toolbar/overlay-section/` (480+ lines, 8 files) → Merged floating overlay toolbar into EnhancedDXFToolbar as collapsible Row 2 | Better UX (no floating windows), mobile responsive, zero duplication, AutoCAD Ribbon pattern, Feature flag migration, Modular architecture (6 components) | 2027-01-27 |
 | **ADR-051** | Enterprise Filter System Centralization 🏢 | `@/components/core/AdvancedFilters/` → `useGenericFilters` + `usePropertyGridFilters` + `applyFilters` + type guards | **7 files deleted**: useFilterState, useFilteredProjects, 2x usePropertyGridFilters, filtering.ts, 2x AdvancedFiltersPanel. **16 consumers** now use centralized. usePropertyFilters refactored with centralized utilities (matchesSearchTerm, matchesNumericRange, matchesArrayFilter, matchesFeatures) | 2026-01-29 |
+| **ADR-052** | DXF Export API Contract 🏢 | `types/dxf-export.types.ts` → DxfExportSettings + EzdxfEntity + Request/Response types | **600+ lines** API contract for ezdxf Python microservice. Entity mapping (18 types), DXF versions AC1009-AC1032, 17 error codes, validation types. Technology: ezdxf (MIT License). | 2026-01-30 |
 
 > **🚫 PROHIBITION**: Click handlers without `viewportReady` check **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - block interactions until viewport valid.
 > **🚫 PROHIBITION**: Double coordinate conversion (world→screen→world) **ΑΠΑΓΟΡΕΥΕΤΑΙ** - single conversion at source per ADR-046.
@@ -83,6 +84,7 @@
 > **🚫 PROHIBITION**: Creating new floating toolbars **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `EnhancedDXFToolbar` με `OverlayToolbarSection` για collapsible sections (ADR-050).
 > **🚫 PROHIBITION**: Standalone filter implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `useGenericFilters` + `applyFilters` από `@/components/core/AdvancedFilters` (ADR-051).
 > **🚫 PROHIBITION**: console.log σε filter components **ΑΠΑΓΟΡΕΥΕΤΑΙ** - αφαιρέθηκαν όλα τα debug logs με ADR-051.
+> **🚫 PROHIBITION**: Ad-hoc DXF export types **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `DxfExportSettings`, `DxfExportRequest`, `EzdxfEntity` από `types/dxf-export.types.ts` (ADR-052).
 > **🏢 ENTERPRISE**: ADR-044 - Canvas line widths fully centralized, 32 hardcoded values → 17 files migrated.
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.
@@ -135,6 +137,7 @@
 | **🔗 Unit Linking System** | `src/features/property-details/components/` | 1,000+ | Entity Linking | 🏢 **ENTERPRISE** | Building+Floor selector, LinkedSpaces (Parking/Storage), real-time events | `import { BuildingSelectorCard, LinkedSpacesCard } from '@/features/property-details/components'` | **2026-01-24: Full Unit→Building→Floor→Spaces linking** |
 | **🔍 Global Search v1** | `src/app/api/search/` + `src/types/search.ts` | 680+ | Search API | 🏢 **ENTERPRISE** | Greek-friendly, prefix matching, tenant isolation, audit logging | `GET /api/search?q=query&types=contact` | **ADR-029: PR#1 Complete** |
 | **🎯 Universal Selection System** | `src/subapps/dxf-viewer/systems/selection/` | 1,040+ | Selection Engine | 🏢 **ENTERPRISE** | Universal entity selection, Window/Crossing, multi-type support | `useUniversalSelection().select(id, 'overlay')` | **ADR-030: Single source of truth for ALL selections** |
+| **📤 DXF Export API Contract** | `src/subapps/dxf-viewer/types/dxf-export.types.ts` | 600+ | Type Definitions | 🏢 **ENTERPRISE** | ezdxf microservice contract, 18 entity mappings, 7 DXF versions | `import { DxfExportSettings, EzdxfEntity } from 'types/dxf-export.types'` | **ADR-052: API contract for Python microservice** |
 
 ---
 

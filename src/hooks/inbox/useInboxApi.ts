@@ -196,25 +196,23 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
       if (channel) params.set('channel', channel);
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      interface ConversationsApiResponse {
-        data: ConversationsResponse;
-      }
-
-      const result = await apiClient.get<ConversationsApiResponse>(`/api/conversations?${params.toString()}`);
+      // apiClient.get() automatically unwraps canonical { success: true, data: T } responses
+      // Returns T directly (not wrapped in .data)
+      const result = await apiClient.get<ConversationsResponse>(`/api/conversations?${params.toString()}`);
 
       // 🏢 ENTERPRISE: Null safety check (Defense-in-Depth)
-      if (!result || !result.data || !Array.isArray(result.data.conversations)) {
+      if (!result || !Array.isArray(result.conversations)) {
         throw new Error('Invalid API response format');
       }
 
       if (mountedRef.current) {
         if (append) {
-          setConversations(prev => [...prev, ...result.data.conversations]);
+          setConversations(prev => [...prev, ...result.conversations]);
         } else {
-          setConversations(result.data.conversations);
+          setConversations(result.conversations);
         }
-        setTotalCount(result.data.totalCount ?? 0);
-        setHasMore(result.data.hasMore ?? false);
+        setTotalCount(result.totalCount ?? 0);
+        setHasMore(result.hasMore ?? false);
         setCurrentPage(pageNum);
       }
     } catch (err) {
@@ -373,21 +371,19 @@ export function useConversationMessages(
       params.set('order', order);
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      interface MessagesApiResponse {
-        data: MessagesResponse;
-      }
-
-      const result = await apiClient.get<MessagesApiResponse>(`/api/conversations/${conversationId}/messages?${params.toString()}`);
+      // apiClient.get() automatically unwraps canonical { success: true, data: T } responses
+      // Returns T directly (not wrapped in .data)
+      const result = await apiClient.get<MessagesResponse>(`/api/conversations/${conversationId}/messages?${params.toString()}`);
 
       if (mountedRef.current) {
         if (append) {
           // Prepend for "load earlier" functionality
-          setMessages(prev => [...result.data.messages, ...prev]);
+          setMessages(prev => [...result.messages, ...prev]);
         } else {
-          setMessages(result.data.messages);
+          setMessages(result.messages);
         }
-        setTotalCount(result.data.totalCount);
-        setHasMore(result.data.hasMore);
+        setTotalCount(result.totalCount);
+        setHasMore(result.hasMore);
         setCurrentPage(pageNum);
       }
     } catch (err) {
@@ -497,16 +493,14 @@ export function useSendMessage(conversationId: string | null): UseSendMessageRes
       setError(null);
 
       // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
-      interface SendMessageApiResponse {
-        data: SendMessageResponse;
-      }
-
-      const result = await apiClient.post<SendMessageApiResponse>(
+      // apiClient.post() automatically unwraps canonical { success: true, data: T } responses
+      // Returns T directly (not wrapped in .data)
+      const result = await apiClient.post<SendMessageResponse>(
         `/api/conversations/${conversationId}/send`,
         options
       );
 
-      return result?.data ?? null;
+      return result ?? null;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
       setError(errorMessage);

@@ -322,9 +322,13 @@ export async function storeMessageInCRM(
     );
 
     // 4. Store in canonical MESSAGES collection - B4: Type-safe with satisfies
+    // 🏢 TENANT ISOLATION: Get companyId from environment (same as conversation)
+    const companyId = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID || 'pagonis-company';
+
     const canonicalMessageDocId = generateMessageDocId(COMMUNICATION_CHANNELS.TELEGRAM, chatId, messageId);
     const canonicalMessage = {
       id: canonicalMessageDocId,
+      companyId, // 🏢 CRITICAL: Tenant isolation field for Firestore security rules
       conversationId,
       direction,
       channel: COMMUNICATION_CHANNELS.TELEGRAM,

@@ -4653,6 +4653,119 @@ const filtered = applyPropertyFilters(entities, filters, searchTerm, { priceRang
 
 ---
 
+### 📋 ADR-052: DXF EXPORT API CONTRACT (2026-01-30) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-30
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - SAP/AutoCAD/BIM Integration Standard
+
+**Problem**:
+Η εφαρμογή έχει **0% DXF export capability**. Απαιτείται:
+- API contract για ezdxf Python microservice
+- Entity mapping types (Nestor → DXF format)
+- Export settings & validation types
+- Enterprise-grade error handling
+
+**Decision**:
+Technology: **ezdxf (Python, MIT License)** - βλ. `docs/strategy/01-dxf-technology-decision.md`
+
+**Architecture** (API Contract Types):
+
+```
+src/subapps/dxf-viewer/types/dxf-export.types.ts (600+ lines)
+├── DXF Version Configuration (AC1009-AC1032)
+├── Unit Configuration (20 DXF unit types)
+├── Export Settings (quality, layers, encoding)
+├── Entity Mapping Types (Nestor → ezdxf)
+├── API Request/Response Types
+├── Validation Types
+├── Error Types
+└── Microservice Health Types
+```
+
+**Key Types**:
+
+| Type | Purpose |
+|------|---------|
+| `DxfExportSettings` | Complete export configuration |
+| `DxfExportSceneRequest` | Scene export API request |
+| `DxfExportResponse` | Export result with stats |
+| `EzdxfEntity` | ezdxf entity representation |
+| `DxfExportErrorCode` | 17 error code types |
+
+**Supported DXF Versions**:
+
+| Version | Code | Features |
+|---------|------|----------|
+| R12 | AC1009 | Maximum compatibility, basic entities |
+| R2000 | AC1015 | **Recommended default** |
+| R2007 | AC1021 | Unicode text support |
+| R2018 | AC1032 | Latest supported |
+
+**Entity Type Mapping** (Nestor → ezdxf):
+
+```typescript
+// 🏢 CANONICAL MAPPING
+const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
+  'line': 'LINE',
+  'polyline': 'POLYLINE',
+  'circle': 'CIRCLE',
+  'arc': 'ARC',
+  'ellipse': 'ELLIPSE',
+  'text': 'TEXT',
+  'rectangle': 'LWPOLYLINE',  // Converts to closed polyline
+  'angle-measurement': null,  // Internal only, not exported
+  // ... all 18 entity types
+};
+```
+
+**Usage Example**:
+
+```typescript
+// 🏢 CANONICAL: Import from centralized types
+import {
+  DxfExportSettings,
+  DxfExportSceneRequest,
+  DxfExportResponse,
+  createDefaultExportSettings,
+  isExportableEntityType,
+  versionSupportsEntity
+} from '@/subapps/dxf-viewer/types/dxf-export.types';
+
+// Create export request
+const settings = createDefaultExportSettings();
+const request: DxfExportSceneRequest = {
+  scene: currentScene,
+  settings: { ...settings, version: 'AC1015' }
+};
+
+// Validate entity exportability
+if (isExportableEntityType(entity.type)) {
+  // Entity can be exported to DXF
+}
+```
+
+**Benefits**:
+- ✅ **Type-safe API** - Full TypeScript contract for microservice
+- ✅ **ezdxf Compatible** - Direct mapping to Python library types
+- ✅ **Validation Ready** - Pre-export validation types
+- ✅ **Enterprise Error Handling** - 17 typed error codes
+- ✅ **Multi-version Support** - DXF R12 to R2018
+
+**Dependencies**:
+- `docs/strategy/01-dxf-technology-decision.md` - Technology decision
+- `types/entities.ts` - Source entity types
+
+**Testing Documentation**:
+- `docs/testing/DXF_EXPORT_TEST_STRATEGY.md` - Comprehensive test strategy (900+ lines)
+
+**Storage Documentation**:
+- `docs/strategy/DXF_EXPORT_STORAGE_STRATEGY.md` - Storage paths, metadata schema, retention (700+ lines)
+
+**Location**: `src/subapps/dxf-viewer/types/dxf-export.types.ts`
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

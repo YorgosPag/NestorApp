@@ -17,6 +17,11 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
+// 🏢 ENTERPRISE: Canonical response format (SAP/Salesforce pattern)
+import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+
+// Type alias for canonical response
+type ConversationsCanonicalResponse = ApiSuccessResponse<ConversationsListResponse>;
 import {
   CONVERSATION_STATUS,
   type ConversationStatus,
@@ -158,8 +163,8 @@ export const dynamic = 'force-dynamic';
  * - Tenant Isolation: Filters by user's companyId
  */
 export async function GET(request: NextRequest) {
-  const handler = withAuth<ConversationsListResponse>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ConversationsListResponse>> => {
+  const handler = withAuth<ConversationsCanonicalResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleListConversations(req, ctx);
     },
     { permissions: 'comm:conversations:list' }
@@ -168,7 +173,7 @@ export async function GET(request: NextRequest) {
   return handler(request);
 }
 
-async function handleListConversations(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ConversationsListResponse>> {
+async function handleListConversations(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ConversationsCanonicalResponse>> {
   const startTime = Date.now();
   const operationId = generateRequestId();
 
@@ -191,11 +196,8 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
   if (cachedData) {
     const duration = Date.now() - startTime;
     console.log(`⚡ [Conversations/List] CACHE HIT - ${cachedData.count} conversations in ${duration}ms`);
-    // 🏢 ENTERPRISE: Return response directly (matches ConversationsListResponse type)
-    return NextResponse.json({
-      ...cachedData,
-      source: 'cache'
-    });
+    // 🏢 ENTERPRISE: Canonical response format { success: true, data: T }
+    return apiSuccess<ConversationsListResponse>({ ...cachedData, source: 'cache' });
   }
 
   console.log('🔍 [Conversations/List] Cache miss - Fetching from Firestore...');
@@ -281,6 +283,6 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
   const duration = Date.now() - startTime;
   console.log(`✅ [Conversations/List] Complete: ${conversations.length} conversations in ${duration}ms`);
 
-  // 🏢 ENTERPRISE: Return response directly (matches ConversationsListResponse type)
-  return NextResponse.json(response);
+  // 🏢 ENTERPRISE: Canonical response format { success: true, data: T }
+  return apiSuccess<ConversationsListResponse>(response);
 }

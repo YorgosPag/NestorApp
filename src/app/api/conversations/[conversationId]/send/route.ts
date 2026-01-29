@@ -15,7 +15,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+
+// Type alias for canonical response
+type SendMessageCanonicalResponse = ApiSuccessResponse<SendMessageResponse>;
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
@@ -58,7 +61,8 @@ async function storeOutboundMessage(
   conversationId: string,
   chatId: string,
   text: string,
-  providerMessageId: number
+  providerMessageId: number,
+  companyId: string // 🏢 TENANT ISOLATION: Required for Firestore security rules
 ): Promise<string | null> {
   try {
     const messageDocId = generateMessageDocId(
@@ -72,6 +76,7 @@ async function storeOutboundMessage(
     // Store in MESSAGES collection - ENTERPRISE: Using satisfies for type safety
     const messageData: MessageDocument = {
       id: messageDocId,
+      companyId, // 🏢 CRITICAL: Tenant isolation field for Firestore security rules
       conversationId,
       direction: MESSAGE_DIRECTION.OUTBOUND,
       channel: COMMUNICATION_CHANNELS.TELEGRAM,
@@ -132,8 +137,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> }
 ) {
-  const handler = withAuth<SendMessageResponse>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<SendMessageResponse>> => {
+  const handler = withAuth<SendMessageCanonicalResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const { conversationId } = await params;
       return handleSendMessage(req, ctx, conversationId);
     },
@@ -143,7 +148,7 @@ export async function POST(
   return handler(request);
 }
 
-async function handleSendMessage(request: NextRequest, ctx: AuthContext, conversationId: string): Promise<NextResponse<SendMessageResponse>> {
+async function handleSendMessage(request: NextRequest, ctx: AuthContext, conversationId: string): Promise<NextResponse<SendMessageCanonicalResponse>> {
   const startTime = Date.now();
   const operationId = generateRequestId();
 
@@ -236,13 +241,17 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
     : null;
 
   // Store in CRM (only if we have provider message ID)
+  // 🏢 TENANT ISOLATION: Get companyId from conversation for message storage
+  const messageCompanyId = convData?.companyId as string || ctx.companyId;
+
   let storedMessageId: string | null = null;
   if (providerMessageId) {
     storedMessageId = await storeOutboundMessage(
       conversationId,
       telegramChatId,
       body.text.trim(),
-      providerMessageId
+      providerMessageId,
+      messageCompanyId // 🏢 CRITICAL: Pass companyId for Firestore security rules
     );
   }
 
@@ -257,6 +266,6 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
     sentAt: new Date().toISOString(),
   };
 
-  // 🏢 ENTERPRISE: Return response directly (matches SendMessageResponse type)
-  return NextResponse.json(response);
+  // 🏢 ENTERPRISE: Canonical response format { success: true, data: T }
+  return apiSuccess<SendMessageResponse>(response);
 }
