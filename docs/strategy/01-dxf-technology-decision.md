@@ -261,8 +261,283 @@ Before any PR implementing this strategy:
 
 ---
 
+## 12. Implementation Plan (Phased)
+
+> **🚫 NO DXF CODING BEFORE PR-1C PASS** — This section is documentation-only until Security Gates complete.
+
+> **BLOCKING DEPENDENCY**: PR-1C (Rate Limiting) MUST be PASS before Phase 1 coding begins.
+
+### Phase 0: Documentation & Contracts (CURRENT - No Security Gate Dependency)
+
+**Timeline**: Immediate (can run parallel to Security Stream)
+
+| Task | Deliverable | Status | Owner |
+|------|-------------|--------|-------|
+| **P0.1** | DXF Subsystem Audit Report | ✅ Complete | `docs/architecture-review/06-dxf-subsystem-review.md` |
+| **P0.2** | ADR: DXF Export Architecture | ✅ Complete | This document |
+| **P0.3** | API Contract (types/schemas) | 🟡 Pending | `src/subapps/dxf-viewer/types/dxf-export.types.ts` |
+| **P0.4** | Test Strategy (Golden Files) | 🟡 Pending | Section 13 below |
+| **P0.5** | Storage Strategy Document | 🟡 Pending | Canonical paths, metadata schema |
+
+**Acceptance**: All docs reviewed and approved before Phase 1.
+
+---
+
+### Phase 1: Microservice Skeleton (REQUIRES: PR-1C PASS + All Gates Green)
+
+**Timeline**: After Security Gates complete
+
+| Task | Deliverable | Dependency | Acceptance Criteria |
+|------|-------------|------------|---------------------|
+| **P1.1** | Docker container setup | None | `docker build` succeeds |
+| **P1.2** | FastAPI skeleton | P1.1 | `/health` returns 200 |
+| **P1.3** | ezdxf integration | P1.2 | Can create empty DXF in memory |
+| **P1.4** | POST `/api/v1/dxf/export` | P1.3 | Returns valid DXF bytes |
+| **P1.5** | Feature flag in app | P1.4 | Export button hidden by default |
+| **P1.6** | Basic integration test | P1.5 | App → Service → DXF file |
+
+**Acceptance**: G1, G2 from Quality Gates (Section 7) pass.
+
+---
+
+### Phase 2: Full Entity Support
+
+**Timeline**: After Phase 1 validated
+
+| Task | Deliverable | Entity Types |
+|------|-------------|--------------|
+| **P2.1** | Line entities | LINE, XLINE, RAY |
+| **P2.2** | Polyline entities | LWPOLYLINE, POLYLINE, SPLINE |
+| **P2.3** | Circular entities | CIRCLE, ARC, ELLIPSE |
+| **P2.4** | Text entities | TEXT, MTEXT |
+| **P2.5** | Overlay conversion | POLYGON → LWPOLYLINE (closed) |
+| **P2.6** | Layer preservation | Layer names, colors, visibility |
+| **P2.7** | Greek text encoding | UTF-8 with ezdxf encoding |
+
+**Acceptance**: G3 (complex DXF export) passes.
+
+---
+
+### Phase 3: Validation & Round-Trip
+
+**Timeline**: After Phase 2
+
+| Task | Deliverable | Test Method |
+|------|-------------|-------------|
+| **P3.1** | POST `/api/v1/dxf/validate` | Validate DXF structure |
+| **P3.2** | Round-trip test suite | Import → Export → Import comparison |
+| **P3.3** | AutoCAD compatibility | Open exported DXF in AutoCAD |
+| **P3.4** | BricsCAD compatibility | Open exported DXF in BricsCAD |
+| **P3.5** | Golden file comparison | Byte-level or structural diff |
+
+**Acceptance**: G4, G5 from Quality Gates pass.
+
+---
+
+### Phase 4: Production Hardening
+
+**Timeline**: After Phase 3
+
+| Task | Deliverable | Metric |
+|------|-------------|--------|
+| **P4.1** | Load testing | 100 concurrent exports *(PLACEHOLDER - final value in SSoT config)* |
+| **P4.2** | Rate limiting integration | Uses centralized rate-limit system |
+| **P4.3** | Security scan | Container + dependencies |
+| **P4.4** | Monitoring/alerting | Health checks, error rates |
+| **P4.5** | Documentation | API docs, runbook |
+| **P4.6** | Feature flag removal | Export enabled for all users |
+
+**Acceptance**: G6, G7 from Quality Gates pass. Production deployment approved.
+
+---
+
+### Gantt Overview (Conceptual)
+
+```
+Phase 0 (Docs)      ████████░░░░░░░░░░░░░░░░  (NOW - Parallel to Security)
+Security Gates      ░░░░████████░░░░░░░░░░░░  (PR-0/1A/1B/1C)
+Phase 1 (Skeleton)  ░░░░░░░░░░░░████░░░░░░░░  (After Gates Green)
+Phase 2 (Entities)  ░░░░░░░░░░░░░░░░████░░░░  (After Phase 1)
+Phase 3 (Validate)  ░░░░░░░░░░░░░░░░░░░░██░░  (After Phase 2)
+Phase 4 (Harden)    ░░░░░░░░░░░░░░░░░░░░░░██  (Before Production)
+```
+
+---
+
+## 13. Test Strategy (Golden Files)
+
+> **🚫 NO DXF CODING BEFORE PR-1C PASS** — This section is documentation-only until Security Gates complete.
+
+### 13.1 Golden File Approach
+
+**Definition**: Golden files are reference DXF files with known-good output. Tests compare generated output against these baselines.
+
+```
+tests/
+└── dxf-export/
+    ├── fixtures/           # Input data (JSON scene models)
+    │   ├── simple-lines.json
+    │   ├── complex-floor-plan.json
+    │   └── greek-text-labels.json
+    │
+    ├── golden/             # Expected output (DXF files)
+    │   ├── simple-lines.dxf
+    │   ├── complex-floor-plan.dxf
+    │   └── greek-text-labels.dxf
+    │
+    └── __tests__/
+        ├── export.test.ts           # Unit tests
+        ├── round-trip.test.ts       # Import → Export → Import
+        └── golden-comparison.test.ts # Golden file diff
+```
+
+---
+
+### 13.2 Test Categories
+
+| Category | Description | Count | Priority |
+|----------|-------------|-------|----------|
+| **Unit Tests** | Individual entity conversion | 15+ | P0 |
+| **Integration Tests** | App → Service → DXF | 5+ | P1 |
+| **Golden File Tests** | Output comparison | 10+ | P1 |
+| **Round-Trip Tests** | Import → Export → Import | 5+ | P2 |
+| **Compatibility Tests** | AutoCAD/BricsCAD open | 3+ | P2 |
+| **Load Tests** | Concurrent exports | 3+ | P3 |
+
+---
+
+### 13.3 Golden File Fixtures
+
+| Fixture | Entities | Purpose | Complexity |
+|---------|----------|---------|------------|
+| **simple-lines.json** | 5 LINE entities | Basic export validation | Low |
+| **polyline-shapes.json** | 3 LWPOLYLINE (open + closed) | Polyline handling | Medium |
+| **circles-arcs.json** | CIRCLE, ARC, ELLIPSE | Circular entity support | Medium |
+| **text-labels.json** | TEXT, MTEXT (Greek) | Text + encoding | Medium |
+| **complex-floor-plan.json** | 50+ mixed entities | Real-world scenario | High |
+| **overlays-to-dxf.json** | 10 Overlay polygons | Overlay → DXF conversion | Medium |
+| **multi-layer.json** | Entities on 5 layers | Layer preservation | Medium |
+
+---
+
+### 13.4 Comparison Strategy
+
+```python
+# Golden file comparison approaches (in ezdxf service)
+
+def compare_dxf_files(generated: str, golden: str) -> ComparisonResult:
+    """
+    Strategy 1: Structural comparison (RECOMMENDED)
+    - Parse both DXF files with ezdxf
+    - Compare entity counts, types, coordinates
+    - Ignore metadata (timestamps, software version)
+    """
+    gen_doc = ezdxf.readfile(generated)
+    gold_doc = ezdxf.readfile(golden)
+
+    return ComparisonResult(
+        entity_count_match=len(gen_doc.modelspace()) == len(gold_doc.modelspace()),
+        entity_types_match=get_entity_types(gen_doc) == get_entity_types(gold_doc),
+        coordinates_match=compare_coordinates(gen_doc, gold_doc, tolerance=0.001),
+        layers_match=get_layers(gen_doc) == get_layers(gold_doc)
+    )
+```
+
+---
+
+### 13.5 Test Execution
+
+```bash
+# Unit tests (microservice)
+cd services/dxf-export
+pytest tests/unit/ -v
+
+# Integration tests (app + service)
+pnpm test:dxf-export
+
+# Golden file tests
+pytest tests/golden/ -v --golden-dir=tests/golden/
+
+# Round-trip tests
+pytest tests/round_trip/ -v
+
+# Update golden files (when intentionally changing output)
+pytest tests/golden/ -v --update-golden
+```
+
+---
+
+### 13.6 CI/CD Integration
+
+> **⚠️ ILLUSTRATIVE EXAMPLE ONLY**: Do NOT modify `.github/workflows/quality-gates.yml` until PR-1C PASS and Security stream approval. All numeric values (ports, timeouts) are PLACEHOLDERS — final values will be defined in centralized SSoT config.
+
+```yaml
+# .github/workflows/quality-gates.yml (FUTURE addition - DO NOT IMPLEMENT YET)
+
+dxf-export-tests:
+  runs-on: ubuntu-latest
+  needs: [lint, typecheck]
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Start ezdxf service
+      run: docker-compose up -d dxf-export-service
+
+    - name: Wait for service health
+      run: |
+        # PLACEHOLDERS: timeout (30s) and port (8080) - final values from SSoT config
+        timeout 30 bash -c 'until curl -s http://localhost:8080/health; do sleep 1; done'
+
+    - name: Run golden file tests
+      run: pytest tests/golden/ -v
+
+    - name: Run round-trip tests
+      run: pytest tests/round_trip/ -v
+
+    - name: Upload test artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: dxf-test-failures
+        path: tests/dxf-export/failures/
+```
+
+---
+
+### 13.7 Golden File Update Policy
+
+| Scenario | Action | Approval Required |
+|----------|--------|-------------------|
+| **Bug fix** | Update golden if output improves | Code review |
+| **New entity type** | Add new golden file | Code review |
+| **Intentional format change** | Update all affected golden files | Architecture review |
+| **Accidental regression** | Fix code, NOT golden file | Mandatory |
+
+**Rule**: Golden files are updated via `--update-golden` flag, NEVER manually edited.
+
+---
+
+### 13.8 Checklist for Merge (DXF Export PRs)
+
+Before any DXF Export PR can be merged:
+
+- [ ] **Local_Protocol**: Zero `any`, zero hardcoded, zero duplicates
+- [ ] **Security Gates**: PR-1C PASS (rate limiting production-grade)
+- [ ] **Unit Tests**: All pass
+- [ ] **Golden File Tests**: All pass (no unexpected diff)
+- [ ] **Round-Trip Tests**: Import → Export → Import matches
+- [ ] **Compatibility**: Opened in AutoCAD/BricsCAD without errors
+- [ ] **TypeScript**: `pnpm typecheck` passes
+- [ ] **Lint**: `pnpm lint` passes
+- [ ] **Build**: `pnpm build` succeeds
+
+---
+
 ## Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-01-29 | Claude (Anthropic AI) | Initial strategy document |
+| 1.1 | 2026-01-29 | Claude #2 (DXF Stream) | Added Section 12: Implementation Plan (Phased) |
+| 1.2 | 2026-01-29 | Claude #2 (DXF Stream) | Added Section 13: Test Strategy (Golden Files) |
+| 1.3 | 2026-01-29 | Claude #2 (DXF Stream) | Polishing: Added "No DXF coding" locks, PLACEHOLDER notes, CI/CD disclaimer |
