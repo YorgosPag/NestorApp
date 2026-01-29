@@ -1,56 +1,27 @@
 /**
- * FEATURE FLAGS
- * Centralized feature toggle configuration
+ * 🏢 ENTERPRISE FEATURE FLAGS
+ * Centralized feature flag configuration for DXF Viewer
+ *
+ * @version 1.0.0
+ * @since 2027-01-27
  */
 
-export interface FeatureFlags {
-  // Level management system
-  ENABLE_LEVELS_SYSTEM: boolean;
-  
-  // Layer systems
-  ENABLE_DXF_LAYERS: boolean;
-  
-  // Unified Grips System (UGS) for Layering mode
-  ENABLE_UGS_FOR_LAYERS: boolean;
-  
-  // Unified Drawing Engine
-  USE_UNIFIED_DRAWING_ENGINE: boolean;
-  
-  // Future features
-  ENABLE_ADVANCED_TOOLS: boolean;
-}
+/**
+ * 🏢 ADR-050: Unified Toolbar Integration (2027-01-27)
+ *
+ * Controls whether overlay toolbar is integrated into main EnhancedDXFToolbar
+ * as collapsible Row 2 (unified mode) or rendered as separate floating window (legacy mode).
+ *
+ * - true: Unified toolbar (Row 2 in EnhancedDXFToolbar, no floating window)
+ * - false: Legacy floating toolbar (DraggableOverlayToolbar)
+ *
+ * @default true - Unified toolbar is LIVE in production
+ */
+export const USE_UNIFIED_OVERLAY_TOOLBAR = true;
 
-export const FEATURE_FLAGS: FeatureFlags = {
-  // ✅ DXF Layers είναι πάντα ενεργό
-  ENABLE_DXF_LAYERS: true,
-  
-  // ✅ LevelsSystem ενεργοποιημένο και πάλι
-  ENABLE_LEVELS_SYSTEM: true,
-  
-  // ✅ UGS για Layering - DXF-style grips (πορτοκαλί/κόκκινο, dashed λευκές γραμμές)
-  ENABLE_UGS_FOR_LAYERS: true,
-  
-  // ✅ Unified Drawing Engine - ενοποιημένο από το featureFlags.ts
-  USE_UNIFIED_DRAWING_ENGINE: true,
-  
-  // Future features
-  ENABLE_ADVANCED_TOOLS: true,
-};
-
-// Helper functions
-export const isFeatureEnabled = (feature: keyof FeatureFlags): boolean => {
-  return FEATURE_FLAGS[feature];
-};
-
-// Type-safe feature flag modification
-type MutableFeatureFlags = {
-  -readonly [K in keyof FeatureFlags]: FeatureFlags[K];
-};
-
-export const enableFeature = (feature: keyof FeatureFlags): void => {
-  (FEATURE_FLAGS as MutableFeatureFlags)[feature] = true;
-};
-
-export const disableFeature = (feature: keyof FeatureFlags): void => {
-  (FEATURE_FLAGS as MutableFeatureFlags)[feature] = false;
-};
+/**
+ * Re-export for backward compatibility
+ */
+export const FEATURE_FLAGS = {
+  USE_UNIFIED_OVERLAY_TOOLBAR,
+} as const;

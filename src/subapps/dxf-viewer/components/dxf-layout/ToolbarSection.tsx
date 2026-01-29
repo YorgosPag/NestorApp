@@ -8,13 +8,11 @@ import { useUniversalSelection } from '../../systems/selection';
 import { useCommandHistory, DeleteOverlayCommand } from '../../core/commands';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
+import type { Point2D } from '../../rendering/types/Types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 // 🏢 ADR-050: Overlay Toolbar Integration (2027-01-27)
 import type { OverlayToolbarState, OverlayToolbarHandlers } from '../../ui/toolbar/overlay-section/types';
-
-// 🏢 ADR-050: Feature flag for unified toolbar integration
-// ✅ ENABLED (2027-01-27): Unified toolbar is now LIVE in production
-const USE_UNIFIED_OVERLAY_TOOLBAR = true; // Unified toolbar active!
+import { USE_UNIFIED_OVERLAY_TOOLBAR } from '../../config/feature-flags';
 
 interface ToolbarSectionProps extends DXFViewerLayoutProps {
   overlayMode: OverlayEditorMode;
@@ -27,6 +25,8 @@ interface ToolbarSectionProps extends DXFViewerLayoutProps {
   showOverlayToolbar?: boolean;
   isOverlaySectionCollapsed?: boolean;
   onToggleOverlaySection?: () => void;
+  // 🏢 ENTERPRISE (2027-01-27): Mouse coordinates for status bar
+  mouseCoordinates?: Point2D | null;
 }
 
 export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
@@ -40,6 +40,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
     showOverlayToolbar = false,
     isOverlaySectionCollapsed = false,
     onToggleOverlaySection,
+    mouseCoordinates = null,
     ...dxfProps
   } = props;
 
@@ -48,6 +49,9 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
   const universalSelection = useUniversalSelection();
   // 🏢 ENTERPRISE (2027-01-27): Command Pattern for Undo/Redo - ADR-032
   const { execute } = useCommandHistory();
+
+  // 🔍 DEBUG: Log mouseCoordinates prop
+  console.log('🔍 ToolbarSection received mouseCoordinates:', mouseCoordinates);
 
   const handleOverlayDuplicate = () => {
     // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
@@ -116,6 +120,9 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           selectedOverlayId={universalSelection.getPrimaryId()}
           isOverlaySectionCollapsed={isOverlaySectionCollapsed}
           onToggleOverlaySection={onToggleOverlaySection}
+          // 🏢 ENTERPRISE (2027-01-27): Mouse coordinates for status bar real-time updates
+          mouseCoordinates={mouseCoordinates}
+          showCoordinates={true}
           // 🏢 ENTERPRISE: Removed unnecessary empty spread - all required props are passed explicitly
         />
 

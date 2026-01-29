@@ -61,4 +61,7 @@ export interface DXFViewerLayoutProps extends Omit<DxfViewerState, 'snapEnabled'
   onRegionClick?: (regionId: string) => void;
   onMouseMove?: (worldPoint: Point2D, event: React.MouseEvent) => void;
   setOverlayStatus?: (status: PropertyStatus) => void;
+
+  // 🏢 ENTERPRISE (2027-01-27): Mouse coordinates callback for status bar real-time updates
+  onMouseCoordinatesChange?: (coords: Point2D | null) => void;
 }

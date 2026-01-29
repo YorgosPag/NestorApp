@@ -201,6 +201,7 @@ export interface EnhancedDXFToolbarPropsExtended {
   canUndo: boolean;
   canRedo: boolean;
   snapEnabled: boolean;
+  showLayers?: boolean;
   showCursorSettings?: boolean;
   currentZoom: number;
   commandCount?: number;

@@ -29,6 +29,8 @@ import { LazyFullLayoutDebug } from '../ui/components/LazyLoadWrapper';
 import { useUniversalSelection } from '../systems/selection';
 // 🏢 ENTERPRISE (2026-01-26): Event Bus for delete command to CanvasSection - ADR-032
 import { useEventBus } from '../systems/events';
+// 🏢 ENTERPRISE (2027-01-27): ADR-050 - Hide floating toolbar when unified toolbar is enabled
+import { USE_UNIFIED_OVERLAY_TOOLBAR } from '../config/feature-flags';
 
 // ✅ ENTERPRISE: Type-safe props interface
 interface FloatingPanelsSectionProps {
@@ -152,7 +154,8 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
       )}
 
       {/* DRAGGABLE OVERLAY TOOLBAR */}
-      {showOverlayToolbar && (
+      {/* 🏢 ADR-050: Hide floating toolbar when unified toolbar is enabled */}
+      {showOverlayToolbar && !USE_UNIFIED_OVERLAY_TOOLBAR && (
         <DraggableOverlayToolbar
           mode={overlayMode}
           onModeChange={setOverlayMode}

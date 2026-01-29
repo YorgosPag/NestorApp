@@ -29,6 +29,9 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
+  // 🔍 DEBUG: Log props to see what's being passed
+  console.log('🔍 ToolbarStatusBar props:', { showCoordinates, mouseCoordinates });
+
   // Λειτουργία ακρίβειας: περισσότερα δεκαδικά ψηφία
   const precision = settings.performance.precision_mode ? 4 : 2;
 

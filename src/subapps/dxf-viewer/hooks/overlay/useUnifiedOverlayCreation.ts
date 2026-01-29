@@ -4,7 +4,7 @@
  * ώστε η εμπειρία να είναι 1:1 με τα DXF tools (rubber-band, snaps, dynamic input).
  */
 import { useCallback } from 'react';
-import { isFeatureEnabled } from '../../config/feature-flags';
+import { isFeatureEnabled } from '../../config/experimental-features';
 import { toolStyleStore } from '../../stores/ToolStyleStore';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useUnifiedDrawing } from '../drawing/useUnifiedDrawing';

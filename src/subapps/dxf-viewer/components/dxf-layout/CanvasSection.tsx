@@ -162,8 +162,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (!last || Math.abs(point.x - last.x) > 0.1 || Math.abs(point.y - last.y) > 0.1) {
       lastMouseWorldRef.current = point;
       setMouseWorld(point);
+      // 🏢 ENTERPRISE: Notify parent of mouse coordinate changes for status bar
+      console.log('🔍 CanvasSection updateMouseWorld:', { point, hasCallback: !!props.onMouseCoordinatesChange });
+      props.onMouseCoordinatesChange?.(point);
     }
-  }, []);
+  }, [props]);
 
   // 🎯 Canvas visibility από parent props (με fallback στα defaults)
   const showDxfCanvas = props.dxfCanvasVisible ?? true;

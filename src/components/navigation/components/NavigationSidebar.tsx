@@ -37,7 +37,7 @@ export function NavigationSidebar({
           )}
         >
           <LocationIcon className="h-4 w-4" />
-          <span className="font-medium">Πλοήγηση</span>
+          <span className="font-medium">Ιεραρχία</span>
           {isExpanded ? (
             <ChevronDown className="h-4 w-4 ml-auto" />
           ) : (

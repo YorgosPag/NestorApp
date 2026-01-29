@@ -28,6 +28,10 @@ export const EXPERIMENTAL_FEATURES = {
 
   // Layout Debug System
   LAYOUT_DEBUG_SYSTEM: false,
+
+  // 🏢 ENTERPRISE (2027-01-27): Unified Drawing Engine
+  // Enables unified drawing engine for overlay creation
+  USE_UNIFIED_DRAWING_ENGINE: true,
 } as const;
 
 export function isFeatureEnabled(feature: keyof typeof EXPERIMENTAL_FEATURES): boolean {
