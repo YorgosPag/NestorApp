@@ -8,13 +8,16 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { FileText, Upload, Camera, FileUp, FileImage, Eye, Download, Trash2 } from 'lucide-react';
+import { FileText, Upload, Camera, FileImage, Eye, Download, Trash2 } from 'lucide-react';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { INTERACTIVE_PATTERNS, FORM_BUTTON_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ADR-054: Centralized upload components
+import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
+import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 
 export function FilesCard() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -23,9 +26,21 @@ export function FilesCard() {
   const { createBorder, quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
-  const handleFileUpload = (files: FileList | null) => {
-    if (!files) return;
-    console.log('Files selected:', Array.from(files).map(f => f.name));
+  /**
+   * 🏢 ADR-054: Centralized file upload handler
+   * Receives validated/compressed files from FileUploadZone
+   */
+  const handleFileUpload = async (files: File[]) => {
+    if (files.length === 0) return;
+    console.log('Files selected:', files.map(f => f.name));
+    // TODO: Implement actual file upload to FileRecordService
+  };
+
+  /**
+   * 🏢 ADR-054: Single file upload handler for FileUploadButton
+   */
+  const handleSingleFileUpload = (file: File) => {
+    handleFileUpload([file]);
   };
 
   return (
@@ -37,13 +52,15 @@ export function FilesCard() {
             {t('tabs.general.files.title')}
           </CardTitle>
           <div className="flex gap-2">
-            <Button asChild variant="outline" size="sm" className="cursor-pointer">
-              <Label>
-                <Upload className={`${iconSizes.sm} mr-2`} />
-                {t('tabs.general.files.addFiles')}
-                <input type="file" multiple className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
-              </Label>
-            </Button>
+            {/* 🏢 ADR-054: Using centralized FileUploadButton */}
+            <FileUploadButton
+              onFileSelect={handleSingleFileUpload}
+              accept="*/*"
+              fileType="any"
+              buttonText={t('tabs.general.files.addFiles')}
+              variant="outline"
+              size="sm"
+            />
             <Button variant="outline" size="sm">
               <Camera className={`${iconSizes.sm} mr-2`} />
               {t('tabs.general.files.newPhoto')}
@@ -52,32 +69,13 @@ export function FilesCard() {
         </nav>
       </CardHeader>
       <CardContent>
-        <section
-          className={`${createBorder('medium', 'hsl(var(--border))', 'dashed')} ${quick.card} p-6 text-center cursor-pointer bg-muted/20 ${INTERACTIVE_PATTERNS.DROPZONE_HOVER}`}
-          role="region"
-          aria-label="File drop zone"
-          onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add(getStatusBorder('info').split(' ')[1], 'bg-accent/20'); }}
-          onDragLeave={(e) => { e.currentTarget.classList.remove(getStatusBorder('info').split(' ')[1], 'bg-accent/20'); }}
-          onDrop={(e) => {
-            e.preventDefault();
-            e.currentTarget.classList.remove(getStatusBorder('info').split(' ')[1], 'bg-accent/20');
-            handleFileUpload(e.dataTransfer.files);
-          }}
-        >
-          <div className="space-y-2">
-            <div className={`mx-auto ${iconSizes.xl3} text-muted-foreground flex items-center justify-center`}>
-              <FileUp className={iconSizes.xl} />
-            </div>
-            <div className="text-sm text-muted-foreground">
-              <span className={`font-medium cursor-pointer ${INTERACTIVE_PATTERNS.LINK_PRIMARY}`}>
-                {t('tabs.general.files.clickToSelect')}
-              </span>{' '}{t('tabs.general.files.orDragAndDrop')}
-            </div>
-            <p className="text-xs text-muted-foreground/80">
-              {t('tabs.general.files.fileTypes')}
-            </p>
-          </div>
-        </section>
+        {/* 🏢 ADR-054: Using centralized FileUploadZone with drag & drop */}
+        <FileUploadZone
+          onUpload={handleFileUpload}
+          accept="*/*"
+          multiple={true}
+          enableCompression={true}
+        />
 
         <section className="mt-6 space-y-3" role="region" aria-labelledby="existing-files-heading">
           <h4 id="existing-files-heading" className="text-sm font-medium text-foreground">{t('tabs.general.files.existingFiles')}</h4>

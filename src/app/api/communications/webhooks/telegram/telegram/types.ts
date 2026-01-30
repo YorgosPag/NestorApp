@@ -102,3 +102,35 @@ export interface TelegramSendResult {
   error?: string;
   result?: TelegramApiResult;
 }
+
+// ============================================================================
+// TELEGRAM REACTIONS (Bot API 7.3+)
+// ============================================================================
+
+/**
+ * Telegram Reaction Type
+ * @see https://core.telegram.org/bots/api#reactiontype
+ */
+export interface TelegramReactionTypeEmoji {
+  type: 'emoji';
+  emoji: string; // e.g., '👍', '❤️', '😂'
+}
+
+export interface TelegramReactionTypeCustomEmoji {
+  type: 'custom_emoji';
+  custom_emoji_id: string;
+}
+
+export type TelegramReactionType = TelegramReactionTypeEmoji | TelegramReactionTypeCustomEmoji;
+
+/**
+ * Telegram setMessageReaction payload
+ * @see https://core.telegram.org/bots/api#setmessagereaction
+ */
+export interface TelegramSetReactionPayload {
+  method: 'setMessageReaction';
+  chat_id: number | string;
+  message_id: number;
+  reaction?: TelegramReactionType[];
+  is_big?: boolean;
+}

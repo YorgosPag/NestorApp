@@ -1,6 +1,11 @@
-import { useCallback, useEffect } from 'react';
-import React from 'react';
+'use client';
+
+import { useCallback, useMemo } from 'react';
+import type React from 'react';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import { useAutoUploadEffect } from '@/hooks/upload/useAutoUploadEffect';
+import { useFileSelectionHandlers } from '@/hooks/upload/useFileSelectionHandlers';
+import { createUploadHandlerFromPreset } from '@/services/upload-handlers';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -21,18 +26,15 @@ export interface UsePhotoUploadLogicProps {
   uploadHandler?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
   /** Purpose για logging */
   purpose?: string;
-  /** 🔥 RESTORED: Contact data για FileNamingService */
+  /** Contact data για FileNamingService */
   contactData?: Record<string, unknown>;
-  /** 🔥 RESTORED: Photo index για multiple photos */
+  /** Photo index για multiple photos */
   photoIndex?: number;
-  /** 🔥 RESTORED: Custom filename override */
+  /** Custom filename override */
   customFileName?: string;
 
   // =========================================================================
   // 🏢 CANONICAL PIPELINE FIELDS (ADR-031)
-  // =========================================================================
-  // If provided, the upload will use the canonical pipeline
-  // (createPendingFileRecord → upload → finalize).
   // =========================================================================
 
   /** 🏢 CANONICAL: Contact ID for FileRecord linkage */
@@ -59,249 +61,107 @@ export interface PhotoUploadHandlers {
 }
 
 // ============================================================================
-// 🔥 EXTRACTED: PHOTO UPLOAD LOGIC HOOK
+// MAIN HOOK (ADR-054: Simplified using extracted hooks)
 // ============================================================================
 
 /**
- * Photo Upload Logic Hook - Specialized για upload business logic
+ * Photo Upload Logic Hook - Simplified version using extracted hooks
  *
- * Extracted από EnterprisePhotoUpload για Single Responsibility Principle.
- * Χειρίζεται μόνο την upload λογική χωρίς UI concerns.
+ * ADR-054: Refactored to use centralized hooks:
+ * - useAutoUploadEffect: Handles automatic upload when file changes
+ * - useFileSelectionHandlers: Handles drag/drop/click file selection
+ * - createUploadHandlerFromPreset: Creates upload handler from preset
  *
- * Features:
- * - File selection με validation
- * - Drag & drop functionality
- * - Automatic upload με Firebase Storage
- * - Remove functionality με callbacks
- * - Error handling και progress tracking
- * - Zero UI dependencies (pure business logic)
+ * @see useAutoUploadEffect
+ * @see useFileSelectionHandlers
+ * @see createUploadHandlerFromPreset
  */
 export function usePhotoUploadLogic({
   photoFile,
   upload,
   onUploadComplete,
-  uploadHandler,
+  uploadHandler: customUploadHandler,
   purpose = 'photo',
   contactData,
   photoIndex,
   customFileName,
-  // 🏢 CANONICAL: New fields for canonical pipeline
   contactId,
   companyId,
   createdBy,
-  contactName
+  contactName,
 }: UsePhotoUploadLogicProps): PhotoUploadHandlers {
 
   // ========================================================================
-  // DEFAULT UPLOAD HANDLER (FIREBASE STORAGE)
+  // DEFAULT UPLOAD HANDLER (ADR-054: Using centralized factory)
   // ========================================================================
 
-  // 🏢 ENTERPRISE: Default upload handler using CORRECT Firebase Storage
-  const defaultUploadHandler = useCallback(async (file: File, onProgress: (progress: FileUploadProgress) => void) => {
-    // 🔥 CRITICAL FIX: Use the CORRECT Firebase Storage service, not Base64
-    const { PhotoUploadService: FirebasePhotoUploadService } = await import('@/services/photo-upload.service');
+  const defaultUploadHandler = useMemo(() => {
+    // Determine preset based on purpose
+    const preset = purpose === 'logo' ? 'company-logo' : 'contact-photo';
 
-    return await FirebasePhotoUploadService.uploadPhoto(file, {
-      folderPath: 'contacts/photos',
-      enableCompression: true,
-      compressionUsage: 'profile-modal',
-      onProgress,
-      purpose: purpose || 'representative',
-      // 🔥 RESTORED: Pass FileNamingService options
+    return createUploadHandlerFromPreset(preset, {
       contactData,
       photoIndex,
       fileName: customFileName,
-      // 🏢 CANONICAL: Pass canonical fields if available (ADR-031)
-      // If all three are provided, uploadPhoto will route to canonical pipeline
       contactId,
       companyId,
       createdBy,
       contactName: contactName || (contactData?.name as string),
+      purpose,
     });
   }, [purpose, contactData, photoIndex, customFileName, contactId, companyId, createdBy, contactName]);
 
-  // ========================================================================
-  // FILE SELECTION LOGIC
-  // ========================================================================
-
-  /**
-   * Handle file selection με validation
-   */
-  const handleFileSelection = useCallback((file: File | null) => {
-    if (!file) {
-      // File cleared - cleanup state handled elsewhere
-      console.log('📤 LOGIC: File cleared, no upload action needed');
-      return;
-    }
-
-    console.log('🔍 LOGIC: File selection started:', {
-      fileName: file.name,
-      fileSize: file.size,
-      purpose
-    });
-  }, [upload, purpose]);
+  // Select handler: custom or default
+  const uploadHandler = customUploadHandler || defaultUploadHandler;
 
   // ========================================================================
-  // DRAG & DROP LOGIC
+  // FILE SELECTION HANDLERS (ADR-054: Using extracted hook)
   // ========================================================================
 
-  /**
-   * Handle drag over events
-   */
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  /**
-   * Handle drop events
-   */
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleFileSelection(files[0]);
-    }
-  }, [handleFileSelection]);
-
-  /**
-   * Handle click to select file
-   */
-  const handleClick = useCallback(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0] || null;
-      handleFileSelection(file);
-    };
-    input.click();
-  }, [handleFileSelection]);
-
-  // ========================================================================
-  // AUTOMATIC UPLOAD LOGIC (EXTRACTED 70-LINE USEEFFECT)
-  // ========================================================================
-
-  /**
-   * 🔥 AUTOMATIC UPLOAD: Start upload immediately when file is selected
-   *
-   * Extracted από το μεγάλο 70-line useEffect του EnterprisePhotoUpload
-   */
-  useEffect(() => {
-    console.log('🔄 LOGIC AUTO-UPLOAD EFFECT TRIGGERED:', {
-      hasPhotoFile: !!photoFile,
-      photoFileName: photoFile?.name,
-      isUploading: upload.isUploading,
-      uploadSuccess: upload.success,
-      hasUploadHandler: !!uploadHandler,
-      hasOnUploadComplete: !!onUploadComplete,
-      purpose
-    });
-
-    // 🔥 CRITICAL: Enhanced validation to prevent undefined uploads
-    const isValidFile = photoFile && photoFile instanceof File && photoFile.name && photoFile.size > 0;
-
-    if (!isValidFile || upload.isUploading || upload.success) {
-      console.log('🛑 LOGIC: Skipping upload:', {
-        reason: !photoFile ? 'No file'
-              : !(photoFile instanceof File) ? 'Not a File object'
-              : !photoFile.name ? 'File has no name'
-              : photoFile.size <= 0 ? 'File is empty'
-              : upload.isUploading ? 'Already uploading'
-              : 'Already successful',
-        hasPhotoFile: !!photoFile,
-        isFileInstance: photoFile instanceof File,
-        fileName: photoFile?.name,
-        fileSize: photoFile?.size
-      });
-      return;
-    }
-
-    console.log('🚀 LOGIC: Starting auto-upload for:', photoFile.name);
-
-    const startUpload = async () => {
-      try {
-        // Use provided uploadHandler or default Firebase Storage handler
-        const handlerToUse = uploadHandler || defaultUploadHandler;
-        console.log('📡 LOGIC: Using upload handler:', {
-          isCustomHandler: !!uploadHandler,
-          isDefaultHandler: !uploadHandler,
-          handlerName: handlerToUse.name || 'anonymous'
-        });
-
-        const result = await upload.uploadFile(photoFile, handlerToUse);
-
-        console.log('🎉 LOGIC: Upload result received!', {
-          hasResult: !!result,
-          result: result,
-          hasSuccess: !!result?.success,
-          hasUrl: !!result?.url,
-          url: result?.url?.substring(0, 80) + '...',
-          fileName: result?.fileName,
-          purpose
-        });
-
-        if (result?.success && onUploadComplete) {
-          console.log('✅ LOGIC: Branch 1 - Explicit success flag present, calling onUploadComplete');
-          onUploadComplete(result);
-        } else if (result?.url && onUploadComplete) {
-          console.log('🔧 LOGIC: Branch 2 - No explicit success flag but has URL, assuming success');
-          const enhancedResult = {
-            ...result,
-            success: true
-          };
-          console.log('📤 LOGIC: Calling onUploadComplete with enhanced result:', enhancedResult);
-          onUploadComplete(enhancedResult);
-        } else {
-          console.error('❌ LOGIC: Upload callback NOT called!', {
-            hasResult: !!result,
-            hasSuccess: !!result?.success,
-            hasUrl: !!result?.url,
-            hasCallback: !!onUploadComplete,
-            callbackName: onUploadComplete?.name || 'anonymous',
-            purpose
-          });
-        }
-      } catch (err) {
-        console.error('⚠️ LOGIC: Auto-upload failed:', err, { purpose, fileName: photoFile?.name });
-
-        // 🔥 CRITICAL: Call onUploadComplete even on failure to prevent hanging
-        if (onUploadComplete) {
-          console.log('🔧 LOGIC: Calling onUploadComplete with error result');
-          onUploadComplete({
-            success: false,
-            error: err instanceof Error ? err.message : 'Upload failed'
-          });
-        }
+  const fileSelectionHandlers = useFileSelectionHandlers({
+    onFileSelect: (file) => {
+      if (!file) {
+        console.log('📤 LOGIC: File cleared, no upload action needed');
+        return;
       }
-    };
-
-    startUpload();
-  }, [photoFile, upload.isUploading, upload.success, uploadHandler, onUploadComplete, upload, defaultUploadHandler, purpose]);
+      console.log('🔍 LOGIC: File selection started:', {
+        fileName: file.name,
+        fileSize: file.size,
+        purpose,
+      });
+    },
+    accept: 'image/*',
+  });
 
   // ========================================================================
-  // REMOVE LOGIC
+  // AUTOMATIC UPLOAD (ADR-054: Using extracted hook)
   // ========================================================================
 
-  /**
-   * Handle remove photo με proper cleanup
-   */
+  useAutoUploadEffect({
+    file: photoFile,
+    upload,
+    uploadHandler,
+    onUploadComplete,
+    purpose,
+    debug: true, // Enable logging for this use case
+  });
+
+  // ========================================================================
+  // REMOVE HANDLER
+  // ========================================================================
+
   const handleRemove = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     console.log('🗑️ LOGIC: Photo removal initiated');
 
-    // ΚΑΘΑΡΙΖΟΥΜΕ ΜΕ ΤΗ ΒΙΑ ΤΑ ΠΑΝΤΑ
-    // ΑΜΕΣΗ ΚΛΗΣΗ ΤΟΥ HANDLER
     if (onUploadComplete) {
       onUploadComplete({
         success: true,
         url: '',
         fileName: '',
-        compressionInfo: { originalSize: 0, compressedSize: 0, compressionRatio: 1, quality: 1 }
+        compressionInfo: { originalSize: 0, compressedSize: 0, compressionRatio: 1, quality: 1 },
       });
     }
 
@@ -313,10 +173,10 @@ export function usePhotoUploadLogic({
   // ========================================================================
 
   return {
-    handleFileSelection,
-    handleDragOver,
-    handleDrop,
-    handleClick,
-    handleRemove
+    handleFileSelection: fileSelectionHandlers.handleFileSelection,
+    handleDragOver: fileSelectionHandlers.handleDragOver,
+    handleDrop: fileSelectionHandlers.handleDrop,
+    handleClick: fileSelectionHandlers.handleClick,
+    handleRemove,
   };
 }

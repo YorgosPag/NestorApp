@@ -1203,6 +1203,21 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             const angleMeasurementEntity = entity as typeof entity & { vertex: Point2D; point1: Point2D; point2: Point2D; angle: number };
             return { ...base, type: 'angle-measurement' as const, vertex: angleMeasurementEntity.vertex, point1: angleMeasurementEntity.point1, point2: angleMeasurementEntity.point2, angle: angleMeasurementEntity.angle } as DxfEntityUnion;
           }
+          case 'rectangle': {
+            // 🏢 ENTERPRISE (2026-01-30): Rectangle support - convert to closed polyline
+            // Pattern: DXF Standard - rectangles are stored as closed polylines (4 vertices)
+            // Type guard: Entity με type 'rectangle' έχει corner1 & corner2
+            const rectEntity = entity as typeof entity & { corner1: Point2D; corner2: Point2D };
+            const { corner1, corner2 } = rectEntity;
+            // Convert corners to 4 vertices (clockwise from corner1)
+            const vertices: Point2D[] = [
+              corner1,                           // Bottom-left
+              { x: corner2.x, y: corner1.y },    // Bottom-right
+              corner2,                           // Top-right
+              { x: corner1.x, y: corner2.y },    // Top-left
+            ];
+            return { ...base, type: 'polyline' as const, vertices, closed: true } as DxfEntityUnion;
+          }
           default:
             console.warn('🔍 Unsupported entity type for DxfCanvas:', entity.type);
             return null;

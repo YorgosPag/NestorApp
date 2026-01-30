@@ -52,6 +52,10 @@ const DEBUG_DRAWING_HANDLERS = false; // 🔍 DISABLED - set to true only for de
 
 import { useCallback, useRef, useMemo } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
+// 🏢 ENTERPRISE (2026-01-30): Centralized tool metadata for continuous mode
+import { getToolMetadata } from '../../systems/tools/ToolStateManager';
+// 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
+import { toolStateStore } from '../../stores/ToolStateStore';
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 import { useUnifiedDrawing, type ExtendedSceneEntity, type DrawingTool } from './useUnifiedDrawing';
@@ -65,6 +69,29 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 type Pt = { x: number, y: number };
+
+/**
+ * 🏢 ENTERPRISE (2026-01-30): Centralized Tool Completion Handler
+ *
+ * Pattern: AutoCAD/BricsCAD - Tools with allowsContinuous=true stay active after completion
+ *
+ * REFACTORED: Now delegates to ToolStateStore for SINGLE SOURCE OF TRUTH
+ * The store manages all tool state and notifies all subscribers (React components)
+ *
+ * @param tool - The current tool type
+ * @param forceSelect - If true, always return to select (used for cancel operations)
+ */
+function handleToolCompletion(
+  tool: ToolType,
+  forceSelect: boolean = false
+): void {
+  // 🏢 ENTERPRISE: Delegate to centralized store
+  // The store will:
+  // 1. Check allowsContinuous metadata
+  // 2. Update internal state (activeTool, previousTool)
+  // 3. Notify all subscribers (React components auto-update)
+  toolStateStore.handleToolCompletion(tool, forceSelect);
+}
 
 // 🏢 ENTERPRISE: Type-safe entity created callback
 // 🏢 ADR-040: Optional previewCanvasRef for direct preview rendering (performance optimization)
@@ -162,7 +189,8 @@ export function useDrawingHandlers(
         if (newEntity && 'type' in newEntity && typeof newEntity.type === 'string') {
           onEntityCreated(newEntity as Entity);
         }
-        onToolChange('select');
+        // 🏢 ENTERPRISE: Use centralized tool completion logic via ToolStateStore
+        handleToolCompletion(activeTool);
 
         // Clear preview canvas
         if (previewCanvasRef?.current) {
@@ -178,8 +206,10 @@ export function useDrawingHandlers(
     const transformUtils = canvasOps.getTransformUtils();
     const completed = addPoint(snappedPoint, transformUtils);
 
-    // 🔧 FIX (2026-01-27): IMMEDIATE clear prevents "two numbers" bug
-    // This is the SYNCHRONOUS path - Event Bus is backup for other listeners
+    // 🏢 ENTERPRISE (2026-01-30): Clear preview canvas when drawing completes
+    // Note: Tool state is managed by useUnifiedDrawing based on allowsContinuous
+    // - allowsContinuous=true → tool stays active for next drawing
+    // - allowsContinuous=false → tool returns to select mode
     if (completed && previewCanvasRef?.current) {
       previewCanvasRef.current.clear();
     }
@@ -220,8 +250,9 @@ export function useDrawingHandlers(
   
   const onDrawingCancel = useCallback(() => {
     cancelDrawing();
-    onToolChange('select');
-  }, [cancelDrawing, onToolChange]);
+    // 🏢 ENTERPRISE: Force select on cancel (user explicitly cancelled)
+    handleToolCompletion(activeTool, true); // forceSelect=true for cancel
+  }, [activeTool, cancelDrawing, onToolChange]);
 
   // Double click handler for finishing operations
   const onDrawingDoubleClick = useCallback(() => {
@@ -242,7 +273,8 @@ export function useDrawingHandlers(
           if (previewCanvasRef?.current) {
             previewCanvasRef.current.clear();
           }
-          onToolChange('select');
+          // 🏢 ENTERPRISE: Use centralized tool completion logic via ToolStateStore
+          handleToolCompletion(activeTool);
           return;
         }
 
@@ -254,9 +286,8 @@ export function useDrawingHandlers(
             onEntityCreated(newEntity as Entity);
           }
         }
-        onToolChange('select');
-      } else {
-
+        // 🏢 ENTERPRISE: Use centralized tool completion logic via ToolStateStore
+        handleToolCompletion(activeTool);
       }
     }
   }, [activeTool, finishPolyline, onEntityCreated, onToolChange, cancelDrawing, previewCanvasRef]);

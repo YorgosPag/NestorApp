@@ -217,6 +217,43 @@ export interface Conversation {
 // CANONICAL MESSAGE (SSoT)
 // ============================================================================
 
+// ============================================================================
+// MESSAGE REACTIONS (Telegram-style)
+// ============================================================================
+
+/**
+ * Single reaction entry
+ * @enterprise Telegram-compatible reaction format
+ */
+export interface MessageReaction {
+  /** Emoji character (e.g., '👍', '❤️', '😂') */
+  emoji: string;
+  /** User IDs who reacted with this emoji */
+  userIds: string[];
+  /** Display names for tooltip (optional, denormalized for performance) */
+  userNames?: string[];
+  /** Total count (derived from userIds.length but stored for queries) */
+  count: number;
+  /** When first reaction was added */
+  createdAt: Date;
+  /** When last reaction was added/removed */
+  updatedAt: Date;
+}
+
+/**
+ * Reactions map for a message
+ * Key is emoji string, value is reaction data
+ * @enterprise Optimized for Firestore map operations
+ */
+export type MessageReactionsMap = Record<string, MessageReaction>;
+
+/**
+ * Quick reaction emojis (Telegram-style)
+ * @enterprise Canonical list - change here to update everywhere
+ */
+export const QUICK_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡'] as const;
+export type QuickReactionEmoji = typeof QUICK_REACTION_EMOJIS[number];
+
 /**
  * Canonical Message entity
  * @enterprise Unified message format across all channels
@@ -266,6 +303,13 @@ export interface CanonicalMessage {
   sentAt?: Date;
   deliveredAt?: Date;
   readAt?: Date;
+
+  /** Reactions (Telegram-style) */
+  reactions?: MessageReactionsMap;
+  /** Total reaction count (for sorting/filtering) */
+  reactionCount?: number;
+  /** Whether current user has reacted (hydrated client-side) */
+  userReactions?: string[];
 }
 
 /**

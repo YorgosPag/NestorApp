@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Upload, 
-  ZoomIn, 
-  ZoomOut, 
-  RotateCcw, 
+import {
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
   Eye,
   EyeOff,
   Grid,
@@ -21,6 +20,8 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
+// 🏢 ADR-054: Centralized upload component
+import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -66,22 +67,14 @@ export function ViewerToolbar({
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  // 🏢 ADR-054: Centralized file upload handler
+  const handleFileSelect = async (file: File) => {
     console.log('📄 PDF selected:', file.name);
 
-    if (file.type !== 'application/pdf') {
-      alert('Please select a PDF file');
-      return;
-    }
-
     setIsUploading(true);
-    
+
     try {
       const pdfUrl = URL.createObjectURL(file);
       console.log('✅ PDF URL created');
@@ -104,37 +97,24 @@ export function ViewerToolbar({
 
     } catch (error) {
       console.error('PDF upload error:', error);
-      alert('PDF upload failed');
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
 
   return (
     <div className={`flex items-center gap-3 p-3 ${colors.bg.primary} ${quick.separatorH}`}>
       
-      {/* PDF UPLOAD */}
-      <div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        <Button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          variant="outline"
-          size="sm"
-        >
-          <Upload className={`${iconSizes.sm} mr-2`} />
-          {isUploading ? 'Loading...' : 'Upload PDF'}
-        </Button>
-      </div>
+      {/* PDF UPLOAD - ADR-054: Using centralized FileUploadButton */}
+      <FileUploadButton
+        onFileSelect={handleFileSelect}
+        accept=".pdf"
+        fileType="pdf"
+        buttonText={isUploading ? 'Loading...' : 'Upload PDF'}
+        loading={isUploading}
+        variant="outline"
+        size="sm"
+      />
 
       <Separator orientation="vertical" className="h-6" />
 

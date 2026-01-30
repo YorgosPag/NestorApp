@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import { validateFile } from '@/utils/file-validation';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -59,30 +60,27 @@ export function useMultiplePhotosHandlers({
 
   /**
    * Validate multiple photos files
+   * ADR-054: Using centralized validateFile() instead of inline validation
    *
    * @param files - Files to validate
    * @returns Valid files array
    */
   const validateMultiplePhotos = useCallback((files: File[]): File[] => {
-
     const validFiles: File[] = [];
     const maxFiles = 5;
-    const maxSize = 5 * 1024 * 1024; // 5MB
 
     for (let i = 0; i < Math.min(files.length, maxFiles); i++) {
       const file = files[i];
 
-      // Check file type
-      if (!file.type.startsWith('image/')) {
-        notifications.error(`📸 Αρχείο ${file.name}: Μόνο εικόνες επιτρέπονται`);
-        console.warn('❌ MULTIPLE PHOTOS HANDLER: Invalid file type:', file.name, file.type);
-        continue;
-      }
+      // 🏢 ADR-054: Use centralized validateFile() instead of inline validation
+      const validation = validateFile(file, {
+        fileType: 'image',
+        maxSize: 5 * 1024 * 1024, // 5MB
+      });
 
-      // Check file size
-      if (file.size > maxSize) {
-        notifications.error(`📏 Αρχείο ${file.name}: Μέγεθος > 5MB`);
-        console.warn('❌ MULTIPLE PHOTOS HANDLER: File too large:', file.name, file.size);
+      if (!validation.isValid) {
+        notifications.error(`📸 ${file.name}: ${validation.error}`);
+        console.warn('❌ MULTIPLE PHOTOS HANDLER: Validation failed:', file.name, validation.error);
         continue;
       }
 

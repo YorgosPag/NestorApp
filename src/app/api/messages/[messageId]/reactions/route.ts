@@ -1,0 +1,427 @@
+/**
+ * =============================================================================
+ * MESSAGE REACTIONS API - ENTERPRISE OMNICHANNEL
+ * =============================================================================
+ *
+ * API endpoint for Telegram-style message reactions.
+ * Enterprise-grade with tenant isolation, RBAC, and real-time sync.
+ *
+ * 🏢 ENTERPRISE FEATURES:
+ * - RBAC permission validation
+ * - Tenant isolation (companyId validation)
+ * - Atomic Firestore updates (FieldValue operations)
+ * - Audit logging
+ * - User display name denormalization
+ *
+ * @module api/messages/[messageId]/reactions
+ * @enterprise Omnichannel Communications
+ * @security RBAC + Tenant Isolation
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { withAuth } from '@/lib/auth';
+import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { generateRequestId } from '@/services/enterprise-id.service';
+import { FieldValue } from 'firebase-admin/firestore';
+import type { MessageReactionsMap } from '@/types/conversations';
+import { QUICK_REACTION_EMOJIS } from '@/types/conversations';
+import { sendTelegramReaction } from '@/app/api/communications/webhooks/telegram/telegram/client';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface ReactionRequest {
+  emoji: string;
+  action: 'add' | 'remove' | 'toggle';
+}
+
+interface ReactionResponse {
+  success: boolean;
+  reactions: MessageReactionsMap;
+  userReactions: string[];
+  action: 'added' | 'removed';
+  emoji: string;
+}
+
+type ReactionCanonicalResponse = ApiSuccessResponse<ReactionResponse>;
+
+interface RouteParams {
+  params: Promise<{
+    messageId: string;
+  }>;
+}
+
+// ============================================================================
+// FORCE DYNAMIC
+// ============================================================================
+
+export const dynamic = 'force-dynamic';
+
+// ============================================================================
+// VALIDATION
+// ============================================================================
+
+/**
+ * Validate emoji is allowed
+ * @enterprise Only allow configured quick reaction emojis + common emojis
+ */
+function isValidEmoji(emoji: string): boolean {
+  // Allow quick reaction emojis
+  if ((QUICK_REACTION_EMOJIS as readonly string[]).includes(emoji)) {
+    return true;
+  }
+
+  // Allow common emoji patterns (single emoji character)
+  // This regex matches most emoji characters
+  const emojiRegex = /^(\p{Emoji_Presentation}|\p{Extended_Pictographic})$/u;
+  return emojiRegex.test(emoji);
+}
+
+// ============================================================================
+// POST HANDLER
+// ============================================================================
+
+/**
+ * POST /api/messages/[messageId]/reactions
+ *
+ * Add, remove, or toggle a reaction on a message.
+ *
+ * 🔒 SECURITY: Protected with RBAC
+ * - Permission: comm:messages:send (need send permission to react)
+ * - Tenant isolation validated
+ *
+ * @example
+ * POST /api/messages/msg_123/reactions
+ * Body: { emoji: "👍", action: "add" }
+ */
+export async function POST(request: NextRequest, { params }: RouteParams) {
+  const handler = withAuth<ReactionCanonicalResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      const { messageId } = await params;
+      return handleReaction(req, ctx, messageId);
+    },
+    { permissions: 'comm:messages:send' }
+  );
+
+  return handler(request);
+}
+
+/**
+ * GET /api/messages/[messageId]/reactions
+ *
+ * Get all reactions for a message.
+ *
+ * 🔒 SECURITY: Protected with RBAC
+ * - Permission: comm:messages:view
+ * - Tenant isolation validated
+ */
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  const handler = withAuth<ApiSuccessResponse<{ reactions: MessageReactionsMap; userReactions: string[] }>>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      const { messageId } = await params;
+      return handleGetReactions(ctx, messageId);
+    },
+    { permissions: 'comm:messages:view' }
+  );
+
+  return handler(request);
+}
+
+// ============================================================================
+// HANDLERS
+// ============================================================================
+
+async function handleReaction(
+  request: NextRequest,
+  ctx: AuthContext,
+  messageId: string
+): Promise<ReturnType<typeof apiSuccess<ReactionResponse>>> {
+  const operationId = generateRequestId();
+
+  console.log(`😀 [Reactions] User ${ctx.email} (company: ${ctx.companyId}) reaction on ${messageId} [${operationId}]`);
+
+  // 1. Parse request
+  const body: ReactionRequest = await request.json();
+  const { emoji, action } = body;
+
+  if (!emoji || !action) {
+    throw new ApiError(400, 'emoji and action (add/remove/toggle) required');
+  }
+
+  if (!['add', 'remove', 'toggle'].includes(action)) {
+    throw new ApiError(400, 'action must be add, remove, or toggle');
+  }
+
+  if (!isValidEmoji(emoji)) {
+    throw new ApiError(400, 'Invalid emoji');
+  }
+
+  // 2. Get message document
+  const messageRef = adminDb.collection(COLLECTIONS.MESSAGES).doc(messageId);
+  const messageDoc = await messageRef.get();
+
+  if (!messageDoc.exists) {
+    throw new ApiError(404, 'Message not found');
+  }
+
+  const messageData = messageDoc.data();
+
+  // 3. Validate tenant isolation
+  if (messageData?.companyId !== ctx.companyId) {
+    throw new ApiError(403, 'Access denied');
+  }
+
+  // 4. Get current reactions
+  const currentReactions: MessageReactionsMap = messageData?.reactions || {};
+  const currentReaction = currentReactions[emoji];
+  const userHasReacted = currentReaction?.userIds?.includes(ctx.uid) || false;
+
+  // 5. Determine final action for toggle
+  let finalAction: 'add' | 'remove' = action === 'toggle'
+    ? (userHasReacted ? 'remove' : 'add')
+    : action;
+
+  // 6. Perform atomic update
+  const now = new Date();
+  // AuthContext has email, not displayName - use email for attribution
+  const userName = ctx.email || 'Unknown';
+
+  if (finalAction === 'add') {
+    if (userHasReacted) {
+      // Already reacted - return current state
+      console.log(`⚠️ [Reactions] User ${ctx.uid} already reacted with ${emoji} [${operationId}]`);
+      return apiSuccess<ReactionResponse>({
+        success: true,
+        reactions: currentReactions,
+        userReactions: extractUserReactions(currentReactions, ctx.uid),
+        action: 'added',
+        emoji,
+      });
+    }
+
+    // Add reaction
+    if (currentReaction) {
+      // Update existing reaction
+      await messageRef.update({
+        [`reactions.${emoji}.userIds`]: FieldValue.arrayUnion(ctx.uid),
+        [`reactions.${emoji}.userNames`]: FieldValue.arrayUnion(userName),
+        [`reactions.${emoji}.count`]: FieldValue.increment(1),
+        [`reactions.${emoji}.updatedAt`]: now,
+        reactionCount: FieldValue.increment(1),
+        updatedAt: now,
+      });
+    } else {
+      // Create new reaction entry
+      await messageRef.update({
+        [`reactions.${emoji}`]: {
+          emoji,
+          userIds: [ctx.uid],
+          userNames: [userName],
+          count: 1,
+          createdAt: now,
+          updatedAt: now,
+        },
+        reactionCount: FieldValue.increment(1),
+        updatedAt: now,
+      });
+    }
+
+    console.log(`✅ [Reactions] Added ${emoji} by ${ctx.uid} on ${messageId} [${operationId}]`);
+
+  } else {
+    // Remove reaction
+    if (!userHasReacted) {
+      // Not reacted - return current state
+      console.log(`⚠️ [Reactions] User ${ctx.uid} hasn't reacted with ${emoji} [${operationId}]`);
+      return apiSuccess<ReactionResponse>({
+        success: true,
+        reactions: currentReactions,
+        userReactions: extractUserReactions(currentReactions, ctx.uid),
+        action: 'removed',
+        emoji,
+      });
+    }
+
+    if (currentReaction && currentReaction.count <= 1) {
+      // Remove entire reaction entry
+      await messageRef.update({
+        [`reactions.${emoji}`]: FieldValue.delete(),
+        reactionCount: FieldValue.increment(-1),
+        updatedAt: now,
+      });
+    } else {
+      // Decrement count
+      await messageRef.update({
+        [`reactions.${emoji}.userIds`]: FieldValue.arrayRemove(ctx.uid),
+        [`reactions.${emoji}.userNames`]: FieldValue.arrayRemove(userName),
+        [`reactions.${emoji}.count`]: FieldValue.increment(-1),
+        [`reactions.${emoji}.updatedAt`]: now,
+        reactionCount: FieldValue.increment(-1),
+        updatedAt: now,
+      });
+    }
+
+    console.log(`✅ [Reactions] Removed ${emoji} by ${ctx.uid} on ${messageId} [${operationId}]`);
+  }
+
+  // 7. Get updated reactions
+  const updatedDoc = await messageRef.get();
+  const updatedReactions: MessageReactionsMap = updatedDoc.data()?.reactions || {};
+
+  // 8. Sync to Telegram (fire-and-forget, non-blocking)
+  // Use void to explicitly ignore the promise - we don't await it
+  void syncReactionToTelegram(
+    messageData as TelegramMessageData,
+    emoji,
+    finalAction === 'remove',
+    operationId
+  );
+
+  return apiSuccess<ReactionResponse>({
+    success: true,
+    reactions: updatedReactions,
+    userReactions: extractUserReactions(updatedReactions, ctx.uid),
+    action: finalAction === 'add' ? 'added' : 'removed',
+    emoji,
+  });
+}
+
+async function handleGetReactions(
+  ctx: AuthContext,
+  messageId: string
+): Promise<ReturnType<typeof apiSuccess<{ reactions: MessageReactionsMap; userReactions: string[] }>>> {
+  const operationId = generateRequestId();
+
+  console.log(`📋 [Reactions] User ${ctx.email} getting reactions for ${messageId} [${operationId}]`);
+
+  // 1. Get message document
+  const messageRef = adminDb.collection(COLLECTIONS.MESSAGES).doc(messageId);
+  const messageDoc = await messageRef.get();
+
+  if (!messageDoc.exists) {
+    throw new ApiError(404, 'Message not found');
+  }
+
+  const messageData = messageDoc.data();
+
+  // 2. Validate tenant isolation
+  if (messageData?.companyId !== ctx.companyId) {
+    throw new ApiError(403, 'Access denied');
+  }
+
+  // 3. Return reactions
+  const reactions: MessageReactionsMap = messageData?.reactions || {};
+
+  return apiSuccess({
+    reactions,
+    userReactions: extractUserReactions(reactions, ctx.uid),
+  });
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Extract emojis that user has reacted with
+ */
+function extractUserReactions(reactions: MessageReactionsMap, userId: string): string[] {
+  const userReactions: string[] = [];
+  Object.entries(reactions).forEach(([emoji, reaction]) => {
+    if (reaction.userIds?.includes(userId)) {
+      userReactions.push(emoji);
+    }
+  });
+  return userReactions;
+}
+
+// ============================================================================
+// TELEGRAM SYNC
+// ============================================================================
+
+interface TelegramMessageData {
+  channel?: string;
+  providerMessageId?: string;
+  providerMetadata?: {
+    chatId?: string | number;
+    [key: string]: unknown;
+  };
+}
+
+/**
+ * Sync reaction to Telegram
+ *
+ * 🏢 ENTERPRISE: Fire-and-forget pattern
+ * - Does not block the main response
+ * - Logs errors but doesn't fail the request
+ * - Telegram reaction failures are non-critical
+ *
+ * @param messageData - Firestore message document data
+ * @param emoji - The emoji to react with
+ * @param remove - Whether to remove (true) or add (false) the reaction
+ * @param operationId - Request tracking ID for logging
+ */
+async function syncReactionToTelegram(
+  messageData: TelegramMessageData,
+  emoji: string,
+  remove: boolean,
+  operationId: string
+): Promise<void> {
+  // Only sync if message is from Telegram channel
+  if (messageData.channel !== 'telegram') {
+    return;
+  }
+
+  // Extract Telegram-specific IDs
+  const chatId = messageData.providerMetadata?.chatId;
+  const providerMessageId = messageData.providerMessageId;
+
+  if (!chatId || !providerMessageId) {
+    console.warn(
+      `⚠️ [Reactions→Telegram] Missing chatId or providerMessageId for Telegram sync [${operationId}]`,
+      { chatId, providerMessageId }
+    );
+    return;
+  }
+
+  try {
+    // Convert providerMessageId to number (Telegram message_id is numeric)
+    const telegramMessageId = parseInt(providerMessageId, 10);
+
+    if (isNaN(telegramMessageId)) {
+      console.warn(
+        `⚠️ [Reactions→Telegram] Invalid providerMessageId: ${providerMessageId} [${operationId}]`
+      );
+      return;
+    }
+
+    console.log(
+      `📤 [Reactions→Telegram] Syncing ${remove ? 'remove' : 'add'} reaction ${emoji} ` +
+      `to chat ${chatId} message ${telegramMessageId} [${operationId}]`
+    );
+
+    const result = await sendTelegramReaction(chatId, telegramMessageId, emoji, remove);
+
+    if (result.success) {
+      console.log(
+        `✅ [Reactions→Telegram] Synced ${emoji} ${remove ? 'removal' : 'addition'} successfully [${operationId}]`
+      );
+    } else {
+      // Log but don't throw - Telegram sync is non-blocking
+      console.warn(
+        `⚠️ [Reactions→Telegram] Sync failed: ${result.error} [${operationId}]`,
+        { chatId, telegramMessageId, emoji, remove }
+      );
+    }
+  } catch (error) {
+    // Log but don't throw - Telegram sync is non-blocking
+    console.error(
+      `❌ [Reactions→Telegram] Unexpected error during sync [${operationId}]`,
+      error instanceof Error ? error.message : error
+    );
+  }
+}

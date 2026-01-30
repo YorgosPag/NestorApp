@@ -26,7 +26,8 @@ import {
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Trash2, Copy, CheckSquare, Square, Reply, Forward, Pencil, Pin, PinOff } from 'lucide-react';
+import { Trash2, Copy, CheckSquare, Square, Reply, Forward, Pencil, Pin, PinOff, Smile } from 'lucide-react';
+import { QUICK_REACTION_EMOJIS } from '@/types/conversations';
 
 // ============================================================================
 // TYPES
@@ -61,6 +62,10 @@ export interface MessageContextMenuProps {
   onTogglePin?: (messageId: string, pinned: boolean) => void;
   /** Whether this is user's own message (for edit permission) */
   isOwnMessage?: boolean;
+  /** Callback when a reaction is selected */
+  onReaction?: (messageId: string, emoji: string) => void;
+  /** Emojis the current user has reacted with */
+  userReactions?: Set<string>;
   /** Children to wrap */
   children: React.ReactNode;
   /** Additional className */
@@ -118,6 +123,8 @@ export function MessageContextMenu({
   isPinned = false,
   onTogglePin,
   isOwnMessage = false,
+  onReaction,
+  userReactions = new Set(),
   children,
   className,
 }: MessageContextMenuProps) {
@@ -176,6 +183,13 @@ export function MessageContextMenu({
     }
   }, [messageId, isPinned, onTogglePin]);
 
+  const handleReaction = useCallback((emoji: string) => {
+    console.log('[MessageContextMenu] Reaction clicked:', emoji, 'for:', messageId);
+    if (onReaction) {
+      onReaction(messageId, emoji);
+    }
+  }, [messageId, onReaction]);
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -186,7 +200,38 @@ export function MessageContextMenu({
         <div>{children}</div>
       </ContextMenuTrigger>
 
-      <ContextMenuContent className="w-48">
+      <ContextMenuContent className="w-56">
+        {/* 🏢 ENTERPRISE: Quick Reactions Row (Telegram-style) */}
+        {onReaction && (
+          <>
+            <div className="flex items-center justify-between px-2 py-1.5">
+              {QUICK_REACTION_EMOJIS.map((emoji) => {
+                const isReacted = userReactions.has(emoji);
+                return (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => handleReaction(emoji)}
+                    className={`
+                      w-8 h-8 flex items-center justify-center
+                      rounded-full text-lg
+                      transition-all duration-150
+                      hover:scale-125 hover:bg-accent
+                      focus:outline-none focus:ring-2 focus:ring-ring
+                      ${isReacted ? 'bg-primary/15 ring-1 ring-primary/30' : ''}
+                    `}
+                    aria-label={emoji}
+                    aria-pressed={isReacted}
+                  >
+                    {emoji}
+                  </button>
+                );
+              })}
+            </div>
+            <ContextMenuSeparator />
+          </>
+        )}
+
         {/* Reply */}
         <ContextMenuItem onClick={handleReply} className="gap-2 cursor-pointer">
           <Reply className={iconSizes.sm} />

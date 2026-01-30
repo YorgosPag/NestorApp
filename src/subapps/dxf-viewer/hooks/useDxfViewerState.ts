@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useCanvasOperations } from './interfaces/useCanvasOperations';
 import type { ToolType } from '../ui/toolbar/types';
 import type { DrawingTool } from './drawing/useUnifiedDrawing';
@@ -16,6 +16,8 @@ import { useDrawingHandlers } from './drawing/useDrawingHandlers';
 import { useSnapContext } from '../snapping/context/SnapContext';
 // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
 import { useCommandHistory } from '../core/commands';
+// 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
+import { useToolState, toolStateStore } from '../stores/ToolStateStore';
 
 export function useDxfViewerState() {
   const { gripSettings } = useGripContext();
@@ -23,8 +25,15 @@ export function useDxfViewerState() {
   // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
   const { undo, redo, canUndo, canRedo } = useCommandHistory();
 
-  // Manage activeTool state locally
-  const [activeTool, setActiveTool] = useState<ToolType>('select');
+  // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State from ToolStateStore
+  // SINGLE SOURCE OF TRUTH: All components subscribe to this store
+  // Pattern: AutoCAD/BricsCAD - tools stay active after entity creation (allowsContinuous)
+  const { activeTool } = useToolState();
+
+  // Wrapper to update tool state via store
+  const setActiveTool = useCallback((tool: ToolType) => {
+    toolStateStore.selectTool(tool);
+  }, []);
 
   // Use specialized hooks
   const toolbarState = useToolbarState();

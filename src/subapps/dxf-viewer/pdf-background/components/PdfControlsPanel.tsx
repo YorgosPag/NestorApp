@@ -18,7 +18,7 @@
  * @see centralized_systems.md for enterprise patterns
  */
 
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { FileUp, ChevronLeft, ChevronRight, RotateCcw, Eye, EyeOff, Trash2, ZoomIn, ZoomOut, RotateCw, Maximize2 } from 'lucide-react';
 import { FloatingPanel } from '@/components/ui/floating';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,8 @@ import { usePdfBackgroundStore } from '../stores/pdfBackgroundStore';
 import { PDF_RENDER_CONFIG, type PdfBackgroundTransform } from '../types/pdf.types';
 // 🏢 ENTERPRISE: Centralized panel dimensions (ADR-029)
 import { PANEL_ANCHORING } from '../../config/panel-tokens';
+// 🏢 ADR-054: Centralized upload component
+import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 
 // ============================================================================
 // CONSTANTS
@@ -119,33 +121,17 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
   } = usePdfBackgroundStore();
 
   // ============================================================
-  // REFS
-  // ============================================================
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // ============================================================
   // HANDLERS
   // ============================================================
 
   /**
-   * Handle file selection
+   * 🏢 ADR-054: Handle file selection via centralized FileUploadButton
    */
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
+  const handleFileSelect = useCallback((file: File) => {
+    if (file.type === 'application/pdf') {
       loadPdf(file);
     }
-    // Reset input so same file can be selected again
-    event.target.value = '';
   }, [loadPdf]);
-
-  /**
-   * Trigger file input click
-   */
-  const handleUploadClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
 
   /**
    * Handle scale increase
@@ -239,17 +225,6 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
   const hasDocument = !!documentInfo;
 
   return (
-    <>
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/pdf"
-        onChange={handleFileSelect}
-        className="hidden"
-        aria-label="Select PDF file"
-      />
-
       <FloatingPanel
         defaultPosition={DEFAULT_POSITION}
         dimensions={PANEL_DIMENSIONS}
@@ -288,18 +263,19 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
               </output>
             )}
 
-            {/* File upload section */}
+            {/* File upload section - ADR-054: Using centralized FileUploadButton */}
             {!hasDocument ? (
               <article className="flex flex-col items-center gap-2 py-4">
-                <Button
-                  onClick={handleUploadClick}
-                  disabled={isLoading}
+                <FileUploadButton
+                  onFileSelect={handleFileSelect}
+                  accept=".pdf,application/pdf"
+                  fileType="pdf"
+                  buttonText={isLoading ? 'Loading...' : 'Upload PDF'}
+                  loading={isLoading}
                   variant="outline"
                   className="w-full"
-                >
-                  <FileUp className="h-4 w-4 mr-2" />
-                  {isLoading ? 'Loading...' : 'Upload PDF'}
-                </Button>
+                  icon={<FileUp className="h-4 w-4 mr-2" />}
+                />
                 <p className="text-xs text-muted-foreground text-center">
                   Select a PDF file to use as background
                 </p>
@@ -461,7 +437,6 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
           </section>
         </FloatingPanel.Content>
       </FloatingPanel>
-    </>
   );
 };
 

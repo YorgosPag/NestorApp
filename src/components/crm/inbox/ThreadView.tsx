@@ -44,6 +44,8 @@ import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: Centralized message actions (selection + delete)
 import { useMessageActions } from '@/hooks/inbox/useMessageActions';
 import { MessageContextMenu } from './MessageContextMenu';
+import { ReactionBubbles } from './ReactionBubbles';
+import type { MessageReactionsMap } from '@/types/conversations';
 
 // ============================================================================
 // TYPES
@@ -76,6 +78,11 @@ interface ThreadViewProps {
   isPinnedFn?: (messageId: string) => boolean;
   /** Callback when pin/unpin is toggled */
   onTogglePin?: (messageId: string, shouldPin: boolean) => Promise<void>;
+  /** 🏢 ENTERPRISE: Reactions support */
+  /** Function to get reactions for a message */
+  getReactionsFn?: (messageId: string) => { reactions: MessageReactionsMap; userReactions: Set<string> };
+  /** Callback when a reaction is toggled */
+  onToggleReaction?: (messageId: string, emoji: string) => Promise<void>;
 }
 
 // ============================================================================
@@ -157,6 +164,8 @@ export function ThreadView({
   onEdit,
   isPinnedFn,
   onTogglePin,
+  getReactionsFn,
+  onToggleReaction,
 }: ThreadViewProps) {
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
@@ -269,6 +278,17 @@ export function ThreadView({
       console.log('[ThreadView] Pin clicked but no onTogglePin handler');
     }
   }, [onTogglePin]);
+
+  // 🏢 ENTERPRISE: Handle reaction from context menu (delegates to parent)
+  const handleReaction = useCallback(async (messageId: string, emoji: string) => {
+    console.log('[ThreadView] handleReaction called:', messageId, 'emoji:', emoji);
+    if (onToggleReaction) {
+      await onToggleReaction(messageId, emoji);
+      console.log('[ThreadView] onToggleReaction called successfully');
+    } else {
+      console.log('[ThreadView] Reaction clicked but no onToggleReaction handler');
+    }
+  }, [onToggleReaction]);
 
   // No conversation selected
   if (!conversation) {
@@ -437,6 +457,8 @@ export function ThreadView({
                     isPinned={isPinnedFn ? isPinnedFn(message.id) : false}
                     onTogglePin={handleTogglePin}
                     isOwnMessage={isOutbound}
+                    onReaction={onToggleReaction ? handleReaction : undefined}
+                    userReactions={getReactionsFn ? getReactionsFn(message.id).userReactions : undefined}
                   >
                     <article
                       onClick={isSelectionMode ? () => toggleSelect(message.id) : undefined}
@@ -496,6 +518,22 @@ export function ThreadView({
                           />
                         </footer>
                       )}
+
+                      {/* 🏢 ENTERPRISE: Reactions (Telegram-style) */}
+                      {getReactionsFn && (() => {
+                        const { reactions, userReactions } = getReactionsFn(message.id);
+                        const hasReactions = Object.keys(reactions).length > 0;
+                        if (!hasReactions) return null;
+                        return (
+                          <ReactionBubbles
+                            messageId={message.id}
+                            reactions={reactions}
+                            userReactions={userReactions}
+                            onReactionClick={onToggleReaction ? handleReaction : undefined}
+                            isOutbound={isOutbound}
+                          />
+                        );
+                      })()}
                     </article>
                   </MessageContextMenu>
                 </li>

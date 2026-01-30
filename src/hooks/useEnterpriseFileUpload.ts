@@ -71,6 +71,62 @@ export interface UseEnterpriseFileUploadReturn extends UseEnterpriseFileUploadAc
 export type { FileType, UploadPurpose, FileValidationResult, FileUploadProgress, FileUploadResult };
 
 // ============================================================================
+// HELPER FUNCTIONS (Extracted to eliminate duplication - ADR-054)
+// ============================================================================
+
+/**
+ * Resolves the purpose for FileNamingService
+ * Maps UploadPurpose to FileNamingService purpose type
+ */
+function resolveFileNamingPurpose(purpose: UploadPurpose): 'logo' | 'photo' | 'representative' {
+  switch (purpose) {
+    case 'logo':
+      return 'logo';
+    case 'representative':
+    case 'avatar':
+      return 'representative';
+    default:
+      return 'photo';
+  }
+}
+
+/**
+ * Generates a properly named file using FileNamingService
+ * Extracted from validateAndPreview and uploadFile to eliminate duplication
+ *
+ * @param file - Original file
+ * @param config - Upload configuration
+ * @returns Renamed file or original if generation fails
+ */
+function generateNamedFile(
+  file: File,
+  config: {
+    contactData?: ContactFormData;
+    fileType: FileType;
+    purpose: UploadPurpose;
+    photoIndex?: number;
+  }
+): File {
+  if (!config.contactData || config.fileType !== 'image') {
+    return file;
+  }
+
+  try {
+    const purpose = resolveFileNamingPurpose(config.purpose);
+
+    return FileNamingService.generateProperFilename(
+      file,
+      config.contactData,
+      purpose,
+      config.photoIndex
+    );
+  } catch (error) {
+    console.error('Filename generation failed:', error);
+    return file;
+  }
+}
+
+// ============================================================================
 // MAIN HOOK
 // ============================================================================
 
@@ -153,41 +209,14 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
       return validation;
     }
 
-    // 🏷️ CENTRALIZED FILENAME GENERATION WITH NEW FileNamingService
-    let processedFile = file;
-    let customFilename = file.name;
-
-    if (config.contactData && config.fileType === 'image') {
-      try {
-        // Map UploadPurpose to FileNamingService purpose
-        let purpose: 'logo' | 'photo' | 'representative' = 'photo';
-
-        switch (config.purpose) {
-          case 'logo':
-            purpose = 'logo';
-            break;
-          case 'representative':
-          case 'avatar':
-            purpose = 'representative';
-            break;
-          default:
-            purpose = 'photo';
-        }
-
-        // Use new FileNamingService for automatic renaming
-        processedFile = FileNamingService.generateProperFilename(
-          file,
-          config.contactData,
-          purpose,
-          config.photoIndex
-        );
-
-        customFilename = processedFile.name;
-      } catch (error) {
-        console.error('Filename generation failed:', error);
-        // Fallback to original file if generation fails
-      }
-    }
+    // 🏷️ CENTRALIZED FILENAME GENERATION (ADR-054: Extracted helper function)
+    const processedFile = generateNamedFile(file, {
+      contactData: config.contactData,
+      fileType: config.fileType,
+      purpose: config.purpose,
+      photoIndex: config.photoIndex,
+    });
+    const customFilename = processedFile.name;
 
     // Valid file - set με preview για images
     const createPreview = config.fileType === 'image' && processedFile.type.startsWith('image/');
@@ -217,41 +246,21 @@ export function useEnterpriseFileUpload(config: UseEnterpriseFileUploadConfig): 
     startUpload();
 
     try {
-      // 🏷️ ENTERPRISE: Apply filename transformation before upload
-      let fileToUpload = file;
+      // 🏷️ ENTERPRISE: Apply filename transformation before upload (ADR-054: Using extracted helper)
+      const fileToUpload = generateNamedFile(file, {
+        contactData: config.contactData,
+        fileType: config.fileType,
+        purpose: config.purpose,
+        photoIndex: config.photoIndex,
+      });
 
-      // Check if this file needs proper naming (from contact form)
-      if (config.contactData && config.fileType === 'image') {
-        try {
-          let purpose: 'logo' | 'photo' | 'representative' = 'photo';
-
-          if (config.purpose === 'logo') {
-            purpose = 'logo';
-          } else if (config.purpose === 'representative') {
-            purpose = 'representative';
-          } else {
-            purpose = 'photo';
-          }
-
-          // Generate proper filename using FileNamingService
-          fileToUpload = FileNamingService.generateProperFilename(
-            file,
-            config.contactData,
-            purpose,
-            config.photoIndex
-          );
-
-          console.log('🏷️ FILE RENAMED FOR UPLOAD:', {
-            original: file.name,
-            renamed: fileToUpload.name,
-            purpose: purpose,
-            contactType: config.contactData.type
-          });
-
-        } catch (error) {
-          console.error('Filename generation failed during upload:', error);
-          // Fallback to original file if generation fails
-        }
+      if (fileToUpload.name !== file.name) {
+        console.log('🏷️ FILE RENAMED FOR UPLOAD:', {
+          original: file.name,
+          renamed: fileToUpload.name,
+          purpose: config.purpose,
+          contactType: config.contactData?.type
+        });
       }
 
       // Progress callback που συνδέει με το state management

@@ -37,9 +37,13 @@ import { useDrawingMachine, type DrawingStateType } from '../../core/state-machi
 // 🏢 ENTERPRISE (2026-01-26): Centralized tool configuration for continuous mode support
 import { getToolMetadata } from '../../systems/tools/ToolStateManager';
 import type { ToolType } from '../../ui/toolbar/types';
+// 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store for persistent tool selection
+import { toolStateStore } from '../../stores/ToolStateStore';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
 import { EventBus } from '../../systems/events';
-import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity } from '../../types/scene';
+// NOTE: ADR-055 Event Bus pattern for entity creation temporarily disabled - needs debugging
+// import { emitEntityCreateRequest } from '../../systems/entity-creation';
+import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity, SceneModel } from '../../types/scene';
 // ✅ ENTERPRISE FIX: Import centralized PreviewGripPoint from entities
 import type { PreviewGripPoint } from '../../types/entities';
 
@@ -495,7 +499,9 @@ export function useUnifiedDrawing() {
             setLevelScene(effectiveLevelId, updatedScene);
           }
         } else if (isMeasurementTool) {
-          const defaultScene = { entities: [measurementEntity as AnySceneEntity] };
+          // 🏢 ENTERPRISE: Create minimal scene - setLevelScene handles partial SceneModel
+          // Type assertion needed because SceneModel interface is stricter than runtime requirements
+          const defaultScene = { entities: [measurementEntity as AnySceneEntity] } as SceneModel;
           setLevelScene(effectiveLevelId, defaultScene);
         }
 
@@ -524,17 +530,18 @@ export function useUnifiedDrawing() {
         previewEntityRef.current = nextPreview as ExtendedSceneEntity;
       }
 
-      return; // Early return - don't execute standard completion logic
+      return false; // Early return - don't execute standard completion logic (not yet complete)
     }
 
     if (isComplete(currentTool, newTempPoints)) {
       const newEntity = createEntityFromTool(currentTool, newTempPoints);
 
-      // 🏢 ENTERPRISE (2026-01-27): CRITICAL FIX - Measurement tools fallback for missing level
-      // Pattern: AutoCAD - Measurements can exist without active layer, defaulting to "0" (DXF standard)
-      // If no currentLevelId, use default level "0" for measurement entities
+      // 🏢 ENTERPRISE (2026-01-30): CRITICAL FIX - ALL drawing tools fallback for missing level
+      // Pattern: AutoCAD/DXF Standard - Layer "0" is always present for entities without explicit layer
+      // If no currentLevelId, use default level "0" for ALL entities (measurements AND drawing tools)
       const isMeasurementTool = currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'measure-angle' || currentTool === 'measure-area';
-      const effectiveLevelId = currentLevelId || (isMeasurementTool ? '0' : null);
+      const isDrawingTool = currentTool === 'line' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'polyline' || currentTool === 'polygon';
+      const effectiveLevelId = currentLevelId || ((isMeasurementTool || isDrawingTool) ? '0' : null);
 
       if (newEntity && effectiveLevelId) {
         // Apply completion settings from ColorPalettePanel (for line entities only)
@@ -565,25 +572,35 @@ export function useUnifiedDrawing() {
 
         // 🏢 ENTERPRISE (2026-01-27): CRITICAL - Clear preview FIRST before any state updates!
         // Pattern: Autodesk AutoCAD - Visual feedback must be synchronous
-        // This MUST happen BEFORE setLevelScene() to prevent "two numbers" bug
+        // This MUST happen BEFORE entity creation to prevent "two numbers" bug
         previewEntityRef.current = null;
         EventBus.emit('drawing:complete', {
           tool: currentTool,
           entityId: newEntity?.id ?? 'unknown'
         });
 
+        // 🏢 ENTERPRISE (2026-01-30): Direct setLevelScene for entity creation
         const scene = getLevelScene(effectiveLevelId);
         if (scene) {
-          // Filter out extended types that are not compatible with AnySceneEntity
+          // Add to existing scene
           if ('type' in newEntity && typeof newEntity.type === 'string') {
-            const updatedScene = { ...scene, entities: [...scene.entities, newEntity as AnySceneEntity] };
+            const updatedScene: SceneModel = {
+              ...scene,
+              entities: [...scene.entities, newEntity as AnySceneEntity]
+            };
             setLevelScene(effectiveLevelId, updatedScene);
           }
-        } else if (isMeasurementTool) {
-          // 🏢 ENTERPRISE (2026-01-27): CRITICAL FIX - Create default level "0" for measurements
-          // Pattern: DXF Standard - Layer "0" is always present for entities without explicit layer
-          const defaultScene = { entities: [newEntity as AnySceneEntity] };
-          setLevelScene(effectiveLevelId, defaultScene);
+        } else {
+          // Create new scene with default layer
+          if ('type' in newEntity && typeof newEntity.type === 'string') {
+            const newScene: SceneModel = {
+              entities: [newEntity as AnySceneEntity],
+              layers: { '0': { name: '0', color: '#FFFFFF', visible: true, locked: false } },
+              bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
+              units: 'mm',
+            };
+            setLevelScene(effectiveLevelId, newScene);
+          }
         }
       }
       // Return to normal mode after entity completion
@@ -593,18 +610,24 @@ export function useUnifiedDrawing() {
       machineComplete();
       machineReset();
 
-      // 🏢 ENTERPRISE FIX (2026-01-26): Use centralized TOOL_DEFINITIONS for continuous mode
+      // 🏢 ENTERPRISE (2026-01-30): Centralized Tool Completion via ToolStateStore
       // Pattern: AutoCAD/BricsCAD - tools with allowsContinuous=true stay active after completion
-      // - Drawing tools (line, rectangle, circle, polygon): allowsContinuous=false → deselect
-      // - Measurement tools (measure-*): allowsContinuous=true → remain active for consecutive use
-      // - Polyline, Move, Pan: allowsContinuous=true → remain active
+      // The store's handleToolCompletion() is the SINGLE SOURCE OF TRUTH for this decision.
+      // - Drawing tools (line, rectangle, circle, polygon): allowsContinuous=true → STAY ACTIVE
+      // - Measurement tools (measure-*): allowsContinuous=true → STAY ACTIVE
+      // - Polyline, Move, Pan: allowsContinuous=true → STAY ACTIVE
+      //
+      // NOTE: The store will notify all subscribers (including React components)
+      // so the UI will automatically reflect the correct tool state.
+      toolStateStore.handleToolCompletion(currentTool as ToolType);
+
+      // Also update state machine for consistency (internal drawing state)
       const toolMetadata = getToolMetadata(currentTool as ToolType);
-      if (!toolMetadata.allowsContinuous) {
-        machineDeselectTool();
-      } else {
-        // 🏢 For continuous tools: re-select to restart the drawing process
-        // This allows consecutive operations without manually re-selecting the tool
+      if (toolMetadata.allowsContinuous) {
+        // Re-select to restart the drawing process for next entity
         machineSelectTool(currentTool);
+      } else {
+        machineDeselectTool();
       }
 
       // Reset local state (preview entity)

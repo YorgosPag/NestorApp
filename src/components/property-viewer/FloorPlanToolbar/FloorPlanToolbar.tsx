@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import {
-  Upload,
   Layers,
   Eye,
   EyeOff,
@@ -39,6 +38,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ADR-054: Centralized upload component
+import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 
 type ViewMode = 'view' | 'create' | 'measure' | 'edit';
 
@@ -84,20 +85,15 @@ export function FloorPlanToolbar({
   const { t } = useTranslation('properties');
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      setIsUploading(true);
-      onPDFUpload(file);
+  // 🏢 ADR-054: Centralized file upload handler
+  const handleFileUpload = (file: File) => {
+    setIsUploading(true);
+    onPDFUpload(file);
 
-      // Reset after upload
-      setTimeout(() => {
-        setIsUploading(false);
-        event.target.value = '';
-      }, 2000);
-    } else {
-      alert(t('floorPlanToolbar.selectPDFFile'));
-    }
+    // Reset after upload
+    setTimeout(() => {
+      setIsUploading(false);
+    }, 2000);
   };
 
   const ToolbarButton = ({ 
@@ -143,30 +139,21 @@ export function FloorPlanToolbar({
         className
       )}>
         
-        {/* FILE OPERATIONS */}
+        {/* FILE OPERATIONS - ADR-054: Using centralized FileUploadButton */}
         <div className="flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <input
-                  type="file"
+                <FileUploadButton
+                  onFileSelect={handleFileUpload}
                   accept=".pdf"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="pdf-upload"
-                />
-                <Button
+                  fileType="pdf"
+                  buttonText={isUploading ? t('floorPlanToolbar.uploading') : t('floorPlanToolbar.uploadPDF')}
+                  loading={isUploading}
                   variant="outline"
                   size="sm"
-                  asChild
-                  disabled={isUploading}
                   className="h-8"
-                >
-                  <label htmlFor="pdf-upload" className="cursor-pointer">
-                    <Upload className={`${iconSizes.sm} mr-2`} />
-                    {isUploading ? t('floorPlanToolbar.uploading') : t('floorPlanToolbar.uploadPDF')}
-                  </label>
-                </Button>
+                />
               </div>
             </TooltipTrigger>
             <TooltipContent>

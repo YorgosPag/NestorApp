@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
-import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { Button } from '@/components/ui/button';
+// 🏢 ADR-054: Centralized upload component
+import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 
 export default function TestUploadPage() {
   const { getStatusBorder } = useBorderTokens();
@@ -17,13 +19,13 @@ export default function TestUploadPage() {
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string>('');
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setResult('');
-      setError('');
-    }
+  /**
+   * 🏢 ADR-054: File selection handler - receives validated file from FileUploadButton
+   */
+  const handleFileSelect = (selectedFile: File) => {
+    setFile(selectedFile);
+    setResult('');
+    setError('');
   };
 
   const testUpload = async () => {
@@ -90,11 +92,14 @@ export default function TestUploadPage() {
           <label className="block text-sm font-medium mb-2">
             Select a file to test upload:
           </label>
-          <input
-            type="file"
-            onChange={handleFileSelect}
+          {/* 🏢 ADR-054: Using centralized FileUploadButton */}
+          <FileUploadButton
+            onFileSelect={handleFileSelect}
             accept="image/*"
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+            fileType="image"
+            buttonText="Select Image"
+            variant="outline"
+            size="default"
           />
         </div>
 
@@ -106,12 +111,13 @@ export default function TestUploadPage() {
           </div>
         )}
 
-        <button
+        <Button
           onClick={testUpload}
           disabled={!file || uploading}
-          className={`px-4 py-2 ${colors.bg.info} text-white rounded disabled:opacity-50 disabled:cursor-not-allowed`}>
+          variant="default"
+        >
           {uploading ? `Uploading... ${progress}%` : 'Test Upload'}
-        </button>
+        </Button>
 
         {uploading && (
           <ThemeProgressBar

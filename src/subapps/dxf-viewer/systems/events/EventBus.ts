@@ -67,6 +67,22 @@ export interface DrawingEventMap {
   'overlay:cancel-polygon': void; // Signal to cancel the current draft polygon
   // 🏢 ENTERPRISE (2026-01-26): Toolbar delete command - ADR-032
   'toolbar:delete': void; // Signal to delete selected grips/overlays with undo support
+
+  // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
+  // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration
+  // useUnifiedDrawing emits this event - EntityCreationManager handles saving
+  'entity:create-request': {
+    entity: Record<string, unknown>;
+    toolType: string;
+    requestId: string;
+    targetLevelId?: string; // Optional - if not provided, uses currentLevelId
+  };
+  // Confirmation event after entity is successfully created
+  'entity:created-confirmed': {
+    entity: Record<string, unknown>;
+    levelId: string;
+    commandId?: string; // For undo/redo tracking
+  };
 }
 
 export type DrawingEventType = keyof DrawingEventMap;

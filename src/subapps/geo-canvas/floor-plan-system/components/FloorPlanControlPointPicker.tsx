@@ -41,6 +41,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';  // ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { CheckCircle, AlertTriangle, Info, MapPin } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+// 🏢 ADR-054: Centralized upload component
+import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 
 /**
  * Component props
@@ -308,12 +310,9 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
   };
 
   /**
-   * 📁 Load points from JSON
+   * 📁 Load points from JSON - ADR-054: Receives File from FileUploadButton
    */
-  const handleLoadPoints = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  const handleLoadPoints = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -330,9 +329,6 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
       }
     };
     reader.readAsText(file);
-
-    // Reset input
-    event.target.value = '';
   };
 
   /**
@@ -632,16 +628,17 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
               💾 {t('floorPlanControlPoints.actions.save')}
             </button>
 
-            {/* Load Points */}
-            <label className={`px-3 py-2 ${colors.bg.info} text-white rounded text-sm font-medium ${INTERACTIVE_PATTERNS.SUBTLE_HOVER} transition-colors cursor-pointer`}>
-              📁 {t('floorPlanControlPoints.actions.load')}
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleLoadPoints}
-                className="hidden"
-              />
-            </label>
+            {/* Load Points - ADR-054: Using centralized FileUploadButton */}
+            <FileUploadButton
+              onFileSelect={handleLoadPoints}
+              accept=".json,application/json"
+              fileType="any"
+              buttonText={`📁 ${t('floorPlanControlPoints.actions.load')}`}
+              variant="default"
+              size="sm"
+              showIcon={false}
+              className={`${colors.bg.info} text-white ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+            />
 
             {/* Clear All */}
             {points.length > 0 && (
@@ -813,7 +810,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
                     <span className="font-medium">Map:</span>{' '}
                     ({point.geo.lng.toFixed(6)}, {point.geo.lat.toFixed(6)})
                   </div>
-                  <div className={colors.text.subtle}>
+                  <div className={colors.text.tertiary}>
                     {new Date(point.createdAt).toLocaleString()}
                   </div>
                 </div>
@@ -824,7 +821,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
 
         {/* Empty State */}
         {points.length === 0 && (
-          <div className={`text-center py-8 ${colors.text.subtle}`}>
+          <div className={`text-center py-8 ${colors.text.tertiary}`}>
             <div className="mb-2">
               <MapPin className="text-4xl block mx-auto" />
             </div>

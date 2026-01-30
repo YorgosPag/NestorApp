@@ -271,6 +271,17 @@
       "unpin": "Unpin",
       "delete": "Delete"
     },
+    "reactions": {
+      "pickReaction": "Pick a reaction",
+      "messageReactions": "Message reactions",
+      "reactedWith": "Reacted with {emoji}",
+      "thumbs_up": "Thumbs up",
+      "heart": "Heart",
+      "laughing": "Laughing",
+      "surprised": "Surprised",
+      "sad": "Sad",
+      "angry": "Angry"
+    },
     "channels": {
       "telegram": "Telegram",
       "email": "Email",

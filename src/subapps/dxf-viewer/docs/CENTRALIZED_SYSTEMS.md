@@ -4879,6 +4879,241 @@ interface DrawingContextMenuProps {
 
 ---
 
+### 📋 ADR-054: ENTERPRISE UPLOAD SYSTEM CONSOLIDATION (2026-01-30) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & PHASE 1-5 COMPLETE** | **Decision Date**: 2026-01-30
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - Google/Microsoft/Salesforce/Autodesk Standards
+
+**Problem**:
+Εντοπίστηκε **fragmented file upload functionality** με πολλαπλά διπλότυπα:
+- **3 upload services** (FileRecordService, PhotoUploadService, UnifiedUploadService)
+- **12 upload components** με overlapping functionality
+- **8 upload hooks** με duplicated logic
+- **7+ file input entry points** χωρίς κεντρικοποίηση
+
+**Impact**:
+- Maintenance burden (αλλαγές σε πολλαπλά σημεία)
+- Inconsistent behavior across the application
+- Security risks (different validation σε different places)
+- Testing complexity (πολλαπλές implementations)
+
+**Decision - Single Source of Truth Architecture**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL SERVICE** | `FileRecordService` (`src/services/file-record.service.ts`) - 893 lines, ADR-031 compliant |
+| **CANONICAL COMPONENT** | `FileUploadZone` (`src/components/shared/files/FileUploadZone.tsx`) - Enterprise drag&drop |
+| **CANONICAL HOOK** | `useEnterpriseFileUpload` (`src/hooks/useEnterpriseFileUpload.ts`) - Upload orchestration |
+| **CANONICAL STATE** | `useFileUploadState` (`src/hooks/useFileUploadState.ts`) - Pure state management |
+| **CANONICAL CONFIG** | `file-upload-config.ts` (`src/config/file-upload-config.ts`) - Configuration |
+| **PROHIBITION** | ❌ Νέα upload implementations εκτός canonical **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** |
+
+**📋 Canonical Pipeline (ADR-031)**:
+```
+pending → upload → finalize
+   │         │         │
+   ▼         ▼         ▼
+FileRecord  Binary   Final URL
+Created     Upload   + Metadata
+```
+
+**🏗️ Architecture**:
+```
+src/
+├── services/
+│   ├── file-record.service.ts        # CANONICAL - Firestore records (ADR-031)
+│   ├── photo-upload.service.ts       # LEGACY - Routes to canonical when possible
+│   └── upload-handlers/
+│       └── defaultUploadHandler.ts   # NEW - Centralized handler factory
+│
+├── components/shared/files/
+│   └── FileUploadZone.tsx            # CANONICAL - Enterprise drag&drop
+│
+├── hooks/
+│   ├── useEnterpriseFileUpload.ts    # CANONICAL - Main upload hook
+│   ├── useFileUploadState.ts         # CANONICAL - State management
+│   └── upload/
+│       ├── useAutoUploadEffect.ts    # NEW - Extracted auto-upload logic
+│       └── useFileSelectionHandlers.ts # NEW - Extracted drag/drop/click
+│
+└── config/
+    └── file-upload-config.ts         # CANONICAL - Configuration
+```
+
+**✅ KEEP (Canonical)**:
+| Item | Path | Status |
+|------|------|--------|
+| FileRecordService | `src/services/file-record.service.ts` | **CANONICAL** |
+| FileUploadZone | `src/components/shared/files/FileUploadZone.tsx` | **CANONICAL** |
+| useEnterpriseFileUpload | `src/hooks/useEnterpriseFileUpload.ts` | **CANONICAL** |
+| useFileUploadState | `src/hooks/useFileUploadState.ts` | **CANONICAL** |
+| file-upload-config | `src/config/file-upload-config.ts` | **CANONICAL** |
+
+**⚠️ DEPRECATE (Migration Mode)**:
+| Item | Problem | Action |
+|------|---------|--------|
+| PhotoUploadService legacy pipeline | Dual pipeline | Route to canonical |
+| usePhotoUploadLogic | Duplicates useEnterpriseFileUpload | Extract reusable parts |
+| useMultiplePhotosHandlers | Basic validation | Use validateFile() |
+
+**✅ REPLACED (Phase 5 Complete)**:
+| Item | Path | Replacement | Status |
+|------|------|-------------|--------|
+| ViewerToolbar.tsx file input | property-viewer/ | FileUploadButton | ✅ DONE |
+| FloorPlanToolbar.tsx file input | FloorPlanToolbar/ | FileUploadButton | ✅ DONE |
+| FileUploader.tsx | ViewerToolbar/ | Deprecated wrapper → FileUploadButton | ✅ DONE |
+
+**Enterprise Standards Compliance**:
+
+| Standard | Implementation |
+|----------|----------------|
+| **Single Source of Truth** | FileRecordService for all file metadata |
+| **Canonical Pipeline** | ADR-031: pending → upload → finalize |
+| **Multi-Tenant** | companyId required for all uploads |
+| **Type Safety** | No `any` types, full TypeScript |
+| **i18n Support** | All strings from translations |
+| **RBAC** | Permission checks via withAuth |
+| **Audit Trail** | FileRecord tracking in Firestore |
+
+**Implementation Pattern**:
+```typescript
+// ✅ ENTERPRISE: Use canonical upload hook
+import { useEnterpriseFileUpload } from '@/hooks/useEnterpriseFileUpload';
+import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
+
+const upload = useEnterpriseFileUpload({
+  fileType: 'image',
+  purpose: 'representative',
+  contactData: formData,
+});
+
+<FileUploadZone
+  onFileSelect={handleFileSelect}
+  accept="image/*"
+  maxSize={5 * 1024 * 1024}
+/>
+
+// ❌ PROHIBITED: Creating new upload implementations
+// Χρησιμοποιήστε ΜΟΝΟ τα canonical systems!
+```
+
+**Consequences**:
+- ✅ Single upload service (FileRecordService)
+- ✅ No duplicate upload logic in hooks
+- ✅ All uploads create FileRecord documents
+- ✅ Consistent validation across application
+- ✅ Single entry point for file selection (FileUploadZone)
+- ✅ Type-safe throughout (zero `any`)
+
+**Documentation**:
+- Main: `src/subapps/dxf-viewer/docs/UPLOAD_SYSTEM_CONSOLIDATION.md`
+- ADR-031: Canonical File Storage System
+
+---
+
+### 📋 ADR-055: CENTRALIZED TOOL STATE PERSISTENCE (2026-01-30) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-30
+
+**🏢 ENTERPRISE LEVEL**: **9/10** - AutoCAD/BricsCAD Standards
+
+**Problem**:
+Κατά τη δημιουργία entities (rectangle, line, circle, polyline), το εργαλείο επέστρεφε αυτόματα σε "select" mode αντί να παραμένει ενεργό για συνεχόμενη σχεδίαση.
+
+**Root Cause Analysis**:
+- **State Machine** (`DrawingStateMachine`) ενημερωνόταν σωστά
+- **React State** (`activeTool` in `useDxfViewerState`) **ΔΕΝ** ενημερωνόταν
+- Αποσύνδεση μεταξύ State Machine και React state
+- 20+ locations ελέγχαν tool state χωρίς κεντρικοποίηση
+
+**Impact**:
+- Κακή UX: Ο χρήστης έπρεπε να επιλέξει ξανά το εργαλείο μετά από κάθε entity
+- Αντίθεση με AutoCAD/BricsCAD standards όπου εργαλεία παραμένουν ενεργά
+
+**Decision - Single Source of Truth**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL STORE** | `ToolStateStore` (`src/subapps/dxf-viewer/stores/ToolStateStore.ts`) |
+| **PATTERN** | `useSyncExternalStore` (React 18+ native pattern) |
+| **METADATA** | `allowsContinuous` flag σε `TOOL_DEFINITIONS` |
+| **PROHIBITION** | ❌ Direct `useState` για tool state **ΑΠΑΓΟΡΕΥΕΤΑΙ** |
+
+**🏗️ Architecture**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ToolStateStore                            │
+│  (Single Source of Truth - useSyncExternalStore)            │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐    ┌─────────────────┐                │
+│  │ Tool Metadata   │    │ Tool State      │                │
+│  │ (TOOL_DEFS)     │───→│ (activeTool)    │                │
+│  └─────────────────┘    └─────────────────┘                │
+│           │                      │                          │
+│           ▼                      ▼                          │
+│  ┌─────────────────────────────────────┐                   │
+│  │     handleToolCompletion()          │                   │
+│  │  - Checks allowsContinuous          │                   │
+│  │  - Updates store                    │                   │
+│  │  - Notifies all subscribers         │                   │
+│  └─────────────────────────────────────┘                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Implementation Pattern**:
+```typescript
+// ✅ ENTERPRISE: Use centralized store
+import { useToolState, toolStateStore } from '../stores/ToolStateStore';
+
+// In components - reactive state
+const { activeTool, previousTool } = useToolState();
+
+// Update tool
+toolStateStore.selectTool('line');
+
+// After entity completion - store decides based on allowsContinuous
+toolStateStore.handleToolCompletion('line');
+
+// ❌ PROHIBITED: Direct useState for tool state
+// const [activeTool, setActiveTool] = useState('select'); // WRONG!
+```
+
+**Files Changed**:
+
+| File | Change |
+|------|--------|
+| `stores/ToolStateStore.ts` | **NEW** - Centralized store |
+| `hooks/drawing/useUnifiedDrawing.tsx` | Calls `toolStateStore.handleToolCompletion()` |
+| `hooks/drawing/useDrawingHandlers.ts` | Delegates to store |
+| `hooks/useDxfViewerState.ts` | Uses `useToolState()` instead of local state |
+
+**Tool Behavior**:
+
+| Tool | allowsContinuous | Behavior After Entity |
+|------|------------------|----------------------|
+| line | true | **STAYS ACTIVE** |
+| rectangle | true | **STAYS ACTIVE** |
+| circle | true | **STAYS ACTIVE** |
+| polyline | true | **STAYS ACTIVE** |
+| polygon | true | **STAYS ACTIVE** |
+| measure-distance | false | Returns to select |
+| measure-area | true | **STAYS ACTIVE** |
+| select | N/A | Default tool |
+
+**Consequences**:
+- ✅ Tool stays active after entity creation (AutoCAD pattern)
+- ✅ Single source of truth for tool state
+- ✅ All components auto-sync via `useSyncExternalStore`
+- ✅ ESC/Cancel properly returns to select
+- ✅ Zero React state duplication
+
+**Related ADRs**:
+- ADR-032: Drawing State Machine
+- ADR-035: Tool Overlay Mode Metadata
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

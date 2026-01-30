@@ -56,6 +56,13 @@ import {
   useConversationMessages,
   useSendMessage,
 } from '@/hooks/inbox/useInboxApi';
+import type { MessageListItem } from '@/hooks/inbox/useInboxApi';
+
+// 🏢 ENTERPRISE: Message action hooks
+import { useMessageReply } from '@/hooks/inbox/useMessageReply';
+import { useMessageEdit } from '@/hooks/inbox/useMessageEdit';
+import { useMessagePin } from '@/hooks/inbox/useMessagePin';
+import { useMessageReactions } from '@/hooks/inbox/useMessageReactions';
 
 // 🏢 ENTERPRISE: Centralized constants
 import { CONVERSATION_STATUS } from '@/types/conversations';
@@ -139,6 +146,42 @@ export default function CrmCommunicationsPage() {
     clearError: clearSendError,
   } = useSendMessage(selectedConversationId);
 
+  // 🏢 ENTERPRISE: Reply/Forward state
+  const {
+    mode: replyMode,
+    quotedMessage,
+    startReply,
+    startForward,
+    cancelReply,
+    clearAfterSend,
+  } = useMessageReply();
+
+  // 🏢 ENTERPRISE: Edit state
+  const {
+    editingMessage,
+    startEdit,
+    updateEditText,
+    cancelEdit,
+    saveEdit,
+    isSaving,
+  } = useMessageEdit();
+
+  // 🏢 ENTERPRISE: Pin state
+  const {
+    isPinned,
+    togglePin,
+  } = useMessagePin();
+
+  // 🏢 ENTERPRISE: Reactions state (Telegram-style)
+  const {
+    getReactions,
+    toggleReaction,
+    initializeFromMessages,
+  } = useMessageReactions({
+    realtime: true,
+    conversationId: selectedConversationId,
+  });
+
   // Filter conversations by search term and channel (client-side)
   const filteredConversations = useMemo(() => {
     return conversations.filter((conv) => {
@@ -168,24 +211,69 @@ export default function CrmCommunicationsPage() {
     setSelectedConversationId(conversationId);
   }, []);
 
-  const handleSendMessage = useCallback(
-    async (text: string): Promise<boolean> => {
-      const result = await send({ text });
-      if (result?.success) {
-        await refreshMessages();
-        return true;
-      }
-      return false;
-    },
-    [send, refreshMessages]
-  );
-
   const handleRefreshAll = useCallback(async () => {
     await refreshConversations();
     if (selectedConversationId) {
       await refreshMessages();
     }
   }, [refreshConversations, refreshMessages, selectedConversationId]);
+
+  // 🏢 ENTERPRISE: Reply handler
+  const handleReply = useCallback((message: MessageListItem) => {
+    console.log('[CrmCommunicationsPage] handleReply called:', message.id);
+    startReply(message);
+  }, [startReply]);
+
+  // 🏢 ENTERPRISE: Forward handler
+  const handleForward = useCallback((message: MessageListItem) => {
+    console.log('[CrmCommunicationsPage] handleForward called:', message.id);
+    startForward(message);
+  }, [startForward]);
+
+  // 🏢 ENTERPRISE: Edit handler
+  const handleEdit = useCallback((message: MessageListItem) => {
+    console.log('[CrmCommunicationsPage] handleEdit called:', message.id);
+    startEdit(message);
+  }, [startEdit]);
+
+  // 🏢 ENTERPRISE: Pin handler
+  const handleTogglePin = useCallback(async (messageId: string, shouldPin: boolean) => {
+    console.log('[CrmCommunicationsPage] handleTogglePin called:', messageId, 'shouldPin:', shouldPin);
+    const message = messages.find(m => m.id === messageId);
+    if (message) {
+      await togglePin(messageId, message.content.text || '', message.senderName);
+    }
+  }, [messages, togglePin]);
+
+  // 🏢 ENTERPRISE: Reaction handler (Telegram-style)
+  const handleToggleReaction = useCallback(async (messageId: string, emoji: string) => {
+    console.log('[CrmCommunicationsPage] handleToggleReaction called:', messageId, 'emoji:', emoji);
+    await toggleReaction(messageId, emoji);
+  }, [toggleReaction]);
+
+  // 🏢 ENTERPRISE: Get reactions for a message
+  const getReactionsFn = useCallback((messageId: string) => {
+    const state = getReactions(messageId);
+    return {
+      reactions: state.reactions,
+      userReactions: state.userReactions,
+    };
+  }, [getReactions]);
+
+  // 🏢 ENTERPRISE: Enhanced send with reply support
+  const handleSendWithReply = useCallback(async (text: string): Promise<boolean> => {
+    const messageData = quotedMessage && replyMode === 'reply'
+      ? { text, replyTo: quotedMessage.id }
+      : { text };
+
+    const result = await send(messageData);
+    if (result?.success) {
+      clearAfterSend();
+      await refreshMessages();
+      return true;
+    }
+    return false;
+  }, [send, quotedMessage, replyMode, clearAfterSend, refreshMessages]);
 
   // Dashboard Stats
   const dashboardStats: DashboardStat[] = [
@@ -454,6 +542,13 @@ export default function CrmCommunicationsPage() {
                         hasMore={hasMoreMessages}
                         onLoadMore={loadMoreMessages}
                         onRefresh={refreshMessages}
+                        onReply={handleReply}
+                        onForward={handleForward}
+                        onEdit={handleEdit}
+                        isPinnedFn={isPinned}
+                        onTogglePin={handleTogglePin}
+                        getReactionsFn={getReactionsFn}
+                        onToggleReaction={handleToggleReaction}
                       />
                     </div>
 
@@ -462,8 +557,16 @@ export default function CrmCommunicationsPage() {
                       disabled={!selectedConversationId}
                       sending={sending}
                       error={sendError}
-                      onSend={handleSendMessage}
+                      onSend={handleSendWithReply}
                       onClearError={clearSendError}
+                      replyMode={replyMode}
+                      quotedMessage={quotedMessage}
+                      onCancelReply={cancelReply}
+                      editingMessage={editingMessage}
+                      onUpdateEditText={updateEditText}
+                      onCancelEdit={cancelEdit}
+                      onSaveEdit={saveEdit}
+                      isSavingEdit={isSaving}
                     />
                   </TabsContent>
 

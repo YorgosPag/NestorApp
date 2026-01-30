@@ -659,6 +659,23 @@ export class PhotoUploadService {
 
   /**
    * Uploads contact photo specifically with optimized compression για profiles
+   *
+   * @deprecated ADR-054: Use uploadContactPhotoCanonical() instead for new code.
+   * This method does not create FileRecord documents in Firestore.
+   * The canonical method ensures proper audit trail and multi-tenant isolation.
+   *
+   * @example
+   * ```typescript
+   * // ❌ DEPRECATED: Don't use this
+   * await PhotoUploadService.uploadContactPhoto(file, contactId);
+   *
+   * // ✅ CANONICAL: Use this instead
+   * await PhotoUploadService.uploadContactPhotoCanonical(file, {
+   *   contactId: 'contact_123',
+   *   companyId: 'company_xyz',
+   *   createdBy: 'user_abc',
+   * });
+   * ```
    */
   static async uploadContactPhoto(
     file: File,
@@ -679,6 +696,23 @@ export class PhotoUploadService {
 
   /**
    * Uploads company logo specifically with optimized compression για logos
+   *
+   * @deprecated ADR-054: Consider using uploadPhoto() with canonical fields for new code.
+   * This method does not create FileRecord documents in Firestore.
+   *
+   * @example
+   * ```typescript
+   * // ❌ DEPRECATED: Don't use this
+   * await PhotoUploadService.uploadCompanyLogo(file, companyId);
+   *
+   * // ✅ CANONICAL: Use uploadPhoto with canonical fields
+   * await PhotoUploadService.uploadPhoto(file, {
+   *   folderPath: 'companies/logos',
+   *   companyId: 'company_xyz',
+   *   createdBy: 'user_abc',
+   *   contactId: 'company_xyz', // Use companyId as entityId for company files
+   * });
+   * ```
    */
   static async uploadCompanyLogo(
     file: File,

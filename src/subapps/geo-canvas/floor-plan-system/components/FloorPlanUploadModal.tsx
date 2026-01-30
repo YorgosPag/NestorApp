@@ -14,7 +14,7 @@
  * @module floor-plan-system/components
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 import { Clock } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
@@ -28,10 +28,12 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
-import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
+import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import { FloorPlanPreview } from './FloorPlanPreview';
 import type { ParserResult } from '../types';
+// 🏢 ADR-054: Centralized upload component
+import { FileUploadZone } from '@/components/shared/files/FileUploadZone';
 
 export interface FloorPlanUploadModalProps {
   /**
@@ -65,17 +67,8 @@ export interface FloorPlanUploadModalProps {
   isParsing?: boolean;
 }
 
-// Supported file formats
-const ACCEPTED_FORMATS = {
-  'application/dxf': ['.dxf'],
-  'application/dwg': ['.dwg'],
-  'application/pdf': ['.pdf'],
-  'image/png': ['.png'],
-  'image/jpeg': ['.jpg', '.jpeg'],
-  'image/tiff': ['.tiff', '.tif']
-};
-
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+// 🏢 ADR-054: Accept string for FileUploadZone (file validation handled by centralized system)
+const FLOOR_PLAN_ACCEPT = '.dxf,.dwg,.pdf,.png,.jpg,.jpeg,.tiff,.tif';
 
 /**
  * FloorPlanUploadModal Component
@@ -102,94 +95,18 @@ export function FloorPlanUploadModal({
   const colors = useSemanticColors();
   const { t } = useTranslationLazy('geo-canvas');
 
-  // Drag state
-  const [isDragging, setIsDragging] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // File input ref
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Validate file
-  const validateFile = useCallback((file: File): { valid: boolean; error?: string } => {
-    // Check file extension
-    const extension = `.${file.name.split('.').pop()?.toLowerCase()}`;
-    const validExtensions = Object.values(ACCEPTED_FORMATS).flat();
-
-    if (!validExtensions.includes(extension)) {
-      return {
-        valid: false,
-        error: t('floorPlan.uploadModal.errors.invalidFormat')
-      };
-    }
-
-    // Check file size
-    if (file.size > MAX_FILE_SIZE) {
-      return {
-        valid: false,
-        error: t('floorPlan.uploadModal.errors.fileTooLarge')
-      };
-    }
-
-    return { valid: true };
-  }, [t]);
-
-  // Handle file selection
-  const handleFileSelection = useCallback((file: File) => {
-    setError(null);
-
-    const validation = validateFile(file);
-
-    if (!validation.valid) {
-      setError(validation.error || 'Invalid file');
-      return;
-    }
-
-    console.log('✅ File selected:', file.name, `(${(file.size / 1024 / 1024).toFixed(2)} MB)`);
-    onFileSelect(file);
-    // Don't close modal - let it show preview after parsing completes
-  }, [validateFile, onFileSelect]);
-
-  // Drag handlers
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const files = Array.from(e.dataTransfer.files);
+  /**
+   * 🏢 ADR-054: File upload handler - receives validated files from FileUploadZone
+   * Compression disabled for floor plans (CAD files should not be compressed)
+   */
+  const handleFileUpload = useCallback(async (files: File[]) => {
     if (files.length > 0) {
-      handleFileSelection(files[0]);
+      const file = files[0]; // Floor plan upload is single file
+      console.log('✅ File selected:', file.name, `(${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+      onFileSelect(file);
+      // Don't close modal - let it show preview after parsing completes
     }
-  }, [handleFileSelection]);
-
-  // File input change handler
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      handleFileSelection(files[0]);
-    }
-  }, [handleFileSelection]);
-
-  // Open file picker
-  const handleBrowseClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+  }, [onFileSelect]);
 
   // ❗ CRITICAL: Stable onOpenChange callback (prevents infinite loop)
   const handleOpenChange = useCallback((open: boolean) => {
@@ -228,100 +145,35 @@ export function FloorPlanUploadModal({
             </p>
           </div>
         ) : (
-          /* Show upload form */
+          /* Show upload form - ADR-054: Using centralized FileUploadZone */
           <>
-            {/* Drag-Drop Zone */}
-            <div
-          className={`
-            relative
-            border border-dashed ${quick.card}
-            p-12
-            text-center
-            transition-all duration-200
-            ${isDragging
-              ? `${getStatusBorder('info')} ${colors.bg.info}/10 scale-105`  // Drag state = Info semantic
-              : `${quick.card} ${HOVER_BACKGROUND_EFFECTS.MUTED}`
-            }
-          `}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          {/* Icon */}
-          <div className="mb-4">
-            <div className="text-6xl">
-              {isDragging ? '📥' : '📁'}
+            {/* 🏢 ADR-054: Centralized FileUploadZone with drag & drop */}
+            <FileUploadZone
+              onUpload={handleFileUpload}
+              accept={FLOOR_PLAN_ACCEPT}
+              multiple={false}
+              enableCompression={false} // Floor plans should not be compressed
+            />
+
+            {/* Supported Formats Info */}
+            <div className={`${colors.bg.primary} rounded-lg p-4`}>
+              <p className={`text-sm font-medium ${colors.text.secondary} mb-2`}>
+                {t('floorPlan.uploadModal.supportedFormats')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {['DXF', 'DWG', 'PDF', 'PNG', 'JPG', 'TIFF'].map((format) => (
+                  <span
+                    key={format}
+                    className={`px-3 py-1 ${colors.bg.hover} ${colors.text.secondary} text-xs rounded-full`}
+                  >
+                    {format}
+                  </span>
+                ))}
+              </div>
+              <p className={`text-xs ${colors.text.tertiary} mt-3`}>
+                {t('floorPlan.uploadModal.maxSize')}
+              </p>
             </div>
-          </div>
-
-          {/* Text */}
-          <div className="mb-6">
-            <p className="text-lg font-medium text-white mb-2">
-              {isDragging
-                ? t('floorPlan.uploadModal.dropText')
-                : t('floorPlan.uploadModal.dragText')
-              }
-            </p>
-            <p className={`text-sm ${colors.text.muted}`}>
-              {t('floorPlan.uploadModal.orText')}
-            </p>
-          </div>
-
-          {/* Browse Button */}
-          <button
-            onClick={handleBrowseClick}
-            className="
-              px-6 py-3
-              ${colors.bg.info} text-white font-medium
-              rounded-lg
-              transition-all duration-200
-              transform active:scale-95
-              shadow-lg
-              ${INTERACTIVE_PATTERNS.PRIMARY_HOVER} ${HOVER_SHADOWS.COLORED.BLUE}
-            "
-          >
-            {t('floorPlan.uploadModal.browseButton')}
-          </button>
-
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".dxf,.dwg,.pdf,.png,.jpg,.jpeg,.tiff,.tif"
-            onChange={handleFileInputChange}
-            className="hidden"
-          />
-        </div>
-
-        {/* Supported Formats */}
-        <div className={`${colors.bg.primary} rounded-lg p-4`}>
-          <p className={`text-sm font-medium ${colors.text.secondary} mb-2`}>
-            {t('floorPlan.uploadModal.supportedFormats')}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {['DXF', 'DWG', 'PDF', 'PNG', 'JPG', 'TIFF'].map((format) => (
-              <span
-                key={format}
-                className={`px-3 py-1 ${colors.bg.hover} ${colors.text.secondary} text-xs rounded-full`}
-              >
-                {format}
-              </span>
-            ))}
-          </div>
-          <p className={`text-xs ${colors.text.tertiary} mt-3`}>
-            {t('floorPlan.uploadModal.maxSize')}
-          </p>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className={`${colors.bg.error}/20 ${quick.card} ${getStatusBorder('error')} p-4`}>
-            <p className="text-sm text-red-400">
-              ❌ {error}
-            </p>
-          </div>
-        )}
           </>
         )}
 

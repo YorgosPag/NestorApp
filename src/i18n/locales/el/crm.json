@@ -271,6 +271,17 @@
       "unpin": "Ξεκαρφίτσωμα",
       "delete": "Διαγραφή"
     },
+    "reactions": {
+      "pickReaction": "Επιλέξτε αντίδραση",
+      "messageReactions": "Αντιδράσεις μηνύματος",
+      "reactedWith": "Αντέδρασαν με {emoji}",
+      "thumbs_up": "Μου αρέσει",
+      "heart": "Καρδιά",
+      "laughing": "Γέλιο",
+      "surprised": "Έκπληξη",
+      "sad": "Λύπη",
+      "angry": "Θυμός"
+    },
     "channels": {
       "telegram": "Telegram",
       "email": "Email",

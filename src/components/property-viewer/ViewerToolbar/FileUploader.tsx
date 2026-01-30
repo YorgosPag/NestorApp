@@ -1,38 +1,75 @@
+/**
+ * =============================================================================
+ * ⚠️ DEPRECATED: FileUploader Component
+ * =============================================================================
+ *
+ * @deprecated ADR-054: Use FileUploadButton from @/components/shared/files instead.
+ *
+ * This file is kept for backward compatibility only.
+ * All new code should use the centralized FileUploadButton component.
+ *
+ * Migration:
+ * ```tsx
+ * // ❌ OLD (deprecated)
+ * import { FileUploader } from '@/components/property-viewer/ViewerToolbar/FileUploader';
+ * <FileUploader onFileUpload={handleChange} />
+ *
+ * // ✅ NEW (canonical)
+ * import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
+ * <FileUploadButton onFileSelect={handleFile} accept=".pdf,.dwg,.dxf" />
+ * ```
+ *
+ * @module components/property-viewer/ViewerToolbar/FileUploader
+ * @enterprise ADR-054 - Upload System Consolidation
+ */
 
 'use client';
 
-import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
-import { useIconSizes } from '@/hooks/useIconSizes';
-// 🏢 ENTERPRISE: i18n support
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import React from 'react';
+import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
 
-interface FileUploaderProps {
+/**
+ * @deprecated Use FileUploadButton from @/components/shared/files instead
+ */
+export interface FileUploaderProps {
   onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
+/**
+ * @deprecated Use FileUploadButton from @/components/shared/files instead
+ *
+ * Legacy wrapper that converts the old event-based API to the new file-based API.
+ */
 export function FileUploader({ onFileUpload }: FileUploaderProps) {
-  const iconSizes = useIconSizes();
-  // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('properties');
+  // Log deprecation warning in development
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(
+      '⚠️ [ADR-054] FileUploader is deprecated. Use FileUploadButton from @/components/shared/files instead.'
+    );
+  }
+
+  // Convert file to synthetic event for backward compatibility
+  const handleFileSelect = (file: File) => {
+    // Create a minimal synthetic event-like object
+    const syntheticEvent = {
+      target: {
+        files: [file] as unknown as FileList,
+      },
+    } as React.ChangeEvent<HTMLInputElement>;
+
+    onFileUpload(syntheticEvent);
+  };
 
   return (
-    <div className="flex items-center gap-1">
-      <input
-        type="file"
-        accept=".pdf,.dwg,.dxf"
-        onChange={onFileUpload}
-        className="hidden"
-        id="floor-plan-upload"
-      />
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => document.getElementById('floor-plan-upload')?.click()}
-      >
-        <Upload className={`${iconSizes.sm} mr-2`} />
-        {t('fileUploader.upload')}
-      </Button>
-    </div>
+    <FileUploadButton
+      onFileSelect={handleFileSelect}
+      accept=".pdf,.dwg,.dxf"
+      fileType="any"
+      buttonText="Upload"
+      variant="outline"
+      size="sm"
+    />
   );
 }
+
+export default FileUploader;

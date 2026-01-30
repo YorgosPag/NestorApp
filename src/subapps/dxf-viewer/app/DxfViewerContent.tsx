@@ -56,6 +56,8 @@ import { useCanvasOperations } from '../hooks/interfaces/useCanvasOperations';
 import { useEventBus } from '../systems/events/EventBus';
 // 🏢 ENTERPRISE (2026-01-26): Centralized tool metadata - ADR-033
 import { preservesOverlayMode } from '../systems/tools/ToolStateManager';
+// 🏢 ENTERPRISE (2026-01-30): ADR-055 Entity Creation Manager - Event Bus + Command Pattern
+import { useEntityCreationManager } from '../systems/entity-creation';
 
 // ✅ ENTERPRISE: State Management Hooks (PHASE 4)
 import { useOverlayState } from '../hooks/state/useOverlayState';
@@ -291,6 +293,16 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
   const universalSelection = useUniversalSelection();
   const levelManager = useLevelManager();
+
+  // 🏢 ENTERPRISE (2026-01-30): ADR-055 Entity Creation Manager - Event Bus + Command Pattern
+  // This enables full undo/redo support for all entity creation operations
+  // useUnifiedDrawing emits 'entity:create-request' events → this manager handles saving via Commands
+  useEntityCreationManager({
+    getLevelScene: levelManager.getLevelScene,
+    setLevelScene: levelManager.setLevelScene,
+    defaultLevelId: levelManager.currentLevelId || '0',
+    debug: false, // ADR-055 Event Bus pattern needs debugging
+  });
 
   // Get grip context for manual control
   const { updateGripSettings } = useGripContext();
