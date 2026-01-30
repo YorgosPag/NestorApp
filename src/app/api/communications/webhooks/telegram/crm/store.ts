@@ -288,7 +288,15 @@ export async function storeMessageInCRM(
 
   return safeDbOperation(async (_db) => {
     // Note: _db is provided by safeDbOperation but helpers create their own connection
-    const { collection, addDoc, doc, setDoc, Timestamp } = firestoreHelpers;
+    const { collection, addDoc, doc, setDoc, Timestamp, updateDoc } = firestoreHelpers;
+
+    // 🔍 DEBUG: Log incoming message data
+    console.log('📝 storeMessageInCRM called:', {
+      hasText: !!message.text,
+      hasCaption: !!message.caption,
+      hasAttachments: !!(message.attachments && message.attachments.length > 0),
+      attachmentsCount: message.attachments?.length || 0,
+    });
 
     const chatId = String(message.chat?.id || message.chat_id);
     const userId = String(message.from.id);
@@ -367,9 +375,18 @@ export async function storeMessageInCRM(
     } satisfies MessageDocument;
 
     // 4. Store in canonical MESSAGES collection (SINGLE SOURCE OF TRUTH)
-    const messagesCollRef = collection(COLLECTIONS.MESSAGES);
-    const messagesRef = doc(messagesCollRef, canonicalMessageDocId);
-    await setDoc(messagesRef, canonicalMessage);
+    console.log('📝 Attempting to store message:', canonicalMessageDocId);
+    console.log('📝 Content:', JSON.stringify(content));
+
+    try {
+      const messagesCollRef = collection(COLLECTIONS.MESSAGES);
+      const messagesRef = doc(messagesCollRef, canonicalMessageDocId);
+      await setDoc(messagesRef, canonicalMessage);
+      console.log('✅ setDoc succeeded for:', canonicalMessageDocId);
+    } catch (setDocError) {
+      console.error('❌ setDoc FAILED:', setDocError);
+      throw setDocError; // Re-throw to be caught by safeDbOperation
+    }
 
     // 🏢 ADR-055: Update conversation lastMessage.content with preview
     const lastMessagePreview = messageText
