@@ -241,28 +241,36 @@ export function ReplyComposer({
   const handleFileSelect = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files;
-      if (!files || files.length === 0) return;
+      console.log('📎 [ReplyComposer] handleFileSelect called, files:', files?.length);
+
+      if (!files || files.length === 0) {
+        console.log('📎 [ReplyComposer] No files selected');
+        return;
+      }
 
       // Reset input to allow re-selecting same file
       event.target.value = '';
 
       // Check max attachments limit
       if (attachments.length + files.length > MAX_ATTACHMENTS) {
-        // Could use notification here
-        console.warn(`Maximum ${MAX_ATTACHMENTS} attachments allowed`);
+        console.warn(`📎 [ReplyComposer] Maximum ${MAX_ATTACHMENTS} attachments allowed`);
         return;
       }
 
       const newAttachments: PendingAttachment[] = [];
 
       for (const file of Array.from(files)) {
+        console.log('📎 [ReplyComposer] Processing file:', file.name, 'size:', file.size, 'type:', file.type);
+
         // Validate file size
         if (file.size > MAX_ATTACHMENT_SIZE) {
-          console.warn(`File ${file.name} exceeds maximum size`);
+          console.warn(`📎 [ReplyComposer] File ${file.name} exceeds maximum size (${file.size} > ${MAX_ATTACHMENT_SIZE})`);
           continue;
         }
 
         const type = detectAttachmentType(file.type);
+        console.log('📎 [ReplyComposer] Detected type:', type);
+
         const attachment: PendingAttachment = {
           id: generateAttachmentId(),
           file,
@@ -279,14 +287,22 @@ export function ReplyComposer({
         newAttachments.push(attachment);
       }
 
-      if (newAttachments.length === 0) return;
+      console.log('📎 [ReplyComposer] New attachments created:', newAttachments.length);
+
+      if (newAttachments.length === 0) {
+        console.log('📎 [ReplyComposer] No valid attachments, returning');
+        return;
+      }
 
       // Add to state
+      console.log('📎 [ReplyComposer] Adding attachments to state');
       setAttachments((prev) => [...prev, ...newAttachments]);
 
       // Auto-upload if handler provided
+      console.log('📎 [ReplyComposer] onUploadAttachment handler:', !!onUploadAttachment);
       if (onUploadAttachment) {
         setIsUploadingAttachment(true);
+        console.log('📎 [ReplyComposer] Starting upload...');
 
         for (const attachment of newAttachments) {
           try {
