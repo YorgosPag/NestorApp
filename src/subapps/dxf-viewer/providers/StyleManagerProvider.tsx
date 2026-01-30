@@ -19,6 +19,8 @@ import { gripStyleStore } from '../stores/GripStyleStore';
 // 🏢 ADR-056: Centralized completion style store
 import { completionStyleStore } from '../stores/CompletionStyleStore';
 import { withOpacity } from '../config/color-config';
+// 🏢 ADR-056: Import proper LineSettings type from settings-core
+import type { LineSettings as CoreLineSettings } from '../settings-core/types';
 
 // ===== CONTEXT CREATION =====
 
@@ -26,14 +28,8 @@ const StyleManagerContext = createContext<StyleManagerContextType | null>(null);
 
 // ===== STORE SYNC UTILITIES =====
 
-/** Line settings for store synchronization */
-interface LineSettings {
-  enabled: boolean;
-  color: string;
-  lineWidth: number;
-  opacity: number;
-  lineType?: string;
-}
+// 🏢 ADR-056: Use CoreLineSettings alias for proper type (includes dashScale, lineCap, etc.)
+type LineSettings = CoreLineSettings;
 
 /** Text settings for store synchronization */
 interface TextSettings {
@@ -69,7 +65,7 @@ const syncLineStore = (settings: LineSettings) => {
     lineWidth: settings.lineWidth,
     opacity: settings.opacity,
     fillColor: withOpacity(settings.color, 0), // Fully transparent fill
-    lineType: settings.lineType,
+    lineType: settings.lineType, // Now properly typed as LineType
   });
 };
 
@@ -148,16 +144,23 @@ export function StyleManagerProvider({ children }: { children: React.ReactNode }
     const textSettings = getEffectiveTextSettings();
     const gripSettings = getEffectiveGripSettings();
 
+    // 🏢 ADR-056: Get completion-specific settings
+    const completionSettings = getEffectiveLineSettings('completion');
+
     // Συγχρονίζουμε τα stores
     syncLineStore(lineSettings);
     syncTextStore(textSettings);
     syncGripStore(gripSettings);
+    // 🏢 ADR-056: Sync completion styles to dedicated store
+    syncCompletionStore(completionSettings);
   }, [getEffectiveLineSettings, getEffectiveTextSettings, getEffectiveGripSettings]);
 
   const updateStore = useCallback((entityType: EntityType) => {
     switch (entityType) {
       case 'line':
         syncLineStore(getEffectiveLineSettings());
+        // 🏢 ADR-056: Also update completion store when line settings change
+        syncCompletionStore(getEffectiveLineSettings('completion'));
         break;
       case 'text':
         syncTextStore(getEffectiveTextSettings());
@@ -169,17 +172,18 @@ export function StyleManagerProvider({ children }: { children: React.ReactNode }
   }, [getEffectiveLineSettings, getEffectiveTextSettings, getEffectiveGripSettings]);
 
   // ===== AUTO-SYNC EFFECT =====
-  // 🚨 ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ: Διπλός συγχρονισμός με DxfSettingsProvider
-  // Το DxfSettingsProvider ήδη συγχρονίζει τα stores σωστά με τις γενικές ρυθμίσεις
+  // 🏢 ADR-056: Re-enabled for CompletionStyleStore synchronization
+  // Note: DxfSettingsProvider syncs preview styles via storeSync.ts, but NOT completion styles
+  // This effect syncs ONLY completionStyleStore (toolStyleStore sync handled by storeSync)
+  useEffect(() => {
+    // 🏢 ADR-056: Only sync completion store (preview already synced by storeSync)
+    const completionSettings = getEffectiveLineSettings('completion');
+    syncCompletionStore(completionSettings);
 
-  // useEffect(() => {
-  //   syncStores();
-  //
-  //   // DEBUG: Force log για να δούμε τι συμβαίνει
-  //   if (DEBUG_STYLE_MANAGER_PROVIDER) {
-  //     console.log('[StyleManager] Auto-sync triggered');
-  //   }
-  // }, [syncStores]); // Simplified dependencies - syncStores already has all needed deps
+    if (DEBUG_STYLE_MANAGER_PROVIDER) {
+      console.log('[StyleManager] Completion store synced:', completionSettings.color);
+    }
+  }, [getEffectiveLineSettings]);
 
   // ===== CONTEXT VALUE =====
 

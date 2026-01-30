@@ -4,7 +4,7 @@
 > **= -> LAST UPDATED**: 2026-01-30
 > **= -> TOTAL SYSTEMS**: 33 Major Enterprise Systems (incl. Tool State Store)
 > **= -> TOTAL CODE**: 21,230+ Lines (incl. ToolStateStore.ts 250 lines)
-> **= -> TOTAL ADRs**: 33 Architectural Decision Records (incl. ADR-056 Entity Completion Styles)
+> **= -> TOTAL ADRs**: 34 Architectural Decision Records (incl. ADR-057 Unified Entity Completion Pipeline)
 
 ---
 
@@ -53,7 +53,9 @@
 | **ADR-054** | Enterprise Upload System Consolidation 🏢 | `FileRecordService` + `useEnterpriseFileUpload` + `FileUploadZone` | **5 canonical components**, single pipeline (pending→upload→finalize), ADR-031 compliant, 12 duplicate components deprecated. | 2026-01-30 |
 | **ADR-055** | Centralized Tool State Persistence 🏢 | `stores/ToolStateStore.ts` → useSyncExternalStore pattern | **Single Source of Truth** for tool state. Tools with `allowsContinuous=true` stay active after entity creation (AutoCAD/BricsCAD pattern). Zero useState for tool state. | 2026-01-30 |
 | **ADR-056** | Centralized Entity Completion Styles 🏢 | `hooks/useLineCompletionStyle.ts` → `applyCompletionStyles()` | **Single Source of Truth** for entity completion styles. AutoCAD "Current Properties" pattern. All entities (drawing + measurement) receive styles from centralized system. Zero hardcoded colors. | 2026-01-30 |
+| **ADR-057** | Unified Entity Completion Pipeline 🏢 | `hooks/drawing/completeEntity.ts` → `completeEntity()` | **Single Entry Point** for ALL entity completions. 4 code paths → 1 function. Handles: styles (ADR-056), scene addition, undo tracking, events, tool persistence. AutoCAD `acdbEntMake` pattern. | 2026-01-30 |
 
+> **🚫 PROHIBITION**: Direct scene manipulation for entity completion **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `completeEntity()` από `hooks/drawing/completeEntity.ts` (ADR-057).
 > **🚫 PROHIBITION**: Click handlers without `viewportReady` check **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - block interactions until viewport valid.
 > **🚫 PROHIBITION**: Double coordinate conversion (world→screen→world) **ΑΠΑΓΟΡΕΥΕΤΑΙ** - single conversion at source per ADR-046.
 > **🚫 PROHIBITION**: Hardcoded layout stabilization delays **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `PANEL_LAYOUT.TIMING.VIEWPORT_LAYOUT_STABILIZATION`.

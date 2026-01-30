@@ -5114,6 +5114,196 @@ toolStateStore.handleToolCompletion('line');
 
 ---
 
+### 📋 ADR-056: CENTRALIZED ENTITY COMPLETION STYLES (2026-01-30) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-30
+
+**🏢 ENTERPRISE LEVEL**: **9/10** - AutoCAD "Current Properties" Pattern
+
+**Problem**:
+Τα **completion styles** (color, lineweight, lineType, κλπ.) εφαρμόζονταν **inline** στο `useUnifiedDrawing.tsx` αντί να υπάρχει κεντρικοποιημένο σύστημα:
+- Hardcoded colors σε measurement entities (π.χ. `#00FF00`)
+- Inconsistency μεταξύ διαφορετικών entity types
+- Δυσκολία στη συντήρηση και επέκταση
+
+**Root Cause Analysis**:
+- Preview styles συγχρονίζονταν μέσω `storeSync.ts` → `toolStyleStore`
+- Completion styles **ΔΕΝ** συγχρονίζονταν - κανένα port/adapter για completion mode
+- `syncStores()` useEffect στο `StyleManagerProvider` ήταν disabled
+
+**Decision - Mirror Preview System Pattern**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL STORE** | `CompletionStyleStore` (`src/subapps/dxf-viewer/stores/CompletionStyleStore.ts`) |
+| **PATTERN** | Mirrors `ToolStyleStore` for consistency |
+| **APPLICATION** | `applyCompletionStyles()` - reads from store automatically |
+| **PROHIBITION** | ❌ Inline completion styling **ΑΠΑΓΟΡΕΥΕΤΑΙ** |
+
+**🏗️ Architecture**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│              COMPLETION STYLES SYSTEM (ADR-056)             │
+├─────────────────────────────────────────────────────────────┤
+│  DxfSettingsContext                                         │
+│         ↓                                                   │
+│  getEffectiveLineSettings('completion')                     │
+│         ↓                                                   │
+│  StyleManagerProvider (useEffect)                           │
+│         ↓                                                   │
+│  syncCompletionStore() → completionStyleStore               │
+│         ↓                                                   │
+│  applyCompletionStyles(entity) ← reads from store           │
+│         ↓                                                   │
+│  All Entities (drawing + measurement)                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Implementation Pattern**:
+```typescript
+// ✅ ENTERPRISE: Apply completion styles (no parameters needed)
+import { applyCompletionStyles } from '../hooks/useLineCompletionStyle';
+
+// After entity creation
+const newEntity = createEntityFromTool(tool, points);
+applyCompletionStyles(newEntity); // Reads from completionStyleStore automatically
+
+// ❌ PROHIBITED: Inline completion styling
+// entity.color = lineCompletionStyles.color; // WRONG!
+// entity.lineweight = lineCompletionStyles.lineWidth; // WRONG!
+```
+
+**Files Changed**:
+
+| File | Change |
+|------|--------|
+| `stores/CompletionStyleStore.ts` | **NEW** - Centralized store |
+| `hooks/useLineCompletionStyle.ts` | **NEW** - `applyCompletionStyles()` function |
+| `providers/StyleManagerProvider.tsx` | **EDIT** - useEffect syncs completionStyleStore |
+| `hooks/drawing/useUnifiedDrawing.tsx` | **EDIT** - Uses `applyCompletionStyles()` |
+
+**Default Colors (FACTORY_DEFAULTS)**:
+
+| Mode | Color | ACI Code |
+|------|-------|----------|
+| Preview (draft) | Gray | ACI 8 |
+| Completion | Green (#00FF00) | ACI 3 |
+| Hover | Cyan | ACI 4 |
+| Selection | Red | ACI 1 |
+
+**Consequences**:
+- ✅ All entities (drawing + measurement) receive styles from centralized store
+- ✅ Zero hardcoded colors in entity creation
+- ✅ Mirrors AutoCAD "Current Properties" pattern
+- ✅ Single source of truth for completion styles
+- ✅ Consistent with preview system architecture
+
+**Related ADRs**:
+- ADR-005: Line Drawing System
+- ADR-055: Centralized Tool State Persistence
+
+---
+
+### 📋 ADR-057: UNIFIED ENTITY COMPLETION PIPELINE (2026-01-30) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-30
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - AutoCAD/BricsCAD/SolidWorks Pattern
+
+**Problem**:
+Entity completion διαχειριζόταν από **4 διαφορετικά code paths**:
+1. `tryCompleteEntity()` - για line/rectangle/circle
+2. `finishPolyline()` - για polyline/polygon/measure-area
+3. Inline code για continuous measurement
+4. Κάθε path είχε τη δική του λογική για styles/scene/events
+
+**Impact**:
+- 4x maintenance burden
+- 4x bug potential
+- Inconsistent behavior μεταξύ entity types
+- Violation of DRY principle
+
+**Decision - Single Entry Point (AutoCAD Pattern)**:
+
+| Rule | Description |
+|------|-------------|
+| **CANONICAL FUNCTION** | `completeEntity()` (`hooks/drawing/completeEntity.ts`) |
+| **RESPONSIBILITIES** | Styles, Scene, Undo, Events, Tool Persistence |
+| **PATTERN** | AutoCAD `acdbEntMake` - single function for all entities |
+| **PROHIBITION** | ❌ Direct scene manipulation for entity completion **ΑΠΑΓΟΡΕΥΕΤΑΙ** |
+
+**🏗️ Architecture**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│              UNIFIED ENTITY COMPLETION PIPELINE             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   Line ──────┐                                              │
+│   Rectangle ─┤                                              │
+│   Circle ────┤                                              │
+│   Polyline ──┼──→ completeEntity(entity, options)           │
+│   Polygon ───┤              │                               │
+│   Measure ───┘              ▼                               │
+│                   ┌─────────────────────┐                   │
+│                   │ 1. Apply styles     │ (ADR-056)         │
+│                   │ 2. Add to scene     │ (centralized)     │
+│                   │ 3. Track for undo   │ (optional)        │
+│                   │ 4. Emit event       │ (EventBus)        │
+│                   │ 5. Tool persistence │ (ADR-055)         │
+│                   └─────────────────────┘                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Implementation Pattern**:
+```typescript
+// ✅ ENTERPRISE: Single entry point for ALL entity completions
+import { completeEntity } from './completeEntity';
+
+const newEntity = createEntityFromTool(tool, points);
+
+completeEntity(newEntity, {
+  tool: currentTool,
+  levelId: currentLevelId || '0',
+  getScene: getLevelScene,
+  setScene: setLevelScene,
+  trackForUndo: (id) => sessionEntityIds.push(id), // Optional
+});
+
+// ❌ PROHIBITED: Direct scene manipulation
+// applyCompletionStyles(entity); // WRONG - called by completeEntity
+// setLevelScene(levelId, { ...scene, entities: [...] }); // WRONG
+```
+
+**Files Changed**:
+
+| File | Change |
+|------|--------|
+| `hooks/drawing/completeEntity.ts` | **NEW** - Unified completion function |
+| `hooks/drawing/useUnifiedDrawing.tsx` | **REFACTORED** - Uses completeEntity() |
+
+**Before vs After**:
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Code paths | 4 | **1** |
+| Lines of completion logic | ~150 | **~50** |
+| Style application points | 4 | **1** |
+| Scene manipulation points | 4 | **1** |
+| Bug potential | High | **Minimal** |
+
+**Consequences**:
+- ✅ Single source of truth for entity completion
+- ✅ Zero code duplication
+- ✅ Consistent behavior for ALL entity types
+- ✅ Easy to maintain and extend
+- ✅ AutoCAD/BricsCAD/SolidWorks pattern compliance
+
+**Related ADRs**:
+- ADR-055: Centralized Tool State Persistence
+- ADR-056: Centralized Entity Completion Styles
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

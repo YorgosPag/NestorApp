@@ -100,8 +100,9 @@ import { usePreviewMode } from '../usePreviewMode';
 import { useLineStyles } from '../../settings-provider';
 // 🏢 ENTERPRISE: Import centralized CAD colors - ADR-014 color token migration
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-// 🏢 ENTERPRISE (2026-01-30): ADR-056 - Centralized Entity Completion Styles
-import { applyCompletionStyles } from '../useLineCompletionStyle';
+// 🏢 ENTERPRISE (2026-01-30): ADR-057 - Unified Entity Completion Pipeline
+// Note: applyCompletionStyles is called internally by completeEntity (ADR-056)
+import { completeEntity } from './completeEntity';
 
 export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-distance-continuous' | 'measure-area' | 'measure-angle';
 
@@ -178,11 +179,11 @@ export function useUnifiedDrawing() {
   // ===== ΠΡΟΣΘΗΚΗ PREVIEW MODE INTEGRATION =====
   const { setMode } = usePreviewMode();
 
-  // ===== ENTITY STYLES FOR PREVIEW & COMPLETION PHASES =====
+  // ===== ENTITY STYLES FOR PREVIEW PHASE =====
   // 🆕 MERGE: Χρησιμοποιούμε το νέο useLineStyles από DxfSettingsProvider (merged)
   const linePreviewStyles = useLineStyles('preview');
-  // 🏢 ADR-056: Completion styles from DxfSettingsContext, applied via centralized function
-  const lineCompletionStyles = useLineStyles('completion');
+  // 🏢 ADR-056: Completion styles read from completionStyleStore via applyCompletionStyles()
+  // No React hook needed - store is synchronized by StyleManagerProvider
 
 
   const nextEntityIdRef = useRef(1);
@@ -230,7 +231,7 @@ export function useUnifiedDrawing() {
         break;
       case 'measure-distance':
         if (points.length >= 2) {
-          // 🏢 ADR-056: Measurement entities use centralized completion styles
+          // 🏢 ADR-057: Entity creation only - styles applied by completeEntity()
           const measureEntity = {
             id,
             type: 'line',
@@ -241,10 +242,6 @@ export function useUnifiedDrawing() {
             measurement: true, // Mark as measurement entity
             showEdgeDistances: true, // Show distance label on the measurement line
           } as LineEntity;
-          // 🏢 ADR-056: Apply centralized completion styles (color, lineweight, opacity, etc.)
-          if (lineCompletionStyles) {
-            applyCompletionStyles(measureEntity as unknown as Record<string, unknown>, lineCompletionStyles);
-          }
           return measureEntity;
         }
         break;
@@ -256,7 +253,7 @@ export function useUnifiedDrawing() {
         if (points.length >= 2) {
           // For continuous mode, always return preview for LAST 2 points
           const lastTwoPoints = points.slice(-2);
-          // 🏢 ADR-056: Measurement entities use centralized completion styles
+          // 🏢 ADR-057: Entity creation only - styles applied by completeEntity()
           const continuousMeasureEntity = {
             id,
             type: 'line',
@@ -267,10 +264,6 @@ export function useUnifiedDrawing() {
             measurement: true, // Mark as measurement entity
             showEdgeDistances: true, // Show distance label on the measurement line
           } as LineEntity;
-          // 🏢 ADR-056: Apply centralized completion styles (color, lineweight, opacity, etc.)
-          if (lineCompletionStyles) {
-            applyCompletionStyles(continuousMeasureEntity as unknown as Record<string, unknown>, lineCompletionStyles);
-          }
           return continuousMeasureEntity;
         }
         break;
@@ -496,35 +489,16 @@ export function useUnifiedDrawing() {
       // Create measurement entity
       const measurementEntity = createEntityFromTool('measure-distance', lastTwoPoints);
 
-      const isMeasurementTool = true;
-      const effectiveLevelId = currentLevelId || '0';
-
-      if (measurementEntity && effectiveLevelId) {
-        const scene = getLevelScene(effectiveLevelId);
-        if (scene) {
-          if ('type' in measurementEntity && typeof measurementEntity.type === 'string') {
-            const updatedScene = { ...scene, entities: [...scene.entities, measurementEntity as AnySceneEntity] };
-            setLevelScene(effectiveLevelId, updatedScene);
-          }
-        } else if (isMeasurementTool) {
-          // 🏢 ENTERPRISE: Create minimal scene - setLevelScene handles partial SceneModel
-          // Type assertion needed because SceneModel interface is stricter than runtime requirements
-          const defaultScene = { entities: [measurementEntity as AnySceneEntity] } as SceneModel;
-          setLevelScene(effectiveLevelId, defaultScene);
-        }
-
-        // 🏢 ADR-053: Track entity ID for session undo functionality
-        // When user presses "Undo" in context menu, ALL session entities will be deleted
-        if (measurementEntity.id) {
-          continuousSessionEntityIdsRef.current.push(measurementEntity.id);
-        }
-
-        // 🏢 ENTERPRISE: Emit event for each measurement
-        EventBus.emit('drawing:complete', {
-          tool: currentTool,
-          entityId: measurementEntity?.id ?? 'unknown'
-        });
-      }
+      // 🏢 ADR-057: Unified Entity Completion Pipeline
+      // Single entry point for ALL entity completions
+      completeEntity(measurementEntity, {
+        tool: currentTool as ToolType,
+        levelId: currentLevelId || '0',
+        getScene: getLevelScene,
+        setScene: setLevelScene,
+        trackForUndo: (id) => continuousSessionEntityIdsRef.current.push(id),
+        skipToolPersistence: true, // Continuous mode - don't reset tool
+      });
 
       // 🏢 ENTERPRISE: Keep last point for next measurement (AutoCAD pattern)
       // Reset machine to have only the last point
@@ -552,49 +526,18 @@ export function useUnifiedDrawing() {
       const effectiveLevelId = currentLevelId || ((isMeasurementTool || isDrawingTool) ? '0' : null);
 
       if (newEntity && effectiveLevelId) {
-        // 🏢 ADR-056: Apply centralized completion styles to ALL drawing entities
-        // Pattern: AutoCAD "Current Properties" - consistent styling via single source of truth
-        // applyCompletionStyles() handles color, lineweight, opacity, lineType, dashScale, etc.
-        // Note: polygon entities are stored as polyline with closed=true (no separate 'polygon' type)
-        const isDrawingEntity = newEntity.type === 'line' || newEntity.type === 'rectangle' ||
-                                newEntity.type === 'circle' || newEntity.type === 'polyline';
-
-        if (isDrawingEntity && lineCompletionStyles) {
-          applyCompletionStyles(newEntity as unknown as Record<string, unknown>, lineCompletionStyles);
-        }
-
         // 🏢 ENTERPRISE (2026-01-27): CRITICAL - Clear preview FIRST before any state updates!
         // Pattern: Autodesk AutoCAD - Visual feedback must be synchronous
-        // This MUST happen BEFORE entity creation to prevent "two numbers" bug
         previewEntityRef.current = null;
-        EventBus.emit('drawing:complete', {
-          tool: currentTool,
-          entityId: newEntity?.id ?? 'unknown'
-        });
 
-        // 🏢 ENTERPRISE (2026-01-30): Direct setLevelScene for entity creation
-        const scene = getLevelScene(effectiveLevelId);
-        if (scene) {
-          // Add to existing scene
-          if ('type' in newEntity && typeof newEntity.type === 'string') {
-            const updatedScene: SceneModel = {
-              ...scene,
-              entities: [...scene.entities, newEntity as AnySceneEntity]
-            };
-            setLevelScene(effectiveLevelId, updatedScene);
-          }
-        } else {
-          // Create new scene with default layer
-          if ('type' in newEntity && typeof newEntity.type === 'string') {
-            const newScene: SceneModel = {
-              entities: [newEntity as AnySceneEntity],
-              layers: { '0': { name: '0', color: '#FFFFFF', visible: true, locked: false } },
-              bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
-              units: 'mm',
-            };
-            setLevelScene(effectiveLevelId, newScene);
-          }
-        }
+        // 🏢 ADR-057: Unified Entity Completion Pipeline
+        // Single entry point for ALL entity completions (styles, scene, events, tool persistence)
+        completeEntity(newEntity, {
+          tool: currentTool as ToolType,
+          levelId: effectiveLevelId,
+          getScene: getLevelScene,
+          setScene: setLevelScene,
+        });
       }
       // Return to normal mode after entity completion
       setMode('normal');
@@ -602,17 +545,6 @@ export function useUnifiedDrawing() {
       // 🏢 ENTERPRISE: Use state machine to complete and reset
       machineComplete();
       machineReset();
-
-      // 🏢 ENTERPRISE (2026-01-30): Centralized Tool Completion via ToolStateStore
-      // Pattern: AutoCAD/BricsCAD - tools with allowsContinuous=true stay active after completion
-      // The store's handleToolCompletion() is the SINGLE SOURCE OF TRUTH for this decision.
-      // - Drawing tools (line, rectangle, circle, polygon): allowsContinuous=true → STAY ACTIVE
-      // - Measurement tools (measure-*): allowsContinuous=true → STAY ACTIVE
-      // - Polyline, Move, Pan: allowsContinuous=true → STAY ACTIVE
-      //
-      // NOTE: The store will notify all subscribers (including React components)
-      // so the UI will automatically reflect the correct tool state.
-      toolStateStore.handleToolCompletion(currentTool as ToolType);
 
       // Also update state machine for consistency (internal drawing state)
       const toolMetadata = getToolMetadata(currentTool as ToolType);
@@ -691,7 +623,7 @@ export function useUnifiedDrawing() {
 
       return false; // Drawing not yet complete
     }
-  }, [canAddPoint, machineAddPoint, machineContext.points, machineContext.toolType, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, lineCompletionStyles, machineComplete, machineReset, machineDeselectTool]);
+  }, [canAddPoint, machineAddPoint, machineContext.points, machineContext.toolType, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, machineComplete, machineReset, machineDeselectTool]);
 
   const updatePreview = useCallback((mousePoint: Point2D, _transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
     // 🏢 ENTERPRISE (2026-01-25): Use state machine for state checks
@@ -974,17 +906,15 @@ export function useUnifiedDrawing() {
 
       const newEntity = createEntityFromTool(currentTool, cleanedPoints);
 
-      // Σώσε entity για polygon και polyline
-      if (newEntity && currentLevelId) {
-        const scene = getLevelScene(currentLevelId);
-        if (scene) {
-          // Filter out extended types that are not compatible with AnySceneEntity
-          if ('type' in newEntity && typeof newEntity.type === 'string') {
-            const updatedScene = { ...scene, entities: [...scene.entities, newEntity as AnySceneEntity] };
-            setLevelScene(currentLevelId, updatedScene);
-          }
-        }
-      }
+      // 🏢 ADR-057: Unified Entity Completion Pipeline
+      // Single entry point for polyline/polygon/measure-area completions
+      const effectiveLevelId = currentLevelId || '0';
+      completeEntity(newEntity, {
+        tool: currentTool as ToolType,
+        levelId: effectiveLevelId,
+        getScene: getLevelScene,
+        setScene: setLevelScene,
+      });
 
       // Return to normal mode after polyline completion
       setMode('normal');

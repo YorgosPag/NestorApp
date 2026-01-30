@@ -2,25 +2,35 @@
  * @module useLineCompletionStyle
  * @description ADR-056: Centralized Entity Completion Styles
  *
- * Mirror pattern of applyLinePreviewStyle() for the completion phase.
- * Provides centralized styling logic for entity completion.
+ * ENTERPRISE PATTERN: Mirrors applyLinePreviewStyle() for completion phase
+ * - Reads from completionStyleStore (single source of truth)
+ * - No React context required (can be called from anywhere)
+ * - Centralized LineType conversion utility
  *
- * ENTERPRISE PATTERN:
- * - AutoCAD "Current Properties" style - all entities receive consistent styles
- * - Accepts styles from DxfSettingsContext (via useLineStyles('completion'))
- * - LineType conversion utility (centralized from inline code)
+ * ARCHITECTURE:
+ * ```
+ * completionStyleStore (SSOT)
+ *        ↓
+ * getCompletionStyles() / applyCompletionStyles()
+ *        ↓
+ * All Entities (drawing + measurement)
+ * ```
  *
  * @example
  * ```typescript
  * import { applyCompletionStyles } from './useLineCompletionStyle';
- * import { useLineStyles } from '../settings-provider';
  *
- * const lineCompletionStyles = useLineStyles('completion');
- * applyCompletionStyles(newEntity, lineCompletionStyles);
+ * // Apply completion styles to any entity (reads from store automatically)
+ * applyCompletionStyles(newEntity);
  * ```
+ *
+ * @author Anthropic Claude Code
+ * @since 2026-01-30
+ * @see ADR-056 in centralized_systems.md
  */
 
-import type { LineType, LineSettings } from '../settings-core/types';
+import { completionStyleStore, type CompletionStyle } from '../stores/CompletionStyleStore';
+import type { LineType } from '../settings-core/types';
 
 /**
  * Entity completion styles interface
@@ -61,24 +71,26 @@ export function convertLineTypeToEntityFormat(
 }
 
 /**
- * Transform LineSettings to EntityCompletionStyles
+ * Get completion styles from completionStyleStore
  *
- * ENTERPRISE PATTERN: Converts DxfSettingsContext format to entity format
+ * ENTERPRISE PATTERN: Single source of truth for completion styles
+ * Mirrors getLinePreviewStyle() but for completion phase
  *
- * @param settings - LineSettings from DxfSettingsContext (useLineStyles('completion'))
- * @returns EntityCompletionStyles ready for entity application
+ * @returns EntityCompletionStyles object with all styling properties
  */
-export function transformToEntityStyles(settings: LineSettings): EntityCompletionStyles {
+export function getCompletionStyles(): EntityCompletionStyles {
+  const storeStyle = completionStyleStore.get();
+
   return {
-    color: settings.color,
-    lineweight: settings.lineWidth,
-    opacity: settings.opacity,
-    lineType: convertLineTypeToEntityFormat(settings.lineType),
-    dashScale: settings.dashScale ?? 1.0,
-    lineCap: settings.lineCap ?? 'round',
-    lineJoin: settings.lineJoin ?? 'round',
-    dashOffset: settings.dashOffset ?? 0,
-    breakAtCenter: settings.breakAtCenter ?? false,
+    color: storeStyle.color,
+    lineweight: storeStyle.lineWidth,
+    opacity: storeStyle.opacity,
+    lineType: convertLineTypeToEntityFormat(storeStyle.lineType),
+    dashScale: storeStyle.dashScale,
+    lineCap: storeStyle.lineCap,
+    lineJoin: storeStyle.lineJoin,
+    dashOffset: storeStyle.dashOffset,
+    breakAtCenter: storeStyle.breakAtCenter,
   };
 }
 
@@ -86,33 +98,27 @@ export function transformToEntityStyles(settings: LineSettings): EntityCompletio
  * Apply completion styles to an entity
  *
  * ENTERPRISE PATTERN: AutoCAD "Current Properties" style application
- * - Accepts styles from DxfSettingsContext (useLineStyles('completion'))
+ * - Reads from completionStyleStore (single source of truth)
  * - Applies ALL properties consistently to any entity type
  * - Type-safe with proper generic constraint
+ * - No parameters required (reads from store automatically)
  *
  * @param entity - The entity to apply styles to (modified in place for performance)
- * @param completionStyles - LineSettings from useLineStyles('completion')
  * @returns The same entity reference with styles applied
  *
  * @example
  * ```typescript
- * // In useUnifiedDrawing.tsx:
- * const lineCompletionStyles = useLineStyles('completion');
- *
  * // For drawing entities (line, circle, rectangle, polyline)
  * const newEntity = createEntityFromTool(tool, points);
- * applyCompletionStyles(newEntity, lineCompletionStyles);
+ * applyCompletionStyles(newEntity);
  *
  * // For measurement entities (measure-distance, measure-angle)
  * const measurementEntity = createMeasurementEntity(points);
- * applyCompletionStyles(measurementEntity, lineCompletionStyles);
+ * applyCompletionStyles(measurementEntity);
  * ```
  */
-export function applyCompletionStyles<T extends Record<string, unknown>>(
-  entity: T,
-  completionStyles: LineSettings
-): T {
-  const styles = transformToEntityStyles(completionStyles);
+export function applyCompletionStyles<T extends Record<string, unknown>>(entity: T): T {
+  const styles = getCompletionStyles();
 
   // Apply all completion style properties to the entity
   // Using Object.assign for performance (mutates in place, returns same reference)
@@ -133,22 +139,18 @@ export function applyCompletionStyles<T extends Record<string, unknown>>(
  * Apply completion styles to a canvas context (for direct rendering)
  *
  * ENTERPRISE PATTERN: Mirrors applyLinePreviewStyle() for completion phase
- * Accepts styles from DxfSettingsContext for consistency with applyCompletionStyles()
+ * Reads from completionStyleStore automatically
  *
  * @param ctx - The canvas 2D rendering context
- * @param completionStyles - LineSettings from useLineStyles('completion')
  *
  * @example
  * ```typescript
- * const lineCompletionStyles = useLineStyles('completion');
- * applyCompletionStylesToContext(ctx, lineCompletionStyles);
+ * applyCompletionStylesToContext(ctx);
+ * ctx.strokeRect(x, y, width, height);
  * ```
  */
-export function applyCompletionStylesToContext(
-  ctx: CanvasRenderingContext2D,
-  completionStyles: LineSettings
-): void {
-  const styles = transformToEntityStyles(completionStyles);
+export function applyCompletionStylesToContext(ctx: CanvasRenderingContext2D): void {
+  const styles = getCompletionStyles();
 
   ctx.strokeStyle = styles.color;
   ctx.lineWidth = styles.lineweight;
