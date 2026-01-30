@@ -4,6 +4,7 @@ import { MESSAGE_DIRECTIONS, MESSAGE_STATUSES, isChannelEnabled } from '../../co
 import { db } from '@/lib/firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, FieldValue } from 'firebase/firestore';
 import type { Channel, BaseMessageInput, SendResult } from '@/types/communications';
+import type { MessageAttachment } from '@/types/conversations';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ============================================================================
@@ -35,7 +36,8 @@ interface MessageRecordInput {
   entityType?: string;
   entityId?: string | null;
   threadId?: string;
-  attachments?: Array<{ url: string; name?: string; type?: string }>;
+  /** 🏢 ENTERPRISE: Uses canonical MessageAttachment type (ADR-055) */
+  attachments?: MessageAttachment[];
   metadata?: Record<string, unknown>;
 }
 
@@ -61,7 +63,8 @@ interface MessageRecord {
   entityId: string | null;
   externalId: string | null;
   threadId: string | null;
-  attachments: Array<{ url: string; name?: string; type?: string }>;
+  /** 🏢 ENTERPRISE: Uses canonical MessageAttachment type (ADR-055) */
+  attachments: MessageAttachment[];
   metadata: Record<string, unknown>;
   createdAt: FieldValue;
   updatedAt: FieldValue;

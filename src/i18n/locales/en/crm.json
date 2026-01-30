@@ -254,6 +254,26 @@
       "saving": "Saving...",
       "cancelEdit": "Cancel edit"
     },
+    "attachments": {
+      "add": "Add attachment",
+      "addFile": "Select file",
+      "remove": "Remove",
+      "removeAll": "Remove all",
+      "uploading": "Uploading...",
+      "uploadFailed": "Upload failed",
+      "downloadFailed": "Download failed",
+      "unsupportedType": "Unsupported file type",
+      "fileTooLarge": "File is too large",
+      "maxSize": "Max size: {size}",
+      "count": "{count} attachments",
+      "image": "Image",
+      "document": "Document",
+      "audio": "Audio",
+      "video": "Video",
+      "download": "Download",
+      "preview": "Preview",
+      "openInNewTab": "Open in new tab"
+    },
     "selection": {
       "selected": "{count} selected",
       "selectAll": "Select all",

@@ -31,6 +31,7 @@ import {
   CONVERSATION_STATUS,
   DELIVERY_STATUS,
   IDENTITY_PROVIDER,
+  type MessageAttachment,
 } from '@/types/conversations';
 import {
   generateConversationId,
@@ -55,6 +56,10 @@ export interface CRMStoreMessage {
   chat_id?: number | string;
   text?: string;
   message_id?: number | string;
+  /** 🏢 ADR-055: Attachments from media messages */
+  attachments?: MessageAttachment[];
+  /** Caption for media messages */
+  caption?: string;
 }
 
 /** Direction type (backward compatible) */
@@ -326,6 +331,20 @@ export async function storeMessageInCRM(
     const companyId = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_ID || 'pagonis-company';
 
     const canonicalMessageDocId = generateMessageDocId(COMMUNICATION_CHANNELS.TELEGRAM, chatId, messageId);
+
+    // 🏢 ADR-055: Build content with text and/or attachments
+    const hasAttachments = message.attachments && message.attachments.length > 0;
+    const messageText = message.text || message.caption || (hasAttachments ? '' : DEFAULTS.MEDIA_MESSAGE_PLACEHOLDER);
+
+    // Build content object
+    const content: { text?: string; attachments?: MessageAttachment[] } = {};
+    if (messageText) {
+      content.text = messageText;
+    }
+    if (hasAttachments) {
+      content.attachments = message.attachments;
+    }
+
     const canonicalMessage = {
       id: canonicalMessageDocId,
       companyId, // 🏢 CRITICAL: Tenant isolation field for Firestore security rules
@@ -335,9 +354,7 @@ export async function storeMessageInCRM(
       senderId: direction === 'inbound' ? userId : BOT_IDENTITY.ID,
       senderName: direction === 'inbound' ? senderName : BOT_IDENTITY.DISPLAY_NAME,
       senderType: direction === 'inbound' ? SENDER_TYPES.CUSTOMER : SENDER_TYPES.BOT,
-      content: {
-        text: message.text || DEFAULTS.MEDIA_MESSAGE_PLACEHOLDER,
-      },
+      content,
       providerMessageId: messageId,
       deliveryStatus: direction === 'inbound' ? DELIVERY_STATUS.DELIVERED : DELIVERY_STATUS.SENT,
       providerMetadata: {
@@ -354,7 +371,26 @@ export async function storeMessageInCRM(
     const messagesRef = doc(messagesCollRef, canonicalMessageDocId);
     await setDoc(messagesRef, canonicalMessage);
 
-    console.log(`✅ Message stored: ${canonicalMessageDocId} (conv: ${conversationId}, new: ${isNew})`);
+    // 🏢 ADR-055: Update conversation lastMessage.content with preview
+    const lastMessagePreview = messageText
+      ? messageText.substring(0, 100)
+      : hasAttachments
+        ? `📎 ${message.attachments!.length} attachment${message.attachments!.length > 1 ? 's' : ''}`
+        : '';
+
+    if (conversationId && lastMessagePreview) {
+      try {
+        const conversationsCollRef = collection(COLLECTIONS.CONVERSATIONS);
+        const convRef = doc(conversationsCollRef, conversationId);
+        await updateDoc(convRef, {
+          'lastMessage.content': lastMessagePreview,
+        });
+      } catch (err) {
+        console.warn('⚠️ Failed to update lastMessage content:', err);
+      }
+    }
+
+    console.log(`✅ Message stored: ${canonicalMessageDocId} (conv: ${conversationId}, new: ${isNew}, attachments: ${message.attachments?.length || 0})`);
 
     // 🏢 ENTERPRISE: No legacy COMMUNICATIONS write (removed 2026-01-16)
     // Architecture: CONVERSATIONS (container) + MESSAGES (canonical) ONLY

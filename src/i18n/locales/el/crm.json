@@ -254,6 +254,26 @@
       "saving": "Αποθήκευση...",
       "cancelEdit": "Ακύρωση επεξεργασίας"
     },
+    "attachments": {
+      "add": "Προσθήκη συνημμένου",
+      "addFile": "Επιλογή αρχείου",
+      "remove": "Αφαίρεση",
+      "removeAll": "Αφαίρεση όλων",
+      "uploading": "Ανέβασμα...",
+      "uploadFailed": "Αποτυχία ανεβάσματος",
+      "downloadFailed": "Αποτυχία λήψης",
+      "unsupportedType": "Μη υποστηριζόμενος τύπος αρχείου",
+      "fileTooLarge": "Το αρχείο είναι πολύ μεγάλο",
+      "maxSize": "Μέγ. μέγεθος: {size}",
+      "count": "{count} συνημμένα",
+      "image": "Εικόνα",
+      "document": "Έγγραφο",
+      "audio": "Ήχος",
+      "video": "Βίντεο",
+      "download": "Λήψη",
+      "preview": "Προεπισκόπηση",
+      "openInNewTab": "Άνοιγμα σε νέα καρτέλα"
+    },
     "selection": {
       "selected": "{count} επιλεγμένα",
       "selectAll": "Επιλογή όλων",

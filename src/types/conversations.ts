@@ -312,16 +312,101 @@ export interface CanonicalMessage {
   userReactions?: string[];
 }
 
+// ============================================================================
+// MESSAGE ATTACHMENTS (ADR-055 - Enterprise Attachment System)
+// ============================================================================
+
 /**
- * Message attachment
+ * Attachment type discriminator
+ * @enterprise Canonical attachment types for omnichannel support
+ */
+export const ATTACHMENT_TYPES = {
+  IMAGE: 'image',
+  DOCUMENT: 'document',
+  AUDIO: 'audio',
+  VIDEO: 'video',
+  LOCATION: 'location',
+  CONTACT: 'contact',
+} as const;
+
+export type AttachmentType = typeof ATTACHMENT_TYPES[keyof typeof ATTACHMENT_TYPES];
+
+/**
+ * Attachment upload status
+ * @enterprise For tracking upload progress in UI
+ */
+export const ATTACHMENT_UPLOAD_STATUS = {
+  PENDING: 'pending',
+  UPLOADING: 'uploading',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+} as const;
+
+export type AttachmentUploadStatus = typeof ATTACHMENT_UPLOAD_STATUS[keyof typeof ATTACHMENT_UPLOAD_STATUS];
+
+/**
+ * Message attachment - CANONICAL TYPE (ADR-055)
+ * @enterprise Single Source of Truth for all attachment handling
+ *
+ * Used in:
+ * - CanonicalMessage.content.attachments[]
+ * - InboundMessageNormalized.content.attachments[]
+ * - ReplyComposer (outbound)
+ * - ThreadView (display)
+ * - Telegram/Email/WhatsApp handlers
  */
 export interface MessageAttachment {
-  type: 'image' | 'document' | 'audio' | 'video' | 'location' | 'contact';
+  /** Attachment type discriminator */
+  type: AttachmentType;
+  /** Download URL (Firebase Storage or external) */
   url?: string;
+  /** Original filename (with extension) */
   filename?: string;
+  /** MIME type (e.g., 'image/jpeg', 'application/pdf') */
   mimeType?: string;
+  /** File size in bytes */
   size?: number;
+  /** Provider-specific or custom metadata */
   metadata?: Record<string, unknown>;
+
+  // === ADR-055 Extensions ===
+
+  /** FileRecord ID (links to Firestore FILES collection) */
+  fileRecordId?: string;
+  /** Upload progress status (for UI state tracking) */
+  uploadStatus?: AttachmentUploadStatus;
+  /** Thumbnail URL for images/videos (for faster preview) */
+  thumbnailUrl?: string;
+  /** Width in pixels (for images/videos) */
+  width?: number;
+  /** Height in pixels (for images/videos) */
+  height?: number;
+  /** Duration in seconds (for audio/video) */
+  duration?: number;
+}
+
+/**
+ * Attachment upload request - for outbound message composition
+ * @enterprise Used by ReplyComposer when attaching files
+ */
+export interface AttachmentUploadRequest {
+  /** The file to upload */
+  file: File;
+  /** Attachment type (auto-detected from MIME if not provided) */
+  type?: AttachmentType;
+  /** Custom filename override */
+  filename?: string;
+}
+
+/**
+ * Detect attachment type from MIME type
+ * @enterprise Helper function for type discrimination
+ */
+export function detectAttachmentType(mimeType: string): AttachmentType {
+  if (mimeType.startsWith('image/')) return ATTACHMENT_TYPES.IMAGE;
+  if (mimeType.startsWith('video/')) return ATTACHMENT_TYPES.VIDEO;
+  if (mimeType.startsWith('audio/')) return ATTACHMENT_TYPES.AUDIO;
+  return ATTACHMENT_TYPES.DOCUMENT;
 }
 
 // ============================================================================

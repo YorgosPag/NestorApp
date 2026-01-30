@@ -45,7 +45,8 @@ import { Spinner } from '@/components/ui/spinner';
 import { useMessageActions } from '@/hooks/inbox/useMessageActions';
 import { MessageContextMenu } from './MessageContextMenu';
 import { ReactionBubbles } from './ReactionBubbles';
-import type { MessageReactionsMap } from '@/types/conversations';
+import { AttachmentRenderer } from './AttachmentRenderer';
+import type { MessageReactionsMap, MessageAttachment } from '@/types/conversations';
 
 // ============================================================================
 // TYPES
@@ -507,16 +508,12 @@ export function ThreadView({
                         }}
                       />
 
-                      {/* Attachments */}
+                      {/* 🏢 ENTERPRISE: Attachments Renderer (ADR-055) */}
                       {message.content.attachments && message.content.attachments.length > 0 && (
-                        <footer className={`${spacing.margin.top.sm} ${spacing.padding.top.sm} border-t`}>
-                          <CommonBadge
-                            status="company"
-                            customLabel={`📎 ${t('inbox.message.attachments', { count: message.content.attachments.length })}`}
-                            variant="outline"
-                            className="text-xs"
-                          />
-                        </footer>
+                        <AttachmentRenderer
+                          attachments={message.content.attachments as MessageAttachment[]}
+                          isOutbound={isOutbound}
+                        />
                       )}
 
                       {/* 🏢 ENTERPRISE: Reactions (Telegram-style) */}

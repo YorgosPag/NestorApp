@@ -20,6 +20,128 @@ export interface TelegramChat {
   last_name?: string;
 }
 
+// ============================================================================
+// TELEGRAM MEDIA TYPES (ADR-055)
+// ============================================================================
+
+/** Telegram PhotoSize object */
+export interface TelegramPhotoSize {
+  file_id: string;
+  file_unique_id: string;
+  width: number;
+  height: number;
+  file_size?: number;
+}
+
+/** Telegram Document object */
+export interface TelegramDocument {
+  file_id: string;
+  file_unique_id: string;
+  file_name?: string;
+  mime_type?: string;
+  file_size?: number;
+  thumbnail?: TelegramPhotoSize;
+}
+
+/** Telegram Audio object */
+export interface TelegramAudio {
+  file_id: string;
+  file_unique_id: string;
+  duration: number;
+  performer?: string;
+  title?: string;
+  file_name?: string;
+  mime_type?: string;
+  file_size?: number;
+  thumbnail?: TelegramPhotoSize;
+}
+
+/** Telegram Video object */
+export interface TelegramVideo {
+  file_id: string;
+  file_unique_id: string;
+  width: number;
+  height: number;
+  duration: number;
+  file_name?: string;
+  mime_type?: string;
+  file_size?: number;
+  thumbnail?: TelegramPhotoSize;
+}
+
+/** Telegram Voice object */
+export interface TelegramVoice {
+  file_id: string;
+  file_unique_id: string;
+  duration: number;
+  mime_type?: string;
+  file_size?: number;
+}
+
+/** Telegram VideoNote object (circular video) */
+export interface TelegramVideoNote {
+  file_id: string;
+  file_unique_id: string;
+  length: number;
+  duration: number;
+  file_size?: number;
+  thumbnail?: TelegramPhotoSize;
+}
+
+/** Telegram Sticker object */
+export interface TelegramSticker {
+  file_id: string;
+  file_unique_id: string;
+  type: 'regular' | 'mask' | 'custom_emoji';
+  width: number;
+  height: number;
+  is_animated: boolean;
+  is_video: boolean;
+  emoji?: string;
+  file_size?: number;
+  thumbnail?: TelegramPhotoSize;
+}
+
+/** Telegram Animation (GIF) object */
+export interface TelegramAnimation {
+  file_id: string;
+  file_unique_id: string;
+  width: number;
+  height: number;
+  duration: number;
+  file_name?: string;
+  mime_type?: string;
+  file_size?: number;
+  thumbnail?: TelegramPhotoSize;
+}
+
+/** Telegram Location object */
+export interface TelegramLocation {
+  latitude: number;
+  longitude: number;
+  horizontal_accuracy?: number;
+  live_period?: number;
+  heading?: number;
+  proximity_alert_radius?: number;
+}
+
+/** Telegram Contact object */
+export interface TelegramContact {
+  phone_number: string;
+  first_name: string;
+  last_name?: string;
+  user_id?: number;
+  vcard?: string;
+}
+
+/** Telegram File object (from getFile API) */
+export interface TelegramFile {
+  file_id: string;
+  file_unique_id: string;
+  file_size?: number;
+  file_path?: string;
+}
+
 /** Telegram Message object from API */
 export interface TelegramMessageObject {
   message_id: number;
@@ -29,6 +151,19 @@ export interface TelegramMessageObject {
   text?: string;
   entities?: TelegramMessageEntity[];
   reply_to_message?: TelegramMessageObject;
+  // 🏢 ADR-055: Media fields
+  photo?: TelegramPhotoSize[];
+  document?: TelegramDocument;
+  audio?: TelegramAudio;
+  video?: TelegramVideo;
+  voice?: TelegramVoice;
+  video_note?: TelegramVideoNote;
+  sticker?: TelegramSticker;
+  animation?: TelegramAnimation;
+  location?: TelegramLocation;
+  contact?: TelegramContact;
+  caption?: string;
+  caption_entities?: TelegramMessageEntity[];
 }
 
 /** Telegram Message Entity (for formatting) */

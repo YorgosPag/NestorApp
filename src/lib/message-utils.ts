@@ -17,20 +17,18 @@ import DOMPurify from 'dompurify';
 // TYPES
 // ============================================================================
 
+import type { MessageAttachment } from '@/types/conversations';
+
 /**
  * Message content structure
  * 🏢 ENTERPRISE: Compatible with MessageListItem.content type
+ * Uses canonical MessageAttachment type (ADR-055)
  */
 export interface MessageContent {
   /** Raw message text (may contain HTML tags) */
   text: string;
-  /** Optional attachments - flexible structure for cross-channel compatibility */
-  attachments?: Array<{
-    type: string;
-    url?: string;
-    name?: string;
-    filename?: string;
-  }>;
+  /** 🏢 ENTERPRISE: Uses canonical MessageAttachment type (ADR-055) */
+  attachments?: MessageAttachment[];
 }
 
 /**

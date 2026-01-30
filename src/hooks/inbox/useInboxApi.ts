@@ -23,7 +23,7 @@ import {
   INBOX_PAGE_SIZE,
   MESSAGES_PAGE_SIZE,
 } from '@/config/domain-constants';
-import type { ConversationStatus, MessageDirection, DeliveryStatus } from '@/types/conversations';
+import type { ConversationStatus, MessageDirection, DeliveryStatus, MessageAttachment } from '@/types/conversations';
 import type { CommunicationChannel } from '@/types/communications';
 import type { SenderType } from '@/config/domain-constants';
 import { useRealtimeMessages } from './useRealtimeMessages';
@@ -72,11 +72,8 @@ export interface MessageListItem {
   senderType: SenderType;
   content: {
     text: string;
-    attachments?: Array<{
-      type: string;
-      url?: string;
-      filename?: string;
-    }>;
+    /** 🏢 ENTERPRISE: Uses canonical MessageAttachment type (ADR-055) */
+    attachments?: MessageAttachment[];
   };
   providerMessageId: string;
   deliveryStatus: DeliveryStatus;

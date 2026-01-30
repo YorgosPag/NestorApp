@@ -9,6 +9,8 @@ import { security } from './security-adapter';
 import type { TelegramSendPayload, TelegramMessageObject } from '../telegram/types';
 import { createStatsResponse } from '../stats/service';
 import { isFirebaseAvailable } from '../firebase/availability';
+// 🏢 ADR-055: Media download for Telegram attachments
+import { hasMedia, processTelegramMedia } from '../telegram/media-download';
 
 export async function processMessage(message: TelegramMessageObject): Promise<TelegramSendPayload> {
   const text = message.text?.toLowerCase() || '';
@@ -24,6 +26,21 @@ export async function processMessage(message: TelegramMessageObject): Promise<Te
   // Store inbound message if Firebase is available
   if (isFirebaseAvailable() && message.from) {
     try {
+      // 🏢 ADR-055: Process media attachments if present
+      let attachments;
+      const messageHasMedia = hasMedia(message);
+      console.log(`📎 ADR-055 Media check: hasMedia=${messageHasMedia}, photo=${!!message.photo}, document=${!!message.document}`);
+
+      if (messageHasMedia) {
+        console.log('📎 Message contains media, processing...');
+        try {
+          attachments = await processTelegramMedia(message);
+          console.log(`📎 Processed ${attachments.length} attachment(s):`, JSON.stringify(attachments));
+        } catch (mediaError) {
+          console.error('❌ Media processing failed:', mediaError);
+        }
+      }
+
       // 🏢 ENTERPRISE: Convert to CRMStoreMessage format
       const crmMessage = {
         from: {
@@ -33,7 +50,10 @@ export async function processMessage(message: TelegramMessageObject): Promise<Te
         },
         chat: { id: message.chat.id },
         text: message.text,
-        message_id: message.message_id
+        message_id: message.message_id,
+        // 🏢 ADR-055: Include attachments and caption
+        attachments,
+        caption: message.caption,
       };
       await storeMessageInCRM(crmMessage, 'inbound');
       console.log('✅ Inbound message stored in CRM');

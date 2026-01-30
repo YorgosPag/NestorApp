@@ -22,7 +22,12 @@ type SendMessageCanonicalResponse = ApiSuccessResponse<SendMessageResponse>;
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
-import { MESSAGE_DIRECTION, DELIVERY_STATUS } from '@/types/conversations';
+import {
+  MESSAGE_DIRECTION,
+  DELIVERY_STATUS,
+  type MessageAttachment,
+  ATTACHMENT_TYPES,
+} from '@/types/conversations';
 import {
   BOT_IDENTITY,
   SENDER_TYPES,
@@ -36,13 +41,30 @@ import type { TelegramSendPayload } from '@/app/api/communications/webhooks/tele
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 // ============================================================================
-// TYPES
+// TYPES (ADR-055 - Enterprise Attachment System)
 // ============================================================================
 
+/**
+ * Attachment in request body (already uploaded to Storage)
+ * @enterprise ADR-055 - Canonical attachment format
+ */
+interface RequestAttachment {
+  type: 'image' | 'document' | 'audio' | 'video' | 'location' | 'contact';
+  url: string;
+  filename?: string;
+  mimeType?: string;
+  size?: number;
+}
+
 interface SendMessageRequest {
-  text: string;
+  /** Text content (optional if attachments present) */
+  text?: string;
+  /** Reply to a specific message */
   replyToMessageId?: string;
+  /** Parse mode for Telegram */
   parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
+  /** 🏢 ENTERPRISE: Attachments (ADR-055) */
+  attachments?: RequestAttachment[];
 }
 
 interface SendMessageResponse {
@@ -57,12 +79,17 @@ interface SendMessageResponse {
 // STORE OUTBOUND MESSAGE - ENTERPRISE CONTRACTS
 // ============================================================================
 
+/**
+ * Store outbound message with optional attachments
+ * @enterprise ADR-055 - Enhanced for attachment support
+ */
 async function storeOutboundMessage(
   conversationId: string,
   chatId: string,
   text: string,
   providerMessageId: number,
-  companyId: string // 🏢 TENANT ISOLATION: Required for Firestore security rules
+  companyId: string, // 🏢 TENANT ISOLATION: Required for Firestore security rules
+  attachments?: MessageAttachment[] // 🏢 ADR-055: Optional attachments
 ): Promise<string | null> {
   try {
     const messageDocId = generateMessageDocId(
@@ -72,6 +99,15 @@ async function storeOutboundMessage(
     );
 
     const now = Timestamp.now();
+
+    // 🏢 ADR-055: Build content object with optional attachments
+    const content: { text?: string; attachments?: MessageAttachment[] } = {};
+    if (text) {
+      content.text = text;
+    }
+    if (attachments && attachments.length > 0) {
+      content.attachments = attachments;
+    }
 
     // Store in MESSAGES collection - ENTERPRISE: Using satisfies for type safety
     const messageData: MessageDocument = {
@@ -83,7 +119,7 @@ async function storeOutboundMessage(
       senderId: BOT_IDENTITY.ID,
       senderName: BOT_IDENTITY.DISPLAY_NAME,
       senderType: SENDER_TYPES.BOT,
-      content: { text },
+      content,
       providerMessageId: String(providerMessageId),
       deliveryStatus: DELIVERY_STATUS.SENT,
       providerMetadata: {
@@ -97,15 +133,22 @@ async function storeOutboundMessage(
     await adminDb.collection(COLLECTIONS.MESSAGES).doc(messageDocId).set(messageData);
 
     // Update conversation lastMessage - ENTERPRISE: Using constants
+    // For attachment-only messages, show "[Attachment]" as preview
+    const previewText = text
+      ? text.substring(0, CONVERSATION_PREVIEW_LENGTH)
+      : attachments && attachments.length > 0
+        ? `📎 ${attachments.length} attachment${attachments.length > 1 ? 's' : ''}`
+        : '';
+
     await adminDb.collection(COLLECTIONS.CONVERSATIONS).doc(conversationId).update({
-      'lastMessage.content': text.substring(0, CONVERSATION_PREVIEW_LENGTH),
+      'lastMessage.content': previewText,
       'lastMessage.direction': MESSAGE_DIRECTION.OUTBOUND,
       'lastMessage.timestamp': FieldValue.serverTimestamp(),
       messageCount: FieldValue.increment(1),
       'audit.updatedAt': FieldValue.serverTimestamp(),
     });
 
-    console.log(`✅ Outbound message stored: ${messageDocId}`);
+    console.log(`✅ Outbound message stored: ${messageDocId} (${attachments?.length || 0} attachments)`);
     return messageDocId;
 
   } catch (error) {
@@ -161,8 +204,24 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
   // Parse request body
   const body: SendMessageRequest = await request.json();
 
-  if (!body.text || typeof body.text !== 'string' || body.text.trim().length === 0) {
-    throw new ApiError(400, 'Message text is required');
+  // 🏢 ADR-055: Text is optional if attachments are present
+  const hasText = body.text && typeof body.text === 'string' && body.text.trim().length > 0;
+  const hasAttachments = body.attachments && Array.isArray(body.attachments) && body.attachments.length > 0;
+
+  if (!hasText && !hasAttachments) {
+    throw new ApiError(400, 'Message text or attachments are required');
+  }
+
+  // Validate attachments if present
+  if (hasAttachments) {
+    for (const att of body.attachments!) {
+      if (!att.url || typeof att.url !== 'string') {
+        throw new ApiError(400, 'Each attachment must have a valid URL');
+      }
+      if (!att.type || !['image', 'document', 'audio', 'video', 'location', 'contact'].includes(att.type)) {
+        throw new ApiError(400, `Invalid attachment type: ${att.type}`);
+      }
+    }
   }
 
   // CRITICAL: Ownership validation - verify conversation belongs to user's company
@@ -221,37 +280,109 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
 
   console.log(`📱 Target Telegram chat: ${telegramChatId}`);
 
-  // ENTERPRISE: Use centralized Telegram client (no duplicate code)
-  const payload: TelegramSendPayload = {
-    chat_id: telegramChatId,
-    text: body.text.trim(),
-    parse_mode: body.parseMode,
-  };
-
-  const sendResult = await sendTelegramMessage(payload);
-
-  if (!sendResult.success) {
-    throw new ApiError(500, `Failed to send message: ${sendResult.error}`);
-  }
-
-  // Extract provider message ID from result
-  const apiResult = sendResult.result?.result;
-  const providerMessageId = typeof apiResult === 'object' && apiResult && 'message_id' in apiResult
-    ? (apiResult as { message_id: number }).message_id
-    : null;
-
-  // Store in CRM (only if we have provider message ID)
   // 🏢 TENANT ISOLATION: Get companyId from conversation for message storage
   const messageCompanyId = convData?.companyId as string || ctx.companyId;
 
+  // 🏢 ADR-055: Convert request attachments to canonical MessageAttachment format
+  const messageAttachments: MessageAttachment[] | undefined = hasAttachments
+    ? body.attachments!.map(att => ({
+        type: att.type as MessageAttachment['type'],
+        url: att.url,
+        filename: att.filename,
+        mimeType: att.mimeType,
+        size: att.size,
+      }))
+    : undefined;
+
+  // 🏢 ADR-055: Send text message first (if present)
+  let providerMessageId: number | null = null;
+
+  if (hasText) {
+    // ENTERPRISE: Use centralized Telegram client (no duplicate code)
+    const textPayload: TelegramSendPayload = {
+      chat_id: telegramChatId,
+      text: body.text!.trim(),
+      parse_mode: body.parseMode,
+    };
+
+    const sendResult = await sendTelegramMessage(textPayload);
+
+    if (!sendResult.success) {
+      throw new ApiError(500, `Failed to send message: ${sendResult.error}`);
+    }
+
+    // Extract provider message ID from result
+    const apiResult = sendResult.result?.result;
+    providerMessageId = typeof apiResult === 'object' && apiResult && 'message_id' in apiResult
+      ? (apiResult as { message_id: number }).message_id
+      : null;
+  }
+
+  // 🏢 ADR-055: Send attachments to Telegram
+  // For now, send images using sendPhoto method
+  if (hasAttachments) {
+    for (const att of body.attachments!) {
+      let method: string;
+      let mediaPayload: Record<string, unknown> = {
+        chat_id: telegramChatId,
+      };
+
+      switch (att.type) {
+        case 'image':
+          method = 'sendPhoto';
+          mediaPayload.photo = att.url;
+          if (att.filename) mediaPayload.caption = att.filename;
+          break;
+        case 'document':
+          method = 'sendDocument';
+          mediaPayload.document = att.url;
+          if (att.filename) mediaPayload.caption = att.filename;
+          break;
+        case 'audio':
+          method = 'sendAudio';
+          mediaPayload.audio = att.url;
+          if (att.filename) mediaPayload.caption = att.filename;
+          break;
+        case 'video':
+          method = 'sendVideo';
+          mediaPayload.video = att.url;
+          if (att.filename) mediaPayload.caption = att.filename;
+          break;
+        default:
+          // For other types, send as document
+          method = 'sendDocument';
+          mediaPayload.document = att.url;
+          if (att.filename) mediaPayload.caption = att.filename;
+      }
+
+      const mediaResult = await sendTelegramMessage({
+        ...mediaPayload,
+        method,
+      } as TelegramSendPayload);
+
+      if (!mediaResult.success) {
+        console.warn(`⚠️ Failed to send ${att.type} attachment: ${mediaResult.error}`);
+        // Continue with other attachments
+      } else {
+        // Use the last successful message ID for storage
+        const mediaApiResult = mediaResult.result?.result;
+        if (typeof mediaApiResult === 'object' && mediaApiResult && 'message_id' in mediaApiResult) {
+          providerMessageId = (mediaApiResult as { message_id: number }).message_id;
+        }
+      }
+    }
+  }
+
+  // Store in CRM (only if we have provider message ID)
   let storedMessageId: string | null = null;
   if (providerMessageId) {
     storedMessageId = await storeOutboundMessage(
       conversationId,
       telegramChatId,
-      body.text.trim(),
+      hasText ? body.text!.trim() : '',
       providerMessageId,
-      messageCompanyId // 🏢 CRITICAL: Pass companyId for Firestore security rules
+      messageCompanyId, // 🏢 CRITICAL: Pass companyId for Firestore security rules
+      messageAttachments // 🏢 ADR-055: Pass attachments
     );
   }
 
