@@ -258,9 +258,11 @@ export function ReplyComposer({
       }
 
       const newAttachments: PendingAttachment[] = [];
+      const filesArray = Array.from(files);
+      console.log('📎 [ReplyComposer] Files array length:', filesArray.length);
 
-      for (const file of Array.from(files)) {
-        console.log('📎 [ReplyComposer] Processing file:', file.name, 'size:', file.size, 'type:', file.type);
+      for (const file of filesArray) {
+        console.log('📎 [ReplyComposer] Processing file:', file.name, 'size:', file.size, 'type:', file.type, 'MAX:', MAX_ATTACHMENT_SIZE);
 
         // Validate file size
         if (file.size > MAX_ATTACHMENT_SIZE) {
