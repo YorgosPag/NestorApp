@@ -65,9 +65,11 @@ import { useMessagePin } from '@/hooks/inbox/useMessagePin';
 import { useMessageReactions } from '@/hooks/inbox/useMessageReactions';
 
 // 🏢 ENTERPRISE: Centralized constants
-import { CONVERSATION_STATUS } from '@/types/conversations';
+import { CONVERSATION_STATUS, type MessageAttachment } from '@/types/conversations';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import { Spinner } from '@/components/ui/spinner';
+// 🏢 ADR-055: Attachment upload support
+import { PhotoUploadService } from '@/services/photo-upload.service';
 
 // ============================================================================
 // COMPONENT
@@ -260,11 +262,40 @@ export default function CrmCommunicationsPage() {
     };
   }, [getReactions]);
 
-  // 🏢 ENTERPRISE: Enhanced send with reply support
-  const handleSendWithReply = useCallback(async (text: string): Promise<boolean> => {
+  // 🏢 ADR-055: Attachment upload handler for ReplyComposer
+  const handleUploadAttachment = useCallback(async (
+    file: File,
+    onProgress: (progress: number) => void
+  ): Promise<{ url: string; thumbnailUrl?: string } | null> => {
+    try {
+      console.log('📎 [Communications] Uploading attachment:', file.name, file.type);
+
+      const result = await PhotoUploadService.uploadPhoto(file, {
+        folderPath: 'telegram-outbound',
+        onProgress: (progress) => {
+          const percent = progress.phase === 'complete' ? 100 : progress.progress;
+          onProgress(percent);
+        },
+        enableCompression: file.type.startsWith('image/'),
+        compressionUsage: 'document-scan',
+      });
+
+      console.log('✅ [Communications] Attachment uploaded:', result.url);
+      return { url: result.url };
+    } catch (error) {
+      console.error('❌ [Communications] Attachment upload failed:', error);
+      return null;
+    }
+  }, []);
+
+  // 🏢 ENTERPRISE: Enhanced send with reply support + attachments (ADR-055)
+  const handleSendWithReply = useCallback(async (
+    text: string,
+    attachments?: MessageAttachment[]
+  ): Promise<boolean> => {
     const messageData = quotedMessage && replyMode === 'reply'
-      ? { text, replyTo: quotedMessage.id }
-      : { text };
+      ? { text, replyTo: quotedMessage.id, attachments }
+      : { text, attachments };
 
     const result = await send(messageData);
     if (result?.success) {
@@ -567,6 +598,7 @@ export default function CrmCommunicationsPage() {
                       onCancelEdit={cancelEdit}
                       onSaveEdit={saveEdit}
                       isSavingEdit={isSaving}
+                      onUploadAttachment={handleUploadAttachment}
                     />
                   </TabsContent>
 
