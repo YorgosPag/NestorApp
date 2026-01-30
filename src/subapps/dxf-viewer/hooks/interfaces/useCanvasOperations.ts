@@ -135,16 +135,6 @@ export const useCanvasOperations = (): CanvasOperations => {
     const center = getCanvasCenter();
     const dxfRef = context?.dxfRef;
 
-    // 🏢 ENTERPRISE (2026-01-27): Detailed diagnostic logging
-    console.log('🔍 [zoomIn] DEBUG:', {
-      hasContext: !!context,
-      hasRef: !!dxfRef,
-      hasCurrent: !!dxfRef?.current,
-      hasZoomMethod: !!dxfRef?.current?.zoomAtScreenPoint,
-      refValue: dxfRef,
-      currentValue: dxfRef?.current
-    });
-
     if (!dxfRef?.current?.zoomAtScreenPoint) {
       console.error('🚨 [zoomIn] CRITICAL: dxfRef.current not available! Zoom disabled. Check if DxfCanvas is mounted and visible.');
       return;

@@ -70,6 +70,7 @@ export const PERMISSIONS = {
   'comm:conversations:update': true,
   'comm:messages:view': true,
   'comm:messages:send': true,
+  'comm:messages:delete': true,
 
   // Projects
   'projects:projects:view': true,

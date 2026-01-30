@@ -125,6 +125,7 @@ export function useUnifiedDrawing() {
     selectTool: machineSelectTool,
     deselectTool: machineDeselectTool,
     addPoint: machineAddPoint,
+    undoPoint: machineUndoPoint,  // 🏢 ADR-047: Undo last point
     moveCursor: machineMoveCursor,
     complete: machineComplete,
     cancel: machineCancel,
@@ -144,6 +145,10 @@ export function useUnifiedDrawing() {
   // This ref is updated synchronously in updatePreview() for immediate access
   // Used by PreviewCanvas for zero-latency rendering
   const previewEntityRef = useRef<ExtendedSceneEntity | null>(null);
+
+  // 🏢 ADR-053: Track entity IDs created during continuous measurement session
+  // Used for "Undo All" functionality - deletes all measurements from current session
+  const continuousSessionEntityIdsRef = useRef<string[]>([]);
 
   // 🏢 ENTERPRISE: Derive DrawingState from state machine for backward compatibility
   const state: DrawingState = useMemo(() => ({
@@ -466,31 +471,13 @@ export function useUnifiedDrawing() {
 
     const currentTool = (machineContext.toolType as DrawingTool) || 'select';
 
-    // 🔍 DEBUG (2026-01-27): Diagnostic logging for measure-angle completion issue
-    console.log('🎯 [addPoint] DEBUG:', {
-      currentTool,
-      machineContextToolType: machineContext.toolType,
-      pointsCount: newTempPoints.length,
-      isCompleteResult: isComplete(currentTool, newTempPoints)
-    });
-
     // 🏢 ENTERPRISE (2026-01-27): CONTINUOUS DISTANCE MEASUREMENT - AutoCAD Pattern
     // Pattern: AutoCAD MEASUREGEOM continuous mode
     // - Every 2nd point → create measurement entity
     // - Keep last point for next measurement
     // - Continue until double-click/Escape
 
-    // 🔍 DIAGNOSTIC (2026-01-27): Debug continuous distance
-    console.log('🔍 [addPoint] Auto-completion check:', {
-      currentTool,
-      isContinuous: currentTool === 'measure-distance-continuous',
-      tempPointsLength: newTempPoints.length,
-      isEven: newTempPoints.length % 2 === 0,
-      willAutoComplete: currentTool === 'measure-distance-continuous' && newTempPoints.length >= 2 && newTempPoints.length % 2 === 0
-    });
-
     if (currentTool === 'measure-distance-continuous' && newTempPoints.length >= 2 && newTempPoints.length % 2 === 0) {
-      console.log('✅ [addPoint] CONTINUOUS MODE: Auto-creating measurement entity');
       // Get the last 2 points for this measurement
       const lastTwoPoints = newTempPoints.slice(-2);
 
@@ -510,6 +497,12 @@ export function useUnifiedDrawing() {
         } else if (isMeasurementTool) {
           const defaultScene = { entities: [measurementEntity as AnySceneEntity] };
           setLevelScene(effectiveLevelId, defaultScene);
+        }
+
+        // 🏢 ADR-053: Track entity ID for session undo functionality
+        // When user presses "Undo" in context menu, ALL session entities will be deleted
+        if (measurementEntity.id) {
+          continuousSessionEntityIdsRef.current.push(measurementEntity.id);
         }
 
         // 🏢 ENTERPRISE: Emit event for each measurement
@@ -753,7 +746,6 @@ export function useUnifiedDrawing() {
             { position: worldPoints[0], type: 'close', color: '#00ff00' }, // 🟢 Green circle = clickable close point
             { position: snappedPoint, type: 'cursor' }
           ];
-          console.log(`🟢 [updatePreview] ADR-047: Added close grip at first point`, worldPoints[0]);
         }
       } else if (previewEntity.type === 'line') {
         const extendedLine = previewEntity as ExtendedLineEntity;
@@ -842,17 +834,17 @@ export function useUnifiedDrawing() {
   }, [machineContext.toolType, machineContext.points, machineMoveCursor, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
-    // 🔍 DEBUG (2026-01-27): Diagnostic logging for measure-angle tool activation
-    console.log('🎯 [startDrawing] Called with tool:', tool);
-
     // Set preview mode when drawing starts
     setMode('preview');
 
+    // 🏢 ADR-053: Clear continuous session when starting new drawing
+    // This ensures each new continuous measurement session starts fresh
+    if (tool === 'measure-distance-continuous') {
+      continuousSessionEntityIdsRef.current = [];
+    }
+
     // 🏢 ENTERPRISE: Use state machine for tool selection
     machineSelectTool(tool);
-
-    // 🔍 DEBUG: Verify state machine updated
-    console.log('🎯 [startDrawing] After machineSelectTool, machineContext.toolType:', machineContext.toolType);
 
     // Reset local state
     setLocalState({
@@ -864,6 +856,9 @@ export function useUnifiedDrawing() {
   const cancelDrawing = useCallback(() => {
     // Return to normal mode on cancel
     setMode('normal');
+
+    // 🏢 ADR-053: Clear session tracking (but don't delete entities - user wants to KEEP them on Cancel)
+    continuousSessionEntityIdsRef.current = [];
 
     // 🏢 ENTERPRISE: Use state machine for cancel
     machineCancel('User cancelled drawing');
@@ -880,6 +875,61 @@ export function useUnifiedDrawing() {
       previewEntity: null,
     }));
   }, [setMode, machineCancel, machineReset, machineDeselectTool]);
+
+  // 🏢 ADR-053: Undo functionality - Context menu "Αναίρεση"
+  // For measure-distance-continuous: DELETE ALL entities from current session
+  // For other tools: Standard undo last point behavior
+  const undoLastPoint = useCallback(() => {
+    const currentTool = (machineContext.toolType as DrawingTool) || 'select';
+
+    // 🏢 ADR-053: Special handling for continuous measurement
+    // User expects "Undo" to delete ALL measurements from this session
+    if (currentTool === 'measure-distance-continuous') {
+      const sessionEntityIds = continuousSessionEntityIdsRef.current;
+
+      if (sessionEntityIds.length > 0) {
+        // Delete ALL session entities from the scene
+        const effectiveLevelId = currentLevelId || '0';
+        const scene = getLevelScene(effectiveLevelId);
+
+        if (scene) {
+          // Filter out all entities that belong to this session
+          const updatedEntities = scene.entities.filter(
+            entity => !sessionEntityIds.includes(entity.id)
+          );
+          const updatedScene = { ...scene, entities: updatedEntities };
+          setLevelScene(effectiveLevelId, updatedScene);
+        }
+
+        // Clear the session tracking array
+        continuousSessionEntityIdsRef.current = [];
+      }
+
+      // Cancel drawing and reset
+      machineCancel();
+      machineReset();
+      setMode('normal');
+      previewEntityRef.current = null;
+      setLocalState(prev => ({
+        ...prev,
+        previewEntity: null,
+      }));
+
+      return; // Early return - handled specially
+    }
+
+    // Standard undo for other tools: just remove last point
+    machineUndoPoint();
+
+    // Update preview to reflect point removal
+    // The preview will be updated on next mouse move
+    // Clear current preview entity since it may be stale
+    previewEntityRef.current = null;
+    setLocalState(prev => ({
+      ...prev,
+      previewEntity: null,
+    }));
+  }, [machineContext.toolType, machineUndoPoint, machineCancel, machineReset, setMode, currentLevelId, getLevelScene, setLevelScene]);
 
   const finishPolyline = useCallback(() => {
     // 🏢 ENTERPRISE (2026-01-25): Use state machine context
@@ -990,6 +1040,7 @@ export function useUnifiedDrawing() {
     updatePreview,
     startDrawing,
     cancelDrawing,
+    undoLastPoint,  // 🏢 ADR-047: Undo last point (AutoCAD U command)
     finishEntity: finishPolyline,
     finishPolyline,
     startPolyline,

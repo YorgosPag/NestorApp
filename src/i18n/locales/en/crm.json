@@ -217,7 +217,9 @@
     "message": {
       "from": "From",
       "to": "To",
-      "attachments": "{count} attachments"
+      "attachments": "{count} attachments",
+      "pinned": "Pinned",
+      "edited": "Edited"
     },
     "tabs": {
       "conversations": "Conversations",
@@ -243,7 +245,31 @@
       "sending": "Sending...",
       "error": "Failed to send",
       "success": "Message sent",
-      "shortcutHint": "Ctrl+Enter to send"
+      "shortcutHint": "Ctrl+Enter to send",
+      "replyingTo": "Replying to",
+      "forwarding": "Forwarding",
+      "cancelReply": "Cancel",
+      "editing": "Editing message",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancelEdit": "Cancel edit"
+    },
+    "selection": {
+      "selected": "{count} selected",
+      "selectAll": "Select all",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "contextMenu": {
+      "select": "Select",
+      "deselect": "Deselect",
+      "copy": "Copy",
+      "reply": "Reply",
+      "forward": "Forward",
+      "edit": "Edit",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "delete": "Delete"
     },
     "channels": {
       "telegram": "Telegram",

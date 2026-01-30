@@ -19,15 +19,17 @@ import DOMPurify from 'dompurify';
 
 /**
  * Message content structure
+ * 🏢 ENTERPRISE: Compatible with MessageListItem.content type
  */
 export interface MessageContent {
   /** Raw message text (may contain HTML tags) */
   text: string;
-  /** Optional attachments */
+  /** Optional attachments - flexible structure for cross-channel compatibility */
   attachments?: Array<{
-    url: string;
     type: string;
-    name: string;
+    url?: string;
+    name?: string;
+    filename?: string;
   }>;
 }
 

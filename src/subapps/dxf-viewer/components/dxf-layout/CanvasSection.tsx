@@ -46,6 +46,8 @@ import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 import { PreviewCanvas, type PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 // ✅ ADR-009: Import RulerCornerBox for interactive corner box (AutoCAD/Revit standard)
 import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
+// 🏢 ADR-047: DrawingContextMenu for right-click context menu during drawing (AutoCAD pattern)
+import DrawingContextMenu from '../../ui/components/DrawingContextMenu';
 // 🎯 SNAP INDICATOR: Import for visual snap feedback
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
 import { useSnapContext } from '../../snapping/context/SnapContext';
@@ -163,7 +165,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       lastMouseWorldRef.current = point;
       setMouseWorld(point);
       // 🏢 ENTERPRISE: Notify parent of mouse coordinate changes for status bar
-      console.log('🔍 CanvasSection updateMouseWorld:', { point, hasCallback: !!props.onMouseCoordinatesChange });
       props.onMouseCoordinatesChange?.(point);
     }
   }, [props]);
@@ -172,11 +173,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const showDxfCanvas = props.dxfCanvasVisible ?? true;
   const showLayerCanvasDebug = props.layerCanvasVisible ?? true;
 
-  // 🏢 ENTERPRISE (2026-01-27): CRITICAL DEBUG - Verify DxfCanvas render state
+  // 🏢 ENTERPRISE (2026-01-27): Only log ERRORS for critical state issues
   if (!showDxfCanvas) {
     console.error('[CanvasSection] 🚨 CRITICAL: DxfCanvas is HIDDEN! showDxfCanvas =', showDxfCanvas, '- Zoom buttons will NOT work!');
-  } else {
-    console.log('[CanvasSection] ✅ DxfCanvas is VISIBLE - showDxfCanvas =', showDxfCanvas);
   }
 
 
@@ -209,6 +208,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const [draftPolygon, setDraftPolygon] = useState<Array<[number, number]>>([]);
   // 🔧 FIX (2026-01-24): Ref for fresh polygon access in async operations
   const draftPolygonRef = useRef<Array<[number, number]>>([]);
+  // 🏢 ADR-047: Drawing context menu state (AutoCAD-style right-click menu)
+  const [drawingContextMenu, setDrawingContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+  });
   // 🏢 ENTERPRISE (2026-01-25): State για grip hover detection (WARM grip)
   const [hoveredEdgeInfo, setHoveredEdgeInfo] = useState<{ overlayId: string; edgeIndex: number } | null>(null);
   const [hoveredVertexInfo, setHoveredVertexInfo] = useState<{ overlayId: string; vertexIndex: number } | null>(null);
@@ -1088,6 +1095,48 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, [activeTool]);
 
+  // === 🏢 ADR-053: DRAWING CONTEXT MENU HANDLER ===
+  // AutoCAD-style right-click context menu during drawing operations
+  // NOTE: This React handler is kept as FALLBACK - main handler is native DOM listener below
+  const handleDrawingContextMenu = useCallback((e: React.MouseEvent) => {
+    // 🏢 CRITICAL: ALWAYS prevent browser context menu on canvas
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrawingContextMenuClose = useCallback((open: boolean) => {
+    if (!open) {
+      setDrawingContextMenu(prev => ({ ...prev, isOpen: false }));
+    }
+  }, []);
+
+  const handleDrawingFinish = useCallback(() => {
+    if (drawingHandlersRef.current?.onDrawingDoubleClick) {
+      drawingHandlersRef.current.onDrawingDoubleClick();
+    }
+  }, []);
+
+  const handleDrawingClose = useCallback(() => {
+    // For polygon tools, close means finish with closing (same as finish)
+    if (drawingHandlersRef.current?.onDrawingDoubleClick) {
+      drawingHandlersRef.current.onDrawingDoubleClick();
+    }
+  }, []);
+
+  // 🏢 ADR-053: Cancel handler using ref pattern (avoids stale closure)
+  const handleDrawingCancel = useCallback(() => {
+    if (drawingHandlersRef.current?.onDrawingCancel) {
+      drawingHandlersRef.current.onDrawingCancel();
+    }
+  }, []);
+
+  // 🏢 ADR-053: Undo last point handler using ref pattern (avoids stale closure)
+  const handleDrawingUndoLastPoint = useCallback(() => {
+    if (drawingHandlersRef.current?.onUndoLastPoint) {
+      drawingHandlersRef.current.onUndoLastPoint();
+    }
+  }, []);
+
   // === CONVERT SCENE TO CANVAS V2 FORMAT ===
   // 🏢 ENTERPRISE (2026-01-26): Always create dxfScene for preview entities, even without loaded DXF
   // This allows measurement/drawing tools to work even when no DXF file is loaded
@@ -1351,14 +1400,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized tool detection (Single Source of Truth)
     if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {
       // 🏢 ADR-046: worldPoint is already in WORLD coordinates - no conversion needed!
-      // 🔍 DEBUG (2026-01-27): Diagnostic logging for coordinate offset issue
-      console.log(
-        `🎯 [handleCanvasClick] ADR-046 Receiving WORLD coords:\n` +
-        `  worldPoint: x=${worldPoint.x.toFixed(2)}, y=${worldPoint.y.toFixed(2)}\n` +
-        `  viewport: w=${viewport.width.toFixed(0)}, h=${viewport.height.toFixed(0)}\n` +
-        `  viewportReady: ${viewportReady}\n` +
-        `  activeTool: ${activeTool}`
-      );
       drawingHandlersRef.current.onDrawingPoint(worldPoint);
       return;
     }
@@ -1619,6 +1660,37 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips]);
 
+  // 🏢 ADR-053 ENTERPRISE FIX (2026-01-30): Document-level contextmenu handler
+  // Native DOM event listener is MORE RELIABLE than React's synthetic events on canvas
+  // This is the pattern used by AutoCAD, Autodesk Viewer, BricsCAD for CAD context menus
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleNativeContextMenu = (e: MouseEvent) => {
+      // ALWAYS prevent browser context menu on canvas area
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Only show OUR context menu when in drawing mode with points
+      const isDrawing = isDrawingTool(activeTool) || isMeasurementTool(activeTool);
+      const hasPoints = (drawingHandlersRef.current?.drawingState?.tempPoints?.length ?? 0) > 0;
+
+      if (isDrawing && hasPoints) {
+        setDrawingContextMenu({
+          isOpen: true,
+          position: { x: e.clientX, y: e.clientY },
+        });
+      }
+    };
+
+    // Use capture: true to intercept BEFORE any other handler
+    container.addEventListener('contextmenu', handleNativeContextMenu, { capture: true });
+
+    return () => {
+      container.removeEventListener('contextmenu', handleNativeContextMenu, { capture: true });
+    };
+  }, [activeTool]);
 
   // ❌ REMOVED: Duplicate zoom handlers - now using centralized zoomSystem.handleKeyboardZoom()
   // All keyboard zoom is handled through the unified system in the keyboard event handler above
@@ -1646,6 +1718,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           onMouseUp={handleContainerMouseUp}
           onMouseEnter={handleContainerMouseEnter}
           onMouseLeave={handleContainerMouseLeave}
+          onContextMenu={handleDrawingContextMenu} // 🏢 ADR-047: Right-click context menu during drawing
         >
           {/* 🏢 PDF BACKGROUND: Lowest layer in canvas stack (z-[-10]) */}
           <PdfBackgroundCanvas
@@ -1678,6 +1751,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 hoveredEdgeInfo !== null
               }
               data-canvas-type="layer" // 🎯 DEBUG: Identifier για alignment test
+              onContextMenu={handleDrawingContextMenu} // 🏢 ADR-053: Right-click context menu
               onTransformChange={(newTransform) => {
                 // 🏢 ENTERPRISE: Single source of truth - setTransform writes to CanvasContext
                 setTransform(newTransform);
@@ -1896,6 +1970,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               }}
               data-canvas-type="dxf" // 🎯 DEBUG: Identifier για alignment test
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`} // 🎯 Z-INDEX FIX: DxfCanvas FOREGROUND (z-10) - ΠΑΝΩ από LayerCanvas!
+              onContextMenu={handleDrawingContextMenu} // 🏢 ADR-053: Right-click context menu
               onCanvasClick={handleCanvasClick} // 🎯 FIX: Connect canvas clicks για drawing tools!
               onTransformChange={(newTransform) => {
                 // 🏢 ENTERPRISE: Single source of truth - setTransform writes to CanvasContext
@@ -2007,6 +2082,19 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             }}
             viewport={viewport}
             className={PANEL_LAYOUT.Z_INDEX['30']}
+          />
+
+          {/* 🏢 ADR-047: DrawingContextMenu - Right-click context menu during drawing */}
+          <DrawingContextMenu
+            isOpen={drawingContextMenu.isOpen}
+            onOpenChange={handleDrawingContextMenuClose}
+            position={drawingContextMenu.position}
+            activeTool={activeTool}
+            pointCount={drawingHandlers?.drawingState?.tempPoints?.length ?? 0}
+            onFinish={handleDrawingFinish}
+            onClose={handleDrawingClose}
+            onUndoLastPoint={handleDrawingUndoLastPoint}
+            onCancel={handleDrawingCancel}
           />
         </div>
       </div>

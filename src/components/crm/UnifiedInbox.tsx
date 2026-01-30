@@ -53,6 +53,11 @@ import { COMMUNICATION_CHANNELS } from '@/types/communications';
 // 🏢 ENTERPRISE: Inbox sub-components
 import { ThreadView } from './inbox/ThreadView';
 import { ReplyComposer } from './inbox/ReplyComposer';
+// 🏢 ENTERPRISE: Centralized reply/edit hooks
+import { useMessageReply } from '@/hooks/inbox/useMessageReply';
+import { useMessageEdit } from '@/hooks/inbox/useMessageEdit';
+import { useMessagePin } from '@/hooks/inbox/useMessagePin';
+import type { MessageListItem } from '@/hooks/inbox/useInboxApi';
 
 // ============================================================================
 // TYPES
@@ -179,6 +184,33 @@ export function UnifiedInbox({
     clearError: clearSendError,
   } = useSendMessage(selectedConversationId);
 
+  // 🏢 ENTERPRISE: Reply/Forward state
+  const {
+    mode: replyMode,
+    quotedMessage,
+    startReply,
+    startForward,
+    cancelReply,
+    clearAfterSend,
+  } = useMessageReply();
+
+  // 🏢 ENTERPRISE: Edit state
+  const {
+    editingMessage,
+    isEditing,
+    startEdit,
+    updateEditText,
+    cancelEdit,
+    saveEdit,
+    isSaving,
+  } = useMessageEdit();
+
+  // 🏢 ENTERPRISE: Pin state
+  const {
+    isPinned,
+    togglePin,
+  } = useMessagePin();
+
   // Filter conversations by search term (client-side)
   const filteredConversations = useMemo(() => {
     if (!searchTerm) return conversations;
@@ -214,6 +246,55 @@ export function UnifiedInbox({
       await refreshMessages();
     }
   }, [refreshConversations, refreshMessages, selectedConversationId]);
+
+  // 🏢 ENTERPRISE: Reply handler
+  const handleReply = useCallback((message: MessageListItem) => {
+    console.log('[UnifiedInbox] handleReply called:', message.id);
+    startReply(message);
+    console.log('[UnifiedInbox] startReply completed');
+  }, [startReply]);
+
+  // 🏢 ENTERPRISE: Forward handler
+  const handleForward = useCallback((message: MessageListItem) => {
+    console.log('[UnifiedInbox] handleForward called:', message.id);
+    startForward(message);
+    console.log('[UnifiedInbox] startForward completed');
+  }, [startForward]);
+
+  // 🏢 ENTERPRISE: Edit handler - puts text in composer for editing
+  const handleEdit = useCallback((message: MessageListItem) => {
+    console.log('[UnifiedInbox] handleEdit called:', message.id);
+    startEdit(message);
+    console.log('[UnifiedInbox] startEdit completed');
+  }, [startEdit]);
+
+  // 🏢 ENTERPRISE: Pin handler
+  const handleTogglePin = useCallback(async (messageId: string, shouldPin: boolean) => {
+    console.log('[UnifiedInbox] handleTogglePin called:', messageId, 'shouldPin:', shouldPin);
+    const message = messages.find(m => m.id === messageId);
+    if (message) {
+      await togglePin(messageId, message.content.text || '', message.senderName);
+      console.log('[UnifiedInbox] togglePin completed');
+    } else {
+      console.log('[UnifiedInbox] Message not found for id:', messageId);
+    }
+  }, [messages, togglePin]);
+
+  // 🏢 ENTERPRISE: Enhanced send with reply support
+  const handleSendWithReply = useCallback(async (text: string): Promise<boolean> => {
+    // Include quoted message reference if replying
+    const messageData = quotedMessage && replyMode === 'reply'
+      ? { text, replyTo: quotedMessage.id }
+      : { text };
+
+    const result = await send(messageData);
+    if (result?.success) {
+      clearAfterSend();
+      await refreshMessages();
+      return true;
+    }
+    return false;
+  }, [send, quotedMessage, replyMode, clearAfterSend, refreshMessages]);
 
   // Loading state for initial load
   if (conversationsLoading && conversations.length === 0) {
@@ -418,6 +499,11 @@ export function UnifiedInbox({
             hasMore={hasMoreMessages}
             onLoadMore={loadMoreMessages}
             onRefresh={refreshMessages}
+            onReply={handleReply}
+            onForward={handleForward}
+            onEdit={handleEdit}
+            isPinnedFn={isPinned}
+            onTogglePin={handleTogglePin}
           />
         </div>
 
@@ -426,8 +512,16 @@ export function UnifiedInbox({
           disabled={!selectedConversationId}
           sending={sending}
           error={sendError}
-          onSend={handleSendMessage}
+          onSend={handleSendWithReply}
           onClearError={clearSendError}
+          replyMode={replyMode}
+          quotedMessage={quotedMessage}
+          onCancelReply={cancelReply}
+          editingMessage={editingMessage}
+          onUpdateEditText={updateEditText}
+          onCancelEdit={cancelEdit}
+          onSaveEdit={saveEdit}
+          isSavingEdit={isSaving}
         />
       </div>
     </section>

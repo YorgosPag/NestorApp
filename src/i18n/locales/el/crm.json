@@ -217,7 +217,9 @@
     "message": {
       "from": "Από",
       "to": "Προς",
-      "attachments": "{count} συνημμένα"
+      "attachments": "{count} συνημμένα",
+      "pinned": "Καρφιτσωμένο",
+      "edited": "Επεξεργασμένο"
     },
     "tabs": {
       "conversations": "Συνομιλίες",
@@ -243,7 +245,31 @@
       "sending": "Αποστολή...",
       "error": "Αποτυχία αποστολής",
       "success": "Το μήνυμα στάλθηκε",
-      "shortcutHint": "Ctrl+Enter για αποστολή"
+      "shortcutHint": "Ctrl+Enter για αποστολή",
+      "replyingTo": "Απάντηση σε",
+      "forwarding": "Προώθηση",
+      "cancelReply": "Ακύρωση",
+      "editing": "Επεξεργασία μηνύματος",
+      "save": "Αποθήκευση",
+      "saving": "Αποθήκευση...",
+      "cancelEdit": "Ακύρωση επεξεργασίας"
+    },
+    "selection": {
+      "selected": "{count} επιλεγμένα",
+      "selectAll": "Επιλογή όλων",
+      "delete": "Διαγραφή",
+      "cancel": "Ακύρωση"
+    },
+    "contextMenu": {
+      "select": "Επιλογή",
+      "deselect": "Αποεπιλογή",
+      "copy": "Αντιγραφή",
+      "reply": "Απάντηση",
+      "forward": "Προώθηση",
+      "edit": "Επεξεργασία",
+      "pin": "Καρφίτσωμα",
+      "unpin": "Ξεκαρφίτσωμα",
+      "delete": "Διαγραφή"
     },
     "channels": {
       "telegram": "Telegram",

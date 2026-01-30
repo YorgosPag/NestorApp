@@ -28,11 +28,6 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
   // 🏢 ENTERPRISE (2027-01-27): Mouse coordinates for status bar real-time updates
   const [mouseCoordinates, setMouseCoordinates] = useState<Point2D | null>(null);
 
-  // 🔍 DEBUG: Log mouse coordinates when they change
-  React.useEffect(() => {
-    console.log('🔍 NormalView mouseCoordinates updated:', mouseCoordinates);
-  }, [mouseCoordinates]);
-
   // 🎯 ENTERPRISE: Use props when available, fallback to local state
   // This ensures NormalView and FloatingPanelsSection share the same state
   const overlayMode = props.overlayMode ?? localOverlayMode;

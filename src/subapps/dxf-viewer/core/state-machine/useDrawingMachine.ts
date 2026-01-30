@@ -61,6 +61,7 @@ export interface UseDrawingMachineReturn {
   selectTool: (toolType: string) => void;
   deselectTool: () => void;
   addPoint: (point: Point2D, snapped?: boolean, snapType?: string) => void;
+  undoPoint: () => void;  // 🏢 ADR-047: Remove last point (AutoCAD U command)
   moveCursor: (position: Point2D, snapped?: boolean, snapType?: string) => void;
   complete: (forced?: boolean) => void;
   cancel: (reason?: string) => void;
@@ -170,6 +171,12 @@ export function useDrawingMachine(
     [machine]
   );
 
+  // 🏢 ADR-047: Undo last point (AutoCAD U command)
+  const undoPoint = useCallback(
+    () => machine.undoPoint(),
+    [machine]
+  );
+
   const moveCursor = useCallback(
     (position: Point2D, snapped = false, snapType?: string) =>
       machine.moveCursor(position, snapped, snapType),
@@ -234,6 +241,7 @@ export function useDrawingMachine(
     selectTool,
     deselectTool,
     addPoint,
+    undoPoint,
     moveCursor,
     complete,
     cancel,

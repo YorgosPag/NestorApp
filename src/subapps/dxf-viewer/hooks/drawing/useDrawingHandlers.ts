@@ -86,6 +86,7 @@ export function useDrawingHandlers(
     finishEntity,
     finishPolyline,
     cancelDrawing,
+    undoLastPoint,  // 🏢 ADR-047: Undo last point (AutoCAD U command)
     updatePreview,
     // 🏢 ADR-040: Direct access to preview entity (bypasses React state)
     getLatestPreviewEntity
@@ -145,39 +146,18 @@ export function useDrawingHandlers(
   // The return value from addPoint() indicates if drawing completed (e.g., 2nd click on line)
   // 🎯 ENTERPRISE (2026-01-27): ADR-047 - Close polygon on first-point click
   const onDrawingPoint = useCallback((p: Pt) => {
-    // 🔍 DEBUG (2026-01-27): Diagnostic logging for coordinate offset issue
-    console.log(`🎯 [onDrawingPoint] Received WORLD point: x=${p.x.toFixed(2)}, y=${p.y.toFixed(2)}`);
-
     // 🎯 ADR-047: CLOSE POLYGON ON FIRST-POINT CLICK (AutoCAD/BricsCAD pattern)
     // CRITICAL: Check distance BEFORE snap, using RAW point!
     const isAreaTool = activeTool === 'measure-area';
     const hasMinPoints = drawingState.tempPoints.length >= 3; // Need at least 3 points to close
-
-    console.log(`🔍 [onDrawingPoint] ADR-047 STATE CHECK:`, JSON.stringify({
-      activeTool,
-      isAreaTool,
-      tempPointsCount: drawingState.tempPoints.length,
-      hasMinPoints,
-      firstPoint: drawingState.tempPoints[0],
-      allConditionsMet: isAreaTool && hasMinPoints && !!drawingState.tempPoints[0]
-    }, null, 2));
 
     if (isAreaTool && hasMinPoints && drawingState.tempPoints[0]) {
       const firstPoint = drawingState.tempPoints[0];
       const distance = calculateDistance(p, firstPoint); // ✅ Use RAW point, NOT snapped!
       const CLOSE_TOLERANCE = 20; // 20 world units tolerance (generous for user-friendly closing)
 
-      console.log(`🔄 [onDrawingPoint] ADR-047 Close check:`, {
-        rawPoint: p,
-        firstPoint,
-        distance: distance.toFixed(2),
-        tolerance: CLOSE_TOLERANCE,
-        willClose: distance < CLOSE_TOLERANCE
-      });
-
       if (distance < CLOSE_TOLERANCE) {
         // 🎯 AUTO-CLOSE: User clicked near first point - close the polygon!
-        console.log(`✅ [onDrawingPoint] ADR-047 AUTO-CLOSE: Closing polygon at first point`);
         const newEntity = finishPolyline();
         if (newEntity && 'type' in newEntity && typeof newEntity.type === 'string') {
           onEntityCreated(newEntity as Entity);
@@ -190,13 +170,10 @@ export function useDrawingHandlers(
         }
         return;
       }
-    } else {
-      console.log(`❌ [onDrawingPoint] ADR-047 SKIPPED: Conditions not met for auto-close`);
     }
 
     // Normal point addition (not closing)
     const snappedPoint = applySnap(p);
-    console.log(`🎯 [onDrawingPoint] After snap: x=${snappedPoint.x.toFixed(2)}, y=${snappedPoint.y.toFixed(2)}`);
 
     const transformUtils = canvasOps.getTransformUtils();
     const completed = addPoint(snappedPoint, transformUtils);
@@ -242,13 +219,9 @@ export function useDrawingHandlers(
   }, [updatePreview, canvasOps, getLatestPreviewEntity, previewCanvasRef]);
   
   const onDrawingCancel = useCallback(() => {
-    console.log(`🚫 [onDrawingCancel] ADR-047 CANCEL DRAWING CALLED!`, {
-      activeTool,
-      tempPointsCount: drawingState.tempPoints.length
-    });
     cancelDrawing();
     onToolChange('select');
-  }, [cancelDrawing, onToolChange, activeTool, drawingState.tempPoints]);
+  }, [cancelDrawing, onToolChange]);
 
   // Double click handler for finishing operations
   const onDrawingDoubleClick = useCallback(() => {
@@ -260,8 +233,20 @@ export function useDrawingHandlers(
       const isOverlayCompletion = toolStyleStore.triggerOverlayCompletion();
 
       if (!isOverlayCompletion) {
-        // Standard DXF polyline completion
+        // 🏢 ADR-053 FIX (2026-01-30): Special handling for measure-distance-continuous
+        // This tool auto-creates entities every 2 points, so "finish" just means stop drawing
+        // No entity creation needed - just cancel and switch to select
+        if (activeTool === 'measure-distance-continuous') {
+          cancelDrawing();
+          // Clear preview canvas
+          if (previewCanvasRef?.current) {
+            previewCanvasRef.current.clear();
+          }
+          onToolChange('select');
+          return;
+        }
 
+        // Standard DXF polyline completion (polyline, polygon, measure-area, measure-angle)
         const newEntity = finishPolyline();
         if(newEntity) {
           // Filter out extended types that are not compatible with base Entity type
@@ -274,7 +259,7 @@ export function useDrawingHandlers(
 
       }
     }
-  }, [activeTool, finishPolyline, onEntityCreated, onToolChange]);
+  }, [activeTool, finishPolyline, onEntityCreated, onToolChange, cancelDrawing, previewCanvasRef]);
 
   // Cancel all operations
   const cancelAllOperations = useCallback(() => {
@@ -284,15 +269,16 @@ export function useDrawingHandlers(
   return {
     // Systems
     drawingState,
-    
+
     // Drawing actions
     startDrawing,
-    
+
     // Event handlers
     onDrawingPoint,
     onDrawingHover,
     onDrawingCancel,
     onDrawingDoubleClick,
+    onUndoLastPoint: undoLastPoint,  // 🏢 ADR-047: Undo last point (context menu)
     cancelAllOperations
   };
 }

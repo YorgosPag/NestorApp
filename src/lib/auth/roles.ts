@@ -79,6 +79,13 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'notifications:notifications:view',
       'audit:data:view',
       'floorplans:floorplans:process',
+      // Communications
+      'comm:conversations:list',
+      'comm:conversations:view',
+      'comm:conversations:update',
+      'comm:messages:view',
+      'comm:messages:send',
+      'comm:messages:delete',
     ],
     level: 1,
     isProjectRole: false
@@ -183,6 +190,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'comm:conversations:view',
       'comm:messages:view',
       'comm:messages:send',
+      'comm:messages:delete',
       'notifications:notifications:view',
     ],
     level: 4,

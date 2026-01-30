@@ -4786,6 +4786,99 @@ services/dxf-export/              # Python microservice
 
 ---
 
+### 📋 ADR-053: DRAWING CONTEXT MENU (2026-01-30) - 🏢 ENTERPRISE
+
+**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2026-01-30
+
+**🏢 ENTERPRISE LEVEL**: **10/10** - AutoCAD/BricsCAD/Revit Pattern
+
+**Problem**:
+Τα **continuous drawing tools** (measure-distance-continuous, polyline, polygon, measure-area) δεν είχαν intuitive τρόπο τερματισμού. Ο χρήστης δεν ήξερε πώς να σταματήσει τη σχεδίαση.
+
+**User Requirement**:
+Ο Γιώργος ζήτησε: **"Right-click context menu με Enter/Close/Undo/Cancel"** (AutoCAD pattern)
+
+**Solution (CAD Industry Standard)**:
+
+**Pattern**: Right-click context menu (AutoCAD, BricsCAD, Revit, Rhino)
+
+```
+AUTOCAD/BRICSCAD PATTERN:
+────────────────────────────────────────────────────────────────────
+Right-click during drawing shows context menu with:
+- Enter (or Space)     → Finish/Complete current drawing
+- Close (or C)         → Close polygon (for polygon tools)
+- Undo (or U)          → Remove last point
+- Cancel (or Esc)      → Cancel entire drawing
+
+KEYBOARD SHORTCUTS (matching menu options):
+- Enter/Space          → Complete drawing
+- C                    → Close polygon
+- U                    → Undo last point
+- Escape               → Cancel drawing
+────────────────────────────────────────────────────────────────────
+```
+
+**Implementation Architecture**:
+
+```
+🏢 DRAWING CONTEXT MENU ARCHITECTURE:
+────────────────────────────────────────────────────────────────────
+ui/components/DrawingContextMenu.tsx      # React component
+ui/components/DrawingContextMenu.module.css  # Styling
+
+State Machine Extensions (core/state-machine/):
+├── interfaces.ts        # Added UNDO_POINT event type
+├── DrawingStateMachine.ts  # Added undoPoint() method
+└── useDrawingMachine.ts    # Exposed undoPoint action
+
+Hooks Extensions (hooks/drawing/):
+├── useUnifiedDrawing.tsx   # Added undoLastPoint callback
+└── useDrawingHandlers.ts   # Added onUndoLastPoint export
+
+Canvas Integration (components/dxf-layout/CanvasSection.tsx):
+├── State: drawingContextMenu { isOpen, position }
+├── Handler: handleDrawingContextMenu (onContextMenu)
+└── Render: <DrawingContextMenu ... />
+────────────────────────────────────────────────────────────────────
+```
+
+**Key Component** (`DrawingContextMenu.tsx`):
+```typescript
+// 🏢 ADR-053: AutoCAD-style right-click context menu
+interface DrawingContextMenuProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  position: { x: number; y: number };
+  activeTool: ToolType;
+  pointCount: number;
+  onFinish: () => void;        // Enter - finish drawing
+  onClose?: () => void;        // C - close polygon
+  onUndoLastPoint?: () => void; // U - undo last point
+  onCancel: () => void;        // Esc - cancel drawing
+}
+```
+
+**State Machine Event** (UNDO_POINT):
+```typescript
+// Added to DrawingEventType
+| 'UNDO_POINT'        // User removes last point (Undo in context menu)
+
+// Transition rules added for states:
+// COLLECTING_POINTS, PREVIEWING, COMPLETING → stay in same state
+```
+
+**Benefits**:
+- ✅ **CAD Standard** - Identical to AutoCAD/BricsCAD behavior
+- ✅ **Zero Learning Curve** - CAD users know this pattern
+- ✅ **State Machine** - Proper UNDO_POINT event with transition rules
+- ✅ **Radix Components** - Uses DropdownMenu for accessibility
+- ✅ **Keyboard Hints** - Shows shortcut keys in menu
+
+**Location**: `src/subapps/dxf-viewer/ui/components/DrawingContextMenu.tsx`
+
+---
+
 ## 🎨 UI SYSTEMS - ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ COMPONENTS
 
 ## 🏢 **COMPREHENSIVE ENTERPRISE ARCHITECTURE MAP** (2025-12-26)

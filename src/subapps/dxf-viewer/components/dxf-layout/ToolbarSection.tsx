@@ -50,9 +50,6 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
   // 🏢 ENTERPRISE (2027-01-27): Command Pattern for Undo/Redo - ADR-032
   const { execute } = useCommandHistory();
 
-  // 🔍 DEBUG: Log mouseCoordinates prop
-  console.log('🔍 ToolbarSection received mouseCoordinates:', mouseCoordinates);
-
   const handleOverlayDuplicate = () => {
     // 🏢 ENTERPRISE (2026-01-25): Use universal selection system - ADR-030
     const primarySelectedId = universalSelection.getPrimaryId();
@@ -100,7 +97,6 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           activeTool={dxfProps.activeTool}
           onToolChange={dxfProps.onToolChange}
           onAction={(action, data) => {
-            console.log('🔧 ToolbarSection onAction called:', { action, data }); // DEBUG
             dxfProps.onAction(action, data);
           }}
           showGrid={dxfProps.showGrid}

@@ -56,6 +56,7 @@ interface DxfCanvasProps {
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
   onWheelZoom?: (wheelDelta: number, center: Point2D) => void; // ✅ ZOOM SYSTEM INTEGRATION
   onCanvasClick?: (point: Point2D) => void; // 🎯 DRAWING TOOLS: Click handler for entity drawing
+  onContextMenu?: (e: React.MouseEvent) => void; // 🏢 ADR-053: Right-click context menu for drawing tools
 }
 
 export interface DxfCanvasRef {
@@ -84,6 +85,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   onMouseMove,
   onWheelZoom,
   onCanvasClick, // 🎯 DRAWING TOOLS: Click handler
+  onContextMenu, // 🏢 ADR-053: Right-click context menu for drawing tools
   ...props // 🎯 PASS THROUGH: Περνάω όλα τα extra props (όπως data-canvas-type)
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -247,7 +249,6 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         if (currentViewport.width > 0 && currentViewport.height > 0) {
           try {
             renderer.render(scene, transform, currentViewport, renderOptions);
-            console.log('🎨 [DxfCanvas] Force render on mount:', currentViewport);
           } catch (error) {
             console.error('🚨 [DxfCanvas] Force render failed:', error);
           }
@@ -410,6 +411,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       onWheel={(e) => mouseHandlers.handleWheel(e)}
       // 🏢 ENTERPRISE: Prevent browser auto-scroll on middle-click
       onAuxClick={(e) => e.preventDefault()}
+      // 🏢 ADR-053: Right-click context menu for drawing tools
+      onContextMenu={onContextMenu}
     />
   );
 }));

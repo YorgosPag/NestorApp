@@ -217,6 +217,14 @@ export class DrawingStateMachine implements IDrawingStateMachine {
     this.send('CANCEL', { reason });
   }
 
+  /**
+   * Undo last point (AutoCAD-style U command)
+   * 🏢 ENTERPRISE (2026-01-30): ADR-047 - Context menu undo support
+   */
+  undoPoint(): void {
+    this.send('UNDO_POINT', {});
+  }
+
   // ==========================================================================
   // PRIVATE METHODS
   // ==========================================================================
@@ -318,6 +326,19 @@ export class DrawingStateMachine implements IDrawingStateMachine {
             snapType: payload.snapType ?? null,
             snapPoint: payload.snapped ? payload.position : null,
           },
+          lastStateChange: event.timestamp,
+        };
+      }
+
+      case 'UNDO_POINT': {
+        // 🏢 ENTERPRISE (2026-01-30): ADR-047 - Remove last point (AutoCAD U command)
+        if (currentContext.points.length === 0) {
+          return currentContext; // Nothing to undo
+        }
+        const newPoints = currentContext.points.slice(0, -1);
+        return {
+          ...currentContext,
+          points: newPoints,
           lastStateChange: event.timestamp,
         };
       }

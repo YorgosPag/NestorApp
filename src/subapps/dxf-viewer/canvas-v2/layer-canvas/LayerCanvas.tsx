@@ -97,6 +97,9 @@ interface LayerCanvasProps {
 
   // ✅ ΦΑΣΗ 7: Unified canvas system integration
   enableUnifiedCanvas?: boolean;
+
+  // 🏢 ADR-053: Right-click context menu for drawing tools
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 // 🚀 PERFORMANCE (2026-01-27): Wrap forwardRef with memo to prevent unnecessary re-renders
@@ -140,6 +143,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   draggingOverlay = null, // 🏢 ENTERPRISE (2027-01-27): Ghost rendering during move tool drag
   useUnifiedUIRendering = false, // ✅ ΦΑΣΗ 6: Default disabled για smooth transition
   enableUnifiedCanvas = false, // ✅ ΦΑΣΗ 7: Default disabled για smooth transition
+  onContextMenu, // 🏢 ADR-053: Right-click context menu for drawing tools
   ...props // 🎯 PASS THROUGH: Περνάω όλα τα extra props (όπως data-canvas-type)
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -655,6 +659,8 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
       onWheel={(e) => mouseHandlers.handleWheel(e)}
       // 🏢 ENTERPRISE: Prevent browser auto-scroll on middle-click
       onAuxClick={(e) => e.preventDefault()}
+      // 🏢 ADR-053: Right-click context menu for drawing tools
+      onContextMenu={onContextMenu}
     />
   );
 }));

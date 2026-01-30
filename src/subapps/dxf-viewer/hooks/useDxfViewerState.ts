@@ -62,13 +62,11 @@ export function useDxfViewerState() {
     setTransform: canvasOps.setTransform,
     undo: useCallback(() => {
       if (canUndo) {
-        console.log('↩️ Undo action triggered');
         undo();
       }
     }, [canUndo, undo]),
     redo: useCallback(() => {
       if (canRedo) {
-        console.log('↪️ Redo action triggered');
         redo();
       }
     }, [canRedo, redo])

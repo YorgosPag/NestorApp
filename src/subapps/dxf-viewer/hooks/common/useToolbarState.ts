@@ -57,7 +57,6 @@ export function useToolbarState() {
       onDrawingStart('measure-area');
     } else if (tool === 'measure-angle') {
       // measure-angle uses same logic as polyline tool but keeps its own identity
-      console.log('🎯 [useToolbarState] measure-angle selected, calling onDrawingStart("measure-angle")');
       onDrawingStart('measure-angle');
     } else if (tool.startsWith('measure-')) {
       const measurementType = tool.replace('measure-', '') as MeasurementType;

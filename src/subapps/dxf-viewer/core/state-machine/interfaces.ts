@@ -125,6 +125,7 @@ export type DrawingEventType =
   | 'SELECT_TOOL'       // User selects a drawing tool
   | 'DESELECT_TOOL'     // User deselects tool (back to select mode)
   | 'ADD_POINT'         // User clicks to add a point
+  | 'UNDO_POINT'        // User removes last point (Undo in context menu)
   | 'MOVE_CURSOR'       // User moves mouse (for preview)
   | 'COMPLETE'          // User requests completion (Enter/Double-click)
   | 'CANCEL'            // User cancels (ESC)
@@ -138,6 +139,7 @@ export interface DrawingEventPayloads {
   SELECT_TOOL: { toolType: string };
   DESELECT_TOOL: Record<string, never>;
   ADD_POINT: { point: Point2D; snapped?: boolean; snapType?: string };
+  UNDO_POINT: Record<string, never>;  // Remove last point (AutoCAD-style U command)
   MOVE_CURSOR: { position: Point2D; snapped?: boolean; snapType?: string };
   COMPLETE: { forced?: boolean };
   CANCEL: { reason?: string };
@@ -283,18 +285,21 @@ export const TRANSITION_RULES: readonly TransitionRule[] = [
 
   // From COLLECTING_POINTS
   { from: 'COLLECTING_POINTS', to: 'COLLECTING_POINTS', on: 'ADD_POINT' },
+  { from: 'COLLECTING_POINTS', to: 'COLLECTING_POINTS', on: 'UNDO_POINT' },
   { from: 'COLLECTING_POINTS', to: 'PREVIEWING', on: 'MOVE_CURSOR' },
   { from: 'COLLECTING_POINTS', to: 'COMPLETING', on: 'MIN_POINTS_REACHED' },
   { from: 'COLLECTING_POINTS', to: 'CANCELLED', on: 'CANCEL' },
 
   // From PREVIEWING
   { from: 'PREVIEWING', to: 'COLLECTING_POINTS', on: 'ADD_POINT' },
+  { from: 'PREVIEWING', to: 'PREVIEWING', on: 'UNDO_POINT' },
   { from: 'PREVIEWING', to: 'PREVIEWING', on: 'MOVE_CURSOR' },
   { from: 'PREVIEWING', to: 'COMPLETING', on: 'MIN_POINTS_REACHED' },
   { from: 'PREVIEWING', to: 'CANCELLED', on: 'CANCEL' },
 
   // From COMPLETING
   { from: 'COMPLETING', to: 'COMPLETING', on: 'ADD_POINT' },
+  { from: 'COMPLETING', to: 'COMPLETING', on: 'UNDO_POINT' },
   { from: 'COMPLETING', to: 'COMPLETING', on: 'MOVE_CURSOR' },
   { from: 'COMPLETING', to: 'COMPLETED', on: 'COMPLETE' },
   { from: 'COMPLETING', to: 'CANCELLED', on: 'CANCEL' },
