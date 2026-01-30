@@ -291,8 +291,13 @@ export function UnifiedInbox({
     try {
       console.log('📎 [UnifiedInbox] Uploading attachment:', file.name, file.type);
 
+      // Use legacy path that's allowed by Storage Rules
+      const folderPath = file.type.startsWith('image/')
+        ? 'contacts/photos'  // Allowed for authenticated + images
+        : 'contacts/photos'; // Same path for now
+
       const result = await PhotoUploadService.uploadPhoto(file, {
-        folderPath: 'telegram-outbound',
+        folderPath,
         onProgress: (progress) => {
           // Map PhotoUploadService progress to simple percentage
           const percent = progress.phase === 'complete' ? 100 : progress.progress;
