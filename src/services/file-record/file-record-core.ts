@@ -30,11 +30,14 @@ import {
   FILE_STATUS,
   FILE_LIFECYCLE_STATES,
 } from '@/config/domain-constants';
+// 🏢 ENTERPRISE (2026-01-31): Direct imports to avoid barrel file
+// The barrel '@/services/upload' re-exports pdf-utils which imports react-i18next
+// This breaks API routes with "createContext is not a function" error
 import {
   buildStoragePath,
   generateFileId,
   getFileExtension,
-} from '@/services/upload';
+} from '@/services/upload/utils/storage-path';
 import {
   buildFileDisplayName,
   type FileDisplayNameResult,
@@ -473,7 +476,7 @@ export function buildIngestionFileRecordData(input: {
 // ============================================================================
 
 export {
-  // Re-export utilities for convenience
+  // Re-export utilities for convenience (direct import for server compatibility)
   generateFileId,
   getFileExtension,
-} from '@/services/upload';
+} from '@/services/upload/utils/storage-path';
