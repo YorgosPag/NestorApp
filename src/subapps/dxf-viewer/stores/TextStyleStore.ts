@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Text Style Store
  * Single source of truth for text styling in preview rendering

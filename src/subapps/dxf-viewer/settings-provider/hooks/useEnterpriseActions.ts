@@ -13,7 +13,7 @@
  * @since 2025-10-09
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ENTERPRISE_CONSTANTS } from '../constants';
 import type { LineSettings, TextSettings } from '../../settings-core/types';
 import type { GripSettings } from '../../types/gripSettings'; // Full GripSettings (with all properties)
@@ -171,7 +171,9 @@ export function useEnterpriseActions(
     dispatch({ type: 'UPDATE_GRIP', payload: { mode, updates, layer: 'specific' } });
   }, [dispatch]);
 
-  return {
+  // 🏢 ENTERPRISE (2026-01-31): useMemo prevents new object creation on every render
+  // This fixes infinite loop where contextValue changes → consumers re-render → provider re-renders
+  return useMemo(() => ({
     updateLineSettings,
     updateTextSettings,
     updateGripSettings,
@@ -182,5 +184,16 @@ export function useEnterpriseActions(
     toggleTextOverride,
     toggleGripOverride,
     resetToDefaults
-  };
+  }), [
+    updateLineSettings,
+    updateTextSettings,
+    updateGripSettings,
+    updateSpecificLineSettings,
+    updateSpecificTextSettings,
+    updateSpecificGripSettings,
+    toggleLineOverride,
+    toggleTextOverride,
+    toggleGripOverride,
+    resetToDefaults
+  ]);
 }

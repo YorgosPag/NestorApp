@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * @module CompletionStyleStore
  * @description ADR-056: Centralized Entity Completion Styles Store

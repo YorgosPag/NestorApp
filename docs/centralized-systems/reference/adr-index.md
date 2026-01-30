@@ -1,0 +1,402 @@
+# 📋 **ARCHITECTURAL DECISION RECORDS (ADRs) INDEX**
+
+> **Complete Enterprise ADR Registry**
+>
+> Single source of truth για όλες τις αρχιτεκτονικές αποφάσεις της εφαρμογής
+
+**📊 Stats**: 57 ADRs | Last Updated: 2026-01-31
+
+---
+
+## 🎯 **QUICK NAVIGATION**
+
+| Category | ADR Range | Quick Jump |
+|----------|-----------|------------|
+| **UI Components** | ADR-001 to ADR-003 | [View](#-ui-components) |
+| **Design System** | ADR-002, ADR-004, ADR-011 | [View](#-design-system) |
+| **Canvas & Rendering** | ADR-004 to ADR-009 | [View](#-canvas--rendering) |
+| **Data & State** | ADR-010, ADR-030 to ADR-034 | [View](#-data--state-management) |
+| **Drawing System** | ADR-005, ADR-040 to ADR-048 | [View](#-drawing-system) |
+| **Security & Auth** | ADR-020, ADR-024 | [View](#-security--authentication) |
+| **Performance** | ADR-019, ADR-030, ADR-040 | [View](#-performance) |
+| **Filters & Search** | ADR-029, ADR-051 | [View](#-filters--search) |
+| **Tools & Keyboard** | ADR-026 to ADR-028, ADR-035, ADR-038, ADR-055 | [View](#-tools--keyboard) |
+| **Entity Systems** | ADR-012 to ADR-018, ADR-025, ADR-052 to ADR-057 | [View](#-entity-systems) |
+
+---
+
+## 📊 **COMPLETE ADR TABLE**
+
+| ADR | Decision | Status | Date | Category |
+|-----|----------|--------|------|----------|
+| **ADR-001** | Select/Dropdown Component → Radix Select | ✅ APPROVED | 2026-01-01 | UI Components |
+| **ADR-002** | Enterprise Z-Index Hierarchy | ✅ APPROVED | 2026-01-02 | Design System |
+| **ADR-003** | Floating Panel Compound Component | ✅ APPROVED | 2026-01-02 | UI Components |
+| **ADR-004** | Canvas Theme System | ✅ APPROVED | 2026-01-03 | Canvas & Rendering |
+| **ADR-005** | Line Drawing System | ✅ APPROVED | 2026-01-03 | Drawing System |
+| **ADR-006** | Crosshair Overlay Consolidation | ✅ APPROVED | 2026-01-03 | Canvas & Rendering |
+| **ADR-008** | CSS→Canvas Coordinate Contract | ✅ APPROVED | 2026-01-04 | Canvas & Rendering |
+| **ADR-009** | Ruler Corner Box Interactive | ✅ APPROVED | 2026-01-04 | Canvas & Rendering |
+| **ADR-010** | Panel Type Centralization | ✅ APPROVED | 2026-01-04 | Data & State |
+| **ADR-011** | FloatingPanel UI Styling System | ✅ APPROVED | 2026-01-04 | Design System |
+| **ADR-012** | Entity Linking Service | ✅ APPROVED | 2026-01-07 | Entity Systems |
+| **ADR-013** | Enterprise Card System (Atomic Design) | ✅ APPROVED | 2026-01-08 | UI Components |
+| **ADR-014** | Navigation Entity Icons Centralization | ✅ APPROVED | 2026-01-09 | UI Components |
+| **ADR-015** | Entity List Column Container | ✅ APPROVED | 2026-01-09 | UI Components |
+| **ADR-016** | Navigation Breadcrumb Path System | ✅ APPROVED | 2026-01-10 | UI Components |
+| **ADR-017** | Enterprise ID Generation | ✅ APPROVED | 2026-01-11 | Entity Systems |
+| **ADR-018** | Unified Upload Service | ✅ APPROVED | 2026-01-11 | Entity Systems |
+| **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-11 | Entity Systems |
+| **ADR-019** | Centralized Performance Thresholds | ✅ APPROVED | 2026-01-11 | Performance |
+| **ADR-020** | Centralized Auth Module | ✅ APPROVED | 2026-01-11 | Security & Auth |
+| **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-11 | Security & Auth |
+| **ADR-023** | Centralized Spinner Component | ✅ APPROVED | 2026-01-11 | UI Components |
+| **ADR-024** | Environment Security Configuration | ✅ APPROVED | 2026-01-16 | Security & Auth |
+| **ADR-025** | Unit Linking System | ✅ APPROVED | 2026-01-24 | Entity Systems |
+| **ADR-026** | DXF Toolbar Colors System | ✅ APPROVED | 2026-01-24 | Tools & Keyboard |
+| **ADR-027** | DXF Keyboard Shortcuts System | ✅ APPROVED | 2026-01-24 | Tools & Keyboard |
+| **ADR-028** | Button Component Consolidation | ✅ APPROVED | 2026-01-24 | Tools & Keyboard |
+| **ADR-029** | Canvas V2 Migration | ✅ COMPLETED | 2026-01-25 | Canvas & Rendering |
+| **ADR-030** | Unified Frame Scheduler | ✅ IMPLEMENTED | 2026-01-25 | Performance |
+| **ADR-031** | Enterprise Command Pattern (Undo/Redo) | ✅ IMPLEMENTED | 2026-01-25 | Data & State |
+| **ADR-032** | Drawing State Machine | ✅ IMPLEMENTED | 2026-01-25 | Drawing System |
+| **ADR-033** | Hybrid Layer Movement System | 📋 PLANNING | 2026-01-25 | Drawing System |
+| **ADR-034** | Geometry Calculations Centralization | ✅ APPROVED | 2026-01-26 | Data & State |
+| **ADR-035** | Tool Overlay Mode Metadata | ✅ APPROVED | 2026-01-26 | Tools & Keyboard |
+| **ADR-036** | Enterprise Structured Logging | ✅ APPROVED | 2026-01-26 | Performance |
+| **ADR-037** | Product Tour System | ✅ APPROVED | 2026-01-26 | UI Components |
+| **ADR-038** | Centralized Tool Detection Functions | ✅ APPROVED | 2026-01-26 | Tools & Keyboard |
+| **ADR-040** | Preview Canvas Performance | ✅ APPROVED | 2027-01-27 | Drawing System |
+| **ADR-041** | Distance Label Centralization | ✅ APPROVED | 2027-01-27 | Drawing System |
+| **ADR-042** | UI Fonts Centralization | ✅ APPROVED | 2027-01-27 | Design System |
+| **ADR-043** | Zoom Constants Consolidation | ✅ APPROVED | 2027-01-27 | Canvas & Rendering |
+| **ADR-044** | Canvas Line Widths Centralization | ✅ APPROVED | 2027-01-27 | Canvas & Rendering |
+| **ADR-045** | Viewport Ready Guard | ✅ APPROVED | 2027-01-27 | Canvas & Rendering |
+| **ADR-046** | Single Coordinate Transform | ✅ APPROVED | 2027-01-27 | Canvas & Rendering |
+| **ADR-047** | Close Polygon on First-Point Click | ✅ APPROVED | 2027-01-27 | Drawing System |
+| **ADR-048** | Unified Grip Rendering System | ✅ APPROVED | 2027-01-27 | Drawing System |
+| **ADR-049** | Unified Move Tool (DXF + Overlays) | ✅ APPROVED | 2027-01-27 | Drawing System |
+| **ADR-050** | Unified Toolbar Integration | ✅ APPROVED | 2027-01-27 | UI Components |
+| **ADR-051** | Enterprise Filter System Centralization | ✅ APPROVED | 2026-01-29 | Filters & Search |
+| **ADR-052** | DXF Export API Contract | ✅ APPROVED | 2026-01-30 | Entity Systems |
+| **ADR-053** | Drawing Context Menu | ✅ APPROVED | 2026-01-30 | Drawing System |
+| **ADR-054** | Enterprise Upload System Consolidation | ✅ APPROVED | 2026-01-30 | Entity Systems |
+| **ADR-055** | Centralized Tool State Persistence | ✅ APPROVED | 2026-01-30 | Tools & Keyboard |
+| **ADR-056** | Centralized Entity Completion Styles | ✅ APPROVED | 2026-01-30 | Drawing System |
+| **ADR-057** | Unified Entity Completion Pipeline | ✅ APPROVED | 2026-01-30 | Drawing System |
+| **ADR-UI-001** | Visual Primitive Ownership | ✅ APPROVED | 2026-01-04 | Design System |
+
+---
+
+## 🎨 **UI COMPONENTS**
+
+### ADR-001: Select/Dropdown Component
+- **Canonical**: `@/components/ui/select` (Radix Select)
+- **Deprecated**: `EnterpriseComboBox`
+- **Strategy**: Migrate on touch (7 legacy files)
+
+### ADR-003: Floating Panel Compound Component
+- **Canonical**: `FloatingPanel` (`@/components/ui/floating`)
+- **Pattern**: Compound Component (Radix UI style)
+
+### ADR-013: Enterprise Card System (Atomic Design)
+- **Canonical**: `@/design-system` + `@/domain/cards`
+- **Pattern**: Atomic Design (Primitives → Components → Domain Cards)
+- **Result**: 64% code reduction (22→7 domain cards)
+
+### ADR-014: Navigation Entity Icons Centralization
+- **Canonical**: `NAVIGATION_ENTITIES` from `@/components/navigation/config`
+- **Prohibition**: Hardcoded Lucide icons for entities
+
+### ADR-015: Entity List Column Container
+- **Canonical**: `EntityListColumn` from `@/core/containers`
+- **Pattern**: Semantic HTML + centralized width tokens
+
+### ADR-016: Navigation Breadcrumb Path System
+- **Canonical**: `syncBreadcrumb()` from `NavigationContext`
+- **Type**: `BreadcrumbEntityRef` (lightweight display-only)
+
+### ADR-023: Centralized Spinner Component
+- **Canonical**: `Spinner` from `@/components/ui/spinner`
+- **Prohibited**: Direct `Loader2` import from lucide-react
+
+### ADR-037: Product Tour System
+- **Canonical**: `ProductTour` from `@/components/ui/ProductTour`
+- **Pattern**: Context-based + Floating UI + Spotlight
+
+### ADR-050: Unified Toolbar Integration
+- **Canonical**: `EnhancedDXFToolbar` with collapsible sections
+- **Pattern**: AutoCAD Ribbon pattern
+
+---
+
+## 🎨 **DESIGN SYSTEM**
+
+### ADR-002: Enterprise Z-Index Hierarchy
+- **Source**: `design-tokens.json` → CSS variables
+- **Pattern**: `var(--z-index-*)` for all z-index values
+- **Prohibited**: Hardcoded z-index (e.g., `z-[9999]`)
+
+### ADR-004: Canvas Theme System
+- **Source**: `design-tokens.json` → `CANVAS_THEME`
+- **Pattern**: CSS Variables for runtime theme switching
+- **Level**: 9.5/10 (Figma/AutoCAD/Blender standards)
+
+### ADR-011: FloatingPanel UI Styling System
+- **Hooks**: `useSemanticColors()` + `useBorderTokens()`
+- **Coverage**: 47 files, 100% centralized
+- **Prohibited**: Hardcoded Tailwind colors
+
+### ADR-042: UI Fonts Centralization
+- **Canonical**: `UI_FONTS` from `text-rendering-config.ts`
+- **Prohibited**: Hardcoded `ctx.font = '12px Arial'`
+
+### ADR-UI-001: Visual Primitive Ownership
+- **Owner**: `useBorderTokens.ts` for all visual primitives
+- **API**: `quick.*` semantic tokens (not just helpers)
+
+---
+
+## 🖼️ **CANVAS & RENDERING**
+
+### ADR-006: Crosshair Overlay Consolidation
+- **Canonical**: `canvas-v2/overlays/CrosshairOverlay.tsx`
+- **Deleted**: Legacy `canvas/CrosshairOverlay.tsx` (495 lines)
+
+### ADR-008: CSS→Canvas Coordinate Contract
+- **Formula**: `(e.clientX - rect.left) * (canvas.width / rect.width)`
+- **Pattern**: Industry Standard (AutoCAD/Figma/Blender)
+
+### ADR-009: Ruler Corner Box Interactive
+- **Canonical**: `RulerCornerBox` component
+- **Features**: Single click (Fit), Double click (100%), Ctrl+Click (Previous)
+
+### ADR-029: Canvas V2 Migration
+- **Canonical**: `canvas-v2/` (ONLY active system)
+- **Deprecated**: `_canvas_LEGACY/` (excluded from TypeScript)
+- **API**: `DxfCanvasRef` (4 methods vs V1's 11 methods)
+
+### ADR-043: Zoom Constants Consolidation
+- **Canonical**: `transform-config.ts` (SSOT)
+- **Deleted**: `zoom-constants.ts` middleman
+
+### ADR-044: Canvas Line Widths Centralization
+- **Canonical**: `RENDER_LINE_WIDTHS` from `text-rendering-config.ts`
+- **Migration**: 32 hardcoded values → 17 files migrated
+
+### ADR-045: Viewport Ready Guard
+- **Pattern**: Fresh viewport + `COORDINATE_LAYOUT.MARGINS`
+- **Fix**: First-click offset bug (~80px)
+
+### ADR-046: Single Coordinate Transform
+- **Pattern**: Pass WORLD coords to `onCanvasClick`
+- **Fix**: Double conversion bug causing ~80px X-axis offset
+
+---
+
+## 📊 **DATA & STATE MANAGEMENT**
+
+### ADR-010: Panel Type Centralization
+- **Canonical**: `types/panel-types.ts`
+- **Type**: `FloatingPanelType = 'levels' | 'hierarchy' | 'overlay' | 'colors'`
+
+### ADR-031: Enterprise Command Pattern (Undo/Redo)
+- **Canonical**: `core/commands/`
+- **Pattern**: GoF Command Pattern (AutoCAD/Photoshop/Figma)
+- **Features**: Serialization, Audit Trail, Persistence, Batch Operations
+
+### ADR-034: Geometry Calculations Centralization
+- **Canonical**: `geometry-utils.ts` (SSOT for polygon calculations)
+- **Separation**: Math (geometry-utils) ↔ Rendering (geometry-rendering-utils)
+
+---
+
+## ✏️ **DRAWING SYSTEM**
+
+### ADR-005: Line Drawing System
+- **Canonical**: `useUnifiedDrawing` + `LineRenderer`
+- **Lines**: 2,300+ (centralized)
+- **Pattern**: 3-phase rendering (preview → completion → normal)
+
+### ADR-032: Drawing State Machine
+- **Canonical**: `core/state-machine/`
+- **Pattern**: Formal State Machine (XState patterns)
+- **States**: IDLE → TOOL_READY → COLLECTING_POINTS → COMPLETING → COMPLETED
+
+### ADR-040: Preview Canvas Performance
+- **Canonical**: `canvas-v2/preview-canvas/` + `PreviewRenderer`
+- **Performance**: ~250ms → <16ms per frame
+
+### ADR-041: Distance Label Centralization
+- **Canonical**: `renderDistanceLabel()` from `distance-label-utils.ts`
+
+### ADR-047: Close Polygon on First-Point Click
+- **Pattern**: AutoCAD/BricsCAD pattern for area measurement
+
+### ADR-048: Unified Grip Rendering System
+- **Canonical**: `UnifiedGripRenderer` (Facade Pattern)
+- **Result**: ~90 lines duplicate code removed
+
+### ADR-049: Unified Move Tool (DXF + Overlays)
+- **Canonical**: `MoveOverlayCommand.ts` (380+ lines)
+- **Pattern**: Command Pattern with undo/redo
+
+### ADR-053: Drawing Context Menu
+- **Canonical**: `DrawingContextMenu.tsx`
+- **Pattern**: AutoCAD-style right-click menu
+
+### ADR-056: Centralized Entity Completion Styles
+- **Canonical**: `applyCompletionStyles()` from `useLineCompletionStyle.ts`
+- **Pattern**: AutoCAD "Current Properties"
+
+### ADR-057: Unified Entity Completion Pipeline
+- **Canonical**: `completeEntity()` from `hooks/drawing/completeEntity.ts`
+- **Result**: 4 code paths → 1 function
+
+---
+
+## 🔐 **SECURITY & AUTHENTICATION**
+
+### ADR-020: Centralized Auth Module
+- **Canonical**: `src/auth/` module
+- **Deleted**: `FirebaseAuthContext.tsx`, `UserRoleContext.tsx`
+- **Import**: `import { AuthProvider, useAuth } from '@/auth'`
+
+### ADR-020.1: Conditional App Shell Layout
+- **Canonical**: `ConditionalAppShell`
+- **Pattern**: Auth routes → standalone layout
+
+### ADR-024: Environment Security Configuration
+- **Canonical**: `src/config/environment-security-config.ts`
+- **Pattern**: Graduated security policies (Microsoft Azure/Google Cloud)
+
+---
+
+## ⚡ **PERFORMANCE**
+
+### ADR-019: Centralized Performance Thresholds
+- **Canonical**: `PERFORMANCE_THRESHOLDS` from `performance-utils.ts`
+- **Pattern**: Centralized FPS/memory/render time limits
+
+### ADR-030: Unified Frame Scheduler
+- **Canonical**: `UnifiedFrameScheduler` singleton
+- **Pattern**: Single RAF loop with priority queue
+
+### ADR-036: Enterprise Structured Logging
+- **Canonical**: `Logger` from `@/lib/telemetry`
+- **Deprecated**: `console.log/warn/info/debug`
+- **ESLint**: `custom/no-console-log` (warn mode)
+
+---
+
+## 🔍 **FILTERS & SEARCH**
+
+### ADR-029: Global Search System v1
+- **Canonical**: `/api/search` + `src/types/search.ts`
+- **Features**: Greek-friendly, prefix matching, tenant isolation
+
+### ADR-051: Enterprise Filter System Centralization
+- **Canonical**: `@/components/core/AdvancedFilters/`
+- **Hooks**: `useGenericFilters` + `applyFilters`
+- **Result**: 7 files deleted, 16 consumers migrated
+
+---
+
+## ⌨️ **TOOLS & KEYBOARD**
+
+### ADR-026: DXF Toolbar Colors System
+- **Canonical**: `toolbar-colors.ts`
+- **Pattern**: Semantic color mapping (CAD Industry Standard)
+
+### ADR-027: DXF Keyboard Shortcuts System
+- **Canonical**: `keyboard-shortcuts.ts`
+- **API**: `matchesShortcut()`, `getShortcutDisplayLabel()`
+- **Pattern**: AutoCAD F-key standards
+
+### ADR-028: Button Component Consolidation
+- **Canonical**: Shadcn Button + `ui/toolbar/ToolButton`
+- **Strategy**: Migrate on touch (49 files)
+
+### ADR-035: Tool Overlay Mode Metadata
+- **Property**: `preservesOverlayMode: boolean` in `ToolInfo`
+- **Helper**: `preservesOverlayMode(tool: ToolType)`
+
+### ADR-038: Centralized Tool Detection Functions
+- **Functions**: `isDrawingTool()`, `isMeasurementTool()`, `isInteractiveTool()`
+- **Source**: `ToolStateManager.ts` (SSOT)
+
+### ADR-055: Centralized Tool State Persistence
+- **Canonical**: `ToolStateStore.ts`
+- **Pattern**: `useSyncExternalStore` + `allowsContinuous`
+
+---
+
+## 🏢 **ENTITY SYSTEMS**
+
+### ADR-012: Entity Linking Service
+- **Canonical**: `EntityLinkingService` from `@/services/entity-linking`
+- **Features**: Retry, Cache, Audit Trail, Optimistic Updates
+
+### ADR-017: Enterprise ID Generation
+- **Canonical**: `@/services/enterprise-id.service`
+- **Prohibited**: `Math.random()` for ID generation
+
+### ADR-018: Unified Upload Service
+- **Canonical**: `UnifiedUploadService` from `@/services/upload`
+- **Pattern**: Gateway + Strategy Pattern
+
+### ADR-018.1: Photos Tab Base Template
+- **Canonical**: `PhotosTabBase` from photo-system
+- **Result**: 79% code reduction
+
+### ADR-025: Unit Linking System
+- **Components**: `BuildingSelectorCard`, `LinkedSpacesCard`
+- **Pattern**: Dependency Injection + Real-time Firestore
+
+### ADR-052: DXF Export API Contract
+- **Canonical**: `types/dxf-export.types.ts`
+- **Types**: 18 entity mappings, 7 DXF versions, 17 error codes
+
+### ADR-054: Enterprise Upload System Consolidation
+- **Canonical**: 5 canonical components
+- **Pipeline**: pending → upload → finalize
+
+---
+
+## 🚫 **GLOBAL PROHIBITIONS**
+
+> Από όλα τα ADRs, αυτές είναι οι κύριες απαγορεύσεις:
+
+| Prohibition | Alternative | ADR |
+|-------------|-------------|-----|
+| `as any` / `@ts-ignore` | Proper TypeScript types | CLAUDE.md |
+| Hardcoded z-index | `var(--z-index-*)` | ADR-002 |
+| Hardcoded canvas backgrounds | `CANVAS_THEME` | ADR-004 |
+| New drawing implementations | `useUnifiedDrawing` | ADR-005 |
+| Direct `getBoundingClientRect()` | `canvasBoundsService.getBounds()` | ADR-008 |
+| Hardcoded Tailwind colors | `useSemanticColors()` | ADR-011 |
+| Hardcoded entity icons | `NAVIGATION_ENTITIES` | ADR-014 |
+| `Math.random()` for IDs | `enterprise-id.service` | ADR-017 |
+| Direct `Loader2` import | `Spinner` component | ADR-023 |
+| Hardcoded keyboard shortcuts | `matchesShortcut()` | ADR-027 |
+| `useState` for tool state | `useToolState()` | ADR-055 |
+| Direct scene manipulation | `completeEntity()` | ADR-057 |
+| `console.log` | `Logger` | ADR-036 |
+
+---
+
+## 📚 **RELATED DOCUMENTATION**
+
+- **[Complete Reference](../../../src/subapps/dxf-viewer/docs/centralized_systems.md)** - Full ADR details (2,824+ lines)
+- **[Quick Table](../../../src/subapps/dxf-viewer/docs/centralized_systems_TABLE.md)** - Systems overview table
+- **[API Reference](./api-quick-reference.md)** - Import examples & usage
+- **[Design System](../design-system/index.md)** - Design tokens & hooks
+- **[Smart Factories](../smart-factories/index.md)** - Dynamic configuration
+
+---
+
+> **💡 Tip**: Use `Ctrl+F` to search for specific ADR numbers or keywords
+>
+> **🔄 Last Updated**: 2026-01-31
+>
+> **👥 Maintainers**: Γιώργος Παγώνης + Claude Code (Anthropic AI)

@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Unified Tool Style Store
  * Single source of truth for drawing styles across DXF and Overlay tools

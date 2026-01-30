@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ToolStateStore - Centralized Tool State Management
  *

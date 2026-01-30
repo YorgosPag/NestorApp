@@ -276,11 +276,16 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       }
     });
 
-    // 🏢 ENTERPRISE: ResizeObserver for SSoT viewport updates
+    // 🏢 ENTERPRISE (2026-01-31): ResizeObserver ONLY when NO viewportProp
+    // PROBLEM: Multiple ResizeObservers (container + canvas) cause race conditions
+    // SOLUTION: If parent provides viewportProp, parent's ResizeObserver is SSoT
+    // Canvas ResizeObserver only runs as FALLBACK when no viewportProp
     let resizeObserver: ResizeObserver | null = null;
     const canvas = canvasRef.current;
+    const hasParentViewport = viewportProp && viewportProp.width > 0 && viewportProp.height > 0;
 
-    if (canvas) {
+    // Only setup local ResizeObserver if NO parent viewport (standalone mode)
+    if (canvas && !hasParentViewport) {
       resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           const { width, height } = entry.contentRect;
@@ -305,7 +310,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         resizeObserver.disconnect();
       }
     };
-  }, []); // Empty deps - setupCanvas is stable
+  }, [viewportProp?.width, viewportProp?.height]); // 🏢 ENTERPRISE (2026-01-31): React to viewportProp changes - disconnect ResizeObserver when parent provides valid viewport
 
   // 🎯 INITIAL TRANSFORM: Set world (0,0) at bottom-left ruler corner
   useEffect(() => {

@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Grip Style Store
  * Single source of truth for grip styling in preview rendering

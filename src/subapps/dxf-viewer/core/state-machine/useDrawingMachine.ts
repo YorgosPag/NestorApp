@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * DRAWING STATE MACHINE - REACT HOOK
  *

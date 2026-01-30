@@ -455,10 +455,16 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   useEffect(() => {
     setupCanvas();
 
+    // 🏢 ENTERPRISE (2026-01-31): ResizeObserver ONLY when NO viewportProp
+    // PROBLEM: Multiple ResizeObservers (container + canvas) cause race conditions
+    // SOLUTION: If parent provides viewportProp, parent's ResizeObserver is SSoT
+    // Canvas ResizeObserver only runs as FALLBACK when no viewportProp
     let resizeObserver: ResizeObserver | null = null;
     const canvas = canvasRef.current;
+    const hasParentViewport = viewportProp && viewportProp.width > 0 && viewportProp.height > 0;
 
-    if (canvas) {
+    // Only setup local ResizeObserver if NO parent viewport (standalone mode)
+    if (canvas && !hasParentViewport) {
       resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           const { width, height } = entry.contentRect;
@@ -483,7 +489,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
         resizeObserver.disconnect();
       }
     };
-  }, []); // Empty deps - setupCanvas is stable
+  }, [viewportProp?.width, viewportProp?.height]); // 🏢 ENTERPRISE (2026-01-31): React to viewportProp changes - disconnect ResizeObserver when parent provides valid viewport
 
   // 🔍 DEBUG: Check computed styles after mount
   useEffect(() => {

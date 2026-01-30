@@ -13,7 +13,7 @@
  * @since 2025-10-09
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { computeEffective } from '../../settings/core/computeEffective';
 import { ENTERPRISE_CONSTANTS } from '../constants';
 import type { LineSettings, TextSettings } from '../../settings-core/types';
@@ -86,9 +86,15 @@ export function useEffectiveSettings(settings: SettingsState): EffectiveSettings
     return getEffectiveSettingsForEntity<GripSettings>(settings, 'grip', mode);
   }, [settings]);
 
-  return {
+  // 🏢 ENTERPRISE (2026-01-31): useMemo prevents new object creation on every render
+  // This fixes infinite loop where contextValue changes → consumers re-render → provider re-renders
+  return useMemo(() => ({
     getEffectiveLineSettings,
     getEffectiveTextSettings,
     getEffectiveGripSettings
-  };
+  }), [
+    getEffectiveLineSettings,
+    getEffectiveTextSettings,
+    getEffectiveGripSettings
+  ]);
 }
