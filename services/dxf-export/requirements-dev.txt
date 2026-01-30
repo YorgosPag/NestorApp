@@ -1,0 +1,41 @@
+# =============================================================================
+# DXF EXPORT MICROSERVICE - Development Dependencies
+# =============================================================================
+#
+# Additional dependencies for development and testing
+# Install with: pip install -r requirements-dev.txt
+#
+# @version 1.0.0
+# @date 2026-01-30
+# =============================================================================
+
+# Include production dependencies
+-r requirements.txt
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.4
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-xdist==3.5.0  # Parallel test execution
+
+# Code Quality
+ruff==0.2.1
+mypy==1.8.0
+black==24.1.1
+isort==5.13.2
+
+# Pre-commit Hooks
+pre-commit==3.6.0
+
+# Documentation
+mkdocs==1.5.3
+mkdocs-material==9.5.6
+
+# Debug Tools
+ipython==8.21.0
+icecream==2.1.3
+
+# Golden File Testing
+deepdiff==6.7.1  # For comparing DXF structures
+filecmp==0.0.0   # Built-in, listed for documentation

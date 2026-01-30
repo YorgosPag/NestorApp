@@ -275,7 +275,7 @@ Before any PR implementing this strategy:
 |------|-------------|--------|-------|
 | **P0.1** | DXF Subsystem Audit Report | ✅ Complete | `docs/architecture-review/06-dxf-subsystem-review.md` |
 | **P0.2** | ADR: DXF Export Architecture | ✅ Complete | This document |
-| **P0.3** | API Contract (types/schemas) | 🟡 Pending | `src/subapps/dxf-viewer/types/dxf-export.types.ts` |
+| **P0.3** | API Contract (types/schemas) | ✅ Complete | `src/subapps/dxf-viewer/types/dxf-export.types.ts` (600+ lines, ADR-052) |
 | **P0.4** | Test Strategy (Golden Files) | ✅ Complete | [DXF_EXPORT_TEST_STRATEGY.md](../testing/DXF_EXPORT_TEST_STRATEGY.md) |
 | **P0.5** | Storage Strategy Document | ✅ Complete | [DXF_EXPORT_STORAGE_STRATEGY.md](./DXF_EXPORT_STORAGE_STRATEGY.md) |
 
@@ -286,15 +286,19 @@ Before any PR implementing this strategy:
 ### Phase 1: Microservice Skeleton (REQUIRES: PR-1C PASS + All Gates Green)
 
 **Timeline**: After Security Gates complete
+**Status**: ✅ **SKELETON COMPLETE** (2026-01-30) - Feature flag OFF pending PR-1C
 
-| Task | Deliverable | Dependency | Acceptance Criteria |
-|------|-------------|------------|---------------------|
-| **P1.1** | Docker container setup | None | `docker build` succeeds |
-| **P1.2** | FastAPI skeleton | P1.1 | `/health` returns 200 |
-| **P1.3** | ezdxf integration | P1.2 | Can create empty DXF in memory |
-| **P1.4** | POST `/api/v1/dxf/export` | P1.3 | Returns valid DXF bytes |
-| **P1.5** | Feature flag in app | P1.4 | Export button hidden by default |
-| **P1.6** | Basic integration test | P1.5 | App → Service → DXF file |
+| Task | Deliverable | Dependency | Acceptance Criteria | Status |
+|------|-------------|------------|---------------------|--------|
+| **P1.1** | Docker container setup | None | `docker build` succeeds | ✅ Complete |
+| **P1.2** | FastAPI skeleton | P1.1 | `/health` returns 200 | ✅ Complete |
+| **P1.3** | ezdxf integration | P1.2 | Can create empty DXF in memory | ✅ Complete |
+| **P1.4** | POST `/api/v1/dxf/export` | P1.3 | Returns valid DXF bytes | ✅ Complete |
+| **P1.5** | Feature flag in app | P1.4 | Export button hidden by default | ✅ Complete (FEATURE_FLAG_ENABLED=false) |
+| **P1.6** | Basic integration test | P1.5 | App → Service → DXF file | ✅ Complete (pytest) |
+
+**Location**: `services/dxf-export/` (Python microservice)
+**Documentation**: `services/dxf-export/README.md`
 
 **Acceptance**: G1, G2 from Quality Gates (Section 7) pass.
 

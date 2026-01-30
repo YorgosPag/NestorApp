@@ -23,7 +23,6 @@ import { MessageSquare, Inbox, Mail, AlertCircle, RefreshCw, Filter, History } f
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { CommonBadge } from '@/core/badges';
 
 // 🏢 ENTERPRISE: Centralized containers and headers
 import { PageContainer, ListContainer, EntityListColumn } from '@/core/containers';
@@ -45,8 +44,11 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useUserRole } from '@/auth/hooks/useAuth';
-import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
-import { truncateText } from '@/lib/obligations-utils';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+
+// 🏢 ENTERPRISE: Domain card component
+import { ConversationListCard } from '@/domain';
 
 // 🏢 ENTERPRISE: API hooks
 import {
@@ -56,63 +58,9 @@ import {
 } from '@/hooks/inbox/useInboxApi';
 
 // 🏢 ENTERPRISE: Centralized constants
-import { MESSAGE_PREVIEW_LENGTH } from '@/config/domain-constants';
 import { CONVERSATION_STATUS } from '@/types/conversations';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
-import { formatDateTime } from '@/lib/intl-utils';
 import { Spinner } from '@/components/ui/spinner';
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Get channel icon component
- */
-function getChannelIcon(channel: string, iconSizes: ReturnType<typeof useIconSizes>) {
-  switch (channel) {
-    case COMMUNICATION_CHANNELS.EMAIL:
-      return <Mail className={iconSizes.sm} />;
-    default:
-      return <MessageSquare className={iconSizes.sm} />;
-  }
-}
-
-/**
- * Get channel color classes
- */
-function getChannelColorClasses(channel: string, colors: ReturnType<typeof useSemanticColors>) {
-  switch (channel) {
-    case COMMUNICATION_CHANNELS.EMAIL:
-      return `${colors.bg.infoSubtle} ${colors.text.info}`;
-    case COMMUNICATION_CHANNELS.TELEGRAM:
-      return `${colors.bg.infoSubtle} ${colors.text.info}`;
-    case COMMUNICATION_CHANNELS.WHATSAPP:
-      return `${colors.bg.successSubtle} ${colors.text.success}`;
-    default:
-      return `${colors.bg.muted} ${colors.text.muted}`;
-  }
-}
-
-/**
- * Format relative time
- */
-function getRelativeTime(
-  timestamp: string,
-  t: (key: string, options?: Record<string, unknown>) => string
-): string {
-  if (!timestamp) return '';
-
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-
-  if (diffHours < 1) return t('inbox.time.now');
-  if (diffHours < 24) return t('inbox.time.hoursAgo', { hours: Math.floor(diffHours) });
-  if (diffHours < 48) return t('inbox.time.yesterday');
-
-  return formatDateTime(date);
-}
 
 // ============================================================================
 // COMPONENT
@@ -122,6 +70,8 @@ export default function CrmCommunicationsPage() {
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
 
   // 🔐 ENTERPRISE: Auth state - stable, no flicker
   const { isLoading: authLoading, isAuthenticated, isAdmin } = useUserRole();
@@ -404,7 +354,8 @@ export default function CrmCommunicationsPage() {
 
             {/* List Content - States rendered INSIDE the panel */}
             <ScrollArea className="flex-1">
-              <div className="p-2 space-y-2">
+              {/* 🏢 ENTERPRISE: Centralized spacing tokens (same as UnitsList) */}
+              <div className={`${spacing.padding.sm} ${spacing.spaceBetween.sm}`}>
                 {/* 🔐 State 1: Auth loading */}
                 {!authReady ? (
                   <div className="flex items-center justify-center p-8">
@@ -439,78 +390,21 @@ export default function CrmCommunicationsPage() {
                   </div>
                 ) : /* 📭 State 6: Empty */
                 filteredConversations.length === 0 ? (
-                      <div className="text-center py-8">
-                        <MessageSquare className={`${iconSizes.xl} ${colors.text.muted} mx-auto mb-2 opacity-30`} />
-                        <p className={colors.text.muted}>{t('inbox.noConversations')}</p>
-                      </div>
-                    ) : (
-                      filteredConversations.map((conversation) => {
-                        const isSelected = conversation.id === selectedConversationId;
-                        const externalParticipant = conversation.participants.find((p) => !p.isInternal);
-                        const relativeTime = getRelativeTime(conversation.audit.updatedAt, t);
-
-                        return (
-                          <button
-                            key={conversation.id}
-                            onClick={() => handleSelectConversation(conversation.id)}
-                            className={`
-                              w-full text-left p-3 rounded-lg
-                              ${TRANSITION_PRESETS.STANDARD_COLORS}
-                              ${isSelected
-                                ? `${colors.bg.accent} ring-2 ring-ring`
-                                : HOVER_BACKGROUND_EFFECTS.LIGHT
-                              }
-                            `}
-                            role="option"
-                            aria-selected={isSelected}
-                          >
-                            <article className="flex items-start gap-3">
-                              {/* Channel icon */}
-                              <figure
-                                className={`p-2 rounded-full flex-shrink-0 ${getChannelColorClasses(conversation.channel, colors)}`}
-                              >
-                                {getChannelIcon(conversation.channel, iconSizes)}
-                              </figure>
-
-                              {/* Content */}
-                              <div className="flex-1 min-w-0">
-                                <header className="flex items-center justify-between mb-1">
-                                  <span className="font-medium truncate">
-                                    {externalParticipant?.displayName || t('inbox.thread.participants')}
-                                  </span>
-                                  <time className={`text-xs ${colors.text.muted} flex-shrink-0`}>
-                                    {relativeTime}
-                                  </time>
-                                </header>
-
-                                <p className={`text-sm ${colors.text.muted} truncate`}>
-                                  {conversation.lastMessage
-                                    ? truncateText(conversation.lastMessage.content, MESSAGE_PREVIEW_LENGTH)
-                                    : t('inbox.thread.noMessages')}
-                                </p>
-
-                                <footer className="flex items-center gap-2 mt-1">
-                                  <CommonBadge
-                                    status="company"
-                                    customLabel={conversation.channel.toUpperCase()}
-                                    variant="outline"
-                                    className="text-xs"
-                                  />
-                                  {conversation.unreadCount > 0 && (
-                                    <CommonBadge
-                                      status="company"
-                                      customLabel={String(conversation.unreadCount)}
-                                      variant="destructive"
-                                      className="text-xs"
-                                    />
-                                  )}
-                                </footer>
-                              </div>
-                            </article>
-                          </button>
-                        );
-                      })
-                    )}
+                  <div className="text-center py-8">
+                    <MessageSquare className={`${iconSizes.xl} ${colors.text.muted} mx-auto mb-2 opacity-30`} />
+                    <p className={colors.text.muted}>{t('inbox.noConversations')}</p>
+                  </div>
+                ) : (
+                  /* 🏢 ENTERPRISE: Using ConversationListCard (same pattern as UnitListCard) */
+                  filteredConversations.map((conversation) => (
+                    <ConversationListCard
+                      key={conversation.id}
+                      conversation={conversation}
+                      isSelected={conversation.id === selectedConversationId}
+                      onSelect={() => handleSelectConversation(conversation.id)}
+                    />
+                  ))
+                )}
 
                     {/* Load more button */}
                     {hasMore && (

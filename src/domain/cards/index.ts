@@ -69,3 +69,9 @@ export { OverlayListCard, type OverlayListCardProps } from './overlay';
 // =============================================================================
 
 export { LevelListCard, type LevelListCardProps } from './level';
+
+// =============================================================================
+// 💬 CONVERSATION (CRM Communications)
+// =============================================================================
+
+export { ConversationListCard, type ConversationListCardProps } from './conversation';

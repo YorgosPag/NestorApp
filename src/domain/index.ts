@@ -35,6 +35,9 @@ export {
   // Property
   PropertyListCard,
   type PropertyListCardProps,
+  // Conversation
+  ConversationListCard,
+  type ConversationListCardProps,
 } from './cards';
 
 // =============================================================================

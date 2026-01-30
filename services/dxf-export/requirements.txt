@@ -1,0 +1,30 @@
+# =============================================================================
+# DXF EXPORT MICROSERVICE - Production Dependencies (Simplified)
+# =============================================================================
+# Optimized for Windows + Python 3.13 (no Rust compilation required)
+# =============================================================================
+
+# Web Framework
+fastapi>=0.109.0
+uvicorn>=0.27.0
+starlette>=0.36.0
+
+# DXF Library (Core) - Pure Python, no compilation
+ezdxf>=1.2.0
+
+# Data Validation - Let pip choose compatible versions
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# File Handling
+python-multipart>=0.0.6
+
+# HTTP Client
+httpx>=0.26.0
+
+# Async Support
+anyio>=4.2.0
+
+# Type Annotations
+typing-extensions>=4.9.0
+annotated-types>=0.6.0

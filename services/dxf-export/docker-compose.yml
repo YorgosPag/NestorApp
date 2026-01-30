@@ -1,0 +1,96 @@
+# =============================================================================
+# DXF EXPORT MICROSERVICE - Docker Compose Configuration
+# =============================================================================
+#
+# Development and production orchestration
+#
+# Commands:
+#   Development: docker-compose up --build
+#   Production:  docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   Logs:        docker-compose logs -f dxf-export
+#   Stop:        docker-compose down
+#
+# @version 1.0.0
+# @date 2026-01-30
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # ---------------------------------------------------------------------------
+  # DXF Export Microservice
+  # ---------------------------------------------------------------------------
+  dxf-export:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: nestor/dxf-export-service:latest
+    container_name: dxf-export-service
+
+    # Port mapping (host:container)
+    ports:
+      - "${DXF_EXPORT_PORT:-8080}:8080"
+
+    # Environment variables
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - APP_PORT=8080
+      - APP_HOST=0.0.0.0
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}
+      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-false}
+      - FEATURE_FLAG_ENABLED=${FEATURE_FLAG_ENABLED:-false}
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8080/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Volumes for development (uncomment for hot-reload)
+    # volumes:
+    #   - ./src:/app/src:ro
+    #   - ./tests:/app/tests:ro
+
+    # Network
+    networks:
+      - nestor-network
+
+# -----------------------------------------------------------------------------
+# Networks
+# -----------------------------------------------------------------------------
+networks:
+  nestor-network:
+    driver: bridge
+    name: nestor-network
+
+# -----------------------------------------------------------------------------
+# Named Volumes (if needed for persistent data)
+# -----------------------------------------------------------------------------
+# volumes:
+#   dxf-export-tmp:
+#     driver: local

@@ -4762,6 +4762,26 @@ if (isExportableEntityType(entity.type)) {
 **Storage Documentation**:
 - `docs/strategy/DXF_EXPORT_STORAGE_STRATEGY.md` - Storage paths, metadata schema, retention (700+ lines)
 
+**Python Microservice** (Phase 1 Complete - 2026-01-30):
+```
+services/dxf-export/              # Python microservice
+├── Dockerfile                    # Multi-stage Docker build
+├── docker-compose.yml            # Container orchestration
+├── pyproject.toml               # Project configuration (PEP 621)
+├── requirements.txt             # Production dependencies (ezdxf 1.3.0)
+├── src/
+│   ├── main.py                  # FastAPI application
+│   ├── api/
+│   │   ├── health.py            # GET /health, /health/live, /health/ready
+│   │   └── export.py            # POST /api/v1/dxf/export, /validate
+│   ├── config/settings.py       # Pydantic settings
+│   ├── models/export_models.py  # Pydantic models (mirrors TypeScript types)
+│   └── services/dxf_export_service.py  # Business logic
+└── tests/                       # pytest test suite
+```
+
+**Feature Flag**: `FEATURE_FLAG_ENABLED=false` (pending PR-1C rate limiting)
+
 **Location**: `src/subapps/dxf-viewer/types/dxf-export.types.ts`
 
 ---
