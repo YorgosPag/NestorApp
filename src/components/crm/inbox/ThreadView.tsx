@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button';
 import { CommonBadge } from '@/core/badges';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens (ADR compliant)
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatDateTime } from '@/lib/intl-utils';
 import { formatMessageHTML } from '@/lib/message-utils';
@@ -134,6 +136,8 @@ export function ThreadView({
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -148,7 +152,7 @@ export function ThreadView({
     return (
       <Card className="h-full flex items-center justify-center">
         <CardContent className="text-center py-12">
-          <MessageSquare className={`${iconSizes.xl2} ${colors.text.muted} mx-auto mb-4 opacity-30`} />
+          <MessageSquare className={`${iconSizes.xl2} ${colors.text.muted} mx-auto ${spacing.margin.bottom.md} opacity-30`} />
           <p className={colors.text.muted}>{t('inbox.thread.selectConversation')}</p>
         </CardContent>
       </Card>
@@ -160,7 +164,7 @@ export function ThreadView({
     return (
       <Card className="h-full flex items-center justify-center">
         <CardContent className="text-center py-12">
-          <Spinner size="medium" className="mx-auto mb-4" />
+          <Spinner size="medium" className={`mx-auto ${spacing.margin.bottom.md}`} />
           <p className={colors.text.muted}>{t('inbox.loading')}</p>
         </CardContent>
       </Card>
@@ -172,11 +176,11 @@ export function ThreadView({
     return (
       <Card className="h-full flex items-center justify-center">
         <CardContent className="text-center py-12">
-          <AlertCircle className={`${iconSizes.xl2} ${colors.text.error} mx-auto mb-4`} />
+          <AlertCircle className={`${iconSizes.xl2} ${colors.text.error} mx-auto ${spacing.margin.bottom.md}`} />
           <p className={colors.text.error}>{error}</p>
-          <Button variant="outline" size="sm" onClick={onRefresh} className="mt-4">
+          <Button variant="outline" size="sm" onClick={onRefresh} className={spacing.margin.top.md}>
             <RefreshCw className={iconSizes.sm} />
-            <span className="ml-2">{t('leads.retry')}</span>
+            <span className={spacing.margin.left.sm}>{t('leads.retry')}</span>
           </Button>
         </CardContent>
       </Card>
@@ -192,8 +196,8 @@ export function ThreadView({
       {/* Header */}
       <CardHeader className="flex-shrink-0 border-b">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-full ${colors.bg.infoSubtle}`}>
+          <div className={`flex items-center ${spacing.gap.sm}`}>
+            <div className={`${spacing.padding.sm} rounded-full ${colors.bg.infoSubtle}`}>
               <MessageSquare className={iconSizes.md} />
             </div>
             <div>
@@ -203,7 +207,7 @@ export function ThreadView({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center ${spacing.gap.sm}`}>
             {conversation.unreadCount > 0 && (
               <CommonBadge
                 status="company"
@@ -219,16 +223,17 @@ export function ThreadView({
       </CardHeader>
 
       {/* Messages */}
-      <CardContent className="flex-1 overflow-y-auto p-4">
+      {/* 🏢 ENTERPRISE: Centralized spacing tokens */}
+      <CardContent className={`flex-1 overflow-y-auto ${spacing.padding.md}`}>
         {/* Load earlier button */}
         {hasMore && (
-          <nav className="flex justify-center mb-4" aria-label="Pagination">
+          <nav className={`flex justify-center ${spacing.margin.bottom.md}`} aria-label="Pagination">
             <Button
               variant="outline"
               size="sm"
               onClick={onLoadMore}
               disabled={loading}
-              className="gap-2"
+              className={spacing.gap.sm}
             >
               <ChevronUp className={iconSizes.sm} />
               {t('inbox.thread.loadEarlier')}
@@ -239,11 +244,11 @@ export function ThreadView({
         {/* Messages list */}
         {messages.length === 0 ? (
           <section className="text-center py-8" aria-label="Empty thread">
-            <MessageSquare className={`${iconSizes.xl} ${colors.text.muted} mx-auto mb-2 opacity-30`} />
+            <MessageSquare className={`${iconSizes.xl} ${colors.text.muted} mx-auto ${spacing.margin.bottom.sm} opacity-30`} />
             <p className={colors.text.muted}>{t('inbox.thread.noMessages')}</p>
           </section>
         ) : (
-          <ul className="space-y-4" role="log" aria-label="Messages">
+          <ul className={spacing.spaceBetween.md} role="log" aria-label="Messages">
             {messages.map((message) => {
               const isOutbound = message.direction === MESSAGE_DIRECTION.OUTBOUND;
               const relativeTime = getRelativeTime(message.createdAt, t);
@@ -263,7 +268,7 @@ export function ThreadView({
                     `}
                   >
                     {/* Message header */}
-                    <header className={`flex items-center gap-2 mb-1 text-sm ${colors.text.muted}`}>
+                    <header className={`flex items-center ${spacing.gap.sm} ${spacing.margin.bottom.xs} text-sm ${colors.text.muted}`}>
                       {getSenderIcon(message.senderType, iconSizes)}
                       <span className="font-medium">{message.senderName}</span>
                       <time dateTime={message.createdAt} className="text-xs">
@@ -282,7 +287,7 @@ export function ThreadView({
 
                     {/* Attachments */}
                     {message.content.attachments && message.content.attachments.length > 0 && (
-                      <footer className="mt-2 pt-2 border-t">
+                      <footer className={`${spacing.margin.top.sm} ${spacing.padding.top.sm} border-t`}>
                         <CommonBadge
                           status="company"
                           customLabel={`📎 ${t('inbox.message.attachments', { count: message.content.attachments.length })}`}
