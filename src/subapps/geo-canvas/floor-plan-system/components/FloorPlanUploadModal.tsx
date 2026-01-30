@@ -28,7 +28,7 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
-import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
+import { Button } from '@/components/ui/button';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import { FloorPlanPreview } from './FloorPlanPreview';
 import type { ParserResult } from '../types';
@@ -91,7 +91,7 @@ export function FloorPlanUploadModal({
   isParsing = false
 }: FloorPlanUploadModalProps) {
   const iconSizes = useIconSizes();
-  const { quick, getStatusBorder } = useBorderTokens();
+  const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const { t } = useTranslationLazy('geo-canvas');
 
@@ -178,19 +178,9 @@ export function FloorPlanUploadModal({
         )}
 
         <DialogFooter>
-          <button
-            onClick={onClose}
-            className="
-              px-4 py-2
-              ${colors.bg.hover}
-              ${HOVER_BACKGROUND_EFFECTS.MUTED}
-              text-white
-              rounded-lg
-              transition-all duration-200
-            "
-          >
+          <Button variant="outline" onClick={onClose}>
             {parserResult ? 'Close' : t('buttons.cancel')}
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

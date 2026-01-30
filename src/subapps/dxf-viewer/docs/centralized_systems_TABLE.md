@@ -4,7 +4,7 @@
 > **= -> LAST UPDATED**: 2026-01-30
 > **= -> TOTAL SYSTEMS**: 33 Major Enterprise Systems (incl. Tool State Store)
 > **= -> TOTAL CODE**: 21,230+ Lines (incl. ToolStateStore.ts 250 lines)
-> **= -> TOTAL ADRs**: 32 Architectural Decision Records (incl. ADR-055 Tool State Persistence)
+> **= -> TOTAL ADRs**: 33 Architectural Decision Records (incl. ADR-056 Entity Completion Styles)
 
 ---
 
@@ -52,6 +52,7 @@
 | **ADR-053** | Drawing Context Menu 🏢 | `components/dxf-layout/DrawingContextMenu.tsx` → AutoCAD-style right-click menu | Right-click context menu with undo last point, finish polyline, cancel drawing. AutoCAD/BricsCAD pattern. | 2026-01-30 |
 | **ADR-054** | Enterprise Upload System Consolidation 🏢 | `FileRecordService` + `useEnterpriseFileUpload` + `FileUploadZone` | **5 canonical components**, single pipeline (pending→upload→finalize), ADR-031 compliant, 12 duplicate components deprecated. | 2026-01-30 |
 | **ADR-055** | Centralized Tool State Persistence 🏢 | `stores/ToolStateStore.ts` → useSyncExternalStore pattern | **Single Source of Truth** for tool state. Tools with `allowsContinuous=true` stay active after entity creation (AutoCAD/BricsCAD pattern). Zero useState for tool state. | 2026-01-30 |
+| **ADR-056** | Centralized Entity Completion Styles 🏢 | `hooks/useLineCompletionStyle.ts` → `applyCompletionStyles()` | **Single Source of Truth** for entity completion styles. AutoCAD "Current Properties" pattern. All entities (drawing + measurement) receive styles from centralized system. Zero hardcoded colors. | 2026-01-30 |
 
 > **🚫 PROHIBITION**: Click handlers without `viewportReady` check **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - block interactions until viewport valid.
 > **🚫 PROHIBITION**: Double coordinate conversion (world→screen→world) **ΑΠΑΓΟΡΕΥΕΤΑΙ** - single conversion at source per ADR-046.
@@ -89,6 +90,7 @@
 > **🚫 PROHIBITION**: console.log σε filter components **ΑΠΑΓΟΡΕΥΕΤΑΙ** - αφαιρέθηκαν όλα τα debug logs με ADR-051.
 > **🚫 PROHIBITION**: Ad-hoc DXF export types **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `DxfExportSettings`, `DxfExportRequest`, `EzdxfEntity` από `types/dxf-export.types.ts` (ADR-052).
 > **🚫 PROHIBITION**: `useState` για tool state **ΑΠΑΓΟΡΕΥΕΤΑΙ** - χρησιμοποιήστε `useToolState()` από `stores/ToolStateStore.ts` (ADR-055).
+> **🚫 PROHIBITION**: Inline completion styles (hardcoded colors, lineweight in entity creation) **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** - χρησιμοποιήστε `applyCompletionStyles()` από `hooks/useLineCompletionStyle.ts` (ADR-056).
 > **🏢 ENTERPRISE**: ADR-044 - Canvas line widths fully centralized, 32 hardcoded values → 17 files migrated.
 > **🏢 ENTERPRISE**: ADR-005 - 2,300+ lines centralized drawing system με 3-phase rendering.
 > **🏢 ENTERPRISE**: ADR-011 - 47 files, 100% centralized styling, zero hardcoded values.

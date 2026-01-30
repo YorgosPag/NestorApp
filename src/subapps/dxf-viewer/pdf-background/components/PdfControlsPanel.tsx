@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { usePdfBackgroundStore } from '../stores/pdfBackgroundStore';
-import { PDF_RENDER_CONFIG, type PdfBackgroundTransform } from '../types/pdf.types';
+import { PDF_RENDER_CONFIG } from '../types/pdf.types';
 // 🏢 ENTERPRISE: Centralized panel dimensions (ADR-029)
 import { PANEL_ANCHORING } from '../../config/panel-tokens';
 // 🏢 ADR-054: Centralized upload component

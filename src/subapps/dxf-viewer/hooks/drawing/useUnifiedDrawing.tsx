@@ -100,6 +100,8 @@ import { usePreviewMode } from '../usePreviewMode';
 import { useLineStyles } from '../../settings-provider';
 // 🏢 ENTERPRISE: Import centralized CAD colors - ADR-014 color token migration
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE (2026-01-30): ADR-056 - Centralized Entity Completion Styles
+import { applyCompletionStyles } from '../useLineCompletionStyle';
 
 export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-distance-continuous' | 'measure-area' | 'measure-angle';
 
@@ -179,6 +181,7 @@ export function useUnifiedDrawing() {
   // ===== ENTITY STYLES FOR PREVIEW & COMPLETION PHASES =====
   // 🆕 MERGE: Χρησιμοποιούμε το νέο useLineStyles από DxfSettingsProvider (merged)
   const linePreviewStyles = useLineStyles('preview');
+  // 🏢 ADR-056: Completion styles from DxfSettingsContext, applied via centralized function
   const lineCompletionStyles = useLineStyles('completion');
 
 
@@ -227,7 +230,8 @@ export function useUnifiedDrawing() {
         break;
       case 'measure-distance':
         if (points.length >= 2) {
-          return {
+          // 🏢 ADR-056: Measurement entities use centralized completion styles
+          const measureEntity = {
             id,
             type: 'line',
             start: points[0],
@@ -235,12 +239,13 @@ export function useUnifiedDrawing() {
             visible: true,
             layer: '0',
             measurement: true, // Mark as measurement entity
-            // 🏢 ENTERPRISE (2026-01-27): Use bright green color for measurement lines
-            // This matches the preview color and AutoCAD standard for measurements
-            color: '#00FF00', // MEASUREMENT_LINE color from color-config.ts
-            lineweight: 1,
             showEdgeDistances: true, // Show distance label on the measurement line
           } as LineEntity;
+          // 🏢 ADR-056: Apply centralized completion styles (color, lineweight, opacity, etc.)
+          if (lineCompletionStyles) {
+            applyCompletionStyles(measureEntity as unknown as Record<string, unknown>, lineCompletionStyles);
+          }
+          return measureEntity;
         }
         break;
 
@@ -251,7 +256,8 @@ export function useUnifiedDrawing() {
         if (points.length >= 2) {
           // For continuous mode, always return preview for LAST 2 points
           const lastTwoPoints = points.slice(-2);
-          return {
+          // 🏢 ADR-056: Measurement entities use centralized completion styles
+          const continuousMeasureEntity = {
             id,
             type: 'line',
             start: lastTwoPoints[0],
@@ -259,11 +265,13 @@ export function useUnifiedDrawing() {
             visible: true,
             layer: '0',
             measurement: true, // Mark as measurement entity
-            // 🏢 ENTERPRISE: Use bright green color for measurement lines
-            color: '#00FF00', // MEASUREMENT_LINE color from color-config.ts
-            lineweight: 1,
             showEdgeDistances: true, // Show distance label on the measurement line
           } as LineEntity;
+          // 🏢 ADR-056: Apply centralized completion styles (color, lineweight, opacity, etc.)
+          if (lineCompletionStyles) {
+            applyCompletionStyles(continuousMeasureEntity as unknown as Record<string, unknown>, lineCompletionStyles);
+          }
+          return continuousMeasureEntity;
         }
         break;
 
@@ -544,30 +552,15 @@ export function useUnifiedDrawing() {
       const effectiveLevelId = currentLevelId || ((isMeasurementTool || isDrawingTool) ? '0' : null);
 
       if (newEntity && effectiveLevelId) {
-        // Apply completion settings from ColorPalettePanel (for line entities only)
-        if (newEntity.type === 'line' && currentTool === 'line' && lineCompletionStyles) {
-          // ✅ ENTERPRISE: Type-safe property assignment with proper assertion
-          const lineEntity = newEntity as LineEntity;
-          lineEntity.color = lineCompletionStyles.color;
-          lineEntity.lineweight = lineCompletionStyles.lineWidth;
-          lineEntity.opacity = lineCompletionStyles.opacity;
-          // ✅ ENTERPRISE FIX: Convert LineType to entity LineType
-          const convertLineType = (lineType: string): 'solid' | 'dashed' | 'dotted' | 'dashdot' | undefined => {
-            switch (lineType) {
-              case 'dash-dot': return 'dashdot';
-              case 'dash-dot-dot': return 'dashdot'; // Fallback to dashdot
-              case 'solid': return 'solid';
-              case 'dashed': return 'dashed';
-              case 'dotted': return 'dotted';
-              default: return 'solid';
-            }
-          };
-          lineEntity.lineType = convertLineType(lineCompletionStyles.lineType);
-          lineEntity.dashScale = lineCompletionStyles.dashScale;
-          lineEntity.lineCap = lineCompletionStyles.lineCap;
-          lineEntity.lineJoin = lineCompletionStyles.lineJoin;
-          lineEntity.dashOffset = lineCompletionStyles.dashOffset;
-          lineEntity.breakAtCenter = lineCompletionStyles.breakAtCenter;
+        // 🏢 ADR-056: Apply centralized completion styles to ALL drawing entities
+        // Pattern: AutoCAD "Current Properties" - consistent styling via single source of truth
+        // applyCompletionStyles() handles color, lineweight, opacity, lineType, dashScale, etc.
+        // Note: polygon entities are stored as polyline with closed=true (no separate 'polygon' type)
+        const isDrawingEntity = newEntity.type === 'line' || newEntity.type === 'rectangle' ||
+                                newEntity.type === 'circle' || newEntity.type === 'polyline';
+
+        if (isDrawingEntity && lineCompletionStyles) {
+          applyCompletionStyles(newEntity as unknown as Record<string, unknown>, lineCompletionStyles);
         }
 
         // 🏢 ENTERPRISE (2026-01-27): CRITICAL - Clear preview FIRST before any state updates!

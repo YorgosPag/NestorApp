@@ -16,6 +16,8 @@ import { useDxfSettings } from '../settings-provider';
 import { toolStyleStore } from '../stores/ToolStyleStore';
 import { textStyleStore } from '../stores/TextStyleStore';
 import { gripStyleStore } from '../stores/GripStyleStore';
+// 🏢 ADR-056: Centralized completion style store
+import { completionStyleStore } from '../stores/CompletionStyleStore';
 import { withOpacity } from '../config/color-config';
 
 // ===== CONTEXT CREATION =====
@@ -102,6 +104,24 @@ const syncGripStore = (settings: GripSettings) => {
     apertureSize: settings.apertureSize,
     colors: settings.colors,
     opacity: 1.0
+  });
+};
+
+// 🏢 ADR-056: Sync completion styles to CompletionStyleStore
+// Mirrors syncLineStore pattern for preview styles
+const syncCompletionStore = (settings: LineSettings) => {
+  completionStyleStore.set({
+    enabled: settings.enabled,
+    color: settings.color,
+    fillColor: withOpacity(settings.color, 0), // Fully transparent fill
+    lineWidth: settings.lineWidth,
+    opacity: settings.opacity,
+    lineType: settings.lineType,
+    dashScale: settings.dashScale ?? 1.0,
+    lineCap: settings.lineCap ?? 'round',
+    lineJoin: settings.lineJoin ?? 'round',
+    dashOffset: settings.dashOffset ?? 0,
+    breakAtCenter: settings.breakAtCenter ?? false,
   });
 };
 

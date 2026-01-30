@@ -198,9 +198,11 @@ export class DxfRenderer {
 
       case 'polyline': {
         // Type guard: Polyline entities έχουν vertices property
-        const polyline = entity as typeof entity & { vertices?: Point2D[]; points?: Point2D[] };
+        // 🐛 FIX (2026-01-30): PolylineRenderer expects 'vertices' NOT 'points'!
+        const polyline = entity as typeof entity & { vertices?: Point2D[]; points?: Point2D[]; closed?: boolean };
         return {
-          points: polyline.points || polyline.vertices || []
+          vertices: polyline.vertices || polyline.points || [],
+          closed: polyline.closed ?? false
         };
       }
 
