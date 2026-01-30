@@ -462,6 +462,8 @@ interface SendMessageOptions {
   text: string;
   replyToMessageId?: string;
   parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
+  /** 🏢 ADR-055: Attachments for outbound messages */
+  attachments?: MessageAttachment[];
 }
 
 interface UseSendMessageResult {

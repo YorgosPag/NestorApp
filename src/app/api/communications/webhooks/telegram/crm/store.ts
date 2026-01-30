@@ -378,9 +378,10 @@ export async function storeMessageInCRM(
     console.log('📝 Attempting to store message:', canonicalMessageDocId);
     console.log('📝 Content:', JSON.stringify(content));
 
+    const messagesCollRef = collection(COLLECTIONS.MESSAGES);
+    const messagesRef = doc(messagesCollRef, canonicalMessageDocId);
+
     try {
-      const messagesCollRef = collection(COLLECTIONS.MESSAGES);
-      const messagesRef = doc(messagesCollRef, canonicalMessageDocId);
       await setDoc(messagesRef, canonicalMessage);
       console.log('✅ setDoc succeeded for:', canonicalMessageDocId);
     } catch (setDocError) {

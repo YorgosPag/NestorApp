@@ -58,6 +58,9 @@ import { useMessageReply } from '@/hooks/inbox/useMessageReply';
 import { useMessageEdit } from '@/hooks/inbox/useMessageEdit';
 import { useMessagePin } from '@/hooks/inbox/useMessagePin';
 import type { MessageListItem } from '@/hooks/inbox/useInboxApi';
+// 🏢 ADR-055: Attachment upload support
+import { PhotoUploadService } from '@/services/photo-upload.service';
+import type { MessageAttachment } from '@/types/conversations';
 
 // ============================================================================
 // TYPES
@@ -280,12 +283,45 @@ export function UnifiedInbox({
     }
   }, [messages, togglePin]);
 
-  // 🏢 ENTERPRISE: Enhanced send with reply support
-  const handleSendWithReply = useCallback(async (text: string): Promise<boolean> => {
+  // 🏢 ADR-055: Attachment upload handler for ReplyComposer
+  const handleUploadAttachment = useCallback(async (
+    file: File,
+    onProgress: (progress: number) => void
+  ): Promise<{ url: string; thumbnailUrl?: string } | null> => {
+    try {
+      console.log('📎 [UnifiedInbox] Uploading attachment:', file.name, file.type);
+
+      const result = await PhotoUploadService.uploadPhoto(file, {
+        folderPath: 'telegram-outbound',
+        onProgress: (progress) => {
+          // Map PhotoUploadService progress to simple percentage
+          const percent = progress.phase === 'complete' ? 100 : progress.progress;
+          onProgress(percent);
+        },
+        enableCompression: file.type.startsWith('image/'),
+        compressionUsage: 'document-scan',
+      });
+
+      console.log('✅ [UnifiedInbox] Attachment uploaded:', result.url);
+
+      return {
+        url: result.url,
+      };
+    } catch (error) {
+      console.error('❌ [UnifiedInbox] Attachment upload failed:', error);
+      return null;
+    }
+  }, []);
+
+  // 🏢 ENTERPRISE: Enhanced send with reply support + attachments (ADR-055)
+  const handleSendWithReply = useCallback(async (
+    text: string,
+    attachments?: MessageAttachment[]
+  ): Promise<boolean> => {
     // Include quoted message reference if replying
     const messageData = quotedMessage && replyMode === 'reply'
-      ? { text, replyTo: quotedMessage.id }
-      : { text };
+      ? { text, replyTo: quotedMessage.id, attachments }
+      : { text, attachments };
 
     const result = await send(messageData);
     if (result?.success) {
@@ -522,6 +558,7 @@ export function UnifiedInbox({
           onCancelEdit={cancelEdit}
           onSaveEdit={saveEdit}
           isSavingEdit={isSaving}
+          onUploadAttachment={handleUploadAttachment}
         />
       </div>
     </section>
