@@ -248,18 +248,20 @@ export function ReplyComposer({
         return;
       }
 
-      // Reset input to allow re-selecting same file
+      // 🐛 FIX: Copy files to array BEFORE resetting input (resetting clears FileList!)
+      const filesArray = Array.from(files);
+      console.log('📎 [ReplyComposer] Files array length:', filesArray.length);
+
+      // Reset input to allow re-selecting same file (AFTER copying!)
       event.target.value = '';
 
       // Check max attachments limit
-      if (attachments.length + files.length > MAX_ATTACHMENTS) {
+      if (attachments.length + filesArray.length > MAX_ATTACHMENTS) {
         console.warn(`📎 [ReplyComposer] Maximum ${MAX_ATTACHMENTS} attachments allowed`);
         return;
       }
 
       const newAttachments: PendingAttachment[] = [];
-      const filesArray = Array.from(files);
-      console.log('📎 [ReplyComposer] Files array length:', filesArray.length);
 
       for (const file of filesArray) {
         console.log('📎 [ReplyComposer] Processing file:', file.name, 'size:', file.size, 'type:', file.type, 'MAX:', MAX_ATTACHMENT_SIZE);
