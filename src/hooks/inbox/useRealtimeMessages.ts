@@ -165,10 +165,12 @@ export function useRealtimeMessages(
       // Messages are in ROOT collection, NOT subcollection!
       const messagesRef = collection(db, COLLECTIONS.MESSAGES);
 
+      // 🏢 ENTERPRISE FIX: Use 'desc' to get LATEST messages, then reverse for UI display
+      // This ensures new messages appear even when conversation has >50 messages
       const q = query(
         messagesRef,
         where('conversationId', '==', conversationId),
-        orderBy('createdAt', 'asc'),
+        orderBy('createdAt', 'desc'),
         limit(limitCount)
       );
 
@@ -179,7 +181,8 @@ export function useRealtimeMessages(
           console.log(`🔥 [Realtime] Received ${snapshot.docs.length} messages for ${conversationId}`);
 
           // Convert Firestore docs to MessageListItem
-          const newMessages = snapshot.docs.map(docToMessage);
+          // 🏢 ENTERPRISE: Reverse to display chronologically (oldest first)
+          const newMessages = snapshot.docs.map(docToMessage).reverse();
 
           // 🔔 NOTIFICATION DISPATCH: Detect new inbound messages
           if (!isInitialLoadRef.current && user) {
