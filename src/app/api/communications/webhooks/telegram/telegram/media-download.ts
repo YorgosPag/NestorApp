@@ -346,19 +346,21 @@ async function downloadAndUploadMedia(
   chatId: string,
   messageId: number
 ): Promise<MessageAttachment | null> {
-  // Location and Contact don't need download
+  // Location and Contact don't need download - 🏢 CRITICAL: Only include metadata if present
   if (mediaInfo.type === ATTACHMENT_TYPES.LOCATION) {
-    return {
-      type: ATTACHMENT_TYPES.LOCATION,
-      metadata: mediaInfo.metadata,
-    };
+    const locationAttachment: MessageAttachment = { type: ATTACHMENT_TYPES.LOCATION };
+    if (mediaInfo.metadata && Object.keys(mediaInfo.metadata).length > 0) {
+      locationAttachment.metadata = mediaInfo.metadata;
+    }
+    return locationAttachment;
   }
 
   if (mediaInfo.type === ATTACHMENT_TYPES.CONTACT) {
-    return {
-      type: ATTACHMENT_TYPES.CONTACT,
-      metadata: mediaInfo.metadata,
-    };
+    const contactAttachment: MessageAttachment = { type: ATTACHMENT_TYPES.CONTACT };
+    if (mediaInfo.metadata && Object.keys(mediaInfo.metadata).length > 0) {
+      contactAttachment.metadata = mediaInfo.metadata;
+    }
+    return contactAttachment;
   }
 
   // Need to download file
@@ -404,18 +406,22 @@ async function downloadAndUploadMedia(
     return null;
   }
 
-  // 5. Build MessageAttachment
+  // 5. Build MessageAttachment - 🏢 CRITICAL: Remove undefined values (Firestore rejects them)
   const attachment: MessageAttachment = {
     type: mediaInfo.type,
     url: downloadUrl,
     filename: filename,
-    mimeType: mediaInfo.mimeType,
     size: buffer.length,
-    width: mediaInfo.width,
-    height: mediaInfo.height,
-    duration: mediaInfo.duration,
-    metadata: mediaInfo.metadata,
   };
+
+  // Only add optional fields if they have values (Firestore doesn't accept undefined)
+  if (mediaInfo.mimeType) attachment.mimeType = mediaInfo.mimeType;
+  if (mediaInfo.width !== undefined) attachment.width = mediaInfo.width;
+  if (mediaInfo.height !== undefined) attachment.height = mediaInfo.height;
+  if (mediaInfo.duration !== undefined) attachment.duration = mediaInfo.duration;
+  if (mediaInfo.metadata && Object.keys(mediaInfo.metadata).length > 0) {
+    attachment.metadata = mediaInfo.metadata;
+  }
 
   console.log(`✅ Media processed: ${mediaInfo.type} -> ${downloadUrl}`);
   return attachment;
