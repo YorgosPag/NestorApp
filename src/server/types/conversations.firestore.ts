@@ -13,7 +13,7 @@
 
 import type { Timestamp } from 'firebase-admin/firestore';
 import type { CommunicationChannel } from '@/types/communications';
-import type { ConversationStatus, MessageDirection, DeliveryStatus, IdentityProvider } from '@/types/conversations';
+import type { ConversationStatus, MessageDirection, DeliveryStatus, IdentityProvider, MessageAttachment } from '@/types/conversations';
 import type { ParticipantRole, SenderType } from '@/config/domain-constants';
 
 // ============================================================================
@@ -114,6 +114,8 @@ export interface MessageDocument {
   /** Message content */
   content: {
     text?: string;
+    /** 🏢 ADR-055: Attachments array for media messages */
+    attachments?: MessageAttachment[];
   };
 
   /** Original provider message ID */
