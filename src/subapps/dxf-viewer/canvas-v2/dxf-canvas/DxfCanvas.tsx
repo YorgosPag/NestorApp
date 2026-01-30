@@ -96,12 +96,24 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // ✅ ADD: Grid and Ruler renderer refs για independent UI
   const gridRendererRef = useRef<GridRenderer | null>(null);
   const rulerRendererRef = useRef<RulerRenderer | null>(null);
-  // ✅ CENTRALIZED VIEWPORT: Use prop if provided AND valid, otherwise calculate internally
+
+  // 🏢 ENTERPRISE (2026-01-30): SSoT Viewport from CONTAINER (parent)
+  // CRITICAL FIX: viewportProp comes from CanvasSection's viewportRef (container-based)
+  // This MUST match what input handlers use (containerRef)
+  // Local viewportRef is ONLY for backing store resize, NOT for coordinate transforms
+  const viewportRef = useRef<Viewport>({ width: 0, height: 0 });
+
+  // ✅ LEGACY: Keep state for React re-renders (dependencies, UI updates)
   const [internalViewport, setInternalViewport] = useState<Viewport>({ width: 0, height: 0 });
-  // Use prop viewport only if it has valid dimensions (not 0x0)
+
+  // 🎯 CRITICAL: viewportProp FIRST (from container) - ensures Input/Render use SAME source
+  // viewportProp = CanvasSection's viewportRef.current (container-based, FRESH)
+  // Local viewportRef = canvas-based (different element, causes DRIFT!)
   const viewport = (viewportProp && viewportProp.width > 0 && viewportProp.height > 0)
-    ? viewportProp
-    : internalViewport;
+    ? viewportProp  // ✅ ALWAYS use container-based viewport from parent
+    : (viewportRef.current.width > 0 && viewportRef.current.height > 0)
+      ? viewportRef.current  // Fallback only if parent didn't provide
+      : internalViewport;
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση του CursorSystem αντί για local state
   const cursor = useCursor();
@@ -223,29 +235,37 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     try {
       CanvasUtils.setupCanvasContext(canvas, canvasConfig);
 
-      // ✅ ENTERPRISE MIGRATION: Get service from registry
-      const canvasBounds = serviceRegistry.get('canvas-bounds');
-      const rect = canvasBounds.getBounds(canvas);
-      // ✅ Always update internal viewport (as fallback if prop is 0x0)
-      setInternalViewport({ width: rect.width, height: rect.height });
+      // 🏢 ENTERPRISE (2026-01-30): Fresh DOM read - no caching!
+      // Use getBoundingClientRect directly for SSoT viewport
+      const rect = canvas.getBoundingClientRect();
+      const newViewport = { width: rect.width, height: rect.height };
+
+      // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
+      // This ensures render loop ALWAYS has fresh viewport
+      viewportRef.current = newViewport;
+
+      // ✅ ALSO update state for React dependencies (UI re-renders)
+      // But coordinate transforms use viewportRef, not this state
+      setInternalViewport(newViewport);
     } catch (error) {
       console.error('Failed to setup DXF canvas:', error);
     }
   }, []); // Removed canvasConfig dependency to prevent infinite loops
 
   // Setup canvas on mount and resize
+  // 🏢 ENTERPRISE (2026-01-30): Use ResizeObserver for DevTools toggle detection
+  // PROBLEM: window resize doesn't trigger when DevTools is toggled (docked)
+  // SOLUTION: ResizeObserver monitors actual canvas element dimensions
   useEffect(() => {
     setupCanvas();
 
     // 🔧 FIX (2026-01-27): Force initial render after setup
-    // Without this, the canvas may not render until a resize event occurs (e.g., opening DevTools)
-    // This ensures the scene is rendered immediately on mount
     requestAnimationFrame(() => {
       const renderer = rendererRef.current;
       const canvas = canvasRef.current;
       if (renderer && canvas) {
-        const rect = canvas.getBoundingClientRect();
-        const currentViewport = { width: rect.width, height: rect.height };
+        // 🎯 Use viewportRef for consistent SSoT
+        const currentViewport = viewportRef.current;
         if (currentViewport.width > 0 && currentViewport.height > 0) {
           try {
             renderer.render(scene, transform, currentViewport, renderOptions);
@@ -256,10 +276,35 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       }
     });
 
+    // 🏢 ENTERPRISE: ResizeObserver for SSoT viewport updates
+    let resizeObserver: ResizeObserver | null = null;
+    const canvas = canvasRef.current;
+
+    if (canvas) {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0) {
+            // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
+            viewportRef.current = { width, height };
+            // Also trigger React state update for dependencies
+            setInternalViewport({ width, height });
+          }
+        }
+      });
+      resizeObserver.observe(canvas);
+    }
+
+    // Fallback: window resize for non-element resizes
     const handleResize = () => setupCanvas();
     window.addEventListener('resize', handleResize);
 
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
   }, []); // Empty deps - setupCanvas is stable
 
   // 🎯 INITIAL TRANSFORM: Set world (0,0) at bottom-left ruler corner

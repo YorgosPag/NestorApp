@@ -39,6 +39,7 @@ import {
   FileText,
   Video,
   Upload,
+  Inbox,
 } from 'lucide-react';
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +56,7 @@ import { SearchInput } from '@/components/ui/search';
 // 🏢 ENTERPRISE: Error Boundary with Admin Notification
 import {
   PageErrorBoundary,
+  EnterpriseErrorBoundary,
   useErrorReporting,
   openEmailCompose,
   EMAIL_PROVIDERS,
@@ -83,6 +85,7 @@ import { useAllCompanyFiles } from './hooks/useAllCompanyFiles';
 import { CompanyFileTree, type GroupingMode, type ViewMode as TreeViewMode } from './CompanyFileTree';
 import { FilesList } from '@/components/shared/files/FilesList';
 import { TrashView } from '@/components/shared/files/TrashView';
+import { InboxView } from '@/components/shared/files/InboxView';
 import { formatFileSize } from '@/utils/file-validation';
 import type { FileRecord } from '@/types/file-record';
 
@@ -91,7 +94,7 @@ import type { FileRecord } from '@/types/file-record';
 // ============================================================================
 
 type ViewMode = 'list' | 'tree' | 'gallery';
-type ActiveTab = 'files' | 'trash';
+type ActiveTab = 'files' | 'trash' | 'inbox';
 
 // ============================================================================
 // FILE CARD COMPONENT (for gallery view)
@@ -556,7 +559,7 @@ export function FileManagerPageContent() {
                 </header>
 
                 <menu className="flex flex-wrap gap-2">
-                  {/* 🗑️ ENTERPRISE: Tab switcher (Files/Trash) - Procore/BIM360 pattern */}
+                  {/* 🗑️ ENTERPRISE: Tab switcher (Files/Inbox/Trash) - Procore/BIM360 pattern */}
                   <li className="flex gap-1 border rounded-md p-1" role="tablist" aria-label={t('manager.filesTitle')}>
                     <Button
                       variant={activeTab === 'files' ? 'default' : 'ghost'}
@@ -568,6 +571,18 @@ export function FileManagerPageContent() {
                     >
                       <FileText className={`${iconSizes.sm} mr-1`} />
                       {t('manager.filesTitle')}
+                    </Button>
+                    {/* 📥 ENTERPRISE: Inbox tab - ADR-055 Attachment Ingestion */}
+                    <Button
+                      variant={activeTab === 'inbox' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setActiveTab('inbox')}
+                      role="tab"
+                      aria-selected={activeTab === 'inbox'}
+                      className={cn('px-3', activeTab === 'inbox' && 'bg-blue-500 text-white hover:bg-blue-600')}
+                    >
+                      <Inbox className={`${iconSizes.sm} mr-1`} />
+                      {t('domains.ingestion')}
                     </Button>
                     <Button
                       variant={activeTab === 'trash' ? 'default' : 'ghost'}
@@ -808,13 +823,34 @@ export function FileManagerPageContent() {
                     />
                   )}
                 </>
+              ) : activeTab === 'inbox' ? (
+                /* 📥 ENTERPRISE: Inbox View - ADR-055 Attachment Ingestion */
+                /* 🏢 Wrapped in EnterpriseErrorBoundary for FULL error UI (Email, Admin, Tour) */
+                <EnterpriseErrorBoundary
+                  componentName="Inbox View"
+                  enableRetry={true}
+                  enableReporting={true}
+                >
+                  <InboxView
+                    companyId={companyId}
+                    currentUserId={user?.uid || ''}
+                    onRefresh={() => refetch()}
+                  />
+                </EnterpriseErrorBoundary>
               ) : (
                 /* Trash View */
-                <TrashView
-                  companyId={companyId}
-                  currentUserId={user?.uid || ''}
-                  onRestore={() => refetch()}
-                />
+                /* 🏢 Wrapped in EnterpriseErrorBoundary for FULL error UI (Email, Admin, Tour) */
+                <EnterpriseErrorBoundary
+                  componentName="Trash View"
+                  enableRetry={true}
+                  enableReporting={true}
+                >
+                  <TrashView
+                    companyId={companyId}
+                    currentUserId={user?.uid || ''}
+                    onRestore={() => refetch()}
+                  />
+                </EnterpriseErrorBoundary>
               )}
             </CardContent>
           </Card>

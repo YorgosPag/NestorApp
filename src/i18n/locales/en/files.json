@@ -5,7 +5,8 @@
     "sales": "Sales",
     "accounting": "Accounting",
     "legal": "Legal",
-    "financial": "Financial"
+    "financial": "Financial",
+    "ingestion": "Inbox"
   },
   "categories": {
     "photos": "Photo",
@@ -373,6 +374,22 @@
     "textDesc": "Write a quick note",
     "textPlaceholder": "Write your note here...",
     "saveNote": "Save note"
+  },
+  "inbox": {
+    "title": "Inbox",
+    "description": "Files pending classification",
+    "empty": "No files in inbox",
+    "emptyDescription": "Files from Telegram will appear here",
+    "totalFiles": "Files",
+    "totalSize": "Size",
+    "chats": "Chats",
+    "classify": "Classify",
+    "classifyDescription": "Assign file to an entity",
+    "source": "Source",
+    "sender": "Sender",
+    "receivedAt": "Received",
+    "messageId": "Message ID",
+    "pending": "Pending"
   },
   "common": {
     "cancel": "Cancel"

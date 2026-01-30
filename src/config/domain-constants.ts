@@ -134,6 +134,12 @@ export const FILE_DOMAINS = {
   LEGAL: 'legal',
   /** Financial documents (financial reports, statements) */
   FINANCIAL: 'financial',
+  /**
+   * 🏢 ENTERPRISE: Ingestion domain for external sources (Telegram, Email, WhatsApp)
+   * @enterprise ADR-055 - Enterprise Attachment Ingestion System
+   * Files in this domain are quarantined until classified and promoted to business entities
+   */
+  INGESTION: 'ingestion',
 } as const;
 
 export type FileDomain = typeof FILE_DOMAINS[keyof typeof FILE_DOMAINS];

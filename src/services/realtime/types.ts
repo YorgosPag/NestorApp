@@ -559,6 +559,7 @@ export interface FileCreatedPayload {
     entityId?: string;
     category?: string;
     contentType?: string;
+    status?: string;
   };
   timestamp: number;
 }
@@ -573,6 +574,8 @@ export interface FileUpdatedPayload {
     displayName?: string;
     status?: string;
     lifecycleState?: string;
+    sizeBytes?: number;
+    hasDownloadUrl?: boolean;
   };
   timestamp: number;
 }
@@ -584,6 +587,7 @@ export interface FileUpdatedPayload {
 export interface FileTrashedPayload {
   fileId: string;
   trashedBy: string;
+  purgeAt?: string;
   timestamp: number;
 }
 

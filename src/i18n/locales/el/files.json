@@ -5,7 +5,8 @@
     "sales": "Πωλήσεις",
     "accounting": "Λογιστικά",
     "legal": "Νομικά",
-    "financial": "Οικονομικά"
+    "financial": "Οικονομικά",
+    "ingestion": "Εισερχόμενα"
   },
   "categories": {
     "photos": "Φωτογραφίες",
@@ -373,6 +374,22 @@
     "textDesc": "Γράψτε μια γρήγορη σημείωση",
     "textPlaceholder": "Γράψτε τη σημείωσή σας εδώ...",
     "saveNote": "Αποθήκευση σημείωσης"
+  },
+  "inbox": {
+    "title": "Εισερχόμενα",
+    "description": "Αρχεία που αναμένουν ταξινόμηση",
+    "empty": "Δεν υπάρχουν αρχεία στα εισερχόμενα",
+    "emptyDescription": "Τα αρχεία από το Telegram θα εμφανιστούν εδώ",
+    "totalFiles": "Αρχεία",
+    "totalSize": "Μέγεθος",
+    "chats": "Συνομιλίες",
+    "classify": "Ταξινόμηση",
+    "classifyDescription": "Αντιστοιχίστε το αρχείο σε οντότητα",
+    "source": "Πηγή",
+    "sender": "Αποστολέας",
+    "receivedAt": "Λήψη",
+    "messageId": "ID Μηνύματος",
+    "pending": "Σε αναμονή"
   },
   "common": {
     "cancel": "Ακύρωση"

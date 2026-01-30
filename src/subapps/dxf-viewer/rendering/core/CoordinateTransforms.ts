@@ -222,3 +222,196 @@ export class CoordinateTransforms {
     };
   }
 }
+
+// ============================================================================
+// 🏢 ENTERPRISE (2026-01-30): POINTER SNAPSHOT UTILITIES - SSoT Pattern
+// ============================================================================
+// PROBLEM: Stale bounds (rect) and viewport from caching services cause drift
+// when DevTools toggles. React state updates are also async.
+// SOLUTION: Single "Pointer Snapshot" per event that captures BOTH rect AND
+// viewport from the SAME element at the SAME moment. No caching, no mixing.
+//
+// CRITICAL: viewport MUST come from rect.width/rect.height (not clientWidth)
+// to guarantee 1:1 consistency with screenPos calculations.
+// ============================================================================
+
+/**
+ * 🎯 Unified Pointer Snapshot - rect + viewport from SAME element
+ *
+ * This is the CANONICAL way to get bounds and viewport for coordinate transforms.
+ * Using this ensures rect and viewport are ALWAYS consistent (same source).
+ */
+export interface PointerSnapshot {
+  /** Fresh DOMRect from getBoundingClientRect() */
+  rect: DOMRect;
+  /** Viewport derived from rect.width/rect.height (1:1 with rect) */
+  viewport: Viewport;
+}
+
+/**
+ * 🎯 Get unified pointer snapshot (rect + viewport) from DOM element
+ *
+ * CRITICAL: This is the ONLY way to get bounds/viewport for transforms!
+ * - rect and viewport come from the SAME element at the SAME moment
+ * - viewport is derived from rect (not clientWidth) for 1:1 consistency
+ * - No caching, no service calls - fresh read every time
+ *
+ * @param element - The event target element (typically e.currentTarget)
+ * @returns PointerSnapshot with rect and viewport, or null if invalid
+ */
+export function getPointerSnapshotFromElement(element: HTMLElement | null): PointerSnapshot | null {
+  if (!element) {
+    // 🏢 ENTERPRISE: Silent fail in production, no console spam
+    return null;
+  }
+
+  // 🎯 CRITICAL: Fresh rect from DOM - no caching!
+  const rect = element.getBoundingClientRect();
+
+  // 🏢 ENTERPRISE: Strict validation - fail-fast
+  if (rect.width <= 0 || rect.height <= 0) {
+    return null;
+  }
+
+  // 🎯 CRITICAL: viewport from rect (not clientWidth) for 1:1 consistency
+  const viewport: Viewport = {
+    width: rect.width,
+    height: rect.height
+  };
+
+  return { rect, viewport };
+}
+
+/**
+ * 🎯 Calculate screen position from mouse event using pointer snapshot
+ *
+ * Helper to compute canvas-relative screen coordinates from a mouse event.
+ *
+ * @param e - The mouse event
+ * @param snap - The pointer snapshot (from getPointerSnapshotFromElement)
+ * @returns Screen position relative to the element
+ */
+export function getScreenPosFromEvent(
+  e: { clientX: number; clientY: number },
+  snap: PointerSnapshot
+): Point2D {
+  return {
+    x: e.clientX - snap.rect.left,
+    y: e.clientY - snap.rect.top
+  };
+}
+
+/**
+ * 🎯 Convert screen point to world using pointer snapshot
+ *
+ * Convenience wrapper that uses the unified PointerSnapshot for transform.
+ *
+ * @param screenPoint - The screen coordinates to convert
+ * @param transform - The current view transform
+ * @param snap - The pointer snapshot (from getPointerSnapshotFromElement)
+ * @returns World coordinates
+ */
+export function screenToWorldWithSnapshot(
+  screenPoint: Point2D,
+  transform: ViewTransform,
+  snap: PointerSnapshot
+): Point2D {
+  return CoordinateTransforms.screenToWorld(screenPoint, transform, snap.viewport);
+}
+
+// ============================================================================
+// 🏢 DEV-ONLY INSTRUMENTATION (2026-01-30): Viewport Mismatch Detection
+// ============================================================================
+// PURPOSE: Detect when input and render use different viewports (causes drift)
+// USAGE: Call logViewportForInput() in mouse handlers, logViewportForRender() in render
+// DETECTION: If viewports differ by more than 1px, logs actionable warning
+
+// Store last input viewport for comparison
+let lastInputViewport: Viewport | null = null;
+let lastInputTimestamp = 0;
+const VIEWPORT_MISMATCH_THRESHOLD = 1; // pixels
+const VIEWPORT_COMPARISON_WINDOW = 100; // ms - compare if render happens within 100ms of input
+
+/**
+ * 🔍 DEV-ONLY: Log viewport used by input handler
+ * Call this in mouse event handlers AFTER getting viewport
+ */
+export function logViewportForInput(viewport: Viewport, eventType: string): void {
+  if (process.env.NODE_ENV !== 'development') return;
+  lastInputViewport = { ...viewport };
+  lastInputTimestamp = Date.now();
+  // Uncomment for verbose logging:
+  // console.log(`[Viewport:Input] ${eventType}:`, viewport);
+}
+
+/**
+ * 🔍 DEV-ONLY: Log viewport used by render and detect mismatch
+ * Call this in render loops BEFORE using viewport
+ */
+export function logViewportForRender(viewport: Viewport, rendererName: string): void {
+  if (process.env.NODE_ENV !== 'development') return;
+
+  // Only compare if we have a recent input event
+  const now = Date.now();
+  if (!lastInputViewport || (now - lastInputTimestamp) > VIEWPORT_COMPARISON_WINDOW) {
+    return; // No recent input to compare with
+  }
+
+  // Check for mismatch
+  const widthDiff = Math.abs(viewport.width - lastInputViewport.width);
+  const heightDiff = Math.abs(viewport.height - lastInputViewport.height);
+
+  if (widthDiff > VIEWPORT_MISMATCH_THRESHOLD || heightDiff > VIEWPORT_MISMATCH_THRESHOLD) {
+    console.warn(
+      `🚨 [Viewport MISMATCH] ${rendererName}:`,
+      `\n  Input used: ${lastInputViewport.width}x${lastInputViewport.height}`,
+      `\n  Render uses: ${viewport.width}x${viewport.height}`,
+      `\n  Diff: ${widthDiff.toFixed(1)}px x ${heightDiff.toFixed(1)}px`,
+      `\n  Time since input: ${now - lastInputTimestamp}ms`,
+      `\n  ACTION: Check if render is using stale React state instead of fresh ref`
+    );
+  }
+}
+
+/**
+ * 🔍 DEV-ONLY: Clear stored viewport (call on unmount)
+ */
+export function clearViewportInstrumentation(): void {
+  lastInputViewport = null;
+  lastInputTimestamp = 0;
+}
+
+// ============================================================================
+// LEGACY EXPORTS (for backward compatibility during migration)
+// ============================================================================
+
+/**
+ * @deprecated Use getPointerSnapshotFromElement instead
+ */
+export function getViewportSnapshotFromElement(element: HTMLElement | null): Viewport | null {
+  const snap = getPointerSnapshotFromElement(element);
+  return snap ? snap.viewport : null;
+}
+
+/**
+ * @deprecated Use getPointerSnapshotFromElement instead
+ */
+export function getBoundsSnapshotFromElement(element: HTMLElement | null): DOMRect | null {
+  const snap = getPointerSnapshotFromElement(element);
+  return snap ? snap.rect : null;
+}
+
+/**
+ * @deprecated Use getPointerSnapshotFromElement + screenToWorldWithSnapshot instead
+ */
+export function screenToWorldFromElement(
+  screenPoint: Point2D,
+  transform: ViewTransform,
+  element: HTMLElement | null
+): Point2D | null {
+  const snap = getPointerSnapshotFromElement(element);
+  if (!snap) {
+    return null;
+  }
+  return CoordinateTransforms.screenToWorld(screenPoint, transform, snap.viewport);
+}

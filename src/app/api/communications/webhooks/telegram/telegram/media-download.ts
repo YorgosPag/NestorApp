@@ -6,8 +6,14 @@
  * Downloads media files from Telegram servers and uploads to Firebase Storage.
  * Converts Telegram media into canonical MessageAttachment format.
  *
+ * 🏢 ENTERPRISE UPGRADE (ADR-055 Phase 2):
+ * - Uses canonical buildStoragePath for ID-only paths
+ * - Creates FileRecord in Firestore for file management
+ * - Implements QUARANTINE GATE: files stay PENDING until classified
+ * - Stores source metadata for traceability (chatId, messageId, fileUniqueId)
+ *
  * @module api/communications/webhooks/telegram/telegram/media-download
- * @enterprise ADR-055 - Enterprise Attachment System Consolidation
+ * @enterprise ADR-055 - Enterprise Attachment Ingestion System
  */
 
 import type {
@@ -25,6 +31,19 @@ import type {
 } from './types';
 import type { MessageAttachment, AttachmentType } from '@/types/conversations';
 import { ATTACHMENT_TYPES } from '@/types/conversations';
+import {
+  FILE_CATEGORIES,
+  FILE_STATUS,
+  type FileCategory,
+} from '@/config/domain-constants';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { FILE_TYPE_CONFIG, type FileType } from '@/config/file-upload-config';
+// 🏢 ENTERPRISE: SSoT Core module for FileRecord schema (ADR-055)
+import {
+  buildIngestionFileRecordData,
+  buildFinalizeFileRecordUpdate,
+  type FileSourceMetadata,
+} from '@/services/file-record';
 
 // ============================================================================
 // TYPES
@@ -40,6 +59,7 @@ interface MediaDownloadResult {
 /** Media info extracted from Telegram message */
 interface TelegramMediaInfo {
   fileId: string;
+  fileUniqueId?: string;
   type: AttachmentType;
   filename?: string;
   mimeType?: string;
@@ -50,15 +70,238 @@ interface TelegramMediaInfo {
   metadata?: Record<string, unknown>;
 }
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
+/** 🏢 ENTERPRISE: FileRecord creation result for server context */
+interface ServerFileRecordResult {
+  fileRecordId: string;
+  storagePath: string;
+  displayName: string;
+}
 
-/** Maximum file size to download (20MB - Telegram bot limit) */
-const MAX_DOWNLOAD_SIZE = 20 * 1024 * 1024;
+/** 🏢 ENTERPRISE: Tenant resolution result */
+interface TenantResolutionResult {
+  companyId: string | null;
+  error?: string;
+}
 
-/** Storage path prefix for Telegram media */
-const TELEGRAM_STORAGE_PREFIX = 'telegram-media';
+// ============================================================================
+// 🏢 ENTERPRISE: CATEGORY/TYPE MAPPING (kept here for webhook context)
+// ============================================================================
+// Note: generateFileId, buildIngestionStoragePath now come from SSoT core module
+
+/**
+ * 🏢 ENTERPRISE: Map attachment type to file category
+ * @enterprise Centralized mapping for consistent categorization
+ */
+function mapAttachmentTypeToCategory(type: AttachmentType): FileCategory {
+  switch (type) {
+    case ATTACHMENT_TYPES.IMAGE:
+      return FILE_CATEGORIES.PHOTOS;
+    case ATTACHMENT_TYPES.VIDEO:
+      return FILE_CATEGORIES.VIDEOS;
+    case ATTACHMENT_TYPES.AUDIO:
+      return FILE_CATEGORIES.AUDIO;
+    case ATTACHMENT_TYPES.DOCUMENT:
+      return FILE_CATEGORIES.DOCUMENTS;
+    default:
+      return FILE_CATEGORIES.DOCUMENTS;
+  }
+}
+
+/**
+ * 🏢 ENTERPRISE: Map attachment type to FILE_TYPE_CONFIG key
+ * @enterprise Uses SSoT file-upload-config.ts for policy (no duplicate limits)
+ */
+function mapAttachmentTypeToFileType(type: AttachmentType): FileType {
+  switch (type) {
+    case ATTACHMENT_TYPES.IMAGE:
+      return 'image';
+    case ATTACHMENT_TYPES.VIDEO:
+      return 'video';
+    case ATTACHMENT_TYPES.AUDIO:
+      return 'any'; // No specific audio config, use 'any'
+    case ATTACHMENT_TYPES.DOCUMENT:
+      return 'document';
+    default:
+      return 'any';
+  }
+}
+
+/**
+ * 🏢 ENTERPRISE: Get max allowed file size from SSoT config
+ *
+ * Uses FILE_TYPE_CONFIG[type].maxSize as the policy limit.
+ * Telegram Bot API has a 20MB limit for getFile - this is a TECHNICAL
+ * constraint, not policy. Files > 20MB need alternative download methods.
+ *
+ * @enterprise No duplicate policy systems - single source from file-upload-config.ts
+ */
+function getMaxAllowedSize(attachmentType: AttachmentType): number {
+  const fileType = mapAttachmentTypeToFileType(attachmentType);
+  const configMaxSize = FILE_TYPE_CONFIG[fileType].maxSize;
+
+  // Telegram Bot API technical limit (20MB for getFile)
+  // This is NOT policy - it's API constraint
+  const TELEGRAM_API_LIMIT = 20 * 1024 * 1024;
+
+  // Return the smaller of policy limit and API constraint
+  // For video (200MB policy), we're limited by Telegram API (20MB)
+  // For image (5MB policy), we're limited by policy (5MB)
+  return Math.min(configMaxSize, TELEGRAM_API_LIMIT);
+}
+
+/**
+ * 🏢 ENTERPRISE: Resolve companyId from Telegram webhook context
+ *
+ * FAIL-CLOSED APPROACH:
+ * - Uses server-side environment variable (NOT NEXT_PUBLIC_*)
+ * - Returns null if not configured → caller must return 401/400
+ * - NO hardcoded fallbacks (e.g., 'pagonis-company')
+ *
+ * Future: Could lookup BOT_CONFIGS collection for bot → company mapping
+ */
+function resolveCompanyIdFromTelegramWebhook(): TenantResolutionResult {
+  // 🏢 ENTERPRISE: Server-side only env var (no NEXT_PUBLIC_ prefix)
+  const companyId = process.env.TELEGRAM_COMPANY_ID;
+
+  if (!companyId) {
+    console.error('❌ TELEGRAM_COMPANY_ID not configured - tenant resolution failed (fail-closed)');
+    return {
+      companyId: null,
+      error: 'Tenant resolution failed: TELEGRAM_COMPANY_ID not configured',
+    };
+  }
+
+  return { companyId };
+}
+
+/**
+ * 🏢 ENTERPRISE: Check if file already exists (idempotency/deduplication)
+ *
+ * Telegram may retry webhooks - we must not create duplicate FileRecords.
+ * Checks for existing record with same (companyId, chatId, messageId, fileUniqueId).
+ *
+ * CRITICAL: Query MUST include companyId for tenant isolation!
+ * Without it, chatId/messageId from another company could cause false duplicates.
+ *
+ * Required Firestore composite index:
+ * Collection: files
+ * Fields: companyId (asc), source.chatId (asc), source.messageId (asc)
+ * Optional: source.fileUniqueId (asc) for more precise matching
+ *
+ * @returns Existing fileRecordId if found, null otherwise
+ */
+async function checkExistingFileRecord(params: {
+  companyId: string;
+  chatId: string;
+  messageId: string;
+  fileUniqueId?: string;
+}): Promise<string | null> {
+  try {
+    const { getFirestore } = await import('firebase-admin/firestore');
+    const firestore = getFirestore();
+
+    // 🏢 ENTERPRISE: Query MUST include companyId for tenant isolation
+    let query = firestore.collection(COLLECTIONS.FILES)
+      .where('companyId', '==', params.companyId) // 🔒 CRITICAL: Tenant isolation
+      .where('source.chatId', '==', params.chatId)
+      .where('source.messageId', '==', params.messageId);
+
+    // If fileUniqueId is available, use it for more precise matching
+    if (params.fileUniqueId) {
+      query = query.where('source.fileUniqueId', '==', params.fileUniqueId);
+    }
+
+    const snapshot = await query.limit(1).get();
+
+    if (!snapshot.empty) {
+      const existingId = snapshot.docs[0].id;
+      console.log(`⏭️ Duplicate detected (tenant-scoped) - FileRecord already exists: ${existingId}`);
+      return existingId;
+    }
+
+    return null;
+  } catch (error) {
+    // On query failure, proceed with upload (fail-open for idempotency check only)
+    console.warn('⚠️ Idempotency check failed, proceeding with upload:', error);
+    return null;
+  }
+}
+
+/**
+ * 🏢 ENTERPRISE: Create FileRecord in Firestore (server context)
+ *
+ * Uses SSoT core module for schema construction.
+ * Uses firebase-admin for server-side Firestore operations.
+ * Creates record with PENDING status (QUARANTINE GATE).
+ *
+ * @enterprise ADR-055 - SSoT FileRecord schema via file-record-core.ts
+ */
+async function createIngestionFileRecord(params: {
+  companyId: string;
+  chatId: string;
+  messageId: number;
+  fromUserId: string;
+  senderName: string;
+  fileUniqueId?: string;
+  category: FileCategory;
+  filename: string;
+  contentType: string;
+  ext: string;
+}): Promise<ServerFileRecordResult | null> {
+  try {
+    // Dynamic import for firebase-admin (server context)
+    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
+    const firestore = getFirestore();
+
+    // =========================================================================
+    // 🏢 ENTERPRISE: USE SSoT CORE MODULE FOR SCHEMA CONSTRUCTION
+    // =========================================================================
+    // All FileRecord schema logic lives in file-record-core.ts
+    // This adapter only handles admin SDK specifics (timestamps, Firestore write)
+    const source: FileSourceMetadata = {
+      type: 'telegram',
+      chatId: params.chatId,
+      messageId: String(params.messageId),
+      fromUserId: params.fromUserId,
+      senderName: params.senderName,
+      receivedAt: new Date().toISOString(),
+      ...(params.fileUniqueId && { fileUniqueId: params.fileUniqueId }),
+    };
+
+    const { fileId, storagePath, displayNameResult, recordBase } =
+      buildIngestionFileRecordData({
+        companyId: params.companyId,
+        category: params.category,
+        filename: params.filename,
+        contentType: params.contentType,
+        ext: params.ext,
+        source,
+      });
+
+    // =========================================================================
+    // 🏢 ENTERPRISE: ADMIN SDK ADAPTER - Add timestamps and write
+    // =========================================================================
+    // Core provides schema, adapter provides SDK-specific operations
+    const fileRecord = {
+      ...recordBase,
+      createdAt: FieldValue.serverTimestamp(), // Admin SDK timestamp
+    };
+
+    // Write to Firestore
+    await firestore.collection(COLLECTIONS.FILES).doc(fileId).set(fileRecord);
+
+    console.log(`✅ FileRecord created (PENDING/quarantine): ${fileId}`);
+
+    return {
+      fileRecordId: fileId,
+      storagePath,
+      displayName: displayNameResult.displayName,
+    };
+  } catch (error) {
+    console.error('❌ Failed to create FileRecord:', error);
+    return null;
+  }
+}
 
 // ============================================================================
 // TELEGRAM API HELPERS
@@ -126,13 +369,18 @@ async function downloadTelegramFile(filePath: string): Promise<Buffer | null> {
 // ============================================================================
 
 /**
- * Upload buffer to Firebase Storage
+ * 🏢 ENTERPRISE: Upload buffer to Firebase Storage with metadata
+ * @param buffer - File content
+ * @param storagePath - Canonical path (IDs only)
+ * @param contentType - MIME type
+ * @param customMetadata - Optional metadata for traceability
  * @returns Download URL or null on failure
  */
 async function uploadToFirebaseStorage(
   buffer: Buffer,
   storagePath: string,
-  contentType: string
+  contentType: string,
+  customMetadata?: Record<string, string>
 ): Promise<string | null> {
   try {
     // Dynamic import to avoid bundling issues
@@ -151,14 +399,18 @@ async function uploadToFirebaseStorage(
 
     const file = bucket.file(storagePath);
 
+    // 🏢 ENTERPRISE: Merge custom metadata with standard fields
+    const metadata = {
+      source: 'telegram',
+      uploadedAt: new Date().toISOString(),
+      ...(customMetadata || {}),
+    };
+
     // Upload buffer
     await file.save(buffer, {
       metadata: {
         contentType,
-        metadata: {
-          source: 'telegram',
-          uploadedAt: new Date().toISOString(),
-        },
+        metadata,
       },
     });
 
@@ -179,7 +431,8 @@ async function uploadToFirebaseStorage(
 // ============================================================================
 
 /**
- * Extract media info from Telegram message
+ * 🏢 ENTERPRISE: Extract media info from Telegram message
+ * Includes file_unique_id for deduplication
  * @returns Array of media info (empty if no media)
  */
 export function extractMediaFromMessage(message: TelegramMessageObject): TelegramMediaInfo[] {
@@ -192,6 +445,7 @@ export function extractMediaFromMessage(message: TelegramMessageObject): Telegra
     );
     mediaList.push({
       fileId: largestPhoto.file_id,
+      fileUniqueId: largestPhoto.file_unique_id, // 🏢 For deduplication
       type: ATTACHMENT_TYPES.IMAGE,
       mimeType: 'image/jpeg', // Telegram converts to JPEG
       fileSize: largestPhoto.file_size,
@@ -204,6 +458,7 @@ export function extractMediaFromMessage(message: TelegramMessageObject): Telegra
   if (message.document) {
     mediaList.push({
       fileId: message.document.file_id,
+      fileUniqueId: message.document.file_unique_id, // 🏢 For deduplication
       type: ATTACHMENT_TYPES.DOCUMENT,
       filename: message.document.file_name,
       mimeType: message.document.mime_type,
@@ -215,6 +470,7 @@ export function extractMediaFromMessage(message: TelegramMessageObject): Telegra
   if (message.audio) {
     mediaList.push({
       fileId: message.audio.file_id,
+      fileUniqueId: message.audio.file_unique_id, // 🏢 For deduplication
       type: ATTACHMENT_TYPES.AUDIO,
       filename: message.audio.file_name || `${message.audio.title || 'audio'}.mp3`,
       mimeType: message.audio.mime_type || 'audio/mpeg',
@@ -231,6 +487,7 @@ export function extractMediaFromMessage(message: TelegramMessageObject): Telegra
   if (message.video) {
     mediaList.push({
       fileId: message.video.file_id,
+      fileUniqueId: message.video.file_unique_id, // 🏢 For deduplication
       type: ATTACHMENT_TYPES.VIDEO,
       filename: message.video.file_name,
       mimeType: message.video.mime_type || 'video/mp4',
@@ -245,6 +502,7 @@ export function extractMediaFromMessage(message: TelegramMessageObject): Telegra
   if (message.voice) {
     mediaList.push({
       fileId: message.voice.file_id,
+      fileUniqueId: message.voice.file_unique_id, // 🏢 For deduplication
       type: ATTACHMENT_TYPES.AUDIO,
       filename: `voice_${message.message_id}.ogg`,
       mimeType: message.voice.mime_type || 'audio/ogg',
@@ -258,6 +516,7 @@ export function extractMediaFromMessage(message: TelegramMessageObject): Telegra
   if (message.video_note) {
     mediaList.push({
       fileId: message.video_note.file_id,
+      fileUniqueId: message.video_note.file_unique_id, // 🏢 For deduplication
       type: ATTACHMENT_TYPES.VIDEO,
       filename: `video_note_${message.message_id}.mp4`,
       mimeType: 'video/mp4',
@@ -273,6 +532,7 @@ export function extractMediaFromMessage(message: TelegramMessageObject): Telegra
   if (message.animation) {
     mediaList.push({
       fileId: message.animation.file_id,
+      fileUniqueId: message.animation.file_unique_id, // 🏢 For deduplication
       type: ATTACHMENT_TYPES.VIDEO, // GIFs are treated as video
       filename: message.animation.file_name || `animation_${message.message_id}.mp4`,
       mimeType: message.animation.mime_type || 'video/mp4',
@@ -338,13 +598,22 @@ export function hasMedia(message: TelegramMessageObject): boolean {
 // ============================================================================
 
 /**
- * Download and upload a single Telegram media file
+ * 🏢 ENTERPRISE: Download and upload a single Telegram media file
+ *
+ * QUARANTINE GATE IMPLEMENTATION:
+ * - Creates FileRecord in PENDING status
+ * - Does NOT finalize to READY (stays in quarantine)
+ * - Files visible in Inbox view for classification
+ * - Uses canonical storage path with INGESTION domain
+ *
  * @returns MessageAttachment or null on failure
  */
 async function downloadAndUploadMedia(
   mediaInfo: TelegramMediaInfo,
   chatId: string,
-  messageId: number
+  messageId: number,
+  fromUserId: string,
+  senderName: string
 ): Promise<MessageAttachment | null> {
   // Location and Contact don't need download - 🏢 CRITICAL: Only include metadata if present
   if (mediaInfo.type === ATTACHMENT_TYPES.LOCATION) {
@@ -369,44 +638,124 @@ async function downloadAndUploadMedia(
     return null;
   }
 
-  // Check file size
-  if (mediaInfo.fileSize && mediaInfo.fileSize > MAX_DOWNLOAD_SIZE) {
-    console.warn(`⚠️ File too large (${mediaInfo.fileSize} bytes), skipping`);
+  // 🏢 ENTERPRISE: Check file size using SSoT config (FILE_TYPE_CONFIG)
+  // No duplicate policy - uses centralized config with Telegram API constraint
+  const maxAllowedSize = getMaxAllowedSize(mediaInfo.type);
+  if (mediaInfo.fileSize && mediaInfo.fileSize > maxAllowedSize) {
+    const fileType = mapAttachmentTypeToFileType(mediaInfo.type);
+    console.warn(`⚠️ File too large: ${mediaInfo.fileSize} bytes > ${maxAllowedSize} (type: ${fileType}), skipping`);
     return null;
   }
 
-  // 1. Get file info from Telegram
+  // 1. 🏢 ENTERPRISE: Tenant resolution (FAIL-CLOSED - no fallback!)
+  const tenantResult = resolveCompanyIdFromTelegramWebhook();
+  if (!tenantResult.companyId) {
+    console.error(`❌ Tenant resolution failed: ${tenantResult.error}`);
+    return null; // Fail-closed: do not process without valid company
+  }
+  const companyId = tenantResult.companyId;
+
+  // 2. 🏢 ENTERPRISE: Idempotency check (prevent duplicates on webhook retries)
+  // CRITICAL: Query includes companyId for tenant isolation
+  const existingFileRecordId = await checkExistingFileRecord({
+    companyId, // 🔒 Tenant-scoped deduplication
+    chatId,
+    messageId: String(messageId),
+    fileUniqueId: mediaInfo.fileUniqueId,
+  });
+  if (existingFileRecordId) {
+    console.log(`⏭️ Skipping duplicate - using existing FileRecord: ${existingFileRecordId}`);
+    // Return minimal attachment with existing fileRecordId
+    return {
+      type: mediaInfo.type,
+      metadata: {
+        fileRecordId: existingFileRecordId,
+        quarantined: true,
+        deduplicated: true,
+      },
+    } as MessageAttachment;
+  }
+
+  // 3. Get file info from Telegram
   const fileInfo = await getTelegramFile(mediaInfo.fileId);
   if (!fileInfo || !fileInfo.file_path) {
     console.error('❌ Could not get file path from Telegram');
     return null;
   }
 
-  // 2. Download file from Telegram
+  // 4. Download file from Telegram
   const buffer = await downloadTelegramFile(fileInfo.file_path);
   if (!buffer) {
     console.error('❌ Could not download file from Telegram');
     return null;
   }
 
-  // 3. Generate storage path
+  // 5. 🏢 ENTERPRISE: Generate filename and extension
   const extension = getExtensionFromPath(fileInfo.file_path) || getExtensionFromMime(mediaInfo.mimeType);
   const filename = mediaInfo.filename || `${mediaInfo.type}_${messageId}${extension}`;
-  const storagePath = `${TELEGRAM_STORAGE_PREFIX}/${chatId}/${messageId}_${filename}`;
+  const cleanExt = extension.startsWith('.') ? extension.slice(1) : extension;
 
-  // 4. Upload to Firebase Storage
+  // 6. 🏢 ENTERPRISE: Map attachment type to file category
+  const category = mapAttachmentTypeToCategory(mediaInfo.type);
+
+  // 7. 🏢 ENTERPRISE: Create FileRecord (QUARANTINE - PENDING status)
+  const fileRecordResult = await createIngestionFileRecord({
+    companyId,
+    chatId,
+    messageId,
+    fromUserId,
+    senderName,
+    fileUniqueId: mediaInfo.fileUniqueId,
+    category,
+    filename,
+    contentType: mediaInfo.mimeType || 'application/octet-stream',
+    ext: cleanExt || 'bin',
+  });
+
+  if (!fileRecordResult) {
+    console.error('❌ Failed to create FileRecord, aborting upload');
+    return null;
+  }
+
+  // 7. 🏢 ENTERPRISE: Upload to canonical storage path
   const downloadUrl = await uploadToFirebaseStorage(
     buffer,
-    storagePath,
-    mediaInfo.mimeType || 'application/octet-stream'
+    fileRecordResult.storagePath,
+    mediaInfo.mimeType || 'application/octet-stream',
+    {
+      source: 'telegram',
+      fileRecordId: fileRecordResult.fileRecordId,
+      chatId,
+      messageId: String(messageId),
+    }
   );
 
   if (!downloadUrl) {
     console.error('❌ Could not upload to Firebase Storage');
+    // TODO: Mark FileRecord as failed
     return null;
   }
 
-  // 5. Build MessageAttachment - 🏢 CRITICAL: Remove undefined values (Firestore rejects them)
+  // 8. 🏢 ENTERPRISE: Update FileRecord with size and URL (but keep PENDING!)
+  // QUARANTINE GATE: We update metadata but do NOT change status to READY
+  try {
+    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
+    const firestore = getFirestore();
+
+    await firestore.collection(COLLECTIONS.FILES).doc(fileRecordResult.fileRecordId).update({
+      sizeBytes: buffer.length,
+      downloadUrl,
+      updatedAt: FieldValue.serverTimestamp(),
+      // 🏢 CRITICAL: Status stays PENDING (quarantine gate)
+      // status: FILE_STATUS.READY, // <-- NOT setting this!
+    });
+
+    console.log(`📋 FileRecord updated (still PENDING/quarantine): ${fileRecordResult.fileRecordId}`);
+  } catch (updateError) {
+    console.warn('⚠️ Failed to update FileRecord with URL:', updateError);
+  }
+
+  // 9. Build MessageAttachment - 🏢 CRITICAL: Remove undefined values (Firestore rejects them)
   const attachment: MessageAttachment = {
     type: mediaInfo.type,
     url: downloadUrl,
@@ -423,13 +772,25 @@ async function downloadAndUploadMedia(
     attachment.metadata = mediaInfo.metadata;
   }
 
-  console.log(`✅ Media processed: ${mediaInfo.type} -> ${downloadUrl}`);
+  // 🏢 ENTERPRISE: Add fileRecordId to metadata for linking
+  attachment.metadata = {
+    ...attachment.metadata,
+    fileRecordId: fileRecordResult.fileRecordId,
+    quarantined: true, // Indicates file is in quarantine
+  };
+
+  console.log(`✅ Media processed (quarantined): ${mediaInfo.type} -> ${downloadUrl}`);
+  console.log(`   FileRecord: ${fileRecordResult.fileRecordId} (PENDING)`);
   return attachment;
 }
 
 /**
- * Process all media in a Telegram message
- * @returns Array of MessageAttachment
+ * 🏢 ENTERPRISE: Process all media in a Telegram message
+ *
+ * QUARANTINE GATE: All files are stored with PENDING status.
+ * They appear in Inbox view for classification before becoming READY.
+ *
+ * @returns Array of MessageAttachment (with fileRecordId in metadata)
  */
 export async function processTelegramMedia(
   message: TelegramMessageObject
@@ -441,13 +802,24 @@ export async function processTelegramMedia(
   }
 
   console.log(`📎 Processing ${mediaList.length} media item(s) from message ${message.message_id}`);
+  console.log(`🏢 QUARANTINE: Files will be stored with PENDING status (Inbox view)`);
 
   const attachments: MessageAttachment[] = [];
   const chatId = String(message.chat.id);
 
+  // 🏢 ENTERPRISE: Extract sender info for source metadata
+  const fromUserId = message.from?.id ? String(message.from.id) : 'unknown';
+  const senderName = message.from?.first_name || message.from?.username || 'Unknown';
+
   for (const media of mediaList) {
     try {
-      const attachment = await downloadAndUploadMedia(media, chatId, message.message_id);
+      const attachment = await downloadAndUploadMedia(
+        media,
+        chatId,
+        message.message_id,
+        fromUserId,
+        senderName
+      );
       if (attachment) {
         attachments.push(attachment);
       }
@@ -456,7 +828,7 @@ export async function processTelegramMedia(
     }
   }
 
-  console.log(`✅ Processed ${attachments.length}/${mediaList.length} media items`);
+  console.log(`✅ Processed ${attachments.length}/${mediaList.length} media items (all quarantined)`);
   return attachments;
 }
 

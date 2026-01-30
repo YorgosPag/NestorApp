@@ -8,7 +8,14 @@
 import { useCallback, useRef, useState } from 'react';
 import { useCursor } from './CursorSystem';
 import { isPointInRulerArea } from './utils';
-import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+import {
+  CoordinateTransforms,
+  COORDINATE_LAYOUT,
+  getPointerSnapshotFromElement,
+  getScreenPosFromEvent,
+  screenToWorldWithSnapshot,
+  type PointerSnapshot
+} from '../../rendering/core/CoordinateTransforms';
 import { canvasEventBus, CANVAS_EVENTS } from '../../rendering/canvas/core/CanvasEventSystem';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -32,8 +39,8 @@ export interface ZoomConstraints {
   maxScale?: number;
   stepSize?: number;
 }
-// ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Canvas bounds service για performance optimization
-import { canvasBoundsService } from '../../services/CanvasBoundsService';
+// 🏢 ENTERPRISE (2026-01-30): canvasBoundsService REMOVED from transform path
+// Reason: Caching caused stale bounds on DevTools toggle. Using getPointerSnapshotFromElement instead.
 // ✅ SNAP DETECTION: Import snap context and manager
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
@@ -168,13 +175,13 @@ export function useCentralizedMouseHandlers({
 
   // ✅ MOUSE DOWN HANDLER - Professional CAD style
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας bounds caching
-    const rect = canvasBoundsService.getBounds(e.currentTarget);
+    // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
+    // Pattern: Autodesk/Bentley - Single snapshot per event, no caching for transforms
+    const snap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+    if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
+
     // Canvas-relative coordinates (CoordinateTransforms handles margins internally)
-    const screenPos = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
+    const screenPos = getScreenPosFromEvent(e, snap);
 
     // ✅ UPDATE CENTRALIZED STATE
     cursor.updatePosition(screenPos);
@@ -230,13 +237,13 @@ export function useCentralizedMouseHandlers({
       e.stopPropagation(); // 🏢 ENTERPRISE: Stop event bubbling to prevent browser auto-scroll
     }
 
-    // Calculate world position
-    const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+    // Calculate world position using unified snapshot (rect + viewport from SAME element)
+    const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
     cursor.updateWorldPosition(worldPos);
 
     // Hit test for entity selection using provided callback
     if (hitTestCallback && onEntitySelect) {
-      const hitEntityId = hitTestCallback(scene, screenPos, transform, viewport);
+      const hitEntityId = hitTestCallback(scene, screenPos, transform, snap.viewport);
       onEntitySelect(hitEntityId);
     }
 
@@ -253,19 +260,16 @@ export function useCentralizedMouseHandlers({
   // 🚀 MOUSE MOVE HANDLER - HIGH PERFORMANCE CAD-style tracking
   // 🏢 ENTERPRISE (2026-01-27): Optimized to reduce React re-renders
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας bounds caching
-    const rect = canvasBoundsService.getBounds(e.currentTarget);
-    // Canvas-relative coordinates (CoordinateTransforms handles margins internally)
-    const screenPos = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
+    // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
+    // Pattern: Autodesk/Bentley - Single snapshot per event, no caching for transforms
+    const snap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+    if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
 
-    // 🏢 ENTERPRISE FIX (2026-01-27): ADR-045 - Use FRESH viewport from canvas rect
-    // PROBLEM: The `viewport` prop may be stale on first interactions after mount.
-    // SOLUTION: Derive viewport from the fresh `rect` we already fetched.
-    // PATTERN: Autodesk/Bentley - Always use current canvas dimensions for transforms
-    const freshViewport = { width: rect.width, height: rect.height };
+    // Canvas-relative coordinates using unified snapshot
+    const screenPos = getScreenPosFromEvent(e, snap);
+
+    // 🏢 ENTERPRISE (2026-01-30): Use unified snapshot viewport (1:1 with rect)
+    const freshViewport = snap.viewport;
 
     // 🚀 PERFORMANCE (2026-01-27): Update ImmediatePositionStore for zero-latency crosshair
     // This triggers direct crosshair render WITHOUT React re-render
@@ -440,9 +444,6 @@ export function useCentralizedMouseHandlers({
     // Also skip if we just finished panning (wasPanning check)
     const isLeftClick = e.button === 0;
 
-    // 🔍 DEBUG (2026-01-27): Log conditions for ADR-046 flow
-    console.log(`🔍 [handleMouseUp] CONDITIONS: onCanvasClick=${!!onCanvasClick}, isLeftClick=${isLeftClick}, isSelecting=${cursor.isSelecting}, wasPanning=${wasPanning}, hasPosition=${!!cursor.position}`);
-
     if (onCanvasClick && isLeftClick && !cursor.isSelecting && !wasPanning) {
       // 🏢 ENTERPRISE FIX (2026-01-27): ADR-046 - Pass WORLD coordinates directly to onCanvasClick
       // PROBLEM (ROOT CAUSE IDENTIFIED):
@@ -460,28 +461,16 @@ export function useCentralizedMouseHandlers({
       //
       // PATTERN: Single coordinate transform per operation (CAD industry standard)
 
-      // 🏢 CRITICAL FIX: Calculate FRESH screen coordinates from e.currentTarget
-      // Don't use cursor.position which may have been calculated from a DIFFERENT element!
-      // This fixes the ~80px offset bug where cursor.position was relative to one canvas
-      // but the mouseUp event arrived on a different canvas with different dimensions.
-      const eventTarget = e.currentTarget;
-      const rect = canvasBoundsService.getBounds(eventTarget);
-      const freshScreenPos = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-      };
-      const freshViewport = { width: rect.width, height: rect.height };
+      // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
+      // Pattern: Autodesk/Bentley - Single snapshot per event, no caching for transforms
+      const snap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+      if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
 
-      // Validate viewport before any coordinate conversion
-      const viewportValid = freshViewport.width > 0 && freshViewport.height > 0;
+      // Calculate screen position using unified snapshot
+      const freshScreenPos = getScreenPosFromEvent(e, snap);
 
-      if (!viewportValid) {
-        console.warn('🚫 [handleMouseUp] Click blocked: viewport not ready', freshViewport);
-        return;
-      }
-
-      // Convert screen → world ONCE using FRESH coordinates from the same element
-      let worldPoint = CoordinateTransforms.screenToWorld(freshScreenPos, transform, freshViewport);
+      // Convert screen → world using unified snapshot
+      let worldPoint = screenToWorldWithSnapshot(freshScreenPos, transform, snap);
 
       // Apply snap detection (in world coordinates)
       if (snapEnabled && findSnapPoint) {
@@ -492,37 +481,26 @@ export function useCentralizedMouseHandlers({
       }
 
       // Pass WORLD coordinates directly - no more double conversion!
-      // 🔍 DEBUG (2026-01-27): Diagnostic logging for coordinate offset issue
-      console.log(
-        `🎯 [handleMouseUp] ADR-046 WORLD coords:\n` +
-        `  freshScreenPos: x=${freshScreenPos.x.toFixed(2)}, y=${freshScreenPos.y.toFixed(2)}\n` +
-        `  worldPoint: x=${worldPoint.x.toFixed(2)}, y=${worldPoint.y.toFixed(2)}\n` +
-        `  freshViewport: w=${freshViewport.width.toFixed(0)}, h=${freshViewport.height.toFixed(0)}\n` +
-        `  transform: scale=${transform.scale.toFixed(4)}, offsetX=${transform.offsetX.toFixed(2)}, offsetY=${transform.offsetY.toFixed(2)}\n` +
-        `  eventTargetSize: w=${rect.width.toFixed(0)}, h=${rect.height.toFixed(0)}\n` +
-        `  cursorPosition: ${cursor.position ? `x=${cursor.position.x.toFixed(2)}, y=${cursor.position.y.toFixed(2)}` : 'null'}\n` +
-        `  clientXY: clientX=${e.clientX}, clientY=${e.clientY}\n` +
-        `  rectLeftTop: left=${rect.left.toFixed(2)}, top=${rect.top.toFixed(2)}`
-      );
       onCanvasClick(worldPoint);
     }
 
     // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ MARQUEE SELECTION - Χρήση UniversalMarqueeSelector
     if (cursor.isSelecting && cursor.selectionStart && cursor.position) {
-      // Χρήση canvas reference για getBoundingClientRect()
-      const canvas = canvasRef?.current;
+      // 🏢 ENTERPRISE (2026-01-30): Use unified snapshot for marquee selection
+      const canvas = canvasRef?.current ?? null;
+      const marqueeSnap = getPointerSnapshotFromElement(canvas);
 
       // 🏢 ENTERPRISE (2026-01-25): Support both multi-selection and single selection callbacks
       const hasMultiCallback = !!onMultiLayerSelected;
       const hasSingleCallback = !!onLayerSelected;
 
-      if (canvas && colorLayers && colorLayers.length > 0 && (hasMultiCallback || hasSingleCallback)) {
-        // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CanvasBoundsService αντί για άμεση κλήση (performance optimization)
+      if (marqueeSnap && colorLayers && colorLayers.length > 0 && (hasMultiCallback || hasSingleCallback)) {
+        // 🏢 ENTERPRISE (2026-01-30): Use fresh rect from unified snapshot
         const selectionResult = UniversalMarqueeSelector.performSelection(
           cursor.selectionStart,
           cursor.position,
           transform,
-          canvasBoundsService.getBounds(canvas),
+          marqueeSnap.rect,
           {
             colorLayers: colorLayers,
             tolerance: 5,
@@ -554,8 +532,11 @@ export function useCentralizedMouseHandlers({
 
           if (isSmallSelection && colorLayers && colorLayers.length > 0) {
             // 🎯 SINGLE CLICK: Do point-in-polygon hit-test for layer selection
-            // Convert screen point to world coordinates for hit-testing
-            const worldPoint = CoordinateTransforms.screenToWorld(cursor.position, transform, viewport);
+            // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot for consistent transforms
+            const canvas = canvasRef?.current ?? null;
+            const hitTestSnap = getPointerSnapshotFromElement(canvas);
+            if (!hitTestSnap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
+            const worldPoint = screenToWorldWithSnapshot(cursor.position, transform, hitTestSnap);
 
             // Check each layer for point containment
             let hitLayerId: string | null = null;
@@ -602,11 +583,11 @@ export function useCentralizedMouseHandlers({
             // 🏢 ENTERPRISE (2026-01-25): When marquee selects nothing, trigger canvas click for deselection
             // 🏢 ADR-046: Convert to WORLD coordinates before calling onCanvasClick
             if (onCanvasClick && cursor.position) {
-              const canvas = canvasRef?.current;
-              const freshViewport = canvas
-                ? { width: canvas.clientWidth, height: canvas.clientHeight }
-                : viewport;
-              const worldPt = CoordinateTransforms.screenToWorld(cursor.position, transform, freshViewport);
+              // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot for consistent transforms
+              const canvas = canvasRef?.current ?? null;
+              const clickSnap = getPointerSnapshotFromElement(canvas);
+              if (!clickSnap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
+              const worldPt = screenToWorldWithSnapshot(cursor.position, transform, clickSnap);
               onCanvasClick(worldPt);
             }
           }
@@ -616,7 +597,11 @@ export function useCentralizedMouseHandlers({
       cursor.endSelection();
     } else if (cursor.position && hitTestCallback) {
       // Single point hit-test for entity/layer selection (only when no marquee)
-      const hitResult = hitTestCallback(scene, cursor.position, transform, viewport);
+      // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot for consistent transforms
+      const canvasForHit = canvasRef?.current ?? null;
+      const hitSnap = getPointerSnapshotFromElement(canvasForHit);
+      if (!hitSnap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
+      const hitResult = hitTestCallback(scene, cursor.position, transform, hitSnap.viewport);
       // Hit-test debug disabled for performance
 
       if (onEntitySelect) {
@@ -652,13 +637,12 @@ export function useCentralizedMouseHandlers({
 
   // ✅ WHEEL HANDLER - CAD-style zoom
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
-    // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας bounds caching
-    const rect = canvasBoundsService.getBounds(e.currentTarget);
-    // ✅ FIXED: Canvas-relative coordinates που θα μετατραπούν σωστά από CoordinateTransforms
-    const zoomCenter = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
+    // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
+    const snap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
+    if (!snap) return; // 🏢 Fail-fast: Cannot zoom without valid snapshot
+
+    // ✅ FIXED: Canvas-relative coordinates using unified snapshot
+    const zoomCenter = getScreenPosFromEvent(e, snap);
 
     // 🏢 ENTERPRISE: Capture modifier keys (Ctrl = faster zoom, Shift = pan)
     const modifiers = {

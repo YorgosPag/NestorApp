@@ -115,6 +115,20 @@ export const UPLOAD_LIMITS = {
   DEFAULT_MAX_SIZE: 5 * 1024 * 1024, // 5MB
   MAX_FILE_SIZE: 50 * 1024 * 1024,   // 50MB
   MIN_FILE_SIZE: 1024,               // 1KB
+  /**
+   * 🏢 ENTERPRISE: Telegram Bot API technical constraint (NOT policy)
+   * @see https://core.telegram.org/bots/api#getfile
+   *
+   * This is a TECHNICAL LIMITATION of Telegram's getFile API, not a policy decision.
+   * Files > 20MB require alternative download methods (local bot server).
+   *
+   * POLICY should come from FILE_TYPE_CONFIG[type].maxSize
+   * This constant is provided as DOCUMENTATION/REFERENCE only.
+   *
+   * @deprecated Use FILE_TYPE_CONFIG[type].maxSize for policy decisions.
+   *             This constant documents API constraint, not policy.
+   */
+  TELEGRAM_API_CONSTRAINT: 20 * 1024 * 1024, // 20MB - Telegram getFile limit
 } as const;
 
 /**

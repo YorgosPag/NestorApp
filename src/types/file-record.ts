@@ -343,6 +343,91 @@ export interface FileRecord {
   purpose?: string;
 
   // =========================================================================
+  // 🏢 ENTERPRISE: INGESTION SOURCE TRACKING (ADR-055)
+  // =========================================================================
+  // For files received from external sources (Telegram, Email, WhatsApp)
+  // Enables traceability and deduplication
+  // =========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: External source metadata
+   * Tracks where this file originated from (Telegram, Email, WhatsApp, etc.)
+   * Used for:
+   * - Traceability: trace file back to original conversation/message
+   * - Deduplication: fileUniqueId for Telegram prevents re-processing same file
+   * - Audit: complete chain of custody from source to classification
+   *
+   * @enterprise ADR-055 - Enterprise Attachment Ingestion System
+   */
+  source?: {
+    /** Source type (telegram, email, whatsapp, web-form, etc.) */
+    type: 'telegram' | 'email' | 'whatsapp' | 'web-form' | 'api';
+    /** Chat/conversation ID from source platform */
+    chatId?: string;
+    /** Message ID from source platform */
+    messageId?: string;
+    /** User ID from source platform (sender) */
+    fromUserId?: string;
+    /** Telegram file_unique_id for deduplication (stable across bots/time) */
+    fileUniqueId?: string;
+    /** Telegram file_id for download (may change) */
+    fileId?: string;
+    /** Original sender display name */
+    senderName?: string;
+    /** Timestamp when received from source */
+    receivedAt?: Date | string;
+  };
+
+  /**
+   * 🏢 ENTERPRISE: Ingestion state for quarantine/classification workflow
+   * Only present for files in INGESTION domain
+   *
+   * State machine:
+   * - received: File uploaded, awaiting scan
+   * - scanned: Passed security scan, awaiting classification
+   * - classified: User has assigned to business entity, ready for promotion
+   *
+   * @enterprise ADR-055 - Enterprise Attachment Ingestion System
+   */
+  ingestion?: {
+    /** Current ingestion state */
+    state: 'received' | 'scanned' | 'classified';
+    /** When state last changed */
+    stateChangedAt?: Date | string;
+    /** Security scan result (if scanned) */
+    scanResult?: {
+      passed: boolean;
+      scannedAt: Date | string;
+      scannerVersion?: string;
+      threats?: string[];
+    };
+  };
+
+  // =========================================================================
+  // 🏢 ENTERPRISE: CLASSIFICATION AUDIT (ADR-055)
+  // =========================================================================
+  // When a file is promoted from INGESTION to a business entity,
+  // we track who classified it and when for audit trail
+  // =========================================================================
+
+  /**
+   * 🏢 ENTERPRISE: Classification audit fields
+   * Populated when file is promoted from INGESTION to business entity
+   *
+   * @enterprise ADR-055 - Enterprise Attachment Ingestion System
+   */
+  classifiedAt?: Date | string;
+
+  /** User who classified/promoted this file */
+  classifiedBy?: string;
+
+  /**
+   * Original ingestion path before promotion
+   * Kept for audit trail - shows where file was before classification
+   */
+  originalIngestionPath?: string;
+
+  // =========================================================================
   // 🏢 ENTERPRISE: PROCESSED DATA - FLOORPLAN CACHING (ADR-033)
   // =========================================================================
   // For floorplan files (DXF, PDF), we cache processed data to avoid

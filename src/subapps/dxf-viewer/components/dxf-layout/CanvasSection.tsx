@@ -37,9 +37,18 @@ import { isDrawingTool, isMeasurementTool, isInteractiveTool, isInDrawingMode } 
 import type { LayerRenderOptions } from '../../canvas-v2/layer-canvas/layer-types';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { useZoom } from '../../systems/zoom';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import {
+  CoordinateTransforms,
+  getPointerSnapshotFromElement,
+  getScreenPosFromEvent,
+  screenToWorldWithSnapshot,
+  type PointerSnapshot
+} from '../../rendering/core/CoordinateTransforms';
 // ✅ ENTERPRISE MIGRATION: Using ServiceRegistry
 import { serviceRegistry } from '../../services';
+// 🏢 ENTERPRISE (2026-01-30): canvasBoundsService kept ONLY for ResizeObserver cache clearing
+// NOT used for coordinate transforms - using getPointerSnapshotFromElement instead
+import { canvasBoundsService } from '../../services/CanvasBoundsService';
 // ✅ ADR-006 FIX: Import CrosshairOverlay για crosshair rendering
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 // 🏢 ADR-040: PreviewCanvas for direct preview rendering (performance optimization)
@@ -126,12 +135,29 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // ✅ CENTRALIZED VIEWPORT: Single source of truth για viewport dimensions
   const [viewport, setViewport] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
+  // 🏢 ENTERPRISE (2026-01-30): SSoT Viewport Ref - ZERO React lag
+  // PROBLEM: useState viewport updates ASYNC (React batches) → stale on resize
+  // SOLUTION: viewportRef updates SYNCHRONOUSLY in ResizeObserver
+  // CANONICAL ELEMENT: containerRef (wrapper that contains all canvases)
+  const viewportRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+
   // 🏢 ENTERPRISE FIX (2026-01-27): Viewport readiness check για coordinate transforms
   // Αποτρέπει λανθασμένες μετατροπές coordinates ΠΡΙΝ το viewport αρχικοποιηθεί σωστά
   // PROBLEM: Την πρώτη φορά μετά από server restart, το viewport είναι {0,0}
   //          και η screenToWorld επιστρέφει λάθος τιμές (π.χ. Y-offset ~80px)
   // SOLUTION: Το viewportReady flag αποκλείει τα clicks μέχρι το viewport να είναι valid
   const viewportReady = viewport.width > 0 && viewport.height > 0;
+
+  // 🏢 ENTERPRISE (2026-01-30): Get canvas element for viewport snapshot
+  // Returns the canvas HTMLElement for use with getViewportSnapshotFromElement()
+  // CRITICAL: This is used for coordinate transforms - NO HARDCODED FALLBACKS
+  const getCanvasElement = useCallback((): HTMLElement | null => {
+    const dxfCanvas = dxfCanvasRef?.current?.getCanvas?.();
+    if (dxfCanvas instanceof HTMLElement) return dxfCanvas;
+    if (overlayCanvasRef.current instanceof HTMLElement) return overlayCanvasRef.current;
+    if (containerRef.current instanceof HTMLElement) return containerRef.current;
+    return null;
+  }, []);
 
   const zoomSystem = useZoom({
     initialTransform: transform, // 🏢 ENTERPRISE: Use context transform as initial value
@@ -311,75 +337,78 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     renderedImageUrl: pdfImageUrl,
     setViewport: setPdfViewport,
   } = usePdfBackgroundStore();
-  // ✅ CENTRALIZED VIEWPORT: Update viewport από canvas dimensions
-  // 🏢 FIX (2026-01-04): Use ResizeObserver for reliable viewport tracking
+  // ✅ CENTRALIZED VIEWPORT: Update viewport από CONTAINER dimensions
+  // 🏢 ENTERPRISE (2026-01-30): CANONICAL ELEMENT = container (SSoT)
+  // PROBLEM: Canvas vs container mixing caused drift on DevTools toggle
+  // SOLUTION: Use CONTAINER as single source of truth for ALL viewport calculations
   React.useEffect(() => {
     let resizeObserver: ResizeObserver | null = null;
 
     const updateViewport = () => {
-      // 🏢 FIX: dxfCanvasRef.current is NOT HTMLCanvasElement - it has getCanvas() method!
-      // Try to get the actual canvas element from DxfCanvas component ref
-      const dxfCanvas = dxfCanvasRef.current?.getCanvas?.();
-      const layerCanvas = overlayCanvasRef.current;
+      // 🎯 CANONICAL ELEMENT: containerRef (wrapper that contains all canvases)
+      const container = containerRef.current;
 
-      // Use DxfCanvas as primary (has the actual canvas element)
-      const canvas = dxfCanvas || layerCanvas;
-
-      if (canvas && canvas instanceof HTMLCanvasElement) {
-        const rect = canvas.getBoundingClientRect();
+      if (container) {
+        const rect = container.getBoundingClientRect();
         // Only update if dimensions are valid (not 0x0)
         if (rect.width > 0 && rect.height > 0) {
-          setViewport({ width: rect.width, height: rect.height });
+          const newViewport = { width: rect.width, height: rect.height };
+          // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
+          viewportRef.current = newViewport;
+          // React state update for dependencies
+          setViewport(newViewport);
           // 🏢 PDF BACKGROUND: Sync viewport to PDF store for fit-to-view
-          setPdfViewport({ width: rect.width, height: rect.height });
-          // Viewport updated silently
+          setPdfViewport(newViewport);
         }
       }
     };
 
-    // 🏢 ENTERPRISE: Use ResizeObserver for precise dimension tracking
+    // 🏢 ENTERPRISE: ResizeObserver on CONTAINER (canonical element)
     const setupObserver = () => {
-      const dxfCanvas = dxfCanvasRef.current?.getCanvas?.();
-      const layerCanvas = overlayCanvasRef.current;
-      const canvas = dxfCanvas || layerCanvas;
+      const container = containerRef.current;
 
-      if (canvas && canvas instanceof HTMLCanvasElement) {
+      if (container) {
         resizeObserver = new ResizeObserver((entries) => {
           for (const entry of entries) {
             const { width, height } = entry.contentRect;
             if (width > 0 && height > 0) {
-              setViewport({ width, height });
+              const newViewport = { width, height };
+              // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
+              viewportRef.current = newViewport;
+              // React state update for dependencies
+              setViewport(newViewport);
               // 🏢 PDF BACKGROUND: Sync viewport to PDF store for fit-to-view
-              setPdfViewport({ width, height });
+              setPdfViewport(newViewport);
+              // 🏢 FIX (2026-01-30): Clear canvasBoundsService cache on resize
+              canvasBoundsService.clearCache();
             }
           }
         });
-        resizeObserver.observe(canvas);
+        resizeObserver.observe(container);
 
         // Initial update
         updateViewport();
       }
     };
 
-    // 🏢 ENTERPRISE: Retry mechanism for canvas mount timing
+    // 🏢 ENTERPRISE: Retry mechanism for container mount timing
     let retryCount = 0;
     const maxRetries = 10;
 
     const trySetupObserver = () => {
-      const dxfCanvas = dxfCanvasRef.current?.getCanvas?.();
-      const layerCanvas = overlayCanvasRef.current;
+      const container = containerRef.current;
 
-      if (dxfCanvas || layerCanvas) {
+      if (container) {
         setupObserver();
       } else if (retryCount < maxRetries) {
         retryCount++;
-        setTimeout(trySetupObserver, PANEL_LAYOUT.TIMING.OBSERVER_RETRY); // Retry every 100ms
+        setTimeout(trySetupObserver, PANEL_LAYOUT.TIMING.OBSERVER_RETRY);
       } else {
-        console.warn('⚠️ [Viewport] Canvas not available after', maxRetries, 'retries');
+        console.warn('⚠️ [Viewport] Container not available after', maxRetries, 'retries');
       }
     };
 
-    // Initial setup with delay to ensure canvas is mounted
+    // Initial setup with delay to ensure container is mounted
     const timer = setTimeout(trySetupObserver, PANEL_LAYOUT.TIMING.OBSERVER_RETRY);
 
     // Fallback: Also listen for window resize
@@ -554,9 +583,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     const container = containerRef.current;
     if (!container) return;
 
-    const rect = container.getBoundingClientRect();
-    const screenPos: Point2D = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+    // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
+    const snap = getPointerSnapshotFromElement(container);
+    if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
+    const screenPos = getScreenPosFromEvent(e, snap);
+    const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
 
     // === VERTEX GRIP CLICK ===
     if (hoveredVertexInfo) {
@@ -661,9 +692,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (draggingVertices && draggingVertices.length > 0 && overlayStore) {
       const container = containerRef.current;
       if (container) {
-        const rect = container.getBoundingClientRect();
-        const screenPos: Point2D = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+        // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
+        const snap = getPointerSnapshotFromElement(container);
+        if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
+        const screenPos = getScreenPosFromEvent(e, snap);
+        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
 
         // 🏢 ENTERPRISE (2026-01-26): Calculate delta from first grip's start point
         const delta = {
@@ -700,9 +733,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (draggingEdgeMidpoint && overlayStore) {
       const container = containerRef.current;
       if (container) {
-        const rect = container.getBoundingClientRect();
-        const screenPos: Point2D = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+        // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
+        const snap = getPointerSnapshotFromElement(container);
+        if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
+        const screenPos = getScreenPosFromEvent(e, snap);
+        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
 
         if (!draggingEdgeMidpoint.newVertexCreated) {
           // First time - insert new vertex
@@ -734,9 +769,11 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if (draggingOverlayBody && overlayStore) {
       const container = containerRef.current;
       if (container) {
-        const rect = container.getBoundingClientRect();
-        const screenPos: Point2D = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
+        // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
+        const snap = getPointerSnapshotFromElement(container);
+        if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
+        const screenPos = getScreenPosFromEvent(e, snap);
+        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
 
         // Calculate delta from start position
         const delta = {
@@ -1304,8 +1341,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
     // ✅ ENTERPRISE MIGRATION: Get service from registry
     const fitToView = serviceRegistry.get('fit-to-view');
-    const viewport = { width: 800, height: 600 }; // Default fallback - should get from actual canvas
-    const result = fitToView.calculateFitToViewFromBounds(bounds, viewport, { padding: 0.1 });
+    // 🏢 ENTERPRISE (2026-01-30): CANONICAL ELEMENT = containerRef (SSoT)
+    // All viewport calculations use container for consistency
+    const container = containerRef.current;
+    const snap = getPointerSnapshotFromElement(container);
+    if (!snap) {
+      console.warn('[CanvasSection] fitViewToBounds: Cannot fit - viewport not ready');
+      return; // 🏢 Fail-fast: Cannot fit without valid viewport
+    }
+    const result = fitToView.calculateFitToViewFromBounds(bounds, snap.viewport, { padding: 0.1 });
 
     if (result.success && result.transform) {
       // Apply transform to zoom system
@@ -1524,11 +1568,18 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       const combinedBounds = createCombinedBounds(dxfScene, colorLayers, true);
 
       if (combinedBounds) {
-        const viewport = e.detail?.viewport || { width: 800, height: 600 };
+        // 🏢 ENTERPRISE (2026-01-30): CANONICAL ELEMENT = containerRef (SSoT)
+        // All viewport calculations use container for consistency
+        const container = containerRef.current;
+        const snap = getPointerSnapshotFromElement(container);
+        if (!snap) {
+          console.warn('[CanvasSection] handleFitToView: Cannot fit - viewport not ready');
+          return; // 🏢 Fail-fast: Cannot fit without valid viewport
+        }
 
         try {
           // 🎯 ENTERPRISE: alignToOrigin = true → (0,0) at axis intersection (bottom-left)
-          const zoomResult = zoomSystem.zoomToFit(combinedBounds, viewport, true);
+          const zoomResult = zoomSystem.zoomToFit(combinedBounds, snap.viewport, true);
 
           // 🔥 ΚΡΙΣΙΜΟ: Εφαρμογή του νέου transform με null checks + NaN guards
           if (zoomResult && zoomResult.transform) {
@@ -1751,7 +1802,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               ref={overlayCanvasRef}
               layers={colorLayersWithDraft} // 🔧 FIX (2026-01-24): Include draft preview layer
               transform={transform}
-              viewport={viewport} // ✅ CENTRALIZED: Pass centralized viewport
+              viewport={viewportRef.current} // 🏢 ENTERPRISE (2026-01-30): Use viewportRef (FRESH) not state
               activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
               overlayMode={overlayMode} // 🎯 OVERLAY FIX: Pass overlayMode for drawing detection
               layersVisible={showLayers} // ✅ ΥΠΑΡΧΟΝ SYSTEM: Existing layer visibility
@@ -1837,7 +1888,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
                 // Now do the throttled work
                 updateMouseCss(screenPoint);
-                const worldPoint = CoordinateTransforms.screenToWorld(screenPoint, transform, viewport);
+                // 🏢 ENTERPRISE (2026-01-30): CANONICAL ELEMENT = containerRef (SSoT)
+                // All viewport calculations use container for consistency
+                const container = containerRef.current;
+                const snap = getPointerSnapshotFromElement(container);
+                if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid viewport
+                const worldPoint = CoordinateTransforms.screenToWorld(screenPoint, transform, snap.viewport);
                 updateMouseWorld(worldPoint);
                 throttle.lastWorldPoint = worldPoint;
 
@@ -1949,7 +2005,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               ref={dxfCanvasRef}
               scene={dxfScene}
               transform={transform}
-              viewport={viewport} // ✅ CENTRALIZED: Pass centralized viewport
+              viewport={viewportRef.current} // 🏢 ENTERPRISE (2026-01-30): Use viewportRef (FRESH) not state
               activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
               overlayMode={overlayMode} // 🎯 OVERLAY FIX: Pass overlayMode for drawing detection
               colorLayers={colorLayers} // ✅ FIX: Pass color layers για fit to view bounds

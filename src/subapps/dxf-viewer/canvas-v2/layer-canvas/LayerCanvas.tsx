@@ -148,12 +148,26 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<LayerRenderer | null>(null);
-  // ✅ CENTRALIZED VIEWPORT: Use prop if provided AND valid, otherwise calculate internally
+
+  // 🏢 ENTERPRISE (2026-01-30): SSoT Viewport - ref-based για ZERO React lag
+  // PROBLEM: useState viewport updates ASYNC (React batches) → render uses stale viewport
+  // SOLUTION: viewportRef updates SYNCHRONOUSLY in ResizeObserver → render uses fresh viewport
+  // PATTERN B from strategy: ref-based store, no React state lag
+  const viewportRef = useRef<Viewport>({ width: 0, height: 0 });
+
+  // ✅ LEGACY: Keep state for React re-renders (dependencies, UI updates)
+  // But NEVER use this for coordinate transforms - use viewportRef instead
   const [internalViewport, setInternalViewport] = useState<Viewport>({ width: 0, height: 0 });
-  // Use prop viewport only if it has valid dimensions (not 0x0)
+
+  // 🎯 CRITICAL: viewportProp FIRST (from container) - ensures Input/Render use SAME source
+  // ENTERPRISE FIX (2026-01-30): Input handlers use containerRef, so renderers MUST use viewportProp
+  // viewportRef (canvas-based) was causing DRIFT because it's a DIFFERENT element than containerRef
+  // PATTERN: SSoT = containerRef → CanvasSection passes viewport → all children use viewportProp
   const viewport = (viewportProp && viewportProp.width > 0 && viewportProp.height > 0)
-    ? viewportProp
-    : internalViewport;
+    ? viewportProp  // ✅ ALWAYS use container-based viewport from parent (matches input handlers)
+    : (viewportRef.current.width > 0 && viewportRef.current.height > 0)
+      ? viewportRef.current  // Fallback: own canvas measurements
+      : internalViewport;    // Last resort: React state
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση του CursorSystem αντί για local state
   const cursor = useCursor();
@@ -417,26 +431,58 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     try {
       CanvasUtils.setupCanvasContext(canvas, canvasConfig);
 
-      // ✅ ENTERPRISE MIGRATION: Get service from registry
-      const canvasBounds = serviceRegistry.get('canvas-bounds');
-      const rect = canvasBounds.getBounds(canvas);
-      // ✅ CENTRALIZED: Only update internal viewport if no prop provided
-      if (!viewportProp) {
-        setInternalViewport({ width: rect.width, height: rect.height });
-      }
+      // 🏢 ENTERPRISE (2026-01-30): Fresh DOM read - no caching!
+      // Use getBoundingClientRect directly for SSoT viewport
+      const rect = canvas.getBoundingClientRect();
+      const newViewport = { width: rect.width, height: rect.height };
+
+      // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
+      // This ensures render loop ALWAYS has fresh viewport
+      viewportRef.current = newViewport;
+
+      // ✅ ALSO update state for React dependencies (UI re-renders)
+      // But coordinate transforms use viewportRef, not this state
+      setInternalViewport(newViewport);
     } catch (error) {
       console.error('Failed to setup Layer canvas:', error);
     }
   }, []); // Removed canvasConfig dependency to prevent infinite loops
 
   // Setup canvas on mount and resize
+  // 🏢 ENTERPRISE (2026-01-30): SSoT Viewport with ResizeObserver
+  // PROBLEM: window resize doesn't trigger when DevTools is toggled (docked)
+  // SOLUTION: ResizeObserver monitors actual canvas element + updates ref SYNCHRONOUSLY
   useEffect(() => {
     setupCanvas();
 
+    let resizeObserver: ResizeObserver | null = null;
+    const canvas = canvasRef.current;
+
+    if (canvas) {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0) {
+            // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
+            viewportRef.current = { width, height };
+            // Also trigger React state update for dependencies
+            setInternalViewport({ width, height });
+          }
+        }
+      });
+      resizeObserver.observe(canvas);
+    }
+
+    // Fallback: window resize for non-element resizes
     const handleResize = () => setupCanvas();
     window.addEventListener('resize', handleResize);
 
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
   }, []); // Empty deps - setupCanvas is stable
 
   // 🔍 DEBUG: Check computed styles after mount

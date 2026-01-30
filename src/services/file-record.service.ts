@@ -58,6 +58,12 @@ import {
   buildFileDisplayName,
   ensureFilesNamespaceLoaded,
 } from '@/services/upload/utils/file-display-name';
+// 🏢 ENTERPRISE: SSoT Core module for FileRecord schema
+import {
+  buildPendingFileRecordData,
+  buildFinalizeFileRecordUpdate,
+  type BuildPendingFileRecordInput,
+} from '@/services/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
@@ -123,9 +129,8 @@ export class FileRecordService {
    * Creates a Firestore document with status: 'pending'.
    * Returns the generated fileId and storagePath for binary upload.
    *
-   * 🏢 ENTERPRISE: displayName is generated CENTRALLY by this function.
-   * It does NOT accept raw displayName - only naming context (entityLabel, purpose, etc.)
-   * This enforces SINGLE NAMING AUTHORITY (ADR-031).
+   * 🏢 ENTERPRISE: Uses SSoT core module for schema construction.
+   * displayName is generated CENTRALLY - enforces SINGLE NAMING AUTHORITY (ADR-031).
    */
   static async createPendingFileRecord(
     input: CreateFileRecordInput
@@ -133,36 +138,37 @@ export class FileRecordService {
     // 🏢 ENTERPRISE: Ensure i18n namespace is loaded for naming
     await ensureFilesNamespaceLoaded();
 
-    // Generate unique file ID
-    const fileId = generateFileId();
-
-    // Get extension from originalFilename if not provided
-    const ext = input.ext || getFileExtension(input.originalFilename);
-
     // =========================================================================
-    // 🏢 ENTERPRISE: CENTRALIZED NAMING - Single Authority
+    // 🏢 ENTERPRISE: USE SSoT CORE MODULE FOR SCHEMA CONSTRUCTION
     // =========================================================================
-    // displayName is generated here, NOT accepted from external input
-    // This ensures consistent naming across ALL entry points
-    const namingResult = buildFileDisplayName({
+    // All FileRecord schema logic lives in file-record-core.ts
+    // This adapter only handles client SDK specifics (timestamps, Firestore write)
+    const coreInput: BuildPendingFileRecordInput = {
+      companyId: input.companyId,
       entityType: input.entityType,
       entityId: input.entityId,
       domain: input.domain,
       category: input.category,
+      originalFilename: input.originalFilename,
+      contentType: input.contentType,
+      createdBy: input.createdBy,
+      projectId: input.projectId,
+      ext: input.ext,
       entityLabel: input.entityLabel,
       purpose: input.purpose,
       descriptors: input.descriptors,
       occurredAt: input.occurredAt,
       revision: input.revision,
-      ext,
-      originalFilename: input.originalFilename,
-      customTitle: input.customTitle, // 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
-      language: 'el', // 🏢 ENTERPRISE: Always use Greek for stored displayNames to ensure consistency
-    });
+      customTitle: input.customTitle,
+      language: 'el', // 🏢 ENTERPRISE: Always use Greek for stored displayNames
+    };
 
-    const displayName = namingResult.displayName;
+    const { fileId, storagePath, displayNameResult, recordBase } =
+      buildPendingFileRecordData(coreInput);
 
-    logger.info('Creating pending FileRecord with centralized naming', {
+    const displayName = displayNameResult.displayName;
+
+    logger.info('Creating pending FileRecord with SSoT core', {
       entityType: input.entityType,
       entityId: input.entityId,
       domain: input.domain,
@@ -175,58 +181,19 @@ export class FileRecordService {
       },
     });
 
-    // Build canonical storage path (IDs only, no Greek names)
-    const { path: storagePath } = buildStoragePath({
-      companyId: input.companyId,
-      projectId: input.projectId,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      domain: input.domain,
-      category: input.category,
-      fileId,
-      ext,
-    });
-
-    // Create FileRecord document
-    // 🏢 ENTERPRISE: Validate REQUIRED fields before creating object
-    if (!input.companyId) {
-      throw new Error('companyId is REQUIRED for creating FileRecord');
-    }
-    if (!input.createdBy) {
-      throw new Error('createdBy is REQUIRED for creating FileRecord');
-    }
-
+    // =========================================================================
+    // 🏢 ENTERPRISE: CLIENT SDK ADAPTER - Add timestamps and write
+    // =========================================================================
+    // Core provides schema, adapter provides SDK-specific operations
     const fileRecord: FileRecord = {
-      id: fileId,
-      companyId: input.companyId, // 🏢 REQUIRED for multi-tenant isolation
-      ...(input.projectId && { projectId: input.projectId }), // 🏢 ENTERPRISE: Only include if defined (Firestore rejects undefined)
-      entityType: input.entityType,
-      entityId: input.entityId,
-      domain: input.domain,
-      category: input.category,
-      storagePath,
-      displayName, // 🏢 ENTERPRISE: Generated centrally, not from input
-      originalFilename: input.originalFilename,
-      ext,
-      contentType: input.contentType,
-      status: FILE_STATUS.PENDING,
-      lifecycleState: FILE_LIFECYCLE_STATES.ACTIVE, // 🏢 ENTERPRISE: REQUIRED - useFloorplanFiles queries by this field
-      isDeleted: false, // 🏢 ENTERPRISE: REQUIRED - Firestore queries with '!=' exclude docs without the field
-      createdAt: new Date().toISOString(),
-      createdBy: input.createdBy,
-      // 🏢 ENTERPRISE: Store naming metadata for runtime i18n translation
-      ...(input.purpose && { purpose: input.purpose }),
-      ...(input.entityLabel && { entityLabel: input.entityLabel }),
-      ...(input.descriptors && { descriptors: input.descriptors }),
-      ...(input.occurredAt && { occurredAt: input.occurredAt }),
-      ...(input.revision && { revision: input.revision }),
-      ...(input.customTitle && { customTitle: input.customTitle }),
+      ...recordBase,
+      createdAt: new Date().toISOString(), // Will be overwritten by serverTimestamp
     };
 
-    // Write to Firestore
+    // Write to Firestore with server timestamp
     const docRef = doc(db, COLLECTIONS.FILES, fileId);
     const docData = {
-      ...fileRecord,
+      ...recordBase,
       createdAt: serverTimestamp(), // Use server timestamp for consistency
     };
 
@@ -275,6 +242,8 @@ export class FileRecordService {
    * Step C: Finalize FileRecord (after successful binary upload)
    *
    * Updates the FileRecord with final metadata and sets status to 'ready'.
+   *
+   * 🏢 ENTERPRISE: Uses SSoT core module for update construction.
    */
   static async finalizeFileRecord(input: FinalizeFileRecordInput): Promise<void> {
     logger.info('Finalizing FileRecord', {
@@ -291,32 +260,35 @@ export class FileRecordService {
       throw new Error(`FileRecord not found: ${input.fileId}`);
     }
 
-    // Update with final data
-    // 🏢 ENTERPRISE: Build update object without undefined fields (Firestore rejects undefined)
-    const updateData: Record<string, unknown> = {
-      status: FILE_STATUS.READY,
+    // =========================================================================
+    // 🏢 ENTERPRISE: USE SSoT CORE MODULE FOR UPDATE CONSTRUCTION
+    // =========================================================================
+    // Core provides update schema, adapter adds timestamp and executes
+    const coreUpdate = buildFinalizeFileRecordUpdate({
       sizeBytes: input.sizeBytes,
       downloadUrl: input.downloadUrl,
+      hash: input.hash,
+      nextStatus: FILE_STATUS.READY, // Default for client uploads
+    });
+
+    // Build update with server timestamp (client SDK specific)
+    const updateData: Record<string, unknown> = {
+      ...coreUpdate,
       updatedAt: serverTimestamp(),
     };
-
-    // Only include hash if provided (optional field)
-    if (input.hash !== undefined) {
-      updateData.hash = input.hash;
-    }
 
     await updateDoc(docRef, updateData);
 
     logger.info('FileRecord finalized successfully', {
       fileId: input.fileId,
-      status: FILE_STATUS.READY,
+      status: coreUpdate.status,
     });
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchFileUpdated({
       fileId: input.fileId,
       updates: {
-        status: FILE_STATUS.READY,
+        status: coreUpdate.status,
         sizeBytes: input.sizeBytes,
         hasDownloadUrl: !!input.downloadUrl,
       },

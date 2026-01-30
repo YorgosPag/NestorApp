@@ -136,6 +136,34 @@ interface ErrorBoundaryProps {
   t?: TFunction; // 🏢 ENTERPRISE: i18n translation function injection
 }
 
+// ============================================================================
+// 🏢 ENTERPRISE: Tour Trigger Component for Error Dialog
+// ============================================================================
+// Function component that triggers the Product Tour when error UI is shown.
+// This is needed because class components cannot use hooks directly.
+// ============================================================================
+
+function ErrorDialogTourTrigger() {
+  const { startTour, shouldShowTour } = useTour();
+
+  React.useEffect(() => {
+    const TOUR_PERSISTENCE_KEY = 'error-dialog-tour-v1';
+
+    // Small delay to ensure DOM elements are rendered with their IDs
+    const timer = setTimeout(() => {
+      if (shouldShowTour('error-dialog-tour', TOUR_PERSISTENCE_KEY)) {
+        const tourConfig = createErrorDialogTourConfig();
+        startTour(tourConfig);
+      }
+    }, 800); // Wait for buttons to render with IDs
+
+    return () => clearTimeout(timer);
+  }, [shouldShowTour, startTour]);
+
+  // This component doesn't render anything - it just triggers the tour
+  return null;
+}
+
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   private retryTimeoutId: NodeJS.Timeout | null = null;
   private pendingEmailData: EmailComposeOptions | null = null; // 🏢 ENTERPRISE: Store email data for provider selection
@@ -578,6 +606,10 @@ ${errorDetails.stack || 'Stack trace not available'}
 
       return (
         <main className={`min-h-screen ${colors ? colors.bg.primary : 'bg-background'} flex items-center justify-center ${paddingMd}`}>
+          {/* 🏢 ENTERPRISE: Product Tour Trigger (ADR-037) */}
+          {/* This triggers the tour when error UI is shown */}
+          <ErrorDialogTourTrigger />
+
           <article className="max-w-2xl w-full">
             <section className={`bg-card ${borderTokens ? borderTokens.quick.error : 'border'} ${paddingXl} shadow-lg ${radiusMd}`}>
               {/* Error Header */}
@@ -608,6 +640,7 @@ ${errorDetails.stack || 'Stack trace not available'}
               <nav className={`flex flex-wrap ${gapSm} ${marginBottomLg}`}>
                 {enableRetry && retryCount < maxRetries && (
                   <Button
+                    id={ERROR_DIALOG_BUTTON_IDS.retry}
                     onClick={this.retry}
                     variant="default"
                     className={`flex items-center ${gapSm}`}
@@ -622,6 +655,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                 )}
 
                 <Button
+                  id={ERROR_DIALOG_BUTTON_IDS.back}
                   onClick={this.goBack}
                   variant="outline"
                   className={`flex items-center ${gapSm}`}
@@ -631,6 +665,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                 </Button>
 
                 <Button
+                  id={ERROR_DIALOG_BUTTON_IDS.home}
                   onClick={this.goHome}
                   variant="outline"
                   className={`flex items-center ${gapSm}`}
@@ -656,6 +691,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                     </div>
                     <div className={`flex flex-wrap ${gapSm}`}>
                       <Button
+                        id={ERROR_DIALOG_BUTTON_IDS.copy}
                         onClick={this.copyErrorDetails}
                         disabled={copySuccess}
                         variant="outline"
@@ -675,6 +711,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                         )}
                       </Button>
                       <Button
+                        id={ERROR_DIALOG_BUTTON_IDS.notify}
                         onClick={this.sendToAdmin}
                         disabled={isSendingToAdmin || emailSent || this.state.showEmailOptions}
                         variant={this.getErrorSeverity(error) === 'critical' ? 'destructive' : 'default'}
@@ -699,6 +736,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                         )}
                       </Button>
                       <Button
+                        id={ERROR_DIALOG_BUTTON_IDS.email}
                         onClick={() => this.setState({ showEmailOptions: true })}
                         disabled={this.state.showEmailOptions}
                         variant="outline"
@@ -753,6 +791,7 @@ ${errorDetails.stack || 'Stack trace not available'}
                       </div>
                     </div>
                     <Button
+                      id={ERROR_DIALOG_BUTTON_IDS.report}
                       onClick={this.reportError}
                       disabled={isReporting || reportSent}
                       variant="outline"
