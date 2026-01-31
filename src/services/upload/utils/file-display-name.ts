@@ -32,9 +32,71 @@ import {
   FILE_CATEGORIES,
 } from '@/config/domain-constants';
 
-// 🏢 ENTERPRISE: Use canonical i18n system (no direct JSON imports)
-import i18n from '@/i18n/config';
-import { loadNamespace } from '@/i18n/lazy-config';
+// ============================================================================
+// 🏢 ENTERPRISE: SERVER-SAFE I18N INTEGRATION
+// ============================================================================
+// CRITICAL: i18n uses react-i18next which calls React.createContext()
+// This breaks API routes (Telegram webhook, etc.) during Vercel build.
+// Solution: Lazy/conditional imports with server-safe fallbacks.
+// ============================================================================
+
+// Lazy-loaded i18n instance (client-side only)
+let i18nInstance: typeof import('i18next').default | null = null;
+let loadNamespaceFunc: ((ns: string, lang: string) => Promise<void>) | null = null;
+
+/**
+ * 🏢 ENTERPRISE: Check if we're in server/build context (no React available)
+ */
+function isServerContext(): boolean {
+  // During Vercel build, React is not available in API routes
+  return typeof window === 'undefined';
+}
+
+/**
+ * 🏢 ENTERPRISE: Lazy load i18n only when needed (client-side)
+ */
+async function getI18nInstance(): Promise<typeof import('i18next').default | null> {
+  // Server context: skip i18n (use fallbacks)
+  if (isServerContext()) {
+    return null;
+  }
+
+  // Already loaded
+  if (i18nInstance) {
+    return i18nInstance;
+  }
+
+  // Dynamic import (client-side only)
+  try {
+    const i18nModule = await import('@/i18n/config');
+    i18nInstance = i18nModule.default;
+    return i18nInstance;
+  } catch {
+    console.warn('⚠️ i18n not available, using fallbacks');
+    return null;
+  }
+}
+
+/**
+ * 🏢 ENTERPRISE: Lazy load loadNamespace function
+ */
+async function getLoadNamespaceFunc(): Promise<((ns: string, lang: string) => Promise<void>) | null> {
+  if (isServerContext()) {
+    return null;
+  }
+
+  if (loadNamespaceFunc) {
+    return loadNamespaceFunc;
+  }
+
+  try {
+    const lazyConfig = await import('@/i18n/lazy-config');
+    loadNamespaceFunc = lazyConfig.loadNamespace;
+    return loadNamespaceFunc;
+  } catch {
+    return null;
+  }
+}
 
 // ============================================================================
 // I18N INTEGRATION
@@ -43,27 +105,39 @@ import { loadNamespace } from '@/i18n/lazy-config';
 /**
  * 🏢 ENTERPRISE: Ensure 'files' namespace is loaded
  * This should be called at app startup or before first use
+ * NOTE: No-op in server context (safe for API routes)
  */
 export async function ensureFilesNamespaceLoaded(): Promise<void> {
+  const loadNs = await getLoadNamespaceFunc();
+  if (!loadNs) {
+    return; // Server context or i18n not available
+  }
+
   // 🏢 ENTERPRISE: Load BOTH languages to ensure translations are available
   // regardless of current UI language during upload
   await Promise.all([
-    loadNamespace('files', 'el'),
-    loadNamespace('files', 'en'),
+    loadNs('files', 'el'),
+    loadNs('files', 'en'),
   ]);
 }
 
 /**
  * Get translation from files namespace with fallback
+ * 🏢 ENTERPRISE: Server-safe - returns fallback in server context
  *
  * @param key - Translation key (e.g., "categories.photos")
  * @param fallback - Fallback value if translation not found
  * @param language - Language code ('el' or 'en'). Defaults to 'el' for storage consistency
  */
 function getFileTranslation(key: string, fallback: string, language: 'el' | 'en' = 'el'): string {
+  // Server context: use fallback (no i18n available)
+  if (isServerContext() || !i18nInstance) {
+    return fallback;
+  }
+
   // 🏢 ENTERPRISE: Always use Greek ('el') for stored displayNames to ensure consistency
   // Runtime translation happens in UI via useFileDisplayName hook
-  const result = i18n.t(`files:${key}`, { defaultValue: fallback, lng: language });
+  const result = i18nInstance.t(`files:${key}`, { defaultValue: fallback, lng: language });
   return typeof result === 'string' ? result : fallback;
 }
 

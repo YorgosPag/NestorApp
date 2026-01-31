@@ -77,11 +77,9 @@ import { PdfBackgroundCanvas, usePdfBackgroundStore } from '../../pdf-background
 import { useEventBus } from '../../systems/events';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
-// 🏢 ENTERPRISE (2026-01-31): Circle TTT (Tangent to 3 Lines) entity selection hook
-import { useCircleTTT } from '../../hooks/drawing/useCircleTTT';
-// 🏢 ENTERPRISE (2026-01-31): Line tools - Perpendicular and Parallel entity selection hooks - ADR-060
-import { useLinePerpendicular } from '../../hooks/drawing/useLinePerpendicular';
-import { useLineParallel } from '../../hooks/drawing/useLineParallel';
+// 🏢 ENTERPRISE (2026-01-31): Circle TTT and Line tools now managed by useSpecialTools hook
+// Previous imports: useCircleTTT, useLinePerpendicular, useLineParallel
+// Now handled by hooks/tools/useSpecialTools.ts
 // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
 import {
   useCommandHistory,
@@ -96,6 +94,14 @@ import {
 } from '../../core/commands';
 // 🏢 ADR-101: Centralized deep clone utility
 import { deepClone } from '../../utils/clone-utils';
+// 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
+import { useCanvasSettings } from '../../hooks/canvas';
+// 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
+import { useOverlayLayers } from '../../hooks/layers';
+// 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
+import { useSpecialTools } from '../../hooks/tools';
+// 🏢 ENTERPRISE (2026-01-31): Centralized grip system state management - ADR-XXX
+import { useGripSystem } from '../../hooks/grips';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -256,135 +262,34 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     isOpen: false,
     position: { x: 0, y: 0 },
   });
-  // 🏢 ENTERPRISE (2026-01-25): State για grip hover detection (WARM grip)
-  const [hoveredEdgeInfo, setHoveredEdgeInfo] = useState<{ overlayId: string; edgeIndex: number } | null>(null);
-  const [hoveredVertexInfo, setHoveredVertexInfo] = useState<{ overlayId: string; vertexIndex: number } | null>(null);
-
-  // 🏢 ENTERPRISE (2026-01-26): State για MULTIPLE selected grips (HOT grips - Autodesk pattern)
-  // Shift+Click: Add/remove grips to selection | Drag: Move all selected grips together
-  // ADR-031: Multi-Grip Selection System
-  const [selectedGrips, setSelectedGrips] = useState<Array<{
-    type: 'vertex' | 'edge-midpoint';
-    overlayId: string;
-    index: number; // vertexIndex for vertex, edgeIndex for edge-midpoint
-  }>>([]);
-
-  // 🏢 ENTERPRISE: Helper για backwards compatibility με single selectedGrip usage
-  const selectedGrip = selectedGrips.length > 0 ? selectedGrips[0] : null;
-
-  // 🏢 ENTERPRISE (2026-01-26): State για MULTI-vertex drag (vertex movement)
-  // ADR-031: Multi-Grip Selection System - supports moving multiple grips together
-  const [draggingVertices, setDraggingVertices] = useState<Array<{
-    overlayId: string;
-    vertexIndex: number;
-    startPoint: Point2D;
-    originalPosition: Point2D; // Original vertex position for delta calculation
-  }> | null>(null);
-
-  // 🏢 ENTERPRISE: Helper για backwards compatibility
-  const draggingVertex = draggingVertices && draggingVertices.length > 0 ? {
-    overlayId: draggingVertices[0].overlayId,
-    vertexIndex: draggingVertices[0].vertexIndex,
-    startPoint: draggingVertices[0].startPoint
-  } : null;
-  // 🏢 ENTERPRISE (2026-01-25): State για edge midpoint drag (vertex insertion)
-  const [draggingEdgeMidpoint, setDraggingEdgeMidpoint] = useState<{
-    overlayId: string;
-    edgeIndex: number;
-    insertIndex: number;
-    startPoint: Point2D;
-    newVertexCreated: boolean; // True after vertex has been inserted
-  } | null>(null);
-
-  // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview position
-  // Updates on every mouse move during drag for smooth visual feedback
-  const [dragPreviewPosition, setDragPreviewPosition] = useState<Point2D | null>(null);
-
-  // 🏢 ENTERPRISE (2027-01-27): State για OVERLAY BODY drag (move tool) - Unified Toolbar Integration
-  // ADR-032: Move entire overlay with Command Pattern for undo/redo support
-  const [draggingOverlayBody, setDraggingOverlayBody] = useState<{
-    overlayId: string;
-    startPoint: Point2D;    // Mouse start position in world coordinates
-    startPolygon: Array<[number, number]>; // Original polygon for delta calculation
-  } | null>(null);
-
-  // 🚀 PERFORMANCE (2026-01-27): Throttle ref for grip hover detection
-  // Grip hover detection is O(selectedOverlays × vertices) - expensive on every mouse move
-  const gripHoverThrottleRef = useRef<{
-    lastCheckTime: number;
-    lastWorldPoint: Point2D | null;
-  }>({
-    lastCheckTime: 0,
-    lastWorldPoint: null
-  });
-
-  // 🏢 ENTERPRISE (2026-01-25): Flag to prevent click event immediately after drag
-  // Prevents overlay deselection when releasing mouse after drag
-  const justFinishedDragRef = useRef(false);
+  // 🏢 ENTERPRISE (2026-01-31): Grip system state management moved to useGripSystem hook
+  // Previous ~65 lines of grip state definitions now handled by centralized hook
+  // Includes: hover states, selection states, drag states, throttle refs
+  const {
+    hoveredVertexInfo, setHoveredVertexInfo,
+    hoveredEdgeInfo, setHoveredEdgeInfo,
+    selectedGrips, setSelectedGrips, selectedGrip,
+    draggingVertices, setDraggingVertices, draggingVertex,
+    draggingEdgeMidpoint, setDraggingEdgeMidpoint,
+    draggingOverlayBody, setDraggingOverlayBody,
+    dragPreviewPosition, setDragPreviewPosition,
+    gripHoverThrottleRef, justFinishedDragRef,
+    markDragFinished,
+  } = useGripSystem();
   // 🔧 FIX (2026-01-24): Flag to track if we're in the process of saving
   const [isSavingPolygon, setIsSavingPolygon] = useState(false);
   // 🎯 EVENT BUS: For polygon drawing communication with toolbar
   const eventBus = useEventBus();
 
-  // 🏢 ENTERPRISE (2026-01-31): Circle TTT (Tangent to 3 Lines) entity selection mode
-  // This tool requires entity picking instead of point collection
-  const circleTTT = useCircleTTT({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onCircleCreated: (circleEntity) => {
-      // Add circle to current level's scene
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-
-      // Add entity to scene
-      const updatedScene = {
-        ...scene,
-        entities: [...(scene.entities || []), circleEntity]
-      };
-      levelManager.setLevelScene(levelId, updatedScene);
-
-      console.log('🎯 [CircleTTT] Circle added to scene:', circleEntity.id);
-    }
-  });
-
-  // 🏢 ENTERPRISE (2026-01-31): Line Perpendicular entity selection mode - ADR-060
-  const linePerpendicular = useLinePerpendicular({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onLineCreated: (lineEntity) => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-
-      const updatedScene = {
-        ...scene,
-        entities: [...(scene.entities || []), lineEntity]
-      };
-      levelManager.setLevelScene(levelId, updatedScene);
-      console.log('🎯 [LinePerpendicular] Line added to scene:', lineEntity.id);
-    }
-  });
-
-  // 🏢 ENTERPRISE (2026-01-31): Line Parallel entity selection mode - ADR-060
-  const lineParallel = useLineParallel({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onLineCreated: (lineEntity) => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-
-      const updatedScene = {
-        ...scene,
-        entities: [...(scene.entities || []), lineEntity]
-      };
-      levelManager.setLevelScene(levelId, updatedScene);
-      console.log('🎯 [LineParallel] Line added to scene:', lineEntity.id);
-    }
+  // 🏢 ENTERPRISE (2026-01-31): Special tools management moved to useSpecialTools hook
+  // Previous ~100 lines of tool initialization and activation logic now handled by centralized hook
+  const {
+    circleTTT,
+    linePerpendicular,
+    lineParallel,
+  } = useSpecialTools({
+    activeTool,
+    levelManager,
   });
 
   // Keep ref in sync with state
@@ -399,38 +304,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       canSave: draftPolygon.length >= 3
     });
   }, [draftPolygon.length, eventBus]);
-
-  // 🏢 ENTERPRISE (2026-01-31): Activate/deactivate Circle TTT based on activeTool
-  // 🔧 FIX: Use stable callback references to avoid infinite loop
-  // The hook returns new object on each render, so we extract stable functions
-  const { activate: activateCircleTTT, deactivate: deactivateCircleTTT } = circleTTT;
-  React.useEffect(() => {
-    if (activeTool === 'circle-ttt') {
-      activateCircleTTT();
-    } else {
-      deactivateCircleTTT();
-    }
-  }, [activeTool, activateCircleTTT, deactivateCircleTTT]);
-
-  // 🏢 ENTERPRISE (2026-01-31): Activate/deactivate Line Perpendicular based on activeTool - ADR-060
-  const { activate: activateLinePerpendicular, deactivate: deactivateLinePerpendicular } = linePerpendicular;
-  React.useEffect(() => {
-    if (activeTool === 'line-perpendicular') {
-      activateLinePerpendicular();
-    } else {
-      deactivateLinePerpendicular();
-    }
-  }, [activeTool, activateLinePerpendicular, deactivateLinePerpendicular]);
-
-  // 🏢 ENTERPRISE (2026-01-31): Activate/deactivate Line Parallel based on activeTool - ADR-060
-  const { activate: activateLineParallel, deactivate: deactivateLineParallel } = lineParallel;
-  React.useEffect(() => {
-    if (activeTool === 'line-parallel') {
-      activateLineParallel();
-    } else {
-      deactivateLineParallel();
-    }
-  }, [activeTool, activateLineParallel, deactivateLineParallel]);
 
   // 🏢 ENTERPRISE: Provide zoom system to context
   // NOTE: canvasContext already retrieved at line 93 for centralized zoom operations
@@ -542,7 +415,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const forceViewportUpdate = () => {
-      const dxfCanvas = dxfCanvasRef.current?.getCanvas?.();
+      const dxfCanvas = dxfCanvasRef?.current?.getCanvas?.();
       if (dxfCanvas && dxfCanvas instanceof HTMLCanvasElement) {
         const rect = dxfCanvas.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
@@ -604,6 +477,23 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
   // Get cursor settings from CursorSystem
   const { settings: cursorSettings } = useCursorSettings();
+
+  // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
+  // Extracts settings conversion from component to dedicated hook (SRP)
+  const {
+    crosshairSettings,
+    cursorCanvasSettings,
+    snapSettings,
+    rulerSettings,
+    gridSettings,
+    selectionSettings,
+    gridMajorInterval,
+  } = useCanvasSettings({
+    cursorSettings,
+    gridContextSettings: gridContextSettings ?? null,
+    rulerContextSettings: rulerContextSettings ?? null,
+    showGrid,
+  });
 
   // 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings (SINGLE SOURCE OF TRUTH)
   // Pattern: SAP/Autodesk - Provider-based settings for consistent grip appearance
@@ -832,8 +722,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setDraggingVertices(null);
       setDragPreviewPosition(null);
       // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
-      justFinishedDragRef.current = true;
-      setTimeout(() => { justFinishedDragRef.current = false; }, PANEL_LAYOUT.TIMING.DRAG_FINISH_RESET);
+      markDragFinished();
     }
 
     // Handle edge midpoint drag end
@@ -867,8 +756,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setDraggingEdgeMidpoint(null);
       setDragPreviewPosition(null);
       // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
-      justFinishedDragRef.current = true;
-      setTimeout(() => { justFinishedDragRef.current = false; }, PANEL_LAYOUT.TIMING.DRAG_FINISH_RESET);
+      markDragFinished();
     }
 
     // 🏢 ENTERPRISE (2027-01-27): Handle overlay body drag end - Unified Toolbar Integration
@@ -907,62 +795,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setDraggingOverlayBody(null);
       setDragPreviewPosition(null);
       // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
-      justFinishedDragRef.current = true;
-      setTimeout(() => { justFinishedDragRef.current = false; }, PANEL_LAYOUT.TIMING.DRAG_FINISH_RESET);
+      markDragFinished();
     }
   }, [draggingVertex, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, transform, viewport, executeCommand]);
 
-  // 🔺 CURSOR SYSTEM INTEGRATION - Σύνδεση με floating panel
-  const crosshairSettings: CrosshairSettings = {
-    enabled: cursorSettings.crosshair.enabled,
-    visible: cursorSettings.crosshair.enabled, // visible follows enabled state
-    color: cursorSettings.crosshair.color,
-    size: cursorSettings.crosshair.size_percent,
-    opacity: cursorSettings.crosshair.opacity,
-    style: cursorSettings.crosshair.line_style,
-    // Extended properties από CursorSystem
-    lineWidth: cursorSettings.crosshair.line_width,
-    useCursorGap: cursorSettings.crosshair.use_cursor_gap,
-    centerGapPx: cursorSettings.crosshair.center_gap_px,
-    showCenterDot: true,  // Default: show center dot
-    centerDotSize: 2      // Default: 2px center dot
-  };
-
-  // 🔺 CURSOR SETTINGS INTEGRATION - Pass complete cursor settings to LayerCanvas
-  // LayerCanvas expects the full CursorSettings object from systems/cursor/config.ts
-  const cursorCanvasSettings: CursorSettings = cursorSettings;
-
-  const snapSettings: SnapSettings = {
-    enabled: true,
-    types: ['endpoint', 'midpoint', 'center'],
-    tolerance: 10
-  };
-
-  // Convert RulersGridSystem settings to Canvas V2 format
-  const rulerSettings: RulerSettings = {
-    enabled: true, // ✅ FORCE ENABLE RULERS
-    unit: (rulerContextSettings?.units as 'mm' | 'cm' | 'm') ?? 'mm',
-    color: rulerContextSettings?.horizontal?.color ?? UI_COLORS.WHITE, // ✅ CENTRALIZED WHITE για visibility
-    backgroundColor: rulerContextSettings?.horizontal?.backgroundColor ?? UI_COLORS.DARK_BACKGROUND, // ✅ CENTRALIZED DARK BACKGROUND για contrast
-    fontSize: rulerContextSettings?.horizontal?.fontSize ?? 12,
-    // Extended properties από RulersGridSystem
-    textColor: rulerContextSettings?.horizontal?.textColor ?? UI_COLORS.WHITE, // ✅ CENTRALIZED WHITE TEXT για visibility
-    showLabels: rulerContextSettings?.horizontal?.showLabels ?? true,
-    showUnits: rulerContextSettings?.horizontal?.showUnits ?? true,
-    showBackground: rulerContextSettings?.horizontal?.showBackground ?? true,
-    showMajorTicks: rulerContextSettings?.horizontal?.showMajorTicks ?? true,
-    showMinorTicks: rulerContextSettings?.horizontal?.showMinorTicks ?? true,
-    majorTickColor: rulerContextSettings?.horizontal?.majorTickColor ?? UI_COLORS.WHITE, // ✅ CENTRALIZED WHITE TICKS
-    minorTickColor: rulerContextSettings?.horizontal?.minorTickColor ?? UI_COLORS.LIGHT_GRAY, // ✅ CENTRALIZED LIGHT GRAY MINOR TICKS
-    majorTickLength: rulerContextSettings?.horizontal?.majorTickLength ?? 10,
-    minorTickLength: rulerContextSettings?.horizontal?.minorTickLength ?? 5,
-    height: rulerContextSettings?.horizontal?.height ?? 30,
-    width: rulerContextSettings?.vertical?.width ?? 30,
-    position: rulerContextSettings?.horizontal?.position ?? 'bottom',
-    // 🔺 MISSING UNITS SETTINGS - Σύνδεση με floating panel
-    unitsFontSize: rulerContextSettings?.horizontal?.unitsFontSize ?? 10,
-    unitsColor: rulerContextSettings?.horizontal?.unitsColor ?? UI_COLORS.WHITE // ✅ CENTRALIZED WHITE UNITS TEXT
-  };
+  // 🏢 ENTERPRISE (2026-01-31): Settings construction moved to useCanvasSettings hook
+  // Previous ~150 lines of settings construction now handled by the hook above (line 608-622)
 
   // ✅ LAYER VISIBILITY: Show LayerCanvas controlled by debug toggle
   // 🔧 FIX (2026-01-24): ALWAYS show LayerCanvas when in draw/edit mode to ensure overlays are visible
@@ -1000,199 +838,30 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, [universalSelection, activeTool, selectedGrips]);
 
-  // ✅ CONVERT RulersGridSystem grid settings to Canvas V2 GridSettings format
-  // RulersGridSystem uses: gridSettings.visual.color
-  // Canvas GridRenderer uses: gridSettings.color
-  const gridSettings: GridSettings = {
-    // Enabled state: ΠΡΩΤΑ από panel, μετά toolbar fallback, τέλος ΠΑΝΤΑ true για stability
-    // 🛡️ NULL GUARD: Ensure grid is always enabled, even if context is temporarily undefined during re-renders
-    enabled: gridContextSettings?.visual?.enabled ?? showGrid ?? true,
-    visible: gridContextSettings?.visual?.enabled ?? true, // ✅ VISIBILITY: Controls grid rendering
+  // 🏢 ENTERPRISE (2026-01-31): Grid/Selection settings construction moved to useCanvasSettings hook
+  // Previous ~60 lines of settings construction now handled by the hook above (line 608-622)
 
-    // ✅ SIZE: Από panel settings
-    size: gridContextSettings?.visual?.step ?? 10,
-
-    // ✅ COLORS: Από panel settings (NOT hardcoded!)
-    color: gridContextSettings?.visual?.color ?? UI_COLORS.BLUE_DEFAULT, // CENTRALIZED default blue από panel
-    majorGridColor: gridContextSettings?.visual?.majorGridColor ?? UI_COLORS.MEDIUM_GRAY,
-    minorGridColor: gridContextSettings?.visual?.minorGridColor ?? UI_COLORS.LIGHT_GRAY_ALT,
-
-    // ✅ OPACITY: Από panel settings
-    opacity: gridContextSettings?.visual?.opacity ?? 0.6,
-
-    // ✅ LINE WIDTHS: Από panel settings
-    lineWidth: gridContextSettings?.visual?.minorGridWeight ?? 0.5,
-    majorGridWeight: gridContextSettings?.visual?.majorGridWeight ?? 1,
-    minorGridWeight: gridContextSettings?.visual?.minorGridWeight ?? 0.5,
-
-    // ✅ GRID STYLE: Από panel settings (lines/dots/crosses)
-    style: gridContextSettings?.visual?.style ?? 'lines',
-    majorInterval: gridContextSettings?.visual?.subDivisions ?? 5, // Extended property for grid subdivisions
-    showMajorGrid: true,
-    showMinorGrid: true,
-    adaptiveOpacity: false, // ❌ DISABLE για να φαίνεται πάντα
-    minVisibleSize: 0 // ✅ ALWAYS SHOW regardless of zoom
-  };
-
-  // 🔧 Grid major interval for ruler tick calculations
-  const gridMajorInterval = gridContextSettings?.visual?.subDivisions ?? 5;
-
-  // 🔺 SELECTION SETTINGS INTEGRATION - Σύνδεση selection boxes με floating panel
-  const selectionSettings: SelectionSettings = {
-    window: {
-      fillColor: cursorSettings.selection.window.fillColor,
-      fillOpacity: cursorSettings.selection.window.fillOpacity,
-      borderColor: cursorSettings.selection.window.borderColor,
-      borderOpacity: cursorSettings.selection.window.borderOpacity,
-      borderStyle: cursorSettings.selection.window.borderStyle,
-      borderWidth: cursorSettings.selection.window.borderWidth
-    },
-    crossing: {
-      fillColor: cursorSettings.selection.crossing.fillColor,
-      fillOpacity: cursorSettings.selection.crossing.fillOpacity,
-      borderColor: cursorSettings.selection.crossing.borderColor,
-      borderOpacity: cursorSettings.selection.crossing.borderOpacity,
-      borderStyle: cursorSettings.selection.crossing.borderStyle,
-      borderWidth: cursorSettings.selection.crossing.borderWidth
-    }
-  };
-
-  // === CONVERT OVERLAYS TO CANVAS V2 FORMAT ===
-  const convertToColorLayers = (overlays: Overlay[]): ColorLayer[] => {
-    // Simple debug - only log count and first overlay sample (no infinite re-render)
-    if (overlays.length > 0) {
-      // // console.log('🔍 Converting overlays:', {
-      //   count: overlays.length,
-      //   sample: { id: overlays[0].id, hasPolygon: !!overlays[0].polygon }
-      // });
-    }
-
-    return overlays
-      .filter(overlay => overlay.polygon && Array.isArray(overlay.polygon) && overlay.polygon.length >= 3)
-      .map((overlay, index) => {
-        const vertices = overlay.polygon.map((point: [number, number]) => ({ x: point[0], y: point[1] }));
-
-        // 🎯 ENTERPRISE: Χρήση Overlay.style properties αντί για non-existent properties
-        // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
-        const isSelected = universalSelection.isSelected(overlay.id);
-        const statusColors = overlay.status ? getStatusColors(overlay.status) : null;
-        const fillColor = overlay.style?.fill || statusColors?.fill || UI_COLORS.BUTTON_PRIMARY;
-        const strokeColor = overlay.style?.stroke || statusColors?.stroke || UI_COLORS.BLACK;
-
-        return {
-          id: overlay.id,
-          name: overlay.label || `Layer ${index + 1}`,
-          color: fillColor,
-          opacity: overlay.style?.opacity ?? 0.7,  // Slightly transparent so we can see them
-          visible: true,  // Overlays are always visible (no visible property in Overlay interface)
-          zIndex: index,
-          // 🎯 ΚΡΙΣΙΜΟ: Περνάμε το status για STATUS_COLORS mapping στο LayerRenderer
-          status: overlay.status as RegionStatus | undefined,
-          // 🏢 ENTERPRISE (2026-01-25): Show grips when layer is selected with select tool
-          showGrips: isSelected,
-          // 🏢 ENTERPRISE (2026-01-25): Show edge midpoint grips for vertex insertion (Autodesk pattern)
-          showEdgeMidpoints: isSelected,
-          // WARM state (hover)
-          hoveredEdgeIndex: hoveredEdgeInfo?.overlayId === overlay.id ? hoveredEdgeInfo.edgeIndex : undefined,
-          hoveredVertexIndex: hoveredVertexInfo?.overlayId === overlay.id ? hoveredVertexInfo.vertexIndex : undefined,
-          // 🏢 ENTERPRISE (2026-01-26): HOT state (MULTI-selected grips - Autodesk pattern)
-          // ADR-031: Multi-Grip Selection System - array of selected grip indices
-          selectedGripIndices: selectedGrips
-            .filter(g => g.overlayId === overlay.id && g.type === 'vertex')
-            .map(g => g.index),
-          selectedEdgeMidpointIndices: selectedGrips
-            .filter(g => g.overlayId === overlay.id && g.type === 'edge-midpoint')
-            .map(g => g.index),
-          // 🏢 ENTERPRISE (2026-01-26): Real-time drag preview for MULTI-GRIP movement
-          // Pattern: Autodesk Inventor - Immutable original positions + computed delta
-          isDragging: draggingVertex?.overlayId === overlay.id || draggingEdgeMidpoint?.overlayId === overlay.id,
-          // Legacy support
-          dragPreviewPosition: (draggingVertex?.overlayId === overlay.id || draggingEdgeMidpoint?.overlayId === overlay.id)
-            ? dragPreviewPosition ?? undefined
-            : undefined,
-          // 🏢 ENTERPRISE: Complete drag state with original positions
-          dragState: (draggingVertices && draggingVertices.length > 0 && dragPreviewPosition)
-            ? (() => {
-                // Build original positions map for this overlay's dragging vertices
-                const originalPositions = new Map<number, Point2D>();
-                draggingVertices
-                  .filter(dv => dv.overlayId === overlay.id)
-                  .forEach(dv => {
-                    originalPositions.set(dv.vertexIndex, dv.originalPosition);
-                  });
-
-                // Calculate delta from first grip's start point
-                const delta = {
-                  x: dragPreviewPosition.x - draggingVertices[0].startPoint.x,
-                  y: dragPreviewPosition.y - draggingVertices[0].startPoint.y
-                };
-
-                return { delta, originalPositions };
-              })()
-            : undefined,
-          polygons: [{
-            id: `polygon_${overlay.id}`,
-            vertices,
-            fillColor,  // Use status colors or style colors
-            strokeColor: isSelected ? UI_COLORS.SELECTED_RED : strokeColor,
-            strokeWidth: isSelected ? 3 : 2,  // Thicker stroke when selected
-            selected: isSelected
-          }]
-        };
-      });
-  };
-
-  const colorLayers = convertToColorLayers(currentOverlays);
-
-  // 🔧 FIX (2026-01-24): Add draft preview layer so user sees polygon while drawing
-  // Without this, the draftPolygon is only stored in state but never rendered
-
-  // 🎯 GRIP CLOSE DETECTION: Check if mouse is near first point
-  // 🏢 ADR-099: Using centralized POLYGON_TOLERANCES.CLOSE_DETECTION
-  const isNearFirstPoint = React.useMemo(() => {
-    if (draftPolygon.length < 3 || !mouseWorld) return false;
-    const firstPoint = draftPolygon[0];
-    // 🏢 ADR-065: Use centralized distance calculation
-    const distance = calculateDistance(mouseWorld, { x: firstPoint[0], y: firstPoint[1] });
-    return distance < (POLYGON_TOLERANCES.CLOSE_DETECTION / transform.scale);
-  }, [draftPolygon, mouseWorld, transform.scale]);
-
-  const draftColorLayer: ColorLayer | null = React.useMemo(() => {
-    // Show grips from first point, but need at least 1 point
-    if (draftPolygon.length < 1) return null;
-
-    const statusColors = getStatusColors(currentStatus);
-    // 🔧 FIX: Default colors if status not found
-    const fillColor = statusColors?.fill ?? 'rgba(59, 130, 246, 0.3)'; // Default blue
-    const strokeColor = statusColors?.stroke ?? '#3b82f6';
-
-    return {
-      id: 'draft-polygon-preview',
-      name: 'Draft Polygon (Preview)',
-      color: fillColor,
-      opacity: 0.5, // Slightly transparent to indicate it's a preview
-      visible: true,
-      zIndex: 999, // On top of all other layers
-      status: currentStatus as 'for-sale' | 'for-rent' | 'reserved' | 'sold' | 'landowner',
-      // 🎯 DRAFT GRIPS: Enable grip rendering for draft polygons
-      isDraft: true,
-      showGrips: true,
-      isNearFirstPoint: isNearFirstPoint,
-      polygons: [{
-        id: 'draft-polygon-preview-0',
-        vertices: draftPolygon.map(([x, y]) => ({ x, y })),
-        fillColor: fillColor,
-        strokeColor: strokeColor,
-        strokeWidth: 2,
-        selected: false
-      }]
-    };
-  }, [draftPolygon, currentStatus, isNearFirstPoint]);
-
-  // Combine saved layers with draft preview
-  const colorLayersWithDraft = React.useMemo(() => {
-    return draftColorLayer ? [...colorLayers, draftColorLayer] : colorLayers;
-  }, [colorLayers, draftColorLayer]);
+  // 🏢 ENTERPRISE (2026-01-31): Overlay to ColorLayer conversion moved to useOverlayLayers hook
+  // Previous ~140 lines of conversion logic now handled by centralized hook
+  const {
+    colorLayers,
+    colorLayersWithDraft,
+    isNearFirstPoint,
+  } = useOverlayLayers({
+    overlays: currentOverlays,
+    isSelected: universalSelection.isSelected,
+    hoveredVertexInfo,
+    hoveredEdgeInfo,
+    selectedGrips,
+    draggingVertex,
+    draggingVertices,
+    draggingEdgeMidpoint,
+    dragPreviewPosition,
+    draftPolygon,
+    mouseWorld,
+    transformScale: transform.scale,
+    currentStatus,
+  });
 
   // === 🎨 DRAWING SYSTEM ===
   // useDrawingHandlers για DXF entity drawing (Line, Circle, Rectangle, etc.)
@@ -1402,7 +1071,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         // Auto-fitting DXF to view - debug disabled for performance
 
         // Get actual canvas dimensions instead of hardcoded values
-        const canvas = dxfCanvasRef.current || overlayCanvasRef.current;
+        const canvas = dxfCanvasRef?.current || overlayCanvasRef.current;
         if (canvas && canvas instanceof HTMLCanvasElement) {
           // ✅ ENTERPRISE MIGRATION: Get service from registry
           const canvasBounds = serviceRegistry.get('canvas-bounds');
@@ -2401,7 +2070,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
               type: currentSnapResult.activeMode || 'endpoint'
             } : null}
             viewport={viewport}
-            canvasRect={dxfCanvasRef.current?.getCanvas?.()?.getBoundingClientRect() ?? null}
+            canvasRect={dxfCanvasRef?.current?.getCanvas?.()?.getBoundingClientRect() ?? null}
             transform={transform}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
           />
