@@ -12,7 +12,8 @@ import { ExtendedSnapType, SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-065: Centralized Distance & Vector Operations
+import { calculateDistance, getUnitVector } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ENTERPRISE: Import centralized type guards
 import {
   isLineEntity,
@@ -41,28 +42,24 @@ export class ParallelSnapEngine extends BaseSnapEngine {
     const referenceLines = this.findReferenceLines(cursorPoint, radius * 3, context);
     
     for (const refLine of referenceLines) {
-      // Calculate line direction vector
-      const dx = refLine.end.x - refLine.start.x;
-      const dy = refLine.end.y - refLine.start.y;
       // 🏢 ADR-065: Use centralized distance calculation
       const length = calculateDistance(refLine.start, refLine.end);
-      
+
       if (length === 0) continue;
-      
-      // Normalized direction vector
-      const dirX = dx / length;
-      const dirY = dy / length;
-      
+
+      // 🏢 ADR-065: Use centralized unit vector calculation
+      const dir = getUnitVector(refLine.start, refLine.end);
+
       // Project cursor point onto the parallel line passing through nearest reference point
       const nearestRefPoint = getNearestPointOnLine(cursorPoint, refLine.start, refLine.end, false);
-      
+
       // Create parallel line candidates at different distances
       const distances = [0, 50, 100, 150]; // Grid-like distances
-      
+
       for (const dist of distances) {
-        // Perpendicular direction
-        const perpX = -dirY;
-        const perpY = dirX;
+        // Perpendicular direction (rotated 90° from direction)
+        const perpX = -dir.y;
+        const perpY = dir.x;
         
         // Points on parallel lines
         const parallelPoint1 = {

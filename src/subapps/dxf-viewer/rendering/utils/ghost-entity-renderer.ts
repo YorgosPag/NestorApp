@@ -38,7 +38,9 @@ import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addCirclePath, TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-066: Centralized Angle Calculation
-import { calculateAngle } from '../entities/shared/geometry-rendering-utils';
+// 🏢 ADR-066: Centralized Angle Calculation
+// 🏢 ADR-080: Centralized Rectangle Bounds
+import { calculateAngle, rectFromTwoPoints } from '../entities/shared/geometry-rendering-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration
@@ -306,10 +308,8 @@ function renderGhostRectangle(
   const ghostCorner1 = worldToScreen(applyDelta(corner1, delta));
   const ghostCorner2 = worldToScreen(applyDelta(corner2, delta));
 
-  const x = Math.min(ghostCorner1.x, ghostCorner2.x);
-  const y = Math.min(ghostCorner1.y, ghostCorner2.y);
-  const width = Math.abs(ghostCorner2.x - ghostCorner1.x);
-  const height = Math.abs(ghostCorner2.y - ghostCorner1.y);
+  // 🏢 ADR-080: Centralized Rectangle Bounds
+  const { x, y, width, height } = rectFromTwoPoints(ghostCorner1, ghostCorner2);
 
   ctx.beginPath();
   ctx.rect(x, y, width, height);
@@ -411,10 +411,8 @@ function renderSimplifiedGhost(
   const ghostMin = worldToScreen(applyDelta({ x: bounds.minX, y: bounds.minY }, delta));
   const ghostMax = worldToScreen(applyDelta({ x: bounds.maxX, y: bounds.maxY }, delta));
 
-  const x = Math.min(ghostMin.x, ghostMax.x);
-  const y = Math.min(ghostMin.y, ghostMax.y);
-  const width = Math.abs(ghostMax.x - ghostMin.x);
-  const height = Math.abs(ghostMax.y - ghostMin.y);
+  // 🏢 ADR-080: Centralized Rectangle Bounds
+  const { x, y, width, height } = rectFromTwoPoints(ghostMin, ghostMax);
 
   // Draw simplified box
   ctx.beginPath();

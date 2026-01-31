@@ -8,6 +8,9 @@
  * @version 1.0.0
  */
 
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../rendering/primitives/canvasPaths';
+
 interface PerformanceTestResult {
   testName: string;
   duration: number;
@@ -142,7 +145,7 @@ export class DxfPerformanceTestRunner {
       // Simulate complex drawing operations
       for (let i = 0; i < 1000; i++) {
         ctx.beginPath();
-        ctx.arc(Math.random() * 800, Math.random() * 600, Math.random() * 10, 0, 2 * Math.PI);
+        ctx.arc(Math.random() * 800, Math.random() * 600, Math.random() * 10, 0, TAU);
         ctx.fillStyle = `hsl(${Math.random() * 360}, 50%, 50%)`;
         ctx.fill();
       }

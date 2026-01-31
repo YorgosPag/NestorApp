@@ -19,16 +19,18 @@ import { UI_COLORS } from '../../config/color-config';
 import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS } from '../grips/constants';
-// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-065: Centralized Distance Calculation & Vector Operations
 // 🏢 ADR-070: Centralized Vector Magnitude
-import { renderSquareGrip, calculateDistance, vectorMagnitude } from './shared/geometry-rendering-utils';
+// 🏢 ADR-078: Centralized Vector Angle
+import { renderSquareGrip, calculateDistance, vectorMagnitude, calculateAngle, vectorAngle, getUnitVector } from './shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 // 🏢 ADR-073: Centralized Bisector Angle, Midpoint
 import { radToDeg, bisectorAngle, calculateMidpoint } from './shared/geometry-utils';
 import { renderStyledTextWithOverride, getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
 // 🏢 ADR-058: Centralized Canvas Primitives
-import { addArcPath, addCirclePath } from '../primitives/canvasPaths';
+// 🏢 ADR-077: Centralized TAU Constant
+import { addArcPath, addCirclePath, TAU } from '../primitives/canvasPaths';
 
 // Interfaces moved to PhaseManager to avoid circular dependency
 
@@ -337,26 +339,23 @@ export abstract class BaseEntityRenderer {
 
   /**
    * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ ΤΟΠΟΘΈΤΗΣΗ ΚΕΙΜΈΝΩΝ ΑΠΟΣΤΆΣΕΩΝ
-   * Υπολογίζει τη θέση του κειμένου ΕΣΩΤΕΡΙΚΑ της γραμμής 
+   * Υπολογίζει τη θέση του κειμένου ΕΣΩΤΕΡΙΚΑ της γραμμής
    * για να μη κρύβει το midpoint grip
    */
   protected calculateDistanceTextPosition(screenStart: Point2D, screenEnd: Point2D, offsetDistance: number = 15): Point2D {
-    // Calculate line direction
-    const dx = screenEnd.x - screenStart.x;
-    const dy = screenEnd.y - screenStart.y;
     // 🏢 ADR-065: Use centralized distance calculation
     const length = calculateDistance(screenStart, screenEnd);
-    
+
     if (length === 0) {
       return { x: screenStart.x, y: screenStart.y };
     }
-    
-    // Unit vectors for line direction and perpendicular
-    const unitX = dx / length;
-    const unitY = dy / length;
-    const perpX = -unitY; // Perpendicular to the left
-    const perpY = unitX;
-    
+
+    // 🏢 ADR-065: Use centralized unit vector calculation
+    const unit = getUnitVector(screenStart, screenEnd);
+    // Perpendicular to the left (rotated 90° CCW)
+    const perpX = -unit.y;
+    const perpY = unit.x;
+
     // 🏢 ADR-073: Use centralized midpoint calculation
     const mid = calculateMidpoint(screenStart, screenEnd);
 
@@ -525,9 +524,8 @@ export abstract class BaseEntityRenderer {
     );
     
     // Calculate line angle for text rotation
-    const dx = screenEnd.x - screenStart.x;
-    const dy = screenEnd.y - screenStart.y;
-    const angle = Math.atan2(dy, dx);
+    // 🏢 ADR-078: Use centralized calculateAngle
+    const angle = calculateAngle(screenStart, screenEnd);
     
     // Format distance text
     const text = worldDistance.toFixed(2);
@@ -609,11 +607,12 @@ export abstract class BaseEntityRenderer {
     const nextUnit = { x: toNext.x / nextLength, y: toNext.y / nextLength };
     
     // Calculate angle in degrees for label
-    const angle1 = Math.atan2(prevUnit.y, prevUnit.x);
-    const angle2 = Math.atan2(nextUnit.y, nextUnit.x);
+    // 🏢 ADR-078: Use centralized vectorAngle
+    const angle1 = vectorAngle(prevUnit);
+    const angle2 = vectorAngle(nextUnit);
     let angleDiff = angle2 - angle1;
-    if (angleDiff < 0) angleDiff += 2 * Math.PI;
-    if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+    if (angleDiff < 0) angleDiff += TAU;
+    if (angleDiff > Math.PI) angleDiff = TAU - angleDiff;
     // 🏢 ADR-067: Use centralized angle conversion
     const degrees = radToDeg(angleDiff);
     
@@ -673,12 +672,13 @@ export abstract class BaseEntityRenderer {
     const centerLength = vectorMagnitude(c) || 1;
     const cNorm = { x: c.x / centerLength, y: c.y / centerLength };
     
-    const a1 = Math.atan2(u1.y, u1.x);
-    const a2 = Math.atan2(u2.y, u2.x);
+    // 🏢 ADR-078: Use centralized vectorAngle
+    const a1 = vectorAngle(u1);
+    const a2 = vectorAngle(u2);
     
-    const norm = (t: number) => (t % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+    const norm = (t: number) => (t % (TAU) + TAU) % (TAU);
     const dCCW = norm(a2 - a1);
-    const dCW = 2 * Math.PI - dCCW;
+    const dCW = TAU - dCCW;
     
     const midCCW = a1 + dCCW / 2;
     const midCW = a1 - dCW / 2;

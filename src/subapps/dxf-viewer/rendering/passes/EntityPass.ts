@@ -4,6 +4,8 @@
  */
 
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../primitives/canvasPaths';
 
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
 import type { Entity } from '../../types/entities';  // ✅ ENTERPRISE FIX: Use proper Entity type instead of EntityModel
@@ -350,7 +352,7 @@ export class EntityPass implements IRenderPass {
 
     // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
     context.beginPath();
-    context.ellipse(screenCenter.x, screenCenter.y, screenRadius, screenRadius, 0, 0, Math.PI * 2);
+    context.ellipse(screenCenter.x, screenCenter.y, screenRadius, screenRadius, 0, 0, TAU);
     context.stroke();
   }
 

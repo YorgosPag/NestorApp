@@ -5,6 +5,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Minus } from "lucide-react";
 import { normalizeNumericInput, validateNumericInput } from './shared/input-validation';
 import { ZOOM_FACTORS } from '../../config/transform-config';
+// 🏢 ADR-079: Centralized Movement Detection Constants
+import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -15,6 +17,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 
 interface ZoomControlsProps {
   currentZoom: number;
@@ -44,8 +48,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   // Update input value when currentZoom changes (only if not editing)
   useEffect(() => {
     if (!isEditing) {
-      const percentage = Math.round(currentZoom * 100);
-      setInputValue(percentage.toString());
+      setInputValue(formatPercent(currentZoom, false));
     }
   }, [currentZoom, isEditing]);
 
@@ -106,8 +109,8 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
     setIsEditing(false);
 
     if (!validateInput(valueToUse)) {
-      const currentPercentage = Math.round(currentZoom * 100);
-      setInputValue(currentPercentage.toString());
+      const currentPercentage = formatPercent(currentZoom, false);
+      setInputValue(currentPercentage);
       console.warn(`⚠️ ${t('zoomControls.invalidInput', { value: valueToUse, percentage: currentPercentage })}`);
       return;
     }
@@ -115,8 +118,9 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
     const newZoom = normalizeInput(valueToUse);
     const newZoomDecimal = newZoom / 100;
 
+    // 🏢 ADR-079: Use centralized zoom change threshold
     // Εφαρμογή μόνο αν διαφέρει από την τρέχουσα τιμή
-    if (Math.abs(newZoomDecimal - currentZoom) > 0.001) {
+    if (Math.abs(newZoomDecimal - currentZoom) > MOVEMENT_DETECTION.ZOOM_CHANGE) {
 
       onSetZoom(newZoomDecimal);
     } else {

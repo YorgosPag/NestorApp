@@ -5,6 +5,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ADR-080: Centralized Rectangle Bounds
+import { rectFromTwoPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 interface MarqueeState {
   active: boolean;
@@ -31,10 +33,8 @@ export default function SelectionMarqueeOverlay({
 
   if (!marquee.active || !marquee.start || !marquee.end) return null;
 
-  const left = Math.min(marquee.start.x, marquee.end.x);
-  const top = Math.min(marquee.start.y, marquee.end.y);
-  const width = Math.abs(marquee.end.x - marquee.start.x);
-  const height = Math.abs(marquee.end.y - marquee.start.y);
+  // 🏢 ADR-080: Centralized Rectangle Bounds
+  const { x: left, y: top, width, height } = rectFromTwoPoints(marquee.start, marquee.end);
 
   // 🏢 ENTERPRISE: Use centralized selection colors based on marquee kind
   const selectionColors = marquee.kind === 'window'

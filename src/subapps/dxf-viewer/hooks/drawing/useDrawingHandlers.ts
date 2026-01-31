@@ -114,6 +114,7 @@ export function useDrawingHandlers(
     finishPolyline,
     cancelDrawing,
     undoLastPoint,  // 🏢 ADR-047: Undo last point (AutoCAD U command)
+    flipArcDirection,  // 🏢 ENTERPRISE (2026-01-31): Flip arc direction (AutoCAD X command)
     updatePreview,
     // 🏢 ADR-040: Direct access to preview entity (bypasses React state)
     getLatestPreviewEntity
@@ -319,6 +320,7 @@ export function useDrawingHandlers(
     onDrawingCancel,
     onDrawingDoubleClick,
     onUndoLastPoint: undoLastPoint,  // 🏢 ADR-047: Undo last point (context menu)
+    onFlipArc: flipArcDirection,  // 🏢 ENTERPRISE (2026-01-31): Flip arc direction (context menu)
     cancelAllOperations
   };
 }

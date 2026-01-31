@@ -1,6 +1,9 @@
 /**
  * Shared Angle Icon Base - Common SVG structure for angle icons
  * Eliminates 158-token duplication between AngleIcon and AngleMeasureGeomIcon
+ *
+ * 🎨 COLOR CODED (2026-01-31): Click sequence visualization
+ * 3 STEPS: Point1 → Vertex → Point2: 🔴 → 🟠 → 🟢
  */
 
 import * as React from 'react';
@@ -10,22 +13,33 @@ import { componentSizes } from '../../../../../../styles/design-tokens';
 // 🏢 ENTERPRISE: Default icon size from centralized design tokens
 const DEFAULT_ICON_SIZE = componentSizes.icon.numeric.sm; // 16px
 
+// 🎨 Color coding for click sequence (consistent with ArcIcon/CircleIcon)
+// 3 στάσεις: Κόκκινο → Πορτοκαλί → Πράσινο
+const CLICK_COLORS = {
+  FIRST: '#ef4444',   // 🔴 Red - 1st click (Point on first ray)
+  SECOND: '#f97316',  // 🟠 Orange - 2nd click (Vertex)
+  THIRD: '#22c55e',   // 🟢 Green - 3rd/last click (Point on second ray)
+} as const;
+
 interface AngleIconBaseProps {
   size?: number;
   color?: string;
   strokeWidth?: number;
   showMeasurementSymbol?: boolean;
   showDiagonalLine?: boolean;
+  /** Enable color-coded click sequence points */
+  showClickSequence?: boolean;
   children?: React.ReactNode;
 }
 
 export function AngleIconBase({
   size = DEFAULT_ICON_SIZE,
-  color = "currentColor", 
+  color = "currentColor",
   strokeWidth = 1.5,
   showMeasurementSymbol = false,
   showDiagonalLine = true,
-  children 
+  showClickSequence = true,
+  children
 }: AngleIconBaseProps) {
   return (
     <svg
@@ -38,15 +52,15 @@ export function AngleIconBase({
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {/* Κάθετη γραμμή */}
-      <line x1="6" y1="18" x2="6" y2="6" />
-      
-      {/* Διαγώνια γραμμή - conditionally rendered */}
-      {showDiagonalLine && <line x1="6" y1="18" x2="18" y2="6" />}
-      
-      {/* Τόξο γωνίας */}
-      <path d="M 6 15 A 3 3 0 0 1 9 12" />
-      
+      {/* Κάθετη γραμμή (1η ακτίνα) */}
+      <line x1="5" y1="19" x2="5" y2="4" />
+
+      {/* Διαγώνια γραμμή (2η ακτίνα) - conditionally rendered */}
+      {showDiagonalLine && <line x1="5" y1="19" x2="20" y2="4" />}
+
+      {/* Τόξο γωνίας - μεγαλύτερο */}
+      <path d="M 5 14 A 5 5 0 0 1 10 11" />
+
       {/* Μετρητής/calculator σύμβολο - conditionally rendered */}
       {showMeasurementSymbol && (
         <>
@@ -55,12 +69,26 @@ export function AngleIconBase({
           <line x1="16" y1="17" x2="18" y2="17" />
         </>
       )}
-      
-      {/* Σημεία στα άκρα των γραμμών */}
-      <circle cx="6" cy="6" r="1" fill={color} />
-      <circle cx="18" cy="6" r="1" fill={color} />
-      <circle cx="6" cy="18" r="1" fill={color} />
-      
+
+      {/* Σημεία στα άκρα των γραμμών - Color coded click sequence */}
+      {showClickSequence ? (
+        <>
+          {/* 1st click - Point on first ray (Red) */}
+          <circle cx="5" cy="4" r="2.5" fill={CLICK_COLORS.FIRST} stroke="none" />
+          {/* 2nd click - Vertex (Orange) */}
+          <circle cx="5" cy="19" r="2.5" fill={CLICK_COLORS.SECOND} stroke="none" />
+          {/* 3rd/Last click - Point on second ray (Green) */}
+          <circle cx="20" cy="4" r="2.5" fill={CLICK_COLORS.THIRD} stroke="none" />
+        </>
+      ) : (
+        <>
+          {/* Original monochrome points */}
+          <circle cx="5" cy="4" r="1.5" fill={color} stroke="none" />
+          <circle cx="20" cy="4" r="1.5" fill={color} stroke="none" />
+          <circle cx="5" cy="19" r="1.5" fill={color} stroke="none" />
+        </>
+      )}
+
       {/* Additional children for customization */}
       {children}
     </svg>

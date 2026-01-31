@@ -58,9 +58,11 @@ import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/ent
 // 🏢 ADR-044: Centralized Line Widths
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 // 🏢 ADR-066: Centralized Angle Calculation
-import { calculateAngle } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-080: Centralized Rectangle Bounds
+import { calculateAngle, rectFromTwoPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-073: Centralized Bisector Angle
-import { bisectorAngle } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-077: Centralized TAU Constant
+import { bisectorAngle, TAU } from '../../rendering/entities/shared/geometry-utils';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -354,7 +356,7 @@ export class PreviewRenderer {
     // Draw circle
     // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
     ctx.beginPath();
-    ctx.ellipse(center.x, center.y, radiusScreen, radiusScreen, 0, 0, Math.PI * 2);
+    ctx.ellipse(center.x, center.y, radiusScreen, radiusScreen, 0, 0, TAU);
     ctx.stroke();
 
     // Draw center grip
@@ -423,10 +425,8 @@ export class PreviewRenderer {
     const c1 = this.worldToScreen(entity.corner1, transform);
     const c2 = this.worldToScreen(entity.corner2, transform);
 
-    const x = Math.min(c1.x, c2.x);
-    const y = Math.min(c1.y, c2.y);
-    const width = Math.abs(c2.x - c1.x);
-    const height = Math.abs(c2.y - c1.y);
+    // 🏢 ADR-080: Centralized Rectangle Bounds
+    const { x, y, width, height } = rectFromTwoPoints(c1, c2);
 
     // Draw rectangle
     ctx.strokeRect(x, y, width, height);

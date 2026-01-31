@@ -6,9 +6,8 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 import { UI_COLORS } from '../../config/color-config';
-// 🏢 ADR-065: Centralized Distance Calculation
-// 🏢 ADR-066: Centralized Angle Calculation
-import { calculateDistance, calculateAngle, calculateMidpoint } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-065: Centralized Distance, Angle & Vector Operations
+import { calculateDistance, calculateAngle, calculateMidpoint, getPerpendicularUnitVector } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 /**
  * Calculate optimal text position and rotation for edge labeling
@@ -31,9 +30,6 @@ export function calculateEdgeTextPosition(
   // 🏢 ADR-073: Use centralized midpoint calculation
   const mid = calculateMidpoint(screenStart, screenEnd);
 
-  // Calculate line direction for text rotation
-  const dx = screenEnd.x - screenStart.x;
-  const dy = screenEnd.y - screenStart.y;
   // 🏢 ADR-066: Use centralized angle calculation
   const angle = calculateAngle(screenStart, screenEnd);
 
@@ -41,13 +37,12 @@ export function calculateEdgeTextPosition(
   const length = calculateDistance(screenStart, screenEnd);
   if (length === 0) return null;
 
-  // Calculate perpendicular offset (dx/dy still needed for direction)
-  const perpX = -dy / length;
-  const perpY = dx / length;
+  // 🏢 ADR-065: Use centralized perpendicular unit vector calculation
+  const perp = getPerpendicularUnitVector(screenStart, screenEnd);
 
   return {
-    x: mid.x + perpX * offsetDistance,
-    y: mid.y + perpY * offsetDistance,
+    x: mid.x + perp.x * offsetDistance,
+    y: mid.y + perp.y * offsetDistance,
     angle,
     length
   };

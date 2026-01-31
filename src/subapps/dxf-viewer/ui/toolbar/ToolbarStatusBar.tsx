@@ -5,6 +5,8 @@ import { useCursor } from '../../systems/cursor';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 import type { ToolType } from './types';
 import type { Point2D } from '../../rendering/types/Types';
 
@@ -62,7 +64,7 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
         
         <span>
           Zoom: <strong className={`${colors.text.success}`}>
-            {Math.round(currentZoom * 100)}%
+            {formatPercent(currentZoom)}
           </strong>
         </span>
         

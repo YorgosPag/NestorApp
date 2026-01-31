@@ -6,6 +6,8 @@
 // Re-export DrawingTool type from existing hook
 export type { DrawingTool, DrawingState } from '../../hooks/drawing/useUnifiedDrawing';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-079: Centralized Entity Limits Constants
+import { ENTITY_LIMITS } from '../../config/tolerance-config';
 
 // Entity creation configuration
 export interface EntityCreationConfig {
@@ -115,7 +117,8 @@ export interface EntityValidationRules {
 }
 
 export const DEFAULT_VALIDATION_RULES: EntityValidationRules = {
-  minSize: 0.001,
+  // 🏢 ADR-079: Use centralized entity minimum size
+  minSize: ENTITY_LIMITS.MIN_SIZE,
   maxSize: 1000000,
   allowZeroSize: false,
   requireValidGeometry: true,

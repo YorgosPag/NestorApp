@@ -51,6 +51,8 @@ interface DrawingContextMenuProps {
   onUndoLastPoint?: () => void;
   /** Callback for Cancel action */
   onCancel: () => void;
+  /** 🏢 ENTERPRISE (2026-01-31): Callback for Flip Arc direction */
+  onFlipArc?: () => void;
 }
 
 // ===== ICONS =====
@@ -93,6 +95,21 @@ function CancelIcon() {
   );
 }
 
+// 🏢 ENTERPRISE (2026-01-31): Flip Arc Direction Icon
+// 🔧 OPTIMIZED: Απλό, καθαρό design - δύο αντίθετα τόξα με βέλη
+function FlipArcIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      {/* Πάνω τόξο με βέλος δεξιά */}
+      <path d="M5 12 A 7 7 0 0 1 19 12" />
+      <polyline points="16 9 19 12 16 15" />
+      {/* Κάτω τόξο με βέλος αριστερά (dashed) */}
+      <path d="M5 12 A 7 7 0 0 0 19 12" strokeDasharray="3,2" opacity="0.6" />
+      <polyline points="8 9 5 12 8 15" opacity="0.6" />
+    </svg>
+  );
+}
+
 // ===== HELPER FUNCTIONS =====
 
 /**
@@ -113,6 +130,14 @@ function isMultiPointTool(tool: ToolType): boolean {
     'measure-angle',
     'measure-distance-continuous'
   ].includes(tool);
+}
+
+/**
+ * 🏢 ENTERPRISE (2026-01-31): Determines if the current tool is an arc tool
+ * Arc tools support direction flip (counterclockwise toggle)
+ */
+function isArcTool(tool: ToolType): boolean {
+  return tool === 'arc-3p' || tool === 'arc-cse' || tool === 'arc-sce';
 }
 
 /**
@@ -146,6 +171,7 @@ export default function DrawingContextMenu({
   onClose,
   onUndoLastPoint,
   onCancel,
+  onFlipArc,
 }: DrawingContextMenuProps) {
   const triggerRef = useRef<HTMLSpanElement>(null);
 
@@ -186,12 +212,23 @@ export default function DrawingContextMenu({
     onOpenChange(false);
   }, [onCancel, onOpenChange]);
 
+  // 🏢 ENTERPRISE (2026-01-31): Flip arc direction handler
+  const handleFlipArc = useCallback(() => {
+    if (onFlipArc) {
+      onFlipArc();
+    }
+    onOpenChange(false);
+  }, [onFlipArc, onOpenChange]);
+
   // ===== COMPUTED VALUES =====
 
   const canFinish = pointCount >= getMinPointsForFinish(activeTool);
   const canClose = supportsClose(activeTool) && pointCount >= 3;
   const canUndo = pointCount > 0 && onUndoLastPoint !== undefined;
   const showCloseOption = supportsClose(activeTool);
+  // 🏢 ENTERPRISE (2026-01-31): Arc flip option visibility
+  // Show flip option for arc tools when at least 2 points are placed (arc is visible)
+  const showFlipArcOption = isArcTool(activeTool) && pointCount >= 2 && onFlipArc !== undefined;
 
   // ===== RENDER =====
 
@@ -233,6 +270,18 @@ export default function DrawingContextMenu({
             <span className={styles.menuItemIcon}><CloseIcon /></span>
             <span className={styles.menuItemLabel}>Close</span>
             <span className={styles.menuItemShortcut}>C</span>
+          </DropdownMenuItem>
+        )}
+
+        {/* 🏢 ENTERPRISE (2026-01-31): Flip Arc Direction (for arc tools only) */}
+        {showFlipArcOption && (
+          <DropdownMenuItem
+            className={styles.menuItem}
+            onClick={handleFlipArc}
+          >
+            <span className={styles.menuItemIcon}><FlipArcIcon /></span>
+            <span className={styles.menuItemLabel}>Αντιστροφή</span>
+            <span className={styles.menuItemShortcut}>X</span>
           </DropdownMenuItem>
         )}
 

@@ -16,6 +16,8 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-079: Centralized Axis Detection Constants
+import { AXIS_DETECTION } from '../../config/tolerance-config';
 
 /**
  * 🏢 ENTERPRISE GRID SNAP ENGINE
@@ -138,10 +140,15 @@ export class GridSnapEngine extends BaseSnapEngine {
    * 🔲 Check if a grid point is on a major grid line
    * Major = multiple of (gridStep * majorGridInterval)
    */
+  /**
+   * 🔲 Check if a grid point is on a major grid line
+   * Major = multiple of (gridStep * majorGridInterval)
+   * 🏢 ADR-079: Uses centralized grid major threshold
+   */
   private isMajorGridPoint(point: Point2D): boolean {
     const majorStep = this.gridStep * this.majorGridInterval;
-    const isXMajor = Math.abs(point.x % majorStep) < 0.001;
-    const isYMajor = Math.abs(point.y % majorStep) < 0.001;
+    const isXMajor = Math.abs(point.x % majorStep) < AXIS_DETECTION.GRID_MAJOR_THRESHOLD;
+    const isYMajor = Math.abs(point.y % majorStep) < AXIS_DETECTION.GRID_MAJOR_THRESHOLD;
 
     return isXMajor && isYMajor;
   }

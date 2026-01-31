@@ -28,6 +28,8 @@ import { UI_COLORS, UI_GRADIENTS } from '../../config/color-config';
 import type { AriaColorSliderProps } from '@react-aria/color';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 
 type SliderChannel = 'hue' | 'saturation' | 'brightness' | 'lightness' | 'red' | 'green' | 'blue' | 'alpha';
 
@@ -225,7 +227,7 @@ function formatValue(channel: SliderChannel, value: number): string {
     case 'blue':
       return Math.round(value).toString();
     case 'alpha':
-      return `${Math.round(value * 100)}%`;
+      return formatPercent(value);
     default:
       return value.toString();
   }

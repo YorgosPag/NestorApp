@@ -7,6 +7,8 @@
 import { useTranslationLazy } from '../../../../i18n/hooks/useTranslationLazy';
 // 🏢 ENTERPRISE: Import from Single Source of Truth
 import type { FloatingPanelType } from '../../types/panel-types';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 
 interface UsePanelDescriptionParams {
   activePanel: FloatingPanelType;
@@ -56,9 +58,9 @@ export function usePanelDescription({
     }
   };
 
-  // ✅ Zoom level formatting
+  // ✅ Zoom level formatting (ADR-081: Uses centralized formatPercent)
   const getZoomText = (): string => {
-    return `Zoom: ${Math.round(zoomLevel * 100)}%`;
+    return `Zoom: ${formatPercent(zoomLevel)}`;
   };
 
   return {

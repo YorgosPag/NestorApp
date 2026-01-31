@@ -21,7 +21,8 @@ function isCircleEntity(entity: EntityModel): entity is CircleEntity {
 import { HoverManager } from '../../utils/hover';
 import { createGripsFromPoints } from './shared/grip-utils';
 // 🏢 ADR-058: Centralized Canvas Primitives
-import { addCirclePath } from '../primitives/canvasPaths';
+// 🏢 ADR-077: Centralized TAU Constant
+import { addCirclePath, TAU } from '../primitives/canvasPaths';
 import { renderCircleAreaText } from './shared/circle-text-utils';
 import { renderSplitLineWithGap, renderContinuousLine, renderLineWithTextCheck } from './shared/line-rendering-utils';
 import { renderDistanceTextPhaseAware } from './shared/phase-text-utils';
@@ -105,7 +106,7 @@ export class CircleRenderer extends BaseEntityRenderer {
     
     // Calculate measurements
     const area = Math.PI * radius * radius;
-    const circumference = 2 * Math.PI * radius;
+    const circumference = TAU * radius;
     
     // Render measurements with centralized styling
     this.ctx.save();
@@ -310,7 +311,7 @@ export class CircleRenderer extends BaseEntityRenderer {
     
     // Calculate and render area and circumference
     const area = Math.PI * radius * radius;
-    const circumference = 2 * Math.PI * radius;
+    const circumference = TAU * radius;
     
     // Render area and circumference labels with centralized styling
     this.ctx.save();

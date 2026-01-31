@@ -16,9 +16,10 @@ import type {
 } from './config';
 import { CONSTRAINTS_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
-// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-065: Centralized Distance Calculation & Vector Operations
 // 🏢 ADR-070: Centralized Vector Magnitude
-import { calculateDistance, vectorMagnitude } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-078: Centralized Vector Angle, Angle Between Points
+import { calculateDistance, vectorMagnitude, calculateAngle, vectorAngle, getUnitVector } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Angle Conversion
 // 🏢 ADR-068: Centralized Angle Normalization
 import { degToRad, radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
@@ -70,12 +71,11 @@ export const AngleUtils = {
   radiansToDegrees: radToDeg,
 
   /**
-   * Calculates angle between two points
+   * Calculates angle between two points (in degrees, normalized 0-360)
+   * 🏢 ADR-076: Uses centralized calculateAngle
    */
   angleBetweenPoints: (point1: Point2D, point2: Point2D): number => {
-    const dx = point2.x - point1.x;
-    const dy = point2.y - point1.y;
-    return AngleUtils.normalizeAngle(AngleUtils.radiansToDegrees(Math.atan2(dy, dx)));
+    return AngleUtils.normalizeAngle(AngleUtils.radiansToDegrees(calculateAngle(point1, point2)));
   },
 
   /**
@@ -176,8 +176,9 @@ export const CoordinateUtils = {
 
     // 🏢 ADR-070: Use centralized vector magnitude
     const distance = vectorMagnitude(relativePoint);
+    // 🏢 ADR-078: Use centralized vectorAngle
     const angle = AngleUtils.normalizeAngle(
-      AngleUtils.radiansToDegrees(Math.atan2(relativePoint.y, relativePoint.x)) - baseAngle
+      AngleUtils.radiansToDegrees(vectorAngle(relativePoint)) - baseAngle
     );
     
     return {
@@ -208,21 +209,19 @@ export const CoordinateUtils = {
    * Projects point onto line defined by two points
    */
   projectPointOnLine: (point: Point2D, lineStart: Point2D, lineEnd: Point2D): Point2D => {
-    const dx = lineEnd.x - lineStart.x;
-    const dy = lineEnd.y - lineStart.y;
     // 🏢 ADR-065: Use centralized distance calculation
     const length = calculateDistance(lineStart, lineEnd);
 
     if (length === 0) return lineStart;
-    
-    const unitX = dx / length;
-    const unitY = dy / length;
-    
-    const dotProduct = (point.x - lineStart.x) * unitX + (point.y - lineStart.y) * unitY;
-    
+
+    // 🏢 ADR-065: Use centralized unit vector calculation
+    const unit = getUnitVector(lineStart, lineEnd);
+
+    const dotProduct = (point.x - lineStart.x) * unit.x + (point.y - lineStart.y) * unit.y;
+
     return {
-      x: lineStart.x + dotProduct * unitX,
-      y: lineStart.y + dotProduct * unitY
+      x: lineStart.x + dotProduct * unit.x,
+      y: lineStart.y + dotProduct * unit.y
     };
   },
 

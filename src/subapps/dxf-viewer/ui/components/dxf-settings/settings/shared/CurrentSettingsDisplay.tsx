@@ -14,6 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 
 interface LineSettings {
   lineType: LineType;
@@ -128,7 +130,7 @@ export function CurrentSettingsDisplay({
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.opacity')}</span>
-                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{Math.round(lineSettings.opacity * 100)}%</span>
+                  <span className={`${colors.text.primary} ${PANEL_LAYOUT.FONT_FAMILY.CODE}`}>{formatPercent(lineSettings.opacity)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className={`${colors.text.muted}`}>{t('currentSettings.labels.scale')}</span>

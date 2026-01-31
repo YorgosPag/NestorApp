@@ -109,6 +109,8 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Shadcn Tooltip component
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 
 // Simple SVG icons
 const SettingsIcon = ({ className }: { className?: string }) => (
@@ -590,7 +592,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* Opacity */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-            {t('settings.line.labels.opacityValue', { value: Math.round(settings.opacity * 100) })}
+            {t('settings.line.labels.opacityValue', { value: formatPercent(settings.opacity, false) })}
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.GAP.MD}`}>
             <input
@@ -688,7 +690,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* Hover Opacity */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-            {t('settings.line.labels.hoverOpacityValue', { value: Math.round(settings.hoverOpacity * 100) })}
+            {t('settings.line.labels.hoverOpacityValue', { value: formatPercent(settings.hoverOpacity, false) })}
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
             <input
@@ -771,7 +773,7 @@ export function LineSettings({ contextType }: { contextType?: 'preview' | 'compl
         {/* Final Opacity */}
         <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
           <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-            {t('settings.line.labels.finalOpacityValue', { value: Math.round(settings.finalOpacity * 100) })}
+            {t('settings.line.labels.finalOpacityValue', { value: formatPercent(settings.finalOpacity, false) })}
           </label>
           <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
             <input

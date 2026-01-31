@@ -205,14 +205,18 @@ export class DxfRenderer {
         };
       }
 
-      case 'arc':
+      case 'arc': {
         // Arc entities ήδη έχουν τα properties στο DxfArc type
+        // 🔧 FIX (2026-01-31): Προσθήκη counterclockwise για σωστή κατεύθυνση τόξου
+        const arcEntity = entity as typeof entity & { counterclockwise?: boolean };
         return {
           center: entity.center,
           radius: entity.radius,
           startAngle: entity.startAngle,
-          endAngle: entity.endAngle
+          endAngle: entity.endAngle,
+          counterclockwise: arcEntity.counterclockwise
         };
+      }
 
       case 'text':
         // ╔════════════════════════════════════════════════════════════════════╗

@@ -3,6 +3,8 @@ import type { Region, RegionStatus, OverlayLayer } from '../types/overlay';
 import { calculateRegionArea, calculateRegionPerimeter } from '../types/overlay';
 import { getStatusColors } from '../config/color-mapping';
 import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-079: Centralized Geometric Precision Constants
+import { GEOMETRY_PRECISION } from '../config/tolerance-config';
 
 // Local interface for layer management (different from the centralized OverlayLayer union type)
 interface RegionLayerObject {
@@ -19,7 +21,8 @@ interface RegionLayerObject {
  * Utility functions for region geometry and validation
  */
 export class RegionGeometry {
-  private static readonly EPSILON = 1e-3;
+  // 🏢 ADR-079: Using centralized region epsilon
+  private static readonly EPSILON = GEOMETRY_PRECISION.REGION_EPSILON;
 
   static nearly(a: number, b: number): boolean {
     return Math.abs(a - b) <= RegionGeometry.EPSILON;

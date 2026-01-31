@@ -10,9 +10,15 @@ import type { Point2D, BoundingBox } from '../../types/Types';
 // 🏢 ADR-072: Centralized Dot Product
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { calculateDistance, vectorMagnitude, dotProduct, calculateMidpoint } from './geometry-rendering-utils';
+// 🏢 ADR-077: Centralized TAU Constant (TAU)
+import { TAU } from '../../primitives/canvasPaths';
+// 🏢 ADR-079: Centralized Geometric Precision Constants
+import { GEOMETRY_PRECISION } from '../../../config/tolerance-config';
 
 // Re-export calculateMidpoint for convenience (canonical source: geometry-rendering-utils.ts)
 export { calculateMidpoint };
+// Re-export TAU for convenience (canonical source: canvasPaths.ts)
+export { TAU };
 
 // ===== DISTANCE CALCULATIONS =====
 
@@ -154,7 +160,7 @@ export function angleFromHorizontal(start: Point2D, end: Point2D): number {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   let angle = Math.atan2(dy, dx);
-  if (angle < 0) angle += 2 * Math.PI;
+  if (angle < 0) angle += TAU;
   return angle;
 }
 
@@ -223,7 +229,8 @@ export function circleFrom3Points(p1: Point2D, p2: Point2D, p3: Point2D): { cent
 
   const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
 
-  if (Math.abs(d) < 1e-10) {
+  // 🏢 ADR-079: Use centralized collinear tolerance
+  if (Math.abs(d) < GEOMETRY_PRECISION.COLLINEAR_TOLERANCE) {
     return null; // Points are collinear
   }
 
@@ -273,8 +280,8 @@ export function arcFrom3Points(
   const clockwiseDistance = (from: number, to: number): number => {
     let diff = to - from;
     // Normalize to [0, 2π) for clockwise distance
-    while (diff < 0) diff += 2 * Math.PI;
-    while (diff >= 2 * Math.PI) diff -= 2 * Math.PI;
+    while (diff < 0) diff += TAU;
+    while (diff >= TAU) diff -= TAU;
     return diff;
   };
 
@@ -329,8 +336,8 @@ export function arcFromCenterStartEnd(
   // Determine if user moved counterclockwise or clockwise from start to end
   let angleDiff = endAngleRad - startAngleRad;
   // Normalize to (-π, π] to find the "short" direction
-  while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-  while (angleDiff <= -Math.PI) angleDiff += 2 * Math.PI;
+  while (angleDiff > Math.PI) angleDiff -= TAU;
+  while (angleDiff <= -Math.PI) angleDiff += TAU;
 
   // If angleDiff > 0, user moved counterclockwise (CCW) → draw CCW arc
   // If angleDiff < 0, user moved clockwise (CW) → draw CW arc
@@ -367,7 +374,7 @@ export function arcFromStartCenterEnd(
  */
 export function calculateArcLength(radius: number, startAngle: number, endAngle: number): number {
   let sweepAngle = endAngle - startAngle;
-  if (sweepAngle < 0) sweepAngle += 2 * Math.PI;
+  if (sweepAngle < 0) sweepAngle += TAU;
   return radius * sweepAngle;
 }
 
@@ -622,9 +629,7 @@ export function radToDeg(radians: number): number {
 
 // ===== ANGLE NORMALIZATION =====
 // 🏢 ADR-068: Centralized Angle Normalization (2026-01-31)
-
-/** Two PI constant for angle calculations */
-const TAU = 2 * Math.PI;
+// 🏢 ADR-077: TAU imported from canvasPaths.ts (see imports at top)
 
 /**
  * Normalize angle in RADIANS to [0, 2π) range

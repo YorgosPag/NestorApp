@@ -30,7 +30,8 @@ import type { AnySceneEntity } from '../types/scene';
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfHeaderData, DimStyleMap, DimStyleEntry } from './dxf-entity-parser';
 // 🏢 ADR-065: Centralized Distance Calculation
-import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-078: Centralized Angle Calculation
+import { calculateDistance, calculateAngle } from '../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { radToDeg } from '../rendering/entities/shared/geometry-utils';
 
@@ -574,10 +575,9 @@ export function convertDimension(
     // If no explicit text rotation, calculate from dimension line direction
     if (textRotation === 0 && lineRotation === 0) {
       // Calculate angle from definition points
-      const dx = x2 - x1;
-      const dy = y2 - y1;
+      // 🏢 ADR-078: Use centralized calculateAngle
       // 🏢 ADR-067: Use centralized angle conversion
-      rotation = radToDeg(Math.atan2(dy, dx));
+      rotation = radToDeg(calculateAngle({ x: x1, y: y1 }, { x: x2, y: y2 }));
 
       // Normalize to keep text readable (not upside down)
       // Text should be readable from bottom-left to top-right

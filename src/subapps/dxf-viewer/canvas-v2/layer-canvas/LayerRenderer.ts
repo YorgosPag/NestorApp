@@ -26,6 +26,8 @@ import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS } from '../../rendering/grips/constants';
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../../rendering/primitives/canvasPaths';
 
 // ✅ ΦΑΣΗ 7: Import unified canvas system
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
@@ -820,7 +822,7 @@ export class LayerRenderer {
       for (let x = startX; x <= viewport.width; x += gridSize) {
         for (let y = startY; y <= viewport.height; y += gridSize) {
           this.ctx.beginPath();
-          this.ctx.arc(x, y, 1, 0, Math.PI * 2);
+          this.ctx.arc(x, y, 1, 0, TAU);
           this.ctx.fill();
         }
       }

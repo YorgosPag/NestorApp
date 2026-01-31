@@ -5,6 +5,8 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { Segment, samePoint, nearPoint, debugSegments } from './GeometryUtils';
 import type { AnySceneEntity } from '../../types/scene';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 // Connection result for force-connect algorithm
 interface ConnectionCandidate {
@@ -50,9 +52,9 @@ export function chainSegments(segs: Segment[], originalEntities: AnySceneEntity[
     for (let i = 0; i < segs.length; i++) {
       if (!used[i]) {
         const seg = segs[i];
-        const tailToStart = Math.sqrt((chainTail.x - seg.start.x) ** 2 + (chainTail.y - seg.start.y) ** 2);
-        const tailToEnd = Math.sqrt((chainTail.x - seg.end.x) ** 2 + (chainTail.y - seg.end.y) ** 2);
-        
+        const tailToStart = calculateDistance(chainTail, seg.start);
+        const tailToEnd = calculateDistance(chainTail, seg.end);
+
         // Try exact match first
         if (samePoint(chainTail, seg.start)) {
 
@@ -91,9 +93,9 @@ export function chainSegments(segs: Segment[], originalEntities: AnySceneEntity[
     for (let i = 0; i < segs.length; i++) {
       if (!used[i]) {
         const seg = segs[i];
-        const headToStart = Math.sqrt((chainHead.x - seg.start.x) ** 2 + (chainHead.y - seg.start.y) ** 2);
-        const headToEnd = Math.sqrt((chainHead.x - seg.end.x) ** 2 + (chainHead.y - seg.end.y) ** 2);
-        
+        const headToStart = calculateDistance(chainHead, seg.start);
+        const headToEnd = calculateDistance(chainHead, seg.end);
+
         // Try exact match first
         if (samePoint(chainHead, seg.end)) {
 
@@ -154,12 +156,12 @@ export function chainSegments(segs: Segment[], originalEntities: AnySceneEntity[
 
       unusedSegs.forEach((seg) => {
         const distToStart = Math.min(
-          Math.hypot(chainStart.x - seg.start.x, chainStart.y - seg.start.y),
-          Math.hypot(chainStart.x - seg.end.x, chainStart.y - seg.end.y)
+          calculateDistance(chainStart, seg.start),
+          calculateDistance(chainStart, seg.end)
         );
         const distToEnd = Math.min(
-          Math.hypot(chainEnd.x - seg.start.x, chainEnd.y - seg.start.y),
-          Math.hypot(chainEnd.x - seg.end.x, chainEnd.y - seg.end.y)
+          calculateDistance(chainEnd, seg.start),
+          calculateDistance(chainEnd, seg.end)
         );
 
       });
@@ -203,11 +205,11 @@ export function tryForceConnect(
     
     // Find closest unused segment to either head or tail
     for (const seg of remaining) {
-      const tailToStart = Math.sqrt((chainTail.x - seg.start.x) ** 2 + (chainTail.y - seg.start.y) ** 2);
-      const tailToEnd = Math.sqrt((chainTail.x - seg.end.x) ** 2 + (chainTail.y - seg.end.y) ** 2);
-      const headToStart = Math.sqrt((chainHead.x - seg.start.x) ** 2 + (chainHead.y - seg.start.y) ** 2);
-      const headToEnd = Math.sqrt((chainHead.x - seg.end.x) ** 2 + (chainHead.y - seg.end.y) ** 2);
-      
+      const tailToStart = calculateDistance(chainTail, seg.start);
+      const tailToEnd = calculateDistance(chainTail, seg.end);
+      const headToStart = calculateDistance(chainHead, seg.start);
+      const headToEnd = calculateDistance(chainHead, seg.end);
+
       const connections: ConnectionCandidate[] = [
         { seg, point: 'start' as const, distance: tailToStart, target: 'tail' as const },
         { seg, point: 'end' as const, distance: tailToEnd, target: 'tail' as const },

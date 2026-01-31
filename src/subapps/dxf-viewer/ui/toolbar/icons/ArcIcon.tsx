@@ -17,9 +17,21 @@ interface ArcIconProps {
   className?: string;
 }
 
+// 🎨 Color coding for click sequence (consistent across all variants)
+// 2 στάσεις: Κόκκινο → Πράσινο
+// 3 στάσεις: Κόκκινο → Πορτοκαλί → Πράσινο
+const CLICK_COLORS = {
+  FIRST: '#ef4444',   // 🔴 Red - 1st click (always)
+  SECOND: '#f97316',  // 🟠 Orange - 2nd click (only for 3-step)
+  THIRD: '#22c55e',   // 🟢 Green - last click (always)
+} as const;
+
 /**
  * Arc Icon Component
  * Renders different arc variants based on AutoCAD arc methods
+ *
+ * 🔧 OPTIMIZED (2026-01-31): Λεπτότερες γραμμές, μεγαλύτερα σχήματα
+ * 🎨 COLOR CODED: Κόκκινο=1η στάση, Πορτοκαλί=2η στάση, Πράσινο=3η στάση
  */
 export const ArcIcon: React.FC<ArcIconProps> = ({
   variant,
@@ -28,81 +40,79 @@ export const ArcIcon: React.FC<ArcIconProps> = ({
   const renderVariantContent = () => {
     switch (variant) {
       case '3point':
-        // 3-Point Arc: Start, Point on Arc, End
+        // 3 STEPS: Start → Point on Arc → End: 🔴 → 🟠 → 🟢
         return (
           <>
-            {/* Arc path */}
+            {/* Arc path - μεγαλύτερο */}
             <path
-              d="M 6 16 Q 12 4 18 16"
+              d="M 3 19 Q 12 1 21 19"
               fill="none"
-              strokeWidth="2"
+              strokeWidth="1.5"
             />
-            {/* Three points on the arc */}
-            <circle cx="6" cy="16" r="1.5" fill="currentColor" />
-            <circle cx="12" cy="8" r="1.5" fill="currentColor" />
-            <circle cx="18" cy="16" r="1.5" fill="currentColor" />
-            {/* Small "3P" label */}
-            <text x="12" y="20" fontSize="4" textAnchor="middle" fill="currentColor">3P</text>
+            {/* 1st click - Start (Red) */}
+            <circle cx="3" cy="19" r="3" fill={CLICK_COLORS.FIRST} stroke="none" />
+            {/* 2nd click - Point on Arc (Orange) */}
+            <circle cx="12" cy="5" r="3" fill={CLICK_COLORS.SECOND} stroke="none" />
+            {/* 3rd/Last click - End (Green) */}
+            <circle cx="21" cy="19" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 
       case 'center-start-end':
-        // Center, Start, End Arc
+        // 3 STEPS: Center → Start → End: 🔴 → 🟠 → 🟢
         return (
           <>
-            {/* Arc path */}
+            {/* Arc path - μεγαλύτερο */}
             <path
-              d="M 6 12 A 6 6 0 0 1 18 12"
+              d="M 3 12 A 9 9 0 0 1 21 12"
               fill="none"
-              strokeWidth="2"
+              strokeWidth="1.5"
             />
-            {/* Center point (marked with +) */}
-            <circle cx="12" cy="12" r="1" fill="currentColor" />
-            <line x1="10" y1="12" x2="14" y2="12" strokeWidth="1" />
-            <line x1="12" y1="10" x2="12" y2="14" strokeWidth="1" />
-            {/* Start point */}
-            <circle cx="6" cy="12" r="1.5" fill="currentColor" />
-            {/* End point */}
-            <circle cx="18" cy="12" r="1.5" fill="currentColor" />
+            {/* 1st click - Center (Red, marked with +) */}
+            <circle cx="12" cy="12" r="2.5" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <line x1="9" y1="12" x2="15" y2="12" strokeWidth="1" stroke="white" />
+            <line x1="12" y1="9" x2="12" y2="15" strokeWidth="1" stroke="white" />
+            {/* 2nd click - Start (Orange) */}
+            <circle cx="3" cy="12" r="3" fill={CLICK_COLORS.SECOND} stroke="none" />
+            {/* 3rd/Last click - End (Green) */}
+            <circle cx="21" cy="12" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
             {/* Radius line */}
-            <line x1="12" y1="12" x2="6" y2="12" strokeDasharray="2,1" strokeWidth="1" />
+            <line x1="12" y1="12" x2="3" y2="12" strokeDasharray="2,1.5" strokeWidth="0.75" opacity="0.5" />
           </>
         );
 
       case 'start-center-end':
-        // Start, Center, End Arc
+        // 3 STEPS: Start → Center → End: 🔴 → 🟠 → 🟢
         return (
           <>
-            {/* Arc path */}
+            {/* Arc path - κάτω κυρτό, μεγαλύτερο */}
             <path
-              d="M 6 14 A 6 6 0 0 0 18 14"
+              d="M 3 10 A 9 9 0 0 0 21 10"
               fill="none"
-              strokeWidth="2"
+              strokeWidth="1.5"
             />
-            {/* Start point (1) */}
-            <circle cx="6" cy="14" r="1.5" fill="currentColor" />
-            <text x="4" y="11" fontSize="4" fill="currentColor">1</text>
-            {/* Center point (2, marked with +) */}
-            <circle cx="12" cy="14" r="1" fill="currentColor" />
-            <line x1="10" y1="14" x2="14" y2="14" strokeWidth="1" />
-            <line x1="12" y1="12" x2="12" y2="16" strokeWidth="1" />
-            <text x="12" y="19" fontSize="4" textAnchor="middle" fill="currentColor">2</text>
-            {/* End point (3) */}
-            <circle cx="18" cy="14" r="1.5" fill="currentColor" />
-            <text x="20" y="11" fontSize="4" fill="currentColor">3</text>
+            {/* 1st click - Start (Red) */}
+            <circle cx="3" cy="10" r="3" fill={CLICK_COLORS.FIRST} stroke="none" />
+            {/* 2nd click - Center (Orange, marked with +) */}
+            <circle cx="12" cy="10" r="2.5" fill={CLICK_COLORS.SECOND} stroke="none" />
+            <line x1="9" y1="10" x2="15" y2="10" strokeWidth="1" stroke="white" />
+            <line x1="12" y1="7" x2="12" y2="13" strokeWidth="1" stroke="white" />
+            {/* 3rd/Last click - End (Green) */}
+            <circle cx="21" cy="10" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 
       default:
-        // Default: simple arc with center
+        // Default: simple arc with 2-step colors (🔴 → 🟢)
         return (
           <>
             <path
-              d="M 6 16 Q 12 4 18 16"
+              d="M 3 19 Q 12 1 21 19"
               fill="none"
-              strokeWidth="2"
+              strokeWidth="1.5"
             />
-            <circle cx="12" cy="12" r="1" fill="currentColor" />
+            <circle cx="3" cy="19" r="3" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="21" cy="19" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
     }
@@ -114,7 +124,7 @@ export const ArcIcon: React.FC<ArcIconProps> = ({
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
     >

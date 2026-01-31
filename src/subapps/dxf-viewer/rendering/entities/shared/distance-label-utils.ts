@@ -131,6 +131,30 @@ export function formatAngle(angle: number, decimals: number = 1): string {
   return `${angle.toFixed(decimals)}°`;
 }
 
+/**
+ * 🏢 ADR-081: Format decimal value as percentage
+ * Canonical source for percentage formatting across DXF Viewer
+ *
+ * Replaces inline `Math.round(value * 100)%` patterns used for:
+ * - Opacity display (0-1 → 0%-100%)
+ * - Zoom display (0.5-10 → 50%-1000%)
+ * - Alpha channel display
+ *
+ * @param value - Decimal value (0-1 range typically, but handles any)
+ * @param includeSymbol - Whether to include "%" symbol (default: true)
+ * @returns Formatted percentage string (e.g., "75%" or "75")
+ *
+ * @example
+ * formatPercent(0.75)       // → "75%"
+ * formatPercent(1.5)        // → "150%"
+ * formatPercent(0.756)      // → "76%"
+ * formatPercent(0.75, false) // → "75"
+ */
+export function formatPercent(value: number, includeSymbol: boolean = true): string {
+  const percent = Math.round(value * 100);
+  return includeSymbol ? `${percent}%` : String(percent);
+}
+
 // ============================================================================
 // LABEL RENDERING - Centralized implementation
 // ============================================================================

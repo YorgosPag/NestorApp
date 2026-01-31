@@ -30,6 +30,8 @@ import { PDF_RENDER_CONFIG } from '../types/pdf.types';
 import { PANEL_ANCHORING } from '../../config/panel-tokens';
 // 🏢 ADR-054: Centralized upload component
 import { FileUploadButton } from '@/components/shared/files/FileUploadButton';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 
 // ============================================================================
 // CONSTANTS
@@ -335,7 +337,7 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
                   <fieldset className="space-y-2">
                     <legend className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>Scale</span>
-                      <span>{Math.round(transform.scale * 100)}%</span>
+                      <span>{formatPercent(transform.scale)}</span>
                     </legend>
                     <menu className="flex items-center gap-2">
                       <Button
@@ -399,7 +401,7 @@ export const PdfControlsPanel: React.FC<PdfControlsPanelProps> = ({
                   <fieldset className="space-y-2">
                     <legend className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>Opacity</span>
-                      <span>{Math.round(opacity * 100)}%</span>
+                      <span>{formatPercent(opacity)}</span>
                     </legend>
                     <Slider
                       value={[opacity]}

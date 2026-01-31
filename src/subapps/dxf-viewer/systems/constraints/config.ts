@@ -7,6 +7,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-067: Import centralized conversion constants
 import { DEGREES_TO_RADIANS, RADIANS_TO_DEGREES } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-079: Centralized Entity Limits Constants
+import { ENTITY_LIMITS } from '../../config/tolerance-config';
 
 // ===== BASIC TYPES =====
 export type ConstraintType = 'ortho' | 'polar' | 'angle' | 'distance' | 'parallel' | 'perpendicular' | 'tangent' | 'horizontal' | 'vertical';
@@ -528,7 +530,8 @@ export const DEFAULT_CONSTRAINT_PRESETS: ConstraintPreset[] = [
       general: {
         enabled: true,
         priority: ['angle', 'distance', 'parallel', 'tangent'],
-        globalTolerance: 0.001,
+        // 🏢 ADR-079: Use centralized constraint tolerance
+        globalTolerance: ENTITY_LIMITS.CONSTRAINT_TOLERANCE,
         showFeedback: true,
         audioFeedback: true,
         hapticFeedback: true

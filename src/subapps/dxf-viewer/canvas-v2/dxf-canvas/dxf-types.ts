@@ -39,6 +39,9 @@ export interface DxfArc extends DxfEntity {
   radius: number;
   startAngle: number; // in degrees
   endAngle: number; // in degrees
+  // 🔧 FIX (2026-01-31): Arc direction flag for correct rendering
+  // true = draw counterclockwise, false = draw clockwise (default)
+  counterclockwise?: boolean;
 }
 
 export interface DxfText extends DxfEntity {

@@ -10,6 +10,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-079: Centralized Geometric Precision Constants
+import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 
 /**
  * Snap prediction confidence levels
@@ -230,10 +232,14 @@ export class AISnappingEngine {
   /**
    * Get history-based score
    */
+  /**
+   * Get history-based score
+   * 🏢 ADR-079: Use centralized point match threshold
+   */
   private getHistoryScore(point: Point2D): number {
     // Check if point was recently used
     const recentUses = this.history.filter(h =>
-      this.distance(h, point) < 0.001
+      this.distance(h, point) < GEOMETRY_PRECISION.POINT_MATCH
     ).length;
 
     return Math.min(1, recentUses * 0.2);

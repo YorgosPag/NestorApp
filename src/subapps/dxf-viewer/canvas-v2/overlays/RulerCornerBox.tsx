@@ -34,6 +34,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import styles from './RulerCornerBox.module.css';
+// 🏢 ADR-079: Centralized Movement Detection Constants (Zoom Preset Matching)
+import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 
 // ===== TYPES =====
 
@@ -173,9 +177,9 @@ export default function RulerCornerBox({
   const lastClickRef = useRef<number>(0);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Format zoom percentage
+  // Format zoom percentage (ADR-081: Uses centralized formatPercent)
   const zoomPercent = Math.round(currentScale * 100);
-  const zoomDisplay = zoomPercent >= 1000 ? `${(zoomPercent / 1000).toFixed(1)}k%` : `${zoomPercent}%`;
+  const zoomDisplay = zoomPercent >= 1000 ? `${(zoomPercent / 1000).toFixed(1)}k%` : formatPercent(currentScale);
 
   // ===== CLICK HANDLERS =====
 
@@ -442,13 +446,14 @@ export default function RulerCornerBox({
                 type="button"
                 className={cn(
                   styles.zoomPresetButton,
-                  Math.abs(currentScale - scale) < 0.01 && styles.active
+                  // 🏢 ADR-079: Use centralized zoom preset matching threshold
+                  Math.abs(currentScale - scale) < MOVEMENT_DETECTION.ZOOM_PRESET_MATCH && styles.active
                 )}
                 onClick={() => {
                   onZoomToScale(scale);
                   setIsMenuOpen(false);
                 }}
-                aria-pressed={Math.abs(currentScale - scale) < 0.01}
+                aria-pressed={Math.abs(currentScale - scale) < MOVEMENT_DETECTION.ZOOM_PRESET_MATCH}
               >
                 {label}
               </button>

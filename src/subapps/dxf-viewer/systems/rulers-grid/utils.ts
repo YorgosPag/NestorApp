@@ -22,6 +22,8 @@ import type { Point2D, ViewTransform } from './config';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-079: Centralized Axis Detection Constants
+import { AXIS_DETECTION } from '../../config/tolerance-config';
 
 // Helper function to generate grid line (eliminates code duplication)
 function createGridLine(
@@ -210,7 +212,8 @@ export const GridCalculations = {
 
     // Vertical lines
     for (let x = minX; x <= maxX; x += gridStep) {
-      const isAxis = Math.abs(x) < 0.001;
+      // 🏢 ADR-079: Use centralized zero threshold
+      const isAxis = Math.abs(x) < AXIS_DETECTION.ZERO_THRESHOLD;
       const isOrigin = isAxis;
       
       if (isAxis && settings.visual.showAxes) {
@@ -225,7 +228,8 @@ export const GridCalculations = {
 
     // Horizontal lines
     for (let y = minY; y <= maxY; y += gridStep) {
-      const isAxis = Math.abs(y) < 0.001;
+      // 🏢 ADR-079: Use centralized zero threshold
+      const isAxis = Math.abs(y) < AXIS_DETECTION.ZERO_THRESHOLD;
       
       if (isAxis && settings.visual.showAxes) {
         lines.push(createGridLine(y, 'horizontal', true, settings));
@@ -331,7 +335,8 @@ export const RulerCalculations = {
     for (let pos = startTick; pos <= expandedEnd; pos += tickSpacing) {
       // Κάνε όλα τα κύρια ticks major για καλύτερη κατανομή labels
       const isMajor = true; // Αφού υπολογίσαμε ήδη το καλύτερο spacing, όλα είναι major
-      const isZero = Math.abs(pos) < 0.001;
+      // 🏢 ADR-079: Use centralized zero threshold
+      const isZero = Math.abs(pos) < AXIS_DETECTION.ZERO_THRESHOLD;
       
       // ✅ ALWAYS SHOW ZERO - User wants 0-0 visible at bottom-left
       // if (isZero && !settings[type].showZero) continue; // DISABLED - Always show zero
@@ -583,7 +588,8 @@ export const RulersGridRendering = {
     // Βελτιωμένη λογική για ομοιόμορφη κατανομή labels
     const shouldShowLabel = (tick: RulerTick, ticks: RulerTick[], type: string, scale: number) => {
       // Πάντα δείχνε το 0
-      if (Math.abs(tick.position) < 0.001) return true;
+      // 🏢 ADR-079: Use centralized zero threshold
+      if (Math.abs(tick.position) < AXIS_DETECTION.ZERO_THRESHOLD) return true;
       
       // Μόνο major ticks έχουν labels
       if (tick.type !== 'major') return false;

@@ -16,6 +16,8 @@ import { UI_COLORS, CANVAS_THEME } from '../config/color-config';
 import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../rendering/primitives/canvasPaths';
 
 interface AlignmentDebugState {
   enabled: boolean;
@@ -306,7 +308,7 @@ class CursorSnapAlignmentDebugger {
     ctx.lineWidth = RENDER_LINE_WIDTHS.DEBUG; // 🏢 ADR-044
 
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+    ctx.arc(pos.x, pos.y, size, 0, TAU);
     ctx.fill();
     ctx.stroke();
 

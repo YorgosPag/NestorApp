@@ -22,8 +22,9 @@ import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, RenderOptions, GripInfo, Point2D } from '../types/Types';
 // 🏢 ADR-065: Centralized Distance, ADR-066: Centralized Angle
 // 🏢 ADR-073: Centralized Bisector Angle
+// 🏢 ADR-077: Centralized TAU Constant
 import { extractAngleMeasurementPoints, calculateDistance, calculateAngle } from './shared';
-import { bisectorAngle } from './shared/geometry-utils';
+import { bisectorAngle, TAU } from './shared/geometry-utils';
 
 export class AngleMeasurementRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -146,8 +147,8 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
 
     // Normalize angle difference to [-π, π]
     let angleDiff = angle2 - angle1;
-    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+    while (angleDiff > Math.PI) angleDiff -= TAU;
+    while (angleDiff < -Math.PI) angleDiff += TAU;
 
     // If angle is > 180°, flip bisector to exterior
     if (Math.abs(angleDiff) > Math.PI) {

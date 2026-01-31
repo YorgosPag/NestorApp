@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import type { Point2D } from '../rendering/types/Types';
+// 🏢 ADR-080: Centralized Rectangle Bounds
+import { rectFromTwoPoints } from '../rendering/entities/shared/geometry-rendering-utils';
 
 type ZoomRect = { x: number; y: number; width: number; height: number };
 
@@ -73,13 +75,9 @@ export function useZoomWindow(): UseZoomWindowResult {
         return prev;
       }
 
-      // Calculate rectangle bounds
-      const x = Math.min(prev.startPoint.x, point.x);
-      const y = Math.min(prev.startPoint.y, point.y);
-      const width = Math.abs(point.x - prev.startPoint.x);
-      const height = Math.abs(point.y - prev.startPoint.y);
-
-      const rect = new DOMRect(x, y, width, height);
+      // 🏢 ADR-080: Centralized Rectangle Bounds
+      const bounds = rectFromTwoPoints(prev.startPoint, point);
+      const rect = new DOMRect(bounds.x, bounds.y, bounds.width, bounds.height);
 
       return {
         ...prev,
@@ -103,10 +101,8 @@ export function useZoomWindow(): UseZoomWindowResult {
       return null;
     }
 
-    const x = Math.min(currentState.startPoint.x, currentState.currentPoint.x);
-    const y = Math.min(currentState.startPoint.y, currentState.currentPoint.y);
-    const width = Math.abs(currentState.currentPoint.x - currentState.startPoint.x);
-    const height = Math.abs(currentState.currentPoint.y - currentState.startPoint.y);
+    // 🏢 ADR-080: Centralized Rectangle Bounds
+    const { x, y, width, height } = rectFromTwoPoints(currentState.startPoint, currentState.currentPoint);
 
     // Minimum rectangle size check
     if (width < 10 || height < 10) {

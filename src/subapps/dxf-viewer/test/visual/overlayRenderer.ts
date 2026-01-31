@@ -8,6 +8,8 @@ import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../../rendering/primitives/canvasPaths';
 
 export interface VisualTestOptions {
   seed?: number;
@@ -170,7 +172,7 @@ async function renderTestCrosshair(
   // Center circle
   ctx.setLineDash([]);
   ctx.beginPath();
-  ctx.arc(centerX, centerY, 10, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, 10, 0, TAU);
   ctx.stroke();
 }
 

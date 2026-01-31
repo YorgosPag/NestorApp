@@ -20,6 +20,8 @@ import {
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 
 export function CursorSettings() {
   const iconSizes = useIconSizes();
@@ -290,7 +292,7 @@ export function CursorSettings() {
                 onChange={(e) => handleCursorOpacityChange(parseFloat(e.target.value))}
                 className="flex-1"
               />
-              <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>{Math.round(settings.cursor.opacity * 100)}%</div>
+              <div className={`${iconSizes.xs} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.primary} ${radius.md} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>{formatPercent(settings.cursor.opacity)}</div>
         </div>
       </section>
 

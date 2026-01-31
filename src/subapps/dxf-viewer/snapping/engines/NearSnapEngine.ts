@@ -12,6 +12,8 @@ import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { findEntityBasedSnapCandidates, GenericSnapPoint, processRectangleSnapping, LegacyRectangleEntity } from './shared/snap-engine-utils'; // ✅ ENTERPRISE FIX: Import proper type
 // 🏢 ADR-074: Centralized Point On Circle
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../../rendering/primitives/canvasPaths';
 
 export class NearSnapEngine extends BaseSnapEngine {
 
@@ -140,7 +142,7 @@ export class NearSnapEngine extends BaseSnapEngine {
     const points: Point2D[] = [];
 
     for (let i = 0; i < count; i++) {
-      const angle = (i / count) * 2 * Math.PI;
+      const angle = (i / count) * TAU;
       // 🏢 ADR-074: Use centralized pointOnCircle
       points.push(pointOnCircle(center, radius, angle));
     }
@@ -152,7 +154,7 @@ export class NearSnapEngine extends BaseSnapEngine {
     const points: Point2D[] = [];
 
     let angleRange = endAngle - startAngle;
-    if (angleRange < 0) angleRange += 2 * Math.PI;
+    if (angleRange < 0) angleRange += TAU;
 
     for (let i = 0; i < count; i++) {
       const t = i / (count - 1);

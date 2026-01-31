@@ -51,7 +51,8 @@ import { HoverManager } from '../../utils/hover';
 import { pointToLineDistance } from './shared/geometry-utils';
 import { hitTestLineSegments, createEdgeGrips, renderSplitLine, renderLineWithTextCheck } from './shared/line-utils';
 import { createVertexGrip } from './shared/grip-utils';
-import { calculateDistance } from './shared/geometry-rendering-utils';
+// 🏢 ADR-065: Centralized Distance & Vector Operations
+import { calculateDistance, getPerpendicularUnitVector } from './shared/geometry-rendering-utils';
 
 export class LineRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -150,27 +151,24 @@ export class LineRenderer extends BaseEntityRenderer {
 
   private renderSplitLineWithMeasurement(screenStart: Point2D, screenEnd: Point2D, worldStart: Point2D, worldEnd: Point2D): void {
     this.ctx.save();
-    
+
     // Use shared utility for split line rendering
     const { midpoint } = renderSplitLine(this.ctx, screenStart, screenEnd, 30);
-    
-    // Calculate perpendicular direction for markers
-    const dx = screenEnd.x - screenStart.x;
-    const dy = screenEnd.y - screenStart.y;
+
     // 🏢 ADR-065: Use centralized distance calculation
     const length = calculateDistance(screenStart, screenEnd);
 
     if (length > 0) {
-      const perpX = -dy / length; // Perpendicular X
-      const perpY = dx / length;  // Perpendicular Y
-      
+      // 🏢 ADR-065: Use centralized perpendicular unit vector calculation
+      const perp = getPerpendicularUnitVector(screenStart, screenEnd);
+
       // Draw perpendicular markers at start and end with centralized color
       const markerSize = 8;
       this.ctx.save();
       this.applyDimensionTextStyle(); // Use centralized fuchsia color
       this.ctx.strokeStyle = this.ctx.fillStyle; // Use same color as text
-      this.renderPerpendicularMarker(screenStart, perpX, perpY, markerSize);
-      this.renderPerpendicularMarker(screenEnd, perpX, perpY, markerSize);
+      this.renderPerpendicularMarker(screenStart, perp.x, perp.y, markerSize);
+      this.renderPerpendicularMarker(screenEnd, perp.x, perp.y, markerSize);
       this.ctx.restore();
     }
     

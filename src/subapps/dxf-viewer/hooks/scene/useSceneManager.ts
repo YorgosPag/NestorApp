@@ -58,14 +58,11 @@ export function useSceneManager(): SceneManagerState {
     if (scene) {
       const arcEntities = scene.entities.filter(e => e.type === 'arc');
       if (arcEntities.length > 0) {
-        console.log('🔍 [getLevelScene] Reading scene with arcs:', {
-          levelId,
-          arcCount: arcEntities.length,
-          arcsWithCounterclockwise: arcEntities.map(e => ({
-            id: e.id,
-            counterclockwise: (e as { counterclockwise?: boolean }).counterclockwise
-          }))
-        });
+        const arcsData = arcEntities.map(e => ({
+          id: e.id,
+          counterclockwise: (e as { counterclockwise?: boolean }).counterclockwise
+        }));
+        console.log('🔍 [getLevelScene] Reading scene with arcs:', levelId, 'arcs:', JSON.stringify(arcsData));
       }
     }
     return scene;

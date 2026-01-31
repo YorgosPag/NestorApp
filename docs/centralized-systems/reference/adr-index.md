@@ -4,7 +4,7 @@
 >
 > Single source of truth για όλες τις αρχιτεκτονικές αποφάσεις της εφαρμογής
 
-**📊 Stats**: 75 ADRs | Last Updated: 2026-01-31
+**📊 Stats**: 80 ADRs (ADR-065 expanded) | Last Updated: 2026-01-31
 
 ---
 
@@ -88,7 +88,7 @@
 | **ADR-057** | Unified Entity Completion Pipeline | ✅ APPROVED | 2026-01-30 | Drawing System |
 | **ADR-058** | Canvas Drawing Primitives (Arc via Ellipse) | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
 | **ADR-064** | Shape Primitives Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
-| **ADR-065** | Distance Calculation Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-065** | Distance & Vector Operations Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
 | **ADR-066** | Angle Calculation Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
 | **ADR-067** | Radians/Degrees Conversion Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
 | **ADR-068** | Angle Normalization Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
@@ -99,6 +99,11 @@
 | **ADR-074** | Point On Circle Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
 | **ADR-075** | Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-31 | Drawing System |
 | **ADR-076** | RGB ↔ HEX Color Conversion Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-077** | TAU Constant Centralization (2 * Math.PI) | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-078** | Vector Angle & Angle Between Vectors Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-079** | Geometric Epsilon/Precision Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-080** | Rectangle Bounds Centralization (rectFromTwoPoints) | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-081** | Percentage Formatting Centralization (formatPercent) | ✅ APPROVED | 2026-01-31 | Data & State |
 | **ADR-059** | Separate Audit Bootstrap from Projects List | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-060** | Building Floorplan Enterprise Storage | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-061** | Path Aliases Strategy | ✅ APPROVED | 2026-01-13 | Infrastructure |
@@ -256,14 +261,25 @@
 - **Canonical**: `geometry-utils.ts` (SSOT for polygon calculations)
 - **Separation**: Math (geometry-utils) ↔ Rendering (geometry-rendering-utils)
 
-### ADR-065: Distance Calculation Centralization
-- **Canonical**: `calculateDistance()` from `geometry-rendering-utils.ts`
-- **Impact**: 35+ inline implementations → 1 function
-- **Files Migrated**: 32 files across snapping, rendering, hooks, utils
+### ADR-065: Distance & Vector Operations Centralization
+- **Canonical Functions** (from `geometry-rendering-utils.ts`):
+  - `calculateDistance(p1, p2)` - Distance between two points
+  - `normalizeVector(v)` - Normalize vector to unit length
+  - `getUnitVector(from, to)` - Unit vector from point to point
+  - `getPerpendicularUnitVector(from, to)` - Perpendicular unit vector (90° CCW)
+- **Impact**:
+  - Distance: 35+ inline implementations → 1 function
+  - Vector normalization: 7 inline patterns → 3 functions
+- **Files Migrated**:
+  - **Distance**: 32 files across snapping, rendering, hooks, utils
+  - **Vector**: line-utils.ts, line-rendering-utils.ts, constraints/utils.ts, ParallelSnapEngine.ts, text-labeling-utils.ts, LineRenderer.ts, BaseEntityRenderer.ts
 - **Pattern**: Single Source of Truth (SSOT)
+- **Eliminated Patterns**:
+  - `unitX = dx / length; unitY = dy / length;` → `getUnitVector()`
+  - `perpX = -dy / length; perpY = dx / length;` → `getPerpendicularUnitVector()`
 - **Benefits**:
-  - Zero duplicate distance calculations
-  - Consistent calculation (p2.x - p1.x, p2.y - p1.y)
+  - Zero duplicate distance/vector calculations
+  - Consistent math (no typos in normalization)
   - Easy maintenance and optimization
   - Type-safe Point2D interface
 
@@ -534,6 +550,169 @@
   - Support for shorthand (#RGB) and alpha (#RRGGBBAA)
   - Type-safe RGBColor interface
 - **Companion**: ADR-004 (Canvas Theme System)
+
+### ADR-077: TAU Constant Centralization (2 * Math.PI)
+- **Canonical**: `TAU` from `rendering/primitives/canvasPaths.ts`
+- **Re-export**: `TAU` also available from `rendering/entities/shared/geometry-utils.ts`
+- **Impact**: 42 inline `Math.PI * 2` / `2 * Math.PI` patterns → 1 constant
+- **Files Migrated** (16 files):
+  - `canvasPaths.ts` - Canonical source (line 222)
+  - `geometry-utils.ts` - Re-exports TAU, removed duplicate private const
+  - `OverlayPass.ts` - Grips & snap circles (3 usages)
+  - `EntityPass.ts` - Circle entity (1 usage)
+  - `BackgroundPass.ts` - Origin marker (1 usage)
+  - `BaseEntityRenderer.ts` - Angle arc calculations (4 usages)
+  - `AngleMeasurementRenderer.ts` - Angle normalization (2 usages)
+  - `CircleRenderer.ts` - Circumference calc (2 usages)
+  - `PreviewRenderer.ts` - Circle preview (1 usage)
+  - `LayerRenderer.ts` - Grid dots (1 usage)
+  - `NearSnapEngine.ts` - Point on circle (2 usages)
+  - `angle-calculation.ts` - Angle calculations (5 usages)
+  - `OriginMarkersDebugOverlay.ts` - Debug circle (1 usage)
+  - `CursorSnapAlignmentDebugOverlay.ts` - Debug snap point (1 usage)
+  - `CalibrationGridRenderer.ts` - Calibration grid (1 usage)
+  - `CircleDragMeasurement.ts` - Circumference calc (1 usage)
+- **Pattern**: Single Source of Truth (SSOT)
+- **API**: `export const TAU = Math.PI * 2;`
+- **Benefits**:
+  - Zero inline full-circle angle patterns
+  - Mathematical clarity (τ = 2π is the "true" circle constant)
+  - Single point of change if precision adjustments needed
+  - Consistent naming across codebase
+- **Companion**: ADR-058 (Canvas Drawing Primitives)
+
+### ADR-078: Vector Angle & Angle Between Vectors Centralization
+- **Canonical**: `vectorAngle()`, `angleBetweenVectors()` from `geometry-rendering-utils.ts`
+- **Impact**: 20 inline `Math.atan2()` implementations → 2 functions + existing `calculateAngle()`
+- **Difference from ADR-066**:
+  - `calculateAngle(from, to)`: Angle from point A **to point B** → `atan2(to.y - from.y, to.x - from.x)`
+  - `vectorAngle(v)`: Angle of a **single vector** from origin → `atan2(v.y, v.x)`
+  - `angleBetweenVectors(v1, v2)`: **Signed angle** between 2 vectors → `atan2(cross, dot)`
+- **Files Migrated**:
+  - `BaseEntityRenderer.ts` - Distance text angle, angle arc unit vectors (4 patterns)
+  - `constraints/utils.ts` - `angleBetweenPoints()`, `cartesianToPolar()` (2 patterns)
+  - `useUnifiedDrawing.tsx` - Measure-angle tool calculation (1 pattern)
+  - `dxf-entity-converters.ts` - Dimension text rotation (1 pattern)
+- **Files NOT Migrated (centralized functions)**:
+  - `geometry-utils.ts` - Already centralized functions (`angleFromHorizontal`, `arcFrom3Points`, `arcFromCenterStartEnd`)
+  - `angle-calculation.ts` - Already centralized functions (`calculateAngleData`, `getArcAngles`)
+  - `line-utils.ts` - Uses existing centralized functions
+- **Pattern**: Single Source of Truth (SSOT)
+- **Mathematical Properties**:
+  - `vectorAngle(v)`: Range [-π, π] radians from positive X-axis
+  - `angleBetweenVectors(v1, v2)`: Positive = v2 CCW from v1, Negative = v2 CW from v1
+- **Benefits**:
+  - Zero duplicate atan2 angle calculations
+  - Clear semantic separation (point→point vs vector vs vector→vector)
+  - Consistent, type-safe Point2D interface
+  - Cross/dot product properly encapsulated
+- **Companion**: ADR-065 (Distance), ADR-066 (Angle), ADR-072 (Dot Product), ADR-073 (Bisector)
+
+### ADR-079: Geometric Epsilon/Precision Centralization
+- **Canonical**: `GEOMETRY_PRECISION`, `AXIS_DETECTION`, `MOVEMENT_DETECTION`, `VECTOR_PRECISION`, `ENTITY_LIMITS` from `tolerance-config.ts`
+- **Impact**: 25 inline epsilon/precision values (1e-10, 1e-6, 1e-3, 0.001, 0.01) → 5 centralized constant objects
+- **Problem**: Inconsistent precision values scattered across 16 files
+- **Solution**: Extended tolerance-config.ts with semantic precision categories
+- **Constant Categories**:
+  - `GEOMETRY_PRECISION`: Ultra-high precision for intersections (1e-10), vertex duplicates (1e-6), point matching (0.001)
+  - `AXIS_DETECTION`: Zero/axis proximity (0.001), grid major line detection
+  - `MOVEMENT_DETECTION`: Min movement (0.001), zoom change (0.001), zoom preset match (0.01)
+  - `VECTOR_PRECISION`: Min magnitude for safe division (0.001)
+  - `ENTITY_LIMITS`: Min entity size (0.001), constraint tolerance (0.001)
+- **Files Migrated**:
+  - `GeometricCalculations.ts` - Line/circle intersection thresholds (3 patterns)
+  - `geometry-utils.ts` - Collinear points check (1 pattern)
+  - `GeometryUtils.ts` - EPS constant, vertex duplicate (2 patterns)
+  - `region-operations.ts` - Region epsilon (1 pattern)
+  - `GridSnapEngine.ts` - Major grid detection (2 patterns)
+  - `rulers-grid/utils.ts` - Zero threshold (4 patterns)
+  - `CenterSnapEngine.ts` - Duplicate center (1 pattern)
+  - `AISnappingEngine.ts` - History point match (1 pattern)
+  - `useUnifiedDrawing.tsx` - Projection point (2 patterns)
+  - `useDynamicInputMultiPoint.ts` - Vector magnitude (2 patterns)
+  - `ZoomControls.tsx` - Zoom change detection (1 pattern)
+  - `CanvasSection.tsx` - Movement detection (1 pattern)
+  - `RulerCornerBox.tsx` - Zoom preset matching (2 patterns)
+  - `entity-creation/config.ts` - Min entity size (1 pattern)
+  - `constraints/config.ts` - Global tolerance (1 pattern)
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero inline precision values (except tolerance-config.ts)
+  - Semantic constant naming (DENOMINATOR_ZERO vs magic number)
+  - Single point of change for precision tuning
+  - Consistent calculation accuracy across systems
+- **Companion**: ADR-065 (Distance), ADR-066 (Angle), ADR-034 (Geometry Centralization)
+
+### ADR-080: Rectangle Bounds Centralization (rectFromTwoPoints)
+- **Canonical**: `rectFromTwoPoints()`, `RectBounds` from `geometry-rendering-utils.ts`
+- **Impact**: 10+ inline bounding box calculations → 1 function
+- **Problem**: Duplicate `Math.min(p1.x, p2.x)` / `Math.abs(p2.x - p1.x)` patterns scattered across files
+- **Solution**: Centralized `rectFromTwoPoints(p1, p2): RectBounds` function
+- **Mathematical Formula**:
+  - `x = Math.min(p1.x, p2.x)`
+  - `y = Math.min(p1.y, p2.y)`
+  - `width = Math.abs(p2.x - p1.x)`
+  - `height = Math.abs(p2.y - p1.y)`
+- **Interface**:
+  ```typescript
+  interface RectBounds { x: number; y: number; width: number; height: number; }
+  ```
+- **Files Migrated**:
+  - `PreviewRenderer.ts` - Rectangle preview bounds (1 pattern)
+  - `ZoomWindowOverlay.tsx` - Zoom window rectangle (1 pattern)
+  - `SelectionMarqueeOverlay.tsx` - Selection marquee rectangle (1 pattern)
+  - `SelectionRenderer.ts` - Selection box rendering (1 pattern)
+  - `useZoomWindow.ts` - Zoom window state updates (2 patterns)
+  - `ghost-entity-renderer.ts` - Ghost rectangle & simplified bounds (2 patterns)
+- **Usage Examples**:
+  ```typescript
+  const { x, y, width, height } = rectFromTwoPoints(corner1, corner2);
+  ctx.strokeRect(x, y, width, height);
+
+  const { x: left, y: top, width, height } = rectFromTwoPoints(startPoint, currentPoint);
+  ```
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero duplicate bounding box calculations
+  - Consistent x/y (top-left) + width/height output
+  - Type-safe RectBounds interface
+  - Destructuring support with rename (`x: left`)
+- **Companion**: ADR-065 (Distance), ADR-073 (Midpoint), ADR-074 (Point On Circle)
+
+### ADR-081: Percentage Formatting Centralization (formatPercent)
+- **Canonical**: `formatPercent()` from `distance-label-utils.ts`
+- **Impact**: 22 inline `Math.round(value * 100)%` implementations → 1 function
+- **Problem**: Duplicate percentage formatting patterns scattered across 12 files for:
+  - Opacity display (0-1 → 0%-100%)
+  - Zoom display (0.5-10 → 50%-1000%)
+  - Alpha channel display
+- **Solution**: Centralized `formatPercent(value, includeSymbol?)` function
+- **API**:
+  ```typescript
+  formatPercent(value: number, includeSymbol: boolean = true): string
+  // formatPercent(0.75)        → "75%"
+  // formatPercent(0.75, false) → "75"
+  ```
+- **Files Migrated**:
+  - `distance-label-utils.ts` - Canonical source (ADR-069 companion)
+  - `SelectionSettings.tsx` - Window/crossing opacity (4 patterns)
+  - `LineSettings.tsx` - Line opacities (3 patterns)
+  - `CursorSettings.tsx` - Cursor opacity (1 pattern)
+  - `GripSettings.tsx` - Grip opacity (1 pattern)
+  - `CurrentSettingsDisplay.tsx` - Summary display (1 pattern)
+  - `EnterpriseColorSlider.tsx` - Alpha channel (1 pattern)
+  - `ZoomControls.tsx` - Zoom input (2 patterns)
+  - `RulerCornerBox.tsx` - Corner zoom (1 pattern)
+  - `ToolbarStatusBar.tsx` - Status bar (1 pattern)
+  - `PdfControlsPanel.tsx` - Scale & opacity (2 patterns)
+  - `usePanelDescription.ts` - Zoom description (1 pattern)
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero inline percentage formatting
+  - Consistent rounding (Math.round)
+  - Optional % symbol for i18n interpolation
+  - Companion to formatDistance/formatAngle
+- **Companion**: ADR-069 (Number Formatting), ADR-043 (Zoom Constants)
 
 ---
 

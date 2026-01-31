@@ -5,6 +5,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ADR-080: Centralized Rectangle Bounds
+import { rectFromTwoPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 // 🏢 ENTERPRISE: Type-safe preview rect structure
 interface PreviewRect {
@@ -35,10 +37,8 @@ export default function ZoomWindowOverlay({
 
   if (!isActive || !startPoint || !currentPoint) return null;
 
-  const left = Math.min(startPoint.x, currentPoint.x);
-  const top = Math.min(startPoint.y, currentPoint.y);
-  const width = Math.abs(currentPoint.x - startPoint.x);
-  const height = Math.abs(currentPoint.y - startPoint.y);
+  // 🏢 ADR-080: Centralized Rectangle Bounds
+  const { x: left, y: top, width, height } = rectFromTwoPoints(startPoint, currentPoint);
 
   return (
     <div className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${className}`}>

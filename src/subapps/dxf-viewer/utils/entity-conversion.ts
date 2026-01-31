@@ -92,10 +92,8 @@ export function isPointNearLineSegment(
   tolerance: number
 ): boolean {
   const closestPoint = getClosestPointOnLineSegment(point, lineStart, lineEnd);
-  const distance = Math.sqrt(
-    Math.pow(point.x - closestPoint.x, 2) + 
-    Math.pow(point.y - closestPoint.y, 2)
-  );
+  // 🏢 ADR-065: Use centralized distance calculation
+  const distance = calculateDistance(point, closestPoint);
   
   return distance <= tolerance;
 }
@@ -175,9 +173,8 @@ export function arePointsConnectable(
   point2: Point2D, 
   tolerance: number
 ): boolean {
-  const distance = Math.sqrt(
-    Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2)
-  );
+  // 🏢 ADR-065: Use centralized distance calculation
+  const distance = calculateDistance(point1, point2);
   return distance <= tolerance;
 }
 
@@ -299,20 +296,12 @@ export function findOverlayEdgeForGrip(
     // Use existing utility for edge detection
     if (isPointNearLineSegment(point, start, end, tolerance)) {
       const insertPoint = getClosestPointOnLineSegment(point, start, end);
-      const distance = Math.sqrt(
-        Math.pow(point.x - insertPoint.x, 2) +
-        Math.pow(point.y - insertPoint.y, 2)
-      );
+      // 🏢 ADR-065: Use centralized distance calculation
+      const distance = calculateDistance(point, insertPoint);
 
       // Don't allow insertion too close to existing vertices
-      const startDist = Math.sqrt(
-        Math.pow(insertPoint.x - start.x, 2) +
-        Math.pow(insertPoint.y - start.y, 2)
-      );
-      const endDist = Math.sqrt(
-        Math.pow(insertPoint.x - end.x, 2) +
-        Math.pow(insertPoint.y - end.y, 2)
-      );
+      const startDist = calculateDistance(insertPoint, start);
+      const endDist = calculateDistance(insertPoint, end);
 
       // Minimum distance from existing vertices (2x tolerance)
       if (startDist > tolerance * 2 && endDist > tolerance * 2) {

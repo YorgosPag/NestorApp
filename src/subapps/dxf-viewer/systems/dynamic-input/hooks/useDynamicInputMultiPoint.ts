@@ -13,6 +13,8 @@ import {
   formatDistance as centralizedFormatDistance,
   formatAngle as centralizedFormatAngle
 } from '../../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-079: Centralized Vector Precision Constants
+import { VECTOR_PRECISION } from '../../../config/tolerance-config';
 
 interface SegmentInfo {
   startPoint: Point2D;
@@ -128,7 +130,8 @@ export function useDynamicInputMultiPoint({
       const mag1 = vectorMagnitude(v1);
       const mag2 = vectorMagnitude(v2);
 
-      if (mag1 > 0.001 && mag2 > 0.001) { // Αποφυγή division by zero
+      // 🏢 ADR-079: Use centralized vector magnitude threshold
+      if (mag1 > VECTOR_PRECISION.MIN_MAGNITUDE && mag2 > VECTOR_PRECISION.MIN_MAGNITUDE) { // Αποφυγή division by zero
         const cosAngle = dot / (mag1 * mag2);
         const angleRad = Math.acos(Math.max(-1, Math.min(1, cosAngle))); // Clamp για ακρίβεια
         // 🏢 ADR-067: Use centralized angle conversion
@@ -166,7 +169,8 @@ export function calculateAngleBetweenPoints(
   const mag1 = vectorMagnitude(v1);
   const mag2 = vectorMagnitude(v2);
 
-  if (mag1 < 0.001 || mag2 < 0.001) {
+  // 🏢 ADR-079: Use centralized vector magnitude threshold
+  if (mag1 < VECTOR_PRECISION.MIN_MAGNITUDE || mag2 < VECTOR_PRECISION.MIN_MAGNITUDE) {
     return { angle: 0, vertex, isValid: false };
   }
 

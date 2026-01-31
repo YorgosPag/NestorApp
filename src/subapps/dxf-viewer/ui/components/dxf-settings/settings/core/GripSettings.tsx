@@ -22,6 +22,8 @@ import { BaseModal } from '../../../../../components/shared/BaseModal';
 import { useNotifications } from '@/providers/NotificationProvider';
 // 🏢 ENTERPRISE: Shadcn Tooltip component
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -219,7 +221,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* Opacity */}
           <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-              {t('settings.grip.labels.opacity')}: {Math.round(gripSettings.opacity * 100)}%
+              {t('settings.grip.labels.opacity')}: {formatPercent(gripSettings.opacity)}
             </label>
             <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
               <input

@@ -57,3 +57,99 @@ export const MIN_POLY_AREA = 0.05;
 export const getScaledTolerance = (baseTolerance: number, scale: number): number => {
   return baseTolerance / scale;
 };
+
+// ===== GEOMETRIC PRECISION CONSTANTS =====
+// 🏢 ADR-079: Centralized epsilon values for geometric calculations (2026-01-31)
+
+/**
+ * 🎯 GEOMETRIC PRECISION CONSTANTS
+ * Ultra-high precision values for line/circle intersections and point matching
+ *
+ * Used for:
+ * - Line intersection calculations (denominator zero check)
+ * - Circle-circle and line-circle intersections (duplicate point check)
+ * - Vertex duplicate detection
+ * - Point matching in snapping systems
+ *
+ * @example
+ * import { GEOMETRY_PRECISION } from '../config/tolerance-config';
+ * if (Math.abs(denominator) < GEOMETRY_PRECISION.DENOMINATOR_ZERO) return null;
+ */
+export const GEOMETRY_PRECISION = {
+  /** Ultra-high precision for collinear points check (1e-10) */
+  COLLINEAR_TOLERANCE: 1e-10,
+  /** Denominator zero check for line intersection (1e-10) */
+  DENOMINATOR_ZERO: 1e-10,
+  /** Duplicate intersection point check (1e-10) */
+  INTERSECTION_DUPLICATE: 1e-10,
+  /** Circle-circle intersection h value check (1e-10) */
+  CIRCLE_INTERSECTION: 1e-10,
+  /** Vertex duplicate detection threshold (1e-6) */
+  VERTEX_DUPLICATE: 1e-6,
+  /** Standard point matching threshold (0.001) */
+  POINT_MATCH: 0.001,
+  /** Region geometry epsilon (1e-3) */
+  REGION_EPSILON: 1e-3,
+  /** Entity gap tolerance for matching (1e-3) */
+  ENTITY_GAP: 1e-3,
+} as const;
+
+/**
+ * 🎯 AXIS/GRID DETECTION CONSTANTS
+ * Thresholds for detecting zero/axis positions in rulers and grids
+ *
+ * @example
+ * import { AXIS_DETECTION } from '../config/tolerance-config';
+ * const isOnAxis = Math.abs(x) < AXIS_DETECTION.ZERO_THRESHOLD;
+ */
+export const AXIS_DETECTION = {
+  /** Zero/axis proximity threshold (0.001) */
+  ZERO_THRESHOLD: 0.001,
+  /** Grid major line detection (0.001) */
+  GRID_MAJOR_THRESHOLD: 0.001,
+} as const;
+
+/**
+ * 🎯 MOVEMENT DETECTION CONSTANTS
+ * Thresholds for detecting meaningful movements and changes
+ *
+ * @example
+ * import { MOVEMENT_DETECTION } from '../config/tolerance-config';
+ * if (Math.abs(delta.x) > MOVEMENT_DETECTION.MIN_MOVEMENT) { ... }
+ */
+export const MOVEMENT_DETECTION = {
+  /** Minimum movement to register (0.001) */
+  MIN_MOVEMENT: 0.001,
+  /** Zoom change detection threshold (0.001) */
+  ZOOM_CHANGE: 0.001,
+  /** Zoom preset matching threshold (0.01) */
+  ZOOM_PRESET_MATCH: 0.01,
+} as const;
+
+/**
+ * 🎯 VECTOR PRECISION CONSTANTS
+ * Thresholds for vector operations and division safety
+ *
+ * @example
+ * import { VECTOR_PRECISION } from '../config/tolerance-config';
+ * if (magnitude > VECTOR_PRECISION.MIN_MAGNITUDE) { ... }
+ */
+export const VECTOR_PRECISION = {
+  /** Minimum magnitude for safe division (0.001) */
+  MIN_MAGNITUDE: 0.001,
+} as const;
+
+/**
+ * 🎯 ENTITY LIMITS CONSTANTS
+ * Minimum size and tolerance values for entity operations
+ *
+ * @example
+ * import { ENTITY_LIMITS } from '../config/tolerance-config';
+ * if (size < ENTITY_LIMITS.MIN_SIZE) return;
+ */
+export const ENTITY_LIMITS = {
+  /** Minimum entity size (0.001) */
+  MIN_SIZE: 0.001,
+  /** Constraint solving tolerance (0.001) */
+  CONSTRAINT_TOLERANCE: 0.001,
+} as const;

@@ -6,7 +6,8 @@
 import type { Point2D } from '../rendering/types/Types';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 // 🏢 ADR-068: Centralized Angle Normalization
-import { radToDeg, normalizeAngleRad } from '../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-077: Centralized TAU Constant
+import { radToDeg, normalizeAngleRad, TAU } from '../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-072: Centralized Dot Product
 import { dotProduct } from '../rendering/entities/shared/geometry-rendering-utils';
 
@@ -47,7 +48,7 @@ export function calculateAngleData(
   const angle = normalizeAngleRad(Math.atan2(cross, dot));
   
   // Use interior angle (smaller angle)
-  const interiorAngle = angle > Math.PI ? 2 * Math.PI - angle : angle;
+  const interiorAngle = angle > Math.PI ? TAU - angle : angle;
   // 🏢 ADR-067: Use centralized angle conversion
   const degrees = radToDeg(interiorAngle);
   
@@ -66,8 +67,8 @@ export function calculateAngleData(
   
   // Determine arc direction (shortest path)
   let angleDiff = endAngle - startAngle;
-  if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-  if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+  if (angleDiff > Math.PI) angleDiff -= TAU;
+  if (angleDiff < -Math.PI) angleDiff += TAU;
   
   const clockwise = angleDiff < 0;
   
@@ -83,8 +84,8 @@ export function calculateAngleBisector(startAngle: number, endAngle: number): {
   bisectorAngle: number;
 } {
   let angleDiff = endAngle - startAngle;
-  if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-  if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+  if (angleDiff > Math.PI) angleDiff -= TAU;
+  if (angleDiff < -Math.PI) angleDiff += TAU;
   
   const bisectorAngle = startAngle + angleDiff / 2;
   

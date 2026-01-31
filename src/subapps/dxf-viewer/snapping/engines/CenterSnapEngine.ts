@@ -10,6 +10,8 @@ import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-079: Centralized Geometric Precision Constants
+import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 
 export class CenterSnapEngine extends BaseSnapEngine {
   private spatialIndex: ISpatialIndex | null = null;
@@ -89,9 +91,9 @@ export class CenterSnapEngine extends BaseSnapEngine {
             const distance = calculateDistance(cursorPoint, center);
             
             if (distance <= radius) {
-              // Ελέγχουμε αν έχουμε ήδη αυτό το center από το index
-              const alreadyExists = candidates.some(c => 
-                calculateDistance(c.point, center) < 0.001
+              // 🏢 ADR-079: Use centralized point match threshold
+              const alreadyExists = candidates.some(c =>
+                calculateDistance(c.point, center) < GEOMETRY_PRECISION.POINT_MATCH
               );
               
               if (!alreadyExists) {

@@ -28,6 +28,8 @@ import type { RegionStatus } from '../../types/overlay';
 import { getStatusColors } from '../../config/color-mapping';
 import { createOverlayHandlers } from '../../overlays/types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-079: Centralized Movement Detection Constants
+import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
 // 🏢 ENTERPRISE (2026-01-25): Edge detection for polygon vertex insertion
 import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
 // 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings via Provider (CANONICAL - SINGLE SOURCE OF TRUTH)
@@ -782,7 +784,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         };
 
         // 🏢 ENTERPRISE: Only execute command if there was actual movement (avoid no-op commands)
-        const hasMovement = Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001;
+        // 🏢 ADR-079: Use centralized movement detection threshold
+        const hasMovement = Math.abs(delta.x) > MOVEMENT_DETECTION.MIN_MOVEMENT || Math.abs(delta.y) > MOVEMENT_DETECTION.MIN_MOVEMENT;
         if (hasMovement) {
           // Execute MoveOverlayCommand through history for undo/redo support
           const command = new MoveOverlayCommand(
@@ -1173,6 +1176,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   }, []);
 
+  // 🏢 ENTERPRISE (2026-01-31): Flip arc direction handler using ref pattern
+  const handleFlipArc = useCallback(() => {
+    if (drawingHandlersRef.current?.onFlipArc) {
+      drawingHandlersRef.current.onFlipArc();
+    }
+  }, []);
+
   // === CONVERT SCENE TO CANVAS V2 FORMAT ===
   // 🔍 DEBUG (2026-01-31): Log props.currentScene for circle debugging
   console.log('📋 [CanvasSection] props.currentScene', {
@@ -1226,9 +1236,10 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             return { ...base, type: 'polyline' as const, vertices: polylineEntity.vertices, closed: polylineEntity.closed } as DxfEntityUnion;
           }
           case 'arc': {
-            // Type guard: Entity με type 'arc' έχει center, radius, startAngle, endAngle
-            const arcEntity = entity as typeof entity & { center: Point2D; radius: number; startAngle: number; endAngle: number };
-            return { ...base, type: 'arc' as const, center: arcEntity.center, radius: arcEntity.radius, startAngle: arcEntity.startAngle, endAngle: arcEntity.endAngle } as DxfEntityUnion;
+            // Type guard: Entity με type 'arc' έχει center, radius, startAngle, endAngle, counterclockwise
+            // 🔧 FIX (2026-01-31): Προσθήκη counterclockwise για σωστή κατεύθυνση τόξου
+            const arcEntity = entity as typeof entity & { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise?: boolean };
+            return { ...base, type: 'arc' as const, center: arcEntity.center, radius: arcEntity.radius, startAngle: arcEntity.startAngle, endAngle: arcEntity.endAngle, counterclockwise: arcEntity.counterclockwise } as DxfEntityUnion;
           }
           case 'text': {
             // ╔════════════════════════════════════════════════════════════════════╗
@@ -1724,13 +1735,22 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             finishDrawing();
           }
           break;
+        // 🏢 ENTERPRISE (2026-01-31): "X" key for flip arc direction during arc drawing
+        case 'x':
+        case 'X':
+          // Only flip if we're in arc drawing mode
+          if (activeTool === 'arc-3p' || activeTool === 'arc-cse' || activeTool === 'arc-sce') {
+            e.preventDefault();
+            handleFlipArc();
+          }
+          break;
       }
     };
 
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc]);
 
   // 🏢 ADR-053 ENTERPRISE FIX (2026-01-30): Document-level contextmenu handler
   // Native DOM event listener is MORE RELIABLE than React's synthetic events on canvas
@@ -2172,6 +2192,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             onClose={handleDrawingClose}
             onUndoLastPoint={handleDrawingUndoLastPoint}
             onCancel={handleDrawingCancel}
+            onFlipArc={handleFlipArc}
           />
         </div>
       </div>

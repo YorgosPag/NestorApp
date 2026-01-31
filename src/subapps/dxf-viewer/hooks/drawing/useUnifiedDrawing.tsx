@@ -122,8 +122,12 @@ import {
   arcFromStartCenterEnd,
   radToDeg,
   normalizeAngleDeg,
-  dotProduct
+  dotProduct,
+  // 🏢 ADR-078: Centralized Angle Between Vectors
+  angleBetweenVectors
 } from '../../rendering/entities/shared';
+// 🏢 ADR-079: Centralized Geometric Precision Constants
+import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 import { usePreviewMode } from '../usePreviewMode';
 // 🗑️ REMOVED: useEntityStyles from ConfigurationProvider
 // import { useEntityStyles } from '../useEntityStyles';
@@ -188,6 +192,11 @@ export function useUnifiedDrawing() {
   // 🏢 ADR-053: Track entity IDs created during continuous measurement session
   // Used for "Undo All" functionality - deletes all measurements from current session
   const continuousSessionEntityIdsRef = useRef<string[]>([]);
+
+  // 🏢 ENTERPRISE (2026-01-31): Arc flip state for direction toggle
+  // When true, the arc direction is inverted (counterclockwise becomes clockwise and vice versa)
+  // Toggled by "X" key or context menu "Αντιστροφή τόξου" option
+  const arcFlippedRef = useRef<boolean>(false);
 
   // 🏢 ENTERPRISE: Derive DrawingState from state machine for backward compatibility
   const state: DrawingState = useMemo(() => ({
@@ -412,10 +421,8 @@ export function useUnifiedDrawing() {
             const vector2 = { x: point2.x - vertex.x, y: point2.y - vertex.y };
 
             // Calculate angle in radians
-            // 🏢 ADR-072: Use centralized dot product
-            const dot = dotProduct(vector1, vector2);
-            const det = vector1.x * vector2.y - vector1.y * vector2.x;
-            const angleRad = Math.atan2(det, dot);
+            // 🏢 ADR-078: Use centralized angleBetweenVectors
+            const angleRad = angleBetweenVectors(vector1, vector2);
 
             // 🏢 ADR-067: Use centralized angle conversion
             // 🏢 ADR-068: Use centralized angle normalization
@@ -469,6 +476,10 @@ export function useUnifiedDrawing() {
           const [start, mid, end] = points;
           const arcResult = arcFrom3Points(start, mid, end);
           if (arcResult) {
+            // 🏢 ENTERPRISE (2026-01-31): Apply flip if user toggled direction
+            const finalCounterclockwise = arcFlippedRef.current
+              ? !arcResult.counterclockwise
+              : arcResult.counterclockwise;
             return {
               id,
               type: 'arc',
@@ -478,6 +489,8 @@ export function useUnifiedDrawing() {
               endAngle: arcResult.endAngle,
               visible: true,
               layer: '0',
+              // 🔧 FIX (2026-01-31): Προσθήκη counterclockwise για σωστή κατεύθυνση τόξου
+              counterclockwise: finalCounterclockwise,
             } as ArcEntity;
           }
         }
@@ -488,6 +501,10 @@ export function useUnifiedDrawing() {
         if (points.length >= 3) {
           const [center, start, end] = points;
           const arcResult = arcFromCenterStartEnd(center, start, end);
+          // 🏢 ENTERPRISE (2026-01-31): Apply flip if user toggled direction
+          const finalCounterclockwise = arcFlippedRef.current
+            ? !arcResult.counterclockwise
+            : arcResult.counterclockwise;
           return {
             id,
             type: 'arc',
@@ -498,7 +515,7 @@ export function useUnifiedDrawing() {
             visible: true,
             layer: '0',
             // 🏢 ENTERPRISE: Pass counterclockwise flag for correct arc direction
-            counterclockwise: arcResult.counterclockwise,
+            counterclockwise: finalCounterclockwise,
           } as ArcEntity;
         }
         break;
@@ -508,11 +525,16 @@ export function useUnifiedDrawing() {
         if (points.length >= 3) {
           const [start, center, end] = points;
           const arcResult = arcFromStartCenterEnd(start, center, end);
+          // 🏢 ENTERPRISE (2026-01-31): Apply flip if user toggled direction
+          const finalCounterclockwise = arcFlippedRef.current
+            ? !arcResult.counterclockwise
+            : arcResult.counterclockwise;
           // 🔍 DEBUG: Log arc creation
           console.log('🏗️ createEntityFromTool arc-sce:', {
             startAngle: arcResult.startAngle,
             endAngle: arcResult.endAngle,
-            counterclockwise: arcResult.counterclockwise,
+            counterclockwise: finalCounterclockwise,
+            flipped: arcFlippedRef.current,
             points: { start, center, end }
           });
           const arcEntity = {
@@ -525,7 +547,7 @@ export function useUnifiedDrawing() {
             visible: true,
             layer: '0',
             // 🏢 ENTERPRISE: Pass counterclockwise flag for correct arc direction
-            counterclockwise: arcResult.counterclockwise,
+            counterclockwise: finalCounterclockwise,
           };
           // 🔍 DEBUG: Log the FULL entity object before returning
           console.log('🏗️ createEntityFromTool arc-sce FULL ENTITY:', JSON.stringify(arcEntity, null, 2));
@@ -921,8 +943,9 @@ export function useUnifiedDrawing() {
             const dx = cursor.x - center.x;
             const dy = cursor.y - center.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
+            // 🏢 ADR-079: Use centralized point match threshold
             // Project cursor to circumference (using same radius as start)
-            const projectedEnd = dist > 0.001 ? {
+            const projectedEnd = dist > GEOMETRY_PRECISION.POINT_MATCH ? {
               x: center.x + (dx / dist) * arcResult.radius,
               y: center.y + (dy / dist) * arcResult.radius
             } : start; // Fallback if cursor is on center
@@ -936,8 +959,9 @@ export function useUnifiedDrawing() {
             const dx = cursor.x - center.x;
             const dy = cursor.y - center.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
+            // 🏢 ADR-079: Use centralized point match threshold
             // Project cursor to circumference
-            const projectedEnd = dist > 0.001 ? {
+            const projectedEnd = dist > GEOMETRY_PRECISION.POINT_MATCH ? {
               x: center.x + (dx / dist) * arcResult.radius,
               y: center.y + (dy / dist) * arcResult.radius
             } : start;
@@ -946,6 +970,11 @@ export function useUnifiedDrawing() {
             // arc-3p: all points define the circumference - use as-is
             constructionVerts = worldPoints;
           }
+
+          // 🏢 ENTERPRISE (2026-01-31): Apply flip if user toggled direction
+          const finalCounterclockwise = arcFlippedRef.current
+            ? !arcResult.counterclockwise
+            : arcResult.counterclockwise;
 
           // Create arc entity with construction vertices for rubber band lines
           const arcPreview: ExtendedArcEntity = {
@@ -966,7 +995,8 @@ export function useUnifiedDrawing() {
             showEdgeDistances: true,
             // 🏢 ENTERPRISE: Arc direction flag for correct rendering
             // Ensures arc passes through all 3 points (not the "mirror" arc)
-            counterclockwise: arcResult.counterclockwise,
+            // With flip support for user direction toggle
+            counterclockwise: finalCounterclockwise,
             // 🏢 ENTERPRISE: Construction line mode
             // arc-3p: polyline (start → mid → end)
             // arc-cse/arc-sce: radial (center → start, center → end)
@@ -1129,6 +1159,9 @@ export function useUnifiedDrawing() {
       continuousSessionEntityIdsRef.current = [];
     }
 
+    // 🏢 ENTERPRISE (2026-01-31): Reset arc flip state for new drawing
+    arcFlippedRef.current = false;
+
     // 🏢 ENTERPRISE: Use state machine for tool selection
     machineSelectTool(tool);
 
@@ -1216,6 +1249,24 @@ export function useUnifiedDrawing() {
       previewEntity: null,
     }));
   }, [machineContext.toolType, machineUndoPoint, machineCancel, machineReset, setMode, currentLevelId, getLevelScene, setLevelScene]);
+
+  // 🏢 ENTERPRISE (2026-01-31): Flip arc direction during drawing
+  // Pattern: AutoCAD X command - toggles arc direction
+  // Called by keyboard shortcut "X" or context menu "Αντιστροφή τόξου"
+  const flipArcDirection = useCallback(() => {
+    const currentTool = (machineContext.toolType as DrawingTool) || 'select';
+
+    // Only flip for arc tools
+    if (currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce') {
+      arcFlippedRef.current = !arcFlippedRef.current;
+      console.log('🔄 [flipArcDirection] Arc flipped:', arcFlippedRef.current);
+
+      // Force preview update by clearing and re-rendering
+      // The next mouse move will apply the new flip state
+      // For immediate feedback, we could trigger a preview refresh here
+      // but mouse move will do it automatically
+    }
+  }, [machineContext.toolType]);
 
   const finishPolyline = useCallback(() => {
     // 🏢 ENTERPRISE (2026-01-25): Use state machine context
@@ -1323,6 +1374,7 @@ export function useUnifiedDrawing() {
     startDrawing,
     cancelDrawing,
     undoLastPoint,  // 🏢 ADR-047: Undo last point (AutoCAD U command)
+    flipArcDirection,  // 🏢 ENTERPRISE (2026-01-31): Flip arc direction (AutoCAD X command)
     finishEntity: finishPolyline,
     finishPolyline,
     startPolyline,

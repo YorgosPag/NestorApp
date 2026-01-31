@@ -4,13 +4,16 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-// 🏢 ADR-067: Centralized angle conversion
-import { degToRad } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-067: Centralized angle conversion + TAU constant
+import { degToRad, TAU } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-074: Centralized Point On Circle
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-079: Centralized Geometric Precision Constants
+import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 
 export const GEOMETRY_CONSTANTS = {
-  EPS: 1e-3, // Relaxed tolerance for better entity matching
+  // 🏢 ADR-079: Using centralized precision constants
+  EPS: GEOMETRY_PRECISION.ENTITY_GAP, // Relaxed tolerance for better entity matching (1e-3)
   GAP_TOLERANCE: 0.5, // Allow moderate gaps between entities (CAD units)
   DEFAULT_ARC_SEGMENTS: 24
 } as const;
@@ -71,7 +74,7 @@ export function arcToPolyline(arc: Arc, segments: number = GEOMETRY_CONSTANTS.DE
   let end = degToRad(arc.endAngle ?? 0);
 
   // Normalize to ensure end > start within [0, 2π)
-  const TAU = Math.PI * 2;
+  // 🏢 TAU imported from centralized geometry-utils
   start = ((start % TAU) + TAU) % TAU;
   end = ((end % TAU) + TAU) % TAU;
   if (end <= start) end += TAU;
@@ -86,8 +89,8 @@ export function arcToPolyline(arc: Arc, segments: number = GEOMETRY_CONSTANTS.DE
     // 🏢 ADR-074: Use centralized pointOnCircle
     const point = pointOnCircle(center, radius, a);
 
-    // Drop consecutive duplicates
-    if (verts.length === 0 || Math.hypot(point.x - verts[verts.length - 1].x, point.y - verts[verts.length - 1].y) > 1e-6) {
+    // 🏢 ADR-079: Drop consecutive duplicates using centralized vertex duplicate threshold
+    if (verts.length === 0 || Math.hypot(point.x - verts[verts.length - 1].x, point.y - verts[verts.length - 1].y) > GEOMETRY_PRECISION.VERTEX_DUPLICATE) {
       verts.push(point);
     }
   }

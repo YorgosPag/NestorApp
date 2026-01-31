@@ -6,6 +6,8 @@
 
 import type { Point2D, Viewport, ViewTransform } from '../rendering/types/Types';
 import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../rendering/primitives/canvasPaths';
 
 export interface OriginMarkerDebugSettings {
   enabled: boolean;
@@ -277,7 +279,7 @@ export class OriginMarkersDebugOverlay {
     // Center dot για ακρίβεια
     if (settings.showCenter) {
       ctx.beginPath();
-      ctx.arc(originScreenX, originScreenY, settings.centerRadius, 0, Math.PI * 2);
+      ctx.arc(originScreenX, originScreenY, settings.centerRadius, 0, TAU);
       ctx.fillStyle = settings.color;
       ctx.fill();
     }

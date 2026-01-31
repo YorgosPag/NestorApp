@@ -6,6 +6,8 @@
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
 import type { EntityModel } from '../types/Types';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../primitives/canvasPaths';
 
 export interface GripInfo {
   entityId: string;
@@ -243,7 +245,7 @@ export class OverlayPass implements IRenderPass {
       case 'center':
         // Circular grips - 🏢 ADR-058: Use ellipse instead of arc
         context.beginPath();
-        context.ellipse(screenPos.x, screenPos.y, gripSize / 2, gripSize / 2, 0, 0, Math.PI * 2);
+        context.ellipse(screenPos.x, screenPos.y, gripSize / 2, gripSize / 2, 0, 0, TAU);
         context.fill();
         context.stroke();
         break;
@@ -283,7 +285,7 @@ export class OverlayPass implements IRenderPass {
 
       // Draw center dot - 🏢 ADR-058: Use ellipse instead of arc
       context.beginPath();
-      context.ellipse(screenPos.x, screenPos.y, 2, 2, 0, 0, Math.PI * 2);
+      context.ellipse(screenPos.x, screenPos.y, 2, 2, 0, 0, TAU);
       context.fill();
     }
 
@@ -362,7 +364,7 @@ export class OverlayPass implements IRenderPass {
         fillStyle: UI_COLORS.OVERLAY_SNAP_POINT
       });
       context.beginPath();
-      context.ellipse(snapScreen.x, snapScreen.y, 3, 3, 0, 0, Math.PI * 2);
+      context.ellipse(snapScreen.x, snapScreen.y, 3, 3, 0, 0, TAU);
       context.fill();
     }
 

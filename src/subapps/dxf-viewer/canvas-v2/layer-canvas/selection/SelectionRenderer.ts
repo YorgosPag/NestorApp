@@ -7,6 +7,8 @@
 import type { Point2D, Viewport } from '../../../rendering/types/Types';
 import type { SelectionSettings, SelectionBox } from '../layer-types';
 import type { UIRenderer, UIRenderContext, UIElementSettings, UIRenderMetrics } from '../../../rendering/ui/core/UIRenderer';
+// 🏢 ADR-080: Centralized Rectangle Bounds
+import { rectFromTwoPoints } from '../../../rendering/entities/shared/geometry-rendering-utils';
 
 export class SelectionRenderer implements UIRenderer {
   readonly type = 'selection';
@@ -70,11 +72,8 @@ export class SelectionRenderer implements UIRenderer {
 
     this.ctx.save();
 
-    // Calculate selection rectangle
-    const x = Math.min(startPoint.x, endPoint.x);
-    const y = Math.min(startPoint.y, endPoint.y);
-    const width = Math.abs(endPoint.x - startPoint.x);
-    const height = Math.abs(endPoint.y - startPoint.y);
+    // 🏢 ADR-080: Centralized Rectangle Bounds
+    const { x, y, width, height } = rectFromTwoPoints(startPoint, endPoint);
 
     // Render fill
     if (selectionConfig.fillOpacity > 0) {

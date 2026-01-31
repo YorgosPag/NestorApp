@@ -592,6 +592,15 @@ export const DXF_SPECIAL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'special:delete-selected',
     category: 'special',
   },
+  // 🏢 ENTERPRISE (2026-01-31): Flip arc direction during arc drawing
+  // Pattern: AutoCAD X command for direction toggle
+  flipArc: {
+    key: 'X',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.special.flipArc',
+    action: 'special:flip-arc',
+    category: 'special',
+  },
 } as const;
 
 // ============================================================================

@@ -11,6 +11,8 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { CircleEntity } from '../../../types/entities';
 import type { DragMeasurementContext, MeasurementData } from '../types';
 import { BaseDragMeasurementRenderer } from './BaseDragMeasurementRenderer';
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../../../rendering/primitives/canvasPaths';
 
 /**
  * Circle-specific drag measurement renderer
@@ -37,7 +39,7 @@ export class CircleDragMeasurement extends BaseDragMeasurementRenderer {
     // Calculate derived measurements
     const diameter = newRadius * 2;
     const area = Math.PI * newRadius * newRadius;
-    const circumference = 2 * Math.PI * newRadius;
+    const circumference = TAU * newRadius;
 
     // Get screen position for measurement display
     const screenCurrentPos = this.worldToScreen(currentPos);

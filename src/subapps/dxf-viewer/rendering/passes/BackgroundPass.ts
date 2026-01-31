@@ -5,6 +5,8 @@
 
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../primitives/canvasPaths';
 
 export interface BackgroundConfig {
   gridEnabled: boolean;
@@ -249,7 +251,7 @@ export class BackgroundPass implements IRenderPass {
       strokeStyle: UI_COLORS.OVERLAY_ORIGIN
     });
     context.beginPath();
-    context.ellipse(originScreen.x, originScreen.y, 3, 3, 0, 0, Math.PI * 2);
+    context.ellipse(originScreen.x, originScreen.y, 3, 3, 0, 0, TAU);
     context.fill();
 
     // Labels

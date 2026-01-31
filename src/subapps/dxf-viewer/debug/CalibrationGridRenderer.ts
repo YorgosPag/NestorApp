@@ -10,6 +10,8 @@ import type { RulerDebugSettings, CalibrationGridSettings } from './RulerDebugTy
 import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized Line Widths
 import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
+// 🏢 ADR-077: Centralized TAU Constant
+import { TAU } from '../rendering/primitives/canvasPaths';
 
 export class CalibrationGridRenderer implements UIRenderer {
   readonly type = 'calibration-grid';
@@ -143,7 +145,7 @@ export class CalibrationGridRenderer implements UIRenderer {
 
     ctx.fillStyle = settings.originMarkerColor;
     ctx.beginPath();
-    ctx.arc(originScreenX, originScreenY, settings.originMarkerSize, 0, Math.PI * 2);
+    ctx.arc(originScreenX, originScreenY, settings.originMarkerSize, 0, TAU);
     ctx.fill();
 
     // Draw crosshair at origin

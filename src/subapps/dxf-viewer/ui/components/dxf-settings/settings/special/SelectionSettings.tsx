@@ -12,6 +12,8 @@ import { RotateCcw, Square, SquareDashed } from 'lucide-react';
 import { TabsOnlyTriggers, type TabDefinition } from '@/components/ui/navigation/TabsComponents';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+// 🏢 ADR-081: Centralized percentage formatting
+import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 
 export function SelectionSettings() {
   const [activeSelectionTab, setActiveSelectionTab] = useState<'window' | 'crossing'>('window');
@@ -164,7 +166,7 @@ export function SelectionSettings() {
                 className="flex-1"
               />
               <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                {Math.round(settings.selection.window.fillOpacity * 100)}%
+                {formatPercent(settings.selection.window.fillOpacity)}
               </div>
             </div>
           </div>
@@ -202,7 +204,7 @@ export function SelectionSettings() {
                 className="flex-1"
               />
               <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                {Math.round(settings.selection.window.borderOpacity * 100)}%
+                {formatPercent(settings.selection.window.borderOpacity)}
               </div>
             </div>
           </div>
@@ -324,7 +326,7 @@ export function SelectionSettings() {
                 className="flex-1"
               />
               <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                {Math.round(settings.selection.crossing.fillOpacity * 100)}%
+                {formatPercent(settings.selection.crossing.fillOpacity)}
               </div>
             </div>
           </div>
@@ -362,7 +364,7 @@ export function SelectionSettings() {
                 className="flex-1"
               />
               <div className={`${PANEL_LAYOUT.WIDTH.VALUE_DISPLAY} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.bg.muted} ${colors.text.inverted} ${PANEL_LAYOUT.ROUNDED.DEFAULT} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.TEXT_ALIGN.CENTER}`}>
-                {Math.round(settings.selection.crossing.borderOpacity * 100)}%
+                {formatPercent(settings.selection.crossing.borderOpacity)}
               </div>
             </div>
           </div>

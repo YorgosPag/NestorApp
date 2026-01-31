@@ -5,8 +5,8 @@
 
 import type { Point2D } from '../../types/Types';
 import { getTextPreviewStyleWithOverride } from '../../../hooks/useTextPreviewStyle';
-// 🏢 ADR-065: Centralized Distance Calculation
-import { calculateDistance } from './geometry-rendering-utils';
+// 🏢 ADR-065: Centralized Distance & Vector Operations
+import { calculateDistance, getUnitVector } from './geometry-rendering-utils';
 
 /**
  * Render a split line with a gap in the middle for text
@@ -17,8 +17,6 @@ export function renderSplitLineWithGap(
   endScreen: Point2D,
   gapSize = 40
 ): void {
-  const dx = endScreen.x - startScreen.x;
-  const dy = endScreen.y - startScreen.y;
   // 🏢 ADR-065: Use centralized distance calculation
   const length = calculateDistance(startScreen, endScreen);
 
@@ -26,15 +24,14 @@ export function renderSplitLineWithGap(
     // Line too short for gap, draw nothing
     return;
   }
-  
-  const unitX = dx / length;
-  const unitY = dy / length;
-  
-  const halfGap = gapSize / 2;
-  const gapStartX = startScreen.x + (length - gapSize) / 2 * unitX;
-  const gapStartY = startScreen.y + (length - gapSize) / 2 * unitY;
-  const gapEndX = startScreen.x + (length + gapSize) / 2 * unitX;
-  const gapEndY = startScreen.y + (length + gapSize) / 2 * unitY;
+
+  // 🏢 ADR-065: Use centralized unit vector calculation
+  const unit = getUnitVector(startScreen, endScreen);
+
+  const gapStartX = startScreen.x + (length - gapSize) / 2 * unit.x;
+  const gapStartY = startScreen.y + (length - gapSize) / 2 * unit.y;
+  const gapEndX = startScreen.x + (length + gapSize) / 2 * unit.x;
+  const gapEndY = startScreen.y + (length + gapSize) / 2 * unit.y;
   
   // Draw first segment
   ctx.beginPath();

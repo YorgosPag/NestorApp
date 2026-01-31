@@ -9,7 +9,8 @@ import type { GripInfo } from '../../types/Types';
 // 🏢 ADR-068: Import normalizeAngleDeg for centralized angle normalization
 // 🏢 ADR-073: Import calculateMidpoint for centralized midpoint calculation
 import { pointToLineDistance, radToDeg, normalizeAngleDeg, calculateMidpoint } from './geometry-utils';
-import { calculateDistance } from './geometry-rendering-utils';
+// 🏢 ADR-065: Centralized Distance & Vector Operations
+import { calculateDistance, getUnitVector } from './geometry-rendering-utils';
 import { getTextPreviewStyleWithOverride } from '../../../hooks/useTextPreviewStyle';
 
 /**
@@ -186,30 +187,29 @@ export function calculateSplitLineGap(
       unitVector: { x: 0, y: 0 }
     };
   }
-  
-  // Unit vectors
-  const unitX = dx / length;
-  const unitY = dy / length;
-  
+
+  // 🏢 ADR-065: Use centralized unit vector calculation
+  const unit = getUnitVector(screenStart, screenEnd);
+
   // 🏢 ADR-073: Use centralized midpoint calculation
   const mid = calculateMidpoint(screenStart, screenEnd);
 
   // Calculate gap points (half gap on each side of center)
   const gapHalf = gapSize / 2;
   const gapStart = {
-    x: mid.x - unitX * gapHalf,
-    y: mid.y - unitY * gapHalf
+    x: mid.x - unit.x * gapHalf,
+    y: mid.y - unit.y * gapHalf
   };
   const gapEnd = {
-    x: mid.x + unitX * gapHalf,
-    y: mid.y + unitY * gapHalf
+    x: mid.x + unit.x * gapHalf,
+    y: mid.y + unit.y * gapHalf
   };
 
   return {
     gapStart,
     gapEnd,
     midpoint: mid,
-    unitVector: { x: unitX, y: unitY }
+    unitVector: unit
   };
 }
 
