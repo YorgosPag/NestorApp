@@ -12,6 +12,10 @@ import { createGripsFromPoints, createCenterGrip } from './shared/grip-utils';
 import { validateEllipseEntity } from './shared/entity-validation-utils';
 import { applyRenderingTransform } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
+// 🏢 ADR-058: Centralized Canvas Primitives
+import { TAU } from '../primitives/canvasPaths';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { degToRad } from './shared/geometry-utils';
 
 export class EllipseRenderer extends BaseEntityRenderer {
   // Helper method to calculate axis endpoints (eliminates duplication)
@@ -19,7 +23,8 @@ export class EllipseRenderer extends BaseEntityRenderer {
     majorPoints: Point2D[];
     minorPoints: Point2D[];
   } {
-    const rotRad = (rotation * Math.PI) / 180;
+    // 🏢 ADR-067: Use centralized angle conversion
+    const rotRad = degToRad(rotation);
     const cosRot = Math.cos(rotRad);
     const sinRot = Math.sin(rotRad);
     
@@ -75,10 +80,12 @@ export class EllipseRenderer extends BaseEntityRenderer {
     
     this.ctx.save();
     this.ctx.translate(screenCenter.x, screenCenter.y);
-    this.ctx.rotate((rotation * Math.PI) / 180);
+    // 🏢 ADR-067: Use centralized angle conversion
+    this.ctx.rotate(degToRad(rotation));
     
+    // 🏢 ADR-058: Use centralized TAU constant
     this.ctx.beginPath();
-    this.ctx.ellipse(0, 0, screenMajor, screenMinor, 0, 0, Math.PI * 2);
+    this.ctx.ellipse(0, 0, screenMajor, screenMinor, 0, 0, TAU);
     this.ctx.stroke();
     
     this.ctx.restore();

@@ -279,10 +279,11 @@ export function debugCRMDashboardTabs(): void {
   }
 }
 
-// Development debug (μόνο στο development)
-if (process.env.NODE_ENV === 'development') {
-  debugCRMDashboardTabs();
-}
+// 🔕 Development debug disabled to reduce console noise (2026-01-31)
+// Call debugCRMDashboardTabs() manually if needed
+// if (process.env.NODE_ENV === 'development') {
+//   debugCRMDashboardTabs();
+// }
 
 // ============================================================================
 // EXPORTS

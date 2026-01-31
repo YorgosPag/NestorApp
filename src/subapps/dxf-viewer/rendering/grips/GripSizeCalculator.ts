@@ -13,6 +13,8 @@ import {
   MIN_GRIP_SIZE,
   MAX_GRIP_SIZE,
 } from './constants';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../entities/shared/geometry-utils';
 
 // ============================================================================
 // GRIP SIZE CALCULATOR CLASS
@@ -89,11 +91,12 @@ export class GripSizeCalculator {
   /**
    * Clamp size to valid range
    * Ensures grips remain visible but not too large
+   * 🏢 ADR-071: Using centralized clamp function
    *
    * @param size - Calculated size
    * @returns Clamped size
    */
   private clampSize(size: number): number {
-    return Math.max(MIN_GRIP_SIZE, Math.min(MAX_GRIP_SIZE, size));
+    return clamp(size, MIN_GRIP_SIZE, MAX_GRIP_SIZE);
   }
 }

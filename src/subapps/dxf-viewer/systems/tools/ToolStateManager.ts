@@ -43,6 +43,12 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'polyline': { id: 'polyline', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'polygon': { id: 'polygon', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'ellipse': { id: 'ellipse', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // 🏢 ENTERPRISE (2026-01-31): Arc drawing tools - ADR-059
+  // AutoCAD pattern: Arc tools require 3 points (or 2 + input for some variants)
+  'arc': { id: 'arc', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'arc-3p': { id: 'arc-3p', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'arc-cse': { id: 'arc-cse', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'arc-sce': { id: 'arc-sce', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 
   // Measurement tools - cancel overlay mode (measurement ≠ overlay drawing)
   // 🏢 ENTERPRISE FIX (2026-01-26): allowsContinuous: true for consecutive measurements

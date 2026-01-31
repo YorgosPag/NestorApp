@@ -14,6 +14,8 @@ import { createCombinedBounds, type Bounds } from '../utils/bounds-utils';
 import { ColorLayerUtils } from '../utils/ColorLayerUtils';
 // 🏢 ENTERPRISE: Use centralized constants from transform-config
 import { FIT_TO_VIEW_DEFAULTS } from '../config/transform-config';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../rendering/entities/shared/geometry-utils';
 
 interface FitToViewOptions {
   padding?: number; // Default: 0.1 (10% padding)
@@ -82,7 +84,8 @@ export class FitToViewService {
     }
 
     // 🛡️ GUARD: Ensure padding doesn't exceed 0.9 (90%) to prevent NaN
-    const safePadding = Math.min(Math.max(padding, 0), 0.9);
+    // 🏢 ADR-071: Using centralized clamp
+    const safePadding = clamp(padding, 0, 0.9);
 
     const paddedViewportWidth = viewport.width * (1 - safePadding);
     const paddedViewportHeight = viewport.height * (1 - safePadding);
@@ -99,7 +102,8 @@ export class FitToViewService {
 
     const scaleX = paddedViewportWidth / boundsWidth;
     const scaleY = paddedViewportHeight / boundsHeight;
-    const scale = Math.min(Math.max(Math.min(scaleX, scaleY), minScale), maxScale);
+    // 🏢 ADR-071: Using centralized clamp
+    const scale = clamp(Math.min(scaleX, scaleY), minScale, maxScale);
 
     // 🛡️ FINAL GUARD: Check for NaN/Infinity in scale
     if (!isFinite(scale) || scale <= 0) {
@@ -235,7 +239,8 @@ export class FitToViewService {
     }
 
     // 🛡️ GUARD: Ensure padding doesn't exceed 0.9 (90%) to prevent NaN
-    const safePadding = Math.min(Math.max(padding, 0), 0.9);
+    // 🏢 ADR-071: Using centralized clamp
+    const safePadding = clamp(padding, 0, 0.9);
 
     const paddedViewportWidth = viewport.width * (1 - safePadding);
     const paddedViewportHeight = viewport.height * (1 - safePadding);
@@ -252,7 +257,8 @@ export class FitToViewService {
 
     const scaleX = paddedViewportWidth / boundsWidth;
     const scaleY = paddedViewportHeight / boundsHeight;
-    const scale = Math.min(Math.max(Math.min(scaleX, scaleY), minScale), maxScale);
+    // 🏢 ADR-071: Using centralized clamp
+    const scale = clamp(Math.min(scaleX, scaleY), minScale, maxScale);
 
     // 🛡️ FINAL GUARD: Check for NaN/Infinity in scale
     if (!isFinite(scale) || scale <= 0) {

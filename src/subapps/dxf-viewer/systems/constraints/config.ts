@@ -5,6 +5,8 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-067: Import centralized conversion constants
+import { DEGREES_TO_RADIANS, RADIANS_TO_DEGREES } from '../../rendering/entities/shared/geometry-utils';
 
 // ===== BASIC TYPES =====
 export type ConstraintType = 'ortho' | 'polar' | 'angle' | 'distance' | 'parallel' | 'perpendicular' | 'tangent' | 'horizontal' | 'vertical';
@@ -394,11 +396,12 @@ export const DEFAULT_CONSTRAINTS_SETTINGS: ConstraintsSettings = {
 };
 
 // ===== CONSTANTS =====
+// 🏢 ADR-067: Angle constants now imported from geometry-utils.ts
 export const CONSTRAINTS_CONFIG = {
-  // Angle constants
-  DEGREES_TO_RADIANS: Math.PI / 180,
-  RADIANS_TO_DEGREES: 180 / Math.PI,
-  
+  // Angle constants - re-exported from centralized source
+  DEGREES_TO_RADIANS,
+  RADIANS_TO_DEGREES,
+
   // Standard angles in degrees
   CARDINAL_ANGLES: [0, 90, 180, 270],
   DIAGONAL_ANGLES: [45, 135, 225, 315],

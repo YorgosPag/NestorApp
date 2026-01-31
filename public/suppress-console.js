@@ -197,7 +197,59 @@
     'console.log @ suppress-console',
 
     // Enterprise suppression confirmation (noisy)
-    '✅ Enterprise console suppression active'
+    '✅ Enterprise console suppression active',
+
+    // 🏢 DXF VIEWER - Scene/Canvas verbose logging (2026-01-31)
+    '📊 [useSceneState] currentScene computed',
+    '🏢 [LevelsSystem] setLevelScene called',
+    '💾 [useAutoSaveSceneManager] setLevelSceneWithAutoSave called',
+    '🗄️ [useSceneManager]',
+    '📋 [CanvasSection] props.currentScene',
+    '🔌 [DxfViewerContent] Subscribing to drawing:complete event',
+
+    // Route/Config loading verbose logs
+    '📥 Loading route configuration from Firebase',
+    '✅ Loaded 5 route configurations from Firebase',
+    'Preloaded route:',
+
+    // Tab configuration debug logs
+    '🏢 Building Tabs Configuration Debug',
+    '💼 CRM Dashboard Tabs Configuration Debug',
+    '📅 Period Selector Configuration Debug',
+    '📊 Stats:',
+    '✅ Validation:',
+    '📋 Enabled tabs:',
+    '📋 Enabled periods:',
+    '🎯 All tabs:',
+    '🎯 All periods:',
+    '🏭 Factory:',
+
+    // React DevTools message
+    'Download the React DevTools',
+
+    // Deprecation warnings (known)
+    '🚨 DEPRECATION WARNING: Direct import from',
+
+    // 🏢 DXF VIEWER - Drawing system verbose logging (2026-01-31)
+    '🚀 [startDrawing] Called with tool:',
+    '🎯 [onDrawingPoint]',
+    '➕ [addPoint] Called',
+    '🏗️ [addPoint] Entity creation',
+    '✅ [addPoint] Calling completeEntity',
+    '📦 [completeEntity] Called',
+    '✅ [completeEntity] Added to',
+    '📤 [completeEntity] Emitting',
+    '📨 [DxfViewerContent] drawing:complete received',
+    '🔄 [DxfViewerContent] Syncing updatedScene',
+    '🎬 [useSceneState] handleSceneChange',
+    '✅ [useSceneState] setLevelScene',
+
+    // 🏢 DXF VIEWER - EntityComposite render logs (2026-01-31)
+    '🎯 [EntityComposite] render()',
+    '🎯 [EntityComposite] Found renderer',
+
+    // 🏢 DXF VIEWER - CanvasSection entity conversion logs (2026-01-31)
+    '🔵 [CanvasSection] Converting'
   ];
 
   // ═══ PERFORMANCE MONITORING NOISE PATTERNS ═══
@@ -295,7 +347,10 @@
       warn: console.warn,
       error: console.error,
       info: console.info,
-      debug: console.debug
+      debug: console.debug,
+      group: console.group,
+      groupCollapsed: console.groupCollapsed,
+      groupEnd: console.groupEnd
     };
 
     // ✅ PRODUCTION: Complete suppression
@@ -304,6 +359,9 @@
       console.warn = function() {};
       console.info = function() {};
       console.debug = function() {};
+      console.group = function() {};
+      console.groupCollapsed = function() {};
+      console.groupEnd = function() {};
 
       // Errors μόνο για critical issues
       console.error = function(...args) {
@@ -352,6 +410,22 @@
       }
     };
 
+    // 🏢 FIX (2026-01-31): Override console.group for tab config debug logs
+    console.group = function(...args) {
+      if (!containsBlockedPattern(args)) {
+        originalConsole.group.apply(console, args);
+      }
+    };
+
+    console.groupCollapsed = function(...args) {
+      if (!containsBlockedPattern(args)) {
+        originalConsole.groupCollapsed.apply(console, args);
+      }
+    };
+
+    // Note: groupEnd doesn't need filtering, but track if group was suppressed
+    // For simplicity, we allow groupEnd to pass through (no-op if group was suppressed)
+
     // ✅ Store originals for debugging access
     if (isDevelopment) {
       window.__ENTERPRISE_CONSOLE__ = {
@@ -389,22 +463,15 @@
   }
 
   // ═══ CANVAS ARC PATCHING (από layout.tsx) ═══
+  // 🏢 FIX (2026-01-31): DISABLED - This was blocking ALL arc rendering!
+  // The kill-switch `return;` prevented any ctx.arc() calls from working,
+  // which broke arc entity rendering completely.
 
   function patchCanvasArc() {
-    if (typeof window !== 'undefined' && !window.__ARC_PATCHED__) {
-      window.__ARC_PATCHED__ = true;
-      const proto = CanvasRenderingContext2D.prototype;
-      const origArc = proto.arc;
-
-      proto.arc = function patchedArc(x, y, r, s, e, ccw) {
-        // Kill-switch: σχολίασέ το για να ΞΑΝΑΦΑΝΕΙ ο κύκλος
-        // Ενεργό => ΔΕΝ ζωγραφίζονται καθόλου κύκλοι
-        return; // προσωρινό hard stop
-
-        // Αν θέλεις να επαναφέρεις το default συμπεριφορά:
-        // return origArc.apply(this, arguments);
-      };
-    }
+    // 🔧 FIX (2026-01-31): Disabled arc patching - arcs should render normally
+    // Original code was blocking all arc rendering with `return;`
+    // This function is now a no-op to allow normal arc drawing
+    return;
   }
 
   // ═══ ENTERPRISE INITIALIZATION SEQUENCE ═══

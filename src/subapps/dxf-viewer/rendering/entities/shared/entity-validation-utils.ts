@@ -106,6 +106,7 @@ export function validateArcEntity(entity: EntityModel): {
   radius: number;
   startAngle: number;
   endAngle: number;
+  counterclockwise: boolean;
 } | null {
   if (entity.type !== 'arc') return null;
 
@@ -114,10 +115,21 @@ export function validateArcEntity(entity: EntityModel): {
   const radius = arcEntity.radius;
   const startAngle = arcEntity.startAngle;
   const endAngle = arcEntity.endAngle;
+  // 🏢 ENTERPRISE: Extract counterclockwise flag (defaults to false if not set)
+  const counterclockwise = arcEntity.counterclockwise ?? false;
+
+  // 🔍 DEBUG: Log what validateArcEntity reads from entity
+  console.log('🔍 validateArcEntity:', {
+    entityId: entity.id,
+    rawCounterclockwise: arcEntity.counterclockwise,
+    resolvedCounterclockwise: counterclockwise,
+    startAngle,
+    endAngle
+  });
 
   if (!center || !radius || startAngle === undefined || endAngle === undefined) return null;
 
-  return { center, radius, startAngle, endAngle };
+  return { center, radius, startAngle, endAngle, counterclockwise };
 }
 
 /**

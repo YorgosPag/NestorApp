@@ -8,6 +8,8 @@ import type { GridSettings } from './GridTypes';
 import type { GridSettings as LayerGridSettings } from '../../../canvas-v2/layer-canvas/layer-types';
 import { GridRenderer } from './GridRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../core/UIRenderContext';
+// 🏢 ADR-076: Centralized Color Conversion
+import { parseHex, rgbToHex } from '../../../ui/color/utils';
 
 /**
  * 🔺 LEGACY ADAPTER
@@ -68,38 +70,38 @@ export class LegacyGridAdapter {
 
   /**
    * Helper: Darken a color by a factor
+   * 🏢 ADR-076: Uses centralized color conversion
    */
   private darkenColor(color: string, factor: number): string {
-    // Simple color darkening - can be enhanced later
     if (color.startsWith('#')) {
-      const r = parseInt(color.slice(1, 3), 16);
-      const g = parseInt(color.slice(3, 5), 16);
-      const b = parseInt(color.slice(5, 7), 16);
-
-      const newR = Math.max(0, Math.floor(r * (1 - factor)));
-      const newG = Math.max(0, Math.floor(g * (1 - factor)));
-      const newB = Math.max(0, Math.floor(b * (1 - factor)));
-
-      return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+      try {
+        const rgb = parseHex(color);
+        const newR = Math.max(0, Math.floor(rgb.r * (1 - factor)));
+        const newG = Math.max(0, Math.floor(rgb.g * (1 - factor)));
+        const newB = Math.max(0, Math.floor(rgb.b * (1 - factor)));
+        return rgbToHex({ r: newR, g: newG, b: newB });
+      } catch {
+        return color;
+      }
     }
     return color;
   }
 
   /**
    * Helper: Lighten a color by a factor
+   * 🏢 ADR-076: Uses centralized color conversion
    */
   private lightenColor(color: string, factor: number): string {
-    // Simple color lightening - can be enhanced later
     if (color.startsWith('#')) {
-      const r = parseInt(color.slice(1, 3), 16);
-      const g = parseInt(color.slice(3, 5), 16);
-      const b = parseInt(color.slice(5, 7), 16);
-
-      const newR = Math.min(255, Math.floor(r + (255 - r) * factor));
-      const newG = Math.min(255, Math.floor(g + (255 - g) * factor));
-      const newB = Math.min(255, Math.floor(b + (255 - b) * factor));
-
-      return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+      try {
+        const rgb = parseHex(color);
+        const newR = Math.min(255, Math.floor(rgb.r + (255 - rgb.r) * factor));
+        const newG = Math.min(255, Math.floor(rgb.g + (255 - rgb.g) * factor));
+        const newB = Math.min(255, Math.floor(rgb.b + (255 - rgb.b) * factor));
+        return rgbToHex({ r: newR, g: newG, b: newB });
+      } catch {
+        return color;
+      }
     }
     return color;
   }

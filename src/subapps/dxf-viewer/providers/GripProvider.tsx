@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useRe
 import type { GripSettings } from '../types/gripSettings';
 import { validateGripSettings, DEFAULT_GRIP_SETTINGS } from '../types/gripSettings';
 import { gripStyleStore } from '../stores/GripStyleStore';
+// 🏢 ADR-075: Centralized Grip Size Multipliers
+import { GRIP_SIZE_MULTIPLIERS } from '../rendering/grips/constants';
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
 // 🗑️ REMOVED (2025-10-06): ConfigurationProvider - MERGED into DxfSettingsProvider
 // import { useViewerConfig } from './ConfigurationProvider';
@@ -150,14 +152,11 @@ export function GripProvider({ children }: GripProviderProps) {
   }, [centralGripHook]);
 
   // === STABLE HELPER FUNCTIONS ===
+  // 🏢 ADR-075: Use centralized grip size multipliers
   const getGripSize = useCallback((state: 'cold' | 'warm' | 'hot') => {
     const baseSize = gripSettings.gripSize * gripSettings.dpiScale;
-    switch (state) {
-      case 'warm': return Math.round(baseSize * 1.2);
-      case 'hot': return Math.round(baseSize * 1.4);
-      case 'cold':
-      default: return Math.round(baseSize);
-    }
+    const multiplier = GRIP_SIZE_MULTIPLIERS[state.toUpperCase() as keyof typeof GRIP_SIZE_MULTIPLIERS];
+    return Math.round(baseSize * multiplier);
   }, [gripSettings.gripSize, gripSettings.dpiScale]);
 
   const getGripColor = useCallback((state: 'cold' | 'warm' | 'hot') => {

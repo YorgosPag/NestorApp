@@ -22,6 +22,8 @@ import type { PdfBackgroundCanvasProps } from '../types/pdf.types';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 
 // ============================================================================
 // RENDER LOOP MANAGEMENT
@@ -173,8 +175,8 @@ export const PdfBackgroundCanvas: React.FC<PdfBackgroundCanvasProps> = ({
       // STEP 4: Apply PDF-specific transform (user controls from panel)
       ctx.translate(pdfTransform.offsetX, pdfTransform.offsetY);
 
-      // Apply PDF rotation around current position
-      ctx.rotate((pdfTransform.rotation * Math.PI) / 180);
+      // 🏢 ADR-067: Use centralized angle conversion
+      ctx.rotate(degToRad(pdfTransform.rotation));
 
       // Apply PDF scale on top of DXF scale
       ctx.scale(pdfTransform.scale, pdfTransform.scale);

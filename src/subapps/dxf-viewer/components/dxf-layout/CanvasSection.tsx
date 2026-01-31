@@ -1044,9 +1044,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const isNearFirstPoint = React.useMemo(() => {
     if (draftPolygon.length < 3 || !mouseWorld) return false;
     const firstPoint = draftPolygon[0];
-    const dx = mouseWorld.x - firstPoint[0];
-    const dy = mouseWorld.y - firstPoint[1];
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distance = calculateDistance(mouseWorld, { x: firstPoint[0], y: firstPoint[1] });
     return distance < (CLOSE_THRESHOLD / transform.scale);
   }, [draftPolygon, mouseWorld, transform.scale]);
 
@@ -1219,15 +1218,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           case 'circle': {
             // Type guard: Entity με type 'circle' έχει center & radius
             const circleEntity = entity as typeof entity & { center: Point2D; radius: number };
-            // 🔍 DEBUG (2026-01-31): Log circle entity conversion
-            console.log('🔵 [CanvasSection] Converting circle entity', {
-              entityId: entity.id,
-              hasCenter: !!circleEntity.center,
-              hasRadius: !!circleEntity.radius,
-              center: circleEntity.center,
-              radius: circleEntity.radius,
-              rawEntity: entity,
-            });
             return { ...base, type: 'circle' as const, center: circleEntity.center, radius: circleEntity.radius } as DxfEntityUnion;
           }
           case 'polyline': {

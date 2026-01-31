@@ -18,6 +18,11 @@ import {
   getCanvasBounds,
   POSITIONING_CONFIG
 } from '../positioning/MeasurementPositioning';
+// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-066: Centralized Angle Calculation
+import { calculateDistance as centralizedCalculateDistance, calculateAngle as centralizedCalculateAngle } from '../../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { radToDeg } from '../../../rendering/entities/shared/geometry-utils';
 
 // ============================================================================
 // CONFIGURATION CONSTANTS
@@ -132,20 +137,19 @@ export abstract class BaseDragMeasurementRenderer {
 
   /**
    * Calculate distance between two points
+   * 🏢 ADR-065: Delegates to centralized calculateDistance
    */
   protected calculateDistance(p1: Point2D, p2: Point2D): number {
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    return Math.sqrt(dx * dx + dy * dy);
+    return centralizedCalculateDistance(p1, p2);
   }
 
   /**
    * Calculate angle in degrees from center to point
+   * 🏢 ADR-066: Delegates to centralized calculateAngle
+   * 🏢 ADR-067: Uses centralized radToDeg conversion
    */
   protected calculateAngle(center: Point2D, point: Point2D): number {
-    const dx = point.x - center.x;
-    const dy = point.y - center.y;
-    return Math.atan2(dy, dx) * 180 / Math.PI;
+    return radToDeg(centralizedCalculateAngle(center, point));
   }
 
   /**

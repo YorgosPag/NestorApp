@@ -5,7 +5,10 @@
 
 import type { Point2D } from '../../types/Types';
 import type { GripInfo } from '../../types/Types';
-import { pointToLineDistance } from './geometry-utils';
+// 🏢 ADR-067: Import radToDeg for centralized angle conversion
+// 🏢 ADR-068: Import normalizeAngleDeg for centralized angle normalization
+// 🏢 ADR-073: Import calculateMidpoint for centralized midpoint calculation
+import { pointToLineDistance, radToDeg, normalizeAngleDeg, calculateMidpoint } from './geometry-utils';
 import { calculateDistance } from './geometry-rendering-utils';
 import { getTextPreviewStyleWithOverride } from '../../../hooks/useTextPreviewStyle';
 
@@ -22,10 +25,8 @@ export function createEdgeGrips(
   
   // Edge midpoint grips for regular segments
   for (let i = 0; i < vertices.length - 1; i++) {
-    const midpoint: Point2D = {
-      x: (vertices[i].x + vertices[i + 1].x) / 2,
-      y: (vertices[i].y + vertices[i + 1].y) / 2
-    };
+    // 🏢 ADR-073: Use centralized midpoint calculation
+    const midpoint = calculateMidpoint(vertices[i], vertices[i + 1]);
     
     grips.push({
       id: `${entityId}-edge-${baseIndex + i}`,
@@ -39,10 +40,8 @@ export function createEdgeGrips(
   
   // Add closing edge grip for closed polylines
   if (closed && vertices.length > 2) {
-    const midpoint: Point2D = {
-      x: (vertices[vertices.length - 1].x + vertices[0].x) / 2,
-      y: (vertices[vertices.length - 1].y + vertices[0].y) / 2
-    };
+    // 🏢 ADR-073: Use centralized midpoint calculation
+    const midpoint = calculateMidpoint(vertices[vertices.length - 1], vertices[0]);
     
     grips.push({
       id: `${entityId}-edge-${baseIndex + vertices.length - 1}`,
@@ -68,11 +67,9 @@ export function hitTestCircularEntity(
   tolerance: number,
   transform: { scale: number }
 ): boolean {
-  // Calculate distance from point to center
-  const dx = point.x - center.x;
-  const dy = point.y - center.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  
+  // 🏢 ADR-065: Use centralized distance calculation
+  const distance = calculateDistance(point, center);
+
   // Check if point is near the circle's radius
   const worldTolerance = tolerance / transform.scale;
   return Math.abs(distance - radius) <= worldTolerance;
@@ -96,15 +93,13 @@ export function hitTestArcEntity(
     return false;
   }
   
-  // Check if point is within the arc's angle range
-  let angle = Math.atan2(point.y - center.y, point.x - center.x) * 180 / Math.PI;
-  if (angle < 0) angle += 360;
-  
+  // 🏢 ADR-067: Use centralized angle conversion
+  // 🏢 ADR-068: Use centralized angle normalization
+  const angle = normalizeAngleDeg(radToDeg(Math.atan2(point.y - center.y, point.x - center.x)));
+
   // Normalize angles
-  let start = startAngle % 360;
-  let end = endAngle % 360;
-  if (start < 0) start += 360;
-  if (end < 0) end += 360;
+  const start = normalizeAngleDeg(startAngle);
+  const end = normalizeAngleDeg(endAngle);
   
   // Check if angle is within arc range
   if (start <= end) {
@@ -180,8 +175,9 @@ export function calculateSplitLineGap(
 ): { gapStart: Point2D; gapEnd: Point2D; midpoint: Point2D; unitVector: Point2D } {
   const dx = screenEnd.x - screenStart.x;
   const dy = screenEnd.y - screenStart.y;
-  const length = Math.sqrt(dx * dx + dy * dy);
-  
+  // 🏢 ADR-065: Use centralized distance calculation
+  const length = calculateDistance(screenStart, screenEnd);
+
   if (length === 0) {
     return {
       gapStart: screenStart,
@@ -195,25 +191,24 @@ export function calculateSplitLineGap(
   const unitX = dx / length;
   const unitY = dy / length;
   
-  // Calculate midpoint
-  const midX = (screenStart.x + screenEnd.x) / 2;
-  const midY = (screenStart.y + screenEnd.y) / 2;
-  
+  // 🏢 ADR-073: Use centralized midpoint calculation
+  const mid = calculateMidpoint(screenStart, screenEnd);
+
   // Calculate gap points (half gap on each side of center)
   const gapHalf = gapSize / 2;
   const gapStart = {
-    x: midX - unitX * gapHalf,
-    y: midY - unitY * gapHalf
+    x: mid.x - unitX * gapHalf,
+    y: mid.y - unitY * gapHalf
   };
   const gapEnd = {
-    x: midX + unitX * gapHalf,
-    y: midY + unitY * gapHalf
+    x: mid.x + unitX * gapHalf,
+    y: mid.y + unitY * gapHalf
   };
-  
+
   return {
     gapStart,
     gapEnd,
-    midpoint: { x: midX, y: midY },
+    midpoint: mid,
     unitVector: { x: unitX, y: unitY }
   };
 }
@@ -256,10 +251,8 @@ function renderLineWithTextCheckInternal(
   gapSize: number = 30
 ): { midpoint: Point2D } {
   const textStyle = getTextPreviewStyleWithOverride();
-  const midpoint = {
-    x: (screenStart.x + screenEnd.x) / 2,
-    y: (screenStart.y + screenEnd.y) / 2
-  };
+  // 🏢 ADR-073: Use centralized midpoint calculation
+  const midpoint = calculateMidpoint(screenStart, screenEnd);
 
   if (textStyle.enabled) {
     // Κείμενο ενεργοποιημένο: γραμμή με κενό

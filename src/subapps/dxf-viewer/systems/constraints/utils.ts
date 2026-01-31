@@ -16,6 +16,12 @@ import type {
 } from './config';
 import { CONSTRAINTS_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
+// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-070: Centralized Vector Magnitude
+import { calculateDistance, vectorMagnitude } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-067: Centralized Angle Conversion
+// 🏢 ADR-068: Centralized Angle Normalization
+import { degToRad, radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
 
 // ===== HELPER FUNCTIONS =====
 
@@ -47,26 +53,21 @@ function createVisualConstraintFeedback(): ConstraintFeedback {
 export const AngleUtils = {
   /**
    * Normalizes angle to 0-360 degree range
+   * 🏢 ADR-068: Delegates to centralized normalizeAngleDeg for consistency
    */
-  normalizeAngle: (angle: number): number => {
-    while (angle < 0) angle += 360;
-    while (angle >= 360) angle -= 360;
-    return angle;
-  },
+  normalizeAngle: normalizeAngleDeg,
 
   /**
    * Converts degrees to radians
+   * 🏢 ADR-067: Re-exports canonical function for backward compatibility
    */
-  degreesToRadians: (degrees: number): number => {
-    return degrees * CONSTRAINTS_CONFIG.DEGREES_TO_RADIANS;
-  },
+  degreesToRadians: degToRad,
 
   /**
    * Converts radians to degrees
+   * 🏢 ADR-067: Re-exports canonical function for backward compatibility
    */
-  radiansToDegrees: (radians: number): number => {
-    return radians * CONSTRAINTS_CONFIG.RADIANS_TO_DEGREES;
-  },
+  radiansToDegrees: radToDeg,
 
   /**
    * Calculates angle between two points
@@ -136,12 +137,9 @@ export const AngleUtils = {
 export const DistanceUtils = {
   /**
    * Calculates distance between two points
+   * 🏢 ADR-065: Re-exports centralized calculateDistance
    */
-  distance: (point1: Point2D, point2: Point2D): number => {
-    const dx = point2.x - point1.x;
-    const dy = point2.y - point1.y;
-    return Math.sqrt(dx * dx + dy * dy);
-  },
+  distance: calculateDistance,
 
   /**
    * Snaps distance to nearest step increment within tolerance
@@ -175,8 +173,9 @@ export const CoordinateUtils = {
       x: point.x - basePoint.x,
       y: point.y - basePoint.y
     };
-    
-    const distance = Math.sqrt(relativePoint.x * relativePoint.x + relativePoint.y * relativePoint.y);
+
+    // 🏢 ADR-070: Use centralized vector magnitude
+    const distance = vectorMagnitude(relativePoint);
     const angle = AngleUtils.normalizeAngle(
       AngleUtils.radiansToDegrees(Math.atan2(relativePoint.y, relativePoint.x)) - baseAngle
     );
@@ -211,8 +210,9 @@ export const CoordinateUtils = {
   projectPointOnLine: (point: Point2D, lineStart: Point2D, lineEnd: Point2D): Point2D => {
     const dx = lineEnd.x - lineStart.x;
     const dy = lineEnd.y - lineStart.y;
-    const length = Math.sqrt(dx * dx + dy * dy);
-    
+    // 🏢 ADR-065: Use centralized distance calculation
+    const length = calculateDistance(lineStart, lineEnd);
+
     if (length === 0) return lineStart;
     
     const unitX = dx / length;

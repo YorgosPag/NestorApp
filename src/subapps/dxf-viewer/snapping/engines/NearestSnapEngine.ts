@@ -96,7 +96,8 @@ export class NearestSnapEngine extends BaseSnapEngine {
   private getNearestPointOnCircle(point: Point2D, center: Point2D, radius: number): Point2D {
     const dx = point.x - center.x;
     const dy = point.y - center.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distance = calculateDistance(point, center);
     
     if (distance === 0) {
       // Point is at center, return any point on circle

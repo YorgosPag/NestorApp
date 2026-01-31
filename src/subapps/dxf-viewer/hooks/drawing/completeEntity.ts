@@ -115,7 +115,9 @@ export function completeEntity(
     entityType: entity?.type,
     entityId: entity?.id,
     levelId: options.levelId,
-    tool: options.tool
+    tool: options.tool,
+    // 🔍 DEBUG: Check if arc has counterclockwise BEFORE any processing
+    counterclockwiseOnEntry: entity?.type === 'arc' ? (entity as { counterclockwise?: boolean }).counterclockwise : 'N/A'
   });
 
   // 🛡️ GUARD: Validate entity
@@ -141,6 +143,15 @@ export function completeEntity(
   // STEP 1: Apply completion styles (ADR-056)
   // ═══════════════════════════════════════════════════════════════════════════
   applyCompletionStyles(entity as unknown as Record<string, unknown>);
+
+  // 🔍 DEBUG: Check if arc has counterclockwise AFTER applyCompletionStyles
+  if (entity.type === 'arc') {
+    console.log('📦 [completeEntity] Arc entity AFTER applyCompletionStyles:', {
+      entityId: entity.id,
+      counterclockwise: (entity as { counterclockwise?: boolean }).counterclockwise,
+      fullEntity: JSON.stringify(entity, null, 2)
+    });
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 2: Add entity to scene
@@ -191,9 +202,16 @@ export function completeEntity(
   // The finalScene was just created above, so it contains the new entity
   // ═══════════════════════════════════════════════════════════════════════════
   if (!skipEvent) {
+    // 🔍 DEBUG: Check arc counterclockwise in finalScene BEFORE emit
+    const arcEntitiesInFinalScene = finalScene.entities.filter(e => e.type === 'arc');
     console.log('📤 [completeEntity] Emitting drawing:complete with finalScene', {
       entityCount: finalScene.entities.length,
-      entityId: entity.id
+      entityId: entity.id,
+      arcCount: arcEntitiesInFinalScene.length,
+      arcsWithCounterclockwise: arcEntitiesInFinalScene.map(e => ({
+        id: e.id,
+        counterclockwise: (e as { counterclockwise?: boolean }).counterclockwise
+      }))
     });
 
     EventBus.emit('drawing:complete', {

@@ -24,6 +24,32 @@
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity, ExtendedLineEntity, ExtendedCircleEntity, ExtendedPolylineEntity, PreviewPoint } from '../../hooks/drawing/useUnifiedDrawing';
+
+// 🏢 ENTERPRISE (2026-01-31): Arc preview entity type - ADR-059
+// Extended to support construction lines (rubber band) during arc drawing
+interface ArcPreviewEntity {
+  type: 'arc';
+  id: string;
+  center: Point2D;
+  radius: number;
+  startAngle: number;  // in degrees
+  endAngle: number;    // in degrees
+  visible?: boolean;
+  layer?: string;
+  preview?: boolean;
+  showPreviewGrips?: boolean;
+  // 🏢 ENTERPRISE: Construction vertices for rubber band lines
+  constructionVertices?: Point2D[];
+  showConstructionLines?: boolean;
+  showEdgeDistances?: boolean;
+  // 🏢 ENTERPRISE: Arc direction flag for Canvas 2D rendering
+  // true = draw counterclockwise, false = draw clockwise
+  counterclockwise?: boolean;
+  // 🏢 ENTERPRISE: Construction line drawing mode
+  // 'polyline': Connect points in sequence (arc-3p: start → mid → end)
+  // 'radial': Draw radii from center (arc-cse/arc-sce: center → start, center → end)
+  constructionLineMode?: 'polyline' | 'radial';
+}
 // 🏢 ENTERPRISE: Centralized CAD colors & coordinate transforms
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
@@ -31,6 +57,10 @@ import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
 // 🏢 ADR-044: Centralized Line Widths
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-066: Centralized Angle Calculation
+import { calculateAngle } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-073: Centralized Bisector Angle
+import { bisectorAngle } from '../../rendering/entities/shared/geometry-utils';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -260,6 +290,10 @@ export class PreviewRenderer {
       case 'point':
         this.renderPoint(ctx, entity as PreviewPoint, transform, opts);
         break;
+      case 'arc':
+        // 🏢 ENTERPRISE (2026-01-31): Arc preview support - ADR-059
+        this.renderArc(ctx, entity as ArcPreviewEntity, transform, opts);
+        break;
       default:
         // Unsupported entity type - silently skip
         break;
@@ -429,8 +463,9 @@ export class PreviewRenderer {
 
     // Draw arc for angle visualization (40px radius in screen space)
     const arcRadius = 40;
-    const angle1 = Math.atan2(entity.point1.y - entity.vertex.y, entity.point1.x - entity.vertex.x);
-    const angle2 = Math.atan2(entity.point2.y - entity.vertex.y, entity.point2.x - entity.vertex.x);
+    // 🏢 ADR-066: Use centralized angle calculation
+    const angle1 = calculateAngle(entity.vertex, entity.point1);
+    const angle2 = calculateAngle(entity.vertex, entity.point2);
 
     ctx.save();
     ctx.strokeStyle = '#FFA500'; // Orange for arc (CAD standard)
@@ -456,11 +491,11 @@ export class PreviewRenderer {
       this.renderDistanceLabelFromWorld(ctx, entity.vertex, entity.point2, screenVertex, screenPoint2);
     }
 
-    // Draw angle text at bisector
-    const bisectorAngle = (angle1 + angle2) / 2;
+    // 🏢 ADR-073: Use centralized bisector angle calculation
+    const bisectorAngleValue = bisectorAngle(angle1, angle2);
     const textDistance = 50;
-    const textX = screenVertex.x + Math.cos(bisectorAngle) * textDistance;
-    const textY = screenVertex.y + Math.sin(bisectorAngle) * textDistance;
+    const textX = screenVertex.x + Math.cos(bisectorAngleValue) * textDistance;
+    const textY = screenVertex.y + Math.sin(bisectorAngleValue) * textDistance;
 
     ctx.save();
     ctx.fillStyle = '#FF00FF'; // Fuchsia for angle text (measurement standard)
@@ -482,6 +517,152 @@ export class PreviewRenderer {
   ): void {
     const pos = this.worldToScreen(entity.position, transform);
     this.renderGrip(ctx, pos, opts);
+  }
+
+  /**
+   * 🏢 ENTERPRISE (2026-01-31): Render arc preview - ADR-059
+   * Renders both construction lines (rubber band) AND the arc shape
+   */
+  private renderArc(
+    ctx: CanvasRenderingContext2D,
+    entity: ArcPreviewEntity,
+    transform: ViewTransform,
+    opts: Required<PreviewRenderOptions>
+  ): void {
+    const center = this.worldToScreen(entity.center, transform);
+    const radiusScreen = entity.radius * transform.scale;
+
+    // Convert angles from degrees to radians
+    const startRad = (entity.startAngle * Math.PI) / 180;
+    const endRad = (entity.endAngle * Math.PI) / 180;
+
+    // 🏢 ENTERPRISE: Draw construction lines (rubber band) FIRST
+    // This shows the clicked points connected with lines
+    if (entity.showConstructionLines && entity.constructionVertices && entity.constructionVertices.length >= 2) {
+      ctx.save();
+      // Use dashed line style for construction lines
+      ctx.setLineDash([8, 4]);
+      ctx.strokeStyle = PANEL_LAYOUT.CAD_COLORS.CONSTRUCTION_LINE || opts.color;
+      ctx.lineWidth = RENDER_LINE_WIDTHS.PREVIEW_CONSTRUCTION || 1;
+      ctx.globalAlpha = 0.7;
+
+      const screenVertices = entity.constructionVertices.map(v => this.worldToScreen(v, transform));
+      const mode = entity.constructionLineMode || 'polyline';
+
+      if (mode === 'radial') {
+        // 🏢 ENTERPRISE: Radial mode for arc-cse/arc-sce
+        // Draw radii from center to start and end points ON THE CIRCUMFERENCE
+        // Use entity.center, startAngle, endAngle, radius for accurate positioning
+        const centerScreen = center; // Already calculated above
+
+        // Calculate start point on circumference (world coords)
+        const startAngleRad = (entity.startAngle * Math.PI) / 180;
+        const endAngleRad = (entity.endAngle * Math.PI) / 180;
+
+        const startPointWorld: Point2D = {
+          x: entity.center.x + Math.cos(startAngleRad) * entity.radius,
+          y: entity.center.y + Math.sin(startAngleRad) * entity.radius
+        };
+        const endPointWorld: Point2D = {
+          x: entity.center.x + Math.cos(endAngleRad) * entity.radius,
+          y: entity.center.y + Math.sin(endAngleRad) * entity.radius
+        };
+
+        const startPointScreen = this.worldToScreen(startPointWorld, transform);
+        const endPointScreen = this.worldToScreen(endPointWorld, transform);
+
+        // Draw radius to start point
+        ctx.beginPath();
+        ctx.moveTo(centerScreen.x, centerScreen.y);
+        ctx.lineTo(startPointScreen.x, startPointScreen.y);
+        ctx.stroke();
+
+        // Draw radius to end point
+        ctx.beginPath();
+        ctx.moveTo(centerScreen.x, centerScreen.y);
+        ctx.lineTo(endPointScreen.x, endPointScreen.y);
+        ctx.stroke();
+
+        // Draw grips at center, start, and end
+        if (opts.showGrips) {
+          this.renderGrip(ctx, centerScreen, opts);
+          this.renderGrip(ctx, startPointScreen, opts);
+          this.renderGrip(ctx, endPointScreen, opts);
+        }
+
+        // Draw radius label (only one - they're the same length)
+        if (entity.showEdgeDistances) {
+          this.renderDistanceLabelFromWorld(
+            ctx,
+            entity.center,
+            startPointWorld,
+            centerScreen,
+            startPointScreen
+          );
+        }
+      } else {
+        // 🏢 ENTERPRISE: Polyline mode for arc-3p
+        // constructionVertices = [start, mid, end] - all on circumference
+        ctx.beginPath();
+        ctx.moveTo(screenVertices[0].x, screenVertices[0].y);
+        for (let i = 1; i < screenVertices.length; i++) {
+          ctx.lineTo(screenVertices[i].x, screenVertices[i].y);
+        }
+        ctx.stroke();
+
+        // Draw grips at construction vertices
+        if (opts.showGrips) {
+          for (const screenVertex of screenVertices) {
+            this.renderGrip(ctx, screenVertex, opts);
+          }
+        }
+
+        // Draw distance labels on construction lines
+        if (entity.showEdgeDistances) {
+          for (let i = 0; i < entity.constructionVertices.length - 1; i++) {
+            const worldStart = entity.constructionVertices[i];
+            const worldEnd = entity.constructionVertices[i + 1];
+            const screenStart = screenVertices[i];
+            const screenEnd = screenVertices[i + 1];
+            this.renderDistanceLabelFromWorld(ctx, worldStart, worldEnd, screenStart, screenEnd);
+          }
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // 🏢 ENTERPRISE: Draw arc shape (solid line)
+    // Use counterclockwise flag to determine arc sweep direction
+    // This ensures the arc passes through all 3 points correctly
+    //
+    // 🎯 CRITICAL: Y-axis inversion fix!
+    // World coords: Y+ is UP, angles are counterclockwise from East
+    // Screen coords: Y+ is DOWN, angles are clockwise from East
+    // Solution: Negate angles and flip direction to compensate for Y-inversion
+    const screenStartRad = -startRad;
+    const screenEndRad = -endRad;
+    const screenCounterclockwise = !(entity.counterclockwise ?? false);
+
+    // 🔍 DEBUG: Log PreviewRenderer arc values
+    console.log('🎨 PreviewRenderer.renderArc:', {
+      entityId: entity.id,
+      startAngle: entity.startAngle,
+      endAngle: entity.endAngle,
+      rawCounterclockwise: entity.counterclockwise,
+      screenStartRad: screenStartRad * 180 / Math.PI,
+      screenEndRad: screenEndRad * 180 / Math.PI,
+      screenCounterclockwise
+    });
+
+    ctx.beginPath();
+    ctx.ellipse(center.x, center.y, radiusScreen, radiusScreen, 0, screenStartRad, screenEndRad, screenCounterclockwise);
+    ctx.stroke();
+
+    // Draw center grip for the arc
+    if (opts.showGrips) {
+      this.renderGrip(ctx, center, opts);
+    }
   }
 
   // ============================================================================

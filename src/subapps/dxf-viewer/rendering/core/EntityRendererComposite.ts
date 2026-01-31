@@ -84,17 +84,8 @@ export class EntityRendererComposite {
 
   // Main render method
   render(entity: Entity, options: RenderOptions = {}): void {
-    // 🔍 DEBUG (2026-01-31): Log entity composite render
-    console.log('🎯 [EntityComposite] render() called', {
-      entityType: entity?.type,
-      entityId: entity?.id,
-      hasCenter: 'center' in entity,
-      hasRadius: 'radius' in entity,
-    });
-
     const renderer = this.getRenderer(entity.type);
     if (renderer) {
-      console.log('🎯 [EntityComposite] Found renderer for:', entity.type);
       renderer.render(entity, options);
     } else {
       console.warn(`No renderer found for entity type: ${entity.type}`);

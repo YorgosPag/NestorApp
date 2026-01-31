@@ -2,7 +2,17 @@
 
 import { useMemo } from 'react';
 import type { Point2D } from '../../../rendering/types/Types';
-import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-070: Centralized Vector Magnitude
+// 🏢 ADR-072: Centralized Dot Product
+import { calculateDistance, vectorMagnitude, dotProduct } from '../../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { radToDeg } from '../../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-069: Centralized Number Formatting
+import {
+  formatDistance as centralizedFormatDistance,
+  formatAngle as centralizedFormatAngle
+} from '../../../rendering/entities/shared/distance-label-utils';
 
 interface SegmentInfo {
   startPoint: Point2D;
@@ -112,14 +122,17 @@ export function useDynamicInputMultiPoint({
       };
       
       // Υπολογισμός γωνίας μεταξύ των διανυσμάτων
-      const dot = v1.x * v2.x + v1.y * v2.y;
-      const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
-      const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
-      
+      // 🏢 ADR-072: Use centralized dot product
+      const dot = dotProduct(v1, v2);
+      // 🏢 ADR-070: Use centralized vector magnitude
+      const mag1 = vectorMagnitude(v1);
+      const mag2 = vectorMagnitude(v2);
+
       if (mag1 > 0.001 && mag2 > 0.001) { // Αποφυγή division by zero
         const cosAngle = dot / (mag1 * mag2);
         const angleRad = Math.acos(Math.max(-1, Math.min(1, cosAngle))); // Clamp για ακρίβεια
-        segmentAngle = (angleRad * 180) / Math.PI;
+        // 🏢 ADR-067: Use centralized angle conversion
+        segmentAngle = radToDeg(angleRad);
       }
     }
 
@@ -140,40 +153,51 @@ export function useDynamicInputMultiPoint({
  * Utility function για υπολογισμό γωνίας μεταξύ τριών σημείων
  */
 export function calculateAngleBetweenPoints(
-  p1: Point2D, 
-  vertex: Point2D, 
+  p1: Point2D,
+  vertex: Point2D,
   p3: Point2D
 ): AngleInfo {
   const v1 = { x: p1.x - vertex.x, y: p1.y - vertex.y };
   const v2 = { x: p3.x - vertex.x, y: p3.y - vertex.y };
-  
-  const dot = v1.x * v2.x + v1.y * v2.y;
-  const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
-  const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
-  
+
+  // 🏢 ADR-072: Use centralized dot product
+  const dot = dotProduct(v1, v2);
+  // 🏢 ADR-070: Use centralized vector magnitude
+  const mag1 = vectorMagnitude(v1);
+  const mag2 = vectorMagnitude(v2);
+
   if (mag1 < 0.001 || mag2 < 0.001) {
     return { angle: 0, vertex, isValid: false };
   }
-  
+
   const cosAngle = dot / (mag1 * mag2);
   const angleRad = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
-  const angleDeg = (angleRad * 180) / Math.PI;
-  
+  // 🏢 ADR-067: Use centralized angle conversion
+  const angleDeg = radToDeg(angleRad);
+
   return { angle: angleDeg, vertex, isValid: true };
 }
 
+// ============================================================================
+// 🏢 ADR-069: Centralized Number Formatting - Re-exports for backward compatibility
+// ============================================================================
+
 /**
- * Utility function για formatting αποστάσεων
+ * 🏢 ENTERPRISE: Format distance value for display
+ * Re-exports centralized implementation with 3 decimals (original behavior)
+ *
+ * @deprecated Prefer importing directly from 'distance-label-utils.ts'
  */
 export function formatDistance(distance: number): string {
-  if (distance < 0.001) return '0.000';
-  return distance.toFixed(3);
+  return centralizedFormatDistance(distance, 3);
 }
 
 /**
- * Utility function για formatting γωνιών
+ * 🏢 ENTERPRISE: Format angle value for display
+ * Re-exports centralized implementation with 1 decimal (original behavior)
+ *
+ * @deprecated Prefer importing directly from 'distance-label-utils.ts'
  */
 export function formatAngle(angle: number): string {
-  if (Math.abs(angle) < 0.01) return '0.0°';
-  return `${angle.toFixed(1)}°`;
+  return centralizedFormatAngle(angle, 1);
 }

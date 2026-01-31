@@ -6,6 +6,8 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { SpatialBounds } from './ISpatialIndex';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../../rendering/entities/shared/geometry-utils';
 
 /**
  * 🔧 BOUNDS OPERATIONS
@@ -161,8 +163,8 @@ export class SpatialUtils {
     const averageItemArea = area / Math.max(itemCount, 1);
     const cellSize = Math.sqrt(averageItemArea);
 
-    // Ensure reasonable bounds
-    return Math.max(10, Math.min(500, cellSize));
+    // 🏢 ADR-071: Ensure reasonable bounds using centralized clamp
+    return clamp(cellSize, 10, 500);
   }
 
   /**

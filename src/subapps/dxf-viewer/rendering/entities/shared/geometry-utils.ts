@@ -5,7 +5,14 @@
  */
 
 import type { Point2D, BoundingBox } from '../../types/Types';
-import { calculateDistance } from './geometry-rendering-utils';
+// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-070: Centralized Vector Magnitude
+// 🏢 ADR-072: Centralized Dot Product
+// 🏢 ADR-073: Centralized Midpoint Calculation
+import { calculateDistance, vectorMagnitude, dotProduct, calculateMidpoint } from './geometry-rendering-utils';
+
+// Re-export calculateMidpoint for convenience (canonical source: geometry-rendering-utils.ts)
+export { calculateMidpoint };
 
 // ===== DISTANCE CALCULATIONS =====
 
@@ -17,9 +24,8 @@ import { calculateDistance } from './geometry-rendering-utils';
  */
 export function pointToLineDistance(point: Point2D, lineStart: Point2D, lineEnd: Point2D): number {
   const nearestPoint = getNearestPointOnLine(point, lineStart, lineEnd, true);
-  const dx = point.x - nearestPoint.x;
-  const dy = point.y - nearestPoint.y;
-  return Math.sqrt(dx * dx + dy * dy);
+  // 🏢 ADR-065: Use centralized distance calculation
+  return calculateDistance(point, nearestPoint);
 }
 
 /**
@@ -43,7 +49,8 @@ export function getNearestPointOnLine(
 ): Point2D {
   const dx = lineEnd.x - lineStart.x;
   const dy = lineEnd.y - lineStart.y;
-  const length = Math.sqrt(dx * dx + dy * dy);
+  // 🏢 ADR-065: Use centralized distance calculation
+  const length = calculateDistance(lineStart, lineEnd);
 
   if (length === 0) {
     return { ...lineStart };
@@ -96,6 +103,27 @@ export function getLineParameter(
   return dotProduct / lengthSquared;
 }
 
+// ===== BISECTOR ANGLE =====
+// 🏢 ADR-073: Centralized Midpoint/Bisector Calculations (2026-01-31)
+
+/**
+ * Calculate the bisector angle between two angles
+ * ✅ CENTRALIZED: Single source of truth για angle bisector
+ *
+ * Used for: angle measurement labels, polyline corner arcs, preview arc text
+ *
+ * @param angle1 - First angle in radians
+ * @param angle2 - Second angle in radians
+ * @returns The bisector angle (average of the two angles)
+ *
+ * @example
+ * const bisector = bisectorAngle(angle1, angle2);
+ * const labelX = vertex.x + Math.cos(bisector) * distance;
+ */
+export function bisectorAngle(angle1: number, angle2: number): number {
+  return (angle1 + angle2) / 2;
+}
+
 // ===== ANGLE CALCULATIONS =====
 
 /**
@@ -105,9 +133,11 @@ export function angleBetweenPoints(vertex: Point2D, point1: Point2D, point2: Poi
   const v1 = { x: point1.x - vertex.x, y: point1.y - vertex.y };
   const v2 = { x: point2.x - vertex.x, y: point2.y - vertex.y };
 
-  const dot = v1.x * v2.x + v1.y * v2.y;
-  const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
-  const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+  // 🏢 ADR-072: Use centralized dot product
+  const dot = dotProduct(v1, v2);
+  // 🏢 ADR-070: Use centralized vector magnitude
+  const mag1 = vectorMagnitude(v1);
+  const mag2 = vectorMagnitude(v2);
 
   if (mag1 === 0 || mag2 === 0) return 0;
 
@@ -209,6 +239,130 @@ export function circleFrom3Points(p1: Point2D, p2: Point2D, p3: Point2D): { cent
 // ===== ARC GEOMETRY =====
 
 /**
+ * 🏢 ENTERPRISE (2026-01-31): Calculate arc from 3 points - ADR-059
+ * Uses circumcircle calculation + angle determination
+ *
+ * The arc will pass through all 3 points: start → mid → end
+ *
+ * @param start - Start point of the arc
+ * @param mid - Point on the arc (between start and end)
+ * @param end - End point of the arc
+ * @returns Arc definition with center, radius, angles in DEGREES, and counterclockwise flag
+ */
+export function arcFrom3Points(
+  start: Point2D,
+  mid: Point2D,
+  end: Point2D
+): { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise: boolean } | null {
+  // Use circumcircle calculation
+  const circle = circleFrom3Points(start, mid, end);
+  if (!circle) return null;
+
+  const { center, radius } = circle;
+
+  // Calculate angles for all 3 points (in radians)
+  const startAngleRad = Math.atan2(start.y - center.y, start.x - center.x);
+  const midAngleRad = Math.atan2(mid.y - center.y, mid.x - center.x);
+  const endAngleRad = Math.atan2(end.y - center.y, end.x - center.x);
+
+  // 🏢 ENTERPRISE: Determine arc direction using angular sweep
+  // In Canvas 2D, anticlockwise=false draws CLOCKWISE from startAngle to endAngle
+  // We need to check if going clockwise from start includes mid before reaching end
+
+  // Helper: Calculate clockwise angular distance from angle 'from' to angle 'to'
+  const clockwiseDistance = (from: number, to: number): number => {
+    let diff = to - from;
+    // Normalize to [0, 2π) for clockwise distance
+    while (diff < 0) diff += 2 * Math.PI;
+    while (diff >= 2 * Math.PI) diff -= 2 * Math.PI;
+    return diff;
+  };
+
+  // Distance from start to mid going clockwise
+  const startToMidCW = clockwiseDistance(startAngleRad, midAngleRad);
+  // Distance from start to end going clockwise
+  const startToEndCW = clockwiseDistance(startAngleRad, endAngleRad);
+
+  // If startToMidCW < startToEndCW, then mid is on the CLOCKWISE arc from start to end
+  // This means we should use anticlockwise=false (draw clockwise)
+  const isMidOnCWArc = startToMidCW < startToEndCW;
+
+  // Convert to degrees
+  const startAngleDeg = radToDeg(startAngleRad);
+  const endAngleDeg = radToDeg(endAngleRad);
+
+  return {
+    center,
+    radius,
+    startAngle: startAngleDeg,
+    endAngle: endAngleDeg,
+    // counterclockwise=false means draw clockwise; true means draw counterclockwise
+    counterclockwise: !isMidOnCWArc
+  };
+}
+
+/**
+ * 🏢 ENTERPRISE (2026-01-31): Calculate arc from center, start, end points - ADR-059
+ *
+ * The arc direction (clockwise/counterclockwise) is determined by the
+ * angular direction from start to end - AutoCAD pattern!
+ * This allows the user to control the arc side by moving the mouse
+ * clockwise or counterclockwise around the center.
+ *
+ * @param center - Center point of the arc
+ * @param start - Start point on the arc circumference
+ * @param end - End point (or cursor position) - direction determines arc side
+ * @returns Arc definition with center, radius, angles in DEGREES, and counterclockwise flag
+ */
+export function arcFromCenterStartEnd(
+  center: Point2D,
+  start: Point2D,
+  end: Point2D
+): { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise: boolean } {
+  const radius = calculateDistance(center, start);
+
+  // Calculate angles
+  const startAngleRad = Math.atan2(start.y - center.y, start.x - center.x);
+  const endAngleRad = Math.atan2(end.y - center.y, end.x - center.x);
+
+  // 🏢 ENTERPRISE: Calculate angular direction (AutoCAD pattern)
+  // Determine if user moved counterclockwise or clockwise from start to end
+  let angleDiff = endAngleRad - startAngleRad;
+  // Normalize to (-π, π] to find the "short" direction
+  while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+  while (angleDiff <= -Math.PI) angleDiff += 2 * Math.PI;
+
+  // If angleDiff > 0, user moved counterclockwise (CCW) → draw CCW arc
+  // If angleDiff < 0, user moved clockwise (CW) → draw CW arc
+  const counterclockwise = angleDiff > 0;
+
+  return {
+    center,
+    radius,
+    startAngle: radToDeg(startAngleRad),
+    endAngle: radToDeg(endAngleRad),
+    counterclockwise
+  };
+}
+
+/**
+ * 🏢 ENTERPRISE (2026-01-31): Calculate arc from start, center, end points - ADR-059
+ * Same as centerStartEnd but with different input order
+ *
+ * @param start - Start point on the arc circumference
+ * @param center - Center point of the arc
+ * @param end - End point on the arc circumference
+ * @returns Arc definition with center, radius, angles in DEGREES, and counterclockwise flag
+ */
+export function arcFromStartCenterEnd(
+  start: Point2D,
+  center: Point2D,
+  end: Point2D
+): { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise: boolean } {
+  return arcFromCenterStartEnd(center, start, end);
+}
+
+/**
  * Calculate arc length
  */
 export function calculateArcLength(radius: number, startAngle: number, endAngle: number): number {
@@ -221,16 +375,10 @@ export function calculateArcLength(radius: number, startAngle: number, endAngle:
  * Check if angle is between start and end angles (handling wrap-around)
  */
 export function isAngleBetween(angle: number, startAngle: number, endAngle: number): boolean {
-  // Normalize angles to [0, 2π]
-  const normalizeAngle = (a: number) => {
-    while (a < 0) a += 2 * Math.PI;
-    while (a >= 2 * Math.PI) a -= 2 * Math.PI;
-    return a;
-  };
-
-  const testAngle = normalizeAngle(angle);
-  const start = normalizeAngle(startAngle);
-  const end = normalizeAngle(endAngle);
+  // 🏢 ADR-068: Use centralized angle normalization
+  const testAngle = normalizeAngleRad(angle);
+  const start = normalizeAngleRad(startAngle);
+  const end = normalizeAngleRad(endAngle);
 
   if (start <= end) {
     return testAngle >= start && testAngle <= end;
@@ -388,23 +536,128 @@ export function lerpPoint(p1: Point2D, p2: Point2D, t: number): Point2D {
   };
 }
 
+// ===== CLAMP UTILITIES =====
+// 🏢 ADR-071: Centralized Clamp Functions (2026-01-31)
+
 /**
- * Clamp value between min and max
+ * 🏢 ENTERPRISE: Clamp value between min and max
+ * Canonical source for value clamping across DXF Viewer
+ *
+ * @param value - Value to clamp
+ * @param min - Minimum allowed value
+ * @param max - Maximum allowed value
+ * @returns Clamped value within [min, max]
+ *
+ * @example
+ * clamp(150, 0, 100) // → 100
+ * clamp(-5, 0, 100)  // → 0
+ * clamp(50, 0, 100)  // → 50
  */
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
 /**
+ * 🏢 ENTERPRISE: Clamp value to [0, 1] range
+ * Convenience function for opacity, alpha, percentage values
+ *
+ * @param value - Value to clamp
+ * @returns Clamped value within [0, 1]
+ *
+ * @example
+ * clamp01(1.5)  // → 1
+ * clamp01(-0.2) // → 0
+ * clamp01(0.7)  // → 0.7
+ */
+export function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+/**
+ * 🏢 ENTERPRISE: Clamp value to [0, 255] range
+ * Convenience function for RGB color components
+ *
+ * @param value - Value to clamp
+ * @returns Clamped value within [0, 255]
+ *
+ * @example
+ * clamp255(300) // → 255
+ * clamp255(-10) // → 0
+ * clamp255(128) // → 128
+ */
+export function clamp255(value: number): number {
+  return Math.max(0, Math.min(255, value));
+}
+
+// ===== ANGLE CONVERSION CONSTANTS & FUNCTIONS =====
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion (2026-01-31)
+
+/**
+ * Conversion constant: degrees to radians
+ * Usage: angleRadians = angleDegrees * DEGREES_TO_RADIANS
+ */
+export const DEGREES_TO_RADIANS = Math.PI / 180;
+
+/**
+ * Conversion constant: radians to degrees
+ * Usage: angleDegrees = angleRadians * RADIANS_TO_DEGREES
+ */
+export const RADIANS_TO_DEGREES = 180 / Math.PI;
+
+/**
  * Convert degrees to radians
+ * 🏢 ADR-067: Canonical source for deg→rad conversion
  */
 export function degToRad(degrees: number): number {
-  return degrees * Math.PI / 180;
+  return degrees * DEGREES_TO_RADIANS;
 }
 
 /**
  * Convert radians to degrees
+ * 🏢 ADR-067: Canonical source for rad→deg conversion
  */
 export function radToDeg(radians: number): number {
-  return radians * 180 / Math.PI;
+  return radians * RADIANS_TO_DEGREES;
+}
+
+// ===== ANGLE NORMALIZATION =====
+// 🏢 ADR-068: Centralized Angle Normalization (2026-01-31)
+
+/** Two PI constant for angle calculations */
+const TAU = 2 * Math.PI;
+
+/**
+ * Normalize angle in RADIANS to [0, 2π) range
+ * Handles any input value (including multiple wraps and extreme values)
+ *
+ * @param radians - Angle in radians (any value)
+ * @returns Normalized angle in [0, 2π) range
+ *
+ * @example
+ * normalizeAngleRad(-Math.PI / 2)  // → 3π/2 (≈4.712)
+ * normalizeAngleRad(3 * Math.PI)   // → π (≈3.142)
+ * normalizeAngleRad(0)             // → 0
+ */
+export function normalizeAngleRad(radians: number): number {
+  let normalized = radians % TAU;
+  if (normalized < 0) normalized += TAU;
+  return normalized;
+}
+
+/**
+ * Normalize angle in DEGREES to [0, 360) range
+ * Handles any input value (including multiple wraps and extreme values)
+ *
+ * @param degrees - Angle in degrees (any value)
+ * @returns Normalized angle in [0, 360) range
+ *
+ * @example
+ * normalizeAngleDeg(-90)   // → 270
+ * normalizeAngleDeg(450)   // → 90
+ * normalizeAngleDeg(360)   // → 0
+ */
+export function normalizeAngleDeg(degrees: number): number {
+  let normalized = degrees % 360;
+  if (normalized < 0) normalized += 360;
+  return normalized;
 }

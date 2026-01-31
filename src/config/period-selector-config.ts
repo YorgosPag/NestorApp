@@ -236,10 +236,11 @@ export function debugPeriods(): void {
   }
 }
 
-// Development debug (μόνο στο development)
-if (process.env.NODE_ENV === 'development') {
-  debugPeriods();
-}
+// 🔕 Development debug disabled to reduce console noise (2026-01-31)
+// Call debugPeriods() manually if needed
+// if (process.env.NODE_ENV === 'development') {
+//   debugPeriods();
+// }
 
 // ============================================================================
 // EXPORTS

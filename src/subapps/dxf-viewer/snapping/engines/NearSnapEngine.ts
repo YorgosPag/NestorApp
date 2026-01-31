@@ -10,6 +10,8 @@ import { isLineEntity, isCircleEntity, isArcEntity, isPolylineEntity, isLWPolyli
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { findEntityBasedSnapCandidates, GenericSnapPoint, processRectangleSnapping, LegacyRectangleEntity } from './shared/snap-engine-utils'; // ✅ ENTERPRISE FIX: Import proper type
+// 🏢 ADR-074: Centralized Point On Circle
+import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 export class NearSnapEngine extends BaseSnapEngine {
 
@@ -136,33 +138,29 @@ export class NearSnapEngine extends BaseSnapEngine {
 
   private sampleCirclePoints(center: Point2D, radius: number, count: number): Point2D[] {
     const points: Point2D[] = [];
-    
+
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * 2 * Math.PI;
-      points.push({
-        x: center.x + radius * Math.cos(angle),
-        y: center.y + radius * Math.sin(angle)
-      });
+      // 🏢 ADR-074: Use centralized pointOnCircle
+      points.push(pointOnCircle(center, radius, angle));
     }
-    
+
     return points;
   }
 
   private sampleArcPoints(center: Point2D, radius: number, startAngle: number, endAngle: number, count: number): Point2D[] {
     const points: Point2D[] = [];
-    
+
     let angleRange = endAngle - startAngle;
     if (angleRange < 0) angleRange += 2 * Math.PI;
-    
+
     for (let i = 0; i < count; i++) {
       const t = i / (count - 1);
       const angle = startAngle + t * angleRange;
-      points.push({
-        x: center.x + radius * Math.cos(angle),
-        y: center.y + radius * Math.sin(angle)
-      });
+      // 🏢 ADR-074: Use centralized pointOnCircle
+      points.push(pointOnCircle(center, radius, angle));
     }
-    
+
     return points;
   }
 

@@ -1,5 +1,9 @@
 import { useEffect } from 'react';
 import type { Point2D as Point } from '../../../rendering/types/Types';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { degToRad } from '../../../rendering/entities/shared/geometry-utils';
 
 interface UseDynamicInputHandlerProps {
   activeTool: string;
@@ -26,7 +30,8 @@ export function useDynamicInputHandler({
       if (tool === 'line' && onDrawingPoint) {
         if (action === 'create-line-second-point' && angle !== undefined && length !== undefined) {
           // Complete line with X+Y+Angle+Length: create line entity directly
-          const angleRad = (angle * Math.PI) / 180;
+          // 🏢 ADR-067: Use centralized angle conversion
+          const angleRad = degToRad(angle);
           const secondPoint = {
             x: coordinates.x + length * Math.cos(angleRad),
             y: coordinates.y + length * Math.sin(angleRad)
@@ -62,7 +67,8 @@ export function useDynamicInputHandler({
             x: (p1.x + p2.x) / 2,
             y: (p1.y + p2.y) / 2
           };
-          const diameter = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+          // 🏢 ADR-065: Use centralized distance calculation
+          const diameter = calculateDistance(p1, p2);
           const radius = diameter / 2;
           
           const circleEntity = {

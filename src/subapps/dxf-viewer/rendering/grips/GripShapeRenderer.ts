@@ -10,6 +10,8 @@
 import type { Point2D } from '../types/Types';
 import type { GripShape } from './types';
 import { renderSquareGrip } from '../entities/shared/geometry-rendering-utils';
+// 🏢 ADR-058/064: Centralized Canvas Primitives
+import { addCirclePath, addDiamondPath } from '../primitives/canvasPaths';
 
 // ============================================================================
 // GRIP SHAPE RENDERER CLASS
@@ -105,9 +107,9 @@ export class GripShapeRenderer {
     ctx.strokeStyle = outlineColor;
     ctx.lineWidth = outlineWidth;
 
-    // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
+    // 🏢 ADR-058: Use centralized canvas primitives
     ctx.beginPath();
-    ctx.ellipse(position.x, position.y, radius, radius, 0, 0, Math.PI * 2);
+    addCirclePath(ctx, position, radius);
     ctx.fill();
     ctx.stroke();
 
@@ -133,19 +135,14 @@ export class GripShapeRenderer {
     outlineColor: string,
     outlineWidth: number
   ): void {
-    const half = size / 2;
-
     ctx.save();
     ctx.fillStyle = fillColor;
     ctx.strokeStyle = outlineColor;
     ctx.lineWidth = outlineWidth;
 
+    // 🏢 ADR-064: Use centralized shape primitives
     ctx.beginPath();
-    ctx.moveTo(position.x, position.y - half); // Top
-    ctx.lineTo(position.x + half, position.y); // Right
-    ctx.lineTo(position.x, position.y + half); // Bottom
-    ctx.lineTo(position.x - half, position.y); // Left
-    ctx.closePath();
+    addDiamondPath(ctx, position, size);
     ctx.fill();
     ctx.stroke();
 

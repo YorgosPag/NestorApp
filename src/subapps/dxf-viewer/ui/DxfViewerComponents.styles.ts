@@ -18,6 +18,8 @@ import { PANEL_COLORS, PANEL_LAYOUT } from '../config/panel-tokens'; // 🏢 ENT
 // 🏢 ENTERPRISE: Centralized z-index systems (ADR-002 compliance)
 import { zIndex as globalZIndex } from '../../../styles/design-tokens';
 import { dxfZIndex } from '../styles/DxfZIndexSystem.styles';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../rendering/entities/shared/geometry-utils';
 // ✅ ENTERPRISE FIX: useBorderTokens is a React hook and cannot be used in styles file
 
 // 🏢 ENTERPRISE: CSS Custom Properties για κεντρικοποιημένα χρώματα
@@ -284,7 +286,8 @@ export const getEnterpriseContactScrollAreaStyles = () => ({
  * @returns Enterprise-grade progress bar styling με type safety
  */
 export const getProgressBarWidthStyles = (value: number) => ({
-  width: `${Math.max(0, Math.min(100, value))}%`, // Constrain to 0-100%
+  // 🏢 ADR-071: Using centralized clamp
+  width: `${clamp(value, 0, 100)}%`, // Constrain to 0-100%
   transition: 'width 0.3s ease-in-out',
   backgroundColor: CSS_VARS.BG_INFO, // ✅ ENTERPRISE: bg-blue-600 → semantic background
   height: '100%',
@@ -298,7 +301,8 @@ export const getProgressBarWidthStyles = (value: number) => ({
  * @param value - Progress value (0-100)
  */
 export const getProgressBarTransformStyles = (value: number) => {
-  const clampedValue = Math.max(0, Math.min(100, value || 0));
+  // 🏢 ADR-071: Using centralized clamp
+  const clampedValue = clamp(value || 0, 0, 100);
   const translateValue = 100 - clampedValue;
 
   return {

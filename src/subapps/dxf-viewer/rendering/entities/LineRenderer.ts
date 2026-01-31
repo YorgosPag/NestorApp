@@ -157,8 +157,9 @@ export class LineRenderer extends BaseEntityRenderer {
     // Calculate perpendicular direction for markers
     const dx = screenEnd.x - screenStart.x;
     const dy = screenEnd.y - screenStart.y;
-    const length = Math.sqrt(dx * dx + dy * dy);
-    
+    // 🏢 ADR-065: Use centralized distance calculation
+    const length = calculateDistance(screenStart, screenEnd);
+
     if (length > 0) {
       const perpX = -dy / length; // Perpendicular X
       const perpY = dx / length;  // Perpendicular Y

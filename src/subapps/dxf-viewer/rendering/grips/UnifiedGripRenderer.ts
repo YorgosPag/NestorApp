@@ -21,6 +21,8 @@ import { GripColorManager } from './GripColorManager';
 import { GripInteractionDetector } from './GripInteractionDetector';
 import { GripShapeRenderer } from './GripShapeRenderer';
 import { MIDPOINT_SIZE_FACTOR } from './constants';
+// 🏢 ADR-073: Centralized Midpoint Calculation
+import { calculateMidpoint } from '../entities/shared/geometry-rendering-utils';
 
 // ============================================================================
 // UNIFIED GRIP RENDERER CLASS (MAIN ORCHESTRATOR)
@@ -204,11 +206,8 @@ export class UnifiedGripRenderer {
       const current = vertices[i];
       const next = vertices[(i + 1) % vertices.length];
 
-      // Calculate midpoint position
-      const midpoint: Point2D = {
-        x: (current.x + next.x) / 2,
-        y: (current.y + next.y) / 2,
-      };
+      // 🏢 ADR-073: Use centralized midpoint calculation
+      const midpoint = calculateMidpoint(current, next);
 
       // Render midpoint grip
       this.renderGrip(

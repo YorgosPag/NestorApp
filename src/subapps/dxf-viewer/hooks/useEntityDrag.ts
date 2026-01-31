@@ -39,6 +39,8 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import type { Point2D } from '../rendering/types/Types';
 import { useMoveEntities } from './useMoveEntities';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
@@ -140,15 +142,6 @@ function debugLog(message: string, ...args: unknown[]): void {
 }
 
 /**
- * Calculate distance between two points
- */
-function distance(p1: Point2D, p2: Point2D): number {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-/**
  * Apply grid snapping to a point
  */
 function snapToGrid(point: Point2D, gridSize: number): Point2D {
@@ -245,7 +238,7 @@ export function useEntityDrag({
     }
 
     // Check minimum drag distance
-    const dragDistance = distance(dragState.startPoint, screenPoint);
+    const dragDistance = calculateDistance(dragState.startPoint, screenPoint);
     const hasMoved = dragDistance >= DRAG_CONFIG.MIN_DRAG_DISTANCE;
 
     if (!hasMoved && !dragState.hasMoved) {

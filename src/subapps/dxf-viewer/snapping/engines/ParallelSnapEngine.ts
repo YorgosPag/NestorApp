@@ -44,7 +44,8 @@ export class ParallelSnapEngine extends BaseSnapEngine {
       // Calculate line direction vector
       const dx = refLine.end.x - refLine.start.x;
       const dy = refLine.end.y - refLine.start.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
+      // 🏢 ADR-065: Use centralized distance calculation
+      const length = calculateDistance(refLine.start, refLine.end);
       
       if (length === 0) continue;
       

@@ -6,6 +6,10 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 
 /**
  * Snap prediction confidence levels
@@ -280,7 +284,8 @@ export class AISnappingEngine {
         this.preferences.commonDistances.forEach(distance => {
           // Generate points at common distances
           for (let angle = 0; angle < 360; angle += 45) {
-            const rad = (angle * Math.PI) / 180;
+            // 🏢 ADR-067: Use centralized angle conversion
+            const rad = degToRad(angle);
             predictions.push({
               x: current.x + distance * Math.cos(rad),
               y: current.y + distance * Math.sin(rad)
@@ -390,9 +395,10 @@ export class AISnappingEngine {
 
   /**
    * Helper functions
+   * 🏢 ADR-065: Use centralized distance calculation
    */
   private distance(p1: Point2D, p2: Point2D): number {
-    return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    return calculateDistance(p1, p2);
   }
 
   private isEndpoint(point: Point2D, context: SnapContext): boolean {

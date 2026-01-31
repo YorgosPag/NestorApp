@@ -9,6 +9,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../../../../config/color-config';
+// 🏢 ADR-076: Centralized Color Conversion
+import { rgbToHex } from '../../../../../color/utils';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Dynamic background/border classes (ZERO inline styles)
@@ -120,14 +122,12 @@ export const RulerUnitsSettings: React.FC<RulerUnitsSettingsProps> = ({ classNam
   // ============================================================================
 
   // Helper function to get color for preview icon (handles rgba)
+  // 🏢 ADR-076: Uses centralized color conversion
   const getPreviewColor = (color: string): string => {
     if (color.includes('rgba')) {
       const match = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
       if (match) {
-        const r = parseInt(match[1]).toString(16).padStart(2, '0');
-        const g = parseInt(match[2]).toString(16).padStart(2, '0');
-        const b = parseInt(match[3]).toString(16).padStart(2, '0');
-        return `#${r}${g}${b}`;
+        return rgbToHex({ r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) });
       }
     }
     return color;

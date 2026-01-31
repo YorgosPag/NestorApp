@@ -70,11 +70,12 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
 
   private getLineExtensions(lineStart: Point2D, lineEnd: Point2D, cursorPoint: Point2D, maxDistance: number): Point2D[] {
     const extensions: Point2D[] = [];
-    
+
     // Calculate line direction vector
     const dx = lineEnd.x - lineStart.x;
     const dy = lineEnd.y - lineStart.y;
-    const lineLength = Math.sqrt(dx * dx + dy * dy);
+    // 🏢 ADR-065: Use centralized distance calculation
+    const lineLength = calculateDistance(lineStart, lineEnd);
     
     if (lineLength === 0) return extensions;
     

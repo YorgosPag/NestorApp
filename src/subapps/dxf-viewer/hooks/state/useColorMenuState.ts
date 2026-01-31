@@ -12,6 +12,8 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../../rendering/entities/shared/geometry-utils';
 
 // ✅ ENTERPRISE: Type-safe state schema
 interface ColorMenuState {
@@ -30,13 +32,14 @@ const DEFAULT_COLOR_MENU_STATE: ColorMenuState = {
 };
 
 // ✅ ENTERPRISE: Coordinate bounds (viewport-based)
+// 🏢 ADR-071: Using centralized clamp function
 function validateCoordinates(x: number, y: number): { x: number; y: number } {
   const maxX = typeof window !== 'undefined' ? window.innerWidth : 1920;
   const maxY = typeof window !== 'undefined' ? window.innerHeight : 1080;
 
   return {
-    x: Math.max(0, Math.min(maxX - 300, x)), // Reserve 300px for menu width
-    y: Math.max(0, Math.min(maxY - 400, y)), // Reserve 400px for menu height
+    x: clamp(x, 0, maxX - 300), // Reserve 300px for menu width
+    y: clamp(y, 0, maxY - 400), // Reserve 400px for menu height
   };
 }
 

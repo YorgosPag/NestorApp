@@ -10,6 +10,9 @@
  * @created 2025-10-04
  */
 
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../rendering/entities/shared/geometry-utils';
+
 // ============================================
 // TRANSFORM SCALE LIMITS
 // ============================================
@@ -419,6 +422,7 @@ export type ZoomFactors = typeof ZOOM_FACTORS;
 
 /**
  * Validate scale value against limits
+ * 🏢 ADR-071: Using centralized clamp function
  */
 export function validateScale(
   scale: number,
@@ -427,17 +431,15 @@ export function validateScale(
     max: TRANSFORM_SCALE_LIMITS.MAX_SCALE,
   }
 ): number {
-  return Math.max(limits.min, Math.min(limits.max, scale));
+  return clamp(scale, limits.min, limits.max);
 }
 
 /**
  * Validate offset value against limits
+ * 🏢 ADR-071: Using centralized clamp function
  */
 export function validateOffset(offset: number): number {
-  return Math.max(
-    TRANSFORM_OFFSET_LIMITS.MIN_OFFSET,
-    Math.min(TRANSFORM_OFFSET_LIMITS.MAX_OFFSET, offset)
-  );
+  return clamp(offset, TRANSFORM_OFFSET_LIMITS.MIN_OFFSET, TRANSFORM_OFFSET_LIMITS.MAX_OFFSET);
 }
 
 /**

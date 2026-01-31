@@ -92,10 +92,9 @@ export class OrthoSnapEngine extends BaseSnapEngine {
 
   private getOrthogonalPoints(referencePoint: Point2D, cursorPoint: Point2D, maxDistance: number): Array<{point: Point2D, type: string, entityId?: string}> {
     const orthoPoints: Array<{point: Point2D, type: string, entityId?: string}> = [];
-    
-    const dx = cursorPoint.x - referencePoint.x;
-    const dy = cursorPoint.y - referencePoint.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distance = calculateDistance(cursorPoint, referencePoint);
     
     if (distance === 0 || distance > maxDistance) {
       return orthoPoints;

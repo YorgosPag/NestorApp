@@ -1,38 +1,43 @@
 import * as React from 'react';
 
 // Επεκτεταμένοι τύποι για measurement system
-export type ToolType = 
-  | 'select' 
-  | 'pan' 
-  | 'zoom-in' 
+export type ToolType =
+  | 'select'
+  | 'pan'
+  | 'zoom-in'
   | 'zoom-out'
   | 'zoom-window'
   | 'zoom-extents'
-  | 'line' 
-  | 'rectangle' 
-  | 'circle' 
+  | 'line'
+  | 'rectangle'
+  | 'circle'
   | 'circle-diameter'
   | 'circle-2p-diameter'
   | 'circle-3p'
   | 'circle-chord-sagitta'
   | 'circle-2p-radius'
   | 'circle-best-fit'
+  // 🏢 ENTERPRISE (2026-01-31): Arc drawing tools - ADR-059
+  | 'arc'                  // Parent dropdown for arc tools
+  | 'arc-3p'               // 3-Point Arc (Start → Point on Arc → End)
+  | 'arc-cse'              // Center → Start → End
+  | 'arc-sce'              // Start → Center → End
   | 'polyline'
   | 'polygon'
   | 'ellipse'
-  | 'move' 
-  | 'copy' 
-  | 'delete' 
+  | 'move'
+  | 'copy'
+  | 'delete'
   | 'measure'
   | 'measure-distance'
   | 'measure-distance-continuous'
   | 'measure-area'
-  | 'measure-angle' 
+  | 'measure-angle'
   | 'measure-angle-line-arc'
   | 'measure-angle-two-arcs'
   | 'measure-angle-measuregeom'
   | 'measure-angle-constraint'
-  | 'measure-radius' 
+  | 'measure-radius'
   | 'measure-perimeter'
   | 'layering'
   | 'grip-edit';

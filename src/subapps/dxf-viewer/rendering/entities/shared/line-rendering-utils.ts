@@ -5,6 +5,8 @@
 
 import type { Point2D } from '../../types/Types';
 import { getTextPreviewStyleWithOverride } from '../../../hooks/useTextPreviewStyle';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from './geometry-rendering-utils';
 
 /**
  * Render a split line with a gap in the middle for text
@@ -17,8 +19,9 @@ export function renderSplitLineWithGap(
 ): void {
   const dx = endScreen.x - startScreen.x;
   const dy = endScreen.y - startScreen.y;
-  const length = Math.sqrt(dx * dx + dy * dy);
-  
+  // 🏢 ADR-065: Use centralized distance calculation
+  const length = calculateDistance(startScreen, endScreen);
+
   if (length < gapSize) {
     // Line too short for gap, draw nothing
     return;

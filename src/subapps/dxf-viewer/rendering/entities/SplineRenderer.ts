@@ -8,7 +8,8 @@ import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import type { SplineEntity } from '../../types/entities';
 import { HoverManager } from '../../utils/hover';
-import { pointToLineDistance } from './shared/geometry-utils';
+// 🏢 ADR-073: Centralized Midpoint Calculation
+import { pointToLineDistance, calculateMidpoint } from './shared/geometry-utils';
 
 export class SplineRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -46,12 +47,11 @@ export class SplineRenderer extends BaseEntityRenderer {
         for (let i = 1; i < screenPoints.length - 1; i++) {
           const cp = screenPoints[i];
           const next = screenPoints[i + 1];
-          
-          // Use current point as control point, next as end point
-          const midX = (cp.x + next.x) / 2;
-          const midY = (cp.y + next.y) / 2;
-          
-          this.ctx.quadraticCurveTo(cp.x, cp.y, midX, midY);
+
+          // 🏢 ADR-073: Use centralized midpoint calculation
+          const mid = calculateMidpoint(cp, next);
+
+          this.ctx.quadraticCurveTo(cp.x, cp.y, mid.x, mid.y);
         }
         
         // Last segment

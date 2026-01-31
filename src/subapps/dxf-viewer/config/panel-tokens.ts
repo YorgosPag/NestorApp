@@ -892,6 +892,8 @@ export const PANEL_LAYOUT = {
     // Drawing colors
     DRAWING_WHITE: '#FFFFFF',            // Pure white for drawings
     DRAWING_BLACK: '#000000',            // Pure black for drawings
+    // 🏢 ENTERPRISE (2026-01-31): Construction line color for arc preview
+    CONSTRUCTION_LINE: '#87CEEB',        // Sky blue - dashed construction lines
     // Transparent
     TRANSPARENT: 'transparent',          // Transparent color
   },

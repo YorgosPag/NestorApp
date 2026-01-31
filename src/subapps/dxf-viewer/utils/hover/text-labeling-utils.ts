@@ -6,6 +6,9 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-066: Centralized Angle Calculation
+import { calculateDistance, calculateAngle, calculateMidpoint } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 /**
  * Calculate optimal text position and rotation for edge labeling
@@ -21,30 +24,30 @@ export interface EdgeTextPosition {
  * Calculate optimal text positioning for edge labels
  */
 export function calculateEdgeTextPosition(
-  screenStart: Point2D, 
-  screenEnd: Point2D, 
+  screenStart: Point2D,
+  screenEnd: Point2D,
   offsetDistance = 12
 ): EdgeTextPosition | null {
-  // Calculate midpoint for distance label
-  const midX = (screenStart.x + screenEnd.x) / 2;
-  const midY = (screenStart.y + screenEnd.y) / 2;
+  // 🏢 ADR-073: Use centralized midpoint calculation
+  const mid = calculateMidpoint(screenStart, screenEnd);
 
   // Calculate line direction for text rotation
   const dx = screenEnd.x - screenStart.x;
   const dy = screenEnd.y - screenStart.y;
-  const angle = Math.atan2(dy, dx);
+  // 🏢 ADR-066: Use centralized angle calculation
+  const angle = calculateAngle(screenStart, screenEnd);
 
-  // Position text to avoid overlapping with edge grips
-  const length = Math.sqrt(dx * dx + dy * dy);
+  // 🏢 ADR-065: Use centralized distance calculation
+  const length = calculateDistance(screenStart, screenEnd);
   if (length === 0) return null;
 
-  // Calculate perpendicular offset
+  // Calculate perpendicular offset (dx/dy still needed for direction)
   const perpX = -dy / length;
   const perpY = dx / length;
 
   return {
-    x: midX + perpX * offsetDistance,
-    y: midY + perpY * offsetDistance,
+    x: mid.x + perpX * offsetDistance,
+    y: mid.y + perpY * offsetDistance,
     angle,
     length
   };

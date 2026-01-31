@@ -98,7 +98,8 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       // Perpendicular from cursor to circle (nearest point on circle)
       const dx = cursorPoint.x - entity.center.x;
       const dy = cursorPoint.y - entity.center.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      // 🏢 ADR-065: Use centralized distance calculation
+      const distance = calculateDistance(cursorPoint, entity.center);
 
       if (distance > 0 && distance <= maxDistance + entity.radius) {
         const scale = entity.radius / distance;

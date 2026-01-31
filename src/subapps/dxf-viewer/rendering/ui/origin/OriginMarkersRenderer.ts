@@ -10,6 +10,8 @@ import type { OriginMarkersSettings } from './OriginMarkersTypes';
 import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
 // 🏢 ADR-042: Centralized UI Fonts
 import { UI_FONTS } from '../../../config/text-rendering-config';
+// 🏢 ADR-058: Centralized Canvas Primitives
+import { addCirclePath } from '../../primitives/canvasPaths';
 
 export class OriginMarkersRenderer implements UIRenderer {
   readonly type = 'origin-markers';
@@ -141,9 +143,10 @@ export class OriginMarkersRenderer implements UIRenderer {
     ctx.stroke();
 
     // Center dot για ακρίβεια
+    // 🏢 ADR-058: Use centralized canvas primitives
     if (settings.showCenter) {
       ctx.beginPath();
-      ctx.arc(originScreenX, originScreenY, settings.centerRadius, 0, Math.PI * 2);
+      addCirclePath(ctx, { x: originScreenX, y: originScreenY }, settings.centerRadius);
       ctx.fillStyle = settings.color;
       ctx.fill();
     }

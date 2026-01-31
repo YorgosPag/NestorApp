@@ -11,6 +11,8 @@ import { UI_COLORS } from '../../../config/color-config';
 import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle';
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
 import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../../config/text-rendering-config';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { degToRad } from './geometry-utils';
 
 /**
  * Extract and validate angle measurement points from entity
@@ -44,6 +46,85 @@ export function calculateDistance(p1: Point2D, p2: Point2D): number {
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;
   return Math.sqrt(dx * dx + dy * dy);
+}
+
+// ===== VECTOR MAGNITUDE =====
+// 🏢 ADR-070: Centralized Vector Magnitude (2026-01-31)
+
+/**
+ * Calculate the magnitude (length) of a 2D vector
+ * ✅ CENTRALIZED: Single source of truth για vector magnitude calculation
+ * Used for: vector normalization, side lengths, bisector calculations
+ *
+ * NOTE: This differs from calculateDistance():
+ * - calculateDistance(p1, p2): Distance between 2 Point2D → Math.sqrt((p2.x-p1.x)² + (p2.y-p1.y)²)
+ * - vectorMagnitude(v): Length of 1 vector → Math.sqrt(v.x² + v.y²)
+ *
+ * @param vector - A 2D vector represented as Point2D (x, y components)
+ * @returns The magnitude (length) of the vector
+ *
+ * @example
+ * const side = { x: p2.x - p1.x, y: p2.y - p1.y };
+ * const length = vectorMagnitude(side);
+ */
+export function vectorMagnitude(vector: Point2D): number {
+  return Math.sqrt(vector.x * vector.x + vector.y * vector.y);
+}
+
+// ===== DOT PRODUCT =====
+// 🏢 ADR-072: Centralized Dot Product (2026-01-31)
+
+/**
+ * Calculate the dot product of two 2D vectors
+ * ✅ CENTRALIZED: Single source of truth για dot product calculation
+ * Used for: angle calculations, perpendicularity checks, projections
+ *
+ * Mathematical properties:
+ * - v1 · v2 = |v1| * |v2| * cos(θ)
+ * - If dot = 0, vectors are perpendicular
+ * - If dot > 0, angle < 90°
+ * - If dot < 0, angle > 90°
+ *
+ * @param v1 - First vector as Point2D
+ * @param v2 - Second vector as Point2D
+ * @returns The dot product (scalar value)
+ *
+ * @example
+ * const dot = dotProduct(side1, side2);
+ * if (Math.abs(dot) < tolerance) {
+ *   // Vectors are perpendicular
+ * }
+ */
+export function dotProduct(v1: Point2D, v2: Point2D): number {
+  return v1.x * v2.x + v1.y * v2.y;
+}
+
+// ===== POINT ON CIRCLE =====
+// 🏢 ADR-074: Centralized Point On Circle (2026-01-31)
+
+/**
+ * Calculate a point on a circle circumference given center, radius, and angle
+ * ✅ CENTRALIZED: Single source of truth for polar-to-cartesian conversion
+ * Used for: arc endpoints, grip positions, circle sampling, tessellation
+ *
+ * Mathematical formula:
+ * - x = center.x + radius * cos(angle)
+ * - y = center.y + radius * sin(angle)
+ *
+ * @param center - Circle center point
+ * @param radius - Circle radius
+ * @param angle - Angle in radians (0 = right, π/2 = up, π = left, 3π/2 = down)
+ * @returns Point on the circle at the given angle
+ *
+ * @example
+ * const startPoint = pointOnCircle(center, radius, startAngleRad);
+ * const endPoint = pointOnCircle(center, radius, endAngleRad);
+ */
+export function pointOnCircle(center: Point2D, radius: number, angle: number): Point2D {
+  return {
+    x: center.x + radius * Math.cos(angle),
+    y: center.y + radius * Math.sin(angle)
+  };
 }
 
 /**
@@ -133,7 +214,8 @@ export function applyRenderingTransform(
   ctx.save();
   ctx.translate(screenCenter.x, screenCenter.y);
   if (rotation !== 0) {
-    ctx.rotate((rotation * Math.PI) / 180);
+    // 🏢 ADR-067: Use centralized angle conversion
+    ctx.rotate(degToRad(rotation));
   }
   callback();
   ctx.restore();

@@ -8,6 +8,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import { calculateAngleData, calculateAngleBisector } from '../angle-calculation';
 // 🏢 ADR-044: Centralized Line Widths
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-058: Centralized Canvas Primitives
+import { addArcPath } from '../../rendering/primitives/canvasPaths';
 
 export function renderHoverAngleAtVertex(
   ctx: CanvasRenderingContext2D,
@@ -27,9 +29,9 @@ export function renderHoverAngleAtVertex(
   // Draw arc with orange color
   ctx.strokeStyle = HOVER_CONFIG.colors.angle;
   ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
-  // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
+  // 🏢 ADR-058: Use centralized canvas primitives
   ctx.beginPath();
-  ctx.ellipse(currentScreen.x, currentScreen.y, HOVER_CONFIG.offsets.arcRadius, HOVER_CONFIG.offsets.arcRadius, 0, startAngle, endAngle, clockwise);
+  addArcPath(ctx, currentScreen, HOVER_CONFIG.offsets.arcRadius, startAngle, endAngle, clockwise);
   ctx.stroke();
 
   // Draw angle label (positioned to avoid grip collision)

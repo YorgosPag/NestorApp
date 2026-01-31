@@ -5,7 +5,10 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { LineEntity, PolylineEntity, AnySceneEntity } from '../types/scene';
-import { getNearestPointOnLine } from '../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-073: Centralized Midpoint Calculation
+import { getNearestPointOnLine, calculateMidpoint } from '../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 
 /**
  * Convert a line entity to a polyline entity
@@ -121,14 +124,12 @@ export function findPolylineEdgeForGrip(
 
     if (isPointNearLineSegment(point, start, end, tolerance)) {
       const insertPoint = getClosestPointOnLineSegment(point, start, end);
-      const distance = Math.sqrt(
-        Math.pow(point.x - insertPoint.x, 2) + 
-        Math.pow(point.y - insertPoint.y, 2)
-      );
+      // 🏢 ADR-065: Use centralized distance calculation
+      const distance = calculateDistance(point, insertPoint);
 
       // Don't allow insertion too close to existing vertices
-      const startDist = Math.sqrt(Math.pow(insertPoint.x - start.x, 2) + Math.pow(insertPoint.y - start.y, 2));
-      const endDist = Math.sqrt(Math.pow(insertPoint.x - end.x, 2) + Math.pow(insertPoint.y - end.y, 2));
+      const startDist = calculateDistance(insertPoint, start);
+      const endDist = calculateDistance(insertPoint, end);
       
       if (startDist > tolerance * 2 && endDist > tolerance * 2) {
         if (!closestEdge || distance < closestEdge.distance) {
@@ -471,8 +472,6 @@ export function getOverlayEdgeMidpoint(
   const start = overlayVertexToPoint2D(polygon[edgeIndex]);
   const end = overlayVertexToPoint2D(polygon[(edgeIndex + 1) % polygon.length]);
 
-  return {
-    x: (start.x + end.x) / 2,
-    y: (start.y + end.y) / 2
-  };
+  // 🏢 ADR-073: Use centralized midpoint calculation
+  return calculateMidpoint(start, end);
 }

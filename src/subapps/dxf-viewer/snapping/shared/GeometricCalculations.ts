@@ -12,7 +12,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { ExtendedSnapType } from '../extended-types';
 import type { Entity } from '../extended-types';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
-import { calculateDistance, rotatePoint } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { calculateDistance, rotatePoint, pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ENTERPRISE: Import centralized entity types and type guards
 import type {
   LineEntity,
@@ -84,14 +84,9 @@ export class GeometricCalculations {
         }
       }
     } else if (isArcEntity(entity)) {
-      const start = {
-        x: entity.center.x + entity.radius * Math.cos(entity.startAngle),
-        y: entity.center.y + entity.radius * Math.sin(entity.startAngle)
-      };
-      const end = {
-        x: entity.center.x + entity.radius * Math.cos(entity.endAngle),
-        y: entity.center.y + entity.radius * Math.sin(entity.endAngle)
-      };
+      // 🏢 ADR-074: Use centralized pointOnCircle
+      const start = pointOnCircle(entity.center, entity.radius, entity.startAngle);
+      const end = pointOnCircle(entity.center, entity.radius, entity.endAngle);
       endpoints.push(start, end);
     } else if (isRectangleEntity(entity)) {
       const corners = GeometricCalculations.getRectangleCorners(entity);
@@ -111,11 +106,9 @@ export class GeometricCalculations {
         y: (entity.start.y + entity.end.y) / 2
       });
     } else if (isArcEntity(entity)) {
+      // 🏢 ADR-074: Use centralized pointOnCircle
       const midAngle = (entity.startAngle + entity.endAngle) / 2;
-      midpoints.push({
-        x: entity.center.x + entity.radius * Math.cos(midAngle),
-        y: entity.center.y + entity.radius * Math.sin(midAngle)
-      });
+      midpoints.push(pointOnCircle(entity.center, entity.radius, midAngle));
     } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
       const vertices = entity.vertices;
       const isClosed = entity.closed || false;
@@ -154,11 +147,9 @@ export class GeometricCalculations {
         y: (entity.start.y + entity.end.y) / 2
       };
     } else if (isArcEntity(entity)) {
+      // 🏢 ADR-074: Use centralized pointOnCircle
       const midAngle = (entity.startAngle + entity.endAngle) / 2;
-      return {
-        x: entity.center.x + entity.radius * Math.cos(midAngle),
-        y: entity.center.y + entity.radius * Math.sin(midAngle)
-      };
+      return pointOnCircle(entity.center, entity.radius, midAngle);
     } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
       const vertices = entity.vertices;
       if (vertices && vertices.length >= 2) {
@@ -318,7 +309,8 @@ export class GeometricCalculations {
   static getCircleIntersections(center1: Point2D, radius1: number, center2: Point2D, radius2: number): Point2D[] {
     const dx = center2.x - center1.x;
     const dy = center2.y - center1.y;
-    const d = Math.sqrt(dx * dx + dy * dy);
+    // 🏢 ADR-065: Use centralized distance calculation
+    const d = calculateDistance(center1, center2);
 
     if (d > radius1 + radius2 || d < Math.abs(radius1 - radius2) || d === 0) {
       return [];

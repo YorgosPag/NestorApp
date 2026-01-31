@@ -217,21 +217,153 @@ export function addArcPath(
 // =============================================================================
 
 /**
- * Convert degrees to radians
- * Useful for DXF files which often use degrees
- */
-export function degreesToRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
-}
-
-/**
- * Convert radians to degrees
- */
-export function radiansToDegrees(radians: number): number {
-  return (radians * 180) / Math.PI;
-}
-
-/**
  * TAU constant (2 * PI) for full circle
  */
 export const TAU = Math.PI * 2;
+
+// 🏢 ADR-067: Angle conversion functions REMOVED - use canonical from:
+// import { degToRad, radToDeg } from '../entities/shared/geometry-utils';
+
+// =============================================================================
+// Shape Path Primitives (ADR-064)
+// =============================================================================
+
+/**
+ * Add square path centered at position
+ *
+ * This is the CANONICAL way to add a square path in the DXF Viewer.
+ * Use this for grip points, cursor shapes, snap indicators.
+ *
+ * @param ctx - Canvas rendering context
+ * @param center - Center point of the square
+ * @param size - Square size (width = height)
+ *
+ * @example
+ * ctx.beginPath();
+ * addSquarePath(ctx, { x: 100, y: 100 }, 10);
+ * ctx.fill();
+ * ctx.stroke();
+ */
+export function addSquarePath(
+  ctx: CanvasRenderingContext2D,
+  center: Point2D,
+  size: number
+): void {
+  const half = size / 2;
+  ctx.rect(center.x - half, center.y - half, size, size);
+}
+
+/**
+ * Add diamond path centered at position
+ *
+ * This is the CANONICAL way to add a diamond path in the DXF Viewer.
+ * Use this for quadrant snap indicators, special grip types.
+ *
+ * @param ctx - Canvas rendering context
+ * @param center - Center point of the diamond
+ * @param size - Diamond size (corner to corner)
+ *
+ * @example
+ * ctx.beginPath();
+ * addDiamondPath(ctx, { x: 100, y: 100 }, 10);
+ * ctx.fill();
+ * ctx.stroke();
+ */
+export function addDiamondPath(
+  ctx: CanvasRenderingContext2D,
+  center: Point2D,
+  size: number
+): void {
+  const half = size / 2;
+  ctx.moveTo(center.x, center.y - half); // Top
+  ctx.lineTo(center.x + half, center.y); // Right
+  ctx.lineTo(center.x, center.y + half); // Bottom
+  ctx.lineTo(center.x - half, center.y); // Left
+  ctx.closePath();
+}
+
+/**
+ * Add cross/plus path centered at position
+ *
+ * This is the CANONICAL way to add a cross/plus path in the DXF Viewer.
+ * Use this for nearest point snap indicators, cursor crosshairs.
+ *
+ * @param ctx - Canvas rendering context
+ * @param center - Center point of the cross
+ * @param size - Cross arm length (full width/height)
+ *
+ * @example
+ * ctx.beginPath();
+ * addCrossPath(ctx, { x: 100, y: 100 }, 10);
+ * ctx.stroke();
+ */
+export function addCrossPath(
+  ctx: CanvasRenderingContext2D,
+  center: Point2D,
+  size: number
+): void {
+  const half = size / 2;
+  // Horizontal line
+  ctx.moveTo(center.x - half, center.y);
+  ctx.lineTo(center.x + half, center.y);
+  // Vertical line
+  ctx.moveTo(center.x, center.y - half);
+  ctx.lineTo(center.x, center.y + half);
+}
+
+/**
+ * Add triangle path (pointing up) centered at position
+ *
+ * This is the CANONICAL way to add a triangle path in the DXF Viewer.
+ * Use this for midpoint snap indicators.
+ *
+ * @param ctx - Canvas rendering context
+ * @param center - Center point of the triangle
+ * @param size - Triangle size (height from base to tip)
+ *
+ * @example
+ * ctx.beginPath();
+ * addTrianglePath(ctx, { x: 100, y: 100 }, 10);
+ * ctx.fill();
+ * ctx.stroke();
+ */
+export function addTrianglePath(
+  ctx: CanvasRenderingContext2D,
+  center: Point2D,
+  size: number
+): void {
+  const half = size / 2;
+  ctx.moveTo(center.x, center.y - half);        // Top
+  ctx.lineTo(center.x - half, center.y + half); // Bottom left
+  ctx.lineTo(center.x + half, center.y + half); // Bottom right
+  ctx.closePath();
+}
+
+/**
+ * Add X shape path centered at position
+ *
+ * This is the CANONICAL way to add an X shape path in the DXF Viewer.
+ * Use this for intersection snap indicators.
+ *
+ * @param ctx - Canvas rendering context
+ * @param center - Center point of the X
+ * @param size - X size (diagonal length)
+ *
+ * @example
+ * ctx.beginPath();
+ * addXPath(ctx, { x: 100, y: 100 }, 10);
+ * ctx.stroke();
+ */
+export function addXPath(
+  ctx: CanvasRenderingContext2D,
+  center: Point2D,
+  size: number
+): void {
+  const half = size / 2;
+  // Diagonal 1 (top-left to bottom-right)
+  ctx.moveTo(center.x - half, center.y - half);
+  ctx.lineTo(center.x + half, center.y + half);
+  // Diagonal 2 (top-right to bottom-left)
+  ctx.moveTo(center.x + half, center.y - half);
+  ctx.lineTo(center.x - half, center.y + half);
+}

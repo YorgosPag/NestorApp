@@ -35,6 +35,10 @@
 import type { Point2D } from '../types/Types';
 // 🏢 ADR-044: Centralized line widths
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-058: Centralized Canvas Primitives
+import { addCirclePath, TAU } from '../primitives/canvasPaths';
+// 🏢 ADR-066: Centralized Angle Calculation
+import { calculateAngle } from '../entities/shared/geometry-rendering-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration
@@ -277,8 +281,9 @@ function renderGhostCircle(
   const ghostCenter = worldToScreen(applyDelta(center, delta));
   const screenRadius = radius * scale;
 
+  // 🏢 ADR-058: Use centralized canvas primitives
   ctx.beginPath();
-  ctx.arc(ghostCenter.x, ghostCenter.y, screenRadius, 0, Math.PI * 2);
+  addCirclePath(ctx, ghostCenter, screenRadius);
   ctx.fillStyle = options.ghostFill ?? GHOST_RENDER_CONFIG.GHOST_FILL;
   ctx.fill();
   ctx.strokeStyle = options.ghostStroke ?? GHOST_RENDER_CONFIG.GHOST_STROKE;
@@ -466,7 +471,8 @@ function renderDeltaLine(
   ctx.setLineDash([]);
 
   // Draw arrow head
-  const angle = Math.atan2(endScreen.y - startScreen.y, endScreen.x - startScreen.x);
+  // 🏢 ADR-066: Use centralized angle calculation
+  const angle = calculateAngle(startScreen, endScreen);
   const arrowSize = 8;
 
   ctx.beginPath();

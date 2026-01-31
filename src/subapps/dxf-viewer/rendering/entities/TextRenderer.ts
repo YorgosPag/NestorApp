@@ -32,6 +32,8 @@ import type { Point2D } from '../types/Types';
 import type { TextEntity } from '../../types/entities';
 import { HoverManager } from '../../utils/hover';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { degToRad } from './shared/geometry-utils';
 
 
 export class TextRenderer extends BaseEntityRenderer {
@@ -106,7 +108,8 @@ export class TextRenderer extends BaseEntityRenderer {
         this.ctx.translate(screenPos.x, screenPos.y);
         // ΑΝΤΙΣΤΡΟΦΗ γωνίας λόγω Y-flip στο worldToScreen
         // DXF CCW → Canvas CW με αντιστροφή
-        this.ctx.rotate((-normalizedRotation * Math.PI) / 180);
+        // 🏢 ADR-067: Use centralized angle conversion
+        this.ctx.rotate(degToRad(-normalizedRotation));
         this.ctx.fillText(text, 0, 0);
       } else {
         this.ctx.fillText(text, screenPos.x, screenPos.y);

@@ -45,6 +45,8 @@ import { useRulersGridContext } from '../../../../../../systems/rulers-grid/Rule
 import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
 import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ADR-076: Centralized Color Conversion
+import { rgbToHex } from '../../../../../color/utils';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-UI-001)
@@ -104,14 +106,12 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
   };
 
   // 🏢 ENTERPRISE: Extract base color (without alpha) from various formats
+  // 🏢 ADR-076: Uses centralized color conversion
   const getBaseColor = (color: string): string => {
     if (color.includes('rgba')) {
       const match = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
       if (match) {
-        const r = parseInt(match[1]).toString(16).padStart(2, '0');
-        const g = parseInt(match[2]).toString(16).padStart(2, '0');
-        const b = parseInt(match[3]).toString(16).padStart(2, '0');
-        return `#${r}${g}${b}`;
+        return rgbToHex({ r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) });
       }
     }
     // Handle hex+alpha format (#RRGGBBAA)

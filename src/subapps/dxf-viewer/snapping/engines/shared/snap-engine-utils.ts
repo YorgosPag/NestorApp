@@ -10,6 +10,8 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { SnapCandidate, SnapConfig } from '../../extended-types';
 import type { Entity, RectangleEntity, CircleEntity, ArcEntity } from '../../../types/entities';
 import { GeometricCalculations } from '../../shared/GeometricCalculations';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
 
 /**
  * 🏢 ENTERPRISE: Legacy rectangle entity interface for backward compatibility
@@ -57,9 +59,8 @@ export function isWithinTolerance(
   point2: Point2D,
   tolerance: number
 ): boolean {
-  const dx = point1.x - point2.x;
-  const dy = point1.y - point2.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
+  // 🏢 ADR-065: Use centralized distance calculation
+  const distance = calculateDistance(point1, point2);
   return distance <= tolerance;
 }
 
@@ -185,10 +186,8 @@ export function processSnapCandidates<T>(
   const candidates: T[] = [];
   
   for (const pointData of points) {
-    // Calculate distance from cursor
-    const dx = cursorPoint.x - pointData.point.x;
-    const dy = cursorPoint.y - pointData.point.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distance = calculateDistance(cursorPoint, pointData.point);
     
     if (distance <= radius) {
       const candidate = createCandidateFunc(
@@ -251,9 +250,8 @@ export function findStandardSnapCandidates(
     
     const points = getPointsFunc(entity);
     for (const point of points) {
-      const dx = cursorPoint.x - point.x;
-      const dy = cursorPoint.y - point.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      // 🏢 ADR-065: Use centralized distance calculation
+      const distance = calculateDistance(cursorPoint, point);
       
       if (distance <= radius) {
         candidates.push({

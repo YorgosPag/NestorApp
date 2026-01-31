@@ -19,6 +19,15 @@ import type {
 } from './SnapTypes';
 // 🏢 ADR-042: Centralized UI Fonts
 import { UI_FONTS } from '../../../config/text-rendering-config';
+// 🏢 ADR-058/064: Centralized Canvas Primitives
+import {
+  addCirclePath,
+  addSquarePath,
+  addTrianglePath,
+  addDiamondPath,
+  addCrossPath,
+  addXPath
+} from '../../primitives/canvasPaths';
 
 /**
  * 🔺 CENTRALIZED SNAP RENDERER
@@ -134,6 +143,7 @@ export class SnapRenderer implements UIRenderer {
 
   /**
    * Render snap shape based on type
+   * 🏢 ADR-064: Using centralized shape primitives
    */
   private renderSnapShape(
     ctx: CanvasRenderingContext2D,
@@ -141,6 +151,7 @@ export class SnapRenderer implements UIRenderer {
     size: number
   ): void {
     const { x, y } = snap.point;
+    const center = { x, y };
     const halfSize = size / 2;
 
     ctx.beginPath();
@@ -148,32 +159,26 @@ export class SnapRenderer implements UIRenderer {
     switch (snap.type) {
       case 'endpoint':
         // Square for endpoints
-        ctx.rect(x - halfSize, y - halfSize, size, size);
+        addSquarePath(ctx, center, size);
         break;
 
       case 'midpoint':
         // Triangle for midpoints
-        ctx.moveTo(x, y - halfSize);
-        ctx.lineTo(x - halfSize, y + halfSize);
-        ctx.lineTo(x + halfSize, y + halfSize);
-        ctx.closePath();
+        addTrianglePath(ctx, center, size);
         break;
 
       case 'center':
         // Circle for centers
-        ctx.arc(x, y, halfSize, 0, Math.PI * 2);
+        addCirclePath(ctx, center, halfSize);
         break;
 
       case 'intersection':
         // X shape for intersections
-        ctx.moveTo(x - halfSize, y - halfSize);
-        ctx.lineTo(x + halfSize, y + halfSize);
-        ctx.moveTo(x + halfSize, y - halfSize);
-        ctx.lineTo(x - halfSize, y + halfSize);
+        addXPath(ctx, center, size);
         break;
 
       case 'perpendicular': {
-        // Right angle symbol
+        // Right angle symbol (special case - not centralized)
         const quarter = halfSize / 2;
         ctx.moveTo(x - quarter, y - halfSize);
         ctx.lineTo(x - quarter, y - quarter);
@@ -181,48 +186,42 @@ export class SnapRenderer implements UIRenderer {
         break;
       }
 
-      case 'parallel':
-        // Parallel lines
+      case 'parallel': {
+        // Parallel lines (special case - not centralized)
         const quarter = halfSize / 2;
         ctx.moveTo(x - halfSize, y - quarter);
         ctx.lineTo(x + halfSize, y - quarter);
         ctx.moveTo(x - halfSize, y + quarter);
         ctx.lineTo(x + halfSize, y + quarter);
         break;
+      }
 
       case 'tangent':
         // Circle with tangent line
-        ctx.arc(x, y, halfSize * 0.6, 0, Math.PI * 2);
+        addCirclePath(ctx, center, halfSize * 0.6);
         ctx.moveTo(x - halfSize, y);
         ctx.lineTo(x + halfSize, y);
         break;
 
       case 'quadrant':
         // Diamond for quadrants
-        ctx.moveTo(x, y - halfSize);
-        ctx.lineTo(x + halfSize, y);
-        ctx.lineTo(x, y + halfSize);
-        ctx.lineTo(x - halfSize, y);
-        ctx.closePath();
+        addDiamondPath(ctx, center, size);
         break;
 
       case 'nearest':
         // Plus sign for nearest
-        ctx.moveTo(x - halfSize, y);
-        ctx.lineTo(x + halfSize, y);
-        ctx.moveTo(x, y - halfSize);
-        ctx.lineTo(x, y + halfSize);
+        addCrossPath(ctx, center, size);
         break;
 
       case 'grid':
         // Grid dot
-        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        addCirclePath(ctx, center, 2);
         ctx.fill();
         return; // Skip stroke for filled dot
 
       default:
         // Default: circle
-        ctx.arc(x, y, halfSize, 0, Math.PI * 2);
+        addCirclePath(ctx, center, halfSize);
     }
 
     ctx.stroke();

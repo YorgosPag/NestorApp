@@ -9,6 +9,8 @@
  */
 
 import type { ColorValue, RGBColor, HSLColor, HSVColor, ParseResult, FormatOptions } from './types';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp255 } from '../../rendering/entities/shared/geometry-utils';
 
 // ===== PARSING =====
 
@@ -125,8 +127,9 @@ export function parseColor(color: string): ParseResult {
 export function rgbToHex(rgb: RGBColor, options: FormatOptions = {}): string {
   const { alpha = false, uppercase = false, short = false } = options;
 
+  // 🏢 ADR-071: Using centralized clamp255 for RGB values
   const toHex = (n: number) => {
-    const hex = Math.round(Math.max(0, Math.min(255, n)))
+    const hex = clamp255(Math.round(n))
       .toString(16)
       .padStart(2, '0');
     return uppercase ? hex.toUpperCase() : hex;

@@ -14,6 +14,8 @@ import { CanvasUtils } from '../rendering/canvas/utils/CanvasUtils';
 import { UI_COLORS, CANVAS_THEME } from '../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 
 interface AlignmentDebugState {
   enabled: boolean;
@@ -402,7 +404,7 @@ class CursorSnapAlignmentDebugger {
     lines.push('-------------');
 
     if (this.state.cursorPos && this.state.crosshairPos) {
-      const dist = this.calculateDistance(this.state.cursorPos, this.state.crosshairPos);
+      const dist = calculateDistance(this.state.cursorPos, this.state.crosshairPos);
       lines.push(`Cursor ↔ Crosshair: ${dist.toFixed(2)}px`);
       if (dist < 0.5) {
         lines.push(`   ✅ ALIGNED (perfect)`);
@@ -419,7 +421,7 @@ class CursorSnapAlignmentDebugger {
     lines.push('');
 
     if (this.state.cursorPos && this.state.snapPos) {
-      const dist = this.calculateDistance(this.state.cursorPos, this.state.snapPos);
+      const dist = calculateDistance(this.state.cursorPos, this.state.snapPos);
       lines.push(`Cursor ↔ Snap: ${dist.toFixed(2)}px`);
     } else {
       lines.push(`Cursor ↔ Snap: ${this.state.snapPos ? 'No cursor data' : 'No snap active'}`);
@@ -427,22 +429,13 @@ class CursorSnapAlignmentDebugger {
     lines.push('');
 
     if (this.state.crosshairPos && this.state.snapPos) {
-      const dist = this.calculateDistance(this.state.crosshairPos, this.state.snapPos);
+      const dist = calculateDistance(this.state.crosshairPos, this.state.snapPos);
       lines.push(`Crosshair ↔ Snap: ${dist.toFixed(2)}px`);
     } else {
       lines.push(`Crosshair ↔ Snap: ${this.state.snapPos ? 'No crosshair data' : 'No snap active'}`);
     }
 
     return lines.join('\n');
-  }
-
-  /**
-   * Calculate distance between two points
-   */
-  private calculateDistance(p1: Point2D, p2: Point2D): number {
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    return Math.sqrt(dx * dx + dy * dy);
   }
 
   /**
@@ -476,13 +469,13 @@ class CursorSnapAlignmentDebugger {
       snap: this.state.snapPos,
       distances: {
         cursorToSnap: this.state.cursorPos && this.state.snapPos
-          ? this.calculateDistance(this.state.cursorPos, this.state.snapPos)
+          ? calculateDistance(this.state.cursorPos, this.state.snapPos)
           : null,
         cursorToCrosshair: this.state.cursorPos && this.state.crosshairPos
-          ? this.calculateDistance(this.state.cursorPos, this.state.crosshairPos)
+          ? calculateDistance(this.state.cursorPos, this.state.crosshairPos)
           : null,
         crosshairToSnap: this.state.crosshairPos && this.state.snapPos
-          ? this.calculateDistance(this.state.crosshairPos, this.state.snapPos)
+          ? calculateDistance(this.state.crosshairPos, this.state.snapPos)
           : null,
       },
     };

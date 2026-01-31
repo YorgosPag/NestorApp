@@ -1,9 +1,13 @@
-# ADR-002: Separate /api/audit/bootstrap from /api/projects/list
+# ADR-059: Separate /api/audit/bootstrap from /api/projects/list
 
-- Status: Accepted
-- Date: 2026-01-11
-- Owners: Platform / Backend
-- Related:
+| Metadata | Value |
+|----------|-------|
+| **Category** | Backend |
+| **Status** | ✅ Active |
+| **Date** | 2026-01-11 |
+| **Owners** | Platform / Backend |
+
+## Related
   - ADR-001: Avoid barrel imports in UI (generic mappings)
   - API: /api/audit/bootstrap
   - API: /api/projects/list

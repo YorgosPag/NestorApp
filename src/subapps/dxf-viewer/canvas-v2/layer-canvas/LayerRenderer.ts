@@ -22,6 +22,10 @@ import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
 import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+// 🏢 ADR-073: Centralized Midpoint Calculation
+import { calculateMidpoint } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-075: Centralized Grip Size Multipliers
+import { GRIP_SIZE_MULTIPLIERS } from '../../rendering/grips/constants';
 
 // ✅ ΦΑΣΗ 7: Import unified canvas system
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
@@ -609,10 +613,10 @@ export class LayerRenderer {
       const dpiScale = gripSettings?.dpiScale ?? 1.0;
       const baseSize = (gripSettings?.gripSize ?? 5) * dpiScale;
 
-      // Calculate sizes using centralized formula (cold→warm→hot multipliers)
-      const GRIP_SIZE_COLD = Math.round(baseSize);
-      const GRIP_SIZE_WARM = Math.round(baseSize * 1.2);
-      const GRIP_SIZE_HOT = Math.round(baseSize * 1.4);
+      // 🏢 ADR-075: Calculate sizes using centralized multipliers (cold→warm→hot)
+      const GRIP_SIZE_COLD = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.COLD);
+      const GRIP_SIZE_WARM = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.WARM);
+      const GRIP_SIZE_HOT = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.HOT);
 
       // Get colors from centralized settings
       const GRIP_COLOR_COLD = gripSettings?.colors?.cold ?? UI_COLORS.GRIP_DEFAULT ?? '#3b82f6';
@@ -698,9 +702,8 @@ export class LayerRenderer {
         const startVertex = screenVertices[i];
         const endVertex = screenVertices[(i + 1) % screenVertices.length];
 
-        // Calculate midpoint in screen coordinates
-        const midX = (startVertex.x + endVertex.x) / 2;
-        const midY = (startVertex.y + endVertex.y) / 2;
+        // 🏢 ADR-073: Use centralized midpoint calculation
+        const mid = calculateMidpoint(startVertex, endVertex);
 
         // Check if this edge is hovered
         const isHovered = layer.hoveredEdgeIndex === i;
@@ -716,8 +719,8 @@ export class LayerRenderer {
         const EDGE_GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SUCCESS_BRIGHT ?? '#22c55e';
 
         // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview for edge midpoint
-        let drawMidX = midX;
-        let drawMidY = midY;
+        let drawMidX = mid.x;
+        let drawMidY = mid.y;
         if (isSelected && layer.isDragging && layer.dragPreviewPosition && this.transform) {
           // Convert dragPreviewPosition from world to screen coordinates
           const previewScreen = this.worldToScreen(layer.dragPreviewPosition, this.transform, this.viewport);

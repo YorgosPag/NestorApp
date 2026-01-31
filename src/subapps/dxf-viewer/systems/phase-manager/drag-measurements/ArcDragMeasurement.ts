@@ -11,13 +11,11 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { ArcEntity } from '../../../types/entities';
 import type { DragMeasurementContext, MeasurementData } from '../types';
 import { BaseDragMeasurementRenderer } from './BaseDragMeasurementRenderer';
-
-// ============================================================================
-// CONFIGURATION CONSTANTS
-// ============================================================================
-
-/** Conversion factor from radians to degrees */
-const RADIANS_TO_DEGREES = 180 / Math.PI;
+// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-066: Centralized Angle Calculation
+import { calculateDistance, calculateAngle } from '../../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { RADIANS_TO_DEGREES, radToDeg } from '../../../rendering/entities/shared/geometry-utils';
 
 /**
  * Arc-specific drag measurement renderer
@@ -83,10 +81,11 @@ export class ArcDragMeasurement extends BaseDragMeasurementRenderer {
     let newStartAngle = startAngle;
     let newEndAngle = endAngle;
 
-    const dx = currentPos.x - center.x;
-    const dy = currentPos.y - center.y;
-    const distanceFromCenter = Math.sqrt(dx * dx + dy * dy);
-    const angle = Math.atan2(dy, dx) * RADIANS_TO_DEGREES;
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distanceFromCenter = calculateDistance(currentPos, center);
+    // 🏢 ADR-066: Use centralized angle calculation
+    // 🏢 ADR-067: Use centralized radToDeg function
+    const angle = radToDeg(calculateAngle(center, currentPos));
 
     switch (gripIndex) {
       case 1: // Start point grip

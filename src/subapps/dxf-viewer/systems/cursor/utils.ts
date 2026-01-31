@@ -7,6 +7,8 @@ import type { CursorSettings, CursorState } from './config';
 import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 // Cursor calculation utilities
 export interface CursorUtils {
@@ -35,13 +37,12 @@ export function calculateCrosshairSize(
  * Check if a point is near the cursor position
  */
 export function isPointNearCursor(
-  point: Point2D, 
-  cursorPos: Point2D, 
+  point: Point2D,
+  cursorPos: Point2D,
   tolerance: number = 10
 ): boolean {
-  const dx = point.x - cursorPos.x;
-  const dy = point.y - cursorPos.y;
-  return Math.sqrt(dx * dx + dy * dy) <= tolerance;
+  // 🏢 ADR-065: Use centralized distance calculation
+  return calculateDistance(point, cursorPos) <= tolerance;
 }
 
 /**

@@ -9,6 +9,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS, withOpacity } from '../../../../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized Color Picker (same as GridSettings, CrosshairSettings, etc.)
 import { ColorDialogTrigger } from '../../../../../color/EnterpriseColorDialog';
+// 🏢 ADR-076: Centralized Color Conversion
+import { rgbToHex } from '../../../../../color/utils';
 // 🏢 ENTERPRISE: Centralized Switch component (Radix)
 import { Switch } from '@/components/ui/switch';
 // 🏢 ENTERPRISE: Centralized spacing tokens
@@ -85,13 +87,11 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
       // CSS variable format - use default white
       setRulerBackgroundColor(UI_COLORS.WHITE);
     } else if (bgColor.includes('rgba')) {
-      // Extract hex from rgba
+      // 🏢 ADR-076: Extract hex from rgba using centralized function
       const match = bgColor.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
       if (match) {
-        const r = parseInt(match[1]).toString(16).padStart(2, '0');
-        const g = parseInt(match[2]).toString(16).padStart(2, '0');
-        const b = parseInt(match[3]).toString(16).padStart(2, '0');
-        setRulerBackgroundColor(`#${r}${g}${b}`);
+        const hexColor = rgbToHex({ r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) });
+        setRulerBackgroundColor(hexColor);
       } else {
         setRulerBackgroundColor(UI_COLORS.WHITE);
       }

@@ -17,6 +17,8 @@ import type {
   GridStyle
 } from './GridTypes';
 import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
+// 🏢 ADR-058: Centralized Canvas Primitives
+import { addCirclePath } from '../../primitives/canvasPaths';
 
 /**
  * 🔺 CENTRALIZED GRID RENDERER
@@ -232,9 +234,9 @@ export class GridRenderer implements UIRenderer {
         if ((isMajor && settings.showMajorGrid) || (!isMajor && settings.showMinorGrid)) {
           const dotSize = isMajor ? majorDotSize : minorDotSize;
           ctx.fillStyle = isMajor ? settings.majorGridColor : settings.minorGridColor;
+          // 🏢 ADR-058: Use centralized canvas primitives
           ctx.beginPath();
-          // ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle)
-          ctx.ellipse(x, y, dotSize, dotSize, 0, 0, Math.PI * 2);
+          addCirclePath(ctx, { x, y }, dotSize);
           ctx.fill();
         }
       }

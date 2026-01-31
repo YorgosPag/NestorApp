@@ -119,6 +119,16 @@ export const DXF_TOOL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'tool',
     toolType: 'polygon',
   },
+  // 🏢 ENTERPRISE (2026-01-31): Arc drawing tool - ADR-059
+  // Note: 'A' is taken by measureArea, using 'Q' (Quadrant of circle reference)
+  arc: {
+    key: 'Q',
+    modifier: 'none',
+    descriptionKey: 'shortcuts.tools.arc',
+    action: 'tool:arc-3p',
+    category: 'tool',
+    toolType: 'arc-3p',
+  },
 
   // Editing Tools
   move: {

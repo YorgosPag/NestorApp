@@ -20,6 +20,8 @@ function isCircleEntity(entity: EntityModel): entity is CircleEntity {
 }
 import { HoverManager } from '../../utils/hover';
 import { createGripsFromPoints } from './shared/grip-utils';
+// 🏢 ADR-058: Centralized Canvas Primitives
+import { addCirclePath } from '../primitives/canvasPaths';
 import { renderCircleAreaText } from './shared/circle-text-utils';
 import { renderSplitLineWithGap, renderContinuousLine, renderLineWithTextCheck } from './shared/line-rendering-utils';
 import { renderDistanceTextPhaseAware } from './shared/phase-text-utils';
@@ -56,9 +58,9 @@ export class CircleRenderer extends BaseEntityRenderer {
     const screenRadius = radius * this.transform.scale;
 
     // Draw circle perimeter
-    // 🏢 ENTERPRISE: Use ellipse() - see rendering/primitives/canvasPaths.ts for details
+    // 🏢 ADR-058: Use centralized canvas primitives
     this.ctx.beginPath();
-    this.ctx.ellipse(screenCenter.x, screenCenter.y, screenRadius, screenRadius, 0, 0, Math.PI * 2);
+    addCirclePath(this.ctx, screenCenter, screenRadius);
     this.ctx.stroke();
 
     // For preview phase, draw the radius/diameter line (the missing blue dashed line!)
@@ -207,8 +209,9 @@ export class CircleRenderer extends BaseEntityRenderer {
     const screenRadius = radius * this.transform.scale;
     
     // Draw the circle
+    // 🏢 ADR-058: Use centralized canvas primitives
     this.ctx.beginPath();
-    this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, 0, Math.PI * 2);
+    addCirclePath(this.ctx, screenCenter, screenRadius);
     this.ctx.stroke();
     
     const extendedEntity = entity as ExtendedCircleEntity;

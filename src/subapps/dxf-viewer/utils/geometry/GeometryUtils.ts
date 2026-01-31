@@ -4,6 +4,10 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+// 🏢 ADR-067: Centralized angle conversion
+import { degToRad } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-074: Centralized Point On Circle
+import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 export const GEOMETRY_CONSTANTS = {
   EPS: 1e-3, // Relaxed tolerance for better entity matching
@@ -62,10 +66,9 @@ export function arcToPolyline(arc: Arc, segments: number = GEOMETRY_CONSTANTS.DE
   const { center, radius } = arc;
 
   // DXF angles are in DEGREES (counter-clockwise). Convert to RADIANS.
-  const deg2rad = (d: number) => (d * Math.PI) / 180;
-
-  let start = deg2rad(arc.startAngle ?? 0);
-  let end = deg2rad(arc.endAngle ?? 0);
+  // 🏢 ADR-067: Using centralized degToRad from geometry-utils
+  let start = degToRad(arc.startAngle ?? 0);
+  let end = degToRad(arc.endAngle ?? 0);
 
   // Normalize to ensure end > start within [0, 2π)
   const TAU = Math.PI * 2;
@@ -80,12 +83,12 @@ export function arcToPolyline(arc: Arc, segments: number = GEOMETRY_CONSTANTS.DE
   const verts: Point2D[] = [];
   for (let i = 0; i <= steps; i++) {
     const a = start + i * step;
-    const x = center.x + radius * Math.cos(a);
-    const y = center.y + radius * Math.sin(a);
-    
+    // 🏢 ADR-074: Use centralized pointOnCircle
+    const point = pointOnCircle(center, radius, a);
+
     // Drop consecutive duplicates
-    if (verts.length === 0 || Math.hypot(x - verts[verts.length - 1].x, y - verts[verts.length - 1].y) > 1e-6) {
-      verts.push({ x, y });
+    if (verts.length === 0 || Math.hypot(point.x - verts[verts.length - 1].x, point.y - verts[verts.length - 1].y) > 1e-6) {
+      verts.push(point);
     }
   }
 

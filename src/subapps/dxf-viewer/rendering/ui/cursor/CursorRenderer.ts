@@ -17,6 +17,8 @@ import type {
   CursorShape,
   CursorLineStyle
 } from './CursorTypes';
+// 🏢 ADR-058/064: Centralized Canvas Primitives
+import { addCirclePath, addSquarePath, addDiamondPath, addCrossPath } from '../../primitives/canvasPaths';
 
 /**
  * 🔺 CENTRALIZED CURSOR RENDERER
@@ -136,15 +138,9 @@ export class CursorRenderer implements UIRenderer {
     size: number,
     settings: UICursorSettings
   ): void {
-    const halfSize = size / 2;
-
+    // 🏢 ADR-064: Use centralized shape primitives
     ctx.beginPath();
-    ctx.rect(
-      position.x - halfSize,
-      position.y - halfSize,
-      size,
-      size
-    );
+    addSquarePath(ctx, position, size);
 
     this.applyFillAndStroke(ctx, settings);
   }
@@ -160,8 +156,9 @@ export class CursorRenderer implements UIRenderer {
   ): void {
     const radius = size / 2;
 
+    // 🏢 ADR-058: Use centralized canvas primitives
     ctx.beginPath();
-    ctx.arc(position.x, position.y, radius, 0, Math.PI * 2);
+    addCirclePath(ctx, position, radius);
 
     this.applyFillAndStroke(ctx, settings);
   }
@@ -175,14 +172,9 @@ export class CursorRenderer implements UIRenderer {
     size: number,
     settings: UICursorSettings
   ): void {
-    const halfSize = size / 2;
-
+    // 🏢 ADR-064: Use centralized shape primitives
     ctx.beginPath();
-    ctx.moveTo(position.x, position.y - halfSize); // Top
-    ctx.lineTo(position.x + halfSize, position.y); // Right
-    ctx.lineTo(position.x, position.y + halfSize); // Bottom
-    ctx.lineTo(position.x - halfSize, position.y); // Left
-    ctx.closePath();
+    addDiamondPath(ctx, position, size);
 
     this.applyFillAndStroke(ctx, settings);
   }
@@ -194,17 +186,11 @@ export class CursorRenderer implements UIRenderer {
     ctx: CanvasRenderingContext2D,
     position: Point2D,
     size: number,
-    settings: UICursorSettings
+    _settings: UICursorSettings
   ): void {
-    const halfSize = size / 2;
-
+    // 🏢 ADR-064: Use centralized shape primitives
     ctx.beginPath();
-    // Horizontal line
-    ctx.moveTo(position.x - halfSize, position.y);
-    ctx.lineTo(position.x + halfSize, position.y);
-    // Vertical line
-    ctx.moveTo(position.x, position.y - halfSize);
-    ctx.lineTo(position.x, position.y + halfSize);
+    addCrossPath(ctx, position, size);
 
     ctx.stroke(); // Only stroke for cross shape
   }

@@ -20,6 +20,8 @@ import type {
 import { SpatialIndexType } from './ISpatialIndex';
 import type { Point2D } from '../../rendering/types/Types';
 import { SpatialUtils } from './SpatialUtils';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../../rendering/entities/shared/geometry-utils';
 
 /**
  * Internal grid cell structure
@@ -310,11 +312,11 @@ export class GridSpatialIndex implements ISpatialIndex {
     const minRow = Math.floor((bounds.minY - this.bounds.minY) / this.cellSize);
     const maxRow = Math.floor((bounds.maxY - this.bounds.minY) / this.cellSize);
 
-    // Clamp to grid bounds
-    const startCol = Math.max(0, Math.min(this.cols - 1, minCol));
-    const endCol = Math.max(0, Math.min(this.cols - 1, maxCol));
-    const startRow = Math.max(0, Math.min(this.rows - 1, minRow));
-    const endRow = Math.max(0, Math.min(this.rows - 1, maxRow));
+    // 🏢 ADR-071: Clamp to grid bounds using centralized clamp
+    const startCol = clamp(minCol, 0, this.cols - 1);
+    const endCol = clamp(maxCol, 0, this.cols - 1);
+    const startRow = clamp(minRow, 0, this.rows - 1);
+    const endRow = clamp(maxRow, 0, this.rows - 1);
 
     for (let col = startCol; col <= endCol; col++) {
       for (let row = startRow; row <= endRow; row++) {
@@ -357,9 +359,10 @@ export class GridSpatialIndex implements ISpatialIndex {
     const col = Math.floor((point.x - this.bounds.minX) / this.cellSize);
     const row = Math.floor((point.y - this.bounds.minY) / this.cellSize);
 
+    // 🏢 ADR-071: Using centralized clamp
     return {
-      col: Math.max(0, Math.min(this.cols - 1, col)),
-      row: Math.max(0, Math.min(this.rows - 1, row))
+      col: clamp(col, 0, this.cols - 1),
+      row: clamp(row, 0, this.rows - 1)
     };
   }
 }

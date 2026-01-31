@@ -1,8 +1,11 @@
-# ADR-028: Path Aliases Strategy
+# ADR-061: Path Aliases Strategy
 
-**Status**: Accepted
-**Date**: 2026-01-13
-**Deciders**: Enterprise Architecture Team
+| Metadata | Value |
+|----------|-------|
+| **Category** | Infrastructure |
+| **Status** | ✅ Active |
+| **Date** | 2026-01-13 |
+| **Deciders** | Enterprise Architecture Team |
 
 ## Context
 

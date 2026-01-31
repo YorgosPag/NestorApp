@@ -19,6 +19,8 @@
 
 import React, { useMemo } from 'react';
 import type { ContrastResult, RGBColor, TextSize } from '../types';
+// 🏢 ADR-076: Centralized Color Conversion
+import { parseHex, rgbToHex as centralizedRgbToHex } from '../utils';
 
 // ===== CONSTANTS =====
 
@@ -31,36 +33,6 @@ const WCAG_THRESHOLDS = {
   AA_LARGE: 3.0, // 3:1 for large text (18pt+ or 14pt+ bold)
   AAA_LARGE: 4.5, // 4.5:1 for large text
 } as const;
-
-// ===== COLOR UTILITIES =====
-
-/**
- * Parse hex color to RGB
- */
-function hexToRgb(hex: string): RGBColor {
-  let cleanHex = hex.trim();
-
-  // Remove # if present
-  if (cleanHex.startsWith('#')) {
-    cleanHex = cleanHex.slice(1);
-  }
-
-  // Expand shorthand #RGB → #RRGGBB
-  if (cleanHex.length === 3) {
-    cleanHex = cleanHex
-      .split('')
-      .map((c) => c + c)
-      .join('');
-  }
-
-  // Parse RGB(A)
-  const r = parseInt(cleanHex.slice(0, 2), 16);
-  const g = parseInt(cleanHex.slice(2, 4), 16);
-  const b = parseInt(cleanHex.slice(4, 6), 16);
-  const a = cleanHex.length === 8 ? parseInt(cleanHex.slice(6, 8), 16) / 255 : 1;
-
-  return { r, g, b, a };
-}
 
 /**
  * Calculate relative luminance (WCAG formula)
@@ -129,8 +101,9 @@ export function useContrast(
 ): ContrastResult {
   return useMemo(() => {
     try {
-      const fg = hexToRgb(foreground);
-      const bg = hexToRgb(background);
+      // 🏢 ADR-076: Use centralized parseHex
+      const fg = parseHex(foreground);
+      const bg = parseHex(background);
 
       const ratio = getContrastRatio(fg, bg);
 
@@ -181,8 +154,9 @@ export function useContrastCheck(
  */
 export function calculateContrast(foreground: string, background: string): ContrastResult {
   try {
-    const fg = hexToRgb(foreground);
-    const bg = hexToRgb(background);
+    // 🏢 ADR-076: Use centralized parseHex
+    const fg = parseHex(foreground);
+    const bg = parseHex(background);
 
     const ratio = getContrastRatio(fg, bg);
 
@@ -226,8 +200,9 @@ export function findAccessibleColor(
       ? WCAG_THRESHOLDS.AA_NORMAL
       : WCAG_THRESHOLDS.AAA_NORMAL;
 
-  const fg = hexToRgb(foreground);
-  const bg = hexToRgb(background);
+  // 🏢 ADR-076: Use centralized parseHex
+  const fg = parseHex(foreground);
+  const bg = parseHex(background);
 
   let bestColor = foreground;
   let bestRatio = getContrastRatio(fg, bg);
@@ -239,7 +214,8 @@ export function findAccessibleColor(
 
     if (ratio >= targetRatio && Math.abs(ratio - targetRatio) < Math.abs(bestRatio - targetRatio)) {
       bestRatio = ratio;
-      bestColor = rgbToHex(adjustedFg);
+      // 🏢 ADR-076: Use centralized rgbToHex
+      bestColor = centralizedRgbToHex(adjustedFg);
     }
   }
 
@@ -259,12 +235,4 @@ function adjustLightness(rgb: RGBColor, lightness: number): RGBColor {
     b: adjust(rgb.b),
     a: rgb.a,
   };
-}
-
-/**
- * Convert RGB to hex
- */
-function rgbToHex(rgb: RGBColor): string {
-  const toHex = (n: number) => Math.round(n).toString(16).padStart(2, '0');
-  return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
 }

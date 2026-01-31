@@ -5,6 +5,8 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../rendering/entities/shared/geometry-utils';
 
 export interface GripSettings {
   // === AutoCAD Variables ===
@@ -93,17 +95,14 @@ export const GRIP_LIMITS = {
 export function validateGripSettings(settings: Partial<GripSettings>): GripSettings {
   const result = { ...DEFAULT_GRIP_SETTINGS, ...settings };
 
-  // Clamp values to AutoCAD ranges
-  result.gripSize = Math.max(GRIP_LIMITS.gripSize.min,
-    Math.min(GRIP_LIMITS.gripSize.max, result.gripSize));
-  result.pickBoxSize = Math.max(GRIP_LIMITS.pickBoxSize.min,
-    Math.min(GRIP_LIMITS.pickBoxSize.max, result.pickBoxSize));
-  result.apertureSize = Math.max(GRIP_LIMITS.apertureSize.min,
-    Math.min(GRIP_LIMITS.apertureSize.max, result.apertureSize));
+  // 🏢 ADR-071: Clamp values to AutoCAD ranges using centralized clamp
+  result.gripSize = clamp(result.gripSize, GRIP_LIMITS.gripSize.min, GRIP_LIMITS.gripSize.max);
+  result.pickBoxSize = clamp(result.pickBoxSize, GRIP_LIMITS.pickBoxSize.min, GRIP_LIMITS.pickBoxSize.max);
+  result.apertureSize = clamp(result.apertureSize, GRIP_LIMITS.apertureSize.min, GRIP_LIMITS.apertureSize.max);
 
-  // Clamp additional settings
-  result.opacity = Math.max(0.1, Math.min(1.0, result.opacity));
-  result.maxGripsPerEntity = Math.max(10, Math.min(200, result.maxGripsPerEntity));
+  // 🏢 ADR-071: Clamp additional settings using centralized clamp
+  result.opacity = clamp(result.opacity, 0.1, 1.0);
+  result.maxGripsPerEntity = clamp(result.maxGripsPerEntity, 10, 200);
 
   return result;
 }

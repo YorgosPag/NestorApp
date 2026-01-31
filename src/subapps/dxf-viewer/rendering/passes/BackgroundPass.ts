@@ -243,13 +243,13 @@ export class BackgroundPass implements IRenderPass {
     context.lineTo(originScreen.x, originScreen.y - axisLength);
     context.stroke();
 
-    // Origin point
+    // Origin point - 🏢 ADR-058: Use ellipse instead of arc
     context.setState({
       fillStyle: UI_COLORS.OVERLAY_ORIGIN, // Blue for origin
       strokeStyle: UI_COLORS.OVERLAY_ORIGIN
     });
     context.beginPath();
-    context.arc(originScreen.x, originScreen.y, 3, 0, Math.PI * 2);
+    context.ellipse(originScreen.x, originScreen.y, 3, 3, 0, 0, Math.PI * 2);
     context.fill();
 
     // Labels

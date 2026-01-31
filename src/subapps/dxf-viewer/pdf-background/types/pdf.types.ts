@@ -13,6 +13,8 @@
  */
 
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp, clamp01 } from '../../rendering/entities/shared/geometry-utils';
 
 // ============================================================================
 // PDF DOCUMENT TYPES
@@ -292,30 +294,34 @@ export function isPdfBackgroundTransform(value: unknown): value is PdfBackground
 
 // ============================================================================
 // VALIDATION HELPERS
+// 🏢 ADR-071: Using centralized clamp from geometry-utils.ts
 // ============================================================================
 
 /**
  * Clamp page number to valid range
+ * 🏢 ADR-071: Using centralized clamp
  */
 export function clampPageNumber(page: number, numPages: number): number {
-  return Math.max(1, Math.min(page, numPages));
+  return clamp(page, 1, numPages);
 }
 
 /**
  * Clamp opacity to valid range
+ * 🏢 ADR-071: Using centralized clamp01 for [0,1] range
  */
 export function clampOpacity(opacity: number): number {
-  return Math.max(0, Math.min(1, opacity));
+  return clamp01(opacity);
 }
 
 /**
  * Clamp scale to valid range
+ * 🏢 ADR-071: Using centralized clamp with PDF-specific limits
  */
 export function clampScale(scale: number): number {
   // Reasonable limits for PDF background scale
   const MIN_SCALE = 0.01;
   const MAX_SCALE = 10;
-  return Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+  return clamp(scale, MIN_SCALE, MAX_SCALE);
 }
 
 /**

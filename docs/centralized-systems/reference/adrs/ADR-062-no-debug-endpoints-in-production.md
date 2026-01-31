@@ -1,9 +1,13 @@
-# ADR-029: No Debug/Admin Analysis Endpoints in Production
+# ADR-062: No Debug/Admin Analysis Endpoints in Production
 
-- Status: Accepted
-- Date: 2026-01-17
-- Owners: Security / Platform
-- Related:
+| Metadata | Value |
+|----------|-------|
+| **Category** | Security |
+| **Status** | ✅ Active |
+| **Date** | 2026-01-17 |
+| **Owners** | Security / Platform |
+
+## Related
   - AUTHZ Phase 2 (Role-Based Access Control)
   - SECURITY_AUDIT_REPORT.md
   - Fortune 500 Security Standards
@@ -116,7 +120,7 @@ We establish the following **non-negotiable security policy**:
 
 3. ✅ **Documentation:**
    - Removed reference from `HARDCODED_VALUES_AUDIT_REPORT.md`
-   - Created this ADR (ADR-029)
+   - Created this ADR (ADR-062)
 
 4. ✅ **Git:**
    - Commit: `chore(security): remove public debug analysis endpoints`

@@ -241,9 +241,9 @@ export class OverlayPass implements IRenderPass {
 
       case 'edge':
       case 'center':
-        // Circular grips
+        // Circular grips - 🏢 ADR-058: Use ellipse instead of arc
         context.beginPath();
-        context.arc(screenPos.x, screenPos.y, gripSize / 2, 0, Math.PI * 2);
+        context.ellipse(screenPos.x, screenPos.y, gripSize / 2, gripSize / 2, 0, 0, Math.PI * 2);
         context.fill();
         context.stroke();
         break;
@@ -281,9 +281,9 @@ export class OverlayPass implements IRenderPass {
       context.lineTo(screenPos.x, screenPos.y + size);
       context.stroke();
 
-      // Draw center dot
+      // Draw center dot - 🏢 ADR-058: Use ellipse instead of arc
       context.beginPath();
-      context.arc(screenPos.x, screenPos.y, 2, 0, Math.PI * 2);
+      context.ellipse(screenPos.x, screenPos.y, 2, 2, 0, 0, Math.PI * 2);
       context.fill();
     }
 
@@ -354,7 +354,7 @@ export class OverlayPass implements IRenderPass {
         break;
     }
 
-    // Draw snap point if available
+    // Draw snap point if available - 🏢 ADR-058: Use ellipse instead of arc
     if (this.cursor.snapPoint) {
       const snapScreen = context.worldToScreen(this.cursor.snapPoint);
       context.setState({
@@ -362,7 +362,7 @@ export class OverlayPass implements IRenderPass {
         fillStyle: UI_COLORS.OVERLAY_SNAP_POINT
       });
       context.beginPath();
-      context.arc(snapScreen.x, snapScreen.y, 3, 0, Math.PI * 2);
+      context.ellipse(snapScreen.x, snapScreen.y, 3, 3, 0, 0, Math.PI * 2);
       context.fill();
     }
 

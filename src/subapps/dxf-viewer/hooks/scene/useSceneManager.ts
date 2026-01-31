@@ -19,9 +19,16 @@ export function useSceneManager(): SceneManagerState {
 
   const setLevelScene = useCallback((levelId: string, scene: SceneModel) => {
     // 🔍 DEBUG (2026-01-31): Log setLevelScene call
+    const arcEntities = scene?.entities?.filter(e => e.type === 'arc') || [];
     console.log('🗄️ [useSceneManager] setLevelScene called', {
       levelId,
-      entityCount: scene?.entities?.length || 0
+      entityCount: scene?.entities?.length || 0,
+      // 🔍 DEBUG: Check arc counterclockwise on SAVE
+      arcCount: arcEntities.length,
+      arcsWithCounterclockwise: arcEntities.map(e => ({
+        id: e.id,
+        counterclockwise: (e as { counterclockwise?: boolean }).counterclockwise
+      }))
     });
 
     // Μικρό warning για άδειες σκηνές που δημιουργούνται
@@ -46,7 +53,22 @@ export function useSceneManager(): SceneManagerState {
   }, []);
 
   const getLevelScene = useCallback((levelId: string): SceneModel | null => {
-    return levelScenes[levelId] || null;
+    const scene = levelScenes[levelId] || null;
+    // 🔍 DEBUG: Check if arc entities have counterclockwise when reading
+    if (scene) {
+      const arcEntities = scene.entities.filter(e => e.type === 'arc');
+      if (arcEntities.length > 0) {
+        console.log('🔍 [getLevelScene] Reading scene with arcs:', {
+          levelId,
+          arcCount: arcEntities.length,
+          arcsWithCounterclockwise: arcEntities.map(e => ({
+            id: e.id,
+            counterclockwise: (e as { counterclockwise?: boolean }).counterclockwise
+          }))
+        });
+      }
+    }
+    return scene;
   }, [levelScenes]);
 
   const clearLevelScene = useCallback((levelId: string) => {

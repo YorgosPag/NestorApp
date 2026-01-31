@@ -1,9 +1,13 @@
-# ADR-003: Migrate BuildingFloorplanService to Enterprise Storage Architecture
+# ADR-060: Migrate BuildingFloorplanService to Enterprise Storage Architecture
 
-- Status: Accepted
-- Date: 2026-01-11
-- Owners: Platform / Storage
-- Related:
+| Metadata | Value |
+|----------|-------|
+| **Category** | Backend |
+| **Status** | ✅ Active |
+| **Date** | 2026-01-11 |
+| **Owners** | Platform / Storage |
+
+## Related
   - DxfFirestoreService (dxf-viewer/services/)
   - DXF_STORAGE_ENTERPRISE_AUDIT_REPORT.md
   - Collection: building_floorplans

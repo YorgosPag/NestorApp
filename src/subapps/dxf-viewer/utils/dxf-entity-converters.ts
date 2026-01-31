@@ -29,6 +29,10 @@
 import type { AnySceneEntity } from '../types/scene';
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfHeaderData, DimStyleMap, DimStyleEntry } from './dxf-entity-parser';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+import { radToDeg } from '../rendering/entities/shared/geometry-utils';
 
 // 🏢 ENTERPRISE: Import centralized helpers
 import {
@@ -556,8 +560,8 @@ export function convertDimension(
       dimensionText = measurement.toFixed(2);
     }
     if (!dimensionText) {
-      // Calculate distance as fallback
-      const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+      // 🏢 ADR-065: Use centralized distance calculation
+      const distance = calculateDistance({ x: x1, y: y1 }, { x: x2, y: y2 });
       dimensionText = distance.toFixed(2);
     }
 
@@ -572,7 +576,8 @@ export function convertDimension(
       // Calculate angle from definition points
       const dx = x2 - x1;
       const dy = y2 - y1;
-      rotation = Math.atan2(dy, dx) * (180 / Math.PI);
+      // 🏢 ADR-067: Use centralized angle conversion
+      rotation = radToDeg(Math.atan2(dy, dx));
 
       // Normalize to keep text readable (not upside down)
       // Text should be readable from bottom-left to top-right

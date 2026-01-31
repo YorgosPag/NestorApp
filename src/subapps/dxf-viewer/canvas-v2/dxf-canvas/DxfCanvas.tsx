@@ -364,12 +364,6 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
           // 🏢 ENTERPRISE: Type-safe UIElementSettings cast for GridRenderer
           gridRendererRef.current.render(context, viewport, gridSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
         }
-      } else {
-        console.log('🚫 [DxfCanvas] Grid NOT rendered:', {
-          hasRenderer: !!gridRendererRef.current,
-          enabled: gridSettings?.enabled,
-          gridSettings
-        });
       }
 
       // 3️⃣ RENDER RULERS (after grid, so it's on top of grid)

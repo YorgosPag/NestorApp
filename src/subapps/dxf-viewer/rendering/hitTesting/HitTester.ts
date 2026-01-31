@@ -9,7 +9,8 @@ import { getEntityBounds } from '../../types/entities';
 import { SpatialFactory, type ISpatialIndex, type SpatialQueryOptions, type SpatialQueryResult } from '../../core/spatial';
 import type { Point2D } from '../types/Types';
 import { BoundingBox, BoundsCalculator, BoundsOperations } from './Bounds';
-import { pointToLineDistance } from '../entities/shared/geometry-utils';
+// 🏢 ADR-071: Centralized geometry utilities
+import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
 
 export interface HitTestOptions extends SpatialQueryOptions {
   // Hit-test specific options
@@ -625,7 +626,8 @@ export class HitTester {
 
     if (lenSq === 0) return lineStart;
 
-    const param = Math.max(0, Math.min(1, dot / lenSq));
+    // 🏢 ADR-071: Using centralized clamp
+    const param = clamp(dot / lenSq, 0, 1);
 
     return {
       x: lineStart.x + param * C,

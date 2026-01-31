@@ -5,6 +5,8 @@
 
 import type { Point2D } from '../../types/Types';
 import { gripStyleStore } from '../../../stores/GripStyleStore';
+// 🏢 ADR-058: Centralized Canvas Primitives
+import { addCirclePath } from '../../primitives/canvasPaths';
 
 /**
  * Render a single dot at given point
@@ -24,8 +26,9 @@ export function renderDotAtPoint(
 
   try {
     const screenPoint = worldToScreen(point);
+    // 🏢 ADR-058: Use centralized canvas primitives
     ctx.beginPath();
-    ctx.arc(screenPoint.x, screenPoint.y, radius, 0, Math.PI * 2);
+    addCirclePath(ctx, screenPoint, radius);
     ctx.fill();
   } catch (error) {
     // Αθόρυβη διαχείριση σφαλμάτων

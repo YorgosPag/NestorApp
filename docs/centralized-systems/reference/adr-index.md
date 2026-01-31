@@ -4,7 +4,7 @@
 >
 > Single source of truth για όλες τις αρχιτεκτονικές αποφάσεις της εφαρμογής
 
-**📊 Stats**: 58 ADRs | Last Updated: 2026-01-31
+**📊 Stats**: 75 ADRs | Last Updated: 2026-01-31
 
 ---
 
@@ -17,7 +17,9 @@
 | **Canvas & Rendering** | ADR-004 to ADR-009 | [View](#-canvas--rendering) |
 | **Data & State** | ADR-010, ADR-030 to ADR-034 | [View](#-data--state-management) |
 | **Drawing System** | ADR-005, ADR-040 to ADR-048 | [View](#-drawing-system) |
-| **Security & Auth** | ADR-020, ADR-024 | [View](#-security--authentication) |
+| **Security & Auth** | ADR-020, ADR-024, ADR-062, ADR-063 | [View](#-security--authentication) |
+| **Backend Systems** | ADR-059, ADR-060 | [View](#-backend-systems) |
+| **Infrastructure** | ADR-061 | [View](#-infrastructure) |
 | **Performance** | ADR-019, ADR-030, ADR-040 | [View](#-performance) |
 | **Filters & Search** | ADR-029, ADR-051 | [View](#-filters--search) |
 | **Tools & Keyboard** | ADR-026 to ADR-028, ADR-035, ADR-038, ADR-055 | [View](#-tools--keyboard) |
@@ -85,6 +87,23 @@
 | **ADR-056** | Centralized Entity Completion Styles | ✅ APPROVED | 2026-01-30 | Drawing System |
 | **ADR-057** | Unified Entity Completion Pipeline | ✅ APPROVED | 2026-01-30 | Drawing System |
 | **ADR-058** | Canvas Drawing Primitives (Arc via Ellipse) | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-064** | Shape Primitives Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-065** | Distance Calculation Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-066** | Angle Calculation Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-067** | Radians/Degrees Conversion Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-068** | Angle Normalization Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-069** | Number Formatting Centralization (formatDistance/formatAngle) | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-070** | Vector Magnitude Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-071** | Clamp Function Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-072** | Dot Product Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-074** | Point On Circle Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-075** | Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-31 | Drawing System |
+| **ADR-076** | RGB ↔ HEX Color Conversion Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-059** | Separate Audit Bootstrap from Projects List | ✅ APPROVED | 2026-01-11 | Backend Systems |
+| **ADR-060** | Building Floorplan Enterprise Storage | ✅ APPROVED | 2026-01-11 | Backend Systems |
+| **ADR-061** | Path Aliases Strategy | ✅ APPROVED | 2026-01-13 | Infrastructure |
+| **ADR-062** | No Debug Endpoints in Production | ✅ APPROVED | 2026-01-17 | Security & Auth |
+| **ADR-063** | Company Isolation Custom Claims | ✅ APPROVED | 2026-01-18 | Security & Auth |
 | **ADR-UI-001** | Visual Primitive Ownership | ✅ APPROVED | 2026-01-04 | Design System |
 
 ---
@@ -197,8 +216,28 @@
 - **Canonical**: `rendering/primitives/canvasPaths.ts`
 - **Decision**: Use `ctx.ellipse()` instead of `ctx.arc()` for all circle/arc rendering
 - **Background**: `ctx.arc()` found unreliable with HiDPI canvas transforms
-- **API**: `drawCircle()`, `drawArc()`, `addCirclePath()`, `addArcPath()`
-- **Migration**: All renderers updated to use ellipse-based primitives
+- **API**: `drawCircle()`, `drawArc()`, `addCirclePath()`, `addArcPath()`, `TAU`
+- **Migration**: 23 files updated to use centralized primitives
+- **Files Migrated**:
+  - CircleRenderer.ts, EllipseRenderer.ts, BaseEntityRenderer.ts
+  - SnapRenderer.ts, CursorRenderer.ts, OriginMarkersRenderer.ts, GridRenderer.ts
+  - OverlayPass.ts, BackgroundPass.ts, ghost-entity-renderer.ts
+  - angle-utils.ts, dot-rendering-utils.ts, GripShapeRenderer.ts
+- **Exceptions**:
+  - Canvas2DContext.ts (low-level wrapper - must keep raw API)
+  - EllipseRenderer.ts (uses ctx.ellipse for actual ellipses with different radii)
+
+### ADR-064: Shape Primitives Centralization
+- **Canonical**: `rendering/primitives/canvasPaths.ts` (extends ADR-058)
+- **Decision**: Centralize all shape path functions (square, diamond, cross, triangle, X)
+- **API**: `addSquarePath()`, `addDiamondPath()`, `addCrossPath()`, `addTrianglePath()`, `addXPath()`
+- **Problem**: Duplicate shape rendering code across 3 files (~100 lines)
+- **Solution**: Single Source of Truth in canvasPaths.ts
+- **Files Migrated**:
+  - GripShapeRenderer.ts - uses `addDiamondPath()`
+  - CursorRenderer.ts - uses `addSquarePath()`, `addDiamondPath()`, `addCrossPath()`
+  - SnapRenderer.ts - uses all 5 shape primitives
+- **Result**: 6 shape types centralized, zero duplicate path code
 
 ---
 
@@ -216,6 +255,285 @@
 ### ADR-034: Geometry Calculations Centralization
 - **Canonical**: `geometry-utils.ts` (SSOT for polygon calculations)
 - **Separation**: Math (geometry-utils) ↔ Rendering (geometry-rendering-utils)
+
+### ADR-065: Distance Calculation Centralization
+- **Canonical**: `calculateDistance()` from `geometry-rendering-utils.ts`
+- **Impact**: 35+ inline implementations → 1 function
+- **Files Migrated**: 32 files across snapping, rendering, hooks, utils
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero duplicate distance calculations
+  - Consistent calculation (p2.x - p1.x, p2.y - p1.y)
+  - Easy maintenance and optimization
+  - Type-safe Point2D interface
+
+### ADR-066: Angle Calculation Centralization
+- **Canonical**: `calculateAngle()` from `geometry-rendering-utils.ts`
+- **Impact**: 9+ inline `Math.atan2(dy, dx)` implementations → 1 function
+- **Files Migrated**:
+  - `ArcDragMeasurement.ts` - Arc grip angle calculation
+  - `AngleMeasurementRenderer.ts` - Angle measurement arc/text
+  - `distance-label-utils.ts` - Label rotation angles
+  - `text-labeling-utils.ts` - Edge text positioning
+  - `TangentSnapEngine.ts` - Tangent point calculations (bug fix!)
+  - `PreviewRenderer.ts` - Angle preview arc
+  - `BaseDragMeasurementRenderer.ts` - Base class angle method
+  - `ghost-entity-renderer.ts` - Arrow head angle
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero duplicate angle calculations
+  - Consistent API: `calculateAngle(from: Point2D, to: Point2D): number`
+  - Fixed undefined dx/dy bug in TangentSnapEngine
+  - Returns radians (multiply by `180/Math.PI` for degrees)
+- **Companion**: ADR-065 (Distance Calculation)
+
+### ADR-067: Radians/Degrees Conversion Centralization
+- **Canonical**: `degToRad()`, `radToDeg()` from `geometry-utils.ts`
+- **Constants**: `DEGREES_TO_RADIANS`, `RADIANS_TO_DEGREES`
+- **Impact**: 15+ inline `Math.PI / 180` calculations → centralized functions
+- **Files Migrated**:
+  - `ArcRenderer.ts` - Arc angle conversions (4 locations)
+  - `EllipseRenderer.ts` - Rotation angle conversion
+  - `BaseEntityRenderer.ts` - Angle arc degrees display
+  - `TextRenderer.ts` - Text rotation
+  - `geometry-rendering-utils.ts` - Rendering transform rotation
+  - `useDynamicInputHandler.ts` - Coordinate input angles
+  - `useDynamicInputMultiPoint.ts` - Segment angle display
+  - `AISnappingEngine.ts` - Prediction angles
+  - `BaseDragMeasurementRenderer.ts` - Drag angle calculation
+  - `ArcDragMeasurement.ts` - Arc grip angle (replaced local constant)
+  - `useUnifiedDrawing.tsx` - Measure-angle tool
+  - `PdfBackgroundCanvas.tsx` - PDF rotation transform
+  - `dxf-entity-converters.ts` - DXF dimension text rotation
+  - `line-utils.ts` - Arc hit test angle
+  - `angle-calculation.ts` - Interior angle calculation
+  - `constraints/config.ts` - Re-exports from centralized source
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero inline `Math.PI / 180` or `180 / Math.PI` calculations
+  - Consistent, tested conversion functions
+  - Constants available for performance-critical code
+  - Removed 2 duplicate constant definitions
+- **Companion**: ADR-065 (Distance), ADR-066 (Angle)
+
+### ADR-068: Angle Normalization Centralization
+- **Canonical**: `normalizeAngleRad()`, `normalizeAngleDeg()` from `geometry-utils.ts`
+- **Impact**: 6+ inline angle normalization implementations → 2 functions
+- **Files Migrated**:
+  - `geometry-utils.ts` - `arcFrom3Points()` + `isAngleBetween()` internal normalizations
+  - `line-utils.ts` - `hitTestArcEntity()` angle/startAngle/endAngle normalization
+  - `angle-calculation.ts` - `calculateAngleData()` positive angle conversion
+  - `useUnifiedDrawing.tsx` - `measure-angle` tool angle conversion
+  - `constraints/utils.ts` - `AngleUtils.normalizeAngle` delegates to canonical
+- **Pattern**: Single Source of Truth (SSOT)
+- **Algorithm**: `modulo + if` (more efficient than while loops for extreme values)
+- **Benefits**:
+  - Zero duplicate angle normalization code
+  - Consistent output ranges: radians [0, 2π), degrees [0, 360)
+  - Handles extreme values (multiple wraps) efficiently
+  - Type-safe APIs with JSDoc examples
+- **Companion**: ADR-065 (Distance), ADR-066 (Angle), ADR-067 (Deg↔Rad Conversion)
+
+### ADR-069: Number Formatting Centralization (formatDistance/formatAngle)
+- **Canonical**: `formatDistance()`, `formatAngle()` from `distance-label-utils.ts`
+- **Impact**: 2 duplicate formatDistance implementations → 1 canonical
+- **Files Migrated**:
+  - `distance-label-utils.ts` - Canonical source (added formatAngle)
+  - `useDynamicInputMultiPoint.ts` - Re-exports from canonical (backward compatibility)
+- **Pattern**: Single Source of Truth (SSOT)
+- **API**:
+  - `formatDistance(distance: number, decimals?: number): string` (default: 2 decimals)
+  - `formatAngle(angle: number, decimals?: number): string` (default: 1 decimal, includes °)
+- **Benefits**:
+  - Zero duplicate number formatting code
+  - Configurable decimal precision
+  - Consistent formatting across DXF Viewer
+  - Special case handling for near-zero values
+- **Companion**: ADR-065 (Distance Calc), ADR-066 (Angle Calc), ADR-041 (Distance Labels)
+
+### ADR-070: Vector Magnitude Centralization
+- **Canonical**: `vectorMagnitude()` from `geometry-rendering-utils.ts`
+- **Impact**: 15+ inline `Math.sqrt(v.x * v.x + v.y * v.y)` implementations → 1 function
+- **Difference from ADR-065**:
+  - `calculateDistance(p1, p2)`: Distance between **2 Point2D** → `Math.sqrt((p2.x-p1.x)² + (p2.y-p1.y)²)`
+  - `vectorMagnitude(v)`: Length of **1 vector** → `Math.sqrt(v.x² + v.y²)`
+- **Files Migrated**:
+  - `PolylineRenderer.ts` - Rectangle detection (4 side lengths)
+  - `BaseEntityRenderer.ts` - Angle arc rendering (prevLength, nextLength, bisectorLength, centerLength)
+  - `geometry-utils.ts` - `angleBetweenPoints()` vector magnitudes (mag1, mag2)
+  - `useDynamicInputMultiPoint.ts` - Angle calculation between segments (4 magnitudes)
+  - `constraints/utils.ts` - Polar coordinate distance
+- **Bonus Fix**: `useGripMovement.ts` now uses `calculateDistance()` instead of inline calc
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero duplicate vector magnitude calculations
+  - Consistent API: `vectorMagnitude(vector: Point2D): number`
+  - Clear distinction from distance calculation
+  - Type-safe Point2D interface
+- **Companion**: ADR-065 (Distance Calculation), ADR-066 (Angle Calculation)
+
+### ADR-071: Clamp Function Centralization
+- **Canonical**: `clamp()`, `clamp01()`, `clamp255()` from `geometry-utils.ts`
+- **Impact**: 40+ inline `Math.max(min, Math.min(max, value))` implementations → 3 functions
+- **Files Migrated (Phase 1 - Core)**:
+  - `geometry-utils.ts` - Canonical source (added `clamp01()`, `clamp255()`)
+  - `domain.ts` - Removed local clamp const, uses import
+  - `calculations.ts` - `clampScale()` now uses centralized clamp
+  - `pdf.types.ts` - `clampPageNumber()`, `clampOpacity()`, `clampScale()` use centralized
+- **Files Migrated (Phase 2 - High-Impact)**:
+  - `FitToViewService.ts` - safePadding and scale calculations (4 patterns)
+  - `gripSettings.ts` - validateGripSettings (5 patterns)
+  - `GridSpatialIndex.ts` - Grid cell clamping (5 patterns)
+  - `useColorMenuState.ts` - Coordinate validation (2 patterns)
+  - `DxfViewerComponents.styles.ts` - Progress bar (2 patterns)
+  - `transform-config.ts` - validateScale, validateOffset
+  - `SpatialUtils.ts` - calculateOptimalGridSize
+  - `HitTester.ts` - closestPointOnLine param
+  - `input-validation.ts` - normalizeNumericInput
+  - `GripSizeCalculator.ts` - clampSize
+  - `ui/color/utils.ts` - RGB value clamping (uses clamp255)
+- **Pattern**: Single Source of Truth (SSOT)
+- **API**:
+  - `clamp(value, min, max)`: Generic clamping
+  - `clamp01(value)`: [0, 1] range (opacity, alpha)
+  - `clamp255(value)`: [0, 255] range (RGB)
+- **Benefits**:
+  - Zero duplicate clamp implementations
+  - Semantic wrappers for common use cases
+  - Consistent, tested clamping behavior
+  - Type-safe number parameters
+- **Companion**: ADR-065 (Distance), ADR-066 (Angle), ADR-067 (Deg↔Rad), ADR-070 (Magnitude)
+
+### ADR-072: Dot Product Centralization
+- **Canonical**: `dotProduct()` from `geometry-rendering-utils.ts`
+- **Impact**: 9+ inline `v1.x * v2.x + v1.y * v2.y` implementations → 1 function
+- **Difference from ADR-070**:
+  - `vectorMagnitude(v)`: Length of **1 vector** → `Math.sqrt(v.x² + v.y²)`
+  - `dotProduct(v1, v2)`: Inner product of **2 vectors** → `v1.x * v2.x + v1.y * v2.y`
+- **Files Migrated**:
+  - `PolylineRenderer.ts` - Rectangle perpendicularity check (2 patterns)
+  - `geometry-utils.ts` - `angleBetweenPoints()` vector angle calculation
+  - `useDynamicInputMultiPoint.ts` - Angle calculation between segments (2 patterns)
+  - `useUnifiedDrawing.tsx` - Measure-angle tool angle calculation
+  - `angle-calculation.ts` - `calculateAngleData()` angle between vectors
+- **Files NOT Migrated (special cases)**:
+  - `geometry-utils.ts:62` - Uses normalized direction (not Point2D vectors)
+  - `geometry-utils.ts:97` - Uses raw dx/dy components (not Point2D)
+  - `HitTester.ts:624` - Uses abbreviated vars A,B,C,D (not Point2D structure)
+  - `BaseEntityRenderer.ts:686` - Uses cos/sin values directly (not Point2D)
+- **Pattern**: Single Source of Truth (SSOT)
+- **Mathematical Properties**:
+  - `v1 · v2 = |v1| * |v2| * cos(θ)`
+  - If `dot = 0`, vectors are perpendicular
+  - If `dot > 0`, angle < 90°
+  - If `dot < 0`, angle > 90°
+- **Benefits**:
+  - Zero duplicate dot product calculations
+  - Consistent API: `dotProduct(v1: Point2D, v2: Point2D): number`
+  - Clear distinction from magnitude/distance calculations
+  - Type-safe Point2D interface
+- **Companion**: ADR-065 (Distance), ADR-070 (Magnitude), ADR-066 (Angle)
+
+### ADR-073: Midpoint/Bisector Calculation Centralization
+- **Canonical**:
+  - `calculateMidpoint()` from `geometry-rendering-utils.ts`
+  - `bisectorAngle()` from `geometry-utils.ts`
+  - `SpatialUtils.boundsCenter()` from `SpatialUtils.ts`
+- **Impact**: 55+ inline `(a + b) / 2` implementations → 3 centralized functions
+- **Categories**:
+  - **Point Midpoints**: `(p1.x + p2.x) / 2, (p1.y + p2.y) / 2` → `calculateMidpoint(p1, p2)`
+  - **Bisector Angles**: `(angle1 + angle2) / 2` → `bisectorAngle(angle1, angle2)`
+  - **Bounds Centers**: `(minX + maxX) / 2` → `SpatialUtils.boundsCenter(bounds)`
+- **Files Migrated (Point Midpoints)**:
+  - `line-utils.ts` - Edge grip midpoints, gap calculations (4 patterns)
+  - `phase-text-utils.ts` - Distance text positioning (2 patterns)
+  - `BaseEntityRenderer.ts` - Distance text positioning (2 patterns)
+  - `text-labeling-utils.ts` - Edge text positioning (1 pattern)
+  - `entity-conversion.ts` - Overlay edge midpoints (1 pattern)
+  - `LayerRenderer.ts` - Edge grip midpoints (1 pattern)
+  - `SplineRenderer.ts` - Bezier midpoints (1 pattern)
+  - `UnifiedGripRenderer.ts` - Midpoint grips (1 pattern)
+- **Files Migrated (Bisector Angles)**:
+  - `AngleMeasurementRenderer.ts` - Angle label positioning (1 pattern)
+  - `BaseEntityRenderer.ts` - Corner arc label (1 pattern)
+  - `PreviewRenderer.ts` - Angle preview text (1 pattern)
+- **Re-export**: `geometry-utils.ts` re-exports `calculateMidpoint` for convenience
+- **Pattern**: Single Source of Truth (SSOT)
+- **API**:
+  - `calculateMidpoint(p1: Point2D, p2: Point2D): Point2D`
+  - `bisectorAngle(angle1: number, angle2: number): number`
+  - `SpatialUtils.boundsCenter(bounds: SpatialBounds): Point2D`
+- **Benefits**:
+  - Zero duplicate midpoint/bisector calculations
+  - Consistent, type-safe Point2D interface
+  - Clear semantic separation (points vs angles vs bounds)
+  - Companion to distance/angle calculations
+- **Companion**: ADR-065 (Distance), ADR-066 (Angle), ADR-070 (Magnitude)
+
+### ADR-074: Point On Circle Centralization
+- **Canonical**: `pointOnCircle()` from `geometry-rendering-utils.ts`
+- **Impact**: 13 inline `center.x + radius * Math.cos(angle)` implementations → 1 function
+- **Difference from other ADRs**:
+  - `calculateDistance(p1, p2)`: Distance between **2 Point2D**
+  - `vectorMagnitude(v)`: Length of **1 vector**
+  - `dotProduct(v1, v2)`: Inner product of **2 vectors**
+  - `pointOnCircle(center, radius, angle)`: **Polar → Cartesian** conversion
+- **Files Migrated**:
+  - `ArcRenderer.ts` - Arc start/end/mid points for rendering and grips (4 patterns)
+  - `GeometricCalculations.ts` - Arc endpoints and midpoints for snapping (4 patterns)
+  - `NodeSnapEngine.ts` - Arc start/end snap points (2 patterns)
+  - `GeometryUtils.ts` - Arc tessellation for export (1 pattern)
+- **Mathematical Formula**:
+  - `x = center.x + radius * cos(angle)`
+  - `y = center.y + radius * sin(angle)`
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero duplicate polar-to-cartesian conversions
+  - Consistent API: `pointOnCircle(center: Point2D, radius: number, angle: number): Point2D`
+  - Angle in radians (0 = right, π/2 = up, π = left, 3π/2 = down)
+  - Type-safe Point2D interface
+- **Companion**: ADR-065 (Distance), ADR-070 (Magnitude), ADR-072 (Dot Product)
+
+### ADR-075: Grip Size Multipliers Centralization
+- **Canonical**: `GRIP_SIZE_MULTIPLIERS` from `rendering/grips/constants.ts`
+- **Impact**: Fixed **visual inconsistency** - grips had different sizes (1.2/1.4 vs 1.25/1.5)
+- **Standard Values** (AutoCAD/BricsCAD):
+  - `COLD`: 1.0 (normal state)
+  - `WARM`: 1.25 (hover state, +25%)
+  - `HOT`: 1.5 (active/drag state, +50%)
+- **Files Migrated**:
+  - `LayerRenderer.ts` - Overlay grip rendering (was 1.2/1.4, now 1.25/1.5)
+  - `GripProvider.tsx` - Grip context helper (was 1.2/1.4, now 1.25/1.5)
+  - `BaseEntityRenderer.ts` - Entity grip rendering (was hardcoded 1.25/1.5)
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero grip size inconsistency (all grips use same multipliers)
+  - AutoCAD-standard visual feedback
+  - Single place to change grip size behavior
+- **Companion**: ADR-048 (Unified Grip Rendering System)
+
+### ADR-076: RGB ↔ HEX Color Conversion Centralization
+- **Canonical**: `parseHex()`, `rgbToHex()` from `ui/color/utils.ts`
+- **Impact**: 12+ inline color conversion implementations → 2 functions
+- **Files Migrated**:
+  - `aci.ts` - Removed duplicate `hexToRgb()`, uses `parseHex()`
+  - `useContrast.ts` - Removed duplicate `hexToRgb()` and `rgbToHex()`, uses imports
+  - `LegacyGridAdapter.ts` - Uses `parseHex()` and `rgbToHex()` for color darkening/lightening
+  - `domain.ts` - Uses `rgbToHex()` for RGB→HEX conversion
+  - `RulerBackgroundSettings.tsx` - Uses `rgbToHex()` for rgba→hex extraction
+  - `RulerMajorLinesSettings.tsx` - Uses `rgbToHex()` in `getBaseColor()`
+  - `RulerMinorLinesSettings.tsx` - Uses `rgbToHex()` in `getBaseColor()`
+  - `RulerUnitsSettings.tsx` - Uses `rgbToHex()` in `getPreviewColor()`
+- **Pattern**: Single Source of Truth (SSOT)
+- **API**:
+  - `parseHex(hex: string): RGBColor` - Parses #RGB, #RRGGBB, #RRGGBBAA
+  - `rgbToHex(rgb: RGBColor, options?: FormatOptions): string` - Converts RGB to hex
+- **Benefits**:
+  - Zero duplicate color conversion code
+  - Consistent parsing with error handling
+  - Support for shorthand (#RGB) and alpha (#RRGGBBAA)
+  - Type-safe RGBColor interface
+- **Companion**: ADR-004 (Canvas Theme System)
 
 ---
 
@@ -244,6 +562,7 @@
 ### ADR-048: Unified Grip Rendering System
 - **Canonical**: `UnifiedGripRenderer` (Facade Pattern)
 - **Result**: ~90 lines duplicate code removed
+- **📄 Full Details**: [ADR-048-unified-grip-rendering.md](./adrs/ADR-048-unified-grip-rendering.md)
 
 ### ADR-049: Unified Move Tool (DXF + Overlays)
 - **Canonical**: `MoveOverlayCommand.ts` (380+ lines)
@@ -277,6 +596,18 @@
 ### ADR-024: Environment Security Configuration
 - **Canonical**: `src/config/environment-security-config.ts`
 - **Pattern**: Graduated security policies (Microsoft Azure/Google Cloud)
+
+### ADR-062: No Debug Endpoints in Production
+- **Policy**: Debug/analysis endpoints **SHALL NOT** exist in production
+- **Alternative**: Offline scripts in `scripts/` directory
+- **Enforcement**: Code review + CI/CD gates
+- **📄 Full Details**: [ADR-062-no-debug-endpoints-in-production.md](./adrs/ADR-062-no-debug-endpoints-in-production.md)
+
+### ADR-063: Company Isolation Custom Claims
+- **Canonical**: Firebase Custom Claims (`companyId`, `globalRole`)
+- **Storage Rules**: `belongsToCompany(companyId)` function
+- **Pattern**: Tenant isolation via ID token claims
+- **📄 Full Details**: [ADR-063-company-isolation-custom-claims.md](./adrs/ADR-063-company-isolation-custom-claims.md)
 
 ---
 
@@ -368,6 +699,32 @@
 ### ADR-054: Enterprise Upload System Consolidation
 - **Canonical**: 5 canonical components
 - **Pipeline**: pending → upload → finalize
+
+---
+
+## 🔧 **BACKEND SYSTEMS**
+
+### ADR-059: Separate Audit Bootstrap from Projects List
+- **APIs**: `/api/audit/bootstrap` (navigation) vs `/api/projects/list` (grid)
+- **Pattern**: Single Responsibility Principle
+- **Benefit**: Independent caching, clear contracts, no scope creep
+- **📄 Full Details**: [ADR-059-separate-audit-bootstrap-from-projects-list.md](./adrs/ADR-059-separate-audit-bootstrap-from-projects-list.md)
+
+### ADR-060: Building Floorplan Enterprise Storage
+- **Canonical**: `DxfFirestoreService` for DXF scene storage
+- **Storage**: Firebase Storage (scenes) + Firestore (metadata)
+- **Pattern**: No 1MB Firestore document limit
+- **📄 Full Details**: [ADR-060-building-floorplan-enterprise-storage.md](./adrs/ADR-060-building-floorplan-enterprise-storage.md)
+
+---
+
+## 🏗️ **INFRASTRUCTURE**
+
+### ADR-061: Path Aliases Strategy
+- **Canonical Source**: `tsconfig.base.json` (root level)
+- **Prefixes**: `@/*`, `@/systems/*`, `@geo-alert/core`, `@core/*`
+- **Rule**: No ad-hoc aliases without ADR update
+- **📄 Full Details**: [ADR-061-path-aliases.md](./adrs/ADR-061-path-aliases.md)
 
 ---
 

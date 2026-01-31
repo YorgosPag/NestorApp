@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react';
 import type { Point2D } from '../../../rendering/types/Types';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
 
 const DEBUG_DYNAMIC_INPUT = false;
 
@@ -50,9 +52,8 @@ export function useDynamicInputRealtime({
       // DISTANCE/RADIUS CALCULATION - Show appropriate value when we have a first point
 
       if ((activeTool === 'line' || activeTool === 'circle' || activeTool === 'circle-diameter' || activeTool === 'polyline' || activeTool === 'measure-angle' || activeTool === 'polygon' || activeTool === 'measure-distance' || activeTool === 'measure-area') && firstClickPoint) {
-        const dx = mouseWorldPosition.x - firstClickPoint.x;
-        const dy = mouseWorldPosition.y - firstClickPoint.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        // 🏢 ADR-065: Use centralized distance calculation
+        const distance = calculateDistance(mouseWorldPosition, firstClickPoint);
 
         // For circle tools, use radius field instead of length field
         if (activeTool === 'circle' || activeTool === 'circle-diameter') {

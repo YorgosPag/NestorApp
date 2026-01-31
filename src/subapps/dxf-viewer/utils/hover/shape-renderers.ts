@@ -1,19 +1,12 @@
 /**
  * Shape Hover Renderers
- * Handles hover rendering for circles, rectangles, arcs, ellipses
+ *
+ * ⚠️ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ: Οι hover renderers για shapes είναι προσωρινά
+ * απενεργοποιημένοι για testing κίτρινων grips.
+ *
+ * Οι συναρτήσεις διατηρούνται ως stubs για backward compatibility.
  */
 
-import { HOVER_CONFIG } from './config';
-import { renderPolylineHover } from './polyline-renderer';
-import { renderGreenDots } from './render-utils';
-import { renderRadiusWithMeasurement } from './radius-utils';
-import type { Point2D } from '../../rendering/types/Types';
-import { drawVerticesPath } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { validateArcEntity, validateEllipseEntity } from '../../rendering/entities/shared/entity-validation-utils';
-import { renderMeasurementLabel } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { UI_COLORS } from '../../config/color-config';
-// 🏢 ADR-044: Centralized Line Widths
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import type { HoverRenderContext } from './types';
 import {
   isCircleEntity,
@@ -22,261 +15,43 @@ import {
   isArcEntity,
   isPolylineEntity,
   isLWPolylineEntity,
-  isEllipseEntity,
-  type CircleEntity,
-  type RectangleEntity,
-  type RectEntity,
-  type PolylineEntity,
-  type LWPolylineEntity,
-  type ArcEntity,
-  type EllipseEntity
+  isEllipseEntity
 } from '../../types/entities';
 
-export function renderCircleHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
-  // ✅ ENTERPRISE: Type guard + manual casting για compatibility
+/**
+ * Render circle hover - ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ
+ * @stub Επιστρέφει αμέσως χωρίς να κάνει τίποτα
+ */
+export function renderCircleHover({ entity }: HoverRenderContext): void {
   if (!isCircleEntity(entity)) return;
-
-  return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips
-
-  // ✅ ENTERPRISE: Safe type casting μετά το type guard check
-  const circleEntity = entity as CircleEntity;
-  const center = circleEntity.center;
-  const radius = circleEntity.radius;
-
-  if (!center || !radius) return;
-
-  const screenCenter = worldToScreen(center);
-  const screenRadius = radius; // Use world radius, will be transformed by setupStyle
-
-  // Determine line style based on hover/selection state
-  // If hovered (regardless of selection), use dashed
-  // If only selected (no hover), use solid
-  const isDashed = options.hovered ? true : false;
-
-  // Setup style exactly like preview but with white color
-  ctx.save();
-  ctx.setLineDash([]); // Reset line dash first
-  
-  if (isDashed) {
-    // Hover: white dashed (like preview but white instead of blue)
-    ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
-    ctx.setLineDash([5, 5]); // Same dash pattern as preview
-    ctx.strokeStyle = UI_COLORS.HOVERED_ENTITY;
-  } else {
-    // Selection: exactly like 2nd phase normal rendering (white, thin, solid)
-    ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044: Thin line like normal entity
-    ctx.setLineDash([]);
-    ctx.strokeStyle = UI_COLORS.HOVERED_ENTITY; // White like normal entity
-  }
-
-  // Draw circle perimeter (use screen coordinates)
-  const screenCenterTransformed = worldToScreen(center);
-  const radiusPoint = { x: center.x + radius, y: center.y };
-  const screenRadiusPoint = worldToScreen(radiusPoint);
-  const screenRadiusTransformed = Math.abs(screenRadiusPoint.x - screenCenterTransformed.x);
-  
-  // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
-  ctx.beginPath();
-  ctx.ellipse(screenCenterTransformed.x, screenCenterTransformed.y, screenRadiusTransformed, screenRadiusTransformed, 0, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Determine which mode we're in (copy from preview logic)
-  // ✅ ENTERPRISE: Type-safe check για custom properties με proper type guards
-  interface ExtendedCircleEntity extends CircleEntity {
-    diameterMode?: boolean;
-    twoPointDiameter?: boolean;
-  }
-
-  const extendedCircle = circleEntity as ExtendedCircleEntity;
-  const isDiameterMode = extendedCircle.diameterMode === true;
-  const isTwoPointDiameter = extendedCircle.twoPointDiameter === true;
-
-  if (isTwoPointDiameter || isDiameterMode) {
-    // Shared diameter line calculation for both modes
-    const leftPoint = { x: center.x - radius, y: center.y };
-    const rightPoint = { x: center.x + radius, y: center.y };
-    const screenLeft = worldToScreen(leftPoint);
-    const screenRight = worldToScreen(rightPoint);
-    
-    // Draw diameter line - dashed for hover, solid for selection
-    ctx.beginPath();
-    ctx.moveTo(screenLeft.x, screenLeft.y);
-    ctx.lineTo(screenRight.x, screenRight.y);
-    ctx.stroke();
-    
-    // Render diameter label based on mode
-    const diameter = radius * 2;
-    const labelX = screenCenterTransformed.x;
-    const labelY = screenCenterTransformed.y - 25;
-    
-    if (isTwoPointDiameter) {
-      const label = `Διάμετρος: ${diameter.toFixed(2)} (2P)`;
-      renderMeasurementLabel(ctx, labelX, labelY, label, UI_COLORS.MEASUREMENT_TEXT);
-    } else {
-      const label = `Διάμετρος: ${diameter.toFixed(2)}`;
-      renderMeasurementLabel(ctx, labelX, labelY, label, UI_COLORS.MEASUREMENT_TEXT);
-    }
-    
-  } else {
-    // Copy exact logic from preview - radius mode with gap for measurement
-    const radiusEndPoint = { x: center.x + radius, y: center.y };
-    const screenRadiusEnd = worldToScreen(radiusEndPoint);
-    
-    // Calculate gap for radius text (same as preview)
-    const textGap = Math.max(20, Math.min(60, 30));
-    const radiusLength = screenRadiusTransformed;
-    const gapStart = screenCenterTransformed.x + (radiusLength - textGap) / 2;
-    const gapEnd = screenCenterTransformed.x + (radiusLength + textGap) / 2;
-    
-    // Draw split radius line (with gap like preview)
-    ctx.beginPath();
-    ctx.moveTo(screenCenterTransformed.x, screenCenterTransformed.y);
-    ctx.lineTo(gapStart, screenCenterTransformed.y);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.moveTo(gapEnd, screenCenterTransformed.y);
-    ctx.lineTo(screenRadiusEnd.x, screenRadiusEnd.y);
-    ctx.stroke();
-    
-    // Render radius label in the gap
-    const labelX = (gapStart + gapEnd) / 2;
-    const labelY = screenCenterTransformed.y;
-    const label = `R: ${radius.toFixed(2)}`;
-    renderMeasurementLabel(ctx, labelX, labelY, label, UI_COLORS.MEASUREMENT_TEXT);
-  }
-
-  ctx.restore();
-
-  // Calculate and display area and circumference (same as preview)
-  const area = Math.PI * radius * radius;
-  const circumference = 2 * Math.PI * radius;
-  
-  // Display area and circumference (same positions as preview)
-  renderMeasurementLabel(ctx, screenCenterTransformed.x, screenCenterTransformed.y - screenRadiusTransformed / 2, `Εμβαδόν: ${area.toFixed(2)}`, UI_COLORS.MEASUREMENT_TEXT);
-  renderMeasurementLabel(ctx, screenCenterTransformed.x, screenCenterTransformed.y + screenRadiusTransformed / 2, `Περιφέρεια: ${circumference.toFixed(2)}`, UI_COLORS.MEASUREMENT_TEXT);
+  // ⚠️ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING
 }
 
-export function renderRectangleHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
-  // ✅ ENTERPRISE FIX: Type guard for rectangle entities
-  // Note: rectangles can be represented as polylines with 4 vertices
-  if (!isRectangleEntity(entity) && !isRectEntity(entity) && !isPolylineEntity(entity) && !isLWPolylineEntity(entity)) return;
-
-  return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips
-
-  // ✅ PERFORMANCE FIX: Render only dashed lines, skip heavy measurements
-  // ✅ ENTERPRISE: Type-safe access to vertices με proper casting
-  let vertices: Point2D[] = [];
-  if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
-    const polylineEntity = entity as PolylineEntity | LWPolylineEntity;
-    vertices = polylineEntity.vertices;
-  } else if (isRectangleEntity(entity) || isRectEntity(entity)) {
-    // ✅ ENTERPRISE FIX: Calculate vertices from corner1 and corner2 properties
-    const rect = entity as RectangleEntity | RectEntity;
-    if (rect.corner1 && rect.corner2) {
-      const c1 = rect.corner1;
-      const c2 = rect.corner2;
-      // ✅ ENTERPRISE FIX: Add null safety checks for Point2D properties
-      if (c1 && c2 && typeof c1.x === 'number' && typeof c1.y === 'number' && typeof c2.x === 'number' && typeof c2.y === 'number') {
-        const corner1: Point2D = { x: c1.x, y: c1.y };
-        const corner2: Point2D = { x: c2.x, y: c2.y };
-        vertices = [
-          corner1,
-          { x: corner2.x, y: corner1.y },
-          corner2,
-          { x: corner1.x, y: corner2.y }
-        ];
-      }
-    } else {
-      // ✅ ENTERPRISE: Fallback to x, y, width, height properties
-      vertices = [
-        { x: rect.x, y: rect.y },
-        { x: rect.x + rect.width, y: rect.y },
-        { x: rect.x + rect.width, y: rect.y + rect.height },
-        { x: rect.x, y: rect.y + rect.height }
-      ];
-    }
-  }
-
-  if (!vertices || vertices.length < 4) return;
-  
-  const screenVertices = vertices.map(v => worldToScreen(v));
-  
-  ctx.save();
-  ctx.setLineDash([8, 6]);
-  ctx.strokeStyle = UI_COLORS.WHITE;
-  ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
-  
-  // Draw simple dashed rectangle without measurements
-  drawVerticesPath(ctx, screenVertices, true);
-  ctx.stroke();
-  ctx.restore();
-  
-  // ✅ Skip heavy polyline hover with measurements during drag
-  // renderPolylineHover({ entity, ctx, worldToScreen }); // Temporarily disabled
+/**
+ * Render rectangle hover - ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ
+ * @stub Επιστρέφει αμέσως χωρίς να κάνει τίποτα
+ */
+export function renderRectangleHover({ entity }: HoverRenderContext): void {
+  if (!isRectangleEntity(entity) && !isRectEntity(entity) &&
+      !isPolylineEntity(entity) && !isLWPolylineEntity(entity)) return;
+  // ⚠️ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING
 }
 
-export function renderArcHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
-  // ✅ ENTERPRISE FIX: Use type guard to ensure entity is ArcEntity
+/**
+ * Render arc hover - ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ
+ * @stub Επιστρέφει αμέσως χωρίς να κάνει τίποτα
+ */
+export function renderArcHover({ entity }: HoverRenderContext): void {
   if (!isArcEntity(entity)) return;
-
-  return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips
-
-  /* // ✅ ENTERPRISE: Commented out unreachable code to avoid TypeScript errors
-  const arcData = validateArcEntity(entity);
-  if (!arcData) return;
-
-  // ✅ ENTERPRISE: Safe destructuring με guaranteed non-null μετά το check
-  const { center, radius, startAngle, endAngle } = arcData;
-  
-  // Draw normal arc
-  const screenCenter = worldToScreen(center);
-  const screenRadius = radius;
-  const startRad = (startAngle * Math.PI) / 180;
-  const endRad = (endAngle * Math.PI) / 180;
-  
-  ctx.beginPath();
-  ctx.arc(screenCenter.x, screenCenter.y, screenRadius, startRad, endRad, false);
-  ctx.stroke();
-  
-  // Simple arc measurement - radius and arc length
-  const arcLength = Math.abs(endRad - startRad) * radius;
-  const midRad = (startRad + endRad) / 2;
-  const textX = screenCenter.x + Math.cos(midRad) * (screenRadius + HOVER_CONFIG.offsets.textFromArc);
-  const textY = screenCenter.y + Math.sin(midRad) * (screenRadius + HOVER_CONFIG.offsets.textFromArc);
-  
-  ctx.save();
-  ctx.fillStyle = HOVER_CONFIG.colors.distance;
-  ctx.font = HOVER_CONFIG.fonts.distance;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`L=${arcLength.toFixed(2)}`, textX, textY);
-  ctx.restore();
-  */
+  // ⚠️ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING
 }
 
-export function renderEllipseHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
-  // ✅ ENTERPRISE FIX: Use type guard to ensure entity is EllipseEntity
+/**
+ * Render ellipse hover - ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ
+ * @stub Επιστρέφει αμέσως χωρίς να κάνει τίποτα
+ */
+export function renderEllipseHover({ entity }: HoverRenderContext): void {
   if (!isEllipseEntity(entity)) return;
-
-  return; // ⚠️ ΠΡΟΣΩΡΙΝΑ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING κίτρινων grips
-
-  /* // ✅ ENTERPRISE: Commented out unreachable code to avoid TypeScript errors
-  // Simple ellipse - just draw the shape, no complex measurements for now
-  const ellipseEntity = entity as EllipseEntity;
-  const { center, majorAxis, minorAxis, rotation = 0 } = ellipseEntity;
-
-  const screenCenter = worldToScreen(center);
-
-  ctx.save();
-  ctx.translate(screenCenter.x, screenCenter.y);
-  ctx.rotate((rotation * Math.PI) / 180);
-
-  ctx.beginPath();
-  ctx.ellipse(0, 0, majorAxis, minorAxis, 0, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.restore();
-  */
+  // ⚠️ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING
 }
 

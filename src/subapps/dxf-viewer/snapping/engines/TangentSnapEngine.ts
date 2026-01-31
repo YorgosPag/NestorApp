@@ -8,6 +8,9 @@ import { ExtendedSnapType } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { findCircleBasedSnapCandidates } from './shared/snap-engine-utils';
+// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-066: Centralized Angle Calculation
+import { calculateDistance, calculateAngle } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 export class TangentSnapEngine extends BaseSnapEngine {
 
@@ -36,9 +39,8 @@ export class TangentSnapEngine extends BaseSnapEngine {
   }
 
   private getTangentPoints(circleCenter: Point2D, circleRadius: number, externalPoint: Point2D): Point2D[] {
-    const dx = externalPoint.x - circleCenter.x;
-    const dy = externalPoint.y - circleCenter.y;
-    const distanceToCenter = Math.sqrt(dx * dx + dy * dy);
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distanceToCenter = calculateDistance(externalPoint, circleCenter);
     
     // If point is inside or on the circle, no external tangents exist
     if (distanceToCenter <= circleRadius) {
@@ -47,7 +49,8 @@ export class TangentSnapEngine extends BaseSnapEngine {
     
     // Calculate tangent points using geometry
     const tangentDistance = Math.sqrt(distanceToCenter * distanceToCenter - circleRadius * circleRadius);
-    const angle = Math.atan2(dy, dx);
+    // 🏢 ADR-066: Use centralized angle calculation (fixes undefined dx/dy bug)
+    const angle = calculateAngle(circleCenter, externalPoint);
     const tangentAngle = Math.asin(circleRadius / distanceToCenter);
     
     // Two tangent points

@@ -1405,7 +1405,12 @@ export const DXF_DRAWING_TOOL_LABELS = {
   CIRCLE_BEST_FIT: 'tools.circleBestFit',
   POLYLINE: 'tools.polyline',
   POLYGON: 'tools.polygon',
-  LAYERING: 'tools.layering'
+  LAYERING: 'tools.layering',
+  // 🏢 ENTERPRISE (2026-01-31): Arc drawing tool variations - ADR-059
+  ARC: 'tools.arc',
+  ARC_3P: 'tools.arc3p',                       // 3-Point Arc (Start → Point on Arc → End)
+  ARC_CENTER_START_END: 'tools.arcCenterStartEnd', // Center → Start → End
+  ARC_START_CENTER_END: 'tools.arcStartCenterEnd'  // Start → Center → End
 } as const;
 
 /**

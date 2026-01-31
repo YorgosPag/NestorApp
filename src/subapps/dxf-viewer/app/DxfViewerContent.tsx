@@ -332,9 +332,16 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       // 🔧 FIX (2026-01-31): Use updatedScene from payload directly (avoids stale closure)
       if (payload.updatedScene) {
         const scene = payload.updatedScene as SceneModel;
+        // 🔍 DEBUG: Check if arc entities have counterclockwise
+        const arcEntities = scene.entities?.filter(e => e.type === 'arc') || [];
         console.log('🔄 [DxfViewerContent] Syncing updatedScene to currentScene', {
           levelId: payload.levelId,
-          entityCount: scene.entities?.length || 0
+          entityCount: scene.entities?.length || 0,
+          arcCount: arcEntities.length,
+          arcsWithCounterclockwise: arcEntities.map(e => ({
+            id: e.id,
+            counterclockwise: (e as { counterclockwise?: boolean }).counterclockwise
+          }))
         });
         // Sync the scene that was passed in the event (contains the new entity!)
         sceneChange(scene);

@@ -265,6 +265,9 @@ export const RENDER_LINE_WIDTHS = {
   /** Drawing preview lines (during tool operation) */
   PREVIEW: 1,
 
+  /** 🏢 ENTERPRISE (2026-01-31): Construction lines for arc preview (dashed rubber band) */
+  PREVIEW_CONSTRUCTION: 1,
+
   /** Ruler tick marks */
   RULER_TICK: 1,
 

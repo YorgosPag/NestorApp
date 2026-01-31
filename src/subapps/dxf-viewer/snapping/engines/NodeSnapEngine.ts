@@ -10,7 +10,7 @@ import { BaseSnapEngine } from '../shared/BaseSnapEngine';
 import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { calculateDistance, pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { processRectangleSnapping } from './shared/snap-engine-utils';
 
 export class NodeSnapEngine extends BaseSnapEngine {
@@ -98,14 +98,9 @@ export class NodeSnapEngine extends BaseSnapEngine {
         const startAngle = entity.startAngle as number;
         const endAngle = entity.endAngle as number;
 
-        const startPoint = {
-          x: center.x + radius * Math.cos(startAngle),
-          y: center.y + radius * Math.sin(startAngle)
-        };
-        const endPoint = {
-          x: center.x + radius * Math.cos(endAngle),
-          y: center.y + radius * Math.sin(endAngle)
-        };
+        // 🏢 ADR-074: Use centralized pointOnCircle
+        const startPoint = pointOnCircle(center, radius, startAngle);
+        const endPoint = pointOnCircle(center, radius, endAngle);
         nodes.push({point: startPoint, type: 'Arc Start'});
         nodes.push({point: endPoint, type: 'Arc End'});
       }

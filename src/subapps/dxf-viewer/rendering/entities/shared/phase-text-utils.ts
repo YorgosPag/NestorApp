@@ -6,6 +6,8 @@
 import type { Point2D } from '../../types/Types';
 import type { EntityModel, RenderOptions } from '../../types/Types';
 import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle';
+// 🏢 ADR-073: Centralized Midpoint Calculation
+import { calculateMidpoint } from './geometry-utils';
 
 /**
  * Render distance text with phase-aware positioning
@@ -25,17 +27,16 @@ export function renderDistanceTextPhaseAware(
   const distance = calculateDistance(startPoint, endPoint);
   const label = getDimensionLabel(distance);
   
+  // 🏢 ADR-073: Use centralized midpoint calculation
+  const mid = calculateMidpoint(screenStart, screenEnd);
+
   if (options.preview) {
     // Inline positioning for preview - at the midpoint
-    const midX = (screenStart.x + screenEnd.x) / 2;
-    const midY = (screenStart.y + screenEnd.y) / 2;
     // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledTextWithOverride(ctx, label, midX, midY);
+    renderStyledTextWithOverride(ctx, label, mid.x, mid.y);
   } else {
     // Offset positioning for measurements - above the line
-    const midX = (screenStart.x + screenEnd.x) / 2;
-    const midY = (screenStart.y + screenEnd.y) / 2 - 20; // Offset above
     // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledTextWithOverride(ctx, label, midX, midY);
+    renderStyledTextWithOverride(ctx, label, mid.x, mid.y - 20);
   }
 }

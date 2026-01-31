@@ -17,9 +17,18 @@ import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-048: Centralized Rendering Geometry (2027-01-27)
 import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
-import { renderSquareGrip } from './shared/geometry-rendering-utils';
+// 🏢 ADR-075: Centralized Grip Size Multipliers
+import { GRIP_SIZE_MULTIPLIERS } from '../grips/constants';
+// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-070: Centralized Vector Magnitude
+import { renderSquareGrip, calculateDistance, vectorMagnitude } from './shared/geometry-rendering-utils';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+// 🏢 ADR-073: Centralized Bisector Angle, Midpoint
+import { radToDeg, bisectorAngle, calculateMidpoint } from './shared/geometry-utils';
 import { renderStyledTextWithOverride, getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
+// 🏢 ADR-058: Centralized Canvas Primitives
+import { addArcPath, addCirclePath } from '../primitives/canvasPaths';
 
 // Interfaces moved to PhaseManager to avoid circular dependency
 
@@ -188,11 +197,11 @@ export abstract class BaseEntityRenderer {
   };
 
 
+  // 🏢 ADR-075: Use centralized grip size multipliers
   protected drawGrip(position: Point2D, state: 'cold' | 'warm' | 'hot', gripType?: string): void {
     const base = this.gripSettings?.gripSize || 10;
-    const size = state === 'hot'  ? Math.round(base * 1.5)
-               : state === 'warm' ? Math.round(base * 1.25)
-                                  : Math.round(base);
+    const multiplier = GRIP_SIZE_MULTIPLIERS[state.toUpperCase() as keyof typeof GRIP_SIZE_MULTIPLIERS];
+    const size = Math.round(base * multiplier);
 
     const colors = this.gripSettings?.colors ?? {
       cold: CAD_UI_COLORS.grips.cold,  // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
@@ -223,10 +232,9 @@ export abstract class BaseEntityRenderer {
     
     for (const grip of grips) {
       const screenGrip = this.worldToScreen(grip.position);
-      const dx = screenPoint.x - screenGrip.x;
-      const dy = screenPoint.y - screenGrip.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
+      // 🏢 ADR-065: Use centralized distance calculation
+      const distance = calculateDistance(screenPoint, screenGrip);
+
       if (distance <= tolerance) {
         return grip;
       }
@@ -336,7 +344,8 @@ export abstract class BaseEntityRenderer {
     // Calculate line direction
     const dx = screenEnd.x - screenStart.x;
     const dy = screenEnd.y - screenStart.y;
-    const length = Math.sqrt(dx * dx + dy * dy);
+    // 🏢 ADR-065: Use centralized distance calculation
+    const length = calculateDistance(screenStart, screenEnd);
     
     if (length === 0) {
       return { x: screenStart.x, y: screenStart.y };
@@ -348,15 +357,14 @@ export abstract class BaseEntityRenderer {
     const perpX = -unitY; // Perpendicular to the left
     const perpY = unitX;
     
-    // Midpoint of the line
-    const midX = (screenStart.x + screenEnd.x) / 2;
-    const midY = (screenStart.y + screenEnd.y) / 2;
-    
+    // 🏢 ADR-073: Use centralized midpoint calculation
+    const mid = calculateMidpoint(screenStart, screenEnd);
+
     // Offset the text position INSIDE the line (perpendicular offset)
     // Positive offset moves text to the "left" side of the line direction
     return {
-      x: midX + perpX * offsetDistance,
-      y: midY + perpY * offsetDistance
+      x: mid.x + perpX * offsetDistance,
+      y: mid.y + perpY * offsetDistance
     };
   }
 
@@ -365,11 +373,9 @@ export abstract class BaseEntityRenderer {
    * Σχεδιάζει το κείμενο απόστασης ΣΤΗΝ ΊΔΙΑ ΕΥΘΕΊΑ της γραμμής (όχι έκκεντρα)
    */
   protected renderInlineDistanceText(worldStart: Point2D, worldEnd: Point2D, screenStart: Point2D, screenEnd: Point2D): void {
-    // Calculate midpoint (στο κέντρο της γραμμής - inline)
-    const midX = (screenStart.x + screenEnd.x) / 2;
-    const midY = (screenStart.y + screenEnd.y) / 2;
-    const textPosition = { x: midX, y: midY };
-    
+    // 🏢 ADR-073: Use centralized midpoint calculation
+    const textPosition = calculateMidpoint(screenStart, screenEnd);
+
     // Use common distance text rendering
     this.renderDistanceTextCommon(worldStart, worldEnd, screenStart, screenEnd, textPosition);
   }
@@ -495,9 +501,9 @@ export abstract class BaseEntityRenderer {
     const screenRadius = radius * this.transform.scale;
     
     // Για κύκλα/τόξα χωρίς γωνίες, χρησιμοποιούμε απλή λογική
-    // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
+    // 🏢 ADR-058: Use centralized canvas primitives
     this.ctx.beginPath();
-    this.ctx.ellipse(screenCenter.x, screenCenter.y, screenRadius, screenRadius, 0, startAngle, endAngle, false);
+    addArcPath(this.ctx, screenCenter, screenRadius, startAngle, endAngle);
     this.ctx.stroke();
     
     this.ctx.restore();
@@ -593,8 +599,9 @@ export abstract class BaseEntityRenderer {
     };
     
     // Normalize vectors
-    const prevLength = Math.sqrt(toPrev.x * toPrev.x + toPrev.y * toPrev.y);
-    const nextLength = Math.sqrt(toNext.x * toNext.x + toNext.y * toNext.y);
+    // 🏢 ADR-070: Use centralized vector magnitude
+    const prevLength = vectorMagnitude(toPrev);
+    const nextLength = vectorMagnitude(toNext);
     
     if (prevLength === 0 || nextLength === 0) return;
     
@@ -607,18 +614,19 @@ export abstract class BaseEntityRenderer {
     let angleDiff = angle2 - angle1;
     if (angleDiff < 0) angleDiff += 2 * Math.PI;
     if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
-    const degrees = (angleDiff * 180) / Math.PI;
+    // 🏢 ADR-067: Use centralized angle conversion
+    const degrees = radToDeg(angleDiff);
     
     // 🔺 ΕΦΑΡΜΟΓΗ ΑΚΡΙΒΟΥΣ ΛΟΓΙΚΗΣ ΑΠΟ TODO.MD
     this.drawInternalArc(currentVertex, prevUnit, nextUnit, arcRadius);
     
-    // Calculate label position using bisector
-    const bisectorAngle = (angle1 + angle2) / 2;
+    // 🏢 ADR-073: Use centralized bisector angle calculation
+    const bisectorAngleValue = bisectorAngle(angle1, angle2);
     const rTextPx = Math.max(arcRadius * 0.66, 6);
     const rWorld = rTextPx / this.transform.scale;
     
-    const worldLabelX = currentVertex.x + Math.cos(bisectorAngle) * rWorld;
-    const worldLabelY = currentVertex.y + Math.sin(bisectorAngle) * rWorld;
+    const worldLabelX = currentVertex.x + Math.cos(bisectorAngleValue) * rWorld;
+    const worldLabelY = currentVertex.y + Math.sin(bisectorAngleValue) * rWorld;
     const screenLabel = this.worldToScreen({ x: worldLabelX, y: worldLabelY });
     
     // Draw label
@@ -647,7 +655,8 @@ export abstract class BaseEntityRenderer {
     // Υπολογισμός centerUnit (διάνυσμα προς το εσωτερικό της γωνίας)
     const bisectorX = (prevUnit.x + nextUnit.x) / 2;
     const bisectorY = (prevUnit.y + nextUnit.y) / 2;
-    const bisectorLength = Math.sqrt(bisectorX * bisectorX + bisectorY * bisectorY);
+    // 🏢 ADR-070: Use centralized vector magnitude
+    const bisectorLength = vectorMagnitude({ x: bisectorX, y: bisectorY });
     
     let centerUnit = { x: 0, y: 0 };
     if (bisectorLength > 0) {
@@ -660,7 +669,8 @@ export abstract class BaseEntityRenderer {
     const c = { x: centerUnit.x, y: -centerUnit.y };
     
     // Normalize center προς τα μέσα
-    const centerLength = Math.sqrt(c.x * c.x + c.y * c.y) || 1;
+    // 🏢 ADR-070: Use centralized vector magnitude
+    const centerLength = vectorMagnitude(c) || 1;
     const cNorm = { x: c.x / centerLength, y: c.y / centerLength };
     
     const a1 = Math.atan2(u1.y, u1.x);
@@ -680,8 +690,8 @@ export abstract class BaseEntityRenderer {
     this.ctx.save();
     this.applyArcStyle();
     this.ctx.beginPath();
-    // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
-    this.ctx.ellipse(v.x, v.y, rPx, rPx, 0, a1, a2, useCCW);
+    // 🏢 ADR-058: Use centralized canvas primitives
+    addArcPath(this.ctx, v, rPx, a1, a2, useCCW);
     this.ctx.stroke();
     this.ctx.restore();
   }

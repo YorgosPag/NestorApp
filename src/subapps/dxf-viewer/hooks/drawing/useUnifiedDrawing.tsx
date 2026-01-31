@@ -43,7 +43,7 @@ import { toolStateStore } from '../../stores/ToolStateStore';
 import { EventBus } from '../../systems/events';
 // NOTE: ADR-055 Event Bus pattern for entity creation temporarily disabled - needs debugging
 // import { emitEntityCreateRequest } from '../../systems/entity-creation';
-import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity, SceneModel } from '../../types/scene';
+import type { AnySceneEntity, LineEntity, CircleEntity, PolylineEntity, RectangleEntity, AngleMeasurementEntity, ArcEntity, SceneModel } from '../../types/scene';
 // ✅ ENTERPRISE FIX: Import centralized PreviewGripPoint from entities
 import type { PreviewGripPoint } from '../../types/entities';
 
@@ -83,16 +83,47 @@ export interface ExtendedLineEntity extends LineEntity {
   showEdgeDistances?: boolean;
 }
 
+// 🏢 ENTERPRISE (2026-01-31): Extended Arc Entity for preview with construction lines
+// Shows both the arc shape AND the rubber band lines connecting clicked points
+export interface ExtendedArcEntity extends ArcEntity {
+  // Construction vertices: all clicked points + cursor position
+  // Used to draw rubber band lines during arc drawing
+  constructionVertices?: Point2D[];
+  showConstructionLines?: boolean;
+  showEdgeDistances?: boolean;
+  // 🏢 ENTERPRISE: Arc direction flag for Canvas 2D rendering
+  // true = draw counterclockwise (anticlockwise), false = draw clockwise
+  counterclockwise?: boolean;
+  // 🏢 ENTERPRISE: Construction line drawing mode
+  // 'polyline': Connect points in sequence (arc-3p: start → mid → end)
+  // 'radial': Draw radii from center (arc-cse/arc-sce: center → start, center → end)
+  constructionLineMode?: 'polyline' | 'radial';
+}
+
 export type ExtendedSceneEntity =
   | ExtendedPolylineEntity
   | ExtendedCircleEntity
   | ExtendedLineEntity
+  | ExtendedArcEntity
   | PreviewPoint
   | AnySceneEntity;
 import { useLevels } from '../../systems/levels';
 // Snap functionality removed - use ProSnapEngine directly if needed
 import { useSnapContext } from '../../snapping/context/SnapContext';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ENTERPRISE (2026-01-31): Geometry utilities - unified import from barrel export
+// calculateDistance: from geometry-rendering-utils.ts
+// arcFrom3Points, arcFromCenterStartEnd, arcFromStartCenterEnd: from geometry-utils.ts (ADR-059)
+// radToDeg: from geometry-utils.ts (ADR-067)
+// normalizeAngleDeg: from geometry-utils.ts (ADR-068)
+import {
+  calculateDistance,
+  arcFrom3Points,
+  arcFromCenterStartEnd,
+  arcFromStartCenterEnd,
+  radToDeg,
+  normalizeAngleDeg,
+  dotProduct
+} from '../../rendering/entities/shared';
 import { usePreviewMode } from '../usePreviewMode';
 // 🗑️ REMOVED: useEntityStyles from ConfigurationProvider
 // import { useEntityStyles } from '../useEntityStyles';
@@ -104,7 +135,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // Note: applyCompletionStyles is called internally by completeEntity (ADR-056)
 import { completeEntity } from './completeEntity';
 
-export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-distance-continuous' | 'measure-area' | 'measure-angle';
+// 🏢 ENTERPRISE (2026-01-31): Added arc tools - ADR-059
+export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-distance-continuous' | 'measure-area' | 'measure-angle' | 'arc-3p' | 'arc-cse' | 'arc-sce';
 
 export interface DrawingState {
   currentTool: DrawingTool;
@@ -318,9 +350,8 @@ export function useUnifiedDrawing() {
             x: (p1.x + p2.x) / 2,
             y: (p1.y + p2.y) / 2
           };
-          const radius = Math.sqrt(
-            Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2)
-          ) / 2; // Η διάμετρος διά 2
+          // 🏢 ADR-065: Use centralized distance calculation
+          const radius = calculateDistance(p1, p2) / 2; // Η διάμετρος διά 2
           return {
             id,
             type: 'circle',
@@ -379,15 +410,16 @@ export function useUnifiedDrawing() {
             // Calculate vectors
             const vector1 = { x: point1.x - vertex.x, y: point1.y - vertex.y };
             const vector2 = { x: point2.x - vertex.x, y: point2.y - vertex.y };
-            
+
             // Calculate angle in radians
-            const dot = vector1.x * vector2.x + vector1.y * vector2.y;
+            // 🏢 ADR-072: Use centralized dot product
+            const dot = dotProduct(vector1, vector2);
             const det = vector1.x * vector2.y - vector1.y * vector2.x;
             const angleRad = Math.atan2(det, dot);
-            
-            // Convert to degrees and make positive
-            let angleDeg = (angleRad * 180) / Math.PI;
-            if (angleDeg < 0) angleDeg += 360;
+
+            // 🏢 ADR-067: Use centralized angle conversion
+            // 🏢 ADR-068: Use centralized angle normalization
+            const angleDeg = normalizeAngleDeg(radToDeg(angleRad));
             
             return {
               id,
@@ -426,6 +458,78 @@ export function useUnifiedDrawing() {
             layer: '0',
             measurement: true, // Mark as measurement entity
           } as PolylineEntity;
+        }
+        break;
+
+      // 🏢 ENTERPRISE (2026-01-31): Arc drawing tools - ADR-059
+      // AutoCAD pattern: Different arc creation methods
+      case 'arc-3p':
+        // 3-Point Arc: Start → Point on Arc → End
+        if (points.length >= 3) {
+          const [start, mid, end] = points;
+          const arcResult = arcFrom3Points(start, mid, end);
+          if (arcResult) {
+            return {
+              id,
+              type: 'arc',
+              center: arcResult.center,
+              radius: arcResult.radius,
+              startAngle: arcResult.startAngle,
+              endAngle: arcResult.endAngle,
+              visible: true,
+              layer: '0',
+            } as ArcEntity;
+          }
+        }
+        break;
+
+      case 'arc-cse':
+        // Center → Start → End Arc
+        if (points.length >= 3) {
+          const [center, start, end] = points;
+          const arcResult = arcFromCenterStartEnd(center, start, end);
+          return {
+            id,
+            type: 'arc',
+            center: arcResult.center,
+            radius: arcResult.radius,
+            startAngle: arcResult.startAngle,
+            endAngle: arcResult.endAngle,
+            visible: true,
+            layer: '0',
+            // 🏢 ENTERPRISE: Pass counterclockwise flag for correct arc direction
+            counterclockwise: arcResult.counterclockwise,
+          } as ArcEntity;
+        }
+        break;
+
+      case 'arc-sce':
+        // Start → Center → End Arc
+        if (points.length >= 3) {
+          const [start, center, end] = points;
+          const arcResult = arcFromStartCenterEnd(start, center, end);
+          // 🔍 DEBUG: Log arc creation
+          console.log('🏗️ createEntityFromTool arc-sce:', {
+            startAngle: arcResult.startAngle,
+            endAngle: arcResult.endAngle,
+            counterclockwise: arcResult.counterclockwise,
+            points: { start, center, end }
+          });
+          const arcEntity = {
+            id,
+            type: 'arc' as const,
+            center: arcResult.center,
+            radius: arcResult.radius,
+            startAngle: arcResult.startAngle,
+            endAngle: arcResult.endAngle,
+            visible: true,
+            layer: '0',
+            // 🏢 ENTERPRISE: Pass counterclockwise flag for correct arc direction
+            counterclockwise: arcResult.counterclockwise,
+          };
+          // 🔍 DEBUG: Log the FULL entity object before returning
+          console.log('🏗️ createEntityFromTool arc-sce FULL ENTITY:', JSON.stringify(arcEntity, null, 2));
+          return arcEntity as ArcEntity;
         }
         break;
     }
@@ -473,7 +577,11 @@ export function useUnifiedDrawing() {
         case 'circle-2p-diameter':
           return points.length >= 2;
         case 'measure-angle':
-          return points.length >= 3; // Complete after exactly 3 points for angle measurement
+        // 🏢 ENTERPRISE (2026-01-31): Arc tools require 3 points - ADR-059
+        case 'arc-3p':
+        case 'arc-cse':
+        case 'arc-sce':
+          return points.length >= 3;
         case 'measure-distance-continuous':
         case 'polyline':
         case 'polygon':
@@ -540,7 +648,8 @@ export function useUnifiedDrawing() {
       // Pattern: AutoCAD/DXF Standard - Layer "0" is always present for entities without explicit layer
       // If no currentLevelId, use default level "0" for ALL entities (measurements AND drawing tools)
       const isMeasurementTool = currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'measure-angle' || currentTool === 'measure-area';
-      const isDrawingTool = currentTool === 'line' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'polyline' || currentTool === 'polygon';
+      // 🏢 ENTERPRISE (2026-01-31): Added arc tools - ADR-059
+      const isDrawingTool = currentTool === 'line' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'polyline' || currentTool === 'polygon' || currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce';
       const effectiveLevelId = currentLevelId || ((isMeasurementTool || isDrawingTool) ? '0' : null);
 
       if (newEntity && effectiveLevelId) {
@@ -548,7 +657,10 @@ export function useUnifiedDrawing() {
         console.log('✅ [addPoint] Calling completeEntity', {
           entityType: newEntity.type,
           entityId: newEntity.id,
-          effectiveLevelId
+          effectiveLevelId,
+          // 🔍 DEBUG: Check counterclockwise BEFORE completeEntity
+          counterclockwiseBeforeComplete: newEntity.type === 'arc' ? (newEntity as { counterclockwise?: boolean }).counterclockwise : 'N/A',
+          fullEntityJSON: JSON.stringify(newEntity)
         });
 
         // 🏢 ENTERPRISE (2026-01-27): CRITICAL - Clear preview FIRST before any state updates!
@@ -646,6 +758,46 @@ export function useUnifiedDrawing() {
         }
       }
 
+      // 🏢 ENTERPRISE (2026-01-31): Arc tools partial preview - ADR-059
+      // Arc tools need 3 points, so show intermediate state with 1-2 points
+      if ((currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce') && newTempPoints.length >= 1) {
+        if (newTempPoints.length === 1) {
+          // After first click, show a dot at the first point
+          partialPreview = {
+            id: 'preview_partial',
+            type: 'point',
+            position: newTempPoints[0],
+            size: 4,
+            visible: true,
+            layer: '0',
+            preview: true,
+            showPreviewGrips: true,
+          } as PreviewPoint;
+        } else if (newTempPoints.length === 2) {
+          // After second click, show a line connecting the two points
+          const basePartialPreview: LineEntity = {
+            id: 'preview_partial',
+            type: 'line',
+            start: newTempPoints[0],
+            end: newTempPoints[1],
+            visible: true,
+            layer: '0',
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+
+          const extendedPartialPreview: ExtendedLineEntity = {
+            ...basePartialPreview,
+            preview: true,
+            showEdgeDistances: true,
+            showPreviewGrips: true,
+          };
+          partialPreview = extendedPartialPreview;
+        }
+      }
+
       // 🏢 ENTERPRISE: Update local state for preview entity only
       setLocalState(prev => ({
         ...prev,
@@ -678,7 +830,8 @@ export function useUnifiedDrawing() {
       // Show a small preview indicator at the mouse position
       let previewEntity: ExtendedSceneEntity | null = null;
 
-      if (currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-area' || currentTool === 'measure-angle') {
+      // 🏢 ENTERPRISE (2026-01-31): Added arc tools - ADR-059
+      if (currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-area' || currentTool === 'measure-angle' || currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce') {
         // For shapes that need two points, show a small dot at the start point
         const isMeasurementTool = currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'measure-area' || currentTool === 'measure-angle';
 
@@ -704,10 +857,152 @@ export function useUnifiedDrawing() {
 
     // For multi-point preview (showing the shape being drawn)
     const worldPoints = [...tempPoints, snappedPoint];
-    const previewEntity = createEntityFromTool(currentTool, worldPoints);
+
+    // 🏢 ENTERPRISE (2026-01-31): Arc tools ALWAYS show rubber band polyline during drawing
+    // Arc tools need 3 clicks to complete, but we want to show dynamic polyline (rubber band)
+    // connecting all clicked points + cursor position until the drawing is complete.
+    // The arc entity is only created when the user clicks the 3rd point (in addPoint).
+    let previewEntity: ExtendedSceneEntity | null = null;
+
+    if (currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce') {
+      // 🏢 ENTERPRISE (2026-01-31): Arc preview with construction lines
+      // Shows BOTH the rubber band lines AND the arc shape preview
+
+      if (tempPoints.length === 1) {
+        // 1 click + cursor = rubber band line only (can't calculate arc yet)
+        const basePreview: PolylineEntity = {
+          id: 'preview_arc_rubberband',
+          type: 'polyline',
+          vertices: worldPoints,
+          closed: false,
+          visible: true,
+          layer: '0',
+          color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+          lineweight: 1,
+          opacity: 1.0,
+          lineType: 'solid' as const
+        };
+        previewEntity = {
+          ...basePreview,
+          preview: true,
+          showEdgeDistances: true,
+          showPreviewGrips: true,
+        } as ExtendedPolylineEntity;
+
+      } else if (tempPoints.length >= 2) {
+        // 2+ clicks + cursor = arc preview WITH construction lines
+        // worldPoints has 3 points: [point1, point2, cursor]
+        let arcResult: { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise?: boolean } | null = null;
+
+        // Calculate arc based on tool type
+        if (currentTool === 'arc-3p') {
+          // 3-Point Arc: Start → Point on Arc → End
+          arcResult = arcFrom3Points(worldPoints[0], worldPoints[1], worldPoints[2]);
+        } else if (currentTool === 'arc-cse') {
+          // Center → Start → End Arc
+          arcResult = arcFromCenterStartEnd(worldPoints[0], worldPoints[1], worldPoints[2]);
+        } else if (currentTool === 'arc-sce') {
+          // Start → Center → End Arc
+          arcResult = arcFromStartCenterEnd(worldPoints[0], worldPoints[1], worldPoints[2]);
+        }
+
+        if (arcResult) {
+          // 🏢 ENTERPRISE: Calculate construction vertices based on tool type
+          // For arc-cse/arc-sce: project cursor to circumference (same radius as start)
+          // For arc-3p: all points are on the circumference by definition
+          let constructionVerts: Point2D[];
+
+          if (currentTool === 'arc-cse') {
+            // arc-cse: [Center, Start, End] - End must be projected to circumference
+            const center = worldPoints[0];
+            const start = worldPoints[1];
+            const cursor = worldPoints[2];
+            // Calculate direction from center to cursor
+            const dx = cursor.x - center.x;
+            const dy = cursor.y - center.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            // Project cursor to circumference (using same radius as start)
+            const projectedEnd = dist > 0.001 ? {
+              x: center.x + (dx / dist) * arcResult.radius,
+              y: center.y + (dy / dist) * arcResult.radius
+            } : start; // Fallback if cursor is on center
+            constructionVerts = [center, start, projectedEnd];
+          } else if (currentTool === 'arc-sce') {
+            // arc-sce: [Start, Center, End] - End must be projected to circumference
+            const start = worldPoints[0];
+            const center = worldPoints[1];
+            const cursor = worldPoints[2];
+            // Calculate direction from center to cursor
+            const dx = cursor.x - center.x;
+            const dy = cursor.y - center.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            // Project cursor to circumference
+            const projectedEnd = dist > 0.001 ? {
+              x: center.x + (dx / dist) * arcResult.radius,
+              y: center.y + (dy / dist) * arcResult.radius
+            } : start;
+            constructionVerts = [start, center, projectedEnd];
+          } else {
+            // arc-3p: all points define the circumference - use as-is
+            constructionVerts = worldPoints;
+          }
+
+          // Create arc entity with construction vertices for rubber band lines
+          const arcPreview: ExtendedArcEntity = {
+            id: 'preview_arc',
+            type: 'arc',
+            center: arcResult.center,
+            radius: arcResult.radius,
+            startAngle: arcResult.startAngle,
+            endAngle: arcResult.endAngle,
+            visible: true,
+            layer: '0',
+            preview: true,
+            showPreviewGrips: true,
+            // 🏢 ENTERPRISE: Construction vertices for rubber band lines
+            // For arc-cse/arc-sce: uses projected points on circumference
+            constructionVertices: constructionVerts,
+            showConstructionLines: true,
+            showEdgeDistances: true,
+            // 🏢 ENTERPRISE: Arc direction flag for correct rendering
+            // Ensures arc passes through all 3 points (not the "mirror" arc)
+            counterclockwise: arcResult.counterclockwise,
+            // 🏢 ENTERPRISE: Construction line mode
+            // arc-3p: polyline (start → mid → end)
+            // arc-cse/arc-sce: radial (center → start, center → end)
+            constructionLineMode: currentTool === 'arc-3p' ? 'polyline' : 'radial',
+          };
+          previewEntity = arcPreview;
+        } else {
+          // Arc calculation failed (e.g., collinear points) - show polyline only
+          const basePreview: PolylineEntity = {
+            id: 'preview_arc_rubberband',
+            type: 'polyline',
+            vertices: worldPoints,
+            closed: false,
+            visible: true,
+            layer: '0',
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+          previewEntity = {
+            ...basePreview,
+            preview: true,
+            showEdgeDistances: true,
+            showPreviewGrips: true,
+          } as ExtendedPolylineEntity;
+        }
+      }
+    } else {
+      // For all other tools: use createEntityFromTool for proper shape preview
+      previewEntity = createEntityFromTool(currentTool, worldPoints);
+    }
 
     // Mark preview entity for special preview rendering with distance labels
-    if (previewEntity && (currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'measure-area' || currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter')) {
+    // 🏢 ENTERPRISE (2026-01-31): Added arc tools - ADR-059
+    if (previewEntity && (currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'measure-area' || currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce')) {
 
       // Handle different entity types appropriately
       // 🏢 ENTERPRISE: Cast to Record<string, unknown> for applyPreviewSettings compatibility
@@ -765,6 +1060,15 @@ export function useUnifiedDrawing() {
         extendedAngle.preview = true;
         extendedAngle.showPreviewGrips = true;
         applyPreviewSettings(extendedAngle as unknown as Record<string, unknown>);
+      } else if (previewEntity.type === 'arc') {
+        // 🏢 ENTERPRISE (2026-01-31): Arc preview support - ADR-059
+        const extendedArc = previewEntity as unknown as {
+          preview?: boolean;
+          showPreviewGrips?: boolean;
+        } & typeof previewEntity;
+        extendedArc.preview = true;
+        extendedArc.showPreviewGrips = true;
+        applyPreviewSettings(extendedArc as unknown as Record<string, unknown>);
       }
 
       if (DEBUG_UNIFIED_DRAWING) {
@@ -927,10 +1231,8 @@ export function useUnifiedDrawing() {
         const lastPoint = cleanedPoints[cleanedPoints.length - 1];
         const secondLastPoint = cleanedPoints[cleanedPoints.length - 2];
 
-        const distance = Math.sqrt(
-          Math.pow(lastPoint.x - secondLastPoint.x, 2) +
-          Math.pow(lastPoint.y - secondLastPoint.y, 2)
-        );
+        // 🏢 ADR-065: Use centralized distance calculation
+        const distance = calculateDistance(lastPoint, secondLastPoint);
 
         // If points are closer than 1 pixel (likely duplicate from double-click)
         if (distance < 1.0) {

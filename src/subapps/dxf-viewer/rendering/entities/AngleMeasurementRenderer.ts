@@ -20,7 +20,10 @@
 
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, RenderOptions, GripInfo, Point2D } from '../types/Types';
-import { extractAngleMeasurementPoints } from './shared';
+// 🏢 ADR-065: Centralized Distance, ADR-066: Centralized Angle
+// 🏢 ADR-073: Centralized Bisector Angle
+import { extractAngleMeasurementPoints, calculateDistance, calculateAngle } from './shared';
+import { bisectorAngle } from './shared/geometry-utils';
 
 export class AngleMeasurementRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -105,8 +108,9 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
 
     // 🏢 ENTERPRISE: Centralized arc rendering (orange dashed arc)
     const arcRadius = 40; // Screen pixels
-    const angle1 = Math.atan2(point1.y - vertex.y, point1.x - vertex.x);
-    const angle2 = Math.atan2(point2.y - vertex.y, point2.x - vertex.x);
+    // 🏢 ADR-066: Use centralized angle calculation
+    const angle1 = calculateAngle(vertex, point1);
+    const angle2 = calculateAngle(vertex, point2);
 
     // Convert to world coordinates for consistent appearance at all zoom levels
     const arcRadiusWorld = arcRadius / this.transform.scale;
@@ -133,11 +137,12 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
     this.applyDimensionTextStyle();
 
     // Calculate text position (exterior bisector for CAD compliance)
-    const angle1 = Math.atan2(point1.y - vertex.y, point1.x - vertex.x);
-    const angle2 = Math.atan2(point2.y - vertex.y, point2.x - vertex.x);
+    // 🏢 ADR-066: Use centralized angle calculation
+    const angle1 = calculateAngle(vertex, point1);
+    const angle2 = calculateAngle(vertex, point2);
 
-    // Calculate bisector angle
-    let bisectorAngle = (angle1 + angle2) / 2;
+    // 🏢 ADR-073: Use centralized bisector angle calculation
+    let bisectorAngleValue = bisectorAngle(angle1, angle2);
 
     // Normalize angle difference to [-π, π]
     let angleDiff = angle2 - angle1;
@@ -146,13 +151,13 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
 
     // If angle is > 180°, flip bisector to exterior
     if (Math.abs(angleDiff) > Math.PI) {
-      bisectorAngle += Math.PI;
+      bisectorAngleValue += Math.PI;
     }
 
     // Text offset from vertex (screen pixels for consistent appearance)
     const textDistance = 50;
-    const textX = vertex.x + Math.cos(bisectorAngle) * textDistance;
-    const textY = vertex.y + Math.sin(bisectorAngle) * textDistance;
+    const textX = vertex.x + Math.cos(bisectorAngleValue) * textDistance;
+    const textY = vertex.y + Math.sin(bisectorAngleValue) * textDistance;
 
     // Format and render angle text
     const angleText = `${angleDegrees.toFixed(1)}°`;
@@ -215,10 +220,10 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
 
     const { vertex, point1, point2 } = angleMeasurement;
 
-    // Test proximity to all 3 points
-    const distance1 = Math.sqrt(Math.pow(point.x - vertex.x, 2) + Math.pow(point.y - vertex.y, 2));
-    const distance2 = Math.sqrt(Math.pow(point.x - point1.x, 2) + Math.pow(point.y - point1.y, 2));
-    const distance3 = Math.sqrt(Math.pow(point.x - point2.x, 2) + Math.pow(point.y - point2.y, 2));
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distance1 = calculateDistance(point, vertex);
+    const distance2 = calculateDistance(point, point1);
+    const distance3 = calculateDistance(point, point2);
 
     return distance1 <= tolerance || distance2 <= tolerance || distance3 <= tolerance;
   }

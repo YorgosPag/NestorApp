@@ -9,6 +9,8 @@ import { FitToViewService } from '../../../services/FitToViewService';
 import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
 // 🏢 ENTERPRISE: Use centralized constants
 import { ZOOM_FACTORS, TRANSFORM_SCALE_LIMITS, FIT_TO_VIEW_DEFAULTS } from '../../../config/transform-config';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../../../rendering/entities/shared/geometry-utils';
 
 // === TRANSFORM CALCULATIONS ===
 
@@ -175,16 +177,18 @@ export function unionBounds(
 }
 
 // === SCALE UTILITIES ===
+// 🏢 ADR-071: Using centralized clamp from geometry-utils.ts
 
 /**
  * Clamp scale within limits
+ * 🏢 ADR-071: Wrapper using centralized clamp function
  */
 export function clampScale(
   scale: number,
   minScale: number,
   maxScale: number
 ): number {
-  return Math.max(minScale, Math.min(maxScale, scale));
+  return clamp(scale, minScale, maxScale);
 }
 
 /**
@@ -201,7 +205,7 @@ export function getNextZoomLevel(
     ? currentScale * factor
     : currentScale / factor;
 
-  return clampScale(newScale, minScale, maxScale);
+  return clamp(newScale, minScale, maxScale);
 }
 
 // === DISTANCE & GEOMETRY ===

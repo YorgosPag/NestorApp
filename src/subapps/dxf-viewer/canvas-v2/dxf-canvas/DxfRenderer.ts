@@ -101,19 +101,8 @@ export class DxfRenderer {
 
     // Early return if no scene
       if (!scene || !scene.entities.length) {
-        // 🔍 DEBUG (2026-01-31): Log when no entities
-        console.log('🎨 [DxfRenderer] No entities to render', {
-          hasScene: !!scene,
-          entityCount: scene?.entities?.length || 0
-        });
         return;
       }
-
-    // 🔍 DEBUG (2026-01-31): Log entities being rendered
-    console.log('🎨 [DxfRenderer] Rendering entities', {
-      entityCount: scene.entities.length,
-      entityTypes: scene.entities.map(e => e.type)
-    });
 
     this.ctx.save();
 
@@ -142,15 +131,6 @@ export class DxfRenderer {
     viewport: Viewport,
     options: DxfRenderOptions
   ): void {
-    // 🔍 DEBUG (2026-01-31): Log entity before unified rendering
-    console.log('🎬 [DxfRenderer] renderEntityUnified() called', {
-      entityType: entity?.type,
-      entityId: entity?.id,
-      hasCenter: 'center' in entity,
-      hasRadius: 'radius' in entity,
-      rawEntity: entity,
-    });
-
     const isSelected = options.selectedEntityIds.includes(entity.id);
 
     // Convert DxfEntityUnion to EntityModel για compatibility
@@ -209,17 +189,11 @@ export class DxfRenderer {
           end: entity.end
         };
 
-      case 'circle': {
-        // 🔍 DEBUG (2026-01-31): Log circle geometry mapping
-        console.log('🔵 [DxfRenderer] mapEntityGeometry for circle', {
-          entityCenter: entity.center,
-          entityRadius: entity.radius,
-        });
+      case 'circle':
         return {
           center: entity.center,
           radius: entity.radius
         };
-      }
 
       case 'polyline': {
         // Type guard: Polyline entities έχουν vertices property

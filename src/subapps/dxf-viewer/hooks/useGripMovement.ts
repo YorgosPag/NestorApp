@@ -42,6 +42,8 @@ import type { Point2D } from '../rendering/types/Types';
 import { useMoveEntities } from './useMoveEntities';
 import { useCommandHistory, MoveVertexCommand } from '../core/commands';
 import { useLevels } from '../systems/levels';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
@@ -178,15 +180,6 @@ function debugLog(message: string, ...args: unknown[]): void {
   if (DEBUG_MODE) {
     console.log(`[GripMovement] ${message}`, ...args);
   }
-}
-
-/**
- * Calculate distance between two points
- */
-function distance(p1: Point2D, p2: Point2D): number {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  return Math.sqrt(dx * dx + dy * dy);
 }
 
 /**
@@ -335,7 +328,8 @@ export function useGripMovement({
     };
 
     // Check minimum drag distance (in world units, approximate)
-    const dragDistance = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
+    // 🏢 ADR-065: Use centralized distance calculation
+    const dragDistance = calculateDistance(startWorldPositionRef.current, currentWorldPoint);
     const hasMoved = dragDistance >= GRIP_CONFIG.MIN_DRAG_DISTANCE / 10; // Rough conversion
 
     if (!hasMoved && !gripState.hasMoved) {
@@ -428,7 +422,7 @@ export function useGripMovement({
    */
   const isNearGrip = useCallback((position: Point2D, grips: GripInfo[]): GripInfo | null => {
     for (const grip of grips) {
-      const dist = distance(position, grip.position);
+      const dist = calculateDistance(position, grip.position);
       if (dist <= GRIP_CONFIG.HIT_TOLERANCE) {
         return grip;
       }

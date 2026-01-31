@@ -26,6 +26,9 @@
 
 import type { Point2D } from '../../types/Types';
 import { getTextPreviewStyleWithOverride, renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle';
+// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-066: Centralized Angle Calculation
+import { calculateDistance, calculateAngle } from './geometry-rendering-utils';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -87,6 +90,7 @@ export const FINAL_LABEL_DEFAULTS: Required<DistanceLabelOptions> = {
 
 /**
  * 🏢 ENTERPRISE: Calculate distance between two world coordinate points
+ * 🏢 ADR-065: Now delegates to centralized calculateDistance
  *
  * CRITICAL: Always use WORLD coordinates for distance calculation!
  * Screen coordinates would give zoom-dependent incorrect distances.
@@ -96,20 +100,35 @@ export const FINAL_LABEL_DEFAULTS: Required<DistanceLabelOptions> = {
  * @returns Distance in world units
  */
 export function calculateWorldDistance(worldP1: Point2D, worldP2: Point2D): number {
-  const dx = worldP2.x - worldP1.x;
-  const dy = worldP2.y - worldP1.y;
-  return Math.sqrt(dx * dx + dy * dy);
+  return calculateDistance(worldP1, worldP2);
 }
 
 /**
  * 🏢 ENTERPRISE: Format distance value for display
+ * Canonical source for distance formatting across DXF Viewer
  *
  * @param distance - Distance value in world units
  * @param decimals - Number of decimal places (default: 2)
  * @returns Formatted string (e.g., "123.45")
  */
 export function formatDistance(distance: number, decimals: number = 2): string {
+  if (distance < Math.pow(10, -decimals)) return (0).toFixed(decimals);
   return distance.toFixed(decimals);
+}
+
+/**
+ * 🏢 ENTERPRISE: Format angle value for display
+ * Canonical source for angle formatting across DXF Viewer
+ *
+ * 🏢 ADR-069: Centralized Number Formatting
+ *
+ * @param angle - Angle value in degrees
+ * @param decimals - Number of decimal places (default: 1)
+ * @returns Formatted string with degree symbol (e.g., "45.5°")
+ */
+export function formatAngle(angle: number, decimals: number = 1): string {
+  if (Math.abs(angle) < Math.pow(10, -decimals)) return `${(0).toFixed(decimals)}°`;
+  return `${angle.toFixed(decimals)}°`;
 }
 
 // ============================================================================
@@ -156,9 +175,8 @@ export function renderDistanceLabel(
   const midY = (screenP1.y + screenP2.y) / 2;
 
   // Calculate line angle for rotation (if enabled)
-  const dx = screenP2.x - screenP1.x;
-  const dy = screenP2.y - screenP1.y;
-  let angle = Math.atan2(dy, dx);
+  // 🏢 ADR-066: Use centralized angle calculation
+  let angle = calculateAngle(screenP1, screenP2);
 
   // Normalize angle to keep text readable (not upside down)
   if (opts.rotateWithLine && Math.abs(angle) > Math.PI / 2) {
@@ -248,9 +266,8 @@ export function renderDistanceLabelStyled(
   const midY = (screenP1.y + screenP2.y) / 2;
 
   // Calculate line angle
-  const dx = screenP2.x - screenP1.x;
-  const dy = screenP2.y - screenP1.y;
-  let angle = Math.atan2(dy, dx);
+  // 🏢 ADR-066: Use centralized angle calculation
+  let angle = calculateAngle(screenP1, screenP2);
 
   // Normalize angle
   if (opts.rotateWithLine && Math.abs(angle) > Math.PI / 2) {

@@ -108,6 +108,10 @@ export interface ArcEntity extends BaseEntity {
   startAngle: number;
   endAngle: number;
   strokeWidth?: number;
+  // 🏢 ENTERPRISE: Arc direction flag for Canvas 2D rendering
+  // true = draw counterclockwise, false = draw clockwise (default)
+  // Determined by mouse direction during drawing (AutoCAD pattern)
+  counterclockwise?: boolean;
 }
 
 export interface EllipseEntity extends BaseEntity {

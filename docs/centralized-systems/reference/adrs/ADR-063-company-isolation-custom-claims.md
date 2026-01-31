@@ -1,9 +1,12 @@
-# ADR-031: Company Isolation via Custom Claims
+# ADR-063: Company Isolation via Custom Claims
 
-**Status**: Accepted
-**Date**: 2026-01-18
-**Decision Makers**: Enterprise Security Team
-**Related**: ADR-003 (Building Storage), RFC v6 Authorization & RBAC
+| Metadata | Value |
+|----------|-------|
+| **Category** | Security |
+| **Status** | ✅ Active |
+| **Date** | 2026-01-18 |
+| **Decision Makers** | Enterprise Security Team |
+| **Related** | ADR-060 (Building Storage), RFC v6 Authorization & RBAC |
 
 ## Context
 

@@ -11,7 +11,9 @@ import { calculatePolygonArea, calculatePolygonCentroid } from './shared/geometr
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
 import { hitTestLineSegments, createEdgeGrips, calculatePerimeter } from './shared/line-utils';
-import { drawVerticesPath } from './shared/geometry-rendering-utils';
+// 🏢 ADR-070: Centralized Vector Magnitude
+// 🏢 ADR-072: Centralized Dot Product
+import { drawVerticesPath, vectorMagnitude, dotProduct } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 
 export class PolylineRenderer extends BaseEntityRenderer {
@@ -235,10 +237,11 @@ export class PolylineRenderer extends BaseEntityRenderer {
     
     // Check if opposite sides are parallel and equal
     const tolerance = TOLERANCE_CONFIG.POLYLINE_PRECISION;
-    const side1Length = Math.sqrt(side1.x * side1.x + side1.y * side1.y);
-    const side3Length = Math.sqrt(side3.x * side3.x + side3.y * side3.y);
-    const side2Length = Math.sqrt(side2.x * side2.x + side2.y * side2.y);
-    const side4Length = Math.sqrt(side4.x * side4.x + side4.y * side4.y);
+    // 🏢 ADR-070: Use centralized vector magnitude
+    const side1Length = vectorMagnitude(side1);
+    const side3Length = vectorMagnitude(side3);
+    const side2Length = vectorMagnitude(side2);
+    const side4Length = vectorMagnitude(side4);
     
     // Opposite sides should be equal in length
     if (Math.abs(side1Length - side3Length) > tolerance || Math.abs(side2Length - side4Length) > tolerance) {
@@ -246,8 +249,9 @@ export class PolylineRenderer extends BaseEntityRenderer {
     }
     
     // Adjacent sides should be perpendicular (dot product = 0)
-    const dot1 = side1.x * side2.x + side1.y * side2.y; // side1 · side2
-    const dot2 = side2.x * side3.x + side2.y * side3.y; // side2 · side3
+    // 🏢 ADR-072: Use centralized dot product
+    const dot1 = dotProduct(side1, side2); // side1 · side2
+    const dot2 = dotProduct(side2, side3); // side2 · side3
     
     if (Math.abs(dot1) > tolerance || Math.abs(dot2) > tolerance) {
       return false;

@@ -1,6 +1,8 @@
 /**
  * Shared input validation utilities for Scale and Zoom controls
  */
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../../../rendering/entities/shared/geometry-utils';
 
 export interface ValidationOptions {
   minValue?: number;
@@ -25,7 +27,8 @@ export function normalizeNumericInput(
   
   const normalized = cleaned.replace(',', '.');
   const parsed = parseFloat(normalized);
-  return isNaN(parsed) ? defaultValue : Math.max(minValue, Math.min(maxValue, parsed));
+  // 🏢 ADR-071: Using centralized clamp
+  return isNaN(parsed) ? defaultValue : clamp(parsed, minValue, maxValue);
 }
 
 /**

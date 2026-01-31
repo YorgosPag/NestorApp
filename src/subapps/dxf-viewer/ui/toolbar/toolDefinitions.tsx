@@ -17,15 +17,21 @@ import {
   DXF_ZOOM_TOOL_LABELS,
   DXF_UTILITY_TOOL_LABELS
 } from '../../../../constants/property-statuses-enterprise';
-import { 
-  CircleRadiusIcon, 
-  CircleDiameterIcon, 
-  Circle2PDiameterIcon, 
-  Circle3PIcon, 
-  CircleChordSagittaIcon, 
-  Circle2PRadiusIcon, 
-  CircleBestFitIcon 
+import {
+  CircleRadiusIcon,
+  CircleDiameterIcon,
+  Circle2PDiameterIcon,
+  Circle3PIcon,
+  CircleChordSagittaIcon,
+  Circle2PRadiusIcon,
+  CircleBestFitIcon
 } from './icons/CircleIcon';
+// 🏢 ENTERPRISE (2026-01-31): Arc drawing tool icons - ADR-059
+import {
+  Arc3PIcon,
+  ArcCSEIcon,
+  ArcSCEIcon
+} from './icons/ArcIcon';
 import { AngleIcon } from './icons/AngleIcon';
 import { AngleLineArcIcon } from './icons/AngleLineArcIcon';
 import { AngleTwoArcsIcon } from './icons/AngleTwoArcsIcon';
@@ -169,6 +175,19 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'circle-chord-sagitta' as ToolType, icon: CircleChordSagittaIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_CHORD_SAGITTA },
           { id: 'circle-2p-radius' as ToolType, icon: Circle2PRadiusIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_2P_RADIUS },
           { id: 'circle-best-fit' as ToolType, icon: CircleBestFitIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_BEST_FIT }
+        ]
+      },
+      // 🏢 ENTERPRISE (2026-01-31): Arc drawing tool with dropdown - ADR-059
+      {
+        id: 'arc' as ToolType,
+        icon: Arc3PIcon,
+        label: DXF_DRAWING_TOOL_LABELS.ARC,
+        hotkey: getShortcutDisplayLabel('arc'),
+        colorClass: DXF_TOOL_GROUP_COLORS.DRAWING,
+        dropdownOptions: [
+          { id: 'arc-3p' as ToolType, icon: Arc3PIcon, label: DXF_DRAWING_TOOL_LABELS.ARC_3P },
+          { id: 'arc-cse' as ToolType, icon: ArcCSEIcon, label: DXF_DRAWING_TOOL_LABELS.ARC_CENTER_START_END },
+          { id: 'arc-sce' as ToolType, icon: ArcSCEIcon, label: DXF_DRAWING_TOOL_LABELS.ARC_START_CENTER_END }
         ]
       },
       { id: 'polyline' as ToolType, icon: Pen, label: DXF_DRAWING_TOOL_LABELS.POLYLINE, hotkey: getShortcutDisplayLabel('polyline'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },

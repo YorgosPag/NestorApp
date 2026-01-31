@@ -160,6 +160,10 @@ export function getAciColorName(index: number): string {
   return ACI_COLOR_NAMES[index] || `ACI ${index}`;
 }
 
+// 🏢 ADR-076: Centralized Color Conversion
+import { parseHex } from '../../ui/color/utils';
+import type { RGBColor } from '../../ui/color/types';
+
 /**
  * Find closest ACI color to hex color
  *
@@ -167,16 +171,24 @@ export function getAciColorName(index: number): string {
  * @returns Closest ACI index
  */
 export function findClosestAci(hex: string): number {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return 7; // Default to white
+  let rgb: RGBColor;
+  try {
+    rgb = parseHex(hex);
+  } catch {
+    return 7; // Default to white on parse error
+  }
 
   let closestIndex = 7;
   let minDistance = Infinity;
 
   for (let i = 1; i <= 255; i++) {
     const aciColor = getAciColor(i);
-    const aciRgb = hexToRgb(aciColor);
-    if (!aciRgb) continue;
+    let aciRgb: RGBColor;
+    try {
+      aciRgb = parseHex(aciColor);
+    } catch {
+      continue;
+    }
 
     const distance = colorDistance(rgb, aciRgb);
     if (distance < minDistance) {
@@ -188,18 +200,9 @@ export function findClosestAci(hex: string): number {
   return closestIndex;
 }
 
-function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
-}
-
 function colorDistance(
-  c1: { r: number; g: number; b: number },
-  c2: { r: number; g: number; b: number }
+  c1: RGBColor,
+  c2: RGBColor
 ): number {
   return Math.sqrt(
     Math.pow(c1.r - c2.r, 2) +

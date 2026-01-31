@@ -4,6 +4,11 @@
  */
 
 import type { Point2D } from '../rendering/types/Types';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+// 🏢 ADR-068: Centralized Angle Normalization
+import { radToDeg, normalizeAngleRad } from '../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-072: Centralized Dot Product
+import { dotProduct } from '../rendering/entities/shared/geometry-rendering-utils';
 
 export interface AngleData {
   degrees: number;
@@ -35,16 +40,16 @@ export function calculateAngleData(
   };
   
   // Calculate angle between vectors using dot product and cross product
-  const dot = vec1.x * vec2.x + vec1.y * vec2.y;
+  // 🏢 ADR-072: Use centralized dot product
+  const dot = dotProduct(vec1, vec2);
   const cross = vec1.x * vec2.y - vec1.y * vec2.x;
-  let angle = Math.atan2(cross, dot);
-  
-  // Convert to positive angle (0 to 2π)
-  if (angle < 0) angle += 2 * Math.PI;
+  // 🏢 ADR-068: Use centralized angle normalization
+  const angle = normalizeAngleRad(Math.atan2(cross, dot));
   
   // Use interior angle (smaller angle)
   const interiorAngle = angle > Math.PI ? 2 * Math.PI - angle : angle;
-  const degrees = interiorAngle * (180 / Math.PI);
+  // 🏢 ADR-067: Use centralized angle conversion
+  const degrees = radToDeg(interiorAngle);
   
   // Calculate angles for arc drawing (in screen coordinates)
   const screenVec1 = {

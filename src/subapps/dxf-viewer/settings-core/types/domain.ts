@@ -16,6 +16,10 @@
  */
 
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-071: Centralized clamp function
+import { clamp } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-076: Centralized Color Conversion
+import { rgbToHex as centralizedRgbToHex } from '../../ui/color/utils';
 
 // ============================================================================
 // LINE TYPES & SETTINGS (ISO 128)
@@ -188,11 +192,8 @@ export type EntityId = string;
 
 // ============================================================================
 // VALIDATION FUNCTIONS (ISO Standards)
+// 🏢 ADR-071: Using centralized clamp from geometry-utils.ts
 // ============================================================================
-
-const clamp = (value: number, min: number, max: number): number => {
-  return Math.max(min, Math.min(max, value));
-};
 
 export const validateLineWidth = (value: number | null | undefined): number => {
   if (value == null || isNaN(value) || typeof value !== 'number') {
@@ -233,8 +234,8 @@ export const validateColor = (value: string | null | undefined): string => {
     const [, r, g, b] = rgbMatch.map(Number);
     if (r === 255 && g === 0 && b === 0) return UI_COLORS.SELECTED_RED;
     if (r === 0 && g === 128 && b === 255) return UI_COLORS.INDICATOR_BLUE;
-    const toHex = (n: number) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0');
-    return '#' + toHex(r) + toHex(g) + toHex(b);
+    // 🏢 ADR-076: Use centralized rgbToHex
+    return centralizedRgbToHex({ r, g, b });
   }
 
   return UI_COLORS.WHITE;
