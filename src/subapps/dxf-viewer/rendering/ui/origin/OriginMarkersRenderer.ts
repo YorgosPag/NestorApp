@@ -9,7 +9,8 @@ import type { Viewport, ViewTransform } from '../../types/Types';
 import type { OriginMarkersSettings } from './OriginMarkersTypes';
 import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
 // 🏢 ADR-042: Centralized UI Fonts
-import { UI_FONTS } from '../../../config/text-rendering-config';
+// 🏢 ADR-091: Centralized Text Label Offsets
+import { UI_FONTS, TEXT_LABEL_OFFSETS } from '../../../config/text-rendering-config';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addCirclePath } from '../../primitives/canvasPaths';
 // 🏢 ADR-088: Centralized Pixel-Perfect Alignment
@@ -116,7 +117,8 @@ export class OriginMarkersRenderer implements UIRenderer {
     }
 
     // Check if origin crosshair should be visible
-    const margin = settings.size + 50; // Extra margin για label
+    // 🏢 ADR-091: Use centralized ORIGIN_LABEL_MARGIN
+    const margin = settings.size + TEXT_LABEL_OFFSETS.ORIGIN_LABEL_MARGIN;
     if (originScreenX < -margin || originScreenX > viewport.width + margin ||
         originScreenY < -margin || originScreenY > viewport.height + margin) {
       ctx.restore();

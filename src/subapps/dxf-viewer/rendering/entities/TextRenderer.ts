@@ -29,7 +29,9 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
-import type { TextEntity } from '../../types/entities';
+import type { TextEntity, Entity } from '../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isTextEntity, isMTextEntity } from '../../types/entities';
 import { HoverManager } from '../../utils/hover';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
@@ -45,7 +47,9 @@ export class TextRenderer extends BaseEntityRenderer {
    * Uses direct height × scale calculation for proper text sizing
    */
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    if (entity.type !== 'text' && entity.type !== 'mtext') return;
+    // 🏢 ADR-102: Use centralized type guards
+    const e = entity as Entity;
+    if (!isTextEntity(e) && !isMTextEntity(e)) return;
 
     // Type guards for safe property access
     if (!('position' in entity) || !('text' in entity)) return;
@@ -152,7 +156,9 @@ export class TextRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    if (entity.type !== 'text' && entity.type !== 'mtext') return [];
+    // 🏢 ADR-102: Use centralized type guards
+    const e = entity as Entity;
+    if (!isTextEntity(e) && !isMTextEntity(e)) return [];
 
     const grips: GripInfo[] = [];
     // ✅ ENTERPRISE FIX: Use type guard for safe property access
@@ -181,7 +187,9 @@ export class TextRenderer extends BaseEntityRenderer {
    * Hit testing for text entities (simplified like old backup)
    */
   hitTest(entity: EntityModel, point: Point2D, tolerance: number = 5): boolean {
-    if (entity.type !== 'text' && entity.type !== 'mtext') return false;
+    // 🏢 ADR-102: Use centralized type guards
+    const e = entity as Entity;
+    if (!isTextEntity(e) && !isMTextEntity(e)) return false;
 
     if (!('position' in entity) || !('text' in entity)) return false;
 

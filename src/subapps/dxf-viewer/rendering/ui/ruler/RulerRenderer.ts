@@ -22,6 +22,8 @@ import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized line widths
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
 import { RENDER_LINE_WIDTHS, buildUIFont } from '../../../config/text-rendering-config';
+// 🏢 ADR-XXX: Centralized Angular Constants
+import { RIGHT_ANGLE } from '../../entities/shared/geometry-utils';
 
 /**
  * 🔺 CENTRALIZED RULER RENDERER
@@ -361,9 +363,10 @@ export class RulerRenderer implements UIRenderer {
       if (settings.showLabels && y >= minY) {
         const numberText = worldY.toFixed(settings.labelPrecision);
 
+        // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
         ctx.save();
         ctx.translate(rect.x + rect.width / 2, y);
-        ctx.rotate(-Math.PI / 2);
+        ctx.rotate(-RIGHT_ANGLE);
 
         // Number
         ctx.fillStyle = settings.textColor;

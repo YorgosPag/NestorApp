@@ -19,6 +19,8 @@
 
 import type { SettingsStateType } from './schema';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-101: Centralized deep clone utility
+import { deepClone } from '../../utils/clone-utils';
 
 // ============================================================================
 // MIGRATION TYPES
@@ -410,7 +412,7 @@ export function rollbackToVersion(
  * @returns Deep copy of data
  */
 export function createBackup(data: unknown): unknown {
-  return JSON.parse(JSON.stringify(data));
+  return deepClone(data);
 }
 
 /**

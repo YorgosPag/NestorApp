@@ -4,7 +4,15 @@
  */
 
 // ✅ ENTERPRISE: Updated imports to use centralized entity types
-import type { Entity, LineEntity, CircleEntity, ArcEntity, RectangleEntity, EntityModel } from '../../../types/entities';
+import type { Entity, LineEntity, CircleEntity, ArcEntity, RectangleEntity, EllipseEntity, EntityModel } from '../../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import {
+  isLineEntity,
+  isCircleEntity,
+  isArcEntity,
+  isEllipseEntity,
+  isRectangleEntity,
+} from '../../../types/entities';
 import type { Point2D } from '../../types/Types';
 
 /**
@@ -14,7 +22,8 @@ export function validateLineEntity(entity: EntityModel): {
   start: Point2D;
   end: Point2D;
 } | null {
-  if (entity.type !== 'line') return null;
+  // 🏢 ADR-102: Use centralized type guard
+  if (!isLineEntity(entity as Entity)) return null;
 
   const lineEntity = entity as LineEntity;
   const start = lineEntity.start;
@@ -32,7 +41,8 @@ export function validateCircleEntity(entity: EntityModel): {
   center: Point2D;
   radius: number;
 } | null {
-  if (entity.type !== 'circle') return null;
+  // 🏢 ADR-102: Use centralized type guard
+  if (!isCircleEntity(entity as Entity)) return null;
 
   const circleEntity = entity as CircleEntity;
   const center = circleEntity.center;
@@ -43,14 +53,7 @@ export function validateCircleEntity(entity: EntityModel): {
   return { center, radius };
 }
 
-// 🏢 ENTERPRISE: Type-safe ellipse entity interface (temporary until added to centralized types)
-interface EllipseEntity extends Entity {
-  type: 'ellipse';
-  center: Point2D;
-  majorAxis: number;
-  minorAxis: number;
-  rotation?: number;
-}
+// 🏢 ADR-102: EllipseEntity now imported from centralized types/entities.ts
 
 /**
  * Validate ellipse entity and extract data
@@ -63,7 +66,8 @@ export function validateEllipseEntity(entity: EntityModel): {
   minorAxis: number;
   rotation: number;
 } | null {
-  if (entity.type !== 'ellipse') return null;
+  // 🏢 ADR-102: Use centralized type guard
+  if (!isEllipseEntity(entity as Entity)) return null;
 
   // 🏢 ENTERPRISE: Type-safe property access
   const ellipseEntity = entity as unknown as EllipseEntity;
@@ -85,7 +89,8 @@ export function validateRectangleEntity(entity: EntityModel): {
   width: number;
   height: number;
 } | null {
-  if (entity.type !== 'rectangle') return null;
+  // 🏢 ADR-102: Use centralized type guard
+  if (!isRectangleEntity(entity as Entity)) return null;
 
   const rectangleEntity = entity as RectangleEntity;
   // Convert x,y to topLeft for compatibility
@@ -108,7 +113,8 @@ export function validateArcEntity(entity: EntityModel): {
   endAngle: number;
   counterclockwise: boolean;
 } | null {
-  if (entity.type !== 'arc') return null;
+  // 🏢 ADR-102: Use centralized type guard
+  if (!isArcEntity(entity as Entity)) return null;
 
   const arcEntity = entity as ArcEntity;
   const center = arcEntity.center;

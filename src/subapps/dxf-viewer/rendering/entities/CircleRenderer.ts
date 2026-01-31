@@ -6,7 +6,8 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
-import type { CircleEntity } from '../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isCircleEntity, type CircleEntity, type Entity } from '../../types/entities';
 
 // ✅ ENTERPRISE: Extended circle entity interface για mode-specific properties
 interface ExtendedCircleEntity extends CircleEntity {
@@ -14,11 +15,8 @@ interface ExtendedCircleEntity extends CircleEntity {
   twoPointDiameter?: boolean;
 }
 
-// ✅ ENTERPRISE: Type guard function για safe type checking
-function isCircleEntity(entity: EntityModel): entity is CircleEntity {
-  return entity.type === 'circle' && 'center' in entity && 'radius' in entity;
-}
-import { HoverManager } from '../../utils/hover';
+// 🏢 ADR-102: Duplicate type guard REMOVED - using centralized isCircleEntity from types/entities.ts
+// 🏢 ADR-099: HoverManager import removed - CircleRenderer has no hover rendering
 import { createGripsFromPoints } from './shared/grip-utils';
 // 🏢 ADR-058: Centralized Canvas Primitives
 // 🏢 ADR-077: Centralized TAU Constant
@@ -37,13 +35,13 @@ import { clamp } from './shared/geometry-utils';
 
 export class CircleRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    if (entity.type !== 'circle') return;
+    // 🏢 ADR-102: Use centralized type guard (replaces both type check and property validation)
+    if (!isCircleEntity(entity as Entity)) return;
 
-    // ✅ ENTERPRISE: Type-safe entity validation αντί για 'as any'
-    if (!isCircleEntity(entity)) return;
-
-    const center = entity.center;
-    const radius = entity.radius;
+    // After type guard, safe to cast to CircleEntity
+    const circleEntity = entity as CircleEntity;
+    const center = circleEntity.center;
+    const radius = circleEntity.radius;
 
     if (!center || !radius) return;
 
@@ -151,17 +149,16 @@ export class CircleRenderer extends BaseEntityRenderer {
   // ΔΙΑΓΡΑΜΜΕΝΗ FUNCTION: renderCircleYellowDots - αφαιρέθηκε για εξάλειψη κίτρινων grips
 
   getGrips(entity: EntityModel): GripInfo[] {
-    if (entity.type !== 'circle') return [];
-
-    // ✅ ENTERPRISE: Type-safe entity validation αντί για 'as any'
-    if (!isCircleEntity(entity)) {
-      console.warn('CircleRenderer.getGrips: Invalid entity type or missing circle properties');
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isCircleEntity(entity as Entity)) {
       return [];
     }
 
+    // After type guard, safe to cast to CircleEntity
+    const circleEntity = entity as CircleEntity;
     const grips: GripInfo[] = [];
-    const center = entity.center;
-    const radius = entity.radius;
+    const center = circleEntity.center;
+    const radius = circleEntity.radius;
 
     if (!center || !radius) return grips;
     
@@ -189,14 +186,15 @@ export class CircleRenderer extends BaseEntityRenderer {
 
   // ✅ ENTERPRISE: Required abstract method implementation
   hitTest(entity: EntityModel, point: Point2D, tolerance: number = 5): boolean {
-    if (entity.type !== 'circle') return false;
-
-    if (!isCircleEntity(entity)) {
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isCircleEntity(entity as Entity)) {
       return false;
     }
 
-    const center = entity.center;
-    const radius = entity.radius;
+    // After type guard, safe to cast to CircleEntity
+    const circleEntity = entity as CircleEntity;
+    const center = circleEntity.center;
+    const radius = circleEntity.radius;
 
     if (!center || !radius) return false;
 

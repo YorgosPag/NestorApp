@@ -6,7 +6,9 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
-import type { RectangleEntity, RectEntity } from '../../types/entities';
+import type { RectangleEntity, RectEntity, Entity } from '../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isRectangleEntity, isRectEntity } from '../../types/entities';
 import { pointToLineDistance } from './shared/geometry-utils';
 import { hitTestLineSegments, createEdgeGrips } from './shared/line-utils';
 import { createVertexGrip } from './shared/grip-utils';
@@ -28,7 +30,9 @@ export class RectangleRenderer extends BaseEntityRenderer {
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    if (entity.type !== 'rectangle' && entity.type !== 'rect') return;
+    // 🏢 ADR-102: Use centralized type guards
+    const e = entity as Entity;
+    if (!isRectangleEntity(e) && !isRectEntity(e)) return;
     
     const vertices = this.getVertices(entity);
     if (!vertices) return;
@@ -156,7 +160,9 @@ export class RectangleRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    if (entity.type !== 'rectangle' && entity.type !== 'rect') return [];
+    // 🏢 ADR-102: Use centralized type guards
+    const e = entity as Entity;
+    if (!isRectangleEntity(e) && !isRectEntity(e)) return [];
     
     const grips: GripInfo[] = [];
     const vertices = this.getVertices(entity);
@@ -176,7 +182,9 @@ export class RectangleRenderer extends BaseEntityRenderer {
 
   // ✅ ENTERPRISE FIX: Implement proper hitTest method with tolerance parameter
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
-    if (entity.type !== 'rectangle' && entity.type !== 'rect') return false;
+    // 🏢 ADR-102: Use centralized type guards
+    const e = entity as Entity;
+    if (!isRectangleEntity(e) && !isRectEntity(e)) return false;
 
     const vertices = this.getVertices(entity);
     if (!vertices) return false;

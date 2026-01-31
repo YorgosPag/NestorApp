@@ -4,7 +4,7 @@
 >
 > Single source of truth για όλες τις αρχιτεκτονικές αποφάσεις της εφαρμογής
 
-**📊 Stats**: 98 ADRs (ADR-100 Inline Degrees-to-Radians Conversion) | Last Updated: 2026-01-31
+**📊 Stats**: 102 ADRs (ADR-104 Entity Type Guards Centralization) | Last Updated: 2026-01-31
 
 ---
 
@@ -23,7 +23,7 @@
 | **Performance** | ADR-019, ADR-030, ADR-040 | [View](#-performance) |
 | **Filters & Search** | ADR-029, ADR-051 | [View](#-filters--search) |
 | **Tools & Keyboard** | ADR-026 to ADR-028, ADR-035, ADR-038, ADR-055 | [View](#-tools--keyboard) |
-| **Entity Systems** | ADR-012 to ADR-018, ADR-025, ADR-052 to ADR-057 | [View](#-entity-systems) |
+| **Entity Systems** | ADR-012 to ADR-018, ADR-025, ADR-052 to ADR-057, ADR-104 | [View](#-entity-systems) |
 
 ---
 
@@ -122,6 +122,10 @@
 | **ADR-098** | Timing Delays Centralization (setTimeout/setInterval) | ✅ APPROVED | 2026-01-31 | Tools & Keyboard |
 | **ADR-099** | Polygon & Measurement Tolerances Centralization | ✅ APPROVED | 2026-01-31 | Drawing System |
 | **ADR-100** | Inline Degrees-to-Radians Conversion Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-101** | Deep Clone Centralization (deepClone utility) | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-102** | Origin Markers Centralization (DXF/Layer/Debug) | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-103** | Angular Constants Centralization (RIGHT_ANGLE, ARROW_ANGLE) | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-104** | Entity Type Guards Centralization (isLineEntity, isCircleEntity, etc.) | ✅ APPROVED | 2026-01-31 | Entity Systems |
 | **ADR-059** | Separate Audit Bootstrap from Projects List | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-060** | Building Floorplan Enterprise Storage | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-061** | Path Aliases Strategy | ✅ APPROVED | 2026-01-13 | Infrastructure |
@@ -477,6 +481,49 @@
   - `systems/cursor/utils.ts` - 1 replacement
 - **Companion**: ADR-043 (Zoom Constants), ADR-079 (Geometric Precision), ADR-087 (Snap Engine Config)
 
+### ADR-102: Origin Markers Centralization (DXF/Layer/Debug)
+- **Canonical**: `OriginMarkerUtils.ts` from `rendering/ui/origin/`
+- **Decision**: Centralize origin marker rendering from 3 scattered implementations to single utility
+- **Problem**: Duplicate origin marker code across 3 files (~50 lines each):
+  - `DxfRenderer.ts` (lines 80-103): Orange L-shape (TOP + LEFT)
+  - `LayerRenderer.ts` (lines 219-243): Blue inverted L-shape (BOTTOM + RIGHT)
+  - `OriginMarkersRenderer.ts`: Magenta crosshair (DEBUG overlay)
+- **Duplicate Code Issues**:
+  - Same `worldToScreen(worldOrigin, transform, viewport)` calculation in 3 places
+  - Hardcoded values: `20px` arm length, `'-45', '-10'` label offset
+  - Inconsistent rendering patterns (manual ctx.save/restore, path creation)
+- **Solution**: Single Source of Truth utility with variant system
+- **API**:
+  ```typescript
+  // Core functions
+  getOriginScreenPosition(transform, viewport): Point2D
+  drawOriginMarker(ctx, screenOrigin, { variant: 'dxf' | 'layer' | 'debug' })
+  renderOriginMarker(ctx, transform, viewport, options) // Convenience combo
+
+  // Configuration (ORIGIN_MARKER_CONFIG)
+  ARM_LENGTH: 20  // Arm length in pixels
+  LINE_WIDTH: RENDER_LINE_WIDTHS.THICK
+  FONT: UI_FONTS.MONOSPACE.BOLD
+  COLORS.DXF: UI_COLORS.DRAWING_HIGHLIGHT  // Orange
+  COLORS.LAYER: UI_COLORS.BUTTON_PRIMARY   // Blue
+  COLORS.DEBUG: UI_COLORS.DEBUG_ORIGIN     // Magenta
+  ```
+- **Variant System**:
+  - `'dxf'`: Orange L-shape (TOP + LEFT arms) - DXF canvas world origin
+  - `'layer'`: Blue inverted L-shape (BOTTOM + RIGHT arms) - Layer canvas
+  - `'debug'`: Magenta crosshair (all 4 directions) - Debug overlay
+- **Files Migrated**:
+  - `canvas-v2/dxf-canvas/DxfRenderer.ts` - 24 lines → 1 line
+  - `canvas-v2/layer-canvas/LayerRenderer.ts` - 25 lines → 1 line
+- **Pattern**: Single Source of Truth (SSOT) + Variant pattern
+- **Benefits**:
+  - Zero duplicate coordinate transformation code
+  - Consistent marker styling (colors, fonts, sizes)
+  - Single point of change for origin marker appearance
+  - Type-safe variant selection
+  - Uses centralized systems: ADR-088 (pixelPerfect), ADR-042 (UI_FONTS), ADR-044 (LINE_WIDTHS)
+- **Companion**: ADR-088 (Pixel-Perfect Rendering), ADR-058 (Canvas Primitives)
+
 ### ADR-084: Scattered Code Centralization (Draggable + Canvas State)
 - **Decision**: Centralize scattered draggable logic and canvas state operations
 - **Two Components**:
@@ -640,6 +687,61 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - TypeScript: `npx tsc --noEmit --project src/subapps/dxf-viewer/tsconfig.json`
   - Grep: `grep -rE "Math\.PI.*180|180.*Math\.PI" src/subapps/dxf-viewer --include="*.ts" --include="*.tsx"` (should return only geometry-utils.ts)
 - **Companion**: ADR-067 (Radians/Degrees), ADR-058 (Canvas Primitives), ADR-082 (FormatterRegistry)
+
+### ADR-101: Deep Clone Centralization
+- **Status**: ✅ APPROVED
+- **Date**: 2026-01-31
+- **Canonical**: `deepClone<T>()` from `utils/clone-utils.ts`
+- **Decision**: Centralize all `JSON.parse(JSON.stringify(...))` patterns to single utility function
+- **Problem**: 11 inline `JSON.parse(JSON.stringify(...))` patterns across 6 files:
+  - **Command Pattern - State Snapshots** (7 uses):
+    - `MoveOverlayCommand.ts` line 98: Overlay polygon vertices for undo
+    - `DeleteOverlayCommand.ts` line 59: Full overlay snapshot for soft delete
+    - `DeleteOverlayCommand.ts` line 193: Batch delete snapshots
+    - `MoveEntityCommand.ts` line 230: Entity movement snapshot
+    - `MoveEntityCommand.ts` line 400: Batch move snapshots
+    - `DeleteEntityCommand.ts` line 39: Single entity deletion
+    - `DeleteEntityCommand.ts` line 143: Batch deletion snapshots
+  - **UI State Management** (1 use):
+    - `CanvasSection.tsx` line 1530: Drag start polygon copy
+  - **Factory Settings** (2 uses):
+    - `FACTORY_DEFAULTS.ts` line 336: Get all factory defaults
+    - `FACTORY_DEFAULTS.ts` line 348: Get entity-specific defaults
+  - **Data Migration** (1 use):
+    - `migrationRegistry.ts` line 413: Data backup before migration
+- **Solution**: Single generic `deepClone<T>()` function
+- **API**:
+  ```typescript
+  import { deepClone } from '../utils/clone-utils';
+
+  // Clone any serializable value
+  const copy = deepClone(entity);
+  const polygonCopy = deepClone(overlay.polygon);
+  ```
+- **Files Changed** (7 files, 11 replacements):
+  - `utils/clone-utils.ts` - NEW centralized utility
+  - `core/commands/overlay-commands/MoveOverlayCommand.ts` - 1 replacement
+  - `core/commands/overlay-commands/DeleteOverlayCommand.ts` - 2 replacements
+  - `core/commands/entity-commands/MoveEntityCommand.ts` - 2 replacements
+  - `core/commands/entity-commands/DeleteEntityCommand.ts` - 2 replacements
+  - `components/dxf-layout/CanvasSection.tsx` - 1 replacement
+  - `settings/FACTORY_DEFAULTS.ts` - 2 replacements
+  - `settings/io/migrationRegistry.ts` - 1 replacement
+- **Limitations** (by design - matches existing behavior):
+  - Does not clone: undefined, functions, Symbols, circular references
+  - Date objects become strings
+  - Map/Set become empty objects
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero duplicate `JSON.parse(JSON.stringify())` patterns
+  - Type-safe generic function `deepClone<T>(value: T): T`
+  - Cleaner, more readable code
+  - Single point of documentation for cloning behavior
+  - Future-proof: Easy to swap implementation (e.g., structuredClone)
+- **Verification**:
+  - TypeScript: `npx tsc --noEmit --project src/subapps/dxf-viewer/tsconfig.json`
+  - Grep: `grep -rE "JSON\.parse\(JSON\.stringify" src/subapps/dxf-viewer --include="*.ts" --include="*.tsx"` (should return only clone-utils.ts)
+- **Companion**: ADR-031 (Command Pattern), ADR-065 (Geometry Utils)
 
 ### ADR-068: Angle Normalization Centralization
 - **Canonical**: `normalizeAngleRad()`, `normalizeAngleDeg()` from `geometry-utils.ts`
@@ -888,7 +990,45 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - Mathematical clarity (τ = 2π is the "true" circle constant)
   - Single point of change if precision adjustments needed
   - Consistent naming across codebase
-- **Companion**: ADR-058 (Canvas Drawing Primitives)
+- **Companion**: ADR-058 (Canvas Drawing Primitives), ADR-103 (Angular Constants)
+
+### ADR-103: Angular Constants Centralization (RIGHT_ANGLE, ARROW_ANGLE)
+- **Canonical**: `RIGHT_ANGLE`, `ARROW_ANGLE` from `rendering/entities/shared/geometry-utils.ts`
+- **Impact**: 18 inline `Math.PI / 2` and `Math.PI / 6` patterns → 2 constants
+- **Constants Added**:
+  - `RIGHT_ANGLE = Math.PI / 2` (≈ 1.5708 rad = 90°)
+  - `ARROW_ANGLE = Math.PI / 6` (≈ 0.5236 rad = 30°)
+- **Files Migrated** (10 files, 18 replacements):
+  - `utils/hover/text-labeling-utils.ts` - Text flip check (1× RIGHT_ANGLE)
+  - `utils/hover/edge-utils.ts` - Text flip check (1× RIGHT_ANGLE)
+  - `systems/rulers-grid/utils.ts` - Vertical ruler text rotation (2× RIGHT_ANGLE)
+  - `canvas-v2/layer-canvas/LayerRenderer.ts` - Vertical ruler text rotation (1× RIGHT_ANGLE)
+  - `snapping/engines/TangentSnapEngine.ts` - Tangent point calculation (4× RIGHT_ANGLE)
+  - `rendering/ui/ruler/RulerRenderer.ts` - Vertical ruler text rotation (1× RIGHT_ANGLE)
+  - `rendering/entities/shared/distance-label-utils.ts` - Text flip check (2× RIGHT_ANGLE)
+  - `rendering/entities/BaseEntityRenderer.ts` - Text flip check (1× RIGHT_ANGLE)
+  - `rendering/passes/BackgroundPass.ts` - Vertical ruler text rotation (1× RIGHT_ANGLE)
+  - `rendering/utils/ghost-entity-renderer.ts` - Arrow head rendering (4× ARROW_ANGLE)
+- **Pattern**: Single Source of Truth (SSOT)
+- **API**:
+  ```typescript
+  import { RIGHT_ANGLE, ARROW_ANGLE } from './geometry-utils';
+
+  // Text flip check (if angle > 90°, flip text)
+  if (Math.abs(textAngle) > RIGHT_ANGLE) {
+    textAngle += Math.PI;
+  }
+
+  // Arrow head rendering (30° angle)
+  ctx.lineTo(x - size * Math.cos(angle - ARROW_ANGLE), ...);
+  ctx.lineTo(x - size * Math.cos(angle + ARROW_ANGLE), ...);
+  ```
+- **Benefits**:
+  - Zero inline angular magic numbers
+  - Semantic constant names (`RIGHT_ANGLE` vs `Math.PI / 2`)
+  - Single point of documentation
+  - Consistent angular calculations across codebase
+- **Companion**: ADR-077 (TAU Constant), ADR-067 (Radians/Degrees Conversion), ADR-068 (Angle Normalization)
 
 ### ADR-078: Vector Angle & Angle Between Vectors Centralization
 - **Canonical**: `vectorAngle()`, `angleBetweenVectors()` from `geometry-rendering-utils.ts`
@@ -1457,6 +1597,68 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
 ### ADR-054: Enterprise Upload System Consolidation
 - **Canonical**: 5 canonical components
 - **Pipeline**: pending → upload → finalize
+
+### ADR-104: Entity Type Guards Centralization
+- **Canonical**: `types/entities.ts` - 20 centralized type guards
+- **Impact**: 100+ inline `entity.type === '...'` patterns → centralized type guards
+- **Problem**: Scattered entity type checks across 35+ files with:
+  - Duplicate type guard definitions in 2 files (MoveEntityCommand.ts: 8, CircleRenderer.ts: 1)
+  - Inconsistent property validation (some with `'center' in entity`, some without)
+  - Type narrowing issues requiring `as unknown as Entity` casting
+- **Solution**: Migrate all inline checks to use centralized type guards from `types/entities.ts`
+- **Type Guards Available**:
+  ```typescript
+  import {
+    isLineEntity, isCircleEntity, isArcEntity, isEllipseEntity,
+    isRectangleEntity, isRectEntity, isPolylineEntity, isLWPolylineEntity,
+    isPointEntity, isTextEntity, isMTextEntity, isSplineEntity,
+    isDimensionEntity, isBlockEntity, isAngleMeasurementEntity, isLeaderEntity,
+    isHatchEntity, isXLineEntity, isRayEntity,
+    type Entity
+  } from '../../types/entities';
+  ```
+- **Pattern**:
+  ```typescript
+  // Before (inline - PROHIBITED)
+  if (entity.type === 'circle' && 'center' in entity) { ... }
+
+  // After (centralized - REQUIRED)
+  if (isCircleEntity(entity as Entity)) {
+    const circleEntity = entity as CircleEntity;
+    // Use circleEntity.center, circleEntity.radius safely
+  }
+  ```
+- **Files Migrated (Phase 1 - Duplicate Removal)**:
+  - `core/commands/entity-commands/MoveEntityCommand.ts` - Removed 8 duplicate type guards
+  - `rendering/entities/CircleRenderer.ts` - Removed 1 duplicate type guard
+- **Files Migrated (Phase 2 - High Priority)**:
+  - `systems/entity-creation/LevelSceneManagerAdapter.ts` - 9 replacements
+  - `components/dxf-layout/CanvasSection.tsx` - 5 replacements
+  - `rendering/entities/shared/entity-validation-utils.ts` - 5 replacements
+  - `systems/selection/shared/selection-duplicate-utils.ts` - 4 replacements
+  - `utils/geometry/GeometryUtils.ts` - 3 replacements
+  - `snapping/engines/shared/snap-engine-utils.ts` - 2 replacements
+  - `systems/phase-manager/PhaseManager.ts` - 2 replacements
+  - `hooks/drawing/completeEntity.ts` - 1 replacement
+  - `rendering/entities/shared/geometry-rendering-utils.ts` - 1 replacement
+- **Files Migrated (Phase 3 - Rendering Entities)**:
+  - `rendering/entities/LineRenderer.ts` - 3 replacements
+  - `rendering/entities/CircleRenderer.ts` - 4 replacements (additional)
+  - `rendering/entities/ArcRenderer.ts` - 3 replacements
+  - `rendering/entities/EllipseRenderer.ts` - 3 replacements
+  - `rendering/entities/RectangleRenderer.ts` - 4 replacements
+  - `rendering/entities/PolylineRenderer.ts` - 4 replacements
+  - `rendering/entities/PointRenderer.ts` - 3 replacements
+  - `rendering/entities/TextRenderer.ts` - 3 replacements
+  - `rendering/entities/SplineRenderer.ts` - 3 replacements
+  - `rendering/entities/AngleMeasurementRenderer.ts` - 4 replacements
+- **Benefits**:
+  - Zero duplicate type guard definitions
+  - Type-safe entity property access after guard
+  - Single Source of Truth for entity type validation
+  - Consistent type narrowing across codebase
+  - Comment marker `// 🏢 ADR-104: Use centralized type guard` for traceability
+- **Companion**: ADR-017 (Enterprise ID Generation), ADR-052 (DXF Export API Contract)
 
 ---
 

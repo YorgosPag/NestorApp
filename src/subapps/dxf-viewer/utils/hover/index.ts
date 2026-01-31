@@ -1,11 +1,26 @@
 /**
  * Centralized Hover Manager - Main Entry Point
- * Replaces the monolithic HoverManager with focused, smaller modules
+ *
+ * 🏢 ENTERPRISE (2026-01-31):
+ * Shape hover renderers (Circle, Rectangle, Arc, Ellipse) were disabled stubs
+ * and have been removed as dead code. If hover rendering is needed for these
+ * entity types in the future, implement proper handlers.
+ *
+ * SUPPORTED ENTITY TYPES:
+ * - line: Distance measurements on hover
+ * - polyline/lwpolyline: Distance + angles + area on hover
+ * - text/mtext: Text hover effects
+ * - spline: Spline hover effects
+ * - angle-measurement: Angle display on hover
+ *
+ * UNSUPPORTED (no hover rendering):
+ * - circle, rectangle/rect, arc, ellipse
+ *
+ * @see ADR-099: Rendering Systems Centralization
  */
 
 import { renderLineHover } from './line-renderer';
 import { renderPolylineHover } from './polyline-renderer';
-import { renderCircleHover, renderRectangleHover, renderArcHover, renderEllipseHover } from './shape-renderers';
 import { renderTextHover, renderSplineHover, renderAngleMeasurementHover } from './text-spline-renderers';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity, RenderOptions } from './types';
@@ -33,19 +48,6 @@ export class HoverManager {
       case 'lwpolyline': // ✅ ENTERPRISE: AutoCAD standard lightweight polyline support
         renderPolylineHover(context);
         break;
-      case 'circle':
-        renderCircleHover(context);
-        break;
-      case 'rectangle':
-      case 'rect': // ✅ ENTERPRISE: Alternative rectangle entity naming convention
-        renderRectangleHover(context);
-        break;
-      case 'arc':
-        renderArcHover(context);
-        break;
-      case 'ellipse': // ✅ ENTERPRISE: AutoCAD ellipse entity support
-        renderEllipseHover(context);
-        break;
       case 'text':
         renderTextHover(context);
         break;
@@ -58,8 +60,20 @@ export class HoverManager {
       case 'angle-measurement':
         renderAngleMeasurementHover(context);
         break;
+      // 🏢 ENTERPRISE (2026-01-31): Shape hover rendering not implemented
+      // These entity types currently have no hover effects
+      case 'circle':
+      case 'rectangle':
+      case 'rect':
+      case 'arc':
+      case 'ellipse':
+        // No hover rendering for shapes - silently skip
+        break;
       default:
-        console.warn('[HoverManager] No hover handler for entity type:', entity.type);
+        // Only warn for truly unknown entity types
+        if (!['circle', 'rectangle', 'rect', 'arc', 'ellipse'].includes(entity.type)) {
+          console.warn('[HoverManager] No hover handler for entity type:', entity.type);
+        }
     }
   }
 }

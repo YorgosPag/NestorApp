@@ -11,6 +11,8 @@ import { UI_COLORS } from '../../config/color-config';
 import { calculateDistance, calculateAngle, calculateMidpoint, getPerpendicularUnitVector, offsetPoint } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-XXX: Centralized Angular Constants
+import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
 
 /**
  * Calculate optimal text position and rotation for edge labeling
@@ -72,8 +74,9 @@ export function renderTextAtEdgePosition(
   ctx.translate(textPos.x, textPos.y);
   
   // Rotate text to be readable (don't flip upside down)
+  // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
   let textAngle = textPos.angle;
-  if (Math.abs(textAngle) > Math.PI / 2) {
+  if (Math.abs(textAngle) > RIGHT_ANGLE) {
     textAngle += Math.PI;
   }
   ctx.rotate(textAngle);

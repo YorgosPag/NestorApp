@@ -3,20 +3,20 @@ import type { EntityModel } from '../types/Types';
 import type { Point2D, GripInfo, RenderOptions } from '../types/Types';
 import { createVertexGrip } from './shared/grip-utils';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isPointEntity, type Entity, type PointEntity } from '../../types/entities';
 
-// Extended point entity interface
-interface PointEntity extends EntityModel {
-  type: 'point';
-  position: Point2D;
-  size?: number;
+// Extended point entity interface for renderer-specific properties
+interface ExtendedPointEntity extends PointEntity {
   preview?: boolean;
 }
 
 export class PointRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    if (entity.type !== 'point') return;
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isPointEntity(entity as Entity)) return;
 
-    const pointEntity = entity as PointEntity;
+    const pointEntity = entity as ExtendedPointEntity;
     const position = pointEntity.position;
     const size = pointEntity.size || 2;
 
@@ -38,9 +38,10 @@ export class PointRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    if (entity.type !== 'point') return [];
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isPointEntity(entity as Entity)) return [];
 
-    const pointEntity = entity as PointEntity;
+    const pointEntity = entity as ExtendedPointEntity;
     return [{
       id: `${entity.id}-point`,
       entityId: entity.id,
@@ -52,9 +53,10 @@ export class PointRenderer extends BaseEntityRenderer {
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
-    if (entity.type !== 'point') return false;
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isPointEntity(entity as Entity)) return false;
 
-    const pointEntity = entity as PointEntity;
+    const pointEntity = entity as ExtendedPointEntity;
     const screenPos = this.worldToScreen(pointEntity.position);
     const screenTestPoint = this.worldToScreen(point);
 

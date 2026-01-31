@@ -34,6 +34,8 @@ import { getTextPreviewStyleWithOverride, renderStyledTextWithOverride } from '.
 import { calculateDistance, calculateAngle } from './geometry-rendering-utils';
 // 🏢 ADR-082: Enterprise Number Formatting
 import { FormatterRegistry, type Precision } from '../../../formatting';
+// 🏢 ADR-XXX: Centralized Angular Constants
+import { RIGHT_ANGLE } from './geometry-utils';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -284,7 +286,7 @@ export function renderDistanceLabel(
   let angle = calculateAngle(screenP1, screenP2);
 
   // Normalize angle to keep text readable (not upside down)
-  if (opts.rotateWithLine && Math.abs(angle) > Math.PI / 2) {
+  if (opts.rotateWithLine && Math.abs(angle) > RIGHT_ANGLE) {
     angle += Math.PI;
   }
 
@@ -375,7 +377,7 @@ export function renderDistanceLabelStyled(
   let angle = calculateAngle(screenP1, screenP2);
 
   // Normalize angle
-  if (opts.rotateWithLine && Math.abs(angle) > Math.PI / 2) {
+  if (opts.rotateWithLine && Math.abs(angle) > RIGHT_ANGLE) {
     angle += Math.PI;
   }
 

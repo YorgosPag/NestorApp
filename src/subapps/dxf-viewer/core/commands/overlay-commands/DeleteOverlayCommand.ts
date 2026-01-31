@@ -13,6 +13,7 @@
 import type { ICommand, SerializedCommand } from '../interfaces';
 import type { Overlay } from '../../../overlays/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { deepClone } from '../../../utils/clone-utils';
 
 /**
  * Overlay store interface for command operations
@@ -56,7 +57,7 @@ export class DeleteOverlayCommand implements ICommand {
     const overlay = this.overlayStore.overlays[this.overlayId];
     if (overlay) {
       // Deep clone the overlay
-      this.overlaySnapshot = JSON.parse(JSON.stringify(overlay)) as Overlay;
+      this.overlaySnapshot = deepClone(overlay);
 
       // Fire-and-forget async operation
       // Firestore real-time listener will update UI
@@ -190,7 +191,7 @@ export class DeleteMultipleOverlaysCommand implements ICommand {
       const overlay = this.overlayStore.overlays[overlayId];
       if (overlay) {
         // Deep clone the overlay
-        this.overlaySnapshots.push(JSON.parse(JSON.stringify(overlay)) as Overlay);
+        this.overlaySnapshots.push(deepClone(overlay));
 
         // Fire-and-forget async operation
         this.overlayStore.remove(overlayId).catch((error: unknown) => {

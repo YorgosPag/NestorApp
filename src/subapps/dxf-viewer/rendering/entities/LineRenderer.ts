@@ -53,10 +53,13 @@ import { hitTestLineSegments, createEdgeGrips, renderSplitLine, renderLineWithTe
 import { createVertexGrip } from './shared/grip-utils';
 // 🏢 ADR-065: Centralized Distance & Vector Operations
 import { calculateDistance, getPerpendicularUnitVector } from './shared/geometry-rendering-utils';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isLineEntity, type Entity } from '../../types/entities';
 
 export class LineRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    if (entity.type !== 'line') return;
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isLineEntity(entity as Entity)) return;
 
     // Use type guard for safe property access
     if (!('start' in entity) || !('end' in entity)) return;
@@ -122,7 +125,8 @@ export class LineRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    if (entity.type !== 'line') return [];
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isLineEntity(entity as Entity)) return [];
 
     // Use type guard for safe property access
     if (!('start' in entity) || !('end' in entity)) return [];
@@ -215,7 +219,8 @@ export class LineRenderer extends BaseEntityRenderer {
 
   // ✅ ENTERPRISE FIX: Implement abstract hitTest method
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
-    if (entity.type !== 'line') return false;
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isLineEntity(entity as Entity)) return false;
 
     // Use type guard for safe property access
     if (!('start' in entity) || !('end' in entity)) return false;

@@ -408,6 +408,20 @@ export const TEXT_LABEL_OFFSETS = {
    * Used for: Ghost entity coordinate readout
    */
   TOOLTIP_VERTICAL: 10,
+
+  /**
+   * Measurement text vertical offset (pixels)
+   * Used for: Distance labels above lines (non-preview mode)
+   * @see phase-text-utils.ts - renderDistanceTextPhaseAware()
+   */
+  MEASUREMENT_VERTICAL: 20,
+
+  /**
+   * Origin marker extra visibility margin (pixels)
+   * Used for: Origin crosshair visibility check with label space
+   * @see OriginMarkersRenderer.ts - render()
+   */
+  ORIGIN_LABEL_MARGIN: 50,
 } as const;
 
 // ============================================

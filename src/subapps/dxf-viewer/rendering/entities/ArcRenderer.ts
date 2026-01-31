@@ -6,7 +6,7 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
-import { HoverManager } from '../../utils/hover';
+// 🏢 ADR-099: HoverManager import removed - ArcRenderer has no hover rendering
 import {
   renderDotAtPoint,
   createArcGripPattern,

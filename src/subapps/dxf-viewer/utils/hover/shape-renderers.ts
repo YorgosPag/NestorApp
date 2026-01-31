@@ -1,57 +1,23 @@
 /**
- * Shape Hover Renderers
+ * Shape Hover Renderers - PLACEHOLDER
  *
- * ⚠️ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ: Οι hover renderers για shapes είναι προσωρινά
- * απενεργοποιημένοι για testing κίτρινων grips.
+ * 🏢 ENTERPRISE CLEANUP (2026-01-31):
+ * Οι hover renderers για shapes (Circle, Rectangle, Arc, Ellipse) ήταν
+ * απενεργοποιημένα stubs (dead code). Διαγράφηκαν σύμφωνα με enterprise
+ * code standards.
  *
- * Οι συναρτήσεις διατηρούνται ως stubs για backward compatibility.
+ * RATIONALE:
+ * - Disabled stubs = dead code = technical debt
+ * - Unused imports σε 3 entity renderers
+ * - Maintenance burden χωρίς λειτουργικότητα
+ *
+ * Αν χρειαστούν hover renderers για shapes στο μέλλον, θα υλοποιηθούν
+ * ΣΩΣΤΑ με πλήρη λειτουργικότητα (όχι stubs).
+ *
+ * @see ADR-099: Rendering Systems Centralization
+ * @since 2026-01-31
  */
 
-import type { HoverRenderContext } from './types';
-import {
-  isCircleEntity,
-  isRectangleEntity,
-  isRectEntity,
-  isArcEntity,
-  isPolylineEntity,
-  isLWPolylineEntity,
-  isEllipseEntity
-} from '../../types/entities';
-
-/**
- * Render circle hover - ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ
- * @stub Επιστρέφει αμέσως χωρίς να κάνει τίποτα
- */
-export function renderCircleHover({ entity }: HoverRenderContext): void {
-  if (!isCircleEntity(entity)) return;
-  // ⚠️ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING
-}
-
-/**
- * Render rectangle hover - ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ
- * @stub Επιστρέφει αμέσως χωρίς να κάνει τίποτα
- */
-export function renderRectangleHover({ entity }: HoverRenderContext): void {
-  if (!isRectangleEntity(entity) && !isRectEntity(entity) &&
-      !isPolylineEntity(entity) && !isLWPolylineEntity(entity)) return;
-  // ⚠️ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING
-}
-
-/**
- * Render arc hover - ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ
- * @stub Επιστρέφει αμέσως χωρίς να κάνει τίποτα
- */
-export function renderArcHover({ entity }: HoverRenderContext): void {
-  if (!isArcEntity(entity)) return;
-  // ⚠️ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING
-}
-
-/**
- * Render ellipse hover - ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ
- * @stub Επιστρέφει αμέσως χωρίς να κάνει τίποτα
- */
-export function renderEllipseHover({ entity }: HoverRenderContext): void {
-  if (!isEllipseEntity(entity)) return;
-  // ⚠️ ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟ ΓΙΑ TESTING
-}
-
+// 🚫 NO EXPORTS - This file is intentionally empty
+// Shape hover rendering was never implemented (only disabled stubs existed)
+// If needed in future, implement properly with full functionality

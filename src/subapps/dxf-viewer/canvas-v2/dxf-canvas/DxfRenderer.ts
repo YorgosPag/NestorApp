@@ -8,13 +8,13 @@
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
-// 🏢 ADR-088: Centralized Pixel-Perfect Alignment
-import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
 // 🏢 ADR-097: Centralized Line Dash Patterns
-import { UI_FONTS, RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
+import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
+// 🏢 ADR-102: Centralized Origin Markers
+import { renderOriginMarker } from '../../rendering/ui/origin/OriginMarkerUtils';
 
 // ✅ ΝΕΟ: Import unified rendering system
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
@@ -77,30 +77,8 @@ export class DxfRenderer {
     // Clear canvas
     CanvasUtils.clearCanvas(this.ctx, this.canvas, 'transparent');
 
-    // 🎨 DEBUG: Draw DxfCanvas origin marker (ORANGE) - TOP + LEFT half
-    // ✅ CORRECT: Calculate screen position of ACTUAL world (0,0) using CoordinateTransforms
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CoordinateTransforms.worldToScreen(worldOrigin, transform, viewport);
-    // 🏢 ADR-088: Use centralized pixelPerfect for crisp rendering
-    const originX = pixelPerfect(screenOrigin.x);
-    const originY = pixelPerfect(screenOrigin.y);
-
-    this.ctx.save();
-    this.ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT; // ✅ CENTRALIZED: Orange highlight για DXF origin marker
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THICK; // 🏢 ADR-044
-    this.ctx.beginPath();
-    // TOP vertical line (up from origin)
-    this.ctx.moveTo(originX, originY);
-    this.ctx.lineTo(originX, originY - 20);
-    // LEFT horizontal line (left from origin)
-    this.ctx.moveTo(originX, originY);
-    this.ctx.lineTo(originX - 20, originY);
-    this.ctx.stroke();
-    // Label
-    this.ctx.fillStyle = UI_COLORS.DRAWING_HIGHLIGHT; // ✅ CENTRALIZED: Orange text για DXF label
-    this.ctx.font = UI_FONTS.MONOSPACE.BOLD; // 🏢 ADR-042: Centralized UI Font
-    this.ctx.fillText('DXF', originX - 45, originY - 10);
-    this.ctx.restore();
+    // 🏢 ADR-102: Centralized Origin Marker (Orange L-shape: TOP + LEFT)
+    renderOriginMarker(this.ctx, transform, viewport, { variant: 'dxf' });
 
     // Early return if no scene
       if (!scene || !scene.entities.length) {

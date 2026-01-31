@@ -25,12 +25,15 @@ import { UI_COLORS } from '../../config/color-config';
 import { UI_FONTS, RENDER_LINE_WIDTHS, buildUIFont, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-073: Centralized Midpoint Calculation
-// 🏢 ADR-088: Centralized Pixel-Perfect Alignment
-import { calculateMidpoint, pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { calculateMidpoint } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-102: Centralized Origin Markers
+import { renderOriginMarker } from '../../rendering/ui/origin/OriginMarkerUtils';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS } from '../../rendering/grips/constants';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../../rendering/primitives/canvasPaths';
+// 🏢 ADR-XXX: Centralized Angular Constants
+import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
 
 // ✅ ΦΑΣΗ 7: Import unified canvas system
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
@@ -216,31 +219,8 @@ export class LayerRenderer {
     // Clear canvas using unified utils
     CanvasUtils.clearCanvas(this.ctx, this.canvas, 'transparent');
 
-    // 🎨 DEBUG: Draw LayerCanvas origin marker (BLUE) - BOTTOM + RIGHT half
-    // ✅ CORRECT: Calculate screen position of ACTUAL world (0,0) using CoordinateTransforms
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CoordinateTransforms.worldToScreen(worldOrigin, transform, viewport);
-    // 🏢 ADR-088: Use centralized pixelPerfect for crisp rendering
-    const originX = pixelPerfect(screenOrigin.x);
-    const originY = pixelPerfect(screenOrigin.y);
-
-    // Debug disabled: origin marker values
-    this.ctx.save();
-    this.ctx.strokeStyle = UI_COLORS.BUTTON_PRIMARY; // ✅ CENTRALIZED: Blue για LayerRenderer origin marker
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THICK; // 🏢 ADR-044
-    this.ctx.beginPath();
-    // BOTTOM vertical line (down from origin)
-    this.ctx.moveTo(originX, originY);
-    this.ctx.lineTo(originX, originY + 20);
-    // RIGHT horizontal line (right from origin)
-    this.ctx.moveTo(originX, originY);
-    this.ctx.lineTo(originX + 20, originY);
-    this.ctx.stroke();
-    // Label
-    this.ctx.fillStyle = UI_COLORS.BUTTON_PRIMARY; // ✅ CENTRALIZED: Blue text για LayerRenderer label
-    this.ctx.font = UI_FONTS.MONOSPACE.BOLD; // 🏢 ADR-042: Centralized UI Font
-    this.ctx.fillText('LAYER', originX + 5, originY + 30);
-    this.ctx.restore();
+    // 🏢 ADR-102: Centralized Origin Marker (Blue inverted L-shape: BOTTOM + RIGHT)
+    renderOriginMarker(this.ctx, transform, viewport, { variant: 'layer' });
 
     this.ctx.save();
 
@@ -982,9 +962,10 @@ export class LayerRenderer {
       if (settings.showLabels !== false) {
         const numberText = worldY.toFixed(0);
 
+        // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
         this.ctx.save();
         this.ctx.translate(rulerWidth / 2, y);
-        this.ctx.rotate(-Math.PI / 2);
+        this.ctx.rotate(-RIGHT_ANGLE);
 
         // Numbers με το κανονικό fontSize και textColor
         this.ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;

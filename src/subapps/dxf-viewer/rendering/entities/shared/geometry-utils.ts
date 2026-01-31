@@ -1165,6 +1165,23 @@ export const DEGREES_TO_RADIANS = Math.PI / 180;
  */
 export const RADIANS_TO_DEGREES = 180 / Math.PI;
 
+// ===== ANGULAR CONSTANTS =====
+// 🏢 ADR-XXX: Centralized Angular Constants (2026-01-31)
+
+/**
+ * Right angle constant: 90° in radians (π/2)
+ * Usage: Text rotation flip checks, vertical text rotation
+ * @see text-labeling-utils.ts, BaseEntityRenderer.ts, RulerRenderer.ts, LayerRenderer.ts
+ */
+export const RIGHT_ANGLE = Math.PI / 2;  // ≈ 1.5708 rad (90°)
+
+/**
+ * Arrow angle constant: 30° in radians (π/6)
+ * Usage: Arrow head rendering angles
+ * @see ghost-entity-renderer.ts
+ */
+export const ARROW_ANGLE = Math.PI / 6;  // ≈ 0.5236 rad (30°)
+
 /**
  * Convert degrees to radians
  * 🏢 ADR-067: Canonical source for deg→rad conversion

@@ -8,6 +8,8 @@ import type { EntityModel, RenderOptions } from '../../types/Types';
 import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { calculateMidpoint } from './geometry-utils';
+// 🏢 ADR-091: Centralized Text Label Offsets
+import { TEXT_LABEL_OFFSETS } from '../../../config/text-rendering-config';
 
 /**
  * Render distance text with phase-aware positioning
@@ -37,6 +39,7 @@ export function renderDistanceTextPhaseAware(
   } else {
     // Offset positioning for measurements - above the line
     // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledTextWithOverride(ctx, label, mid.x, mid.y - 20);
+    // 🏢 ADR-091: Use centralized MEASUREMENT_VERTICAL offset
+    renderStyledTextWithOverride(ctx, label, mid.x, mid.y - TEXT_LABEL_OFFSETS.MEASUREMENT_VERTICAL);
   }
 }

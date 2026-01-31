@@ -23,6 +23,14 @@
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, AnySceneEntity, SceneLayer, SceneBounds } from '../../types/scene';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import {
+  isLineEntity,
+  isCircleEntity,
+  isRectangleEntity,
+  isPolylineEntity,
+  type Entity,
+} from '../../types/entities';
 
 /**
  * Type for getLevelScene function from useLevels hook
@@ -165,7 +173,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         if (entity.id !== entityId) return entity;
 
         // Handle polyline vertices
-        if (entity.type === 'polyline' && 'vertices' in entity) {
+        // 🏢 ADR-102: Use centralized type guard with Entity cast + property check for TS narrowing
+        if (isPolylineEntity(entity as unknown as Entity) && 'vertices' in entity) {
           const vertices = [...entity.vertices];
           if (vertexIndex >= 0 && vertexIndex < vertices.length) {
             vertices[vertexIndex] = position;
@@ -174,7 +183,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         }
 
         // Handle line start/end
-        if (entity.type === 'line' && 'start' in entity && 'end' in entity) {
+        // 🏢 ADR-102: Use centralized type guard with Entity cast
+        if (isLineEntity(entity as unknown as Entity)) {
           if (vertexIndex === 0) {
             return { ...entity, start: position };
           } else if (vertexIndex === 1) {
@@ -183,7 +193,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         }
 
         // Handle circle center
-        if (entity.type === 'circle' && 'center' in entity) {
+        // 🏢 ADR-102: Use centralized type guard with Entity cast
+        if (isCircleEntity(entity as unknown as Entity)) {
           if (vertexIndex === 0) {
             return { ...entity, center: position };
           }
@@ -212,7 +223,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         if (entity.id !== entityId) return entity;
 
         // Only polylines support vertex insertion
-        if (entity.type === 'polyline' && 'vertices' in entity) {
+        // 🏢 ADR-102: Use centralized type guard with Entity cast + property check for TS narrowing
+        if (isPolylineEntity(entity as unknown as Entity) && 'vertices' in entity) {
           const vertices = [...entity.vertices];
           vertices.splice(insertIndex, 0, position);
           return { ...entity, vertices };
@@ -241,7 +253,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         if (entity.id !== entityId) return entity;
 
         // Only polylines support vertex removal
-        if (entity.type === 'polyline' && 'vertices' in entity) {
+        // 🏢 ADR-102: Use centralized type guard with Entity cast + property check for TS narrowing
+        if (isPolylineEntity(entity as unknown as Entity) && 'vertices' in entity) {
           const vertices = [...entity.vertices];
           if (vertexIndex >= 0 && vertexIndex < vertices.length && vertices.length > 2) {
             vertices.splice(vertexIndex, 1);
@@ -271,13 +284,15 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     if (!entity) return undefined;
 
     // Handle polyline vertices
-    if (entity.type === 'polyline' && 'vertices' in entity) {
+    // 🏢 ADR-102: Use centralized type guard with Entity cast + property check for TS narrowing
+    if (isPolylineEntity(entity as unknown as Entity) && 'vertices' in entity) {
       return entity.vertices;
     }
 
     // Handle line as 2 vertices
     // 🏢 ENTERPRISE: Type guard ensures start/end are defined for line entities
-    if (entity.type === 'line' && 'start' in entity && 'end' in entity) {
+    // 🏢 ADR-102: Use centralized type guard with Entity cast
+    if (isLineEntity(entity as unknown as Entity)) {
       const lineEntity = entity as { start?: Point2D; end?: Point2D };
       if (lineEntity.start && lineEntity.end) {
         return [lineEntity.start, lineEntity.end];
@@ -285,7 +300,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     }
 
     // Handle circle as 1 vertex (center)
-    if (entity.type === 'circle' && 'center' in entity) {
+    // 🏢 ADR-102: Use centralized type guard with Entity cast
+    if (isCircleEntity(entity as unknown as Entity)) {
       const circleEntity = entity as { center?: Point2D };
       if (circleEntity.center) {
         return [circleEntity.center];
@@ -293,7 +309,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     }
 
     // Handle rectangle as 2 corners
-    if (entity.type === 'rectangle' && 'corner1' in entity && 'corner2' in entity) {
+    // 🏢 ADR-102: Use centralized type guard with Entity cast
+    if (isRectangleEntity(entity as unknown as Entity) && 'corner1' in entity && 'corner2' in entity) {
       const rectEntity = entity as { corner1?: Point2D; corner2?: Point2D };
       if (rectEntity.corner1 && rectEntity.corner2) {
         return [rectEntity.corner1, rectEntity.corner2];

@@ -9,6 +9,8 @@ const DEBUG_SNAP_ENGINE_UTILS = false;
 import type { Point2D } from '../../../rendering/types/Types';
 import type { SnapCandidate, SnapConfig } from '../../extended-types';
 import type { Entity, RectangleEntity, CircleEntity, ArcEntity } from '../../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isCircleEntity, isArcEntity } from '../../../types/entities';
 import { GeometricCalculations } from '../../shared/GeometricCalculations';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
@@ -334,7 +336,8 @@ export function findCircleBasedSnapCandidates(
 
   for (const entity of filteredEntities) {
     // 🏢 ENTERPRISE: Handle circle and arc entities with proper type guards
-    if (entity.type === 'circle') {
+    // 🏢 ADR-102: Use centralized type guards
+    if (isCircleEntity(entity)) {
       const circleEntity = entity as CircleEntity;
       const { center, radius } = circleEntity;
 
@@ -347,7 +350,7 @@ export function findCircleBasedSnapCandidates(
           }
         }
       }
-    } else if (entity.type === 'arc') {
+    } else if (isArcEntity(entity)) {
       const arcEntity = entity as ArcEntity;
       const { center, radius } = arcEntity;
 

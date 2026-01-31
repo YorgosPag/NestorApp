@@ -26,7 +26,8 @@ import { RENDER_LINE_WIDTHS, buildUIFont } from '../../config/text-rendering-con
 // 🏢 ADR-079: Centralized Axis Detection Constants
 import { AXIS_DETECTION } from '../../config/tolerance-config';
 // 🏢 ADR: Centralized Clamp Function
-import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-XXX: Centralized Angular Constants
+import { clamp01, RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
 
 // Helper function to generate grid line (eliminates code duplication)
 function createGridLine(
@@ -741,9 +742,10 @@ export const RulersGridRendering = {
           if (settings.showUnits && unitsText) {
             ctx.font = buildUIFont(settings.unitsFontSize || 10, settings.fontFamily || 'monospace');
 
+            // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
             ctx.save();
             ctx.translate(3, currentY);
-            ctx.rotate(-Math.PI / 2);
+            ctx.rotate(-RIGHT_ANGLE);
             ctx.textBaseline = 'top';
             ctx.textAlign = 'end';
             ctx.fillStyle = settings.unitsColor || settings.textColor || UI_COLORS.RULER_TEXT_GRAY;
@@ -751,14 +753,15 @@ export const RulersGridRendering = {
             ctx.restore();
             currentY += ctx.measureText(unitsText).width; // Μετακίνηση για τα numbers
           }
-          
+
           // Render numbers ΜΕΤΑ (θα εμφανιστούν πάνω μετά την περιστροφή)
           if (settings.showLabels && numbersText) {
             ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
 
+            // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
             ctx.save();
             ctx.translate(3, currentY);
-            ctx.rotate(-Math.PI / 2);
+            ctx.rotate(-RIGHT_ANGLE);
             ctx.textBaseline = 'top';
             ctx.textAlign = 'end';
             ctx.fillText(numbersText, 0, 0);

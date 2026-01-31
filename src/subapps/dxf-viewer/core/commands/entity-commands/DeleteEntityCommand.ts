@@ -7,6 +7,7 @@
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { deepClone } from '../../../utils/clone-utils';
 
 /**
  * Command for deleting an entity
@@ -36,7 +37,7 @@ export class DeleteEntityCommand implements ICommand {
     const entity = this.sceneManager.getEntity(this.entityId);
     if (entity) {
       // Deep clone the entity
-      this.entitySnapshot = JSON.parse(JSON.stringify(entity)) as SceneEntity;
+      this.entitySnapshot = deepClone(entity);
       this.sceneManager.removeEntity(this.entityId);
       this.wasExecuted = true;
     }
@@ -140,7 +141,7 @@ export class DeleteMultipleEntitiesCommand implements ICommand {
       const entity = this.sceneManager.getEntity(entityId);
       if (entity) {
         // Deep clone the entity
-        this.entitySnapshots.push(JSON.parse(JSON.stringify(entity)) as SceneEntity);
+        this.entitySnapshots.push(deepClone(entity));
         this.sceneManager.removeEntity(entityId);
       }
     }

@@ -34,6 +34,8 @@
  */
 
 import type { Entity } from '../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isArcEntity } from '../../types/entities';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import type { ToolType } from '../../ui/toolbar/types';
 import { applyCompletionStyles } from '../useLineCompletionStyle';
@@ -145,7 +147,8 @@ export function completeEntity(
   applyCompletionStyles(entity as unknown as Record<string, unknown>);
 
   // 🔍 DEBUG: Check if arc has counterclockwise AFTER applyCompletionStyles
-  if (entity.type === 'arc') {
+  // 🏢 ADR-102: Use centralized type guard
+  if (isArcEntity(entity)) {
     console.log('📦 [completeEntity] Arc entity AFTER applyCompletionStyles:', {
       entityId: entity.id,
       counterclockwise: (entity as { counterclockwise?: boolean }).counterclockwise,

@@ -9,6 +9,8 @@ import { renderEdgeDistanceLabel, calculateEdgeTextPosition } from './text-label
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-XXX: Centralized Angular Constants
+import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
 
 export function renderHoverEdgeWithDistance(
   ctx: CanvasRenderingContext2D,
@@ -36,8 +38,9 @@ export function renderHoverEdgeWithDistance(
   ctx.translate(textPos.x, textPos.y);
 
   // Rotate text to be readable
+  // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
   let textAngle = textPos.angle;
-  if (Math.abs(textAngle) > Math.PI / 2) {
+  if (Math.abs(textAngle) > RIGHT_ANGLE) {
     textAngle += Math.PI;
   }
   ctx.rotate(textAngle);

@@ -7,6 +7,8 @@ import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/Ren
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../primitives/canvasPaths';
+// 🏢 ADR-XXX: Centralized Angular Constants
+import { RIGHT_ANGLE } from '../entities/shared/geometry-utils';
 
 export interface BackgroundConfig {
   gridEnabled: boolean;
@@ -194,10 +196,11 @@ export class BackgroundPass implements IRenderPass {
       const worldY = (y - transform.offsetY) / transform.scale;
       context.save();
       // 🏢 ENTERPRISE: Use native canvas context for transform operations
+      // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
       const nativeCtx = context.canvas.getContext('2d');
       if (nativeCtx) {
         nativeCtx.translate(rulerHeight / 2, y);
-        nativeCtx.rotate(-Math.PI / 2);
+        nativeCtx.rotate(-RIGHT_ANGLE);
       }
       context.fillText(worldY.toFixed(0), 0, 0);
       context.restore();

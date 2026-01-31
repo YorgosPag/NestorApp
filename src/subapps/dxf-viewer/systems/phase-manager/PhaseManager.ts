@@ -33,6 +33,8 @@ const DEBUG_PHASE_MANAGER = false;
 
 import type { Point2D, GripInfo, RenderOptions } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isAngleMeasurementEntity, isDimensionEntity } from '../../types/entities';
 import type { GripSettings } from '../../types/gripSettings';
 import type {
   PhaseManagerOptions,
@@ -306,11 +308,15 @@ export class PhaseManager {
   /**
    * Check if entity is a measurement entity
    */
+  /**
+   * Check if entity is a measurement entity
+   * 🏢 ADR-102: Use centralized type guards
+   */
   private isMeasurementEntity(entity: Entity): boolean {
     return (
       entity.measurement === true ||
-      entity.type === 'angle-measurement' ||
-      entity.type === 'dimension'
+      isAngleMeasurementEntity(entity) ||
+      isDimensionEntity(entity)
     );
   }
 

@@ -44,7 +44,9 @@ export function pixelPerfectPoint(point: Point2D): Point2D {
   };
 }
 // ✅ ENTERPRISE FIX: Import AngleMeasurementEntity from entities
-import type { AngleMeasurementEntity } from '../../../types/entities';
+import type { AngleMeasurementEntity, Entity } from '../../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isAngleMeasurementEntity } from '../../../types/entities';
 import type { EntityModel } from '../../types/Types';
 import { UI_COLORS } from '../../../config/color-config';
 import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle';
@@ -63,7 +65,8 @@ export function extractAngleMeasurementPoints(entity: EntityModel): {
   angle: number;
 } | null {
   // ✅ ENTERPRISE: Type guard for angle measurement entity
-  if (entity.type !== 'angle-measurement') return null;
+  // 🏢 ADR-102: Use centralized type guard
+  if (!isAngleMeasurementEntity(entity as Entity)) return null;
 
   const angleEntity = entity as AngleMeasurementEntity;
   const vertex = angleEntity.vertex;

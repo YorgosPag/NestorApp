@@ -6,7 +6,9 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
-import type { PolylineEntity } from '../../types/entities';
+import type { PolylineEntity, Entity } from '../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isPolylineEntity, isLWPolylineEntity } from '../../types/entities';
 import { calculatePolygonArea, calculatePolygonCentroid } from './shared/geometry-utils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
@@ -24,7 +26,9 @@ import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 export class PolylineRenderer extends BaseEntityRenderer {
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return;
+    // 🏢 ADR-102: Use centralized type guards
+    const e = entity as Entity;
+    if (!isPolylineEntity(e) && !isLWPolylineEntity(e)) return;
 
     // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
     const polylineEntity = entity as PolylineEntity; // 🏢 ENTERPRISE: Type-safe casting
@@ -133,7 +137,9 @@ export class PolylineRenderer extends BaseEntityRenderer {
     this.renderVertexDots(vertices);
   }
   getGrips(entity: EntityModel): GripInfo[] {
-    if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return [];
+    // 🏢 ADR-102: Use centralized type guards
+    const e = entity as Entity;
+    if (!isPolylineEntity(e) && !isLWPolylineEntity(e)) return [];
 
     const grips: GripInfo[] = [];
     // ✅ ENTERPRISE FIX: Use type guard for safe property access
@@ -267,7 +273,9 @@ export class PolylineRenderer extends BaseEntityRenderer {
 
   // ✅ ENTERPRISE FIX: Implement abstract hitTest method
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
-    if (entity.type !== 'polyline' && entity.type !== 'lwpolyline') return false;
+    // 🏢 ADR-102: Use centralized type guards
+    const e = entity as Entity;
+    if (!isPolylineEntity(e) && !isLWPolylineEntity(e)) return false;
 
     // 🏢 ENTERPRISE: Type-safe casting for entity-specific properties
     const polylineEntity = entity as PolylineEntity;

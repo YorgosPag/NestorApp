@@ -20,6 +20,7 @@ import type { ICommand, SerializedCommand } from '../interfaces';
 import type { Overlay } from '../../../overlays/types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { deepClone } from '../../../utils/clone-utils';
 
 /**
  * Point2D interface for delta calculation
@@ -95,7 +96,7 @@ export class MoveOverlayCommand implements ICommand {
 
     // Store original polygon for undo (first execution only)
     if (!this.wasExecuted) {
-      this.originalPolygon = JSON.parse(JSON.stringify(overlay.polygon));
+      this.originalPolygon = deepClone(overlay.polygon);
     }
 
     // Calculate new polygon by adding delta to all vertices

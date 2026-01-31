@@ -4,6 +4,8 @@
  */
 
 import type { Entity, LineEntity, CircleEntity, RectangleEntity } from '../../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isLineEntity, isCircleEntity, isRectangleEntity } from '../../../types/entities';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { AnySceneEntity } from '../../../types/scene';
 import { calculateVerticesBounds } from '../../../utils/geometry/GeometryUtils';
@@ -29,7 +31,8 @@ export function calculateBoundingBox(entities: Entity[]): {
 
   entities.forEach(entity => {
     // Extract bounds from different entity types using type narrowing
-    if (entity.type === 'line') {
+    // 🏢 ADR-102: Use centralized type guards
+    if (isLineEntity(entity)) {
       const lineEntity = entity as LineEntity;
       const { start, end } = lineEntity;
       if (start && end) {
@@ -38,7 +41,7 @@ export function calculateBoundingBox(entities: Entity[]): {
         maxX = Math.max(maxX, start.x, end.x);
         maxY = Math.max(maxY, start.y, end.y);
       }
-    } else if (entity.type === 'circle') {
+    } else if (isCircleEntity(entity)) {
       const circleEntity = entity as CircleEntity;
       const { center, radius } = circleEntity;
       if (center && radius !== undefined) {
@@ -47,7 +50,7 @@ export function calculateBoundingBox(entities: Entity[]): {
         maxX = Math.max(maxX, center.x + radius);
         maxY = Math.max(maxY, center.y + radius);
       }
-    } else if (entity.type === 'rectangle') {
+    } else if (isRectangleEntity(entity)) {
       const rectEntity = entity as RectangleEntity;
       const { x, y, width, height } = rectEntity;
       if (x !== undefined && y !== undefined && width !== undefined && height !== undefined) {

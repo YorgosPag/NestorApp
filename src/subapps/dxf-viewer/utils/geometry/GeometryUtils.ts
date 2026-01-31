@@ -6,6 +6,13 @@
 import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-067: Centralized angle conversion + TAU constant
 import { degToRad, TAU } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import {
+  isLineEntity,
+  isPolylineEntity,
+  isArcEntity,
+  type Entity,
+} from '../../types/entities';
 // 🏢 ADR-074: Centralized Point On Circle
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
@@ -121,13 +128,16 @@ interface GeometryEntity {
  * Convert entity to segments based on type
  */
 export function entityToSegments(entity: GeometryEntity): Segment[] {
-  if (entity.type === 'line') {
+  // 🏢 ADR-102: Use centralized type guards (cast GeometryEntity to Entity for compatibility)
+  const e = entity as unknown as Entity;
+
+  if (isLineEntity(e)) {
     // Type guard: Ensure start and end exist on line entity
     if (!entity.start || !entity.end) return [];
     return [{ start: entity.start, end: entity.end }];
   }
-  
-  if (entity.type === 'polyline') {
+
+  if (isPolylineEntity(e)) {
     const vs = entity.vertices || [];
     const segs: Segment[] = [];
     
@@ -141,8 +151,8 @@ export function entityToSegments(entity: GeometryEntity): Segment[] {
     
     return segs;
   }
-  
-  if (entity.type === 'arc') {
+
+  if (isArcEntity(e)) {
     // Type guard: Ensure required arc properties exist
     if (!entity.center || typeof entity.radius !== 'number') return [];
     const vertices = arcToPolyline(entity as Arc);

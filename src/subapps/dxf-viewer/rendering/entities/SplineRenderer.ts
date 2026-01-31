@@ -6,14 +6,17 @@
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
-import type { SplineEntity } from '../../types/entities';
+import type { SplineEntity, Entity } from '../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isSplineEntity } from '../../types/entities';
 import { HoverManager } from '../../utils/hover';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { pointToLineDistance, calculateMidpoint } from './shared/geometry-utils';
 
 export class SplineRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    if (entity.type !== 'spline') return;
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isSplineEntity(entity as Entity)) return;
 
     // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
     const splineEntity = entity as SplineEntity; // 🏢 ENTERPRISE: Type-safe casting
@@ -71,7 +74,8 @@ export class SplineRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    if (entity.type !== 'spline') return [];
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isSplineEntity(entity as Entity)) return [];
 
     const grips: GripInfo[] = [];
     // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
@@ -96,7 +100,8 @@ export class SplineRenderer extends BaseEntityRenderer {
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number = 5): boolean {
-    if (entity.type !== 'spline') return false;
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isSplineEntity(entity as Entity)) return false;
 
     // ✅ ENTERPRISE FIX: Safe type casting for entity-specific properties
     const splineEntity = entity as SplineEntity; // 🏢 ENTERPRISE: Type-safe casting

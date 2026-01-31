@@ -41,9 +41,10 @@ import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS, UI_FONTS, TEXT_LABEL_OFFSETS } 
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addCirclePath, TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-066: Centralized Angle Calculation
-// 🏢 ADR-066: Centralized Angle Calculation
 // 🏢 ADR-080: Centralized Rectangle Bounds
 import { calculateAngle, rectFromTwoPoints } from '../entities/shared/geometry-rendering-utils';
+// 🏢 ADR-XXX: Centralized Angular Constants
+import { ARROW_ANGLE } from '../entities/shared/geometry-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration
@@ -476,19 +477,20 @@ function renderDeltaLine(
 
   // Draw arrow head
   // 🏢 ADR-066: Use centralized angle calculation
+  // 🏢 ADR-XXX: Use centralized ARROW_ANGLE constant (30° = π/6)
   const angle = calculateAngle(startScreen, endScreen);
   const arrowSize = 8;
 
   ctx.beginPath();
   ctx.moveTo(endScreen.x, endScreen.y);
   ctx.lineTo(
-    endScreen.x - arrowSize * Math.cos(angle - Math.PI / 6),
-    endScreen.y - arrowSize * Math.sin(angle - Math.PI / 6)
+    endScreen.x - arrowSize * Math.cos(angle - ARROW_ANGLE),
+    endScreen.y - arrowSize * Math.sin(angle - ARROW_ANGLE)
   );
   ctx.moveTo(endScreen.x, endScreen.y);
   ctx.lineTo(
-    endScreen.x - arrowSize * Math.cos(angle + Math.PI / 6),
-    endScreen.y - arrowSize * Math.sin(angle + Math.PI / 6)
+    endScreen.x - arrowSize * Math.cos(angle + ARROW_ANGLE),
+    endScreen.y - arrowSize * Math.sin(angle + ARROW_ANGLE)
   );
   ctx.stroke();
 }

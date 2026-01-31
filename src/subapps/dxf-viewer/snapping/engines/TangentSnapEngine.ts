@@ -11,6 +11,8 @@ import { findCircleBasedSnapCandidates } from './shared/snap-engine-utils';
 // 🏢 ADR-065: Centralized Distance Calculation
 // 🏢 ADR-066: Centralized Angle Calculation
 import { calculateDistance, calculateAngle } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-XXX: Centralized Angular Constants
+import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
 
 export class TangentSnapEngine extends BaseSnapEngine {
 
@@ -54,17 +56,18 @@ export class TangentSnapEngine extends BaseSnapEngine {
     const tangentAngle = Math.asin(circleRadius / distanceToCenter);
     
     // Two tangent points
+    // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
     const angle1 = angle + tangentAngle;
     const angle2 = angle - tangentAngle;
-    
+
     const tangentPoint1 = {
-      x: circleCenter.x + circleRadius * Math.cos(angle1 + Math.PI / 2),
-      y: circleCenter.y + circleRadius * Math.sin(angle1 + Math.PI / 2)
+      x: circleCenter.x + circleRadius * Math.cos(angle1 + RIGHT_ANGLE),
+      y: circleCenter.y + circleRadius * Math.sin(angle1 + RIGHT_ANGLE)
     };
-    
+
     const tangentPoint2 = {
-      x: circleCenter.x + circleRadius * Math.cos(angle2 - Math.PI / 2),
-      y: circleCenter.y + circleRadius * Math.sin(angle2 - Math.PI / 2)
+      x: circleCenter.x + circleRadius * Math.cos(angle2 - RIGHT_ANGLE),
+      y: circleCenter.y + circleRadius * Math.sin(angle2 - RIGHT_ANGLE)
     };
     
     return [tangentPoint1, tangentPoint2];

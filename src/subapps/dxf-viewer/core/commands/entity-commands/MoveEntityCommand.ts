@@ -24,6 +24,19 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 import type { Point2D } from '../../../rendering/types/Types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { DEFAULT_MERGE_CONFIG } from '../interfaces';
+import { deepClone } from '../../../utils/clone-utils';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import {
+  isLineEntity,
+  isCircleEntity,
+  isRectangleEntity,
+  isArcEntity,
+  isEllipseEntity,
+  isPolylineEntity,
+  isTextEntity,
+  isPointEntity,
+  type Entity,
+} from '../../../types/entities';
 
 /**
  * 🏢 ENTERPRISE: Entity geometry types for type-safe movement
@@ -84,40 +97,8 @@ type MoveableGeometry =
   | TextGeometry
   | PointGeometry;
 
-/**
- * Type guard functions for entity types
- */
-function isLineGeometry(entity: SceneEntity): entity is SceneEntity & LineGeometry {
-  return entity.type === 'line' && 'start' in entity && 'end' in entity;
-}
-
-function isCircleGeometry(entity: SceneEntity): entity is SceneEntity & CircleGeometry {
-  return entity.type === 'circle' && 'center' in entity && 'radius' in entity;
-}
-
-function isRectangleGeometry(entity: SceneEntity): entity is SceneEntity & RectangleGeometry {
-  return entity.type === 'rectangle' && 'corner1' in entity && 'corner2' in entity;
-}
-
-function isArcGeometry(entity: SceneEntity): entity is SceneEntity & ArcGeometry {
-  return entity.type === 'arc' && 'center' in entity;
-}
-
-function isEllipseGeometry(entity: SceneEntity): entity is SceneEntity & EllipseGeometry {
-  return entity.type === 'ellipse' && 'center' in entity;
-}
-
-function isPolylineGeometry(entity: SceneEntity): entity is SceneEntity & PolylineGeometry {
-  return (entity.type === 'polyline' || entity.type === 'polygon') && 'vertices' in entity;
-}
-
-function isTextGeometry(entity: SceneEntity): entity is SceneEntity & TextGeometry {
-  return entity.type === 'text' && 'position' in entity;
-}
-
-function isPointGeometry(entity: SceneEntity): entity is SceneEntity & PointGeometry {
-  return entity.type === 'point' && 'position' in entity;
-}
+// 🏢 ADR-102: Duplicate type guards REMOVED - using centralized guards from types/entities.ts
+// Local geometry type assertions for move calculations (entity has already been validated)
 
 /**
  * Apply delta movement to a point
@@ -131,55 +112,75 @@ function applyDelta(point: Point2D, delta: Point2D): Point2D {
 
 /**
  * Calculate geometry updates for an entity based on delta
+ * 🏢 ADR-102: Uses centralized type guards from types/entities.ts
  */
 function calculateMovedGeometry(entity: SceneEntity, delta: Point2D): Partial<SceneEntity> {
-  if (isLineGeometry(entity)) {
+  // Cast to Entity for type guard compatibility
+  // SceneEntity and Entity have same structure, safe to cast via unknown
+  const e = entity as unknown as Entity;
+
+  if (isLineEntity(e)) {
     return {
-      start: applyDelta(entity.start, delta),
-      end: applyDelta(entity.end, delta),
+      start: applyDelta(e.start, delta),
+      end: applyDelta(e.end, delta),
     };
   }
 
-  if (isCircleGeometry(entity)) {
+  if (isCircleEntity(e)) {
     return {
-      center: applyDelta(entity.center, delta),
+      center: applyDelta(e.center, delta),
     };
   }
 
-  if (isRectangleGeometry(entity)) {
+  if (isRectangleEntity(e)) {
+    // Rectangle may have corner1/corner2 or x/y/width/height
+    const updates: Partial<SceneEntity> = {};
+    if ('corner1' in e && e.corner1 && 'corner2' in e && e.corner2) {
+      updates.corner1 = applyDelta(e.corner1, delta);
+      updates.corner2 = applyDelta(e.corner2, delta);
+    }
+    if ('x' in e && 'y' in e) {
+      updates.x = e.x + delta.x;
+      updates.y = e.y + delta.y;
+    }
+    return updates;
+  }
+
+  if (isArcEntity(e)) {
     return {
-      corner1: applyDelta(entity.corner1, delta),
-      corner2: applyDelta(entity.corner2, delta),
+      center: applyDelta(e.center, delta),
     };
   }
 
-  if (isArcGeometry(entity)) {
+  if (isEllipseEntity(e)) {
     return {
-      center: applyDelta(entity.center, delta),
+      center: applyDelta(e.center, delta),
     };
   }
 
-  if (isEllipseGeometry(entity)) {
+  if (isPolylineEntity(e)) {
     return {
-      center: applyDelta(entity.center, delta),
+      vertices: e.vertices.map(v => applyDelta(v, delta)),
     };
   }
 
-  if (isPolylineGeometry(entity)) {
+  // Handle polygon type (not in centralized guards but used in codebase)
+  if (entity.type === 'polygon' && 'vertices' in entity) {
+    const polyEntity = entity as unknown as { vertices: Point2D[] };
     return {
-      vertices: entity.vertices.map(v => applyDelta(v, delta)),
+      vertices: polyEntity.vertices.map(v => applyDelta(v, delta)),
     };
   }
 
-  if (isTextGeometry(entity)) {
+  if (isTextEntity(e)) {
     return {
-      position: applyDelta(entity.position, delta),
+      position: applyDelta(e.position, delta),
     };
   }
 
-  if (isPointGeometry(entity)) {
+  if (isPointEntity(e)) {
     return {
-      position: applyDelta(entity.position, delta),
+      position: applyDelta(e.position, delta),
     };
   }
 
@@ -227,7 +228,7 @@ export class MoveEntityCommand implements ICommand {
     const entity = this.sceneManager.getEntity(this.entityId);
     if (entity) {
       // Store snapshot before move (for undo)
-      this.entitySnapshot = JSON.parse(JSON.stringify(entity)) as SceneEntity;
+      this.entitySnapshot = deepClone(entity);
 
       // Calculate new geometry
       const updates = calculateMovedGeometry(entity, this.delta);
@@ -397,7 +398,7 @@ export class MoveMultipleEntitiesCommand implements ICommand {
       const entity = this.sceneManager.getEntity(entityId);
       if (entity) {
         // Store snapshot before move (for undo)
-        this.entitySnapshots.set(entityId, JSON.parse(JSON.stringify(entity)) as SceneEntity);
+        this.entitySnapshots.set(entityId, deepClone(entity));
 
         // Calculate and apply new geometry
         const updates = calculateMovedGeometry(entity, this.delta);

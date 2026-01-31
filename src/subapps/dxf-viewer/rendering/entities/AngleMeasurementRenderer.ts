@@ -20,6 +20,9 @@
 
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, RenderOptions, GripInfo, Point2D } from '../types/Types';
+import type { Entity } from '../../types/entities';
+// 🏢 ADR-102: Centralized Entity Type Guards
+import { isAngleMeasurementEntity } from '../../types/entities';
 // 🏢 ADR-065: Centralized Distance, ADR-066: Centralized Angle
 // 🏢 ADR-073: Centralized Bisector Angle
 // 🏢 ADR-077: Centralized TAU Constant
@@ -30,7 +33,8 @@ import { formatAngle } from './shared/distance-label-utils';
 
 export class AngleMeasurementRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    if (entity.type !== 'angle-measurement') return;
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isAngleMeasurementEntity(entity as Entity)) return;
 
     const angleMeasurement = extractAngleMeasurementPoints(entity);
     if (!angleMeasurement) return;
@@ -179,7 +183,8 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
    * Returns 3 grips: vertex (center), point1, point2
    */
   getGrips(entity: EntityModel): GripInfo[] {
-    if (entity.type !== 'angle-measurement') return [];
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isAngleMeasurementEntity(entity as Entity)) return [];
 
     const angleMeasurement = extractAngleMeasurementPoints(entity);
     if (!angleMeasurement) return [];
@@ -216,7 +221,8 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
    * Tests proximity to vertex, point1, and point2
    */
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
-    if (entity.type !== 'angle-measurement') return false;
+    // 🏢 ADR-102: Use centralized type guard
+    if (!isAngleMeasurementEntity(entity as Entity)) return false;
 
     const angleMeasurement = extractAngleMeasurementPoints(entity);
     if (!angleMeasurement) return false;

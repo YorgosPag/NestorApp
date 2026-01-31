@@ -31,7 +31,8 @@ import { GRIP_SIZE_MULTIPLIERS } from '../grips/constants';
 import { renderSquareGrip, calculateDistance, vectorMagnitude, calculateAngle, vectorAngle, getUnitVector } from './shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 // 🏢 ADR-073: Centralized Bisector Angle, Midpoint
-import { radToDeg, bisectorAngle, calculateMidpoint } from './shared/geometry-utils';
+// 🏢 ADR-XXX: Centralized Angular Constants
+import { radToDeg, bisectorAngle, calculateMidpoint, RIGHT_ANGLE } from './shared/geometry-utils';
 import { renderStyledTextWithOverride, getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
 // 🏢 ADR-058: Centralized Canvas Primitives
@@ -533,8 +534,9 @@ export abstract class BaseEntityRenderer {
     this.ctx.translate(textPosition.x, textPosition.y);
     
     // Rotate text to be readable (don't flip upside down)
+    // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
     let textAngle = angle;
-    if (Math.abs(textAngle) > Math.PI / 2) {
+    if (Math.abs(textAngle) > RIGHT_ANGLE) {
       textAngle += Math.PI;
     }
     this.ctx.rotate(textAngle);

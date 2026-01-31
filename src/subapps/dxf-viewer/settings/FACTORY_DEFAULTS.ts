@@ -17,6 +17,8 @@
 import type { SettingsState, StorageMode } from './core/types';
 import { ACI_PALETTE } from './standards/aci';
 import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-101: Centralized deep clone utility
+import { deepClone } from '../utils/clone-utils';
 
 // ============================================================================
 // CURRENT SCHEMA VERSION
@@ -333,7 +335,7 @@ export const DEFAULT_GRIP_SETTINGS = GRIP_DEFAULTS;
  * @returns Fresh copy of factory defaults
  */
 export function getFactoryDefaults(): SettingsState {
-  return JSON.parse(JSON.stringify(FACTORY_DEFAULTS));
+  return deepClone(FACTORY_DEFAULTS);
 }
 
 /**
@@ -345,5 +347,5 @@ export function getFactoryDefaults(): SettingsState {
 export function getEntityFactoryDefaults(
   entity: 'line' | 'text' | 'grip'
 ): SettingsState[typeof entity] {
-  return JSON.parse(JSON.stringify(FACTORY_DEFAULTS[entity]));
+  return deepClone(FACTORY_DEFAULTS[entity]);
 }
