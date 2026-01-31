@@ -54,18 +54,22 @@ interface ArcPreviewEntity {
 }
 // 🏢 ENTERPRISE: Centralized CAD colors & coordinate transforms
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+// 🏢 ADR-040: Centralized coordinate transforms - worldToScreen() Single Source of Truth
+import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ADR-041: Centralized Distance Label Rendering
 import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-090: Centralized UI Fonts
-import { RENDER_LINE_WIDTHS, UI_FONTS } from '../../config/text-rendering-config';
+// 🏢 ADR-097: Centralized Line Dash Patterns
+import { RENDER_LINE_WIDTHS, UI_FONTS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 // 🏢 ADR-066: Centralized Angle Calculation
 // 🏢 ADR-080: Centralized Rectangle Bounds
 import { calculateAngle, rectFromTwoPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-073: Centralized Bisector Angle
 // 🏢 ADR-077: Centralized TAU Constant
-import { bisectorAngle, TAU } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-067: Centralized Radians/Degrees Conversion
+// 🏢 ADR-100: Centralized Degrees-to-Radians Conversion
+import { bisectorAngle, TAU, radToDeg, degToRad } from '../../rendering/entities/shared/geometry-utils';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -322,8 +326,9 @@ export class PreviewRenderer {
     transform: ViewTransform,
     opts: Required<PreviewRenderOptions>
   ): void {
-    const start = this.worldToScreen(entity.start, transform);
-    const end = this.worldToScreen(entity.end, transform);
+    // 🏢 ADR-040: Use centralized CoordinateTransforms.worldToScreen()
+    const start = CoordinateTransforms.worldToScreen(entity.start, transform, this.currentViewport!);
+    const end = CoordinateTransforms.worldToScreen(entity.end, transform, this.currentViewport!);
 
     // Draw line
     ctx.beginPath();
@@ -353,7 +358,8 @@ export class PreviewRenderer {
     transform: ViewTransform,
     opts: Required<PreviewRenderOptions>
   ): void {
-    const center = this.worldToScreen(entity.center, transform);
+    // 🏢 ADR-040: Use centralized CoordinateTransforms.worldToScreen()
+    const center = CoordinateTransforms.worldToScreen(entity.center, transform, this.currentViewport!);
     const radiusScreen = entity.radius * transform.scale;
 
     // Draw circle
@@ -379,7 +385,8 @@ export class PreviewRenderer {
   ): void {
     if (!entity.vertices || entity.vertices.length < 2) return;
 
-    const screenPoints = entity.vertices.map(v => this.worldToScreen(v, transform));
+    // 🏢 ADR-040: Use centralized CoordinateTransforms.worldToScreen()
+    const screenPoints = entity.vertices.map(v => CoordinateTransforms.worldToScreen(v, transform, this.currentViewport!));
 
     // Draw polyline
     ctx.beginPath();
@@ -425,8 +432,9 @@ export class PreviewRenderer {
   ): void {
     if (!entity.corner1 || !entity.corner2) return;
 
-    const c1 = this.worldToScreen(entity.corner1, transform);
-    const c2 = this.worldToScreen(entity.corner2, transform);
+    // 🏢 ADR-040: Use centralized CoordinateTransforms.worldToScreen()
+    const c1 = CoordinateTransforms.worldToScreen(entity.corner1, transform, this.currentViewport!);
+    const c2 = CoordinateTransforms.worldToScreen(entity.corner2, transform, this.currentViewport!);
 
     // 🏢 ADR-080: Centralized Rectangle Bounds
     const { x, y, width, height } = rectFromTwoPoints(c1, c2);
@@ -452,9 +460,10 @@ export class PreviewRenderer {
     transform: ViewTransform,
     opts: Required<PreviewRenderOptions>
   ): void {
-    const screenVertex = this.worldToScreen(entity.vertex, transform);
-    const screenPoint1 = this.worldToScreen(entity.point1, transform);
-    const screenPoint2 = this.worldToScreen(entity.point2, transform);
+    // 🏢 ADR-040: Use centralized CoordinateTransforms.worldToScreen()
+    const screenVertex = CoordinateTransforms.worldToScreen(entity.vertex, transform, this.currentViewport!);
+    const screenPoint1 = CoordinateTransforms.worldToScreen(entity.point1, transform, this.currentViewport!);
+    const screenPoint2 = CoordinateTransforms.worldToScreen(entity.point2, transform, this.currentViewport!);
 
     // Draw two lines (vertex → point1, vertex → point2)
     ctx.beginPath();
@@ -472,7 +481,7 @@ export class PreviewRenderer {
 
     ctx.save();
     ctx.strokeStyle = '#FFA500'; // Orange for arc (CAD standard)
-    ctx.setLineDash([5, 5]); // Dashed arc
+    ctx.setLineDash([...LINE_DASH_PATTERNS.DASHED]); // 🏢 ADR-097: Centralized dashed pattern
     // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
     ctx.beginPath();
     ctx.ellipse(screenVertex.x, screenVertex.y, arcRadius, arcRadius, 0, angle1, angle2, false);
@@ -518,7 +527,8 @@ export class PreviewRenderer {
     transform: ViewTransform,
     opts: Required<PreviewRenderOptions>
   ): void {
-    const pos = this.worldToScreen(entity.position, transform);
+    // 🏢 ADR-040: Use centralized CoordinateTransforms.worldToScreen()
+    const pos = CoordinateTransforms.worldToScreen(entity.position, transform, this.currentViewport!);
     this.renderGrip(ctx, pos, opts);
   }
 
@@ -532,12 +542,13 @@ export class PreviewRenderer {
     transform: ViewTransform,
     opts: Required<PreviewRenderOptions>
   ): void {
-    const center = this.worldToScreen(entity.center, transform);
+    // 🏢 ADR-040: Use centralized CoordinateTransforms.worldToScreen()
+    const center = CoordinateTransforms.worldToScreen(entity.center, transform, this.currentViewport!);
     const radiusScreen = entity.radius * transform.scale;
 
-    // Convert angles from degrees to radians
-    const startRad = (entity.startAngle * Math.PI) / 180;
-    const endRad = (entity.endAngle * Math.PI) / 180;
+    // 🏢 ADR-100: Centralized degrees-to-radians conversion
+    const startRad = degToRad(entity.startAngle);
+    const endRad = degToRad(entity.endAngle);
 
     // 🏢 ENTERPRISE: Draw construction lines (rubber band) FIRST
     // This shows the clicked points connected with lines
@@ -549,7 +560,8 @@ export class PreviewRenderer {
       ctx.lineWidth = RENDER_LINE_WIDTHS.PREVIEW_CONSTRUCTION || 1;
       ctx.globalAlpha = 0.7;
 
-      const screenVertices = entity.constructionVertices.map(v => this.worldToScreen(v, transform));
+      // 🏢 ADR-040: Use centralized CoordinateTransforms.worldToScreen()
+      const screenVertices = entity.constructionVertices.map(v => CoordinateTransforms.worldToScreen(v, transform, this.currentViewport!));
       const mode = entity.constructionLineMode || 'polyline';
 
       if (mode === 'radial') {
@@ -558,9 +570,9 @@ export class PreviewRenderer {
         // Use entity.center, startAngle, endAngle, radius for accurate positioning
         const centerScreen = center; // Already calculated above
 
-        // Calculate start point on circumference (world coords)
-        const startAngleRad = (entity.startAngle * Math.PI) / 180;
-        const endAngleRad = (entity.endAngle * Math.PI) / 180;
+        // 🏢 ADR-100: Centralized degrees-to-radians conversion
+        const startAngleRad = degToRad(entity.startAngle);
+        const endAngleRad = degToRad(entity.endAngle);
 
         const startPointWorld: Point2D = {
           x: entity.center.x + Math.cos(startAngleRad) * entity.radius,
@@ -571,8 +583,9 @@ export class PreviewRenderer {
           y: entity.center.y + Math.sin(endAngleRad) * entity.radius
         };
 
-        const startPointScreen = this.worldToScreen(startPointWorld, transform);
-        const endPointScreen = this.worldToScreen(endPointWorld, transform);
+        // 🏢 ADR-040: Use centralized CoordinateTransforms.worldToScreen()
+        const startPointScreen = CoordinateTransforms.worldToScreen(startPointWorld, transform, this.currentViewport!);
+        const endPointScreen = CoordinateTransforms.worldToScreen(endPointWorld, transform, this.currentViewport!);
 
         // Draw radius to start point
         ctx.beginPath();
@@ -653,8 +666,8 @@ export class PreviewRenderer {
       startAngle: entity.startAngle,
       endAngle: entity.endAngle,
       rawCounterclockwise: entity.counterclockwise,
-      screenStartRad: screenStartRad * 180 / Math.PI,
-      screenEndRad: screenEndRad * 180 / Math.PI,
+      screenStartRad: radToDeg(screenStartRad),
+      screenEndRad: radToDeg(screenEndRad),
       screenCounterclockwise
     });
 
@@ -717,39 +730,6 @@ export class PreviewRenderer {
   ): void {
     // 🏢 ADR-041: Use centralized distance label rendering
     renderDistanceLabel(ctx, worldP1, worldP2, screenP1, screenP2, PREVIEW_LABEL_DEFAULTS);
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Transform world coordinates to screen coordinates
-   *
-   * 🎯 CRITICAL: Uses same formula as CoordinateTransforms.worldToScreen()
-   * to ensure consistent rendering between preview and main canvas.
-   *
-   * Formula:
-   *   screenX = left + worldX * scale + offsetX
-   *   screenY = (height - top) - worldY * scale - offsetY
-   *
-   * Note: offsetY is SUBTRACTED because positive offset moves drawing UP (decreases screenY)
-   */
-  private worldToScreen(worldPoint: Point2D, transform: ViewTransform): Point2D {
-    // 🏢 ADR-040: Must have viewport for Y-axis inversion
-    if (!this.currentViewport) {
-      // Fallback to simple transform (will be mirrored - but shouldn't happen)
-      return {
-        x: worldPoint.x * transform.scale + transform.offsetX,
-        y: worldPoint.y * transform.scale + transform.offsetY,
-      };
-    }
-
-    const { left, top } = COORDINATE_LAYOUT.MARGINS;
-    const { height } = this.currentViewport;
-
-    // 🎯 ENTERPRISE: Same formula as CoordinateTransforms.worldToScreen()
-    // This ensures preview renders at exact same position as completed entities
-    return {
-      x: left + worldPoint.x * transform.scale + transform.offsetX,
-      y: (height - top) - worldPoint.y * transform.scale - transform.offsetY
-    };
   }
 
   // ============================================================================

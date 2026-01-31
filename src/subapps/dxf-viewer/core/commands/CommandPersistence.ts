@@ -13,6 +13,8 @@
 
 import type { ICommandPersistence, SerializedCommand, PersistenceConfig } from './interfaces';
 import { DEFAULT_PERSISTENCE_CONFIG } from './interfaces';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet, storageRemove } from '../../utils/storage-utils';
 
 const DB_NAME = 'dxf-viewer-commands';
 const STORE_NAME = 'command-history';
@@ -84,8 +86,11 @@ export class CommandPersistence implements ICommandPersistence {
 
   /**
    * Check if localStorage is available
+   * 🏢 ADR-092: This method remains for the isAvailable() check
+   * but actual operations use centralized storage-utils
    */
   private isLocalStorageAvailable(): boolean {
+    if (typeof window === 'undefined') return false;
     try {
       const test = '__storage_test__';
       localStorage.setItem(test, test);
@@ -156,12 +161,12 @@ export class CommandPersistence implements ICommandPersistence {
 
   /**
    * Save to localStorage
+   * 🏢 ADR-092: Using centralized storage-utils
    */
   private saveToLocalStorage(data: PersistenceData): void {
-    try {
-      localStorage.setItem(this.config.keyPrefix, JSON.stringify(data));
-    } catch (error) {
-      console.error('[CommandPersistence] localStorage save failed:', error);
+    const success = storageSet(this.config.keyPrefix, data);
+    if (!success) {
+      console.error('[CommandPersistence] localStorage save failed');
     }
   }
 
@@ -228,17 +233,10 @@ export class CommandPersistence implements ICommandPersistence {
 
   /**
    * Load from localStorage
+   * 🏢 ADR-092: Using centralized storage-utils
    */
   private loadFromLocalStorage(): PersistenceData | null {
-    try {
-      const stored = localStorage.getItem(this.config.keyPrefix);
-      if (stored) {
-        return JSON.parse(stored) as PersistenceData;
-      }
-    } catch (error) {
-      console.error('[CommandPersistence] localStorage load failed:', error);
-    }
-    return null;
+    return storageGet<PersistenceData | null>(this.config.keyPrefix, null);
   }
 
   /**
@@ -255,12 +253,9 @@ export class CommandPersistence implements ICommandPersistence {
     }
 
     // Clear localStorage
+    // 🏢 ADR-092: Using centralized storage-utils
     if (this.isLocalStorageAvailable()) {
-      try {
-        localStorage.removeItem(this.config.keyPrefix);
-      } catch (error) {
-        console.warn('[CommandPersistence] localStorage clear failed:', error);
-      }
+      storageRemove(this.config.keyPrefix);
     }
   }
 

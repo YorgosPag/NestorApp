@@ -1,6 +1,8 @@
 import { useCallback, useEffect } from 'react';
 import type { Point2D } from './config';
 import type { RulerSettings, GridSettings } from './config';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet } from '../../utils/storage-utils';
 
 interface PersistedData {
   rulers?: Partial<RulerSettings>;
@@ -17,16 +19,12 @@ export interface PersistenceHook {
 
 /**
  * Shared hook for loading persisted settings from localStorage
+ * 🏢 ADR-092: Using centralized storage-utils
  */
 export function useLoadPersistedSettings(enablePersistence: boolean, persistenceKey: string): () => PersistedData | null {
   return useCallback(() => {
     if (!enablePersistence) return null;
-    try {
-      const stored = localStorage.getItem(persistenceKey);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+    return storageGet<PersistedData | null>(persistenceKey, null);
   }, [enablePersistence, persistenceKey]);
 }
 
@@ -43,20 +41,17 @@ export function usePersistence(
   const persistedData = loadPersistedSettings();
 
   // Persistence effect
+  // 🏢 ADR-092: Using centralized storage-utils
   useEffect(() => {
     if (enablePersistence) {
-      const dataToStore = {
+      const dataToStore: PersistedData = {
         rulers,
         grid,
         origin,
         isVisible,
         timestamp: Date.now()
       };
-      try {
-        localStorage.setItem(persistenceKey, JSON.stringify(dataToStore));
-      } catch (error) {
-        console.warn('Failed to persist rulers/grid settings:', error);
-      }
+      storageSet(persistenceKey, dataToStore);
     }
   }, [rulers, grid, origin, isVisible, enablePersistence, persistenceKey]);
 

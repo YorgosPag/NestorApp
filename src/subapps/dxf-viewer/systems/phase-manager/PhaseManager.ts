@@ -43,7 +43,8 @@ import type {
 // Centralized configuration
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-097: Centralized Line Dash Patterns
+import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 
 // Style hooks
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
@@ -266,7 +267,7 @@ export class PhaseManager {
       this.ctx.strokeStyle = toolStyle.strokeColor || UI_COLORS.SUCCESS_GREEN;
       this.ctx.fillStyle = toolStyle.fillColor || UI_COLORS.SEMI_TRANSPARENT_RED;
       this.ctx.lineWidth = toolStyle.lineWidth || 2;
-      this.ctx.setLineDash([5, 5]);
+      this.ctx.setLineDash([...LINE_DASH_PATTERNS.DASHED]); // 🏢 ADR-097: Centralized dashed pattern
     } else {
       const previewStyle = getLinePreviewStyleWithOverride();
       this.ctx.strokeStyle = previewStyle.strokeColor;

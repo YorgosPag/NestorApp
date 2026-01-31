@@ -31,7 +31,8 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-rend
 // 🏢 ENTERPRISE (2026-01-31): Import pointToLineDistance for Circle TTT hit testing
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-079: Centralized Movement Detection Constants
-import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
+// 🏢 ADR-099: Centralized Polygon Tolerances
+import { MOVEMENT_DETECTION, POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ENTERPRISE (2026-01-25): Edge detection for polygon vertex insertion
 import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
 // 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings via Provider (CANONICAL - SINGLE SOURCE OF TRUTH)
@@ -76,6 +77,9 @@ import { useEventBus } from '../../systems/events';
 import { useUniversalSelection } from '../../systems/selection';
 // 🏢 ENTERPRISE (2026-01-31): Circle TTT (Tangent to 3 Lines) entity selection hook
 import { useCircleTTT } from '../../hooks/drawing/useCircleTTT';
+// 🏢 ENTERPRISE (2026-01-31): Line tools - Perpendicular and Parallel entity selection hooks - ADR-060
+import { useLinePerpendicular } from '../../hooks/drawing/useLinePerpendicular';
+import { useLineParallel } from '../../hooks/drawing/useLineParallel';
 // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
 import {
   useCommandHistory,
@@ -341,6 +345,44 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     }
   });
 
+  // 🏢 ENTERPRISE (2026-01-31): Line Perpendicular entity selection mode - ADR-060
+  const linePerpendicular = useLinePerpendicular({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onLineCreated: (lineEntity) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+
+      const updatedScene = {
+        ...scene,
+        entities: [...(scene.entities || []), lineEntity]
+      };
+      levelManager.setLevelScene(levelId, updatedScene);
+      console.log('🎯 [LinePerpendicular] Line added to scene:', lineEntity.id);
+    }
+  });
+
+  // 🏢 ENTERPRISE (2026-01-31): Line Parallel entity selection mode - ADR-060
+  const lineParallel = useLineParallel({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onLineCreated: (lineEntity) => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+
+      const updatedScene = {
+        ...scene,
+        entities: [...(scene.entities || []), lineEntity]
+      };
+      levelManager.setLevelScene(levelId, updatedScene);
+      console.log('🎯 [LineParallel] Line added to scene:', lineEntity.id);
+    }
+  });
+
   // Keep ref in sync with state
   React.useEffect(() => {
     draftPolygonRef.current = draftPolygon;
@@ -365,6 +407,26 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       deactivateCircleTTT();
     }
   }, [activeTool, activateCircleTTT, deactivateCircleTTT]);
+
+  // 🏢 ENTERPRISE (2026-01-31): Activate/deactivate Line Perpendicular based on activeTool - ADR-060
+  const { activate: activateLinePerpendicular, deactivate: deactivateLinePerpendicular } = linePerpendicular;
+  React.useEffect(() => {
+    if (activeTool === 'line-perpendicular') {
+      activateLinePerpendicular();
+    } else {
+      deactivateLinePerpendicular();
+    }
+  }, [activeTool, activateLinePerpendicular, deactivateLinePerpendicular]);
+
+  // 🏢 ENTERPRISE (2026-01-31): Activate/deactivate Line Parallel based on activeTool - ADR-060
+  const { activate: activateLineParallel, deactivate: deactivateLineParallel } = lineParallel;
+  React.useEffect(() => {
+    if (activeTool === 'line-parallel') {
+      activateLineParallel();
+    } else {
+      deactivateLineParallel();
+    }
+  }, [activeTool, activateLineParallel, deactivateLineParallel]);
 
   // 🏢 ENTERPRISE: Provide zoom system to context
   // NOTE: canvasContext already retrieved at line 93 for centralized zoom operations
@@ -1082,13 +1144,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // Without this, the draftPolygon is only stored in state but never rendered
 
   // 🎯 GRIP CLOSE DETECTION: Check if mouse is near first point
-  const CLOSE_THRESHOLD = 20; // pixels in world coordinates (scaled by transform)
+  // 🏢 ADR-099: Using centralized POLYGON_TOLERANCES.CLOSE_DETECTION
   const isNearFirstPoint = React.useMemo(() => {
     if (draftPolygon.length < 3 || !mouseWorld) return false;
     const firstPoint = draftPolygon[0];
     // 🏢 ADR-065: Use centralized distance calculation
     const distance = calculateDistance(mouseWorld, { x: firstPoint[0], y: firstPoint[1] });
-    return distance < (CLOSE_THRESHOLD / transform.scale);
+    return distance < (POLYGON_TOLERANCES.CLOSE_DETECTION / transform.scale);
   }, [draftPolygon, mouseWorld, transform.scale]);
 
   const draftColorLayer: ColorLayer | null = React.useMemo(() => {
@@ -1438,8 +1500,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     if ((activeTool === 'select' || activeTool === 'layering') && hoveredEdgeInfo?.overlayId === overlayId) {
       const overlay = currentOverlays.find(o => o.id === overlayId);
       if (overlay?.polygon) {
-        const EDGE_TOLERANCE = 15 / transform.scale; // 15 pixels in world units
-        const edgeInfo = findOverlayEdgeForGrip(point, overlay.polygon, EDGE_TOLERANCE);
+        // 🏢 ADR-099: Using centralized POLYGON_TOLERANCES.EDGE_DETECTION
+        const edgeTolerance = POLYGON_TOLERANCES.EDGE_DETECTION / transform.scale;
+        const edgeInfo = findOverlayEdgeForGrip(point, overlay.polygon, edgeTolerance);
 
         if (edgeInfo && edgeInfo.edgeIndex === hoveredEdgeInfo.edgeIndex) {
           // Click was on the hovered edge midpoint - add vertex
@@ -1573,6 +1636,84 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         console.log('🎯 [CanvasSection] Circle TTT: No line/polyline found at click point');
       }
       return; // Don't process as regular canvas click
+    }
+
+    // 🏢 ENTERPRISE (2026-01-31): Line Perpendicular entity picking mode - ADR-060
+    // Step 0: Select reference line, Step 1: Click through point
+    if (activeTool === 'line-perpendicular' && linePerpendicular.isActive) {
+      if (linePerpendicular.currentStep === 0) {
+        // Step 0: Entity selection mode - find clicked line
+        const scene = levelManager.currentLevelId
+          ? levelManager.getLevelScene(levelManager.currentLevelId)
+          : null;
+
+        if (scene?.entities) {
+          const hitTolerance = 10 / transform.scale;
+
+          for (const entity of scene.entities) {
+            if (entity.type === 'line') {
+              const lineEntity = entity as { start: Point2D; end: Point2D };
+              const dist = pointToLineDistance(worldPoint, lineEntity.start, lineEntity.end);
+              if (dist <= hitTolerance) {
+                // Pass entity as AnySceneEntity - the hook will extract start/end internally
+                const accepted = linePerpendicular.onEntityClick(
+                  entity as import('../../types/scene').AnySceneEntity,
+                  worldPoint
+                );
+                if (accepted) {
+                  console.log('🎯 [CanvasSection] LinePerpendicular entity accepted:', entity.id);
+                  return;
+                }
+              }
+            }
+          }
+          console.log('🎯 [CanvasSection] LinePerpendicular: No line found at click point');
+        }
+        return;
+      } else if (linePerpendicular.currentStep === 1) {
+        // Step 1: Point selection mode - pass click point to hook
+        linePerpendicular.onCanvasClick(worldPoint);
+        return;
+      }
+    }
+
+    // 🏢 ENTERPRISE (2026-01-31): Line Parallel entity picking mode - ADR-060
+    // Step 0: Select reference line, Step 1: Click offset point
+    if (activeTool === 'line-parallel' && lineParallel.isActive) {
+      if (lineParallel.currentStep === 0) {
+        // Step 0: Entity selection mode - find clicked line
+        const scene = levelManager.currentLevelId
+          ? levelManager.getLevelScene(levelManager.currentLevelId)
+          : null;
+
+        if (scene?.entities) {
+          const hitTolerance = 10 / transform.scale;
+
+          for (const entity of scene.entities) {
+            if (entity.type === 'line') {
+              const lineEntity = entity as { start: Point2D; end: Point2D };
+              const dist = pointToLineDistance(worldPoint, lineEntity.start, lineEntity.end);
+              if (dist <= hitTolerance) {
+                // Pass entity as AnySceneEntity - the hook will extract start/end internally
+                const accepted = lineParallel.onEntityClick(
+                  entity as import('../../types/scene').AnySceneEntity,
+                  worldPoint
+                );
+                if (accepted) {
+                  console.log('🎯 [CanvasSection] LineParallel entity accepted:', entity.id);
+                  return;
+                }
+              }
+            }
+          }
+          console.log('🎯 [CanvasSection] LineParallel: No line found at click point');
+        }
+        return;
+      } else if (lineParallel.currentStep === 1) {
+        // Step 1: Point selection mode - pass click point to hook
+        lineParallel.onCanvasClick(worldPoint);
+        return;
+      }
     }
 
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing AND measurement tools

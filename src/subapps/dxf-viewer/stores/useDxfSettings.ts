@@ -12,6 +12,8 @@ import type {
   EntityId,
   PartialDxfSettings
 } from '../settings-core/types';
+// 🏢 ADR-098: Centralized Timing Constants
+import { STORAGE_TIMING } from '../config/timing-config';
 
 // ============================================================================
 // DEBOUNCE UTILITY
@@ -63,7 +65,7 @@ export function useGeneralLineSettings() {
   const debouncedSetSettings = useDebounce((patch: Partial<LineSettings>) => {
     setSettings(patch);
     saveToLocalStorage();
-  }, 150);
+  }, STORAGE_TIMING.SETTINGS_DEBOUNCE);
 
   // Instant update για toggles και dropdowns
   const instantSetSettings = useCallback((patch: Partial<LineSettings>) => {
@@ -89,7 +91,7 @@ export function useGeneralTextSettings() {
   const debouncedSetSettings = useDebounce((patch: Partial<TextSettings>) => {
     setSettings(patch);
     saveToLocalStorage();
-  }, 150);
+  }, STORAGE_TIMING.SETTINGS_DEBOUNCE);
 
   const instantSetSettings = useCallback((patch: Partial<TextSettings>) => {
     setSettings(patch);
@@ -114,7 +116,7 @@ export function useGeneralGripSettings() {
   const debouncedSetSettings = useDebounce((patch: Partial<GripSettings>) => {
     setSettings(patch);
     saveToLocalStorage();
-  }, 150);
+  }, STORAGE_TIMING.SETTINGS_DEBOUNCE);
 
   const instantSetSettings = useCallback((patch: Partial<GripSettings>) => {
     setSettings(patch);
@@ -159,7 +161,7 @@ export function useEntitySettings(entityId: EntityId | null) {
       setOverride(entityId, patch);
       saveToLocalStorage();
     }
-  }, 150);
+  }, STORAGE_TIMING.SETTINGS_DEBOUNCE);
 
   // Clear overrides
   const handleClearOverrides = useCallback(() => {
@@ -195,7 +197,7 @@ export function useSelectionSettings() {
   const debouncedApplyToSelection = useDebounce((patch: PartialDxfSettings) => {
     applyToSelection(patch);
     saveToLocalStorage();
-  }, 150);
+  }, STORAGE_TIMING.SETTINGS_DEBOUNCE);
 
   const handleClearSelection = useCallback(() => {
     clearSelection();

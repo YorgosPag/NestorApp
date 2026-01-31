@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Point2D } from '../rendering/types/Types';
 import type { Region, OverlayLayer, RegionStatus } from '../types/overlay';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet, STORAGE_KEYS } from '../utils/storage-utils';
 
 // ✅ ENTERPRISE FIX: Extended OverlayState for manager use
 interface ExtendedOverlayState {
@@ -32,37 +34,38 @@ export function useOverlayManager() {
   const duplicationGuard = DuplicationGuard.getInstance();
 
   // ---------- Persistence per level ----------
+  // 🏢 ADR-092: Using centralized storage-utils
   useEffect(() => {
     if (!currentLevelId) return;
-    
-    try {
-      const saved = localStorage.getItem(`dxf-overlay-${currentLevelId}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setCoreState(prev => ({
-          ...prev,
-          regions: parsed.regions || {},
-          layers: parsed.layers || { default: RegionOperations.createDefaultLayer() },
-          groups: parsed.groups || {}
-        }));
-      }
-    } catch (error) {
-      console.warn('Failed to load overlay state:', error);
+
+    interface PersistedOverlayData {
+      regions?: Record<string, Region>;
+      layers?: Record<string, OverlayLayer>;
+      groups?: Record<string, unknown>;
+    }
+
+    const storageKey = `${STORAGE_KEYS.OVERLAY_STATE_PREFIX}${currentLevelId}`;
+    const saved = storageGet<PersistedOverlayData | null>(storageKey, null);
+
+    if (saved) {
+      setCoreState(prev => ({
+        ...prev,
+        regions: saved.regions || {},
+        layers: saved.layers || { default: RegionOperations.createDefaultLayer() },
+        groups: saved.groups || {}
+      }));
     }
   }, [currentLevelId]);
 
   useEffect(() => {
     if (!currentLevelId) return;
-    
-    try {
-      localStorage.setItem(`dxf-overlay-${currentLevelId}`, JSON.stringify({
-        regions: coreState.regions,
-        layers: coreState.layers,
-        groups: coreState.groups
-      }));
-    } catch (error) {
-      console.warn('Failed to save overlay state:', error);
-    }
+
+    const storageKey = `${STORAGE_KEYS.OVERLAY_STATE_PREFIX}${currentLevelId}`;
+    storageSet(storageKey, {
+      regions: coreState.regions,
+      layers: coreState.layers,
+      groups: coreState.groups
+    });
   }, [coreState.regions, coreState.layers, coreState.groups, currentLevelId]);
 
   // ---------- Region CRUD with duplication prevention ----------

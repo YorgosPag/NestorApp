@@ -27,8 +27,9 @@ export const STORAGE_KEYS = {
   // Performance
   PERFORMANCE_MONITOR: 'dxf-viewer-performance-monitor-enabled',
 
-  // Overlay State
+  // Overlay State (per-level dynamic key prefix)
   OVERLAY_STATE: 'dxf-viewer:overlay-state:v1',
+  OVERLAY_STATE_PREFIX: 'dxf-overlay-',
 
   // Colors
   RECENT_COLORS: 'dxf-viewer:recent-colors',
@@ -39,6 +40,15 @@ export const STORAGE_KEYS = {
 
   // AI Snapping
   AI_SNAPPING: 'ai-snapping-data',
+
+  // Rulers/Grid Persistence (dynamic key - used with prefix)
+  RULERS_GRID_PREFIX: 'rulers-grid-persistence',
+
+  // Constraints System (dynamic key - used with prefix)
+  CONSTRAINTS_PREFIX: 'dxf-viewer-constraints',
+
+  // Command Persistence (dynamic key - used with prefix)
+  COMMAND_HISTORY_PREFIX: 'dxf-command-history',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string;

@@ -9,6 +9,8 @@ import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-095: Centralized Snap Tolerance
+import { SNAP_TOLERANCE } from '../../config/tolerance-config';
 
 // Cursor calculation utilities
 export interface CursorUtils {
@@ -39,7 +41,7 @@ export function calculateCrosshairSize(
 export function isPointNearCursor(
   point: Point2D,
   cursorPos: Point2D,
-  tolerance: number = 10
+  tolerance: number = SNAP_TOLERANCE // 🏢 ADR-095: Centralized default
 ): boolean {
   // 🏢 ADR-065: Use centralized distance calculation
   return calculateDistance(point, cursorPos) <= tolerance;

@@ -1,6 +1,6 @@
 'use client';
 import {
-  MousePointer, Hand, ZoomIn, ZoomOut, Minus, Square, CircleDot, Circle, Pen,
+  MousePointer, Hand, ZoomIn, ZoomOut, Square, CircleDot, Circle, Pen,
   Move, Copy, Trash2, Ruler, Undo, Redo, Focus, Maximize2,
   Grid, Settings, Crop, Download, Plus, Crosshair,
   Maximize, Calculator, Map, Edit, Hexagon, FlaskConical,
@@ -33,6 +33,12 @@ import {
   ArcCSEIcon,
   ArcSCEIcon
 } from './icons/ArcIcon';
+// 🏢 ENTERPRISE (2026-01-31): Line drawing tool icons - ADR-060
+import {
+  LineNormalIcon,
+  LinePerpendicularIcon,
+  LineParallelIcon
+} from './icons/LineIcon';
 import { AngleIcon } from './icons/AngleIcon';
 import { AngleLineArcIcon } from './icons/AngleLineArcIcon';
 import { AngleTwoArcsIcon } from './icons/AngleTwoArcsIcon';
@@ -159,7 +165,19 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
       // ✅ CENTRALIZED: Using DXF_DRAWING_TOOL_LABELS from central system - ZERO HARDCODED VALUES
       // 🎨 ENTERPRISE: Auto-assigned from DXF_TOOL_GROUP_COLORS.DRAWING
       // ⌨️ ENTERPRISE: Hotkeys from centralized keyboard-shortcuts.ts
-      { id: 'line' as ToolType, icon: Minus, label: DXF_DRAWING_TOOL_LABELS.LINE, hotkey: getShortcutDisplayLabel('line'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
+      // 🏢 ENTERPRISE (2026-01-31): Line tool with dropdown - ADR-060
+      {
+        id: 'line' as ToolType,
+        icon: LineNormalIcon,
+        label: DXF_DRAWING_TOOL_LABELS.LINE,
+        hotkey: getShortcutDisplayLabel('line'),
+        colorClass: DXF_TOOL_GROUP_COLORS.DRAWING,
+        dropdownOptions: [
+          { id: 'line' as ToolType, icon: LineNormalIcon, label: DXF_DRAWING_TOOL_LABELS.LINE },
+          { id: 'line-perpendicular' as ToolType, icon: LinePerpendicularIcon, label: DXF_DRAWING_TOOL_LABELS.LINE_PERPENDICULAR },
+          { id: 'line-parallel' as ToolType, icon: LineParallelIcon, label: DXF_DRAWING_TOOL_LABELS.LINE_PARALLEL }
+        ]
+      },
       { id: 'rectangle' as ToolType, icon: Square, label: DXF_DRAWING_TOOL_LABELS.RECTANGLE, hotkey: getShortcutDisplayLabel('rectangle'), colorClass: DXF_TOOL_GROUP_COLORS.DRAWING },
       {
         id: 'circle' as ToolType,

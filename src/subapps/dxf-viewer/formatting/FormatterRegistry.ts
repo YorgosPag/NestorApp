@@ -19,6 +19,8 @@
  */
 
 import { getCurrentLocale } from '@/lib/intl-utils';
+// 🏢 ADR-100: Centralized Degrees-to-Radians Conversion
+import { degToRad } from '../rendering/entities/shared/geometry-utils';
 import type {
   NumberFormatConfig,
   LinearUnitType,
@@ -532,9 +534,10 @@ export class FormatterRegistry {
 
   /**
    * Format as radians (0.7854r)
+   * 🏢 ADR-100: Uses centralized degToRad() conversion
    */
   private formatRadians(degrees: number, precision: Precision): string {
-    const radians = degrees * (Math.PI / 180);
+    const radians = degToRad(degrees);
     return `${radians.toFixed(precision)}r`;
   }
 

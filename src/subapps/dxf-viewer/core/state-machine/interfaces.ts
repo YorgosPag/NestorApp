@@ -254,6 +254,10 @@ export const TOOL_POINT_REQUIREMENTS: Record<string, ToolPointRequirements> = {
   'arc-cse': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
   'arc-sce': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
 
+  // 🏢 ENTERPRISE (2026-01-31): Line tools - entity selection mode (0 points) - ADR-060
+  'line-perpendicular': { minPoints: 0, maxPoints: 0, allowsContinuous: false },
+  'line-parallel': { minPoints: 0, maxPoints: 0, allowsContinuous: false },
+
   // Multi-point shapes
   polyline: { minPoints: 2, maxPoints: Infinity, allowsContinuous: true },
   polygon: { minPoints: 3, maxPoints: Infinity, allowsContinuous: false },

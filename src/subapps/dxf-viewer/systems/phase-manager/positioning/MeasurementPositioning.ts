@@ -10,13 +10,15 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { MeasurementPosition, CanvasBounds } from '../types';
+// 🏢 ADR-099: Centralized Measurement Offsets
+import { MEASUREMENT_OFFSETS } from '../../../config/tolerance-config';
 
 // ============================================================================
 // CONFIGURATION CONSTANTS (Centralized - NO hardcoded values in logic)
 // ============================================================================
 
-/** Distance from grip point to measurement label */
-const GRIP_OFFSET = 20;
+/** Distance from grip point to measurement label - 🏢 ADR-099: Centralized */
+const GRIP_OFFSET = MEASUREMENT_OFFSETS.GRIP;
 
 /** Minimum margin from canvas edges */
 const EDGE_MARGIN = 15;
@@ -27,8 +29,8 @@ const ESTIMATED_TEXT_WIDTH = 120;
 /** Estimated height per measurement line */
 const LINE_HEIGHT = 20;
 
-/** Offset adjustment when near top edge */
-const TOP_EDGE_OFFSET = 60;
+/** Offset adjustment when near top edge - 🏢 ADR-099: Centralized */
+const TOP_EDGE_OFFSET = MEASUREMENT_OFFSETS.TOP_EDGE;
 
 // ============================================================================
 // MAIN POSITIONING FUNCTIONS

@@ -36,6 +36,8 @@ import { cn } from '@/lib/utils';
 import styles from './RulerCornerBox.module.css';
 // 🏢 ADR-079: Centralized Movement Detection Constants (Zoom Preset Matching)
 import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
+// 🏢 ADR-098: Centralized Timing Constants (Double-Click Window)
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-081: Centralized percentage formatting
 import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
 
@@ -197,8 +199,8 @@ export default function RulerCornerBox({
     const now = Date.now();
     const timeSinceLastClick = now - lastClickRef.current;
 
-    // Double-click detection (within 300ms)
-    if (timeSinceLastClick < 300) {
+    // Double-click detection (within DOUBLE_CLICK_WINDOW ms)
+    if (timeSinceLastClick < PANEL_LAYOUT.TIMING.DOUBLE_CLICK_WINDOW) {
       // Clear single-click timeout
       if (clickTimeoutRef.current) {
         clearTimeout(clickTimeoutRef.current);
@@ -214,7 +216,7 @@ export default function RulerCornerBox({
         // Single-click = Zoom to Fit
         onZoomToFit();
         clickTimeoutRef.current = null;
-      }, 300);
+      }, PANEL_LAYOUT.TIMING.DOUBLE_CLICK_WINDOW);
     }
   }, [isMenuOpen, onZoomToFit, onZoom100, onZoomPrevious]);
 

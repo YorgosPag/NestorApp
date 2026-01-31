@@ -19,6 +19,8 @@ import type {
 import { DEFAULT_TOOLBAR_STYLE } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { generateCustomizationId } from '@/services/enterprise-id.service';
+// 🏢 ADR-095: Centralized Snap Tolerance
+import { SNAP_TOLERANCE } from '../../config/tolerance-config';
 
 // ===== TOOL DEFINITION UTILITIES =====
 export const ToolUtils = {
@@ -354,7 +356,7 @@ export const ToolRunnerUtils = {
         snapSettings: {
           enabled: true,
           types: ['endpoint', 'midpoint', 'center'],
-          tolerance: 10
+          tolerance: SNAP_TOLERANCE // 🏢 ADR-095
         },
         inputSettings: {
           ortho: false,

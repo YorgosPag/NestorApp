@@ -25,6 +25,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE ADR-082: Centralized number formatting (replaces .toFixed())
+import { getFormatter } from '../../formatting';
 
 /**
  * Enterprise Color Field Component
@@ -202,6 +204,7 @@ export function EnterpriseColorField({
         </div>
 
         {/* Alpha */}
+        {/* 🏢 ENTERPRISE ADR-082: Uses FormatterRegistry for locale-aware alpha formatting */}
         {alpha && (
           <div>
             <label className={`${PANEL_LAYOUT.ALERT.TEXT_SIZE} ${colors.text.muted}`}>{labels.alpha || 'A'}</label>
@@ -210,7 +213,7 @@ export function EnterpriseColorField({
               min="0"
               max="1"
               step="0.01"
-              value={(rgbAlpha ?? 1).toFixed(2)}
+              value={getFormatter().formatLinear(rgbAlpha ?? 1, { precision: 2 })}
               onChange={(e) => handleComponentChange('a', parseFloat(e.target.value) || 0)}
               disabled={disabled}
               readOnly={readOnly}
@@ -284,6 +287,7 @@ export function EnterpriseColorField({
         </div>
 
         {/* Alpha */}
+        {/* 🏢 ENTERPRISE ADR-082: Uses FormatterRegistry for locale-aware alpha formatting */}
         {alpha && (
           <div>
             <label className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>{labels.alpha || 'A'}</label>
@@ -292,7 +296,7 @@ export function EnterpriseColorField({
               min="0"
               max="1"
               step="0.01"
-              value={(hslAlpha ?? 1).toFixed(2)}
+              value={getFormatter().formatLinear(hslAlpha ?? 1, { precision: 2 })}
               onChange={(e) => handleComponentChange('a', parseFloat(e.target.value) || 0)}
               disabled={disabled}
               readOnly={readOnly}

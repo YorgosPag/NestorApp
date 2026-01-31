@@ -48,6 +48,8 @@ import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
 // 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
 import { setImmediatePosition } from './ImmediatePositionStore';
+// 🏢 ADR-096: Centralized Interaction Timing Constants
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface CentralizedMouseHandlersProps {
   scene: DxfScene | null;
@@ -194,7 +196,8 @@ export function useCentralizedMouseHandlers({
     if (e.button === 1) {
       const now = Date.now();
       const timeSinceLastClick = now - middleClickRef.current.lastClickTime;
-      const DOUBLE_CLICK_THRESHOLD = 300; // ms
+      // 🏢 ADR-096: Centralized Interaction Timing Constants
+      const DOUBLE_CLICK_THRESHOLD = PANEL_LAYOUT.TIMING.DOUBLE_CLICK_MS;
 
       if (timeSinceLastClick < DOUBLE_CLICK_THRESHOLD) {
         // 🎯 DOUBLE CLICK DETECTED! Trigger Fit to View
@@ -280,7 +283,8 @@ export function useCentralizedMouseHandlers({
     // 🚀 PERFORMANCE (2026-01-27): Throttle React Context updates to reduce re-renders
     // CursorSystem context updates trigger re-renders in ALL consumers
     // Throttle to 50ms (20fps) - sufficient for UI feedback, reduces re-render overhead
-    const CURSOR_UPDATE_THROTTLE_MS = 50;
+    // 🏢 ADR-096: Centralized Interaction Timing Constants
+    const CURSOR_UPDATE_THROTTLE_MS = PANEL_LAYOUT.TIMING.CURSOR_UPDATE_THROTTLE;
     const now = performance.now();
 
     if (now - cursorThrottleRef.current.lastUpdateTime >= CURSOR_UPDATE_THROTTLE_MS) {
@@ -319,7 +323,8 @@ export function useCentralizedMouseHandlers({
 
     // 🚀 PERFORMANCE: Throttled snap detection (max 60fps)
     // Snap detection is expensive - only run every 16ms
-    const SNAP_THROTTLE_MS = 16;
+    // 🏢 ADR-096: Centralized Interaction Timing Constants
+    const SNAP_THROTTLE_MS = PANEL_LAYOUT.TIMING.SNAP_DETECTION_THROTTLE;
     const snapThrottle = snapThrottleRef.current;
     const snapNow = performance.now();
 

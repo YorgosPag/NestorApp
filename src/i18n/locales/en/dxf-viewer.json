@@ -1362,6 +1362,8 @@
     "select": "Select",
     "pan": "Pan View",
     "line": "Line",
+    "linePerpendicular": "Perpendicular Line",
+    "lineParallel": "Parallel Line",
     "rectangle": "Rectangle",
     "circleRadius": "Circle (Radius)",
     "circleDiameter": "Circle (Diameter)",

@@ -9,6 +9,8 @@ import { EventEmitter } from 'events';
 import type { Point2D } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
 import { generateUserId, generateOperationId as generateEnterpriseOperationId } from '@/services/enterprise-id.service';
+// 🏢 ADR-098: Centralized Timing Constants
+import { COLLABORATION_TIMING } from '../../config/timing-config';
 
 /**
  * User presence data
@@ -111,6 +113,7 @@ export class CollaborationEngine extends EventEmitter {
     this.state.sessionId = sessionId;
 
     // Mock connection για demo
+    // 🏢 ADR-098: Using COLLABORATION_TIMING.CONNECTION_DELAY
     return new Promise((resolve) => {
       setTimeout(() => {
         this.state.isConnected = true;
@@ -120,7 +123,7 @@ export class CollaborationEngine extends EventEmitter {
         this.addMockUsers();
 
         resolve();
-      }, 500);
+      }, COLLABORATION_TIMING.CONNECTION_DELAY);
     });
   }
 
@@ -411,6 +414,7 @@ export class CollaborationEngine extends EventEmitter {
     });
 
     // Simulate cursor movements
+    // 🏢 ADR-098: Using COLLABORATION_TIMING.CURSOR_UPDATE_INTERVAL
     setInterval(() => {
       this.state.users.forEach(user => {
         if (user.id !== this.currentUserId) {
@@ -419,7 +423,7 @@ export class CollaborationEngine extends EventEmitter {
           this.emit('cursor-update', user);
         }
       });
-    }, 100);
+    }, COLLABORATION_TIMING.CURSOR_UPDATE_INTERVAL);
   }
 
   /**

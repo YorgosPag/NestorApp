@@ -26,6 +26,8 @@
 import { useSyncExternalStore } from 'react';
 import type { ToolType } from '../ui/toolbar/types';
 import { getToolMetadata } from '../systems/tools/ToolStateManager';
+// 🏢 ADR-098: Centralized Timing Constants
+import { UI_TIMING } from '../config/timing-config';
 
 // ============================================================================
 // TYPES
@@ -113,10 +115,11 @@ export const toolStateStore = {
     notifyListeners();
 
     // Reset transitioning state after brief delay
+    // 🏢 ADR-098: Using UI_TIMING.TOOL_TRANSITION_RESET
     setTimeout(() => {
       current = { ...current, isTransitioning: false };
       notifyListeners();
-    }, 50);
+    }, UI_TIMING.TOOL_TRANSITION_RESET);
   },
 
   /**

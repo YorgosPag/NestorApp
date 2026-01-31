@@ -16,7 +16,8 @@ import { UI_COLORS, CANVAS_THEME } from '../config/color-config';
 import { getDevicePixelRatio } from '../systems/cursor/utils';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-090: Centralized UI Fonts
-import { RENDER_LINE_WIDTHS, UI_FONTS } from '../config/text-rendering-config';
+// 🏢 ADR-097: Centralized Line Dash Patterns
+import { RENDER_LINE_WIDTHS, UI_FONTS, LINE_DASH_PATTERNS } from '../config/text-rendering-config';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-077: Centralized TAU Constant
@@ -343,7 +344,7 @@ class CursorSnapAlignmentDebugger {
     ctx.save();
     ctx.strokeStyle = color;
     ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
-    ctx.setLineDash([5, 5]);
+    ctx.setLineDash([...LINE_DASH_PATTERNS.DASHED]); // 🏢 ADR-097: Centralized dashed pattern
 
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);

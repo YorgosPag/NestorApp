@@ -7,7 +7,8 @@
 import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-097: Centralized Line Dash Patterns
+import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../../rendering/primitives/canvasPaths';
 
@@ -155,7 +156,7 @@ async function renderTestCrosshair(
 
   ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT;
   ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
-  ctx.setLineDash([5, 5]);
+  ctx.setLineDash([...LINE_DASH_PATTERNS.DASHED]); // 🏢 ADR-097: Centralized dashed pattern
 
   ctx.beginPath();
 

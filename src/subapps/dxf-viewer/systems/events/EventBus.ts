@@ -99,6 +99,32 @@ export interface DrawingEventMap {
       segmentIndex?: number;
     }>;
   };
+  // 🏢 ENTERPRISE (2026-01-31): Line Perpendicular completion event - ADR-060
+  // Emitted when perpendicular line is created from reference line
+  'line-perpendicular:completed': {
+    line: Record<string, unknown>;
+    referenceEntity: {
+      entityId: string;
+      entityType: string;
+      start: { x: number; y: number };
+      end: { x: number; y: number };
+      segmentIndex?: number;
+    };
+    throughPoint: { x: number; y: number };
+  };
+  // 🏢 ENTERPRISE (2026-01-31): Line Parallel completion event - ADR-060
+  // Emitted when parallel line is created from reference line
+  'line-parallel:completed': {
+    line: Record<string, unknown>;
+    referenceEntity: {
+      entityId: string;
+      entityType: string;
+      start: { x: number; y: number };
+      end: { x: number; y: number };
+      segmentIndex?: number;
+    };
+    offsetPoint: { x: number; y: number };
+  };
 }
 
 export type DrawingEventType = keyof DrawingEventMap;

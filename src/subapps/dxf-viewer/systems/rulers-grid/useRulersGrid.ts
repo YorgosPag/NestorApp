@@ -8,6 +8,8 @@ const DEBUG_RULERS_GRID = false;
 
 import React, { useContext } from 'react';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-095: Centralized Snap Tolerance
+import { SNAP_TOLERANCE } from '../../config/tolerance-config';
 import type {
   RulerSettings,
   GridSettings,
@@ -176,8 +178,8 @@ export function useSnapState() {
   const rulersGrid = useRulersGrid();
   if (!rulersGrid) {
     return {
-      rulerSnap: { enabled: false, tolerance: 10 },
-      gridSnap: { enabled: false, tolerance: 10 },
+      rulerSnap: { enabled: false, tolerance: SNAP_TOLERANCE },
+      gridSnap: { enabled: false, tolerance: SNAP_TOLERANCE },
       toggleRulerSnap: () => {},
       toggleGridSnap: () => {},
       setSnapTolerance: () => {},

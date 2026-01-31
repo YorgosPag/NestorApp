@@ -21,7 +21,8 @@ import { getStatusColors } from '../../config/color-mapping';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
-import { UI_FONTS, RENDER_LINE_WIDTHS, buildUIFont } from '../../config/text-rendering-config';
+// 🏢 ADR-097: Centralized Line Dash Patterns
+import { UI_FONTS, RENDER_LINE_WIDTHS, buildUIFont, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 // 🏢 ADR-088: Centralized Pixel-Perfect Alignment
@@ -603,7 +604,7 @@ export class LayerRenderer {
     if (polygon.selected) {
       this.ctx.strokeStyle = UI_COLORS.BRIGHT_GREEN;
       this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
-      this.ctx.setLineDash([5, 5]);
+      this.ctx.setLineDash([...LINE_DASH_PATTERNS.SELECTION]); // 🏢 ADR-097: Centralized selection pattern
       this.ctx.stroke();
       this.ctx.setLineDash([]);
       // Debug disabled: console.log('🔍 Applied selection highlight');

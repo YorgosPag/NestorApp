@@ -22,6 +22,8 @@ import {
   GridSettingsUpdate
 } from './config';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet } from '../../utils/storage-utils';
 
 // ✅ ENTERPRISE: Window interface extension for debug globals
 declare global {
@@ -55,14 +57,18 @@ function useRulersGridSystemIntegration({
 }: Omit<RulersGridSystemProps, 'children'>): RulersGridHookReturn {
 
   // Load persisted settings if enabled
+  // 🏢 ADR-092: Using centralized storage-utils
+  interface PersistedRulersGridData {
+    rulers?: Partial<RulerSettings>;
+    grid?: Partial<GridSettings>;
+    origin?: Point2D;
+    isVisible?: boolean;
+    timestamp?: number;
+  }
+
   const loadPersistedSettings = useCallback(() => {
     if (!enablePersistence) return null;
-    try {
-      const stored = localStorage.getItem(persistenceKey);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+    return storageGet<PersistedRulersGridData | null>(persistenceKey, null);
   }, [enablePersistence, persistenceKey]);
 
   const persistedData = loadPersistedSettings();
@@ -353,11 +359,8 @@ function useRulersGridSystemIntegration({
         isVisible,
         timestamp: Date.now()
       };
-      try {
-        localStorage.setItem(persistenceKey, JSON.stringify(dataToStore));
-      } catch (error) {
-        console.warn('Failed to persist rulers/grid settings:', error);
-      }
+      // 🏢 ADR-092: Using centralized storage-utils
+      storageSet(persistenceKey, dataToStore);
     }
   }, [rulers, grid, origin, isVisible, enablePersistence, persistenceKey]);
 

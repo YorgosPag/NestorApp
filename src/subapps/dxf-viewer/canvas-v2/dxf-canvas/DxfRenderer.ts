@@ -12,7 +12,8 @@ import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/Co
 import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
-import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-097: Centralized Line Dash Patterns
+import { UI_FONTS, RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 
 // ✅ ΝΕΟ: Import unified rendering system
@@ -271,7 +272,7 @@ export class DxfRenderer {
     this.ctx.save();
     this.ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT;
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
-    this.ctx.setLineDash([5, 5]);
+    this.ctx.setLineDash([...LINE_DASH_PATTERNS.SELECTION]); // 🏢 ADR-097: Centralized selection pattern
 
     for (const entityId of options.selectedEntityIds) {
       const entity = scene.entities.find(e => e.id === entityId);

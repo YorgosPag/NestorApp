@@ -6,6 +6,8 @@
 import type { Point2D } from '../../types/Types';
 import type { UIElementSettings } from '../core/UIRenderer';
 import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ADR-095: Centralized Snap Tolerance
+import { SNAP_TOLERANCE } from '../../../config/tolerance-config';
 
 /**
  * 🔺 SNAP TYPES
@@ -89,7 +91,7 @@ export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
   color: UI_COLORS.SNAP_DEFAULT,           // Yellow default
   size: 8,
   lineWidth: 2,
-  tolerance: 10,              // 10px snap tolerance
+  tolerance: SNAP_TOLERANCE,  // 🏢 ADR-095: Centralized snap tolerance
 
   // Type-specific colors
   endpointColor: UI_COLORS.SNAP_ENDPOINT,   // Red for endpoints

@@ -59,7 +59,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { MODAL_COLOR_SCHEMES, getModalColorScheme, getModalIconColor } from '../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, MODAL_SPACING, getIconSize } from '../config/modal-layout';
 import { getSelectStyles, getSelectPlaceholder, MODAL_SELECT_ITEM_PATTERNS } from '../config/modal-select';
-// 🏢 ENTERPRISE: Centralized spacing tokens
+// 🏢 ENTERPRISE: Centralized spacing & timing tokens
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { CompaniesLoadingState, ProjectsLoadingState, ModalEmptyState, InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -578,7 +578,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     setPdfEnabled(true);
 
     // 🏢 ENTERPRISE: Small delay to ensure state is committed (Zustand batching)
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, PANEL_LAYOUT.TIMING.OBSERVER_RETRY));
 
     // 🏢 ENTERPRISE: Get rendered image and dimensions from store
     const pdfState = usePdfBackgroundStore.getState();

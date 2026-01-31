@@ -23,6 +23,8 @@ import { Checkbox } from '@/components/ui/checkbox';  // ✅ ENTERPRISE: Central
 import { PANEL_LAYOUT, PanelPositionCalculator } from '../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 import { FloatingPanel } from '@/components/ui/floating';  // ✅ ADR-084: Centralized FloatingPanel
 import { Settings } from 'lucide-react';  // ✅ ENTERPRISE: Icon for panel header
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageRemove, STORAGE_KEYS } from '../utils/storage-utils';
 
 // ============================================================================
 // 🏢 ADR-084: PANEL DIMENSIONS - Centralized configuration
@@ -146,10 +148,9 @@ export default function CursorSettingsPanel({ isVisible, onClose }: CursorSettin
     cursorConfig.resetToDefaults();
   };
 
+  // 🏢 ADR-092: Using centralized storage-utils
   const clearAndReload = () => {
-    try { 
-      localStorage.removeItem("autocad_cursor_settings"); 
-    } catch {}
+    storageRemove(STORAGE_KEYS.CURSOR_SETTINGS);
     window.location.reload();
   };
 

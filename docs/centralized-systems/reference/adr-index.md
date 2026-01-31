@@ -4,7 +4,7 @@
 >
 > Single source of truth για όλες τις αρχιτεκτονικές αποφάσεις της εφαρμογής
 
-**📊 Stats**: 93 ADRs (ADR-094 added) | Last Updated: 2026-01-31
+**📊 Stats**: 98 ADRs (ADR-100 Inline Degrees-to-Radians Conversion) | Last Updated: 2026-01-31
 
 ---
 
@@ -117,6 +117,11 @@
 | **ADR-092** | Centralized localStorage Service | ✅ APPROVED | 2026-01-31 | Infrastructure |
 | **ADR-093** | Text Label Offsets Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
 | **ADR-094** | Device Pixel Ratio Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-095** | Snap Tolerance Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-096** | Interaction Timing Constants Centralization | ✅ APPROVED | 2026-01-31 | Tools & Keyboard |
+| **ADR-098** | Timing Delays Centralization (setTimeout/setInterval) | ✅ APPROVED | 2026-01-31 | Tools & Keyboard |
+| **ADR-099** | Polygon & Measurement Tolerances Centralization | ✅ APPROVED | 2026-01-31 | Drawing System |
+| **ADR-100** | Inline Degrees-to-Radians Conversion Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
 | **ADR-059** | Separate Audit Bootstrap from Projects List | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-060** | Building Floorplan Enterprise Storage | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-061** | Path Aliases Strategy | ✅ APPROVED | 2026-01-13 | Infrastructure |
@@ -322,7 +327,14 @@
   - `SelectionRenderer.ts` - Uses `CURSOR_DASHED`, `CURSOR_DOTTED`, `CURSOR_DASH_DOT`
   - `ghost-entity-renderer.ts` - Uses `GHOST` pattern
   - `hover/config.ts` - Uses `SELECTION` pattern
-- **Migration Strategy**: On-touch migration for remaining 12 files
+  - `canvas-v2/preview-canvas/PreviewRenderer.ts` - Uses `DASHED` for arc preview (2026-01-31)
+  - `canvas-v2/layer-canvas/LayerRenderer.ts` - Uses `SELECTION` for polygon highlight (2026-01-31)
+  - `canvas-v2/dxf-canvas/DxfRenderer.ts` - Uses `SELECTION` for selection highlights (2026-01-31)
+  - `systems/phase-manager/PhaseManager.ts` - Uses `DASHED` for overlay preview (2026-01-31)
+  - `debug/CursorSnapAlignmentDebugOverlay.ts` - Uses `DASHED` for debug lines (2026-01-31)
+  - `test/visual/overlayRenderer.ts` - Uses `DASHED` for test crosshair (2026-01-31)
+  - `collaboration/CollaborationOverlay.tsx` - Uses `SELECTION` for user selections (2026-01-31)
+- **Migration Status**: ✅ **COMPLETE** - Zero hardcoded `[5, 5]` patterns remaining
 - **Benefits**:
   - Zero hardcoded dash patterns
   - Consistent visual style across all renderers
@@ -430,6 +442,40 @@
   - `systems/zoom/ZoomManager.ts` - 1 replacement
 - **Skipped**: `automatedTests.ts` - Test file, inline DPR is acceptable
 - **Companion**: ADR-043 (Zoom Constants), ADR-044 (Canvas Line Widths), ADR-088 (Pixel-Perfect Rendering)
+
+### ADR-095: Snap Tolerance Centralization
+- **Canonical**: `SNAP_TOLERANCE` from `config/tolerance-config.ts`
+- **Decision**: Centralize hardcoded `tolerance = 10` patterns to existing centralized constant
+- **Problem**: 7 hardcoded `tolerance = 10` or `tolerance: 10` patterns across 6 files:
+  - `rendering/hitTesting/HitTester.ts`: line 70 - `private snapTolerance = 10;`
+  - `rendering/ui/snap/SnapTypes.ts`: line 92 - `tolerance: 10,`
+  - `systems/toolbars/utils.ts`: line 357 - `tolerance: 10`
+  - `systems/rulers-grid/useRulersGrid.ts`: lines 179-180 - 2x `tolerance: 10`
+  - `rendering/canvas/core/CanvasSettings.ts`: line 104 - `tolerance: 10,`
+  - `systems/cursor/utils.ts`: line 42 - `tolerance: number = 10`
+- **Existing Infrastructure**: `SNAP_TOLERANCE` constant already existed but was not being used!
+  ```typescript
+  // Already in tolerance-config.ts:
+  export const SNAP_TOLERANCE = TOLERANCE_CONFIG.SNAP_DEFAULT; // = 10
+  ```
+- **Solution**: Simple import migration - replace hardcoded values with centralized constant
+- **API**:
+  - `SNAP_TOLERANCE` - Default snap tolerance in pixels (10px)
+  - `TOLERANCE_CONFIG.SNAP_DEFAULT` - Source constant (10)
+- **Pattern**: Single Source of Truth (SSOT) for snap tolerance
+- **Benefits**:
+  - Single point of change for snap sensitivity
+  - Consistent snap behavior across all systems (HitTester, Snap, Grid, Rulers, Cursor)
+  - CAD-standard tolerance value (10px matches AutoCAD default)
+  - Eliminates risk of inconsistent snap behavior
+- **Files Migrated** (6 files, 7 replacements):
+  - `rendering/hitTesting/HitTester.ts` - 1 replacement
+  - `rendering/ui/snap/SnapTypes.ts` - 1 replacement
+  - `systems/toolbars/utils.ts` - 1 replacement
+  - `systems/rulers-grid/useRulersGrid.ts` - 2 replacements
+  - `rendering/canvas/core/CanvasSettings.ts` - 1 replacement
+  - `systems/cursor/utils.ts` - 1 replacement
+- **Companion**: ADR-043 (Zoom Constants), ADR-079 (Geometric Precision), ADR-087 (Snap Engine Config)
 
 ### ADR-084: Scattered Code Centralization (Draggable + Canvas State)
 - **Decision**: Centralize scattered draggable logic and canvas state operations
@@ -568,6 +614,32 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - Constants available for performance-critical code
   - Removed 2 duplicate constant definitions
 - **Companion**: ADR-065 (Distance), ADR-066 (Angle)
+
+### ADR-100: Inline Degrees-to-Radians Conversion Centralization
+- **Status**: ✅ APPROVED
+- **Date**: 2026-01-31
+- **Canonical**: `degToRad()` from `geometry-utils.ts` (extends ADR-067)
+- **Decision**: Migrate remaining 5 inline `Math.PI / 180` patterns to centralized `degToRad()` function
+- **Problem**: After ADR-067, 5 inline patterns remained in 2 files:
+  - `PreviewRenderer.ts`: 4 patterns (`(entity.startAngle * Math.PI) / 180`)
+    - Lines 541-542: Arc preview start/end radians
+    - Lines 564-565: Radial construction line angle calculation
+  - `FormatterRegistry.ts`: 1 pattern (`degrees * (Math.PI / 180)`)
+    - Line 537: `formatRadians()` method
+- **Solution**: Simple import of existing `degToRad()` function
+- **Files Changed** (2 files, 5 replacements):
+  - `canvas-v2/preview-canvas/PreviewRenderer.ts` - 4 replacements (added `degToRad` to imports)
+  - `formatting/FormatterRegistry.ts` - 1 replacement (added import + replaced inline calc)
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero remaining inline `Math.PI / 180` patterns in DXF Viewer
+  - Consistent with ADR-067 architecture
+  - Single point of change for conversion precision
+  - Cleaner, more readable code
+- **Verification**:
+  - TypeScript: `npx tsc --noEmit --project src/subapps/dxf-viewer/tsconfig.json`
+  - Grep: `grep -rE "Math\.PI.*180|180.*Math\.PI" src/subapps/dxf-viewer --include="*.ts" --include="*.tsx"` (should return only geometry-utils.ts)
+- **Companion**: ADR-067 (Radians/Degrees), ADR-058 (Canvas Primitives), ADR-082 (FormatterRegistry)
 
 ### ADR-068: Angle Normalization Centralization
 - **Canonical**: `normalizeAngleRad()`, `normalizeAngleDeg()` from `geometry-utils.ts`
@@ -1176,6 +1248,35 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - CircleRenderer now uses same gap size as other renderers
 - **Companion**: ADR-048 (RENDER_GEOMETRY), ADR-044 (Line Widths), ADR-065 (Distance Calculation)
 
+### ADR-099: Polygon & Measurement Tolerances Centralization
+- **Status**: ✅ APPROVED
+- **Date**: 2026-01-31
+- **Canonical**: `POLYGON_TOLERANCES`, `MEASUREMENT_OFFSETS` from `config/tolerance-config.ts`
+- **Decision**: Centralize polygon close detection and measurement positioning tolerances
+- **Problem**: 5 hardcoded tolerance/offset constants in 3 files with duplicate values:
+  - `CLOSE_THRESHOLD = 20` in `CanvasSection.tsx`
+  - `CLOSE_TOLERANCE = 20` in `useDrawingHandlers.ts` (DUPLICATE VALUE!)
+  - `EDGE_TOLERANCE = 15` in `CanvasSection.tsx`
+  - `GRIP_OFFSET = 20` in `MeasurementPositioning.ts`
+  - `TOP_EDGE_OFFSET = 60` in `MeasurementPositioning.ts`
+- **Solution**: Extend existing `tolerance-config.ts` with 2 new sections
+- **API**:
+  - `POLYGON_TOLERANCES.CLOSE_DETECTION` (20) - Polygon auto-close threshold
+  - `POLYGON_TOLERANCES.EDGE_DETECTION` (15) - Edge midpoint detection
+  - `MEASUREMENT_OFFSETS.GRIP` (20) - Grip to label distance
+  - `MEASUREMENT_OFFSETS.TOP_EDGE` (60) - Top edge adjustment
+- **Files Changed**:
+  - `config/tolerance-config.ts` - Added new sections (+40 lines)
+  - `components/dxf-layout/CanvasSection.tsx` - 2 replacements
+  - `hooks/drawing/useDrawingHandlers.ts` - 1 replacement
+  - `systems/phase-manager/positioning/MeasurementPositioning.ts` - 2 replacements
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Eliminates duplicate `CLOSE_THRESHOLD` and `CLOSE_TOLERANCE` (same value in 2 files)
+  - Single place to modify polygon detection sensitivity
+  - Consistent measurement label positioning
+- **Companion**: ADR-079 (GEOMETRY_PRECISION), ADR-095 (Snap Tolerance)
+
 ### ADR-086: Hover Utilities Scattered Code Centralization
 - **Decision**: Replace inline calculations/formatting in hover utilities with centralized functions
 - **Problem**: 3 hover utility files had inline code instead of using existing centralized functions:
@@ -1286,6 +1387,45 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
 - **Canonical**: `ToolStateStore.ts`
 - **Pattern**: `useSyncExternalStore` + `allowsContinuous`
 
+### ADR-096: Interaction Timing Constants Centralization
+- **Status**: ✅ APPROVED
+- **Date**: 2026-01-31
+- **Canonical**: `PANEL_LAYOUT.TIMING` from `config/panel-tokens.ts`
+- **Problem**: CRITICAL CONFLICT - `DOUBLE_CLICK_TIME` (400ms) vs `DOUBLE_CLICK_THRESHOLD` (300ms) in different files
+- **Solution**: Centralize all interaction timing to `PANEL_LAYOUT.TIMING`
+- **Decision**: Use 300ms as standard (CAD industry: 200-400ms range, 300ms is middle ground)
+- **Constants Centralized**:
+  - `DOUBLE_CLICK_MS: 300` - Double-click detection window
+  - `DRAG_THRESHOLD_PX: 5` - Pixels to move before drag starts
+  - `CURSOR_UPDATE_THROTTLE: 50` - Cursor context update throttle (20fps)
+  - `SNAP_DETECTION_THROTTLE: 16` - Snap detection throttle (60fps)
+- **Files Migrated**:
+  - `systems/interaction/InteractionEngine.ts` (2 constants)
+  - `systems/cursor/useCentralizedMouseHandlers.ts` (3 constants)
+- **Benefits**: Single Source of Truth, consistent UX, no timing conflicts
+
+### ADR-098: Timing Delays Centralization (setTimeout/setInterval)
+- **Status**: ✅ APPROVED
+- **Date**: 2026-01-31
+- **Canonical**: `config/timing-config.ts`
+- **Problem**: 18+ hardcoded timing values (50, 100, 150, 500, 1000, 2000 ms) scattered across 7 files
+- **Solution**: Centralize all setTimeout/setInterval timing constants
+- **Constants Categories**:
+  - `INPUT_TIMING`: Focus delays (10ms, 50ms)
+  - `FIELD_TIMING`: Field render delays (150ms)
+  - `UI_TIMING`: Menu guards, tool transitions, anchor display (50ms, 100ms, 1000ms)
+  - `STORAGE_TIMING`: Settings debounce, save status display (150ms, 500ms, 2000ms)
+  - `COLLABORATION_TIMING`: Connection delays, cursor updates (100ms, 500ms)
+- **Files Migrated**:
+  - `useDynamicInputKeyboard.ts` (8 replacements)
+  - `useDxfSettings.ts` (5 replacements)
+  - `CollaborationEngine.ts` (2 replacements)
+  - `ToolStateStore.ts` (1 replacement)
+  - `useColorMenuState.ts` (1 replacement)
+  - `useDynamicInputAnchoring.ts` (1 replacement)
+  - `DxfSettingsStore.ts` (1 replacement)
+- **Benefits**: Single Source of Truth, easy performance tuning, no magic numbers
+
 ---
 
 ## 🏢 **ENTITY SYSTEMS**
@@ -1364,13 +1504,30 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - `STORAGE_KEYS.DEBUG_ORIGIN_MARKERS` - `'debug.originMarkers.enabled'`
   - `STORAGE_KEYS.PERFORMANCE_MONITOR` - `'dxf-viewer-performance-monitor-enabled'`
   - `STORAGE_KEYS.OVERLAY_STATE` - `'dxf-viewer:overlay-state:v1'`
+  - `STORAGE_KEYS.OVERLAY_STATE_PREFIX` - `'dxf-overlay-'` (per-level dynamic key)
   - `STORAGE_KEYS.RECENT_COLORS` - `'dxf-viewer:recent-colors'`
+  - `STORAGE_KEYS.DXF_SETTINGS` - `'dxf-settings-v2'`
+  - `STORAGE_KEYS.CURSOR_SETTINGS` - `'autocad_cursor_settings'`
+  - `STORAGE_KEYS.AI_SNAPPING` - `'ai-snapping-data'`
+  - `STORAGE_KEYS.RULERS_GRID_PREFIX` - `'rulers-grid-persistence'`
+  - `STORAGE_KEYS.CONSTRAINTS_PREFIX` - `'dxf-viewer-constraints'`
+  - `STORAGE_KEYS.COMMAND_HISTORY_PREFIX` - `'dxf-command-history'`
 - **Files Migrated (Phase 1)**:
   - `debug/RulerDebugOverlay.ts` - Debug toggle persistence
   - `debug/OriginMarkersDebugOverlay.ts` - Debug toggle persistence
   - `hooks/usePerformanceMonitorToggle.ts` - Performance monitor state
   - `hooks/state/useOverlayState.ts` - Overlay editor state
   - `ui/color/RecentColorsStore.ts` - Recent colors LRU cache (SSR fix!)
+- **Files Migrated (Phase 2 - Full Centralization)**:
+  - `state/overlay-manager.ts` - Per-level overlay state persistence
+  - `systems/cursor/config.ts` - Cursor settings persistence
+  - `stores/DxfSettingsStore.ts` - DXF settings (general + overrides)
+  - `systems/rulers-grid/usePersistence.ts` - Rulers/Grid persistence hook
+  - `systems/rulers-grid/RulersGridSystem.tsx` - Main rulers/grid system
+  - `systems/constraints/useConstraintsSystemState.ts` - Constraints system state
+  - `systems/ai-snapping/AISnappingEngine.ts` - AI snapping learned data
+  - `core/commands/CommandPersistence.ts` - Command history fallback storage
+  - `ui/CursorSettingsPanel.tsx` - Cursor settings clear & reload
 - **Relationship to LocalStorageDriver**:
   - `LocalStorageDriver` (ADR async) - Full enterprise async driver for settings
   - `storageGet/Set` (ADR-092 sync) - Lightweight sync utilities for simple state

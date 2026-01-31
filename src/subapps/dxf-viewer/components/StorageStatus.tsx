@@ -19,6 +19,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+// 🏢 ENTERPRISE ADR-082: Centralized number formatting (replaces .toFixed())
+import { getFormatter } from '../formatting';
 
 interface StorageStatusProps {
   showDetails?: boolean;
@@ -111,8 +113,9 @@ export function StorageStatus({ showDetails = false, className }: StorageStatusP
                   } w-[${Math.min(usagePercentage, 100)}%]`}
                 />
               </div>
+              {/* 🏢 ENTERPRISE ADR-082: Uses FormatterRegistry for locale-aware percentage formatting */}
               <div className={`${PANEL_LAYOUT.BUTTON.TEXT_SIZE_XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
-                {usagePercentage.toFixed(1)}% used • {StorageManager.formatBytes(storageInfo.quota - storageInfo.usage)} available
+                {getFormatter().formatLinear(usagePercentage, { precision: 1 })}% used • {StorageManager.formatBytes(storageInfo.quota - storageInfo.usage)} available
               </div>
             </div>
 
@@ -148,10 +151,11 @@ export function StorageStatusIndicator() {
 
   if (!isWarning) return null;
 
+  // 🏢 ENTERPRISE ADR-082: Uses FormatterRegistry for locale-aware percentage formatting
   return (
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning}`}>
       <HardDrive className={iconSizes.xs} />
-      <span>{usagePercentage.toFixed(0)}%</span>
+      <span>{getFormatter().formatLinear(usagePercentage, { precision: 0 })}%</span>
     </div>
   );
 }

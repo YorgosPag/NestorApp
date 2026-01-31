@@ -23,6 +23,9 @@ import {
   DEFAULT_POLAR_SETTINGS,
   DEFAULT_CONSTRAINTS_SETTINGS
 } from './config';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet } from '../../utils/storage-utils';
+
 // Import the base persistence hook
 interface ConstraintsPersistedData {
   orthoSettings?: Partial<OrthoConstraintSettings>;
@@ -32,15 +35,14 @@ interface ConstraintsPersistedData {
   timestamp?: number;
 }
 
+/**
+ * Load constraints settings from storage
+ * 🏢 ADR-092: Using centralized storage-utils
+ */
 function useLoadConstraintsSettings(enablePersistence: boolean, persistenceKey: string): () => ConstraintsPersistedData | null {
   return () => {
     if (!enablePersistence) return null;
-    try {
-      const stored = localStorage.getItem(persistenceKey);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+    return storageGet<ConstraintsPersistedData | null>(persistenceKey, null);
   };
 }
 
@@ -135,20 +137,17 @@ export function useConstraintsSystemState({
   });
 
   // Persistence effect
+  // 🏢 ADR-092: Using centralized storage-utils
   useEffect(() => {
     if (enablePersistence) {
-      const dataToStore = {
+      const dataToStore: ConstraintsPersistedData = {
         orthoSettings,
         polarSettings,
         settings,
         constraints,
         timestamp: Date.now()
       };
-      try {
-        localStorage.setItem(persistenceKey, JSON.stringify(dataToStore));
-      } catch (error) {
-        console.warn('Failed to persist constraints settings:', error);
-      }
+      storageSet(persistenceKey, dataToStore);
     }
   }, [orthoSettings, polarSettings, settings, constraints, enablePersistence, persistenceKey]);
 

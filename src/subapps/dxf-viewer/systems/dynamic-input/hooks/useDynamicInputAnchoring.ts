@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import type { Phase } from './useDynamicInputState';
 import type { CoordinateFieldState, CircleFieldState } from '../types/common-interfaces';
+// 🏢 ADR-098: Centralized Timing Constants
+import { UI_TIMING } from '../../../config/timing-config';
 
 interface UseDynamicInputAnchoringArgs {
   isCoordinateAnchored: CoordinateFieldState;
@@ -24,15 +26,16 @@ export function useDynamicInputAnchoring({
   setFieldUnlocked,
 }: UseDynamicInputAnchoringArgs) {
   
-  // Auto-unanchor XY highlight after 1 second με field unlocking logic
+  // Auto-unanchor XY highlight after anchor display duration με field unlocking logic
+  // 🏢 ADR-098: Using UI_TIMING.ANCHOR_DISPLAY_DURATION
   useEffect(() => {
     if (isCoordinateAnchored.x || isCoordinateAnchored.y) {
       const resetTimer = setTimeout(() => {
         // ΕΠΑΝΑΦΟΡΑ anchoring για το κίτρινο highlighting
         setIsCoordinateAnchored({ x: false, y: false });
         setIsManualInput({ x: false, y: false });
-        console.debug('[DynamicInputOverlay] Reset anchor state after 1s');
-        
+        console.debug('[DynamicInputOverlay] Reset anchor state after anchor display duration');
+
         // ΕΠΑΝΑΦΟΡΑ της κανονικής κατάστασης fieldUnlocked - tool-aware reset για second-point
         if (drawingPhase === 'second-point') {
           if (activeTool === 'circle') {
@@ -46,7 +49,7 @@ export function useDynamicInputAnchoring({
             console.debug('[DynamicInputOverlay] Reset Y field to locked state (second-point)');
           }
         }
-      }, 1000); // 1 δευτερόλεπτο
+      }, UI_TIMING.ANCHOR_DISPLAY_DURATION);
 
       return () => clearTimeout(resetTimer);
     }

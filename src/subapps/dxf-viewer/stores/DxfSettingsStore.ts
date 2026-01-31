@@ -55,6 +55,10 @@ import {
   validateTextSettings,
   validateGripSettings
 } from '../settings-core/types';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet, storageRemove, STORAGE_KEYS } from '../utils/storage-utils';
+// 🏢 ADR-098: Centralized Timing Constants
+import { STORAGE_TIMING } from '../config/timing-config';
 
 // ============================================================================
 // STORE STATE TYPE
@@ -323,6 +327,7 @@ export const useDxfSettingsStore = create<DxfSettingsState & DxfSettingsActions>
         // PERSISTENCE ACTIONS
         // ====================================================================
 
+        // 🏢 ADR-092: Using centralized storage-utils
         saveToLocalStorage: () => {
           set((state) => {
             state.saveStatus = 'saving';
@@ -336,19 +341,24 @@ export const useDxfSettingsStore = create<DxfSettingsState & DxfSettingsActions>
               savedAt: new Date().toISOString()
             };
 
-            localStorage.setItem('dxf-settings-v2', JSON.stringify(dataToSave));
+            const success = storageSet(STORAGE_KEYS.DXF_SETTINGS, dataToSave);
 
-            set((state) => {
-              state.lastSaved = new Date();
-              state.saveStatus = 'saved';
-            });
-
-            // Reset status μετά από 2 δευτερόλεπτα
-            setTimeout(() => {
+            if (success) {
               set((state) => {
-                state.saveStatus = 'idle';
+                state.lastSaved = new Date();
+                state.saveStatus = 'saved';
               });
-            }, 2000);
+
+              // Reset status μετά από save status display duration
+              // 🏢 ADR-098: Using STORAGE_TIMING.SAVE_STATUS_DISPLAY
+              setTimeout(() => {
+                set((state) => {
+                  state.saveStatus = 'idle';
+                });
+              }, STORAGE_TIMING.SAVE_STATUS_DISPLAY);
+            } else {
+              throw new Error('storageSet returned false');
+            }
           } catch (error) {
             console.error('Failed to save settings:', error);
             set((state) => {
@@ -357,49 +367,53 @@ export const useDxfSettingsStore = create<DxfSettingsState & DxfSettingsActions>
           }
         },
 
+        // 🏢 ADR-092: Using centralized storage-utils
         loadFromLocalStorage: () => {
-          try {
-            const saved = localStorage.getItem('dxf-settings-v2');
-            if (saved) {
-              const parsed = JSON.parse(saved);
+          interface PersistedSettings {
+            general?: {
+              line?: Partial<LineSettings>;
+              text?: Partial<TextSettings>;
+              grip?: Partial<GripSettings>;
+            };
+            overrides?: Record<EntityId, PartialDxfSettings>;
+            savedAt?: string;
+          }
 
-              set((state) => {
-                if (parsed.general) {
-                  state.general = {
-                    line: validateLineSettings(parsed.general.line || DEFAULT_LINE_SETTINGS),
-                    text: validateTextSettings(parsed.general.text || DEFAULT_TEXT_SETTINGS),
-                    grip: validateGripSettings(parsed.general.grip || DEFAULT_GRIP_SETTINGS),
-                  };
-                }
+          const saved = storageGet<PersistedSettings | null>(STORAGE_KEYS.DXF_SETTINGS, null);
 
-                if (parsed.overrides) {
-                  state.overrides = parsed.overrides;
-                }
+          if (saved) {
+            set((state) => {
+              if (saved.general) {
+                state.general = {
+                  line: validateLineSettings(saved.general.line || DEFAULT_LINE_SETTINGS),
+                  text: validateTextSettings(saved.general.text || DEFAULT_TEXT_SETTINGS),
+                  grip: validateGripSettings(saved.general.grip || DEFAULT_GRIP_SETTINGS),
+                };
+              }
 
-                state.isLoaded = true;
-                state.lastSaved = parsed.savedAt ? new Date(parsed.savedAt) : null;
-              });
-            } else {
-              set((state) => {
-                state.isLoaded = true;
-              });
-            }
-          } catch (error) {
-            console.error('Failed to load settings:', error);
+              if (saved.overrides) {
+                state.overrides = saved.overrides;
+              }
+
+              state.isLoaded = true;
+              state.lastSaved = saved.savedAt ? new Date(saved.savedAt) : null;
+            });
+          } else {
             set((state) => {
               state.isLoaded = true;
             });
           }
         },
 
+        // 🏢 ADR-092: Using centralized storage-utils
         clearLocalStorage: () => {
-          try {
-            localStorage.removeItem('dxf-settings-v2');
+          const success = storageRemove(STORAGE_KEYS.DXF_SETTINGS);
+          if (success) {
             set((state) => {
               state.lastSaved = null;
             });
-          } catch (error) {
-            console.error('Failed to clear settings:', error);
+          } else {
+            console.error('Failed to clear settings');
           }
         },
       }))

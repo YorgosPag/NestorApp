@@ -6,6 +6,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Point2D as Point } from '../../rendering/types/Types';
 import type { ToolType } from '../../ui/toolbar/types';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 export interface InteractionState {
   mousePosition: Point | null;
@@ -49,8 +50,9 @@ export interface InteractionOptions {
   handlers: InteractionHandlers;
 }
 
-const DRAG_THRESHOLD = 5; // pixels
-const DOUBLE_CLICK_TIME = 400; // milliseconds
+// 🏢 ADR-096: Centralized Interaction Timing Constants (PANEL_LAYOUT.TIMING)
+const DRAG_THRESHOLD = PANEL_LAYOUT.TIMING.DRAG_THRESHOLD_PX;
+const DOUBLE_CLICK_TIME = PANEL_LAYOUT.TIMING.DOUBLE_CLICK_MS;
 
 export function useInteractionEngine({
   canvasRef,

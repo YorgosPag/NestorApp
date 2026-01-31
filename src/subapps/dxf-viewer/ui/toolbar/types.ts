@@ -23,6 +23,9 @@ export type ToolType =
   | 'arc-3p'               // 3-Point Arc (Start → Point on Arc → End)
   | 'arc-cse'              // Center → Start → End
   | 'arc-sce'              // Start → Center → End
+  // 🏢 ENTERPRISE (2026-01-31): Line drawing tools - ADR-060
+  | 'line-perpendicular'   // Perpendicular line to reference line
+  | 'line-parallel'        // Parallel line with offset
   | 'polyline'
   | 'polygon'
   | 'ellipse'

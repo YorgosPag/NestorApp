@@ -1367,6 +1367,8 @@
     "select": "Επιλογή",
     "pan": "Μετακίνηση Προβολής",
     "line": "Γραμμή",
+    "linePerpendicular": "Κάθετη Γραμμή",
+    "lineParallel": "Παράλληλη Γραμμή",
     "rectangle": "Ορθογώνιο",
     "circleRadius": "Κύκλος (Ακτίνα)",
     "circleDiameter": "Κύκλος (Διάμετρος)",

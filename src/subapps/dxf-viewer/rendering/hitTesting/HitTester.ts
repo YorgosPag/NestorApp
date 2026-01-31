@@ -11,6 +11,8 @@ import type { Point2D } from '../types/Types';
 import { BoundingBox, BoundsCalculator, BoundsOperations } from './Bounds';
 // 🏢 ADR-071: Centralized geometry utilities
 import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
+// 🏢 ADR-095: Centralized Snap Tolerance
+import { SNAP_TOLERANCE } from '../../config/tolerance-config';
 
 export interface HitTestOptions extends SpatialQueryOptions {
   // Hit-test specific options
@@ -67,7 +69,7 @@ export class HitTester {
 
   // Configuration
   private defaultTolerance = 5; // pixels
-  private snapTolerance = 10; // pixels
+  private snapTolerance = SNAP_TOLERANCE; // 🏢 ADR-095: Centralized
   private maxResults = 50;
 
   // Performance tracking

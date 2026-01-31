@@ -6,6 +6,8 @@
 import { BaseConfigurationManager } from '../../rendering/entities/shared/geometry-rendering-utils';
 import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet, STORAGE_KEYS } from '../../utils/storage-utils';
 
 // ===== TYPES =====
 export interface CursorSettings {
@@ -152,7 +154,7 @@ export const DEFAULT_CURSOR_SETTINGS: CursorSettings = {
 };
 
 // ===== STORAGE MANAGEMENT =====
-const STORAGE_KEY = "autocad_cursor_settings";
+// 🏢 ADR-092: Using centralized STORAGE_KEYS registry
 
 export class CursorConfiguration extends BaseConfigurationManager<CursorSettings> {
   private static instance: CursorConfiguration;
@@ -238,16 +240,13 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
   }
 
   // Storage operations
+  // 🏢 ADR-092: Using centralized storage-utils (SSR-safe)
   private loadSettings(): CursorSettings {
-    try {
-      // ✅ SSR GUARD: Check if localStorage exists (browser only)
-      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-        return { ...DEFAULT_CURSOR_SETTINGS };
-      }
+    // storageGet handles SSR check internally
+    const stored = storageGet<CursorSettings | null>(STORAGE_KEYS.CURSOR_SETTINGS, null);
 
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
+    if (stored) {
+      const parsed = stored;
 
         // 🔧 MIGRATION: Force enable crosshair if it was disabled in old settings
         // This ensures crosshair is visible after refactoring changes
@@ -273,8 +272,8 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
             window: {
               ...DEFAULT_CURSOR_SETTINGS.selection.window,
               ...parsed.selection?.window,
-              // Migration για νέα fields
-              fillOpacity: parsed.selection?.window?.fillOpacity ?? parsed.selection?.window?.opacity ?? DEFAULT_CURSOR_SETTINGS.selection.window.fillOpacity,
+              // Migration για νέα fields (cast to access legacy 'opacity' property)
+              fillOpacity: parsed.selection?.window?.fillOpacity ?? (parsed.selection?.window as { opacity?: number } | undefined)?.opacity ?? DEFAULT_CURSOR_SETTINGS.selection.window.fillOpacity,
               borderOpacity: parsed.selection?.window?.borderOpacity ?? DEFAULT_CURSOR_SETTINGS.selection.window.borderOpacity,
               borderStyle: parsed.selection?.window?.borderStyle || DEFAULT_CURSOR_SETTINGS.selection.window.borderStyle,
               borderWidth: parsed.selection?.window?.borderWidth ?? DEFAULT_CURSOR_SETTINGS.selection.window.borderWidth
@@ -282,8 +281,8 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
             crossing: {
               ...DEFAULT_CURSOR_SETTINGS.selection.crossing,
               ...parsed.selection?.crossing,
-              // Migration για νέα fields
-              fillOpacity: parsed.selection?.crossing?.fillOpacity ?? parsed.selection?.crossing?.opacity ?? DEFAULT_CURSOR_SETTINGS.selection.crossing.fillOpacity,
+              // Migration για νέα fields (cast to access legacy 'opacity' property)
+              fillOpacity: parsed.selection?.crossing?.fillOpacity ?? (parsed.selection?.crossing as { opacity?: number } | undefined)?.opacity ?? DEFAULT_CURSOR_SETTINGS.selection.crossing.fillOpacity,
               borderOpacity: parsed.selection?.crossing?.borderOpacity ?? DEFAULT_CURSOR_SETTINGS.selection.crossing.borderOpacity,
               borderStyle: parsed.selection?.crossing?.borderStyle || DEFAULT_CURSOR_SETTINGS.selection.crossing.borderStyle,
               borderWidth: parsed.selection?.crossing?.borderWidth ?? DEFAULT_CURSOR_SETTINGS.selection.crossing.borderWidth
@@ -294,21 +293,14 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
         };
 
         // 🔧 AUTO-SAVE: If migration occurred, save the updated settings immediately
+        // 🏢 ADR-092: Using centralized storageSet
         if (shouldMigrateCrosshair) {
-
-          // Save the migrated settings to localStorage
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedSettings));
-          } catch (error) {
-            console.warn('Failed to save migrated cursor settings:', error);
-          }
+          storageSet(STORAGE_KEYS.CURSOR_SETTINGS, migratedSettings);
         }
 
         return migratedSettings;
       }
-    } catch (error) {
-      console.warn('Failed to load cursor settings:', error);
-    }
+
     return { ...DEFAULT_CURSOR_SETTINGS };
   }
 
@@ -325,12 +317,11 @@ export class CursorConfiguration extends BaseConfigurationManager<CursorSettings
       this.delegateToUnifiedAutosave();
     } catch (error) {
       console.warn('Failed to save cursor settings:', error);
-      // 🔄 FALLBACK: Αν αποτύχει το unified system, χρησιμοποιούμε το παλιό
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.settings));
-
-      } catch (fallbackError) {
-        console.error('❌ [CursorSystem] Both unified and fallback saves failed:', fallbackError);
+      // 🔄 FALLBACK: Αν αποτύχει το unified system, χρησιμοποιούμε το centralized storage
+      // 🏢 ADR-092: Using centralized storageSet
+      const saved = storageSet(STORAGE_KEYS.CURSOR_SETTINGS, this.settings);
+      if (!saved) {
+        console.error('❌ [CursorSystem] Both unified and fallback saves failed');
       }
     }
   }

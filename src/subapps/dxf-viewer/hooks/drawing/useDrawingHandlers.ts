@@ -67,6 +67,8 @@ import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 // 🎯 ADR-047: Distance calculation for close-on-first-point
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-099: Centralized Polygon Tolerances
+import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 
 type Pt = { x: number, y: number };
 
@@ -191,9 +193,8 @@ export function useDrawingHandlers(
     if (isAreaTool && hasMinPoints && drawingState.tempPoints[0]) {
       const firstPoint = drawingState.tempPoints[0];
       const distance = calculateDistance(p, firstPoint); // ✅ Use RAW point, NOT snapped!
-      const CLOSE_TOLERANCE = 20; // 20 world units tolerance (generous for user-friendly closing)
 
-      if (distance < CLOSE_TOLERANCE) {
+      if (distance < POLYGON_TOLERANCES.CLOSE_DETECTION) {
         // 🎯 AUTO-CLOSE: User clicked near first point - close the polygon!
         const newEntity = finishPolyline();
         if (newEntity && 'type' in newEntity && typeof newEntity.type === 'string') {

@@ -6,6 +6,8 @@
 import { UI_COLORS, CANVAS_THEME } from '../../../config/color-config';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
 import { getDevicePixelRatio } from '../../../systems/cursor/utils';
+// 🏢 ADR-095: Centralized Snap Tolerance
+import { SNAP_TOLERANCE } from '../../../config/tolerance-config';
 
 import type { CrosshairSettings } from '../../ui/crosshair/CrosshairTypes';
 import type { UICursorSettings } from '../../ui/cursor/CursorTypes';
@@ -101,7 +103,7 @@ export class CanvasSettings {
       snap: {
         enabled: true,
         visible: true,
-        tolerance: 10,
+        tolerance: SNAP_TOLERANCE, // 🏢 ADR-095: Centralized snap tolerance
         color: UI_COLORS.BRIGHT_YELLOW,
         size: 8,
         lineWidth: 1,

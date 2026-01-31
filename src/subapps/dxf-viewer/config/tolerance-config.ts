@@ -218,3 +218,47 @@ export const SNAP_GEOMETRY = {
   /** 1/√2 ≈ 0.7071 - για διαίρεση με √2 (πιο γρήγορο από division) */
   INV_SQRT_2: 1 / Math.sqrt(2),
 } as const;
+
+// ===== POLYGON CLOSE TOLERANCES =====
+// 🏢 ADR-099: Centralized Polygon Tolerances (2026-01-31)
+
+/**
+ * 🎯 POLYGON CLOSE TOLERANCES
+ * Thresholds for polygon auto-close and edge detection
+ *
+ * Used for:
+ * - Polygon auto-close when clicking near first point (CanvasSection, useDrawingHandlers)
+ * - Edge detection for overlay vertex insertion (CanvasSection)
+ *
+ * @example
+ * import { POLYGON_TOLERANCES } from '../config/tolerance-config';
+ * if (distance < POLYGON_TOLERANCES.CLOSE_DETECTION / transform.scale) { ... }
+ */
+export const POLYGON_TOLERANCES = {
+  /** Distance threshold for polygon auto-close when clicking near first point (20 world units) */
+  CLOSE_DETECTION: 20,
+  /** Edge detection tolerance for boundary checks and vertex insertion (15 pixels) */
+  EDGE_DETECTION: 15,
+} as const;
+
+// ===== MEASUREMENT POSITIONING OFFSETS =====
+// 🏢 ADR-099: Centralized Measurement Offsets (2026-01-31)
+
+/**
+ * 🎯 MEASUREMENT POSITIONING OFFSETS
+ * Offsets for measurement labels and grip positioning
+ *
+ * Used for:
+ * - Smart measurement label positioning (MeasurementPositioning.ts)
+ * - Grip point to label distance calculation
+ *
+ * @example
+ * import { MEASUREMENT_OFFSETS } from '../config/tolerance-config';
+ * const labelX = gripX + MEASUREMENT_OFFSETS.GRIP;
+ */
+export const MEASUREMENT_OFFSETS = {
+  /** Distance from grip point to measurement label (20 pixels) */
+  GRIP: 20,
+  /** Top edge offset adjustment for labels near top edge (60 pixels) */
+  TOP_EDGE: 60,
+} as const;

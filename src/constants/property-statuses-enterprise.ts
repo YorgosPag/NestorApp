@@ -1395,6 +1395,9 @@ export const DXF_SELECTION_TOOL_LABELS = {
  */
 export const DXF_DRAWING_TOOL_LABELS = {
   LINE: 'tools.line',
+  // 🏢 ENTERPRISE (2026-01-31): Line tool variations - ADR-060
+  LINE_PERPENDICULAR: 'tools.linePerpendicular',
+  LINE_PARALLEL: 'tools.lineParallel',
   RECTANGLE: 'tools.rectangle',
   CIRCLE_RADIUS: 'tools.circleRadius',
   CIRCLE_DIAMETER: 'tools.circleDiameter',

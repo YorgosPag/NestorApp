@@ -7,6 +7,8 @@ import { useEffect, useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { FieldValueSetters, FieldValues, FullFieldState, CoordinateFieldState } from '../types/common-interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
+// 🏢 ADR-098: Centralized Timing Constants
+import { INPUT_TIMING, FIELD_TIMING } from '../../../config/timing-config';
 
 type Phase = 'first-point' | 'second-point' | 'continuous';
 type Field = 'x' | 'y' | 'angle' | 'length' | 'radius' | 'diameter';
@@ -76,12 +78,14 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
   } = args;
 
   // Helper για focus με timeout
-  const focusSoon = useCallback((ref: React.RefObject<HTMLInputElement>, ms = 10) => {
+  // 🏢 ADR-098: Using centralized INPUT_TIMING.FOCUS_IMMEDIATE
+  const focusSoon = useCallback((ref: React.RefObject<HTMLInputElement>, ms: number = INPUT_TIMING.FOCUS_IMMEDIATE) => {
     setTimeout(() => ref.current?.focus(), ms);
   }, []);
 
   // Helper για focus και auto-select text (για radius field)
-  const focusAndSelect = useCallback((ref: React.RefObject<HTMLInputElement>, ms = 50) => {
+  // 🏢 ADR-098: Using centralized INPUT_TIMING.FOCUS_AND_SELECT
+  const focusAndSelect = useCallback((ref: React.RefObject<HTMLInputElement>, ms: number = INPUT_TIMING.FOCUS_AND_SELECT) => {
     setTimeout(() => {
       if (ref.current) {
         ref.current.focus();
@@ -209,7 +213,7 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
                 setDrawingPhase('first-point');
 
                 resetForNextPointFirstPhase();
-                focusSoon(xInputRef, 50);
+                focusSoon(xInputRef, INPUT_TIMING.FOCUS_DEFAULT);
               }
               return;
             }
@@ -253,7 +257,7 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
             setDrawingPhase('first-point');
 
             resetForNextPointFirstPhase();
-            focusSoon(xInputRef, 50);
+            focusSoon(xInputRef, INPUT_TIMING.FOCUS_DEFAULT);
             return;
           }
         }
@@ -305,6 +309,7 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
                   setActiveField('radius');
 
                   // Add delay to allow radius field to render
+                  // 🏢 ADR-098: Using FIELD_TIMING.FIELD_RENDER_DELAY
                   setTimeout(() => {
 
                     if (radiusInputRef.current) {
@@ -313,7 +318,7 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
                     } else {
 
                     }
-                  }, 150);
+                  }, FIELD_TIMING.FIELD_RENDER_DELAY);
 
                 } else if (activeTool === 'circle-diameter') {
 
@@ -323,6 +328,7 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
                   setActiveField('diameter');
 
                   // Add delay to allow diameter field to render
+                  // 🏢 ADR-098: Using FIELD_TIMING.FIELD_RENDER_DELAY
                   setTimeout(() => {
 
                     if (diameterInputRef.current) {
@@ -331,7 +337,7 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
                     } else {
 
                     }
-                  }, 150);
+                  }, FIELD_TIMING.FIELD_RENDER_DELAY);
 
                 } else if (activeTool === 'circle-2p-diameter') {
 
@@ -354,12 +360,13 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
                   // Set up for second point coordinates
                   setFieldUnlocked({ x: true, y: false, angle: false, length: false, radius: false, diameter: false });
                   setActiveField('x'); // Focus X για το δεύτερο σημείο
+                  // 🏢 ADR-098: Using FIELD_TIMING.FIELD_RENDER_DELAY
                   setTimeout(() => {
                     if (xInputRef.current) {
                       xInputRef.current.focus();
                       xInputRef.current.select();
                     }
-                  }, 150);
+                  }, FIELD_TIMING.FIELD_RENDER_DELAY);
 
                 }
               }
@@ -392,7 +399,7 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
 
             // Reset για επόμενο κύκλο χρησιμοποιώντας την υπάρχουσα κοινή λογική
             resetForNextPointFirstPhase();
-            focusSoon(xInputRef, 50);
+            focusSoon(xInputRef, INPUT_TIMING.FOCUS_DEFAULT);
             return;
           }
 
@@ -422,7 +429,7 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
 
             // Reset για επόμενο κύκλο χρησιμοποιώντας την υπάρχουσα κοινή λογική
             resetForNextPointFirstPhase();
-            focusSoon(xInputRef, 50);
+            focusSoon(xInputRef, INPUT_TIMING.FOCUS_DEFAULT);
             return;
           }
         }
@@ -465,7 +472,7 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
 
               // Reset για επόμενο κύκλο
               resetForNextPointFirstPhase();
-              focusSoon(xInputRef, 50);
+              focusSoon(xInputRef, INPUT_TIMING.FOCUS_DEFAULT);
             } else {
 
             }
@@ -510,7 +517,7 @@ export function useDynamicInputKeyboard(args: UseDynamicInputKeyboardArgs) {
               setActiveField('x');
               setIsManualInput({ x: false, y: false });
 
-              focusSoon(xInputRef, 50);
+              focusSoon(xInputRef, INPUT_TIMING.FOCUS_DEFAULT);
             } else {
 
               CADFeedback.onError();

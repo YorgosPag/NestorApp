@@ -7,6 +7,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE ADR-082: Centralized number formatting (replaces .toFixed())
+import { getFormatter } from '../../../formatting';
 import { useCursor } from '../../cursor';
 import { CADFeedback } from '../../../utils/feedback-utils';
 import { DynamicInputField } from './DynamicInputField';
@@ -505,19 +507,20 @@ export default function DynamicInputOverlay({
         </div>
 
         {/* Multi-point information για polyline/polygon */}
+        {/* 🏢 ENTERPRISE ADR-082: Uses FormatterRegistry for locale-aware formatting */}
         {multiPointInfo.shouldShowMultiPoint && (
           <div className={`${PANEL_LAYOUT.MARGIN.TOP_SM} ${PANEL_LAYOUT.PADDING.TOP_SM} ${getDirectionalBorder('muted', 'top')} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.tertiary}`}>
             {multiPointInfo.lastPointDistance !== null && (
-              <div>{t('dynamicInput.multiPoint.distance')} {multiPointInfo.lastPointDistance.toFixed(3)}</div>
+              <div>{t('dynamicInput.multiPoint.distance')} {getFormatter().formatDistance(multiPointInfo.lastPointDistance, 3)}</div>
             )}
             {multiPointInfo.segmentAngle !== null && (
-              <div>{t('dynamicInput.multiPoint.angle')} {multiPointInfo.segmentAngle.toFixed(1)}°</div>
+              <div>{t('dynamicInput.multiPoint.angle')} {getFormatter().formatAngle(multiPointInfo.segmentAngle, 1)}</div>
             )}
             {multiPointInfo.segments.length > 0 && (
               <div>{t('dynamicInput.multiPoint.segments')} {multiPointInfo.segments.length}</div>
             )}
             {multiPointInfo.totalDistance > 0 && (
-              <div>{t('dynamicInput.multiPoint.total')} {multiPointInfo.totalDistance.toFixed(3)}</div>
+              <div>{t('dynamicInput.multiPoint.total')} {getFormatter().formatDistance(multiPointInfo.totalDistance, 3)}</div>
             )}
           </div>
         )}

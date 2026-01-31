@@ -930,6 +930,15 @@ export const PANEL_LAYOUT = {
   // ============================================================================
   TIMING: {
     // ─────────────────────────────────────────────────────────────────────────
+    // INTERACTION THRESHOLDS (2026-01-31 ADR-096)
+    // Single source of truth for mouse/pointer interaction timing
+    // ─────────────────────────────────────────────────────────────────────────
+    DOUBLE_CLICK_MS: 300,                // Double-click detection window (enterprise standard: 200-400ms range)
+    DRAG_THRESHOLD_PX: 5,                // Pixels to move before drag starts
+    CURSOR_UPDATE_THROTTLE: 50,          // Cursor context update throttle (20fps - sufficient for UI)
+    SNAP_DETECTION_THROTTLE: 16,         // Snap detection throttle (60fps - high precision needed)
+
+    // ─────────────────────────────────────────────────────────────────────────
     // MICRO DELAYS (10-50ms) - Focus/DOM updates
     // ─────────────────────────────────────────────────────────────────────────
     FOCUS_DELAY: 10,                     // Focus after DOM update (DynamicInputOverlay)

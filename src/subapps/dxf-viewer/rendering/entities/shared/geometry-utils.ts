@@ -5,12 +5,12 @@
  */
 
 import type { Point2D, BoundingBox } from '../../types/Types';
-// 🏢 ADR-065: Centralized Distance Calculation
+// 🏢 ADR-065: Centralized Distance Calculation & Angle Calculation
 // 🏢 ADR-070: Centralized Vector Magnitude
 // 🏢 ADR-072: Centralized Dot Product
 // 🏢 ADR-073: Centralized Midpoint Calculation
 // 🏢 ADR-090: Centralized Point Vector Operations
-import { calculateDistance, vectorMagnitude, dotProduct, calculateMidpoint, subtractPoints, getUnitVector } from './geometry-rendering-utils';
+import { calculateDistance, calculateAngle, vectorMagnitude, dotProduct, calculateMidpoint, subtractPoints, getUnitVector } from './geometry-rendering-utils';
 // 🏢 ADR-077: Centralized TAU Constant (TAU)
 import { TAU } from '../../primitives/canvasPaths';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
@@ -159,9 +159,8 @@ export function angleBetweenPoints(vertex: Point2D, point1: Point2D, point2: Poi
  * Calculate angle from horizontal (0 to 2π)
  */
 export function angleFromHorizontal(start: Point2D, end: Point2D): number {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  let angle = Math.atan2(dy, dx);
+  // 🏢 ADR-065: Use centralized calculateAngle
+  let angle = calculateAngle(start, end);
   if (angle < 0) angle += TAU;
   return angle;
 }
@@ -503,6 +502,149 @@ export function circleFrom2PointsAndRadius(
   return { center, radius };
 }
 
+// ===== PERPENDICULAR & PARALLEL LINE CONSTRUCTION =====
+// 🏢 ADR-060: Line Construction Tools (Perpendicular & Parallel) (2026-01-31)
+
+/**
+ * 🏢 ENTERPRISE (2026-01-31): Create a perpendicular line through a point - ADR-060
+ *
+ * Given a reference line and a through-point, creates a line perpendicular
+ * to the reference that passes through (or near) the given point.
+ *
+ * Algorithm:
+ * 1. Calculate the perpendicular direction (rotate reference direction 90°)
+ * 2. Project the through-point onto the reference line
+ * 3. Create a line through the projection point in the perpendicular direction
+ *
+ * @param refStart - Start point of reference line
+ * @param refEnd - End point of reference line
+ * @param throughPoint - Point that the perpendicular should pass through/near
+ * @param length - Length of the resulting perpendicular line (default 100)
+ * @returns Line definition with start and end points, or null if reference is degenerate
+ *
+ * @example
+ * const perp = createPerpendicularLine(
+ *   { x: 0, y: 0 }, { x: 10, y: 0 },  // Horizontal reference
+ *   { x: 5, y: 3 },                    // Point above the line
+ *   20                                  // 20 units long
+ * );
+ * // Returns line from (5, -10) to (5, 10) - vertical line at x=5
+ */
+export function createPerpendicularLine(
+  refStart: Point2D,
+  refEnd: Point2D,
+  throughPoint: Point2D,
+  length: number = 100
+): { start: Point2D; end: Point2D } | null {
+  // Calculate reference line direction
+  const dx = refEnd.x - refStart.x;
+  const dy = refEnd.y - refStart.y;
+  const refLength = Math.sqrt(dx * dx + dy * dy);
+
+  // 🏢 ADR-079: Use centralized tolerance
+  if (refLength < GEOMETRY_PRECISION.POINT_MATCH) {
+    return null; // Reference line is degenerate (point)
+  }
+
+  // Normalized reference direction
+  const refDirX = dx / refLength;
+  const refDirY = dy / refLength;
+
+  // Perpendicular direction (rotate 90° counterclockwise)
+  const perpDirX = -refDirY;
+  const perpDirY = refDirX;
+
+  // Project throughPoint onto reference line to find intersection
+  const toPointX = throughPoint.x - refStart.x;
+  const toPointY = throughPoint.y - refStart.y;
+  const projLength = toPointX * refDirX + toPointY * refDirY;
+
+  // Intersection point (foot of perpendicular)
+  const footX = refStart.x + projLength * refDirX;
+  const footY = refStart.y + projLength * refDirY;
+
+  // Create perpendicular line centered at the foot
+  const halfLength = length / 2;
+
+  return {
+    start: {
+      x: footX - perpDirX * halfLength,
+      y: footY - perpDirY * halfLength
+    },
+    end: {
+      x: footX + perpDirX * halfLength,
+      y: footY + perpDirY * halfLength
+    }
+  };
+}
+
+/**
+ * 🏢 ENTERPRISE (2026-01-31): Create a parallel line at offset distance - ADR-060
+ *
+ * Given a reference line and an offset point, creates a line parallel
+ * to the reference at the same distance as the offset point.
+ *
+ * Algorithm:
+ * 1. Calculate perpendicular direction from reference line
+ * 2. Calculate signed distance from offset point to reference line
+ * 3. Create parallel line at that offset distance
+ *
+ * The parallel line has the same length as the reference line.
+ *
+ * @param refStart - Start point of reference line
+ * @param refEnd - End point of reference line
+ * @param offsetPoint - Point indicating which side and how far the parallel should be
+ * @returns Line definition with start and end points, or null if reference is degenerate
+ *
+ * @example
+ * const parallel = createParallelLine(
+ *   { x: 0, y: 0 }, { x: 10, y: 0 },  // Horizontal reference
+ *   { x: 5, y: 3 }                     // Point 3 units above
+ * );
+ * // Returns line from (0, 3) to (10, 3) - parallel line 3 units above
+ */
+export function createParallelLine(
+  refStart: Point2D,
+  refEnd: Point2D,
+  offsetPoint: Point2D
+): { start: Point2D; end: Point2D } | null {
+  // Calculate reference line direction
+  const dx = refEnd.x - refStart.x;
+  const dy = refEnd.y - refStart.y;
+  const refLength = Math.sqrt(dx * dx + dy * dy);
+
+  // 🏢 ADR-079: Use centralized tolerance
+  if (refLength < GEOMETRY_PRECISION.POINT_MATCH) {
+    return null; // Reference line is degenerate (point)
+  }
+
+  // Normalized reference direction
+  const refDirX = dx / refLength;
+  const refDirY = dy / refLength;
+
+  // Perpendicular direction (rotate 90° counterclockwise)
+  const perpDirX = -refDirY;
+  const perpDirY = refDirX;
+
+  // Calculate signed distance from offsetPoint to reference line
+  // Using the perpendicular direction as normal
+  const toPointX = offsetPoint.x - refStart.x;
+  const toPointY = offsetPoint.y - refStart.y;
+  const signedDistance = toPointX * perpDirX + toPointY * perpDirY;
+
+  // Create parallel line by offsetting reference endpoints
+  return {
+    start: {
+      x: refStart.x + perpDirX * signedDistance,
+      y: refStart.y + perpDirY * signedDistance
+    },
+    end: {
+      x: refEnd.x + perpDirX * signedDistance,
+      y: refEnd.y + perpDirY * signedDistance
+    }
+  };
+}
+
 // ===== LINE INTERSECTION (INFINITE LINES) =====
 // 🏢 ADR-XXX: Centralized Line Intersection for Extended Lines (2026-01-31)
 
@@ -678,9 +820,10 @@ export function arcFrom3Points(
   const { center, radius } = circle;
 
   // Calculate angles for all 3 points (in radians)
-  const startAngleRad = Math.atan2(start.y - center.y, start.x - center.x);
-  const midAngleRad = Math.atan2(mid.y - center.y, mid.x - center.x);
-  const endAngleRad = Math.atan2(end.y - center.y, end.x - center.x);
+  // 🏢 ADR-065: Use centralized calculateAngle
+  const startAngleRad = calculateAngle(center, start);
+  const midAngleRad = calculateAngle(center, mid);
+  const endAngleRad = calculateAngle(center, end);
 
   // 🏢 ENTERPRISE: Determine arc direction using angular sweep
   // In Canvas 2D, anticlockwise=false draws CLOCKWISE from startAngle to endAngle
@@ -739,8 +882,9 @@ export function arcFromCenterStartEnd(
   const radius = calculateDistance(center, start);
 
   // Calculate angles
-  const startAngleRad = Math.atan2(start.y - center.y, start.x - center.x);
-  const endAngleRad = Math.atan2(end.y - center.y, end.x - center.x);
+  // 🏢 ADR-065: Use centralized calculateAngle
+  const startAngleRad = calculateAngle(center, start);
+  const endAngleRad = calculateAngle(center, end);
 
   // 🏢 ENTERPRISE: Calculate angular direction (AutoCAD pattern)
   // Determine if user moved counterclockwise or clockwise from start to end

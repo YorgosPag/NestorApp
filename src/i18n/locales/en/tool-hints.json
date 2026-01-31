@@ -48,6 +48,24 @@
       ],
       "shortcuts": "L | ESC=Cancel"
     },
+    "line-perpendicular": {
+      "name": "Perpendicular Line",
+      "description": "Line perpendicular to existing",
+      "steps": [
+        "Select reference line",
+        "Click for through point"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "line-parallel": {
+      "name": "Parallel Line",
+      "description": "Line parallel with offset",
+      "steps": [
+        "Select reference line",
+        "Click for offset distance"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
     "polyline": {
       "name": "Polyline",
       "description": "Continuous lines",

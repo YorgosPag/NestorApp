@@ -7,7 +7,8 @@ import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfZIndexSystem.
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 // 🏢 ADR-090: Centralized UI Fonts
-import { UI_FONTS } from '../config/text-rendering-config';
+// 🏢 ADR-097: Centralized Line Dash Patterns
+import { UI_FONTS, LINE_DASH_PATTERNS } from '../config/text-rendering-config';
 
 interface CollaborationOverlayProps {
   users: CollaborationUser[];
@@ -101,7 +102,7 @@ export function CollaborationOverlay({
     ctx.save();
     ctx.strokeStyle = user.color;
     ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]);
+    ctx.setLineDash([...LINE_DASH_PATTERNS.SELECTION]); // 🏢 ADR-097: Centralized selection pattern
 
     // This would need actual entity bounds from the DXF viewer
     // For now, just draw placeholder rectangles

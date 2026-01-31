@@ -13,6 +13,8 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-rend
 import { degToRad, clamp } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
 import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet, storageRemove, STORAGE_KEYS } from '../../utils/storage-utils';
 
 /**
  * Snap prediction confidence levels
@@ -445,31 +447,29 @@ export class AISnappingEngine {
 
   /**
    * Persistence methods
+   * 🏢 ADR-092: Using centralized storage-utils
    */
   private loadLearnedData(): void {
-    try {
-      const saved = localStorage.getItem('ai-snapping-data');
-      if (saved) {
-        const data = JSON.parse(saved);
-        this.preferences = data.preferences || this.preferences;
-        this.patterns = new Map(data.patterns || []);
-      }
-    } catch (error) {
-      console.error('[AISnapping] Failed to load learned data:', error);
+    interface AISnappingData {
+      preferences?: LearnedPreferences;
+      patterns?: Array<[string, UserPattern]>;
+      savedAt?: string;
+    }
+
+    const data = storageGet<AISnappingData | null>(STORAGE_KEYS.AI_SNAPPING, null);
+    if (data) {
+      this.preferences = data.preferences || this.preferences;
+      this.patterns = new Map(data.patterns || []);
     }
   }
 
   private saveLearnedData(): void {
-    try {
-      const data = {
-        preferences: this.preferences,
-        patterns: Array.from(this.patterns.entries()),
-        savedAt: new Date().toISOString()
-      };
-      localStorage.setItem('ai-snapping-data', JSON.stringify(data));
-    } catch (error) {
-      console.error('[AISnapping] Failed to save learned data:', error);
-    }
+    const data = {
+      preferences: this.preferences,
+      patterns: Array.from(this.patterns.entries()),
+      savedAt: new Date().toISOString()
+    };
+    storageSet(STORAGE_KEYS.AI_SNAPPING, data);
   }
 
   /**
@@ -487,6 +487,7 @@ export class AISnappingEngine {
     };
   }
 
+  // 🏢 ADR-092: Using centralized storage-utils
   reset(): void {
     this.history = [];
     this.patterns.clear();
@@ -497,6 +498,6 @@ export class AISnappingEngine {
       gridPreference: 0.5,
       patterns: []
     };
-    localStorage.removeItem('ai-snapping-data');
+    storageRemove(STORAGE_KEYS.AI_SNAPPING);
   }
 }

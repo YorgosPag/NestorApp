@@ -14,6 +14,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-098: Centralized Timing Constants
+import { UI_TIMING } from '../../config/timing-config';
 
 // ✅ ENTERPRISE: Type-safe state schema
 interface ColorMenuState {
@@ -117,9 +119,10 @@ export function useColorMenuState() {
     };
 
     // Add listener with delay to avoid immediate close
+    // 🏢 ADR-098: Using UI_TIMING.MENU_CLICK_GUARD
     setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
-    }, 100);
+    }, UI_TIMING.MENU_CLICK_GUARD);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
