@@ -95,7 +95,8 @@ import {
 // 🏢 ADR-101: Centralized deep clone utility
 import { deepClone } from '../../utils/clone-utils';
 // 🏢 ENTERPRISE (2026-01-31): Centralized canvas settings construction - ADR-XXX
-import { useCanvasSettings } from '../../hooks/canvas';
+// 🏢 ENTERPRISE (2026-01-31): Centralized mouse event handling - ADR-XXX
+import { useCanvasSettings, useCanvasMouse } from '../../hooks/canvas';
 // 🏢 ENTERPRISE (2026-01-31): Centralized overlay to ColorLayer conversion - ADR-XXX
 import { useOverlayLayers } from '../../hooks/layers';
 // 🏢 ENTERPRISE (2026-01-31): Centralized special tools management - ADR-XXX
@@ -188,32 +189,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     viewport
   });
   const [canvasRect, setCanvasRect] = useState<DOMRect | null>(null);
-  const [mouseCss, setMouseCss] = useState<Point2D | null>(null);
-  const [mouseWorld, setMouseWorld] = useState<Point2D | null>(null);
-
-  // 🚀 PERFORMANCE (2026-01-27): Refs to skip unnecessary state updates
-  // Mouse position updates only when changed by more than 1 pixel
-  const lastMouseCssRef = useRef<Point2D | null>(null);
-  const lastMouseWorldRef = useRef<Point2D | null>(null);
-
-  // 🚀 PERFORMANCE: Memoized setters that skip updates when position unchanged
-  const updateMouseCss = useCallback((point: Point2D) => {
-    const last = lastMouseCssRef.current;
-    if (!last || Math.abs(point.x - last.x) > 0.5 || Math.abs(point.y - last.y) > 0.5) {
-      lastMouseCssRef.current = point;
-      setMouseCss(point);
-    }
-  }, []);
-
-  const updateMouseWorld = useCallback((point: Point2D) => {
-    const last = lastMouseWorldRef.current;
-    if (!last || Math.abs(point.x - last.x) > 0.1 || Math.abs(point.y - last.y) > 0.1) {
-      lastMouseWorldRef.current = point;
-      setMouseWorld(point);
-      // 🏢 ENTERPRISE: Notify parent of mouse coordinate changes for status bar
-      props.onMouseCoordinatesChange?.(point);
-    }
-  }, [props]);
+  // 🏢 ENTERPRISE (2026-01-31): Mouse position state moved to useCanvasMouse hook
+  // mouseCss, mouseWorld, lastMouseCssRef, lastMouseWorldRef, updateMouseCss, updateMouseWorld
+  // are now provided by the hook (see line ~520)
 
   // 🎯 Canvas visibility από parent props (με fallback στα defaults)
   const showDxfCanvas = props.dxfCanvasVisible ?? true;
@@ -509,295 +487,52 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { updatePosition, setActive } = useCursorActions();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * 🏢 ENTERPRISE: Container mouse move handler
-   * Updates CursorSystem position for all overlays (CrosshairOverlay, etc.)
-   * FIX (2026-01-25): Also updates immediate position για zero-latency crosshair
-   */
-  const handleContainerMouseMove = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    const screenPos: Point2D = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
-
-    // 🚀 IMMEDIATE: Update immediate store για zero-latency crosshair
-    setImmediatePosition(screenPos);
-    // React state update (για components που το χρειάζονται)
-    updatePosition(screenPos);
-  }, [updatePosition]);
-
-  const handleContainerMouseEnter = React.useCallback(() => {
-    setActive(true);
-  }, [setActive]);
-
-  const handleContainerMouseLeave = React.useCallback(() => {
-    setActive(false);
-    // 🚀 IMMEDIATE: Clear immediate position για zero-latency crosshair
-    setImmediatePosition(null);
-    updatePosition(null);
-  }, [setActive, updatePosition]);
-
-  // 🏢 ENTERPRISE (2026-01-26): Mouse down handler for MULTI-GRIP selection and drag
-  // ADR-031: Multi-Grip Selection System
-  // Patterns:
-  // - Single click: Select single grip (replaces selection)
-  // - Shift+Click: Add/remove grip to/from selection (toggle)
-  // - Click+Drag: Start dragging ALL selected grips together
-  const handleContainerMouseDown = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    // Only handle left click
-    if (e.button !== 0) return;
-
-    // Only in select/layering/move mode
-    // 🏢 ENTERPRISE (2027-01-27): Add 'move' tool support for overlay drag - Unified Toolbar Integration
-    if (activeTool !== 'select' && activeTool !== 'layering' && activeTool !== 'move') return;
-
-    const isShiftPressed = e.shiftKey;
-
-    // 🏢 ENTERPRISE (2026-01-26): Check if hovered overlay is in multi-selection
-    const hoveredOverlayId = hoveredVertexInfo?.overlayId || hoveredEdgeInfo?.overlayId;
-    if (!hoveredOverlayId) {
-      // Clicked elsewhere → Deselect ALL grips (unless Shift is pressed to preserve selection)
-      if (!isShiftPressed && selectedGrips.length > 0) {
-        setSelectedGrips([]);
-      }
-      return;
-    }
-
-    // Check if the hovered overlay is selected (part of multi-selection)
-    // 🏢 ENTERPRISE (2026-01-26): Use universal selection system via ref to avoid stale closures - ADR-030
-    if (!universalSelectionRef.current.isSelected(hoveredOverlayId)) {
-      // Clicked on grip of non-selected overlay → Deselect grips
-      if (!isShiftPressed && selectedGrips.length > 0) {
-        setSelectedGrips([]);
-      }
-      return;
-    }
-
-    const container = containerRef.current;
-    if (!container) return;
-
-    // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
-    const snap = getPointerSnapshotFromElement(container);
-    if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
-    const screenPos = getScreenPosFromEvent(e, snap);
-    const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-
-    // === VERTEX GRIP CLICK ===
-    if (hoveredVertexInfo) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const clickedGrip = {
-        type: 'vertex' as const,
-        overlayId: hoveredVertexInfo.overlayId,
-        index: hoveredVertexInfo.vertexIndex
-      };
-
-      // 🏢 ENTERPRISE (2026-01-26): Check if this grip is already selected
-      const isGripAlreadySelected = selectedGrips.some(
-        g => g.type === 'vertex' && g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index
-      );
-
-      if (isShiftPressed) {
-        // 🏢 FIX (2026-01-26): Shift+Click = ONLY toggle selection, NO drag
-        // This allows building multi-selection without accidentally moving grips
-        if (isGripAlreadySelected) {
-          // Remove from selection
-          setSelectedGrips(selectedGrips.filter(
-            g => !(g.type === 'vertex' && g.overlayId === clickedGrip.overlayId && g.index === clickedGrip.index)
-          ));
-        } else {
-          // Add to selection
-          setSelectedGrips([...selectedGrips, clickedGrip]);
-        }
-        // 🏢 CRITICAL: Do NOT start dragging on Shift+Click
-        return;
-      }
-
-      // 🏢 ENTERPRISE (2026-01-26): Regular click (no Shift)
-      // If clicking on already-selected grip: drag ALL selected grips
-      // If clicking on non-selected grip: replace selection and drag single grip
-      const gripsToMove = isGripAlreadySelected
-        ? selectedGrips.filter(g => g.type === 'vertex')  // Move all selected vertex grips
-        : [clickedGrip];  // Just the clicked grip
-
-      // Update selection if clicking on non-selected grip
-      if (!isGripAlreadySelected) {
-        setSelectedGrips([clickedGrip]);
-      }
-
-      // 🏢 ENTERPRISE (2026-01-26): Start dragging selected vertex grips
-      if (gripsToMove.length > 0) {
-        const overlayStore = overlayStoreRef.current;
-        const draggingData = gripsToMove.map(grip => {
-          // Get original vertex position from overlay
-          const overlay = overlayStore.overlays[grip.overlayId];
-          const originalPosition = overlay?.polygon?.[grip.index]
-            ? { x: overlay.polygon[grip.index][0], y: overlay.polygon[grip.index][1] }
-            : worldPos;
-
-          return {
-            overlayId: grip.overlayId,
-            vertexIndex: grip.index,
-            startPoint: worldPos,
-            originalPosition
-          };
-        });
-
-        setDraggingVertices(draggingData);
-        setDragPreviewPosition(worldPos);
-      }
-      return;
-    }
-
-    // === EDGE MIDPOINT GRIP CLICK → IMMEDIATE DRAG (single grip only) ===
-    if (hoveredEdgeInfo) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const clickedGrip = {
-        type: 'edge-midpoint' as const,
-        overlayId: hoveredEdgeInfo.overlayId,
-        index: hoveredEdgeInfo.edgeIndex
-      };
-
-      // 🏢 ENTERPRISE: Edge midpoints always replace selection (no multi-select for edge midpoints)
-      // This is because dragging edge midpoint creates a NEW vertex, not moves existing
-      setSelectedGrips([clickedGrip]);
-      setDraggingEdgeMidpoint({
-        overlayId: hoveredEdgeInfo.overlayId,
-        edgeIndex: hoveredEdgeInfo.edgeIndex,
-        insertIndex: hoveredEdgeInfo.edgeIndex + 1,
-        startPoint: worldPos,
-        newVertexCreated: false
-      });
-      setDragPreviewPosition(worldPos);
-      return;
-    }
-  }, [activeTool, hoveredVertexInfo, hoveredEdgeInfo, selectedGrips, transform, viewport]);
-
-  // 🏢 ENTERPRISE (2026-01-26): Mouse up handler for MULTI-grip drag end
-  // ADR-031: Multi-Grip Selection System - updates all dragged vertices
-  const handleContainerMouseUp = React.useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
-    const overlayStore = overlayStoreRef.current;
-
-    // Handle MULTI-vertex drag end
-    if (draggingVertices && draggingVertices.length > 0 && overlayStore) {
-      const container = containerRef.current;
-      if (container) {
-        // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
-        const snap = getPointerSnapshotFromElement(container);
-        if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
-        const screenPos = getScreenPosFromEvent(e, snap);
-        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-
-        // 🏢 ENTERPRISE (2026-01-26): Calculate delta from first grip's start point
-        const delta = {
-          x: worldPos.x - draggingVertices[0].startPoint.x,
-          y: worldPos.y - draggingVertices[0].startPoint.y
-        };
-
-        // 🏢 ENTERPRISE (2026-01-26): Command Pattern for multi-grip movement - ADR-032
-        // Uses MoveMultipleOverlayVerticesCommand for UNDO/REDO support
-        const movements: VertexMovement[] = draggingVertices.map(drag => ({
-          overlayId: drag.overlayId,
-          vertexIndex: drag.vertexIndex,
-          oldPosition: [drag.originalPosition.x, drag.originalPosition.y] as [number, number],
-          newPosition: [
-            drag.originalPosition.x + delta.x,
-            drag.originalPosition.y + delta.y
-          ] as [number, number]
-        }));
-
-        // Execute command through history for undo/redo support
-        const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore);
-        executeCommand(command);
-      }
-      // 🏢 ENTERPRISE (2026-01-26): Clear ONLY drag-related states
-      // ⚠️ IMPORTANT: Do NOT clear selectedGrips - grips should remain visible for further editing
-      setDraggingVertices(null);
-      setDragPreviewPosition(null);
-      // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
-      markDragFinished();
-    }
-
-    // Handle edge midpoint drag end
-    if (draggingEdgeMidpoint && overlayStore) {
-      const container = containerRef.current;
-      if (container) {
-        // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
-        const snap = getPointerSnapshotFromElement(container);
-        if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
-        const screenPos = getScreenPosFromEvent(e, snap);
-        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-
-        if (!draggingEdgeMidpoint.newVertexCreated) {
-          // First time - insert new vertex
-          await overlayStore.addVertex(
-            draggingEdgeMidpoint.overlayId,
-            draggingEdgeMidpoint.insertIndex,
-            [worldPos.x, worldPos.y]
-          );
-        } else {
-          // Vertex already created - just update position
-          await overlayStore.updateVertex(
-            draggingEdgeMidpoint.overlayId,
-            draggingEdgeMidpoint.insertIndex,
-            [worldPos.x, worldPos.y]
-          );
-        }
-      }
-      // 🏢 ENTERPRISE (2026-01-25): Clear ONLY drag-related states
-      // ⚠️ IMPORTANT: Do NOT clear selectedGrip - grips should remain visible
-      setDraggingEdgeMidpoint(null);
-      setDragPreviewPosition(null);
-      // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
-      markDragFinished();
-    }
-
-    // 🏢 ENTERPRISE (2027-01-27): Handle overlay body drag end - Unified Toolbar Integration
-    // ADR-032: Move entire overlay with Command Pattern for undo/redo support
-    if (draggingOverlayBody && overlayStore) {
-      const container = containerRef.current;
-      if (container) {
-        // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
-        const snap = getPointerSnapshotFromElement(container);
-        if (!snap) return; // 🏢 Fail-fast: Cannot transform without valid snapshot
-        const screenPos = getScreenPosFromEvent(e, snap);
-        const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-
-        // Calculate delta from start position
-        const delta = {
-          x: worldPos.x - draggingOverlayBody.startPoint.x,
-          y: worldPos.y - draggingOverlayBody.startPoint.y
-        };
-
-        // 🏢 ENTERPRISE: Only execute command if there was actual movement (avoid no-op commands)
-        // 🏢 ADR-079: Use centralized movement detection threshold
-        const hasMovement = Math.abs(delta.x) > MOVEMENT_DETECTION.MIN_MOVEMENT || Math.abs(delta.y) > MOVEMENT_DETECTION.MIN_MOVEMENT;
-        if (hasMovement) {
-          // Execute MoveOverlayCommand through history for undo/redo support
-          const command = new MoveOverlayCommand(
-            draggingOverlayBody.overlayId,
-            delta,
-            overlayStore,
-            true // isDragging = true for smooth drag operations
-          );
-          executeCommand(command);
-        }
-      }
-
-      // Clear drag state
-      setDraggingOverlayBody(null);
-      setDragPreviewPosition(null);
-      // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
-      markDragFinished();
-    }
-  }, [draggingVertex, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, transform, viewport, executeCommand]);
+  // 🏢 ENTERPRISE (2026-01-31): Mouse event handling moved to useCanvasMouse hook - ADR-XXX
+  // Previous ~290 lines of handler definitions now handled by centralized hook
+  // This hook CONSUMES refs from useGripSystem (no duplicates)
+  const {
+    mouseCss,                      // 🏢 ENTERPRISE: Now from hook (was local state)
+    mouseWorld,                    // 🏢 ENTERPRISE: Now from hook (was local state)
+    updateMouseCss,
+    updateMouseWorld,
+    handleContainerMouseMove,
+    handleContainerMouseDown,
+    handleContainerMouseUp,
+    handleContainerMouseEnter,
+    handleContainerMouseLeave,
+  } = useCanvasMouse({
+    transform,
+    viewport,
+    activeTool,
+    updatePosition,
+    setActive,
+    containerRef,
+    onMouseCoordinatesChange: props.onMouseCoordinatesChange,
+    // Grip state from useGripSystem
+    hoveredVertexInfo,
+    hoveredEdgeInfo,
+    selectedGrips,
+    setSelectedGrips,
+    draggingVertices,
+    setDraggingVertices,
+    draggingEdgeMidpoint,
+    setDraggingEdgeMidpoint,
+    draggingOverlayBody,
+    setDraggingOverlayBody,
+    dragPreviewPosition,
+    setDragPreviewPosition,
+    // Refs INJECTED from useGripSystem (CANONICAL - Single Source of Truth)
+    gripHoverThrottleRef,
+    justFinishedDragRef,
+    markDragFinished,
+    // Store refs
+    universalSelectionRef,
+    overlayStoreRef,
+    // Command execution
+    executeCommand,
+    // 🏢 ADR-079: Movement detection threshold from centralized config
+    movementDetectionThreshold: MOVEMENT_DETECTION.MIN_MOVEMENT,
+  });
 
   // 🏢 ENTERPRISE (2026-01-31): Settings construction moved to useCanvasSettings hook
   // Previous ~150 lines of settings construction now handled by the hook above (line 608-622)

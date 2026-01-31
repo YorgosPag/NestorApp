@@ -89,6 +89,15 @@ export interface DraggingOverlayBodyState {
 /**
  * Props για useCanvasMouse hook
  */
+/**
+ * Grip hover throttle ref type for performance optimization
+ * SHARED TYPE: Same as in useGripSystem - refs are injected, NOT created here
+ */
+export interface GripHoverThrottle {
+  lastCheckTime: number;
+  lastWorldPoint: Point2D | null;
+}
+
 export interface UseCanvasMouseProps {
   /** Current view transform (scale, offset) */
   transform: ViewTransform;
@@ -128,31 +137,45 @@ export interface UseCanvasMouseProps {
   dragPreviewPosition: Point2D | null;
   /** Callback to set drag preview position */
   setDragPreviewPosition: (pos: Point2D | null) => void;
-  /** Universal selection ref for checking selection */
-  universalSelectionRef: React.RefObject<{
+  /** Universal selection ref for checking selection
+   * Note: Uses MutableRefObject to be compatible with useRef pattern in CanvasSection
+   */
+  universalSelectionRef: React.MutableRefObject<{
     isSelected: (id: string) => boolean;
-    getIdsByType: (type: 'overlay' | 'entity') => string[];
-    clearByType: (type: 'overlay' | 'entity') => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getIdsByType: (type: any) => string[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    clearByType: (type: any) => void;
     clearAll: () => void;
   }>;
   /** Overlay store ref for getting overlay data
    * Note: Uses generic Record type to be compatible with command interfaces
    */
-  overlayStoreRef: React.RefObject<{
+  overlayStoreRef: React.MutableRefObject<{
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     overlays: Record<string, any>;
     addVertex: (overlayId: string, insertIndex: number, vertex: [number, number]) => Promise<void>;
     updateVertex: (overlayId: string, vertexIndex: number, vertex: [number, number]) => Promise<void>;
     update?: (id: string, patch: { polygon: Array<[number, number]> }) => Promise<void>;
   }>;
-  /** Command execution function */
-  executeCommand: (command: { execute: () => void | Promise<void> }) => void;
-  /** PANEL_LAYOUT timing constants */
-  timingConstants: {
-    DRAG_FINISH_RESET: number;
-  };
+  /** Command execution function
+   * Note: Uses broader type to be compatible with ICommand pattern
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  executeCommand: (command: any) => void;
   /** Movement detection threshold */
   movementDetectionThreshold: number;
+
+  // ============================================================================
+  // 🏢 ENTERPRISE: Refs από useGripSystem (INJECTED - NOT created here)
+  // Pattern: Dependency Injection - refs are CANONICAL in useGripSystem
+  // ============================================================================
+  /** Throttle ref for grip hover detection (from useGripSystem) */
+  gripHoverThrottleRef: React.MutableRefObject<GripHoverThrottle>;
+  /** Flag to prevent click event immediately after drag (from useGripSystem) */
+  justFinishedDragRef: React.MutableRefObject<boolean>;
+  /** Function to mark drag as finished (from useGripSystem) */
+  markDragFinished: () => void;
 }
 
 /**
@@ -167,14 +190,9 @@ export interface UseCanvasMouseReturn {
   updateMouseCss: (point: Point2D) => void;
   updateMouseWorld: (point: Point2D) => void;
 
-  // Refs
+  // Refs (mouse-specific only - grip refs come from useGripSystem)
   lastMouseCssRef: React.RefObject<Point2D | null>;
   lastMouseWorldRef: React.RefObject<Point2D | null>;
-  gripHoverThrottleRef: React.RefObject<{
-    lastCheckTime: number;
-    lastWorldPoint: Point2D | null;
-  }>;
-  justFinishedDragRef: React.RefObject<boolean>;
 
   // Event handlers
   handleContainerMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void;
@@ -234,8 +252,11 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     universalSelectionRef,
     overlayStoreRef,
     executeCommand,
-    timingConstants,
     movementDetectionThreshold,
+    // 🏢 ENTERPRISE: Refs INJECTED from useGripSystem (Single Source of Truth)
+    gripHoverThrottleRef,
+    justFinishedDragRef,
+    markDragFinished,
   } = props;
 
   // ============================================================================
@@ -246,24 +267,15 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
   const [mouseWorld, setMouseWorld] = useState<Point2D | null>(null);
 
   // ============================================================================
-  // REFS
+  // REFS (mouse-specific only - grip refs come from useGripSystem)
   // ============================================================================
 
   // 🚀 PERFORMANCE: Refs to skip unnecessary state updates
   const lastMouseCssRef = useRef<Point2D | null>(null);
   const lastMouseWorldRef = useRef<Point2D | null>(null);
 
-  // 🚀 PERFORMANCE: Throttle ref for grip hover detection
-  const gripHoverThrottleRef = useRef<{
-    lastCheckTime: number;
-    lastWorldPoint: Point2D | null;
-  }>({
-    lastCheckTime: 0,
-    lastWorldPoint: null
-  });
-
-  // 🏢 ENTERPRISE: Flag to prevent click event immediately after drag
-  const justFinishedDragRef = useRef(false);
+  // 🏢 ENTERPRISE: gripHoverThrottleRef and justFinishedDragRef are now INJECTED
+  // from useGripSystem via props - NO duplicates here!
 
   // ============================================================================
   // MEMOIZED UPDATE FUNCTIONS
@@ -533,8 +545,8 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
       // Clear drag states but NOT selectedGrips
       setDraggingVertices(null);
       setDragPreviewPosition(null);
-      justFinishedDragRef.current = true;
-      setTimeout(() => { justFinishedDragRef.current = false; }, timingConstants.DRAG_FINISH_RESET);
+      // 🏢 ENTERPRISE: Use injected markDragFinished from useGripSystem
+      markDragFinished();
     }
 
     // Handle edge midpoint drag end
@@ -565,8 +577,8 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
 
       setDraggingEdgeMidpoint(null);
       setDragPreviewPosition(null);
-      justFinishedDragRef.current = true;
-      setTimeout(() => { justFinishedDragRef.current = false; }, timingConstants.DRAG_FINISH_RESET);
+      // 🏢 ENTERPRISE: Use injected markDragFinished from useGripSystem
+      markDragFinished();
     }
 
     // Handle overlay body drag end (move tool)
@@ -604,8 +616,8 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
 
       setDraggingOverlayBody(null);
       setDragPreviewPosition(null);
-      justFinishedDragRef.current = true;
-      setTimeout(() => { justFinishedDragRef.current = false; }, timingConstants.DRAG_FINISH_RESET);
+      // 🏢 ENTERPRISE: Use injected markDragFinished from useGripSystem
+      markDragFinished();
     }
   }, [
     draggingVertices,
@@ -619,8 +631,8 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     setDraggingOverlayBody,
     setDragPreviewPosition,
     overlayStoreRef,
-    timingConstants,
     movementDetectionThreshold,
+    markDragFinished, // 🏢 ENTERPRISE: Injected from useGripSystem
   ]);
 
   // ============================================================================
@@ -636,11 +648,9 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     updateMouseCss,
     updateMouseWorld,
 
-    // Refs
+    // Refs (mouse-specific only - grip refs come from useGripSystem)
     lastMouseCssRef,
     lastMouseWorldRef,
-    gripHoverThrottleRef,
-    justFinishedDragRef,
 
     // Event handlers
     handleContainerMouseMove,

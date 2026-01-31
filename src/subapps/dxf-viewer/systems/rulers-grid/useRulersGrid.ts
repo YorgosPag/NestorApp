@@ -105,14 +105,9 @@ interface RulersGridContextType {
 export type RulersGridHookReturn = RulersGridContextType;
 
 export function useRulersGrid(): RulersGridContextType | null {
-  // ✅ FIXED: Always call useContext with a valid context or create a dummy one
-  const contextToUse = _rulersGridContext || React.createContext<RulersGridContextType | null>(null);
-  const context = useContext(contextToUse);
-
-  if (!_rulersGridContext) {
-    if (DEBUG_RULERS_GRID) console.warn('🚨 [useRulersGrid] Context not initialized yet, returning null');
-    return null;
-  }
+  // 🏢 ENTERPRISE: Use the module-level static context (NEVER create dynamically!)
+  // Dynamic context creation inside hooks causes "Provider is null" in production.
+  const context = useContext(_rulersGridContext);
 
   if (!context) {
     if (DEBUG_RULERS_GRID) console.warn('🚨 [useRulersGrid] No context found, component may be outside RulersGridSystem provider');
@@ -290,8 +285,24 @@ export function useRulersGridSettings() {
 
 // Legacy hook names removed - use useRulersGrid directly
 
-// Context management
-let _rulersGridContext: React.Context<RulersGridContextType | null> | null = null;
+// ============================================================================
+// 🏢 ENTERPRISE: STATIC CONTEXT CREATION
+// ============================================================================
+// CRITICAL FIX: Context must be created statically at module level, NOT
+// dynamically inside hooks. Dynamic creation causes "Provider is null" errors
+// in production builds due to bundler optimizations.
+//
+// Pattern: Salesforce, Microsoft Dynamics, Autodesk - all use static contexts
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Static context instance (created once at module load)
+ * This is the ONLY correct way to create React Context for production builds.
+ */
+const RulersGridContext = React.createContext<RulersGridContextType | null>(null);
+
+// Keep reference for backward compatibility with setRulersGridContext pattern
+let _rulersGridContext: React.Context<RulersGridContextType | null> = RulersGridContext;
 
 export function setRulersGridContext(context: React.Context<RulersGridContextType | null>) {
   _rulersGridContext = context;
@@ -300,3 +311,9 @@ export function setRulersGridContext(context: React.Context<RulersGridContextTyp
 export function getRulersGridContext() {
   return _rulersGridContext;
 }
+
+/**
+ * 🏢 ENTERPRISE: Export the static context for Provider usage
+ * This allows RulersGridSystem to use the same context instance
+ */
+export { RulersGridContext };

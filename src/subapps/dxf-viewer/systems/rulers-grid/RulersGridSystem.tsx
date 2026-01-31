@@ -1,7 +1,7 @@
 'use client';
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_RULERS_GRID = false;
-import React, { createContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Point2D, ViewTransform } from './config';
 import {
   RulerSettings,
@@ -33,7 +33,7 @@ declare global {
   }
 }
 import { RulersGridCalculations, RulersGridRendering, RulersGridSnapping } from './utils';
-import { setRulersGridContext, type RulersGridHookReturn } from './useRulersGrid';
+import { type RulersGridHookReturn } from './useRulersGrid';
 import { RulersGridSystemProps, DEFAULT_ORIGIN } from './types';
 import { useRulerManagement } from './useRulerManagement';
 import { useGridManagement } from './useGridManagement';
@@ -518,7 +518,14 @@ function useRulersGridSystemIntegration({
   };
 }
 
-const RulersGridContext = createContext<RulersGridHookReturn | null>(null);
+// ============================================================================
+// 🏢 ENTERPRISE: USE SHARED STATIC CONTEXT
+// ============================================================================
+// CRITICAL: Import the shared context from useRulersGrid.ts instead of creating
+// a new one here. Using multiple context instances causes "Provider is null"
+// errors in production builds.
+// ============================================================================
+import { RulersGridContext } from './useRulersGrid';
 
 export function useRulersGridContext(): RulersGridHookReturn {
   const context = React.useContext(RulersGridContext);
@@ -530,14 +537,11 @@ export function useRulersGridContext(): RulersGridHookReturn {
 
 export function RulersGridSystem({ children, ...props }: RulersGridSystemProps) {
   // Debug logging removed for performance
-  
+
   const value = useRulersGridSystemIntegration(props);
   // Debug logging removed for performance
 
-  React.useEffect(() => {
-    // Debug logging removed for performance
-    setRulersGridContext(RulersGridContext);
-  }, []);
+  // 🏢 ENTERPRISE: No need to call setRulersGridContext - we use the shared static context
 
   // Debug logging removed for performance
 
