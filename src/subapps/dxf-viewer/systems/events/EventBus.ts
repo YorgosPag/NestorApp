@@ -35,9 +35,13 @@ export interface DrawingEventMap {
   // Pattern: Autodesk AutoCAD - Command completion notification
   // Emitted when a drawing operation completes (e.g., 2nd click on line/measure-distance)
   // Consumers (PreviewCanvas) listen to clear preview immediately
+  // 🔧 FIX (2026-01-31): Added entity and updatedScene to avoid stale closure issue
   'drawing:complete': {
     tool: string;
     entityId: string;
+    entity?: Record<string, unknown>; // The created entity
+    updatedScene?: Record<string, unknown>; // The updated scene with the new entity
+    levelId?: string; // The level ID where entity was added
   };
   // 🔧 PHASE 3: Additional events from DxfViewerContent
   'dxf-zoom-changed': {

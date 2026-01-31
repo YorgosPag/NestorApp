@@ -392,17 +392,27 @@ function useLevelsSystemState({
   }, []);
 
   // Scene management (delegated to sceneManager)
+  // 🔧 FIX (2026-01-31): Use sceneManager functions directly as dependencies
+  // PROBLEM: sceneManager object reference doesn't change, causing stale closures
+  // SOLUTION: Use the actual function references which DO change when state changes
   const setLevelScene = useCallback((levelId: string, scene: SceneModel) => {
+    // 🔍 DEBUG (2026-01-31): Log LevelsSystem setLevelScene call
+    console.log('🏢 [LevelsSystem] setLevelScene called', {
+      levelId,
+      entityCount: scene?.entities?.length || 0
+    });
     sceneManager.setLevelScene(levelId, scene);
-  }, [sceneManager]);
+  }, [sceneManager.setLevelScene]);
 
+  // 🔧 CRITICAL FIX: getLevelScene dependency must be the actual function, not sceneManager
+  // This ensures useMemo in useSceneState re-computes when scenes change
   const getLevelScene = useCallback((levelId: string) => {
     return sceneManager.getLevelScene(levelId);
-  }, [sceneManager]);
+  }, [sceneManager.getLevelScene]);
 
   const clearLevelScene = useCallback((levelId: string) => {
     sceneManager.clearLevelScene(levelId);
-  }, [sceneManager]);
+  }, [sceneManager.clearLevelScene]);
 
   // Import wizard operations
   const startImportWizard = useCallback((file: File) => {

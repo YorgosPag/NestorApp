@@ -11,7 +11,7 @@
  * - Backwards compatibility via re-exports
  *
  * @module types/panel-types
- * @see centralized_systems.md - Panel Types section
+ * @see ADR-010 in docs/centralized-systems/reference/adr-index.md
  * ============================================================================
  */
 

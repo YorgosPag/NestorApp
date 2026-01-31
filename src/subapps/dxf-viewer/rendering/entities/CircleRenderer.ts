@@ -31,10 +31,7 @@ export class CircleRenderer extends BaseEntityRenderer {
     if (entity.type !== 'circle') return;
 
     // ✅ ENTERPRISE: Type-safe entity validation αντί για 'as any'
-    if (!isCircleEntity(entity)) {
-      console.warn('CircleRenderer: Invalid entity type or missing circle properties');
-      return;
-    }
+    if (!isCircleEntity(entity)) return;
 
     const center = entity.center;
     const radius = entity.radius;
@@ -59,8 +56,9 @@ export class CircleRenderer extends BaseEntityRenderer {
     const screenRadius = radius * this.transform.scale;
 
     // Draw circle perimeter
+    // 🏢 ENTERPRISE: Use ellipse() - see rendering/primitives/canvasPaths.ts for details
     this.ctx.beginPath();
-    this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, 0, Math.PI * 2);
+    this.ctx.ellipse(screenCenter.x, screenCenter.y, screenRadius, screenRadius, 0, 0, Math.PI * 2);
     this.ctx.stroke();
 
     // For preview phase, draw the radius/diameter line (the missing blue dashed line!)

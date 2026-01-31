@@ -201,7 +201,7 @@ export interface ExtendedPropertyDetails extends Property {
  * 🏢 ADR-051: FilterState extends GenericFilterState for centralized filter system compatibility
  * Uses NumericRange (undefined) instead of null for enterprise-grade type consistency
  *
- * @see centralized_systems.md ADR-051
+ * @see ADR-051 in docs/centralized-systems/reference/adr-index.md
  */
 export interface FilterState extends GenericFilterState {
   searchTerm: string;

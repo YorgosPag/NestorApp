@@ -11,7 +11,7 @@
  * - Cancel: Cancel current drawing (ESC)
  *
  * @see ADR-047: Drawing Tool Keyboard Shortcuts & Context Menu
- * @see centralized_systems.md - Rule: Drawing Tools
+ * @see ADR-053 in docs/centralized-systems/reference/adr-index.md
  *
  * @author Γιώργος Παγώνης + Claude Code (Anthropic AI)
  * @since 2026-01-30

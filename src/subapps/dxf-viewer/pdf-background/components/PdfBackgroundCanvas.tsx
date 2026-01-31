@@ -14,7 +14,7 @@
  * - CAD-grade positioning
  *
  * @see ADR-002 for z-index hierarchy
- * @see centralized_systems.md for enterprise patterns
+ * @see docs/centralized-systems/reference/adr-index.md
  */
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';

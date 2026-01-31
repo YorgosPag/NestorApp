@@ -18,16 +18,29 @@ export function useSceneManager(): SceneManagerState {
   const [levelScenes, setLevelScenes] = useState<Record<string, SceneModel>>({});
 
   const setLevelScene = useCallback((levelId: string, scene: SceneModel) => {
+    // 🔍 DEBUG (2026-01-31): Log setLevelScene call
+    console.log('🗄️ [useSceneManager] setLevelScene called', {
+      levelId,
+      entityCount: scene?.entities?.length || 0
+    });
+
     // Μικρό warning για άδειες σκηνές που δημιουργούνται
     if (!scene.entities?.length) {
       if (DEBUG_SCENE_MANAGER) console.debug(`🏢 [SceneManager] Setting empty scene for level ${levelId} (${scene.entities.length} entities)`);
-    } else {
-
     }
+
     setLevelScenes(prev => {
       const prevScene = prev[levelId];
       // No-op αν δεν αλλάζει ο pointer (γλιτώνουμε rerender loops)
-      if (prevScene === scene) return prev;
+      if (prevScene === scene) {
+        console.log('🗄️ [useSceneManager] Scene pointer unchanged - skipping update');
+        return prev;
+      }
+      console.log('🗄️ [useSceneManager] Updating levelScenes state', {
+        levelId,
+        prevEntityCount: prevScene?.entities?.length || 0,
+        newEntityCount: scene?.entities?.length || 0
+      });
       return { ...prev, [levelId]: scene };
     });
   }, []);

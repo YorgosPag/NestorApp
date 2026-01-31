@@ -36,12 +36,6 @@ import { ConditionalAppShell } from './components/ConditionalAppShell';
  * @updated 2026-01-27 - ADR-040 Provider Separation
  */
 
-// 🏢 ENTERPRISE: Type-safe Window extension for arc patch diagnostic
-declare global {
-  interface Window {
-    __ARC_PATCHED__?: boolean;
-  }
-}
 
 const roboto = Roboto({
   subsets: ["latin", "greek"],
@@ -59,19 +53,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // ⛔️ Kill-switch διάγνωση για εντοπισμό κυκλάκι
-  if (typeof window !== 'undefined' && !window.__ARC_PATCHED__) {
-    window.__ARC_PATCHED__ = true;
-    const proto = CanvasRenderingContext2D.prototype;
-
-    proto.arc = function patchedArc(): void {
-      // ✅ ΚΑΘΑΡΟ: Χωρίς console noise
-      // Kill-switch: σχολίασέ το για να ΞΑΝΑΦΑΝΕΙ ο κύκλος
-      // Ενεργό => ΔΕΝ ζωγραφίζονται καθόλου κύκλοι
-      return; // ⬅️ προσωρινό hard stop
-    };
-  }
-
   return (
     <html lang="el" className="overflow-x-hidden" suppressHydrationWarning>
       <head>

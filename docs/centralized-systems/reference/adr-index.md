@@ -4,7 +4,7 @@
 >
 > Single source of truth για όλες τις αρχιτεκτονικές αποφάσεις της εφαρμογής
 
-**📊 Stats**: 57 ADRs | Last Updated: 2026-01-31
+**📊 Stats**: 58 ADRs | Last Updated: 2026-01-31
 
 ---
 
@@ -84,6 +84,7 @@
 | **ADR-055** | Centralized Tool State Persistence | ✅ APPROVED | 2026-01-30 | Tools & Keyboard |
 | **ADR-056** | Centralized Entity Completion Styles | ✅ APPROVED | 2026-01-30 | Drawing System |
 | **ADR-057** | Unified Entity Completion Pipeline | ✅ APPROVED | 2026-01-30 | Drawing System |
+| **ADR-058** | Canvas Drawing Primitives (Arc via Ellipse) | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
 | **ADR-UI-001** | Visual Primitive Ownership | ✅ APPROVED | 2026-01-04 | Design System |
 
 ---
@@ -191,6 +192,13 @@
 ### ADR-046: Single Coordinate Transform
 - **Pattern**: Pass WORLD coords to `onCanvasClick`
 - **Fix**: Double conversion bug causing ~80px X-axis offset
+
+### ADR-058: Canvas Drawing Primitives (Arc via Ellipse)
+- **Canonical**: `rendering/primitives/canvasPaths.ts`
+- **Decision**: Use `ctx.ellipse()` instead of `ctx.arc()` for all circle/arc rendering
+- **Background**: `ctx.arc()` found unreliable with HiDPI canvas transforms
+- **API**: `drawCircle()`, `drawArc()`, `addCirclePath()`, `addArcPath()`
+- **Migration**: All renderers updated to use ellipse-based primitives
 
 ---
 
@@ -387,11 +395,11 @@
 
 ## 📚 **RELATED DOCUMENTATION**
 
-- **[Complete Reference](../../../src/subapps/dxf-viewer/docs/centralized_systems.md)** - Full ADR details (2,824+ lines)
-- **[Quick Table](../../../src/subapps/dxf-viewer/docs/centralized_systems_TABLE.md)** - Systems overview table
 - **[API Reference](./api-quick-reference.md)** - Import examples & usage
 - **[Design System](../design-system/index.md)** - Design tokens & hooks
 - **[Smart Factories](../smart-factories/index.md)** - Dynamic configuration
+- **[Data Systems](../data-systems/index.md)** - State & data management
+- **[UI Systems](../ui-systems/index.md)** - User interface systems
 
 ---
 

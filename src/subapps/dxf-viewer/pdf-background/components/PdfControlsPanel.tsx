@@ -15,7 +15,7 @@
  * - Enable/disable toggle
  *
  * @see ADR-003 for FloatingPanel compound component
- * @see centralized_systems.md for enterprise patterns
+ * @see docs/centralized-systems/reference/adr-index.md
  */
 
 import React, { useCallback, useEffect } from 'react';

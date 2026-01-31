@@ -1175,6 +1175,13 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   }, []);
 
   // === CONVERT SCENE TO CANVAS V2 FORMAT ===
+  // 🔍 DEBUG (2026-01-31): Log props.currentScene for circle debugging
+  console.log('📋 [CanvasSection] props.currentScene', {
+    hasScene: !!props.currentScene,
+    entityCount: props.currentScene?.entities?.length || 0,
+    entityTypes: props.currentScene?.entities?.map(e => e.type) || []
+  });
+
   // 🏢 ENTERPRISE (2026-01-26): Always create dxfScene for preview entities, even without loaded DXF
   // This allows measurement/drawing tools to work even when no DXF file is loaded
   const dxfScene: DxfScene = {
@@ -1212,6 +1219,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           case 'circle': {
             // Type guard: Entity με type 'circle' έχει center & radius
             const circleEntity = entity as typeof entity & { center: Point2D; radius: number };
+            // 🔍 DEBUG (2026-01-31): Log circle entity conversion
+            console.log('🔵 [CanvasSection] Converting circle entity', {
+              entityId: entity.id,
+              hasCenter: !!circleEntity.center,
+              hasRadius: !!circleEntity.radius,
+              center: circleEntity.center,
+              radius: circleEntity.radius,
+              rawEntity: entity,
+            });
             return { ...base, type: 'circle' as const, center: circleEntity.center, radius: circleEntity.radius } as DxfEntityUnion;
           }
           case 'polyline': {

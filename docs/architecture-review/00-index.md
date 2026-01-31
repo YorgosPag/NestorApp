@@ -170,7 +170,7 @@ All findings in this review are backed by:
 
 - **Main Repo README**: `C:\Nestor_Pagonis\README.md`
 - **Centralized Systems**: `C:\Nestor_Pagonis\docs\centralized-systems\README.md`
-- **DXF Viewer Docs**: `C:\Nestor_Pagonis\src\subapps\dxf-viewer\docs\centralized_systems.md`
+- **DXF Viewer Docs**: `C:\Nestor_Pagonis\docs\centralized-systems\README.md` (migrated from src/subapps/dxf-viewer/docs/)
 - **Security Audit (Previous)**: `C:\Nestor_Pagonis\SECURITY_AUDIT_REPORT.md` (2025-12-15)
 - **ADRs**: `C:\Nestor_Pagonis\docs\adr\README.md`
 

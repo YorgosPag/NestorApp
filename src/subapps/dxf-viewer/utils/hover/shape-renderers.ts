@@ -75,8 +75,9 @@ export function renderCircleHover({ entity, ctx, worldToScreen, options }: Hover
   const screenRadiusPoint = worldToScreen(radiusPoint);
   const screenRadiusTransformed = Math.abs(screenRadiusPoint.x - screenCenterTransformed.x);
   
+  // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
   ctx.beginPath();
-  ctx.arc(screenCenterTransformed.x, screenCenterTransformed.y, screenRadiusTransformed, 0, Math.PI * 2);
+  ctx.ellipse(screenCenterTransformed.x, screenCenterTransformed.y, screenRadiusTransformed, screenRadiusTransformed, 0, 0, Math.PI * 2);
   ctx.stroke();
 
   // Determine which mode we're in (copy from preview logic)

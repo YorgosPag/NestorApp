@@ -26,7 +26,7 @@
  *
  * @author Anthropic Claude Code
  * @since 2026-01-30
- * @see ADR-056 in centralized_systems.md
+ * @see ADR-056 in docs/centralized-systems/reference/adr-index.md
  */
 
 import { completionStyleStore, type CompletionStyle } from '../stores/CompletionStyleStore';

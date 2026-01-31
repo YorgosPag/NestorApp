@@ -1,30 +1,47 @@
-# ⚠️ ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ΣΥΣΤΗΜΑΤΑ - NAVIGATION POINTER
+# ⚠️ [OLD] NAVIGATION POINTER - Η τεκμηρίωση μετακινήθηκε!
 
-> **🏢 ENTERPRISE DOCUMENTATION RESTRUCTURE (2025-12-28)**
+> **Ημερομηνία Migration**: 2026-01-31
 >
-> **ΝΕΕΣ MODULAR DOCS**: Η τεκμηρίωση έχει διασπαστεί σε enterprise-grade modular structure!
->
-> **📚 NEW LOCATION**: **[`docs/centralized-systems/`](../../../../docs/centralized-systems/)** - Root-level enterprise documentation
->
-> **🔗 QUICK ACCESS**: **[Enterprise Documentation Index](../../../../docs/centralized-systems/README.md)**
+> **Νέα Τοποθεσία**: `docs/centralized-systems/`
 
 ---
 
-## 📊 **QUICK ACCESS NAVIGATION**
+## 🚨 **ΣΗΜΑΝΤΙΚΟ: ΜΗΝ ΠΡΟΣΘΕΤΕΙΣ ΠΕΡΙΕΧΟΜΕΝΟ ΕΔΩ**
 
-### 🎯 **CHOOSE YOUR VIEW**:
+Αυτό το αρχείο είναι **DEPRECATED**. Όλες οι νέες προσθήκες πρέπει να γίνονται
+στα modular αρχεία στο `docs/centralized-systems/`.
 
-| View Type | File | Best For | Content |
-|-----------|------|----------|---------|
-| **🏢 MODULAR ENTERPRISE DOCS** | **[NEW: Enterprise Docs](../../../../docs/centralized-systems/)** | **Modern navigation** | Organized by system type, 400-500 lines max per file |
-| **📋 QUICK TABLE** | **[centralized_systems_TABLE.md](./centralized_systems_TABLE.md)** | **Fast reference** | Comprehensive table, metrics, quick access |
-| **📚 LEGACY DETAILED DOCS** | **[centralized_systems.md](./centralized_systems.md)** | **Complete reference** | Full 2,824-line implementation details |
+---
 
-### ⚡ **INSTANT ACCESS**:
-- 🏢 **NEW: Modern structure?** → **[Enterprise Modular Docs](../../../../docs/centralized-systems/README.md)**
-- 🎯 **Need specific system?** → **[Design System](../../../../docs/centralized-systems/design-system/)** | **[Smart Factories](../../../../docs/centralized-systems/smart-factories/)** | **[API Reference](../../../../docs/centralized-systems/reference/api-quick-reference.md)**
-- 🔍 **Need quick lookup?** → **[Go to TABLE](./centralized_systems_TABLE.md)**
-- 📖 **Need complete reference?** → **Continue reading below (legacy 2,824-line docs)**
+## 🎯 **ΝΕΕΣ ΤΟΠΟΘΕΣΙΕΣ**
+
+| Περιεχόμενο | Νέο Path |
+|-------------|----------|
+| **Master Hub** | [`docs/centralized-systems/README.md`](../../../../docs/centralized-systems/README.md) |
+| **ADR Index (57 ADRs)** | [`docs/centralized-systems/reference/adr-index.md`](../../../../docs/centralized-systems/reference/adr-index.md) |
+| **Design System** | [`docs/centralized-systems/design-system/`](../../../../docs/centralized-systems/design-system/) |
+| **Data Systems** | [`docs/centralized-systems/data-systems/`](../../../../docs/centralized-systems/data-systems/) |
+| **UI Systems** | [`docs/centralized-systems/ui-systems/`](../../../../docs/centralized-systems/ui-systems/) |
+| **Tools** | [`docs/centralized-systems/tools/`](../../../../docs/centralized-systems/tools/) |
+| **Infrastructure** | [`docs/centralized-systems/infrastructure/`](../../../../docs/centralized-systems/infrastructure/) |
+| **Security** | [`docs/centralized-systems/security/`](../../../../docs/centralized-systems/security/) |
+| **Configuration** | [`docs/centralized-systems/configuration/`](../../../../docs/centralized-systems/configuration/) |
+| **API Reference** | [`docs/centralized-systems/reference/api-quick-reference.md`](../../../../docs/centralized-systems/reference/api-quick-reference.md) |
+
+---
+
+## ⚡ **QUICK LINKS**
+
+- **🏢 MASTER HUB** → [docs/centralized-systems/README.md](../../../../docs/centralized-systems/README.md)
+- **📋 ADR INDEX** → [docs/centralized-systems/reference/adr-index.md](../../../../docs/centralized-systems/reference/adr-index.md)
+- **🔧 API REFERENCE** → [docs/centralized-systems/reference/api-quick-reference.md](../../../../docs/centralized-systems/reference/api-quick-reference.md)
+
+---
+
+## 📚 **LEGACY CONTENT BELOW**
+
+> Το παρακάτω περιεχόμενο διατηρείται για backward compatibility.
+> **ΓΙΑ ΕΝΗΜΕΡΩΜΕΝΗ ΤΕΚΜΗΡΙΩΣΗ, ΧΡΗΣΙΜΟΠΟΙΗΣΕ ΤΑ ΝΕΕΣ ΤΟΠΟΘΕΣΙΕΣ ΠΑΡΑΠΑΝΩ.**
 
 ---
 

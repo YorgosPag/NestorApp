@@ -8,7 +8,7 @@
  *
  * @module lib/message-utils
  * @enterprise SDL + OWASP compliant - Input validation & XSS protection
- * @see centralized_systems.md Rule #15
+ * @see docs/centralized-systems/reference/adr-index.md
  */
 
 import DOMPurify from 'dompurify';

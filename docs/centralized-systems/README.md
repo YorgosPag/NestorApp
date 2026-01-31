@@ -18,7 +18,7 @@
 
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 >
-> **📍 Full Details**: [centralized_systems.md](../src/subapps/dxf-viewer/docs/centralized_systems.md)
+> **📍 Full Details**: [ADR Index](reference/adr-index.md#adr-001-selectdropdown-component)
 
 ---
 
@@ -28,9 +28,9 @@
 
 | Documentation Type | Location | Best For | Content |
 |--------------------|----------|----------|---------|
-| **📚 Complete Reference** | [Original Docs](../src/subapps/dxf-viewer/docs/centralized_systems.md) | **Deep dive** | Full implementation details (2,824 lines) |
-| **📋 Quick Table** | [Systems Table](../src/subapps/dxf-viewer/docs/centralized_systems_TABLE.md) | **Quick lookup** | Comprehensive systems table (341 lines) |
+| **📋 ADR Index** | [ADR Index](reference/adr-index.md) | **Quick lookup** | All 57 ADRs with categories |
 | **🎯 Modular Docs** | **Below sections** | **Focused learning** | Organized by system type |
+| **🔧 API Reference** | [API Quick Reference](reference/api-quick-reference.md) | **Implementation** | Import examples & usage |
 
 ---
 
@@ -51,7 +51,10 @@
 ### 🔄 **DATA SYSTEMS**
 - **[📋 Overview](data-systems/index.md)** - Data management architecture
 - **[🏠 Unit Fields System](data-systems/unit-fields.md)** - Extended unit properties (layout, areas, features)
-- **[🎯 Multi-Selection System](../src/subapps/dxf-viewer/docs/HYBRID_LAYER_MOVEMENT_ARCHITECTURE.md#9-multi-selection--marquee-selection-system-2026-01-25)** - AutoCAD-style Window/Crossing selection ✨ **NEW**
+- **[✏️ Drawing System](data-systems/drawing-system.md)** - Line drawing, state machine
+- **[🎯 Selection System](data-systems/selection-system.md)** - Multi-selection, marquee selection
+- **[🔍 Filter System](data-systems/filter-system.md)** - Enterprise filtering & search
+- **[🏢 Entity Systems](data-systems/entity-systems.md)** - Entity linking, uploads, ID generation
 - **[🚨 Alert Engine](data-systems/alert-engine.md)** - Real-time monitoring & notifications
 - **[🌍 Polygon System](data-systems/polygon-system.md)** - Geographic drawing engine
 - **[🏗️ State Management](data-systems/state-management.md)** - Context providers & stores
@@ -61,6 +64,17 @@
 - **[📸 Photo System](ui-systems/photo-system.md)** - Media management & display
 - **[🔍 Search System](ui-systems/search-system.md)** - Unified search experience
 - **[📄 Enterprise Headers](ui-systems/enterprise-headers.md)** - Header component system
+- **[🖼️ Overlays](ui-systems/overlays.md)** - Crosshairs, rulers, visual feedback
+- **[🎨 Canvas System](ui-systems/canvas-system.md)** - Coordinates, transforms, rendering
+
+### ⚒️ **TOOLS**
+- **[📋 Overview](tools/index.md)** - Drawing tools, keyboard shortcuts, interactions
+
+### 🏗️ **INFRASTRUCTURE**
+- **[📋 Overview](infrastructure/index.md)** - Performance, logging, auth systems
+
+### 🔐 **SECURITY**
+- **[📋 Overview](security/index.md)** - Authentication, authorization, environment security
 
 ### ⚙️ **CONFIGURATION**
 - **[📋 Overview](configuration/index.md)** - Configuration systems overview
@@ -101,8 +115,8 @@
 
 ### 📋 **RELATED DOCUMENTATION**
 
-- **[🏢 Original Complete Documentation](../src/subapps/dxf-viewer/docs/centralized_systems.md)** - Full 2,824-line reference
-- **[📊 Systems Overview Table](../src/subapps/dxf-viewer/docs/centralized_systems_TABLE.md)** - Quick stats & metrics
+- **[📋 ADR Index](reference/adr-index.md)** - Complete list of all 57 ADRs with categories
+- **[🔧 API Quick Reference](reference/api-quick-reference.md)** - Import examples & usage patterns
 - **[📁 DXF Architecture](../src/subapps/dxf-viewer/docs/architecture/)** - DXF-specific documentation
 - **[⚙️ Settings System](../src/subapps/dxf-viewer/docs/settings-system/)** - Settings architecture details
 
@@ -119,7 +133,7 @@
 | Metric | Value | Status |
 |--------|-------|---------|
 | **Total Systems** | 31 | ✅ **Complete** |
-| **Total ADRs** | 28 | ✅ **Documented** |
+| **Total ADRs** | 57 | ✅ **Documented** |
 | **Total Code Lines** | 20,380+ | ✅ **Enterprise** |
 | **Documentation Files** | 20+ | ✅ **Modular** |
 | **Cross-Links** | 50+ | ✅ **Interconnected** |

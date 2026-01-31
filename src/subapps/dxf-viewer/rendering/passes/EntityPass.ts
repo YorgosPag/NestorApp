@@ -348,8 +348,9 @@ export class EntityPass implements IRenderPass {
     const screenCenter = context.worldToScreen(center);
     const screenRadius = radius * options.transform.scale;
 
+    // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
     context.beginPath();
-    context.arc(screenCenter.x, screenCenter.y, screenRadius, 0, Math.PI * 2);
+    context.ellipse(screenCenter.x, screenCenter.y, screenRadius, screenRadius, 0, 0, Math.PI * 2);
     context.stroke();
   }
 

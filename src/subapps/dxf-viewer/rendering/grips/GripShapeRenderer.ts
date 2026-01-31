@@ -105,8 +105,9 @@ export class GripShapeRenderer {
     ctx.strokeStyle = outlineColor;
     ctx.lineWidth = outlineWidth;
 
+    // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
     ctx.beginPath();
-    ctx.arc(position.x, position.y, radius, 0, Math.PI * 2);
+    ctx.ellipse(position.x, position.y, radius, radius, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 

@@ -53,7 +53,7 @@ import { useOverlayDrawing } from '../hooks/useOverlayDrawing';
 import { useCursor } from '../systems/cursor';
 import { useSnapContext } from '../snapping/context/SnapContext';
 import { useCanvasOperations } from '../hooks/interfaces/useCanvasOperations';
-import { useEventBus } from '../systems/events/EventBus';
+import { useEventBus, EventBus } from '../systems/events/EventBus';
 // 🏢 ENTERPRISE (2026-01-26): Centralized tool metadata - ADR-033
 import { preservesOverlayMode } from '../systems/tools/ToolStateManager';
 // 🏢 ENTERPRISE (2026-01-30): ADR-055 Entity Creation Manager - Event Bus + Command Pattern
@@ -293,6 +293,72 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
   const universalSelection = useUniversalSelection();
   const levelManager = useLevelManager();
+
+  // 🏢 ENTERPRISE (2026-01-31): CRITICAL FIX - Sync level scene with currentScene
+  // PROBLEM: useUnifiedDrawing saves to level scene (via useLevels), but DxfCanvas
+  // receives currentScene (via useSceneState) - these are TWO DIFFERENT systems!
+  // SOLUTION: Listen to 'drawing:complete' event and sync level scene → currentScene
+
+  // 🔧 FIX: Use refs to avoid re-subscribing on every render (prevents race conditions)
+  const levelManagerRef = React.useRef(levelManager);
+  const handleSceneChangeRef = React.useRef(handleSceneChange);
+
+  // Keep refs updated
+  React.useEffect(() => {
+    levelManagerRef.current = levelManager;
+    handleSceneChangeRef.current = handleSceneChange;
+  });
+
+  React.useEffect(() => {
+    // 🔍 DEBUG (2026-01-31): Log effect mount
+    console.log('🔌 [DxfViewerContent] Subscribing to drawing:complete event (ONCE)');
+
+    const handleDrawingComplete = (payload: {
+      tool: string;
+      entityId: string;
+      entity?: Record<string, unknown>;
+      updatedScene?: Record<string, unknown>;
+      levelId?: string;
+    }) => {
+      const sceneChange = handleSceneChangeRef.current;
+
+      // 🔍 DEBUG: Log when handler is called
+      console.log('📨 [DxfViewerContent] drawing:complete received!', {
+        payload,
+        hasUpdatedScene: !!payload.updatedScene,
+        updatedSceneEntityCount: (payload.updatedScene as SceneModel | undefined)?.entities?.length || 0
+      });
+
+      // 🔧 FIX (2026-01-31): Use updatedScene from payload directly (avoids stale closure)
+      if (payload.updatedScene) {
+        const scene = payload.updatedScene as SceneModel;
+        console.log('🔄 [DxfViewerContent] Syncing updatedScene to currentScene', {
+          levelId: payload.levelId,
+          entityCount: scene.entities?.length || 0
+        });
+        // Sync the scene that was passed in the event (contains the new entity!)
+        sceneChange(scene);
+      } else {
+        // Fallback to lookup (legacy compatibility)
+        const lm = levelManagerRef.current;
+        console.log('⚠️ [DxfViewerContent] No updatedScene in payload, falling back to lookup');
+        if (lm.currentLevelId) {
+          const levelScene = lm.getLevelScene(lm.currentLevelId);
+          if (levelScene) {
+            sceneChange(levelScene);
+          }
+        }
+      }
+    };
+
+    // Subscribe to drawing:complete event (ONCE - no dependencies!)
+    const unsubscribe = EventBus.on('drawing:complete', handleDrawingComplete);
+
+    return () => {
+      console.log('🔌 [DxfViewerContent] Unsubscribing from drawing:complete event');
+      unsubscribe();
+    };
+  }, []); // Empty deps = subscribe once on mount
 
   // 🏢 ENTERPRISE (2026-01-30): ADR-055 Entity Creation Manager - Event Bus + Command Pattern
   // This enables full undo/redo support for all entity creation operations

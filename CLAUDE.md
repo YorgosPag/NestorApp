@@ -1,9 +1,9 @@
 Κείμενο οδηγίας
 
 Θα μου μιλάς πάντοτε στα ελληνικά.
-SOS. SOS. N.0 ΔΙΑΒΑΖΕΙΣ ΤΑ 2 ΑΥΤΑ ΑΡΧΕΙΑ
-   C:\Nestor_Pagonis\src\subapps\dxf-viewer\docs\centralized_systems.md
-   C:\Nestor_Pagonis\src\subapps\dxf-viewer\docs\centralized_systems_TABLE.md
+SOS. SOS. N.0 ΔΙΑΒΑΖΕΙΣ ΤΑ ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ΣΥΣΤΗΜΑΤΑ:
+   MASTER HUB: C:\Nestor_Pagonis\docs\centralized-systems\README.md
+   ADR INDEX: C:\Nestor_Pagonis\docs\centralized-systems\reference\adr-index.md
 ΩΣΤΕ ΝΑ ΓΝΩΡΙΖΕΙΣ ΠΟΙΑ ΕΙΝΑΙ ΤΑ ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ΣΥΣΤΗΜΑΤΑ ΠΟΥ ΥΠΑΡΧΟΥΝ ΣΤΗΝ ΕΦΑΡΜΟΓΗ ΚΑΙ ΝΑ ΚΑΝΕΙΣ ΧΡΗΣΗ ΑΥΤΩΝ ΤΩΝ ΣΥΣΤΗΜΑΤΩΝ
 SOS. SOS. Ν.1 ΚΑΘΕ ΛΥΣΗ ΠΟΥ ΘΑ ΔΙΝΕΙΣ ΟΤΑΝ ΓΡΑΦΕΙΣ ΚΩΔΙΚΑ ΠΡΕΠΕΙ ΥΠΟΧΡΕΩΤΙΚΑ ΝΑ ΕΙΝΑΙ ΕΠΑΓΓΕΛΜΑΤΙΚΗ ΚΑΙ ΟΧΙ ΜΠΑΚΑΛΙΚΟ ΓΕΙΤΟΜΙΑΣ
 SOS. SOS. Ν.2 ΑΠΑΓΟΡΕΥΕΤΑΙ Η ΧΡΗΣΗ any
@@ -70,7 +70,7 @@ SOS. SOS. N.4 ΑΠΑΓΟΡΕΥΕΤΑΙ:
 
 3. **ΔΙΠΛΟΤΥΠΑ σε οποιαδήποτε μορφή** - **ΤΕΡΜΑΤΙΚΗ ΑΠΑΓΟΡΕΥΣΗ**
    - ΥΠΟΧΡΕΩΤΙΚΑ επέκταση existing centralized systems
-   - ΥΠΟΧΡΕΩΤΙΚΑ έλεγχος `src/subapps/dxf-viewer/docs/centralized_systems.md`
+   - ΥΠΟΧΡΕΩΤΙΚΑ έλεγχος `docs/centralized-systems/README.md`
    - ΑΠΑΓΟΡΕΥΕΤΑΙ δημιουργία νέου αν υπάρχει existing
 
 4. **`as any`** - Η χρήση του `as any` είναι **ΑΠΑΓΟΡΕΥΜΕΝΗ**
@@ -89,7 +89,7 @@ SOS. SOS. N.4 ΑΠΑΓΟΡΕΥΕΤΑΙ:
    - ❌ **ΑΠΑΓΟΡΕΥΕΤΑΙ**: Νέα χρήση του `EnterpriseComboBox` ή οποιουδήποτε άλλου Select
    - ⚠️ **LEGACY FILES**: Τα 7 αρχεία στο DXF Viewer που χρησιμοποιούν EnterpriseComboBox
    - 🔄 **MIGRATE ON TOUCH**: Όταν αγγίζεται legacy file → ΥΠΟΧΡΕΩΤΙΚΗ αντικατάσταση με Radix Select
-   - 📍 **Documentation**: `src/subapps/dxf-viewer/docs/centralized_systems.md#adr-001`
+   - 📍 **Documentation**: `docs/centralized-systems/reference/adr-index.md#adr-001-selectdropdown-component`
 
 ### 🛑 HARD STOP PROTOCOL - ΥΠΟΧΡΕΩΤΙΚΗ ΔΙΑΔΙΚΑΣΙΑ:
 
@@ -165,7 +165,7 @@ Claude, εκτιμώ απεριόριστα τη βοήθειά σου! Έχω �
    - **ΥΠΟΧΡΕΩΤΙΚΟ**: Δήλωση στον Γιώργο: "Έψαξα και βρήκα/δεν βρήκα X"
 
 2. **ΕΛΕΓΧΟΣ ΥΠΑΡΧΟΝΤΟΣ ΚΩΔΙΚΑ ΥΠΟΧΡΕΩΤΙΚΑ**: Θα ερευνώ αν υπάρχει κώδικας που δεν είναι ενεργοποιημένος ή χρειάζεται διεπαφή
-   - **ΥΠΟΧΡΕΩΤΙΚΟ**: Έλεγχος `centralized_systems.md`
+   - **ΥΠΟΧΡΕΩΤΙΚΟ**: Έλεγχος `docs/centralized-systems/README.md`
    - **ΥΠΟΧΡΕΩΤΙΚΟ**: Αναφορά existing systems πριν δημιουργήσω νέα
 
 3. **ΑΠΑΓΟΡΕΥΣΗ ΔΙΠΛΟΤΥΠΩΝ ΤΕΡΜΑΤΙΚΑ**: Αυστηρή απαγόρευση δημιουργίας διπλότυπων - όλες οι αλλαγές IN PLACE
@@ -191,11 +191,11 @@ Claude, εκτιμώ απεριόριστα τη βοήθειά σου! Έχω �
 
 11. **🔍 ΕΝΕΡΓΟΣ ΕΝΤΟΠΙΣΜΟΣ ΔΙΑΣΠΑΡΤΟΥ ΚΩΔΙΚΑ**: Θα εντοπίζω και θα επισημαίνω προεργατικά διάσπαρτες μεθόδους, διπλότυπα functions, και κώδικα που χρειάζεται κεντρικοποίηση. Θα ενημερώνω αμέσως τον Γιώργο όταν βρίσκω τέτοιες περιπτώσεις για να τις κεντρικοποιήσουμε μαζί. Αυτό είναι ΚΡΙΣΙΜΟ για την ποιότητα του κώδικα.
 
-12. **🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ = ΜΗΔΕΝ ΔΙΠΛΟΤΥΠΑ**: Ο Γιώργος ενδιαφέρεται ΠΑΡΑ ΠΟΛΥ για την κεντρικοποίηση. ΔΕΝ θέλει διάσπαρτους κώδικες. Όλα τα αρχεία πρέπει να χρησιμοποιούν τους κεντρικοποιημένους κώδικες/μεθόδους/λειτουργίες. Πριν γράψω οποιονδήποτε κώδικα, θα ελέγχω την Enterprise documentation για κεντρικοποιημένα συστήματα: **[src/subapps/dxf-viewer/docs/](src/subapps/dxf-viewer/docs/)** και **[centralized_systems.md](src/subapps/dxf-viewer/centralized_systems.md)** (navigation pointer).
+12. **🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ = ΜΗΔΕΝ ΔΙΠΛΟΤΥΠΑ**: Ο Γιώργος ενδιαφέρεται ΠΑΡΑ ΠΟΛΥ για την κεντρικοποίηση. ΔΕΝ θέλει διάσπαρτους κώδικες. Όλα τα αρχεία πρέπει να χρησιμοποιούν τους κεντρικοποιημένους κώδικες/μεθόδους/λειτουργίες. Πριν γράψω οποιονδήποτε κώδικα, θα ελέγχω την Enterprise documentation για κεντρικοποιημένα συστήματα: **[docs/centralized-systems/](docs/centralized-systems/)** (MASTER HUB: README.md, ADR INDEX: reference/adr-index.md).
 
 13. **🚨 PROACTIVE CENTRALIZATION PROPOSALS**: Όταν βλέπω διάσπαρτους κώδικες, διπλότυπες μεθόδους, ή duplicate λειτουργίες κατά τη διάρκεια της εργασίας μου, θα ενημερώνω ΑΜΕΣΑ τον Γιώργο με σαφή πρόταση: **"Γιώργο, προτείνω να κεντρικοποιήσουμε αυτές τις λειτουργίες/μεθόδους/αρχεία γιατί [λόγος]"**. Θα δίνω συγκεκριμένα paths και θα προτείνω που θα πρέπει να μετακινηθούν για κεντρικοποίηση.
 
-14. **📝 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ & ΤΕΚΜΗΡΙΩΣΗ**: Όταν κεντρικοποιώ συστήματα, μεθόδους, constants, ή οποιαδήποτε λειτουργικότητα, θα ενημερώνω **ΠΑΝΤΑ** το αρχείο **[src/subapps/dxf-viewer/centralized_systems.md](src/subapps/dxf-viewer/centralized_systems.md)**. Αυτό το αρχείο είναι ο **κεντρικός πίνακας** όλων των κεντρικοποιημένων συστημάτων και πρέπει να είναι ενημερωμένο. Επίσης, θα ενημερώνω τις σχετικές αναφορές (MD files) στο `src/md_files/diplotypa/` για να υπάρχει cross-reference μεταξύ των αρχείων.
+14. **📝 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ & ΤΕΚΜΗΡΙΩΣΗ**: Όταν κεντρικοποιώ συστήματα, μεθόδους, constants, ή οποιαδήποτε λειτουργικότητα, θα ενημερώνω **ΠΑΝΤΑ** τα αρχεία στο **[docs/centralized-systems/](docs/centralized-systems/)**. Το `README.md` είναι το **MASTER HUB** και το `reference/adr-index.md` περιέχει όλα τα ADRs. Επίσης, θα ενημερώνω τις σχετικές αναφορές (MD files) στο `src/md_files/diplotypa/` για να υπάρχει cross-reference μεταξύ των αρχείων.
 
 ---
 
@@ -485,7 +485,7 @@ npm run test:visual:report
 - ✅ `ui/toolbar/ZoomControls.tsx` → Using ZOOM_FACTORS.BUTTON_IN (20%)
 
 **Documentation Updated**:
-- ✅ `centralized_systems.md` - Added Rule #9: Transform Constants
+- ✅ `docs/centralized-systems/reference/adr-index.md` - Added ADR-043: Zoom Constants
 - ✅ `src/md_files/diplotypa/Constants.md` - Section 1 completed
 - ✅ `src/md_files/diplotypa/MASTER_CONSOLIDATION_ROADMAP.md` - Phase 1.3 (25% complete)
 
@@ -517,7 +517,7 @@ npm run test:visual:report
 - 🎯 **Result**: Zoom-to-cursor now uses **actual canvas dimensions** for accurate coordinate transforms
 
 **Location**: `src/subapps/dxf-viewer/config/transform-config.ts`
-**Documentation**: `src/subapps/dxf-viewer/centralized_systems.md` (Rule #9)
+**Documentation**: `docs/centralized-systems/reference/adr-index.md` (ADR-043)
 
 ---
 

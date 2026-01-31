@@ -700,7 +700,7 @@ pnpm test:visual      # Visual regression
 - ADR-050: Unified Toolbar
 - ADR-041-045: Legacy cleanup
 
-**Evidence**: `C:\Nestor_Pagonis\src\subapps\dxf-viewer\docs\centralized_systems.md` (7,700 lines)
+**Evidence**: `C:\Nestor_Pagonis\docs\centralized-systems\README.md` and `reference/adr-index.md` (57 ADRs)
 
 ---
 

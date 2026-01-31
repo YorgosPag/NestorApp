@@ -25,7 +25,7 @@
 | **❌ PROHIBITED** | Νέες Select/ComboBox implementations |
 | **⚠️ DEPRECATED** | `EnterpriseComboBox` (DXF Viewer only, temporary) |
 
-**📍 Full Details**: [centralized_systems.md](../src/subapps/dxf-viewer/docs/centralized_systems.md)
+**📍 Full Details**: [ADR Index](reference/adr-index.md#adr-001-selectdropdown-component)
 
 ---
 
@@ -37,7 +37,7 @@
 |--------|-------|------------------|
 | **Total Systems** | 31 enterprise systems | ✅ **Exceeds Fortune 500** |
 | **Total Code** | 20,380+ lines | ✅ **Enterprise scale** |
-| **Total ADRs** | 28 architectural decisions | ✅ **Enterprise governance** |
+| **Total ADRs** | 57 architectural decisions | ✅ **Enterprise governance** |
 | **Type Safety** | 100% TypeScript | ✅ **Zero `any` types** |
 | **Code Duplication** | 0% duplicates | ✅ **Single source of truth** |
 | **Documentation** | 3,165+ lines | ✅ **Enterprise standard** |
@@ -167,8 +167,8 @@
 ## 🔗 **CROSS-REFERENCES**
 
 ### 📋 **COMPLETE DOCUMENTATION**
-- **[🏢 Full Implementation Guide](../src/subapps/dxf-viewer/docs/centralized_systems.md)** - 2,824 lines detailed reference
-- **[📊 Systems Statistics](../src/subapps/dxf-viewer/docs/centralized_systems_TABLE.md)** - Comprehensive metrics table
+- **[📋 ADR Index](reference/adr-index.md)** - Complete list of all 57 ADRs
+- **[🔧 API Quick Reference](reference/api-quick-reference.md)** - Import examples & usage
 
 ### 🎯 **RELATED ARCHITECTURE**
 - **[📁 DXF Architecture](../src/subapps/dxf-viewer/docs/architecture/)** - CAD-specific patterns

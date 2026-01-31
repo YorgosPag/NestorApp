@@ -173,6 +173,15 @@ export function useDrawingHandlers(
   // The return value from addPoint() indicates if drawing completed (e.g., 2nd click on line)
   // 🎯 ENTERPRISE (2026-01-27): ADR-047 - Close polygon on first-point click
   const onDrawingPoint = useCallback((p: Pt) => {
+    // 🔍 DEBUG (2026-01-31): Log drawing point for circle debugging
+    console.log('🎯 [onDrawingPoint]', {
+      activeTool,
+      point: p,
+      drawingState: drawingState.currentTool,
+      isDrawing: drawingState.isDrawing,
+      tempPoints: drawingState.tempPoints?.length || 0
+    });
+
     // 🎯 ADR-047: CLOSE POLYGON ON FIRST-POINT CLICK (AutoCAD/BricsCAD pattern)
     // CRITICAL: Check distance BEFORE snap, using RAW point!
     const isAreaTool = activeTool === 'measure-area';

@@ -495,8 +495,9 @@ export abstract class BaseEntityRenderer {
     const screenRadius = radius * this.transform.scale;
     
     // Για κύκλα/τόξα χωρίς γωνίες, χρησιμοποιούμε απλή λογική
+    // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
     this.ctx.beginPath();
-    this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, startAngle, endAngle, false);
+    this.ctx.ellipse(screenCenter.x, screenCenter.y, screenRadius, screenRadius, 0, startAngle, endAngle, false);
     this.ctx.stroke();
     
     this.ctx.restore();
@@ -679,7 +680,8 @@ export abstract class BaseEntityRenderer {
     this.ctx.save();
     this.applyArcStyle();
     this.ctx.beginPath();
-    this.ctx.arc(v.x, v.y, rPx, a1, a2, useCCW);
+    // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
+    this.ctx.ellipse(v.x, v.y, rPx, rPx, 0, a1, a2, useCCW);
     this.ctx.stroke();
     this.ctx.restore();
   }

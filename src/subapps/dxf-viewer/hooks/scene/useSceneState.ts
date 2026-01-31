@@ -26,10 +26,16 @@ export function useSceneState() {
   const { importDxfFile, error: importError } = useDxfImport();
 
   // Derived current scene
-  const currentScene = useMemo(() => {
-    if (!currentLevelId) return null;
-    return getLevelScene(currentLevelId);
-  }, [currentLevelId, getLevelScene]);
+  // 🔧 FIX (2026-01-31): Remove useMemo - getLevelScene reference changes cause issues
+  // Direct call ensures fresh scene on every render
+  const currentScene = currentLevelId ? getLevelScene(currentLevelId) : null;
+
+  // 🔍 DEBUG (2026-01-31): Log currentScene for circle debugging
+  console.log('📊 [useSceneState] currentScene computed', {
+    currentLevelId,
+    hasScene: !!currentScene,
+    entityCount: currentScene?.entities?.length || 0
+  });
 
   // Create empty scene if needed - WITHOUT default layer "0"
   useEffect(() => {
@@ -65,9 +71,18 @@ export function useSceneState() {
   }, [currentLevelId, currentScene, setLevelScene]);
 
   // Scene change handler
+  // 🔍 DEBUG (2026-01-31): Log scene change for debugging
   const handleSceneChange = useCallback((scene: SceneModel) => {
+    console.log('🎬 [useSceneState] handleSceneChange called', {
+      currentLevelId,
+      entityCount: scene?.entities?.length || 0,
+      hasSetLevelScene: !!setLevelScene
+    });
     if (currentLevelId) {
       setLevelScene(currentLevelId, scene);
+      console.log('✅ [useSceneState] setLevelScene completed');
+    } else {
+      console.log('⚠️ [useSceneState] No currentLevelId - skipping setLevelScene');
     }
   }, [currentLevelId, setLevelScene]);
 

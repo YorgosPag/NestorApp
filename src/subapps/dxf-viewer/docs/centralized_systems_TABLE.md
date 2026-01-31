@@ -1,4 +1,4 @@
-# = -> **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
+# [OLD] **ENTERPRISE CENTRALIZED SYSTEMS TABLE**
 
 > **= MAIN DOCUMENTATION**: [centralized_systems.md](./centralized_systems.md)
 > **= -> LAST UPDATED**: 2026-01-30
@@ -106,7 +106,7 @@
 > **🏢 ENTERPRISE**: ADR-027 - Keyboard Shortcuts SSOT, `matchesShortcut()`, AutoCAD F-key standards.
 > **🏢 ENTERPRISE**: ADR-028 - Button Consolidation, Shadcn Button foundation, 49 files migrate on touch.
 >
-> **📍 Full ADRs**: [centralized_systems.md](./centralized_systems.md)
+> **📍 Full ADRs**: [docs/centralized-systems/reference/adr-index.md](../../../../docs/centralized-systems/reference/adr-index.md)
 
 ---
 

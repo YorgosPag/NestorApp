@@ -6,7 +6,7 @@
  *
  * @fileoverview Centralized type definitions for the Card design system.
  * @enterprise Fortune 500 compliant - Zero duplicates
- * @see centralized_systems.md
+ * @see ADR-013 in docs/centralized-systems/reference/adr-index.md
  * @author Enterprise Architecture Team
  * @since 2026-01-08
  */

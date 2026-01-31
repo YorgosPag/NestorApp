@@ -438,9 +438,19 @@ export function useUnifiedDrawing() {
    * Also emits 'drawing:complete' event for other listeners (Event Bus pattern)
    */
   const addPoint = useCallback((worldPoint: Point2D, _transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }): boolean => {
+    // 🔍 DEBUG (2026-01-31): Log addPoint for circle debugging
+    console.log('➕ [addPoint] Called', {
+      worldPoint,
+      canAddPoint,
+      currentTool: machineContext.toolType,
+      pointCount: machineContext.points.length,
+      machineState: machineIsDrawing ? 'drawing' : 'not-drawing'
+    });
+
     // 🏢 ENTERPRISE (2026-01-25): Use state machine guard instead of manual checks
     // State machine provides canAddPoint which handles all edge cases
     if (!canAddPoint) {
+      console.log('❌ [addPoint] BLOCKED - canAddPoint is false');
       return false;
     }
 
@@ -518,6 +528,14 @@ export function useUnifiedDrawing() {
     if (isComplete(currentTool, newTempPoints)) {
       const newEntity = createEntityFromTool(currentTool, newTempPoints);
 
+      // 🔍 DEBUG (2026-01-31): Log entity creation for circle debugging
+      console.log('🏗️ [addPoint] Entity creation', {
+        currentTool,
+        pointsCount: newTempPoints.length,
+        newEntity: newEntity ? { type: newEntity.type, id: newEntity.id } : null,
+        currentLevelId
+      });
+
       // 🏢 ENTERPRISE (2026-01-30): CRITICAL FIX - ALL drawing tools fallback for missing level
       // Pattern: AutoCAD/DXF Standard - Layer "0" is always present for entities without explicit layer
       // If no currentLevelId, use default level "0" for ALL entities (measurements AND drawing tools)
@@ -526,6 +544,13 @@ export function useUnifiedDrawing() {
       const effectiveLevelId = currentLevelId || ((isMeasurementTool || isDrawingTool) ? '0' : null);
 
       if (newEntity && effectiveLevelId) {
+        // 🔍 DEBUG (2026-01-31): Log before completeEntity
+        console.log('✅ [addPoint] Calling completeEntity', {
+          entityType: newEntity.type,
+          entityId: newEntity.id,
+          effectiveLevelId
+        });
+
         // 🏢 ENTERPRISE (2026-01-27): CRITICAL - Clear preview FIRST before any state updates!
         // Pattern: Autodesk AutoCAD - Visual feedback must be synchronous
         previewEntityRef.current = null;
@@ -537,6 +562,12 @@ export function useUnifiedDrawing() {
           levelId: effectiveLevelId,
           getScene: getLevelScene,
           setScene: setLevelScene,
+        });
+      } else {
+        // 🔍 DEBUG (2026-01-31): Log why completeEntity was NOT called
+        console.log('❌ [addPoint] completeEntity NOT called', {
+          hasEntity: !!newEntity,
+          effectiveLevelId
         });
       }
       // Return to normal mode after entity completion
@@ -782,6 +813,9 @@ export function useUnifiedDrawing() {
   }, [machineContext.toolType, machineContext.points, machineMoveCursor, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
+    // 🔍 DEBUG (2026-01-31): Log startDrawing for circle debugging
+    console.log('🚀 [startDrawing] Called with tool:', tool);
+
     // Set preview mode when drawing starts
     setMode('preview');
 

@@ -19,7 +19,7 @@
  * const companyColor = NAVIGATION_ENTITIES.company.color;
  * ```
  *
- * @see centralized_systems.md - Rule #XX: Navigation Entity Configuration
+ * @see ADR-014 in docs/centralized-systems/reference/adr-index.md
  * @author Enterprise Architecture Team
  * @since 2026-01-07
  */

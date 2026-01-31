@@ -318,8 +318,9 @@ export class PreviewRenderer {
     const radiusScreen = entity.radius * transform.scale;
 
     // Draw circle
+    // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
     ctx.beginPath();
-    ctx.arc(center.x, center.y, radiusScreen, 0, Math.PI * 2);
+    ctx.ellipse(center.x, center.y, radiusScreen, radiusScreen, 0, 0, Math.PI * 2);
     ctx.stroke();
 
     // Draw center grip
@@ -434,8 +435,9 @@ export class PreviewRenderer {
     ctx.save();
     ctx.strokeStyle = '#FFA500'; // Orange for arc (CAD standard)
     ctx.setLineDash([5, 5]); // Dashed arc
+    // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
     ctx.beginPath();
-    ctx.arc(screenVertex.x, screenVertex.y, arcRadius, angle1, angle2, false);
+    ctx.ellipse(screenVertex.x, screenVertex.y, arcRadius, arcRadius, 0, angle1, angle2, false);
     ctx.stroke();
     ctx.restore();
 

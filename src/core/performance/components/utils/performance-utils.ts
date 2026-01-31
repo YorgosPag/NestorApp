@@ -123,7 +123,7 @@ export const PANEL_DIMENSIONS = {
  * Χρησιμοποιείται από: DxfPerformanceOptimizer, DxfViewerContent, PerformanceDashboard
  *
  * @see CLAUDE.md - Rule N.1: Enterprise-grade solutions
- * @see centralized_systems.md - Performance configuration section
+ * @see ADR-019 in docs/centralized-systems/reference/adr-index.md
  */
 export const PERFORMANCE_THRESHOLDS = {
   fps: {

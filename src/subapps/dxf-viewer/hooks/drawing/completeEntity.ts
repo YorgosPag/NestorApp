@@ -30,7 +30,7 @@
  *
  * @author Anthropic Claude Code
  * @since 2026-01-30
- * @see ADR-057 in centralized_systems.md
+ * @see ADR-057 in docs/centralized-systems/reference/adr-index.md
  */
 
 import type { Entity } from '../../types/entities';
@@ -110,8 +110,17 @@ export function completeEntity(
   entity: Entity | null,
   options: CompleteEntityOptions
 ): CompleteEntityResult {
+  // 🔍 DEBUG (2026-01-31): Log completeEntity call for circle debugging
+  console.log('📦 [completeEntity] Called', {
+    entityType: entity?.type,
+    entityId: entity?.id,
+    levelId: options.levelId,
+    tool: options.tool
+  });
+
   // 🛡️ GUARD: Validate entity
   if (!entity) {
+    console.log('❌ [completeEntity] Entity is null');
     return { success: false, entityId: '', error: 'Entity is null' };
   }
 
@@ -135,25 +144,38 @@ export function completeEntity(
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 2: Add entity to scene
+  // 🔧 FIX (2026-01-31): Store finalScene for event emission (avoids stale closure)
   // ═══════════════════════════════════════════════════════════════════════════
   const scene = getScene(levelId);
+  let finalScene: SceneModel;
 
   if (scene) {
     // Add to existing scene
-    const updatedScene: SceneModel = {
+    finalScene = {
       ...scene,
       entities: [...scene.entities, entity as AnySceneEntity]
     };
-    setScene(levelId, updatedScene);
+    setScene(levelId, finalScene);
+    // 🔍 DEBUG (2026-01-31): Log scene update
+    console.log('✅ [completeEntity] Added to existing scene', {
+      levelId,
+      previousCount: scene.entities.length,
+      newCount: finalScene.entities.length
+    });
   } else {
     // Create new scene with default layer (measurement tools need this)
-    const newScene: SceneModel = {
+    finalScene = {
       entities: [entity as AnySceneEntity],
       layers: { '0': { name: '0', color: '#FFFFFF', visible: true, locked: false } },
       bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
       units: 'mm',
     };
-    setScene(levelId, newScene);
+    setScene(levelId, finalScene);
+    // 🔍 DEBUG (2026-01-31): Log new scene creation
+    console.log('✅ [completeEntity] Created new scene', {
+      levelId,
+      entityCount: 1
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -165,11 +187,21 @@ export function completeEntity(
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 4: Emit completion event
+  // 🔧 FIX (2026-01-31): Pass finalScene directly to avoid stale closure issue
+  // The finalScene was just created above, so it contains the new entity
   // ═══════════════════════════════════════════════════════════════════════════
   if (!skipEvent) {
+    console.log('📤 [completeEntity] Emitting drawing:complete with finalScene', {
+      entityCount: finalScene.entities.length,
+      entityId: entity.id
+    });
+
     EventBus.emit('drawing:complete', {
       tool,
-      entityId: entity.id
+      entityId: entity.id,
+      entity: entity as unknown as Record<string, unknown>,
+      updatedScene: finalScene as unknown as Record<string, unknown>,
+      levelId,
     });
   }
 

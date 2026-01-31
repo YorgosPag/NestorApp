@@ -15,7 +15,7 @@
  * - Accessibility: WCAG 2.1 AA compliant
  *
  * @see ADR-009: Corner Box Feature Implementation
- * @see centralized_systems.md - Rule #X: Zoom System
+ * @see ADR-009 in docs/centralized-systems/reference/adr-index.md
  */
 
 import React, { useCallback, useRef, useState } from 'react';

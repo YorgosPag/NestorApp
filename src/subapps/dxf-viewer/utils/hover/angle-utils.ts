@@ -27,8 +27,9 @@ export function renderHoverAngleAtVertex(
   // Draw arc with orange color
   ctx.strokeStyle = HOVER_CONFIG.colors.angle;
   ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-044
+  // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
   ctx.beginPath();
-  ctx.arc(currentScreen.x, currentScreen.y, HOVER_CONFIG.offsets.arcRadius, startAngle, endAngle, clockwise);
+  ctx.ellipse(currentScreen.x, currentScreen.y, HOVER_CONFIG.offsets.arcRadius, HOVER_CONFIG.offsets.arcRadius, 0, startAngle, endAngle, clockwise);
   ctx.stroke();
 
   // Draw angle label (positioned to avoid grip collision)
