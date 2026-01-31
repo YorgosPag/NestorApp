@@ -7,6 +7,8 @@ import { HOVER_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { renderEdgeDistanceLabel, calculateEdgeTextPosition } from './text-labeling-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
 
 export function renderHoverEdgeWithDistance(
   ctx: CanvasRenderingContext2D,
@@ -41,7 +43,7 @@ export function renderHoverEdgeWithDistance(
   ctx.rotate(textAngle);
 
   // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-  const distanceText = distance.toFixed(2);
+  const distanceText = formatDistance(distance);
   renderStyledTextWithOverride(ctx, distanceText, 0, 0);
 
   ctx.restore();

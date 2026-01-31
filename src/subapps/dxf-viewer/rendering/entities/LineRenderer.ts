@@ -48,7 +48,7 @@ import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import { HoverManager } from '../../utils/hover';
-import { pointToLineDistance } from './shared/geometry-utils';
+import { pointToLineDistance, clamp } from './shared/geometry-utils';
 import { hitTestLineSegments, createEdgeGrips, renderSplitLine, renderLineWithTextCheck } from './shared/line-utils';
 import { createVertexGrip } from './shared/grip-utils';
 // 🏢 ADR-065: Centralized Distance & Vector Operations
@@ -197,7 +197,7 @@ export class LineRenderer extends BaseEntityRenderer {
 
   private renderPreviewLineWithDistance(screenStart: Point2D, screenEnd: Point2D, worldStart: Point2D, worldEnd: Point2D): void {
     // Use shared utility for split line rendering
-    const textGap = Math.max(20, Math.min(60, 30 * this.transform.scale)); // Scale gap with zoom
+    const textGap = clamp(30 * this.transform.scale, 20, 60); // Scale gap with zoom
     const { midpoint } = renderSplitLine(this.ctx, screenStart, screenEnd, textGap);
     
     // Calculate and display distance at midpoint using shared utility

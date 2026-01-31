@@ -8,6 +8,8 @@ import { ExtendedSnapType, SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-087: Centralized Snap Engine Configuration
+import { SNAP_SEARCH_RADIUS, SNAP_RADIUS_MULTIPLIERS, SNAP_GEOMETRY } from '../../config/tolerance-config';
 
 export class OrthoSnapEngine extends BaseSnapEngine {
   private lastPoint: Point2D | null = null;
@@ -31,7 +33,8 @@ export class OrthoSnapEngine extends BaseSnapEngine {
     const referencePoint = this.findReferencePoint(cursorPoint, context);
     
     if (referencePoint) {
-      const orthoPoints = this.getOrthogonalPoints(referencePoint, cursorPoint, radius * 2);
+      // 🏢 ADR-087: Use centralized snap radius multiplier
+      const orthoPoints = this.getOrthogonalPoints(referencePoint, cursorPoint, radius * SNAP_RADIUS_MULTIPLIERS.STANDARD);
       
       for (const orthoPoint of orthoPoints) {
         const distance = calculateDistance(cursorPoint, orthoPoint.point);
@@ -64,7 +67,8 @@ export class OrthoSnapEngine extends BaseSnapEngine {
     // Otherwise, find the closest endpoint as reference
     let closestPoint: Point2D | null = null;
     let closestDistance = Infinity;
-    const searchRadius = 200; // Larger search radius for reference point
+    // 🏢 ADR-087: Use centralized search radius
+    const searchRadius = SNAP_SEARCH_RADIUS.REFERENCE_POINT;
     
     // Guard against non-iterable entities
     if (!Array.isArray(context.entities)) {
@@ -95,11 +99,15 @@ export class OrthoSnapEngine extends BaseSnapEngine {
 
     // 🏢 ADR-065: Use centralized distance calculation
     const distance = calculateDistance(cursorPoint, referencePoint);
-    
+
     if (distance === 0 || distance > maxDistance) {
       return orthoPoints;
     }
-    
+
+    // Calculate direction vector for angle determination
+    const dx = cursorPoint.x - referencePoint.x;
+    const dy = cursorPoint.y - referencePoint.y;
+
     // Horizontal snap (0° and 180°)
     const horizontalPoint = {
       x: cursorPoint.x,
@@ -133,7 +141,8 @@ export class OrthoSnapEngine extends BaseSnapEngine {
     }
     
     // Also try diagonal orthogonal points (45°, 135°, 225°, 315°)
-    const diagonalDistance = distance / Math.sqrt(2);
+    // 🏢 ADR-087: Use centralized geometry constant (INV_SQRT_2 for efficiency)
+    const diagonalDistance = distance * SNAP_GEOMETRY.INV_SQRT_2;
     
     if (diagonalDistance <= maxDistance) {
       // 45° diagonal

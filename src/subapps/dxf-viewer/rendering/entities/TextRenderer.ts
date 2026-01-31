@@ -34,6 +34,8 @@ import { HoverManager } from '../../utils/hover';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from './shared/geometry-utils';
+// 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
+import { buildUIFont } from '../../config/text-rendering-config';
 
 
 export class TextRenderer extends BaseEntityRenderer {
@@ -74,7 +76,7 @@ export class TextRenderer extends BaseEntityRenderer {
       this.ctx.save();
 
       // ✅ SIMPLIFIED: Direct font setting
-      this.ctx.font = `${screenHeight}px Arial`;
+      this.ctx.font = buildUIFont(screenHeight, 'arial');
       this.ctx.fillStyle = ('color' in entity ? entity.color : undefined) || UI_COLORS.DEFAULT_ENTITY;
       this.ctx.textAlign = 'left';
       // ╔════════════════════════════════════════════════════════════════════════╗

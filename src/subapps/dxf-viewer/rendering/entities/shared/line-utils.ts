@@ -10,8 +10,8 @@ import type { GripInfo } from '../../types/Types';
 // 🏢 ADR-073: Import calculateMidpoint for centralized midpoint calculation
 import { pointToLineDistance, radToDeg, normalizeAngleDeg, calculateMidpoint } from './geometry-utils';
 // 🏢 ADR-065: Centralized Distance & Vector Operations
-import { calculateDistance, getUnitVector } from './geometry-rendering-utils';
-import { getTextPreviewStyleWithOverride } from '../../../hooks/useTextPreviewStyle';
+// 🏢 ADR-090: Centralized Point Vector Operations
+import { calculateDistance, getUnitVector, offsetPoint } from './geometry-rendering-utils';
 
 /**
  * Creates edge midpoint grips for line-based entities
@@ -195,15 +195,10 @@ export function calculateSplitLineGap(
   const mid = calculateMidpoint(screenStart, screenEnd);
 
   // Calculate gap points (half gap on each side of center)
+  // 🏢 ADR-090: Use centralized offsetPoint for gap calculations
   const gapHalf = gapSize / 2;
-  const gapStart = {
-    x: mid.x - unit.x * gapHalf,
-    y: mid.y - unit.y * gapHalf
-  };
-  const gapEnd = {
-    x: mid.x + unit.x * gapHalf,
-    y: mid.y + unit.y * gapHalf
-  };
+  const gapStart = offsetPoint(mid, unit, -gapHalf);
+  const gapEnd = offsetPoint(mid, unit, gapHalf);
 
   return {
     gapStart,
@@ -239,90 +234,11 @@ export function renderSplitLine(
   return { midpoint };
 }
 
-/**
- * Render line με έλεγχο για text enabled state (Internal version - returns midpoint)
- * Αν το κείμενο είναι enabled, σχεδιάζει γραμμή με κενό
- * Αν το κείμενο είναι disabled, σχεδιάζει συνεχόμενη γραμμή
- */
-function renderLineWithTextCheckInternal(
-  ctx: CanvasRenderingContext2D,
-  screenStart: Point2D,
-  screenEnd: Point2D,
-  gapSize: number = 30
-): { midpoint: Point2D } {
-  const textStyle = getTextPreviewStyleWithOverride();
-  // 🏢 ADR-073: Use centralized midpoint calculation
-  const midpoint = calculateMidpoint(screenStart, screenEnd);
-
-  if (textStyle.enabled) {
-    // Κείμενο ενεργοποιημένο: γραμμή με κενό
-    return renderSplitLine(ctx, screenStart, screenEnd, gapSize);
-  } else {
-    // Κείμενο απενεργοποιημένο: συνεχόμενη γραμμή
-    ctx.beginPath();
-    ctx.moveTo(screenStart.x, screenStart.y);
-    ctx.lineTo(screenEnd.x, screenEnd.y);
-    ctx.stroke();
-
-    return { midpoint };
-  }
-}
-
-/**
- * 🔺 EXPORTED VERSION: Render line με έλεγχο για text enabled state
- * Αν το κείμενο είναι enabled, σχεδιάζει γραμμή με κενό
- * Αν το κείμενο είναι disabled, σχεδιάζει συνεχόμενη γραμμή
- *
- * @param ctx - Canvas rendering context
- * @param screenStart - Start point in screen coordinates
- * @param screenEnd - End point in screen coordinates
- * @param gapSize - Size of gap for text (default: 30px)
- */
-export function renderLineWithTextCheck(
-  ctx: CanvasRenderingContext2D,
-  screenStart: Point2D,
-  screenEnd: Point2D,
-  gapSize: number = 30
-): void {
-  renderLineWithTextCheckInternal(ctx, screenStart, screenEnd, gapSize);
-}
-
-/**
- * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ CONTINUOUS LINE RENDERING
- * Σχεδιάζει συνεχόμενη γραμμή χωρίς κενό
- */
-export function renderContinuousLine(
-  ctx: CanvasRenderingContext2D,
-  screenStart: Point2D,
-  screenEnd: Point2D
-): void {
-  ctx.beginPath();
-  ctx.moveTo(screenStart.x, screenStart.y);
-  ctx.lineTo(screenEnd.x, screenEnd.y);
-  ctx.stroke();
-}
-
-/**
- * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ SPLIT LINE WITH GAP RENDERING
- * Σχεδιάζει γραμμή με κενό στη μέση για distance text
- */
-export function renderSplitLineWithGap(
-  ctx: CanvasRenderingContext2D,
-  screenStart: Point2D,
-  screenEnd: Point2D,
-  gapSize: number = 30
-): void {
-  const { gapStart, gapEnd } = calculateSplitLineGap(screenStart, screenEnd, gapSize);
-
-  // Draw first segment
-  ctx.beginPath();
-  ctx.moveTo(screenStart.x, screenStart.y);
-  ctx.lineTo(gapStart.x, gapStart.y);
-  ctx.stroke();
-
-  // Draw second segment
-  ctx.beginPath();
-  ctx.moveTo(gapEnd.x, gapEnd.y);
-  ctx.lineTo(screenEnd.x, screenEnd.y);
-  ctx.stroke();
-}
+// 🏢 ADR-085: Re-export from line-rendering-utils.ts (CANONICAL SOURCE)
+// These functions are maintained in line-rendering-utils.ts for single source of truth.
+// Re-exported here for backward compatibility with existing imports.
+export {
+  renderLineWithTextCheck,
+  renderContinuousLine,
+  renderSplitLineWithGap
+} from './line-rendering-utils';

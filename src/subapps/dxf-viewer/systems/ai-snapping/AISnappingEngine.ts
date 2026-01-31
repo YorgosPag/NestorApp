@@ -9,7 +9,8 @@ import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
-import { degToRad } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR: Centralized Clamp Function
+import { degToRad, clamp } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
 import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 
@@ -207,7 +208,7 @@ export class AISnappingEngine {
   private calculateDynamicSnapRadius(zoom: number): number {
     // Adaptive radius based on zoom level
     const baseRadius = 10;
-    const zoomFactor = Math.max(0.5, Math.min(2, zoom));
+    const zoomFactor = clamp(zoom, 0.5, 2);
     return baseRadius * zoomFactor;
   }
 

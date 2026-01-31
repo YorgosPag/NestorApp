@@ -7,6 +7,8 @@
 import type { CanvasConfig, Point2D } from '../../types/Types';
 // 🏢 ENTERPRISE: Centralized bounds service για performance optimization
 import { canvasBoundsService } from '../../../services/CanvasBoundsService';
+// 🏢 ADR-094: Centralized Device Pixel Ratio
+import { getDevicePixelRatio } from '../../../systems/cursor/utils';
 
 // ✅ ENTERPRISE: Vendor-specific canvas context properties for HiDPI support
 interface VendorCanvasRenderingContext2D extends CanvasRenderingContext2D {
@@ -40,7 +42,7 @@ export class CanvasUtils {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not get canvas context');
 
-    const dpr = config.enableHiDPI ? (config.devicePixelRatio || window.devicePixelRatio || 1) : 1;
+    const dpr = config.enableHiDPI ? (config.devicePixelRatio || getDevicePixelRatio()) : 1; // 🏢 ADR-094
     // 🏢 ENTERPRISE: Use cached bounds service
     const rect = canvasBoundsService.getBounds(canvas);
 
@@ -121,7 +123,7 @@ export class CanvasUtils {
     const ctx = canvas.getContext('2d');
     if (!ctx) return 1;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDevicePixelRatio(); // 🏢 ADR-094
     // ✅ ENTERPRISE: Type-safe access to vendor-specific properties
     const vendorCtx = ctx as VendorCanvasRenderingContext2D;
     const backingStoreRatio = vendorCtx.webkitBackingStorePixelRatio ||

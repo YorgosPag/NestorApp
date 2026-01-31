@@ -200,6 +200,20 @@ export const UI_FONTS = {
     /** 12px - Standard system font */
     NORMAL: '12px system-ui, -apple-system, sans-serif',
   },
+
+  /**
+   * 🏢 ADR-090: Inter fonts - For collaboration overlays, UI labels
+   * Modern, readable font for interactive elements
+   * @since 2026-01-31
+   */
+  INTER: {
+    /** 10px - Small labels, annotations */
+    SMALL: '10px Inter, sans-serif',
+    /** 12px - Standard UI text, cursor labels */
+    NORMAL: '12px Inter, sans-serif',
+    /** Bold 10px - Emphasized small text, annotation markers */
+    BOLD_SMALL: 'bold 10px Inter, sans-serif',
+  },
 } as const;
 
 /**
@@ -213,9 +227,12 @@ export const UI_FONTS = {
  * @param weight - Optional font weight ('normal' | 'bold')
  * @returns CSS font string for canvas.font property
  */
+/** Supported font families for buildUIFont */
+export type UIFontFamily = 'monospace' | 'Arial' | 'arial' | 'system-ui' | 'Inter, sans-serif';
+
 export function buildUIFont(
   size: number,
-  family: 'monospace' | 'Arial' | 'system-ui' = 'monospace',
+  family: UIFontFamily | string = 'monospace',
   weight: 'normal' | 'bold' = 'normal'
 ): string {
   const weightPrefix = weight === 'bold' ? 'bold ' : '';
@@ -335,6 +352,62 @@ export const RENDER_GEOMETRY = {
    * STANDARD: AutoCAD dimension lines use similar gap patterns
    */
   SPLIT_LINE_GAP: 30,
+} as const;
+
+// ============================================
+// 🏢 ADR-091: TEXT LABEL OFFSETS (2026-01-31)
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: Text Label Positioning Offsets
+ *
+ * Centralized vertical offsets for multi-line text labels in entity renderers.
+ * Used for center measurements (area, perimeter, dimensions).
+ *
+ * Pattern: AutoCAD DIMTAD / ISO 129 Dimension Text Positioning
+ *
+ * LAYOUT (4-line example - Ellipse):
+ *   Line 1: y - MULTI_LINE_OUTER (30px)  ← "Ma: X.XX"
+ *   Line 2: y - TWO_LINE (10px)          ← "Mi: X.XX"
+ *   Line 3: y + TWO_LINE (10px)          ← "E: X.XX"
+ *   Line 4: y + MULTI_LINE_OUTER (30px)  ← "Περ: X.XX"
+ *
+ * @see ADR-091: Centralized Text Label Offsets
+ * @since 2026-01-31
+ */
+export const TEXT_LABEL_OFFSETS = {
+  /**
+   * Standard two-line vertical spacing (pixels)
+   * Used for: Rectangle, Polyline (Area + Perimeter)
+   *
+   * LAYOUT:
+   *   Line 1: y - 10  ← "Ε: X.XX"
+   *   Line 2: y + 10  ← "Περ: X.XX"
+   */
+  TWO_LINE: 10,
+
+  /**
+   * Multi-line outer vertical spacing (pixels)
+   * Used for: Ellipse (4 lines), Arc (3 lines)
+   *
+   * LAYOUT (Arc - 3 lines):
+   *   Line 1: y - 30  ← "R: X.XX"
+   *   Line 2: y - 10  ← "Angle"
+   *   Line 3: y + 10  ← "L: X.XX"
+   */
+  MULTI_LINE_OUTER: 30,
+
+  /**
+   * Tooltip/readout horizontal offset (pixels)
+   * Used for: Ghost entity coordinate readout
+   */
+  TOOLTIP_HORIZONTAL: 10,
+
+  /**
+   * Tooltip/readout vertical offset (pixels)
+   * Used for: Ghost entity coordinate readout
+   */
+  TOOLTIP_VERTICAL: 10,
 } as const;
 
 // ============================================
@@ -507,6 +580,107 @@ export type CharacterMetrics = typeof CHARACTER_METRICS;
  * Text fonts configuration type
  */
 export type TextFontsConfig = typeof TEXT_FONTS;
+
+// ============================================
+// 🏢 ADR-083: LINE DASH PATTERNS (2026-01-31)
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: Line Dash Pattern Configuration
+ *
+ * Centralized dash patterns for Canvas 2D ctx.setLineDash().
+ * Eliminates 45+ hardcoded dash arrays across 16 files.
+ *
+ * Pattern: AutoCAD LTSCALE / ISO 128 Line Types
+ *
+ * @see ADR-083: Centralized Line Dash Patterns
+ * @since 2026-01-31
+ */
+export const LINE_DASH_PATTERNS = {
+  // ────────────────────────────────────────────
+  // CORE LINE TYPES (ISO 128 / AutoCAD Standard)
+  // ────────────────────────────────────────────
+
+  /** Solid line - no dashes */
+  SOLID: [] as number[],
+
+  /** Standard dashed line [5, 5] */
+  DASHED: [5, 5] as const,
+
+  /** Dotted line [2, 4] */
+  DOTTED: [2, 4] as const,
+
+  /** Dash-dot (center line) [8, 4, 2, 4] */
+  DASH_DOT: [8, 4, 2, 4] as const,
+
+  // ────────────────────────────────────────────
+  // SPECIAL PURPOSE
+  // ────────────────────────────────────────────
+
+  /** Selection highlight [5, 5] */
+  SELECTION: [5, 5] as const,
+
+  /** Ghost entity preview [4, 4] */
+  GHOST: [4, 4] as const,
+
+  /** Hover state [12, 6] - longer dash for emphasis */
+  HOVER: [12, 6] as const,
+
+  /** Locked/disabled state [4, 4] */
+  LOCKED: [4, 4] as const,
+
+  /** Construction/temporary lines [8, 4] */
+  CONSTRUCTION: [8, 4] as const,
+
+  /** Arc preview lines [3, 3] */
+  ARC: [3, 3] as const,
+
+  /** Text bounding box [2, 2] */
+  TEXT_BOUNDING: [2, 2] as const,
+
+  // ────────────────────────────────────────────
+  // CURSOR STYLES (match CursorRenderer)
+  // ────────────────────────────────────────────
+
+  /** Cursor dashed style [6, 6] */
+  CURSOR_DASHED: [6, 6] as const,
+
+  /** Cursor dotted style [2, 4] */
+  CURSOR_DOTTED: [2, 4] as const,
+
+  /** Cursor dash-dot style [8, 4, 2, 4] */
+  CURSOR_DASH_DOT: [8, 4, 2, 4] as const,
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Line dash pattern type
+ * Union of all available dash patterns
+ */
+export type LineDashPattern = (typeof LINE_DASH_PATTERNS)[keyof typeof LINE_DASH_PATTERNS];
+
+/**
+ * 🏢 ENTERPRISE: Apply line dash pattern to canvas context
+ * Convenience wrapper for ctx.setLineDash()
+ *
+ * @param ctx - Canvas 2D rendering context
+ * @param pattern - Dash pattern from LINE_DASH_PATTERNS
+ */
+export function applyLineDash(
+  ctx: CanvasRenderingContext2D,
+  pattern: LineDashPattern
+): void {
+  ctx.setLineDash([...pattern]);
+}
+
+/**
+ * 🏢 ENTERPRISE: Reset line dash to solid
+ * Convenience wrapper for ctx.setLineDash([])
+ *
+ * @param ctx - Canvas 2D rendering context
+ */
+export function resetLineDash(ctx: CanvasRenderingContext2D): void {
+  ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
+}
 
 // ============================================
 // HELPER FUNCTIONS

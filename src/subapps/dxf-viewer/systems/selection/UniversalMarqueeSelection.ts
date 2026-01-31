@@ -20,6 +20,8 @@ import type { Region } from '../../types/overlay';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import { UnifiedEntitySelection } from './utils';
 import { calculateVerticesBounds } from '../../utils/geometry/GeometryUtils';
+// 🏢 ADR-089: Centralized Point-In-Bounds
+import { SpatialUtils } from '../../core/spatial/SpatialUtils';
 
 // ✅ ΕΝΙΑΙΟ SELECTION INTERFACE - Δουλεύει για όλα τα types
 export interface UniversalSelectionInput {
@@ -404,9 +406,9 @@ export class UniversalMarqueeSelector {
     if (polygonVertices.length < 3) return false;
 
     // 1. Check if any polygon vertex is inside the rectangle
+    // 🏢 ADR-089: Centralized Point-In-Bounds
     for (const vertex of polygonVertices) {
-      if (vertex.x >= rectBounds.min.x && vertex.x <= rectBounds.max.x &&
-          vertex.y >= rectBounds.min.y && vertex.y <= rectBounds.max.y) {
+      if (SpatialUtils.pointInRect(vertex, rectBounds)) {
         return true;
       }
     }

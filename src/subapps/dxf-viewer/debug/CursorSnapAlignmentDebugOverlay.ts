@@ -12,8 +12,11 @@ import type { Point2D } from '../rendering/types/Types';
 import type { CanvasConfig } from '../rendering/types/Types';
 import { CanvasUtils } from '../rendering/canvas/utils/CanvasUtils';
 import { UI_COLORS, CANVAS_THEME } from '../config/color-config';
+// 🏢 ADR-094: Centralized Device Pixel Ratio
+import { getDevicePixelRatio } from '../systems/cursor/utils';
 // 🏢 ADR-044: Centralized Line Widths
-import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
+// 🏢 ADR-090: Centralized UI Fonts
+import { RENDER_LINE_WIDTHS, UI_FONTS } from '../config/text-rendering-config';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-077: Centralized TAU Constant
@@ -98,7 +101,7 @@ class CursorSnapAlignmentDebugger {
     // This ensures cursor/crosshair markers align with rendered UI elements
     // ✅ ADR-002: Using centralized CANVAS_THEME for overlay background
     const canvasConfig: CanvasConfig = {
-      devicePixelRatio: window.devicePixelRatio || 1,
+      devicePixelRatio: getDevicePixelRatio(), // 🏢 ADR-094
       enableHiDPI: true,
       backgroundColor: CANVAS_THEME.OVERLAY
     };
@@ -248,7 +251,7 @@ class CursorSnapAlignmentDebugger {
     // ✅ CORRECT: Use logical dimensions matching setupCanvasContext
     // setupCanvasContext did: canvas.width = rect.width * dpr, ctx.setTransform(dpr, ...)
     // So we need: rect.width = canvas.width / dpr (reverse calculation)
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDevicePixelRatio(); // 🏢 ADR-094
     const logicalWidth = this.state.overlayEl.width / dpr;
     const logicalHeight = this.state.overlayEl.height / dpr;
 
@@ -322,7 +325,7 @@ class CursorSnapAlignmentDebugger {
 
     // Draw label
     ctx.fillStyle = color;
-    ctx.font = 'bold 12px Arial';
+    ctx.font = UI_FONTS.ARIAL.BOLD; // 🏢 ADR-090: Centralized font
     ctx.fillText(label, pos.x + size + 8, pos.y - size - 5);
 
     ctx.restore();

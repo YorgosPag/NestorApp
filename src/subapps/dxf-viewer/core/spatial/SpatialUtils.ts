@@ -8,6 +8,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { SpatialBounds } from './ISpatialIndex';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-070: Centralized Vector Magnitude
+import { vectorMagnitude } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 /**
  * 🔧 BOUNDS OPERATIONS
@@ -63,7 +65,9 @@ export class SpatialUtils {
   }
 
   /**
-   * Test if point is inside bounds
+   * Test if point is inside bounds (SpatialBounds format)
+   * 🏢 ADR-089: Centralized Point-In-Bounds (2026-01-31)
+   * ✅ CANONICAL: Single source of truth for bounds checking
    */
   static pointInBounds(point: Point2D, bounds: SpatialBounds): boolean {
     return (
@@ -75,13 +79,29 @@ export class SpatialUtils {
   }
 
   /**
+   * Test if point is inside rect (min/max Point2D format)
+   * 🏢 ADR-089: Centralized Point-In-Bounds (2026-01-31)
+   * ✅ NEW: For { min: Point2D, max: Point2D } format
+   * Used by: selection marquee, rendering bounds checks
+   */
+  static pointInRect(point: Point2D, rect: { min: Point2D; max: Point2D }): boolean {
+    return (
+      point.x >= rect.min.x &&
+      point.x <= rect.max.x &&
+      point.y >= rect.min.y &&
+      point.y <= rect.max.y
+    );
+  }
+
+  /**
    * Calculate distance from point to bounds
    * Returns 0 if point is inside bounds
    */
   static distanceToPoint(point: Point2D, bounds: SpatialBounds): number {
     const dx = Math.max(0, Math.max(bounds.minX - point.x, point.x - bounds.maxX));
     const dy = Math.max(0, Math.max(bounds.minY - point.y, point.y - bounds.maxY));
-    return Math.sqrt(dx * dx + dy * dy);
+    // 🏢 ADR-070: Use centralized vector magnitude
+    return vectorMagnitude({ x: dx, y: dy });
   }
 
   /**

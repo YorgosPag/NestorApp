@@ -40,6 +40,9 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'circle-chord-sagitta': { id: 'circle-chord-sagitta', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'circle-2p-radius': { id: 'circle-2p-radius', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'circle-best-fit': { id: 'circle-best-fit', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // 🏢 ENTERPRISE (2026-01-31): Circle Tangent to 3 Lines (AutoCAD TTT style)
+  // Uses entity selection mode - user picks 3 lines, system calculates incircle
+  'circle-ttt': { id: 'circle-ttt', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'polyline': { id: 'polyline', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'polygon': { id: 'polygon', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'ellipse': { id: 'ellipse', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },

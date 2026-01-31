@@ -12,6 +12,8 @@ import type { Entity, RectangleEntity, CircleEntity, ArcEntity } from '../../../
 import { GeometricCalculations } from '../../shared/GeometricCalculations';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-089: Centralized Point-In-Bounds
+import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 
 /**
  * 🏢 ENTERPRISE: Legacy rectangle entity interface for backward compatibility
@@ -126,12 +128,14 @@ export function isPointOnSegment(
   lineEnd: Point2D,
   tolerance = TOLERANCE_CONFIG.SNAP_PRECISION
 ): boolean {
-  const minX = Math.min(lineStart.x, lineEnd.x) - tolerance;
-  const maxX = Math.max(lineStart.x, lineEnd.x) + tolerance;
-  const minY = Math.min(lineStart.y, lineEnd.y) - tolerance;
-  const maxY = Math.max(lineStart.y, lineEnd.y) + tolerance;
-  
-  return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
+  // 🏢 ADR-089: Centralized Point-In-Bounds
+  const bounds = {
+    minX: Math.min(lineStart.x, lineEnd.x) - tolerance,
+    maxX: Math.max(lineStart.x, lineEnd.x) + tolerance,
+    minY: Math.min(lineStart.y, lineEnd.y) - tolerance,
+    maxY: Math.max(lineStart.y, lineEnd.y) + tolerance
+  };
+  return SpatialUtils.pointInBounds(point, bounds);
 }
 
 /**

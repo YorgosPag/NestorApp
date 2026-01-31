@@ -10,6 +10,10 @@ import { calculateAngleData, calculateAngleBisector } from '../angle-calculation
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addArcPath } from '../../rendering/primitives/canvasPaths';
+// 🏢 ADR-086: Centralized Angle Formatting
+import { formatAngle } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-074: Centralized Point On Circle
+import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 export function renderHoverAngleAtVertex(
   ctx: CanvasRenderingContext2D,
@@ -37,16 +41,17 @@ export function renderHoverAngleAtVertex(
   // Draw angle label (positioned to avoid grip collision)
   const { bisectorAngle } = calculateAngleBisector(startAngle, endAngle);
   const labelRadius = HOVER_CONFIG.offsets.arcRadius + HOVER_CONFIG.offsets.textFromArc;
-  const labelX = currentScreen.x + Math.cos(bisectorAngle) * labelRadius;
-  const labelY = currentScreen.y + Math.sin(bisectorAngle) * labelRadius;
+  // 🏢 ADR-074: Use centralized pointOnCircle for label positioning
+  const labelPos = pointOnCircle(currentScreen, labelRadius, bisectorAngle);
 
   ctx.fillStyle = HOVER_CONFIG.colors.angle;
   ctx.font = HOVER_CONFIG.fonts.angle;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  const angleText = `${degrees.toFixed(1)}°`;
-  ctx.fillText(angleText, labelX, labelY);
+  // 🏢 ADR-086: Use centralized angle formatting
+  const angleText = formatAngle(degrees, 1);
+  ctx.fillText(angleText, labelPos.x, labelPos.y);
 
   ctx.restore();
 }

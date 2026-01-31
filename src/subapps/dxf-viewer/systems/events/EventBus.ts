@@ -87,6 +87,18 @@ export interface DrawingEventMap {
     levelId: string;
     commandId?: string; // For undo/redo tracking
   };
+  // 🏢 ENTERPRISE (2026-01-31): Circle TTT completion event
+  // Emitted when incircle is calculated from 3 selected lines
+  'circle-ttt:completed': {
+    circle: Record<string, unknown>;
+    selectedLines: Array<{
+      entityId: string;
+      entityType: string;
+      start: { x: number; y: number };
+      end: { x: number; y: number };
+      segmentIndex?: number;
+    }>;
+  };
 }
 
 export type DrawingEventType = keyof DrawingEventMap;

@@ -266,9 +266,9 @@ export function useDrawingHandlers(
 
   // Double click handler for finishing operations
   const onDrawingDoubleClick = useCallback(() => {
-
     // 🏢 ENTERPRISE (2026-01-27): Continuous tools that finish with double-click
-    if (activeTool === 'polyline' || activeTool === 'polygon' || activeTool === 'measure-area' || activeTool === 'measure-angle' || activeTool === 'measure-distance-continuous') {
+    // 🏢 ENTERPRISE (2026-01-31): Added circle-best-fit - ADR-083
+    if (activeTool === 'polyline' || activeTool === 'polygon' || activeTool === 'measure-area' || activeTool === 'measure-angle' || activeTool === 'measure-distance-continuous' || activeTool === 'circle-best-fit') {
       // Check for overlay completion callback first
       const { toolStyleStore } = require('../../stores/ToolStyleStore');
       const isOverlayCompletion = toolStyleStore.triggerOverlayCompletion();

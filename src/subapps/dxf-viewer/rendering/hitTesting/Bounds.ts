@@ -4,6 +4,8 @@
  */
 
 import type { EntityModel, Point2D } from '../types/Types';
+// 🏢 ADR-070: Centralized Vector Magnitude
+import { vectorMagnitude } from '../entities/shared/geometry-rendering-utils';
 
 // 🏢 ENTERPRISE: Entity-specific type interfaces for safe type casting
 interface LineEntityProperties {
@@ -358,7 +360,8 @@ export class BoundsOperations {
   static distanceFromPoint(box: BoundingBox, point: Point2D): number {
     const dx = Math.max(0, Math.max(box.minX - point.x, point.x - box.maxX));
     const dy = Math.max(0, Math.max(box.minY - point.y, point.y - box.maxY));
-    return Math.sqrt(dx * dx + dy * dy);
+    // 🏢 ADR-070: Use centralized vector magnitude
+    return vectorMagnitude({ x: dx, y: dy });
   }
 
   // ✅ ENTERPRISE FIX: Added missing methods για HitTester.ts TS2339 errors

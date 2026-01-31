@@ -11,12 +11,18 @@ import type { GripSettings } from '../../types/gripSettings';
 import { PhaseManager } from '../../systems/phase-manager/PhaseManager';
 import type { EntityModel, RenderOptions, GripInfo } from '../types/Types';
 import type { Entity } from '../../types/entities';
+// 🏢 ADR-085: Centralized Split Line Rendering
 import { calculateSplitLineGap } from './shared/line-utils';
+import {
+  renderSplitLineWithGap as renderSplitLineWithGapUtil,
+  renderContinuousLine as renderContinuousLineUtil
+} from './shared/line-rendering-utils';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-048: Centralized Rendering Geometry (2027-01-27)
-import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
+// 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
+import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY, buildUIFont } from '../../config/text-rendering-config';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS } from '../grips/constants';
 // 🏢 ADR-065: Centralized Distance Calculation & Vector Operations
@@ -31,6 +37,8 @@ import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle
 // 🏢 ADR-058: Centralized Canvas Primitives
 // 🏢 ADR-077: Centralized TAU Constant
 import { addArcPath, addCirclePath, TAU } from '../primitives/canvasPaths';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance, formatAngle } from './shared/distance-label-utils';
 
 // Interfaces moved to PhaseManager to avoid circular dependency
 
@@ -126,7 +134,7 @@ export abstract class BaseEntityRenderer {
    */
   protected applyDimensionTextStyle(): void {
     this.ctx.fillStyle = UI_COLORS.DIMENSION_TEXT;  // 🏢 Centralized fuchsia color
-    this.ctx.font = `${this.getBaseFontSize()}px Arial`;
+    this.ctx.font = buildUIFont(this.getBaseFontSize(), 'arial');
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
   }
@@ -436,7 +444,10 @@ export abstract class BaseEntityRenderer {
   /**
    * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΗ ΜΈΘΟΔΟΣ ΣΠΑΣΜΈΝΗΣ ΓΡΑΜΜΉΣ ΓΙΑ ΌΛΕΣ ΤΙΣ ΟΝΤΌΤΗΤΕΣ
    * Σχεδιάζει γραμμή με κενό στο κέντρο για distance text - για όλες τις οντότητες κατά την προεπισκόπηση
-   * 🏢 ADR-048: Uses centralized SPLIT_LINE_GAP constant (2027-01-27)
+   *
+   * 🏢 ADR-085: Centralized Split Line Rendering
+   * Delegates to line-rendering-utils.ts for single source of truth.
+   * Uses RENDER_GEOMETRY.SPLIT_LINE_GAP (30px) for consistent gap size.
    */
   protected renderSplitLineWithGap(screenStart: Point2D, screenEnd: Point2D, entity: EntityModel, options: RenderOptions = {}, gapSize: number = RENDER_GEOMETRY.SPLIT_LINE_GAP): void {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
@@ -447,26 +458,11 @@ export abstract class BaseEntityRenderer {
       : getTextPreviewStyleWithOverride(); // ✅ ΔΙΟΡΘΩΣΗ: Χρήση WithOverride και για NORMAL phase
 
     if (textStyle.enabled) {
-      // Κείμενο ενεργοποιημένο: γραμμή με κενό
-      // Use shared gap calculation logic
-      const { gapStart, gapEnd } = calculateSplitLineGap(screenStart, screenEnd, gapSize);
-
-      // Draw split line with gap for text
-      this.ctx.beginPath();
-      this.ctx.moveTo(screenStart.x, screenStart.y);
-      this.ctx.lineTo(gapStart.x, gapStart.y);
-      this.ctx.stroke();
-
-      this.ctx.beginPath();
-      this.ctx.moveTo(gapEnd.x, gapEnd.y);
-      this.ctx.lineTo(screenEnd.x, screenEnd.y);
-      this.ctx.stroke();
+      // 🏢 ADR-085: Delegate to centralized utility
+      renderSplitLineWithGapUtil(this.ctx, screenStart, screenEnd, gapSize);
     } else {
-      // Κείμενο απενεργοποιημένο: συνεχόμενη γραμμή
-      this.ctx.beginPath();
-      this.ctx.moveTo(screenStart.x, screenStart.y);
-      this.ctx.lineTo(screenEnd.x, screenEnd.y);
-      this.ctx.stroke();
+      // 🏢 ADR-085: Delegate to centralized utility
+      renderContinuousLineUtil(this.ctx, screenStart, screenEnd);
     }
   }
 
@@ -526,9 +522,9 @@ export abstract class BaseEntityRenderer {
     // Calculate line angle for text rotation
     // 🏢 ADR-078: Use centralized calculateAngle
     const angle = calculateAngle(screenStart, screenEnd);
-    
-    // Format distance text
-    const text = worldDistance.toFixed(2);
+
+    // 🏢 ADR-090: Centralized number formatting
+    const text = formatDistance(worldDistance);
     
     // Save context for rotation
     this.ctx.save();
@@ -632,11 +628,12 @@ export abstract class BaseEntityRenderer {
     this.ctx.save();
     this.applyArcStyle();
     this.ctx.fillStyle = this.ctx.strokeStyle;
-    this.ctx.font = `${this.getBaseFontSize()}px Arial`;
+    this.ctx.font = buildUIFont(this.getBaseFontSize(), 'arial');
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
-    
-    const angleText = `${degrees.toFixed(1)}°`;
+
+    // 🏢 ADR-090: Centralized number formatting
+    const angleText = formatAngle(degrees, 1);
     // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
     renderStyledTextWithOverride(this.ctx, angleText, screenLabel.x, screenLabel.y);
     this.ctx.restore();

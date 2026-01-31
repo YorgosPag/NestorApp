@@ -1,5 +1,158 @@
-// Storage utilities για DXF Viewer
-// Χειρισμός storage errors και cleanup
+/**
+ * 🏢 ADR-092: Centralized localStorage Service
+ *
+ * Storage utilities για DXF Viewer
+ * - Χειρισμός storage errors και cleanup
+ * - SSR-safe localStorage operations
+ * - Type-safe JSON serialization
+ * - Consistent error handling
+ *
+ * @author Γιώργος Παγωνής + Claude Code (Anthropic AI)
+ * @since 2026-01-31
+ */
+
+// ============================================================================
+// STORAGE KEYS REGISTRY
+// ============================================================================
+
+/**
+ * 🏢 Centralized registry για όλα τα localStorage keys
+ * Single Source of Truth για key naming conventions
+ */
+export const STORAGE_KEYS = {
+  // Debug Settings
+  DEBUG_RULER: 'debug.rulerDebug.enabled',
+  DEBUG_ORIGIN_MARKERS: 'debug.originMarkers.enabled',
+
+  // Performance
+  PERFORMANCE_MONITOR: 'dxf-viewer-performance-monitor-enabled',
+
+  // Overlay State
+  OVERLAY_STATE: 'dxf-viewer:overlay-state:v1',
+
+  // Colors
+  RECENT_COLORS: 'dxf-viewer:recent-colors',
+
+  // Settings (used by LocalStorageDriver)
+  DXF_SETTINGS: 'dxf-settings-v2',
+  CURSOR_SETTINGS: 'autocad_cursor_settings',
+
+  // AI Snapping
+  AI_SNAPPING: 'ai-snapping-data',
+} as const;
+
+export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string;
+
+// ============================================================================
+// SSR-SAFE SYNC STORAGE UTILITIES
+// ============================================================================
+
+/**
+ * 🏢 SSR-safe check for localStorage availability
+ */
+function isStorageAvailable(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const test = '__storage_test__';
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 🏢 Get value from localStorage with type safety
+ *
+ * @param key - The storage key
+ * @param defaultValue - Value to return if key doesn't exist or on error
+ * @returns The stored value or defaultValue
+ *
+ * @example
+ * const enabled = storageGet(STORAGE_KEYS.DEBUG_RULER, false);
+ * const colors = storageGet<string[]>(STORAGE_KEYS.RECENT_COLORS, []);
+ */
+export function storageGet<T>(key: StorageKey, defaultValue: T): T {
+  if (!isStorageAvailable()) return defaultValue;
+
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored === null) return defaultValue;
+    return JSON.parse(stored) as T;
+  } catch (error) {
+    console.warn(`[StorageService] Failed to get "${key}":`, error);
+    return defaultValue;
+  }
+}
+
+/**
+ * 🏢 Set value to localStorage with error handling
+ *
+ * @param key - The storage key
+ * @param value - Value to store (will be JSON.stringify'd)
+ * @returns true if successful, false on error
+ *
+ * @example
+ * storageSet(STORAGE_KEYS.DEBUG_RULER, true);
+ * storageSet(STORAGE_KEYS.RECENT_COLORS, ['#ff0000', '#00ff00']);
+ */
+export function storageSet<T>(key: StorageKey, value: T): boolean {
+  if (!isStorageAvailable()) return false;
+
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    // Handle quota exceeded
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.error(`[StorageService] Quota exceeded for "${key}"`);
+    } else {
+      console.warn(`[StorageService] Failed to set "${key}":`, error);
+    }
+    return false;
+  }
+}
+
+/**
+ * 🏢 Remove value from localStorage
+ *
+ * @param key - The storage key to remove
+ * @returns true if successful, false on error
+ *
+ * @example
+ * storageRemove(STORAGE_KEYS.DEBUG_RULER);
+ */
+export function storageRemove(key: StorageKey): boolean {
+  if (!isStorageAvailable()) return false;
+
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 🏢 Check if a key exists in localStorage
+ *
+ * @param key - The storage key to check
+ * @returns true if key exists, false otherwise
+ */
+export function storageHas(key: StorageKey): boolean {
+  if (!isStorageAvailable()) return false;
+
+  try {
+    return localStorage.getItem(key) !== null;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================================
+// STORAGE MANAGER CLASS (existing functionality)
+// ============================================================================
 
 export class StorageManager {
   /**

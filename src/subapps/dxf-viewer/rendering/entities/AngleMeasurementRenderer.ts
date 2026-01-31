@@ -25,6 +25,8 @@ import type { EntityModel, RenderOptions, GripInfo, Point2D } from '../types/Typ
 // 🏢 ADR-077: Centralized TAU Constant
 import { extractAngleMeasurementPoints, calculateDistance, calculateAngle } from './shared';
 import { bisectorAngle, TAU } from './shared/geometry-utils';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatAngle } from './shared/distance-label-utils';
 
 export class AngleMeasurementRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -161,7 +163,7 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
     const textY = vertex.y + Math.sin(bisectorAngleValue) * textDistance;
 
     // Format and render angle text
-    const angleText = `${angleDegrees.toFixed(1)}°`;
+    const angleText = formatAngle(angleDegrees, 1);
 
     // 🏢 ENTERPRISE: Use fillText directly to preserve fuchsia color
     // (renderStyledTextWithOverride would override with white text style)

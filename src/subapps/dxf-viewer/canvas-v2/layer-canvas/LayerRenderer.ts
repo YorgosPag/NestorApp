@@ -20,10 +20,12 @@ import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/Co
 import { getStatusColors } from '../../config/color-mapping';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
-import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
+import { UI_FONTS, RENDER_LINE_WIDTHS, buildUIFont } from '../../config/text-rendering-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-073: Centralized Midpoint Calculation
-import { calculateMidpoint } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-088: Centralized Pixel-Perfect Alignment
+import { calculateMidpoint, pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS } from '../../rendering/grips/constants';
 // 🏢 ADR-077: Centralized TAU Constant
@@ -217,9 +219,9 @@ export class LayerRenderer {
     // ✅ CORRECT: Calculate screen position of ACTUAL world (0,0) using CoordinateTransforms
     const worldOrigin = { x: 0, y: 0 };
     const screenOrigin = CoordinateTransforms.worldToScreen(worldOrigin, transform, viewport);
-    const px = (v: number) => Math.round(v) + 0.5;
-    const originX = px(screenOrigin.x);
-    const originY = px(screenOrigin.y);
+    // 🏢 ADR-088: Use centralized pixelPerfect for crisp rendering
+    const originX = pixelPerfect(screenOrigin.x);
+    const originY = pixelPerfect(screenOrigin.y);
 
     // Debug disabled: origin marker values
     this.ctx.save();
@@ -856,7 +858,7 @@ export class LayerRenderer {
 
     // Text styling
     this.ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
-    this.ctx.font = `${settings.fontSize}px Arial`;
+    this.ctx.font = buildUIFont(settings.fontSize ?? 10, 'arial');
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
 
@@ -905,7 +907,7 @@ export class LayerRenderer {
 
         // Numbers με το κανονικό fontSize και textColor
         this.ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
-        this.ctx.font = `${settings.fontSize}px Arial`;
+        this.ctx.font = buildUIFont(settings.fontSize ?? 10, 'arial');
         this.ctx.fillText(numberText, x, yPosition + rulerHeight / 2);
 
         // Units με ξεχωριστό fontSize και color (αν είναι enabled)
@@ -915,7 +917,7 @@ export class LayerRenderer {
 
           // 🔺 UNITS SPECIFIC STYLING - Σύνδεση με floating panel
           this.ctx.fillStyle = settings.unitsColor ?? settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
-          this.ctx.font = `${settings.unitsFontSize ?? settings.fontSize}px Arial`;
+          this.ctx.font = buildUIFont(settings.unitsFontSize ?? settings.fontSize ?? 10, 'arial');
 
           // Render units ΜΕΤΑ από τον αριθμό (δεξιά του)
           this.ctx.fillText(settings.unit ?? '', x + numberWidth / 2 + 5, yPosition + rulerHeight / 2);
@@ -985,7 +987,7 @@ export class LayerRenderer {
 
         // Numbers με το κανονικό fontSize και textColor
         this.ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
-        this.ctx.font = `${settings.fontSize}px Arial`;
+        this.ctx.font = buildUIFont(settings.fontSize ?? 10, 'arial');
         this.ctx.fillText(numberText, 0, 0);
 
         // Units με ξεχωριστό fontSize και color (αν είναι enabled)
@@ -995,7 +997,7 @@ export class LayerRenderer {
 
           // 🔺 UNITS SPECIFIC STYLING - Σύνδεση με floating panel
           this.ctx.fillStyle = settings.unitsColor ?? settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
-          this.ctx.font = `${settings.unitsFontSize ?? settings.fontSize}px Arial`;
+          this.ctx.font = buildUIFont(settings.unitsFontSize ?? settings.fontSize ?? 10, 'arial');
 
           // Render units ΜΕΤΑ από τον αριθμό (δεξιά του στο rotated coordinate system)
           this.ctx.fillText(settings.unit ?? '', numberWidth / 2 + 5, 0);

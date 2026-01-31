@@ -21,6 +21,8 @@ import React, { useMemo } from 'react';
 import type { ContrastResult, RGBColor, TextSize } from '../types';
 // 🏢 ADR-076: Centralized Color Conversion
 import { parseHex, rgbToHex as centralizedRgbToHex } from '../utils';
+// 🏢 ADR: Centralized Clamp Function
+import { clamp255 } from '../../../rendering/entities/shared/geometry-utils';
 
 // ===== CONSTANTS =====
 
@@ -227,7 +229,7 @@ export function findAccessibleColor(
  */
 function adjustLightness(rgb: RGBColor, lightness: number): RGBColor {
   const factor = lightness / 50 - 1; // -1 to 1
-  const adjust = (c: number) => Math.max(0, Math.min(255, c + factor * 128));
+  const adjust = (c: number) => clamp255(c + factor * 128);
 
   return {
     r: adjust(rgb.r),

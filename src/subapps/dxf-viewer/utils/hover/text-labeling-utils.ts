@@ -7,7 +7,10 @@ import type { Point2D } from '../../rendering/types/Types';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-065: Centralized Distance, Angle & Vector Operations
-import { calculateDistance, calculateAngle, calculateMidpoint, getPerpendicularUnitVector } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-090: Centralized Point Vector Operations
+import { calculateDistance, calculateAngle, calculateMidpoint, getPerpendicularUnitVector, offsetPoint } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
 
 /**
  * Calculate optimal text position and rotation for edge labeling
@@ -40,9 +43,12 @@ export function calculateEdgeTextPosition(
   // 🏢 ADR-065: Use centralized perpendicular unit vector calculation
   const perp = getPerpendicularUnitVector(screenStart, screenEnd);
 
+  // 🏢 ADR-090: Use centralized offsetPoint for text position
+  const textPos = offsetPoint(mid, perp, offsetDistance);
+
   return {
-    x: mid.x + perp.x * offsetDistance,
-    y: mid.y + perp.y * offsetDistance,
+    x: textPos.x,
+    y: textPos.y,
     angle,
     length
   };
@@ -98,11 +104,8 @@ export function renderEdgeDistanceLabel(
   screenEnd: Point2D,
   offsetDistance = 12
 ): void {
-  // Calculate world distance
-  const distance = Math.sqrt(
-    Math.pow(worldEnd.x - worldStart.x, 2) + 
-    Math.pow(worldEnd.y - worldStart.y, 2)
-  );
+  // 🏢 ADR-086: Use centralized distance calculation (already imported!)
+  const distance = calculateDistance(worldStart, worldEnd);
 
-  renderTextAtEdgePosition(ctx, distance.toFixed(2), screenStart, screenEnd, offsetDistance, true);
+  renderTextAtEdgePosition(ctx, formatDistance(distance), screenStart, screenEnd, offsetDistance, true);
 }

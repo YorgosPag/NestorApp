@@ -26,6 +26,8 @@ import { useGripContext } from '../../providers/GripProvider';
 import { portalComponents } from '@/styles/design-tokens';
 import type { Point2D } from '../../rendering/types/Types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ADR-088: Centralized Pixel-Perfect Alignment
+import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ✅ ADR-030: UnifiedFrameScheduler Integration
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 // 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
@@ -170,9 +172,9 @@ export default function CrosshairOverlay({
     const canvasWidth = canvas.width / dpr;
     const canvasHeight = canvas.height / dpr;
 
-    // ✅ ADR-008: Pixel-perfect alignment
-    const mouseX = Math.round(pos.x) + 0.5;
-    const mouseY = Math.round(pos.y) + 0.5;
+    // ✅ ADR-008 + ADR-088: Pixel-perfect alignment (centralized)
+    const mouseX = pixelPerfect(pos.x);
+    const mouseY = pixelPerfect(pos.y);
 
     // Calculate crosshair dimensions
     const crosshairHalfWidth = (canvasWidth / 2) * (sizePercent / 100);

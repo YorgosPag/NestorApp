@@ -124,7 +124,20 @@ import {
   normalizeAngleDeg,
   dotProduct,
   // 🏢 ADR-078: Centralized Angle Between Vectors
-  angleBetweenVectors
+  angleBetweenVectors,
+  // 🏢 ADR-083: Circle from 3 points (circumcircle)
+  circleFrom3Points,
+  // 🏢 ADR-083: Circle from chord and sagitta
+  circleFromChordAndSagitta,
+  // 🏢 ADR-083: Circle from 2 points + radius indicator
+  circleFrom2PointsAndRadius,
+  // 🏢 ADR-083: Circle best-fit (least squares)
+  circleBestFit,
+  // 🏢 ADR-090: Centralized Point Vector Operations
+  subtractPoints,
+  // 🏢 ADR-065: Centralized point projection and angle calculation
+  pointOnCircle,
+  calculateAngle,
 } from '../../rendering/entities/shared';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
 import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
@@ -140,7 +153,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { completeEntity } from './completeEntity';
 
 // 🏢 ENTERPRISE (2026-01-31): Added arc tools - ADR-059
-export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-distance-continuous' | 'measure-area' | 'measure-angle' | 'arc-3p' | 'arc-cse' | 'arc-sce';
+// 🏢 ENTERPRISE (2026-01-31): Added circle-3p, circle-chord-sagitta, circle-2p-radius, circle-best-fit - ADR-083
+export type DrawingTool = 'select' | 'line' | 'rectangle' | 'circle' | 'circle-diameter' | 'circle-2p-diameter' | 'circle-3p' | 'circle-chord-sagitta' | 'circle-2p-radius' | 'circle-best-fit' | 'polyline' | 'polygon' | 'measure-distance' | 'measure-distance-continuous' | 'measure-area' | 'measure-angle' | 'arc-3p' | 'arc-cse' | 'arc-sce';
 
 export interface DrawingState {
   currentTool: DrawingTool;
@@ -372,6 +386,83 @@ export function useUnifiedDrawing() {
           } as CircleEntity;
         }
         break;
+
+      // 🏢 ENTERPRISE (2026-01-31): Circle from 3 points (circumcircle) - ADR-083
+      // Creates a circle that passes through all 3 clicked points
+      case 'circle-3p':
+        if (points.length >= 3) {
+          const [p1, p2, p3] = points;
+          const circleResult = circleFrom3Points(p1, p2, p3);
+          if (circleResult) {
+            return {
+              id,
+              type: 'circle',
+              center: circleResult.center,
+              radius: circleResult.radius,
+              visible: true,
+              layer: '0',
+            } as CircleEntity;
+          }
+        }
+        break;
+
+      // 🏢 ENTERPRISE (2026-01-31): Circle from chord and sagitta - ADR-083
+      // Creates a circle from two points defining a chord and a third point defining the sagitta (arc height)
+      case 'circle-chord-sagitta':
+        if (points.length >= 3) {
+          const [chordStart, chordEnd, sagittaPoint] = points;
+          const circleResult = circleFromChordAndSagitta(chordStart, chordEnd, sagittaPoint);
+          if (circleResult) {
+            return {
+              id,
+              type: 'circle',
+              center: circleResult.center,
+              radius: circleResult.radius,
+              visible: true,
+              layer: '0',
+            } as CircleEntity;
+          }
+        }
+        break;
+
+      // 🏢 ENTERPRISE (2026-01-31): Circle from 2 points + radius indicator - ADR-083
+      // Creates a circle from two points on circumference and a third point indicating radius/side
+      case 'circle-2p-radius':
+        if (points.length >= 3) {
+          const [p1, p2, radiusIndicator] = points;
+          const circleResult = circleFrom2PointsAndRadius(p1, p2, radiusIndicator);
+          if (circleResult) {
+            return {
+              id,
+              type: 'circle',
+              center: circleResult.center,
+              radius: circleResult.radius,
+              visible: true,
+              layer: '0',
+            } as CircleEntity;
+          }
+        }
+        break;
+
+      // 🏢 ENTERPRISE (2026-01-31): Circle best-fit (least squares) - ADR-083
+      // Creates a circle that best fits N points (minimum 3) using Hyper Circle Fit algorithm
+      // Works like polyline: user clicks multiple points, then Enter to complete
+      case 'circle-best-fit':
+        if (points.length >= 3) {
+          const circleResult = circleBestFit(points);
+          if (circleResult) {
+            return {
+              id,
+              type: 'circle',
+              center: circleResult.center,
+              radius: circleResult.radius,
+              visible: true,
+              layer: '0',
+            } as CircleEntity;
+          }
+        }
+        break;
+
       case 'polyline':
         if (points.length >= 2) {
           return {
@@ -416,9 +507,9 @@ export function useUnifiedDrawing() {
             // Full angle measurement with 3+ points
             const [point1, vertex, point2] = points;
             
-            // Calculate vectors
-            const vector1 = { x: point1.x - vertex.x, y: point1.y - vertex.y };
-            const vector2 = { x: point2.x - vertex.x, y: point2.y - vertex.y };
+            // 🏢 ADR-090: Use centralized point subtraction
+            const vector1 = subtractPoints(point1, vertex);
+            const vector2 = subtractPoints(point2, vertex);
 
             // Calculate angle in radians
             // 🏢 ADR-078: Use centralized angleBetweenVectors
@@ -603,11 +694,17 @@ export function useUnifiedDrawing() {
         case 'arc-3p':
         case 'arc-cse':
         case 'arc-sce':
+        // 🏢 ENTERPRISE (2026-01-31): Circle from 3 points, chord-sagitta, 2p-radius - ADR-083
+        case 'circle-3p':
+        case 'circle-chord-sagitta':
+        case 'circle-2p-radius':
           return points.length >= 3;
         case 'measure-distance-continuous':
         case 'polyline':
         case 'polygon':
         case 'measure-area':
+        // 🏢 ENTERPRISE (2026-01-31): Circle best-fit continues until Enter/double-click - ADR-083
+        case 'circle-best-fit':
           return false; // These tools continue until manually finished (double-click or Escape)
         default:
           return false;
@@ -671,7 +768,8 @@ export function useUnifiedDrawing() {
       // If no currentLevelId, use default level "0" for ALL entities (measurements AND drawing tools)
       const isMeasurementTool = currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'measure-angle' || currentTool === 'measure-area';
       // 🏢 ENTERPRISE (2026-01-31): Added arc tools - ADR-059
-      const isDrawingTool = currentTool === 'line' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'polyline' || currentTool === 'polygon' || currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce';
+      // 🏢 ENTERPRISE (2026-01-31): Added circle-3p, circle-chord-sagitta, circle-2p-radius, circle-best-fit - ADR-083
+      const isDrawingTool = currentTool === 'line' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'circle-3p' || currentTool === 'circle-chord-sagitta' || currentTool === 'circle-2p-radius' || currentTool === 'circle-best-fit' || currentTool === 'polyline' || currentTool === 'polygon' || currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce';
       const effectiveLevelId = currentLevelId || ((isMeasurementTool || isDrawingTool) ? '0' : null);
 
       if (newEntity && effectiveLevelId) {
@@ -820,6 +918,204 @@ export function useUnifiedDrawing() {
         }
       }
 
+      // 🏢 ENTERPRISE (2026-01-31): Circle-3p partial preview - ADR-083
+      // Circle-3p needs 3 points, so show intermediate state with 1-2 points
+      if (currentTool === 'circle-3p' && newTempPoints.length >= 1) {
+        if (newTempPoints.length === 1) {
+          // After first click, show a dot at the first point
+          partialPreview = {
+            id: 'preview_partial',
+            type: 'point',
+            position: newTempPoints[0],
+            size: 4,
+            visible: true,
+            layer: '0',
+            preview: true,
+            showPreviewGrips: true,
+          } as PreviewPoint;
+        } else if (newTempPoints.length === 2) {
+          // After second click, show a line connecting the two points
+          const basePartialPreview: LineEntity = {
+            id: 'preview_partial',
+            type: 'line',
+            start: newTempPoints[0],
+            end: newTempPoints[1],
+            visible: true,
+            layer: '0',
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+
+          const extendedPartialPreview: ExtendedLineEntity = {
+            ...basePartialPreview,
+            preview: true,
+            showEdgeDistances: true,
+            showPreviewGrips: true,
+          };
+          partialPreview = extendedPartialPreview;
+        }
+      }
+
+      // 🏢 ENTERPRISE (2026-01-31): Circle-chord-sagitta partial preview - ADR-083
+      // Circle-chord-sagitta needs 3 points, so show intermediate state with 1-2 points
+      if (currentTool === 'circle-chord-sagitta' && newTempPoints.length >= 1) {
+        if (newTempPoints.length === 1) {
+          // After first click, show a dot at the chord start point
+          partialPreview = {
+            id: 'preview_partial',
+            type: 'point',
+            position: newTempPoints[0],
+            size: 4,
+            visible: true,
+            layer: '0',
+            preview: true,
+            showPreviewGrips: true,
+          } as PreviewPoint;
+        } else if (newTempPoints.length === 2) {
+          // After second click, show the chord line
+          const basePartialPreview: LineEntity = {
+            id: 'preview_partial',
+            type: 'line',
+            start: newTempPoints[0],
+            end: newTempPoints[1],
+            visible: true,
+            layer: '0',
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+
+          const extendedPartialPreview: ExtendedLineEntity = {
+            ...basePartialPreview,
+            preview: true,
+            showEdgeDistances: true,
+            showPreviewGrips: true,
+          };
+          partialPreview = extendedPartialPreview;
+        }
+      }
+
+      // 🏢 ENTERPRISE (2026-01-31): Circle-2p-radius partial preview - ADR-083
+      // Circle-2p-radius needs 3 points, so show intermediate state with 1-2 points
+      if (currentTool === 'circle-2p-radius' && newTempPoints.length >= 1) {
+        if (newTempPoints.length === 1) {
+          // After first click, show a dot at the first circumference point
+          partialPreview = {
+            id: 'preview_partial',
+            type: 'point',
+            position: newTempPoints[0],
+            size: 4,
+            visible: true,
+            layer: '0',
+            preview: true,
+            showPreviewGrips: true,
+          } as PreviewPoint;
+        } else if (newTempPoints.length === 2) {
+          // After second click, show the line between the two circumference points
+          const basePartialPreview: LineEntity = {
+            id: 'preview_partial',
+            type: 'line',
+            start: newTempPoints[0],
+            end: newTempPoints[1],
+            visible: true,
+            layer: '0',
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+
+          const extendedPartialPreview: ExtendedLineEntity = {
+            ...basePartialPreview,
+            preview: true,
+            showEdgeDistances: true,
+            showPreviewGrips: true,
+          };
+          partialPreview = extendedPartialPreview;
+        }
+      }
+
+      // 🏢 ENTERPRISE (2026-01-31): Circle-best-fit partial preview - ADR-083
+      // Circle-best-fit needs minimum 3 points, continues until Enter
+      // Shows polyline connecting all points + best-fit circle when 3+ points
+      if (currentTool === 'circle-best-fit' && newTempPoints.length >= 1) {
+        if (newTempPoints.length === 1) {
+          // After first click, show a dot
+          partialPreview = {
+            id: 'preview_partial',
+            type: 'point',
+            position: newTempPoints[0],
+            size: 4,
+            visible: true,
+            layer: '0',
+            preview: true,
+            showPreviewGrips: true,
+          } as PreviewPoint;
+        } else if (newTempPoints.length === 2) {
+          // After second click, show line between points
+          const basePartialPreview: LineEntity = {
+            id: 'preview_partial',
+            type: 'line',
+            start: newTempPoints[0],
+            end: newTempPoints[1],
+            visible: true,
+            layer: '0',
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+
+          const extendedPartialPreview: ExtendedLineEntity = {
+            ...basePartialPreview,
+            preview: true,
+            showEdgeDistances: true,
+            showPreviewGrips: true,
+          };
+          partialPreview = extendedPartialPreview;
+        } else {
+          // 3+ points: show polyline connecting points + best-fit circle
+          // First, try to calculate the best-fit circle
+          const circleResult = circleBestFit(newTempPoints);
+          if (circleResult) {
+            // Show the best-fit circle as preview
+            partialPreview = {
+              id: 'preview_partial',
+              type: 'circle',
+              center: circleResult.center,
+              radius: circleResult.radius,
+              visible: true,
+              layer: '0',
+              preview: true,
+              showPreviewGrips: true,
+            } as ExtendedCircleEntity;
+          } else {
+            // If calculation fails, show polyline of points
+            const polylinePreview: PolylineEntity = {
+              id: 'preview_partial',
+              type: 'polyline',
+              vertices: [...newTempPoints],
+              closed: false,
+              visible: true,
+              layer: '0',
+              color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+              lineweight: 1,
+              opacity: 1.0,
+              lineType: 'solid' as const
+            };
+            partialPreview = {
+              ...polylinePreview,
+              preview: true,
+              showEdgeDistances: true,
+              showPreviewGrips: true,
+            } as ExtendedPolylineEntity;
+          }
+        }
+      }
+
       // 🏢 ENTERPRISE: Update local state for preview entity only
       setLocalState(prev => ({
         ...prev,
@@ -853,7 +1149,8 @@ export function useUnifiedDrawing() {
       let previewEntity: ExtendedSceneEntity | null = null;
 
       // 🏢 ENTERPRISE (2026-01-31): Added arc tools - ADR-059
-      if (currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-area' || currentTool === 'measure-angle' || currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce') {
+      // 🏢 ENTERPRISE (2026-01-31): Added circle-3p, circle-chord-sagitta, circle-2p-radius - ADR-083
+      if (currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'circle-3p' || currentTool === 'circle-chord-sagitta' || currentTool === 'circle-2p-radius' || currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-area' || currentTool === 'measure-angle' || currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce') {
         // For shapes that need two points, show a small dot at the start point
         const isMeasurementTool = currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'measure-area' || currentTool === 'measure-angle';
 
@@ -880,13 +1177,283 @@ export function useUnifiedDrawing() {
     // For multi-point preview (showing the shape being drawn)
     const worldPoints = [...tempPoints, snappedPoint];
 
-    // 🏢 ENTERPRISE (2026-01-31): Arc tools ALWAYS show rubber band polyline during drawing
-    // Arc tools need 3 clicks to complete, but we want to show dynamic polyline (rubber band)
+    // 🏢 ENTERPRISE (2026-01-31): Arc/Circle-3p tools ALWAYS show rubber band polyline during drawing
+    // These tools need 3 clicks to complete, but we want to show dynamic polyline (rubber band)
     // connecting all clicked points + cursor position until the drawing is complete.
-    // The arc entity is only created when the user clicks the 3rd point (in addPoint).
+    // The entity is only created when the user clicks the 3rd point (in addPoint).
     let previewEntity: ExtendedSceneEntity | null = null;
 
-    if (currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce') {
+    // 🏢 ENTERPRISE (2026-01-31): Circle from 3 points preview - ADR-083
+    // Shows rubber band lines connecting clicked points + cursor, then circle when 3 points available
+    if (currentTool === 'circle-3p') {
+      if (tempPoints.length === 1) {
+        // 1 click + cursor = rubber band line only
+        const basePreview: PolylineEntity = {
+          id: 'preview_circle3p_rubberband',
+          type: 'polyline',
+          vertices: worldPoints,
+          closed: false,
+          visible: true,
+          layer: '0',
+          color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+          lineweight: 1,
+          opacity: 1.0,
+          lineType: 'solid' as const
+        };
+        previewEntity = {
+          ...basePreview,
+          preview: true,
+          showEdgeDistances: true,
+          showPreviewGrips: true,
+        } as ExtendedPolylineEntity;
+
+      } else if (tempPoints.length >= 2) {
+        // 2+ clicks + cursor = try to show circle preview
+        const circleResult = circleFrom3Points(worldPoints[0], worldPoints[1], worldPoints[2]);
+        if (circleResult) {
+          // Show circle preview
+          const circlePreview: ExtendedCircleEntity = {
+            id: 'preview_circle3p',
+            type: 'circle',
+            center: circleResult.center,
+            radius: circleResult.radius,
+            visible: true,
+            layer: '0',
+            preview: true,
+            showPreviewGrips: true,
+          };
+          previewEntity = circlePreview;
+        } else {
+          // Points are collinear - show polyline only
+          const basePreview: PolylineEntity = {
+            id: 'preview_circle3p_rubberband',
+            type: 'polyline',
+            vertices: worldPoints,
+            closed: false,
+            visible: true,
+            layer: '0',
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+          previewEntity = {
+            ...basePreview,
+            preview: true,
+            showEdgeDistances: true,
+            showPreviewGrips: true,
+          } as ExtendedPolylineEntity;
+        }
+      }
+    } else if (currentTool === 'circle-chord-sagitta') {
+      // 🏢 ENTERPRISE (2026-01-31): Circle from chord and sagitta preview - ADR-083
+      // Shows rubber band lines connecting clicked points + cursor, then circle when 3 points available
+      if (tempPoints.length === 1) {
+        // 1 click + cursor = rubber band line only (chord being defined)
+        const basePreview: PolylineEntity = {
+          id: 'preview_chord_sagitta_rubberband',
+          type: 'polyline',
+          vertices: worldPoints,
+          closed: false,
+          visible: true,
+          layer: '0',
+          color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+          lineweight: 1,
+          opacity: 1.0,
+          lineType: 'solid' as const
+        };
+        previewEntity = {
+          ...basePreview,
+          preview: true,
+          showEdgeDistances: true,
+          showPreviewGrips: true,
+        } as ExtendedPolylineEntity;
+
+      } else if (tempPoints.length >= 2) {
+        // 2+ clicks + cursor = try to show circle preview (chord + sagitta)
+        const circleResult = circleFromChordAndSagitta(worldPoints[0], worldPoints[1], worldPoints[2]);
+        if (circleResult) {
+          // Show circle preview
+          const circlePreview: ExtendedCircleEntity = {
+            id: 'preview_chord_sagitta',
+            type: 'circle',
+            center: circleResult.center,
+            radius: circleResult.radius,
+            visible: true,
+            layer: '0',
+            preview: true,
+            showPreviewGrips: true,
+          };
+          previewEntity = circlePreview;
+        } else {
+          // Invalid configuration - show polyline only
+          const basePreview: PolylineEntity = {
+            id: 'preview_chord_sagitta_rubberband',
+            type: 'polyline',
+            vertices: worldPoints,
+            closed: false,
+            visible: true,
+            layer: '0',
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+          previewEntity = {
+            ...basePreview,
+            preview: true,
+            showEdgeDistances: true,
+            showPreviewGrips: true,
+          } as ExtendedPolylineEntity;
+        }
+      }
+    } else if (currentTool === 'circle-2p-radius') {
+      // 🏢 ENTERPRISE (2026-01-31): Circle from 2 points + radius indicator preview - ADR-083
+      // Shows rubber band lines connecting clicked points + cursor, then circle when 3 points available
+      if (tempPoints.length === 1) {
+        // 1 click + cursor = rubber band line only (two points being defined)
+        const basePreview: PolylineEntity = {
+          id: 'preview_2p_radius_rubberband',
+          type: 'polyline',
+          vertices: worldPoints,
+          closed: false,
+          visible: true,
+          layer: '0',
+          color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+          lineweight: 1,
+          opacity: 1.0,
+          lineType: 'solid' as const
+        };
+        previewEntity = {
+          ...basePreview,
+          preview: true,
+          showEdgeDistances: true,
+          showPreviewGrips: true,
+        } as ExtendedPolylineEntity;
+
+      } else if (tempPoints.length >= 2) {
+        // 2+ clicks + cursor = try to show circle preview (2 points + radius indicator)
+        const circleResult = circleFrom2PointsAndRadius(worldPoints[0], worldPoints[1], worldPoints[2]);
+        if (circleResult) {
+          // Show circle preview
+          const circlePreview: ExtendedCircleEntity = {
+            id: 'preview_2p_radius',
+            type: 'circle',
+            center: circleResult.center,
+            radius: circleResult.radius,
+            visible: true,
+            layer: '0',
+            preview: true,
+            showPreviewGrips: true,
+          };
+          previewEntity = circlePreview;
+        } else {
+          // Invalid configuration - show polyline only
+          const basePreview: PolylineEntity = {
+            id: 'preview_2p_radius_rubberband',
+            type: 'polyline',
+            vertices: worldPoints,
+            closed: false,
+            visible: true,
+            layer: '0',
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+          previewEntity = {
+            ...basePreview,
+            preview: true,
+            showEdgeDistances: true,
+            showPreviewGrips: true,
+          } as ExtendedPolylineEntity;
+        }
+      }
+    } else if (currentTool === 'circle-best-fit') {
+      // 🏢 ENTERPRISE (2026-01-31): Circle best-fit preview - ADR-083
+      // Shows rubber band lines connecting all clicked points + cursor
+      // When 3+ points: shows the best-fit circle calculated from all points including cursor
+      if (tempPoints.length === 1) {
+        // 1 click + cursor = rubber band line only
+        const basePreview: PolylineEntity = {
+          id: 'preview_bestfit_rubberband',
+          type: 'polyline',
+          vertices: worldPoints,
+          closed: false,
+          visible: true,
+          layer: '0',
+          color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+          lineweight: 1,
+          opacity: 1.0,
+          lineType: 'solid' as const
+        };
+        previewEntity = {
+          ...basePreview,
+          preview: true,
+          showEdgeDistances: true,
+          showPreviewGrips: true,
+        } as ExtendedPolylineEntity;
+
+      } else if (tempPoints.length === 2) {
+        // 2 clicks + cursor = rubber band polyline (3 points not enough without cursor contribution)
+        const basePreview: PolylineEntity = {
+          id: 'preview_bestfit_rubberband',
+          type: 'polyline',
+          vertices: worldPoints,
+          closed: false,
+          visible: true,
+          layer: '0',
+          color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+          lineweight: 1,
+          opacity: 1.0,
+          lineType: 'solid' as const
+        };
+        previewEntity = {
+          ...basePreview,
+          preview: true,
+          showEdgeDistances: true,
+          showPreviewGrips: true,
+        } as ExtendedPolylineEntity;
+
+      } else {
+        // 3+ clicks + cursor = show best-fit circle calculated from all points including cursor
+        const circleResult = circleBestFit(worldPoints);
+        if (circleResult) {
+          // Show best-fit circle preview
+          const circlePreview: ExtendedCircleEntity = {
+            id: 'preview_bestfit',
+            type: 'circle',
+            center: circleResult.center,
+            radius: circleResult.radius,
+            visible: true,
+            layer: '0',
+            preview: true,
+            showPreviewGrips: true,
+          };
+          previewEntity = circlePreview;
+        } else {
+          // If calculation fails, show polyline of all points
+          const basePreview: PolylineEntity = {
+            id: 'preview_bestfit_rubberband',
+            type: 'polyline',
+            vertices: worldPoints,
+            closed: false,
+            visible: true,
+            layer: '0',
+            color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
+            lineweight: 1,
+            opacity: 1.0,
+            lineType: 'solid' as const
+          };
+          previewEntity = {
+            ...basePreview,
+            preview: true,
+            showEdgeDistances: true,
+            showPreviewGrips: true,
+          } as ExtendedPolylineEntity;
+        }
+      }
+    } else if (currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce') {
       // 🏢 ENTERPRISE (2026-01-31): Arc preview with construction lines
       // Shows BOTH the rubber band lines AND the arc shape preview
 
@@ -939,32 +1506,26 @@ export function useUnifiedDrawing() {
             const center = worldPoints[0];
             const start = worldPoints[1];
             const cursor = worldPoints[2];
-            // Calculate direction from center to cursor
-            const dx = cursor.x - center.x;
-            const dy = cursor.y - center.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            // 🏢 ADR-065: Use centralized distance calculation
+            const dist = calculateDistance(center, cursor);
             // 🏢 ADR-079: Use centralized point match threshold
-            // Project cursor to circumference (using same radius as start)
-            const projectedEnd = dist > GEOMETRY_PRECISION.POINT_MATCH ? {
-              x: center.x + (dx / dist) * arcResult.radius,
-              y: center.y + (dy / dist) * arcResult.radius
-            } : start; // Fallback if cursor is on center
+            // 🏢 ADR-065: Use centralized pointOnCircle for projection
+            const projectedEnd = dist > GEOMETRY_PRECISION.POINT_MATCH
+              ? pointOnCircle(center, arcResult.radius, calculateAngle(center, cursor))
+              : start; // Fallback if cursor is on center
             constructionVerts = [center, start, projectedEnd];
           } else if (currentTool === 'arc-sce') {
             // arc-sce: [Start, Center, End] - End must be projected to circumference
             const start = worldPoints[0];
             const center = worldPoints[1];
             const cursor = worldPoints[2];
-            // Calculate direction from center to cursor
-            const dx = cursor.x - center.x;
-            const dy = cursor.y - center.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            // 🏢 ADR-065: Use centralized distance calculation
+            const dist = calculateDistance(center, cursor);
             // 🏢 ADR-079: Use centralized point match threshold
-            // Project cursor to circumference
-            const projectedEnd = dist > GEOMETRY_PRECISION.POINT_MATCH ? {
-              x: center.x + (dx / dist) * arcResult.radius,
-              y: center.y + (dy / dist) * arcResult.radius
-            } : start;
+            // 🏢 ADR-065: Use centralized pointOnCircle for projection
+            const projectedEnd = dist > GEOMETRY_PRECISION.POINT_MATCH
+              ? pointOnCircle(center, arcResult.radius, calculateAngle(center, cursor))
+              : start;
             constructionVerts = [start, center, projectedEnd];
           } else {
             // arc-3p: all points define the circumference - use as-is
@@ -1032,7 +1593,8 @@ export function useUnifiedDrawing() {
 
     // Mark preview entity for special preview rendering with distance labels
     // 🏢 ENTERPRISE (2026-01-31): Added arc tools - ADR-059
-    if (previewEntity && (currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'measure-area' || currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce')) {
+    // 🏢 ENTERPRISE (2026-01-31): Added circle-3p, circle-chord-sagitta, circle-2p-radius, circle-best-fit - ADR-083
+    if (previewEntity && (currentTool === 'polygon' || currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'measure-area' || currentTool === 'line' || currentTool === 'measure-distance' || currentTool === 'measure-distance-continuous' || currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'circle-diameter' || currentTool === 'circle-2p-diameter' || currentTool === 'circle-3p' || currentTool === 'circle-chord-sagitta' || currentTool === 'circle-2p-radius' || currentTool === 'circle-best-fit' || currentTool === 'arc-3p' || currentTool === 'arc-cse' || currentTool === 'arc-sce')) {
 
       // Handle different entity types appropriately
       // 🏢 ENTERPRISE: Cast to Record<string, unknown> for applyPreviewSettings compatibility
@@ -1272,6 +1834,41 @@ export function useUnifiedDrawing() {
     // 🏢 ENTERPRISE (2026-01-25): Use state machine context
     const currentTool = (machineContext.toolType as DrawingTool) || 'select';
     const tempPoints = machineContext.points;
+
+    // 🏢 ENTERPRISE (2026-01-31): Circle best-fit requires minimum 3 points - ADR-083
+    if (currentTool === 'circle-best-fit' && tempPoints.length >= 3) {
+      // Remove duplicate points that might be added by double-click
+      let cleanedPoints = [...tempPoints];
+
+      if (cleanedPoints.length >= 2) {
+        const lastPoint = cleanedPoints[cleanedPoints.length - 1];
+        const secondLastPoint = cleanedPoints[cleanedPoints.length - 2];
+        const distance = calculateDistance(lastPoint, secondLastPoint);
+        if (distance < 1.0) {
+          cleanedPoints = cleanedPoints.slice(0, -1);
+        }
+      }
+
+      // Need at least 3 points after cleanup
+      if (cleanedPoints.length >= 3) {
+        const newEntity = createEntityFromTool(currentTool, cleanedPoints);
+
+        if (newEntity) {
+          const effectiveLevelId = currentLevelId || '0';
+          completeEntity(newEntity, {
+            tool: currentTool as ToolType,
+            levelId: effectiveLevelId,
+            getScene: getLevelScene,
+            setScene: setLevelScene,
+          });
+
+          setMode('normal');
+          cancelDrawing();
+          return newEntity;
+        }
+      }
+      return null;
+    }
 
     if ((currentTool === 'polyline' || currentTool === 'measure-angle' || currentTool === 'polygon' || currentTool === 'measure-area') && tempPoints.length >= 2) {
       // Remove duplicate points that might be added by double-click

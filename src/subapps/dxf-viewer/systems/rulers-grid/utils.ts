@@ -21,9 +21,12 @@ import {
 import type { Point2D, ViewTransform } from './config';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
+import { RENDER_LINE_WIDTHS, buildUIFont } from '../../config/text-rendering-config';
 // 🏢 ADR-079: Centralized Axis Detection Constants
 import { AXIS_DETECTION } from '../../config/tolerance-config';
+// 🏢 ADR: Centralized Clamp Function
+import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
 
 // Helper function to generate grid line (eliminates code duplication)
 function createGridLine(
@@ -256,7 +259,7 @@ export const GridCalculations = {
       return baseOpacity;
     }
 
-    const scaleFactor = Math.max(0, Math.min(1, transform.scale / 10));
+    const scaleFactor = clamp01(transform.scale / 10);
     const fadeMultiplier = Math.max(settings.behavior.fadeThreshold, scaleFactor);
     
     return baseOpacity * fadeMultiplier;
@@ -582,7 +585,7 @@ export const RulersGridRendering = {
     // Χρησιμοποιεί τα χρώματα από τις ρυθμίσεις
     ctx.strokeStyle = settings.tickColor || settings.color || UI_COLORS.RULER_DARK_GRAY;
     ctx.fillStyle = settings.textColor || settings.color || UI_COLORS.RULER_TEXT_GRAY;
-    ctx.font = `${settings.fontSize || 10}px ${settings.fontFamily || 'monospace'}`;
+    ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
     ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK; // 🏢 ADR-044
     
     // Βελτιωμένη λογική για ομοιόμορφη κατανομή labels
@@ -661,11 +664,11 @@ export const RulersGridRendering = {
           
           // Calculate text widths for proper centering
           if (settings.showLabels && numbersText) {
-            ctx.font = `${settings.fontSize || 10}px ${settings.fontFamily || 'monospace'}`;
+            ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
             totalWidth += ctx.measureText(numbersText).width;
           }
           if (settings.showUnits && unitsText) {
-            ctx.font = `${settings.unitsFontSize || 10}px ${settings.fontFamily || 'monospace'}`;
+            ctx.font = buildUIFont(settings.unitsFontSize || 10, settings.fontFamily || 'monospace');
             totalWidth += ctx.measureText(unitsText).width;
           }
           
@@ -673,7 +676,7 @@ export const RulersGridRendering = {
           
           // Render numbers (text labels) - positioned at bottom of ruler
           if (settings.showLabels && numbersText) {
-            ctx.font = `${settings.fontSize || 10}px ${settings.fontFamily || 'monospace'}`;
+            ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
 
             ctx.fillText(numbersText, currentX, ctx.canvas.height - 3);
             currentX += ctx.measureText(numbersText).width;
@@ -682,7 +685,7 @@ export const RulersGridRendering = {
           // Render units - positioned at bottom of ruler  
           if (settings.showUnits && unitsText) {
             ctx.save();
-            ctx.font = `${settings.unitsFontSize || 10}px ${settings.fontFamily || 'monospace'}`;
+            ctx.font = buildUIFont(settings.unitsFontSize || 10, settings.fontFamily || 'monospace');
             ctx.fillStyle = settings.unitsColor || settings.textColor || UI_COLORS.RULER_TEXT_GRAY;
 
             ctx.fillText(unitsText, currentX, ctx.canvas.height - 3);
@@ -719,11 +722,11 @@ export const RulersGridRendering = {
           
           // Calculate text widths for proper centering (same as horizontal)
           if (settings.showLabels && numbersText) {
-            ctx.font = `${settings.fontSize || 10}px ${settings.fontFamily || 'monospace'}`;
+            ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
             totalWidth += ctx.measureText(numbersText).width;
           }
           if (settings.showUnits && unitsText) {
-            ctx.font = `${settings.unitsFontSize || 10}px ${settings.fontFamily || 'monospace'}`;
+            ctx.font = buildUIFont(settings.unitsFontSize || 10, settings.fontFamily || 'monospace');
             totalWidth += ctx.measureText(unitsText).width;
           }
           
@@ -736,7 +739,7 @@ export const RulersGridRendering = {
 
           // Render units ΠΡΩΤΑ (θα εμφανιστούν κάτω μετά την περιστροφή)
           if (settings.showUnits && unitsText) {
-            ctx.font = `${settings.unitsFontSize || 10}px ${settings.fontFamily || 'monospace'}`;
+            ctx.font = buildUIFont(settings.unitsFontSize || 10, settings.fontFamily || 'monospace');
 
             ctx.save();
             ctx.translate(3, currentY);
@@ -751,7 +754,7 @@ export const RulersGridRendering = {
           
           // Render numbers ΜΕΤΑ (θα εμφανιστούν πάνω μετά την περιστροφή)
           if (settings.showLabels && numbersText) {
-            ctx.font = `${settings.fontSize || 10}px ${settings.fontFamily || 'monospace'}`;
+            ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
 
             ctx.save();
             ctx.translate(3, currentY);

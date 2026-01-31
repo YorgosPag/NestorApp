@@ -28,6 +28,8 @@ import type { RegionStatus } from '../../types/overlay';
 import { getStatusColors } from '../../config/color-mapping';
 import { createOverlayHandlers } from '../../overlays/types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ENTERPRISE (2026-01-31): Import pointToLineDistance for Circle TTT hit testing
+import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-079: Centralized Movement Detection Constants
 import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
 // 🏢 ENTERPRISE (2026-01-25): Edge detection for polygon vertex insertion
@@ -72,6 +74,8 @@ import { PdfBackgroundCanvas, usePdfBackgroundStore } from '../../pdf-background
 import { useEventBus } from '../../systems/events';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
+// 🏢 ENTERPRISE (2026-01-31): Circle TTT (Tangent to 3 Lines) entity selection hook
+import { useCircleTTT } from '../../hooks/drawing/useCircleTTT';
 // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
 import {
   useCommandHistory,
@@ -314,6 +318,29 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // 🎯 EVENT BUS: For polygon drawing communication with toolbar
   const eventBus = useEventBus();
 
+  // 🏢 ENTERPRISE (2026-01-31): Circle TTT (Tangent to 3 Lines) entity selection mode
+  // This tool requires entity picking instead of point collection
+  const circleTTT = useCircleTTT({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onCircleCreated: (circleEntity) => {
+      // Add circle to current level's scene
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return;
+
+      const scene = levelManager.getLevelScene(levelId);
+      if (!scene) return;
+
+      // Add entity to scene
+      const updatedScene = {
+        ...scene,
+        entities: [...(scene.entities || []), circleEntity]
+      };
+      levelManager.setLevelScene(levelId, updatedScene);
+
+      console.log('🎯 [CircleTTT] Circle added to scene:', circleEntity.id);
+    }
+  });
+
   // Keep ref in sync with state
   React.useEffect(() => {
     draftPolygonRef.current = draftPolygon;
@@ -326,6 +353,18 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       canSave: draftPolygon.length >= 3
     });
   }, [draftPolygon.length, eventBus]);
+
+  // 🏢 ENTERPRISE (2026-01-31): Activate/deactivate Circle TTT based on activeTool
+  // 🔧 FIX: Use stable callback references to avoid infinite loop
+  // The hook returns new object on each render, so we extract stable functions
+  const { activate: activateCircleTTT, deactivate: deactivateCircleTTT } = circleTTT;
+  React.useEffect(() => {
+    if (activeTool === 'circle-ttt') {
+      activateCircleTTT();
+    } else {
+      deactivateCircleTTT();
+    }
+  }, [activeTool, activateCircleTTT, deactivateCircleTTT]);
 
   // 🏢 ENTERPRISE: Provide zoom system to context
   // NOTE: canvasContext already retrieved at line 93 for centralized zoom operations
@@ -728,7 +767,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setDragPreviewPosition(null);
       // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
       justFinishedDragRef.current = true;
-      setTimeout(() => { justFinishedDragRef.current = false; }, 100);
+      setTimeout(() => { justFinishedDragRef.current = false; }, PANEL_LAYOUT.TIMING.DRAG_FINISH_RESET);
     }
 
     // Handle edge midpoint drag end
@@ -763,7 +802,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setDragPreviewPosition(null);
       // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
       justFinishedDragRef.current = true;
-      setTimeout(() => { justFinishedDragRef.current = false; }, 100);
+      setTimeout(() => { justFinishedDragRef.current = false; }, PANEL_LAYOUT.TIMING.DRAG_FINISH_RESET);
     }
 
     // 🏢 ENTERPRISE (2027-01-27): Handle overlay body drag end - Unified Toolbar Integration
@@ -803,7 +842,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setDragPreviewPosition(null);
       // 🏢 ENTERPRISE: Set flag to prevent click event from deselecting overlay
       justFinishedDragRef.current = true;
-      setTimeout(() => { justFinishedDragRef.current = false; }, 100);
+      setTimeout(() => { justFinishedDragRef.current = false; }, PANEL_LAYOUT.TIMING.DRAG_FINISH_RESET);
     }
   }, [draggingVertex, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, transform, viewport, executeCommand]);
 
@@ -1472,6 +1511,70 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       return;
     }
 
+    // 🏢 ENTERPRISE (2026-01-31): Circle TTT entity picking mode
+    // When circle-ttt tool is active, perform hit testing to find clicked entity
+    if (activeTool === 'circle-ttt' && circleTTT.isWaitingForSelection) {
+      // Get current scene for hit testing
+      const scene = levelManager.currentLevelId
+        ? levelManager.getLevelScene(levelManager.currentLevelId)
+        : null;
+
+      if (scene?.entities) {
+        // Find entity at click point (check lines and polylines only)
+        const hitTolerance = 10 / transform.scale; // 10 screen pixels in world units
+
+        for (const entity of scene.entities) {
+          if (entity.type === 'line' || entity.type === 'polyline') {
+            // Simple distance check for hit testing
+            let isHit = false;
+
+            if (entity.type === 'line') {
+              const lineEntity = entity as { start: Point2D; end: Point2D };
+              const dist = pointToLineDistance(worldPoint, lineEntity.start, lineEntity.end);
+              isHit = dist <= hitTolerance;
+            } else if (entity.type === 'polyline') {
+              const polyEntity = entity as { vertices: Point2D[]; closed?: boolean };
+              if (polyEntity.vertices && polyEntity.vertices.length >= 2) {
+                for (let i = 0; i < polyEntity.vertices.length - 1; i++) {
+                  const dist = pointToLineDistance(
+                    worldPoint,
+                    polyEntity.vertices[i],
+                    polyEntity.vertices[i + 1]
+                  );
+                  if (dist <= hitTolerance) {
+                    isHit = true;
+                    break;
+                  }
+                }
+                // Check closing segment for closed polylines
+                if (!isHit && polyEntity.closed && polyEntity.vertices.length > 2) {
+                  const dist = pointToLineDistance(
+                    worldPoint,
+                    polyEntity.vertices[polyEntity.vertices.length - 1],
+                    polyEntity.vertices[0]
+                  );
+                  isHit = dist <= hitTolerance;
+                }
+              }
+            }
+
+            if (isHit) {
+              // Pass entity to Circle TTT handler
+              const accepted = circleTTT.onEntityClick(entity as import('../../types/scene').AnySceneEntity, worldPoint);
+              if (accepted) {
+                console.log('🎯 [CanvasSection] Circle TTT entity accepted:', entity.id);
+                return; // Entity was accepted, don't process further
+              }
+            }
+          }
+        }
+
+        // No entity hit - show feedback
+        console.log('🎯 [CanvasSection] Circle TTT: No line/polyline found at click point');
+      }
+      return; // Don't process as regular canvas click
+    }
+
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Route click to unified drawing system for drawing AND measurement tools
     // 🏢 ENTERPRISE (2026-01-26): ADR-036 - Using centralized tool detection (Single Source of Truth)
     if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {
@@ -1731,7 +1834,14 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           }
           break;
         case 'Enter':
-          if (draftPolygon.length >= 3) {
+          // 🏢 ENTERPRISE (2026-01-31): Handle Enter for continuous drawing tools - ADR-083
+          // Check if we're in a continuous drawing mode (polyline, polygon, measure-area, circle-best-fit, etc.)
+          const continuousTools = ['polyline', 'polygon', 'measure-area', 'measure-angle', 'measure-distance-continuous', 'circle-best-fit'];
+          if (continuousTools.includes(activeTool)) {
+            e.preventDefault();
+            handleDrawingFinish();
+          } else if (draftPolygon.length >= 3) {
+            // Legacy: Overlay polygon mode
             finishDrawing();
           }
           break;
@@ -1750,7 +1860,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, selectedGrips, activeTool, handleFlipArc, handleDrawingFinish]);
 
   // 🏢 ADR-053 ENTERPRISE FIX (2026-01-30): Document-level contextmenu handler
   // Native DOM event listener is MORE RELIABLE than React's synthetic events on canvas

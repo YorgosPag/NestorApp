@@ -24,7 +24,8 @@ import {
   Circle3PIcon,
   CircleChordSagittaIcon,
   Circle2PRadiusIcon,
-  CircleBestFitIcon
+  CircleBestFitIcon,
+  CircleTTTIcon // 🏢 ENTERPRISE (2026-01-31): Circle Tangent to 3 Lines
 } from './icons/CircleIcon';
 // 🏢 ENTERPRISE (2026-01-31): Arc drawing tool icons - ADR-059
 import {
@@ -174,7 +175,9 @@ export const toolGroups: { name: string; tools: ToolDefinition[] }[] = [
           { id: 'circle-3p' as ToolType, icon: Circle3PIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_3P },
           { id: 'circle-chord-sagitta' as ToolType, icon: CircleChordSagittaIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_CHORD_SAGITTA },
           { id: 'circle-2p-radius' as ToolType, icon: Circle2PRadiusIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_2P_RADIUS },
-          { id: 'circle-best-fit' as ToolType, icon: CircleBestFitIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_BEST_FIT }
+          { id: 'circle-best-fit' as ToolType, icon: CircleBestFitIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_BEST_FIT },
+          // 🏢 ENTERPRISE (2026-01-31): Circle Tangent to 3 Lines (AutoCAD TTT)
+          { id: 'circle-ttt' as ToolType, icon: CircleTTTIcon, label: DXF_DRAWING_TOOL_LABELS.CIRCLE_TTT }
         ]
       },
       // 🏢 ENTERPRISE (2026-01-31): Arc drawing tool with dropdown - ADR-059

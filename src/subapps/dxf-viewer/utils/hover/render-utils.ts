@@ -6,9 +6,11 @@
 import { HOVER_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
 
 export function renderAreaLabel(ctx: CanvasRenderingContext2D, x: number, y: number, area: number): void {
-  const text = area.toFixed(2);
+  const text = formatDistance(area);
   
   ctx.save();
   ctx.translate(x, y);

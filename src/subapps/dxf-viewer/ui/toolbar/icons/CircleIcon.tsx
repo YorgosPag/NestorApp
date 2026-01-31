@@ -17,7 +17,8 @@ export type CircleVariant =
   | '2point-radius'
   | '2point-diameter'
   | 'best-fit'
-  | 'chord-sagitta';
+  | 'chord-sagitta'
+  | 'ttt'; // 🏢 ENTERPRISE (2026-01-31): Tangent to 3 Lines
 
 interface CircleIconProps {
   variant: CircleVariant;
@@ -150,6 +151,26 @@ export const CircleIcon: React.FC<CircleIconProps> = ({
           </>
         );
 
+      case 'ttt':
+        // 🏢 ENTERPRISE (2026-01-31): Circle Tangent to 3 Lines (AutoCAD TTT)
+        // 3 STEPS: Line 1 → Line 2 → Line 3: 🔴 → 🟠 → 🟢
+        // Shows inscribed circle touching 3 lines forming a triangle
+        return (
+          <>
+            {/* 3 lines forming a triangle */}
+            {/* Line 1 - bottom (highlighted red) */}
+            <line x1="3" y1="18" x2="21" y2="18" strokeWidth="1.5" stroke={CLICK_COLORS.FIRST} />
+            {/* Line 2 - left side (highlighted orange) */}
+            <line x1="5" y1="5" x2="12" y2="18" strokeWidth="1.5" stroke={CLICK_COLORS.SECOND} />
+            {/* Line 3 - right side (highlighted green) */}
+            <line x1="19" y1="5" x2="12" y2="18" strokeWidth="1.5" stroke={CLICK_COLORS.THIRD} />
+            {/* Tangent points on each line - small dots */}
+            <circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none" />
+            <circle cx="8.5" cy="11.5" r="1.5" fill="currentColor" stroke="none" />
+            <circle cx="15.5" cy="11.5" r="1.5" fill="currentColor" stroke="none" />
+          </>
+        );
+
       default:
         return renderCenterDot();
     }
@@ -192,5 +213,9 @@ export const Circle2PDiameterIcon: React.FC<{className?: string}> = (props) =>
 export const CircleBestFitIcon: React.FC<{className?: string}> = (props) => 
   <CircleIcon variant="best-fit" {...props} />;
 
-export const CircleChordSagittaIcon: React.FC<{className?: string}> = (props) => 
+export const CircleChordSagittaIcon: React.FC<{className?: string}> = (props) =>
   <CircleIcon variant="chord-sagitta" {...props} />;
+
+// 🏢 ENTERPRISE (2026-01-31): Circle Tangent to 3 Lines (AutoCAD TTT)
+export const CircleTTTIcon: React.FC<{className?: string}> = (props) =>
+  <CircleIcon variant="ttt" {...props} />;

@@ -16,10 +16,14 @@ import { validateArcEntity } from './shared/entity-validation-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addArcPath } from '../primitives/canvasPaths';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance, formatAngle } from './shared/distance-label-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from './shared/geometry-utils';
 // 🏢 ADR-074: Centralized Point On Circle
 import { pointOnCircle } from './shared/geometry-rendering-utils';
+// 🏢 ADR-091: Centralized Text Label Offsets
+import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 
 export class ArcRenderer extends BaseEntityRenderer {
   private validateArc(entity: EntityModel) {
@@ -96,10 +100,11 @@ export class ArcRenderer extends BaseEntityRenderer {
     
     this.ctx.save();
     this.applyCenterMeasurementTextStyle();
-    // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledTextWithOverride(this.ctx, `R: ${radius.toFixed(2)}`, screenCenter.x, screenCenter.y - 30);
-    renderStyledTextWithOverride(this.ctx, `∠: ${arcAngle.toFixed(1)}°`, screenCenter.x, screenCenter.y - 10);
-    renderStyledTextWithOverride(this.ctx, `L: ${arcLength.toFixed(2)}`, screenCenter.x, screenCenter.y + 10);
+    // 🏢 ADR-090: Centralized number formatting
+    // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
+    renderStyledTextWithOverride(this.ctx, `R: ${formatDistance(radius)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER);
+    renderStyledTextWithOverride(this.ctx, formatAngle(arcAngle, 1), screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE);
+    renderStyledTextWithOverride(this.ctx, `L: ${formatDistance(arcLength)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE);
     this.ctx.restore();
   }
 

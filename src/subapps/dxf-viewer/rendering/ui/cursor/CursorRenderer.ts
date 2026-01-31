@@ -19,6 +19,8 @@ import type {
 } from './CursorTypes';
 // 🏢 ADR-058/064: Centralized Canvas Primitives
 import { addCirclePath, addSquarePath, addDiamondPath, addCrossPath } from '../../primitives/canvasPaths';
+// 🏢 ADR-083: Centralized Line Dash Patterns
+import { LINE_DASH_PATTERNS } from '../../../config/text-rendering-config';
 
 /**
  * 🔺 CENTRALIZED CURSOR RENDERER
@@ -215,23 +217,24 @@ export class CursorRenderer implements UIRenderer {
 
   /**
    * Set line style patterns
+   * 🏢 ADR-083: Uses centralized LINE_DASH_PATTERNS
    */
   private setLineStyle(ctx: CanvasRenderingContext2D, style: CursorLineStyle): void {
     switch (style) {
       case 'solid':
-        ctx.setLineDash([]);
+        ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
         break;
       case 'dashed':
-        ctx.setLineDash([6, 6]);
+        ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASHED]);
         break;
       case 'dotted':
-        ctx.setLineDash([2, 4]);
+        ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DOTTED]);
         break;
       case 'dash-dot':
-        ctx.setLineDash([8, 4, 2, 4]);
+        ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASH_DOT]);
         break;
       default:
-        ctx.setLineDash([]);
+        ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
     }
   }
 

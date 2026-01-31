@@ -13,6 +13,10 @@ import { createVertexGrip } from './shared/grip-utils';
 import { drawVerticesPath } from './shared/geometry-rendering-utils';
 import { getRectangleVertices } from '../../systems/selection/utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance } from './shared/distance-label-utils';
+// 🏢 ADR-091: Centralized Text Label Offsets
+import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 
 // 🏢 ENTERPRISE: Union type for rectangle entities
 type RectangleEntityUnion = RectangleEntity | RectEntity;
@@ -79,9 +83,9 @@ export class RectangleRenderer extends BaseEntityRenderer {
     const centerX = (vertices[0].x + vertices[2].x) / 2;
     const centerY = (vertices[0].y + vertices[2].y) / 2;
     const screenCenter = this.worldToScreen({ x: centerX, y: centerY });
-    // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledTextWithOverride(this.ctx, `Ε: ${area.toFixed(2)}`, screenCenter.x, screenCenter.y - 10);
-    renderStyledTextWithOverride(this.ctx, `Περ: ${perimeter.toFixed(2)}`, screenCenter.x, screenCenter.y + 10);
+    // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
+    renderStyledTextWithOverride(this.ctx, `Ε: ${formatDistance(area)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE);
+    renderStyledTextWithOverride(this.ctx, `Περ: ${formatDistance(perimeter)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE);
     
     // 🔺 ΔΙΑΣΤΑΣΕΙΣ ΠΛΕΥΡΩΝ - Εσωτερικές στο ορθογώνιο (αρνητικό offset)
     

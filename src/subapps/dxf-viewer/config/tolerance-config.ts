@@ -153,3 +153,68 @@ export const ENTITY_LIMITS = {
   /** Constraint solving tolerance (0.001) */
   CONSTRAINT_TOLERANCE: 0.001,
 } as const;
+
+// ===== SNAP ENGINE CONFIGURATION =====
+// 🏢 ADR-087: Centralized Snap Engine Configuration (2026-01-31)
+
+/**
+ * 🎯 SNAP SEARCH RADIUS
+ * Search radius values για εύρεση reference points σε snap engines
+ *
+ * @example
+ * import { SNAP_SEARCH_RADIUS } from '../config/tolerance-config';
+ * const searchRadius = SNAP_SEARCH_RADIUS.REFERENCE_POINT; // 200
+ */
+export const SNAP_SEARCH_RADIUS = {
+  /** Reference point search radius (OrthoSnapEngine) */
+  REFERENCE_POINT: 200,
+} as const;
+
+/**
+ * 🎯 SNAP RADIUS MULTIPLIERS
+ * Multipliers για snap radius ανά engine type
+ *
+ * DOCUMENTATION:
+ * - STANDARD (2x): Default για Ortho, Perpendicular, Extension
+ * - EXTENDED (3x): Parallel χρειάζεται μεγαλύτερο radius για ανίχνευση παράλληλων γραμμών
+ *
+ * @example
+ * import { SNAP_RADIUS_MULTIPLIERS } from '../config/tolerance-config';
+ * const searchRadius = radius * SNAP_RADIUS_MULTIPLIERS.STANDARD; // radius * 2
+ */
+export const SNAP_RADIUS_MULTIPLIERS = {
+  /** Standard multiplier (2x) - Ortho, Perpendicular, Extension */
+  STANDARD: 2,
+  /** Extended multiplier (3x) - Parallel (needs wider search for parallel line detection) */
+  EXTENDED: 3,
+} as const;
+
+/**
+ * 🎯 SNAP GRID DISTANCES
+ * Predefined grid distances για snap engines
+ *
+ * @example
+ * import { SNAP_GRID_DISTANCES } from '../config/tolerance-config';
+ * for (const dist of SNAP_GRID_DISTANCES.PARALLEL) { ... }
+ */
+export const SNAP_GRID_DISTANCES = {
+  /** Parallel snap grid distances (ParallelSnapEngine) */
+  PARALLEL: [0, 50, 100, 150] as const,
+  /** Extension snap distances (ExtensionSnapEngine) */
+  EXTENSION: [25, 50, 100, 200, 300] as const,
+} as const;
+
+/**
+ * 🎯 SNAP GEOMETRY CONSTANTS
+ * Mathematical constants για geometric snap calculations
+ *
+ * @example
+ * import { SNAP_GEOMETRY } from '../config/tolerance-config';
+ * const diagonalDistance = distance * SNAP_GEOMETRY.INV_SQRT_2;
+ */
+export const SNAP_GEOMETRY = {
+  /** √2 - για diagonal calculations */
+  SQRT_2: Math.sqrt(2),
+  /** 1/√2 ≈ 0.7071 - για διαίρεση με √2 (πιο γρήγορο από division) */
+  INV_SQRT_2: 1 / Math.sqrt(2),
+} as const;

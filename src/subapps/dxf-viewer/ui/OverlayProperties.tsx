@@ -25,6 +25,8 @@ import { PANEL_LAYOUT } from '../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-26): Use centralized geometry functions - ADR Geometry Centralization
 import { calculatePolygonArea, calculatePolygonPerimeter } from '../rendering/entities/shared/geometry-utils';
 import { overlayVertexToPoint2D } from '../utils/entity-conversion';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance } from '../rendering/entities/shared/distance-label-utils';
 
 interface OverlayPropertiesProps {
   overlay: Overlay | null;
@@ -172,8 +174,8 @@ export const OverlayProperties: React.FC<OverlayPropertiesProps> = ({ overlay, o
         <Label className={PANEL_LAYOUT.TYPOGRAPHY.XS}>{t('overlayProperties.geometry')}</Label>
         <div className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} text-muted-foreground leading-tight`}>
           <div>{t('overlayProperties.points')} {overlay && overlay.polygon ? overlay.polygon.length : 0}</div>
-          <div>{t('overlayProperties.area')} {area.toFixed(2)} m²</div>
-          <div>{t('overlayProperties.perimeter')} {perimeter.toFixed(2)} m</div>
+          <div>{t('overlayProperties.area')} {formatDistance(area)} m²</div>
+          <div>{t('overlayProperties.perimeter')} {formatDistance(perimeter)} m</div>
         </div>
       </div>
     </div>

@@ -6,6 +6,8 @@
 
 import type { RulerDebugSettings, RulerDebugMode } from './RulerDebugTypes';
 import { DEFAULT_RULER_DEBUG_SETTINGS } from './RulerDebugTypes';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet, STORAGE_KEYS } from '../utils/storage-utils';
 
 /**
  * 🛠️ RULER DEBUG OVERLAY
@@ -25,27 +27,18 @@ export class RulerDebugOverlay {
 
   /**
    * 🎯 LOAD PERSISTED STATE
+   * 🏢 ADR-092: Uses centralized storage service
    */
   private loadPersistedState(): boolean | null {
-    if (typeof window === 'undefined') return null;
-    try {
-      const stored = localStorage.getItem('debug.rulerDebug.enabled');
-      return stored !== null ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+    return storageGet<boolean | null>(STORAGE_KEYS.DEBUG_RULER, null);
   }
 
   /**
    * 🎯 SAVE PERSISTED STATE
+   * 🏢 ADR-092: Uses centralized storage service
    */
   private savePersistedState(enabled: boolean): void {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem('debug.rulerDebug.enabled', JSON.stringify(enabled));
-    } catch (error) {
-      console.warn('Failed to persist ruler debug state:', error);
-    }
+    storageSet(STORAGE_KEYS.DEBUG_RULER, enabled);
   }
 
   /**

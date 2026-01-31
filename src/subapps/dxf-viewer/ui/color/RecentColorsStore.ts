@@ -15,10 +15,11 @@
  */
 
 import type { RecentColorsState, RecentColorsActions } from './types';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet, STORAGE_KEYS } from '../../utils/storage-utils';
 
 // ===== CONSTANTS =====
 
-const STORAGE_KEY = 'dxf-viewer:recent-colors';
 const DEFAULT_MAX_COLORS = 10;
 
 // ===== UTILITY FUNCTIONS =====
@@ -52,41 +53,34 @@ function normalizeHex(color: string): string {
 
 /**
  * Load colors from localStorage
+ * 🏢 ADR-092: Uses centralized storage service (SSR-safe)
  */
 function loadFromStorage(): string[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
+  const stored = storageGet<unknown[]>(STORAGE_KEYS.RECENT_COLORS, []);
 
-    const parsed = JSON.parse(stored);
-    if (Array.isArray(parsed)) {
-      // Validate and normalize all colors
-      return parsed
-        .filter((c) => typeof c === 'string')
-        .map((c) => {
-          try {
-            return normalizeHex(c);
-          } catch {
-            return null;
-          }
-        })
-        .filter((c): c is string => c !== null);
-    }
-  } catch (error) {
-    console.warn('[RecentColors] Failed to load from localStorage:', error);
+  if (Array.isArray(stored)) {
+    // Validate and normalize all colors
+    return stored
+      .filter((c) => typeof c === 'string')
+      .map((c) => {
+        try {
+          return normalizeHex(c as string);
+        } catch {
+          return null;
+        }
+      })
+      .filter((c): c is string => c !== null);
   }
+
   return [];
 }
 
 /**
  * Save colors to localStorage
+ * 🏢 ADR-092: Uses centralized storage service
  */
 function saveToStorage(colors: string[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(colors));
-  } catch (error) {
-    console.warn('[RecentColors] Failed to save to localStorage:', error);
-  }
+  storageSet(STORAGE_KEYS.RECENT_COLORS, colors);
 }
 
 // ===== STORE IMPLEMENTATION =====

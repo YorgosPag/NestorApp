@@ -1,0 +1,337 @@
+{
+  "tools": {
+    "select": {
+      "name": "Select",
+      "description": "Select entities",
+      "steps": ["Click on entity to select"],
+      "shortcuts": "Ctrl+A=Select All | ESC=Deselect"
+    },
+    "pan": {
+      "name": "Pan",
+      "description": "Pan canvas",
+      "steps": ["Hold and drag to pan"],
+      "shortcuts": "Spacebar+Drag | Middle Mouse"
+    },
+    "zoom-in": {
+      "name": "Zoom In",
+      "description": "Zoom in view",
+      "steps": ["Click to zoom in"],
+      "shortcuts": "+/= | Scroll Up"
+    },
+    "zoom-out": {
+      "name": "Zoom Out",
+      "description": "Zoom out view",
+      "steps": ["Click to zoom out"],
+      "shortcuts": "- | Scroll Down"
+    },
+    "zoom-window": {
+      "name": "Zoom Window",
+      "description": "Zoom to area",
+      "steps": [
+        "Click for 1st corner",
+        "Click for 2nd corner"
+      ],
+      "shortcuts": "W | ESC=Cancel"
+    },
+    "zoom-extents": {
+      "name": "Zoom Extents",
+      "description": "Show entire drawing",
+      "steps": ["Automatic adjustment"],
+      "shortcuts": "E | Home"
+    },
+    "line": {
+      "name": "Line",
+      "description": "Draw line",
+      "steps": [
+        "Click for 1st point",
+        "Click for 2nd point"
+      ],
+      "shortcuts": "L | ESC=Cancel"
+    },
+    "polyline": {
+      "name": "Polyline",
+      "description": "Continuous lines",
+      "steps": [
+        "Click for 1st point",
+        "Continue clicking for points",
+        "Enter=Complete | U=Undo last"
+      ],
+      "shortcuts": "P | Enter=Complete | U=Undo | ESC=Cancel"
+    },
+    "rectangle": {
+      "name": "Rectangle",
+      "description": "Draw rectangle",
+      "steps": [
+        "Click for 1st corner",
+        "Click for opposite corner"
+      ],
+      "shortcuts": "R | ESC=Cancel"
+    },
+    "polygon": {
+      "name": "Polygon",
+      "description": "Closed polygon",
+      "steps": [
+        "Click for 1st point",
+        "Continue clicking for points",
+        "Enter/C=Close"
+      ],
+      "shortcuts": "Enter/C=Close | U=Undo | ESC=Cancel"
+    },
+    "circle": {
+      "name": "Circle (Radius)",
+      "description": "Circle by center and radius",
+      "steps": [
+        "Click for center",
+        "Click or type radius"
+      ],
+      "shortcuts": "C | ESC=Cancel"
+    },
+    "circle-diameter": {
+      "name": "Circle (Diameter)",
+      "description": "Circle by center and diameter",
+      "steps": [
+        "Click for center",
+        "Click or type diameter"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "circle-2p-diameter": {
+      "name": "Circle 2P Diameter",
+      "description": "Circle through 2 points (diameter)",
+      "steps": [
+        "Click for 1st diameter point",
+        "Click for 2nd diameter point"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "circle-2p-radius": {
+      "name": "Circle 2P Radius",
+      "description": "Circle through 2 points with radius",
+      "steps": [
+        "Click for 1st point",
+        "Click for 2nd point",
+        "Type radius"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "circle-3p": {
+      "name": "Circle 3 Points",
+      "description": "Circle through 3 points",
+      "steps": [
+        "Click for 1st point",
+        "Click for 2nd point",
+        "Click for 3rd point"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "circle-chord-sagitta": {
+      "name": "Circle Chord-Sagitta",
+      "description": "Circle by chord and sagitta",
+      "steps": [
+        "Click for chord start",
+        "Click for chord end",
+        "Click for sagitta (arc height)"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "circle-best-fit": {
+      "name": "Circle Best Fit",
+      "description": "Best fit circle through points",
+      "steps": [
+        "Click for points (minimum 3)",
+        "Enter=Calculate circle"
+      ],
+      "shortcuts": "Enter=Complete | ESC=Cancel"
+    },
+    "arc-3p": {
+      "name": "Arc 3 Points",
+      "description": "Arc through 3 points",
+      "steps": [
+        "Click for start point",
+        "Click for point on arc",
+        "Click for end point"
+      ],
+      "shortcuts": "A | X=Reverse | ESC=Cancel"
+    },
+    "arc-cse": {
+      "name": "Arc C-S-E",
+      "description": "Arc: Center → Start → End",
+      "steps": [
+        "Click for center",
+        "Click for start",
+        "Click for end"
+      ],
+      "shortcuts": "X=Reverse | ESC=Cancel"
+    },
+    "arc-sce": {
+      "name": "Arc S-C-E",
+      "description": "Arc: Start → Center → End",
+      "steps": [
+        "Click for start",
+        "Click for center",
+        "Click for end"
+      ],
+      "shortcuts": "X=Reverse | ESC=Cancel"
+    },
+    "ellipse": {
+      "name": "Ellipse",
+      "description": "Draw ellipse",
+      "steps": [
+        "Click for center",
+        "Click for major axis",
+        "Click for minor axis"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "measure-distance": {
+      "name": "Measure Distance",
+      "description": "Distance between 2 points",
+      "steps": [
+        "Click for 1st point",
+        "Click for 2nd point"
+      ],
+      "shortcuts": "D | ESC=Cancel"
+    },
+    "measure-distance-continuous": {
+      "name": "Continuous Distance",
+      "description": "Continuous distance measurement",
+      "steps": [
+        "Click for 1st point",
+        "Continue clicking for points",
+        "Enter=Complete"
+      ],
+      "shortcuts": "D | Enter=Complete | ESC=Cancel"
+    },
+    "measure-area": {
+      "name": "Measure Area",
+      "description": "Polygon area",
+      "steps": [
+        "Click for 1st point",
+        "Continue clicking for vertices",
+        "Enter=Calculate (min 3 points)"
+      ],
+      "shortcuts": "Enter=Complete | U=Undo | ESC=Cancel"
+    },
+    "measure-angle": {
+      "name": "Measure Angle",
+      "description": "Angle between 3 points",
+      "steps": [
+        "Click for 1st point",
+        "Click for vertex",
+        "Click for 3rd point"
+      ],
+      "shortcuts": "T | ESC=Cancel"
+    },
+    "measure-angle-line-arc": {
+      "name": "Angle Line-Arc",
+      "description": "Angle between line and arc",
+      "steps": [
+        "Select the line",
+        "Select the arc",
+        "Display angle"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "measure-angle-two-arcs": {
+      "name": "Angle Two Arcs",
+      "description": "Angle between two arcs",
+      "steps": [
+        "Select 1st arc",
+        "Select 2nd arc",
+        "Display angle"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "measure-angle-measuregeom": {
+      "name": "Angle MeasureGeom",
+      "description": "Angle measurement without dimension",
+      "steps": [
+        "Click for 1st point",
+        "Click for vertex",
+        "Click for 3rd point"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "measure-angle-constraint": {
+      "name": "Parametric Angle",
+      "description": "Parametric angle constraint",
+      "steps": [
+        "Select 1st entity",
+        "Select 2nd entity",
+        "Enter angle value"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "measure-radius": {
+      "name": "Measure Radius",
+      "description": "Circle/arc radius",
+      "steps": [
+        "Click on circle or arc",
+        "Display radius"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "measure-perimeter": {
+      "name": "Measure Perimeter",
+      "description": "Shape perimeter",
+      "steps": [
+        "Click for outline points",
+        "Enter=Calculate"
+      ],
+      "shortcuts": "Enter=Complete | ESC=Cancel"
+    },
+    "move": {
+      "name": "Move",
+      "description": "Move selected entities",
+      "steps": [
+        "Select entities",
+        "Click for base point",
+        "Click for new location"
+      ],
+      "shortcuts": "M | ESC=Cancel"
+    },
+    "copy": {
+      "name": "Copy",
+      "description": "Copy selected entities",
+      "steps": [
+        "Select entities",
+        "Click for base point",
+        "Click for copy location"
+      ],
+      "shortcuts": "Ctrl+C | ESC=Cancel"
+    },
+    "delete": {
+      "name": "Delete",
+      "description": "Delete selected entities",
+      "steps": [
+        "Select entities",
+        "Enter/Delete=Delete"
+      ],
+      "shortcuts": "Del | ESC=Cancel"
+    },
+    "grip-edit": {
+      "name": "Grip Edit",
+      "description": "Edit with control points",
+      "steps": [
+        "Select entity",
+        "Click on grip point",
+        "Drag to new position"
+      ],
+      "shortcuts": "ESC=Cancel"
+    },
+    "layering": {
+      "name": "Layers",
+      "description": "Layer management",
+      "steps": ["Open Layers panel"],
+      "shortcuts": "F7"
+    }
+  },
+  "common": {
+    "step": "Step",
+    "of": "of",
+    "complete": "Complete",
+    "cancel": "Cancel",
+    "point": "Point",
+    "noHint": "Select a tool"
+  }
+}

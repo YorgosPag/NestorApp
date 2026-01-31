@@ -5,8 +5,9 @@
  * Pattern: Autodesk AutoCAD / Bentley MicroStation - Single source of truth
  *
  * @module distance-label-utils
- * @version 1.0.0 - ADR-041: Centralized Distance Label Rendering
+ * @version 2.0.0 - ADR-082: Enterprise Number Formatting System
  * @since 2026-01-27
+ * @updated 2026-01-31 - Added locale-aware formatting via FormatterRegistry
  *
  * 🎯 PURPOSE:
  * - Single source of truth for distance label rendering
@@ -20,8 +21,10 @@
  * - Optional background box rendering
  * - Rotation support for inline labels
  * - Integration with centralized TextStyleStore
+ * - 🆕 ADR-082: Locale-aware number formatting via FormatterRegistry
  *
  * @see {@link docs/centralized_systems.md#adr-041} - Distance Label Centralization
+ * @see {@link docs/centralized_systems.md#adr-082} - Enterprise Number Formatting
  */
 
 import type { Point2D } from '../../types/Types';
@@ -29,6 +32,8 @@ import { getTextPreviewStyleWithOverride, renderStyledTextWithOverride } from '.
 // 🏢 ADR-065: Centralized Distance Calculation
 // 🏢 ADR-066: Centralized Angle Calculation
 import { calculateDistance, calculateAngle } from './geometry-rendering-utils';
+// 🏢 ADR-082: Enterprise Number Formatting
+import { FormatterRegistry, type Precision } from '../../../formatting';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -107,9 +112,14 @@ export function calculateWorldDistance(worldP1: Point2D, worldP2: Point2D): numb
  * 🏢 ENTERPRISE: Format distance value for display
  * Canonical source for distance formatting across DXF Viewer
  *
+ * 🆕 ADR-082: Now supports locale-aware formatting via FormatterRegistry.
+ * For locale-aware formatting, use `formatDistanceLocale()` instead.
+ *
  * @param distance - Distance value in world units
  * @param decimals - Number of decimal places (default: 2)
  * @returns Formatted string (e.g., "123.45")
+ *
+ * @see formatDistanceLocale - For locale-aware formatting
  */
 export function formatDistance(distance: number, decimals: number = 2): string {
   if (distance < Math.pow(10, -decimals)) return (0).toFixed(decimals);
@@ -117,18 +127,75 @@ export function formatDistance(distance: number, decimals: number = 2): string {
 }
 
 /**
+ * 🏢 ADR-082: Format distance value with locale awareness
+ *
+ * Uses FormatterRegistry for locale-aware decimal separators:
+ * - Greek (el-GR): 1.234,56
+ * - English (en-US): 1,234.56
+ *
+ * @param distance - Distance value in world units
+ * @param decimals - Number of decimal places (default: 2)
+ * @returns Locale-formatted string
+ *
+ * @example
+ * // In Greek locale:
+ * formatDistanceLocale(1234.56) // → "1.234,56"
+ *
+ * // In English locale:
+ * formatDistanceLocale(1234.56) // → "1,234.56"
+ */
+export function formatDistanceLocale(distance: number, decimals: number = 2): string {
+  if (distance < Math.pow(10, -decimals)) {
+    const registry = FormatterRegistry.getInstance();
+    return registry.formatDistance(0, decimals as Precision);
+  }
+  const registry = FormatterRegistry.getInstance();
+  return registry.formatDistance(distance, decimals as Precision);
+}
+
+/**
  * 🏢 ENTERPRISE: Format angle value for display
  * Canonical source for angle formatting across DXF Viewer
  *
  * 🏢 ADR-069: Centralized Number Formatting
+ * 🆕 ADR-082: For locale-aware formatting, use `formatAngleLocale()` instead.
  *
  * @param angle - Angle value in degrees
  * @param decimals - Number of decimal places (default: 1)
  * @returns Formatted string with degree symbol (e.g., "45.5°")
+ *
+ * @see formatAngleLocale - For locale-aware formatting
  */
 export function formatAngle(angle: number, decimals: number = 1): string {
   if (Math.abs(angle) < Math.pow(10, -decimals)) return `${(0).toFixed(decimals)}°`;
   return `${angle.toFixed(decimals)}°`;
+}
+
+/**
+ * 🏢 ADR-082: Format angle value with locale awareness
+ *
+ * Uses FormatterRegistry for locale-aware decimal separators:
+ * - Greek (el-GR): 45,5°
+ * - English (en-US): 45.5°
+ *
+ * @param angle - Angle value in degrees
+ * @param decimals - Number of decimal places (default: 1)
+ * @returns Locale-formatted string with degree symbol
+ *
+ * @example
+ * // In Greek locale:
+ * formatAngleLocale(45.5) // → "45,5°"
+ *
+ * // In English locale:
+ * formatAngleLocale(45.5) // → "45.5°"
+ */
+export function formatAngleLocale(angle: number, decimals: number = 1): string {
+  if (Math.abs(angle) < Math.pow(10, -decimals)) {
+    const registry = FormatterRegistry.getInstance();
+    return registry.formatAngle(0, decimals as Precision);
+  }
+  const registry = FormatterRegistry.getInstance();
+  return registry.formatAngle(angle, decimals as Precision);
 }
 
 /**
@@ -153,6 +220,20 @@ export function formatAngle(angle: number, decimals: number = 1): string {
 export function formatPercent(value: number, includeSymbol: boolean = true): string {
   const percent = Math.round(value * 100);
   return includeSymbol ? `${percent}%` : String(percent);
+}
+
+/**
+ * 🏢 ADR-082: Format coordinate value with locale awareness
+ *
+ * Uses FormatterRegistry for locale-aware decimal separators.
+ *
+ * @param value - Coordinate value (X or Y)
+ * @param decimals - Number of decimal places (default: 2)
+ * @returns Locale-formatted coordinate string
+ */
+export function formatCoordinateLocale(value: number, decimals: number = 2): string {
+  const registry = FormatterRegistry.getInstance();
+  return registry.formatCoordinate(value, decimals as Precision);
 }
 
 // ============================================================================
@@ -323,4 +404,8 @@ export function renderDistanceLabelStyled(
  * ✅ Rotation support for inline labels
  * ✅ Configurable decimal precision
  * ✅ Enterprise documentation (JSDoc)
+ * ✅ 🆕 ADR-082: Locale-aware formatting via FormatterRegistry
+ *   - formatDistanceLocale() for locale-aware distance
+ *   - formatAngleLocale() for locale-aware angles
+ *   - formatCoordinateLocale() for locale-aware coordinates
  */

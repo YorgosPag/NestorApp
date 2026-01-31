@@ -6,7 +6,10 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-081: Centralized percentage formatting
-import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatPercent, formatDistance } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-082: Step-by-step tool hints
+import { useToolHints } from '../../hooks/useToolHints';
 import type { ToolType } from './types';
 import type { Point2D } from '../../rendering/types/Types';
 
@@ -28,8 +31,11 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
   showCoordinates = false
 }) => {
   const { settings } = useCursor();
-  const { getStatusBorder, getDirectionalBorder } = useBorderTokens();
+  const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
+
+  // 🏢 ADR-082: Tool hints system
+  const { hint, currentStepText, hasHints, isReady } = useToolHints(activeTool);
 
   // Λειτουργία ακρίβειας: περισσότερα δεκαδικά ψηφία
   const precision = settings.performance.precision_mode ? 4 : 2;
@@ -91,16 +97,36 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
             <span>
               Συντεταγμένες: <strong className={`${colors.text.accent}`}>
                 {throttledCoordinates ?
-                  `X: ${throttledCoordinates.x.toFixed(precision)}, Y: ${throttledCoordinates.y.toFixed(precision)}` :
-                  `X: ${(0).toFixed(precision)}, Y: ${(0).toFixed(precision)}`}
+                  `X: ${formatDistance(throttledCoordinates.x, precision)}, Y: ${formatDistance(throttledCoordinates.y, precision)}` :
+                  `X: ${formatDistance(0, precision)}, Y: ${formatDistance(0, precision)}`}
               </strong>
             </span>
           </>
         )}
       </div>
       
+      {/* 🏢 ADR-082: Dynamic tool hints section */}
       <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${colors.text.muted}`}>
-        <span>🔺 D=Ruler | W=ZoomWindow | +/-=Zoom | F9=Grid | ESC=Cancel</span>
+        {hasHints && isReady ? (
+          <>
+            {/* Current step instruction */}
+            <span className={`${colors.text.primary} font-medium`}>
+              {currentStepText}
+            </span>
+            {/* Tool shortcuts */}
+            {hint?.shortcuts && (
+              <>
+                <span className={`${colors.text.muted}`}>|</span>
+                <span className="text-xs">
+                  {hint.shortcuts}
+                </span>
+              </>
+            )}
+          </>
+        ) : (
+          /* Fallback: generic shortcuts */
+          <span>D=Ruler | W=ZoomWindow | +/-=Zoom | F9=Grid | ESC=Cancel</span>
+        )}
       </div>
     </div>
   );

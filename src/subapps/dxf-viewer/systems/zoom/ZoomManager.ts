@@ -36,6 +36,8 @@ import {
   clampScale,
   getVisibleBounds
 } from './utils';
+// 🏢 ADR-094: Centralized Device Pixel Ratio
+import { getDevicePixelRatio } from '../../systems/cursor/utils';
 
 export class ZoomManager implements IZoomManager {
   private config: ZoomConfig;
@@ -159,7 +161,7 @@ export class ZoomManager implements IZoomManager {
     // 🎯 DPI-aware 1:1 scale
     // For CAD applications, 1.0 scale typically means 1 pixel = 1 drawing unit
     // Device pixel ratio should be considered for true 1:1 on high-DPI displays
-    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+    const dpr = getDevicePixelRatio(); // 🏢 ADR-094
     const scale100 = 1.0 * dpr;
 
     return this.zoomToScale(scale100, center);

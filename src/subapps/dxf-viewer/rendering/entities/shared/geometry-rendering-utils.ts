@@ -1,9 +1,48 @@
 /**
- * Geometry rendering utilities  
+ * Geometry rendering utilities
  * Consolidates duplicate geometric calculation and rendering patterns
  */
 
 import type { Point2D } from '../../types/Types';
+
+// ===== PIXEL-PERFECT RENDERING =====
+// 🏢 ADR-088: Centralized Pixel-Perfect Alignment (2026-01-31)
+
+/**
+ * 🎯 PIXEL-PERFECT COORDINATE
+ * Rounds a coordinate and adds 0.5 for crisp 1px canvas lines.
+ *
+ * WHY +0.5:
+ * - Canvas coordinates are at pixel CENTER (not edge)
+ * - A 1px line at integer coordinate spans 2 pixels (anti-aliased)
+ * - Adding 0.5 places the line exactly on pixel boundary = crisp line
+ *
+ * INDUSTRY STANDARD: AutoCAD, Figma, Blender all use this pattern
+ *
+ * @example
+ * import { pixelPerfect } from '../shared/geometry-rendering-utils';
+ * ctx.moveTo(pixelPerfect(x), pixelPerfect(y));
+ * ctx.lineTo(pixelPerfect(x2), pixelPerfect(y2));
+ */
+export function pixelPerfect(value: number): number {
+  return Math.round(value) + 0.5;
+}
+
+/**
+ * 🎯 PIXEL-PERFECT POINT
+ * Applies pixel-perfect alignment to a Point2D.
+ *
+ * @example
+ * import { pixelPerfectPoint } from '../shared/geometry-rendering-utils';
+ * const crisp = pixelPerfectPoint(pos);
+ * ctx.moveTo(crisp.x, crisp.y);
+ */
+export function pixelPerfectPoint(point: Point2D): Point2D {
+  return {
+    x: Math.round(point.x) + 0.5,
+    y: Math.round(point.y) + 0.5
+  };
+}
 // ✅ ENTERPRISE FIX: Import AngleMeasurementEntity from entities
 import type { AngleMeasurementEntity } from '../../../types/entities';
 import type { EntityModel } from '../../types/Types';
@@ -184,6 +223,80 @@ export function pointOnCircle(center: Point2D, radius: number, angle: number): P
   return {
     x: center.x + radius * Math.cos(angle),
     y: center.y + radius * Math.sin(angle)
+  };
+}
+
+// ===== VECTOR ARITHMETIC =====
+// 🏢 ADR-090: Centralized Point Vector Operations (2026-01-31)
+
+/**
+ * Subtract two points (creates vector from p2 to p1)
+ * ✅ CANONICAL: p1 - p2 = vector from p2 pointing to p1
+ * Used for: angle calculations, direction vectors, side vectors
+ *
+ * @param p1 - First point (minuend)
+ * @param p2 - Second point (subtrahend)
+ * @returns Vector from p2 to p1 as Point2D
+ *
+ * @example
+ * const direction = subtractPoints(endPoint, startPoint); // vector from start to end
+ * const v1 = subtractPoints(point1, vertex); // vector from vertex to point1
+ */
+export function subtractPoints(p1: Point2D, p2: Point2D): Point2D {
+  return { x: p1.x - p2.x, y: p1.y - p2.y };
+}
+
+/**
+ * Add two points/vectors
+ * ✅ CANONICAL: Component-wise addition
+ * Used for: offset calculations, translation
+ *
+ * @param p1 - First point/vector
+ * @param p2 - Second point/vector
+ * @returns Sum of the two points as Point2D
+ *
+ * @example
+ * const translated = addPoints(position, offset);
+ */
+export function addPoints(p1: Point2D, p2: Point2D): Point2D {
+  return { x: p1.x + p2.x, y: p1.y + p2.y };
+}
+
+/**
+ * Scale a point/vector by a scalar
+ * ✅ CANONICAL: Component-wise multiplication
+ * Used for: extending vectors, applying distances
+ *
+ * @param point - Point/vector to scale
+ * @param scalar - Scale factor
+ * @returns Scaled point/vector as Point2D
+ *
+ * @example
+ * const doubled = scalePoint(vector, 2);
+ * const halfLength = scalePoint(direction, 0.5);
+ */
+export function scalePoint(point: Point2D, scalar: number): Point2D {
+  return { x: point.x * scalar, y: point.y * scalar };
+}
+
+/**
+ * Offset a point by a direction vector scaled by distance
+ * ✅ CANONICAL: point + direction * distance
+ * Combines addPoints + scalePoint for common use case
+ *
+ * @param point - Base point to offset from
+ * @param direction - Direction vector (typically unit vector)
+ * @param distance - Distance to offset
+ * @returns Offset point as Point2D
+ *
+ * @example
+ * const labelPos = offsetPoint(center, perpendicular, labelDistance);
+ * const gapEnd = offsetPoint(mid, unit, gapHalf);
+ */
+export function offsetPoint(point: Point2D, direction: Point2D, distance: number): Point2D {
+  return {
+    x: point.x + direction.x * distance,
+    y: point.y + direction.y * distance
   };
 }
 

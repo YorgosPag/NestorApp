@@ -23,6 +23,8 @@ import {
 import { calculateDistance as centralizedCalculateDistance, calculateAngle as centralizedCalculateAngle } from '../../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { radToDeg } from '../../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance, formatAngle } from '../../../rendering/entities/shared/distance-label-utils';
 
 // ============================================================================
 // CONFIGURATION CONSTANTS
@@ -124,15 +126,21 @@ export abstract class BaseDragMeasurementRenderer {
 
   /**
    * Format a measurement for display
+   * 🏢 ADR-090: Centralized number formatting
    *
    * @param measurement - Measurement data object
    * @returns Formatted string for display
    */
   protected formatMeasurement(measurement: MeasurementData): string {
-    const precision = measurement.unit === '°' ? 1 : 2;
-    const value = measurement.value.toFixed(precision);
     const unit = measurement.unit || '';
-    return `${measurement.label}: ${value}${unit}`;
+    // Use centralized formatting based on unit type
+    if (unit === '°') {
+      // Angle formatting (includes the ° symbol)
+      return `${measurement.label}: ${formatAngle(measurement.value, 1)}`;
+    } else {
+      // Distance/length formatting
+      return `${measurement.label}: ${formatDistance(measurement.value)}${unit}`;
+    }
   }
 
   /**

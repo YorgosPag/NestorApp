@@ -12,6 +12,8 @@ import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
 import { UI_FONTS } from '../../../config/text-rendering-config';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addCirclePath } from '../../primitives/canvasPaths';
+// 🏢 ADR-088: Centralized Pixel-Perfect Alignment
+import { pixelPerfect } from '../../entities/shared/geometry-rendering-utils';
 
 export class OriginMarkersRenderer implements UIRenderer {
   readonly type = 'origin-markers';
@@ -62,8 +64,7 @@ export class OriginMarkersRenderer implements UIRenderer {
       calculated: { originScreenX, originScreenY }
     });
 
-    // Pixel snapping helper for crisp rendering
-    const px = (v: number) => Math.round(v) + 0.5;
+    // 🏢 ADR-088: Use centralized pixelPerfect for crisp rendering (removed local px helper)
 
     ctx.save();
 
@@ -76,17 +77,17 @@ export class OriginMarkersRenderer implements UIRenderer {
       ctx.beginPath();
 
       // X-Axis: Horizontal line across entire viewport (only if Y coord is visible)
-      // ✅ ChatGPT-5: Apply pixel snapping for crisp rendering
+      // ✅ ADR-088: Apply centralized pixel snapping for crisp rendering
       if (originScreenY >= 0 && originScreenY <= viewport.height) {
-        const y = px(originScreenY);
+        const y = pixelPerfect(originScreenY);
         ctx.moveTo(0, y);
         ctx.lineTo(viewport.width, y);
       }
 
       // Y-Axis: Vertical line across entire viewport (only if X coord is visible)
-      // ✅ ChatGPT-5: Apply pixel snapping for crisp rendering
+      // ✅ ADR-088: Apply centralized pixel snapping for crisp rendering
       if (originScreenX >= 0 && originScreenX <= viewport.width) {
-        const x = px(originScreenX);
+        const x = pixelPerfect(originScreenX);
         ctx.moveTo(x, 0);
         ctx.lineTo(x, viewport.height);
       }

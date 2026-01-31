@@ -20,6 +20,8 @@ import {
   isPolylineEntity,
   isLWPolylineEntity
 } from '../../types/entities';
+// 🏢 ADR-087: Centralized Snap Engine Configuration
+import { SNAP_RADIUS_MULTIPLIERS, SNAP_GRID_DISTANCES } from '../../config/tolerance-config';
 
 export class ParallelSnapEngine extends BaseSnapEngine {
   private referenceLine: {start: Point2D, end: Point2D} | null = null;
@@ -39,7 +41,8 @@ export class ParallelSnapEngine extends BaseSnapEngine {
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.PARALLEL);
     
     // Find potential reference lines near cursor
-    const referenceLines = this.findReferenceLines(cursorPoint, radius * 3, context);
+    // 🏢 ADR-087: Use extended multiplier (3x) for parallel line detection
+    const referenceLines = this.findReferenceLines(cursorPoint, radius * SNAP_RADIUS_MULTIPLIERS.EXTENDED, context);
     
     for (const refLine of referenceLines) {
       // 🏢 ADR-065: Use centralized distance calculation
@@ -54,9 +57,8 @@ export class ParallelSnapEngine extends BaseSnapEngine {
       const nearestRefPoint = getNearestPointOnLine(cursorPoint, refLine.start, refLine.end, false);
 
       // Create parallel line candidates at different distances
-      const distances = [0, 50, 100, 150]; // Grid-like distances
-
-      for (const dist of distances) {
+      // 🏢 ADR-087: Use centralized grid distances
+      for (const dist of SNAP_GRID_DISTANCES.PARALLEL) {
         // Perpendicular direction (rotated 90° from direction)
         const perpX = -dir.y;
         const perpY = dir.x;

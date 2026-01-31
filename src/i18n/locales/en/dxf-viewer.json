@@ -1370,6 +1370,7 @@
     "circleChordSagitta": "Circle (Chord-Sagitta)",
     "circle2pRadius": "Circle (2 Points + Radius)",
     "circleBestFit": "Circle (Best Fit)",
+    "circleTTT": "Circle (Tangent to 3 Lines)",
     "polyline": "Polyline",
     "polygon": "Polygon",
     "arc": "Arc",

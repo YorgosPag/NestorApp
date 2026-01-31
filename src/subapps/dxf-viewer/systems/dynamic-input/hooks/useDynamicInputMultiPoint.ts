@@ -5,9 +5,11 @@ import type { Point2D } from '../../../rendering/types/Types';
 // 🏢 ADR-065: Centralized Distance Calculation
 // 🏢 ADR-070: Centralized Vector Magnitude
 // 🏢 ADR-072: Centralized Dot Product
-import { calculateDistance, vectorMagnitude, dotProduct } from '../../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-090: Centralized Point Vector Operations
+import { calculateDistance, vectorMagnitude, dotProduct, subtractPoints } from '../../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
-import { radToDeg } from '../../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR: Centralized Clamp Function
+import { radToDeg, clamp } from '../../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-069: Centralized Number Formatting
 import {
   formatDistance as centralizedFormatDistance,
@@ -133,7 +135,7 @@ export function useDynamicInputMultiPoint({
       // 🏢 ADR-079: Use centralized vector magnitude threshold
       if (mag1 > VECTOR_PRECISION.MIN_MAGNITUDE && mag2 > VECTOR_PRECISION.MIN_MAGNITUDE) { // Αποφυγή division by zero
         const cosAngle = dot / (mag1 * mag2);
-        const angleRad = Math.acos(Math.max(-1, Math.min(1, cosAngle))); // Clamp για ακρίβεια
+        const angleRad = Math.acos(clamp(cosAngle, -1, 1)); // Clamp για ακρίβεια
         // 🏢 ADR-067: Use centralized angle conversion
         segmentAngle = radToDeg(angleRad);
       }
@@ -160,8 +162,9 @@ export function calculateAngleBetweenPoints(
   vertex: Point2D,
   p3: Point2D
 ): AngleInfo {
-  const v1 = { x: p1.x - vertex.x, y: p1.y - vertex.y };
-  const v2 = { x: p3.x - vertex.x, y: p3.y - vertex.y };
+  // 🏢 ADR-090: Use centralized point subtraction
+  const v1 = subtractPoints(p1, vertex);
+  const v2 = subtractPoints(p3, vertex);
 
   // 🏢 ADR-072: Use centralized dot product
   const dot = dotProduct(v1, v2);
@@ -175,7 +178,7 @@ export function calculateAngleBetweenPoints(
   }
 
   const cosAngle = dot / (mag1 * mag2);
-  const angleRad = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
+  const angleRad = Math.acos(clamp(cosAngle, -1, 1));
   // 🏢 ADR-067: Use centralized angle conversion
   const angleDeg = radToDeg(angleRad);
 

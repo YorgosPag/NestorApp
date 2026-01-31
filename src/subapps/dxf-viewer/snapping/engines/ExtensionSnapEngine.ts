@@ -13,6 +13,8 @@ import { filterValidEntities, isWithinTolerance } from './shared/snap-engine-uti
 import { CoordinateUtils } from '../../systems/constraints/utils';
 import { getNearestPointOnLine, getLineParameter } from '../../rendering/entities/shared/geometry-utils';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-087: Centralized Snap Engine Configuration
+import { SNAP_RADIUS_MULTIPLIERS, SNAP_GRID_DISTANCES } from '../../config/tolerance-config';
 
 export class ExtensionSnapEngine extends BaseSnapEngine {
 
@@ -28,12 +30,13 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
     const priority = 5; // Medium priority
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.EXTENSION);
     
+    // 🏢 ADR-087: Use centralized snap radius multiplier
     const candidates = this.processCandidateLoop(
       context.entities,
       context,
       cursorPoint,
       priority,
-      (entity) => this.getExtensionPoints(entity as EntityModel, cursorPoint, radius * 2), // ✅ ENTERPRISE FIX: Type casting
+      (entity) => this.getExtensionPoints(entity as EntityModel, cursorPoint, radius * SNAP_RADIUS_MULTIPLIERS.STANDARD),
       (type) => `Extension (${type})`
     );
 
@@ -88,9 +91,8 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
     const distToEnd = calculateDistance(cursorPoint, lineEnd);
     
     // Extension distances to try
-    const extensionDistances = [25, 50, 100, 200, 300];
-    
-    for (const extDist of extensionDistances) {
+    // 🏢 ADR-087: Use centralized extension grid distances
+    for (const extDist of SNAP_GRID_DISTANCES.EXTENSION) {
       if (extDist > maxDistance) break;
       
       // Extend from start (backwards)

@@ -9,6 +9,11 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { HoverRenderContext } from './types';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-086: Centralized Font Definitions
+// 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
+import { UI_FONTS, buildUIFont } from '../../config/text-rendering-config';
+// 🏢 ADR-086: Centralized Angle Formatting
+import { formatAngle } from '../../rendering/entities/shared/distance-label-utils';
 import { isTextEntity, isAngleMeasurementEntity } from '../../types/entities';
 
 export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
@@ -26,7 +31,7 @@ export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRe
   
   // Simple text bounding box
   ctx.save();
-  ctx.font = `${screenHeight}px Arial`;
+  ctx.font = buildUIFont(screenHeight, 'arial');
   const metrics = ctx.measureText(text);
   const width = metrics.width;
   
@@ -73,9 +78,10 @@ export function renderAngleMeasurementHover({ entity, ctx, worldToScreen, option
   // Simple angle text at vertex
   ctx.save();
   ctx.fillStyle = UI_COLORS.DRAWING_TEMP;
-  ctx.font = '14px Arial';
+  ctx.font = UI_FONTS.ARIAL.LARGE; // 🏢 ADR-086: Use centralized font constant
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`${angle.toFixed(1)}°`, screenVertex.x, screenVertex.y - 20);
+  // 🏢 ADR-086: Use centralized angle formatting
+  ctx.fillText(formatAngle(angle, 1), screenVertex.x, screenVertex.y - 20);
   ctx.restore();
 }

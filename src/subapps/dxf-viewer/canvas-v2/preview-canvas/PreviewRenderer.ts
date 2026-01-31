@@ -24,6 +24,8 @@
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity, ExtendedLineEntity, ExtendedCircleEntity, ExtendedPolylineEntity, PreviewPoint } from '../../hooks/drawing/useUnifiedDrawing';
+// 🏢 ADR-094: Centralized Device Pixel Ratio
+import { getDevicePixelRatio } from '../../systems/cursor/utils';
 
 // 🏢 ENTERPRISE (2026-01-31): Arc preview entity type - ADR-059
 // Extended to support construction lines (rubber band) during arc drawing
@@ -56,7 +58,8 @@ import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ADR-041: Centralized Distance Label Rendering
 import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/entities/shared/distance-label-utils';
 // 🏢 ADR-044: Centralized Line Widths
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-090: Centralized UI Fonts
+import { RENDER_LINE_WIDTHS, UI_FONTS } from '../../config/text-rendering-config';
 // 🏢 ADR-066: Centralized Angle Calculation
 // 🏢 ADR-080: Centralized Rectangle Bounds
 import { calculateAngle, rectFromTwoPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -147,7 +150,7 @@ export class PreviewRenderer {
       alpha: true, // Transparent background
       desynchronized: true, // Better performance
     });
-    this.dpr = window.devicePixelRatio || 1;
+    this.dpr = getDevicePixelRatio(); // 🏢 ADR-094
   }
 
   /**
@@ -156,7 +159,7 @@ export class PreviewRenderer {
   updateSize(width: number, height: number): void {
     if (!this.canvas || !this.ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDevicePixelRatio(); // 🏢 ADR-094
     this.dpr = dpr;
 
     // Set canvas buffer size
@@ -216,7 +219,7 @@ export class PreviewRenderer {
 
     // 🔧 FIX (2026-01-27): IMMEDIATE clearRect - don't wait for scheduler
     if (this.ctx && this.canvas) {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = getDevicePixelRatio(); // 🏢 ADR-094
       this.ctx.setTransform(1, 0, 0, 1, 0, 0);
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -499,7 +502,7 @@ export class PreviewRenderer {
 
     ctx.save();
     ctx.fillStyle = '#FF00FF'; // Fuchsia for angle text (measurement standard)
-    ctx.font = '14px Arial';
+    ctx.font = UI_FONTS.ARIAL.LARGE; // 🏢 ADR-090: Centralized font
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`${entity.angle.toFixed(1)}°`, textX, textY);

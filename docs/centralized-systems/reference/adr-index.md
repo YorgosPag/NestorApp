@@ -4,7 +4,7 @@
 >
 > Single source of truth για όλες τις αρχιτεκτονικές αποφάσεις της εφαρμογής
 
-**📊 Stats**: 80 ADRs (ADR-065 expanded) | Last Updated: 2026-01-31
+**📊 Stats**: 93 ADRs (ADR-094 added) | Last Updated: 2026-01-31
 
 ---
 
@@ -104,6 +104,19 @@
 | **ADR-079** | Geometric Epsilon/Precision Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
 | **ADR-080** | Rectangle Bounds Centralization (rectFromTwoPoints) | ✅ APPROVED | 2026-01-31 | Data & State |
 | **ADR-081** | Percentage Formatting Centralization (formatPercent) | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-082** | Enterprise Number Formatting System (AutoCAD-Grade) | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-083** | Line Dash Patterns Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-084** | Scattered Code Centralization (Draggable + Canvas State) | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-085** | Split Line Rendering Centralization | ✅ APPROVED | 2026-01-31 | Drawing System |
+| **ADR-086** | Hover Utilities Scattered Code Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-087** | Snap Engine Configuration Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-088** | Pixel-Perfect Rendering Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-089** | Point-In-Bounds Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-090** | Point Vector Operations Centralization | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-091** | Scattered Code Centralization (Fonts + Formatting) | ✅ APPROVED | 2026-01-31 | Design System |
+| **ADR-092** | Centralized localStorage Service | ✅ APPROVED | 2026-01-31 | Infrastructure |
+| **ADR-093** | Text Label Offsets Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-094** | Device Pixel Ratio Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
 | **ADR-059** | Separate Audit Bootstrap from Projects List | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-060** | Building Floorplan Enterprise Storage | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-061** | Path Aliases Strategy | ✅ APPROVED | 2026-01-13 | Infrastructure |
@@ -180,6 +193,43 @@
 - **Owner**: `useBorderTokens.ts` for all visual primitives
 - **API**: `quick.*` semantic tokens (not just helpers)
 
+### ADR-091: Scattered Code Centralization (Fonts + Formatting)
+- **Decision**: Migrate hardcoded `ctx.font` strings and inline `.toFixed()` calls to centralized systems
+- **Problem**: Two categories of scattered code identified:
+  - **42 hardcoded `ctx.font`** strings across 22 files (e.g., `'12px Inter'`, `'14px Arial'`)
+  - **245 inline `.toFixed()`** patterns across 94 files (e.g., `radius.toFixed(2)`)
+- **Solution**: Use existing centralized systems from ADR-042 and ADR-069
+- **Phase 1 Migrations** (15 high-impact files):
+  - **Font Migrations** (8 files):
+    - `CollaborationOverlay.tsx` → `UI_FONTS.INTER.NORMAL`, `UI_FONTS.INTER.BOLD_SMALL`
+    - `PreviewRenderer.ts` → `UI_FONTS.ARIAL.LARGE`
+    - `overlay-drawing.ts` → `UI_FONTS.SYSTEM.NORMAL`
+    - `CursorSnapAlignmentDebugOverlay.ts` → `UI_FONTS.ARIAL.BOLD`
+    - `hover/config.ts` → `UI_FONTS.ARIAL.SMALL`, `UI_FONTS.ARIAL.LARGE`
+    - `ghost-entity-renderer.ts` → `UI_FONTS.MONOSPACE.SMALL`
+    - `BaseDragMeasurementRenderer.ts` → `UI_FONTS.ARIAL.NORMAL`
+    - `text-spline-renderers.ts` → `UI_FONTS.ARIAL.LARGE`
+  - **Formatting Migrations** (7 files):
+    - `CircleRenderer.ts` → `formatDistance()` for diameter/radius
+    - `ArcRenderer.ts` → `formatDistance()`, `formatAngle()`
+    - `BaseEntityRenderer.ts` → `formatDistance()`, `formatAngle()`
+    - `BaseDragMeasurementRenderer.ts` → `formatDistance()`, `formatAngle()`
+- **New UI_FONTS Addition**:
+  - `UI_FONTS.INTER` - For collaboration overlays and modern UI elements
+    - `SMALL`: `'10px Inter, sans-serif'`
+    - `NORMAL`: `'12px Inter, sans-serif'`
+    - `BOLD_SMALL`: `'bold 10px Inter, sans-serif'`
+- **Pattern**: On-touch migration (Phase 2 covers remaining files as they're edited)
+- **Canonical Sources**:
+  - Fonts: `UI_FONTS` from `config/text-rendering-config.ts` (ADR-042)
+  - Formatting: `formatDistance()`, `formatAngle()` from `distance-label-utils.ts` (ADR-069)
+- **Benefits**:
+  - Zero hardcoded font strings in migrated files
+  - Consistent number formatting across all entity renderers
+  - Single point of change for typography and precision
+  - Future locale-aware formatting support via `formatDistanceLocale()`
+- **Companion**: ADR-042 (UI Fonts), ADR-069 (formatDistance/formatAngle), ADR-082 (FormatterRegistry)
+
 ---
 
 ## 🖼️ **CANVAS & RENDERING**
@@ -243,6 +293,193 @@
   - CursorRenderer.ts - uses `addSquarePath()`, `addDiamondPath()`, `addCrossPath()`
   - SnapRenderer.ts - uses all 5 shape primitives
 - **Result**: 6 shape types centralized, zero duplicate path code
+
+### ADR-083: Line Dash Patterns Centralization
+- **Canonical**: `LINE_DASH_PATTERNS` from `config/text-rendering-config.ts`
+- **Decision**: Centralize all `ctx.setLineDash()` patterns (45+ hardcoded across 16 files)
+- **API**:
+  - `LINE_DASH_PATTERNS.SOLID` - `[]` (reset)
+  - `LINE_DASH_PATTERNS.DASHED` - `[5, 5]`
+  - `LINE_DASH_PATTERNS.DOTTED` - `[2, 4]`
+  - `LINE_DASH_PATTERNS.DASH_DOT` - `[8, 4, 2, 4]`
+  - `LINE_DASH_PATTERNS.SELECTION` - `[5, 5]`
+  - `LINE_DASH_PATTERNS.GHOST` - `[4, 4]`
+  - `LINE_DASH_PATTERNS.HOVER` - `[12, 6]`
+  - `LINE_DASH_PATTERNS.LOCKED` - `[4, 4]`
+  - `LINE_DASH_PATTERNS.CONSTRUCTION` - `[8, 4]`
+  - `LINE_DASH_PATTERNS.ARC` - `[3, 3]`
+  - `LINE_DASH_PATTERNS.TEXT_BOUNDING` - `[2, 2]`
+  - `LINE_DASH_PATTERNS.CURSOR_DASHED` - `[6, 6]`
+  - `LINE_DASH_PATTERNS.CURSOR_DOTTED` - `[2, 4]`
+  - `LINE_DASH_PATTERNS.CURSOR_DASH_DOT` - `[8, 4, 2, 4]`
+- **Helper Functions**:
+  - `applyLineDash(ctx, pattern)` - Apply pattern to canvas context
+  - `resetLineDash(ctx)` - Reset to solid line
+- **Type**: `LineDashPattern` - Union type of all patterns
+- **Industry Standard**: AutoCAD LTSCALE / ISO 128 Line Types
+- **Files Migrated**:
+  - `CursorRenderer.ts` - Uses `CURSOR_DASHED`, `CURSOR_DOTTED`, `CURSOR_DASH_DOT`
+  - `SelectionRenderer.ts` - Uses `CURSOR_DASHED`, `CURSOR_DOTTED`, `CURSOR_DASH_DOT`
+  - `ghost-entity-renderer.ts` - Uses `GHOST` pattern
+  - `hover/config.ts` - Uses `SELECTION` pattern
+- **Migration Strategy**: On-touch migration for remaining 12 files
+- **Benefits**:
+  - Zero hardcoded dash patterns
+  - Consistent visual style across all renderers
+  - Single point of change for pattern tuning
+  - Type-safe pattern references
+- **Companion**: ADR-044 (Canvas Line Widths), ADR-058 (Canvas Primitives)
+
+### ADR-088: Pixel-Perfect Rendering Centralization
+- **Canonical**: `pixelPerfect()`, `pixelPerfectPoint()` from `geometry-rendering-utils.ts`
+- **Decision**: Centralize pixel-perfect alignment pattern (`Math.round(v) + 0.5`)
+- **Problem**: Duplicate inline functions across 4 files:
+  - `CrosshairOverlay.tsx`: `Math.round(pos.x) + 0.5` (inline)
+  - `LayerRenderer.ts`: `const px = (v: number) => Math.round(v) + 0.5;`
+  - `DxfRenderer.ts`: `const px = (v: number) => Math.round(v) + 0.5;`
+  - `OriginMarkersRenderer.ts`: `const px = (v: number) => Math.round(v) + 0.5;`
+- **Solution**: Single Source of Truth in `geometry-rendering-utils.ts`
+- **API**:
+  - `pixelPerfect(value: number): number` - Single coordinate (returns `Math.round(value) + 0.5`)
+  - `pixelPerfectPoint(point: Point2D): Point2D` - Full point alignment
+- **Why +0.5**:
+  - Canvas coordinates are at pixel CENTER (not edge)
+  - A 1px line at integer coordinate spans 2 pixels (anti-aliased = blurry)
+  - Adding 0.5 places the line exactly on pixel boundary = crisp 1px line
+- **Industry Standard**: AutoCAD, Figma, Blender all use this pattern
+- **Files Migrated**:
+  - `canvas-v2/overlays/CrosshairOverlay.tsx` - Crosshair lines
+  - `canvas-v2/layer-canvas/LayerRenderer.ts` - Origin marker lines
+  - `canvas-v2/dxf-canvas/DxfRenderer.ts` - Origin marker lines
+  - `rendering/ui/origin/OriginMarkersRenderer.ts` - Axis lines
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero duplicate pixel-perfect helper functions
+  - Consistent crisp line rendering across all canvases
+  - Documented reason for the +0.5 pattern
+  - CAD-grade visual quality
+- **Companion**: ADR-044 (Canvas Line Widths), ADR-058 (Canvas Primitives), ADR-083 (Line Dash Patterns)
+
+### ADR-093: Text Label Offsets Centralization
+- **Canonical**: `TEXT_LABEL_OFFSETS` from `config/text-rendering-config.ts`
+- **Decision**: Centralize hardcoded vertical offsets (10, 30) for multi-line text labels in entity renderers
+- **Problem**: Magic numbers `-30`, `-10`, `+10`, `+30` scattered across 5 files:
+  - `EllipseRenderer.ts`: 4 lines (Ma, Mi, E, Περ)
+  - `ArcRenderer.ts`: 3 lines (R, Angle, L)
+  - `RectangleRenderer.ts`: 2 lines (E, Περ)
+  - `PolylineRenderer.ts`: 2 lines (E, Περ)
+  - `ghost-entity-renderer.ts`: 2 lines (tooltip x/y offset)
+- **Solution**: Centralized constants in `text-rendering-config.ts`
+- **API**:
+  - `TEXT_LABEL_OFFSETS.TWO_LINE`: 10 (2-line label spacing)
+  - `TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER`: 30 (3-4 line label outer spacing)
+  - `TEXT_LABEL_OFFSETS.TOOLTIP_HORIZONTAL`: 10 (tooltip x offset)
+  - `TEXT_LABEL_OFFSETS.TOOLTIP_VERTICAL`: 10 (tooltip y offset)
+- **Layout Pattern**:
+  ```
+  4-line (Ellipse):          3-line (Arc):          2-line (Rect/Poly):
+  y - 30  ← "Ma: X.XX"       y - 30  ← "R: X.XX"
+  y - 10  ← "Mi: X.XX"       y - 10  ← "Angle"      y - 10  ← "Ε: X.XX"
+  y + 10  ← "Ε: X.XX"        y + 10  ← "L: X.XX"    y + 10  ← "Περ: X.XX"
+  y + 30  ← "Περ: X.XX"
+  ```
+- **Industry Standard**: AutoCAD DIMTAD / ISO 129 Dimension Text Positioning
+- **Files Migrated**:
+  - `rendering/entities/EllipseRenderer.ts` - 4 replacements
+  - `rendering/entities/ArcRenderer.ts` - 3 replacements
+  - `rendering/entities/RectangleRenderer.ts` - 2 replacements
+  - `rendering/entities/PolylineRenderer.ts` - 2 replacements
+  - `rendering/utils/ghost-entity-renderer.ts` - 2 replacements
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero magic numbers for text label positioning
+  - Single point of change for spacing adjustments
+  - Consistent label layout across all entity types
+  - Semantic constant names (`TWO_LINE` vs `10`)
+- **Companion**: ADR-042 (UI Fonts), ADR-044 (Canvas Line Widths), ADR-048 (RENDER_GEOMETRY)
+
+### ADR-094: Device Pixel Ratio Centralization
+- **Canonical**: `getDevicePixelRatio()` from `systems/cursor/utils.ts`
+- **Decision**: Centralize inline `window.devicePixelRatio || 1` patterns to SSR-safe centralized function
+- **Problem**: 10+ inline occurrences of `window.devicePixelRatio || 1` across 6 files:
+  - `canvas-v2/preview-canvas/PreviewRenderer.ts`: 3 occurrences (lines 151, 160, 220)
+  - `debug/CursorSnapAlignmentDebugOverlay.ts`: 2 occurrences (lines 102, 252)
+  - `rendering/canvas/utils/CanvasUtils.ts`: 2 occurrences (lines 43, 124)
+  - `rendering/canvas/core/CanvasSettings.ts`: 1 occurrence (line 184)
+  - `systems/zoom/ZoomManager.ts`: 1 occurrence (line 162)
+- **SSR Risk**: Inline `window.devicePixelRatio` without checks fails in SSR environments
+- **Solution**: Use existing centralized function (already present in cursor/utils.ts):
+  ```typescript
+  export function getDevicePixelRatio(): number {
+    return typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  }
+  ```
+- **API**:
+  - `getDevicePixelRatio()` - Returns current device pixel ratio (SSR-safe, defaults to 1)
+- **Pattern**: Single Source of Truth (SSOT) for DPR access
+- **Benefits**:
+  - SSR-safe by default (no `window is not defined` errors)
+  - Consistent fallback value (always 1)
+  - Single point of change if DPR handling logic changes
+  - Testable (can mock in unit tests)
+- **Files Migrated**:
+  - `canvas-v2/preview-canvas/PreviewRenderer.ts` - 3 replacements
+  - `debug/CursorSnapAlignmentDebugOverlay.ts` - 2 replacements
+  - `rendering/canvas/utils/CanvasUtils.ts` - 2 replacements
+  - `rendering/canvas/core/CanvasSettings.ts` - 1 replacement
+  - `systems/zoom/ZoomManager.ts` - 1 replacement
+- **Skipped**: `automatedTests.ts` - Test file, inline DPR is acceptable
+- **Companion**: ADR-043 (Zoom Constants), ADR-044 (Canvas Line Widths), ADR-088 (Pixel-Perfect Rendering)
+
+### ADR-084: Scattered Code Centralization (Draggable + Canvas State)
+- **Decision**: Centralize scattered draggable logic and canvas state operations
+- **Two Components**:
+  1. **CursorSettingsPanel Refactor** - 70+ lines manual drag → FloatingPanel
+  2. **withCanvasState() Helper** - 89 hardcoded ctx.fillStyle/strokeStyle → centralized
+
+#### Part 1: CursorSettingsPanel Migration
+- **Before**: Manual drag state, mouse handlers, event listeners (70 lines)
+- **After**: FloatingPanel compound component (10 lines)
+- **Canonical**: `FloatingPanel` from `@/components/ui/floating`
+- **File Changed**: `ui/CursorSettingsPanel.tsx`
+- **Result**: -60 lines, consistent with other floating panels
+
+#### Part 2: Canvas State Helper
+- **Canonical**: `withCanvasState()` from `rendering/canvas/withCanvasState.ts`
+- **API**:
+  - `withCanvasState(ctx, style, callback)` - Save/restore pattern
+  - `withCanvasStateAsync(ctx, style, callback)` - Async version
+  - `applyCanvasStyle(ctx, style)` - Apply style options
+  - `setFillStyle(ctx, color, opacity?)` - Set fill with optional opacity
+  - `setStrokeStyle(ctx, color, width?, dash?)` - Set stroke with optional width/dash
+  - `resetCanvasState(ctx)` - Reset to defaults
+- **Type**: `CanvasStyleOptions` - All canvas style properties
+- **Supports Config Keys**: `lineWidth: 'NORMAL'`, `lineDash: 'DASHED'`
+
+#### Migration Example
+```typescript
+// Before (scattered code):
+ctx.save();
+ctx.fillStyle = UI_COLORS.WHITE;
+ctx.globalAlpha = 0.5;
+ctx.fillRect(0, 0, width, height);
+ctx.restore();
+
+// After (centralized):
+import { withCanvasState } from '../canvas/withCanvasState';
+
+withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
+  ctx.fillRect(0, 0, width, height);
+});
+```
+
+- **Migration Strategy**: On-touch migration for 56 files with canvas state operations
+- **Files Created**:
+  - `rendering/canvas/withCanvasState.ts` (~100 lines)
+- **Files Changed**:
+  - `ui/CursorSettingsPanel.tsx` (-60 lines, +20 lines)
+  - `rendering/canvas/index.ts` (new exports)
+- **Companion**: ADR-003 (FloatingPanel), ADR-044 (Line Widths), ADR-083 (Line Dash)
 
 ---
 
@@ -643,6 +880,99 @@
   - Consistent calculation accuracy across systems
 - **Companion**: ADR-065 (Distance), ADR-066 (Angle), ADR-034 (Geometry Centralization)
 
+### ADR-087: Snap Engine Configuration Centralization
+- **Canonical**: `SNAP_SEARCH_RADIUS`, `SNAP_RADIUS_MULTIPLIERS`, `SNAP_GRID_DISTANCES`, `SNAP_GEOMETRY` from `tolerance-config.ts`
+- **Impact**: 8 magic numbers across 4 snap engines → 4 centralized constant objects
+- **Problem**: Inconsistent snap engine constants:
+  - `OrthoSnapEngine`: `200` (search radius), `radius * 2`, `Math.sqrt(2)`
+  - `ParallelSnapEngine`: `radius * 3` (why 3x?), `[0, 50, 100, 150]`
+  - `PerpendicularSnapEngine`: `radius * 2`
+  - `ExtensionSnapEngine`: `radius * 2`, `[25, 50, 100, 200, 300]`
+- **Solution**: Extended tolerance-config.ts with snap engine configuration
+- **Constant Categories**:
+  - `SNAP_SEARCH_RADIUS.REFERENCE_POINT`: 200 (Ortho reference point search)
+  - `SNAP_RADIUS_MULTIPLIERS.STANDARD`: 2 (Ortho, Perpendicular, Extension)
+  - `SNAP_RADIUS_MULTIPLIERS.EXTENDED`: 3 (Parallel - needs wider search)
+  - `SNAP_GRID_DISTANCES.PARALLEL`: [0, 50, 100, 150]
+  - `SNAP_GRID_DISTANCES.EXTENSION`: [25, 50, 100, 200, 300]
+  - `SNAP_GEOMETRY.SQRT_2`: Math.sqrt(2) (diagonal calculations)
+  - `SNAP_GEOMETRY.INV_SQRT_2`: 1/√2 ≈ 0.7071 (efficient division)
+- **Files Migrated**:
+  - `OrthoSnapEngine.ts` - 3 patterns migrated
+  - `ParallelSnapEngine.ts` - 2 patterns migrated
+  - `PerpendicularSnapEngine.ts` - 1 pattern migrated
+  - `ExtensionSnapEngine.ts` - 2 patterns migrated
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero magic numbers in snap engines
+  - Documented reason for 3x vs 2x multiplier
+  - Single point of change for snap configuration
+  - Consistent snap behavior across engines
+- **Companion**: ADR-079 (Geometric Precision), ADR-034 (Geometry Centralization)
+
+### ADR-089: Point-In-Bounds Centralization
+- **Canonical**: `SpatialUtils.pointInBounds()`, `SpatialUtils.pointInRect()` from `core/spatial/SpatialUtils.ts`
+- **Impact**: 4 duplicate point-in-bounds implementations → 2 centralized functions
+- **Problem**: Scattered point-in-bounds checking patterns:
+  - `snap-engine-utils.ts:134` - Inline `point.x >= minX && point.x <= maxX && ...`
+  - `UniversalMarqueeSelection.ts:408-409` - Inline vertex check against rectBounds
+  - `SpatialUtils.ts:68` - Existing static method (UNUSED!)
+  - `ISpatialIndex.ts:312` - Duplicate in namespace (DEAD CODE)
+- **Two Bounds Formats**:
+  - **SpatialBounds**: `{ minX, maxX, minY, maxY }` → Spatial indexing systems
+  - **MinMax Point2D**: `{ min: Point2D, max: Point2D }` → Selection/rendering
+- **Solution**: Two canonical functions for different formats:
+  - `SpatialUtils.pointInBounds(point, bounds)` - For SpatialBounds format
+  - `SpatialUtils.pointInRect(point, rect)` - For { min, max } Point2D format
+- **Files Migrated**:
+  - `snapping/engines/shared/snap-engine-utils.ts` - Uses `SpatialUtils.pointInBounds()`
+  - `systems/selection/UniversalMarqueeSelection.ts` - Uses `SpatialUtils.pointInRect()`
+  - `core/spatial/ISpatialIndex.ts` - Re-exports from SpatialUtils class (removed duplicate namespace)
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero duplicate point-in-bounds implementations
+  - Support for both bounds formats (SpatialBounds and { min, max })
+  - Type-safe Point2D interface
+  - ISpatialIndex namespace now delegates to SpatialUtils class
+- **Companion**: ADR-034 (Geometry Centralization), ADR-079 (Geometric Precision)
+
+### ADR-090: Point Vector Operations Centralization
+- **Canonical**: `subtractPoints()`, `addPoints()`, `scalePoint()`, `offsetPoint()` from `geometry-rendering-utils.ts`
+- **Impact**: 15+ inline vector arithmetic patterns → 4 centralized functions
+- **Problem**: Duplicate vector arithmetic patterns scattered across 8+ files:
+  - `{ x: p1.x - p2.x, y: p1.y - p2.y }` - Vector subtraction
+  - `{ x: point.x + dir.x * dist, y: point.y + dir.y * dist }` - Point offset
+- **Solution**: Centralized vector arithmetic functions
+- **API**:
+  ```typescript
+  // Vector subtraction: p1 - p2 = vector from p2 to p1
+  subtractPoints(p1: Point2D, p2: Point2D): Point2D
+
+  // Vector addition
+  addPoints(p1: Point2D, p2: Point2D): Point2D
+
+  // Scale vector by scalar
+  scalePoint(point: Point2D, scalar: number): Point2D
+
+  // Offset point by direction * distance (combines add + scale)
+  offsetPoint(point: Point2D, direction: Point2D, distance: number): Point2D
+  ```
+- **Files Migrated**:
+  - `geometry-utils.ts` - `angleBetweenPoints()` vector calculations
+  - `useUnifiedDrawing.tsx` - Measure-angle tool vector calculations
+  - `PolylineRenderer.ts` - Rectangle side vectors (4 patterns)
+  - `useDynamicInputMultiPoint.ts` - Angle calculation vectors
+  - `angle-utils.ts` - Uses `pointOnCircle()` for label positioning
+  - `text-labeling-utils.ts` - Uses `offsetPoint()` for text positioning
+  - `line-utils.ts` - Uses `offsetPoint()` for gap calculations
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero duplicate vector arithmetic
+  - Consistent API: `subtractPoints(p1, p2)` instead of `{ x: p1.x - p2.x, ... }`
+  - Clear semantic meaning (subtract vs offset vs scale)
+  - Type-safe Point2D interface
+- **Companion**: ADR-065 (Distance), ADR-073 (Midpoint), ADR-074 (Point On Circle)
+
 ### ADR-080: Rectangle Bounds Centralization (rectFromTwoPoints)
 - **Canonical**: `rectFromTwoPoints()`, `RectBounds` from `geometry-rendering-utils.ts`
 - **Impact**: 10+ inline bounding box calculations → 1 function
@@ -714,6 +1044,66 @@
   - Companion to formatDistance/formatAngle
 - **Companion**: ADR-069 (Number Formatting), ADR-043 (Zoom Constants)
 
+### ADR-082: Enterprise Number Formatting System (AutoCAD-Grade)
+- **Canonical**: `FormatterRegistry` from `formatting/FormatterRegistry.ts`
+- **Hook**: `useFormatter()` from `formatting/useFormatter.ts`
+- **Config**: `number-format-config.ts`
+- **Impact**: 258 scattered `.toFixed()` patterns → 1 centralized, locale-aware system
+- **Problem**: No locale awareness in number formatting (Greek uses comma, English uses period)
+- **Solution**: Full AutoCAD-grade FormatterRegistry with:
+  - Unit types (Scientific, Decimal, Engineering, Architectural, Fractional)
+  - Locale-aware formatting (el-GR: `1.234,56` vs en-US: `1,234.56`)
+  - Per-category precision configuration
+  - Format templates (prefix/suffix like DIMPOST)
+  - Hierarchical overrides (Global → Context → Per-element)
+  - Zero suppression options (like DIMZIN)
+- **AutoCAD System Variable Mapping**:
+  | AutoCAD | This Config |
+  |---------|-------------|
+  | LUNITS | linearUnits |
+  | LUPREC | precision.linear |
+  | AUNITS | angularUnits |
+  | AUPREC | precision.angular |
+  | DIMZIN | zeroSuppression |
+  | DIMDSEP | decimalSeparator |
+  | DIMPOST | templates.* |
+- **API**:
+  ```typescript
+  // Registry usage (non-React)
+  const fmt = FormatterRegistry.getInstance();
+  fmt.formatDistance(1234.567);  // "1.234,57" (el-GR) or "1,234.57" (en-US)
+  fmt.formatAngle(45.5);         // "45,5°" (el-GR) or "45.5°" (en-US)
+  fmt.formatDiameter(50);        // "Ø50,00" (el-GR) or "Ø50.00" (en-US)
+  fmt.formatPercent(0.75);       // "75%"
+
+  // React hook usage
+  const { formatDistance, formatAngle } = useFormatter();
+  ```
+- **New Functions in distance-label-utils.ts**:
+  - `formatDistanceLocale()` - Locale-aware distance formatting
+  - `formatAngleLocale()` - Locale-aware angle formatting
+  - `formatCoordinateLocale()` - Locale-aware coordinate formatting
+- **File Structure**:
+  ```
+  src/subapps/dxf-viewer/
+  ├── config/number-format-config.ts (150 lines)
+  ├── formatting/
+  │   ├── FormatterRegistry.ts (500 lines)
+  │   ├── useFormatter.ts (150 lines)
+  │   └── index.ts (exports)
+  └── rendering/entities/shared/
+      └── distance-label-utils.ts (MODIFIED)
+  ```
+- **Pattern**: Singleton + Factory + Strategy
+- **Benefits**:
+  - Zero inline `.toFixed()` patterns (incremental migration)
+  - Locale-aware decimal separators
+  - AutoCAD-compatible unit types
+  - Cached Intl.NumberFormat instances
+  - Full TypeScript (ZERO any)
+- **Migration Strategy**: On-touch migration (replace `.toFixed()` when editing files)
+- **Companion**: ADR-069 (formatDistance/formatAngle), ADR-081 (formatPercent), ADR-041 (Distance Labels)
+
 ---
 
 ## ✏️ **DRAWING SYSTEM**
@@ -758,6 +1148,55 @@
 ### ADR-057: Unified Entity Completion Pipeline
 - **Canonical**: `completeEntity()` from `hooks/drawing/completeEntity.ts`
 - **Result**: 4 code paths → 1 function
+
+### ADR-085: Split Line Rendering Centralization
+- **Canonical**: `renderSplitLineWithGap()`, `renderLineWithTextCheck()` from `rendering/entities/shared/line-rendering-utils.ts`
+- **Decision**: Centralize split line rendering logic (line with gap for distance text)
+- **Problem**: 2 parallel implementations with inconsistent gap sizes:
+  - `BaseEntityRenderer.renderSplitLineWithGap()`: 30px gap, phase-aware
+  - `line-rendering-utils.renderSplitLineWithGap()`: 40px gap, standalone
+- **Solution**: Single Source of Truth in `line-rendering-utils.ts`
+- **Gap Size**: Unified to `RENDER_GEOMETRY.SPLIT_LINE_GAP` (30px) from ADR-048
+- **Gap Calculation**: Uses `calculateSplitLineGap()` from `line-utils.ts`
+- **API**:
+  - `renderSplitLineWithGap(ctx, startScreen, endScreen, gapSize?)` - Draw line with centered gap
+  - `renderLineWithTextCheck(ctx, startScreen, endScreen, gapSize?)` - Conditional gap based on text settings
+  - `renderContinuousLine(ctx, startScreen, endScreen)` - Draw solid line (no gap)
+- **Files Changed**:
+  - `line-rendering-utils.ts` - Canonical source, uses centralized gap calculation
+  - `BaseEntityRenderer.ts` - Delegates to centralized utilities
+- **Consumers**:
+  - LineRenderer, PolylineRenderer, RectangleRenderer, AngleMeasurementRenderer (via BaseEntityRenderer)
+  - CircleRenderer (via line-rendering-utils.ts)
+- **Pattern**: Single Source of Truth (SSOT) + Delegation
+- **Benefits**:
+  - Zero duplicate split line rendering code
+  - Consistent 30px gap across all renderers
+  - Phase-aware behavior preserved in BaseEntityRenderer
+  - CircleRenderer now uses same gap size as other renderers
+- **Companion**: ADR-048 (RENDER_GEOMETRY), ADR-044 (Line Widths), ADR-065 (Distance Calculation)
+
+### ADR-086: Hover Utilities Scattered Code Centralization
+- **Decision**: Replace inline calculations/formatting in hover utilities with centralized functions
+- **Problem**: 3 hover utility files had inline code instead of using existing centralized functions:
+  - `text-labeling-utils.ts`: Inline `Math.sqrt(Math.pow(...))` instead of `calculateDistance()`
+  - `angle-utils.ts`: Inline `` `${degrees.toFixed(1)}°` `` instead of `formatAngle()`
+  - `text-spline-renderers.ts`: Hardcoded `'14px Arial'` + inline angle format
+- **Solution**: Replace with calls to existing enterprise functions:
+  - `calculateDistance()` from `geometry-rendering-utils.ts` (ADR-065)
+  - `formatAngle()` from `distance-label-utils.ts` (ADR-069)
+  - `UI_FONTS.ARIAL.LARGE` from `text-rendering-config.ts` (ADR-042)
+- **Files Changed**:
+  - `utils/hover/text-labeling-utils.ts` - Use `calculateDistance()` (already imported!)
+  - `utils/hover/angle-utils.ts` - Import & use `formatAngle()`
+  - `utils/hover/text-spline-renderers.ts` - Import & use `UI_FONTS.ARIAL.LARGE` + `formatAngle()`
+- **Lines Changed**: ~6 removed, ~5 added (imports + function calls)
+- **Pattern**: DRY (Don't Repeat Yourself) + SSOT (Single Source of Truth)
+- **Benefits**:
+  - Zero duplicate distance calculation formulas
+  - Consistent angle formatting across all hover utilities
+  - Centralized font definitions (one place to change)
+- **Companion**: ADR-042 (UI Fonts), ADR-065 (Distance Calculation), ADR-069 (formatAngle)
 
 ---
 
@@ -904,6 +1343,45 @@
 - **Prefixes**: `@/*`, `@/systems/*`, `@geo-alert/core`, `@core/*`
 - **Rule**: No ad-hoc aliases without ADR update
 - **📄 Full Details**: [ADR-061-path-aliases.md](./adrs/ADR-061-path-aliases.md)
+
+### ADR-092: Centralized localStorage Service
+- **Canonical**: `storageGet()`, `storageSet()`, `storageRemove()`, `STORAGE_KEYS` from `utils/storage-utils.ts`
+- **Decision**: Centralize all localStorage operations with SSR-safe, type-safe utilities
+- **Problem**: 37+ scattered localStorage calls across 16 files with:
+  - Inconsistent error handling
+  - Missing SSR-safe checks
+  - Duplicate JSON parse/stringify patterns
+  - Different key naming conventions
+- **Solution**: Extended existing `storage-utils.ts` with sync localStorage utilities
+- **API**:
+  - `STORAGE_KEYS` - Registry of all localStorage keys
+  - `storageGet<T>(key, defaultValue): T` - SSR-safe getter with type safety
+  - `storageSet<T>(key, value): boolean` - SSR-safe setter with quota handling
+  - `storageRemove(key): boolean` - SSR-safe removal
+  - `storageHas(key): boolean` - SSR-safe existence check
+- **Key Registry**:
+  - `STORAGE_KEYS.DEBUG_RULER` - `'debug.rulerDebug.enabled'`
+  - `STORAGE_KEYS.DEBUG_ORIGIN_MARKERS` - `'debug.originMarkers.enabled'`
+  - `STORAGE_KEYS.PERFORMANCE_MONITOR` - `'dxf-viewer-performance-monitor-enabled'`
+  - `STORAGE_KEYS.OVERLAY_STATE` - `'dxf-viewer:overlay-state:v1'`
+  - `STORAGE_KEYS.RECENT_COLORS` - `'dxf-viewer:recent-colors'`
+- **Files Migrated (Phase 1)**:
+  - `debug/RulerDebugOverlay.ts` - Debug toggle persistence
+  - `debug/OriginMarkersDebugOverlay.ts` - Debug toggle persistence
+  - `hooks/usePerformanceMonitorToggle.ts` - Performance monitor state
+  - `hooks/state/useOverlayState.ts` - Overlay editor state
+  - `ui/color/RecentColorsStore.ts` - Recent colors LRU cache (SSR fix!)
+- **Relationship to LocalStorageDriver**:
+  - `LocalStorageDriver` (ADR async) - Full enterprise async driver for settings
+  - `storageGet/Set` (ADR-092 sync) - Lightweight sync utilities for simple state
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero SSR errors (automatic `typeof window` check)
+  - Zero duplicate try/catch blocks
+  - Consistent error logging with `[StorageService]` prefix
+  - Quota exceeded handling built-in
+  - Type-safe JSON serialization
+- **Companion**: LocalStorageDriver (async enterprise), StorageManager (quota/cleanup)
 
 ---
 

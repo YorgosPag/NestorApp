@@ -6,6 +6,8 @@ import { isFeatureEnabled } from '../config/experimental-features';
 import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfZIndexSystem.styles';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+// 🏢 ADR-090: Centralized UI Fonts
+import { UI_FONTS } from '../config/text-rendering-config';
 
 interface CollaborationOverlayProps {
   users: CollaborationUser[];
@@ -87,7 +89,7 @@ export function CollaborationOverlay({
     ctx.fillStyle = user.color;
     ctx.fillRect(x + 15, y - 8, ctx.measureText(user.name).width + 8, 20);
     ctx.fillStyle = UI_COLORS.WHITE;
-    ctx.font = '12px Inter, sans-serif';
+    ctx.font = UI_FONTS.INTER.NORMAL; // 🏢 ADR-090: Centralized font
     ctx.fillText(user.name, x + 19, y + 6);
 
     ctx.restore();
@@ -128,7 +130,7 @@ export function CollaborationOverlay({
 
     // Annotation number/icon
     ctx.fillStyle = UI_COLORS.WHITE;
-    ctx.font = 'bold 10px Inter, sans-serif';
+    ctx.font = UI_FONTS.INTER.BOLD_SMALL; // 🏢 ADR-090: Centralized font
     ctx.textAlign = 'center';
     ctx.fillText(annotation.type === 'note' ? '!' :
                 annotation.type === 'measurement' ? 'M' : '×', x, y + 3);

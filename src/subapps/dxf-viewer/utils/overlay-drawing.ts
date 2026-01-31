@@ -5,7 +5,8 @@ import type { GripSettings } from '../types/gripSettings';
 import { getStatusColors } from '../config/color-mapping'; // 🔺 Κεντρική function για ελληνικά/αγγλικά mapping
 import { CAD_UI_COLORS, UI_COLORS } from '../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
-import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
+// 🏢 ADR-090: Centralized UI Fonts
+import { RENDER_LINE_WIDTHS, UI_FONTS } from '../config/text-rendering-config';
 import { drawVerticesPath } from '../rendering/entities/shared/geometry-rendering-utils';
 
 // 🏢 ADR-048: Unified Grip Rendering System
@@ -220,7 +221,7 @@ export class OverlayDrawingEngine {
 
     const padding = 6;
     const text = region.name ?? '';
-    ctx.font = '12px system-ui';
+    ctx.font = UI_FONTS.SYSTEM.NORMAL; // 🏢 ADR-090: Centralized font
     const textWidth = ctx.measureText(text).width;
 
     const w = textWidth + padding * 2;

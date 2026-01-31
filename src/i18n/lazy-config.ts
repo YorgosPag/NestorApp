@@ -38,7 +38,8 @@ export const SUPPORTED_NAMESPACES = [
   'files',     // File storage display names (ADR-031)
   'storage',   // 🏢 Storage management module
   'parking',   // 🏢 Parking management module - added 2026-01-24
-  'admin'      // 🏢 Admin tools (units, claims repair)
+  'admin',     // 🏢 Admin tools (units, claims repair)
+  'tool-hints' // 🏢 DXF Viewer: Step-by-step tool hints (ADR-082)
 ] as const;
 export type Namespace = typeof SUPPORTED_NAMESPACES[number];
 
@@ -143,6 +144,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
         case 'admin':
           translations = await import('./locales/el/admin.json');
           break;
+        case 'tool-hints':
+          translations = await import('./locales/el/tool-hints.json');
+          break;
         default:
           console.warn(`Namespace ${namespace} not found for language ${language}`);
           return {};
@@ -227,6 +231,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
           break;
         case 'admin':
           translations = await import('./locales/en/admin.json');
+          break;
+        case 'tool-hints':
+          translations = await import('./locales/en/tool-hints.json');
           break;
         default:
           console.warn(`Namespace ${namespace} not found for language ${language}`);

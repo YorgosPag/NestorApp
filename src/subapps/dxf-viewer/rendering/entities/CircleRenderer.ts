@@ -28,6 +28,12 @@ import { renderSplitLineWithGap, renderContinuousLine, renderLineWithTextCheck }
 import { renderDistanceTextPhaseAware } from './shared/phase-text-utils';
 import { UI_COLORS } from '../../config/color-config';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
+// 🏢 ADR-091: Centralized UI Fonts
+import { buildUIFont } from '../../config/text-rendering-config';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance } from './shared/distance-label-utils';
+// 🏢 ADR: Centralized Clamp Function
+import { clamp } from './shared/geometry-utils';
 
 export class CircleRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -125,9 +131,10 @@ export class CircleRenderer extends BaseEntityRenderer {
       // Diameter line endpoints for phase-aware positioning
       const { leftPoint, rightPoint, screenLeft, screenRight } = this.calculateDiameterPoints(center, radius);
       const diameter = radius * 2;
-      const label = isTwoPointDiameter 
-        ? `Διάμετρος: ${diameter.toFixed(2)} (2P)` 
-        : `D: ${diameter.toFixed(2)}`;
+      // 🏢 ADR-090: Centralized number formatting
+      const label = isTwoPointDiameter
+        ? `Διάμετρος: ${formatDistance(diameter)} (2P)`
+        : `D: ${formatDistance(diameter)}`;
       
       // 🔺 Phase-aware text positioning - inline for preview, offset for measurements
       this.renderDistanceTextPhaseAware(leftPoint, rightPoint, screenLeft, screenRight, entity, options);
@@ -234,7 +241,8 @@ export class CircleRenderer extends BaseEntityRenderer {
       const diameter = radius * 2;
       const labelX = screenCenter.x;
       const labelY = screenCenter.y - 25; // Πάνω από το κέντρο
-      const label = `Διάμετρος: ${diameter.toFixed(2)} (2P)`;
+      // 🏢 ADR-090: Centralized number formatting
+      const label = `Διάμετρος: ${formatDistance(diameter)} (2P)`;
       // Use centralized styling instead of hardcoded green
       this.ctx.save();
       this.applyDimensionTextStyle();
@@ -254,7 +262,8 @@ export class CircleRenderer extends BaseEntityRenderer {
       // Render diameter label (πάνω από τη γραμμή)
       const labelX = screenCenter.x;
       const labelY = screenCenter.y - 25; // Move above line to avoid collision
-      const label = `D: ${(radius * 2).toFixed(2)}`;
+      // 🏢 ADR-090: Centralized number formatting
+      const label = `D: ${formatDistance(radius * 2)}`;
       // Use centralized styling instead of hardcoded green
       this.ctx.save();
       this.applyDimensionTextStyle();
@@ -267,7 +276,7 @@ export class CircleRenderer extends BaseEntityRenderer {
       const screenRadiusEnd = this.worldToScreen(radiusEndPoint);
       
       // Calculate gap for radius text
-      const textGap = Math.max(20, Math.min(60, 30 * this.transform.scale));
+      const textGap = clamp(30 * this.transform.scale, 20, 60);
       const radiusLength = screenRadius;
       const gapStart = screenCenter.x + (radiusLength - textGap) / 2;
       const gapEnd = screenCenter.x + (radiusLength + textGap) / 2;
@@ -301,7 +310,8 @@ export class CircleRenderer extends BaseEntityRenderer {
       // Render radius label in the gap
       const labelX = (gapStart + gapEnd) / 2;
       const labelY = screenCenter.y;
-      const label = `R: ${radius.toFixed(2)}`;
+      // 🏢 ADR-090: Centralized number formatting
+      const label = `R: ${formatDistance(radius)}`;
       // Use centralized styling instead of hardcoded green
       this.ctx.save();
       this.applyDimensionTextStyle();
@@ -343,7 +353,7 @@ export class CircleRenderer extends BaseEntityRenderer {
     
     // 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ font styling
     this.ctx.fillStyle = color;
-    this.ctx.font = `${this.getBaseFontSize()}px Arial`;
+    this.ctx.font = buildUIFont(this.getBaseFontSize(), 'arial');
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
     

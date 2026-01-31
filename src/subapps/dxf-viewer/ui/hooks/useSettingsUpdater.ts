@@ -1,4 +1,6 @@
 import { useCallback } from 'react';
+// 🏢 ADR: Centralized Clamp Function
+import { clamp } from '../../rendering/entities/shared/geometry-utils';
 
 export type SettingsValue = string | number | boolean;
 
@@ -156,7 +158,7 @@ export const commonTransformers = {
   // Για numeric values με bounds
   boundedNumber: (min: number, max: number) => (value: SettingsValue) => {
     const num = typeof value === 'string' ? parseFloat(value) : (value as number);
-    return Math.max(min, Math.min(max, num as number));
+    return clamp(num, min, max);
   },
 
   // Για colors (hex validation)

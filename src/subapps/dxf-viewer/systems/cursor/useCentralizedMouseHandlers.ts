@@ -23,6 +23,8 @@ import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import { UniversalMarqueeSelector } from '../selection/UniversalMarqueeSelection';
 // 🏢 ENTERPRISE (2026-01-26): ADR-038 - Centralized tool & mode detection (Single Source of Truth)
 import { isInDrawingMode } from '../tools/ToolStateManager';
+// 🏢 ADR: Centralized Clamp Function
+import { clamp } from '../../rendering/entities/shared/geometry-utils';
 
 // 🏢 ENTERPRISE: Type-safe snap result interface
 export interface SnapResultItem {
@@ -682,7 +684,7 @@ export function useCentralizedMouseHandlers({
       // ⚠️ FALLBACK: Basic wheel zoom for backwards compatibility
       // 🏢 ENTERPRISE (2025-10-04): Use centralized CoordinateTransforms instead of duplicate formula
       const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-      const newScale = Math.max(0.1, Math.min(50, transform.scale * zoomFactor));
+      const newScale = clamp(transform.scale * zoomFactor, 0.1, 50);
 
       // ✅ CENTRALIZED: CoordinateTransforms handles margins adjustment automatically
       const canvas = e.currentTarget;

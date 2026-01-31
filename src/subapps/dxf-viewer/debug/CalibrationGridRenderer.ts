@@ -9,7 +9,8 @@ import type { Viewport, ViewTransform } from '../rendering/types/Types';
 import type { RulerDebugSettings, CalibrationGridSettings } from './RulerDebugTypes';
 import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized Line Widths
-import { RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
+// 🏢 ADR-091: Centralized UI Fonts
+import { RENDER_LINE_WIDTHS, UI_FONTS, buildUIFont } from '../config/text-rendering-config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../rendering/primitives/canvasPaths';
 
@@ -160,7 +161,7 @@ export class CalibrationGridRenderer implements UIRenderer {
 
     // Label
     ctx.fillStyle = settings.originMarkerColor;
-    ctx.font = 'bold 14px monospace';
+    ctx.font = UI_FONTS.MONOSPACE.BOLD_LARGE;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText('ORIGIN (0,0)', originScreenX + 20, originScreenY + 5);
@@ -194,7 +195,7 @@ export class CalibrationGridRenderer implements UIRenderer {
     const startYScreen = (originScreenY % step);
 
     ctx.fillStyle = settings.labelColor;
-    ctx.font = `${settings.labelFontSize}px monospace`;
+    ctx.font = buildUIFont(settings.labelFontSize, 'monospace');
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 

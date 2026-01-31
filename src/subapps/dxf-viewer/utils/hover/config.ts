@@ -4,6 +4,9 @@
  */
 
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-083: Centralized Line Dash Patterns
+// 🏢 ADR-090: Centralized UI Fonts
+import { LINE_DASH_PATTERNS, UI_FONTS } from '../../config/text-rendering-config';
 
 export interface HoverConfig {
   colors: {
@@ -34,9 +37,9 @@ export const HOVER_CONFIG: HoverConfig = {
     area: UI_COLORS.BRIGHT_GREEN       // Bright green - from existing area labels
   },
   fonts: {
-    distance: '11px Arial',  // From PolylineRenderer
-    angle: '11px Arial',     // From PolylineRenderer  
-    area: '14px Arial'       // From PolylineRenderer
+    distance: UI_FONTS.ARIAL.SMALL, // 🏢 ADR-090: Centralized font
+    angle: UI_FONTS.ARIAL.SMALL,    // 🏢 ADR-090: Centralized font
+    area: UI_FONTS.ARIAL.LARGE      // 🏢 ADR-090: Centralized font
   },
   offsets: {
     gripAvoidance: 20,    // From LineRenderer
@@ -44,6 +47,7 @@ export const HOVER_CONFIG: HoverConfig = {
     textFromArc: 20       // From PolylineRenderer
   },
   lineStyle: {
-    dashPattern: [5, 5]   // From PolylineRenderer
+    // 🏢 ADR-083: Use centralized line dash pattern
+    dashPattern: [...LINE_DASH_PATTERNS.SELECTION]
   }
 };

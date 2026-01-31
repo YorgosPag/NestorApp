@@ -8,6 +8,10 @@ import type { Point2D, Viewport, ViewTransform } from '../rendering/types/Types'
 import { UI_COLORS } from '../config/color-config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../rendering/primitives/canvasPaths';
+// 🏢 ADR-091: Centralized UI Fonts
+import { UI_FONTS } from '../config/text-rendering-config';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet, STORAGE_KEYS } from '../utils/storage-utils';
 
 export interface OriginMarkerDebugSettings {
   enabled: boolean;
@@ -58,27 +62,18 @@ export class OriginMarkersDebugOverlay {
 
   /**
    * 🎯 LOAD PERSISTED STATE
+   * 🏢 ADR-092: Uses centralized storage service
    */
   private loadPersistedState(): boolean | null {
-    if (typeof window === 'undefined') return null;
-    try {
-      const stored = localStorage.getItem('debug.originMarkers.enabled');
-      return stored !== null ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+    return storageGet<boolean | null>(STORAGE_KEYS.DEBUG_ORIGIN_MARKERS, null);
   }
 
   /**
    * 🎯 SAVE PERSISTED STATE
+   * 🏢 ADR-092: Uses centralized storage service
    */
   private savePersistedState(enabled: boolean): void {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem('debug.originMarkers.enabled', JSON.stringify(enabled));
-    } catch (error) {
-      console.warn('Failed to persist origin markers state:', error);
-    }
+    storageSet(STORAGE_KEYS.DEBUG_ORIGIN_MARKERS, enabled);
   }
 
   /**
@@ -229,7 +224,7 @@ export class OriginMarkersDebugOverlay {
       // 🎯 AXIS LABELS (only if lines are visible)
       if (settings.showLabel) {
         ctx.fillStyle = settings.axisColor;
-        ctx.font = '14px monospace';
+        ctx.font = UI_FONTS.MONOSPACE.LARGE;
 
         // X-Axis label (only if horizontal line is visible)
         if (originScreenY >= 0 && originScreenY <= viewport.height) {
@@ -287,7 +282,7 @@ export class OriginMarkersDebugOverlay {
     // Debug label
     if (settings.showLabel) {
       ctx.fillStyle = settings.color;
-      ctx.font = '12px monospace';
+      ctx.font = UI_FONTS.MONOSPACE.NORMAL;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
 
@@ -298,14 +293,14 @@ export class OriginMarkersDebugOverlay {
       ctx.fillText('(0,0)', labelX, labelY);
 
       // Additional debug info
-      ctx.font = '10px monospace';
+      ctx.font = UI_FONTS.MONOSPACE.SMALL;
       ctx.fillText(`Screen: (${originScreenX.toFixed(1)}, ${originScreenY.toFixed(1)})`, labelX, labelY + 15);
     }
 
     // 🎯 ORIGIN LABEL ENHANCEMENT
     if (settings.showAxisLines && settings.showLabel) {
       ctx.fillStyle = settings.axisColor;
-      ctx.font = '14px monospace';
+      ctx.font = UI_FONTS.MONOSPACE.LARGE;
       ctx.globalAlpha = settings.axisOpacity;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';

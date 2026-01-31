@@ -22,7 +22,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import { calculateDistance, vectorMagnitude, calculateAngle, vectorAngle, getUnitVector } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Angle Conversion
 // 🏢 ADR-068: Centralized Angle Normalization
-import { degToRad, radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR: Centralized Clamp Function
+import { degToRad, radToDeg, normalizeAngleDeg, clamp } from '../../rendering/entities/shared/geometry-utils';
 
 // ===== HELPER FUNCTIONS =====
 
@@ -537,7 +538,7 @@ export const ConstraintApplicationUtils = {
   calculateAccuracy: (originalPoint: Point2D, constrainedPoint: Point2D): number => {
     const distance = DistanceUtils.distance(originalPoint, constrainedPoint);
     // Return accuracy as percentage (closer to original = higher accuracy)
-    return Math.max(0, Math.min(100, 100 - (distance * 10)));
+    return clamp(100 - (distance * 10), 0, 100);
   }
 };
 

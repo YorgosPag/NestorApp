@@ -939,6 +939,7 @@ export const PANEL_LAYOUT = {
     // ─────────────────────────────────────────────────────────────────────────
     // DEBOUNCE INTERVALS (100-200ms)
     // ─────────────────────────────────────────────────────────────────────────
+    DRAG_FINISH_RESET: 100,              // Reset justFinishedDrag flag after drag operations (CanvasSection)
     DEBOUNCE_SCROLL: 100,                // Scroll event debounce
     OBSERVER_RETRY: 100,                 // Canvas observer setup retry (CanvasSection)
     CURSOR_THROTTLE: 100,                // Collaboration cursor throttle

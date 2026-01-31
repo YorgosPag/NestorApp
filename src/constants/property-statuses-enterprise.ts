@@ -1403,6 +1403,8 @@ export const DXF_DRAWING_TOOL_LABELS = {
   CIRCLE_CHORD_SAGITTA: 'tools.circleChordSagitta',
   CIRCLE_2P_RADIUS: 'tools.circle2pRadius',
   CIRCLE_BEST_FIT: 'tools.circleBestFit',
+  // 🏢 ENTERPRISE (2026-01-31): Circle Tangent to 3 Lines (AutoCAD TTT)
+  CIRCLE_TTT: 'tools.circleTTT',
   POLYLINE: 'tools.polyline',
   POLYGON: 'tools.polygon',
   LAYERING: 'tools.layering',

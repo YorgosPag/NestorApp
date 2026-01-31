@@ -4,6 +4,8 @@
  */
 
 import { UI_COLORS, CANVAS_THEME } from '../../../config/color-config';
+// 🏢 ADR-094: Centralized Device Pixel Ratio
+import { getDevicePixelRatio } from '../../../systems/cursor/utils';
 
 import type { CrosshairSettings } from '../../ui/crosshair/CrosshairTypes';
 import type { UICursorSettings } from '../../ui/cursor/CursorTypes';
@@ -181,7 +183,7 @@ export class CanvasSettings {
 
       // Canvas settings - ✅ ADR-002: Centralized canvas theme
       enableHiDPI: true,
-      devicePixelRatio: window.devicePixelRatio || 1,
+      devicePixelRatio: getDevicePixelRatio(), // 🏢 ADR-094
       imageSmoothingEnabled: true,
       backgroundColor: CANVAS_THEME.CONTAINER,
 

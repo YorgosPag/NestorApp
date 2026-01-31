@@ -128,7 +128,9 @@ function isMultiPointTool(tool: ToolType): boolean {
     'polygon',
     'measure-area',
     'measure-angle',
-    'measure-distance-continuous'
+    'measure-distance-continuous',
+    // 🏢 ENTERPRISE (2026-01-31): Circle best-fit is a multi-point tool - ADR-083
+    'circle-best-fit'
   ].includes(tool);
 }
 
@@ -155,6 +157,10 @@ function getMinPointsForFinish(tool: ToolType): number {
   }
   if (tool === 'measure-angle') {
     return 3; // Angle needs 3 points
+  }
+  // 🏢 ENTERPRISE (2026-01-31): Circle best-fit needs at least 3 points - ADR-083
+  if (tool === 'circle-best-fit') {
+    return 3; // Circle best-fit needs at least 3 points
   }
   return 2; // Polyline needs at least 2
 }

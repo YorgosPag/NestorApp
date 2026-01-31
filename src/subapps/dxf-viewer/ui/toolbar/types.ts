@@ -17,6 +17,7 @@ export type ToolType =
   | 'circle-chord-sagitta'
   | 'circle-2p-radius'
   | 'circle-best-fit'
+  | 'circle-ttt'      // 🏢 ENTERPRISE (2026-01-31): Circle Tangent to 3 Lines (AutoCAD TTT)
   // 🏢 ENTERPRISE (2026-01-31): Arc drawing tools - ADR-059
   | 'arc'                  // Parent dropdown for arc tools
   | 'arc-3p'               // 3-Point Arc (Start → Point on Arc → End)
@@ -192,6 +193,45 @@ export const MEASUREMENT_TOOL_CONFIGS: Record<MeasurementTool, MeasurementToolCo
 // ============================================================================
 
 import type { OverlayToolbarState, OverlayToolbarHandlers } from './overlay-section/types';
+
+// ============================================================================
+// 🏢 ADR-082: TOOL HINTS SYSTEM (2026-01-31)
+// Portable step-by-step guidance for drawing tools
+// ============================================================================
+
+/**
+ * Tool hint data for step-by-step guidance
+ * Localized via i18n (tool-hints namespace)
+ */
+export interface ToolHint {
+  /** Tool display name (localized) */
+  name: string;
+  /** Tool description (localized) */
+  description: string;
+  /** Step-by-step instructions (localized, with color emojis) */
+  steps: string[];
+  /** Available keyboard shortcuts for this tool */
+  shortcuts: string;
+}
+
+/**
+ * Return type of useToolHints hook
+ * Provides current hint state based on active tool and drawing progress
+ */
+export interface ToolHintsResult {
+  /** Current tool hint data (null if no hints for tool) */
+  hint: ToolHint | null;
+  /** Current step index (0-based, based on pointCount) */
+  currentStep: number;
+  /** Total number of steps for this tool */
+  totalSteps: number;
+  /** Current step text (with emoji, ready to display) */
+  currentStepText: string;
+  /** Whether hints are available for this tool */
+  hasHints: boolean;
+  /** Whether i18n namespace is ready */
+  isReady: boolean;
+}
 
 /**
  * Extended props for EnhancedDXFToolbar (backward compatible)

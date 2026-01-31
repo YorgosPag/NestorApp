@@ -5,6 +5,8 @@
 
 import type { Point2D } from '../../types/Types';
 import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance } from './distance-label-utils';
 
 /**
  * Render area and circumference text on circle
@@ -17,6 +19,6 @@ export function renderCircleAreaText(
   circumference: number
 ): void {
   // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-  renderStyledTextWithOverride(ctx, `Εμβαδόν: ${area.toFixed(2)}`, screenCenter.x, screenCenter.y - screenRadius / 2);
-  renderStyledTextWithOverride(ctx, `Περιφέρεια: ${circumference.toFixed(2)}`, screenCenter.x, screenCenter.y + screenRadius / 2);
+  renderStyledTextWithOverride(ctx, `Εμβαδόν: ${formatDistance(area)}`, screenCenter.x, screenCenter.y - screenRadius / 2);
+  renderStyledTextWithOverride(ctx, `Περιφέρεια: ${formatDistance(circumference)}`, screenCenter.x, screenCenter.y + screenRadius / 2);
 }

@@ -34,7 +34,10 @@
 
 import type { Point2D } from '../types/Types';
 // 🏢 ADR-044: Centralized line widths
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-083: Centralized line dash patterns
+// 🏢 ADR-090: Centralized UI Fonts
+// 🏢 ADR-091: Centralized Text Label Offsets
+import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS, UI_FONTS, TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addCirclePath, TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-066: Centralized Angle Calculation
@@ -60,14 +63,16 @@ export const GHOST_RENDER_CONFIG = {
   DELTA_LINE_COLOR: 'rgba(255, 165, 0, 0.8)',
   /** Delta line width - 🏢 ADR-044: Use centralized constant */
   DELTA_LINE_WIDTH: RENDER_LINE_WIDTHS.DELTA,
-  /** Delta line dash pattern */
-  DELTA_LINE_DASH: [4, 4],
-  /** Coordinate readout font */
-  READOUT_FONT: '11px monospace',
+  /** Delta line dash pattern - 🏢 ADR-083: Use centralized pattern */
+  DELTA_LINE_DASH: LINE_DASH_PATTERNS.GHOST,
+  /** Coordinate readout font - 🏢 ADR-090: Centralized font */
+  READOUT_FONT: UI_FONTS.MONOSPACE.SMALL,
   /** Coordinate readout color */
   READOUT_COLOR: 'rgba(0, 0, 0, 0.8)',
   /** Coordinate readout background */
   READOUT_BG: 'rgba(255, 255, 255, 0.9)',
+  /** Coordinate readout text padding (pixels) */
+  READOUT_PADDING: 4,
   /** Maximum entities to render detailed ghost (performance) */
   DETAIL_THRESHOLD: 50,
   /** Simplified box rendering for large selections */
@@ -421,9 +426,10 @@ function renderSimplifiedGhost(
   ctx.fill();
   ctx.strokeStyle = options.ghostStroke ?? GHOST_RENDER_CONFIG.GHOST_STROKE;
   ctx.lineWidth = options.strokeWidth ?? GHOST_RENDER_CONFIG.GHOST_STROKE_WIDTH;
-  ctx.setLineDash([4, 4]);
+  // 🏢 ADR-083: Use centralized line dash pattern
+  ctx.setLineDash([...GHOST_RENDER_CONFIG.DELTA_LINE_DASH]);
   ctx.stroke();
-  ctx.setLineDash([]);
+  ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
 
   // Draw entity count label
   ctx.font = GHOST_RENDER_CONFIG.READOUT_FONT;
@@ -464,9 +470,9 @@ function renderDeltaLine(
   ctx.lineTo(endScreen.x, endScreen.y);
   ctx.strokeStyle = GHOST_RENDER_CONFIG.DELTA_LINE_COLOR;
   ctx.lineWidth = GHOST_RENDER_CONFIG.DELTA_LINE_WIDTH;
-  ctx.setLineDash(GHOST_RENDER_CONFIG.DELTA_LINE_DASH);
+  ctx.setLineDash([...GHOST_RENDER_CONFIG.DELTA_LINE_DASH]);
   ctx.stroke();
-  ctx.setLineDash([]);
+  ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
 
   // Draw arrow head
   // 🏢 ADR-066: Use centralized angle calculation
@@ -502,9 +508,10 @@ function renderCoordinateReadout(
   ctx.textBaseline = 'bottom';
 
   const metrics = ctx.measureText(label);
-  const padding = 4;
-  const x = screenPosition.x + 10;
-  const y = screenPosition.y - 10;
+  const padding = GHOST_RENDER_CONFIG.READOUT_PADDING;
+  // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
+  const x = screenPosition.x + TEXT_LABEL_OFFSETS.TOOLTIP_HORIZONTAL;
+  const y = screenPosition.y - TEXT_LABEL_OFFSETS.TOOLTIP_VERTICAL;
 
   // Background
   ctx.fillStyle = GHOST_RENDER_CONFIG.READOUT_BG;

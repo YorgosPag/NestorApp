@@ -62,6 +62,18 @@ export const createUnifiedCanvasSystem = (options: {
   };
 };
 
+// 🏢 ADR-084: Canvas State Helpers
+export {
+  withCanvasState,
+  withCanvasStateAsync,
+  applyCanvasStyle,
+  setFillStyle,
+  setStrokeStyle,
+  resetCanvasState
+} from './withCanvasState';
+
+export type { CanvasStyleOptions } from './withCanvasState';
+
 // Legacy compatibility exports
 export { CanvasUtils as CanvasUtilsLegacy } from './utils/CanvasUtils';
 export { globalCanvasEventSystem as CanvasEventBusLegacy } from './core/CanvasEventSystem';

@@ -16,6 +16,10 @@ import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 import { TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from './shared/geometry-utils';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance } from './shared/distance-label-utils';
+// 🏢 ADR-091: Centralized Text Label Offsets
+import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 
 export class EllipseRenderer extends BaseEntityRenderer {
   // Helper method to calculate axis endpoints (eliminates duplication)
@@ -101,11 +105,11 @@ export class EllipseRenderer extends BaseEntityRenderer {
     
     this.ctx.save();
     this.applyCenterMeasurementTextStyle();
-    // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledTextWithOverride(this.ctx, `Ma: ${majorAxis.toFixed(2)}`, screenCenter.x, screenCenter.y - 30);
-    renderStyledTextWithOverride(this.ctx, `Mi: ${minorAxis.toFixed(2)}`, screenCenter.x, screenCenter.y - 10);
-    renderStyledTextWithOverride(this.ctx, `Ε: ${area.toFixed(2)}`, screenCenter.x, screenCenter.y + 10);
-    renderStyledTextWithOverride(this.ctx, `Περ: ${perimeter.toFixed(2)}`, screenCenter.x, screenCenter.y + 30);
+    // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
+    renderStyledTextWithOverride(this.ctx, `Ma: ${formatDistance(majorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER);
+    renderStyledTextWithOverride(this.ctx, `Mi: ${formatDistance(minorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE);
+    renderStyledTextWithOverride(this.ctx, `Ε: ${formatDistance(area)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE);
+    renderStyledTextWithOverride(this.ctx, `Περ: ${formatDistance(perimeter)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER);
     this.ctx.restore();
   }
 

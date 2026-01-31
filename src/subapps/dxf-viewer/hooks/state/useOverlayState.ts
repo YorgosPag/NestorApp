@@ -14,6 +14,8 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { OverlayEditorMode, OverlayKind, Status } from '../../overlays/types';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet, STORAGE_KEYS } from '../../utils/storage-utils';
 
 // ✅ ENTERPRISE: Type-safe state schema with validation
 interface OverlayState {
@@ -59,31 +61,21 @@ function validateOverlayState(state: Partial<OverlayState>): OverlayState {
   return validated;
 }
 
-// ✅ ENTERPRISE: LocalStorage key with versioning
-const STORAGE_KEY = 'dxf-viewer:overlay-state:v1';
-const STORAGE_DEBOUNCE_MS = 500; // Debounce auto-save
+// ✅ ENTERPRISE: Debounce auto-save
+const STORAGE_DEBOUNCE_MS = 500;
 
 // ✅ ENTERPRISE: Load state from localStorage with error handling
+// 🏢 ADR-092: Uses centralized storage service
 function loadPersistedState(): OverlayState {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return DEFAULT_OVERLAY_STATE;
-
-    const parsed = JSON.parse(stored);
-    return validateOverlayState(parsed);
-  } catch (error) {
-    console.error('[useOverlayState] Failed to load persisted state:', error);
-    return DEFAULT_OVERLAY_STATE;
-  }
+  const stored = storageGet<Partial<OverlayState> | null>(STORAGE_KEYS.OVERLAY_STATE, null);
+  if (!stored) return DEFAULT_OVERLAY_STATE;
+  return validateOverlayState(stored);
 }
 
 // ✅ ENTERPRISE: Save state to localStorage with error handling
+// 🏢 ADR-092: Uses centralized storage service
 function savePersistedState(state: OverlayState): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (error) {
-    console.error('[useOverlayState] Failed to save state:', error);
-  }
+  storageSet(STORAGE_KEYS.OVERLAY_STATE, state);
 }
 
 /**

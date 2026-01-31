@@ -15,9 +15,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-
-// 🏢 ENTERPRISE: Storage key for persistence
-const STORAGE_KEY = 'dxf-viewer-performance-monitor-enabled';
+// 🏢 ADR-092: Centralized localStorage Service
+import { storageGet, storageSet, STORAGE_KEYS } from '../utils/storage-utils';
 
 // 🏢 ENTERPRISE: Default OFF for better performance (Bentley/Autodesk pattern)
 const DEFAULT_ENABLED = false;
@@ -52,33 +51,14 @@ export interface UsePerformanceMonitorToggleReturn {
  * );
  */
 export function usePerformanceMonitorToggle(): UsePerformanceMonitorToggleReturn {
-  // 🏢 ENTERPRISE: Initialize from localStorage (SSR-safe)
+  // 🏢 ENTERPRISE: Initialize from localStorage (SSR-safe via ADR-092)
   const [isEnabled, setIsEnabled] = useState<boolean>(() => {
-    if (typeof window === 'undefined') {
-      return DEFAULT_ENABLED;
-    }
-
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored !== null) {
-        return JSON.parse(stored) === true;
-      }
-    } catch (error) {
-      console.warn('[PerformanceMonitor] Failed to read from localStorage:', error);
-    }
-
-    return DEFAULT_ENABLED;
+    return storageGet(STORAGE_KEYS.PERFORMANCE_MONITOR, DEFAULT_ENABLED);
   });
 
-  // 🏢 ENTERPRISE: Persist to localStorage on change
+  // 🏢 ENTERPRISE: Persist to localStorage on change (via ADR-092)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(isEnabled));
-    } catch (error) {
-      console.warn('[PerformanceMonitor] Failed to save to localStorage:', error);
-    }
+    storageSet(STORAGE_KEYS.PERFORMANCE_MONITOR, isEnabled);
   }, [isEnabled]);
 
   // 🏢 ENTERPRISE: Toggle function (stable reference)
@@ -101,16 +81,8 @@ export function usePerformanceMonitorToggle(): UsePerformanceMonitorToggleReturn
 /**
  * 🏢 ENTERPRISE: Standalone function to check if Performance Monitor is enabled
  * Useful for conditional imports and lazy loading
+ * 🏢 ADR-092: Uses centralized storage service
  */
 export function isPerformanceMonitorEnabled(): boolean {
-  if (typeof window === 'undefined') {
-    return DEFAULT_ENABLED;
-  }
-
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored !== null ? JSON.parse(stored) === true : DEFAULT_ENABLED;
-  } catch {
-    return DEFAULT_ENABLED;
-  }
+  return storageGet(STORAGE_KEYS.PERFORMANCE_MONITOR, DEFAULT_ENABLED);
 }

@@ -1,5 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { setSelection, selectSingle } from './selection';
+// 🏢 ADR: Centralized Clamp Function
+import { clamp } from '../../../../rendering/entities/shared/geometry-utils';
 
 interface KeyboardNavigationProps {
   selectedEntityIds: string[];
@@ -36,7 +38,7 @@ export function useKeyboardNavigation({
     if (curIdx < 0) return;
 
     const delta = e.key === 'ArrowDown' ? 1 : -1;
-    const nextIdx = Math.max(0, Math.min(curIdx + delta, list.length - 1));
+    const nextIdx = clamp(curIdx + delta, 0, list.length - 1);
     const nextId = list[nextIdx]?.id;
     if (!nextId) return;
 

@@ -22,6 +22,8 @@ import {
   isRectangleEntity,
   isCircleEntity
 } from '../../types/entities';
+// 🏢 ADR-087: Centralized Snap Engine Configuration
+import { SNAP_RADIUS_MULTIPLIERS } from '../../config/tolerance-config';
 
 export class PerpendicularSnapEngine extends BaseSnapEngine {
 
@@ -47,7 +49,8 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       },
       (entity, cursorPoint, _) => {
         // Extract only Point2D from the rich point data structure
-        const richPoints = this.getPerpendicularPoints(entity as EntityModel, cursorPoint, radius * 2);
+        // 🏢 ADR-087: Use centralized snap radius multiplier
+        const richPoints = this.getPerpendicularPoints(entity as EntityModel, cursorPoint, radius * SNAP_RADIUS_MULTIPLIERS.STANDARD);
         return richPoints.map(p => p.point);
       }
     );

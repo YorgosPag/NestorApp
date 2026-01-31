@@ -8,6 +8,8 @@
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+// 🏢 ADR-088: Centralized Pixel-Perfect Alignment
+import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
 import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -78,9 +80,9 @@ export class DxfRenderer {
     // ✅ CORRECT: Calculate screen position of ACTUAL world (0,0) using CoordinateTransforms
     const worldOrigin = { x: 0, y: 0 };
     const screenOrigin = CoordinateTransforms.worldToScreen(worldOrigin, transform, viewport);
-    const px = (v: number) => Math.round(v) + 0.5;
-    const originX = px(screenOrigin.x);
-    const originY = px(screenOrigin.y);
+    // 🏢 ADR-088: Use centralized pixelPerfect for crisp rendering
+    const originX = pixelPerfect(screenOrigin.x);
+    const originY = pixelPerfect(screenOrigin.y);
 
     this.ctx.save();
     this.ctx.strokeStyle = UI_COLORS.DRAWING_HIGHLIGHT; // ✅ CENTRALIZED: Orange highlight για DXF origin marker

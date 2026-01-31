@@ -241,12 +241,26 @@ export const TOOL_POINT_REQUIREMENTS: Record<string, ToolPointRequirements> = {
   'circle-diameter': { minPoints: 2, maxPoints: 2, allowsContinuous: false },
   'circle-2p-diameter': { minPoints: 2, maxPoints: 2, allowsContinuous: false },
 
+  // 🏢 ENTERPRISE (2026-01-31): Circle tools requiring 3 points - ADR-083
+  'circle-3p': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
+  'circle-chord-sagitta': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
+  'circle-2p-radius': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
+  'circle-best-fit': { minPoints: 3, maxPoints: Infinity, allowsContinuous: true },
+  // 🏢 ENTERPRISE (2026-01-31): Circle TTT - entity selection mode (0 points, selects 3 lines)
+  'circle-ttt': { minPoints: 0, maxPoints: 0, allowsContinuous: false },
+
+  // 🏢 ENTERPRISE (2026-01-31): Arc tools requiring 3 points - ADR-059
+  'arc-3p': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
+  'arc-cse': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
+  'arc-sce': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
+
   // Multi-point shapes
   polyline: { minPoints: 2, maxPoints: Infinity, allowsContinuous: true },
   polygon: { minPoints: 3, maxPoints: Infinity, allowsContinuous: false },
 
   // Measurements
   'measure-distance': { minPoints: 2, maxPoints: 2, allowsContinuous: false },
+  'measure-distance-continuous': { minPoints: 2, maxPoints: Infinity, allowsContinuous: true },
   'measure-area': { minPoints: 3, maxPoints: Infinity, allowsContinuous: false },
   'measure-angle': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
 

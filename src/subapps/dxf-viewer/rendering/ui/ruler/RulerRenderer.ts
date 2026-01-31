@@ -20,7 +20,8 @@ import type {
 } from './RulerTypes';
 import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized line widths
-import { RENDER_LINE_WIDTHS } from '../../../config/text-rendering-config';
+// 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
+import { RENDER_LINE_WIDTHS, buildUIFont } from '../../../config/text-rendering-config';
 
 /**
  * 🔺 CENTRALIZED RULER RENDERER
@@ -257,7 +258,7 @@ export class RulerRenderer implements UIRenderer {
 
     // Text styling
     ctx.fillStyle = settings.textColor;
-    ctx.font = `${settings.fontSize}px Arial`;
+    ctx.font = buildUIFont(settings.fontSize, 'arial');
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -283,14 +284,14 @@ export class RulerRenderer implements UIRenderer {
 
         // Number
         ctx.fillStyle = settings.textColor;
-        ctx.font = `${settings.fontSize}px Arial`;
+        ctx.font = buildUIFont(settings.fontSize, 'arial');
         ctx.fillText(numberText, x, rect.y + rect.height / 2);
 
         // Units
         if (settings.showUnits) {
           const numberWidth = ctx.measureText(numberText).width;
           ctx.fillStyle = settings.unitsColor;
-          ctx.font = `${settings.unitsFontSize}px Arial`;
+          ctx.font = buildUIFont(settings.unitsFontSize, 'arial');
           ctx.fillText(settings.unit, x + numberWidth / 2 + 5, rect.y + rect.height / 2);
         }
       }
@@ -338,7 +339,7 @@ export class RulerRenderer implements UIRenderer {
 
     // Text styling
     ctx.fillStyle = settings.textColor;
-    ctx.font = `${settings.fontSize}px Arial`;
+    ctx.font = buildUIFont(settings.fontSize, 'arial');
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -366,14 +367,14 @@ export class RulerRenderer implements UIRenderer {
 
         // Number
         ctx.fillStyle = settings.textColor;
-        ctx.font = `${settings.fontSize}px Arial`;
+        ctx.font = buildUIFont(settings.fontSize, 'arial');
         ctx.fillText(numberText, 0, 0);
 
         // Units
         if (settings.showUnits) {
           const numberWidth = ctx.measureText(numberText).width;
           ctx.fillStyle = settings.unitsColor;
-          ctx.font = `${settings.unitsFontSize}px Arial`;
+          ctx.font = buildUIFont(settings.unitsFontSize, 'arial');
           ctx.fillText(settings.unit, numberWidth / 2 + 5, 0);
         }
 

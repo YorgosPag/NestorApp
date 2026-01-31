@@ -13,8 +13,13 @@ import { UI_COLORS } from '../../config/color-config';
 import { hitTestLineSegments, createEdgeGrips, calculatePerimeter } from './shared/line-utils';
 // 🏢 ADR-070: Centralized Vector Magnitude
 // 🏢 ADR-072: Centralized Dot Product
-import { drawVerticesPath, vectorMagnitude, dotProduct } from './shared/geometry-rendering-utils';
+// 🏢 ADR-090: Centralized Point Vector Operations
+import { drawVerticesPath, vectorMagnitude, dotProduct, subtractPoints } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
+// 🏢 ADR-090: Centralized Number Formatting
+import { formatDistance } from './shared/distance-label-utils';
+// 🏢 ADR-091: Centralized Text Label Offsets
+import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 
 export class PolylineRenderer extends BaseEntityRenderer {
 
@@ -116,9 +121,9 @@ export class PolylineRenderer extends BaseEntityRenderer {
       
       this.ctx.save();
       this.applyCenterMeasurementTextStyle();
-      // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-      renderStyledTextWithOverride(this.ctx, `Ε: ${area.toFixed(2)}`, screenCentroid.x, screenCentroid.y - 10);
-      renderStyledTextWithOverride(this.ctx, `Περ: ${perimeter.toFixed(2)}`, screenCentroid.x, screenCentroid.y + 10);
+      // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
+      renderStyledTextWithOverride(this.ctx, `Ε: ${formatDistance(area)}`, screenCentroid.x, screenCentroid.y - TEXT_LABEL_OFFSETS.TWO_LINE);
+      renderStyledTextWithOverride(this.ctx, `Περ: ${formatDistance(perimeter)}`, screenCentroid.x, screenCentroid.y + TEXT_LABEL_OFFSETS.TWO_LINE);
       this.ctx.restore();
     }
   }
@@ -229,11 +234,11 @@ export class PolylineRenderer extends BaseEntityRenderer {
     // 2. Adjacent sides are perpendicular
     const [p1, p2, p3, p4] = vertices;
     
-    // Calculate vectors for the sides
-    const side1 = { x: p2.x - p1.x, y: p2.y - p1.y }; // p1 -> p2
-    const side2 = { x: p3.x - p2.x, y: p3.y - p2.y }; // p2 -> p3
-    const side3 = { x: p4.x - p3.x, y: p4.y - p3.y }; // p3 -> p4
-    const side4 = { x: p1.x - p4.x, y: p1.y - p4.y }; // p4 -> p1
+    // 🏢 ADR-090: Use centralized point subtraction for side vectors
+    const side1 = subtractPoints(p2, p1); // p1 -> p2
+    const side2 = subtractPoints(p3, p2); // p2 -> p3
+    const side3 = subtractPoints(p4, p3); // p3 -> p4
+    const side4 = subtractPoints(p1, p4); // p4 -> p1
     
     // Check if opposite sides are parallel and equal
     const tolerance = TOLERANCE_CONFIG.POLYLINE_PRECISION;

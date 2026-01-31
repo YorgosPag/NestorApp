@@ -9,6 +9,8 @@ import type { SelectionSettings, SelectionBox } from '../layer-types';
 import type { UIRenderer, UIRenderContext, UIElementSettings, UIRenderMetrics } from '../../../rendering/ui/core/UIRenderer';
 // 🏢 ADR-080: Centralized Rectangle Bounds
 import { rectFromTwoPoints } from '../../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-083: Centralized Line Dash Patterns
+import { LINE_DASH_PATTERNS } from '../../../config/text-rendering-config';
 
 export class SelectionRenderer implements UIRenderer {
   readonly type = 'selection';
@@ -121,23 +123,24 @@ export class SelectionRenderer implements UIRenderer {
 
   /**
    * Set line dash pattern based on style
+   * 🏢 ADR-083: Uses centralized LINE_DASH_PATTERNS
    */
   private setLineStyle(style: 'solid' | 'dashed' | 'dotted' | 'dash-dot'): void {
     switch (style) {
       case 'solid':
-        this.ctx.setLineDash([]);
+        this.ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
         break;
       case 'dashed':
-        this.ctx.setLineDash([6, 6]);
+        this.ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASHED]);
         break;
       case 'dotted':
-        this.ctx.setLineDash([2, 4]);
+        this.ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DOTTED]);
         break;
       case 'dash-dot':
-        this.ctx.setLineDash([8, 4, 2, 4]);
+        this.ctx.setLineDash([...LINE_DASH_PATTERNS.CURSOR_DASH_DOT]);
         break;
       default:
-        this.ctx.setLineDash([]);
+        this.ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
     }
   }
 
