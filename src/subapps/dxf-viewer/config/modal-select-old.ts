@@ -12,9 +12,12 @@
 // 🏢 ENTERPRISE IMPORTS - CENTRALIZED SOURCE OF TRUTH
 // ====================================================================
 
+// 🏢 ENTERPRISE: Import centralized color configuration
+import { UI_COLORS } from './color-config';
+
 // Import color systems for consistency - mock for TypeScript compatibility
 const componentSizes = { sm: '14px', md: '16px' };
-const semanticColors = { primary: '#3B82F6', secondary: '#6B7280' };
+const semanticColors = { primary: UI_COLORS.BUTTON_PRIMARY, secondary: UI_COLORS.BUTTON_SECONDARY };
 const COLOR_BRIDGE = { bg: { primary: 'bg-white' }, text: { primary: 'text-black' } };
 
 // Define missing constants

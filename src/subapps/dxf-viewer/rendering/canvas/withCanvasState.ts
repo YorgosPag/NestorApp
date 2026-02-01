@@ -15,6 +15,8 @@
 
 import { LINE_DASH_PATTERNS, RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import type { LineDashPattern, RenderLineWidth } from '../../config/text-rendering-config';
+// 🏢 ADR-119: Centralized Opacity Constants
+import { OPACITY } from '../../config/color-config';
 
 // ============================================================================
 // TYPES
@@ -261,7 +263,7 @@ export function setStrokeStyle(
  * @param ctx - Canvas 2D rendering context
  */
 export function resetCanvasState(ctx: CanvasRenderingContext2D): void {
-  ctx.globalAlpha = 1.0;
+  ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
   ctx.setLineDash([]);
   ctx.lineCap = 'butt';
   ctx.lineJoin = 'miter';

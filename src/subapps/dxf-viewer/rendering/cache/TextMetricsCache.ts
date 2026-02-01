@@ -1,7 +1,15 @@
 /**
  * TEXT METRICS CACHE - Caching για text measurements
  * ✅ ΦΑΣΗ 5: Βελτιστοποίηση text rendering performance
+ *
+ * 🏢 ADR-107: Uses centralized TEXT_METRICS_RATIOS for fallback calculations
+ * 🏢 ADR-113: Uses centralized CACHE_TIMING for TTL constants
  */
+
+// 🏢 ADR-107: Centralized Text Metrics Ratios
+import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
+// 🏢 ADR-113: Centralized Cache Timing Constants
+import { CACHE_TIMING } from '../../config/timing-config';
 
 export interface TextMetrics {
   width: number;
@@ -46,7 +54,8 @@ export class TextMetricsCache {
   constructor(options: TextCacheOptions = {}) {
     this.options = {
       maxEntries: options.maxEntries || 500,
-      ttlMs: options.ttlMs || 300000, // 5 minutes
+      // 🏢 ADR-113: Centralized cache timing
+      ttlMs: options.ttlMs || CACHE_TIMING.DEFAULT_TTL_MS,
       enableMeasurement: options.enableMeasurement !== false
     };
 
@@ -113,8 +122,9 @@ export class TextMetricsCache {
       height: fontSize, // Approximation
       actualBoundingBoxLeft: nativeMetrics.actualBoundingBoxLeft || 0,
       actualBoundingBoxRight: nativeMetrics.actualBoundingBoxRight || nativeMetrics.width,
-      actualBoundingBoxAscent: nativeMetrics.actualBoundingBoxAscent || fontSize * 0.8,
-      actualBoundingBoxDescent: nativeMetrics.actualBoundingBoxDescent || fontSize * 0.2
+      // 🏢 ADR-107: Centralized text metrics ratios
+      actualBoundingBoxAscent: nativeMetrics.actualBoundingBoxAscent || fontSize * TEXT_METRICS_RATIOS.ASCENT_RATIO,
+      actualBoundingBoxDescent: nativeMetrics.actualBoundingBoxDescent || fontSize * TEXT_METRICS_RATIOS.DESCENT_RATIO
     };
   }
 
@@ -123,8 +133,8 @@ export class TextMetricsCache {
    * Fallback εκτίμηση όταν δεν υπάρχει Canvas context
    */
   private estimateTextMetrics(text: string, fontSize: number): TextMetrics {
-    // Rough estimation based on average character width
-    const averageCharWidth = fontSize * 0.6;
+    // 🏢 ADR-107: Use centralized text metrics ratios for estimation
+    const averageCharWidth = fontSize * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
     const width = text.length * averageCharWidth;
 
     return {
@@ -132,8 +142,8 @@ export class TextMetricsCache {
       height: fontSize,
       actualBoundingBoxLeft: 0,
       actualBoundingBoxRight: width,
-      actualBoundingBoxAscent: fontSize * 0.8,
-      actualBoundingBoxDescent: fontSize * 0.2
+      actualBoundingBoxAscent: fontSize * TEXT_METRICS_RATIOS.ASCENT_RATIO,
+      actualBoundingBoxDescent: fontSize * TEXT_METRICS_RATIOS.DESCENT_RATIO
     };
   }
 

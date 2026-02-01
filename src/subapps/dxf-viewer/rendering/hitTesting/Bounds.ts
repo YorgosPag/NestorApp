@@ -6,6 +6,8 @@
 import type { EntityModel, Point2D } from '../types/Types';
 // 🏢 ADR-070: Centralized Vector Magnitude
 import { vectorMagnitude } from '../entities/shared/geometry-rendering-utils';
+// 🏢 ADR-107: Centralized Text Metrics Ratios
+import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 
 // 🏢 ENTERPRISE: Entity-specific type interfaces for safe type casting
 interface LineEntityProperties {
@@ -214,8 +216,8 @@ export class BoundsCalculator {
     const text = textEntity.text || '';
     const fontSize = textEntity.fontSize || 12;
 
-    // Rough estimation - 0.6 * fontSize per character width
-    const estimatedWidth = text.length * fontSize * 0.6;
+    // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
+    const estimatedWidth = text.length * fontSize * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
     const estimatedHeight = fontSize;
 
     return this.createBoundingBox(

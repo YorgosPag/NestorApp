@@ -27,3 +27,10 @@ export type {
   GridContextSettings,
   RulerContextSettings,
 } from './useCanvasSettings';
+
+// === useCanvasResize === (ADR-118)
+export { useCanvasResize } from './useCanvasResize';
+export type {
+  UseCanvasResizeOptions,
+  UseCanvasResizeResult,
+} from './useCanvasResize';

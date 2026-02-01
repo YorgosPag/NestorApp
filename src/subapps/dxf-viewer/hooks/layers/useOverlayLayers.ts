@@ -289,8 +289,8 @@ export function useOverlayLayers(props: UseOverlayLayersProps): UseOverlayLayers
     if (draftPolygon.length < 1) return null;
 
     const statusColors = getStatusColors(currentStatus);
-    const fillColor = statusColors?.fill ?? 'rgba(59, 130, 246, 0.3)';
-    const strokeColor = statusColors?.stroke ?? '#3b82f6';
+    const fillColor = statusColors?.fill ?? UI_COLORS.PRIMARY_FILL_30;
+    const strokeColor = statusColors?.stroke ?? UI_COLORS.BUTTON_PRIMARY;
 
     return {
       id: 'draft-polygon-preview',

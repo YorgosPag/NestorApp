@@ -303,7 +303,10 @@ export class DxfFirestoreService {
       }
 
       // 2. Download scene from Storage
-      const storageRef = ref(storage, metadata.storageUrl);
+      // 🏢 ENTERPRISE FIX: Use the known storage path pattern instead of the download URL
+      // The download URL has CORS issues, but using ref() with the path works correctly
+      const storagePath = `dxf-scenes/${fileId}/scene.json`;
+      const storageRef = ref(storage, storagePath);
       const sceneBytes = await getBytes(storageRef);
       const sceneJson = new TextDecoder().decode(sceneBytes);
       const scene = JSON.parse(sceneJson) as SceneModel;

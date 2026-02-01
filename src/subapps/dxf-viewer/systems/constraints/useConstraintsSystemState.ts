@@ -25,6 +25,8 @@ import {
 } from './config';
 // 🏢 ADR-092: Centralized localStorage Service
 import { storageGet, storageSet } from '../../utils/storage-utils';
+// 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 // Import the base persistence hook
 interface ConstraintsPersistedData {
@@ -129,9 +131,10 @@ export function useConstraintsSystemState({
       ctrl: false,
       alt: false
     },
+    // 🏢 ADR-105: Use centralized fallback tolerance
     snapSettings: {
       enabled: true,
-      tolerance: 5
+      tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK
     },
     activeConstraints: []
   });

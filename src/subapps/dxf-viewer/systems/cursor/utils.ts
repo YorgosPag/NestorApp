@@ -87,6 +87,29 @@ export function getDevicePixelRatio(): number {
 }
 
 /**
+ * 🏢 ADR-117: DPI-Aware Pixel Calculations Centralization
+ * Convert CSS pixels to device/physical pixels
+ *
+ * Use this for canvas buffer size calculations where you need
+ * to multiply CSS dimensions by DPR and round to integers.
+ *
+ * @param cssPixels - Value in CSS pixels
+ * @param dpr - Device pixel ratio (defaults to current device)
+ * @returns Rounded physical pixel value
+ *
+ * @example
+ * // Before (scattered pattern):
+ * canvas.width = Math.round(width * dpr);
+ *
+ * // After (centralized):
+ * canvas.width = toDevicePixels(width, dpr);
+ */
+export function toDevicePixels(cssPixels: number, dpr?: number): number {
+  const ratio = dpr ?? getDevicePixelRatio();
+  return Math.round(cssPixels * ratio);
+}
+
+/**
  * Scale crosshair size for device pixel ratio
  */
 export function scaleCrosshairForDPR(size: number, dpr: number): number {

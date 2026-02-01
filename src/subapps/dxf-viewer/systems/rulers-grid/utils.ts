@@ -22,7 +22,8 @@ import type { Point2D, ViewTransform } from './config';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
-import { RENDER_LINE_WIDTHS, buildUIFont } from '../../config/text-rendering-config';
+// 🏢 ADR-107: Centralized UI Size Defaults
+import { RENDER_LINE_WIDTHS, buildUIFont, UI_SIZE_DEFAULTS } from '../../config/text-rendering-config';
 // 🏢 ADR-079: Centralized Axis Detection Constants
 import { AXIS_DETECTION } from '../../config/tolerance-config';
 // 🏢 ADR: Centralized Clamp Function
@@ -72,7 +73,8 @@ function createMinorLines(
 ): GridLine[] {
   const lines: GridLine[] = [];
   
-  const subDivisions = settings?.visual?.subDivisions || 5;
+  // 🏢 ADR-110: Use centralized subdivisions fallback
+  const subDivisions = settings?.visual?.subDivisions || RULERS_GRID_CONFIG.DEFAULT_SUBDIVISIONS;
   if (subDivisions > 1) {
     for (let i = 1; i < subDivisions; i++) {
       const subPosition = basePosition + (i * subStep);
@@ -147,8 +149,9 @@ export const GridCalculations = {
     }
     
     let currentStep = baseStep;
-    const subDivisions = settings?.visual?.subDivisions || 5;
-    
+    // 🏢 ADR-110: Use centralized subdivisions fallback
+    const subDivisions = settings?.visual?.subDivisions || RULERS_GRID_CONFIG.DEFAULT_SUBDIVISIONS;
+
     // Increase step size when too dense
     while (currentStep * scale < settings.behavior.minGridSpacing) {
       currentStep *= subDivisions;
@@ -474,7 +477,8 @@ export const SettingsValidationUtils = {
     }
 
     // Validate subdivisions
-    const subDivisions = settings?.visual?.subDivisions || 5;
+    // 🏢 ADR-110: Use centralized subdivisions fallback
+    const subDivisions = settings?.visual?.subDivisions || RULERS_GRID_CONFIG.DEFAULT_SUBDIVISIONS;
     if (subDivisions < 1 || subDivisions > 20) {
       errors.push('Grid subdivisions must be between 1 and 20');
     }
@@ -586,7 +590,7 @@ export const RulersGridRendering = {
     // Χρησιμοποιεί τα χρώματα από τις ρυθμίσεις
     ctx.strokeStyle = settings.tickColor || settings.color || UI_COLORS.RULER_DARK_GRAY;
     ctx.fillStyle = settings.textColor || settings.color || UI_COLORS.RULER_TEXT_GRAY;
-    ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
+    ctx.font = buildUIFont(settings.fontSize || UI_SIZE_DEFAULTS.RULER_FONT_SIZE, settings.fontFamily || 'monospace');
     ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK; // 🏢 ADR-044
     
     // Βελτιωμένη λογική για ομοιόμορφη κατανομή labels
@@ -665,11 +669,11 @@ export const RulersGridRendering = {
           
           // Calculate text widths for proper centering
           if (settings.showLabels && numbersText) {
-            ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
+            ctx.font = buildUIFont(settings.fontSize || UI_SIZE_DEFAULTS.RULER_FONT_SIZE, settings.fontFamily || 'monospace');
             totalWidth += ctx.measureText(numbersText).width;
           }
           if (settings.showUnits && unitsText) {
-            ctx.font = buildUIFont(settings.unitsFontSize || 10, settings.fontFamily || 'monospace');
+            ctx.font = buildUIFont(settings.unitsFontSize || UI_SIZE_DEFAULTS.RULER_UNITS_FONT_SIZE, settings.fontFamily || 'monospace');
             totalWidth += ctx.measureText(unitsText).width;
           }
           
@@ -677,7 +681,7 @@ export const RulersGridRendering = {
           
           // Render numbers (text labels) - positioned at bottom of ruler
           if (settings.showLabels && numbersText) {
-            ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
+            ctx.font = buildUIFont(settings.fontSize || UI_SIZE_DEFAULTS.RULER_FONT_SIZE, settings.fontFamily || 'monospace');
 
             ctx.fillText(numbersText, currentX, ctx.canvas.height - 3);
             currentX += ctx.measureText(numbersText).width;
@@ -686,7 +690,7 @@ export const RulersGridRendering = {
           // Render units - positioned at bottom of ruler  
           if (settings.showUnits && unitsText) {
             ctx.save();
-            ctx.font = buildUIFont(settings.unitsFontSize || 10, settings.fontFamily || 'monospace');
+            ctx.font = buildUIFont(settings.unitsFontSize || UI_SIZE_DEFAULTS.RULER_UNITS_FONT_SIZE, settings.fontFamily || 'monospace');
             ctx.fillStyle = settings.unitsColor || settings.textColor || UI_COLORS.RULER_TEXT_GRAY;
 
             ctx.fillText(unitsText, currentX, ctx.canvas.height - 3);
@@ -723,11 +727,11 @@ export const RulersGridRendering = {
           
           // Calculate text widths for proper centering (same as horizontal)
           if (settings.showLabels && numbersText) {
-            ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
+            ctx.font = buildUIFont(settings.fontSize || UI_SIZE_DEFAULTS.RULER_FONT_SIZE, settings.fontFamily || 'monospace');
             totalWidth += ctx.measureText(numbersText).width;
           }
           if (settings.showUnits && unitsText) {
-            ctx.font = buildUIFont(settings.unitsFontSize || 10, settings.fontFamily || 'monospace');
+            ctx.font = buildUIFont(settings.unitsFontSize || UI_SIZE_DEFAULTS.RULER_UNITS_FONT_SIZE, settings.fontFamily || 'monospace');
             totalWidth += ctx.measureText(unitsText).width;
           }
           
@@ -740,7 +744,7 @@ export const RulersGridRendering = {
 
           // Render units ΠΡΩΤΑ (θα εμφανιστούν κάτω μετά την περιστροφή)
           if (settings.showUnits && unitsText) {
-            ctx.font = buildUIFont(settings.unitsFontSize || 10, settings.fontFamily || 'monospace');
+            ctx.font = buildUIFont(settings.unitsFontSize || UI_SIZE_DEFAULTS.RULER_UNITS_FONT_SIZE, settings.fontFamily || 'monospace');
 
             // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
             ctx.save();
@@ -756,7 +760,7 @@ export const RulersGridRendering = {
 
           // Render numbers ΜΕΤΑ (θα εμφανιστούν πάνω μετά την περιστροφή)
           if (settings.showLabels && numbersText) {
-            ctx.font = buildUIFont(settings.fontSize || 10, settings.fontFamily || 'monospace');
+            ctx.font = buildUIFont(settings.fontSize || UI_SIZE_DEFAULTS.RULER_FONT_SIZE, settings.fontFamily || 'monospace');
 
             // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
             ctx.save();

@@ -121,33 +121,24 @@ service cloud.firestore {
     // =========================================================================
     // 🎨 CAD_FILES COLLECTION - ENTERPRISE DXF STORAGE (Firebase Storage + Metadata)
     // =========================================================================
+    // Internal storage for DXF scene metadata (actual scene data in Firebase Storage)
+    // Used by: DxfFirestoreService, BuildingFloorplanService, FloorFloorplanService
+    // =========================================================================
     match /cadFiles/{fileId} {
 
-      // 📖 READ: Authenticated with ownership support (Production mode)
-      allow read: if request.auth != null
-                  && (resource.data.keys().hasAny(['ownerId']) == false
-                      || resource.data.ownerId == request.auth.uid);
+      // 📖 READ: Any authenticated user (internal DXF storage)
+      allow read: if request.auth != null;
 
-      // ✍️ CREATE: Authenticated users με enterprise validation
-      allow create: if request.auth != null
-                    && isValidCadFileData(request.resource.data)
-                    && (request.resource.data.keys().hasAny(['ownerId']) == false
-                        || request.resource.data.ownerId == request.auth.uid)
-                    && resource == null;
+      // ✍️ CREATE/UPDATE: Authenticated users with basic validation
+      // Note: Scene data is stored in Firebase Storage, not Firestore
+      // This collection only contains metadata (fileName, storageUrl, etc.)
+      allow create, update: if request.auth != null
+                            && request.resource.data.keys().hasAll(['fileName'])
+                            && request.resource.data.fileName is string
+                            && request.resource.data.fileName.size() > 0;
 
-      // 📝 UPDATE: Enterprise με system field protection και Storage URL validation
-      allow update: if request.auth != null
-                    && isValidCadFileData(request.resource.data)
-                    && (resource.data.keys().hasAny(['ownerId']) == false
-                        || resource.data.ownerId == request.auth.uid)
-                    && (request.resource.data.keys().hasAny(['ownerId']) == false
-                        || request.resource.data.ownerId == request.auth.uid)
-                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data);
-
-      // 🗑️ DELETE: Owner only (Production mode)
-      allow delete: if request.auth != null
-                    && (resource.data.keys().hasAny(['ownerId']) == false
-                        || resource.data.ownerId == request.auth.uid);
+      // 🗑️ DELETE: Authenticated users
+      allow delete: if request.auth != null;
     }
 
     // =========================================================================
@@ -644,6 +635,48 @@ service cloud.firestore {
                        // Legacy: creator-only
                        || (!resource.data.keys().hasAny(['companyId'])
                            && resource.data.createdBy == request.auth.uid)
+                     );
+
+      // ✍️ CREATE: companyId required
+      allow create: if isAuthenticated()
+                    && request.resource.data.companyId == getUserCompanyId();
+
+      // 📝 UPDATE: Creator or company admin
+      allow update: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       )
+                    && (!resource.data.keys().hasAny(['companyId'])
+                        || request.resource.data.companyId == resource.data.companyId);
+
+      // 🗑️ DELETE: Creator or company admin
+      allow delete: if isAuthenticated()
+                    && (
+                         resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                         || isSuperAdminOnly()
+                       );
+    }
+
+    // =========================================================================
+    // 📐 FLOOR_FLOORPLANS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1C)
+    // =========================================================================
+    // 📅 Added: 2026-02-01 (Floor-level floorplan storage)
+    // 🏢 ENTERPRISE: Floor-level floorplans with tenant isolation
+    match /floor_floorplans/{floorplanId} {
+      // 📖 READ: Tenant-scoped via companyId or buildingId lookup
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // Legacy: creator-only
+                       || (!resource.data.keys().hasAny(['companyId'])
+                           && resource.data.createdBy == request.auth.uid)
+                       // Fallback: Any authenticated user (development)
+                       || !resource.data.keys().hasAny(['companyId', 'createdBy'])
                      );
 
       // ✍️ CREATE: companyId required

@@ -1,12 +1,14 @@
 import React from 'react';
 import type { Point2D } from './config';
-import type { 
-  RulerSettings, 
-  GridSettings, 
-  SnapResult, 
-  ViewTransform, 
-  DOMRect 
+import type {
+  RulerSettings,
+  GridSettings,
+  SnapResult,
+  ViewTransform,
+  DOMRect
 } from './config';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { DEFAULT_ORIGIN } from '../../config/geometry-constants';
 
 export interface RulersGridSystemProps {
   children: React.ReactNode;
@@ -24,4 +26,5 @@ export interface RulersGridSystemProps {
   canvasBounds?: DOMRect;
 }
 
-export const DEFAULT_ORIGIN: Point2D = { x: 0, y: 0 };
+// 🏢 ADR-118: Re-export for backward compatibility
+export { DEFAULT_ORIGIN };

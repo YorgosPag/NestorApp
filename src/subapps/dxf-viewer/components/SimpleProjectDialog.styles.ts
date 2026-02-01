@@ -52,11 +52,11 @@ const dialogComponents: DialogComponentsType = {
     select: { width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #ccc' }
   },
   buttons: {
-    primary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#3B82F6', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.2)' }, '&:hover': { backgroundColor: '#2563EB' } },
-    secondary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#6B7280', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(107, 114, 128, 0.2)' }, '&:hover': { backgroundColor: '#4B5563' } },
-    success: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#10B981', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.2)' }, '&:hover': { backgroundColor: '#059669' } },
-    destructive: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#EF4444', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.2)' }, '&:hover': { backgroundColor: '#DC2626' } },
-    warning: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#F59E0B', color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(245, 158, 11, 0.2)' }, '&:hover': { backgroundColor: '#D97706' } }
+    primary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.BUTTON_PRIMARY, color: 'white', '&:focus': { boxShadow: `0 0 0 3px ${UI_COLORS.PRIMARY_FILL_20}` }, '&:hover': { backgroundColor: UI_COLORS.BUTTON_PRIMARY_HOVER } },
+    secondary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.BUTTON_SECONDARY, color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(107, 114, 128, 0.2)' }, '&:hover': { backgroundColor: UI_COLORS.BUTTON_SECONDARY_HOVER } },
+    success: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.SUCCESS, color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.2)' }, '&:hover': { backgroundColor: '#059669' } },
+    destructive: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.ERROR, color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.2)' }, '&:hover': { backgroundColor: '#DC2626' } },
+    warning: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.WARNING, color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(245, 158, 11, 0.2)' }, '&:hover': { backgroundColor: '#D97706' } }
   }
 };
 

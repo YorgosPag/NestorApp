@@ -4,6 +4,8 @@
  */
 
 import type { Point2D } from '../rendering/types/Types';
+// 🏢 ADR-107: Centralized Text Metrics Ratios
+import { TEXT_METRICS_RATIOS } from '../config/text-rendering-config';
 
 // ✅ ENTERPRISE FIX: Enhanced grip point interface for preview system
 // 🎯 ADR-047: Added 'close' type and optional color for close-on-first-point indicator
@@ -455,8 +457,8 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
         maxY: entity.position.y
       };
     case 'text':
-      // Simple approximation - actual bounds would need font metrics
-      const textWidth = entity.text.length * (entity.fontSize || 12) * 0.6;
+      // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
+      const textWidth = entity.text.length * (entity.fontSize || 12) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
       const textHeight = entity.fontSize || 12;
       return {
         minX: entity.position.x,

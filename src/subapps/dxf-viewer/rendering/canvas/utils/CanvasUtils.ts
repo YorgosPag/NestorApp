@@ -8,7 +8,10 @@ import type { CanvasConfig, Point2D } from '../../types/Types';
 // 🏢 ENTERPRISE: Centralized bounds service για performance optimization
 import { canvasBoundsService } from '../../../services/CanvasBoundsService';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
-import { getDevicePixelRatio } from '../../../systems/cursor/utils';
+// 🏢 ADR-117: DPI-Aware Pixel Calculations Centralization
+import { getDevicePixelRatio, toDevicePixels } from '../../../systems/cursor/utils';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { ZERO_VECTOR } from '../../../config/geometry-constants';
 
 // ✅ ENTERPRISE: Vendor-specific canvas context properties for HiDPI support
 interface VendorCanvasRenderingContext2D extends CanvasRenderingContext2D {
@@ -50,8 +53,9 @@ export class CanvasUtils {
     // Only set backing store size for HiDPI
 
     // Backing store size
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
+    // 🏢 ADR-117: Use centralized toDevicePixels for DPI-aware calculations
+    canvas.width = toDevicePixels(rect.width, dpr);
+    canvas.height = toDevicePixels(rect.height, dpr);
 
     // Scale context
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -94,9 +98,10 @@ export class CanvasUtils {
    */
   static getCanvasDimensions(canvas: HTMLCanvasElement): { width: number; height: number } {
     // ✅ SAFETY: Check if canvas is valid before proceeding
+    // 🏢 ADR-118: Use centralized ZERO_VECTOR pattern for error fallback
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
       console.error('CanvasUtils.getCanvasDimensions: Invalid canvas element provided');
-      return { width: 0, height: 0 };
+      return { width: 0, height: 0 }; // Keeps { width, height } format, not Point2D
     }
     // 🏢 ENTERPRISE: Use cached bounds service
     const rect = canvasBoundsService.getBounds(canvas);
@@ -144,9 +149,10 @@ export class CanvasUtils {
     canvas: HTMLCanvasElement
   ): Point2D {
     // ✅ SAFETY: Check if canvas is valid before proceeding
+    // 🏢 ADR-118: Use centralized ZERO_VECTOR for error fallback
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
       console.error('CanvasUtils.screenToCanvas: Invalid canvas element provided');
-      return { x: 0, y: 0 };
+      return ZERO_VECTOR;
     }
     // 🏢 ENTERPRISE: Use cached bounds service
     const rect = canvasBoundsService.getBounds(canvas);
@@ -165,9 +171,10 @@ export class CanvasUtils {
     canvas: HTMLCanvasElement
   ): Point2D {
     // ✅ SAFETY: Check if canvas is valid before proceeding
+    // 🏢 ADR-118: Use centralized ZERO_VECTOR for error fallback
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
       console.error('CanvasUtils.canvasToScreen: Invalid canvas element provided');
-      return { x: 0, y: 0 };
+      return ZERO_VECTOR;
     }
     // 🏢 ENTERPRISE: Use cached bounds service
     const rect = canvasBoundsService.getBounds(canvas);
@@ -206,9 +213,10 @@ export class CanvasUtils {
    */
   static getCanvasCenter(canvas: HTMLCanvasElement): Point2D {
     // ✅ SAFETY: Check if canvas is valid before proceeding
+    // 🏢 ADR-118: Use centralized ZERO_VECTOR for error fallback
     if (!canvas || typeof canvas.getBoundingClientRect !== 'function') {
       console.error('CanvasUtils.getCanvasCenter: Invalid canvas element provided');
-      return { x: 0, y: 0 };
+      return ZERO_VECTOR;
     }
     // 🏢 ENTERPRISE: Use cached bounds service
     const rect = canvasBoundsService.getBounds(canvas);

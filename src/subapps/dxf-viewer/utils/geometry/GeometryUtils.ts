@@ -14,7 +14,10 @@ import {
   type Entity,
 } from '../../types/entities';
 // 🏢 ADR-074: Centralized Point On Circle
-import { pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { pointOnCircle, calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-114: Centralized Bounding Box Calculation
+import { calculateBoundingBox } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
 import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 
@@ -55,10 +58,10 @@ export function samePoint(p: Point2D, q: Point2D): boolean {
 
 /**
  * Check if two points are near each other within gap tolerance
+ * 🏢 ADR-065: Uses centralized calculateDistance
  */
 export function nearPoint(p: Point2D, q: Point2D): boolean {
-  const dist = Math.sqrt((p.x - q.x) ** 2 + (p.y - q.y) ** 2);
-  return dist <= GEOMETRY_CONSTANTS.GAP_TOLERANCE;
+  return calculateDistance(p, q) <= GEOMETRY_CONSTANTS.GAP_TOLERANCE;
 }
 
 /**
@@ -187,24 +190,13 @@ export function isPointInPolygon(point: Point2D, polygon: Point2D[]): boolean {
 }
 
 /**
- * 🎯 CENTRALIZED BOUNDS CALCULATION FROM VERTICES
- * Κεντρικοποιημένη μέθοδος για υπολογισμό bounds από vertices
+ * 🏢 ADR-114: CENTRALIZED BOUNDS CALCULATION
+ * Re-export από geometry-utils.ts (Single Source of Truth)
+ *
+ * @deprecated Use calculateBoundingBox from geometry-utils.ts directly
+ * This alias is kept for backward compatibility
  */
-export function calculateVerticesBounds(vertices: Point2D[]): { min: Point2D; max: Point2D } | null {
-  if (!vertices || vertices.length === 0) return null;
-
-  let minX = vertices[0].x, minY = vertices[0].y;
-  let maxX = minX, maxY = minY;
-
-  for (const v of vertices) {
-    minX = Math.min(minX, v.x);
-    minY = Math.min(minY, v.y);
-    maxX = Math.max(maxX, v.x);
-    maxY = Math.max(maxY, v.y);
-  }
-
-  return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
-}
+export { calculateBoundingBox as calculateVerticesBounds };
 
 /**
  * Debug helper to log segment endpoints

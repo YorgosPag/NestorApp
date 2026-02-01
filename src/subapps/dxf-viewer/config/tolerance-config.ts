@@ -16,6 +16,7 @@ export const TOLERANCE_CONFIG = {
   
   // Hit testing
   HIT_TEST_DEFAULT: 8,      // Default hit test tolerance
+  HIT_TEST_FALLBACK: 5,     // 🏢 ADR-105: Fallback tolerance for renderer hitTest methods
   HIT_TEST_RADIUS: 12,      // Hit test radius for visual elements
   
   // Grips and handles
@@ -47,6 +48,7 @@ export const HOVER_TOLERANCE_CONFIG: HoverToleranceConfig = {
 // Export convenient aliases for backward compatibility
 export const DEFAULT_TOLERANCE = TOLERANCE_CONFIG.SELECTION_DEFAULT;
 export const SNAP_TOLERANCE = TOLERANCE_CONFIG.SNAP_DEFAULT;
+export const HIT_TEST_FALLBACK = TOLERANCE_CONFIG.HIT_TEST_FALLBACK; // 🏢 ADR-105
 export const HIT_TEST_RADIUS_PX = TOLERANCE_CONFIG.HIT_TEST_RADIUS;
 export const CALIB_TOLERANCE_PX = TOLERANCE_CONFIG.CALIBRATION;
 export const VERTEX_HANDLE_SIZE = TOLERANCE_CONFIG.VERTEX_HANDLE_SIZE;

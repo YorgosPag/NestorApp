@@ -24,6 +24,8 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ADR-081: Centralized percentage formatting
 import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
+// 🏢 ADR-107: Centralized UI Size Defaults
+import { UI_SIZE_DEFAULTS } from '../../../../../config/text-rendering-config';
 
 // SVG Icons για τα accordion sections
 const CogIcon = ({ className }: { className?: string }) => (
@@ -194,7 +196,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
           {/* Grip Size */}
           <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
             <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-              {t('settings.grip.labels.size')}: {gripSettings.gripSize || 8}px
+              {t('settings.grip.labels.size')}: {gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE}px
             </label>
             <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
               <input
@@ -202,7 +204,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 min="4"
                 max="16"
                 step="1"
-                value={gripSettings.gripSize || 8}
+                value={gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE}
                 onChange={(e) => updateSettings({ gripSize: parseInt(e.target.value) })}
                 className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
               />
@@ -211,7 +213,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                 min="4"
                 max="16"
                 step="1"
-                value={gripSettings.gripSize || 8}
+                value={gripSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE}
                 onChange={(e) => updateSettings({ gripSize: parseInt(e.target.value) })}
                 className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
               />
@@ -379,7 +381,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
             {/* Pick Box Size */}
             <div className={PANEL_LAYOUT.SPACING.GAP_SM}>
               <label className={`block ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.secondary}`}>
-                {t('settings.grip.labels.pickBoxSize')}: {gripSettings.pickBoxSize || 3}px
+                {t('settings.grip.labels.pickBoxSize')}: {gripSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE}px
               </label>
               <div className={`flex items-center ${PANEL_LAYOUT.SPACING.GAP_H_MD}`}>
                 <input
@@ -387,7 +389,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   min="1"
                   max="8"
                   step="1"
-                  value={gripSettings.pickBoxSize || 3}
+                  value={gripSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE}
                   onChange={(e) => updateSettings({ pickBoxSize: parseInt(e.target.value) })}
                   className={`flex-1 ${PANEL_LAYOUT.HEIGHT.SM} ${colors.bg.muted} ${radius.lg} appearance-none ${PANEL_LAYOUT.CURSOR.POINTER}`}
                 />
@@ -396,7 +398,7 @@ export function GripSettings({ contextType }: { contextType?: 'preview' | 'compl
                   min="1"
                   max="8"
                   step="1"
-                  value={gripSettings.pickBoxSize || 3}
+                  value={gripSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE}
                   onChange={(e) => updateSettings({ pickBoxSize: parseInt(e.target.value) })}
                   className={`${PANEL_LAYOUT.WIDTH.MD} ${PANEL_LAYOUT.INPUT.PADDING_COMPACT} ${colors.bg.hover} ${quick.input} ${colors.text.primary} ${PANEL_LAYOUT.INPUT.TEXT_SIZE}`}
                 />

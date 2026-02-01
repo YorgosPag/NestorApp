@@ -8,6 +8,8 @@ import { gripStyleStore } from '../stores/GripStyleStore';
 // ===== OVERRIDE GUARD SYSTEM =====
 import { guardGlobalAccess } from '../../../utils/overrideGuard';
 import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-107: Centralized UI Size Defaults
+import { UI_SIZE_DEFAULTS } from '../config/text-rendering-config';
 
 export interface GripPreviewStyle {
   enabled: boolean;
@@ -92,9 +94,9 @@ export function getGripPreviewStyleWithOverride(): GripPreviewStyle {
         hot: specificSettings.colors?.hot || UI_COLORS.SELECTED_RED,    // ✅ AutoCAD standard: Red for hot grips
         contour: specificSettings.colors?.contour || UI_COLORS.BLACK // ✅ AutoCAD standard: Black contour
       },
-      gripSize: specificSettings.gripSize || 8,
-      pickBoxSize: specificSettings.pickBoxSize || 3,
-      apertureSize: specificSettings.apertureSize || 10,
+      gripSize: specificSettings.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE,
+      pickBoxSize: specificSettings.pickBoxSize || UI_SIZE_DEFAULTS.PICK_BOX_SIZE,
+      apertureSize: specificSettings.apertureSize || UI_SIZE_DEFAULTS.APERTURE_SIZE,
       showGrips: specificSettings.showGrips !== undefined ? specificSettings.showGrips : true,
       opacity: specificSettings.opacity || 1
     };

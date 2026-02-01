@@ -15,6 +15,8 @@ import { UI_FONTS, TEXT_LABEL_OFFSETS } from '../../../config/text-rendering-con
 import { addCirclePath } from '../../primitives/canvasPaths';
 // 🏢 ADR-088: Centralized Pixel-Perfect Alignment
 import { pixelPerfect } from '../../entities/shared/geometry-rendering-utils';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { WORLD_ORIGIN } from '../../../config/geometry-constants';
 
 export class OriginMarkersRenderer implements UIRenderer {
   readonly type = 'origin-markers';
@@ -51,15 +53,15 @@ export class OriginMarkersRenderer implements UIRenderer {
 
     // Calculate screen position of world origin (0,0)
     // ✅ CORRECT: Use CoordinateTransforms.worldToScreen for ACTUAL world (0,0)
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
     const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CT.worldToScreen(worldOrigin, transform, viewport);
+    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
     const originScreenX = screenOrigin.x;
     const originScreenY = screenOrigin.y;
 
     // 🔍 DEBUG: Log values to compare with DxfRenderer/LayerRenderer
     console.log('🎯 OriginMarkersRenderer origin marker:', {
-      worldOrigin,
+      WORLD_ORIGIN,
       screenOrigin,
       transform: { scale: transform.scale, offsetX: transform.offsetX, offsetY: transform.offsetY },
       calculated: { originScreenX, originScreenY }

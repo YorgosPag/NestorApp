@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Triangle, Building2, Folder, Building as BuildingIcon } from 'lucide-react';
+import { Triangle, Building2, Folder, Building as BuildingIcon, Layers } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -30,13 +30,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { useProjectHierarchy, type Building, type Unit } from '../contexts/ProjectHierarchyContext';
+import { useProjectHierarchy, type Building, type Unit, type Floor } from '../contexts/ProjectHierarchyContext';
 import { useFloorplan } from '../../../contexts/FloorplanContext';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { dxfImportService } from '../io/dxf-import';
 import { FloorplanService, type FloorplanData } from '../../../services/floorplans/FloorplanService';
 import { BuildingFloorplanService } from '../../../services/floorplans/BuildingFloorplanService';
 import { UnitFloorplanService } from '../../../services/floorplans/UnitFloorplanService';
+import { FloorFloorplanService } from '../../../services/floorplans/FloorFloorplanService';
 import { useNotifications } from '../../../providers/NotificationProvider';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
@@ -115,17 +116,20 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   const [units, setUnits] = useState<Unit[]>([]);
+  // 🏢 ENTERPRISE (2026-01-31): Floor selection state for floor-level floorplans
+  const [selectedFloorId, setSelectedFloorId] = useState<string>('');
+  const [floors, setFloors] = useState<Floor[]>([]);
 
   // DXF Import Modal state
   const [showDxfModal, setShowDxfModal] = useState(false);
-  const [currentFloorplanType, setCurrentFloorplanType] = useState<'project' | 'parking' | 'building' | 'storage' | 'unit'>('project');
+  const [currentFloorplanType, setCurrentFloorplanType] = useState<'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor'>('project');
 
   // ✅ ENTERPRISE: Controlled AlertDialog state for floorplan replacement confirmation
   const [showReplaceConfirm, setShowReplaceConfirm] = useState(false);
   const [pendingImportData, setPendingImportData] = useState<{
     file: File;
     encoding: string;
-    type: 'project' | 'parking' | 'building' | 'storage' | 'unit';
+    type: 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor';
     typeLabel: string;
   } | null>(null);
 
@@ -169,23 +173,37 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
       setSelectedProjectId('');
       setSelectedBuildingId('');
       setBuildings([]);
+      // 🏢 ENTERPRISE (2026-01-31): Reset floor state
+      setSelectedFloorId('');
+      setFloors([]);
     }
   }, [isOpen]);
 
-  // Load buildings when project is selected
+  /**
+   * 🏢 ENTERPRISE (2026-01-31): Load buildings for project from Firestore collection
+   * Buildings are stored in a separate 'buildings' collection with projectId foreign key
+   */
   const loadBuildingsForProject = async (projectId: string) => {
     try {
+      console.log(`🔄 [SimpleProjectDialog] Loading buildings for project: ${projectId}`);
 
-      const selectedProjectData = projects?.find(p => p.id === projectId);
-      if (selectedProjectData?.buildings) {
-        setBuildings(selectedProjectData.buildings);
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface BuildingsApiResponse {
+        buildings: Building[];
+        count: number;
+      }
 
+      const result = await apiClient.get<BuildingsApiResponse>(`/api/buildings?projectId=${projectId}`);
+
+      if (result?.buildings && result.buildings.length > 0) {
+        setBuildings(result.buildings);
+        console.log(`✅ [SimpleProjectDialog] Loaded ${result.buildings.length} buildings for project`);
       } else {
         setBuildings([]);
-
+        console.log(`⚠️ [SimpleProjectDialog] No buildings found for project: ${projectId}`);
       }
     } catch (error) {
-      console.error('🔺 Failed to load buildings:', error);
+      console.error('❌ [SimpleProjectDialog] Error loading buildings for project:', error);
       setBuildings([]);
     }
   };
@@ -245,13 +263,46 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
   const handleBuildingChange = async (buildingId: string) => {
 
     setSelectedBuildingId(buildingId);
-    
+
     // Load units for selected building
     if (buildingId) {
       await loadUnitsForBuilding(buildingId);
+      // 🏢 ENTERPRISE (2026-01-31): Load floors from separate Firestore collection via API
+      await loadFloorsForBuilding(buildingId);
     } else {
       setUnits([]);
       setSelectedUnitId('');
+      setFloors([]);
+      setSelectedFloorId('');
+    }
+  };
+
+  /**
+   * 🏢 ENTERPRISE (2026-01-31): Load floors for building from Firestore collection
+   * Floors are stored in a separate 'floors' collection with buildingId foreign key
+   */
+  const loadFloorsForBuilding = async (buildingId: string) => {
+    try {
+      console.log(`🔄 [SimpleProjectDialog] Loading floors for building: ${buildingId}`);
+
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      interface FloorsApiResponse {
+        floors: Floor[];
+        count: number;
+      }
+
+      const result = await apiClient.get<FloorsApiResponse>(`/api/floors?buildingId=${buildingId}`);
+
+      if (result?.floors && result.floors.length > 0) {
+        setFloors(result.floors);
+        console.log(`✅ [SimpleProjectDialog] Loaded ${result.floors.length} floors for building`);
+      } else {
+        setFloors([]);
+        console.log(`⚠️ [SimpleProjectDialog] No floors found for building: ${buildingId}`);
+      }
+    } catch (error) {
+      console.error('❌ [SimpleProjectDialog] Error loading floors for building:', error);
+      setFloors([]);
     }
   };
 
@@ -290,6 +341,12 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     setSelectedUnitId(unitId);
   };
 
+  // 🏢 ENTERPRISE (2026-01-31): Floor selection handler
+  const handleFloorChange = (floorId: string) => {
+    console.log(`🏢 [SimpleProjectDialog] Floor selected: ${floorId}`);
+    setSelectedFloorId(floorId);
+  };
+
   const handleClose = () => {
     setCurrentStep('company');
     setSelectedCompanyId('');
@@ -298,11 +355,14 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     setBuildings([]);
     setSelectedUnitId('');
     setUnits([]);
+    // 🏢 ENTERPRISE (2026-01-31): Reset floor state
+    setSelectedFloorId('');
+    setFloors([]);
     onClose();
   };
 
   // ✅ ENTERPRISE: Inner function to perform the actual import (used by both fresh import and confirmed replacement)
-  const performFloorplanImport = async (file: File, encoding: string, type: 'project' | 'parking' | 'building' | 'storage' | 'unit') => {
+  const performFloorplanImport = async (file: File, encoding: string, type: 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor') => {
     // 🏢 ENTERPRISE: Clear PDF background when loading DXF (only one floorplan at a time)
     console.log('🔺 [DXF Import] Clearing PDF background before loading DXF...');
     unloadPdf();
@@ -360,6 +420,19 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           timestamp: Date.now()
         };
         saved = await UnitFloorplanService.saveFloorplan(selectedUnitId, unitData);
+      } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
+        // 🏢 ENTERPRISE (2026-01-31): Save floor floorplan
+        const selectedFloorData = floors.find(f => f.id === selectedFloorId);
+        const floorData = {
+          buildingId: selectedBuildingId,
+          floorId: selectedFloorId,
+          floorNumber: selectedFloorData?.number || 0,
+          type: 'floor' as const,
+          scene,
+          fileName: file.name,
+          timestamp: Date.now()
+        };
+        saved = await FloorFloorplanService.saveFloorplan(selectedBuildingId, selectedFloorId, floorData);
       } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
         const buildingData = {
           buildingId: selectedBuildingId,
@@ -466,15 +539,18 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     try {
       // Check if floorplan already exists before proceeding
       let hasExisting = false;
-      
+
       if (currentStep === 'unit' && type === 'unit') {
         hasExisting = await UnitFloorplanService.hasFloorplan(selectedUnitId);
+      } else if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
+        // 🏢 ENTERPRISE (2026-01-31): Check for existing floor floorplan
+        hasExisting = await FloorFloorplanService.hasFloorplan(selectedBuildingId, selectedFloorId);
       } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
         hasExisting = await BuildingFloorplanService.hasFloorplan(selectedBuildingId, type as 'building' | 'storage');
       } else {
         hasExisting = await FloorplanService.hasFloorplan(selectedProjectId, type as 'project' | 'parking');
       }
-      
+
       // ✅ ENTERPRISE: If floorplan exists, show controlled AlertDialog for confirmation
       if (hasExisting) {
         const typeLabels = {
@@ -482,7 +558,8 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           parking: t('wizard.floorplanTypes.parking'),
           building: t('wizard.floorplanTypes.building'),
           storage: t('wizard.floorplanTypes.storage'),
-          unit: t('wizard.floorplanTypes.unit')
+          unit: t('wizard.floorplanTypes.unit'),
+          floor: t('wizard.floorplanTypes.floor')  // 🏢 ENTERPRISE (2026-01-31): Floor label
         };
 
         // Store pending data and show confirmation dialog
@@ -504,7 +581,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
     }
   };
 
-  const handleLoadFloorplan = (type: 'project' | 'parking' | 'building' | 'storage' | 'unit') => {
+  const handleLoadFloorplan = (type: 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor') => {
 
     setCurrentFloorplanType(type);
     setShowDxfModal(true);
@@ -562,7 +639,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
    * 🏢 ENTERPRISE: Perform actual PDF floorplan import
    * Renders PDF, saves to Firestore, and loads to background store
    */
-  const performPdfFloorplanImport = async (file: File, type: 'project' | 'parking' | 'building' | 'storage' | 'unit') => {
+  const performPdfFloorplanImport = async (file: File, type: 'project' | 'parking' | 'building' | 'storage' | 'unit' | 'floor') => {
     console.log('📄 [SimpleProjectDialog] Performing PDF floorplan import:', file.name, type);
 
     // 🏢 ENTERPRISE: Clear DXF scene when loading PDF (only one floorplan at a time)
@@ -631,7 +708,23 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
 
     // 🏢 ENTERPRISE: Save to Firestore for persistent storage
     let saved = false;
-    if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
+    if (currentStep === 'building' && type === 'floor' && selectedFloorId) {
+      // 🏢 ENTERPRISE (2026-01-31): Save floor PDF floorplan
+      const selectedFloorData = floors.find(f => f.id === selectedFloorId);
+      const floorData = {
+        buildingId: selectedBuildingId,
+        floorId: selectedFloorId,
+        floorNumber: selectedFloorData?.number || 0,
+        type: 'floor' as const,
+        fileType: 'pdf' as const,
+        scene: null,
+        pdfImageUrl: pdfImageUrl,
+        pdfDimensions: pdfDimensions,
+        fileName: file.name,
+        timestamp: Date.now()
+      };
+      saved = await FloorFloorplanService.saveFloorplan(selectedBuildingId, selectedFloorId, floorData);
+    } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
       const buildingData = {
         buildingId: selectedBuildingId,
         type: type as 'building' | 'storage',
@@ -800,9 +893,6 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                         <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
                           <Folder className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
                           <span>{project.name}</span>
-                          {project.buildings?.length > 0 && (
-                            <span className={typography.body.sm}>({t('wizard.counts.buildings', { count: project.buildings.length })})</span>
-                          )}
                         </div>
                       </SelectItem>
                     )) || []}
@@ -848,7 +938,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
                       <Building2 className={`${getIconSize('title')} ${getModalIconColor('success')}`} />
                       <div>
                         <p className={typography.heading.md}>{selectedProject.name}</p>
-                        <p className={`${typography.body.sm}`}>{t('wizard.counts.buildings', { count: selectedProject.buildings?.length || 0 })}</p>
+                        <p className={`${typography.body.sm}`}>{t('wizard.counts.buildings', { count: buildings.length })}</p>
                       </div>
                     </div>
                   </ProjectModalContainer>
@@ -948,6 +1038,49 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
               </ModalActions>
               <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
                 {t('wizard.floorplanSections.hintBuilding')}
+              </p>
+            </ProjectModalContainer>
+          )}
+
+          {/* 🏢 ENTERPRISE (2026-01-31): Floor Selection - Only shown when building is selected and has floors */}
+          {currentStep === 'building' && selectedBuildingId && floors.length > 0 && (
+            <ProjectModalContainer title={t('wizard.floorplanSections.selectFloor')} className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getModalContainerBorder('info')}`}>
+              <div className={MODAL_SPACING.SECTIONS.betweenItems}>
+                <label className={`block ${typography.label.sm} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
+                  {t('wizard.labels.selectFloor')}
+                </label>
+                <Select value={selectedFloorId} onValueChange={handleFloorChange}>
+                  <SelectTrigger className={getSelectStyles().trigger}>
+                    <SelectValue placeholder={t('wizard.placeholders.floor')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {floors.map(floor => (
+                      <SelectItem key={floor.id} value={floor.id}>
+                        <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                          <Layers className={`${getIconSize('field')} ${getModalIconColor('info')}`} />
+                          <span>{floor.name || t('wizard.counts.floorOrdinal', { floor: floor.number })}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Floor Floorplan Button - Only when floor is selected */}
+              {selectedFloorId && (
+                <ModalActions alignment="center">
+                  <Button
+                    onClick={() => handleLoadFloorplan('floor')}
+                    variant="default"
+                    size="default"
+                    className={MODAL_DIMENSIONS.BUTTONS.flex}
+                  >
+                    {t('wizard.floorplanTypes.floor')}
+                  </Button>
+                </ModalActions>
+              )}
+              <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
+                {t('wizard.floorplanSections.hintFloor')}
               </p>
             </ProjectModalContainer>
           )}

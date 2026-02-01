@@ -138,6 +138,31 @@ export const COLLABORATION_TIMING = {
 } as const;
 
 // ============================================
+// CACHE TIMING - ADR-113
+// ============================================
+
+/**
+ * Cache system timing constants
+ *
+ * RATIONALE:
+ * - DEFAULT_TTL_MS (300000ms / 5min): Standard cache entry lifetime
+ * - EXTENDED_TTL_MS (600000ms / 10min): Extended lifetime for global caches
+ * - CLEANUP_INTERVAL_MS (60000ms / 1min): Periodic expired entry cleanup
+ *
+ * Used by: PathCache, TextMetricsCache
+ */
+export const CACHE_TIMING = {
+  /** Default cache TTL (300000ms / 5 minutes) - standard cache lifetime */
+  DEFAULT_TTL_MS: 300000,
+
+  /** Extended cache TTL (600000ms / 10 minutes) - for global/singleton caches */
+  EXTENDED_TTL_MS: 600000,
+
+  /** Cleanup interval (60000ms / 1 minute) - periodic cache cleanup */
+  CLEANUP_INTERVAL_MS: 60000,
+} as const;
+
+// ============================================
 // COMBINED CONFIG
 // ============================================
 
@@ -152,6 +177,7 @@ export const TIMING_CONFIG = {
   ui: UI_TIMING,
   storage: STORAGE_TIMING,
   collaboration: COLLABORATION_TIMING,
+  cache: CACHE_TIMING,
 } as const;
 
 // ============================================
@@ -172,6 +198,9 @@ export type StorageTiming = typeof STORAGE_TIMING;
 
 /** Collaboration timing type */
 export type CollaborationTiming = typeof COLLABORATION_TIMING;
+
+/** Cache timing type */
+export type CacheTiming = typeof CACHE_TIMING;
 
 /** Complete timing config type */
 export type TimingConfig = typeof TIMING_CONFIG;

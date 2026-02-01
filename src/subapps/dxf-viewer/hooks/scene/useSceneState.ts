@@ -14,6 +14,8 @@ import { useLevels } from '../../systems/levels';
 import { useDxfImport } from '../useDxfImport';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { EMPTY_BOUNDS } from '../../config/geometry-constants';
 
 export function useSceneState() {
   const canvasOps = useCanvasOperations();
@@ -43,13 +45,11 @@ export function useSceneState() {
     const scene = getLevelScene(currentLevelId);
     if (!scene) {
       // 🔺 FIXED: Don't create default layer "0" until DXF is loaded
+      // 🏢 ADR-118: Use centralized EMPTY_BOUNDS for empty scene
       const emptyScene = {
         entities: [],
         layers: {}, // ← Empty layers object - no default "0" layer!
-        bounds: {
-          min: { x: 0, y: 0 },
-          max: { x: 0, y: 0 }
-        },
+        bounds: { ...EMPTY_BOUNDS },
         units: 'mm' as const
       };
 

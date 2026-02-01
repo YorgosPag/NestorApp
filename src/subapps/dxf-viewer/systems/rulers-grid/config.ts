@@ -8,6 +8,8 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 // Re-export για συμβατότητα με existing imports
 export type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 export interface BoundingBox {
   min: Point2D;
@@ -172,9 +174,10 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
     showBackground: true  // Default: show background
   },
   units: 'mm',
+  // 🏢 ADR-105: Use centralized fallback tolerance
   snap: {
     enabled: false,
-    tolerance: 5
+    tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK
   }
 };
 
@@ -185,7 +188,7 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     opacity: 0.6,
     color: UI_COLORS.GRID_BLUE, // Μπλε για καλύτερη ορατότητα
     style: 'lines', // ✅ NEW: Default grid style (lines/dots/crosses)
-    subDivisions: 5,
+    subDivisions: 5, // 🏢 ADR-110: Canonical value defined in RULERS_GRID_CONFIG.DEFAULT_SUBDIVISIONS
     showOrigin: true,
     showAxes: true,
     axesColor: UI_COLORS.RULER_DARK_GRAY, // Σκουρότερο γκρι για τους άξονες
@@ -229,6 +232,7 @@ export const RULERS_GRID_CONFIG = {
   MIN_GRID_STEP: 0.1,
   MAX_GRID_STEP: 1000,
   DEFAULT_GRID_STEP: 10,
+  DEFAULT_SUBDIVISIONS: 5, // 🏢 ADR-110: Centralized grid subdivisions fallback
   MIN_OPACITY: 0.05,
   MAX_OPACITY: 1.0,
   DEFAULT_OPACITY: 0.3,

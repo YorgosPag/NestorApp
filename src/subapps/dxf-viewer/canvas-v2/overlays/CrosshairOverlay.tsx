@@ -32,6 +32,9 @@ import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 // 🚀 PERFORMANCE (2026-01-27): ImmediatePositionStore for zero-latency crosshair updates
 import { registerDirectRender, getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
+// 🏢 ADR-094: Centralized Device Pixel Ratio
+// 🏢 ADR-117: DPI-Aware Pixel Calculations Centralization
+import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
 
 interface Viewport {
   width: number;
@@ -103,15 +106,16 @@ export default function CrosshairOverlay({
 
     const updateCanvasSize = () => {
       const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = getDevicePixelRatio(); // 🏢 ADR-094
 
       const cssWidth = rect.width;
       const cssHeight = rect.height;
 
       if (cssWidth === 0 || cssHeight === 0) return;
 
-      const w = Math.round(cssWidth * dpr);
-      const h = Math.round(cssHeight * dpr);
+      // 🏢 ADR-117: Use centralized toDevicePixels for DPI-aware calculations
+      const w = toDevicePixels(cssWidth, dpr);
+      const h = toDevicePixels(cssHeight, dpr);
 
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
@@ -152,7 +156,7 @@ export default function CrosshairOverlay({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getDevicePixelRatio(); // 🏢 ADR-094
 
     // ✅ CAD-GRADE: Reset transform and clear entire canvas
     ctx.setTransform(1, 0, 0, 1, 0, 0);

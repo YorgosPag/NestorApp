@@ -8,6 +8,12 @@
 import type { Point2D } from '../../../rendering/types/Types';
 import type { DxfScene } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../../canvas-v2/layer-canvas/layer-types';
+// 🏢 ADR-107: Centralized UI Size Defaults and Text Metrics Ratios
+import { UI_SIZE_DEFAULTS, TEXT_METRICS_RATIOS } from '../../../config/text-rendering-config';
+// 🏢 ADR-114: Centralized Bounding Box Calculation
+import { calculateBoundingBox } from '../../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { EMPTY_BOUNDS, DEFAULT_BOUNDS } from '../../../config/geometry-constants';
 
 // ============================================================================
 // 🏢 CANONICAL TYPES
@@ -46,19 +52,13 @@ export function unionBounds(a: Bounds, b: Bounds): Bounds {
 // === BOUNDS CREATION ===
 
 /**
- * Δημιουργία bounds από array of points
+ * 🏢 ADR-114: CENTRALIZED BOUNDS CALCULATION
+ * Re-export από geometry-utils.ts (Single Source of Truth)
+ *
+ * @deprecated Use calculateBoundingBox from geometry-utils.ts directly
+ * This alias is kept for backward compatibility
  */
-export function createBoundsFromPoints(points: Point2D[]): { min: Point2D; max: Point2D } | null {
-  if (points.length === 0) return null;
-
-  const xs = points.map(p => p.x);
-  const ys = points.map(p => p.y);
-
-  return {
-    min: { x: Math.min(...xs), y: Math.min(...ys) },
-    max: { x: Math.max(...xs), y: Math.max(...ys) }
-  };
-}
+export { calculateBoundingBox as createBoundsFromPoints };
 
 /**
  * Δημιουργία bounds από DXF scene
@@ -129,8 +129,8 @@ export function createBoundsFromDxfScene(
         // 🛡️ GUARD: Ensure position exists
         if (entity.position && isFinite(entity.position.x) && isFinite(entity.position.y)) {
           allPoints.push(entity.position);
-          // Add approximate text bounds
-          const textWidth = (entity.text?.length || 1) * (entity.height || 12) * 0.6;
+          // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
+          const textWidth = (entity.text?.length || 1) * (entity.height || 12) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
           allPoints.push({
             x: entity.position.x + textWidth,
             y: entity.position.y + (entity.height || 12)
@@ -140,7 +140,7 @@ export function createBoundsFromDxfScene(
     }
   }
 
-  return createBoundsFromPoints(allPoints);
+  return calculateBoundingBox(allPoints);
 }
 
 /**
@@ -163,7 +163,7 @@ export function createBoundsFromLayers(layers: ColorLayer[]): { min: Point2D; ma
     }
   }
 
-  return createBoundsFromPoints(allPoints);
+  return calculateBoundingBox(allPoints);
 }
 
 /**
@@ -328,8 +328,9 @@ export function getViewportBounds(viewport: { width: number; height: number }): 
   min: Point2D;
   max: Point2D;
 } {
+  // 🏢 ADR-118: Use EMPTY_BOUNDS pattern for min coordinate
   return {
-    min: { x: 0, y: 0 },
+    min: { ...EMPTY_BOUNDS.min },
     max: { x: viewport.width, y: viewport.height }
   };
 }
@@ -435,8 +436,9 @@ export function getEntityBounds(entity: BoundsEntity): Bounds | null {
 
     case 'text': {
       if (entity.position) {
-        const textWidth = (entity.text?.length || 5) * (entity.height || 10) * 0.7;
-        const textHeight = entity.height || 10;
+        // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
+        const textWidth = (entity.text?.length || 5) * (entity.height || UI_SIZE_DEFAULTS.TEXT_HEIGHT_FALLBACK) * TEXT_METRICS_RATIOS.CHAR_WIDTH_WIDE;
+        const textHeight = entity.height || UI_SIZE_DEFAULTS.TEXT_HEIGHT_FALLBACK;
         return {
           min: { x: entity.position.x, y: entity.position.y },
           max: {
@@ -547,8 +549,9 @@ export function calculateTightBounds(
   entities: BoundsEntity[],
   normalize: boolean = false
 ): Bounds {
+  // 🏢 ADR-118: Use centralized DEFAULT_BOUNDS for empty entity array
   if (entities.length === 0) {
-    return { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } };
+    return { ...DEFAULT_BOUNDS };
   }
 
   let minX = Infinity;
@@ -573,7 +576,8 @@ export function calculateTightBounds(
 
   if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
     console.warn('Invalid bounds calculated, using defaults');
-    return { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } };
+    // 🏢 ADR-118: Use centralized DEFAULT_BOUNDS for invalid bounds fallback
+    return { ...DEFAULT_BOUNDS };
   }
 
   // ΒΗΜΑ 2: Optional normalization

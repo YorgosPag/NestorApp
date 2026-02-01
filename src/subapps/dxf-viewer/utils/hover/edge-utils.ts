@@ -9,8 +9,10 @@ import { renderEdgeDistanceLabel, calculateEdgeTextPosition } from './text-label
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
-// 🏢 ADR-XXX: Centralized Angular Constants
-import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-112: Centralized Text Rotation Pattern
+import { withTextRotation } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-109: Centralized Distance Calculation
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 export function renderHoverEdgeWithDistance(
   ctx: CanvasRenderingContext2D,
@@ -20,9 +22,8 @@ export function renderHoverEdgeWithDistance(
   screenEnd: Point2D
 ): void {
   // Calculate distance in world coordinates
-  const distance = Math.sqrt(
-    Math.pow(worldEnd.x - worldStart.x, 2) + Math.pow(worldEnd.y - worldStart.y, 2)
-  );
+  // 🏢 ADR-109: Use centralized distance calculation
+  const distance = calculateDistance(worldStart, worldEnd);
 
   // Draw dashed line
   ctx.beginPath();
@@ -34,20 +35,10 @@ export function renderHoverEdgeWithDistance(
   const textPos = calculateEdgeTextPosition(screenStart, screenEnd, HOVER_CONFIG.offsets.gripAvoidance);
   if (!textPos) return;
 
-  ctx.save();
-  ctx.translate(textPos.x, textPos.y);
-
-  // Rotate text to be readable
-  // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
-  let textAngle = textPos.angle;
-  if (Math.abs(textAngle) > RIGHT_ANGLE) {
-    textAngle += Math.PI;
-  }
-  ctx.rotate(textAngle);
-
-  // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-  const distanceText = formatDistance(distance);
-  renderStyledTextWithOverride(ctx, distanceText, 0, 0);
-
-  ctx.restore();
+  // 🏢 ADR-110: Use centralized text rotation pattern
+  withTextRotation(ctx, textPos, () => {
+    // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
+    const distanceText = formatDistance(distance);
+    renderStyledTextWithOverride(ctx, distanceText, 0, 0);
+  });
 }

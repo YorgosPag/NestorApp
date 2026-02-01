@@ -8,7 +8,10 @@ import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 // 🏢 ADR-090: Centralized UI Fonts
 // 🏢 ADR-097: Centralized Line Dash Patterns
-import { UI_FONTS, LINE_DASH_PATTERNS } from '../config/text-rendering-config';
+// 🏢 ADR-122: Centralized Line Widths
+import { UI_FONTS, LINE_DASH_PATTERNS, RENDER_LINE_WIDTHS } from '../config/text-rendering-config';
+// 🏢 ADR-109: Centralized Distance Calculation
+import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
 
 interface CollaborationOverlayProps {
   users: CollaborationUser[];
@@ -74,7 +77,7 @@ export function CollaborationOverlay({
     ctx.save();
     ctx.fillStyle = user.color;
     ctx.strokeStyle = UI_COLORS.CANVAS_STROKE_DEFAULT;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-122: Centralized line width
 
     // Cursor arrow
     ctx.beginPath();
@@ -101,7 +104,7 @@ export function CollaborationOverlay({
 
     ctx.save();
     ctx.strokeStyle = user.color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.SELECTION; // 🏢 ADR-122: Centralized line width
     ctx.setLineDash([...LINE_DASH_PATTERNS.SELECTION]); // 🏢 ADR-097: Centralized selection pattern
 
     // This would need actual entity bounds from the DXF viewer
@@ -125,7 +128,7 @@ export function CollaborationOverlay({
     ctx.fillStyle = annotation.type === 'note' ? UI_COLORS.BUTTON_PRIMARY :
                    annotation.type === 'measurement' ? UI_COLORS.SUCCESS : UI_COLORS.ERROR;
     ctx.strokeStyle = UI_COLORS.WHITE;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL; // 🏢 ADR-122: Centralized line width
 
     // ⚡ NUCLEAR: COLLABORATION CIRCLES ELIMINATED
 
@@ -153,10 +156,9 @@ export function CollaborationOverlay({
     annotations.forEach(annotation => {
       const annotationX = (annotation.position.x * viewport.zoom) + viewport.panX;
       const annotationY = (annotation.position.y * viewport.zoom) + viewport.panY;
-      
-      const distance = Math.sqrt(
-        Math.pow(x - annotationX, 2) + Math.pow(y - annotationY, 2)
-      );
+
+      // 🏢 ADR-109: Use centralized distance calculation
+      const distance = calculateDistance({ x, y }, { x: annotationX, y: annotationY });
 
       if (distance <= 12) { // 8px radius + 4px tolerance
         onAnnotationClick(annotation);

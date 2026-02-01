@@ -27,6 +27,23 @@ export const GRIP_SIZE_MULTIPLIERS = {
   HOT: 1.5,    // Active/drag state (+50%)
 } as const;
 
+/**
+ * Edge grip size multipliers based on temperature state
+ * Edge grips use slightly larger multipliers than vertex grips
+ * for more dramatic hover/active feedback on thin edge lines
+ *
+ * 🏢 ADR-106: Centralized Edge Grip Size Multipliers
+ *
+ * - COLD (1.0x): Normal state, default size
+ * - WARM (1.4x): Hover state, 40% larger (vs 25% for vertex)
+ * - HOT (1.6x): Active/drag state, 60% larger (vs 50% for vertex)
+ */
+export const EDGE_GRIP_SIZE_MULTIPLIERS = {
+  COLD: 1.0,   // Normal state
+  WARM: 1.4,   // Hover state (+40%)
+  HOT: 1.6,    // Active/drag state (+60%)
+} as const;
+
 // ============================================================================
 // DEFAULT GRIP COLORS (AutoCAD Standard)
 // ============================================================================

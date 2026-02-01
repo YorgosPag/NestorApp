@@ -26,6 +26,8 @@ import {
   getCalibrationTestMarkerStyles,
   getCalibrationTooltipStyles
 } from './DxfViewerComponents.styles';
+// 🏢 ADR-094: Centralized Device Pixel Ratio
+import { getDevicePixelRatio } from '../systems/cursor/utils';
 
 interface CoordinateCalibrationOverlayProps {
   mousePos: Point2D | null;
@@ -66,7 +68,7 @@ export default function CoordinateCalibrationOverlay({
   // Scene info
   const entitiesCount = currentScene?.entities?.length ?? 0;
   const layersCount = currentScene?.layers ? Object.keys(currentScene.layers).length : 0;
-  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  const dpr = getDevicePixelRatio(); // 🏢 ADR-094
 
   // ✅ Χρήση κεντρικού CoordinateTransforms για round-trip test
   const calculateRoundTripError = (cssPoint: Point2D): number => {

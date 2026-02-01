@@ -25,7 +25,8 @@
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity, ExtendedLineEntity, ExtendedCircleEntity, ExtendedPolylineEntity, PreviewPoint } from '../../hooks/drawing/useUnifiedDrawing';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
-import { getDevicePixelRatio } from '../../systems/cursor/utils';
+// 🏢 ADR-117: DPI-Aware Pixel Calculations Centralization
+import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
 
 // 🏢 ENTERPRISE (2026-01-31): Arc preview entity type - ADR-059
 // Extended to support construction lines (rubber band) during arc drawing
@@ -70,6 +71,9 @@ import { calculateAngle, rectFromTwoPoints } from '../../rendering/entities/shar
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 // 🏢 ADR-100: Centralized Degrees-to-Radians Conversion
 import { bisectorAngle, TAU, radToDeg, degToRad } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-119: Centralized Opacity Constants
+// 🏢 ADR-123: Centralized Preview Colors
+import { UI_COLORS, OPACITY } from '../../config/color-config';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -99,13 +103,13 @@ export interface PreviewRenderOptions {
 // ============================================================================
 
 const DEFAULT_PREVIEW_OPTIONS: Required<PreviewRenderOptions> = {
-  color: '#00FF00', // Green preview (AutoCAD standard)
+  color: UI_COLORS.BRIGHT_GREEN, // 🏢 ADR-123: Green preview (AutoCAD standard)
   lineWidth: 1,
   opacity: 0.9,
   dashPattern: [],
   showGrips: true,
   gripSize: 6,
-  gripColor: '#00FF00',
+  gripColor: UI_COLORS.BRIGHT_GREEN, // 🏢 ADR-123: Centralized grip color
 };
 
 // 🏢 ENTERPRISE: Cached Path2D for grip points (performance optimization)
@@ -167,8 +171,9 @@ export class PreviewRenderer {
     this.dpr = dpr;
 
     // Set canvas buffer size
-    this.canvas.width = Math.round(width * dpr);
-    this.canvas.height = Math.round(height * dpr);
+    // 🏢 ADR-117: Use centralized toDevicePixels for DPI-aware calculations
+    this.canvas.width = toDevicePixels(width, dpr);
+    this.canvas.height = toDevicePixels(height, dpr);
 
     // Set canvas display size
     this.canvas.style.width = `${width}px`;
@@ -309,7 +314,7 @@ export class PreviewRenderer {
     }
 
     // Reset context
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
     ctx.setLineDash([]);
   }
 
@@ -480,7 +485,7 @@ export class PreviewRenderer {
     const angle2 = calculateAngle(entity.vertex, entity.point2);
 
     ctx.save();
-    ctx.strokeStyle = '#FFA500'; // Orange for arc (CAD standard)
+    ctx.strokeStyle = UI_COLORS.PREVIEW_ARC_ORANGE; // 🏢 ADR-123: Orange for arc (CAD standard)
     ctx.setLineDash([...LINE_DASH_PATTERNS.DASHED]); // 🏢 ADR-097: Centralized dashed pattern
     // 🔧 FIX (2026-01-31): Use ellipse() instead of arc() - arc() has rendering bug!
     ctx.beginPath();
@@ -510,7 +515,7 @@ export class PreviewRenderer {
     const textY = screenVertex.y + Math.sin(bisectorAngleValue) * textDistance;
 
     ctx.save();
-    ctx.fillStyle = '#FF00FF'; // Fuchsia for angle text (measurement standard)
+    ctx.fillStyle = UI_COLORS.DIMENSION_TEXT; // 🏢 ADR-123: Fuchsia for angle text (measurement standard)
     ctx.font = UI_FONTS.ARIAL.LARGE; // 🏢 ADR-090: Centralized font
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -558,7 +563,7 @@ export class PreviewRenderer {
       ctx.setLineDash([8, 4]);
       ctx.strokeStyle = PANEL_LAYOUT.CAD_COLORS.CONSTRUCTION_LINE || opts.color;
       ctx.lineWidth = RENDER_LINE_WIDTHS.PREVIEW_CONSTRUCTION || 1;
-      ctx.globalAlpha = 0.7;
+      ctx.globalAlpha = OPACITY.MEDIUM; // 🏢 ADR-119: Centralized opacity
 
       // 🏢 ADR-040: Use centralized CoordinateTransforms.worldToScreen()
       const screenVertices = entity.constructionVertices.map(v => CoordinateTransforms.worldToScreen(v, transform, this.currentViewport!));
@@ -703,7 +708,7 @@ export class PreviewRenderer {
     ctx.fill(path);
 
     // Stroke with darker border
-    ctx.strokeStyle = '#000000';
+    ctx.strokeStyle = UI_COLORS.BLACK; // 🏢 ADR-123: Centralized grip border color
     ctx.lineWidth = RENDER_LINE_WIDTHS.GRIP_OUTLINE; // 🏢 ADR-044
     ctx.stroke(path);
 

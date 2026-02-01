@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback, useImperativeHandle } from 'react';
+import React, { useRef, useEffect, useCallback, useImperativeHandle } from 'react';
 import { DxfRenderer } from './DxfRenderer';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Mouse handlers τώρα από το centralized system
@@ -30,6 +30,14 @@ import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // ✅ ADR-002: Centralized canvas theme
 import { CANVAS_THEME } from '../../config/color-config';
+// 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// 🏢 ADR-094: Centralized Device Pixel Ratio
+import { getDevicePixelRatio } from '../../systems/cursor/utils';
+// 🏢 ADR-118: Centralized Canvas Resize Hook
+import { useCanvasResize } from '../../hooks/canvas';
+// 🏢 ADR-119: Centralized RAF via UnifiedFrameScheduler
+import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 
 // ✅ MOVED OUTSIDE COMPONENT - Prevents re-render loop
 const DEFAULT_RENDER_OPTIONS: DxfRenderOptions = {
@@ -97,23 +105,13 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   const gridRendererRef = useRef<GridRenderer | null>(null);
   const rulerRendererRef = useRef<RulerRenderer | null>(null);
 
-  // 🏢 ENTERPRISE (2026-01-30): SSoT Viewport from CONTAINER (parent)
-  // CRITICAL FIX: viewportProp comes from CanvasSection's viewportRef (container-based)
-  // This MUST match what input handlers use (containerRef)
-  // Local viewportRef is ONLY for backing store resize, NOT for coordinate transforms
-  const viewportRef = useRef<Viewport>({ width: 0, height: 0 });
-
-  // ✅ LEGACY: Keep state for React re-renders (dependencies, UI updates)
-  const [internalViewport, setInternalViewport] = useState<Viewport>({ width: 0, height: 0 });
-
-  // 🎯 CRITICAL: viewportProp FIRST (from container) - ensures Input/Render use SAME source
-  // viewportProp = CanvasSection's viewportRef.current (container-based, FRESH)
-  // Local viewportRef = canvas-based (different element, causes DRIFT!)
-  const viewport = (viewportProp && viewportProp.width > 0 && viewportProp.height > 0)
-    ? viewportProp  // ✅ ALWAYS use container-based viewport from parent
-    : (viewportRef.current.width > 0 && viewportRef.current.height > 0)
-      ? viewportRef.current  // Fallback only if parent didn't provide
-      : internalViewport;
+  // 🏢 ADR-118: Centralized canvas resize hook
+  // Handles viewport priority resolution (viewportProp > ref > state) and ResizeObserver
+  // Note: setupCanvas callback is passed via useEffect below (after setupCanvas is defined)
+  const { viewport, viewportRef, setInternalViewport } = useCanvasResize({
+    canvasRef,
+    viewportProp,
+  });
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση του CursorSystem αντί για local state
   const cursor = useCursor();
@@ -170,8 +168,9 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
       try {
         // ✅ ENTERPRISE MIGRATION: Get service from registry
         const hitTesting = serviceRegistry.get('hit-testing');
+        // 🏢 ADR-105: Use centralized fallback tolerance
         const result = hitTesting.hitTest(screenPos, transform, viewport, {
-          tolerance: 5,
+          tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
           maxResults: 1
         });
 
@@ -190,7 +189,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
 
   // Canvas config - ✅ ADR-002: Centralized canvas theme
   const canvasConfig: CanvasConfig = {
-    devicePixelRatio: window.devicePixelRatio || 1,
+    devicePixelRatio: getDevicePixelRatio(), // 🏢 ADR-094
     enableHiDPI: true,
     backgroundColor: CANVAS_THEME.CONTAINER
   };
@@ -252,65 +251,15 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     }
   }, []); // Removed canvasConfig dependency to prevent infinite loops
 
-  // Setup canvas on mount and resize
-  // 🏢 ENTERPRISE (2026-01-30): Use ResizeObserver for DevTools toggle detection
-  // PROBLEM: window resize doesn't trigger when DevTools is toggled (docked)
-  // SOLUTION: ResizeObserver monitors actual canvas element dimensions
+  // 🏢 ADR-119: Dirty flag ref for UnifiedFrameScheduler optimization
+  const isDirtyRef = useRef(true);
+
+  // 🏢 ADR-118: Setup canvas on mount
+  // 🏢 ADR-119: Initial render now handled by UnifiedFrameScheduler
   useEffect(() => {
     setupCanvas();
-
-    // 🔧 FIX (2026-01-27): Force initial render after setup
-    requestAnimationFrame(() => {
-      const renderer = rendererRef.current;
-      const canvas = canvasRef.current;
-      if (renderer && canvas) {
-        // 🎯 Use viewportRef for consistent SSoT
-        const currentViewport = viewportRef.current;
-        if (currentViewport.width > 0 && currentViewport.height > 0) {
-          try {
-            renderer.render(scene, transform, currentViewport, renderOptions);
-          } catch (error) {
-            console.error('🚨 [DxfCanvas] Force render failed:', error);
-          }
-        }
-      }
-    });
-
-    // 🏢 ENTERPRISE (2026-01-31): ResizeObserver ONLY when NO viewportProp
-    // PROBLEM: Multiple ResizeObservers (container + canvas) cause race conditions
-    // SOLUTION: If parent provides viewportProp, parent's ResizeObserver is SSoT
-    // Canvas ResizeObserver only runs as FALLBACK when no viewportProp
-    let resizeObserver: ResizeObserver | null = null;
-    const canvas = canvasRef.current;
-    const hasParentViewport = viewportProp && viewportProp.width > 0 && viewportProp.height > 0;
-
-    // Only setup local ResizeObserver if NO parent viewport (standalone mode)
-    if (canvas && !hasParentViewport) {
-      resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const { width, height } = entry.contentRect;
-          if (width > 0 && height > 0) {
-            // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
-            viewportRef.current = { width, height };
-            // Also trigger React state update for dependencies
-            setInternalViewport({ width, height });
-          }
-        }
-      });
-      resizeObserver.observe(canvas);
-    }
-
-    // Fallback: window resize for non-element resizes
-    const handleResize = () => setupCanvas();
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-    };
-  }, [viewportProp?.width, viewportProp?.height]); // 🏢 ENTERPRISE (2026-01-31): React to viewportProp changes - disconnect ResizeObserver when parent provides valid viewport
+    isDirtyRef.current = true; // Mark dirty for initial render
+  }, [setupCanvas]);
 
   // 🎯 INITIAL TRANSFORM: Set world (0,0) at bottom-left ruler corner
   useEffect(() => {
@@ -335,8 +284,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
 
   // Computed styles check disabled for performance
 
-  // 🚀 IMMEDIATE SCENE RENDERING - No delays for professional CAD performance
-  useEffect(() => {
+  // 🏢 ADR-119: Memoized render function for UnifiedFrameScheduler
+  const renderScene = useCallback(() => {
     const renderer = rendererRef.current;
     if (!renderer || !viewport.width || !viewport.height) return;
 
@@ -386,7 +335,30 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     } catch (error) {
       console.error('Failed to render DXF scene:', error);
     }
-  }, [scene, transform, viewport.width, viewport.height, renderOptions, gridSettings, rulerSettings]);
+  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings]);
+
+  // 🏢 ADR-119: Register with UnifiedFrameScheduler for centralized RAF
+  useEffect(() => {
+    if (viewport.width > 0 && viewport.height > 0 && rendererRef.current) {
+      const unsubscribe = registerRenderCallback(
+        'dxf-canvas',
+        'DXF Entity Renderer',
+        RENDER_PRIORITIES.NORMAL,
+        () => {
+          renderScene();
+          isDirtyRef.current = false;
+        },
+        () => isDirtyRef.current
+      );
+
+      return unsubscribe;
+    }
+  }, [renderScene, viewport.width, viewport.height]);
+
+  // 🏢 ADR-119: Mark dirty when dependencies change
+  useEffect(() => {
+    isDirtyRef.current = true;
+  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings]);
 
   // 🚀 SEPARATE UI RENDERING - Independent of scene rendering for better performance
   useEffect(() => {

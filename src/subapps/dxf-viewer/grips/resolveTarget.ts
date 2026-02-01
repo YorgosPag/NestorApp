@@ -1,6 +1,8 @@
 // src/subapps/dxf-viewer/grips/resolveTarget.ts
 import { useOverlayStore } from '../overlays/overlay-store';
 import type { Point2D } from '../rendering/types/Types';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { DEFAULT_BOUNDS } from '../config/geometry-constants';
 
 export function resolveGripTarget(id: string, type: 'dxf'|'overlay') {
   if (type === 'overlay') {
@@ -9,15 +11,15 @@ export function resolveGripTarget(id: string, type: 'dxf'|'overlay') {
     // In a real scenario, you'd need to access the store properly
 
     return {
-      id, 
+      id,
       type,
       getVertices: () => {
 
         return []; // TODO: Get actual vertices from overlay store
       },
       getBBox: () => {
-
-        return { min: {x: 0, y: 0}, max: {x: 100, y: 100} }; // TODO: Calculate real bbox
+        // 🏢 ADR-118: Use centralized DEFAULT_BOUNDS for mock bbox
+        return { ...DEFAULT_BOUNDS }; // TODO: Calculate real bbox
       },
       setVertex: (i: number, p: Point2D) => {
 
@@ -27,12 +29,12 @@ export function resolveGripTarget(id: string, type: 'dxf'|'overlay') {
   }
   
   // dxf - placeholder for now
-
+  // 🏢 ADR-118: Use centralized DEFAULT_BOUNDS for mock bbox
   return {
-    id, 
+    id,
     type,
     getVertices: () => [],
-    getBBox: () => ({ min: {x: 0, y: 0}, max: {x: 100, y: 100} }),
+    getBBox: () => ({ ...DEFAULT_BOUNDS }),
     setVertex: (i: number, p: Point2D) => {
 
     },

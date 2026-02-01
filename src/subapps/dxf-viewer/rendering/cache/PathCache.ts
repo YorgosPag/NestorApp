@@ -1,7 +1,12 @@
 /**
  * PATH CACHE - Path2D caching για βελτιστοποίηση rendering performance
  * ✅ ΦΑΣΗ 5: Caching system για repeated entity rendering
+ *
+ * 🏢 ADR-113: Uses centralized CACHE_TIMING for TTL constants
  */
+
+// 🏢 ADR-113: Centralized Cache Timing Constants
+import { CACHE_TIMING } from '../../config/timing-config';
 
 import type { EntityModel } from '../types/Types';
 import type {
@@ -61,13 +66,15 @@ export class PathCache {
 
   // Cleanup management
   private lastCleanup = Date.now();
-  private cleanupInterval = 60000; // 1 minute
+  // 🏢 ADR-113: Centralized cache timing
+  private cleanupInterval = CACHE_TIMING.CLEANUP_INTERVAL_MS;
 
   constructor(options: CacheOptions = {}) {
     this.options = {
       maxEntries: options.maxEntries || 1000,
       maxMemorySize: options.maxMemorySize || 50 * 1024 * 1024, // 50MB
-      ttlMs: options.ttlMs || 300000, // 5 minutes
+      // 🏢 ADR-113: Centralized cache timing
+      ttlMs: options.ttlMs || CACHE_TIMING.DEFAULT_TTL_MS,
       enableStats: options.enableStats !== false
     };
   }
@@ -454,7 +461,8 @@ export function getGlobalPathCache(): PathCache {
     globalPathCache = new PathCache({
       maxEntries: 2000,
       maxMemorySize: 100 * 1024 * 1024, // 100MB
-      ttlMs: 600000 // 10 minutes
+      // 🏢 ADR-113: Extended TTL for global cache
+      ttlMs: CACHE_TIMING.EXTENDED_TTL_MS
     });
   }
   return globalPathCache;

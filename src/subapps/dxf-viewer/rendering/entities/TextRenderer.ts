@@ -37,7 +37,10 @@ import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from './shared/geometry-utils';
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
-import { buildUIFont } from '../../config/text-rendering-config';
+// 🏢 ADR-107: Centralized Text Metrics Ratios
+import { buildUIFont, TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
+// 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 
 export class TextRenderer extends BaseEntityRenderer {
@@ -185,8 +188,9 @@ export class TextRenderer extends BaseEntityRenderer {
 
   /**
    * Hit testing for text entities (simplified like old backup)
+   * 🏢 ADR-105: Use centralized fallback tolerance
    */
-  hitTest(entity: EntityModel, point: Point2D, tolerance: number = 5): boolean {
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number = TOLERANCE_CONFIG.HIT_TEST_FALLBACK): boolean {
     // 🏢 ADR-102: Use centralized type guards
     const e = entity as Entity;
     if (!isTextEntity(e) && !isMTextEntity(e)) return false;
@@ -199,8 +203,8 @@ export class TextRenderer extends BaseEntityRenderer {
 
     if (!position || !text) return false;
 
-    // ✅ SIMPLIFIED: Approximate text bounds like old backup
-    const width = text.length * height * 0.6; // Rough approximation
+    // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
+    const width = text.length * height * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
 
     // Check if point is within text bounds (world coordinates)
     const minX = position.x;

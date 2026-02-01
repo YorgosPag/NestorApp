@@ -71,6 +71,9 @@ const UI_COLORS_BASE = {
   DRAWING_TEMP: '#ffaa00',
   DRAWING_HIGHLIGHT: '#ff6600', // Orange highlight για DxfRenderer
 
+  // Preview/Drawing Colors (ADR-123)
+  PREVIEW_ARC_ORANGE: '#FFA500', // Arc stroke in angle measurement
+
   // Critical canvas rendering colors (από log analysis)
   SELECTED_RED: '#ff0000',      // Red για selected polygons/entities
   BRIGHT_GREEN: '#00ff00',      // Bright green για measurements/previews
@@ -124,7 +127,11 @@ const UI_COLORS_BASE = {
   STATUS_INACTIVE: '#6B7280',          // Gray for inactive states
 
   // Focus ring colors
-  FOCUS_RING: 'rgba(59, 130, 246, 0.5)', // Primary focus ring
+  FOCUS_RING: 'rgba(59, 130, 246, 0.5)', // Primary focus ring (50% opacity)
+
+  // Primary color RGBA variants (ADR-115: Primary Blue Centralization)
+  PRIMARY_FILL_20: 'rgba(59, 130, 246, 0.2)', // Focus ring shadow (20% opacity)
+  PRIMARY_FILL_30: 'rgba(59, 130, 246, 0.3)', // Fill background (30% opacity)
 
   // Box shadow colors
   SHADOW_LIGHT: 'rgba(0, 0, 0, 0.05)',   // Light shadow (shadow-sm)
@@ -217,10 +224,12 @@ const UI_COLORS_BASE = {
 // ✅ ENTERPRISE FIX: Export UI_COLORS moved after CAD_UI_COLORS and LEGACY_COLORS
 
 // Opacity variations
+// 🏢 ADR-119: Centralized Canvas globalAlpha Opacity Values
 export const OPACITY = {
   OPAQUE: 1.0,
   HIGH: 0.9,
   MEDIUM: 0.7,
+  SUBTLE: 0.6,    // 🏢 ADR-119: For origin markers, subtle overlays
   LOW: 0.5,
   VERY_LOW: 0.3,
   FAINT: 0.1,

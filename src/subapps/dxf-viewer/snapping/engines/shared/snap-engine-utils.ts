@@ -142,20 +142,15 @@ export function isPointOnSegment(
 
 /**
  * Sort candidates by distance to cursor
+ * 🏢 ADR-065: Uses centralized calculateDistance
  */
 export function sortCandidatesByDistance(
   candidates: SnapCandidate[],
   cursorPosition: Point2D
 ): SnapCandidate[] {
   return candidates.sort((a, b) => {
-    const distA = Math.sqrt(
-      (a.point.x - cursorPosition.x) ** 2 +
-      (a.point.y - cursorPosition.y) ** 2
-    );
-    const distB = Math.sqrt(
-      (b.point.x - cursorPosition.x) ** 2 +
-      (b.point.y - cursorPosition.y) ** 2
-    );
+    const distA = calculateDistance(a.point, cursorPosition);
+    const distB = calculateDistance(b.point, cursorPosition);
     return distA - distB;
   });
 }

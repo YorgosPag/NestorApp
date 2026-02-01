@@ -21,11 +21,15 @@
 // ✅ USE EXISTING DEBUG SYSTEM: OptimizedLogger instead of duplicate flags
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+// 🏢 ADR-118: Centralized Canvas Resize Hook
+import { useCanvasResize } from '../../hooks/canvas';
 import { LayerRenderer } from './LayerRenderer';
 // ✅ SIMPLE DEBUG: Use console.log for reliable debugging like other components
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Mouse handlers και marquee selection από το centralized system
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
 import { useCursor } from '../../systems/cursor/CursorSystem';
+// 🏢 ADR-119: Centralized RAF via UnifiedFrameScheduler
+import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 
 // ✅ ΦΑΣΗ 7: Import unified canvas system
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
@@ -37,6 +41,8 @@ import type { CanvasSettings } from '../../rendering/canvas/core/CanvasSettings'
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // ✅ ADR-002: Centralized canvas theme
 import { CANVAS_THEME } from '../../config/color-config';
+// 🏢 ADR-094: Centralized Device Pixel Ratio
+import { getDevicePixelRatio } from '../../systems/cursor/utils';
 
 // ✅ ΦΑΣΗ 7: Event system κεντρικοποιημένο στο rendering/canvas/core/CanvasEventSystem
 import { canvasEventBus, CANVAS_EVENTS, subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
@@ -149,25 +155,12 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<LayerRenderer | null>(null);
 
-  // 🏢 ENTERPRISE (2026-01-30): SSoT Viewport - ref-based για ZERO React lag
-  // PROBLEM: useState viewport updates ASYNC (React batches) → render uses stale viewport
-  // SOLUTION: viewportRef updates SYNCHRONOUSLY in ResizeObserver → render uses fresh viewport
-  // PATTERN B from strategy: ref-based store, no React state lag
-  const viewportRef = useRef<Viewport>({ width: 0, height: 0 });
-
-  // ✅ LEGACY: Keep state for React re-renders (dependencies, UI updates)
-  // But NEVER use this for coordinate transforms - use viewportRef instead
-  const [internalViewport, setInternalViewport] = useState<Viewport>({ width: 0, height: 0 });
-
-  // 🎯 CRITICAL: viewportProp FIRST (from container) - ensures Input/Render use SAME source
-  // ENTERPRISE FIX (2026-01-30): Input handlers use containerRef, so renderers MUST use viewportProp
-  // viewportRef (canvas-based) was causing DRIFT because it's a DIFFERENT element than containerRef
-  // PATTERN: SSoT = containerRef → CanvasSection passes viewport → all children use viewportProp
-  const viewport = (viewportProp && viewportProp.width > 0 && viewportProp.height > 0)
-    ? viewportProp  // ✅ ALWAYS use container-based viewport from parent (matches input handlers)
-    : (viewportRef.current.width > 0 && viewportRef.current.height > 0)
-      ? viewportRef.current  // Fallback: own canvas measurements
-      : internalViewport;    // Last resort: React state
+  // 🏢 ADR-118: Centralized canvas resize hook
+  // Handles viewport priority resolution (viewportProp > ref > state) and ResizeObserver
+  const { viewport, viewportRef, setInternalViewport } = useCanvasResize({
+    canvasRef,
+    viewportProp,
+  });
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση του CursorSystem αντί για local state
   const cursor = useCursor();
@@ -275,7 +268,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
 
   // Canvas config - ✅ ADR-002: Using centralized CANVAS_THEME
   const canvasConfig: CanvasConfig = {
-    devicePixelRatio: window.devicePixelRatio || 1,
+    devicePixelRatio: getDevicePixelRatio(), // 🏢 ADR-094
     enableHiDPI: true,
     backgroundColor: CANVAS_THEME.LAYER_CANVAS
   };
@@ -308,7 +301,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
           {
             enableHiDPI: true,
             backgroundColor: CANVAS_THEME.LAYER_CANVAS,
-            devicePixelRatio: window.devicePixelRatio || 1,
+            devicePixelRatio: getDevicePixelRatio(), // 🏢 ADR-094
             imageSmoothingEnabled: true
           },
           10 // z-index για layer canvas
@@ -350,38 +343,14 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     return unsubscribe;
   }, []);
 
+  // 🏢 ADR-119: Dirty flag ref for UnifiedFrameScheduler optimization
+  const isDirtyRef = useRef(true);
+
   // 🎯 Subscribe to Origin Markers toggle event
   useEffect(() => {
-    const handleOriginMarkersToggle = (event: CustomEvent) => {
-      // Force re-render to show/hide origin markers
-      if (rendererRef.current) {
-        requestAnimationFrame(() => {
-          // Use the ref directly to avoid closure issues
-          const renderer = rendererRef.current;
-          if (!renderer || !viewport.width || !viewport.height) {
-            console.warn('🎯 LayerCanvas: Cannot render - missing renderer or viewport', {
-              hasRenderer: !!renderer,
-              viewport: { width: viewport.width, height: viewport.height }
-            });
-            return;
-          }
-
-          renderer.render(
-            layersVisible ? layers : [],
-            transform,
-            viewport,
-            crosshairSettings,
-            cursorSettings,
-            snapSettings,
-            gridSettings,
-            rulerSettings,
-            selectionSettings,
-            renderOptions
-          );
-        });
-      } else {
-        console.warn('🎯 LayerCanvas: No renderer ref available');
-      }
+    const handleOriginMarkersToggle = () => {
+      // 🏢 ADR-119: Mark dirty for next frame instead of direct RAF
+      isDirtyRef.current = true;
     };
 
     window.addEventListener('origin-markers-toggle', handleOriginMarkersToggle as EventListener);
@@ -389,31 +358,13 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     return () => {
       window.removeEventListener('origin-markers-toggle', handleOriginMarkersToggle as EventListener);
     };
-  }, [layers, transform, viewport, layersVisible, crosshairSettings, cursorSettings, snapSettings, gridSettings, rulerSettings, selectionSettings, renderOptions, useUnifiedUIRendering]);
+  }, []);
 
   // 🛠️ Subscribe to Ruler Debug toggle event
   useEffect(() => {
-    const handleRulerDebugToggle = (event: CustomEvent) => {
-      // Force re-render to show/hide ruler debug overlays
-      if (rendererRef.current) {
-        requestAnimationFrame(() => {
-          const renderer = rendererRef.current;
-          if (!renderer || !viewport.width || !viewport.height) return;
-
-          renderer.render(
-            layersVisible ? layers : [],
-            transform,
-            viewport,
-            crosshairSettings,
-            cursorSettings,
-            snapSettings,
-            gridSettings,
-            rulerSettings,
-            selectionSettings,
-            renderOptions
-          );
-        });
-      }
+    const handleRulerDebugToggle = () => {
+      // 🏢 ADR-119: Mark dirty for next frame instead of direct RAF
+      isDirtyRef.current = true;
     };
 
     window.addEventListener('ruler-debug-toggle', handleRulerDebugToggle as EventListener);
@@ -421,7 +372,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     return () => {
       window.removeEventListener('ruler-debug-toggle', handleRulerDebugToggle as EventListener);
     };
-  }, [layers, transform, viewport, layersVisible, crosshairSettings, cursorSettings, snapSettings, gridSettings, rulerSettings, selectionSettings, renderOptions, useUnifiedUIRendering]);
+  }, []);
 
   // Setup canvas size and context
   const setupCanvas = useCallback(() => {
@@ -448,48 +399,11 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     }
   }, []); // Removed canvasConfig dependency to prevent infinite loops
 
-  // Setup canvas on mount and resize
-  // 🏢 ENTERPRISE (2026-01-30): SSoT Viewport with ResizeObserver
-  // PROBLEM: window resize doesn't trigger when DevTools is toggled (docked)
-  // SOLUTION: ResizeObserver monitors actual canvas element + updates ref SYNCHRONOUSLY
+  // 🏢 ADR-118: Setup canvas on mount
+  // ResizeObserver logic is now handled by useCanvasResize hook
   useEffect(() => {
     setupCanvas();
-
-    // 🏢 ENTERPRISE (2026-01-31): ResizeObserver ONLY when NO viewportProp
-    // PROBLEM: Multiple ResizeObservers (container + canvas) cause race conditions
-    // SOLUTION: If parent provides viewportProp, parent's ResizeObserver is SSoT
-    // Canvas ResizeObserver only runs as FALLBACK when no viewportProp
-    let resizeObserver: ResizeObserver | null = null;
-    const canvas = canvasRef.current;
-    const hasParentViewport = viewportProp && viewportProp.width > 0 && viewportProp.height > 0;
-
-    // Only setup local ResizeObserver if NO parent viewport (standalone mode)
-    if (canvas && !hasParentViewport) {
-      resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const { width, height } = entry.contentRect;
-          if (width > 0 && height > 0) {
-            // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
-            viewportRef.current = { width, height };
-            // Also trigger React state update for dependencies
-            setInternalViewport({ width, height });
-          }
-        }
-      });
-      resizeObserver.observe(canvas);
-    }
-
-    // Fallback: window resize for non-element resizes
-    const handleResize = () => setupCanvas();
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-    };
-  }, [viewportProp?.width, viewportProp?.height]); // 🏢 ENTERPRISE (2026-01-31): React to viewportProp changes - disconnect ResizeObserver when parent provides valid viewport
+  }, [setupCanvas]); // 🏢 ADR-118: Only depend on setupCanvas (ResizeObserver handled by hook)
 
   // 🔍 DEBUG: Check computed styles after mount
   useEffect(() => {
@@ -595,22 +509,42 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     snapResults // ✅ SNAP FIX STEP 5: Include snap results in dependencies
   ]);
 
-  // Render όταν αλλάζουν τα data - RE-ENABLED with stable dependencies
-  // 🏢 ENTERPRISE FIX (2026-01-25): IMMEDIATE render χωρίς setTimeout
-  // Το setTimeout(10ms) προκαλούσε καθυστέρηση κατά το panning - τα layers
-  // δεν μετακινούνταν ταυτόχρονα με το DxfCanvas.
-  // Τώρα χρησιμοποιούμε requestAnimationFrame για optimal frame timing.
+  // 🏢 ADR-119: Register with UnifiedFrameScheduler for centralized RAF
+  // This replaces scattered requestAnimationFrame calls with a single coordinated loop
   useEffect(() => {
-    // Only render if we have valid viewport dimensions AND renderer
+    // Only register if we have valid viewport dimensions AND renderer
     if (viewport.width > 0 && viewport.height > 0 && rendererRef.current) {
-      // 🚀 IMMEDIATE: Use requestAnimationFrame for optimal frame timing (no delay)
-      const frameId = requestAnimationFrame(() => {
-        renderLayers();
-      });
+      const unsubscribe = registerRenderCallback(
+        'layer-canvas',
+        'Layer Canvas Renderer',
+        RENDER_PRIORITIES.NORMAL,
+        () => {
+          renderLayers();
+          isDirtyRef.current = false; // Reset dirty flag after render
+        },
+        () => isDirtyRef.current // Dirty check - skip if not dirty
+      );
 
-      return () => cancelAnimationFrame(frameId);
+      return unsubscribe;
     }
-  }, [renderLayers, viewport.width, viewport.height]); // Also depend on viewport changes
+  }, [renderLayers, viewport.width, viewport.height]);
+
+  // 🏢 ADR-119: Mark dirty when dependencies change (replaces direct RAF calls)
+  useEffect(() => {
+    isDirtyRef.current = true;
+  }, [
+    layers,
+    transform,
+    viewport,
+    cursor.position,
+    cursor.isSelecting,
+    cursor.selectionStart,
+    cursor.selectionCurrent,
+    snapResults,
+    layersVisible,
+    activeTool,
+    draggingOverlay
+  ]);
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Mouse handlers πλέον στο CursorSystem
 

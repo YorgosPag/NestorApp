@@ -12,6 +12,8 @@ import { isSplineEntity } from '../../types/entities';
 import { HoverManager } from '../../utils/hover';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { pointToLineDistance, calculateMidpoint } from './shared/geometry-utils';
+// 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 export class SplineRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -99,7 +101,8 @@ export class SplineRenderer extends BaseEntityRenderer {
     return grips;
   }
 
-  hitTest(entity: EntityModel, point: Point2D, tolerance: number = 5): boolean {
+  // 🏢 ADR-105: Use centralized fallback tolerance
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number = TOLERANCE_CONFIG.HIT_TEST_FALLBACK): boolean {
     // 🏢 ADR-102: Use centralized type guard
     if (!isSplineEntity(entity as Entity)) return false;
 

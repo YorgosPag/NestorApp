@@ -41,6 +41,8 @@ import type { Point2D } from '../rendering/types/Types';
 import { useMoveEntities } from './useMoveEntities';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { createZeroPoint } from '../config/geometry-constants';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
@@ -162,11 +164,12 @@ function defaultScreenToWorld(point: Point2D): Point2D {
 // 🏢 ENTERPRISE: Initial State
 // ============================================================================
 
+// 🏢 ADR-118: Use createZeroPoint() for mutable state initialization
 const INITIAL_DRAG_STATE: DragState = {
   isDragging: false,
   startPoint: null,
   currentPoint: null,
-  totalDelta: { x: 0, y: 0 },
+  totalDelta: createZeroPoint(),
   hasMoved: false,
 };
 
@@ -200,7 +203,8 @@ export function useEntityDrag({
 
   // Refs for performance (avoid closure stale values)
   const lastUpdateRef = useRef<number>(0);
-  const pendingDeltaRef = useRef<Point2D>({ x: 0, y: 0 });
+  // 🏢 ADR-118: Use createZeroPoint() for mutable ref initialization
+  const pendingDeltaRef = useRef<Point2D>(createZeroPoint());
   const rafIdRef = useRef<number | null>(null);
   const startWorldPointRef = useRef<Point2D | null>(null);
 
@@ -216,11 +220,12 @@ export function useEntityDrag({
     const worldPoint = screenToWorld(screenPoint);
     startWorldPointRef.current = worldPoint;
 
+    // 🏢 ADR-118: Use createZeroPoint() for mutable state initialization
     setDragState({
       isDragging: true,
       startPoint: screenPoint,
       currentPoint: screenPoint,
-      totalDelta: { x: 0, y: 0 },
+      totalDelta: createZeroPoint(),
       hasMoved: false,
     });
 

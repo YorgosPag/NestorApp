@@ -23,6 +23,8 @@ import { GripShapeRenderer } from './GripShapeRenderer';
 import { MIDPOINT_SIZE_FACTOR } from './constants';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { calculateMidpoint } from '../entities/shared/geometry-rendering-utils';
+// 🏢 ADR-107: Centralized UI Size Defaults
+import { UI_SIZE_DEFAULTS } from '../../config/text-rendering-config';
 
 // ============================================================================
 // UNIFIED GRIP RENDERER CLASS (MAIN ORCHESTRATOR)
@@ -113,7 +115,7 @@ export class UnifiedGripRenderer {
         : 'cold');
 
     // Step 3: Calculate size
-    const baseSize = settings?.gripSize || 8;
+    const baseSize = settings?.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE;
     const dpiScale = settings?.dpiScale || 1.0;
     const size = this.sizeCalculator.calculateSize(
       baseSize,
@@ -198,7 +200,7 @@ export class UnifiedGripRenderer {
     }
 
     // Calculate midpoint grip size
-    const baseSize = config.size || settings?.gripSize || 8;
+    const baseSize = config.size || settings?.gripSize || UI_SIZE_DEFAULTS.GRIP_SIZE;
     const midpointSize = Math.round(baseSize * MIDPOINT_SIZE_FACTOR);
 
     // Render midpoint between each pair of vertices

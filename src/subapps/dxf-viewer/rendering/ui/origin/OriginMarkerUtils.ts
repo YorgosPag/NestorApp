@@ -27,6 +27,8 @@ import { pixelPerfect } from '../../entities/shared/geometry-rendering-utils';
 import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../../config/text-rendering-config';
 import { UI_COLORS } from '../../../config/color-config';
 import type { Point2D, ViewTransform, Viewport } from '../../types/Types';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { WORLD_ORIGIN } from '../../../config/geometry-constants';
 
 // ===== CONFIGURATION =====
 
@@ -120,8 +122,8 @@ export function getOriginScreenPosition(
   transform: ViewTransform,
   viewport: Viewport
 ): Point2D {
-  const worldOrigin: Point2D = { x: 0, y: 0 };
-  const screenOrigin = CoordinateTransforms.worldToScreen(worldOrigin, transform, viewport);
+  // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
+  const screenOrigin = CoordinateTransforms.worldToScreen(WORLD_ORIGIN, transform, viewport);
 
   // 🏢 ADR-088: Apply pixel-perfect alignment for crisp 1px lines
   return {

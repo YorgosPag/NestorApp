@@ -5,6 +5,8 @@ import { portalComponents } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ADR-124: Centralized label offsets
+import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 
 // 🏢 ENTERPRISE NOTE: This component uses a simplified SnapResult interface
 // TODO: Migrate to use ProSnapResult.activeMode instead of type when refactoring
@@ -35,7 +37,8 @@ export default function SnapModeIndicator({
         className={`absolute ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.warning} ${colors.bg.overlay} ${PANEL_LAYOUT.SPACING.COMPACT_XS} rounded`}
         style={{
           left: mouseCss.x + 10,
-          top: mouseCss.y - 25,
+          // 🏢 ADR-124: Centralized circle/cursor label offset
+          top: mouseCss.y - TEXT_LABEL_OFFSETS.CIRCLE_LABEL,
           zIndex: portalComponents.zIndex.tooltip + 1
         }}
       >

@@ -25,6 +25,8 @@ import { UniversalMarqueeSelector } from '../selection/UniversalMarqueeSelection
 import { isInDrawingMode } from '../tools/ToolStateManager';
 // 🏢 ADR: Centralized Clamp Function
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 // 🏢 ENTERPRISE: Type-safe snap result interface
 export interface SnapResultItem {
@@ -503,6 +505,7 @@ export function useCentralizedMouseHandlers({
 
       if (marqueeSnap && colorLayers && colorLayers.length > 0 && (hasMultiCallback || hasSingleCallback)) {
         // 🏢 ENTERPRISE (2026-01-30): Use fresh rect from unified snapshot
+        // 🏢 ADR-105: Use centralized fallback tolerance
         const selectionResult = UniversalMarqueeSelector.performSelection(
           cursor.selectionStart,
           cursor.position,
@@ -510,7 +513,7 @@ export function useCentralizedMouseHandlers({
           marqueeSnap.rect,
           {
             colorLayers: colorLayers,
-            tolerance: 5,
+            tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
             enableDebugLogs: false,
             // 🏢 ENTERPRISE: Don't use individual callbacks in selector - we handle it below
             onLayerSelected: undefined,

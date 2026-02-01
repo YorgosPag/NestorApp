@@ -3,7 +3,7 @@ import type { Region, RegionStatus } from '../types/overlay';
 import type { ViewTransform } from '../rendering/types/Types';
 import type { GripSettings } from '../types/gripSettings';
 import { getStatusColors } from '../config/color-mapping'; // 🔺 Κεντρική function για ελληνικά/αγγλικά mapping
-import { CAD_UI_COLORS, UI_COLORS } from '../config/color-config';
+import { CAD_UI_COLORS, UI_COLORS, OPACITY } from '../config/color-config'; // 🏢 ADR-119: Centralized Opacity
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-090: Centralized UI Fonts
 import { RENDER_LINE_WIDTHS, UI_FONTS } from '../config/text-rendering-config';
@@ -79,7 +79,7 @@ export class OverlayDrawingEngine {
     ctx.fill();
 
     // Draw border with DXF-style hover effects using ToolStyle if available
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
     
     // Check if region is hovered (has grip interaction)
     const isHovered = options.gripInteractionState?.hovered?.entityId === region.id;
@@ -214,7 +214,7 @@ export class OverlayDrawingEngine {
     ctx.save();
 
     // Bubble
-    ctx.globalAlpha = 0.9;
+    ctx.globalAlpha = OPACITY.HIGH; // 🏢 ADR-119: Centralized opacity
     ctx.fillStyle = isSelected ? UI_COLORS.ERROR : UI_COLORS.UPLOAD_AREA_BG;
     ctx.strokeStyle = UI_COLORS.WHITE;
     ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
@@ -236,7 +236,7 @@ export class OverlayDrawingEngine {
     ctx.stroke();
 
     // Text
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
     ctx.fillStyle = UI_COLORS.WHITE;
     ctx.fillText(text, centerX, centerY + 4);
 

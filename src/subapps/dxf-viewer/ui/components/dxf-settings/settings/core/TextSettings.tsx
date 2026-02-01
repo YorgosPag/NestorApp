@@ -70,6 +70,8 @@ import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS } from '../../../../../.
 import { layoutUtilities } from '../../../../../../../styles/design-tokens';
 // 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ADR-107: Centralized Text Metrics Ratios
+import { TEXT_METRICS_RATIOS } from '../../../../../config/text-rendering-config';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Shadcn Tooltip component
@@ -318,9 +320,9 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
 
   // Generate preview text style
   const getPreviewStyle = (): React.CSSProperties => {
-    // ✅ ENTERPRISE FIX: Removed duplicate fontSize property
+    // 🏢 ADR-107: Use centralized text metrics ratio for script size
     const baseFontSize = textSettings.isSuperscript || textSettings.isSubscript
-      ? textSettings.fontSize * 0.75
+      ? textSettings.fontSize * TEXT_METRICS_RATIOS.SCRIPT_SIZE_RATIO
       : textSettings.fontSize;
 
     return {

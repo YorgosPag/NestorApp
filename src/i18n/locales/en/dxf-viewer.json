@@ -153,15 +153,18 @@
       "selectProject": "Select Project",
       "selectBuilding": "Select Building",
       "selectUnit": "Select Unit",
+      "selectFloor": "Select Floor",
       "company": "Company:",
       "project": "Project:",
-      "building": "Building:"
+      "building": "Building:",
+      "floor": "Floor:"
     },
     "placeholders": {
       "company": "-- Select Company --",
       "project": "-- Select Project --",
       "building": "-- Select Building --",
-      "unit": "-- Select Unit --"
+      "unit": "-- Select Unit --",
+      "floor": "-- Select Floor --"
     },
     "loading": {
       "companies": "Loading companies...",
@@ -190,15 +193,18 @@
       "parking": "Parking Floorplan",
       "building": "Building Floorplan",
       "storage": "Storage Floorplan",
-      "unit": "Unit Floorplan"
+      "unit": "Unit Floorplan",
+      "floor": "Floor Plan"
     },
     "floorplanSections": {
       "selectForProject": "Select Floorplan to Load",
       "selectForBuilding": "Select Building Floorplan to Load",
       "selectForUnit": "Select Unit Floorplan to Load",
+      "selectFloor": "Select Floor for Floorplan",
       "hintProject": "The floorplan will be loaded to the canvas and the corresponding project tab",
       "hintBuilding": "The floorplan will be loaded to the canvas and building management",
-      "hintUnit": "The floorplan will be loaded to the canvas and unit management"
+      "hintUnit": "The floorplan will be loaded to the canvas and unit management",
+      "hintFloor": "The floorplan will be saved for the specific floor of the building"
     },
     "navigation": {
       "cancel": "Cancel",

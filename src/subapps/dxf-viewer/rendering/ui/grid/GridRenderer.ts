@@ -19,6 +19,8 @@ import type {
 import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addCirclePath } from '../../primitives/canvasPaths';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { WORLD_ORIGIN } from '../../../config/geometry-constants';
 
 /**
  * 🔺 CENTRALIZED GRID RENDERER
@@ -166,9 +168,9 @@ export class GridRenderer implements UIRenderer {
 
     // Vertical lines (X-axis) - ✅ CORRECT: Use world (0,0) as reference
     // Calculate screen position of world point (0,0)
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
     const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CT.worldToScreen(worldOrigin, transform, viewport);
+    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
     const originScreenX = screenOrigin.x;
     const startX = (originScreenX % gridSize);
 
@@ -209,9 +211,9 @@ export class GridRenderer implements UIRenderer {
     const majorDotSize = Math.max(1.5, settings.majorGridWeight * 0.75); // 1.5px default
 
     // Calculate grid origin in screen coordinates
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
     const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CT.worldToScreen(worldOrigin, transform, viewport);
+    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
     const startX = screenOrigin.x % gridSize;
     const startY = screenOrigin.y % gridSize;
 
@@ -258,9 +260,9 @@ export class GridRenderer implements UIRenderer {
     const majorCrossSize = Math.max(2, settings.majorGridWeight * 2);
 
     // ✅ CORRECT: Use world (0,0) as reference
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
     const { CoordinateTransforms: CT } = require('../../core/CoordinateTransforms');
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CT.worldToScreen(worldOrigin, transform, viewport);
+    const screenOrigin = CT.worldToScreen(WORLD_ORIGIN, transform, viewport);
     const startX = (screenOrigin.x % gridSize);
     const startY = (screenOrigin.y % gridSize);
 

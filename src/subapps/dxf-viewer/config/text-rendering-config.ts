@@ -352,6 +352,15 @@ export const RENDER_GEOMETRY = {
    * STANDARD: AutoCAD dimension lines use similar gap patterns
    */
   SPLIT_LINE_GAP: 30,
+
+  /**
+   * 🏢 ADR-124: Dot radius in pixels for yellow measurement dots
+   * Used when rendering endpoint/center dots on entities (Arc, Ellipse, Line)
+   *
+   * USAGE: Yellow dots at entity endpoints, centers, and axis points
+   * STANDARD: Visual indicator size consistent across all entity renderers
+   */
+  DOT_RADIUS: 4,
 } as const;
 
 // ============================================
@@ -422,7 +431,197 @@ export const TEXT_LABEL_OFFSETS = {
    * @see OriginMarkersRenderer.ts - render()
    */
   ORIGIN_LABEL_MARGIN: 50,
+
+  /**
+   * 🏢 ADR-124: Circle/Center label vertical offset (pixels)
+   * Used for: Circle diameter/radius labels, snap mode indicator tooltip
+   * Positions label above the center point or cursor
+   *
+   * LAYOUT:
+   *   Label: y - 25  ← "D: X.XX" or snap type
+   *   Center: y = 0  ← Circle center or cursor position
+   *
+   * @see CircleRenderer.ts - renderPreviewCircleWithMeasurements()
+   * @see SnapModeIndicator.tsx - tooltip positioning
+   */
+  CIRCLE_LABEL: 25,
 } as const;
+
+// ============================================
+// 🏢 ADR-107: UI SIZE DEFAULTS (2026-01-31)
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: UI Size Default Values
+ *
+ * Centralized fallback values for UI elements when settings are not provided.
+ * Eliminates ~20 hardcoded `|| 10` / `?? 10` patterns across 4 files.
+ *
+ * SEMANTIC CATEGORIES:
+ * - Ruler Typography: Font sizes for ruler labels
+ * - Ruler Measurements: Tick mark dimensions
+ * - Grips & Interaction: Selection aperture sizes
+ * - Text Entity Bounds: Fallback heights for bounds calculation
+ *
+ * Pattern: AutoCAD DIMSCALE / Bentley MicroStation UI Defaults
+ *
+ * @see ADR-107: UI Size Defaults Centralization
+ * @since 2026-01-31
+ */
+export const UI_SIZE_DEFAULTS = {
+  // ────────────────────────────────────────────
+  // RULER TYPOGRAPHY
+  // ────────────────────────────────────────────
+
+  /**
+   * Default ruler font size (px)
+   * Used when settings.fontSize is not provided
+   * Standard for CAD ruler annotations
+   */
+  RULER_FONT_SIZE: 10,
+
+  /**
+   * Default ruler units font size (px)
+   * Used when settings.unitsFontSize is not provided
+   * Typically same as RULER_FONT_SIZE for consistency
+   */
+  RULER_UNITS_FONT_SIZE: 10,
+
+  // ────────────────────────────────────────────
+  // RULER MEASUREMENTS
+  // ────────────────────────────────────────────
+
+  /**
+   * Default major tick mark length (px)
+   * Used when settings.majorTickLength is not provided
+   * Standard 10px for visibility and CAD conventions
+   */
+  MAJOR_TICK_LENGTH: 10,
+
+  // ────────────────────────────────────────────
+  // GRIPS & INTERACTION
+  // ────────────────────────────────────────────
+
+  /**
+   * Default grip selection aperture size (px)
+   * Used when settings.apertureSize is not provided
+   * AutoCAD standard: APERTURE system variable default
+   */
+  APERTURE_SIZE: 10,
+
+  /**
+   * Default grip point size (px)
+   * Used when settings.gripSize is not provided
+   * AutoCAD standard: GRIPSIZE system variable default
+   */
+  GRIP_SIZE: 8,
+
+  /**
+   * Default pick box size (px)
+   * Used when settings.pickBoxSize is not provided
+   * AutoCAD standard: PICKBOX system variable default
+   */
+  PICK_BOX_SIZE: 3,
+
+  // ────────────────────────────────────────────
+  // TEXT ENTITY BOUNDS
+  // ────────────────────────────────────────────
+
+  /**
+   * Default text height for bounds calculation (drawing units)
+   * Used when entity.height is not provided
+   * Provides reasonable bounding box for text entities
+   */
+  TEXT_HEIGHT_FALLBACK: 10,
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: UI Size Defaults type
+ */
+export type UISizeDefaults = typeof UI_SIZE_DEFAULTS;
+
+// ============================================================================
+// 🏢 ADR-107: TEXT METRICS RATIOS (Typography Standards)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Centralized Text Metrics Ratios
+ *
+ * Typography constants for text measurement and positioning.
+ * Based on standard font metrics (typical Western fonts).
+ *
+ * Eliminates 27+ hardcoded font/text metrics multipliers across 16 files.
+ *
+ * Reference: CSS font-size-adjust, OpenType OS/2 metrics
+ *
+ * @see ADR-107: Text Metrics Constants Centralization
+ * @since 2026-01-31
+ */
+export const TEXT_METRICS_RATIOS = {
+  // ────────────────────────────────────────────
+  // CHARACTER WIDTH ESTIMATION
+  // ────────────────────────────────────────────
+
+  /** Average character width for monospace fonts (60% of fontSize) */
+  CHAR_WIDTH_MONOSPACE: 0.6,
+
+  /** Average character width for proportional fonts (55% of fontSize) */
+  CHAR_WIDTH_PROPORTIONAL: 0.55,
+
+  /** Alternative wider estimate for text bounds (70% of fontSize) */
+  CHAR_WIDTH_WIDE: 0.7,
+
+  // ────────────────────────────────────────────
+  // VERTICAL METRICS (Ascent/Descent)
+  // ────────────────────────────────────────────
+
+  /** Ascender height ratio - top of letters above baseline (80% of fontSize) */
+  ASCENT_RATIO: 0.8,
+
+  /** Descender height ratio - bottom of letters below baseline (20% of fontSize) */
+  DESCENT_RATIO: 0.2,
+
+  // ────────────────────────────────────────────
+  // SUPERSCRIPT/SUBSCRIPT
+  // ────────────────────────────────────────────
+
+  /** Font size reduction for super/subscript (75% of normal) */
+  SCRIPT_SIZE_RATIO: 0.75,
+
+  /** Superscript vertical offset - raise above baseline (30% of fontSize) */
+  SUPERSCRIPT_OFFSET: 0.3,
+
+  /** Subscript vertical offset - drop below baseline (20% of fontSize) */
+  SUBSCRIPT_OFFSET: 0.2,
+
+  // ────────────────────────────────────────────
+  // TEXT DECORATIONS
+  // ────────────────────────────────────────────
+
+  /** Underline vertical position below text (15% of fontSize) */
+  UNDERLINE_OFFSET: 0.15,
+
+  /** Strikethrough vertical position (5% above baseline) */
+  STRIKETHROUGH_OFFSET: 0.05,
+
+  /** Decoration line width ratio (5% of fontSize) */
+  DECORATION_LINE_WIDTH: 0.05,
+
+  // ────────────────────────────────────────────
+  // BOLD/SCRIPT ADJUSTMENTS
+  // ────────────────────────────────────────────
+
+  /** Bold text width multiplier (115% of normal) */
+  BOLD_WIDTH_MULTIPLIER: 1.15,
+
+  /** Script spacing multiplier (120% for super/subscript) */
+  SCRIPT_SPACING_MULTIPLIER: 1.2,
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Text Metrics Ratios type
+ */
+export type TextMetricsRatios = typeof TEXT_METRICS_RATIOS;
 
 // ============================================
 // HIT TESTING CONFIGURATION

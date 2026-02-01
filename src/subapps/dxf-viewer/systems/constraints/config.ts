@@ -9,6 +9,8 @@ import { UI_COLORS } from '../../config/color-config';
 import { DEGREES_TO_RADIANS, RADIANS_TO_DEGREES } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-079: Centralized Entity Limits Constants
 import { ENTITY_LIMITS } from '../../config/tolerance-config';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { ZERO_VECTOR } from '../../config/geometry-constants';
 
 // ===== BASIC TYPES =====
 export type ConstraintType = 'ortho' | 'polar' | 'angle' | 'distance' | 'parallel' | 'perpendicular' | 'tangent' | 'horizontal' | 'vertical';
@@ -328,6 +330,7 @@ export const DEFAULT_ORTHO_SETTINGS: OrthoConstraintSettings = {
   }
 };
 
+// 🏢 ADR-118: Use centralized ZERO_VECTOR for basePoint
 export const DEFAULT_POLAR_SETTINGS: PolarConstraintSettings = {
   enabled: false,
   mode: 'absolute',
@@ -336,7 +339,7 @@ export const DEFAULT_POLAR_SETTINGS: PolarConstraintSettings = {
   angleTolerance: 2,
   distanceTolerance: 1,
   baseAngle: 0,
-  basePoint: { x: 0, y: 0 },
+  basePoint: ZERO_VECTOR,
   visualFeedback: {
     showPolarRay: true,
     showDistanceMarker: true,

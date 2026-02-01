@@ -53,7 +53,7 @@ import { renderStyledTextWithOverride } from '../../../hooks/useTextPreviewStyle
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
 import { UI_FONTS, RENDER_LINE_WIDTHS } from '../../../config/text-rendering-config';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
-import { degToRad } from './geometry-utils';
+import { degToRad, clamp } from './geometry-utils';
 
 /**
  * Extract and validate angle measurement points from entity
@@ -88,6 +88,27 @@ export function calculateDistance(p1: Point2D, p2: Point2D): number {
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;
   return Math.sqrt(dx * dx + dy * dy);
+}
+
+// ===== SQUARED DISTANCE =====
+// 🏢 ADR-109: Centralized Squared Distance (2026-02-01)
+
+/**
+ * Calculate squared distance between two points (without sqrt)
+ * ✅ CENTRALIZED: Single source of truth για squared distance
+ *
+ * Use for: comparisons, threshold checks, hit testing (when actual distance not needed)
+ * Performance: Avoids expensive Math.sqrt() call
+ *
+ * @example
+ * // Instead of: Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2)
+ * const distSq = squaredDistance(p1, p2);
+ * if (distSq <= tolerance * tolerance) { ... }
+ */
+export function squaredDistance(p1: Point2D, p2: Point2D): number {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  return dx * dx + dy * dy;
 }
 
 // ===== VECTOR MAGNITUDE =====
@@ -620,4 +641,41 @@ export class BaseConfigurationManager<T> {
   protected notifyListeners(settings: T): void {
     this.listeners.forEach(listener => listener(settings));
   }
+}
+
+// ===== TEXT GAP CALCULATION =====
+// 🏢 ADR-124: Centralized Text Gap Calculation (2026-02-01)
+
+/**
+ * 🏢 ADR-124: Configuration for text gap calculation
+ * Defines the base gap, minimum, and maximum values for scaled text gaps
+ */
+const TEXT_GAP_CONFIG = {
+  /** Base gap in pixels at scale 1.0 */
+  BASE: 30,
+  /** Minimum gap to ensure readability */
+  MIN: 20,
+  /** Maximum gap to prevent excessive spacing */
+  MAX: 60,
+} as const;
+
+/**
+ * Calculate scale-aware text gap for measurement labels
+ * ✅ CENTRALIZED: Single source of truth for text gap calculation
+ * Used for: Distance text positioning, split line gap sizing
+ *
+ * Formula: clamp(BASE * scale, MIN, MAX)
+ * - At scale 0.5: clamp(15, 20, 60) = 20px
+ * - At scale 1.0: clamp(30, 20, 60) = 30px
+ * - At scale 2.0: clamp(60, 20, 60) = 60px
+ *
+ * @param scale - Current canvas scale (zoom level)
+ * @returns Text gap in pixels, clamped between MIN and MAX
+ *
+ * @example
+ * const textGap = calculateTextGap(this.transform.scale);
+ * renderSplitLine(ctx, start, end, textGap);
+ */
+export function calculateTextGap(scale: number): number {
+  return clamp(TEXT_GAP_CONFIG.BASE * scale, TEXT_GAP_CONFIG.MIN, TEXT_GAP_CONFIG.MAX);
 }

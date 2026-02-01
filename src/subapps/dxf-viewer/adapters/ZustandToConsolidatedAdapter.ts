@@ -10,6 +10,8 @@ import { useDxfSettingsStore } from '../stores/DxfSettingsStore';
 import type { LineSettings, TextSettings, GripSettings, EntityId, LineCapStyle, LineJoinStyle } from '../settings-core/types';
 // ✅ ENTERPRISE: Import centralized colors
 import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-106: Centralized grip size multipliers για hover/highlight effects
+import { GRIP_SIZE_MULTIPLIERS } from '../rendering/grips/constants';
 import type { TextSettings as LegacyTextSettings } from '../contexts/TextSettingsContext';
 
 /**
@@ -29,7 +31,7 @@ function zustandToLegacyLine(settings: LineSettings): LineSettings {
     breakAtCenter: false,
     hoverColor: settings.hoverColor || UI_COLORS.BRIGHT_YELLOW, // ✅ CENTRALIZED: Yellow hover color
     hoverType: settings.hoverType || 'solid',
-    hoverWidth: settings.hoverWidth || settings.lineWidth * 1.5,
+    hoverWidth: settings.hoverWidth || settings.lineWidth * GRIP_SIZE_MULTIPLIERS.HOT,
     hoverOpacity: settings.hoverOpacity || 0.8,
     finalColor: settings.finalColor || UI_COLORS.BRIGHT_GREEN, // ✅ CENTRALIZED: Green final color
     finalType: settings.finalType || settings.lineType,

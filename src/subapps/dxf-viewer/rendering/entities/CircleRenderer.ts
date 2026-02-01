@@ -26,12 +26,16 @@ import { renderSplitLineWithGap, renderContinuousLine, renderLineWithTextCheck }
 import { renderDistanceTextPhaseAware } from './shared/phase-text-utils';
 import { UI_COLORS } from '../../config/color-config';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
-// 🏢 ADR-091: Centralized UI Fonts
-import { buildUIFont } from '../../config/text-rendering-config';
+// 🏢 ADR-091: Centralized UI Fonts, ADR-124: Centralized Label Offsets
+import { buildUIFont, TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatDistance } from './shared/distance-label-utils';
-// 🏢 ADR: Centralized Clamp Function
-import { clamp } from './shared/geometry-utils';
+// 🏢 ADR-124: Centralized Text Gap Calculation
+import { calculateTextGap } from './shared/geometry-rendering-utils';
+// 🏢 ADR-109: Centralized Distance Calculation
+import { calculateDistance } from './shared/geometry-rendering-utils';
+// 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 export class CircleRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -185,7 +189,8 @@ export class CircleRenderer extends BaseEntityRenderer {
   }
 
   // ✅ ENTERPRISE: Required abstract method implementation
-  hitTest(entity: EntityModel, point: Point2D, tolerance: number = 5): boolean {
+  // 🏢 ADR-105: Use centralized fallback tolerance
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number = TOLERANCE_CONFIG.HIT_TEST_FALLBACK): boolean {
     // 🏢 ADR-102: Use centralized type guard
     if (!isCircleEntity(entity as Entity)) {
       return false;
@@ -199,9 +204,8 @@ export class CircleRenderer extends BaseEntityRenderer {
     if (!center || !radius) return false;
 
     // Distance from point to circle center
-    const distance = Math.sqrt(
-      Math.pow(point.x - center.x, 2) + Math.pow(point.y - center.y, 2)
-    );
+    // 🏢 ADR-109: Use centralized distance calculation
+    const distance = calculateDistance(point, center);
 
     // Hit test: point is near the circle circumference (within tolerance)
     return Math.abs(distance - radius) <= tolerance;
@@ -238,7 +242,8 @@ export class CircleRenderer extends BaseEntityRenderer {
       // Render diameter label
       const diameter = radius * 2;
       const labelX = screenCenter.x;
-      const labelY = screenCenter.y - 25; // Πάνω από το κέντρο
+      // 🏢 ADR-124: Centralized circle label offset
+      const labelY = screenCenter.y - TEXT_LABEL_OFFSETS.CIRCLE_LABEL; // Πάνω από το κέντρο
       // 🏢 ADR-090: Centralized number formatting
       const label = `Διάμετρος: ${formatDistance(diameter)} (2P)`;
       // Use centralized styling instead of hardcoded green
@@ -259,7 +264,8 @@ export class CircleRenderer extends BaseEntityRenderer {
       
       // Render diameter label (πάνω από τη γραμμή)
       const labelX = screenCenter.x;
-      const labelY = screenCenter.y - 25; // Move above line to avoid collision
+      // 🏢 ADR-124: Centralized circle label offset
+      const labelY = screenCenter.y - TEXT_LABEL_OFFSETS.CIRCLE_LABEL; // Move above line to avoid collision
       // 🏢 ADR-090: Centralized number formatting
       const label = `D: ${formatDistance(radius * 2)}`;
       // Use centralized styling instead of hardcoded green
@@ -272,9 +278,10 @@ export class CircleRenderer extends BaseEntityRenderer {
       // ✅ ΑΚΤΙΝΑ MODE: Κίτρινη μπαλίτσα στο κέντρο + κίτρινη μπαλίτσα στον κέρσορα
       const radiusEndPoint = { x: center.x + radius, y: center.y };
       const screenRadiusEnd = this.worldToScreen(radiusEndPoint);
-      
+
       // Calculate gap for radius text
-      const textGap = clamp(30 * this.transform.scale, 20, 60);
+      // 🏢 ADR-124: Centralized text gap calculation
+      const textGap = calculateTextGap(this.transform.scale);
       const radiusLength = screenRadius;
       const gapStart = screenCenter.x + (radiusLength - textGap) / 2;
       const gapEnd = screenCenter.x + (radiusLength + textGap) / 2;

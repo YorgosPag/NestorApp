@@ -92,6 +92,21 @@ export function ListLayout({
               ? filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.name
               : undefined
           }
+          floorId={
+            selectedPropertyIds[0]
+              ? (filteredProperties.find((p) => p.id === selectedPropertyIds[0])?.floorId as string | undefined) ?? null
+              : null
+          }
+          buildingId={
+            selectedPropertyIds[0]
+              ? ((filteredProperties.find((p) => p.id === selectedPropertyIds[0]) as Record<string, unknown>)?.buildingId as string | undefined) ?? null
+              : null
+          }
+          floorNumber={
+            selectedPropertyIds[0]
+              ? ((filteredProperties.find((p) => p.id === selectedPropertyIds[0]) as Record<string, unknown>)?.floor as number | undefined) ?? null
+              : null
+          }
         />
       </div>
 

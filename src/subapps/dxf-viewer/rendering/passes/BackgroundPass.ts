@@ -9,6 +9,8 @@ import { UI_COLORS } from '../../config/color-config';
 import { TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-XXX: Centralized Angular Constants
 import { RIGHT_ANGLE } from '../entities/shared/geometry-utils';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { WORLD_ORIGIN } from '../../config/geometry-constants';
 
 export interface BackgroundConfig {
   gridEnabled: boolean;
@@ -217,7 +219,8 @@ export class BackgroundPass implements IRenderPass {
     const { transform } = options;
 
     // Calculate screen position of world origin (0,0)
-    const originScreen = context.worldToScreen({ x: 0, y: 0 });
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
+    const originScreen = context.worldToScreen(WORLD_ORIGIN);
     const { width, height } = context.getSize();
 
     // Only render if origin is visible on screen

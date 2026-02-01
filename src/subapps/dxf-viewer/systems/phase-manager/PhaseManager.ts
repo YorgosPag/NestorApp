@@ -43,7 +43,8 @@ import type {
 } from './types';
 
 // Centralized configuration
-import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-119: Centralized Opacity Constants
+import { UI_COLORS, OPACITY } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-097: Centralized Line Dash Patterns
 import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
@@ -289,7 +290,7 @@ export class PhaseManager {
     this.ctx.setLineDash([]);
     // ✅ Use entity.color if available, fallback to WHITE (not dark colors!)
     this.ctx.strokeStyle = entity.color || '#FFFFFF';
-    this.ctx.globalAlpha = 1.0; // Always full opacity
+    this.ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
   }
 
   /**

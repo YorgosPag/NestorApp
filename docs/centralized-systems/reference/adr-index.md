@@ -4,7 +4,7 @@
 >
 > Single source of truth για όλες τις αρχιτεκτονικές αποφάσεις της εφαρμογής
 
-**📊 Stats**: 102 ADRs (ADR-104 Entity Type Guards Centralization) | Last Updated: 2026-01-31
+**📊 Stats**: 122 ADRs (ADR-124 Renderer Constants Centralization) | Last Updated: 2026-02-01
 
 ---
 
@@ -14,7 +14,7 @@
 |----------|-----------|------------|
 | **UI Components** | ADR-001 to ADR-003 | [View](#-ui-components) |
 | **Design System** | ADR-002, ADR-004, ADR-011 | [View](#-design-system) |
-| **Canvas & Rendering** | ADR-004 to ADR-009 | [View](#-canvas--rendering) |
+| **Canvas & Rendering** | ADR-004 to ADR-009, ADR-115 | [View](#-canvas--rendering) |
 | **Data & State** | ADR-010, ADR-030 to ADR-034 | [View](#-data--state-management) |
 | **Drawing System** | ADR-005, ADR-040 to ADR-048 | [View](#-drawing-system) |
 | **Security & Auth** | ADR-020, ADR-024, ADR-062, ADR-063 | [View](#-security--authentication) |
@@ -126,6 +126,26 @@
 | **ADR-102** | Origin Markers Centralization (DXF/Layer/Debug) | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
 | **ADR-103** | Angular Constants Centralization (RIGHT_ANGLE, ARROW_ANGLE) | ✅ APPROVED | 2026-01-31 | Data & State |
 | **ADR-104** | Entity Type Guards Centralization (isLineEntity, isCircleEntity, etc.) | ✅ APPROVED | 2026-01-31 | Entity Systems |
+| **ADR-105** | Hit Test Fallback Tolerance Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering |
+| **ADR-106** | Edge Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-31 | Drawing System |
+| **ADR-107** | UI Size Defaults Centralization (|| 10 / ?? 10) | ✅ APPROVED | 2026-01-31 | Design System |
+| **ADR-108** | Text Metrics Ratios Centralization (0.6 / 0.75 / 0.8) | ✅ APPROVED | 2026-01-31 | Data & State |
+| **ADR-109** | Squared Distance Centralization (calculateDistance) | ✅ APPROVED | 2026-02-01 | Data & State |
+| **ADR-110** | Grid Subdivisions Centralization (|| 5 fallback) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-111** | Device Pixel Ratio Migration (inline → getDevicePixelRatio) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-112** | Text Rotation Pattern Centralization (normalizeTextAngle) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-113** | Cache TTL Centralization (300000ms / 600000ms / 60000ms) | ✅ APPROVED | 2026-02-01 | Performance |
+| **ADR-114** | Bounding Box Calculation Centralization (calculateBoundingBox) | ✅ APPROVED | 2026-02-01 | Data & State |
+| **ADR-115** | Canvas Context Setup Standardization (CanvasUtils.setupCanvasContext) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-116** | Primary Blue Color Centralization (#3b82f6 → UI_COLORS) | ✅ APPROVED | 2026-02-01 | Design System |
+| **ADR-117** | DPI-Aware Pixel Calculations Centralization (toDevicePixels) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-118** | Canvas Viewport Hook Centralization (useCanvasResize) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-119** | RAF Consolidation to UnifiedFrameScheduler | ✅ APPROVED | 2026-02-01 | Performance |
+| **ADR-120** | Canvas globalAlpha Opacity Centralization (OPACITY constant) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-121** | Zero Point Pattern Centralization (WORLD_ORIGIN, ZERO_VECTOR, EMPTY_BOUNDS) | ✅ APPROVED | 2026-02-01 | Data & State |
+| **ADR-122** | CollaborationOverlay Line Width Centralization (ctx.lineWidth → RENDER_LINE_WIDTHS) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-123** | PreviewRenderer Color Centralization (hex → UI_COLORS) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-124** | Renderer Constants Centralization (DOT_RADIUS, TEXT_GAP, CIRCLE_LABEL) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
 | **ADR-059** | Separate Audit Bootstrap from Projects List | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-060** | Building Floorplan Enterprise Storage | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-061** | Path Aliases Strategy | ✅ APPROVED | 2026-01-13 | Infrastructure |
@@ -238,6 +258,52 @@
   - Single point of change for typography and precision
   - Future locale-aware formatting support via `formatDistanceLocale()`
 - **Companion**: ADR-042 (UI Fonts), ADR-069 (formatDistance/formatAngle), ADR-082 (FormatterRegistry)
+
+### ADR-107: UI Size Defaults Centralization (|| 10 / ?? 10 / || 8 / || 3)
+- **Canonical**: `UI_SIZE_DEFAULTS` from `config/text-rendering-config.ts`
+- **Decision**: Centralize hardcoded `|| 10` / `?? 10` / `|| 8` / `|| 3` fallback patterns to named constants
+- **Problem**: ~30 hardcoded fallback patterns across 7 files:
+  - `systems/rulers-grid/utils.ts`: 9 occurrences (fontSize, unitsFontSize)
+  - `canvas-v2/layer-canvas/LayerRenderer.ts`: 7 occurrences (fontSize, unitsFontSize, majorTickLength)
+  - `hooks/useGripPreviewStyle.ts`: 3 occurrences (apertureSize, gripSize, pickBoxSize)
+  - `systems/zoom/utils/bounds.ts`: 2 occurrences (text height fallback)
+  - `rendering/grips/UnifiedGripRenderer.ts`: 2 occurrences (gripSize)
+  - `ui/components/dxf-settings/settings/core/GripSettings.tsx`: 6 occurrences (gripSize, pickBoxSize)
+- **Semantic Categories**:
+  - `RULER_FONT_SIZE`: 10 - Default ruler number font size (px)
+  - `RULER_UNITS_FONT_SIZE`: 10 - Default ruler units label font size (px)
+  - `MAJOR_TICK_LENGTH`: 10 - Default major tick mark length (px)
+  - `APERTURE_SIZE`: 10 - Grip selection aperture size (px, AutoCAD APERTURE)
+  - `GRIP_SIZE`: 8 - Default grip point size (px, AutoCAD GRIPSIZE)
+  - `PICK_BOX_SIZE`: 3 - Default pick box size (px, AutoCAD PICKBOX)
+  - `TEXT_HEIGHT_FALLBACK`: 10 - Default text height for bounds calculation (drawing units)
+- **API**:
+  ```typescript
+  export const UI_SIZE_DEFAULTS = {
+    RULER_FONT_SIZE: 10,
+    RULER_UNITS_FONT_SIZE: 10,
+    MAJOR_TICK_LENGTH: 10,
+    APERTURE_SIZE: 10,
+    GRIP_SIZE: 8,
+    PICK_BOX_SIZE: 3,
+    TEXT_HEIGHT_FALLBACK: 10,
+  } as const;
+  ```
+- **Industry Standard**: AutoCAD DIMSCALE / APERTURE / GRIPSIZE / PICKBOX system variables
+- **Files Migrated** (7 files, 29 replacements):
+  - `systems/rulers-grid/utils.ts` - 9 replacements
+  - `canvas-v2/layer-canvas/LayerRenderer.ts` - 7 replacements
+  - `hooks/useGripPreviewStyle.ts` - 3 replacements (apertureSize, gripSize, pickBoxSize)
+  - `systems/zoom/utils/bounds.ts` - 2 replacements
+  - `rendering/grips/UnifiedGripRenderer.ts` - 2 replacements (gripSize)
+  - `ui/components/dxf-settings/settings/core/GripSettings.tsx` - 6 replacements (gripSize, pickBoxSize)
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero magic numbers `10` and `8` for UI defaults
+  - Semantic constant names (`GRIP_SIZE` vs `8`, `RULER_FONT_SIZE` vs `10`)
+  - Single point of change for default sizes
+  - Consistent fallback behavior across all UI systems
+- **Companion**: ADR-042 (UI Fonts), ADR-044 (Canvas Line Widths), ADR-093 (Text Label Offsets)
 
 ---
 
@@ -574,6 +640,129 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - `rendering/canvas/index.ts` (new exports)
 - **Companion**: ADR-003 (FloatingPanel), ADR-044 (Line Widths), ADR-083 (Line Dash)
 
+### ADR-115: Canvas Context Setup Standardization
+- **Canonical**: `CanvasUtils.setupCanvasContext()` from `rendering/canvas/utils/CanvasUtils.ts`
+- **Decision**: Document existing centralized canvas setup function as the Single Source of Truth
+- **Status**: ✅ **ALREADY CENTRALIZED** - No code changes needed
+- **Current State Analysis**:
+  - **Files using centralized function (3/5 = 60%)**:
+    - `canvas-v2/layer-canvas/LayerCanvas.tsx` - ✅ Uses `CanvasUtils.setupCanvasContext()`
+    - `canvas-v2/dxf-canvas/DxfCanvas.tsx` - ✅ Uses `CanvasUtils.setupCanvasContext()`
+    - `rendering/canvas/core/CanvasManager.ts` - ✅ Uses `CanvasUtils.setupCanvasContext()`
+  - **Files with acceptable inline pattern (2/5 = 40%)**:
+    - `canvas-v2/overlays/CrosshairOverlay.tsx` - Uses ResizeObserver callback (special case)
+    - `canvas-v2/preview-canvas/PreviewRenderer.ts` - Standalone class (special case)
+  - **Total duplicate lines**: ~20 (negligible)
+  - **Pattern consistency**: 100% (all use same DPI pattern)
+- **Centralized Function API**:
+  ```typescript
+  static setupCanvasContext(
+    canvas: HTMLCanvasElement,
+    config: CanvasConfig
+  ): CanvasRenderingContext2D {
+    const dpr = config.enableHiDPI ? (config.devicePixelRatio || getDevicePixelRatio()) : 1;
+    const rect = canvasBoundsService.getBounds(canvas);
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = config.imageSmoothingEnabled !== false;
+    return ctx;
+  }
+  ```
+- **Why Inline is Acceptable for 2 Files**:
+  - `CrosshairOverlay.tsx`: Uses `ResizeObserver` callback with dimension comparison logic
+  - `PreviewRenderer.ts`: Standalone renderer class with different lifecycle
+  - Both use `getDevicePixelRatio()` from ADR-094 (centralized DPR)
+  - Both follow identical DPI scaling pattern
+- **Enterprise Features of CanvasUtils**:
+  - Uses `canvasBoundsService` for cached `getBoundingClientRect()` (performance optimization)
+  - Uses `getDevicePixelRatio()` from ADR-094 (SSR-safe)
+  - Safety checks for invalid canvas elements
+  - Full utility suite: `clearCanvas()`, `getCanvasDimensions()`, `screenToCanvas()`, etc.
+- **Recommendation**: No refactoring needed - current state is acceptable
+- **Benefits**:
+  - 60% centralization with 100% pattern consistency
+  - ~20 lines of duplicate code (negligible vs 500 estimated)
+  - Risk of change outweighs benefit for remaining 2 files
+  - Clear documentation of the canonical approach
+- **Companion**: ADR-094 (Device Pixel Ratio), ADR-088 (Pixel-Perfect Rendering), ADR-043 (Zoom Constants)
+
+### ADR-117: DPI-Aware Pixel Calculations Centralization
+- **Canonical**: `toDevicePixels()` from `systems/cursor/utils.ts`
+- **Decision**: Centralize the `Math.round(cssPixels * dpr)` pattern for canvas buffer sizing
+- **Status**: ✅ **IMPLEMENTED** (2026-02-01)
+- **Problem**: The pattern `Math.round(value * dpr)` for physical pixel calculations was scattered across 3 files:
+  - `canvas-v2/preview-canvas/PreviewRenderer.ts` (lines 170-171)
+  - `canvas-v2/overlays/CrosshairOverlay.tsx` (lines 115-116)
+  - `rendering/canvas/utils/CanvasUtils.ts` (lines 53-54)
+- **Solution**: Create `toDevicePixels()` utility function
+- **API**:
+  ```typescript
+  /**
+   * Convert CSS pixels to device/physical pixels
+   * @param cssPixels - Value in CSS pixels
+   * @param dpr - Device pixel ratio (defaults to current device)
+   * @returns Rounded physical pixel value
+   */
+  export function toDevicePixels(cssPixels: number, dpr?: number): number {
+    const ratio = dpr ?? getDevicePixelRatio();
+    return Math.round(cssPixels * ratio);
+  }
+  ```
+- **Migration**:
+  ```typescript
+  // Before (scattered pattern):
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+
+  // After (centralized):
+  import { toDevicePixels } from '../../systems/cursor/utils';
+  canvas.width = toDevicePixels(width, dpr);
+  canvas.height = toDevicePixels(height, dpr);
+  ```
+- **Files Changed**:
+  - `systems/cursor/utils.ts` (+20 lines: `toDevicePixels()` function)
+  - `canvas-v2/preview-canvas/PreviewRenderer.ts` (2 replacements)
+  - `canvas-v2/overlays/CrosshairOverlay.tsx` (2 replacements)
+  - `rendering/canvas/utils/CanvasUtils.ts` (2 replacements)
+- **Benefits**:
+  - Single Source of Truth for DPI-aware pixel calculations
+  - Self-documenting code: `toDevicePixels(width)` vs `Math.round(width * dpr)`
+  - Consistent rounding behavior across all canvas operations
+  - Easier to test and maintain
+- **Companion**: ADR-094 (Device Pixel Ratio), ADR-115 (Canvas Context Setup)
+
+### ADR-120: Canvas globalAlpha Opacity Centralization
+- **Canonical**: `OPACITY` from `config/color-config.ts`
+- **Decision**: Migrate hardcoded `ctx.globalAlpha` values to centralized OPACITY constants
+- **Status**: ✅ APPROVED
+- **Problem**: 12 hardcoded opacity values across 7 files despite existing OPACITY constant
+- **Solution**:
+  - Add `OPACITY.SUBTLE = 0.6` for origin markers
+  - Replace all hardcoded values with OPACITY.* references
+- **API**:
+  - `OPACITY.OPAQUE` - 1.0 (full opacity, reset value)
+  - `OPACITY.HIGH` - 0.9 (region bubbles, near-opaque overlays)
+  - `OPACITY.MEDIUM` - 0.7 (construction lines, semi-transparent)
+  - `OPACITY.SUBTLE` - 0.6 (NEW: origin markers, subtle overlays)
+  - `OPACITY.LOW` - 0.5
+  - `OPACITY.VERY_LOW` - 0.3
+  - `OPACITY.FAINT` - 0.1
+- **Files Migrated**:
+  - `rendering/ui/ruler/RulerRenderer.ts` - 2 occurrences (0.6 → SUBTLE, 1 → OPAQUE)
+  - `canvas-v2/preview-canvas/PreviewRenderer.ts` - 2 occurrences (0.7 → MEDIUM, 1 → OPAQUE)
+  - `utils/overlay-drawing.ts` - 3 occurrences (0.9 → HIGH, 1 → OPAQUE x2)
+  - `systems/phase-manager/PhaseManager.ts` - 1 occurrence (1.0 → OPAQUE)
+  - `rendering/entities/BaseEntityRenderer.ts` - 2 occurrences (1.0 → OPAQUE x2)
+  - `rendering/canvas/withCanvasState.ts` - 1 occurrence (1.0 → OPAQUE)
+  - `debug/OriginMarkersDebugOverlay.ts` - 1 occurrence (1.0 → OPAQUE)
+- **Benefits**:
+  - Single source of truth for opacity values
+  - Consistent visual appearance across canvas operations
+  - Easy global adjustments (change one constant, affects all)
+  - Type-safe references (TypeScript autocomplete)
+- **Companion**: ADR-044 (Line Widths), ADR-083 (Line Dash Patterns)
+
 ---
 
 ## 📊 **DATA & STATE MANAGEMENT**
@@ -598,15 +787,24 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - `getUnitVector(from, to)` - Unit vector from point to point
   - `getPerpendicularUnitVector(from, to)` - Perpendicular unit vector (90° CCW)
 - **Impact**:
-  - Distance: 35+ inline implementations → 1 function
+  - Distance: 42+ inline implementations → 1 function
   - Vector normalization: 7 inline patterns → 3 functions
 - **Files Migrated**:
-  - **Distance**: 32 files across snapping, rendering, hooks, utils
+  - **Distance**: 38 files across snapping, rendering, hooks, utils
   - **Vector**: line-utils.ts, line-rendering-utils.ts, constraints/utils.ts, ParallelSnapEngine.ts, text-labeling-utils.ts, LineRenderer.ts, BaseEntityRenderer.ts
+- **2026-02-01 Migration** (6 additional files):
+  - `utils/geometry/GeometryUtils.ts` - nearPoint() function
+  - `rendering/entities/PointRenderer.ts` - hitTest() method
+  - `rendering/entities/EllipseRenderer.ts` - hitTest() method
+  - `snapping/engines/shared/snap-engine-utils.ts` - sortCandidatesByDistance()
+  - `systems/constraints/useConstraintApplication.ts` - validatePoint()
+  - `rendering/entities/shared/geometry-utils.ts` - circleBestFit() fallback
 - **Pattern**: Single Source of Truth (SSOT)
 - **Eliminated Patterns**:
   - `unitX = dx / length; unitY = dy / length;` → `getUnitVector()`
   - `perpX = -dy / length; perpY = dx / length;` → `getPerpendicularUnitVector()`
+  - `Math.sqrt((p.x - q.x) ** 2 + (p.y - q.y) ** 2)` → `calculateDistance(p, q)`
+  - `Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2))` → `calculateDistance()`
 - **Benefits**:
   - Zero duplicate distance/vector calculations
   - Consistent math (no typos in normalization)
@@ -778,6 +976,75 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - Special case handling for near-zero values
 - **Companion**: ADR-065 (Distance Calc), ADR-066 (Angle Calc), ADR-041 (Distance Labels)
 
+### ADR-108: Text Metrics Ratios Centralization
+- **Status**: ✅ APPROVED
+- **Date**: 2026-01-31
+- **Canonical**: `TEXT_METRICS_RATIOS` from `config/text-rendering-config.ts`
+- **Decision**: Centralize hardcoded font/text metrics multipliers (0.6, 0.75, 0.8, etc.) to named constants
+- **Problem**: 27+ hardcoded font/text metrics multipliers across 16 files:
+  - `TextMetricsCache.ts`: 5 occurrences (0.6, 0.8, 0.2)
+  - `useTextPreviewStyle.ts`: 6 occurrences (0.75, 0.3, 0.2, 0.05, 0.15)
+  - `LinePreview.tsx`: 4 occurrences (0.6, 0.55, 1.15, 1.2)
+  - `Bounds.ts`: 1 occurrence (0.6)
+  - `TextRenderer.ts`: 1 occurrence (0.6)
+  - `entities.ts`: 1 occurrence (0.6)
+  - `TextSettings.tsx`: 1 occurrence (0.75)
+  - `systems/zoom/utils/bounds.ts`: 2 occurrences (0.6, 0.7)
+- **Semantic Categories**:
+  - **Character Width Estimation**:
+    - `CHAR_WIDTH_MONOSPACE`: 0.6 - Average monospace character width (60% of fontSize)
+    - `CHAR_WIDTH_PROPORTIONAL`: 0.55 - Average proportional character width (55% of fontSize)
+    - `CHAR_WIDTH_WIDE`: 0.7 - Wider estimate for text bounds (70% of fontSize)
+  - **Vertical Metrics**:
+    - `ASCENT_RATIO`: 0.8 - Ascender height (80% of fontSize)
+    - `DESCENT_RATIO`: 0.2 - Descender height (20% of fontSize)
+  - **Superscript/Subscript**:
+    - `SCRIPT_SIZE_RATIO`: 0.75 - Font size reduction (75% of normal)
+    - `SUPERSCRIPT_OFFSET`: 0.3 - Vertical raise (30% of fontSize)
+    - `SUBSCRIPT_OFFSET`: 0.2 - Vertical drop (20% of fontSize)
+  - **Text Decorations**:
+    - `UNDERLINE_OFFSET`: 0.15 - Position below text (15% of fontSize)
+    - `STRIKETHROUGH_OFFSET`: 0.05 - Position above baseline (5% of fontSize)
+    - `DECORATION_LINE_WIDTH`: 0.05 - Line thickness (5% of fontSize)
+  - **Bold/Script Adjustments**:
+    - `BOLD_WIDTH_MULTIPLIER`: 1.15 - Bold text width increase (115% of normal)
+    - `SCRIPT_SPACING_MULTIPLIER`: 1.2 - Script spacing increase (120% of normal)
+- **API**:
+  ```typescript
+  import { TEXT_METRICS_RATIOS } from '../config/text-rendering-config';
+
+  // Character width estimation
+  const width = text.length * fontSize * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
+
+  // Superscript font size
+  const scriptSize = fontSize * TEXT_METRICS_RATIOS.SCRIPT_SIZE_RATIO;
+
+  // Ascent/descent for bounding box
+  const ascent = fontSize * TEXT_METRICS_RATIOS.ASCENT_RATIO;
+  const descent = fontSize * TEXT_METRICS_RATIOS.DESCENT_RATIO;
+  ```
+- **Industry Standard**: CSS font-size-adjust, OpenType OS/2 metrics
+- **Files Migrated** (9 files, 21 replacements):
+  - `rendering/cache/TextMetricsCache.ts` - 5 replacements (ascent, descent, char width)
+  - `hooks/useTextPreviewStyle.ts` - 6 replacements (script size, offsets, decorations)
+  - `ui/.../LinePreview.tsx` - 4 replacements (char width, bold/script multipliers)
+  - `rendering/hitTesting/Bounds.ts` - 1 replacement (char width)
+  - `rendering/entities/TextRenderer.ts` - 1 replacement (char width)
+  - `types/entities.ts` - 1 replacement (char width)
+  - `ui/.../TextSettings.tsx` - 1 replacement (script size)
+  - `systems/zoom/utils/bounds.ts` - 2 replacements (char width)
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero magic numbers for text metrics calculations
+  - Semantic constant names (`CHAR_WIDTH_MONOSPACE` vs `0.6`)
+  - Single point of change for typography adjustments
+  - Typography-correct documentation (CSS/OpenType reference)
+  - Consistent text measurement across all systems
+- **Verification**:
+  - TypeScript: `npx tsc --noEmit --project src/subapps/dxf-viewer/tsconfig.json`
+  - Grep: `grep -rE "fontSize \* 0\.[0-9]" src/subapps/dxf-viewer --include="*.ts" --include="*.tsx"` (should return minimal results)
+- **Companion**: ADR-042 (UI Fonts), ADR-091 (Fonts + Formatting), ADR-107 (UI Size Defaults)
+
 ### ADR-070: Vector Magnitude Centralization
 - **Canonical**: `vectorMagnitude()` from `geometry-rendering-utils.ts`
 - **Impact**: 15+ inline `Math.sqrt(v.x * v.x + v.y * v.y)` implementations → 1 function
@@ -932,12 +1199,41 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - `LayerRenderer.ts` - Overlay grip rendering (was 1.2/1.4, now 1.25/1.5)
   - `GripProvider.tsx` - Grip context helper (was 1.2/1.4, now 1.25/1.5)
   - `BaseEntityRenderer.ts` - Entity grip rendering (was hardcoded 1.25/1.5)
+  - `adapters/ZustandToConsolidatedAdapter.ts` - Line hover width (uses HOT for 1.5x effect)
+  - `rendering/ui/snap/SnapRenderer.ts` - Snap indicator highlight mode (uses HOT)
+  - `rendering/ui/cursor/CursorRenderer.ts` - Cursor highlight mode (uses HOT)
+- **Extended Usage**: `GRIP_SIZE_MULTIPLIERS.HOT` (1.5) χρησιμοποιείται για όλα τα highlight/emphasis effects σε UI elements (όχι μόνο grips)
 - **Pattern**: Single Source of Truth (SSOT)
 - **Benefits**:
   - Zero grip size inconsistency (all grips use same multipliers)
   - AutoCAD-standard visual feedback
   - Single place to change grip size behavior
+  - Unified highlight multiplier για grips, snap indicators, cursors, και line hover
 - **Companion**: ADR-048 (Unified Grip Rendering System)
+
+### ADR-106: Edge Grip Size Multipliers Centralization
+- **Canonical**: `EDGE_GRIP_SIZE_MULTIPLIERS` from `rendering/grips/constants.ts`
+- **Impact**: Fixed **hardcoded edge grip multipliers** in LayerRenderer (1.4/1.6)
+- **Standard Values** (Edge-specific, larger than vertex grips):
+  - `COLD`: 1.0 (normal state)
+  - `WARM`: 1.4 (hover state, +40% - more dramatic than vertex +25%)
+  - `HOT`: 1.6 (active/drag state, +60% - more dramatic than vertex +50%)
+- **Rationale**: Edge grips are rendered on thin edge lines, so they need larger multipliers for visible hover/active feedback
+- **Files Changed**:
+  - `rendering/grips/constants.ts` - Added `EDGE_GRIP_SIZE_MULTIPLIERS` (+16 lines)
+  - `rendering/grips/index.ts` - Export added
+  - `canvas-v2/layer-canvas/LayerRenderer.ts` - Replaced hardcoded 1.4/1.6 with centralized constants
+- **Consistency Table**:
+  | Grip Type | COLD | WARM | HOT | Source |
+  |-----------|------|------|-----|--------|
+  | **Vertex** | 1.0 | 1.25 | 1.5 | `GRIP_SIZE_MULTIPLIERS` |
+  | **Edge** | 1.0 | 1.4 | 1.6 | `EDGE_GRIP_SIZE_MULTIPLIERS` |
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero hardcoded edge grip multipliers
+  - Consistent with vertex grip centralization (ADR-075)
+  - Single place to adjust edge grip visual feedback
+- **Companion**: ADR-075 (Grip Size Multipliers), ADR-048 (Unified Grip Rendering System)
 
 ### ADR-076: RGB ↔ HEX Color Conversion Centralization
 - **Canonical**: `parseHex()`, `rgbToHex()` from `ui/color/utils.ts`
@@ -1316,6 +1612,147 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
 - **Migration Strategy**: On-touch migration (replace `.toFixed()` when editing files)
 - **Companion**: ADR-069 (formatDistance/formatAngle), ADR-081 (formatPercent), ADR-041 (Distance Labels)
 
+### ADR-121: Zero Point Pattern Centralization (WORLD_ORIGIN, ZERO_VECTOR, EMPTY_BOUNDS)
+- **Status**: ✅ APPROVED
+- **Date**: 2026-02-01
+- **Canonical**: `config/geometry-constants.ts`
+- **Decision**: Centralize all `{ x: 0, y: 0 }` inline patterns to semantic constants
+- **Problem**: 74 repetitions of `{ x: 0, y: 0 }` across 41 files with different semantic meanings:
+  - World coordinate origin (coordinate transforms, rulers, grids)
+  - Zero vectors (return values, fallbacks)
+  - Empty bounds (error states, empty arrays)
+  - Mutable state initialization (React useState)
+- **Solution**: Semantic constants + factory functions for different use cases
+- **Constants** (immutable with `Object.freeze()`):
+  - `WORLD_ORIGIN: Readonly<Point2D>` - Reference point in world coordinates (transforms, rulers)
+  - `ZERO_VECTOR: Readonly<Point2D>` - Generic zero point (returns, fallbacks)
+  - `ZERO_DELTA: Readonly<Point2D>` - Zero movement vector (delta tracking)
+  - `EMPTY_BOUNDS: Readonly<BoundingBox>` - Zero-size bounding box (empty arrays)
+  - `DEFAULT_BOUNDS: Readonly<BoundingBox>` - Standard placeholder (100x100)
+- **Factory Functions** (for mutable state):
+  - `createZeroPoint(): Point2D` - Fresh mutable zero point (React state)
+  - `createEmptyBounds(): BoundingBox` - Fresh mutable empty bounds
+- **Utility Functions**:
+  - `isAtOrigin(point: Point2D): boolean` - Check if point is at origin
+  - `isEmptyBounds(bounds: BoundingBox): boolean` - Check if bounds are empty
+- **API**:
+  ```typescript
+  // Immutable usage (coordinate transforms, rendering)
+  import { WORLD_ORIGIN, ZERO_VECTOR, EMPTY_BOUNDS } from '../config/geometry-constants';
+
+  const screenOrigin = worldToScreen(WORLD_ORIGIN, transform);
+  return isValid ? result : ZERO_VECTOR;
+  const bounds = entities.length > 0 ? calculateBounds(entities) : { ...EMPTY_BOUNDS };
+
+  // Mutable usage (React state)
+  import { createZeroPoint } from '../config/geometry-constants';
+
+  const [position, setPosition] = useState<Point2D>(createZeroPoint());
+  const dragDelta = useRef<Point2D>(createZeroPoint());
+  ```
+- **Files Migrated** (18 files, ~42 replacements):
+  - **Phase 1 - Core Rendering** (5 files):
+    - `rendering/ui/grid/GridRenderer.ts` - 3 worldOrigin → WORLD_ORIGIN
+    - `rendering/ui/ruler/RulerRenderer.ts` - 2 worldOrigin → WORLD_ORIGIN
+    - `rendering/ui/origin/OriginMarkersRenderer.ts` - 1 worldOrigin → WORLD_ORIGIN
+    - `rendering/ui/origin/OriginMarkerUtils.ts` - 1 worldOrigin → WORLD_ORIGIN
+    - `rendering/passes/BackgroundPass.ts` - 1 inline → WORLD_ORIGIN
+  - **Phase 2 - Geometry Utils** (3 files):
+    - `rendering/entities/shared/geometry-utils.ts` - 3 returns/accumulators → ZERO_VECTOR
+    - `rendering/entities/shared/line-utils.ts` - 1 unitVector → ZERO_VECTOR
+    - `rendering/canvas/utils/CanvasUtils.ts` - 3 error returns → ZERO_VECTOR
+  - **Phase 3 - Bounds & Fallbacks** (4 files):
+    - `systems/zoom/utils/bounds.ts` - 4 fallback bounds → EMPTY_BOUNDS / DEFAULT_BOUNDS
+    - `hooks/scene/useSceneState.ts` - 2 empty scene → EMPTY_BOUNDS
+    - `grips/resolveTarget.ts` - 2 mock bbox → DEFAULT_BOUNDS
+    - `systems/rulers-grid/types.ts` - Removed local DEFAULT_ORIGIN, re-exports from centralized
+  - **Phase 4 - State Hooks** (3 files):
+    - `hooks/useEntityDrag.ts` - 3 totalDelta init → createZeroPoint()
+    - `hooks/useGripMovement.ts` - 2 totalDelta init → createZeroPoint()
+    - `hooks/useViewState.ts` - 1 panStart init → createZeroPoint()
+  - **Phase 5 - Misc Files** (2 files):
+    - `systems/constraints/config.ts` - 1 basePoint → ZERO_VECTOR
+    - `debug/CalibrationGridRenderer.ts` - 3 worldOrigin → WORLD_ORIGIN
+- **Backward Compatibility**:
+  - `systems/rulers-grid/types.ts` re-exports `DEFAULT_ORIGIN` from geometry-constants
+- **Pattern**: Single Source of Truth (SSOT) + Factory Pattern
+- **Benefits**:
+  - Zero inline `{ x: 0, y: 0 }` patterns (semantic constants instead)
+  - Semantic clarity: WORLD_ORIGIN vs ZERO_VECTOR vs ZERO_DELTA
+  - Type safety with `Readonly<Point2D>` for immutable constants
+  - Mutable state safety with factory functions (no shared references)
+  - Single point of change for coordinate system origin
+  - Consistent bounds handling across codebase
+- **Verification**:
+  - TypeScript: `npx tsc --noEmit --project src/subapps/dxf-viewer/tsconfig.json`
+  - Grep: `grep -rE "\{ *x: *0, *y: *0 *\}" src/subapps/dxf-viewer --include="*.ts" --include="*.tsx"` (should return only geometry-constants.ts)
+- **Companion**: ADR-065 (Distance Calculation), ADR-034 (Geometry Centralization), ADR-114 (Bounding Box)
+
+### ADR-123: PreviewRenderer Color Centralization (hex → UI_COLORS)
+- **Status**: ✅ APPROVED
+- **Date**: 2026-02-01
+- **Canonical**: `UI_COLORS` from `config/color-config.ts`
+- **Decision**: Migrate 5 hardcoded hex colors in PreviewRenderer to centralized UI_COLORS
+- **Problem**: PreviewRenderer.ts had 5 inline hex color values:
+  - Line 105: `color: '#00FF00'` (preview default - green)
+  - Line 111: `gripColor: '#00FF00'` (grip default - green)
+  - Line 487: `ctx.strokeStyle = '#FFA500'` (arc stroke - orange)
+  - Line 517: `ctx.fillStyle = '#FF00FF'` (angle text - fuchsia)
+  - Line 710: `ctx.strokeStyle = '#000000'` (grip border - black)
+- **Solution**: Replace inline hex with UI_COLORS references
+- **New Color Added**:
+  - `UI_COLORS.PREVIEW_ARC_ORANGE` (#FFA500) - Arc stroke in angle measurement
+- **Existing Colors Used**:
+  - `UI_COLORS.BRIGHT_GREEN` (#00ff00) - Preview/grip default
+  - `UI_COLORS.DIMENSION_TEXT` (fuchsia) - Angle text
+  - `UI_COLORS.BLACK` (#000000) - Grip border
+- **Files Changed** (2 files):
+  - `config/color-config.ts` - Added PREVIEW_ARC_ORANGE constant
+  - `canvas-v2/preview-canvas/PreviewRenderer.ts` - 5 replacements, added UI_COLORS import
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Zero hardcoded colors in PreviewRenderer
+  - Consistent theming support
+  - Single point of change for preview appearance
+  - Type-safe color references
+- **Verification**:
+  - TypeScript: `npx tsc --noEmit --project src/subapps/dxf-viewer/tsconfig.json`
+  - Grep: `grep -n "#00FF00\|#FFA500\|#FF00FF\|#000000" src/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewRenderer.ts` (should return nothing)
+- **Companion**: ADR-004 (Canvas Theme), ADR-119 (Opacity Constants), ADR-040 (Preview Canvas)
+
+### ADR-124: Renderer Constants Centralization (DOT_RADIUS, TEXT_GAP, CIRCLE_LABEL)
+- **Status**: ✅ APPROVED
+- **Date**: 2026-02-01
+- **Canonical**: `RENDER_GEOMETRY`, `TEXT_LABEL_OFFSETS`, `calculateTextGap()`
+- **Location**: `config/text-rendering-config.ts`, `rendering/entities/shared/geometry-rendering-utils.ts`
+- **Decision**: Centralize duplicate hardcoded values in entity renderers
+- **Problem**: 8 hardcoded values across 5 files:
+  - `const dotRadius = 4;` in ArcRenderer.ts, EllipseRenderer.ts, LineRenderer.ts
+  - `clamp(30 * scale, 20, 60)` in CircleRenderer.ts, LineRenderer.ts
+  - `- 25` label offset in CircleRenderer.ts (2 places), SnapModeIndicator.tsx
+- **Solution**:
+  - Add `RENDER_GEOMETRY.DOT_RADIUS = 4` to text-rendering-config.ts
+  - Add `TEXT_LABEL_OFFSETS.CIRCLE_LABEL = 25` to text-rendering-config.ts
+  - Add `calculateTextGap(scale)` utility function to geometry-rendering-utils.ts
+- **Files Changed** (7 files):
+  - `config/text-rendering-config.ts` - Added constants
+  - `rendering/entities/shared/geometry-rendering-utils.ts` - Added calculateTextGap()
+  - `rendering/entities/ArcRenderer.ts` - Using RENDER_GEOMETRY.DOT_RADIUS
+  - `rendering/entities/EllipseRenderer.ts` - Using RENDER_GEOMETRY.DOT_RADIUS
+  - `rendering/entities/LineRenderer.ts` - Using RENDER_GEOMETRY.DOT_RADIUS + calculateTextGap()
+  - `rendering/entities/CircleRenderer.ts` - Using TEXT_LABEL_OFFSETS.CIRCLE_LABEL + calculateTextGap()
+  - `canvas-v2/overlays/SnapModeIndicator.tsx` - Using TEXT_LABEL_OFFSETS.CIRCLE_LABEL
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Single source of truth for rendering constants
+  - Easy global adjustments (change once, apply everywhere)
+  - Eliminates duplicate formula code
+  - Type-safe references
+- **Verification**:
+  - TypeScript: `npx tsc --noEmit --project src/subapps/dxf-viewer/tsconfig.json`
+  - Visual: Draw circle/arc/line entities, verify measurements and dots render correctly
+- **Companion**: ADR-091 (Text Label Offsets), ADR-048 (Hardcoded Values), ADR-044 (Canvas Line Widths)
+
 ---
 
 ## ✏️ **DRAWING SYSTEM**
@@ -1659,6 +2096,38 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - Consistent type narrowing across codebase
   - Comment marker `// 🏢 ADR-104: Use centralized type guard` for traceability
 - **Companion**: ADR-017 (Enterprise ID Generation), ADR-052 (DXF Export API Contract)
+
+### ADR-105: Hit Test Fallback Tolerance Centralization
+- **Canonical**: `TOLERANCE_CONFIG.HIT_TEST_FALLBACK` from `config/tolerance-config.ts`
+- **Export Alias**: `HIT_TEST_FALLBACK` for direct import
+- **Value**: 5 pixels (standard fallback for hit testing methods)
+- **Impact**: 10+ hardcoded `tolerance: 5` or `tolerance = 5` patterns → centralized constant
+- **Problem**: Scattered hardcoded tolerance values across 10 files:
+  - `services/HitTestingService.ts` - main hit test service
+  - `rendering/entities/CircleRenderer.ts` - circle hitTest method
+  - `rendering/entities/SplineRenderer.ts` - spline hitTest method
+  - `rendering/entities/TextRenderer.ts` - text hitTest method
+  - `canvas-v2/dxf-canvas/DxfCanvas.tsx` - DXF canvas hit testing
+  - `canvas-v2/layer-canvas/LayerRenderer.ts` - layer hit testing
+  - `systems/constraints/useConstraintsSystemState.ts` - constraint snap settings
+  - `systems/cursor/useCentralizedMouseHandlers.ts` - marquee selection
+  - `systems/selection/UniversalMarqueeSelection.ts` - universal selection
+  - `systems/rulers-grid/config.ts` - ruler snap settings
+- **Solution**: Replace all hardcoded `5` with `TOLERANCE_CONFIG.HIT_TEST_FALLBACK`
+- **Pattern**:
+  ```typescript
+  // Before (hardcoded - PROHIBITED)
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number = 5): boolean
+
+  // After (centralized - REQUIRED)
+  import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+  hitTest(entity: EntityModel, point: Point2D, tolerance: number = TOLERANCE_CONFIG.HIT_TEST_FALLBACK): boolean
+  ```
+- **Benefits**:
+  - Single Source of Truth for hit test fallback tolerance
+  - Easy global adjustment if needed
+  - Comment marker `// 🏢 ADR-105` for traceability
+- **Companion**: ADR-095 (Snap Tolerance), ADR-099 (Polygon & Measurement Tolerances)
 
 ---
 

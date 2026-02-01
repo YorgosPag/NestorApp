@@ -11,6 +11,8 @@ import type { Point2D } from '../types/Types';
 import { BoundingBox, BoundsCalculator, BoundsOperations } from './Bounds';
 // 🏢 ADR-071: Centralized geometry utilities
 import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
+// 🏢 ADR-109: Centralized Distance Calculation
+import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
 // 🏢 ADR-095: Centralized Snap Tolerance
 import { SNAP_TOLERANCE } from '../../config/tolerance-config';
 
@@ -553,9 +555,8 @@ export class HitTester {
     const center = circleEntity.center;
     const radius = circleEntity.radius;
 
-    const distanceFromCenter = Math.sqrt(
-      Math.pow(point.x - center.x, 2) + Math.pow(point.y - center.y, 2)
-    );
+    // 🏢 ADR-109: Use centralized distance calculation
+    const distanceFromCenter = calculateDistance(point, center);
 
     // Hit if close to circumference
     const distanceFromCircumference = Math.abs(distanceFromCenter - radius);

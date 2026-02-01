@@ -5,6 +5,8 @@ import { createVertexGrip } from './shared/grip-utils';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isPointEntity, type Entity, type PointEntity } from '../../types/entities';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from './shared/geometry-rendering-utils';
 
 // Extended point entity interface for renderer-specific properties
 interface ExtendedPointEntity extends PointEntity {
@@ -60,10 +62,8 @@ export class PointRenderer extends BaseEntityRenderer {
     const screenPos = this.worldToScreen(pointEntity.position);
     const screenTestPoint = this.worldToScreen(point);
 
-    const distance = Math.sqrt(
-      Math.pow(screenPos.x - screenTestPoint.x, 2) +
-      Math.pow(screenPos.y - screenTestPoint.y, 2)
-    );
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distance = calculateDistance(screenPos, screenTestPoint);
 
     return distance <= tolerance;
   }

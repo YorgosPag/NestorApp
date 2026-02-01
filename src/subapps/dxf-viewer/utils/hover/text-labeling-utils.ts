@@ -11,8 +11,8 @@ import { UI_COLORS } from '../../config/color-config';
 import { calculateDistance, calculateAngle, calculateMidpoint, getPerpendicularUnitVector, offsetPoint } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatDistance } from '../../rendering/entities/shared/distance-label-utils';
-// 🏢 ADR-XXX: Centralized Angular Constants
-import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-112: Centralized Text Rotation Pattern
+import { withTextRotation } from '../../rendering/entities/shared/geometry-utils';
 
 /**
  * Calculate optimal text position and rotation for edge labeling
@@ -70,30 +70,20 @@ export function renderTextAtEdgePosition(
   const textPos = calculateEdgeTextPosition(screenStart, screenEnd, offsetDistance);
   if (!textPos) return;
 
-  ctx.save();
-  ctx.translate(textPos.x, textPos.y);
-  
-  // Rotate text to be readable (don't flip upside down)
-  // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
-  let textAngle = textPos.angle;
-  if (Math.abs(textAngle) > RIGHT_ANGLE) {
-    textAngle += Math.PI;
-  }
-  ctx.rotate(textAngle);
+  // 🏢 ADR-110: Use centralized text rotation pattern
+  withTextRotation(ctx, textPos, () => {
+    if (withBackground) {
+      // ✅ ENTERPRISE: Use CSS variable instead of hardcoded white (adapts to dark mode)
+      const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
+      ctx.fillStyle = bgColor ? `hsl(${bgColor} / 0.9)` : UI_COLORS.TEXT_LABEL_BG_FALLBACK; // fallback to slate-800
+      ctx.fillRect(-20, -8, 40, 16);
+      ctx.strokeStyle = UI_COLORS.TEXT_LABEL_BORDER;
+      ctx.strokeRect(-20, -8, 40, 16);
+    }
 
-  if (withBackground) {
-    // ✅ ENTERPRISE: Use CSS variable instead of hardcoded white (adapts to dark mode)
-    const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
-    ctx.fillStyle = bgColor ? `hsl(${bgColor} / 0.9)` : UI_COLORS.TEXT_LABEL_BG_FALLBACK; // fallback to slate-800
-    ctx.fillRect(-20, -8, 40, 16);
-    ctx.strokeStyle = UI_COLORS.TEXT_LABEL_BORDER;
-    ctx.strokeRect(-20, -8, 40, 16);
-  }
-
-  // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-  renderStyledTextWithOverride(ctx, text, 0, 0);
-  
-  ctx.restore();
+    // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
+    renderStyledTextWithOverride(ctx, text, 0, 0);
+  });
 }
 
 /**

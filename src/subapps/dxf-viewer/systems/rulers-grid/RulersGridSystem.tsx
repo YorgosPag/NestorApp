@@ -182,88 +182,28 @@ function useRulersGridSystemIntegration({
   );
 
   // 🆕 UNIFIED AUTOSAVE: Wrapped setters για integration με DxfSettingsProvider
+  // ✅ CLEANUP (2026-02-01): Removed unused CustomEvent dispatch - nobody listens to 'dxf-grid-settings-update'
+  // Sync now happens via globalGridStore subscription pattern (lines 310-333)
   const setGrid = useCallback((updater: React.SetStateAction<GridSettings>) => {
     setGridInternal(prev => {
       const newGrid = typeof updater === 'function' ? updater(prev) : updater;
-
-      // Delegate to unified autosave system
-      setTimeout(() => {
-        const gridSettingsEvent = new CustomEvent('dxf-grid-settings-update', {
-          detail: {
-            gridSettings: newGrid,
-            source: 'RulersGridSystem',
-            timestamp: Date.now()
-          }
-        });
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(gridSettingsEvent);
-        }
-      }, 0);
-
       return newGrid;
     });
   }, []);
 
+  // ✅ CLEANUP (2026-02-01): Removed unused CustomEvent dispatch - nobody listens to 'dxf-ruler-settings-update'
+  // Sync now happens via globalRulerStore subscription pattern (lines 310-333)
   const setRulers = useCallback((updater: React.SetStateAction<RulerSettings>) => {
     setRulersInternal(prev => {
       const newRulers = typeof updater === 'function' ? updater(prev) : updater;
-
-      // Delegate to unified autosave system
-      setTimeout(() => {
-        const rulerSettingsEvent = new CustomEvent('dxf-ruler-settings-update', {
-          detail: {
-            rulerSettings: newRulers,
-            source: 'RulersGridSystem',
-            timestamp: Date.now()
-          }
-        });
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(rulerSettingsEvent);
-        }
-      }, 0);
-
       return newRulers;
     });
   }, []);
 
-  // 🔄 BIDIRECTIONAL SYNC: Event listeners για sync από DxfSettingsProvider
-  // ✅ STABILIZATION: Added ref to prevent excessive add/remove cycles
-  const listenersRegisteredRef = useRef(false);
-
-  useEffect(() => {
-    // ✅ GUARD: Prevent duplicate listener registration
-    if (listenersRegisteredRef.current) {
-      return;
-    }
-
-    const handleProviderGridSync = (event: CustomEvent) => {
-      const { gridSettings, source, timestamp } = event.detail;
-      // ✅ REMOVED CONSOLE.LOG to prevent logging during sync cycles
-      setGridInternal(gridSettings);
-    };
-
-    const handleProviderRulerSync = (event: CustomEvent) => {
-      const { rulerSettings, source, timestamp } = event.detail;
-      // ✅ REMOVED CONSOLE.LOG to prevent logging during sync cycles
-      setRulersInternal(rulerSettings);
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('dxf-provider-grid-sync', handleProviderGridSync as EventListener);
-      window.addEventListener('dxf-provider-ruler-sync', handleProviderRulerSync as EventListener);
-      listenersRegisteredRef.current = true;
-      // ✅ REMOVED CONSOLE.LOG to prevent mount/unmount logging spam
-    }
-
-    return () => {
-      if (typeof window !== 'undefined' && listenersRegisteredRef.current) {
-        window.removeEventListener('dxf-provider-grid-sync', handleProviderGridSync as EventListener);
-        window.removeEventListener('dxf-provider-ruler-sync', handleProviderRulerSync as EventListener);
-        listenersRegisteredRef.current = false;
-        // ✅ REMOVED CONSOLE.LOG to prevent mount/unmount logging spam
-      }
-    };
-  }, []);
+  // ✅ CLEANUP (2026-02-01): Removed unused bidirectional sync event listeners
+  // Events 'dxf-provider-grid-sync' and 'dxf-provider-ruler-sync' were never dispatched by any component.
+  // Actual sync happens via globalGridStore/globalRulerStore subscription pattern below.
+  // This cleanup removes ~40 lines of dead code.
 
   // 🎯 DEBUG: Expose grid settings to window για enterprise testing
   useEffect(() => {

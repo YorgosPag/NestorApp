@@ -13,6 +13,8 @@ import {
   OrthoConstraintEngine,
   PolarConstraintEngine
 } from './utils';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 
 export interface ConstraintApplicationHook {
   applyConstraints: (point: Point2D, context?: Partial<ConstraintContextData>) => ConstraintResult;
@@ -78,12 +80,10 @@ export function useConstraintApplication(
       orthoSettings.tolerance || 5,
       polarSettings.angleTolerance || 5
     );
-    
-    const distance = Math.sqrt(
-      Math.pow(result.constrainedPoint.x - point.x, 2) +
-      Math.pow(result.constrainedPoint.y - point.y, 2)
-    );
-    
+
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distance = calculateDistance(result.constrainedPoint, point);
+
     return distance <= tolerance;
   }, [applyConstraints, orthoSettings.tolerance, polarSettings.angleTolerance]);
 

@@ -6,6 +6,8 @@ import type { ZoomWindowState } from './useZoomWindow';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικής υπηρεσίας αντί για διάσπαρτη fit logic
 import { FitToViewService } from '../services/FitToViewService';
 import type { ViewTransform, Viewport } from '../rendering/types/Types';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { createZeroPoint } from '../config/geometry-constants';
 
 export interface ViewState {
   zoom: number;
@@ -18,12 +20,13 @@ export interface ViewState {
 }
 
 export const useViewState = () => {
+  // 🏢 ADR-118: Use createZeroPoint() for mutable state initialization
   const [viewState, setViewState] = useState<ViewState>({
     zoom: 1,
     panX: 0,
     panY: 0,
     isPanning: false,
-    panStart: { x: 0, y: 0 },
+    panStart: createZeroPoint(),
     autoCrop: true,
     zoomWindow: {
       isActive: false,

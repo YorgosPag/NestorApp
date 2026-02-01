@@ -22,6 +22,8 @@ import { UnifiedEntitySelection } from './utils';
 import { calculateVerticesBounds } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-089: Centralized Point-In-Bounds
 import { SpatialUtils } from '../../core/spatial/SpatialUtils';
+// 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 // ✅ ΕΝΙΑΙΟ SELECTION INTERFACE - Δουλεύει για όλα τα types
 export interface UniversalSelectionInput {
@@ -36,7 +38,8 @@ export interface UniversalSelectionInput {
   colorLayers?: ColorLayer[];
 
   // Selection settings
-  tolerance?: number; // Default: 5 pixels
+  // 🏢 ADR-105: Default tolerance from centralized config
+  tolerance?: number; // Default: TOLERANCE_CONFIG.HIT_TEST_FALLBACK (5 pixels)
   enableDebugLogs?: boolean; // Default: false
 
   // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ CALLBACKS - Όλη η multi-selection λογική εδώ
@@ -90,12 +93,13 @@ export class UniversalMarqueeSelector {
     input: UniversalSelectionInput
   ): UniversalSelectionResult {
 
+    // 🏢 ADR-105: Use centralized fallback tolerance as default
     const {
       entities = [],
       entityLayers = {},
       overlays = [],
       colorLayers = [],
-      tolerance = 5,
+      tolerance = TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
       enableDebugLogs = false,
       onLayerSelected, // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ CALLBACK
       currentPosition

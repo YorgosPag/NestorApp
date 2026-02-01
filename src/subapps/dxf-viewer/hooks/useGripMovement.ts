@@ -44,6 +44,8 @@ import { useCommandHistory, MoveVertexCommand } from '../core/commands';
 import { useLevels } from '../systems/levels';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { createZeroPoint } from '../config/geometry-constants';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
@@ -160,12 +162,13 @@ export interface UseGripMovementReturn {
 // 🏢 ENTERPRISE: Initial State
 // ============================================================================
 
+// 🏢 ADR-118: Use createZeroPoint() for mutable state initialization
 const INITIAL_GRIP_STATE: GripDragState = {
   isDragging: false,
   activeGrip: null,
   startPosition: null,
   currentPosition: null,
-  totalDelta: { x: 0, y: 0 },
+  totalDelta: createZeroPoint(),
   hasMoved: false,
 };
 
@@ -291,12 +294,13 @@ export function useGripMovement({
     const worldPoint = screenToWorld(screenPoint);
     startWorldPositionRef.current = worldPoint;
 
+    // 🏢 ADR-118: Use createZeroPoint() for mutable state initialization
     setGripState({
       isDragging: true,
       activeGrip: grip,
       startPosition: worldPoint,
       currentPosition: worldPoint,
-      totalDelta: { x: 0, y: 0 },
+      totalDelta: createZeroPoint(),
       hasMoved: false,
     });
 

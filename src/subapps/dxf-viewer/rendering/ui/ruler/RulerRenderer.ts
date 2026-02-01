@@ -22,8 +22,12 @@ import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized line widths
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
 import { RENDER_LINE_WIDTHS, buildUIFont } from '../../../config/text-rendering-config';
+// 🏢 ADR-119: Centralized Opacity Constants
+import { OPACITY } from '../../../config/color-config';
 // 🏢 ADR-XXX: Centralized Angular Constants
 import { RIGHT_ANGLE } from '../../entities/shared/geometry-utils';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { WORLD_ORIGIN } from '../../../config/geometry-constants';
 
 /**
  * 🔺 CENTRALIZED RULER RENDERER
@@ -219,7 +223,7 @@ export class RulerRenderer implements UIRenderer {
 
     ctx.strokeStyle = settings.textColor || settings.color;
     ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
-    ctx.globalAlpha = 0.6;
+    ctx.globalAlpha = OPACITY.SUBTLE; // 🏢 ADR-119: Centralized opacity
 
     // Horizontal line of origin marker
     ctx.beginPath();
@@ -233,7 +237,7 @@ export class RulerRenderer implements UIRenderer {
     ctx.lineTo(centerX, centerY + markerSize);
     ctx.stroke();
 
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
     ctx.restore();
   }
 
@@ -253,8 +257,8 @@ export class RulerRenderer implements UIRenderer {
 
     // ✅ CORRECT: Use world (0,0) as reference
     // Calculate screen position of world point (0,0)
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CoordinateTransforms.worldToScreen(worldOrigin, transform, viewport);
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
+    const screenOrigin = CoordinateTransforms.worldToScreen(WORLD_ORIGIN, transform, viewport);
     const originScreenX = screenOrigin.x;
     const startX = (originScreenX % step);
 
@@ -332,8 +336,8 @@ export class RulerRenderer implements UIRenderer {
     if (step < 20) return; // Skip if ticks are too close
 
     // ✅ CORRECT: Use world (0,0) as reference (same as horizontal ruler)
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CoordinateTransforms.worldToScreen(worldOrigin, transform, viewport);
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
+    const screenOrigin = CoordinateTransforms.worldToScreen(WORLD_ORIGIN, transform, viewport);
     const originScreenY = screenOrigin.y;
     const startY = (originScreenY % step);
 

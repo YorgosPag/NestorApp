@@ -21,6 +21,8 @@ import type {
 import { addCirclePath, addSquarePath, addDiamondPath, addCrossPath } from '../../primitives/canvasPaths';
 // 🏢 ADR-083: Centralized Line Dash Patterns
 import { LINE_DASH_PATTERNS } from '../../../config/text-rendering-config';
+// 🏢 ADR-106: Centralized grip size multipliers για hover/highlight effects
+import { GRIP_SIZE_MULTIPLIERS } from '../../grips/constants';
 
 /**
  * 🔺 CENTRALIZED CURSOR RENDERER
@@ -103,9 +105,10 @@ export class CursorRenderer implements UIRenderer {
     this.setLineStyle(ctx, settings.style);
 
     // Calculate cursor size based on mode
+    // 🏢 ADR-106: Using centralized HOT multiplier (1.5x) for highlight state
     let actualSize = settings.size;
     if (mode === 'highlight') {
-      actualSize = settings.size * 1.5; // 50% bigger for highlight
+      actualSize = settings.size * GRIP_SIZE_MULTIPLIERS.HOT;
     }
 
     // Render based on shape

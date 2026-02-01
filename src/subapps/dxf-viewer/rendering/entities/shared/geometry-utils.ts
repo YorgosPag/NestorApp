@@ -15,6 +15,8 @@ import { calculateDistance, calculateAngle, vectorMagnitude, dotProduct, calcula
 import { TAU } from '../../primitives/canvasPaths';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
 import { GEOMETRY_PRECISION } from '../../../config/tolerance-config';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { ZERO_VECTOR } from '../../../config/geometry-constants';
 
 // Re-export calculateMidpoint for convenience (canonical source: geometry-rendering-utils.ts)
 export { calculateMidpoint };
@@ -287,9 +289,10 @@ export function circleBestFit(points: Point2D[]): { center: Point2D; radius: num
   if (Math.abs(det) < 1e-10) {
     // Fallback: Use simple centroid method
     // Calculate center as centroid and radius as average distance
+    // 🏢 ADR-065: Use centralized distance calculation
     let totalDist = 0;
     for (const p of points) {
-      totalDist += Math.sqrt((p.x - meanX) ** 2 + (p.y - meanY) ** 2);
+      totalDist += calculateDistance(p, { x: meanX, y: meanY });
     }
     const avgRadius = totalDist / n;
 
@@ -1019,13 +1022,15 @@ export function calculatePolygonArea(points: Point2D[]): number {
  * @returns Centroid point
  */
 export function calculatePolygonCentroid(points: Point2D[]): Point2D {
-  if (points.length === 0) return { x: 0, y: 0 };
+  // 🏢 ADR-118: Use centralized ZERO_VECTOR for empty array fallback
+  if (points.length === 0) return ZERO_VECTOR;
   if (points.length === 1) return { ...points[0] };
 
   const area = calculatePolygonArea(points);
   if (area === 0) {
     // Degenerate polygon - return average of points
-    const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+    // 🏢 ADR-118: Use centralized ZERO_VECTOR for accumulator initialization
+    const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { ...ZERO_VECTOR });
     return { x: sum.x / points.length, y: sum.y / points.length };
   }
 
@@ -1166,7 +1171,7 @@ export const DEGREES_TO_RADIANS = Math.PI / 180;
 export const RADIANS_TO_DEGREES = 180 / Math.PI;
 
 // ===== ANGULAR CONSTANTS =====
-// 🏢 ADR-XXX: Centralized Angular Constants (2026-01-31)
+// 🏢 ADR-103: Centralized Angular Constants (2026-01-31)
 
 /**
  * Right angle constant: 90° in radians (π/2)
@@ -1236,4 +1241,99 @@ export function normalizeAngleDeg(degrees: number): number {
   let normalized = degrees % 360;
   if (normalized < 0) normalized += 360;
   return normalized;
+}
+
+// ===== TEXT ROTATION UTILITIES =====
+// 🏢 ADR-112: Centralized Text Rotation Pattern (2026-02-01)
+
+/**
+ * 🏢 ENTERPRISE: Normalize angle to keep text readable (never upside-down)
+ *
+ * CAD Standard: AutoCAD/Revit/MicroStation pattern for text rendering.
+ * If angle exceeds 90° (π/2), flips by adding π (180°) to keep text readable.
+ *
+ * @param angle - Original angle in radians
+ * @returns Normalized angle for readable text
+ *
+ * @example
+ * normalizeTextAngle(0)           // → 0 (horizontal, readable)
+ * normalizeTextAngle(Math.PI/4)   // → π/4 (45°, readable)
+ * normalizeTextAngle(Math.PI)     // → 0 (was 180°, flipped to 0°)
+ * normalizeTextAngle(-Math.PI/2)  // → π/2 (was -90°, flipped)
+ *
+ * @see ADR-112: Text Rotation Pattern Centralization
+ */
+export function normalizeTextAngle(angle: number): number {
+  if (Math.abs(angle) > RIGHT_ANGLE) {
+    return angle + Math.PI;
+  }
+  return angle;
+}
+
+/**
+ * 🏢 ENTERPRISE: Execute render function within rotated text context
+ *
+ * Handles the complete pattern: save → translate → normalize angle → rotate → render → restore
+ * Eliminates duplicate code across text rendering functions.
+ *
+ * @param ctx - Canvas 2D rendering context
+ * @param position - Text position with angle { x, y, angle }
+ * @param renderFn - Function to execute (renders text at origin after transformation)
+ *
+ * @example
+ * withTextRotation(ctx, { x: 100, y: 50, angle: Math.PI / 3 }, () => {
+ *   ctx.fillText('Distance: 5.00', 0, 0);
+ * });
+ *
+ * @see ADR-112: Text Rotation Pattern Centralization
+ */
+export function withTextRotation(
+  ctx: CanvasRenderingContext2D,
+  position: { x: number; y: number; angle: number },
+  renderFn: () => void
+): void {
+  ctx.save();
+  ctx.translate(position.x, position.y);
+  ctx.rotate(normalizeTextAngle(position.angle));
+  renderFn();
+  ctx.restore();
+}
+
+/**
+ * 🏢 ENTERPRISE: Execute render function with optional text rotation
+ *
+ * Useful when rotation is conditionally enabled (e.g., rotateWithLine option).
+ * If angle is undefined, no rotation is applied.
+ *
+ * @param ctx - Canvas 2D rendering context
+ * @param position - Text position { x, y }
+ * @param angle - Optional angle in radians (if undefined, no rotation)
+ * @param renderFn - Function to execute
+ *
+ * @example
+ * // With rotation
+ * withOptionalTextRotation(ctx, { x: 100, y: 50 }, Math.PI / 4, () => {
+ *   ctx.fillText('Label', 0, 0);
+ * });
+ *
+ * // Without rotation (angle undefined)
+ * withOptionalTextRotation(ctx, { x: 100, y: 50 }, undefined, () => {
+ *   ctx.fillText('Label', 0, 0);
+ * });
+ *
+ * @see ADR-112: Text Rotation Pattern Centralization
+ */
+export function withOptionalTextRotation(
+  ctx: CanvasRenderingContext2D,
+  position: { x: number; y: number },
+  angle: number | undefined,
+  renderFn: () => void
+): void {
+  ctx.save();
+  ctx.translate(position.x, position.y);
+  if (angle !== undefined) {
+    ctx.rotate(normalizeTextAngle(angle));
+  }
+  renderFn();
+  ctx.restore();
 }

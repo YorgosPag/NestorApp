@@ -18,7 +18,8 @@ import {
   renderContinuousLine as renderContinuousLineUtil
 } from './shared/line-rendering-utils';
 import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
-import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-119: Centralized Opacity Constants
+import { UI_COLORS, OPACITY } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-048: Centralized Rendering Geometry (2027-01-27)
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
@@ -31,8 +32,8 @@ import { GRIP_SIZE_MULTIPLIERS } from '../grips/constants';
 import { renderSquareGrip, calculateDistance, vectorMagnitude, calculateAngle, vectorAngle, getUnitVector } from './shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 // 🏢 ADR-073: Centralized Bisector Angle, Midpoint
-// 🏢 ADR-XXX: Centralized Angular Constants
-import { radToDeg, bisectorAngle, calculateMidpoint, RIGHT_ANGLE } from './shared/geometry-utils';
+// 🏢 ADR-112: Centralized Text Rotation Pattern
+import { radToDeg, bisectorAngle, calculateMidpoint, normalizeTextAngle } from './shared/geometry-utils';
 import { renderStyledTextWithOverride, getTextPreviewStyleWithOverride } from '../../hooks/useTextPreviewStyle';
 import { getLinePreviewStyleWithOverride } from '../../hooks/useLinePreviewStyle';
 // 🏢 ADR-058: Centralized Canvas Primitives
@@ -271,7 +272,7 @@ export abstract class BaseEntityRenderer {
     this.ctx.save();
 
     // 🎯 CRITICAL: Full canvas state reset for AutoCAD-like colors
-    this.ctx.globalAlpha = 1.0;
+    this.ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
     this.ctx.globalCompositeOperation = 'source-over';
     this.ctx.setLineDash([]);
     this.ctx.lineCap = 'butt';
@@ -291,7 +292,7 @@ export abstract class BaseEntityRenderer {
     // Keep solid line for authentic style
     this.ctx.setLineDash([]);
     // 🎯 CRITICAL: Ensure full opacity for authentic colors
-    this.ctx.globalAlpha = 1.0;
+    this.ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
   }
 
   protected cleanupStyle(): void {
@@ -516,9 +517,8 @@ export abstract class BaseEntityRenderer {
     textPosition: Point2D
   ): void {
     // Calculate world distance
-    const worldDistance = Math.sqrt(
-      Math.pow(worldEnd.x - worldStart.x, 2) + Math.pow(worldEnd.y - worldStart.y, 2)
-    );
+    // 🏢 ADR-109: Use centralized distance calculation
+    const worldDistance = calculateDistance(worldStart, worldEnd);
     
     // Calculate line angle for text rotation
     // 🏢 ADR-078: Use centralized calculateAngle
@@ -529,17 +529,12 @@ export abstract class BaseEntityRenderer {
     
     // Save context for rotation
     this.ctx.save();
-    
+
     // Move to text position and rotate
     this.ctx.translate(textPosition.x, textPosition.y);
-    
-    // Rotate text to be readable (don't flip upside down)
-    // 🏢 ADR-XXX: Use centralized RIGHT_ANGLE constant (90° = π/2)
-    let textAngle = angle;
-    if (Math.abs(textAngle) > RIGHT_ANGLE) {
-      textAngle += Math.PI;
-    }
-    this.ctx.rotate(textAngle);
+
+    // 🏢 ADR-110: Use centralized text rotation normalization (keeps text readable)
+    this.ctx.rotate(normalizeTextAngle(angle));
     
     // Apply distance text styling - χρήση δυναμικού styling με πλήρη υποστήριξη decorations
     this.applyDistanceTextStyle();

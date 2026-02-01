@@ -28,6 +28,8 @@ import {
   addCrossPath,
   addXPath
 } from '../../primitives/canvasPaths';
+// 🏢 ADR-106: Centralized grip size multipliers για hover/highlight effects
+import { GRIP_SIZE_MULTIPLIERS } from '../../grips/constants';
 
 /**
  * 🔺 CENTRALIZED SNAP RENDERER
@@ -124,9 +126,10 @@ export class SnapRenderer implements UIRenderer {
     ctx.globalAlpha = settings.opacity;
 
     // Calculate size based on mode
+    // 🏢 ADR-106: Using centralized HOT multiplier (1.5x) for highlight state
     let actualSize = settings.size;
     if (mode === 'highlight') {
-      actualSize = settings.size * 1.5;
+      actualSize = settings.size * GRIP_SIZE_MULTIPLIERS.HOT;
       ctx.strokeStyle = settings.highlightColor;
     }
 

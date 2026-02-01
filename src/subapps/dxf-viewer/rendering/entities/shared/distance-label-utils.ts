@@ -34,8 +34,8 @@ import { getTextPreviewStyleWithOverride, renderStyledTextWithOverride } from '.
 import { calculateDistance, calculateAngle } from './geometry-rendering-utils';
 // 🏢 ADR-082: Enterprise Number Formatting
 import { FormatterRegistry, type Precision } from '../../../formatting';
-// 🏢 ADR-XXX: Centralized Angular Constants
-import { RIGHT_ANGLE } from './geometry-utils';
+// 🏢 ADR-112: Centralized Text Rotation Pattern
+import { normalizeTextAngle } from './geometry-utils';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -283,12 +283,9 @@ export function renderDistanceLabel(
 
   // Calculate line angle for rotation (if enabled)
   // 🏢 ADR-066: Use centralized angle calculation
-  let angle = calculateAngle(screenP1, screenP2);
-
-  // Normalize angle to keep text readable (not upside down)
-  if (opts.rotateWithLine && Math.abs(angle) > RIGHT_ANGLE) {
-    angle += Math.PI;
-  }
+  // 🏢 ADR-110: Use centralized text rotation normalization
+  const rawAngle = calculateAngle(screenP1, screenP2);
+  const angle = opts.rotateWithLine ? normalizeTextAngle(rawAngle) : rawAngle;
 
   ctx.save();
 
@@ -374,12 +371,9 @@ export function renderDistanceLabelStyled(
 
   // Calculate line angle
   // 🏢 ADR-066: Use centralized angle calculation
-  let angle = calculateAngle(screenP1, screenP2);
-
-  // Normalize angle
-  if (opts.rotateWithLine && Math.abs(angle) > RIGHT_ANGLE) {
-    angle += Math.PI;
-  }
+  // 🏢 ADR-110: Use centralized text rotation normalization
+  const rawAngle = calculateAngle(screenP1, screenP2);
+  const angle = opts.rotateWithLine ? normalizeTextAngle(rawAngle) : rawAngle;
 
   ctx.save();
   ctx.translate(midX, midY + opts.verticalOffset);

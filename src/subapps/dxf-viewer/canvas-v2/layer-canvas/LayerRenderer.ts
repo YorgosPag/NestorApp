@@ -22,18 +22,22 @@ import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
 // 🏢 ADR-097: Centralized Line Dash Patterns
-import { UI_FONTS, RENDER_LINE_WIDTHS, buildUIFont, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
+// 🏢 ADR-107: Centralized UI Size Defaults
+import { UI_FONTS, RENDER_LINE_WIDTHS, buildUIFont, LINE_DASH_PATTERNS, UI_SIZE_DEFAULTS } from '../../config/text-rendering-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-102: Centralized Origin Markers
 import { renderOriginMarker } from '../../rendering/ui/origin/OriginMarkerUtils';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
-import { GRIP_SIZE_MULTIPLIERS } from '../../rendering/grips/constants';
+// 🏢 ADR-106: Centralized Edge Grip Size Multipliers
+import { GRIP_SIZE_MULTIPLIERS, EDGE_GRIP_SIZE_MULTIPLIERS } from '../../rendering/grips/constants';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../../rendering/primitives/canvasPaths';
 // 🏢 ADR-XXX: Centralized Angular Constants
 import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 // ✅ ΦΑΣΗ 7: Import unified canvas system
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
@@ -604,10 +608,11 @@ export class LayerRenderer {
       const GRIP_SIZE_HOT = Math.round(baseSize * GRIP_SIZE_MULTIPLIERS.HOT);
 
       // Get colors from centralized settings
-      const GRIP_COLOR_COLD = gripSettings?.colors?.cold ?? UI_COLORS.GRIP_DEFAULT ?? '#3b82f6';
-      const GRIP_COLOR_WARM = gripSettings?.colors?.warm ?? UI_COLORS.GRIP_HOVER ?? '#f59e0b';
-      const GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SUCCESS_BRIGHT ?? '#22c55e';
-      const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK ?? '#000000';
+      // 🏢 ADR-115: Using centralized UI_COLORS - no hardcoded fallbacks needed
+      const GRIP_COLOR_COLD = gripSettings?.colors?.cold ?? UI_COLORS.GRIP_DEFAULT;
+      const GRIP_COLOR_WARM = gripSettings?.colors?.warm ?? UI_COLORS.GRIP_HOVER;
+      const GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SUCCESS_BRIGHT;
+      const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK;
 
       // 🏢 ENTERPRISE (2026-01-26): Get selected grip indices for multi-grip support
       const selectedVertexGripIndices = layer.selectedGripIndices ??
@@ -673,13 +678,14 @@ export class LayerRenderer {
 
       // Edge grips are smaller than vertex grips (60% of base size)
       const baseEdgeSize = ((gripSettings?.gripSize ?? 5) * 0.6) * dpiScale;
-      const EDGE_GRIP_SIZE_COLD = Math.round(baseEdgeSize);
-      const EDGE_GRIP_SIZE_WARM = Math.round(baseEdgeSize * 1.4); // More dramatic hover for edges
+      // 🏢 ADR-106: Use centralized edge grip multipliers
+      const EDGE_GRIP_SIZE_COLD = Math.round(baseEdgeSize * EDGE_GRIP_SIZE_MULTIPLIERS.COLD);
+      const EDGE_GRIP_SIZE_WARM = Math.round(baseEdgeSize * EDGE_GRIP_SIZE_MULTIPLIERS.WARM);
 
-      // Colors: Edge grips use dedicated edge color when cold, warm color when hovered
-      const EDGE_GRIP_COLOR_COLD = UI_COLORS.GRIP_EDGE ?? '#9ca3af';
-      const EDGE_GRIP_COLOR_WARM = gripSettings?.colors?.warm ?? UI_COLORS.GRIP_HOVER ?? '#f59e0b';
-      const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK ?? '#000000';
+      // 🏢 ADR-115: Colors using centralized UI_COLORS - no hardcoded fallbacks needed
+      const EDGE_GRIP_COLOR_COLD = UI_COLORS.GRIP_EDGE;
+      const EDGE_GRIP_COLOR_WARM = gripSettings?.colors?.warm ?? UI_COLORS.GRIP_HOVER;
+      const GRIP_COLOR_CONTOUR = gripSettings?.colors?.contour ?? UI_COLORS.BLACK;
 
       // Iterate through edges (including closing edge for closed polygons)
       const edgeCount = screenVertices.length;
@@ -699,9 +705,10 @@ export class LayerRenderer {
           (layer.selectedGripType === 'edge-midpoint' && layer.selectedGripIndex !== undefined ? [layer.selectedGripIndex] : []);
         const isSelected = selectedEdgeMidpointIdx.includes(i);
 
-        // HOT grip size (larger than warm)
-        const EDGE_GRIP_SIZE_HOT = Math.round(baseEdgeSize * 1.6);
-        const EDGE_GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SUCCESS_BRIGHT ?? '#22c55e';
+        // 🏢 ADR-106: HOT grip size using centralized multiplier
+        const EDGE_GRIP_SIZE_HOT = Math.round(baseEdgeSize * EDGE_GRIP_SIZE_MULTIPLIERS.HOT);
+        // 🏢 ADR-115: Using centralized UI_COLORS - no hardcoded fallback needed
+        const EDGE_GRIP_COLOR_HOT = gripSettings?.colors?.hot ?? UI_COLORS.SUCCESS_BRIGHT;
 
         // 🏢 ENTERPRISE (2026-01-25): Real-time drag preview for edge midpoint
         let drawMidX = mid.x;
@@ -839,7 +846,7 @@ export class LayerRenderer {
 
     // Text styling
     this.ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
-    this.ctx.font = buildUIFont(settings.fontSize ?? 10, 'arial');
+    this.ctx.font = buildUIFont(settings.fontSize ?? UI_SIZE_DEFAULTS.RULER_FONT_SIZE, 'arial');
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
 
@@ -866,7 +873,7 @@ export class LayerRenderer {
     if (step < 20) return;
 
     const startX = -(transform.offsetX % step);
-    const majorTickLength = settings.majorTickLength ?? 10;
+    const majorTickLength = settings.majorTickLength ?? UI_SIZE_DEFAULTS.MAJOR_TICK_LENGTH;
     const minorTickLength = settings.minorTickLength ?? 5;
 
     for (let x = startX; x <= viewport.width; x += step) {
@@ -888,7 +895,7 @@ export class LayerRenderer {
 
         // Numbers με το κανονικό fontSize και textColor
         this.ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
-        this.ctx.font = buildUIFont(settings.fontSize ?? 10, 'arial');
+        this.ctx.font = buildUIFont(settings.fontSize ?? UI_SIZE_DEFAULTS.RULER_FONT_SIZE, 'arial');
         this.ctx.fillText(numberText, x, yPosition + rulerHeight / 2);
 
         // Units με ξεχωριστό fontSize και color (αν είναι enabled)
@@ -898,7 +905,7 @@ export class LayerRenderer {
 
           // 🔺 UNITS SPECIFIC STYLING - Σύνδεση με floating panel
           this.ctx.fillStyle = settings.unitsColor ?? settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
-          this.ctx.font = buildUIFont(settings.unitsFontSize ?? settings.fontSize ?? 10, 'arial');
+          this.ctx.font = buildUIFont(settings.unitsFontSize ?? settings.fontSize ?? UI_SIZE_DEFAULTS.RULER_UNITS_FONT_SIZE, 'arial');
 
           // Render units ΜΕΤΑ από τον αριθμό (δεξιά του)
           this.ctx.fillText(settings.unit ?? '', x + numberWidth / 2 + 5, yPosition + rulerHeight / 2);
@@ -938,7 +945,7 @@ export class LayerRenderer {
     // ✅ UNIFIED WITH COORDINATETRANSFORMS
     const baseY = viewport.height - COORDINATE_LAYOUT.MARGINS.top;
     const startY = ((baseY - transform.offsetY) % step);
-    const majorTickLength = settings.majorTickLength ?? 10;
+    const majorTickLength = settings.majorTickLength ?? UI_SIZE_DEFAULTS.MAJOR_TICK_LENGTH;
     const minorTickLength = settings.minorTickLength ?? 5;
 
     this.ctx.save();
@@ -969,7 +976,7 @@ export class LayerRenderer {
 
         // Numbers με το κανονικό fontSize και textColor
         this.ctx.fillStyle = settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
-        this.ctx.font = buildUIFont(settings.fontSize ?? 10, 'arial');
+        this.ctx.font = buildUIFont(settings.fontSize ?? UI_SIZE_DEFAULTS.RULER_FONT_SIZE, 'arial');
         this.ctx.fillText(numberText, 0, 0);
 
         // Units με ξεχωριστό fontSize και color (αν είναι enabled)
@@ -979,7 +986,7 @@ export class LayerRenderer {
 
           // 🔺 UNITS SPECIFIC STYLING - Σύνδεση με floating panel
           this.ctx.fillStyle = settings.unitsColor ?? settings.textColor ?? settings.color ?? UI_COLORS.BLACK;
-          this.ctx.font = buildUIFont(settings.unitsFontSize ?? settings.fontSize ?? 10, 'arial');
+          this.ctx.font = buildUIFont(settings.unitsFontSize ?? settings.fontSize ?? UI_SIZE_DEFAULTS.RULER_UNITS_FONT_SIZE, 'arial');
 
           // Render units ΜΕΤΑ από τον αριθμό (δεξιά του στο rotated coordinate system)
           this.ctx.fillText(settings.unit ?? '', numberWidth / 2 + 5, 0);
@@ -1010,13 +1017,14 @@ export class LayerRenderer {
 
   /**
    * Hit test - βρίσκει layer κοντά σε point
+   * 🏢 ADR-105: Use centralized fallback tolerance
    */
   hitTest(
     layers: ColorLayer[],
     screenPoint: Point2D,
     transform: ViewTransform,
     viewport: Viewport,
-    tolerance = 5
+    tolerance = TOLERANCE_CONFIG.HIT_TEST_FALLBACK
   ): string | null {
     const worldPoint = CoordinateTransforms.screenToWorld(screenPoint, transform, viewport);
     // Hit test debug disabled for performance

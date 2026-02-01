@@ -48,13 +48,15 @@ import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import { HoverManager } from '../../utils/hover';
-import { pointToLineDistance, clamp } from './shared/geometry-utils';
+import { pointToLineDistance } from './shared/geometry-utils';
 import { hitTestLineSegments, createEdgeGrips, renderSplitLine, renderLineWithTextCheck } from './shared/line-utils';
 import { createVertexGrip } from './shared/grip-utils';
-// 🏢 ADR-065: Centralized Distance & Vector Operations
-import { calculateDistance, getPerpendicularUnitVector } from './shared/geometry-rendering-utils';
+// 🏢 ADR-065: Centralized Distance & Vector Operations, ADR-124: Centralized Text Gap
+import { calculateDistance, getPerpendicularUnitVector, calculateTextGap } from './shared/geometry-rendering-utils';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isLineEntity, type Entity } from '../../types/entities';
+// 🏢 ADR-124: Centralized Dot Radius
+import { RENDER_GEOMETRY } from '../../config/text-rendering-config';
 
 export class LineRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -117,10 +119,11 @@ export class LineRenderer extends BaseEntityRenderer {
   private renderLineEndpointDots(start: Point2D, end: Point2D, entity: EntityModel): void {
     const screenStart = this.worldToScreen(start);
     const screenEnd = this.worldToScreen(end);
-    
+
     // 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ ΧΡΏΜΑ - το fillStyle έχει ήδη οριστεί από το renderWithPhases
-    const dotRadius = 4;
-    
+    // 🏢 ADR-124: Centralized dot radius
+    const dotRadius = RENDER_GEOMETRY.DOT_RADIUS;
+
     // ⚡ NUCLEAR: LINE ENDPOINT DOTS ELIMINATED
   }
 
@@ -201,7 +204,8 @@ export class LineRenderer extends BaseEntityRenderer {
 
   private renderPreviewLineWithDistance(screenStart: Point2D, screenEnd: Point2D, worldStart: Point2D, worldEnd: Point2D): void {
     // Use shared utility for split line rendering
-    const textGap = clamp(30 * this.transform.scale, 20, 60); // Scale gap with zoom
+    // 🏢 ADR-124: Centralized text gap calculation
+    const textGap = calculateTextGap(this.transform.scale);
     const { midpoint } = renderSplitLine(this.ctx, screenStart, screenEnd, textGap);
     
     // Calculate and display distance at midpoint using shared utility

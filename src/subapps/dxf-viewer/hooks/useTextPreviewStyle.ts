@@ -5,6 +5,8 @@
 
 import { textStyleStore } from '../stores/TextStyleStore';
 import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-107: Centralized Text Metrics Ratios
+import { TEXT_METRICS_RATIOS } from '../config/text-rendering-config';
 
 export interface TextPreviewStyle {
   enabled: boolean;          // ΝΕΟ! Ενεργοποίηση/απενεργοποίηση κειμένου
@@ -130,12 +132,13 @@ export function renderStyledTextWithOverride(
   let adjustedY = y;
   let adjustedFontSize = fontSize;
 
+  // 🏢 ADR-107: Use centralized text metrics ratios for super/subscript
   if (style.isSuperscript || style.isSubscript) {
-    adjustedFontSize = Math.round(fontSize * 0.75); // 75% του κανονικού μεγέθους
+    adjustedFontSize = Math.round(fontSize * TEXT_METRICS_RATIOS.SCRIPT_SIZE_RATIO); // 75% του κανονικού μεγέθους
     if (style.isSuperscript) {
-      adjustedY = y - fontSize * 0.3; // Πάνω από τη γραμμή βάσης
+      adjustedY = y - fontSize * TEXT_METRICS_RATIOS.SUPERSCRIPT_OFFSET; // Πάνω από τη γραμμή βάσης
     } else if (style.isSubscript) {
-      adjustedY = y + fontSize * 0.2; // Κάτω από τη γραμμή βάσης
+      adjustedY = y + fontSize * TEXT_METRICS_RATIOS.SUBSCRIPT_OFFSET; // Κάτω από τη γραμμή βάσης
     }
   }
 
@@ -155,11 +158,12 @@ export function renderStyledTextWithOverride(
     const textWidth = ctx.measureText(text).width;
     const decorations = style.textDecoration.split(' ');
 
+    // 🏢 ADR-107: Use centralized text metrics ratios for decorations
     ctx.strokeStyle = style.color;
-    ctx.lineWidth = Math.max(1, adjustedFontSize * 0.05); // 5% του font size
+    ctx.lineWidth = Math.max(1, adjustedFontSize * TEXT_METRICS_RATIOS.DECORATION_LINE_WIDTH);
 
     if (decorations.includes('underline')) {
-      const underlineY = adjustedY + adjustedFontSize * 0.15;
+      const underlineY = adjustedY + adjustedFontSize * TEXT_METRICS_RATIOS.UNDERLINE_OFFSET;
       ctx.beginPath();
       ctx.moveTo(x - textWidth / 2, underlineY);
       ctx.lineTo(x + textWidth / 2, underlineY);
@@ -167,7 +171,7 @@ export function renderStyledTextWithOverride(
     }
 
     if (decorations.includes('line-through')) {
-      const strikethroughY = adjustedY - adjustedFontSize * 0.05;
+      const strikethroughY = adjustedY - adjustedFontSize * TEXT_METRICS_RATIOS.STRIKETHROUGH_OFFSET;
       ctx.beginPath();
       ctx.moveTo(x - textWidth / 2, strikethroughY);
       ctx.lineTo(x + textWidth / 2, strikethroughY);

@@ -13,6 +13,8 @@ import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
 import { RENDER_LINE_WIDTHS, UI_FONTS, buildUIFont } from '../config/text-rendering-config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../rendering/primitives/canvasPaths';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { WORLD_ORIGIN } from '../config/geometry-constants';
 
 export class CalibrationGridRenderer implements UIRenderer {
   readonly type = 'calibration-grid';
@@ -69,9 +71,9 @@ export class CalibrationGridRenderer implements UIRenderer {
     const spacing = settings.gridSpacing; // e.g. 100mm
 
     // ✅ UNIFIED WITH RULERS: Use CoordinateTransforms to find world (0,0)
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
     const { CoordinateTransforms } = require('../rendering/core/CoordinateTransforms');
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CoordinateTransforms.worldToScreen(worldOrigin, transform, viewport);
+    const screenOrigin = CoordinateTransforms.worldToScreen(WORLD_ORIGIN, transform, viewport);
     const originScreenX = screenOrigin.x;
     const originScreenY = screenOrigin.y;
 
@@ -83,7 +85,7 @@ export class CalibrationGridRenderer implements UIRenderer {
 
     // 🔍 DEBUG: Log calibration grid calculation
     console.log('🎯 CalibrationGrid DEBUG (UNIFIED):', {
-      worldOrigin,
+      WORLD_ORIGIN,
       screenOrigin,
       viewportHeight: viewport.height,
       viewportWidth: viewport.width,
@@ -138,9 +140,9 @@ export class CalibrationGridRenderer implements UIRenderer {
     viewport: Viewport
   ): void {
     // Import CoordinateTransforms for proper world-to-screen conversion
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
     const { CoordinateTransforms } = require('../rendering/core/CoordinateTransforms');
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CoordinateTransforms.worldToScreen(worldOrigin, transform, viewport);
+    const screenOrigin = CoordinateTransforms.worldToScreen(WORLD_ORIGIN, transform, viewport);
     const originScreenX = screenOrigin.x;
     const originScreenY = screenOrigin.y;
 
@@ -181,9 +183,9 @@ export class CalibrationGridRenderer implements UIRenderer {
     const labelSpacing = spacing * 2; // Every 200mm for readability
 
     // ✅ UNIFIED: Use CoordinateTransforms to find world (0,0) (same as grid lines)
+    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
     const { CoordinateTransforms } = require('../rendering/core/CoordinateTransforms');
-    const worldOrigin = { x: 0, y: 0 };
-    const screenOrigin = CoordinateTransforms.worldToScreen(worldOrigin, transform, viewport);
+    const screenOrigin = CoordinateTransforms.worldToScreen(WORLD_ORIGIN, transform, viewport);
     const originScreenX = screenOrigin.x;
     const originScreenY = screenOrigin.y;
 

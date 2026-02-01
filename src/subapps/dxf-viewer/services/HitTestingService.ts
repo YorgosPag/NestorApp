@@ -13,6 +13,8 @@ import type {
   EntityModel
 } from '../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion, DxfLine, DxfCircle, DxfPolyline, DxfArc, DxfText } from '../canvas-v2/dxf-canvas/dxf-types';
+// 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
+import { TOLERANCE_CONFIG } from '../config/tolerance-config';
 
 export interface HitTestResult {
   entityId: string | null;
@@ -79,8 +81,9 @@ export class HitTestingService {
       const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, viewport);
 
       // Perform hit test using centralized HitTester
+      // 🏢 ADR-105: Use centralized fallback tolerance
       const hits = this.hitTester.hitTestPoint(worldPos, {
-        tolerance: options.tolerance || 5,
+        tolerance: options.tolerance || TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
         maxResults: options.maxResults || 1,
         useSpatialIndex: true,
         layerFilter: options.layerFilter,

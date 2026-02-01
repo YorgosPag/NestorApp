@@ -6,6 +6,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { UI_COLORS } from '../../../../../config/color-config';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
+// 🏢 ADR-107: Centralized Text Metrics Ratios
+import { TEXT_METRICS_RATIOS } from '../../../../../config/text-rendering-config';
 
 // Helper για SVG stroke-dasharray (χρησιμοποιεί την κεντρική getDashArray)
 const getDashArrayForSvg = (type: LineType | string, scale: number = 1) => {
@@ -112,11 +114,14 @@ export function LinePreview({ lineSettings, textSettings, gripSettings, activeTa
                                 fontFamily.toLowerCase().includes('courier') ||
                                 fontFamily.toLowerCase().includes('consolas');
 
-              const charWidthRatio = isMonospace ? 0.6 : 0.55;
-              const boldMultiplier = isBold ? 1.15 : 1;
+              // 🏢 ADR-107: Use centralized text metrics ratios
+              const charWidthRatio = isMonospace
+                ? TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE
+                : TEXT_METRICS_RATIOS.CHAR_WIDTH_PROPORTIONAL;
+              const boldMultiplier = isBold ? TEXT_METRICS_RATIOS.BOLD_WIDTH_MULTIPLIER : 1;
 
               const hasScript = textSettings.isSuperscript || textSettings.isSubscript;
-              const scriptMultiplier = hasScript ? 1.2 : 1;
+              const scriptMultiplier = hasScript ? TEXT_METRICS_RATIOS.SCRIPT_SPACING_MULTIPLIER : 1;
 
               const estimatedTextWidth = text.length * fontSize * charWidthRatio * boldMultiplier * scriptMultiplier;
               const padding = Math.max(24, fontSize * 1.0);

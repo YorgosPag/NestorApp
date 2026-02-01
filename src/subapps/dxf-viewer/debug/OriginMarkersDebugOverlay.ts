@@ -5,7 +5,8 @@
  */
 
 import type { Point2D, Viewport, ViewTransform } from '../rendering/types/Types';
-import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-119: Centralized Opacity Constants
+import { UI_COLORS, OPACITY } from '../config/color-config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../rendering/primitives/canvasPaths';
 // 🏢 ADR-091: Centralized UI Fonts
@@ -217,7 +218,7 @@ export class OriginMarkersDebugOverlay {
 
       // 🎯 DEBUG TEST: Σχεδιάζω ένα φωτεινό κόκκινο τετράγωνο στη γωνία
       ctx.fillStyle = UI_COLORS.DEBUG_ORIGIN;
-      ctx.globalAlpha = 1.0;
+      ctx.globalAlpha = OPACITY.OPAQUE; // 🏢 ADR-119: Centralized opacity
       ctx.fillRect(10, 10, 50, 50);
       console.log('🎯 TEST RECTANGLE DRAWN!');
 

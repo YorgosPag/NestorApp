@@ -19,3 +19,19 @@ export * from './utils/number';
 
 // Types
 export * from './types';
+
+// Keyboard Handlers (Strategy Pattern)
+// Note: Phase type already exported from ./useDynamicInput, so we explicitly export other types
+export {
+  getKeyboardHandler,
+  hasCustomKeyboardHandler,
+  getRegisteredKeyboardTools,
+  handleLineKeyboard,
+  handleCircleKeyboard,
+  handleDefaultKeyboard,
+  type KeyboardHandler,
+  type KeyboardHandlerContext,
+  type KeyboardHandlerActions,
+  type KeyboardHandlerRefs,
+  type DynamicSubmitPayload
+} from './keyboard-handlers';

@@ -22,8 +22,8 @@ import { formatDistance, formatAngle } from './shared/distance-label-utils';
 import { degToRad, radToDeg } from './shared/geometry-utils';
 // 🏢 ADR-074: Centralized Point On Circle
 import { pointOnCircle } from './shared/geometry-rendering-utils';
-// 🏢 ADR-091: Centralized Text Label Offsets
-import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
+// 🏢 ADR-091: Centralized Text Label Offsets, ADR-124: Dot Radius
+import { TEXT_LABEL_OFFSETS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 
 export class ArcRenderer extends BaseEntityRenderer {
   private validateArc(entity: EntityModel) {
@@ -110,7 +110,8 @@ export class ArcRenderer extends BaseEntityRenderer {
 
   private renderArcYellowDots(center: Point2D, radius: number, startAngle: number, endAngle: number): void {
     // 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ ΧΡΏΜΑ - το fillStyle έχει ήδη οριστεί από το renderWithPhases
-    const dotRadius = 4;
+    // 🏢 ADR-124: Centralized dot radius
+    const dotRadius = RENDER_GEOMETRY.DOT_RADIUS;
 
     // 🏢 ADR-067: Use centralized angle conversion
     const startRad = degToRad(startAngle);

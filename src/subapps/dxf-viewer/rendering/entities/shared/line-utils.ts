@@ -12,6 +12,8 @@ import { pointToLineDistance, radToDeg, normalizeAngleDeg, calculateMidpoint } f
 // 🏢 ADR-065: Centralized Distance & Vector Operations
 // 🏢 ADR-090: Centralized Point Vector Operations
 import { calculateDistance, getUnitVector, offsetPoint } from './geometry-rendering-utils';
+// 🏢 ADR-118: Centralized Zero Point Pattern
+import { ZERO_VECTOR } from '../../../config/geometry-constants';
 
 /**
  * Creates edge midpoint grips for line-based entities
@@ -184,7 +186,8 @@ export function calculateSplitLineGap(
       gapStart: screenStart,
       gapEnd: screenEnd,
       midpoint: screenStart,
-      unitVector: { x: 0, y: 0 }
+      // 🏢 ADR-118: Use centralized ZERO_VECTOR for zero-length line
+      unitVector: ZERO_VECTOR
     };
   }
 

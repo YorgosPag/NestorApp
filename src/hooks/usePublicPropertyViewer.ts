@@ -2,12 +2,26 @@
 
 import { useMemo, useState } from 'react';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
-import type { Property } from '@/types/property-viewer';
+import type { Property, OperationalStatus } from '@/types/property-viewer';
 import type { FilterState } from '@/types/property-viewer';
 
-// Allowed statuses for public viewing
-const PUBLIC_ALLOWED_STATUSES = ['for-sale', 'for-rent', 'reserved'] as const;
-type PublicAllowedStatus = typeof PUBLIC_ALLOWED_STATUSES[number];
+// ============================================================================
+// 🏢 ENTERPRISE: Public Viewing Eligibility Configuration
+// ============================================================================
+// A property is eligible for public viewing if:
+// 1. It has a market status indicating availability (for-sale, for-rent, reserved)
+// 2. OR it has an operational status of 'ready' (construction complete)
+//
+// This dual-check ensures properties appear even when only one status is set,
+// which is common during data migration or when using different status systems.
+// ============================================================================
+
+// Market/sales statuses that indicate public availability
+const PUBLIC_ALLOWED_MARKET_STATUSES = ['for-sale', 'for-rent', 'reserved'] as const;
+type PublicAllowedMarketStatus = typeof PUBLIC_ALLOWED_MARKET_STATUSES[number];
+
+// Operational statuses that indicate the property is ready for viewing
+const PUBLIC_ALLOWED_OPERATIONAL_STATUSES: OperationalStatus[] = ['ready'];
 
 // 🏢 ADR-051: Use undefined for empty ranges (enterprise-grade type consistency)
 const DEFAULT_PUBLIC_FILTERS: FilterState = {
@@ -41,12 +55,25 @@ export function usePublicPropertyViewer() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_PUBLIC_FILTERS);
 
   // Φιλτράρουμε properties για public view
+  // 🏢 ENTERPRISE: Dual-check για market status ΚΑΙ operational status
   const publicProperties = useMemo(() => {
     if (!Array.isArray(allProperties)) return [];
-    
-    return allProperties.filter((property: Property) =>
-      PUBLIC_ALLOWED_STATUSES.includes(property.status as PublicAllowedStatus)
-    );
+
+    return allProperties.filter((property: Property) => {
+      // Check 1: Has an allowed market status (for-sale, for-rent, reserved)
+      const hasAllowedMarketStatus = PUBLIC_ALLOWED_MARKET_STATUSES.includes(
+        property.status as PublicAllowedMarketStatus
+      );
+
+      // Check 2: Has an allowed operational status (ready = construction complete)
+      const hasAllowedOperationalStatus = property.operationalStatus
+        ? PUBLIC_ALLOWED_OPERATIONAL_STATUSES.includes(property.operationalStatus)
+        : false;
+
+      // Property is eligible if EITHER condition is met
+      // This ensures properties appear even when only one status system is used
+      return hasAllowedMarketStatus || hasAllowedOperationalStatus;
+    });
   }, [allProperties]);
 
   // Apply filters to public properties
@@ -78,21 +105,25 @@ export function usePublicPropertyViewer() {
     }
 
     // Price range filter
-    if (filters.priceRange.min !== null || filters.priceRange.max !== null) {
+    // 🏢 ENTERPRISE: Check for both null AND undefined (ADR-051 uses undefined for empty ranges)
+    const hasPriceFilter = filters.priceRange.min != null || filters.priceRange.max != null;
+    if (hasPriceFilter) {
       filtered = filtered.filter(property => {
         const price = property.price || 0;
-        const minOk = filters.priceRange.min === null || price >= filters.priceRange.min;
-        const maxOk = filters.priceRange.max === null || price <= filters.priceRange.max;
+        const minOk = filters.priceRange.min == null || price >= filters.priceRange.min;
+        const maxOk = filters.priceRange.max == null || price <= filters.priceRange.max;
         return minOk && maxOk;
       });
     }
 
     // Area range filter
-    if (filters.areaRange.min !== null || filters.areaRange.max !== null) {
+    // 🏢 ENTERPRISE: Check for both null AND undefined (ADR-051 uses undefined for empty ranges)
+    const hasAreaFilter = filters.areaRange.min != null || filters.areaRange.max != null;
+    if (hasAreaFilter) {
       filtered = filtered.filter(property => {
         const area = property.area || 0;
-        const minOk = filters.areaRange.min === null || area >= filters.areaRange.min;
-        const maxOk = filters.areaRange.max === null || area <= filters.areaRange.max;
+        const minOk = filters.areaRange.min == null || area >= filters.areaRange.min;
+        const maxOk = filters.areaRange.max == null || area <= filters.areaRange.max;
         return minOk && maxOk;
       });
     }
@@ -101,20 +132,30 @@ export function usePublicPropertyViewer() {
   }, [publicProperties, filters]);
 
   // Υπολογίζουμε stats μόνο για διαθέσιμα properties
+  // 🏢 ENTERPRISE: Stats calculation considers both market and operational status
   const dashboardStats = useMemo(() => {
     const availableProps = publicProperties;
-    
+
+    // Helper: Check if property is available for sale/rent
+    const isAvailableForTransaction = (p: Property): boolean => {
+      const hasMarketStatus = p.status === 'for-sale' || p.status === 'for-rent';
+      const isReady = p.operationalStatus === 'ready';
+      return hasMarketStatus || isReady;
+    };
+
     return {
       totalProperties: availableProps.length,
-      availableProperties: availableProps.filter(p => p.status === 'for-sale' || p.status === 'for-rent').length,
+      availableProperties: availableProps.filter(isAvailableForTransaction).length,
       soldProperties: 0, // Δεν εμφανίζουμε sold properties
       totalValue: availableProps.reduce((sum, p) => sum + (p.price || 0), 0),
       totalArea: availableProps.reduce((sum, p) => sum + (p.area || 0), 0),
-      averagePrice: availableProps.length > 0 ? 
+      averagePrice: availableProps.length > 0 ?
         availableProps.reduce((sum, p) => sum + (p.price || 0), 0) / availableProps.length : 0,
-      propertiesByStatus: availableProps.reduce((acc, p) => { 
-        acc[p.status] = (acc[p.status] || 0) + 1; 
-        return acc; 
+      // 🏢 ENTERPRISE: Group by effective status (market or operational)
+      propertiesByStatus: availableProps.reduce((acc, p) => {
+        const effectiveStatus = p.status || p.operationalStatus || 'unknown';
+        acc[effectiveStatus] = (acc[effectiveStatus] || 0) + 1;
+        return acc;
       }, {} as Record<string, number>),
       propertiesByType: availableProps.reduce((acc, p) => { 
         acc[p.type] = (acc[p.type] || 0) + 1; 
@@ -126,7 +167,14 @@ export function usePublicPropertyViewer() {
         return acc; 
       }, {} as Record<string, number>),
       totalStorageUnits: availableProps.filter(p => p.type === 'Αποθήκη').length,
-      availableStorageUnits: availableProps.filter(p => p.type === 'Αποθήκη' && (p.status === 'for-sale' || p.status === 'for-rent')).length,
+      // 🏢 ENTERPRISE: Storage availability considers both status systems
+      availableStorageUnits: availableProps.filter(p =>
+        p.type === 'Αποθήκη' && (
+          p.status === 'for-sale' ||
+          p.status === 'for-rent' ||
+          p.operationalStatus === 'ready'
+        )
+      ).length,
       soldStorageUnits: 0, // Δεν εμφανίζουμε sold
       uniqueBuildings: [...new Set(availableProps.map(p => p.building))].length,
       reserved: availableProps.filter(p => p.status === 'reserved').length,

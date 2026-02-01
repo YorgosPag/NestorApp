@@ -10,7 +10,8 @@ import type { Point2D } from '../types/Types';
 import { renderDotAtPoint, renderDotsAtPoints } from './shared/dot-rendering-utils';
 import { createGripsFromPoints, createCenterGrip } from './shared/grip-utils';
 import { validateEllipseEntity } from './shared/entity-validation-utils';
-import { applyRenderingTransform } from './shared/geometry-rendering-utils';
+// 🏢 ADR-065: Centralized Distance Calculation
+import { applyRenderingTransform, calculateDistance } from './shared/geometry-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { TAU } from '../primitives/canvasPaths';
@@ -18,8 +19,8 @@ import { TAU } from '../primitives/canvasPaths';
 import { degToRad } from './shared/geometry-utils';
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatDistance } from './shared/distance-label-utils';
-// 🏢 ADR-091: Centralized Text Label Offsets
-import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
+// 🏢 ADR-091: Centralized Text Label Offsets, ADR-124: Dot Radius
+import { TEXT_LABEL_OFFSETS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 
 export class EllipseRenderer extends BaseEntityRenderer {
   // Helper method to calculate axis endpoints (eliminates duplication)
@@ -115,7 +116,8 @@ export class EllipseRenderer extends BaseEntityRenderer {
 
   private renderEllipseYellowDots(center: Point2D, majorAxis: number, minorAxis: number, rotation: number): void {
     // 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ ΧΡΏΜΑ - το fillStyle έχει ήδη οριστεί από το renderWithPhases
-    const dotRadius = 4;
+    // 🏢 ADR-124: Centralized dot radius
+    const dotRadius = RENDER_GEOMETRY.DOT_RADIUS;
     
     // Center dot
     renderDotAtPoint(this.ctx, this.worldToScreen, center, dotRadius);
@@ -150,11 +152,8 @@ export class EllipseRenderer extends BaseEntityRenderer {
 
     const { center, majorAxis, minorAxis } = ellipseData;
 
-    // Simple distance-based hit test to ellipse center
-    const distance = Math.sqrt(
-      Math.pow(point.x - center.x, 2) +
-      Math.pow(point.y - center.y, 2)
-    );
+    // 🏢 ADR-065: Use centralized distance calculation
+    const distance = calculateDistance(point, center);
 
     // Check if point is within ellipse bounds (approximation)
     const maxRadius = Math.max(majorAxis, minorAxis);

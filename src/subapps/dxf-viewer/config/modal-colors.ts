@@ -7,8 +7,11 @@
  * @compliance CLAUDE.md Enterprise Standards
  */
 
+// 🏢 ENTERPRISE: Import centralized color configuration
+import { UI_COLORS } from './color-config';
+
 // Import existing color systems from centralized design tokens - mock for TypeScript compatibility
-const colors = { primary: '#3B82F6', secondary: '#6B7280' };
+const colors = { primary: UI_COLORS.BUTTON_PRIMARY, secondary: UI_COLORS.BUTTON_SECONDARY };
 const COLOR_BRIDGE = {
   bg: {
     primary: 'bg-white',

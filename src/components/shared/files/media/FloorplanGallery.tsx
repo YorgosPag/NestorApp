@@ -276,6 +276,16 @@ export function FloorplanGallery({
   // =========================================================================
 
   useEffect(() => {
+    // 🔍 DEBUG: Log what we're receiving
+    console.log('🖼️ [FloorplanGallery] Scene loading effect:', {
+      hasCurrentFile: !!currentFile,
+      fileId: currentFile?.id,
+      hasProcessedData: !!currentFile?.processedData,
+      hasScene: !!currentFile?.processedData?.scene,
+      sceneEntitiesCount: currentFile?.processedData?.scene?.entities?.length || 0,
+      sceneLayersType: currentFile?.processedData?.scene?.layers ? (Array.isArray(currentFile.processedData.scene.layers) ? 'array' : 'object') : 'none',
+    });
+
     if (!currentFile?.processedData) {
       setLoadedScene(null);
       return;
@@ -343,6 +353,15 @@ export function FloorplanGallery({
   // =========================================================================
 
   useEffect(() => {
+    // 🔍 DEBUG: Log rendering conditions
+    console.log('🎨 [FloorplanGallery] Canvas render effect:', {
+      hasLoadedScene: !!loadedScene,
+      hasCanvasRef: !!canvasRef.current,
+      isDxf,
+      entitiesCount: loadedScene?.entities?.length || 0,
+      boundsPresent: !!loadedScene?.bounds,
+    });
+
     if (!loadedScene || !canvasRef.current || !isDxf) return;
     if (!loadedScene.entities || loadedScene.entities.length === 0) return;
 
@@ -378,6 +397,16 @@ export function FloorplanGallery({
 
     const offsetX = (canvas.width - drawingWidth * scale) / 2;
     const offsetY = (canvas.height - drawingHeight * scale) / 2;
+
+    // 🔍 DEBUG: Log rendering parameters
+    console.log('🎨 [FloorplanGallery] Rendering:', {
+      canvasSize: { width: canvas.width, height: canvas.height },
+      bounds,
+      drawingSize: { width: drawingWidth, height: drawingHeight },
+      scale,
+      offset: { x: offsetX, y: offsetY },
+      entitiesToRender: loadedScene.entities.length,
+    });
 
     // Layer color helper
     const getLayerColor = (layerName: string): string => {
@@ -694,14 +723,22 @@ export function FloorplanGallery({
           </section>
         )}
 
-        {/* DXF Canvas */}
-        {isDxf && !isLoading && !sceneError && (
+        {/* DXF Canvas - Only render when loadedScene exists */}
+        {isDxf && !isLoading && !sceneError && loadedScene && (
           <canvas
             ref={canvasRef}
             className="w-full h-full"
             style={canvasUtilities.geoInteractive.canvasFullDisplay()}
             aria-label={t('floorplan.canvasAlt', { fileName: currentFile?.displayName })}
           />
+        )}
+
+        {/* DXF file but no scene loaded - show message */}
+        {isDxf && !isLoading && !sceneError && !loadedScene && currentFile?.processedData && (
+          <section className="absolute inset-0 flex flex-col items-center justify-center">
+            <Map className={cn(iconSizes.xl, 'text-warning mb-2')} aria-hidden="true" />
+            <span className="text-sm text-muted-foreground">Δεν φορτώθηκαν δεδομένα κάτοψης</span>
+          </section>
         )}
 
         {/* PDF Display */}

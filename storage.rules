@@ -296,6 +296,27 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 🏢 DXF SCENES (Enterprise DXF Storage)
+    // =========================================================================
+    // Path: /dxf-scenes/{fileId}/{filename}
+    // Used by DxfFirestoreService for storing parsed DXF scene data
+    // Includes: project floorplans, building floorplans, floor floorplans, unit floorplans
+    // =========================================================================
+
+    match /dxf-scenes/{fileId}/{fileName} {
+
+      // 📖 READ: Any authenticated user (internal tool)
+      allow read: if isAuthenticated();
+
+      // ✍️ WRITE: Authenticated users (internal tool)
+      allow write: if isAuthenticated()
+                   && isValidFileSize();
+
+      // 🗑️ DELETE: Authenticated users
+      allow delete: if isAuthenticated();
+    }
+
+    // =========================================================================
     // 🎨 CAD FILES (DXF/Technical Drawings)
     // =========================================================================
     // Path: /cad/{userId}/{fileId}/{filename}
