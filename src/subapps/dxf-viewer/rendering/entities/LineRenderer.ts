@@ -55,6 +55,8 @@ import { createVertexGrip } from './shared/grip-utils';
 import { calculateDistance, getPerpendicularUnitVector, calculateTextGap } from './shared/geometry-rendering-utils';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isLineEntity, type Entity } from '../../types/entities';
+// 🏢 ADR-165: Centralized Entity Validation
+import { validateLineEntity } from './shared/entity-validation-utils';
 // 🏢 ADR-124: Centralized Dot Radius
 import { RENDER_GEOMETRY } from '../../config/text-rendering-config';
 // 🏢 ADR-150: Centralized Arrow/Marker Size
@@ -62,16 +64,10 @@ import { OVERLAY_DIMENSIONS } from '../../utils/hover/config';
 
 export class LineRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    // 🏢 ADR-102: Use centralized type guard
-    if (!isLineEntity(entity as Entity)) return;
-
-    // Use type guard for safe property access
-    if (!('start' in entity) || !('end' in entity)) return;
-    const lineEntity = entity as EntityModel & { start: Point2D; end: Point2D };
-    const start = lineEntity.start;
-    const end = lineEntity.end;
-
-    if (!start || !end) return;
+    // 🏢 ADR-165: Use centralized entity validation
+    const lineData = validateLineEntity(entity);
+    if (!lineData) return;
+    const { start, end } = lineData;
 
     // 🔺 ΌΛΑ τα lines χρησιμοποιούν το 3-phase system
     // Measurement flag affects μόνο το styling, όχι τη λογική
@@ -130,16 +126,11 @@ export class LineRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    // 🏢 ADR-102: Use centralized type guard
-    if (!isLineEntity(entity as Entity)) return [];
-
-    // Use type guard for safe property access
-    if (!('start' in entity) || !('end' in entity)) return [];
-    const lineEntity = entity as EntityModel & { start: Point2D; end: Point2D };
-    const start = lineEntity.start;
-    const end = lineEntity.end;
-
-    if (!start || !end) return [];
+    // 🏢 ADR-165: Use centralized entity validation
+    const lineData = validateLineEntity(entity);
+    if (!lineData) return [];
+    const { start, end } = lineData;
+    const lineEntity = entity as EntityModel & { id: string };
     
     const grips: GripInfo[] = [];
     
@@ -226,14 +217,11 @@ export class LineRenderer extends BaseEntityRenderer {
 
   // ✅ ENTERPRISE FIX: Implement abstract hitTest method
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
-    // 🏢 ADR-102: Use centralized type guard
-    if (!isLineEntity(entity as Entity)) return false;
+    // 🏢 ADR-165: Use centralized entity validation
+    const lineData = validateLineEntity(entity);
+    if (!lineData) return false;
 
-    // Use type guard for safe property access
-    if (!('start' in entity) || !('end' in entity)) return false;
-    const lineEntity = entity as EntityModel & { start: Point2D; end: Point2D };
-
-    const distance = pointToLineDistance(point, lineEntity.start, lineEntity.end);
+    const distance = pointToLineDistance(point, lineData.start, lineData.end);
     return distance <= tolerance;
   }
 

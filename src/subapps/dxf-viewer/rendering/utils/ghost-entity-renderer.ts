@@ -38,6 +38,8 @@ import type { Point2D } from '../types/Types';
 // 🏢 ADR-090: Centralized UI Fonts
 // 🏢 ADR-091: Centralized Text Label Offsets
 import { RENDER_LINE_WIDTHS, LINE_DASH_PATTERNS, UI_FONTS, TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
+// 🏢 ADR-166: Centralized Ghost Entity Colors
+import { GHOST_COLORS } from '../../config/color-config';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addCirclePath, TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-066: Centralized Angle Calculation
@@ -56,30 +58,30 @@ import { OVERLAY_DIMENSIONS } from '../../utils/hover/config';
  * Ghost rendering configuration
  */
 export const GHOST_RENDER_CONFIG = {
-  /** Default ghost fill color (semi-transparent blue) */
-  GHOST_FILL: 'rgba(0, 120, 255, 0.15)',
-  /** Default ghost stroke color */
-  GHOST_STROKE: 'rgba(0, 120, 255, 0.6)',
+  /** Default ghost fill color - 🏢 ADR-166: Centralized ghost colors */
+  GHOST_FILL: GHOST_COLORS.FILL,
+  /** Default ghost stroke color - 🏢 ADR-166 */
+  GHOST_STROKE: GHOST_COLORS.STROKE,
   /** Ghost stroke width (pixels) - 🏢 ADR-044: Use centralized constant */
   GHOST_STROKE_WIDTH: RENDER_LINE_WIDTHS.GHOST,
-  /** Delta line color */
-  DELTA_LINE_COLOR: 'rgba(255, 165, 0, 0.8)',
+  /** Delta line color - 🏢 ADR-166 */
+  DELTA_LINE_COLOR: GHOST_COLORS.DELTA_LINE,
   /** Delta line width - 🏢 ADR-044: Use centralized constant */
   DELTA_LINE_WIDTH: RENDER_LINE_WIDTHS.DELTA,
   /** Delta line dash pattern - 🏢 ADR-083: Use centralized pattern */
   DELTA_LINE_DASH: LINE_DASH_PATTERNS.GHOST,
   /** Coordinate readout font - 🏢 ADR-090: Centralized font */
   READOUT_FONT: UI_FONTS.MONOSPACE.SMALL,
-  /** Coordinate readout color */
-  READOUT_COLOR: 'rgba(0, 0, 0, 0.8)',
-  /** Coordinate readout background */
-  READOUT_BG: 'rgba(255, 255, 255, 0.9)',
+  /** Coordinate readout color - 🏢 ADR-166 */
+  READOUT_COLOR: GHOST_COLORS.READOUT_TEXT,
+  /** Coordinate readout background - 🏢 ADR-166 */
+  READOUT_BG: GHOST_COLORS.READOUT_BG,
   /** @deprecated Use TEXT_LABEL_OFFSETS.LABEL_BOX_PADDING - 🏢 ADR-137 */
   READOUT_PADDING: 4, // Kept for backward compatibility, use TEXT_LABEL_OFFSETS instead
   /** Maximum entities to render detailed ghost (performance) */
   DETAIL_THRESHOLD: 50,
-  /** Simplified box rendering for large selections */
-  SIMPLIFIED_BOX_COLOR: 'rgba(0, 120, 255, 0.3)',
+  /** Simplified box rendering for large selections - 🏢 ADR-166 */
+  SIMPLIFIED_BOX_COLOR: GHOST_COLORS.SIMPLIFIED_BOX,
 } as const;
 
 // ============================================================================

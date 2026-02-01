@@ -19,13 +19,16 @@ import { pointOnCircle, calculateDistance } from '../../rendering/entities/share
 // 🏢 ADR-114: Centralized Bounding Box Calculation
 import { calculateBoundingBox } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
-import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
+// 🏢 ADR-166: Centralized GAP_TOLERANCE & ARC_TESSELLATION
+import { GEOMETRY_PRECISION, ENTITY_LIMITS, ARC_TESSELLATION } from '../../config/tolerance-config';
 
 export const GEOMETRY_CONSTANTS = {
   // 🏢 ADR-079: Using centralized precision constants
   EPS: GEOMETRY_PRECISION.ENTITY_GAP, // Relaxed tolerance for better entity matching (1e-3)
-  GAP_TOLERANCE: 0.5, // Allow moderate gaps between entities (CAD units)
-  DEFAULT_ARC_SEGMENTS: 24
+  // 🏢 ADR-166: Using centralized entity gap tolerance
+  GAP_TOLERANCE: ENTITY_LIMITS.GAP_TOLERANCE, // Allow moderate gaps between entities (0.5 CAD units)
+  // 🏢 ADR-166: Using centralized arc tessellation segments
+  DEFAULT_ARC_SEGMENTS: ARC_TESSELLATION.DEFAULT_SEGMENTS, // 24 segments = 15° per segment
 } as const;
 
 // Point2D imported from shared types

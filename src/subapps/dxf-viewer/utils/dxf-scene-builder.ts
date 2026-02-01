@@ -8,6 +8,8 @@ import { getLayerNameOrDefault } from '../config/layer-config';
 import { TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
 import { createInfinityBounds } from '../config/geometry-constants';
+// 🏢 ADR-163: Centralized Vector Magnitude (replaces inline Math.sqrt patterns)
+import { vectorMagnitude } from '../rendering/entities/shared/geometry-rendering-utils';
 
 export class DxfSceneBuilder {
   static buildScene(content: string): SceneModel {
@@ -277,7 +279,8 @@ export class DxfSceneBuilder {
     // Υπολογισμός διαγωνίου κάτοψης
     const width = bounds.max.x - bounds.min.x;
     const height = bounds.max.y - bounds.min.y;
-    const diagonal = Math.sqrt(width * width + height * height);
+    // 🏢 ADR-163: Centralized vectorMagnitude (replaces inline Math.sqrt)
+    const diagonal = vectorMagnitude({ x: width, y: height });
 
     // Guard: Αν η διαγώνιος είναι πολύ μικρή, μην κάνεις τίποτα
     if (diagonal < 1) {

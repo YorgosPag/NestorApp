@@ -124,14 +124,7 @@ export function validateArcEntity(entity: EntityModel): {
   // 🏢 ENTERPRISE: Extract counterclockwise flag (defaults to false if not set)
   const counterclockwise = arcEntity.counterclockwise ?? false;
 
-  // 🔍 DEBUG: Log what validateArcEntity reads from entity
-  console.log('🔍 validateArcEntity:', {
-    entityId: entity.id,
-    rawCounterclockwise: arcEntity.counterclockwise,
-    resolvedCounterclockwise: counterclockwise,
-    startAngle,
-    endAngle
-  });
+  // 🏢 ADR-165: Debug console.log removed for production cleanup
 
   if (!center || !radius || startAngle === undefined || endAngle === undefined) return null;
 

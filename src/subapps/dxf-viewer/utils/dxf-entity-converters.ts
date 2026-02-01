@@ -31,7 +31,8 @@ import type { Point2D } from '../rendering/types/Types';
 import type { DxfHeaderData, DimStyleMap, DimStyleEntry } from './dxf-entity-parser';
 // 🏢 ADR-065: Centralized Distance Calculation
 // 🏢 ADR-078: Centralized Angle Calculation
-import { calculateDistance, calculateAngle } from '../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-163: Centralized Vector Magnitude (replaces inline Math.sqrt patterns)
+import { calculateDistance, calculateAngle, vectorMagnitude } from '../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { radToDeg } from '../rendering/entities/shared/geometry-utils';
 
@@ -250,7 +251,8 @@ export function convertEllipse(
   }
 
   // Calculate radius as average of major and minor axes
-  const majorRadius = Math.sqrt(majorAxisX * majorAxisX + majorAxisY * majorAxisY);
+  // 🏢 ADR-163: Centralized vectorMagnitude (replaces inline Math.sqrt)
+  const majorRadius = vectorMagnitude({ x: majorAxisX, y: majorAxisY });
   const minorRadius = majorRadius * ratio;
   const approxRadius = (majorRadius + minorRadius) / 2;
 

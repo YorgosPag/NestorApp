@@ -8,6 +8,8 @@ import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isCircleEntity, type CircleEntity, type Entity } from '../../types/entities';
+// 🏢 ADR-165: Centralized Entity Validation
+import { validateCircleEntity } from './shared/entity-validation-utils';
 
 // ✅ ENTERPRISE: Extended circle entity interface για mode-specific properties
 interface ExtendedCircleEntity extends CircleEntity {
@@ -39,15 +41,10 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 export class CircleRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    // 🏢 ADR-102: Use centralized type guard (replaces both type check and property validation)
-    if (!isCircleEntity(entity as Entity)) return;
-
-    // After type guard, safe to cast to CircleEntity
-    const circleEntity = entity as CircleEntity;
-    const center = circleEntity.center;
-    const radius = circleEntity.radius;
-
-    if (!center || !radius) return;
+    // 🏢 ADR-165: Use centralized entity validation
+    const circleData = validateCircleEntity(entity);
+    if (!circleData) return;
+    const { center, radius } = circleData;
 
     // Use universal 3-phase rendering template
     this.renderWithPhases(
@@ -153,18 +150,11 @@ export class CircleRenderer extends BaseEntityRenderer {
   // ΔΙΑΓΡΑΜΜΕΝΗ FUNCTION: renderCircleYellowDots - αφαιρέθηκε για εξάλειψη κίτρινων grips
 
   getGrips(entity: EntityModel): GripInfo[] {
-    // 🏢 ADR-102: Use centralized type guard
-    if (!isCircleEntity(entity as Entity)) {
-      return [];
-    }
-
-    // After type guard, safe to cast to CircleEntity
-    const circleEntity = entity as CircleEntity;
+    // 🏢 ADR-165: Use centralized entity validation
+    const circleData = validateCircleEntity(entity);
+    if (!circleData) return [];
+    const { center, radius } = circleData;
     const grips: GripInfo[] = [];
-    const center = circleEntity.center;
-    const radius = circleEntity.radius;
-
-    if (!center || !radius) return grips;
     
     // Center grip
     grips.push({
@@ -191,17 +181,10 @@ export class CircleRenderer extends BaseEntityRenderer {
   // ✅ ENTERPRISE: Required abstract method implementation
   // 🏢 ADR-105: Use centralized fallback tolerance
   hitTest(entity: EntityModel, point: Point2D, tolerance: number = TOLERANCE_CONFIG.HIT_TEST_FALLBACK): boolean {
-    // 🏢 ADR-102: Use centralized type guard
-    if (!isCircleEntity(entity as Entity)) {
-      return false;
-    }
-
-    // After type guard, safe to cast to CircleEntity
-    const circleEntity = entity as CircleEntity;
-    const center = circleEntity.center;
-    const radius = circleEntity.radius;
-
-    if (!center || !radius) return false;
+    // 🏢 ADR-165: Use centralized entity validation
+    const circleData = validateCircleEntity(entity);
+    if (!circleData) return false;
+    const { center, radius } = circleData;
 
     // Distance from point to circle center
     // 🏢 ADR-109: Use centralized distance calculation

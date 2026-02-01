@@ -9,6 +9,8 @@ import React, { useState, useRef } from 'react';
 import { Lightbulb } from 'lucide-react';
 import { CoordinateTransforms } from '../rendering/core/CoordinateTransforms';
 import type { Point2D, Viewport } from '../rendering/types/Types';
+// 🏢 ADR-163: Centralized Vector Magnitude (replaces inline Math.sqrt patterns)
+import { vectorMagnitude } from '../rendering/entities/shared/geometry-rendering-utils';
 import type { SceneModel } from '../types/scene';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { portalComponents, layoutUtilities } from '@/styles/design-tokens';
@@ -80,9 +82,8 @@ export default function CoordinateCalibrationOverlay({
     const worldPt = CoordinateTransforms.screenToWorld(cssPoint, { scale: 1, offsetX: 0, offsetY: 0 }, viewport);
     const backToCss = CoordinateTransforms.worldToScreen(worldPt, { scale: 1, offsetX: 0, offsetY: 0 }, viewport);
 
-    const deltaX = cssPoint.x - backToCss.x;
-    const deltaY = cssPoint.y - backToCss.y;
-    return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    // 🏢 ADR-163: Centralized vectorMagnitude (replaces inline Math.sqrt)
+    return vectorMagnitude({ x: cssPoint.x - backToCss.x, y: cssPoint.y - backToCss.y });
   };
 
   // Handle calibration click test

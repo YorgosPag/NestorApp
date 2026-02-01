@@ -6,11 +6,22 @@
 
 **📊 Quick Stats**: 31 Enterprise Systems | 20,380+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: ADR-051 Enterprise Filter System Centralization (2026-01-29)
+> **🆕 Latest**: ADR-GEOMETRY Domain Consolidation - 26 ADRs → 1 (2026-02-01)
 
 ---
 
 ## 🏛️ **ARCHITECTURAL DECISIONS (ADRs)**
+
+### 📐 **DOMAIN ADRs** (Consolidated)
+
+| Domain ADR | Περιεχόμενο | Merged ADRs | Status |
+|------------|-------------|-------------|--------|
+| **[ADR-GEOMETRY](reference/adrs/ADR-GEOMETRY.md)** | Geometry & Math Operations | 26 ADRs | ✅ Active |
+
+> **🎯 Domain ADR Pattern**: Αντί για πολλά μικρά ADRs, ομαδοποιούμε σε domain-based ADRs.
+> Νέες αποφάσεις **ΠΡΟΣΤΙΘΕΝΤΑΙ** στο υπάρχον domain ADR αντί να δημιουργούν νέο αρχείο.
+
+### 🎨 **KEY DECISIONS**
 
 | ADR | Decision | Canonical Component | Deprecated | Date |
 |-----|----------|---------------------|------------|------|

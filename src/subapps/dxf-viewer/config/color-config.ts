@@ -635,3 +635,41 @@ export const UI_GRADIENTS = {
   GREEN_CHANNEL: 'linear-gradient(to right, #000000, #00ff00)',
   BLUE_CHANNEL: 'linear-gradient(to right, #000000, #0000ff)',
 } as const;
+
+// ============================================================================
+// 🏢 ADR-166: GHOST ENTITY COLORS (2026-02-01)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Ghost Entity Rendering Colors
+ *
+ * Colors for drag preview ghost entities.
+ * Based on: AutoCAD drag preview, Figma selection ghost, Adobe Illustrator preview
+ *
+ * @see ghost-entity-renderer.ts
+ * @since 2026-02-01
+ */
+export const GHOST_COLORS = {
+  /** Ghost base color (blue) - #0078FF */
+  BASE: '#0078FF',
+
+  /** Ghost fill color (15% opacity) */
+  FILL: 'rgba(0, 120, 255, 0.15)',
+
+  /** Ghost stroke color (60% opacity) */
+  STROKE: 'rgba(0, 120, 255, 0.6)',
+
+  /** Delta line color (orange, 80% opacity) */
+  DELTA_LINE: 'rgba(255, 165, 0, 0.8)',
+
+  /** Coordinate readout text color */
+  READOUT_TEXT: 'rgba(0, 0, 0, 0.8)',
+
+  /** Coordinate readout background */
+  READOUT_BG: 'rgba(255, 255, 255, 0.9)',
+
+  /** Simplified box color for large selections (30% opacity) */
+  SIMPLIFIED_BOX: 'rgba(0, 120, 255, 0.3)',
+} as const;
+
+export type GhostColorKey = keyof typeof GHOST_COLORS;

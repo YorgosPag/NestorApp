@@ -91,6 +91,14 @@ SOS. SOS. N.4 ΑΠΑΓΟΡΕΥΕΤΑΙ:
    - 🔄 **MIGRATE ON TOUCH**: Όταν αγγίζεται legacy file → ΥΠΟΧΡΕΩΤΙΚΗ αντικατάσταση με Radix Select
    - 📍 **Documentation**: `docs/centralized-systems/reference/adr-index.md#adr-001-selectdropdown-component`
 
+8. **ADR Numbering: ΧΡΗΣΗ ΔΙΑΘΕΣΙΜΩΝ IDs ΠΡΩΤΑ** - **ΚΑΝΟΝΑΣ 2026-02-01**
+   - ✅ **ΔΙΑΘΕΣΙΜΑ IDs** (χρησιμοποίησε αυτά ΠΡΩΤΑ πριν το 167+):
+     `034, 065, 066, 067, 068, 070, 071, 072, 073, 074, 077, 078, 079, 080, 089, 090, 100, 103, 121, 131, 132, 134, 145, 156, 161, 164`
+   - 📝 **ΓΙΑΤΙ ΚΕΝΑ**: Αυτά τα IDs ενοποιήθηκαν στο ADR-GEOMETRY (consolidation document)
+   - 📍 **ADR-GEOMETRY**: Περιέχει 26 geometry-related αποφάσεις → `adrs/ADR-GEOMETRY.md`
+   - 📁 **ARCHIVED**: Τα παλιά αρχεία στο `adrs/archived/` για historical reference
+   - ⚠️ **ΣΗΜΑΝΤΙΚΟ**: Όταν τελειώσουν τα διαθέσιμα IDs, συνέχισε από ADR-167
+
 ### 🛑 HARD STOP PROTOCOL - ΥΠΟΧΡΕΩΤΙΚΗ ΔΙΑΔΙΚΑΣΙΑ:
 
 **ΠΡΙΝ από κάθε Edit/Write/MultiEdit command:**

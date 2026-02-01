@@ -154,6 +154,29 @@ export const ENTITY_LIMITS = {
   MIN_SIZE: 0.001,
   /** Constraint solving tolerance (0.001) */
   CONSTRAINT_TOLERANCE: 0.001,
+  /** Gap tolerance for entity chain matching (0.5 CAD units) - 🏢 ADR-166 */
+  GAP_TOLERANCE: 0.5,
+} as const;
+
+// ===== ARC TESSELLATION CONFIGURATION =====
+// 🏢 ADR-166: Centralized Arc Tessellation Constants (2026-02-01)
+
+/**
+ * 🎯 ARC TESSELLATION CONSTANTS
+ * Segments για arc-to-polyline conversion
+ *
+ * Used for:
+ * - Arc rendering (tessellation to line segments)
+ * - Arc-to-polyline conversion in GeometryUtils
+ * - Smooth curve approximation in DXF processing
+ *
+ * @example
+ * import { ARC_TESSELLATION } from '../config/tolerance-config';
+ * const segments = ARC_TESSELLATION.DEFAULT_SEGMENTS; // 24
+ */
+export const ARC_TESSELLATION = {
+  /** Default arc segments for tessellation (24 segments = 15° per segment) */
+  DEFAULT_SEGMENTS: 24,
 } as const;
 
 // ===== SNAP ENGINE CONFIGURATION =====

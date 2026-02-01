@@ -22,6 +22,7 @@ const OUTPUT_PATH = path.join(__dirname, '..', 'adr-index.md');
 
 // Category order for display
 const CATEGORY_ORDER = [
+  'Domain - Geometry',  // Domain ADRs first
   'UI Components',
   'Design System',
   'Canvas & Rendering',
@@ -38,6 +39,7 @@ const CATEGORY_ORDER = [
 
 // Category icons
 const CATEGORY_ICONS = {
+  'Domain - Geometry': '📐',  // Domain ADRs
   'UI Components': '🎨',
   'Design System': '🎨',
   'Canvas & Rendering': '🖼️',
@@ -225,9 +227,22 @@ function generateIndex(adrs) {
   // Footer
   content += `## 📝 **ADDING NEW ADRs**
 
-1. Create a new file in \`adrs/\` using the template: \`adrs/_template.md\`
-2. Follow the naming convention: \`ADR-NNN-short-description.md\`
-3. Run the generator script to update this index:
+### 🔢 ΔΙΑΘΕΣΙΜΑ IDs (χρησιμοποίησε αυτά ΠΡΩΤΑ):
+
+\`\`\`
+034, 065, 066, 067, 068, 070, 071, 072, 073, 074,
+077, 078, 079, 080, 089, 090, 100, 103, 121, 131,
+132, 134, 145, 156, 161, 164
+\`\`\`
+
+> **⚠️ ΣΗΜΑΝΤΙΚΟ**: Αυτά τα IDs ενοποιήθηκαν στο ADR-GEOMETRY. Χρησιμοποίησέ τα για νέα ADRs πριν συνεχίσεις από το 167+.
+
+### 📋 Οδηγίες:
+
+1. **Επέλεξε ID** από τη λίστα παραπάνω (ή 167+ αν τελείωσαν)
+2. Create a new file in \`adrs/\` using the template: \`adrs/_template.md\`
+3. Follow the naming convention: \`ADR-NNN-short-description.md\`
+4. Run the generator script to update this index:
    \`\`\`bash
    node docs/centralized-systems/reference/scripts/generate-adr-index.cjs
    \`\`\`
@@ -270,8 +285,14 @@ async function main() {
     process.exit(1);
   }
 
-  // Read all ADR files
-  const files = fs.readdirSync(ADRS_FOLDER).filter(f => f.endsWith('.md') && !f.startsWith('_'));
+  // Read all ADR files (exclude archived folder and templates)
+  const files = fs.readdirSync(ADRS_FOLDER).filter(f => {
+    // Exclude directories (like 'archived')
+    const fullPath = path.join(ADRS_FOLDER, f);
+    if (fs.statSync(fullPath).isDirectory()) return false;
+    // Only include .md files that don't start with _
+    return f.endsWith('.md') && !f.startsWith('_');
+  });
   console.log(`📁 Found ${files.length} ADR files in ${ADRS_FOLDER}\n`);
 
   const adrs = [];

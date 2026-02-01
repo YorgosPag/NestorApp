@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 143 ADRs | Last Updated: 2026-02-01
+**📊 Stats**: 120 ADRs | Last Updated: 2026-02-01
 
 ---
 
@@ -15,10 +15,11 @@
 
 | Category | Count | Quick Jump |
 |----------|-------|------------|
+| 📐 **Domain - Geometry** | 1 | [View](#domain-geometry) |
 | 🎨 **UI Components** | 12 | [View](#ui-components) |
 | 🎨 **Design System** | 7 | [View](#design-system) |
 | 🖼️ **Canvas & Rendering** | 39 | [View](#canvas-rendering) |
-| 📊 **Data & State** | 36 | [View](#data-state) |
+| 📊 **Data & State** | 10 | [View](#data-state) |
 | ✏️ **Drawing System** | 16 | [View](#drawing-system) |
 | 📂 **Entity Systems** | 10 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
@@ -27,7 +28,7 @@
 | 🔧 **Backend Systems** | 2 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 2 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 1 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 3 | [View](#uncategorized) |
 
 ---
 
@@ -35,6 +36,7 @@
 
 | ADR | Decision | Status | Date | Category | Link |
 |-----|----------|--------|------|----------|------|
+| **ADR-GEOMETRY** | Geometry & Math Operations | ✅ ACTIVE | 2026-01-01 | Domain - Geometry | [📄](./adrs/ADR-GEOMETRY.md) |
 | **ADR-001** | Select/Dropdown Component | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-001-select-dropdown-component.md) |
 | **ADR-002** | Enterprise Z-Index Hierarchy | ✅ APPROVED | 2026-01-01 | Design System | [📄](./adrs/ADR-002-enterprise-z-index-hierarchy.md) |
 | **ADR-003** | Floating Panel Compound Component | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-003-floating-panel-compound-component.md) |
@@ -65,7 +67,6 @@
 | **ADR-030** | Unified Frame Scheduler | ✅ APPROVED | 2026-02-01 | Performance | [📄](./adrs/ADR-030-unified-frame-scheduler.md) |
 | **ADR-031** | Enterprise Command Pattern (Undo/Redo) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-031-enterprise-command-pattern-undo-redo.md) |
 | **ADR-032** | Drawing State Machine | ✅ COMPLETED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-032-drawing-state-machine.md) |
-| **ADR-034** | Geometry Calculations Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-034-geometry-calculations-centralization.md) |
 | **ADR-035** | Tool Overlay Mode Metadata | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-035-tool-overlay-mode-metadata.md) |
 | **ADR-036** | Enterprise Structured Logging | ✅ APPROVED | 2026-01-01 | Performance | [📄](./adrs/ADR-036-enterprise-structured-logging.md) |
 | **ADR-037** | Product Tour System | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-037-product-tour-system.md) |
@@ -95,22 +96,9 @@
 | **ADR-062** | No Debug/Admin Analysis Endpoints in Production | ✅ ✅ Active | 2026-01-17 | Security & Auth | [📄](./adrs/ADR-062-no-debug-endpoints-in-production.md) |
 | **ADR-063** | Company Isolation via Custom Claims | ✅ ✅ Active | 2026-01-18 | Security & Auth | [📄](./adrs/ADR-063-company-isolation-custom-claims.md) |
 | **ADR-064** | Shape Primitives Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-064-shape-primitives-centralization.md) |
-| **ADR-065** | Distance & Vector Operations Centralization | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-065-distance-vector-operations-centralization.md) |
-| **ADR-066** | Angle Calculation Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-066-angle-calculation-centralization.md) |
-| **ADR-067** | Radians/Degrees Conversion Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-067-radians-degrees-conversion-centralization.md) |
-| **ADR-068** | Angle Normalization Centralization | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-068-angle-normalization-centralization.md) |
 | **ADR-069** | Number Formatting Centralization (formatDistance/formatAngle) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-069-number-formatting-centralization-formatdistance-fo.md) |
-| **ADR-070** | Vector Magnitude Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-070-vector-magnitude-centralization.md) |
-| **ADR-071** | Clamp Function Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-071-clamp-function-centralization.md) |
-| **ADR-072** | Dot Product Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-072-dot-product-centralization.md) |
-| **ADR-073** | Midpoint/Bisector Calculation Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-073-midpoint-bisector-calculation-centralization.md) |
-| **ADR-074** | Point On Circle Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-074-point-on-circle-centralization.md) |
 | **ADR-075** | Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-075-grip-size-multipliers-centralization.md) |
 | **ADR-076** | RGB ↔ HEX Color Conversion Centralization | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-076-rgb-hex-color-conversion-centralization.md) |
-| **ADR-077** | TAU Constant Centralization (2 * Math.PI) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-077-tau-constant-centralization-2-math-pi.md) |
-| **ADR-078** | Vector Angle & Angle Between Vectors Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-078-vector-angle-angle-between-vectors-centralization.md) |
-| **ADR-079** | Geometric Epsilon/Precision Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-079-geometric-epsilon-precision-centralization.md) |
-| **ADR-080** | Rectangle Bounds Centralization (rectFromTwoPoints) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-080-rectangle-bounds-centralization-rectfromtwopoints.md) |
 | **ADR-081** | Percentage Formatting Centralization (formatPercent) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-081-percentage-formatting-centralization-formatpercent.md) |
 | **ADR-082** | Enterprise Number Formatting System (AutoCAD-Grade) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-082-enterprise-number-formatting-system-autocad-grade.md) |
 | **ADR-083** | Line Dash Patterns Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering | [📄](./adrs/ADR-083-line-dash-patterns-centralization.md) |
@@ -119,8 +107,6 @@
 | **ADR-086** | Hover Utilities Scattered Code Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-086-hover-utilities-scattered-code-centralization.md) |
 | **ADR-087** | Snap Engine Configuration Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-087-snap-engine-configuration-centralization.md) |
 | **ADR-088** | Pixel-Perfect Rendering Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-088-pixel-perfect-rendering-centralization.md) |
-| **ADR-089** | Point-In-Bounds Centralization | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-089-point-in-bounds-centralization.md) |
-| **ADR-090** | Point Vector Operations Centralization | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-090-point-vector-operations-centralization.md) |
 | **ADR-091** | Scattered Code Centralization (Fonts + Formatting) | ✅ APPROVED | 2026-01-01 | Design System | [📄](./adrs/ADR-091-scattered-code-centralization-fonts-formatting.md) |
 | **ADR-092** | Centralized localStorage Service | ✅ APPROVED | 2026-01-01 | Infrastructure | [📄](./adrs/ADR-092-centralized-localstorage-service.md) |
 | **ADR-093** | Text Label Offsets Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-093-text-label-offsets-centralization.md) |
@@ -129,10 +115,8 @@
 | **ADR-096** | Interaction Timing Constants Centralization | ✅ APPROVED | 2026-01-31 | Tools & Keyboard | [📄](./adrs/ADR-096-interaction-timing-constants-centralization.md) |
 | **ADR-098** | Timing Delays Centralization (setTimeout/setInterval) | ✅ APPROVED | 2026-01-31 | Tools & Keyboard | [📄](./adrs/ADR-098-timing-delays-centralization-settimeout-setinterva.md) |
 | **ADR-099** | Polygon & Measurement Tolerances Centralization | ✅ APPROVED | 2026-01-31 | Drawing System | [📄](./adrs/ADR-099-polygon-measurement-tolerances-centralization.md) |
-| **ADR-100** | Inline Degrees-to-Radians Conversion Centralization | ✅ APPROVED | 2026-01-31 | Data & State | [📄](./adrs/ADR-100-inline-degrees-to-radians-conversion-centralizatio.md) |
 | **ADR-101** | Deep Clone Centralization | ✅ APPROVED | 2026-01-31 | Data & State | [📄](./adrs/ADR-101-deep-clone-centralization.md) |
 | **ADR-102** | Origin Markers Centralization (DXF/Layer/Debug) | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-102-origin-markers-centralization-dxf-layer-debug.md) |
-| **ADR-103** | Angular Constants Centralization (RIGHT_ANGLE, ARROW_ANGLE) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-103-angular-constants-centralization-right-angle-arrow.md) |
 | **ADR-104** | Entity Type Guards Centralization | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-104-entity-type-guards-centralization.md) |
 | **ADR-105** | Hit Test Fallback Tolerance Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-105-hit-test-fallback-tolerance-centralization.md) |
 | **ADR-106** | Edge Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-106-edge-grip-size-multipliers-centralization.md) |
@@ -142,7 +126,6 @@
 | **ADR-117** | DPI-Aware Pixel Calculations Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-117-dpi-aware-pixel-calculations-centralization.md) |
 | **ADR-119** | RAF Consolidation to UnifiedFrameScheduler | ✅ IMPLEMENTED | 2026-02-01 | Performance | [📄](./adrs/ADR-119-raf-consolidation-to-unifiedframescheduler.md) |
 | **ADR-120** | Canvas globalAlpha Opacity Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-120-canvas-globalalpha-opacity-centralization.md) |
-| **ADR-121** | Zero Point Pattern Centralization (WORLD_ORIGIN, ZERO_VECTOR, EMPTY_BOUNDS) | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-121-zero-point-pattern-centralization-world-origin-zer.md) |
 | **ADR-123** | PreviewRenderer Color Centralization (hex → UI_COLORS) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-123-previewrenderer-color-centralization-hex-ui-colors.md) |
 | **ADR-124** | Renderer Constants Centralization (DOT_RADIUS, TEXT_GAP, CIRCLE_LABEL) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-124-renderer-constants-centralization-dot-radius-text-.md) |
 | **ADR-125** | Context Creation Pattern (Provider Colocation) | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-125-context-creation-pattern-provider-colocation.md) |
@@ -150,10 +133,7 @@
 | **ADR-128** | Switch Status Variant (Green ON / Red OFF) | ✅ APPROVED | 2026-02-01 | UI Components | [📄](./adrs/ADR-128-switch-status-variant-green-on-red-off.md) |
 | **ADR-129** | Layer Entity Filtering Centralization | ✅ IMPLEMENTED | 2026-02-01 | Entity Systems | [📄](./adrs/ADR-129-layer-entity-filtering-centralization.md) |
 | **ADR-130** | Default Layer Name Centralization | ✅ IMPLEMENTED | 2026-02-01 | Entity Systems | [📄](./adrs/ADR-130-default-layer-name-centralization.md) |
-| **ADR-131** | clampScale Function Centralization (PDF + Zoom) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-131-clampscale-function-centralization-pdf-zoom.md) |
-| **ADR-132** | Coordinate Validation Centralization (isValidPoint/isValidPointStrict) | ✅ IMPLEMENTED | 2026-02-01 | Data & State | [📄](./adrs/ADR-132-coordinate-validation-centralization-isvalidpoint-.md) |
 | **ADR-133** | SVG Stroke Width Centralization | ✅ IMPLEMENTED | 2026-02-01 | Design System | [📄](./adrs/ADR-133-svg-stroke-width-centralization.md) |
-| **ADR-134** | Angle Difference Normalization (normalizeAngleDiff) | ✅ IMPLEMENTED | 2026-02-01 | Data & State | [📄](./adrs/ADR-134-angle-difference-normalization-normalizeanglediff.md) |
 | **ADR-135** | Menu Icons Centralization | ✅ IMPLEMENTED | 2026-02-01 | UI Components | [📄](./adrs/ADR-135-menu-icons-centralization.md) |
 | **ADR-136** | Canvas Opacity Constants Centralization (Extended) | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-136-canvas-opacity-constants-centralization-extended.md) |
 | **ADR-137** | Snap Icon Geometry Centralization | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-137-snap-icon-geometry-centralization.md) |
@@ -162,22 +142,28 @@
 | **ADR-140** | Angle Measurement Visualization Constants | ✅ IMPLEMENTED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-140-angle-measurement-visualization-constants.md) |
 | **ADR-143** | Origin/Cursor Offset Constants Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-143-origin-cursor-offset-constants-centralization.md) |
 | **ADR-144** | Icon Click Sequence Colors Centralization | ✅ IMPLEMENTED | 2026-02-01 | UI Components | [📄](./adrs/ADR-144-icon-click-sequence-colors-centralization.md) |
-| **ADR-145** | MIN_POLY_POINTS Centralization | ✅ IMPLEMENTED | 2026-02-01 | Data & State | [📄](./adrs/ADR-145-min-poly-points-centralization.md) |
 | **ADR-146** | Canvas Size Observer Hook Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-146-canvas-size-observer-hook-centralization.md) |
 | **ADR-150** | Arrow Head Size Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-150-arrow-head-size-centralization.md) |
 | **ADR-151** | Grip Tolerance Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-151-grip-tolerance-centralization.md) |
 | **ADR-152** | Simple Coordinate Transform Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-152-simple-coordinate-transform-centralization.md) |
 | **ADR-153** | Snap Tooltip Offset Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-153-snap-tooltip-offset-centralization.md) |
 | **ADR-154** | Grip Line Width Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-154-grip-line-width-centralization.md) |
-| **ADR-156** | Degenerate Determinant Tolerance (GEOMETRY_PRECISION.DENOMINATOR_ZERO) | ✅ IMPLEMENTED | 2026-02-01 | Data & State | [📄](./adrs/ADR-156-degenerate-determinant-tolerance-geometry-precisio.md) |
 | **ADR-158** | Origin Axis Label Offsets Centralization (X/Y axis labels) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-158-origin-axis-label-offsets-centralization-x-y-axis-.md) |
 | **ADR-159** | Measurement Text Colors Separation (ANGLE vs DISTANCE) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System | [📄](./adrs/ADR-159-measurement-text-colors-separation-angle-vs-distan.md) |
 | **ADR-160** | Internal Angle Arc Rendering (dot product logic) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System | [📄](./adrs/ADR-160-internal-angle-arc-rendering-dot-product-logic.md) |
-| **ADR-161** | isFinite() Standardization (global → Number.isFinite) | ✅ IMPLEMENTED | 2026-02-01 | Data & State | [📄](./adrs/ADR-161-isfinite-standardization-global-number-isfinite.md) |
-| **ADR-164** | Line Direction Normalization → ADR-065 Functions | ✅ IMPLEMENTED | 2026-02-01 | Data & State | [📄](./adrs/ADR-164-line-direction-normalization-adr-065-functions.md) |
+| **ADR-165** | Entity Validation Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-165-entity-validation-centralization.md) |
+| **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
+
+---
+
+## 📐 **DOMAIN - GEOMETRY**
+
+| ADR | Decision | Status | Link |
+|-----|----------|--------|------|
+| **ADR-GEOMETRY** | Geometry & Math Operations | ✅ ACTIVE | [View](./adrs/ADR-GEOMETRY.md) |
 
 ---
 
@@ -266,40 +252,14 @@
 |-----|----------|--------|------|
 | **ADR-010** | Panel Type Centralization | ✅ APPROVED | [View](./adrs/ADR-010-panel-type-centralization.md) |
 | **ADR-031** | Enterprise Command Pattern (Undo/Redo) | ✅ APPROVED | [View](./adrs/ADR-031-enterprise-command-pattern-undo-redo.md) |
-| **ADR-034** | Geometry Calculations Centralization | ✅ APPROVED | [View](./adrs/ADR-034-geometry-calculations-centralization.md) |
-| **ADR-065** | Distance & Vector Operations Centralization | ✅ APPROVED | [View](./adrs/ADR-065-distance-vector-operations-centralization.md) |
-| **ADR-066** | Angle Calculation Centralization | ✅ APPROVED | [View](./adrs/ADR-066-angle-calculation-centralization.md) |
-| **ADR-067** | Radians/Degrees Conversion Centralization | ✅ APPROVED | [View](./adrs/ADR-067-radians-degrees-conversion-centralization.md) |
-| **ADR-068** | Angle Normalization Centralization | ✅ APPROVED | [View](./adrs/ADR-068-angle-normalization-centralization.md) |
 | **ADR-069** | Number Formatting Centralization (formatDistance/formatAngle) | ✅ APPROVED | [View](./adrs/ADR-069-number-formatting-centralization-formatdistance-fo.md) |
-| **ADR-070** | Vector Magnitude Centralization | ✅ APPROVED | [View](./adrs/ADR-070-vector-magnitude-centralization.md) |
-| **ADR-071** | Clamp Function Centralization | ✅ APPROVED | [View](./adrs/ADR-071-clamp-function-centralization.md) |
-| **ADR-072** | Dot Product Centralization | ✅ APPROVED | [View](./adrs/ADR-072-dot-product-centralization.md) |
-| **ADR-073** | Midpoint/Bisector Calculation Centralization | ✅ APPROVED | [View](./adrs/ADR-073-midpoint-bisector-calculation-centralization.md) |
-| **ADR-074** | Point On Circle Centralization | ✅ APPROVED | [View](./adrs/ADR-074-point-on-circle-centralization.md) |
 | **ADR-076** | RGB ↔ HEX Color Conversion Centralization | ✅ APPROVED | [View](./adrs/ADR-076-rgb-hex-color-conversion-centralization.md) |
-| **ADR-077** | TAU Constant Centralization (2 * Math.PI) | ✅ APPROVED | [View](./adrs/ADR-077-tau-constant-centralization-2-math-pi.md) |
-| **ADR-078** | Vector Angle & Angle Between Vectors Centralization | ✅ APPROVED | [View](./adrs/ADR-078-vector-angle-angle-between-vectors-centralization.md) |
-| **ADR-079** | Geometric Epsilon/Precision Centralization | ✅ APPROVED | [View](./adrs/ADR-079-geometric-epsilon-precision-centralization.md) |
-| **ADR-080** | Rectangle Bounds Centralization (rectFromTwoPoints) | ✅ APPROVED | [View](./adrs/ADR-080-rectangle-bounds-centralization-rectfromtwopoints.md) |
 | **ADR-081** | Percentage Formatting Centralization (formatPercent) | ✅ APPROVED | [View](./adrs/ADR-081-percentage-formatting-centralization-formatpercent.md) |
 | **ADR-082** | Enterprise Number Formatting System (AutoCAD-Grade) | ✅ APPROVED | [View](./adrs/ADR-082-enterprise-number-formatting-system-autocad-grade.md) |
 | **ADR-087** | Snap Engine Configuration Centralization | ✅ APPROVED | [View](./adrs/ADR-087-snap-engine-configuration-centralization.md) |
-| **ADR-089** | Point-In-Bounds Centralization | ✅ APPROVED | [View](./adrs/ADR-089-point-in-bounds-centralization.md) |
-| **ADR-090** | Point Vector Operations Centralization | ✅ APPROVED | [View](./adrs/ADR-090-point-vector-operations-centralization.md) |
-| **ADR-100** | Inline Degrees-to-Radians Conversion Centralization | ✅ APPROVED | [View](./adrs/ADR-100-inline-degrees-to-radians-conversion-centralizatio.md) |
 | **ADR-101** | Deep Clone Centralization | ✅ APPROVED | [View](./adrs/ADR-101-deep-clone-centralization.md) |
-| **ADR-103** | Angular Constants Centralization (RIGHT_ANGLE, ARROW_ANGLE) | ✅ APPROVED | [View](./adrs/ADR-103-angular-constants-centralization-right-angle-arrow.md) |
 | **ADR-108** | Text Metrics Ratios Centralization | ✅ APPROVED | [View](./adrs/ADR-108-text-metrics-ratios-centralization.md) |
-| **ADR-121** | Zero Point Pattern Centralization (WORLD_ORIGIN, ZERO_VECTOR, EMPTY_BOUNDS) | ✅ APPROVED | [View](./adrs/ADR-121-zero-point-pattern-centralization-world-origin-zer.md) |
 | **ADR-125** | Context Creation Pattern (Provider Colocation) | ✅ APPROVED | [View](./adrs/ADR-125-context-creation-pattern-provider-colocation.md) |
-| **ADR-131** | clampScale Function Centralization (PDF + Zoom) | ✅ APPROVED | [View](./adrs/ADR-131-clampscale-function-centralization-pdf-zoom.md) |
-| **ADR-132** | Coordinate Validation Centralization (isValidPoint/isValidPointStrict) | ✅ IMPLEMENTED | [View](./adrs/ADR-132-coordinate-validation-centralization-isvalidpoint-.md) |
-| **ADR-134** | Angle Difference Normalization (normalizeAngleDiff) | ✅ IMPLEMENTED | [View](./adrs/ADR-134-angle-difference-normalization-normalizeanglediff.md) |
-| **ADR-145** | MIN_POLY_POINTS Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-145-min-poly-points-centralization.md) |
-| **ADR-156** | Degenerate Determinant Tolerance (GEOMETRY_PRECISION.DENOMINATOR_ZERO) | ✅ IMPLEMENTED | [View](./adrs/ADR-156-degenerate-determinant-tolerance-geometry-precisio.md) |
-| **ADR-161** | isFinite() Standardization (global → Number.isFinite) | ✅ IMPLEMENTED | [View](./adrs/ADR-161-isfinite-standardization-global-number-isfinite.md) |
-| **ADR-164** | Line Direction Normalization → ADR-065 Functions | ✅ IMPLEMENTED | [View](./adrs/ADR-164-line-direction-normalization-adr-065-functions.md) |
 
 ---
 
@@ -411,15 +371,30 @@
 
 | ADR | Decision | Status | Link |
 |-----|----------|--------|------|
+| **ADR-165** | Entity Validation Centralization | ✅ APPROVED | [View](./adrs/ADR-165-entity-validation-centralization.md) |
+| **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | [View](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
 
 ## 📝 **ADDING NEW ADRs**
 
-1. Create a new file in `adrs/` using the template: `adrs/_template.md`
-2. Follow the naming convention: `ADR-NNN-short-description.md`
-3. Run the generator script to update this index:
+### 🔢 ΔΙΑΘΕΣΙΜΑ IDs (χρησιμοποίησε αυτά ΠΡΩΤΑ):
+
+```
+034, 065, 066, 067, 068, 070, 071, 072, 073, 074,
+077, 078, 079, 080, 089, 090, 100, 103, 121, 131,
+132, 134, 145, 156, 161, 164
+```
+
+> **⚠️ ΣΗΜΑΝΤΙΚΟ**: Αυτά τα IDs ενοποιήθηκαν στο ADR-GEOMETRY. Χρησιμοποίησέ τα για νέα ADRs πριν συνεχίσεις από το 167+.
+
+### 📋 Οδηγίες:
+
+1. **Επέλεξε ID** από τη λίστα παραπάνω (ή 167+ αν τελείωσαν)
+2. Create a new file in `adrs/` using the template: `adrs/_template.md`
+3. Follow the naming convention: `ADR-NNN-short-description.md`
+4. Run the generator script to update this index:
    ```bash
    node docs/centralized-systems/reference/scripts/generate-adr-index.cjs
    ```

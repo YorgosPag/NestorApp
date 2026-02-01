@@ -26,14 +26,11 @@ import { pointOnCircle } from './shared/geometry-rendering-utils';
 import { TEXT_LABEL_OFFSETS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 
 export class ArcRenderer extends BaseEntityRenderer {
-  private validateArc(entity: EntityModel) {
-    // 🔺 Χρήση κεντρικοποιημένης validation - μείωση διπλότυπου κώδικα
-    // 🏢 ENTERPRISE: validateArcEntity accepts EntityModel directly
-    return validateArcEntity(entity);
-  }
+  // 🏢 ADR-165: Removed validateArc wrapper - use validateArcEntity directly
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    const arcData = this.validateArc(entity);
+    // 🏢 ADR-165: Use centralized entity validation directly
+    const arcData = validateArcEntity(entity);
     if (!arcData) return;
 
     // 🔺 Χρήση 3-phase system όπως όλες οι άλλες οντότητες
@@ -50,13 +47,7 @@ export class ArcRenderer extends BaseEntityRenderer {
   }
 
   private renderArcGeometry(center: Point2D, radius: number, startAngle: number, endAngle: number, counterclockwise: boolean): void {
-    // 🔍 DEBUG: Log arc rendering parameters
-    console.log('🎯 ArcRenderer.renderArcGeometry:', {
-      startAngle,
-      endAngle,
-      counterclockwise,
-      center
-    });
+    // 🏢 ADR-165: Debug console.log removed for production cleanup
 
     // 🏢 ADR-067: Use centralized angle conversion
     const startRad = degToRad(startAngle);
@@ -77,12 +68,7 @@ export class ArcRenderer extends BaseEntityRenderer {
     // Flip counterclockwise because of Y-axis inversion
     const screenCounterclockwise = !counterclockwise;
 
-    // 🔍 DEBUG: Log screen values
-    console.log('🎯 ArcRenderer screen values:', {
-      screenStartRad: radToDeg(screenStartRad),
-      screenEndRad: radToDeg(screenEndRad),
-      screenCounterclockwise
-    });
+    // 🏢 ADR-165: Debug console.log removed for production cleanup
 
     // 🏢 ADR-058: Use centralized canvas primitives
     this.ctx.beginPath();
@@ -128,7 +114,8 @@ export class ArcRenderer extends BaseEntityRenderer {
   }
 
   getGrips(entity: EntityModel): GripInfo[] {
-    const arcData = this.validateArc(entity);
+    // 🏢 ADR-165: Use centralized entity validation directly
+    const arcData = validateArcEntity(entity);
     if (!arcData) return [];
     
     const { center, radius, startAngle, endAngle } = arcData;
@@ -149,7 +136,8 @@ export class ArcRenderer extends BaseEntityRenderer {
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
-    const arcData = this.validateArc(entity);
+    // 🏢 ADR-165: Use centralized entity validation directly
+    const arcData = validateArcEntity(entity);
     if (!arcData) return false;
 
     // Use centralized arc hit test
