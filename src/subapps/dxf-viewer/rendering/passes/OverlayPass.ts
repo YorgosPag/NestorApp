@@ -10,6 +10,8 @@ import { UI_COLORS } from '../../config/color-config';
 import { TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-138: Centralized Overlay Dimensions
 import { OVERLAY_DIMENSIONS } from '../../utils/hover/config';
+// 🏢 ADR-067: Centralized Text Label Offsets
+import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 
 export interface GripInfo {
   entityId: string;
@@ -325,9 +327,12 @@ export class OverlayPass implements IRenderPass {
         break;
 
       case 'grab':
-        // Draw hand cursor indicator
+        // Draw hand cursor indicator - 🏢 ADR-067: Centralized Text Label Offsets
         context.setState({ fillStyle: UI_COLORS.BLACK });
-        context.fillText('✋', screenPos.x + 10, screenPos.y - 10);
+        context.fillText('✋',
+          screenPos.x + TEXT_LABEL_OFFSETS.TOOLTIP_HORIZONTAL,
+          screenPos.y - TEXT_LABEL_OFFSETS.TOOLTIP_VERTICAL
+        );
         break;
 
       case 'move':

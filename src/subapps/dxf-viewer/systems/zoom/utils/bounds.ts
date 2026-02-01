@@ -19,6 +19,8 @@ import { EMPTY_BOUNDS, DEFAULT_BOUNDS } from '../../../config/geometry-constants
 import { createInfinityBounds, isInfinityBounds } from '../../../config/geometry-constants';
 // 🏢 ADR: Centralized point validation
 import { isValidPoint, isValidPointStrict } from '../../../rendering/entities/shared/entity-validation-utils';
+// 🏢 ADR-034: Centralized Bounds Validation
+import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 
 // ============================================================================
 // 🏢 CANONICAL TYPES
@@ -211,19 +213,10 @@ export function createCombinedBounds(
 
 /**
  * Έλεγχος αν bounds είναι valid
+ * 🏢 ADR-034: Delegates to centralized SpatialUtils.isValidRect
  */
 export function isValidBounds(bounds: { min: Point2D; max: Point2D } | null): boolean {
-  if (!bounds) return false;
-
-  // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
-  return (
-    Number.isFinite(bounds.min.x) &&
-    Number.isFinite(bounds.min.y) &&
-    Number.isFinite(bounds.max.x) &&
-    Number.isFinite(bounds.max.y) &&
-    bounds.max.x > bounds.min.x &&
-    bounds.max.y > bounds.min.y
-  );
+  return SpatialUtils.isValidRect(bounds);
 }
 
 /**

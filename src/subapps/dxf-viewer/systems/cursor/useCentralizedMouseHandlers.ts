@@ -5,6 +5,9 @@
  * 🚀 OPTIMIZED FOR HIGH PERFORMANCE PANNING - uses requestAnimationFrame
  */
 
+// 🔍 STOP 1 DEBUG FLAG (2026-02-01): Enable for tracing coordinate flow
+const DEBUG_MOUSE_HANDLERS = true; // Set to true to trace screenPos → worldPos flow
+
 import { useCallback, useRef, useState } from 'react';
 import { useCursor } from './CursorSystem';
 import { isPointInRulerArea } from './utils';
@@ -314,12 +317,28 @@ export function useCentralizedMouseHandlers({
     // Calculate world position using FRESH viewport (needed for callbacks even when throttled)
     const worldPos = CoordinateTransforms.screenToWorld(screenPos, transform, freshViewport);
 
+    // 🔍 STOP 1 DEBUG TRACE (2026-02-01): Log coordinate transformation
+    if (DEBUG_MOUSE_HANDLERS) {
+      console.log('🔍 [MouseHandlers] COORDS', {
+        screenPos: `(${screenPos.x.toFixed(1)}, ${screenPos.y.toFixed(1)})`,
+        worldPos: `(${worldPos.x.toFixed(2)}, ${worldPos.y.toFixed(2)})`,
+        viewport: `${freshViewport.width}x${freshViewport.height}`,
+        transform: `scale=${transform.scale.toFixed(2)}, offset=(${transform.offsetX.toFixed(1)}, ${transform.offsetY.toFixed(1)})`,
+        activeTool,
+        isDrawingMode: isInDrawingMode(activeTool, overlayMode),
+        timestamp: performance.now().toFixed(1)
+      });
+    }
+
     // Call parent callback (pass through - let parent decide throttling)
     onMouseMove?.(screenPos, worldPos);
 
     // 🏢 ENTERPRISE (2026-01-26): ADR-038 - Call drawing hover for preview line
     // Uses centralized isInDrawingMode (Single Source of Truth)
     if (onDrawingHover && isInDrawingMode(activeTool, overlayMode)) {
+      if (DEBUG_MOUSE_HANDLERS) {
+        console.log('🔍 [MouseHandlers] CALLING onDrawingHover', { worldX: worldPos.x, worldY: worldPos.y });
+      }
       onDrawingHover(worldPos);
     }
 

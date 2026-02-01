@@ -19,7 +19,7 @@ import { type AnySceneEntity, type SceneLayer } from '../../types/scene';
 import type { Region } from '../../types/overlay';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
 import { UnifiedEntitySelection } from './utils';
-import { calculateVerticesBounds } from '../../utils/geometry/GeometryUtils';
+import { calculateVerticesBounds, isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-089: Centralized Point-In-Bounds
 import { SpatialUtils } from '../../core/spatial/SpatialUtils';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
@@ -432,7 +432,7 @@ export class UniversalMarqueeSelector {
       x: (rectBounds.min.x + rectBounds.max.x) / 2,
       y: (rectBounds.min.y + rectBounds.max.y) / 2
     };
-    if (this.pointInPolygon(rectCenter, polygonVertices)) {
+    if (isPointInPolygon(rectCenter, polygonVertices)) {
       return true;
     }
 
@@ -499,23 +499,6 @@ export class UniversalMarqueeSelector {
   private static onSegment(pi: Point2D, pj: Point2D, pk: Point2D): boolean {
     return Math.min(pi.x, pj.x) <= pk.x && pk.x <= Math.max(pi.x, pj.x) &&
            Math.min(pi.y, pj.y) <= pk.y && pk.y <= Math.max(pi.y, pj.y);
-  }
-
-  /**
-   * 🏢 ENTERPRISE (2026-01-25): Point in polygon test using ray casting
-   */
-  private static pointInPolygon(point: Point2D, polygon: Point2D[]): boolean {
-    let inside = false;
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      const xi = polygon[i].x, yi = polygon[i].y;
-      const xj = polygon[j].x, yj = polygon[j].y;
-
-      if (((yi > point.y) !== (yj > point.y)) &&
-          (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi)) {
-        inside = !inside;
-      }
-    }
-    return inside;
   }
 
   /**

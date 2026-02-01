@@ -9,6 +9,8 @@ import { PANEL_LAYOUT } from '../config/panel-tokens';
 // 🏢 ENTERPRISE FIX (2026-01-27): ADR-045 - Use centralized margins (was hardcoded 80px!)
 import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
 import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
+// 🏢 ENTERPRISE: Centralized movement detection thresholds - ADR-079
+import { MOVEMENT_DETECTION } from '../config/tolerance-config';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import { matchesShortcut } from '../config/keyboard-shortcuts';
 
@@ -558,9 +560,10 @@ Check console for detailed metrics`;
 
         const currentTransform = canvasTransformRef.current;
         // Only update if values changed significantly - STRONGER thresholds
-        if (Math.abs(currentTransform.scale - newTransform.scale) > 0.01 ||
-            Math.abs(currentTransform.offsetX - newTransform.offsetX) > 5 ||
-            Math.abs(currentTransform.offsetY - newTransform.offsetY) > 5) {
+        // 🏢 ENTERPRISE: Use centralized MOVEMENT_DETECTION from tolerance-config.ts
+        if (Math.abs(currentTransform.scale - newTransform.scale) > MOVEMENT_DETECTION.ZOOM_PRESET_MATCH ||
+            Math.abs(currentTransform.offsetX - newTransform.offsetX) > MOVEMENT_DETECTION.OFFSET_CHANGE ||
+            Math.abs(currentTransform.offsetY - newTransform.offsetY) > MOVEMENT_DETECTION.OFFSET_CHANGE) {
           setCanvasTransform({
             scale: newTransform.scale || 1,
             offsetX: newTransform.offsetX || 0,

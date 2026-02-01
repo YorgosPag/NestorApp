@@ -6,6 +6,8 @@
 import type { UIElementSettings } from '../core/UIRenderer';
 // 🏢 ADR-134: Centralized Opacity Constants
 import { UI_COLORS, OPACITY } from '../../../config/color-config';
+// 🏢 ADR-034: Centralized Rendering Z-Index
+import { RENDERING_ZINDEX } from '../../../config/tolerance-config';
 
 /**
  * 🔺 GRID STYLES
@@ -88,5 +90,5 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
   majorGridWeight: 2,    // Thicker major grid lines
   minorGridWeight: 1,    // Standard minor grid lines
 
-  zIndex: 100           // Low priority for background rendering
+  zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
 };

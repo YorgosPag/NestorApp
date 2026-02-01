@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 120 ADRs | Last Updated: 2026-02-01
+**📊 Stats**: 124 ADRs | Last Updated: 2026-02-01
 
 ---
 
@@ -18,17 +18,17 @@
 | 📐 **Domain - Geometry** | 1 | [View](#domain-geometry) |
 | 🎨 **UI Components** | 12 | [View](#ui-components) |
 | 🎨 **Design System** | 7 | [View](#design-system) |
-| 🖼️ **Canvas & Rendering** | 39 | [View](#canvas-rendering) |
-| 📊 **Data & State** | 10 | [View](#data-state) |
+| 🖼️ **Canvas & Rendering** | 40 | [View](#canvas-rendering) |
+| 📊 **Data & State** | 11 | [View](#data-state) |
 | ✏️ **Drawing System** | 16 | [View](#drawing-system) |
-| 📂 **Entity Systems** | 10 | [View](#entity-systems) |
+| 📂 **Entity Systems** | 11 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 5 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 2 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 2 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 3 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 4 | [View](#uncategorized) |
 
 ---
 
@@ -67,6 +67,8 @@
 | **ADR-030** | Unified Frame Scheduler | ✅ APPROVED | 2026-02-01 | Performance | [📄](./adrs/ADR-030-unified-frame-scheduler.md) |
 | **ADR-031** | Enterprise Command Pattern (Undo/Redo) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-031-enterprise-command-pattern-undo-redo.md) |
 | **ADR-032** | Drawing State Machine | ✅ COMPLETED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-032-drawing-state-machine.md) |
+| **ADR-034** | EMPTY_SPATIAL_BOUNDS Consolidation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-034-empty-spatial-bounds-centralization.md) |
+| **ADR-034** | Validation Bounds Centralization | ✅ IMPLEMENTED | 2026-02-01 | Data & State | [📄](./adrs/ADR-034-validation-bounds-centralization.md) |
 | **ADR-035** | Tool Overlay Mode Metadata | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-035-tool-overlay-mode-metadata.md) |
 | **ADR-036** | Enterprise Structured Logging | ✅ APPROVED | 2026-01-01 | Performance | [📄](./adrs/ADR-036-enterprise-structured-logging.md) |
 | **ADR-037** | Product Tour System | ✅ APPROVED | 2026-01-01 | UI Components | [📄](./adrs/ADR-037-product-tour-system.md) |
@@ -96,6 +98,8 @@
 | **ADR-062** | No Debug/Admin Analysis Endpoints in Production | ✅ ✅ Active | 2026-01-17 | Security & Auth | [📄](./adrs/ADR-062-no-debug-endpoints-in-production.md) |
 | **ADR-063** | Company Isolation via Custom Claims | ✅ ✅ Active | 2026-01-18 | Security & Auth | [📄](./adrs/ADR-063-company-isolation-custom-claims.md) |
 | **ADR-064** | Shape Primitives Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-064-shape-primitives-centralization.md) |
+| **ADR-065** | Inline ID Generation Centralization | ✅ IMPLEMENTED | 2026-02-01 | Entity Systems | [📄](./adrs/ADR-065-inline-id-generation-centralization.md) |
+| **ADR-066** | Rendering Z-Index Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-066-rendering-zindex-centralization.md) |
 | **ADR-069** | Number Formatting Centralization (formatDistance/formatAngle) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-069-number-formatting-centralization-formatdistance-fo.md) |
 | **ADR-075** | Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-075-grip-size-multipliers-centralization.md) |
 | **ADR-076** | RGB ↔ HEX Color Conversion Centralization | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-076-rgb-hex-color-conversion-centralization.md) |
@@ -214,6 +218,7 @@
 | **ADR-045** | Viewport Ready Guard | ✅ APPROVED | [View](./adrs/ADR-045-viewport-ready-guard.md) |
 | **ADR-046** | Single Coordinate Transform | ✅ APPROVED | [View](./adrs/ADR-046-single-coordinate-transform.md) |
 | **ADR-058** | Canvas Drawing Primitives (Arc via Ellipse) | ✅ APPROVED | [View](./adrs/ADR-058-canvas-drawing-primitives-arc-via-ellipse.md) |
+| **ADR-163** | Canvas Layer Synchronization Fix (Flickering Bug) | ✅ IMPLEMENTED | [View](#adr-163-canvas-layer-synchronization) |
 | **ADR-064** | Shape Primitives Centralization | ✅ APPROVED | [View](./adrs/ADR-064-shape-primitives-centralization.md) |
 | **ADR-083** | Line Dash Patterns Centralization | ✅ APPROVED | [View](./adrs/ADR-083-line-dash-patterns-centralization.md) |
 | **ADR-084** | Scattered Code Centralization (Draggable + Canvas State) | ✅ APPROVED | [View](./adrs/ADR-084-scattered-code-centralization-draggable-canvas-sta.md) |
@@ -252,6 +257,7 @@
 |-----|----------|--------|------|
 | **ADR-010** | Panel Type Centralization | ✅ APPROVED | [View](./adrs/ADR-010-panel-type-centralization.md) |
 | **ADR-031** | Enterprise Command Pattern (Undo/Redo) | ✅ APPROVED | [View](./adrs/ADR-031-enterprise-command-pattern-undo-redo.md) |
+| **ADR-034** | Validation Bounds Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-034-validation-bounds-centralization.md) |
 | **ADR-069** | Number Formatting Centralization (formatDistance/formatAngle) | ✅ APPROVED | [View](./adrs/ADR-069-number-formatting-centralization-formatdistance-fo.md) |
 | **ADR-076** | RGB ↔ HEX Color Conversion Centralization | ✅ APPROVED | [View](./adrs/ADR-076-rgb-hex-color-conversion-centralization.md) |
 | **ADR-081** | Percentage Formatting Centralization (formatPercent) | ✅ APPROVED | [View](./adrs/ADR-081-percentage-formatting-centralization-formatpercent.md) |
@@ -371,6 +377,7 @@
 
 | ADR | Decision | Status | Link |
 |-----|----------|--------|------|
+| **ADR-034** | EMPTY_SPATIAL_BOUNDS Consolidation | ✅ APPROVED | [View](./adrs/ADR-034-empty-spatial-bounds-centralization.md) |
 | **ADR-165** | Entity Validation Centralization | ✅ APPROVED | [View](./adrs/ADR-165-entity-validation-centralization.md) |
 | **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | [View](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |

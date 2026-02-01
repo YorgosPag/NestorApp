@@ -17,6 +17,8 @@ import { TestsModal } from '../../TestsModal'; // Corrected path to TestsModal
 import { useBorderTokens } from '@/hooks/useBorderTokens'; // Enterprise border system
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors'; // Enterprise semantic colors
 import { PANEL_LAYOUT } from '../../../../config/panel-tokens'; // 🏢 ENTERPRISE: Centralized typography tokens
+// 🏢 ADR-XXX: Centralized viewport defaults
+import { VIEWPORT_DEFAULTS } from '../../../../config/transform-config';
 import type { TestDefinition, NotificationFn, DxfEntity, DxfValidationData } from '../types/tests.types'; // Adjust path accordingly
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import {
@@ -140,14 +142,14 @@ export function createPerformanceTest(notify: NotificationFn): TestDefinition {
       const iterations = 1000;
       const results: number[] = [];
 
-      // Simulate canvas operations
+      // Simulate canvas operations - 🏢 Using centralized VIEWPORT_DEFAULTS
       for (let i = 0; i < iterations; i++) {
         const startTime = performance.now();
 
         // Simulate expensive operation
         const canvas = document.createElement('canvas');
-        canvas.width = 800;
-        canvas.height = 600;
+        canvas.width = VIEWPORT_DEFAULTS.WIDTH;
+        canvas.height = VIEWPORT_DEFAULTS.HEIGHT;
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.fillStyle = 'red';

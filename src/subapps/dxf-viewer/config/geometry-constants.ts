@@ -222,3 +222,37 @@ export function createInfinityBounds(): InfinityBounds {
 export function isInfinityBounds(bounds: InfinityBounds): boolean {
   return bounds.minX === Infinity;
 }
+
+// ============================================================================
+// 📦 ADR-034: EMPTY_SPATIAL_BOUNDS CONSOLIDATION
+// ============================================================================
+
+/**
+ * 📦 EMPTY_SPATIAL_BOUNDS - Zero-size spatial bounds (SpatialBounds format)
+ *
+ * Use for:
+ * - Empty entity lists (getEntityBounds fallback)
+ * - Spatial index empty results
+ * - calculateBoundingBox empty array
+ * - boundsFromPoints empty array fallback
+ *
+ * 🏢 ADR-034: Centralized empty bounds for SpatialBounds format
+ * Consolidates 9 inline instances of { minX: 0, minY: 0, maxX: 0, maxY: 0 }
+ *
+ * @see EMPTY_BOUNDS for BoundingBox format ({ min: Point2D, max: Point2D })
+ *
+ * @example
+ * if (entities.length === 0) return EMPTY_SPATIAL_BOUNDS;
+ * if (points.length === 0) return EMPTY_SPATIAL_BOUNDS;
+ */
+export const EMPTY_SPATIAL_BOUNDS: Readonly<{
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}> = Object.freeze({
+  minX: 0,
+  minY: 0,
+  maxX: 0,
+  maxY: 0
+});

@@ -122,7 +122,7 @@ export function getPerpendicularFoot(
 /**
  * Check if point lies on line segment
  */
-import { TOLERANCE_CONFIG } from '../../../config/tolerance-config';
+import { TOLERANCE_CONFIG, SNAP_DEFAULTS } from '../../../config/tolerance-config';
 
 export function isPointOnSegment(
   point: Point2D,
@@ -301,10 +301,10 @@ export function findEntityBasedSnapCandidates(
   const filteredEntities = filterValidEntities(entities);
 
   for (const entity of filteredEntities) {
-    const points = pointsGenerator(entity, cursorPoint, context.snapRadius || 20);
+    const points = pointsGenerator(entity, cursorPoint, context.snapRadius || SNAP_DEFAULTS.FALLBACK_RADIUS);
 
     for (const point of points) {
-      if (isWithinTolerance(cursorPoint, point, context.snapRadius || 20)) {
+      if (isWithinTolerance(cursorPoint, point, context.snapRadius || SNAP_DEFAULTS.FALLBACK_RADIUS)) {
         candidates.push(createSnapCandidate(point, config, entity));
       }
     }
@@ -340,7 +340,7 @@ export function findCircleBasedSnapCandidates(
         const points = pointsGenerator(center, radius, entity);
 
         for (const point of points) {
-          if (isWithinTolerance(cursorPoint, point, context.snapRadius || 20)) {
+          if (isWithinTolerance(cursorPoint, point, context.snapRadius || SNAP_DEFAULTS.FALLBACK_RADIUS)) {
             candidates.push(createSnapCandidate(point, config, entity));
           }
         }
@@ -353,7 +353,7 @@ export function findCircleBasedSnapCandidates(
         const points = pointsGenerator(center, radius, entity);
 
         for (const point of points) {
-          if (isWithinTolerance(cursorPoint, point, context.snapRadius || 20)) {
+          if (isWithinTolerance(cursorPoint, point, context.snapRadius || SNAP_DEFAULTS.FALLBACK_RADIUS)) {
             candidates.push(createSnapCandidate(point, config, entity));
           }
         }

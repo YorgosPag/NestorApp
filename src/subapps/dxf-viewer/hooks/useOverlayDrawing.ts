@@ -7,7 +7,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useSnapManager } from '../snapping/hooks/useSnapManager';
 import { calculateDistance } from '../rendering/entities/shared/geometry-rendering-utils';
-import { SNAP_TOLERANCE, MIN_POLY_POINTS } from '../overlays/types';
+import { MIN_POLY_POINTS } from '../overlays/types';
+import { POLYGON_TOLERANCES } from '../config/tolerance-config';
 import type { OverlayEditorMode, OverlayKind, Status, Overlay, CreateOverlayData, UpdateOverlayData } from '../overlays/types';
 import type { Point2D } from '../rendering/types/Types';
 import type { SceneModel } from '../types/entities';
@@ -86,10 +87,8 @@ export const useOverlayDrawing = ({
       const firstPoint = draftPolygon[0];
       const distance = calculateDistance(point, { x: firstPoint[0], y: firstPoint[1] });
 
-      // 🔺 IMPROVED: Convert pixel tolerance to world coordinates based on zoom
-      // Use smaller tolerance (5px instead of 10px) for more precise polygon closing
-      const pixelTolerance = 5; // Reduced from SNAP_TOLERANCE (10px) for better precision
-      const worldTolerance = pixelTolerance / canvasTransform.scale;
+      // 🏢 ADR-099: Centralized polygon close tolerance - converts pixels to world units
+      const worldTolerance = POLYGON_TOLERANCES.OVERLAY_CLOSE_PIXELS / canvasTransform.scale;
 
       if (distance < worldTolerance) {
         finishDrawing();

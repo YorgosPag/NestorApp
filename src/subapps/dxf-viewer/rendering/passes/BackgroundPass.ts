@@ -13,6 +13,8 @@ import { TAU } from '../primitives/canvasPaths';
 import { RIGHT_ANGLE } from '../entities/shared/geometry-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { WORLD_ORIGIN } from '../../config/geometry-constants';
+// 🏢 ADR-067: Centralized Text Label Offsets & UI Fonts
+import { TEXT_LABEL_OFFSETS, UI_FONTS } from '../../config/text-rendering-config';
 
 export interface BackgroundConfig {
   gridEnabled: boolean;
@@ -263,16 +265,25 @@ export class BackgroundPass implements IRenderPass {
     context.ellipse(originScreen.x, originScreen.y, 3, 3, 0, 0, TAU);
     context.fill();
 
-    // Labels
+    // Labels - 🏢 ADR-067: Centralized UI Fonts & Text Label Offsets
     context.setState({
       fillStyle: UI_COLORS.BLACK,
-      font: '14px Arial',
+      font: UI_FONTS.ARIAL.LARGE, // was: '14px Arial'
       textAlign: 'left',
       textBaseline: 'top'
     });
-    context.fillText('X', originScreen.x + axisLength + 5, originScreen.y - 7);
-    context.fillText('Y', originScreen.x + 5, originScreen.y - axisLength - 20);
-    context.fillText('(0,0)', originScreen.x + 5, originScreen.y + 5);
+    context.fillText('X',
+      originScreen.x + axisLength + TEXT_LABEL_OFFSETS.AXIS_X_LABEL_H_OFFSET,
+      originScreen.y + TEXT_LABEL_OFFSETS.AXIS_X_LABEL_V_OFFSET
+    );
+    context.fillText('Y',
+      originScreen.x + TEXT_LABEL_OFFSETS.ORIGIN_LABEL_OFFSET,
+      originScreen.y - axisLength + TEXT_LABEL_OFFSETS.AXIS_Y_LABEL_V_OFFSET
+    );
+    context.fillText('(0,0)',
+      originScreen.x + TEXT_LABEL_OFFSETS.ORIGIN_LABEL_OFFSET,
+      originScreen.y + TEXT_LABEL_OFFSETS.ORIGIN_LABEL_OFFSET
+    );
 
     context.restore();
   }

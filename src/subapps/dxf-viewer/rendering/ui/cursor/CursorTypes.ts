@@ -7,6 +7,8 @@ import type { Point2D } from '../../types/Types';
 import type { UIElementSettings } from '../core/UIRenderer';
 // 🏢 ADR-134: Centralized Opacity Constants
 import { UI_COLORS, OPACITY } from '../../../config/color-config';
+// 🏢 ADR-034: Centralized Rendering Z-Index
+import { RENDERING_ZINDEX } from '../../../config/tolerance-config';
 
 /**
  * 🔺 CURSOR LINE STYLES
@@ -82,5 +84,5 @@ export const DEFAULT_UI_CURSOR_SETTINGS: UICursorSettings = {
   showFill: false,
   fillColor: UI_COLORS.WHITE,
   fillOpacity: 0.1,
-  zIndex: 900           // High priority for cursor visibility
+  zIndex: RENDERING_ZINDEX.CURSOR  // 🏢 ADR-034: Centralized z-index (800)
 };

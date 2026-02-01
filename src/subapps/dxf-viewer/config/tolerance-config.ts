@@ -126,6 +126,8 @@ export const MOVEMENT_DETECTION = {
   ZOOM_CHANGE: 0.001,
   /** Zoom preset matching threshold (0.01) */
   ZOOM_PRESET_MATCH: 0.01,
+  /** Offset change threshold for transform updates (5 pixels) */
+  OFFSET_CHANGE: 5,
 } as const;
 
 /**
@@ -244,6 +246,19 @@ export const SNAP_GEOMETRY = {
   INV_SQRT_2: 1 / Math.sqrt(2),
 } as const;
 
+/**
+ * 🎯 SNAP DEFAULTS
+ * Default values for snap engine fallbacks
+ *
+ * @example
+ * import { SNAP_DEFAULTS } from '../config/tolerance-config';
+ * const radius = context.snapRadius || SNAP_DEFAULTS.FALLBACK_RADIUS;
+ */
+export const SNAP_DEFAULTS = {
+  /** Fallback snap radius when context.snapRadius is undefined (20 pixels) */
+  FALLBACK_RADIUS: 20,
+} as const;
+
 // ===== POLYGON CLOSE TOLERANCES =====
 // 🏢 ADR-099: Centralized Polygon Tolerances (2026-01-31)
 
@@ -264,6 +279,8 @@ export const POLYGON_TOLERANCES = {
   CLOSE_DETECTION: 20,
   /** Edge detection tolerance for boundary checks and vertex insertion (15 pixels) */
   EDGE_DETECTION: 15,
+  /** 🏢 ADR-099: Overlay polygon close detection in pixels (5px - more precise than SNAP_TOLERANCE 10px) */
+  OVERLAY_CLOSE_PIXELS: 5,
 } as const;
 
 // ===== MEASUREMENT POSITIONING OFFSETS =====
@@ -370,3 +387,129 @@ export const SNAP_ENGINE_PRIORITIES = {
  * tooltipOffset: SNAP_TOOLTIP_OFFSET, // 15 pixels
  */
 export const SNAP_TOOLTIP_OFFSET = 15;
+
+// ===== GEOMETRIC PRECISION UTILITY FUNCTIONS =====
+// 🏢 ADR-079: Centralized Precision Check Functions (2026-02-01)
+
+/**
+ * 🎯 PRECISION CHECK UTILITIES
+ * Semantic functions for geometric precision checks.
+ * Replace inline Math.abs(x) < TOLERANCE patterns.
+ *
+ * @example
+ * // ΠΡΙΝ (inline, hard to read):
+ * if (Math.abs(denom) < GEOMETRY_PRECISION.DENOMINATOR_ZERO) return null;
+ *
+ * // ΜΕΤΑ (semantic, clear intent):
+ * if (isDenominatorZero(denom)) return null;
+ */
+
+/**
+ * Check if a value is effectively zero (for division safety)
+ * Used for: denominator checks in line intersections
+ */
+export function isDenominatorZero(value: number): boolean {
+  return Math.abs(value) < GEOMETRY_PRECISION.DENOMINATOR_ZERO;
+}
+
+/**
+ * Check if points are collinear (determinant near zero)
+ * Used for: circle from 3 points, line parallelism
+ */
+export function isCollinear(determinant: number): boolean {
+  return Math.abs(determinant) < GEOMETRY_PRECISION.COLLINEAR_TOLERANCE;
+}
+
+/**
+ * Check if circle intersection height is negligible
+ * Used for: circle-circle intersection (single point case)
+ */
+export function isCircleIntersectionSinglePoint(h: number): boolean {
+  return Math.abs(h) < GEOMETRY_PRECISION.CIRCLE_INTERSECTION;
+}
+
+/**
+ * Generic near-zero check with custom tolerance
+ * Used for: any precision check with specific tolerance
+ */
+export function isNearZero(value: number, tolerance: number): boolean {
+  return Math.abs(value) < tolerance;
+}
+
+// ===== RENDERING LAYER Z-INDEX =====
+// 🏢 ADR-034: Centralized Rendering Z-Index Hierarchy (2026-02-01)
+
+/**
+ * 🎯 RENDERING LAYER Z-INDEX
+ * Internal canvas rendering priority hierarchy.
+ * Lower values = rendered first (background), Higher = rendered last (foreground).
+ *
+ * ⚠️ ΣΗΜΑΝΤΙΚΟ: Αυτά είναι internal rendering priorities, ΟΧΙ CSS z-index!
+ * Για CSS z-index χρησιμοποίησε: styles/DxfZIndexSystem.styles.ts
+ *
+ * Hierarchy:
+ * 0-99:    Background layers (grid)
+ * 100-199: Structure layers (rulers)
+ * 200-299: Content layers (entities)
+ * 300-399: Selection layers (marquee, grips)
+ * 800-899: Interactive layers (cursor)
+ * 900-949: Feedback layers (snap)
+ * 950-999: Overlay layers (crosshair)
+ * 1000+:   Debug layers (origin markers)
+ *
+ * @example
+ * import { RENDERING_ZINDEX } from '../config/tolerance-config';
+ * zIndex: RENDERING_ZINDEX.GRID // 10
+ */
+export const RENDERING_ZINDEX = {
+  /** Grid - background layer, rendered first */
+  GRID: 10,
+  /** Rulers - above grid, structure layer */
+  RULER: 100,
+  /** Entities - main content layer */
+  ENTITIES: 200,
+  /** Selection marquee and grips */
+  SELECTION: 300,
+  /** Cursor indicator */
+  CURSOR: 800,
+  /** Snap indicators - high visibility */
+  SNAP: 900,
+  /** Crosshair - top interactive layer */
+  CROSSHAIR: 950,
+  /** Origin markers - debug/reference */
+  ORIGIN: 1000,
+} as const;
+
+// ===== UI POSITIONING CONSTANTS =====
+// 🏢 ADR-167: Centralized UI Positioning Constants (2026-02-01)
+
+/**
+ * 🎯 UI POSITIONING CONSTANTS
+ * Centralized positioning values for measurement labels, toolbars, and modals
+ *
+ * Used for:
+ * - Measurement label positioning (MeasurementPositioning.ts)
+ * - Ruler tick calculations (rulers-grid/utils.ts)
+ * - Toolbar positioning (toolbars/utils.ts)
+ * - Modal centering (useDraggableModal.ts)
+ *
+ * @example
+ * import { UI_POSITIONING } from '../config/tolerance-config';
+ * const y = screenY - UI_POSITIONING.EDGE_MARGIN;
+ */
+export const UI_POSITIONING = {
+  /** Minimum margin from canvas/container edges (15 pixels) */
+  EDGE_MARGIN: 15,
+  /** Conservative estimate for measurement text width (120 pixels) */
+  ESTIMATED_TEXT_WIDTH: 120,
+  /** Height per measurement line (20 pixels) */
+  MEASUREMENT_LINE_HEIGHT: 20,
+  /** Default toolbar margin from edges (20 pixels) */
+  TOOLBAR_MARGIN: 20,
+  /** Modal top offset from viewport (50 pixels) */
+  MODAL_TOP_OFFSET: 50,
+  /** Minimum pixel spacing between ruler ticks (15 pixels) */
+  MIN_TICK_PIXEL_SPACING: 15,
+  /** Target number of major ticks on rulers (8 ticks) */
+  DESIRED_TICK_COUNT: 8,
+} as const;

@@ -4,6 +4,8 @@
  */
 
 import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-XXX: Centralized viewport defaults
+import { VIEWPORT_DEFAULTS } from '../config/transform-config';
 
 // ✅ ENTERPRISE FIX: Vitest compatibility layer
 import { vi as jest } from 'vitest';
@@ -69,10 +71,10 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'getBoundingClientRect', {
     y: 0,
     top: 0,
     left: 0,
-    width: 800,
-    height: 600,
-    right: 800,
-    bottom: 600,
+    width: VIEWPORT_DEFAULTS.WIDTH,
+    height: VIEWPORT_DEFAULTS.HEIGHT,
+    right: VIEWPORT_DEFAULTS.WIDTH,
+    bottom: VIEWPORT_DEFAULTS.HEIGHT,
     toJSON: () => ({})
   }))
 });
@@ -82,8 +84,8 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'getBoundingClientRect', {
 Object.defineProperty(HTMLCanvasElement.prototype, 'toDataURL', {
   value: function(type: string = 'image/png') {
     // Generate deterministic test image based on canvas size
-    const width = this.width || 800;
-    const height = this.height || 600;
+    const width = this.width || VIEWPORT_DEFAULTS.WIDTH;
+    const height = this.height || VIEWPORT_DEFAULTS.HEIGHT;
 
     // Create minimal PNG data URL για consistent testing
     const testPattern = `iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==`;
@@ -113,7 +115,7 @@ function createMockCanvas(options?: {
   height?: number;
   canvasType?: string;
 }): HTMLCanvasElement {
-  const { width = 800, height = 600, canvasType = 'dxf' } = options || {};
+  const { width = VIEWPORT_DEFAULTS.WIDTH, height = VIEWPORT_DEFAULTS.HEIGHT, canvasType = 'dxf' } = options || {};
 
   const canvas = document.createElement('canvas');
   canvas.setAttribute('data-canvas-type', canvasType);
@@ -140,7 +142,7 @@ function createMockDOMRect(options?: {
   width?: number;
   height?: number;
 }): DOMRect {
-  const { x = 0, y = 0, width = 800, height = 600 } = options || {};
+  const { x = 0, y = 0, width = VIEWPORT_DEFAULTS.WIDTH, height = VIEWPORT_DEFAULTS.HEIGHT } = options || {};
 
   return {
     x, y,
@@ -190,8 +192,8 @@ function createMockViewport(options?: {
   panY?: number;
 }): { width: number; height: number; zoom: number; panX: number; panY: number } {
   const {
-    width = 800,
-    height = 600,
+    width = VIEWPORT_DEFAULTS.WIDTH,
+    height = VIEWPORT_DEFAULTS.HEIGHT,
     zoom = 1,
     panX = 0,
     panY = 0
@@ -224,9 +226,9 @@ function generateTestPoints(count: number, bounds?: {
 }): Array<{ x: number; y: number }> {
   const {
     minX = 0,
-    maxX = 800,
+    maxX = VIEWPORT_DEFAULTS.WIDTH,
     minY = 0,
-    maxY = 600
+    maxY = VIEWPORT_DEFAULTS.HEIGHT
   } = bounds || {};
 
   const points = [];
@@ -353,7 +355,7 @@ function createVisualTestCanvas(options?: {
   height?: number;
   testId?: string;
 }): HTMLCanvasElement {
-  const { width = 800, height = 600, testId = 'visual-test' } = options || {};
+  const { width = VIEWPORT_DEFAULTS.WIDTH, height = VIEWPORT_DEFAULTS.HEIGHT, testId = 'visual-test' } = options || {};
 
   const canvas = createMockCanvas({ width, height });
   canvas.setAttribute('data-visual-test-id', testId);
@@ -367,7 +369,7 @@ function ensureDirectoryExists(dirPath: string): void {
   console.log(`Mock: Creating directory ${dirPath}`);
 }
 
-function generateTestImageBuffer(width: number = 800, height: number = 600): Buffer {
+function generateTestImageBuffer(width: number = VIEWPORT_DEFAULTS.WIDTH, height: number = VIEWPORT_DEFAULTS.HEIGHT): Buffer {
   // Generate deterministic test buffer για visual testing
   const mockData = new Uint8Array(width * height * 4); // RGBA
 

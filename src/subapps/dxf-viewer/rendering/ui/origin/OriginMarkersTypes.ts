@@ -6,6 +6,8 @@
 import type { UIElementSettings } from '../core/UIRenderer';
 // 🏢 ADR-134: Centralized Opacity Constants
 import { UI_COLORS, OPACITY } from '../../../config/color-config';
+// 🏢 ADR-034: Centralized Rendering Z-Index
+import { RENDERING_ZINDEX } from '../../../config/tolerance-config';
 
 /**
  * 🎯 ORIGIN MARKERS SETTINGS
@@ -35,7 +37,7 @@ export const DEFAULT_ORIGIN_MARKERS_SETTINGS: OriginMarkersSettings = {
   enabled: false,             // 🚫 OFF by default - debug only
   visible: true,              // Visible όταν enabled
   opacity: OPACITY.MEDIUM,    // 🏢 ADR-134: Centralized opacity (0.8) - Slightly transparent
-  zIndex: 1000,               // Top-most layer για debugging
+  zIndex: RENDERING_ZINDEX.ORIGIN,  // 🏢 ADR-034: Centralized z-index (1000) - Top-most layer για debugging
 
   // Origin crosshair
   color: UI_COLORS.DEBUG_ORIGIN,    // Κόκκινο για καλύτερη ορατότητα

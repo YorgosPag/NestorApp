@@ -36,6 +36,10 @@
 import type { Entity } from '../../types/entities';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isArcEntity } from '../../types/entities';
+// 🏢 ADR-130: Centralized Default Layer Name
+import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
+// 🏢 ADR-XXX: Centralized Color Config
+import { UI_COLORS } from '../../config/color-config';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import type { ToolType } from '../../ui/toolbar/types';
 import { applyCompletionStyles } from '../useLineCompletionStyle';
@@ -180,7 +184,7 @@ export function completeEntity(
     // Create new scene with default layer (measurement tools need this)
     finalScene = {
       entities: [entity as AnySceneEntity],
-      layers: { '0': { name: '0', color: '#FFFFFF', visible: true, locked: false } },
+      layers: { [DXF_DEFAULT_LAYER]: { name: DXF_DEFAULT_LAYER, color: UI_COLORS.WHITE, visible: true, locked: false } },
       bounds: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
       units: 'mm',
     };

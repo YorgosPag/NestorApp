@@ -7,6 +7,8 @@
 import { createCanvas, GlobalFonts, Image } from '@napi-rs/canvas';
 import type { Canvas, SKRSContext2D } from '@napi-rs/canvas';
 import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-XXX: Centralized viewport defaults
+import { VIEWPORT_DEFAULTS } from '../config/transform-config';
 
 // 🎯 DETERMINISTIC FONT SETUP
 // Load fixed fonts για consistent text rendering
@@ -36,8 +38,8 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     if (contextType === '2d') {
       // Create real napi-rs canvas αν δεν υπάρχει
       if (!this.__napiCanvas) {
-        const width = this.width || 800;
-        const height = this.height || 600;
+        const width = this.width || VIEWPORT_DEFAULTS.WIDTH;
+        const height = this.height || VIEWPORT_DEFAULTS.HEIGHT;
 
         this.__napiCanvas = createCanvas(width, height);
         this.__napiContext = this.__napiCanvas.getContext('2d');
@@ -86,8 +88,8 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'toDataURL', {
 
     // Fallback για cases όπου δεν έχουμε napi canvas
     console.warn('⚠️ toDataURL called without napi canvas - generating empty PNG');
-    const width = this.width || 800;
-    const height = this.height || 600;
+    const width = this.width || VIEWPORT_DEFAULTS.WIDTH;
+    const height = this.height || VIEWPORT_DEFAULTS.HEIGHT;
     const fallbackCanvas = createCanvas(width, height);
     const buffer = fallbackCanvas.toBuffer('image/png');
     const base64 = buffer.toString('base64');
@@ -107,8 +109,8 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'toBuffer', {
     }
 
     // Fallback
-    const width = this.width || 800;
-    const height = this.height || 600;
+    const width = this.width || VIEWPORT_DEFAULTS.WIDTH;
+    const height = this.height || VIEWPORT_DEFAULTS.HEIGHT;
     const fallbackCanvas = createCanvas(width, height);
     return fallbackCanvas.toBuffer(mimeType as any);
   },
@@ -120,8 +122,8 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'toBuffer', {
  * Creates canvas με deterministic settings
  */
 export function createDeterministicCanvas(
-  width: number = 800,
-  height: number = 600,
+  width: number = VIEWPORT_DEFAULTS.WIDTH,
+  height: number = VIEWPORT_DEFAULTS.HEIGHT,
   options?: {
     pixelRatio?: number;
     antialias?: boolean;
@@ -165,8 +167,8 @@ export function createDeterministicCanvas(
  */
 function syncCanvasDimensions(canvas: HTMLCanvasElement) {
   if (canvas.__napiCanvas) {
-    const width = canvas.width || 800;
-    const height = canvas.height || 600;
+    const width = canvas.width || VIEWPORT_DEFAULTS.WIDTH;
+    const height = canvas.height || VIEWPORT_DEFAULTS.HEIGHT;
 
     // Recreate αν τα dimensions άλλαξαν
     if (canvas.__napiCanvas.width !== width || canvas.__napiCanvas.height !== height) {

@@ -47,8 +47,8 @@
 
 'use client';
 
-// DEBUG FLAG
-const DEBUG_DRAWING_HANDLERS = false; // 🔍 DISABLED - set to true only for debugging
+// DEBUG FLAG - 🔍 ENABLE FOR TRACING PREVIEW ISSUES
+const DEBUG_DRAWING_HANDLERS = true; // 🔍 ENABLED (2026-02-01) - tracing preview flow
 
 import { useCallback, useRef, useMemo } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -227,7 +227,16 @@ export function useDrawingHandlers(
   }, [activeTool, drawingState.tempPoints, addPoint, finishPolyline, onEntityCreated, onToolChange, canvasOps, applySnap, previewCanvasRef]);
 
   const onDrawingHover = useCallback((p: Pt | null) => {
-    if (DEBUG_DRAWING_HANDLERS) console.log('🔍 [onDrawingHover] Called with point:', p);
+    // 🔍 STOP 1 DEBUG TRACE (2026-02-01): Comprehensive preview flow tracing
+    if (DEBUG_DRAWING_HANDLERS) {
+      console.log('🔍 [onDrawingHover] ENTRY', {
+        activeTool,
+        hasPoint: !!p,
+        worldPos: p ? `(${p.x.toFixed(2)}, ${p.y.toFixed(2)})` : 'null',
+        hasPreviewRef: !!previewCanvasRef?.current,
+        timestamp: performance.now().toFixed(1)
+      });
+    }
 
     if (p) {
       // 🚀 PERFORMANCE (2026-01-27): REMOVED RAF throttling for synchronous preview rendering
@@ -242,6 +251,17 @@ export function useDrawingHandlers(
       // 🏢 ADR-040: Direct rendering to PreviewCanvas (ZERO React overhead)
       if (previewCanvasRef?.current) {
         const previewEntity = getLatestPreviewEntity();
+
+        // 🔍 DEBUG TRACE: Log preview entity details
+        if (DEBUG_DRAWING_HANDLERS) {
+          console.log('🔍 [onDrawingHover] PREVIEW ENTITY', {
+            entityType: previewEntity?.type,
+            hasEntity: !!previewEntity,
+            callingDrawPreview: !!previewEntity,
+            timestamp: performance.now().toFixed(1)
+          });
+        }
+
         if (previewEntity) {
           previewCanvasRef.current.drawPreview(previewEntity);
         } else {
@@ -257,7 +277,7 @@ export function useDrawingHandlers(
         previewCanvasRef.current.clear();
       }
     }
-  }, [updatePreview, canvasOps, getLatestPreviewEntity, previewCanvasRef]);
+  }, [updatePreview, canvasOps, getLatestPreviewEntity, previewCanvasRef, activeTool]);
   
   const onDrawingCancel = useCallback(() => {
     cancelDrawing();

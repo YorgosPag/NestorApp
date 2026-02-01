@@ -8,6 +8,8 @@ import type { Point2D } from '../rendering/types/Types';
 import { entityToSegments, samePoint } from '../utils/geometry/GeometryUtils';
 import { chainSegments } from '../utils/geometry/SegmentChaining';
 import { publishHighlight } from '../events/selection-bus';
+// 🏢 ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
+import { generateEntityId } from '../systems/entity-creation/utils';
 
 export interface MergeResult {
   updatedScene: SceneModel;
@@ -87,7 +89,8 @@ export class EntityMergeService {
       };
     }
     
-    const newId = `polyline_${Date.now()}`;
+    // 🏢 ADR-065: Crypto-secure ID generation (collision-resistant)
+    const newId = generateEntityId();
     // 🏢 ENTERPRISE: Type-safe entity creation using LWPolylineEntity structure
     const mergedEntity: AnySceneEntity = {
       id: newId,

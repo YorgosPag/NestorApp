@@ -4,8 +4,8 @@
  */
 
 import type { EntityModel, Point2D } from '../types/Types';
-// 🏢 ADR-070: Centralized Vector Magnitude
-import { vectorMagnitude } from '../entities/shared/geometry-rendering-utils';
+// 🏢 ADR-066: Centralized Distance to Bounds
+import { SpatialUtils } from '../../core/spatial/SpatialUtils';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
 // 🏢 ADR-142: Centralized Default Font Size
 import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
@@ -362,12 +362,11 @@ export class BoundsOperations {
   /**
    * 🔺 DISTANCE FROM POINT
    * Υπολογίζει την απόσταση από ένα point στο κοντινότερο σημείο του box
+   * 🏢 ADR-066: Delegates to centralized SpatialUtils.distanceToPoint
    */
   static distanceFromPoint(box: BoundingBox, point: Point2D): number {
-    const dx = Math.max(0, Math.max(box.minX - point.x, point.x - box.maxX));
-    const dy = Math.max(0, Math.max(box.minY - point.y, point.y - box.maxY));
-    // 🏢 ADR-070: Use centralized vector magnitude
-    return vectorMagnitude({ x: dx, y: dy });
+    // 🏢 ADR-066: Delegate to centralized SpatialUtils - DRY compliance
+    return SpatialUtils.distanceToPoint(point, box);
   }
 
   // ✅ ENTERPRISE FIX: Added missing methods για HitTester.ts TS2339 errors

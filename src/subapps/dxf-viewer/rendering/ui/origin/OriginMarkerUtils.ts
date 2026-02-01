@@ -252,5 +252,12 @@ export function renderOriginMarker(
   options: OriginMarkerOptions
 ): void {
   const screenOrigin = getOriginScreenPosition(transform, viewport);
+
+  // 🔍 DEBUG (2026-02-01): Investigate origin marker misalignment
+  // Remove this logging after bug is fixed
+  // Using timestamp to see timing of renders
+  const now = performance.now().toFixed(0);
+  console.log(`[${now}ms][OriginMarker:${options.variant.toUpperCase()}] vp.h=${viewport.height.toFixed(1)}, offsetY=${transform.offsetY.toFixed(1)}, screenY=${screenOrigin.y.toFixed(1)}`);
+
   drawOriginMarker(ctx, screenOrigin, options);
 }

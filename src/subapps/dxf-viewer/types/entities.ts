@@ -7,6 +7,8 @@ import type { Point2D } from '../rendering/types/Types';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
 // 🏢 ADR-142: Centralized Default Font Size
 import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
+// 🏢 ADR-034: Centralized Empty Spatial Bounds
+import { EMPTY_SPATIAL_BOUNDS } from '../config/geometry-constants';
 
 // ✅ ENTERPRISE FIX: Enhanced grip point interface for preview system
 // 🎯 ADR-047: Added 'close' type and optional color for close-on-first-point indicator
@@ -426,7 +428,8 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
           maxY: Math.max(...ys)
         };
       }
-      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+      // 🏢 ADR-034: Centralized Empty Spatial Bounds
+      return EMPTY_SPATIAL_BOUNDS;
     case 'circle':
       return {
         minX: entity.center.x - entity.radius,
@@ -488,7 +491,8 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
           maxY: Math.max(...ys)
         };
       }
-      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+      // 🏢 ADR-034: Centralized Empty Spatial Bounds
+      return EMPTY_SPATIAL_BOUNDS;
     case 'leader':   // ✅ ENTERPRISE: AutoCAD leader bounds from vertices
       if ('vertices' in entity && entity.vertices && entity.vertices.length > 0) {
         const leaderXs = entity.vertices.map(v => v.x);
@@ -500,7 +504,8 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
           maxY: Math.max(...leaderYs)
         };
       }
-      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+      // 🏢 ADR-034: Centralized Empty Spatial Bounds
+      return EMPTY_SPATIAL_BOUNDS;
     case 'hatch':    // ✅ ENTERPRISE: AutoCAD hatch bounds from boundary paths
       if ('boundaryPaths' in entity && entity.boundaryPaths && entity.boundaryPaths.length > 0) {
         const allPoints = entity.boundaryPaths.flat();
@@ -515,7 +520,8 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
           };
         }
       }
-      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+      // 🏢 ADR-034: Centralized Empty Spatial Bounds
+      return EMPTY_SPATIAL_BOUNDS;
     case 'xline':    // ✅ ENTERPRISE: XLine is infinite - return basePoint as bounds center
       if ('basePoint' in entity && entity.basePoint) {
         // XLines are infinite, so we return a nominal bounds around the base point
@@ -528,7 +534,8 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
           maxY: entity.basePoint.y + NOMINAL_EXTENT
         };
       }
-      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+      // 🏢 ADR-034: Centralized Empty Spatial Bounds
+      return EMPTY_SPATIAL_BOUNDS;
     case 'ray':      // ✅ ENTERPRISE: Ray is semi-infinite - return basePoint to direction extent
       if ('basePoint' in entity && entity.basePoint) {
         // Rays are semi-infinite, so we return bounds from origin in direction
@@ -542,7 +549,8 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
           maxY: Math.max(entity.basePoint.y, entity.basePoint.y + dirY * NOMINAL_EXTENT)
         };
       }
-      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+      // 🏢 ADR-034: Centralized Empty Spatial Bounds
+      return EMPTY_SPATIAL_BOUNDS;
     default:
       // ✅ ENTERPRISE FIX: Type-safe fallback for entities with vertices
       if ('vertices' in entity && entity.vertices && Array.isArray(entity.vertices) && entity.vertices.length > 0) {
@@ -557,7 +565,8 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
           maxY: Math.max(...ys)
         };
       }
-      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+      // 🏢 ADR-034: Centralized Empty Spatial Bounds
+      return EMPTY_SPATIAL_BOUNDS;
   }
 };
 

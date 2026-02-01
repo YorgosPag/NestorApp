@@ -10,6 +10,8 @@ import { GridRenderer } from './GridRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../core/UIRenderContext';
 // 🏢 ADR-076: Centralized Color Conversion
 import { parseHex, rgbToHex } from '../../../ui/color/utils';
+// 🏢 ADR-034: Centralized Rendering Z-Index
+import { RENDERING_ZINDEX } from '../../../config/tolerance-config';
 
 /**
  * 🔺 LEGACY ADAPTER
@@ -55,7 +57,7 @@ export class LegacyGridAdapter {
       majorGridWeight: 2,
       minorGridWeight: 1,
 
-      zIndex: 100
+      zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
     };
 
     // Use direct render method for better performance

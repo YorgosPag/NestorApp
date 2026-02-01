@@ -10,6 +10,10 @@ import type { SpatialBounds } from './ISpatialIndex';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-070: Centralized Vector Magnitude
 import { vectorMagnitude } from '../../rendering/entities/shared/geometry-rendering-utils';
+// 🏢 ADR-034: Centralized Empty Spatial Bounds
+import { EMPTY_SPATIAL_BOUNDS } from '../../config/geometry-constants';
+// 🏢 ADR-034: Centralized Validation Bounds
+import { SPATIAL_BOUNDS } from '../../config/validation-bounds-config';
 
 /**
  * 🔧 BOUNDS OPERATIONS
@@ -22,7 +26,8 @@ export class SpatialUtils {
    */
   static boundsFromPoints(points: Point2D[]): SpatialBounds {
     if (points.length === 0) {
-      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+      // 🏢 ADR-034: Centralized Empty Spatial Bounds
+      return EMPTY_SPATIAL_BOUNDS;
     }
 
     let minX = points[0].x;
@@ -183,8 +188,8 @@ export class SpatialUtils {
     const averageItemArea = area / Math.max(itemCount, 1);
     const cellSize = Math.sqrt(averageItemArea);
 
-    // 🏢 ADR-071: Ensure reasonable bounds using centralized clamp
-    return clamp(cellSize, 10, 500);
+    // 🏢 ADR-034: Using centralized validation bounds
+    return clamp(cellSize, SPATIAL_BOUNDS.GRID_CELL_SIZE.min, SPATIAL_BOUNDS.GRID_CELL_SIZE.max);
   }
 
   /**
@@ -192,7 +197,9 @@ export class SpatialUtils {
    */
 
   /**
-   * Validate bounds are not degenerate
+   * Validate bounds are not degenerate (SpatialBounds format)
+   * 🏢 ADR-034: Centralized Bounds Validation
+   * ✅ CANONICAL: For { minX, minY, maxX, maxY } format (allows min == max)
    */
   static isValidBounds(bounds: SpatialBounds): boolean {
     return (
@@ -202,6 +209,25 @@ export class SpatialUtils {
       Number.isFinite(bounds.minY) &&
       Number.isFinite(bounds.maxX) &&
       Number.isFinite(bounds.maxY)
+    );
+  }
+
+  /**
+   * Validate bounds in { min, max } format
+   * 🏢 ADR-034: Centralized Bounds Validation (2026-02-01)
+   * ✅ CANONICAL: For { min: Point2D, max: Point2D } format with null check
+   * ⚠️ STRICT: Requires max > min (not equal) for valid non-degenerate bounds
+   * Used by: zoom bounds calculations, viewport validation
+   */
+  static isValidRect(bounds: { min: Point2D; max: Point2D } | null): boolean {
+    if (!bounds) return false;
+    return (
+      Number.isFinite(bounds.min.x) &&
+      Number.isFinite(bounds.min.y) &&
+      Number.isFinite(bounds.max.x) &&
+      Number.isFinite(bounds.max.y) &&
+      bounds.max.x > bounds.min.x &&
+      bounds.max.y > bounds.min.y
     );
   }
 

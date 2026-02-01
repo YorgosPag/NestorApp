@@ -10,6 +10,8 @@ import { CursorRenderer } from './CursorRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../core/UIRenderContext';
 import type { UITransform } from '../core/UIRenderer';
 import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ADR-034: Centralized Rendering Z-Index
+import { RENDERING_ZINDEX } from '../../../config/tolerance-config';
 
 /**
  * 🔺 LEGACY ADAPTER
@@ -50,7 +52,7 @@ export class LegacyCursorAdapter {
       showFill: false, // Legacy cursor doesn't support fill
       fillColor: UI_COLORS.WHITE,
       fillOpacity: 0.1,
-      zIndex: 900
+      zIndex: RENDERING_ZINDEX.CURSOR  // 🏢 ADR-034: Centralized z-index (800)
     };
 
     // ✅ FIX: Convert ViewTransform to UITransform

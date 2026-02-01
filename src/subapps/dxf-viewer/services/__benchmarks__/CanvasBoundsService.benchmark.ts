@@ -15,14 +15,16 @@
  */
 
 import { canvasBoundsService } from '../CanvasBoundsService';
+// 🏢 ADR-XXX: Centralized viewport defaults
+import { VIEWPORT_DEFAULTS } from '../../config/transform-config';
 
 /**
  * Create mock canvas for testing
  */
 function createMockCanvas(): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
-  canvas.width = 800;
-  canvas.height = 600;
+  canvas.width = VIEWPORT_DEFAULTS.WIDTH;
+  canvas.height = VIEWPORT_DEFAULTS.HEIGHT;
   document.body.appendChild(canvas);
   return canvas;
 }

@@ -13,8 +13,12 @@ import { ExtendedSnapType } from '../extended-types';
 import type { Entity } from '../extended-types';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { calculateDistance, rotatePoint, pointOnCircle, squaredDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-// 🏢 ADR-079: Centralized Geometric Precision Constants
-import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
+// 🏢 ADR-079: Centralized Geometric Precision Constants & Utility Functions
+import {
+  GEOMETRY_PRECISION,
+  isDenominatorZero,
+  isCircleIntersectionSinglePoint
+} from '../../config/tolerance-config';
 // 🏢 ENTERPRISE: Import centralized entity types and type guards
 import type {
   LineEntity,
@@ -256,8 +260,8 @@ export class GeometricCalculations {
     const x4 = p4.x, y4 = p4.y;
 
     const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-    // 🏢 ADR-079: Use centralized denominator zero threshold
-    if (Math.abs(denom) < GEOMETRY_PRECISION.DENOMINATOR_ZERO) return null;
+    // 🏢 ADR-079: Use centralized precision check function
+    if (isDenominatorZero(denom)) return null;
 
     const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
     const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
@@ -325,8 +329,8 @@ export class GeometricCalculations {
     const px = center1.x + a * (dx / d);
     const py = center1.y + a * (dy / d);
 
-    // 🏢 ADR-079: Use centralized circle intersection threshold
-    if (Math.abs(h) < GEOMETRY_PRECISION.CIRCLE_INTERSECTION) {
+    // 🏢 ADR-079: Use centralized precision check function
+    if (isCircleIntersectionSinglePoint(h)) {
       return [{ x: px, y: py }];
     }
 

@@ -7,7 +7,8 @@ import { UI_COLORS, CANVAS_THEME } from '../../../config/color-config';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
 import { getDevicePixelRatio } from '../../../systems/cursor/utils';
 // 🏢 ADR-095: Centralized Snap Tolerance
-import { SNAP_TOLERANCE } from '../../../config/tolerance-config';
+// 🏢 ADR-034: Centralized Rendering Z-Index
+import { SNAP_TOLERANCE, RENDERING_ZINDEX } from '../../../config/tolerance-config';
 
 import type { CrosshairSettings } from '../../ui/crosshair/CrosshairTypes';
 import type { UICursorSettings } from '../../ui/cursor/CursorTypes';
@@ -84,7 +85,7 @@ export class CanvasSettings {
         showCenterDot: false,
         centerDotSize: 2,
         opacity: 1.0,
-        zIndex: 1000
+        zIndex: RENDERING_ZINDEX.CROSSHAIR  // 🏢 ADR-034: Centralized z-index (950)
       },
       cursor: {
         enabled: true,
@@ -98,7 +99,7 @@ export class CanvasSettings {
         fillColor: UI_COLORS.BLACK,
         fillOpacity: 0.5,
         opacity: 1.0,
-        zIndex: 1001
+        zIndex: RENDERING_ZINDEX.CURSOR  // 🏢 ADR-034: Centralized z-index (800)
       },
       snap: {
         enabled: true,
@@ -115,7 +116,7 @@ export class CanvasSettings {
         tooltipOffset: 10,
         highlightColor: UI_COLORS.WHITE,
         opacity: 1.0,
-        zIndex: 900
+        zIndex: RENDERING_ZINDEX.SNAP  // 🏢 ADR-034: Centralized z-index (900)
       },
       grid: {
         enabled: true,
@@ -134,7 +135,7 @@ export class CanvasSettings {
         majorGridWeight: 1.5,
         minorGridWeight: 0.5,
         opacity: 0.5,
-        zIndex: 1
+        zIndex: RENDERING_ZINDEX.GRID  // 🏢 ADR-034: Centralized z-index (10)
       },
       rulers: {
         enabled: true,
@@ -162,7 +163,7 @@ export class CanvasSettings {
         borderColor: UI_COLORS.MEDIUM_GRAY,
         borderWidth: 1,
         opacity: 1.0,
-        zIndex: 100
+        zIndex: RENDERING_ZINDEX.RULER  // 🏢 ADR-034: Centralized z-index (100)
       },
       selection: {
         window: {

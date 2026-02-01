@@ -21,6 +21,15 @@
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// 🏢 ADR-163: Canvas Layer Synchronization - Mark canvases dirty for synchronized render
+// 🔧 FIX (2026-02-01): Use markSystemsDirty instead of markAllCanvasDirty
+// to EXCLUDE preview-canvas - it's managed by PreviewRenderer.drawPreview() with immediate render
+// Including preview-canvas here causes race condition where RAF frame renders with stale entity
+import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
+
+// 🏢 ENTERPRISE: Canvas IDs to mark dirty on cursor position change
+// EXCLUDES 'preview-canvas' - managed by PreviewRenderer with immediate render
+const CURSOR_SYNC_CANVAS_IDS = ['dxf-canvas', 'layer-canvas', 'crosshair-overlay'];
 
 type PositionListener = (position: Point2D | null) => void;
 type DirectRenderCallback = (position: Point2D | null) => void;
@@ -60,6 +69,12 @@ class ImmediatePositionStoreClass {
     if (this.directRenderCallback) {
       try {
         this.directRenderCallback(this.position);
+        // 🏢 ADR-163: Canvas Layer Synchronization Fix
+        // 🔧 FIX (2026-02-01): Mark ONLY dxf/layer/crosshair canvases dirty
+        // EXCLUDES preview-canvas to prevent RAF race condition:
+        // - preview-canvas is managed by PreviewRenderer.drawPreview() with immediate render
+        // - including it here caused preview to disappear during mouse movement
+        markSystemsDirty(CURSOR_SYNC_CANVAS_IDS);
       } catch (error) {
         console.error('ImmediatePositionStore direct render error:', error);
       }
@@ -125,6 +140,8 @@ class ImmediatePositionStoreClass {
       // Call direct render with the NEW screen position (derived from locked world)
       if (this.directRenderCallback) {
         this.directRenderCallback(screenPos);
+        // 🏢 ADR-163: Canvas Layer Synchronization Fix
+        markSystemsDirty(CURSOR_SYNC_CANVAS_IDS);
       }
     }
   }

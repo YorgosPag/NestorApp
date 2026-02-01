@@ -71,10 +71,17 @@ import { calculateAngle, rectFromTwoPoints } from '../../rendering/entities/shar
 // 🏢 ADR-077: Centralized TAU Constant
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 // 🏢 ADR-100: Centralized Degrees-to-Radians Conversion
-import { bisectorAngle, TAU, radToDeg, degToRad } from '../../rendering/entities/shared/geometry-utils';
+import { bisectorAngle, TAU, degToRad } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-119: Centralized Opacity Constants
 // 🏢 ADR-123: Centralized Preview Colors
 import { UI_COLORS, OPACITY } from '../../config/color-config';
+// 🏢 ADR-163: Canvas Layer Synchronization - Immediate render for synchronized preview
+// 🔧 FIX (2026-02-01): REMOVED markAllCanvasDirty calls - they caused preview to disappear!
+// Root cause: markAllCanvasDirty() schedules ALL canvases for next RAF frame. When scheduler runs,
+// preview's isDirty()=false (already rendered immediately) → scheduler skips it → preview disappears!
+// Solution: Preview canvas is independent - doesn't need to sync with other canvases.
+// The DXF/Layer canvases don't change during preview updates, so no sync needed.
+// import { markAllCanvasDirty } from '../../rendering/core/UnifiedFrameScheduler';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -197,6 +204,11 @@ export class PreviewRenderer {
    * Called directly from mouse handler - NO REACT STATE!
    * This is the key optimization: direct canvas calls bypass React entirely.
    *
+   * 🚀 PERFORMANCE FIX (2026-02-01): IMMEDIATE RENDER
+   * Pattern: Same as CrosshairOverlay - render synchronously on mouse move
+   * This fixes the "preview disappears during mouse movement" bug caused by
+   * the delay between mouse event and RAF frame.
+   *
    * @param entity - Preview entity to render
    * @param transform - Current view transform
    * @param viewport - Viewport dimensions (required for Y-axis inversion)
@@ -208,11 +220,24 @@ export class PreviewRenderer {
     viewport: Viewport,
     options?: PreviewRenderOptions
   ): void {
+    // 🔍 DEBUG (2026-02-01): Trace preview calls
+    console.log('🎨 [PreviewRenderer.drawPreview]', {
+      entityType: entity?.type,
+      hasTransform: !!transform,
+      viewport: viewport ? `${viewport.width}x${viewport.height}` : 'null'
+    });
+
     this.currentPreview = entity;
     this.currentTransform = transform;
     this.currentViewport = viewport;  // 🏢 ADR-040: Store viewport for Y-axis inversion
     this.currentOptions = { ...DEFAULT_PREVIEW_OPTIONS, ...options };
-    this.isDirty = true;
+
+    // 🚀 IMMEDIATE RENDER: Render preview synchronously (no RAF wait!)
+    // This matches the CrosshairOverlay pattern for zero-latency visual feedback
+    this.render();
+
+    // 🔧 FIX (2026-02-01): REMOVED markAllCanvasDirty() - it caused preview to disappear!
+    // Preview canvas is independent - renders immediately, doesn't need RAF sync with other canvases.
   }
 
   /**
@@ -234,6 +259,8 @@ export class PreviewRenderer {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
+
+    // 🔧 FIX (2026-02-01): REMOVED markAllCanvasDirty() - preview canvas is independent.
   }
 
   /**
@@ -249,10 +276,41 @@ export class PreviewRenderer {
    * Performs the actual canvas rendering on RAF callback.
    */
   render(): void {
-    if (!this.ctx || !this.canvas) return;
+    if (!this.ctx || !this.canvas) {
+      console.log('🎨 [PreviewRenderer.render] SKIP: no ctx or canvas');
+      return;
+    }
 
     const ctx = this.ctx;
     const dpr = this.dpr;
+
+    // 🏢 ADR-163: Early exit BEFORE clear if no valid content to render
+    // This prevents the "entities disappear" bug where we clear but don't redraw
+    // because viewport is invalid (0x0)
+    if (!this.currentPreview || !this.currentTransform || !this.currentViewport) {
+      console.log('🎨 [PreviewRenderer.render] SKIP: missing data', {
+        hasPreview: !!this.currentPreview,
+        hasTransform: !!this.currentTransform,
+        hasViewport: !!this.currentViewport
+      });
+      this.isDirty = false;
+      return;
+    }
+
+    // 🏢 ADR-163: Additional check - skip if viewport is invalid (0x0)
+    // This can happen during component mount/unmount transitions
+    if (this.currentViewport.width <= 0 || this.currentViewport.height <= 0) {
+      console.log('🎨 [PreviewRenderer.render] SKIP: invalid viewport', this.currentViewport);
+      this.isDirty = false;
+      return;
+    }
+
+    // 🔍 DEBUG: Confirm rendering is happening
+    console.log('🎨 [PreviewRenderer.render] RENDERING:', {
+      type: this.currentPreview.type,
+      viewport: `${this.currentViewport.width}x${this.currentViewport.height}`,
+      canvasSize: `${this.canvas.width}x${this.canvas.height}`
+    });
 
     // Reset transform and clear
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -261,11 +319,6 @@ export class PreviewRenderer {
 
     // Mark as clean
     this.isDirty = false;
-
-    // Early exit if no preview or missing viewport
-    if (!this.currentPreview || !this.currentTransform || !this.currentViewport) {
-      return;
-    }
 
     const entity = this.currentPreview;
     const transform = this.currentTransform;
@@ -667,17 +720,6 @@ export class PreviewRenderer {
     const screenStartRad = -startRad;
     const screenEndRad = -endRad;
     const screenCounterclockwise = !(entity.counterclockwise ?? false);
-
-    // 🔍 DEBUG: Log PreviewRenderer arc values
-    console.log('🎨 PreviewRenderer.renderArc:', {
-      entityId: entity.id,
-      startAngle: entity.startAngle,
-      endAngle: entity.endAngle,
-      rawCounterclockwise: entity.counterclockwise,
-      screenStartRad: radToDeg(screenStartRad),
-      screenEndRad: radToDeg(screenEndRad),
-      screenCounterclockwise
-    });
 
     ctx.beginPath();
     ctx.ellipse(center.x, center.y, radiusScreen, radiusScreen, 0, screenStartRad, screenEndRad, screenCounterclockwise);

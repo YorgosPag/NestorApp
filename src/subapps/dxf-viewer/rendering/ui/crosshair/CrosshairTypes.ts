@@ -6,6 +6,8 @@
 import type { Point2D } from '../../types/Types';
 import type { UIElementSettings } from '../core/UIRenderer';
 import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ADR-034: Centralized Rendering Z-Index
+import { RENDERING_ZINDEX } from '../../../config/tolerance-config';
 
 /**
  * 🔺 CROSSHAIR SETTINGS
@@ -70,5 +72,5 @@ export const DEFAULT_CROSSHAIR_SETTINGS: CrosshairSettings = {
   centerGapPx: 10,
   showCenterDot: true,
   centerDotSize: 2,
-  zIndex: 1000          // High priority για top rendering
+  zIndex: RENDERING_ZINDEX.CROSSHAIR  // 🏢 ADR-034: Centralized z-index (950)
 };

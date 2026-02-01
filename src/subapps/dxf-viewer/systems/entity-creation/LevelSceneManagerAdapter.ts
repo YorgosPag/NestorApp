@@ -23,6 +23,10 @@
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, AnySceneEntity, SceneLayer, SceneBounds } from '../../types/scene';
+// 🏢 ADR-130: Centralized Default Layer Name
+import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
+// 🏢 ADR-XXX: Centralized Color Config
+import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import {
   isLineEntity,
@@ -93,8 +97,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
       // 🏢 ENTERPRISE: DXF Standard - Layer "0" is always present for entities without explicit layer
       // Create minimal SceneModel with default values for required properties
       const defaultLayer: SceneLayer = {
-        name: '0',
-        color: '#FFFFFF',
+        name: DXF_DEFAULT_LAYER,
+        color: UI_COLORS.WHITE,
         visible: true,
         locked: false,
       };
@@ -106,7 +110,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
 
       const newScene: SceneModel = {
         entities: [sceneEntity],
-        layers: { '0': defaultLayer },
+        layers: { [DXF_DEFAULT_LAYER]: defaultLayer },
         bounds: defaultBounds,
         units: 'mm',
       };

@@ -3,7 +3,7 @@ import { DxfEntityParser, type EntityData, type DxfHeaderData, type DimStyleMap,
 import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
 import { getAciColor } from '../settings/standards/aci';
 // ADR-130: Centralized Default Layer Name
-import { getLayerNameOrDefault } from '../config/layer-config';
+import { getLayerNameOrDefault, DXF_DEFAULT_LAYER } from '../config/layer-config';
 // 🏢 ADR-142: Centralized Default Font Size
 import { TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
@@ -49,9 +49,9 @@ export class DxfSceneBuilder {
     const layers: Record<string, SceneLayer> = {};
 
     // Add default layer with real ACI color
-    const defaultLayerColor = layerColors['0']?.color || DEFAULT_LAYER_COLOR;
-    layers['0'] = {
-      name: '0',
+    const defaultLayerColor = layerColors[DXF_DEFAULT_LAYER]?.color || DEFAULT_LAYER_COLOR;
+    layers[DXF_DEFAULT_LAYER] = {
+      name: DXF_DEFAULT_LAYER,
       color: defaultLayerColor,
       visible: true,
       locked: false

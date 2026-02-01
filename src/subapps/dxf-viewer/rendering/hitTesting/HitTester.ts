@@ -523,6 +523,11 @@ export class HitTester {
       case 'polyline':
       case 'lwpolyline':
         return this.hitTestPolyline(entity, point, tolerance);
+      // 🏢 ENTERPRISE FIX (2026-02-01): Rectangles need special handling
+      // RectangleEntity has x,y,width,height - NOT vertices
+      case 'rectangle':
+      case 'rect':
+        return this.hitTestRectangle(entity, point, tolerance);
       default:
         // Generic hit test - point inside bounds
         return {
@@ -592,6 +597,45 @@ export class HitTester {
         return {
           hitType: 'entity',
           hitPoint: this.closestPointOnLine(point, vertices[i], vertices[i + 1]),
+          edgeIndex: i
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * 🏢 ENTERPRISE FIX (2026-02-01): Rectangle hit testing
+   * Rectangles have x,y,width,height - NOT vertices property
+   * We compute 4 vertices and test all 4 edges of the closed rectangle
+   */
+  private hitTestRectangle(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+    // ✅ Type-safe property access for rectangle
+    if (!('x' in entity) || !('y' in entity) || !('width' in entity) || !('height' in entity)) {
+      return null;
+    }
+
+    const rect = entity as { x: number; y: number; width: number; height: number };
+
+    // 🏢 Compute 4 vertices from rectangle dimensions
+    // Vertex order: top-left, top-right, bottom-right, bottom-left (clockwise)
+    const vertices: Point2D[] = [
+      { x: rect.x, y: rect.y },                           // Top-left
+      { x: rect.x + rect.width, y: rect.y },              // Top-right
+      { x: rect.x + rect.width, y: rect.y + rect.height }, // Bottom-right
+      { x: rect.x, y: rect.y + rect.height }              // Bottom-left
+    ];
+
+    // Test all 4 edges (including closing edge from last to first vertex)
+    for (let i = 0; i < 4; i++) {
+      const nextIndex = (i + 1) % 4;
+      const distance = pointToLineDistance(point, vertices[i], vertices[nextIndex]);
+
+      if (distance <= tolerance) {
+        return {
+          hitType: 'entity',
+          hitPoint: this.closestPointOnLine(point, vertices[i], vertices[nextIndex]),
           edgeIndex: i
         };
       }

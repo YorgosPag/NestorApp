@@ -5,6 +5,8 @@
 
 import type { UIElementSettings } from '../core/UIRenderer';
 import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ADR-034: Centralized Rendering Z-Index
+import { RENDERING_ZINDEX } from '../../../config/tolerance-config';
 
 /**
  * 🔺 RULER POSITIONS
@@ -119,5 +121,5 @@ export const DEFAULT_RULER_SETTINGS: RulerSettings = {
   borderColor: UI_COLORS.LIGHT_GRAY,
   borderWidth: 1,
 
-  zIndex: 200             // Medium priority for ruler rendering
+  zIndex: RENDERING_ZINDEX.RULER  // 🏢 ADR-034: Centralized z-index (100)
 };

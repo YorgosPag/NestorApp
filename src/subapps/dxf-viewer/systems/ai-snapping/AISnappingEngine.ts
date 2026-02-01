@@ -9,8 +9,10 @@ import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
-// 🏢 ADR: Centralized Clamp Function
+// 🏢 ADR-071: Centralized Clamp Function
 import { degToRad, clamp } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-034: Centralized Validation Bounds
+import { SPATIAL_BOUNDS } from '../../config/validation-bounds-config';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
 import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 // 🏢 ADR-092: Centralized localStorage Service
@@ -206,11 +208,12 @@ export class AISnappingEngine {
 
   /**
    * Calculate dynamic snap radius based on zoom
+   * 🏢 ADR-034: Using centralized validation bounds
    */
   private calculateDynamicSnapRadius(zoom: number): number {
     // Adaptive radius based on zoom level
     const baseRadius = 10;
-    const zoomFactor = clamp(zoom, 0.5, 2);
+    const zoomFactor = clamp(zoom, SPATIAL_BOUNDS.SNAP_ZOOM_FACTOR.min, SPATIAL_BOUNDS.SNAP_ZOOM_FACTOR.max);
     return baseRadius * zoomFactor;
   }
 

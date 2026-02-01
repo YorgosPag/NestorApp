@@ -5,6 +5,8 @@
 
 import { CoordinateTransforms } from './rendering/core/CoordinateTransforms';
 import type { Point2D, ViewTransform, Viewport } from './rendering/types/Types';
+// 🏢 ADR-XXX: Centralized viewport defaults
+import { VIEWPORT_DEFAULTS } from './config/transform-config';
 
 // Test data
 const testPoints: Point2D[] = [
@@ -23,7 +25,7 @@ const testTransforms: ViewTransform[] = [
 ];
 
 const testViewports: Viewport[] = [
-  { width: 800, height: 600 },
+  { width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT }, // 🏢 Standard (centralized)
   { width: 1920, height: 1080 },
   { width: 400, height: 300 }
 ];

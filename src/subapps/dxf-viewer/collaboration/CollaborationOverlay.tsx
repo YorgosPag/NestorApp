@@ -6,6 +6,8 @@ import { isFeatureEnabled } from '../config/experimental-features';
 import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfZIndexSystem.styles';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+// 🏢 ADR-XXX: Centralized viewport defaults
+import { VIEWPORT_DEFAULTS } from '../config/transform-config';
 // 🏢 ADR-090: Centralized UI Fonts
 // 🏢 ADR-097: Centralized Line Dash Patterns
 // 🏢 ADR-122: Centralized Line Widths
@@ -169,8 +171,8 @@ export function CollaborationOverlay({
   return (
     <canvas
       ref={canvasRef}
-      width={800}
-      height={600}
+      width={VIEWPORT_DEFAULTS.WIDTH}
+      height={VIEWPORT_DEFAULTS.HEIGHT}
       className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
       style={dxfComponentStyles.collaborationOverlay}
       {...dxfAccessibility.getOverlayProps('collaboration', true)}

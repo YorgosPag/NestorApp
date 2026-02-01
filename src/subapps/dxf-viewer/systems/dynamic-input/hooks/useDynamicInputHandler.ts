@@ -4,6 +4,8 @@ import type { Point2D as Point } from '../../../rendering/types/Types';
 import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from '../../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
+import { generateEntityId } from '../../../systems/entity-creation/utils';
 
 interface UseDynamicInputHandlerProps {
   activeTool: string;
@@ -39,7 +41,8 @@ export function useDynamicInputHandler({
 
           if (onEntityCreated) {
             const lineEntity = {
-              id: `line_${Date.now()}`,
+              // 🏢 ADR-065: Crypto-secure ID generation
+              id: generateEntityId(),
               type: 'LINE',
               startPoint: { x: coordinates.x, y: coordinates.y, z: 0 },
               endPoint: { x: secondPoint.x, y: secondPoint.y, z: 0 },
@@ -72,7 +75,8 @@ export function useDynamicInputHandler({
           const radius = diameter / 2;
           
           const circleEntity = {
-            id: `circle_${Date.now()}`,
+            // 🏢 ADR-065: Crypto-secure ID generation
+            id: generateEntityId(),
             type: 'circle',
             center: { x: center.x, y: center.y, z: 0 },
             radius: radius,
@@ -84,7 +88,8 @@ export function useDynamicInputHandler({
         } else if (onEntityCreated && typeof length === 'number' && Number.isFinite(length)) {
           // Circle completion - create circle entity with radius (length is already radius for both tools)
           const circleEntity = {
-            id: `circle_${Date.now()}`,
+            // 🏢 ADR-065: Crypto-secure ID generation
+            id: generateEntityId(),
             type: 'circle',
             center: { x: coordinates.x, y: coordinates.y, z: 0 },
             radius: length, // For circle: direct radius, for circle-diameter: converted from diameter to radius
@@ -97,7 +102,8 @@ export function useDynamicInputHandler({
       } else if (onEntityCreated) {
         // Create a point entity for other tools
         const pointEntity = {
-          id: `point_${Date.now()}`,
+          // 🏢 ADR-065: Crypto-secure ID generation
+          id: generateEntityId(),
           type: 'POINT',
           x: coordinates.x,
           y: coordinates.y,

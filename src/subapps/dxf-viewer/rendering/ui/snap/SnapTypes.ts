@@ -9,7 +9,8 @@ import type { UIElementSettings } from '../core/UIRenderer';
 import { UI_COLORS, OPACITY } from '../../../config/color-config';
 // 🏢 ADR-095: Centralized Snap Tolerance
 // 🏢 ADR-153: Centralized Snap Tooltip Offset
-import { SNAP_TOLERANCE, SNAP_TOOLTIP_OFFSET } from '../../../config/tolerance-config';
+// 🏢 ADR-034: Centralized Rendering Z-Index
+import { SNAP_TOLERANCE, SNAP_TOOLTIP_OFFSET, RENDERING_ZINDEX } from '../../../config/tolerance-config';
 
 /**
  * 🔺 SNAP TYPES
@@ -105,5 +106,5 @@ export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
   showTooltip: true,
   tooltipOffset: SNAP_TOOLTIP_OFFSET,  // 🏢 ADR-153: Centralized snap tooltip offset
   highlightColor: UI_COLORS.SNAP_HIGHLIGHT,
-  zIndex: 950                 // Very high priority for snap visibility
+  zIndex: RENDERING_ZINDEX.SNAP  // 🏢 ADR-034: Centralized z-index (900)
 };

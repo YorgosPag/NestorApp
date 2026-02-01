@@ -25,7 +25,8 @@ import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-107: Centralized UI Size Defaults
 import { RENDER_LINE_WIDTHS, buildUIFont, UI_SIZE_DEFAULTS } from '../../config/text-rendering-config';
 // 🏢 ADR-079: Centralized Axis Detection Constants
-import { AXIS_DETECTION } from '../../config/tolerance-config';
+// 🏢 ADR-167: Centralized UI Positioning Constants
+import { AXIS_DETECTION, UI_POSITIONING } from '../../config/tolerance-config';
 // 🏢 ADR: Centralized Clamp Function
 // 🏢 ADR-XXX: Centralized Angular Constants
 import { clamp01, RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
@@ -310,7 +311,8 @@ export const RulerCalculations = {
     
     // Υπολογισμός tick spacing με βάση το εύρος που είναι ορατό στο χάρακα
     const visibleRange = Math.abs(expandedEnd - expandedStart);
-    const desiredTickCount = 8; // Στόχος: περίπου 8-10 major ticks σε όλο το μήκος του χάρακα
+    // 🏢 ADR-167: Centralized UI Positioning Constants
+    const desiredTickCount = UI_POSITIONING.DESIRED_TICK_COUNT; // Στόχος: περίπου 8-10 major ticks σε όλο το μήκος του χάρακα
     
     // Εξασφάλισε λογικές τιμές (π.χ. 1, 2, 5, 10, 20, 50, 100...)
     const logicalSpacings = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
@@ -319,8 +321,8 @@ export const RulerCalculations = {
     // Βρες την πιο κοντινή λογική τιμή
     tickSpacing = logicalSpacings.find(s => s >= tickSpacing) || logicalSpacings[logicalSpacings.length - 1];
     
-    // Εξασφάλισε ότι το spacing δεν είναι πολύ μικρό στο screen (ελάχιστο 15 pixels)
-    const minPixelSpacing = 15;
+    // 🏢 ADR-167: Εξασφάλισε ότι το spacing δεν είναι πολύ μικρό στο screen
+    const minPixelSpacing = UI_POSITIONING.MIN_TICK_PIXEL_SPACING;
     while (tickSpacing * transform.scale < minPixelSpacing && tickSpacing < 1000) {
       const currentIndex = logicalSpacings.indexOf(tickSpacing);
       if (currentIndex < logicalSpacings.length - 1) {

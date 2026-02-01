@@ -159,7 +159,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // DxfCanvas receives transform prop but imperative methods are the primary control
   const defaultTransform = useMemo(() => ({ scale: 1, offsetX: 0, offsetY: 0 }), []);
   const transform = canvasContext?.transform || defaultTransform;
-  const setTransform = canvasContext?.setTransform || (() => {
+  const contextSetTransform = canvasContext?.setTransform || (() => {
     console.error('[CanvasSection] setTransform called but CanvasContext not available');
   });
 
@@ -171,6 +171,23 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // SOLUTION: viewportRef updates SYNCHRONOUSLY in ResizeObserver
   // CANONICAL ELEMENT: containerRef (wrapper that contains all canvases)
   const viewportRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+
+  // 🏢 ENTERPRISE FIX (2026-02-01): Transform ref for fresh access in ResizeObserver callback
+  // PROBLEM: When viewport height changes (toolbar open/close), offsetY must be adjusted
+  //          to keep world origin at same screen position
+  // SOLUTION: Keep transform ref in sync, adjust offsetY by deltaHeight in ResizeObserver
+  const transformRef = useRef(transform);
+
+  // 🏢 ENTERPRISE FIX (2026-02-01): Wrapper setTransform that updates ref SYNCHRONOUSLY
+  // PROBLEM: Pan/zoom call setTransform (async React state), but canvas uses transformRef (sync)
+  //          This causes origin markers to be out of sync during pan operations
+  // SOLUTION: Update transformRef.current IMMEDIATELY, then call context setTransform
+  const setTransform = useCallback((newTransform: typeof transform) => {
+    // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
+    transformRef.current = newTransform;
+    // React state update for context (async)
+    contextSetTransform(newTransform);
+  }, [contextSetTransform]);
 
   // 🏢 ENTERPRISE FIX (2026-01-27): Viewport readiness check για coordinate transforms
   // Αποτρέπει λανθασμένες μετατροπές coordinates ΠΡΙΝ το viewport αρχικοποιηθεί σωστά
@@ -230,6 +247,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // This is CRITICAL for updateVertex/addVertex to work with the latest polygon data
   overlayStoreRef.current = overlayStore;
   universalSelectionRef.current = universalSelection;
+  // 🏢 FIX (2026-02-01): Keep transform ref in sync for ResizeObserver callback
+  transformRef.current = transform;
   const levelManager = useLevels();
 
   // 🏢 ENTERPRISE (2026-01-25): Moved BEFORE callbacks that use them to avoid hoisting issues
@@ -340,6 +359,44 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           for (const entry of entries) {
             const { width, height } = entry.contentRect;
             if (width > 0 && height > 0) {
+              // 🏢 FIX (2026-02-01): Adjust transform.offsetY when viewport height changes
+              // PROBLEM: When toolbar opens/closes, viewport height changes but offsetY stays same
+              //          This causes world origin to shift on screen (origin markers misalign)
+              // SOLUTION: Adjust offsetY by deltaHeight to keep world origin at same screen position
+              // FORMULA: newOffsetY = oldOffsetY + (newHeight - oldHeight)
+              const oldHeight = viewportRef.current.height;
+              const deltaHeight = height - oldHeight;
+
+              // Only adjust if we have a valid previous height (not initial load)
+              if (oldHeight > 0 && Math.abs(deltaHeight) > 0.5) {
+                const currentTransform = transformRef.current;
+                const newOffsetY = currentTransform.offsetY + deltaHeight;
+                const newTransform = {
+                  ...currentTransform,
+                  offsetY: newOffsetY
+                };
+
+                // 🔍 DEBUG: Detailed logging to understand the issue
+                const timestamp = performance.now().toFixed(0);
+                console.log(`[${timestamp}ms][ResizeObserver] ADJUSTING:
+  oldHeight=${oldHeight.toFixed(1)}, newHeight=${height.toFixed(1)}, deltaHeight=${deltaHeight.toFixed(1)}
+  oldOffsetY=${currentTransform.offsetY.toFixed(1)}, newOffsetY=${newOffsetY.toFixed(1)}
+  transformRef.current.offsetY BEFORE=${transformRef.current.offsetY.toFixed(1)}`);
+
+                // 🏢 FIX (2026-02-01): Update transformRef SYNCHRONOUSLY before viewport update
+                // PROBLEM: setTransform is async (React batches), but viewportRef is sync
+                //          Canvas re-renders with new viewport but OLD transform → misaligned markers
+                // SOLUTION: Update transformRef FIRST (sync), then setTransform (async for React)
+                transformRef.current = newTransform;
+
+                // React state update for dependencies (async)
+                setTransform(newTransform);
+
+                console.log(`[${timestamp}ms][ResizeObserver] AFTER: transformRef.current.offsetY=${transformRef.current.offsetY.toFixed(1)}`);
+              } else {
+                console.log(`[ResizeObserver] SKIP adjust: oldHeight=${oldHeight.toFixed(1)}, deltaHeight=${deltaHeight.toFixed(1)}`);
+              }
+
               const newViewport = { width, height };
               // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
               viewportRef.current = newViewport;
@@ -391,7 +448,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     };
   }, []); // 🏢 FIX: Empty deps - setup once, ResizeObserver handles updates
 
-  // 🏢 ENTERPRISE FIX (2026-01-27): Force viewport update after browser layout stabilization
+  // 🏢 ENTERPRISE FIX (2026-02-01): Force viewport update after browser layout stabilization
   // PROBLEM: getBoundingClientRect() επιστρέφει stale values την πρώτη φορά μετά από server restart
   //          γιατί ο browser δεν έχει ακόμα ολοκληρώσει το layout calculation
   // SOLUTION: Χρησιμοποιούμε requestAnimationFrame + setTimeout για να περιμένουμε
@@ -399,13 +456,21 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   //           2. setTimeout: Δίνει χρόνο στον browser να κάνει reflow
   // RESULT: Το viewport έχει σωστές dimensions ΠΡΙΝ ο χρήστης κάνει click
   // 🏢 ADR-119: Migrated to UnifiedFrameScheduler.scheduleOnceDelayed for centralized RAF management
+  // 🏢 FIX (2026-02-01): SSoT - Use containerRef (same as ResizeObserver) instead of dxfCanvas
+  //                      Also update viewportRef.current for consistency with main mechanism
   React.useEffect(() => {
     const forceViewportUpdate = () => {
-      const dxfCanvas = dxfCanvasRef?.current?.getCanvas?.();
-      if (dxfCanvas && dxfCanvas instanceof HTMLCanvasElement) {
-        const rect = dxfCanvas.getBoundingClientRect();
+      // 🏢 SSoT: Use containerRef (canonical element) - SAME as ResizeObserver mechanism
+      // BEFORE: Used dxfCanvas which caused inconsistency with container-based ResizeObserver
+      const container = containerRef.current;
+      if (container) {
+        const rect = container.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
-          setViewport({ width: rect.width, height: rect.height });
+          const newViewport = { width: rect.width, height: rect.height };
+          // 🏢 SSoT: Update BOTH ref AND state (same as ResizeObserver)
+          viewportRef.current = newViewport;
+          setViewport(newViewport);
+          setPdfViewport(newViewport);
         }
       }
     };
@@ -554,6 +619,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       setDraftPolygon([]);
     }
   }, [activeTool, draftPolygon.length]);
+
+  // 🏢 ENTERPRISE (2026-02-01): Clear preview canvas when switching to non-drawing tool
+  // FIX: Green grip ball (start point indicator) stayed visible after switching to Select tool
+  // The preview canvas is independent and must be explicitly cleared when leaving drawing mode
+  React.useEffect(() => {
+    if (!isInDrawingMode(activeTool, overlayMode)) {
+      previewCanvasRef.current?.clear();
+    }
+  }, [activeTool, overlayMode]);
 
   // 🏢 ENTERPRISE (2026-01-26): Clear selected grips when overlay or tool changes
   // ADR-031: Multi-Grip Selection System - clear grips that are no longer valid
@@ -1500,8 +1574,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             <LayerCanvas
               ref={overlayCanvasRef}
               layers={colorLayersWithDraft} // 🔧 FIX (2026-01-24): Include draft preview layer
-              transform={transform}
-              viewport={viewportRef.current} // 🏢 ENTERPRISE (2026-01-30): Use viewportRef (FRESH) not state
+              transform={transform} // 🏢 FIX (2026-02-01): Use React state (reactive) for proper re-render
+              viewport={viewport} // 🏢 FIX (2026-02-01): Use React state (reactive) - ref was not triggering re-render!
               activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
               overlayMode={overlayMode} // 🎯 OVERLAY FIX: Pass overlayMode for drawing detection
               layersVisible={showLayers} // ✅ ΥΠΑΡΧΟΝ SYSTEM: Existing layer visibility
@@ -1702,8 +1776,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             <DxfCanvas
               ref={dxfCanvasRef}
               scene={dxfScene}
-              transform={transform}
-              viewport={viewportRef.current} // 🏢 ENTERPRISE (2026-01-30): Use viewportRef (FRESH) not state
+              transform={transform} // 🏢 FIX (2026-02-01): Use React state (reactive) for proper re-render
+              viewport={viewport} // 🏢 FIX (2026-02-01): Use React state (reactive) - consistent with LayerCanvas
               activeTool={activeTool} // 🔥 ΚΡΙΣΙΜΟ: Pass activeTool για pan cursor
               overlayMode={overlayMode} // 🎯 OVERLAY FIX: Pass overlayMode for drawing detection
               colorLayers={colorLayers} // ✅ FIX: Pass color layers για fit to view bounds

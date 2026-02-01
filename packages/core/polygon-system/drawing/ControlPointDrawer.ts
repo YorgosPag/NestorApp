@@ -14,6 +14,34 @@ import type {
 import { DEFAULT_POLYGON_STYLES } from '../types';
 import { SimplePolygonDrawer } from './SimplePolygonDrawer';
 
+// ────────────────────────────────────────────
+// 🏢 ADR-067: Centralized Text Label & Font Constants (2026-02-01)
+// Local copies from dxf-viewer/config/text-rendering-config.ts
+// (Cannot import directly due to package boundaries)
+// ────────────────────────────────────────────
+
+/**
+ * Text label positioning offsets for control point rendering
+ */
+const CONTROL_POINT_OFFSETS = {
+  /** Coordinate text offset above point (pixels, negative = above) */
+  COORD_TEXT_ABOVE: -12,
+  /** Measurement text vertical offset (pixels) for labels below */
+  MEASUREMENT_VERTICAL: 20,
+  /** Indicator symbol ("?") vertical offset (pixels) */
+  INDICATOR_OFFSET: 4,
+} as const;
+
+/**
+ * UI Font strings for control point labels
+ */
+const CONTROL_POINT_FONTS = {
+  /** 10px Arial - Small labels for coordinates */
+  SMALL: '10px Arial',
+  /** 12px Arial - Standard labels */
+  NORMAL: '12px Arial',
+} as const;
+
 /**
  * Extended drawer για georeferencing control points
  */
@@ -263,19 +291,19 @@ export class ControlPointDrawer extends SimplePolygonDrawer {
         this.context.arc(point.x, point.y, 6, 0, 2 * Math.PI);
         this.context.fill();
 
-        // Show coordinates as text
+        // Show coordinates as text - 🏢 ADR-067: Centralized offsets & fonts
         this.context.fillStyle = '#374151';
-        this.context.font = '10px Arial';
+        this.context.font = CONTROL_POINT_FONTS.SMALL;
         this.context.textAlign = 'center';
         this.context.fillText(
           `${geoRef.lng.toFixed(4)}, ${geoRef.lat.toFixed(4)}`,
           point.x,
-          point.y - 12
+          point.y + CONTROL_POINT_OFFSETS.COORD_TEXT_ABOVE
         );
 
-        // Show label
+        // Show label - 🏢 ADR-067: Centralized measurement vertical offset
         if (point.label) {
-          this.context.fillText(point.label, point.x, point.y + 20);
+          this.context.fillText(point.label, point.x, point.y + CONTROL_POINT_OFFSETS.MEASUREMENT_VERTICAL);
         }
       } else {
         // Draw red indicator για non-georeferenced points
@@ -287,11 +315,11 @@ export class ControlPointDrawer extends SimplePolygonDrawer {
         this.context.arc(point.x, point.y, 6, 0, 2 * Math.PI);
         this.context.stroke();
 
-        // Show "needs geo ref" indicator
+        // Show "needs geo ref" indicator - 🏢 ADR-067: Centralized offsets & fonts
         this.context.fillStyle = '#dc2626';
-        this.context.font = '12px Arial';
+        this.context.font = CONTROL_POINT_FONTS.NORMAL;
         this.context.textAlign = 'center';
-        this.context.fillText('?', point.x, point.y + 4);
+        this.context.fillText('?', point.x, point.y + CONTROL_POINT_OFFSETS.INDICATOR_OFFSET);
       }
     }
 

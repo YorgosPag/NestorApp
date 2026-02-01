@@ -150,6 +150,10 @@ class UnifiedFrameSchedulerImpl {
   private fpsHistory: number[] = [];
   private isFirstFrame = true; // 🏢 FIX: Track first frame to skip throttling
 
+  // 🏢 ADR-163: Immediate render debounce - prevents multiple renders per frame
+  // Uses frame number instead of boolean to correctly track across RAF boundaries
+  private immediateRenderFrame = -1;
+
   // === METRICS ===
   private currentMetrics: FrameMetrics = this.createEmptyMetrics();
 
@@ -309,6 +313,53 @@ class UnifiedFrameSchedulerImpl {
 
     if (this.config.debug) {
       console.log(`[UnifiedFrameScheduler] markSystemsDirty: ${systemIds.join(', ')}`);
+    }
+  }
+
+  /**
+   * 🏢 ADR-163: IMMEDIATE RENDER ALL CANVASES
+   *
+   * Forces SYNCHRONOUS render of all canvas layers RIGHT NOW.
+   * Does NOT wait for next RAF frame - renders immediately!
+   *
+   * Use this when doing direct/immediate renders (like CrosshairOverlay)
+   * to ensure all canvases stay synchronized.
+   *
+   * Pattern: Figma/Sketch - Synchronous multi-layer compositing
+   *
+   * 🏢 DEBOUNCE: Only ONE immediate render per frame allowed!
+   * Multiple mouse events in one frame will only trigger ONE render cycle.
+   * This prevents the "multiple clear" flickering bug.
+   *
+   * Uses frameNumber tracking to correctly handle RAF timing:
+   * - Mouse events between frames → immediate render at frame N
+   * - processFrame() runs at frame N → sees immediateRenderFrame = N → skips canvases
+   * - processFrame() ends → frameNumber becomes N+1
+   * - Next frame → immediateRenderFrame ≠ frameNumber → canvases can render normally
+   */
+  forceImmediateRenderAll(): void {
+    // 🏢 DEBOUNCE: Skip if already rendered this frame
+    // Prevents multiple mouse events from causing multiple clear/render cycles
+    if (this.immediateRenderFrame === this.frameNumber) {
+      return;
+    }
+    this.immediateRenderFrame = this.frameNumber;
+
+    const canvasSystemIds = ['dxf-canvas', 'layer-canvas', 'preview-canvas'];
+    // Note: crosshair-overlay excluded - it's already being rendered directly
+
+    for (const id of canvasSystemIds) {
+      const system = this.systems.get(id);
+      if (system && system.enabled) {
+        try {
+          // Call render directly - SYNCHRONOUS!
+          system.render(0, this.frameNumber);
+          // Reset dirty flags - prevent RAF loop from re-rendering
+          system.forceDirty = false;
+        } catch (error) {
+          console.error(`[UnifiedFrameScheduler] forceImmediateRenderAll error in ${id}:`, error);
+        }
+      }
     }
   }
 
@@ -537,12 +588,16 @@ class UnifiedFrameSchedulerImpl {
     const frameStartTime = performance.now();
     const deltaTime = timestamp - this.lastFrameTime;
     this.lastFrameTime = timestamp;
-    this.frameNumber++;
+    // 🏢 ADR-163: frameNumber increment moved to END of processFrame
+    // This ensures forceImmediateRenderAll() sets the correct frame number
+    // that will be checked in the CURRENT processFrame, not the next one.
 
     // === THROTTLING CHECK ===
     // 🏢 FIX: Never skip first frame (deltaTime will be ~0 on first frame)
     if (this.config.enableThrottling && !this.isFirstFrame && deltaTime < FRAME_TIME_60FPS * 0.5) {
       // Skip frame if too fast (browser giving us extra frames)
+      // 🏢 ADR-163: Still increment frame number even on skip
+      this.frameNumber++;
       this.scheduleFrame();
       return;
     }
@@ -561,12 +616,34 @@ class UnifiedFrameSchedulerImpl {
     // === 🏢 ADR-156: CANVAS SYNCHRONIZATION PRE-CHECK ===
     // If ANY canvas layer needs rendering, ALL canvas layers must render together
     // This prevents the "entities disappear during mouse move" bug
-    const canvasSystemIds = ['dxf-canvas', 'layer-canvas', 'preview-canvas', 'crosshair-overlay'];
+    //
+    // 🏢 ADR-163: Skip this logic if immediate render was already done this frame
+    // The forceImmediateRenderAll() already synchronized all canvases
+    //
+    // 🔧 FIX (2026-02-01): EXCLUDE 'preview-canvas' from sync group!
+    // Preview canvas is managed independently by PreviewRenderer.drawPreview() with immediate render.
+    // Including it in sync group caused the "preview disappears during mouse move" bug:
+    // - setImmediatePosition marks dxf/layer/crosshair dirty
+    // - onDrawingHover does immediate preview render
+    // - RAF comes: sync logic marks ALL canvases dirty INCLUDING preview-canvas
+    // - preview-canvas re-renders with stale/null data → preview disappears!
+    const canvasSystemIds = ['dxf-canvas', 'layer-canvas', 'crosshair-overlay'];
+    // Note: 'preview-canvas' intentionally excluded - it renders independently
+    const immediateSyncedIds = ['dxf-canvas', 'layer-canvas'];
+
+    // Check if immediate render was done THIS frame (using frame number comparison)
+    const wasImmediateRenderedThisFrame = this.immediateRenderFrame === this.frameNumber;
+
     let anyCanvasNeedsRender = false;
 
     // First pass: check if any canvas needs rendering
     for (const system of sortedSystems) {
       if (canvasSystemIds.includes(system.id)) {
+        // 🏢 ADR-163: Skip canvases that were already synced by forceImmediateRenderAll
+        if (wasImmediateRenderedThisFrame && immediateSyncedIds.includes(system.id)) {
+          // These canvases were already rendered synchronously, skip dirty check
+          continue;
+        }
         const needsRender = system.forceDirty || !system.isDirty || system.isDirty();
         if (needsRender) {
           anyCanvasNeedsRender = true;
@@ -576,8 +653,13 @@ class UnifiedFrameSchedulerImpl {
     }
 
     // If any canvas needs render, mark ALL canvas systems as forceDirty
+    // 🏢 ADR-163: But skip canvases that were already rendered by forceImmediateRenderAll
     if (anyCanvasNeedsRender) {
       for (const id of canvasSystemIds) {
+        // Skip if this canvas was already synced by immediate render
+        if (wasImmediateRenderedThisFrame && immediateSyncedIds.includes(id)) {
+          continue;
+        }
         const system = this.systems.get(id);
         if (system && !system.forceDirty) {
           system.forceDirty = true;
@@ -667,6 +749,11 @@ class UnifiedFrameSchedulerImpl {
           `${averageFps.toFixed(1)} FPS`
       );
     }
+
+    // 🏢 ADR-163: Increment frame number at END of processFrame
+    // This ensures forceImmediateRenderAll() called between frames
+    // will set immediateRenderFrame to the NEXT frame's number
+    this.frameNumber++;
 
     // === SCHEDULE NEXT FRAME ===
     this.scheduleFrame();
@@ -827,6 +914,43 @@ export function markAllCanvasDirty(): void {
  */
 export function markSystemDirty(id: string): void {
   UnifiedFrameScheduler.markDirty(id);
+}
+
+/**
+ * 🏢 ENTERPRISE: Mark specific canvas systems as dirty
+ * ADR-156: Canvas Layer Synchronization Fix
+ *
+ * Use this instead of markAllCanvasDirty() when you need to exclude certain canvases.
+ * For example, cursor position updates should NOT mark preview-canvas dirty
+ * because preview-canvas is managed by PreviewRenderer.drawPreview() with immediate render.
+ *
+ * @param systemIds - Array of system IDs to mark dirty
+ *
+ * @example
+ * ```typescript
+ * // Mark only dxf/layer canvases dirty (exclude preview-canvas)
+ * markSystemsDirty(['dxf-canvas', 'layer-canvas', 'crosshair-overlay']);
+ * ```
+ */
+export function markSystemsDirty(systemIds: string[]): void {
+  UnifiedFrameScheduler.markSystemsDirty(systemIds);
+}
+
+/**
+ * 🏢 ADR-163: FORCE IMMEDIATE RENDER ALL CANVASES
+ *
+ * Renders ALL canvas layers SYNCHRONOUSLY, RIGHT NOW!
+ * Use this after direct/immediate renders (like CrosshairOverlay)
+ * to prevent flickering caused by unsynchronized canvas updates.
+ *
+ * @example
+ * ```typescript
+ * // After direct crosshair render:
+ * forceImmediateRenderAll();
+ * ```
+ */
+export function forceImmediateRenderAll(): void {
+  UnifiedFrameScheduler.forceImmediateRenderAll();
 }
 
 /**

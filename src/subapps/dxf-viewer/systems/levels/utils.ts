@@ -4,6 +4,8 @@
  */
 
 import type { Level, FloorplanDoc, CalibrationData } from './config';
+// 🏢 ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
+import { generateLayerId, generateFloorId } from '@/services/enterprise-id.service';
 
 export class LevelOperations {
   static createDefaultLevels(): Level[] {
@@ -26,7 +28,8 @@ export class LevelOperations {
   }
 
   static generateLevelId(): string {
-    return `level_${Date.now()}`;
+    // 🏢 ADR-065: Crypto-secure, collision-resistant ID generation
+    return generateLayerId();
   }
 
   static getNextOrder(levels: Level[]): number {
@@ -105,7 +108,8 @@ export class LevelOperations {
 
 export class FloorplanOperations {
   static generateFloorplanId(): string {
-    return `floorplan_${Date.now()}`;
+    // 🏢 ADR-065: Crypto-secure, collision-resistant ID generation
+    return generateFloorId();
   }
 
   static createFloorplan(

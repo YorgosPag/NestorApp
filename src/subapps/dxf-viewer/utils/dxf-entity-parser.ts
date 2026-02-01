@@ -19,6 +19,8 @@ import {
   convertEntityToScene
 } from './dxf-entity-converters';
 import { getAciColor } from '../settings/standards/aci';
+// 🏢 ADR-130: Centralized Default Layer Name
+import { DXF_DEFAULT_LAYER } from '../config/layer-config';
 
 // Re-export for backward compatibility
 export type { EntityData } from './dxf-entity-converters';
@@ -467,8 +469,8 @@ export class DxfEntityParser {
     const layerColors: LayerColorMap = {};
 
     // Default layer "0" with white color
-    layerColors['0'] = {
-      name: '0',
+    layerColors[DXF_DEFAULT_LAYER] = {
+      name: DXF_DEFAULT_LAYER,
       colorIndex: 7,
       color: getAciColor(7), // White
       visible: true

@@ -20,7 +20,8 @@ import { DEFAULT_TOOLBAR_STYLE } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { generateCustomizationId } from '@/services/enterprise-id.service';
 // 🏢 ADR-095: Centralized Snap Tolerance
-import { SNAP_TOLERANCE } from '../../config/tolerance-config';
+// 🏢 ADR-167: Centralized UI Positioning Constants
+import { SNAP_TOLERANCE, UI_POSITIONING } from '../../config/tolerance-config';
 
 // ===== TOOL DEFINITION UTILITIES =====
 export const ToolUtils = {
@@ -296,21 +297,24 @@ export const ToolbarUtils = {
   ): Point2D => {
     const dimensions = ToolbarUtils.calculateDimensions(config);
     
+    // 🏢 ADR-167: Centralized toolbar margin
+    const margin = UI_POSITIONING.TOOLBAR_MARGIN;
+
     // Default to center-top
     let x = (containerRect.width - dimensions.width) / 2;
-    let y = 20;
-    
+    let y = margin;
+
     // Check for collisions with avoid rectangles
     const proposedRect = new DOMRect(x, y, dimensions.width, dimensions.height);
-    
+
     for (const avoidRect of avoid) {
       if (ToolbarUtils.rectsOverlap(proposedRect, avoidRect)) {
         // Try different positions
         const positions = [
-          { x: 20, y: 20 }, // Top-left
-          { x: containerRect.width - dimensions.width - 20, y: 20 }, // Top-right
-          { x: 20, y: containerRect.height - dimensions.height - 20 }, // Bottom-left
-          { x: containerRect.width - dimensions.width - 20, y: containerRect.height - dimensions.height - 20 } // Bottom-right
+          { x: margin, y: margin }, // Top-left
+          { x: containerRect.width - dimensions.width - margin, y: margin }, // Top-right
+          { x: margin, y: containerRect.height - dimensions.height - margin }, // Bottom-left
+          { x: containerRect.width - dimensions.width - margin, y: containerRect.height - dimensions.height - margin } // Bottom-right
         ];
         
         for (const pos of positions) {

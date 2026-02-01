@@ -12,7 +12,8 @@ import { calculateVerticesBounds } from '../../../utils/geometry/GeometryUtils';
 // 🏢 ADR-089: Centralized Point-In-Bounds
 import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
-import { createInfinityBounds } from '../../../config/geometry-constants';
+// 🏢 ADR-034: Centralized Empty Spatial Bounds
+import { createInfinityBounds, EMPTY_SPATIAL_BOUNDS } from '../../../config/geometry-constants';
 
 /**
  * Calculate bounding box for entities
@@ -25,7 +26,8 @@ export function calculateBoundingBox(entities: Entity[]): {
   maxY: number;
 } {
   if (entities.length === 0) {
-    return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    // 🏢 ADR-034: Centralized Empty Spatial Bounds
+    return EMPTY_SPATIAL_BOUNDS;
   }
 
   // 🏢 ADR-158: Centralized Infinity Bounds Initialization

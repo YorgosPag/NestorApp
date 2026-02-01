@@ -4,6 +4,8 @@
  */
 
 import type { Point2D } from '../rendering/types/Types';
+// 🏢 ENTERPRISE: Import centralized UI colors - hardcoded color centralization
+import { UI_COLORS } from '../config/color-config';
 
 export interface BaseMeasurement {
   id: string;
@@ -61,6 +63,6 @@ export type AnyMeasurement =
 // Default measurement settings
 export const DEFAULT_MEASUREMENT_SETTINGS = {
   precision: 2,
-  color: '#00ff00',
+  color: UI_COLORS.BRIGHT_GREEN,
   visible: true,
 } as const;

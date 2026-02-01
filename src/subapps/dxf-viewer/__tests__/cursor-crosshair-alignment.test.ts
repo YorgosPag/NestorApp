@@ -6,18 +6,20 @@
 
 import { CoordinateTransforms } from '../rendering/core/CoordinateTransforms';
 import type { Point2D, ViewTransform, Viewport } from '../rendering/types/Types';
+// 🏢 ADR-XXX: Centralized viewport defaults
+import { VIEWPORT_DEFAULTS } from '../config/transform-config';
 
 // Mock canvas setup για testing environment
 const createMockCanvas = (): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
   canvas.setAttribute('data-canvas-type', 'dxf');
 
-  // Mock getBoundingClientRect
+  // Mock getBoundingClientRect - 🏢 Using centralized VIEWPORT_DEFAULTS
   Object.defineProperty(canvas, 'getBoundingClientRect', {
     value: () => ({
       x: 0, y: 0, top: 0, left: 0,
-      width: 800, height: 600,
-      right: 800, bottom: 600,
+      width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT,
+      right: VIEWPORT_DEFAULTS.WIDTH, bottom: VIEWPORT_DEFAULTS.HEIGHT,
       toJSON: () => ({})
     })
   });
@@ -54,9 +56,9 @@ type TestScenario = {
   performanceThresholdMs: number;
 };
 
-// Generate test scenarios with fixed dimensions (matches mock canvas 800x600)
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 600;
+// Generate test scenarios with fixed dimensions - 🏢 Using centralized VIEWPORT_DEFAULTS
+const CANVAS_WIDTH = VIEWPORT_DEFAULTS.WIDTH;
+const CANVAS_HEIGHT = VIEWPORT_DEFAULTS.HEIGHT;
 
 function generateTestScenarios(): TestScenario[] {
   const center: Point2D = { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 };
@@ -192,7 +194,7 @@ describe('🏢 Enterprise Cursor↔Crosshair Alignment', () => {
 
   describe('Edge Cases & Boundary Testing', () => {
     test('zero coordinates handling', () => {
-      const viewport: Viewport = { width: 800, height: 600 };
+      const viewport: Viewport = { width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT };
       const transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
       const zeroPoint: Point2D = { x: 0, y: 0 };
 
@@ -204,7 +206,7 @@ describe('🏢 Enterprise Cursor↔Crosshair Alignment', () => {
     });
 
     test('negative coordinates handling', () => {
-      const viewport: Viewport = { width: 800, height: 600 };
+      const viewport: Viewport = { width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT };
       const transform: ViewTransform = { scale: 1, offsetX: -100, offsetY: -200 };
       const negativePoint: Point2D = { x: -50, y: -75 };
 
@@ -216,7 +218,7 @@ describe('🏢 Enterprise Cursor↔Crosshair Alignment', () => {
     });
 
     test('very large coordinates handling', () => {
-      const viewport: Viewport = { width: 800, height: 600 };
+      const viewport: Viewport = { width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT };
       const transform: ViewTransform = { scale: 0.001, offsetX: 0, offsetY: 0 };
       const largePoint: Point2D = { x: 100000, y: 100000 };
 
@@ -228,7 +230,7 @@ describe('🏢 Enterprise Cursor↔Crosshair Alignment', () => {
     });
 
     test('fractional coordinates precision', () => {
-      const viewport: Viewport = { width: 800, height: 600 };
+      const viewport: Viewport = { width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT };
       const transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
       const fractionalPoint: Point2D = { x: 123.456789, y: 987.654321 };
 
@@ -244,7 +246,7 @@ describe('🏢 Enterprise Cursor↔Crosshair Alignment', () => {
     test('different viewport sizes', () => {
       const viewports = [
         { width: 320, height: 240 },   // Very small
-        { width: 800, height: 600 },   // Standard
+        { width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT },   // Standard (centralized)
         { width: 1920, height: 1080 }, // HD
         { width: 3840, height: 2160 }  // 4K
       ];
@@ -265,9 +267,9 @@ describe('🏢 Enterprise Cursor↔Crosshair Alignment', () => {
       const dprValues = [1, 1.25, 1.5, 2, 3]; // Common device pixel ratios
 
       for (const dpr of dprValues) {
-        const viewport: Viewport = { width: 800 * dpr, height: 600 * dpr };
+        const viewport: Viewport = { width: VIEWPORT_DEFAULTS.WIDTH * dpr, height: VIEWPORT_DEFAULTS.HEIGHT * dpr };
         const transform: ViewTransform = { scale: dpr, offsetX: 0, offsetY: 0 };
-        const point: Point2D = { x: 400 * dpr, y: 300 * dpr };
+        const point: Point2D = { x: (VIEWPORT_DEFAULTS.WIDTH / 2) * dpr, y: (VIEWPORT_DEFAULTS.HEIGHT / 2) * dpr };
 
         const world = CoordinateTransforms.screenToWorld(point, transform, viewport);
         const recovered = CoordinateTransforms.worldToScreen(world, transform, viewport);
@@ -280,9 +282,9 @@ describe('🏢 Enterprise Cursor↔Crosshair Alignment', () => {
 
   describe('Stress Testing', () => {
     test('rapid successive transformations', () => {
-      const viewport: Viewport = { width: 800, height: 600 };
+      const viewport: Viewport = { width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT };
       const baseTransform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
-      const testPoint: Point2D = { x: 400, y: 300 };
+      const testPoint: Point2D = { x: VIEWPORT_DEFAULTS.WIDTH / 2, y: VIEWPORT_DEFAULTS.HEIGHT / 2 };
 
       let maxError = 0;
       const iterations = 1000;
@@ -306,7 +308,7 @@ describe('🏢 Enterprise Cursor↔Crosshair Alignment', () => {
     });
 
     test('memory consistency over time', () => {
-      const viewport: Viewport = { width: 800, height: 600 };
+      const viewport: Viewport = { width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT };
       const transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
       const referencePoint: Point2D = { x: 123.456, y: 789.012 };
 
@@ -315,7 +317,7 @@ describe('🏢 Enterprise Cursor↔Crosshair Alignment', () => {
 
       // Perform many operations που μπορεί να επηρεάσουν memory
       for (let i = 0; i < 10000; i++) {
-        const randomPoint: Point2D = { x: Math.random() * 800, y: Math.random() * 600 };
+        const randomPoint: Point2D = { x: Math.random() * VIEWPORT_DEFAULTS.WIDTH, y: Math.random() * VIEWPORT_DEFAULTS.HEIGHT };
         CoordinateTransforms.screenToWorld(randomPoint, transform, viewport);
         CoordinateTransforms.worldToScreen(randomPoint, transform, viewport);
       }

@@ -14,8 +14,12 @@ import type { Point2D, BoundingBox } from '../../types/Types';
 import { calculateDistance, calculateAngle, vectorMagnitude, dotProduct, calculateMidpoint, subtractPoints, getUnitVector, getPerpendicularUnitVector } from './geometry-rendering-utils';
 // 🏢 ADR-077: Centralized TAU Constant (TAU)
 import { TAU } from '../../primitives/canvasPaths';
-// 🏢 ADR-079: Centralized Geometric Precision Constants
-import { GEOMETRY_PRECISION } from '../../../config/tolerance-config';
+// 🏢 ADR-079: Centralized Geometric Precision Constants & Utility Functions
+import {
+  GEOMETRY_PRECISION,
+  isDenominatorZero,
+  isCollinear
+} from '../../../config/tolerance-config';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { ZERO_VECTOR } from '../../../config/geometry-constants';
 
@@ -287,8 +291,8 @@ export function circleBestFit(points: Point2D[]): { center: Point2D; radius: num
   const det = Suu * Svv - Suv * Suv;
 
   // Check for degenerate case (collinear points)
-  // 🏢 ADR-156: Centralized degenerate determinant tolerance
-  if (Math.abs(det) < GEOMETRY_PRECISION.DENOMINATOR_ZERO) {
+  // 🏢 ADR-079: Use centralized precision check function
+  if (isDenominatorZero(det)) {
     // Fallback: Use simple centroid method
     // Calculate center as centroid and radius as average distance
     // 🏢 ADR-065: Use centralized distance calculation
@@ -349,8 +353,8 @@ export function circleFrom3Points(p1: Point2D, p2: Point2D, p3: Point2D): { cent
 
   const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
 
-  // 🏢 ADR-079: Use centralized collinear tolerance
-  if (Math.abs(d) < GEOMETRY_PRECISION.COLLINEAR_TOLERANCE) {
+  // 🏢 ADR-079: Use centralized precision check function
+  if (isCollinear(d)) {
     return null; // Points are collinear
   }
 
@@ -672,8 +676,8 @@ export function lineIntersectionExtended(
   // Denominator for both t and u
   const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
 
-  // 🏢 ADR-079: Use centralized tolerance for parallel line detection
-  if (Math.abs(denom) < GEOMETRY_PRECISION.COLLINEAR_TOLERANCE) {
+  // 🏢 ADR-079: Use centralized precision check function
+  if (isCollinear(denom)) {
     return null; // Lines are parallel (or coincident)
   }
 

@@ -314,6 +314,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
   /**
    * 🏢 ENTERPRISE: Container mouse move handler
    * Updates CursorSystem position for all overlays (CrosshairOverlay, etc.)
+   * 🏢 FIX (2026-02-01): Also calculates world coordinates for status bar display
    */
   const handleContainerMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const container = containerRef.current;
@@ -329,7 +330,17 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     setImmediatePosition(screenPos);
     // React state update (for components that need it)
     updatePosition(screenPos);
-  }, [containerRef, updatePosition]);
+    // Update CSS coordinates
+    updateMouseCss(screenPos);
+
+    // 🏢 FIX (2026-02-01): Calculate world coordinates for status bar
+    // This was missing - Y coordinate was always 0 because world pos was never calculated!
+    const snap = getPointerSnapshotFromElement(container);
+    if (snap) {
+      const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
+      updateMouseWorld(worldPos);
+    }
+  }, [containerRef, updatePosition, updateMouseCss, updateMouseWorld, transform]);
 
   /**
    * 🏢 ENTERPRISE: Container mouse enter handler

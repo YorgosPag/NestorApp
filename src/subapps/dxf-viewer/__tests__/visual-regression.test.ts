@@ -26,6 +26,8 @@ import {
   renderCoordinateSystemTest,
   type VisualTestOptions
 } from '../test/visual/overlayRenderer';
+// 🏢 ADR-XXX: Centralized viewport defaults
+import { VIEWPORT_DEFAULTS } from '../config/transform-config';
 import {
   writeArtifacts,
   hasBaseline,
@@ -51,16 +53,16 @@ type TestCase = {
 };
 
 const ENTERPRISE_TEST_CASES: TestCase[] = [
-  // Standard desktop resolution
-  { name: 'combined-800x600', width: 800, height: 600, overlayType: 'combined', threshold: 0.0001, maxMismatchPixels: 48, seed: 42 },
-  { name: 'origin-800x600', width: 800, height: 600, overlayType: 'origin', threshold: 0.0001, maxMismatchPixels: 24, seed: 42 },
-  { name: 'grid-800x600', width: 800, height: 600, overlayType: 'grid', threshold: 0.0001, maxMismatchPixels: 40, seed: 42 },
+  // Standard desktop resolution - 🏢 Using centralized VIEWPORT_DEFAULTS
+  { name: 'combined-800x600', width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT, overlayType: 'combined', threshold: 0.0001, maxMismatchPixels: 48, seed: 42 },
+  { name: 'origin-800x600', width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT, overlayType: 'origin', threshold: 0.0001, maxMismatchPixels: 24, seed: 42 },
+  { name: 'grid-800x600', width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.HEIGHT, overlayType: 'grid', threshold: 0.0001, maxMismatchPixels: 40, seed: 42 },
 
   // HD resolution
   { name: 'combined-1920x1080', width: 1920, height: 1080, overlayType: 'combined', threshold: 0.0001, maxMismatchPixels: 207, seed: 42 },
 
-  // Square canvas
-  { name: 'crosshair-800x800', width: 800, height: 800, overlayType: 'crosshair', threshold: 0.0001, maxMismatchPixels: 32, seed: 42 },
+  // Square canvas - uses VIEWPORT_DEFAULTS.WIDTH for both dimensions (square)
+  { name: 'crosshair-800x800', width: VIEWPORT_DEFAULTS.WIDTH, height: VIEWPORT_DEFAULTS.WIDTH, overlayType: 'crosshair', threshold: 0.0001, maxMismatchPixels: 32, seed: 42 },
 
   // Mobile resolution
   { name: 'combined-320x240', width: 320, height: 240, overlayType: 'combined', threshold: 0.0002, maxMismatchPixels: 15, seed: 42 },
@@ -319,8 +321,8 @@ describe('🎨 Enterprise Visual Regression Testing', () => {
     test('coordinate transform visual accuracy', async () => {
     const testCase = {
       name: 'coordinate-transform-800x600',
-      width: 800,
-      height: 600,
+      width: VIEWPORT_DEFAULTS.WIDTH,
+      height: VIEWPORT_DEFAULTS.HEIGHT,
       threshold: 0.0001,
       maxMismatchPixels: 40
     };

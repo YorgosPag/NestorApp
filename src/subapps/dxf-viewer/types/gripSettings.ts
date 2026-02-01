@@ -7,6 +7,8 @@ import type { Point2D } from '../rendering/types/Types';
 import { UI_COLORS } from '../config/color-config';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-034: Centralized Validation Bounds
+import { OPACITY_BOUNDS, GRIP_BOUNDS } from '../config/validation-bounds-config';
 
 export interface GripSettings {
   // === AutoCAD Variables ===
@@ -86,23 +88,24 @@ export const DEFAULT_GRIP_SETTINGS: GripSettings = {
 };
 
 // === VALIDATION ===
+// 🏢 ADR-034: Using centralized GRIP_BOUNDS for consistency
 export const GRIP_LIMITS = {
-  gripSize: { min: 1, max: 255 },
-  pickBoxSize: { min: 0, max: 50 },
-  apertureSize: { min: 1, max: 50 }
+  gripSize: { min: GRIP_BOUNDS.SIZE_EXTENDED.min, max: GRIP_BOUNDS.SIZE_EXTENDED.max },
+  pickBoxSize: { min: GRIP_BOUNDS.PICK_BOX.min, max: GRIP_BOUNDS.PICK_BOX.max },
+  apertureSize: { min: GRIP_BOUNDS.APERTURE.min, max: GRIP_BOUNDS.APERTURE.max }
 } as const;
 
 export function validateGripSettings(settings: Partial<GripSettings>): GripSettings {
   const result = { ...DEFAULT_GRIP_SETTINGS, ...settings };
 
-  // 🏢 ADR-071: Clamp values to AutoCAD ranges using centralized clamp
-  result.gripSize = clamp(result.gripSize, GRIP_LIMITS.gripSize.min, GRIP_LIMITS.gripSize.max);
-  result.pickBoxSize = clamp(result.pickBoxSize, GRIP_LIMITS.pickBoxSize.min, GRIP_LIMITS.pickBoxSize.max);
-  result.apertureSize = clamp(result.apertureSize, GRIP_LIMITS.apertureSize.min, GRIP_LIMITS.apertureSize.max);
+  // 🏢 ADR-034: Clamp values using centralized validation bounds
+  result.gripSize = clamp(result.gripSize, GRIP_BOUNDS.SIZE_EXTENDED.min, GRIP_BOUNDS.SIZE_EXTENDED.max);
+  result.pickBoxSize = clamp(result.pickBoxSize, GRIP_BOUNDS.PICK_BOX.min, GRIP_BOUNDS.PICK_BOX.max);
+  result.apertureSize = clamp(result.apertureSize, GRIP_BOUNDS.APERTURE.min, GRIP_BOUNDS.APERTURE.max);
 
-  // 🏢 ADR-071: Clamp additional settings using centralized clamp
-  result.opacity = clamp(result.opacity, 0.1, 1.0);
-  result.maxGripsPerEntity = clamp(result.maxGripsPerEntity, 10, 200);
+  // 🏢 ADR-034: Clamp additional settings using centralized validation bounds
+  result.opacity = clamp(result.opacity, OPACITY_BOUNDS.VISIBLE.min, OPACITY_BOUNDS.VISIBLE.max);
+  result.maxGripsPerEntity = clamp(result.maxGripsPerEntity, GRIP_BOUNDS.MAX_PER_ENTITY.min, GRIP_BOUNDS.MAX_PER_ENTITY.max);
 
   return result;
 }

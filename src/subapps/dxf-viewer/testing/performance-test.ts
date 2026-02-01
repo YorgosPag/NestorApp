@@ -10,6 +10,8 @@
 
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../rendering/primitives/canvasPaths';
+// 🏢 ADR-XXX: Centralized viewport defaults
+import { VIEWPORT_DEFAULTS } from '../config/transform-config';
 
 interface PerformanceTestResult {
   testName: string;
@@ -131,10 +133,10 @@ export class DxfPerformanceTestRunner {
     const startTime = performance.now();
 
     try {
-      // Simulate canvas rendering test
+      // Simulate canvas rendering test - 🏢 Using centralized VIEWPORT_DEFAULTS
       const canvas = document.createElement('canvas');
-      canvas.width = 800;
-      canvas.height = 600;
+      canvas.width = VIEWPORT_DEFAULTS.WIDTH;
+      canvas.height = VIEWPORT_DEFAULTS.HEIGHT;
 
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context not available');

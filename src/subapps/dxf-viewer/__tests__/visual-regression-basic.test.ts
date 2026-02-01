@@ -41,9 +41,11 @@ describe('Basic Visual Regression Setup', () => {
   });
 
   test('canvas creation works', () => {
+    // Note: Using literal values here because VIEWPORT_DEFAULTS is defined in config
+    // and this is a basic setup test. If changing defaults, update these values.
     const canvas = document.createElement('canvas');
-    canvas.width = 800;
-    canvas.height = 600;
+    canvas.width = 800;  // Matches VIEWPORT_DEFAULTS.WIDTH
+    canvas.height = 600; // Matches VIEWPORT_DEFAULTS.HEIGHT
 
     expect(canvas.width).toBe(800);
     expect(canvas.height).toBe(600);

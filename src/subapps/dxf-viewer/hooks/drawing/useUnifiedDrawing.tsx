@@ -148,6 +148,8 @@ import { usePreviewMode } from '../usePreviewMode';
 import { useLineStyles } from '../../settings-provider';
 // 🏢 ENTERPRISE: Import centralized CAD colors - ADR-014 color token migration
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Import centralized UI colors - hardcoded color centralization
+import { UI_COLORS } from '../../config/color-config';
 // 🏢 ENTERPRISE (2026-01-30): ADR-057 - Unified Entity Completion Pipeline
 // Note: applyCompletionStyles is called internally by completeEntity (ADR-056)
 import { completeEntity } from './completeEntity';
@@ -1609,7 +1611,7 @@ export function useUnifiedDrawing() {
         // 🎯 ADR-047: Highlight first point for measure-area when 3+ points (close indicator)
         if (currentTool === 'measure-area' && worldPoints.length >= 3) {
           extendedPolyline.previewGripPoints = [
-            { position: worldPoints[0], type: 'close', color: '#00ff00' }, // 🟢 Green circle = clickable close point
+            { position: worldPoints[0], type: 'close', color: UI_COLORS.BRIGHT_GREEN }, // 🟢 Green circle = clickable close point
             { position: snappedPoint, type: 'cursor' }
           ];
         }

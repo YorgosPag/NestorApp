@@ -5,6 +5,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { DraggableState } from '../types/tests.types';
+// 🏢 ADR-167: Centralized UI Positioning Constants
+import { UI_POSITIONING } from '../../../../config/tolerance-config';
 
 export function useDraggableModal(isOpen: boolean): DraggableState {
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -16,7 +18,8 @@ export function useDraggableModal(isOpen: boolean): DraggableState {
   useEffect(() => {
     if (isOpen && position.x === 0 && position.y === 0) {
       const centerX = (window.innerWidth - 900) / 2; // 900px = max-w-4xl
-      const centerY = 50; // Start near top
+      // 🏢 ADR-167: Centralized UI Positioning Constants
+      const centerY = UI_POSITIONING.MODAL_TOP_OFFSET; // Start near top
       setPosition({ x: centerX, y: centerY });
     }
   }, [isOpen, position.x, position.y]);

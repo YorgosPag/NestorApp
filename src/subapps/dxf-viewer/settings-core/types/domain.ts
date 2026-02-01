@@ -20,6 +20,13 @@ import { UI_COLORS } from '../../config/color-config';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-076: Centralized Color Conversion
 import { rgbToHex as centralizedRgbToHex } from '../../ui/color/utils';
+// 🏢 ADR-034: Centralized Validation Bounds
+import {
+  OPACITY_BOUNDS,
+  TEXT_BOUNDS,
+  LINE_BOUNDS,
+  GRIP_BOUNDS,
+} from '../../config/validation-bounds-config';
 
 // ============================================================================
 // LINE TYPES & SETTINGS (ISO 128)
@@ -199,7 +206,8 @@ export const validateLineWidth = (value: number | null | undefined): number => {
   if (value == null || isNaN(value) || typeof value !== 'number') {
     return 1;
   }
-  return clamp(value, 0.1, 100);
+  // 🏢 ADR-034: Centralized validation bounds
+  return clamp(value, LINE_BOUNDS.WIDTH.min, LINE_BOUNDS.WIDTH.max);
 };
 
 export const validateColor = (value: string | null | undefined): string => {
@@ -245,14 +253,16 @@ export const validateFontSize = (value: number | null | undefined): number => {
   if (value == null || isNaN(value) || typeof value !== 'number') {
     return 14;
   }
-  return clamp(value, 8, 72);
+  // 🏢 ADR-034: Centralized validation bounds
+  return clamp(value, TEXT_BOUNDS.FONT_SIZE.min, TEXT_BOUNDS.FONT_SIZE.max);
 };
 
 export const validateGripSize = (value: number | null | undefined): number => {
   if (value == null || isNaN(value) || typeof value !== 'number') {
     return 5;
   }
-  return clamp(value, 3, 20);
+  // 🏢 ADR-034: Centralized validation bounds
+  return clamp(value, GRIP_BOUNDS.SIZE.min, GRIP_BOUNDS.SIZE.max);
 };
 
 export const validateLineSettings = (settings: Partial<LineSettings>): LineSettings => {
@@ -284,18 +294,19 @@ export const validateLineSettings = (settings: Partial<LineSettings>): LineSetti
     validatedSettings.lineType = 'solid';
   }
 
+  // 🏢 ADR-034: All clamp operations use centralized validation bounds
   return {
     ...defaults,
     ...validatedSettings,
     lineWidth: validateLineWidth(settings.lineWidth) ?? defaults.lineWidth,
     color: validateColor(settings.color) ?? defaults.color,
-    opacity: clamp(settings.opacity ?? defaults.opacity, 0, 1),
-    dashScale: clamp(settings.dashScale ?? defaults.dashScale, 0.1, 3.0),
-    dashOffset: clamp(settings.dashOffset ?? defaults.dashOffset, 0, 100),
+    opacity: clamp(settings.opacity ?? defaults.opacity, OPACITY_BOUNDS.STANDARD.min, OPACITY_BOUNDS.STANDARD.max),
+    dashScale: clamp(settings.dashScale ?? defaults.dashScale, LINE_BOUNDS.DASH_SCALE.min, LINE_BOUNDS.DASH_SCALE.max),
+    dashOffset: clamp(settings.dashOffset ?? defaults.dashOffset, LINE_BOUNDS.DASH_OFFSET.min, LINE_BOUNDS.DASH_OFFSET.max),
     hoverWidth: validateLineWidth(settings.hoverWidth) ?? defaults.hoverWidth,
-    hoverOpacity: clamp(settings.hoverOpacity ?? defaults.hoverOpacity, 0, 1),
+    hoverOpacity: clamp(settings.hoverOpacity ?? defaults.hoverOpacity, OPACITY_BOUNDS.STANDARD.min, OPACITY_BOUNDS.STANDARD.max),
     finalWidth: validateLineWidth(settings.finalWidth) ?? defaults.finalWidth,
-    finalOpacity: clamp(settings.finalOpacity ?? defaults.finalOpacity, 0, 1),
+    finalOpacity: clamp(settings.finalOpacity ?? defaults.finalOpacity, OPACITY_BOUNDS.STANDARD.min, OPACITY_BOUNDS.STANDARD.max),
   };
 };
 
@@ -343,18 +354,19 @@ export const validateTextSettings = (settings: Partial<TextSettings>): TextSetti
     validatedSettings.fontStyle = 'normal';
   }
 
+  // 🏢 ADR-034: All clamp operations use centralized validation bounds
   return {
     ...defaults,
     ...validatedSettings,
     fontSize: validateFontSize(settings.fontSize) ?? defaults.fontSize,
-    fontWeight: clamp(settings.fontWeight ?? defaults.fontWeight, 100, 900),
+    fontWeight: clamp(settings.fontWeight ?? defaults.fontWeight, TEXT_BOUNDS.FONT_WEIGHT.min, TEXT_BOUNDS.FONT_WEIGHT.max),
     color: validateColor(settings.color) ?? defaults.color,
-    opacity: clamp(settings.opacity ?? defaults.opacity, 0, 1),
-    letterSpacing: clamp(settings.letterSpacing ?? defaults.letterSpacing, -5, 10),
-    lineHeight: clamp(settings.lineHeight ?? defaults.lineHeight, 0.8, 3.0),
-    shadowBlur: clamp(settings.shadowBlur ?? defaults.shadowBlur, 0, 20),
-    strokeWidth: clamp(settings.strokeWidth ?? defaults.strokeWidth, 0, 5),
-    backgroundPadding: clamp(settings.backgroundPadding ?? defaults.backgroundPadding, 0, 20),
+    opacity: clamp(settings.opacity ?? defaults.opacity, OPACITY_BOUNDS.STANDARD.min, OPACITY_BOUNDS.STANDARD.max),
+    letterSpacing: clamp(settings.letterSpacing ?? defaults.letterSpacing, TEXT_BOUNDS.LETTER_SPACING.min, TEXT_BOUNDS.LETTER_SPACING.max),
+    lineHeight: clamp(settings.lineHeight ?? defaults.lineHeight, TEXT_BOUNDS.LINE_HEIGHT.min, TEXT_BOUNDS.LINE_HEIGHT.max),
+    shadowBlur: clamp(settings.shadowBlur ?? defaults.shadowBlur, TEXT_BOUNDS.SHADOW_BLUR.min, TEXT_BOUNDS.SHADOW_BLUR.max),
+    strokeWidth: clamp(settings.strokeWidth ?? defaults.strokeWidth, TEXT_BOUNDS.STROKE_WIDTH.min, TEXT_BOUNDS.STROKE_WIDTH.max),
+    backgroundPadding: clamp(settings.backgroundPadding ?? defaults.backgroundPadding, TEXT_BOUNDS.BACKGROUND_PADDING.min, TEXT_BOUNDS.BACKGROUND_PADDING.max),
   };
 };
 
@@ -392,13 +404,14 @@ export const validateGripSettings = (settings: Partial<GripSettings>): GripSetti
     validatedSettings.colors = validatedColors;
   }
 
+  // 🏢 ADR-034: All clamp operations use centralized validation bounds
   return {
     ...defaults,
     ...validatedSettings,
     gripSize: validateGripSize(settings.gripSize) ?? defaults.gripSize,
-    pickBoxSize: clamp(settings.pickBoxSize ?? defaults.pickBoxSize, 1, 20),
-    apertureSize: clamp(settings.apertureSize ?? defaults.apertureSize, 1, 50),
-    opacity: clamp(settings.opacity ?? defaults.opacity, 0, 1),
-    maxGripsPerEntity: clamp(settings.maxGripsPerEntity ?? defaults.maxGripsPerEntity, 1, 100),
+    pickBoxSize: clamp(settings.pickBoxSize ?? defaults.pickBoxSize, GRIP_BOUNDS.PICK_BOX_REFINED.min, GRIP_BOUNDS.PICK_BOX_REFINED.max),
+    apertureSize: clamp(settings.apertureSize ?? defaults.apertureSize, GRIP_BOUNDS.APERTURE.min, GRIP_BOUNDS.APERTURE.max),
+    opacity: clamp(settings.opacity ?? defaults.opacity, OPACITY_BOUNDS.STANDARD.min, OPACITY_BOUNDS.STANDARD.max),
+    maxGripsPerEntity: clamp(settings.maxGripsPerEntity ?? defaults.maxGripsPerEntity, GRIP_BOUNDS.MAX_PER_ENTITY_LEGACY.min, GRIP_BOUNDS.MAX_PER_ENTITY_LEGACY.max),
   };
 };

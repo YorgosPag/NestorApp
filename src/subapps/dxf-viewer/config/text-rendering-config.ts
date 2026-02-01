@@ -649,6 +649,68 @@ export const TEXT_LABEL_OFFSETS = {
    * @see OriginMarkersRenderer.ts, OriginMarkersDebugOverlay.ts
    */
   Y_AXIS_LABEL_TOP_MARGIN: 10,
+
+  // ────────────────────────────────────────────
+  // 🏢 ADR-067: BACKGROUND PASS AXIS LABELS (2026-02-01)
+  // ────────────────────────────────────────────
+
+  /**
+   * X axis label horizontal offset from axis end (pixels)
+   * Used in: BackgroundPass.ts - drawOriginAxes()
+   *
+   * PATTERN: ctx.fillText('X', axisEnd.x + AXIS_X_LABEL_H_OFFSET, ...)
+   * @see BackgroundPass.ts - renderCoordinateSystem()
+   */
+  AXIS_X_LABEL_H_OFFSET: 5,
+
+  /**
+   * X axis label vertical offset (pixels, negative = above)
+   * Used in: BackgroundPass.ts - drawOriginAxes()
+   *
+   * PATTERN: ctx.fillText('X', ..., axisEnd.y + AXIS_X_LABEL_V_OFFSET)
+   * @see BackgroundPass.ts - renderCoordinateSystem()
+   */
+  AXIS_X_LABEL_V_OFFSET: -7,
+
+  /**
+   * Y axis label vertical offset from axis end (pixels)
+   * Used in: BackgroundPass.ts - drawOriginAxes()
+   *
+   * PATTERN: ctx.fillText('Y', ..., axisEnd.y + AXIS_Y_LABEL_V_OFFSET)
+   * @see BackgroundPass.ts - renderCoordinateSystem()
+   */
+  AXIS_Y_LABEL_V_OFFSET: -20,
+
+  /**
+   * Origin "(0,0)" label offset (pixels)
+   * Used in: BackgroundPass.ts - drawOriginAxes()
+   *
+   * PATTERN: ctx.fillText('(0,0)', origin.x + ORIGIN_LABEL_OFFSET, origin.y + ORIGIN_LABEL_OFFSET)
+   * @see BackgroundPass.ts - renderCoordinateSystem()
+   */
+  ORIGIN_LABEL_OFFSET: 5,
+
+  // ────────────────────────────────────────────
+  // 🏢 ADR-067: CONTROL POINT OFFSETS (2026-02-01)
+  // ────────────────────────────────────────────
+
+  /**
+   * Coordinate text offset above point (pixels, negative = above)
+   * Used in: ControlPointDrawer.ts - renderGeoReferences()
+   *
+   * PATTERN: ctx.fillText(coords, point.x, point.y + COORD_TEXT_ABOVE)
+   * @see ControlPointDrawer.ts - renderGeoReferences()
+   */
+  COORD_TEXT_ABOVE: -12,
+
+  /**
+   * Indicator symbol ("?") vertical offset (pixels)
+   * Used in: ControlPointDrawer.ts - renderGeoReferences()
+   *
+   * PATTERN: ctx.fillText('?', point.x, point.y + INDICATOR_OFFSET)
+   * @see ControlPointDrawer.ts - renderGeoReferences()
+   */
+  INDICATOR_OFFSET: 4,
 } as const;
 
 // ============================================

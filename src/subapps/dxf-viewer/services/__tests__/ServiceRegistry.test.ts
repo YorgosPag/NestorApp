@@ -33,9 +33,10 @@ jest.mock('../HitTestingService', () => ({
 }));
 
 // Mock CanvasBoundsService
+// Note: Using literal values 800x600 to match VIEWPORT_DEFAULTS from transform-config.ts
 jest.mock('../CanvasBoundsService', () => ({
   canvasBoundsService: {
-    getBounds: jest.fn().mockReturnValue({ x: 0, y: 0, width: 800, height: 600 }),
+    getBounds: jest.fn().mockReturnValue({ x: 0, y: 0, width: 800, height: 600 }), // Matches VIEWPORT_DEFAULTS
     updateBounds: jest.fn()
   }
 }));
