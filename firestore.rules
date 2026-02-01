@@ -55,10 +55,16 @@ service cloud.firestore {
 
       // ✍️ CREATE: Authenticated users with companyId from claims
       // 🔐 SECURITY: companyId MUST match user's company claim (no cross-tenant creation)
+      // 🏢 EXCEPTION: Super Admin can create projects for any company
       allow create: if isAuthenticated()
                     && isValidProjectData(request.resource.data)
-                    && request.resource.data.companyId == getUserCompanyId()
-                    && resource == null;
+                    && resource == null
+                    && (
+                         // Super Admin can create for any company
+                         isSuperAdminOnly()
+                         // OR user creates for their own company
+                         || request.resource.data.companyId == getUserCompanyId()
+                       );
 
       // 📝 UPDATE: Creator or company admin with tenant check
       // 🔐 SECURITY: companyId is immutable (no re-tenanting)
@@ -1134,6 +1140,45 @@ service cloud.firestore {
                          || isCompanyAdminOfCompany(resource.data.companyId)
                          || isSuperAdminOnly()
                        );
+
+      // =====================================================================
+      // 🏦 BANK ACCOUNTS SUBCOLLECTION - INHERITS PARENT TENANT ISOLATION
+      // =====================================================================
+      // 🏢 ENTERPRISE: Bank accounts for contacts (2026-02-01)
+      // 📁 Path: contacts/{contactId}/bankAccounts/{accountId}
+      // 🔒 SECURITY: Inherits access from parent contact document
+      // =====================================================================
+      match /bankAccounts/{accountId} {
+
+        // Helper: Check if user can access parent contact
+        function canAccessParentContact() {
+          let parentContact = get(/databases/$(database)/documents/contacts/$(contactId)).data;
+          return isAuthenticated()
+                 && (
+                      isSuperAdminOnly()
+                      || (parentContact.keys().hasAny(['companyId'])
+                          && belongsToCompany(parentContact.companyId))
+                      || (!parentContact.keys().hasAny(['companyId'])
+                          && parentContact.createdBy == request.auth.uid)
+                    );
+        }
+
+        // 📖 READ: Same access as parent contact
+        allow read: if canAccessParentContact();
+
+        // ✍️ CREATE: Users who can access parent contact
+        allow create: if canAccessParentContact()
+                      && request.resource.data.keys().hasAll(['bankName', 'iban', 'accountType', 'currency', 'isPrimary', 'isActive'])
+                      && request.resource.data.iban is string
+                      && request.resource.data.iban.size() >= 15;
+
+        // 📝 UPDATE: Users who can access parent contact
+        allow update: if canAccessParentContact()
+                      && request.resource.data.keys().hasAll(['bankName', 'iban', 'accountType', 'currency', 'isPrimary', 'isActive']);
+
+        // 🗑️ DELETE: Users who can access parent contact
+        allow delete: if canAccessParentContact();
+      }
     }
 
     // =========================================================================

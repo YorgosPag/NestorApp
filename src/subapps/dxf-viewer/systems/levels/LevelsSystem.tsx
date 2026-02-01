@@ -11,7 +11,7 @@ import {
   DEFAULT_LEVEL_SETTINGS 
 } from './config';
 import { LevelOperations, FloorplanOperations, CalibrationOperations } from './utils';
-import { LevelsContext, type LevelsHookReturn } from './useLevels';
+import { type LevelsHookReturn } from './useLevels';
 import { useAutoSaveSceneManager } from '../../hooks/scene/useAutoSaveSceneManager';
 import type { SceneModel } from '../../types/scene';
 import { useImportWizard } from '../../hooks/common/useImportWizard';
@@ -29,6 +29,21 @@ import {
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore';
+
+// ============================================================================
+// 🏢 ENTERPRISE: STATIC CONTEXT CREATION (ADR-125)
+// ============================================================================
+// CRITICAL: Context MUST be created in the SAME file as the Provider component.
+// This prevents "Provider is null" errors in production builds due to bundler
+// optimizations that can reorder module evaluation.
+// Pattern: Autodesk/Microsoft/Google enterprise standard
+// ============================================================================
+
+/**
+ * Static context instance (created once at module load)
+ * This is the CANONICAL location for LevelsContext.
+ */
+export const LevelsContext = React.createContext<LevelsHookReturn | null>(null);
 
 // 🔺 FIXED: Helper για ΠΡΑΓΜΑΤΙΚΑ κενή σκηνή χωρίς default layer
 const createEmptyScene = () => ({

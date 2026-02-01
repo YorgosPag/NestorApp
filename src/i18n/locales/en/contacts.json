@@ -617,6 +617,9 @@
       },
       "relationships": {
         "title": "Relationships"
+      },
+      "banking": {
+        "title": "Banking"
       }
     },
     "fields": {
@@ -783,6 +786,10 @@
       "files": {
         "title": "Files",
         "description": "Manage contact files and documents"
+      },
+      "banking": {
+        "title": "Banking",
+        "description": "Contact bank accounts"
       }
     },
     "fields": {

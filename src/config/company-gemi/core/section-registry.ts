@@ -156,6 +156,9 @@ const statusesSection: SectionConfig = { id: 'statuses', title: 'sections.status
 const photosSection: SectionConfig = { id: 'companyPhotos', title: 'sections.logoPhotos', icon: 'image', order: 13, fields: [], description: 'sectionDescriptions.logoPhotos' };
 const relationshipsSection: SectionConfig = { id: 'relationships', title: 'sections.shareholdersEmployees', icon: 'users', order: 14, fields: [], description: 'sectionDescriptions.shareholdersPartners' };
 
+// 🏢 ENTERPRISE: Banking System (ADR-126)
+const bankingSection: SectionConfig = { id: 'banking', title: 'sections.banking', icon: 'credit-card', order: 15, fields: [], description: 'sectionDescriptions.banking' };
+
 // ============================================================================
 // SECTION REGISTRY
 // ============================================================================
@@ -182,4 +185,5 @@ export const COMPANY_GEMI_SECTIONS: SectionConfig[] = [
   statusesSection,
   photosSection,
   relationshipsSection,
+  bankingSection, // 🏢 ENTERPRISE: Banking System (ADR-126)
 ].sort((a, b) => a.order - b.order); // Auto-sort by order

@@ -15,6 +15,7 @@
     "clearAllCount": "Clear ({count})"
   },
   "filters": {
+    "title": "Filters",
     "status": {
       "available": "Available",
       "sold": "Sold",
@@ -117,6 +118,24 @@
       "favoritesManagement": "Manage favorites",
       "share": "Share",
       "sorting": "Sorting"
+    },
+    "sort": {
+      "name": {
+        "asc": "Name (A → Z)",
+        "desc": "Name (Z → A)"
+      },
+      "date": {
+        "asc": "Date (Oldest)",
+        "desc": "Date (Newest)"
+      },
+      "status": {
+        "asc": "Status (A → Z)",
+        "desc": "Status (Z → A)"
+      },
+      "channel": {
+        "asc": "Channel (A → Z)",
+        "desc": "Channel (Z → A)"
+      }
     },
     "ui": {
       "itemsSelected": "{count} selected",

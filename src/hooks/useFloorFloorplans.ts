@@ -48,6 +48,8 @@ interface UseFloorFloorplansParams {
   buildingId: string | null;
   /** Floor number - used with buildingId to find floor */
   floorNumber: number | null;
+  /** Company ID (REQUIRED for Enterprise pattern) */
+  companyId?: string | null;
 }
 
 interface UseFloorFloorplansReturn {
@@ -104,7 +106,7 @@ interface FloorDocument {
  * @returns Floor floorplan data, loading state, error, and refetch function
  */
 export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFloorplansReturn {
-  const { floorId, buildingId, floorNumber } = params;
+  const { floorId, buildingId, floorNumber, companyId } = params;
 
   const [floorFloorplan, setFloorFloorplan] = useState<FloorFloorplanData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -179,7 +181,13 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
           };
         }
 
-        return await FloorFloorplanService.loadFloorplan(docData.buildingId, floorIdStr);
+        // 🏢 ENTERPRISE: Use new API with companyId if available
+        if (companyId) {
+          return await FloorFloorplanService.loadFloorplan({ companyId, floorId: floorIdStr });
+        }
+        // Legacy fallback - return metadata only (no scene loading without companyId)
+        console.warn('📋 [useFloorFloorplans] companyId not available for Enterprise loading');
+        return null;
       }
 
       console.log('📋 [useFloorFloorplans] No floorplan found in floor_floorplans collection');
@@ -188,7 +196,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
       console.warn('⚠️ [useFloorFloorplans] Error searching floor_floorplans:', err);
       return null;
     }
-  }, []);
+  }, [companyId]);
 
   /**
    * 🏢 ENTERPRISE: Strategy 2 - Search cadFiles collection
@@ -240,15 +248,20 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
   /**
    * 🏢 ENTERPRISE: Strategy 3 - Load directly with FloorFloorplanService
    */
-  const loadDirectly = useCallback(async (bId: string, fId: string): Promise<FloorFloorplanData | null> => {
+  const loadDirectly = useCallback(async (fId: string): Promise<FloorFloorplanData | null> => {
     try {
-      console.log('🔍 [useFloorFloorplans] Loading directly with FloorFloorplanService:', { buildingId: bId, floorId: fId });
-      return await FloorFloorplanService.loadFloorplan(bId, fId);
+      // 🏢 ENTERPRISE: Requires companyId for the new API
+      if (!companyId) {
+        console.warn('⚠️ [useFloorFloorplans] companyId required for Enterprise pattern');
+        return null;
+      }
+      console.log('🔍 [useFloorFloorplans] Loading directly with FloorFloorplanService:', { companyId, floorId: fId });
+      return await FloorFloorplanService.loadFloorplan({ companyId, floorId: fId });
     } catch (err) {
       console.warn('⚠️ [useFloorFloorplans] Error loading directly:', err);
       return null;
     }
-  }, []);
+  }, [companyId]);
 
   /**
    * Main fetch function - tries multiple strategies
@@ -291,9 +304,9 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
         floorplanData = await searchCadFiles(effectiveFloorId);
       }
 
-      // Strategy 3: Try loading directly if we have buildingId
-      if (!floorplanData && buildingId) {
-        floorplanData = await loadDirectly(buildingId, effectiveFloorId);
+      // Strategy 3: Try loading directly with Enterprise pattern if we have companyId
+      if (!floorplanData && companyId) {
+        floorplanData = await loadDirectly(effectiveFloorId);
       }
 
       setFloorFloorplan(floorplanData);
@@ -317,7 +330,7 @@ export function useFloorFloorplans(params: UseFloorFloorplansParams): UseFloorFl
     } finally {
       setLoading(false);
     }
-  }, [floorId, buildingId, floorNumber, findFloorId, searchFloorFloorplans, searchCadFiles, loadDirectly]);
+  }, [floorId, buildingId, floorNumber, companyId, findFloorId, searchFloorFloorplans, searchCadFiles, loadDirectly]);
 
   // Fetch on mount and when params change
   useEffect(() => {

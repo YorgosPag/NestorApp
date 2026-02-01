@@ -20,6 +20,7 @@
 
 import { performanceMonitor } from '../../../utils/performanceMonitor';
 import { PERFORMANCE_THRESHOLDS } from '../../../core/performance/components/utils/performance-utils';
+import { UnifiedFrameScheduler } from '../rendering/core/UnifiedFrameScheduler';
 
 // ============================================================================
 // 🏢 ENTERPRISE: TypeScript Types for Browser Memory API
@@ -156,10 +157,11 @@ export class DxfPerformanceOptimizer {
   private lastOptimizationTime = 0;
 
   // Performance monitoring state
-  private frameCount = 0;
-  private lastFrameTime = performance.now();
   private renderStartTime = 0;
   private memoryCheckTime = 0;
+
+  // 🏢 ENTERPRISE: Unsubscribe function for frame scheduler metrics
+  private unsubscribeFrameMetrics: (() => void) | null = null;
 
   private constructor() {
     this.config = this.getDefaultConfig();
@@ -255,28 +257,26 @@ export class DxfPerformanceOptimizer {
 
   /**
    * 🎯 FPS Monitoring
+   *
+   * 🏢 ENTERPRISE: Uses UnifiedFrameScheduler.getMetrics() instead of parallel RAF loop
+   * @see ADR-030: Unified Frame Scheduler
+   * @see ADR-119: RAF Consolidation to UnifiedFrameScheduler
+   *
+   * CONSOLIDATION (2026-02-01):
+   * - REMOVED: Parallel RAF loop that was competing with UnifiedFrameScheduler
+   * - NOW USES: UnifiedFrameScheduler.onFrame() for FPS metrics
+   * - BENEFIT: Single RAF loop for entire application, reduced CPU overhead
    */
   private setupFPSMonitoring(): void {
-    const measureFPS = () => {
-      const now = performance.now();
-      this.frameCount++;
-
-      if (now - this.lastFrameTime >= 1000) {
-        const fps = (this.frameCount * 1000) / (now - this.lastFrameTime);
-        this.frameCount = 0;
-        this.lastFrameTime = now;
-
-        // Update current metrics
-        if (this.currentMetrics) {
-          this.currentMetrics.fps = Math.round(fps);
-          this.checkPerformanceThresholds();
-        }
+    // 🏢 ENTERPRISE: Subscribe to UnifiedFrameScheduler metrics instead of parallel RAF
+    // The scheduler already tracks FPS with averageFps calculation over 60 frames
+    this.unsubscribeFrameMetrics = UnifiedFrameScheduler.onFrame((frameMetrics) => {
+      if (this.currentMetrics) {
+        // Use averageFps for smoother readings (60-frame rolling average)
+        this.currentMetrics.fps = Math.round(frameMetrics.averageFps);
+        this.checkPerformanceThresholds();
       }
-
-      requestAnimationFrame(measureFPS);
-    };
-
-    requestAnimationFrame(measureFPS);
+    });
   }
 
   /**
@@ -744,6 +744,12 @@ export class DxfPerformanceOptimizer {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
+    }
+
+    // 🏢 ENTERPRISE: Cleanup frame scheduler subscription
+    if (this.unsubscribeFrameMetrics) {
+      this.unsubscribeFrameMetrics();
+      this.unsubscribeFrameMetrics = null;
     }
 
     DxfPerformanceOptimizer.instance = null;

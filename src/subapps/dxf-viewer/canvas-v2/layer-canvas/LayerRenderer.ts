@@ -38,6 +38,8 @@ import { TAU } from '../../rendering/primitives/canvasPaths';
 import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// 🏢 ADR-127: Centralized Ruler Dimensions
+import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 
 // ✅ ΦΑΣΗ 7: Import unified canvas system
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
@@ -831,8 +833,9 @@ export class LayerRenderer {
     viewport: Viewport,
     settings: RulerSettings
   ): void {
-    const rulerHeight = settings.height ?? 30;
-    const rulerWidth = settings.width ?? 30;
+    // 🏢 ADR-127: Use centralized ruler dimensions
+    const rulerHeight = settings.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT;
+    const rulerWidth = settings.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH;
     const horizontalRulerY = viewport.height - rulerHeight; // Κάτω από τον καμβά, πάνω από toolbar
 
     this.ctx.save();

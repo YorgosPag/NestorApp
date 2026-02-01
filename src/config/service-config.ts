@@ -283,13 +283,27 @@ const relationshipsSection: ServiceSectionConfig = {
   ]
 };
 
+// -------------------------------------------------------------------------
+// 7. ΤΡΑΠΕΖΙΚΑ - 🏢 ENTERPRISE BANKING SYSTEM (ADR-126)
+// -------------------------------------------------------------------------
+const bankingSection: ServiceSectionConfig = {
+  id: 'banking',
+  title: 'contacts.service.sections.banking.title',
+  icon: 'credit-card',
+  fields: [
+    // 🎯 DUMMY FIELD για custom renderer triggering
+    // Fields are handled by ContactBankingTab component
+  ]
+};
+
 export const SERVICE_SECTIONS: ServiceSectionConfig[] = [
   basicInfoSection,
   administrativeSection,
   contactSection,
   servicesSection,
   logoSection,
-  relationshipsSection
+  relationshipsSection,
+  bankingSection
 ];
 
 /**

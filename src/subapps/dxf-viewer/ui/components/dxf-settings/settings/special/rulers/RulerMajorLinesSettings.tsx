@@ -186,9 +186,11 @@ export const RulerMajorLinesSettings: React.FC<RulerMajorLinesSettingsProps> = (
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {rulerSettings.horizontal.showMajorTicks ? t('rulerSettings.common.active') : t('rulerSettings.common.inactive')}
             </span>
+            {/* 🏢 ADR-128: Status variant - Green ON / Red OFF */}
             <Switch
               checked={rulerSettings.horizontal.showMajorTicks}
               onCheckedChange={handleMajorTicksVisibilityChange}
+              variant="status"
             />
           </div>
         </div>

@@ -10,6 +10,7 @@ export {
   calculateFitTransform,
   calculateNormalizedTransform,
   getVisibleBounds,
+  // ⚠️ DEPRECATED: isPointInBounds - Use SpatialUtils.pointInRect() directly (ADR-089)
   isPointInBounds,
   unionBounds,
   clampScale,
@@ -18,6 +19,9 @@ export {
   getBoundsCenter,
   getViewportCenter
 } from './calculations';
+
+// 🏢 ADR-089: Re-export SpatialUtils for point-in-bounds operations
+export { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 
 // === BOUNDS ===
 export {

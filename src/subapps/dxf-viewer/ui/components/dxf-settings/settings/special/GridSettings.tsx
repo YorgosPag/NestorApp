@@ -201,6 +201,7 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
             <Switch
               checked={gridSettings.visual.enabled}
               onCheckedChange={handleGridVisibilityChange}
+              variant="status"
             />
           </div>
         </div>

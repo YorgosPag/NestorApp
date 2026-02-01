@@ -501,6 +501,98 @@
       "actions": "Actions"
     }
   },
+  "dialog": {
+    "addTitle": "New Project",
+    "editTitle": "Edit Project",
+    "addDescription": "Fill in the details for the new project",
+    "editDescription": "Edit the project details",
+    "tabs": {
+      "basic": "Basic Info",
+      "details": "Details",
+      "features": "Features"
+    },
+    "fields": {
+      "name": "Project Name",
+      "namePlaceholder": "e.g. Residential Building Construction",
+      "title": "Title",
+      "titlePlaceholder": "e.g. Residential Tower A",
+      "status": "Status",
+      "statusPlaceholder": "Select status",
+      "company": "Company",
+      "companyPlaceholder": "Select company",
+      "address": "Address",
+      "addressPlaceholder": "e.g. 100 Main Street",
+      "city": "City",
+      "cityPlaceholder": "e.g. Athens",
+      "location": "Location",
+      "locationPlaceholder": "e.g. Attica",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional project description",
+      "client": "Client",
+      "clientPlaceholder": "Client name",
+      "type": "Project Type",
+      "typePlaceholder": "Select type",
+      "priority": "Priority",
+      "priorityPlaceholder": "Select priority",
+      "riskLevel": "Risk Level",
+      "riskLevelPlaceholder": "Select level",
+      "complexity": "Complexity",
+      "complexityPlaceholder": "Select complexity",
+      "budget": "Budget (€)",
+      "budgetPlaceholder": "e.g. 500000",
+      "totalValue": "Total Value (€)",
+      "totalValuePlaceholder": "e.g. 1000000",
+      "totalArea": "Total Area (m²)",
+      "totalAreaPlaceholder": "e.g. 2500",
+      "duration": "Duration (months)",
+      "durationPlaceholder": "e.g. 24",
+      "startDate": "Start Date",
+      "startDatePlaceholder": "Select date",
+      "completionDate": "Completion Date",
+      "completionDatePlaceholder": "Select date",
+      "hasPermits": "Has Permits",
+      "hasFinancing": "Has Financing",
+      "isEcological": "Ecological Project",
+      "hasSubcontractors": "Uses Subcontractors",
+      "isActive": "Active",
+      "hasIssues": "Has Issues"
+    },
+    "messages": {
+      "success": "Project created successfully",
+      "updated": "Project updated successfully",
+      "error": "Error creating project"
+    },
+    "validation": {
+      "nameRequired": "Name is required",
+      "companyRequired": "Company is required"
+    }
+  },
+  "projectType": {
+    "residential": "Residential",
+    "commercial": "Commercial",
+    "industrial": "Industrial",
+    "mixed": "Mixed Use",
+    "infrastructure": "Infrastructure",
+    "renovation": "Renovation"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "riskLevel": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "complexity": {
+    "simple": "Simple",
+    "moderate": "Moderate",
+    "complex": "Complex",
+    "highly_complex": "Highly Complex"
+  },
   "empty": "No projects found",
   "table": {
     "project": "Project",

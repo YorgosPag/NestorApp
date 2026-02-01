@@ -26,10 +26,12 @@ interface ProjectViewSwitchProps {
   companies: NavigationCompany[];
   // 🏢 ENTERPRISE: Added viewMode prop for grid/list switching (PR: Projects Grid View)
   viewMode?: ProjectsViewMode;
+  /** 🏢 ENTERPRISE: Callback for editing selected project (ADR-087) */
+  onEditProject?: (project: Project) => void;
 }
 
 export function ProjectViewSwitch({
-  projects, selectedProject, onSelectProject, companies, viewMode = 'list' }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies, viewMode = 'list', onEditProject }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -86,7 +88,7 @@ export function ProjectViewSwitch({
           actionButtons={
             <>
               <button
-                onClick={() => {/* TODO: Edit project handler */}}
+                onClick={() => selectedProject && onEditProject?.(selectedProject)}
                 className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
                 aria-label={t('viewSwitch.editLabel')}
               >
@@ -102,7 +104,12 @@ export function ProjectViewSwitch({
             </>
           }
         >
-          {selectedProject && <ProjectDetails project={getProjectWithCompanyName(selectedProject)} />}
+          {selectedProject && (
+            <ProjectDetails
+              project={getProjectWithCompanyName(selectedProject)}
+              onEdit={() => onEditProject?.(selectedProject)}
+            />
+          )}
         </MobileDetailsSlideIn>
       </>
     );
@@ -119,7 +126,12 @@ export function ProjectViewSwitch({
             onSelectProject={onSelectProject}
             companies={companies}
         />
-        {selectedProject && <ProjectDetails project={getProjectWithCompanyName(selectedProject)} />}
+        {selectedProject && (
+          <ProjectDetails
+            project={getProjectWithCompanyName(selectedProject)}
+            onEdit={() => onEditProject?.(selectedProject)}
+          />
+        )}
       </div>
 
       {/* 📱 MOBILE: Show only ProjectsList when no project is selected */}
@@ -140,7 +152,7 @@ export function ProjectViewSwitch({
         actionButtons={
           <>
             <button
-              onClick={() => {/* TODO: Edit project handler */}}
+              onClick={() => selectedProject && onEditProject?.(selectedProject)}
               className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
               aria-label={t('viewSwitch.editLabel')}
             >
@@ -156,7 +168,12 @@ export function ProjectViewSwitch({
           </>
         }
       >
-        {selectedProject && <ProjectDetails project={getProjectWithCompanyName(selectedProject)} />}
+        {selectedProject && (
+          <ProjectDetails
+            project={getProjectWithCompanyName(selectedProject)}
+            onEdit={() => onEditProject?.(selectedProject)}
+          />
+        )}
       </MobileDetailsSlideIn>
     </>
   );

@@ -738,6 +738,7 @@
       "floors": "Όροφοι",
       "amenities": "Ανέσεις",
       "documents": "Έγγραφα",
+      "banking": "Τραπεζικά",
       "notes": "Σημειώσεις",
       "history": "Ιστορικό",
       "buildings": "Κτίρια",
@@ -1364,6 +1365,56 @@
         "mechanicalSecurity": "Μηχανική Ασφάλεια",
         "emergencyExits": "Έξοδοι Κινδύνου"
       }
+    }
+  },
+  "dialog": {
+    "addTitle": "Προσθήκη Νέου Κτιρίου",
+    "addDescription": "Δημιουργήστε ένα νέο κτίριο συμπληρώνοντας τα παρακάτω στοιχεία.",
+    "tabs": {
+      "basic": "Βασικά Στοιχεία",
+      "details": "Λεπτομέρειες",
+      "features": "Χαρακτηριστικά"
+    },
+    "fields": {
+      "name": "Όνομα Κτιρίου",
+      "namePlaceholder": "Εισάγετε όνομα κτιρίου...",
+      "project": "Έργο",
+      "projectPlaceholder": "Επιλέξτε έργο...",
+      "status": "Κατάσταση",
+      "statusPlaceholder": "Επιλέξτε κατάσταση...",
+      "category": "Κατηγορία",
+      "categoryPlaceholder": "Επιλέξτε κατηγορία...",
+      "description": "Περιγραφή",
+      "descriptionPlaceholder": "Εισάγετε περιγραφή κτιρίου...",
+      "address": "Διεύθυνση",
+      "addressPlaceholder": "Εισάγετε διεύθυνση...",
+      "city": "Πόλη",
+      "cityPlaceholder": "Εισάγετε πόλη...",
+      "totalArea": "Συνολική Επιφάνεια (m\u00B2)",
+      "totalAreaPlaceholder": "0",
+      "builtArea": "Δομημένη Επιφάνεια (m\u00B2)",
+      "builtAreaPlaceholder": "0",
+      "floors": "Αριθμός Ορόφων",
+      "floorsPlaceholder": "0",
+      "units": "Αριθμός Μονάδων",
+      "unitsPlaceholder": "0",
+      "totalValue": "Συνολική Αξία (\u20AC)",
+      "totalValuePlaceholder": "0",
+      "startDate": "Ημερομηνία Έναρξης",
+      "completionDate": "Ημερομηνία Ολοκλήρωσης",
+      "type": "Τύπος Κτιρίου",
+      "typePlaceholder": "Επιλέξτε τύπο...",
+      "priority": "Προτεραιότητα",
+      "priorityPlaceholder": "Επιλέξτε προτεραιότητα...",
+      "energyClass": "Ενεργειακή Κλάση",
+      "energyClassPlaceholder": "Επιλέξτε ενεργειακή κλάση..."
+    },
+    "validation": {
+      "addressRequired": "Η διεύθυνση είναι υποχρεωτική"
+    },
+    "messages": {
+      "success": "Το κτίριο δημιουργήθηκε επιτυχώς!",
+      "error": "Σφάλμα κατά τη δημιουργία κτιρίου. Παρακαλώ δοκιμάστε ξανά."
     }
   },
   "error": {

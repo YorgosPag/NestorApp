@@ -501,6 +501,98 @@
       "actions": "Ενέργειες"
     }
   },
+  "dialog": {
+    "addTitle": "Νέο Έργο",
+    "editTitle": "Επεξεργασία Έργου",
+    "addDescription": "Συμπληρώστε τα στοιχεία του νέου έργου",
+    "editDescription": "Τροποποιήστε τα στοιχεία του έργου",
+    "tabs": {
+      "basic": "Βασικά Στοιχεία",
+      "details": "Λεπτομέρειες",
+      "features": "Χαρακτηριστικά"
+    },
+    "fields": {
+      "name": "Όνομα Έργου",
+      "namePlaceholder": "π.χ. Κατασκευή Πολυκατοικίας",
+      "title": "Τίτλος",
+      "titlePlaceholder": "π.χ. Residential Tower A",
+      "status": "Κατάσταση",
+      "statusPlaceholder": "Επιλέξτε κατάσταση",
+      "company": "Εταιρεία",
+      "companyPlaceholder": "Επιλέξτε εταιρεία",
+      "address": "Διεύθυνση",
+      "addressPlaceholder": "π.χ. Λεωφ. Κηφισίας 100",
+      "city": "Πόλη",
+      "cityPlaceholder": "π.χ. Αθήνα",
+      "location": "Τοποθεσία",
+      "locationPlaceholder": "π.χ. Αττική",
+      "description": "Περιγραφή",
+      "descriptionPlaceholder": "Προαιρετική περιγραφή του έργου",
+      "client": "Πελάτης",
+      "clientPlaceholder": "Όνομα πελάτη",
+      "type": "Τύπος Έργου",
+      "typePlaceholder": "Επιλέξτε τύπο",
+      "priority": "Προτεραιότητα",
+      "priorityPlaceholder": "Επιλέξτε προτεραιότητα",
+      "riskLevel": "Επίπεδο Κινδύνου",
+      "riskLevelPlaceholder": "Επιλέξτε επίπεδο",
+      "complexity": "Πολυπλοκότητα",
+      "complexityPlaceholder": "Επιλέξτε πολυπλοκότητα",
+      "budget": "Προϋπολογισμός (€)",
+      "budgetPlaceholder": "π.χ. 500000",
+      "totalValue": "Συνολική Αξία (€)",
+      "totalValuePlaceholder": "π.χ. 1000000",
+      "totalArea": "Συνολικό Εμβαδόν (m²)",
+      "totalAreaPlaceholder": "π.χ. 2500",
+      "duration": "Διάρκεια (μήνες)",
+      "durationPlaceholder": "π.χ. 24",
+      "startDate": "Ημερομηνία Έναρξης",
+      "startDatePlaceholder": "Επιλέξτε ημερομηνία",
+      "completionDate": "Ημερομηνία Ολοκλήρωσης",
+      "completionDatePlaceholder": "Επιλέξτε ημερομηνία",
+      "hasPermits": "Έχει Άδειες",
+      "hasFinancing": "Έχει Χρηματοδότηση",
+      "isEcological": "Οικολογικό Έργο",
+      "hasSubcontractors": "Χρησιμοποιεί Υπεργολάβους",
+      "isActive": "Ενεργό",
+      "hasIssues": "Έχει Προβλήματα"
+    },
+    "messages": {
+      "success": "Το έργο δημιουργήθηκε επιτυχώς",
+      "updated": "Το έργο ενημερώθηκε επιτυχώς",
+      "error": "Σφάλμα κατά τη δημιουργία του έργου"
+    },
+    "validation": {
+      "nameRequired": "Το όνομα είναι υποχρεωτικό",
+      "companyRequired": "Η εταιρεία είναι υποχρεωτική"
+    }
+  },
+  "projectType": {
+    "residential": "Κατοικία",
+    "commercial": "Εμπορικό",
+    "industrial": "Βιομηχανικό",
+    "mixed": "Μικτής Χρήσης",
+    "infrastructure": "Υποδομές",
+    "renovation": "Ανακαίνιση"
+  },
+  "priority": {
+    "low": "Χαμηλή",
+    "medium": "Μεσαία",
+    "high": "Υψηλή",
+    "critical": "Κρίσιμη"
+  },
+  "riskLevel": {
+    "low": "Χαμηλό",
+    "medium": "Μεσαίο",
+    "high": "Υψηλό",
+    "critical": "Κρίσιμο"
+  },
+  "complexity": {
+    "simple": "Απλό",
+    "moderate": "Μέτριο",
+    "complex": "Σύνθετο",
+    "highly_complex": "Πολύ Σύνθετο"
+  },
   "empty": "Δεν υπάρχουν έργα",
   "table": {
     "project": "Έργο",

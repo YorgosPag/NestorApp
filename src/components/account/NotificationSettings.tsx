@@ -314,6 +314,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
                     handleCategorySettingToggle(config.id, setting.key, checked)
                   }
                   disabled={!settings.globalEnabled || isSaving}
+                  variant="status"
                 />
               </div>
             );
@@ -393,6 +394,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
             checked={settings.globalEnabled}
             onCheckedChange={handleGlobalToggle}
             disabled={isSaving}
+            variant="status"
           />
         </section>
 
@@ -415,6 +417,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
               checked={settings.inAppEnabled}
               onCheckedChange={handleInAppToggle}
               disabled={!settings.globalEnabled || isSaving}
+              variant="status"
             />
           </div>
 
@@ -431,6 +434,7 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
               checked={settings.emailEnabled}
               onCheckedChange={handleEmailToggle}
               disabled={!settings.globalEnabled || isSaving}
+              variant="status"
             />
           </div>
 

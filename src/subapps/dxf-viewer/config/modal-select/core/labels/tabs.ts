@@ -51,6 +51,7 @@ export interface ContactTabLabelsConfig {
   readonly buildings: string;
   readonly projects: string;
   readonly documents: string;
+  readonly banking: string;  // 🏢 ENTERPRISE: Banking accounts tab (2026-02-01)
   readonly notes: string;
   readonly history: string;
 }
@@ -180,6 +181,7 @@ export const MODAL_SELECT_CONTACT_TAB_LABELS: ContactTabLabelsConfig = {
   buildings: "tabs.labels.buildings",
   projects: "tabs.labels.projects",
   documents: "tabs.labels.documents",
+  banking: "tabs.labels.banking",  // 🏢 ENTERPRISE: Banking accounts tab (2026-02-01)
   notes: "tabs.labels.notes",
   history: "tabs.labels.history"
 } as const;

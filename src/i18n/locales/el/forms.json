@@ -19,7 +19,8 @@
     "contactInfo": "Στοιχεία Επικοινωνίας",
     "servicesResponsibilities": "Αρμοδιότητες & Υπηρεσίες",
     "logo": "Λογότυπο",
-    "employeesOrganization": "Υπάλληλοι & Οργάνωση"
+    "employeesOrganization": "Υπάλληλοι & Οργάνωση",
+    "banking": "Τραπεζικά"
   },
   "sectionDescriptions": {
     "basicInfoGemi": "Βασικές πληροφορίες εταιρείας από το ΓΕΜΗ",
@@ -35,7 +36,8 @@
     "announcementsPublications": "Ανακοινώσεις και δημοσιεύσεις ΦΕΚ",
     "statusesLifecycle": "Κύκλος ζωής και καταστάσεις εταιρείας",
     "logoPhotos": "Λογότυπο και φωτογραφίες",
-    "shareholdersEmployees": "Διαχείριση μετόχων και εργαζομένων"
+    "shareholdersEmployees": "Διαχείριση μετόχων και εργαζομένων",
+    "banking": "Διαχείριση τραπεζικών λογαριασμών της επαφής"
   },
   "company": {
     "companyName": "Επωνυμία Εταιρείας",

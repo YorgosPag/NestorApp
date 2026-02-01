@@ -157,11 +157,12 @@ export function ReadOnlyMediaViewer({
 
   // 🏢 Floor floorplans (Κάτοψη Ορόφου) - Uses FloorFloorplanService (ADR-060)
   // This hook loads from dxf-scenes/{fileId}/scene.json via FloorFloorplanService
-  console.log('🏢 [ReadOnlyMediaViewer] Floor props:', { floorId, buildingId, floorNumber });
+  console.log('🏢 [ReadOnlyMediaViewer] Floor props:', { floorId, buildingId, floorNumber, companyId: user?.companyId });
   const { floorFloorplan, loading: floorFloorplanLoading, error: floorFloorplanError, refetch: refetchFloorFloorplan } = useFloorFloorplans({
     floorId: floorId || null,
     buildingId: buildingId || null,
     floorNumber: floorNumber ?? null,
+    companyId: user?.companyId || null, // 🏢 ENTERPRISE: Required for Enterprise pattern (ADR-031)
   });
 
   // 🏢 ENTERPRISE: Adapter - Convert FloorFloorplanData to FileRecord[] for FloorplanGallery
@@ -181,13 +182,14 @@ export function ReadOnlyMediaViewer({
 
     if (floorFloorplan) {
       // Create a synthetic FileRecord from FloorFloorplanData
+      // 🏢 ENTERPRISE: Using correct FileRecord field names (ADR-031)
       const fileRecord: FileRecord = {
-        id: `floor_floorplan_${floorFloorplan.buildingId}_${floorFloorplan.floorId}`,
-        fileName: floorFloorplan.fileName || 'floor_floorplan',
+        id: floorFloorplan.fileRecordId || `floor_floorplan_${floorFloorplan.buildingId}_${floorFloorplan.floorId}`,
+        originalFilename: floorFloorplan.fileName || 'floor_floorplan',
         displayName: floorFloorplan.fileName || 'Κάτοψη Ορόφου',
         ext: floorFloorplan.fileType === 'pdf' ? 'pdf' : 'dxf',
-        mimeType: floorFloorplan.fileType === 'pdf' ? 'application/pdf' : 'application/dxf',
-        size: 0, // Unknown for legacy data
+        contentType: floorFloorplan.fileType === 'pdf' ? 'application/pdf' : 'application/dxf',
+        sizeBytes: 0, // Unknown for legacy data
         storagePath: '',
         downloadUrl: floorFloorplan.pdfImageUrl || '',
         status: 'ready',
@@ -197,16 +199,18 @@ export function ReadOnlyMediaViewer({
         entityId: floorFloorplan.floorId,
         domain: 'construction',
         category: 'floorplans',
-        createdBy: '',
-        createdAt: floorFloorplan.timestamp ? new Date(floorFloorplan.timestamp) : new Date(),
-        updatedAt: new Date(),
-        // 🏢 ENTERPRISE: Include scene data for DXF rendering
+        createdBy: 'system',
+        createdAt: floorFloorplan.timestamp ? new Date(floorFloorplan.timestamp).toISOString() : new Date().toISOString(),
+        // 🏢 ENTERPRISE: Include scene data for DXF rendering (V1 pattern for backward compat)
+        // Note: SceneModel and DxfSceneData are structurally compatible for rendering purposes
         processedData: floorFloorplan.scene ? {
-          fileType: 'dxf',
-          scene: floorFloorplan.scene,
-          entityStats: {
-            total: floorFloorplan.scene.entities?.length || 0,
-            byType: {},
+          fileType: 'dxf' as const,
+          scene: floorFloorplan.scene as unknown as import('@/types/file-record').DxfSceneData,
+          processedAt: Date.now(),
+          sceneStats: {
+            entityCount: floorFloorplan.scene.entities?.length || 0,
+            layerCount: Object.keys(floorFloorplan.scene.layers || {}).length,
+            parseTimeMs: 0,
           },
         } : undefined,
       };

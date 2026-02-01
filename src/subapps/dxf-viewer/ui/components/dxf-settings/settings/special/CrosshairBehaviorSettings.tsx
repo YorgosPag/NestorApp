@@ -161,6 +161,7 @@ export const CrosshairBehaviorSettings: React.FC<CrosshairBehaviorSettingsProps>
             <Switch
               checked={settings.crosshair.use_cursor_gap}
               onCheckedChange={(checked) => updateSettings({ crosshair: { ...settings.crosshair, use_cursor_gap: checked } })}
+              variant="status"
             />
           </div>
         </div>

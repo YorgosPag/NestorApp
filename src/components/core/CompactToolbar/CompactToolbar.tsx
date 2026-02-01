@@ -403,10 +403,10 @@ export function CompactToolbar({
               {config.sortOptions.map((sortOption, index) => (
                 <React.Fragment key={sortOption.field}>
                   <DropdownMenuItem onClick={() => onSortChange?.(sortOption.field, 'asc')}>
-                    {sortOption.ascLabel}
+                    {t(sortOption.ascLabel)}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onSortChange?.(sortOption.field, 'desc')}>
-                    {sortOption.descLabel}
+                    {t(sortOption.descLabel)}
                   </DropdownMenuItem>
                   {index < config.sortOptions.length - 1 && (
                     <DropdownMenuSeparator />

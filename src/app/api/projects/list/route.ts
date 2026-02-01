@@ -65,9 +65,10 @@ const CACHE_KEY_PREFIX = 'api:projects:list';
 /**
  * Generate tenant-specific cache key
  * TTL managed by EnterpriseAPICache (30s for projectsList - near-realtime)
+ * 🏢 Super Admin gets 'all' cache key for cross-tenant access
  */
-function getTenantCacheKey(companyId: string): string {
-  return `${CACHE_KEY_PREFIX}:${companyId}`;
+function getTenantCacheKey(companyId: string, isSuperAdmin: boolean): string {
+  return isSuperAdmin ? `${CACHE_KEY_PREFIX}:all` : `${CACHE_KEY_PREFIX}:${companyId}`;
 }
 
 // ============================================================================
@@ -150,14 +151,17 @@ export async function GET(request: NextRequest) {
   const handler = withAuth<ApiSuccessResponse<ProjectListResponse>>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const startTime = Date.now();
-      console.log('🏗️ [Projects/List] Starting projects list load...');
+
+      // 🏢 ENTERPRISE: Check if user is Super Admin for cross-tenant access
+      const isSuperAdmin = ctx.globalRole === 'super_admin';
+      console.log(`🏗️ [Projects/List] Starting projects list load... (Super Admin: ${isSuperAdmin})`);
 
       // ============================================================================
       // 1. CHECK TENANT-SPECIFIC CACHE FIRST
       // ============================================================================
 
       const cache = EnterpriseAPICache.getInstance();
-      const tenantCacheKey = getTenantCacheKey(ctx.companyId);
+      const tenantCacheKey = getTenantCacheKey(ctx.companyId, isSuperAdmin);
       const cachedData = cache.get<ProjectListResponse>(tenantCacheKey);
 
   if (cachedData) {
@@ -181,13 +185,24 @@ export async function GET(request: NextRequest) {
       console.log('🔍 [Projects/List] Cache miss - Fetching from Firestore...');
 
       // ============================================================================
-      // 2. FETCH TENANT-SCOPED PROJECTS (Admin SDK + Tenant Isolation)
+      // 2. FETCH PROJECTS (Admin SDK)
+      // 🏢 ENTERPRISE: Super Admin gets ALL projects, others get tenant-scoped
       // ============================================================================
 
-      const projectsSnapshot = await adminDb
-        .collection(COLLECTIONS.PROJECTS)
-        .where('companyId', '==', ctx.companyId)
-        .get();
+      let projectsSnapshot;
+      if (isSuperAdmin) {
+        // 🏢 Super Admin: Fetch ALL projects across all companies
+        console.log('👑 [Projects/List] Super Admin - Fetching ALL projects...');
+        projectsSnapshot = await adminDb
+          .collection(COLLECTIONS.PROJECTS)
+          .get();
+      } else {
+        // 🔒 Regular user: Tenant-scoped (only their company)
+        projectsSnapshot = await adminDb
+          .collection(COLLECTIONS.PROJECTS)
+          .where('companyId', '==', ctx.companyId)
+          .get();
+      }
 
       console.log(`🏗️ [Projects/List] Found ${projectsSnapshot.docs.length} projects`);
 

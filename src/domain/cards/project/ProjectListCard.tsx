@@ -156,13 +156,12 @@ export function ProjectListCard({
     return [{ label: statusLabel, variant }];
   }, [project.status]);
 
-  /** Get location for subtitle */
+  /** Get company for subtitle - 🏢 ENTERPRISE: Company is PRIMARY info */
   const subtitle = useMemo(() => {
-    if (project.city && project.address) {
-      return `${project.city} - ${project.address}`;
-    }
-    return project.city || project.address || project.company;
-  }, [project.city, project.address, project.company]);
+    // 🏢 ENTERPRISE: Always show company first (primary business info)
+    // Location is secondary and shown in stats/details if needed
+    return project.company || project.city || project.address || '';
+  }, [project.company, project.city, project.address]);
 
   // ==========================================================================
   // 🏢 RENDER

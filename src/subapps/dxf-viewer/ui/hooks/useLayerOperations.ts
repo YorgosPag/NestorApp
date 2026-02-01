@@ -11,6 +11,8 @@ import { serviceRegistry } from '../../services';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { publishHighlight } from '../../events/selection-bus';
 import { handleLayerServiceResult } from '../utils/selection-update-utils';
+// ADR-129: Centralized entity layer filtering
+import { countEntitiesInLayer } from '../../services/shared/layer-operation-utils';
 
 export interface LayerOperationsCallbacks {
   // Layer operations
@@ -75,7 +77,8 @@ export function useLayerOperations({
   const handleLayerDelete = async (layerName: string) => {
     if (!scene || !currentLevelId || !scene.entities) return;
 
-    const entityCount = scene.entities.filter(entity => entity.layer === layerName).length;
+    // ADR-129: Centralized entity filtering
+    const entityCount = countEntitiesInLayer(scene.entities, layerName);
     const confirmed = await showConfirmDialog(
       `Θέλετε να διαγράψετε το layer "${layerName}" και ${entityCount} entities;`,
       () => {},

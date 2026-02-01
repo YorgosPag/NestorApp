@@ -32,6 +32,10 @@ const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // 🏢 ENTERPRISE (2026-01-30): allowsContinuous=true for all drawing tools
   // Pattern: User preference - tool stays active after entity creation for rapid drawing
   'line': { id: 'line', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // 🏢 ENTERPRISE (2026-01-31): Line Perpendicular & Parallel tools - ADR-060
+  // Entity selection mode: user picks reference line, then clicks to create new line
+  'line-perpendicular': { id: 'line-perpendicular', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'line-parallel': { id: 'line-parallel', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'rectangle': { id: 'rectangle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'circle': { id: 'circle', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'circle-diameter': { id: 'circle-diameter', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },

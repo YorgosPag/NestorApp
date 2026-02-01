@@ -9,6 +9,8 @@ import { isLineEntity, isCircleEntity, isRectangleEntity } from '../../../types/
 import type { Point2D } from '../../../rendering/types/Types';
 import type { AnySceneEntity } from '../../../types/scene';
 import { calculateVerticesBounds } from '../../../utils/geometry/GeometryUtils';
+// 🏢 ADR-089: Centralized Point-In-Bounds
+import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 
 /**
  * Calculate bounding box for entities
@@ -67,15 +69,14 @@ export function calculateBoundingBox(entities: Entity[]): {
 
 /**
  * Check if point is inside bounding rectangle
+ * 🏢 ADR-089: Wrapper για SpatialUtils.pointInBounds() - Single Source of Truth
+ * @deprecated Prefer using SpatialUtils.pointInBounds() directly for new code
  */
 export function isPointInBounds(
   point: Point2D,
   bounds: { minX: number; minY: number; maxX: number; maxY: number }
 ): boolean {
-  return point.x >= bounds.minX && 
-         point.x <= bounds.maxX && 
-         point.y >= bounds.minY && 
-         point.y <= bounds.maxY;
+  return SpatialUtils.pointInBounds(point, bounds);
 }
 
 /**

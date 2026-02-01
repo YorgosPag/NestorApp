@@ -5,6 +5,8 @@
 
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-127: Centralized Ruler Dimensions
+import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-XXX: Centralized Angular Constants
@@ -153,7 +155,8 @@ export class BackgroundPass implements IRenderPass {
       textBaseline: 'middle'
     });
 
-    const rulerHeight = 20;
+    // 🏢 ADR-127: Use centralized ruler dimensions
+    const rulerHeight = RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT;
     const tickSpacing = 50 * transform.scale;
 
     // Skip rulers if spacing is too small

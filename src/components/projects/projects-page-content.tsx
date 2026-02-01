@@ -30,6 +30,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: AddProjectDialog for creating new projects (ADR-087)
+import { AddProjectDialog } from './dialogs/AddProjectDialog';
 
 export function ProjectsPageContent() {
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -79,6 +81,24 @@ export function ProjectsPageContent() {
   // Mobile-only states
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // 🏢 ENTERPRISE: AddProjectDialog state (ADR-087)
+  const [isAddProjectDialogOpen, setIsAddProjectDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<typeof selectedProject>(null);
+
+  // 🏢 ENTERPRISE: Handler για refresh μετά τη δημιουργία/ενημέρωση έργου
+  const handleProjectAdded = React.useCallback(() => {
+    // Trigger page reload to refresh projects list
+    // Note: Για production, καλύτερα να χρησιμοποιηθεί refetch από useFirestoreProjects
+    window.location.reload();
+  }, []);
+
+  // 🏢 ENTERPRISE: Handler για επεξεργασία έργου (ADR-087)
+  const handleEditProject = React.useCallback((project: typeof selectedProject) => {
+    console.log('🎯 [EditProject] Opening edit dialog for:', project?.name);
+    setEditingProject(project);
+    setIsAddProjectDialogOpen(true);
+  }, []);
 
   // Transform stats to UnifiedDashboard format
   const dashboardStats: DashboardStat[] = [
@@ -188,10 +208,24 @@ export function ProjectsPageContent() {
             setViewMode={setViewMode}
             showDashboard={showDashboard}
             setShowDashboard={setShowDashboard}
-            onNewProject={() => console.log('Add new project')}
+            onNewProject={() => {
+              console.log('🎯 [AddProjectDialog] Button clicked - Opening dialog...');
+              setIsAddProjectDialogOpen(true);
+            }}
             showFilters={showFilters}
             setShowFilters={setShowFilters}
             projectCount={projectsStats.totalProjects} // 🏢 Enterprise count display
+        />
+
+        {/* 🏢 ENTERPRISE: AddProjectDialog (ADR-087) */}
+        <AddProjectDialog
+          open={isAddProjectDialogOpen}
+          onOpenChange={(open) => {
+            setIsAddProjectDialogOpen(open);
+            if (!open) setEditingProject(null); // Clear edit state when closing
+          }}
+          onProjectAdded={handleProjectAdded}
+          editProject={editingProject}
         />
 
         {showDashboard && (
@@ -230,6 +264,8 @@ export function ProjectsPageContent() {
             companies={companies}
             // 🏢 ENTERPRISE: Pass viewMode for grid/list switching (PR: Projects Grid View)
             viewMode={viewMode}
+            // 🏢 ENTERPRISE: Pass edit handler (ADR-087)
+            onEditProject={handleEditProject}
           />
         </ListContainer>
       </PageContainer>

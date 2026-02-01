@@ -16,6 +16,7 @@ export default {
     // 🏢 ENTERPRISE: Additional paths for centralized systems
     './src/core/**/*.{ts,tsx}',
     './src/styles/design-tokens.ts',
+    './src/design-system/**/*.ts', // 🏢 ADR-128: Color bridge & switch tokens
     './src/features/**/*.{ts,tsx}',
     './src/domain/**/*.{ts,tsx}',
     './src/hooks/**/*.ts',

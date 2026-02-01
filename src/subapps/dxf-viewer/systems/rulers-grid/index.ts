@@ -25,4 +25,7 @@ export {
 // For components, import directly: import { RulersGridSystem } from './systems/rulers-grid/RulersGridSystem';
 
 // Re-export main system component for convenience
-export { RulersGridSystem, useRulersGridContext } from './RulersGridSystem';
+export { RulersGridSystem, useRulersGridContext, RulersGridContext } from './RulersGridSystem';
+
+// Re-export types from types.ts (ADR-125)
+export type { RulersGridContextType, RulersGridHookReturn } from './types';

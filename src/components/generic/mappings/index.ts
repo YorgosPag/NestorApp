@@ -118,6 +118,7 @@ import { ContactBasicInfoTab } from '../../contacts/tabs/ContactBasicInfoTab';
 import { ContactCommunicationTab } from '../../contacts/tabs/ContactCommunicationTab';
 import { ContactRelationshipsTab } from '../../contacts/tabs/ContactRelationshipsTab';
 import { ContactPhotosTab } from '../../contacts/tabs/ContactPhotosTab';
+import { ContactBankingTab } from '../../contacts/tabs/ContactBankingTab';
 import { PlaceholderContactTab } from '../../contacts/tabs/PlaceholderContactTab';
 
 export const CONTACT_COMPONENT_MAPPING = {
@@ -128,6 +129,7 @@ export const CONTACT_COMPONENT_MAPPING = {
   'ContactServicesInfoTab': PlaceholderContactTab, // Future implementation
   'ContactAddressesTab': PlaceholderContactTab,    // Future implementation
   'ContactRelationshipsTab': ContactRelationshipsTab,
+  'ContactBankingTab': ContactBankingTab,          // 🏢 ENTERPRISE: Banking accounts (2026-02-01)
   'ContactPhotosTab': ContactPhotosTab,
   'ContactLogoTab': PlaceholderContactTab,         // Future implementation
   'ContactHistoryTab': PlaceholderContactTab,      // Future implementation

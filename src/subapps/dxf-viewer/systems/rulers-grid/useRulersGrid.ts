@@ -10,104 +10,15 @@ import React, { useContext } from 'react';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-095: Centralized Snap Tolerance
 import { SNAP_TOLERANCE } from '../../config/tolerance-config';
-import type {
-  RulerSettings,
-  GridSettings,
-  RulersGridState,
-  RulersGridOperation,
-  RulersGridOperationResult,
-  UnitType,
-  GridBounds,
-  SnapResult,
-  RulerTick,
-  GridLine,
-  RulersLayoutInfo
-} from './config';
-import type { Point2D, ViewTransform, DOMRect } from './config';
+// Imports from config are no longer needed here - types moved to types.ts
 
-// Context type (will be properly typed when connected to RulersGridSystem)
-interface RulersGridContextType {
-  // State
-  state: RulersGridState;
-  
-  // Ruler Management
-  toggleRulers: (type?: 'horizontal' | 'vertical' | 'both') => void;
-  setRulerVisibility: (type: 'horizontal' | 'vertical', visible: boolean) => void;
-  updateRulerSettings: (updates: Partial<RulerSettings>) => void;
-  setRulerUnits: (units: UnitType) => void;
-  setRulerPosition: (type: 'horizontal' | 'vertical', position: 'top' | 'bottom' | 'left' | 'right') => void;
-  
-  // Grid Management
-  toggleGrid: () => void;
-  setGridVisibility: (visible: boolean) => void;
-  updateGridSettings: (updates: Partial<GridSettings>) => void;
-  setGridStep: (step: number) => void;
-  setGridOpacity: (opacity: number) => void;
-  setGridColor: (color: string) => void;
-  
-  // Origin and Coordinate System
-  setOrigin: (point: Point2D) => void;
-  resetOrigin: () => void;
-  getOrigin: () => Point2D;
-  
-  // Snap Functionality
-  toggleRulerSnap: () => void;
-  toggleGridSnap: () => void;
-  setSnapTolerance: (tolerance: number) => void;
-  findSnapPoint: (point: Point2D, transform: ViewTransform, canvasRect: DOMRect) => SnapResult | null;
-  
-  // Calculation Functions
-  calculateGridBounds: (transform: ViewTransform, canvasRect: DOMRect) => GridBounds;
-  calculateGridLines: (bounds: GridBounds, settings: GridSettings, transform: ViewTransform) => GridLine[];
-  calculateRulerTicks: (
-    type: 'horizontal' | 'vertical',
-    bounds: GridBounds,
-    settings: RulerSettings,
-    transform: ViewTransform,
-    canvasRect: DOMRect
-  ) => RulerTick[];
-  
-  // Layout Information
-  getLayoutInfo: (canvasRect: DOMRect) => RulersLayoutInfo;
-  getContentArea: (canvasRect: DOMRect) => DOMRect;
-  
-  // Unit Conversion
-  convertUnits: (value: number, fromUnit: UnitType, toUnit: UnitType) => number;
-  formatValue: (value: number, units: UnitType, precision?: number) => string;
-  
-  // Visibility and Display
-  isRulerVisible: (type: 'horizontal' | 'vertical') => boolean;
-  isGridVisible: () => boolean;
-  getEffectiveOpacity: (transform: ViewTransform) => number;
-  shouldRenderGrid: (transform: ViewTransform) => boolean;
-  shouldRenderRulers: (transform: ViewTransform) => boolean;
-  
-  // Performance and Optimization
-  getMaxGridLines: () => number;
-  getMaxRulerTicks: () => number;
-  isPerformanceOptimized: () => boolean;
-  
-  // Settings Management
-  resetRulerSettings: () => void;
-  resetGridSettings: () => void;
-  resetAllSettings: () => void;
-  exportSettings: () => string;
-  importSettings: (data: string) => Promise<RulersGridOperationResult>;
-  validateSettings: (settings: unknown) => { valid: boolean; errors: string[] };
-  
-  // Auto-fit and Smart Behavior
-  autoFitGrid: (transform: ViewTransform, canvasRect: DOMRect) => void;
-  getOptimalGridStep: (transform: ViewTransform) => number;
-  getOptimalTickSpacing: (transform: ViewTransform, type: 'horizontal' | 'vertical') => number;
-}
-
-// Type alias for hook return
-export type RulersGridHookReturn = RulersGridContextType;
+// 🏢 ADR-125: Context type imported from types.ts to prevent circular dependencies
+import type { RulersGridContextType, RulersGridHookReturn } from './types';
 
 export function useRulersGrid(): RulersGridContextType | null {
-  // 🏢 ENTERPRISE: Use the module-level static context (NEVER create dynamically!)
-  // Dynamic context creation inside hooks causes "Provider is null" in production.
-  const context = useContext(_rulersGridContext);
+  // 🏢 ENTERPRISE: Use lazy-loaded context reference (ADR-125)
+  // Context is defined in RulersGridSystem.tsx to prevent "Provider is null" errors.
+  const context = useContext(getContext());
 
   if (!context) {
     if (DEBUG_RULERS_GRID) console.warn('🚨 [useRulersGrid] No context found, component may be outside RulersGridSystem provider');
@@ -286,34 +197,36 @@ export function useRulersGridSettings() {
 // Legacy hook names removed - use useRulersGrid directly
 
 // ============================================================================
-// 🏢 ENTERPRISE: STATIC CONTEXT CREATION
+// 🏢 ENTERPRISE: CONTEXT RE-EXPORT FOR BACKWARD COMPATIBILITY (ADR-125)
 // ============================================================================
-// CRITICAL FIX: Context must be created statically at module level, NOT
-// dynamically inside hooks. Dynamic creation causes "Provider is null" errors
-// in production builds due to bundler optimizations.
-//
-// Pattern: Salesforce, Microsoft Dynamics, Autodesk - all use static contexts
+// Context is now defined in RulersGridSystem.tsx (canonical location).
+// This re-export ensures existing imports continue to work.
+// Pattern: Autodesk/Microsoft/Google enterprise standard
 // ============================================================================
 
-/**
- * 🏢 ENTERPRISE: Static context instance (created once at module load)
- * This is the ONLY correct way to create React Context for production builds.
- */
-const RulersGridContext = React.createContext<RulersGridContextType | null>(null);
+// Re-export context from canonical location
+export { RulersGridContext } from './RulersGridSystem';
 
-// Keep reference for backward compatibility with setRulersGridContext pattern
-let _rulersGridContext: React.Context<RulersGridContextType | null> = RulersGridContext;
+// Internal reference for hooks (lazy loaded to prevent circular dependency)
+let _cachedContext: React.Context<RulersGridContextType | null> | null = null;
 
-export function setRulersGridContext(context: React.Context<RulersGridContextType | null>) {
-  _rulersGridContext = context;
+function getContext(): React.Context<RulersGridContextType | null> {
+  if (!_cachedContext) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { RulersGridContext } = require('./RulersGridSystem');
+    _cachedContext = RulersGridContext;
+  }
+  return _cachedContext;
 }
 
-export function getRulersGridContext() {
-  return _rulersGridContext;
+// DEPRECATED: No longer needed with static context colocation
+export function setRulersGridContext(_context: React.Context<RulersGridContextType | null>) {
+  console.warn('[DEPRECATED] setRulersGridContext is no longer needed - context is colocated with Provider');
 }
 
-/**
- * 🏢 ENTERPRISE: Export the static context for Provider usage
- * This allows RulersGridSystem to use the same context instance
- */
-export { RulersGridContext };
+export function getRulersGridContext(): React.Context<RulersGridContextType | null> {
+  return getContext();
+}
+
+// Re-export types for consumers (ADR-125)
+export type { RulersGridContextType, RulersGridHookReturn } from './types';

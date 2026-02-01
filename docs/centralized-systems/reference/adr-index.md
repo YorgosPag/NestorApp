@@ -4,7 +4,7 @@
 >
 > Single source of truth για όλες τις αρχιτεκτονικές αποφάσεις της εφαρμογής
 
-**📊 Stats**: 122 ADRs (ADR-124 Renderer Constants Centralization) | Last Updated: 2026-02-01
+**📊 Stats**: 127 ADRs (ADR-129 Layer Entity Filtering) | Last Updated: 2026-02-01
 
 ---
 
@@ -140,12 +140,17 @@
 | **ADR-116** | Primary Blue Color Centralization (#3b82f6 → UI_COLORS) | ✅ APPROVED | 2026-02-01 | Design System |
 | **ADR-117** | DPI-Aware Pixel Calculations Centralization (toDevicePixels) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
 | **ADR-118** | Canvas Viewport Hook Centralization (useCanvasResize) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
-| **ADR-119** | RAF Consolidation to UnifiedFrameScheduler | ✅ APPROVED | 2026-02-01 | Performance |
+| **ADR-119** | RAF Consolidation to UnifiedFrameScheduler | ✅ IMPLEMENTED | 2026-02-01 | Performance |
 | **ADR-120** | Canvas globalAlpha Opacity Centralization (OPACITY constant) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
 | **ADR-121** | Zero Point Pattern Centralization (WORLD_ORIGIN, ZERO_VECTOR, EMPTY_BOUNDS) | ✅ APPROVED | 2026-02-01 | Data & State |
 | **ADR-122** | CollaborationOverlay Line Width Centralization (ctx.lineWidth → RENDER_LINE_WIDTHS) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
 | **ADR-123** | PreviewRenderer Color Centralization (hex → UI_COLORS) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
 | **ADR-124** | Renderer Constants Centralization (DOT_RADIUS, TEXT_GAP, CIRCLE_LABEL) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-125** | Context Creation Pattern (Provider Colocation) | ✅ APPROVED | 2026-02-01 | Data & State |
+| **ADR-126** | Bank Accounts System for Contacts | ✅ APPROVED | 2026-02-01 | Entity Systems |
+| **ADR-127** | Ruler Dimensions Centralization (DEFAULT_RULER_HEIGHT/WIDTH) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering |
+| **ADR-128** | Switch Status Variant (Green ON / Red OFF) | ✅ APPROVED | 2026-02-01 | UI Components |
+| **ADR-129** | Layer Entity Filtering Centralization | ✅ IMPLEMENTED | 2026-02-01 | Entity Systems |
 | **ADR-059** | Separate Audit Bootstrap from Projects List | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-060** | Building Floorplan Enterprise Storage | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-061** | Path Aliases Strategy | ✅ APPROVED | 2026-01-13 | Infrastructure |
@@ -186,6 +191,20 @@
 ### ADR-023: Centralized Spinner Component
 - **Canonical**: `Spinner` from `@/components/ui/spinner`
 - **Prohibited**: Direct `Loader2` import from lucide-react
+
+### ADR-128: Switch Status Variant (Green ON / Red OFF)
+- **Status**: ✅ APPROVED
+- **Date**: 2026-02-01
+- **Problem**: Switch components had no visual distinction for ON/OFF state
+- **Decision**: Add `variant` prop to Switch component with centralized tokens
+- **Canonical Location**: `@/components/ui/switch` + `@/design-system/color-bridge`
+- **Variants Available**:
+  - `default`: Primary when ON, input color when OFF
+  - `status`: Green when ON, Red when OFF (visibility toggles)
+  - `success`: Green when ON, muted when OFF
+  - `destructive`: Red when ON, muted when OFF
+- **Files Updated**: 6 Switch components in Ruler Settings
+- **Pattern**: Centralized tokens in COLOR_BRIDGE.switch
 
 ### ADR-037: Product Tour System
 - **Canonical**: `ProductTour` from `@/components/ui/ProductTour`
@@ -333,6 +352,21 @@
 ### ADR-044: Canvas Line Widths Centralization
 - **Canonical**: `RENDER_LINE_WIDTHS` from `text-rendering-config.ts`
 - **Migration**: 32 hardcoded values → 17 files migrated
+
+### ADR-127: Ruler Dimensions Centralization (DEFAULT_RULER_HEIGHT/WIDTH)
+- **Status**: ✅ APPROVED
+- **Date**: 2026-02-01
+- **Problem**: Hardcoded ruler dimensions (20 vs 30) scattered across 5+ files
+- **Root Cause**: No centralized default constants for ruler dimensions
+- **Decision**: Add DEFAULT_RULER_HEIGHT/WIDTH to RULERS_GRID_CONFIG
+- **Canonical Location**: `systems/rulers-grid/config.ts`
+- **Files Updated**:
+  - `BackgroundPass.ts` - 20 → centralized (fixed inconsistency)
+  - `DxfCanvas.tsx` - 30 → centralized
+  - `CanvasSection.tsx` - fallback → centralized
+  - `LayerRenderer.ts` - fallback → centralized
+- **Pattern**: Single Source of Truth (SSOT)
+- **Companion**: ADR-043 (Zoom Constants), ADR-044 (Canvas Line Widths)
 
 ### ADR-045: Viewport Ready Guard
 - **Pattern**: Fresh viewport + `COORDINATE_LAYOUT.MARGINS`
@@ -1436,6 +1470,8 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - `snapping/engines/shared/snap-engine-utils.ts` - Uses `SpatialUtils.pointInBounds()`
   - `systems/selection/UniversalMarqueeSelection.ts` - Uses `SpatialUtils.pointInRect()`
   - `core/spatial/ISpatialIndex.ts` - Re-exports from SpatialUtils class (removed duplicate namespace)
+  - `systems/zoom/utils/calculations.ts` - Wrapper delegates to `SpatialUtils.pointInRect()` (2026-02-01)
+  - `systems/selection/shared/selection-duplicate-utils.ts` - Wrapper delegates to `SpatialUtils.pointInBounds()` (2026-02-01)
 - **Pattern**: Single Source of Truth (SSOT)
 - **Benefits**:
   - Zero duplicate point-in-bounds implementations
@@ -1753,6 +1789,28 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - Visual: Draw circle/arc/line entities, verify measurements and dots render correctly
 - **Companion**: ADR-091 (Text Label Offsets), ADR-048 (Hardcoded Values), ADR-044 (Canvas Line Widths)
 
+### ADR-125: Context Creation Pattern (Provider Colocation)
+- **Status**: ✅ APPROVED
+- **Date**: 2026-02-01
+- **Problem**: Production error "Cannot read properties of null (reading 'Provider')"
+- **Root Cause**: Context created in different file than Provider component. Bundle optimization can reorder module evaluation, causing context to be `null` when Provider tries to use it.
+- **Decision**: Context MUST be created in SAME file as Provider component (colocation pattern)
+- **Pattern**: Autodesk/Microsoft/Google enterprise standard
+- **Files Fixed**:
+  - `RulersGridContext` → moved to `systems/rulers-grid/RulersGridSystem.tsx`
+  - `LevelsContext` → moved to `systems/levels/LevelsSystem.tsx`
+- **Backward Compatibility**: Re-exports in original files (`useRulersGrid.ts`, `useLevels.ts`) with lazy loading to prevent circular dependencies
+- **Implementation**:
+  - Create context in Provider file: `export const MyContext = React.createContext<Type | null>(null);`
+  - Re-export from hook file: `export { MyContext } from './MySystem';`
+  - Use lazy loading for internal hook reference to prevent circular deps
+- **Verification**:
+  - TypeScript: `npx tsc --noEmit --project src/subapps/dxf-viewer/tsconfig.json`
+  - Production Build: `npm run build` (no "Provider is null" errors)
+  - Runtime: Grid toggle ON/OFF, Rulers toggle ON/OFF, Level switching
+- **Risk Level**: LOW (structural change with full backward compatibility)
+- **Companion**: ADR-010 (Panel Type Centralization), ADR-030 (Data & State)
+
 ---
 
 ## ✏️ **DRAWING SYSTEM**
@@ -1914,8 +1972,43 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
 - **Pattern**: Centralized FPS/memory/render time limits
 
 ### ADR-030: Unified Frame Scheduler
-- **Canonical**: `UnifiedFrameScheduler` singleton
-- **Pattern**: Single RAF loop with priority queue
+- **Canonical**: `UnifiedFrameScheduler` singleton from `rendering/core/UnifiedFrameScheduler.ts`
+- **Pattern**: Single RAF loop with priority queue (Autodesk/Adobe pattern)
+- **Features**:
+  - Priority-based render queue (CRITICAL → BACKGROUND)
+  - Dirty flag aggregation from multiple sources
+  - Frame skipping optimization under load
+  - Performance metrics collection via `getMetrics()`
+  - Auto-start/stop based on registered systems
+- **API**:
+  - `UnifiedFrameScheduler.register(id, name, priority, render, isDirty?)` - Register render system
+  - `UnifiedFrameScheduler.getMetrics()` - Get current FPS, frame timing
+  - `UnifiedFrameScheduler.onFrame(callback)` - Subscribe to frame metrics
+- **Consumers** (2026-02-01):
+  - `DxfPerformanceOptimizer.ts` - Uses `onFrame()` for FPS tracking instead of parallel RAF loop
+  - (Migrated: Removed duplicate `requestAnimationFrame(measureFPS)` loop)
+- **Companion**: ADR-119 (RAF Consolidation)
+
+### ADR-119: RAF Consolidation to UnifiedFrameScheduler
+- **Status**: ✅ IMPLEMENTED (2026-02-01)
+- **Decision**: All RAF loops must use `UnifiedFrameScheduler` instead of parallel `requestAnimationFrame()` calls
+- **Problem**: Multiple parallel RAF loops competing for resources:
+  - `UnifiedFrameScheduler` - Main render loop ✅
+  - `DxfPerformanceOptimizer` - FPS measurement loop ❌ DUPLICATE
+  - `useCentralizedMouseHandlers` - Panning (keep separate - high-frequency state updates)
+  - `useEntityDrag` - Throttling (keep separate - state updates, not rendering)
+- **Solution**:
+  - `DxfPerformanceOptimizer` now uses `UnifiedFrameScheduler.onFrame()` instead of own RAF loop
+  - Panning/drag RAF loops remain separate (high-frequency state updates, risky to consolidate)
+- **Changes Made**:
+  - `DxfPerformanceOptimizer.ts`: Removed `measureFPS()` RAF loop, now subscribes to scheduler metrics
+  - Uses `UnifiedFrameScheduler.onFrame()` callback for FPS updates
+  - Added cleanup via `unsubscribeFrameMetrics` in `destroy()` method
+- **Benefits**:
+  - Reduced from 5+ parallel RAF loops to 1 central + 2 specialized
+  - More accurate FPS measurement (60-frame rolling average from scheduler)
+  - Reduced CPU overhead from competing RAF loops
+- **Companion**: ADR-030 (Unified Frame Scheduler), ADR-019 (Performance Thresholds)
 
 ### ADR-036: Enterprise Structured Logging
 - **Canonical**: `Logger` from `@/lib/telemetry`
@@ -2128,6 +2221,73 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - Easy global adjustment if needed
   - Comment marker `// 🏢 ADR-105` for traceability
 - **Companion**: ADR-095 (Snap Tolerance), ADR-099 (Polygon & Measurement Tolerances)
+
+### ADR-129: Layer Entity Filtering Centralization
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Canonical**: `services/shared/layer-operation-utils.ts`
+- **Decision**: Centralize all entity-layer filtering patterns to single source of truth
+- **Problem**: 20+ duplicate inline filtering patterns across 5 files:
+  - `services/LayerOperationsService.ts` - 6 occurrences (lines 126, 154, 255, 313, 341, 391)
+  - `ui/hooks/useLayerOperations.ts` - 1 occurrence (line 78)
+  - `ui/components/layers/hooks/useSearchFilter.ts` - 1 occurrence (line 8)
+  - `ui/components/layers/hooks/useLayersCallbacks.ts` - 4 occurrences (lines 71, 149, 209, 228)
+  - `ui/components/layers/hooks/useColorGroups.ts` - 1 occurrence (line 22)
+- **Issues Found**:
+  - Inconsistent null safety: Some patterns had `entity.layer &&` check, others didn't
+  - Mixed visibility checks: `entity.visible !== false` vs `scene.layers[layer]?.visible !== false`
+  - Code duplication: Same logic in 5+ files
+  - No single source of truth for entity filtering
+- **Solution**: Extended existing `layer-operation-utils.ts` with centralized utilities
+- **API**:
+  ```typescript
+  // === SINGLE LAYER OPERATIONS ===
+  getEntitiesByLayer(entities, layerName): AnySceneEntity[]
+  getEntityIdsByLayer(entities, layerName): string[]
+  countEntitiesInLayer(entities, layerName): number
+
+  // === MULTI LAYER OPERATIONS ===
+  getEntitiesByLayers(entities, layerNames): AnySceneEntity[]
+  getEntityIdsByLayers(entities, layerNames): string[]
+
+  // === WITH VISIBILITY CHECKS ===
+  getVisibleEntitiesByLayer(entities, layerName): AnySceneEntity[]
+  getVisibleEntityIdsByLayer(entities, layerName): string[]
+  getVisibleEntityIdsByLayers(entities, layerNames): string[]
+  getVisibleEntityIdsInLayers(entities, layers, layerNames): string[]
+
+  // === ENTITY EXCLUSION OPERATIONS ===
+  getEntitiesNotInLayer(entities, layerName): AnySceneEntity[]
+  getEntitiesNotInLayers(entities, layerNames): AnySceneEntity[]
+
+  // === HELPER FUNCTIONS ===
+  entityBelongsToLayer(entity, layerName): boolean
+  entityBelongsToLayers(entity, layerNames): boolean
+  isEntityVisible(entity): boolean
+  ```
+- **Files Migrated**:
+  - `services/LayerOperationsService.ts` - 6 replacements
+  - `ui/hooks/useLayerOperations.ts` - 1 replacement
+  - `ui/components/layers/hooks/useSearchFilter.ts` - 1 replacement
+  - `ui/components/layers/hooks/useLayersCallbacks.ts` - 4 replacements
+- **Pattern**:
+  ```typescript
+  // Before (inline - PROHIBITED)
+  const entityIds = scene.entities
+    .filter(entity => entity.layer === layerName)
+    .map(entity => entity.id);
+
+  // After (centralized - REQUIRED)
+  import { getEntityIdsByLayer } from '../services/shared/layer-operation-utils';
+  const entityIds = getEntityIdsByLayer(scene.entities, layerName);
+  ```
+- **Benefits**:
+  - Zero inline layer filtering patterns (20+ eliminated)
+  - Consistent null safety (100%)
+  - Single Source of Truth for all entity-layer operations
+  - Type-safe with `AnySceneEntity` type
+  - ~50 lines of duplicate code removed
+- **Companion**: ADR-104 (Entity Type Guards), ADR-017 (Enterprise ID)
 
 ---
 

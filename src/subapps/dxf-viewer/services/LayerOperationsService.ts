@@ -5,11 +5,16 @@
 
 import { SceneModel } from '../types/scene';
 import { mergeColorGroups } from '../ui/components/layers/utils/scene-merge';
-import { 
-  validateLayerExists, 
-  updateLayerProperties, 
+import {
+  validateLayerExists,
+  updateLayerProperties,
   updateEntitiesForLayer,
-  LayerOperationResult as ImportedLayerOperationResult
+  LayerOperationResult as ImportedLayerOperationResult,
+  // ADR-129: Centralized entity layer filtering
+  getEntityIdsByLayer,
+  getEntityIdsByLayers,
+  getEntitiesNotInLayer,
+  getEntitiesNotInLayers
 } from './shared/layer-operation-utils';
 
 export interface LayerOperationResult {
@@ -121,10 +126,9 @@ export class LayerOperationsService {
     
     let updatedScene = updateLayerProperties(layerName, { visible }, scene);
     updatedScene = updateEntitiesForLayer(updatedScene, layerName, { visible });
-    
-    const affectedEntityIds = scene.entities
-      .filter(entity => entity.layer === layerName)
-      .map(entity => entity.id);
+
+    // ADR-129: Centralized entity filtering
+    const affectedEntityIds = getEntityIdsByLayer(scene.entities, layerName);
     
     return {
       updatedScene,
@@ -150,13 +154,10 @@ export class LayerOperationsService {
     }
     
     const { [layerName]: deletedLayer, ...remainingLayers } = scene.layers;
-    const deletedEntityIds = scene.entities
-      .filter(entity => entity.layer === layerName)
-      .map(entity => entity.id);
-    
-    const remainingEntities = scene.entities.filter(
-      entity => entity.layer !== layerName
-    );
+
+    // ADR-129: Centralized entity filtering
+    const deletedEntityIds = getEntityIdsByLayer(scene.entities, layerName);
+    const remainingEntities = getEntitiesNotInLayer(scene.entities, layerName);
     
     const updatedScene = {
       ...scene,
@@ -250,10 +251,9 @@ export class LayerOperationsService {
       layers: updatedLayers,
       entities: updatedEntities
     };
-    
-    const affectedEntityIds = scene.entities
-      .filter(entity => entity.layer && sourceLayerNames.includes(entity.layer))
-      .map(entity => entity.id);
+
+    // ADR-129: Centralized entity filtering
+    const affectedEntityIds = getEntityIdsByLayers(scene.entities, sourceLayerNames);
 
     return {
       updatedScene,
@@ -262,7 +262,7 @@ export class LayerOperationsService {
       message: `Merged ${sourceLayerNames.length} layers into "${targetLayerName}"`
     };
   }
-  
+
   /**
    * Merge color groups hierarchically (without deleting layers)
    */
@@ -309,9 +309,8 @@ export class LayerOperationsService {
       )
     };
 
-    const affectedEntityIds = scene.entities
-      .filter(entity => entity.layer && layersInGroup.includes(entity.layer))
-      .map(entity => entity.id);
+    // ADR-129: Centralized entity filtering
+    const affectedEntityIds = getEntityIdsByLayers(scene.entities, layersInGroup);
 
     return {
       updatedScene,
@@ -320,7 +319,7 @@ export class LayerOperationsService {
       message: `Color group visibility set to ${visible}`
     };
   }
-  
+
   /**
    * Delete all layers in a color group
    */
@@ -336,14 +335,10 @@ export class LayerOperationsService {
         ([layerName]) => !layersInGroup.includes(layerName)
       )
     );
-    
-    const deletedEntityIds = scene.entities
-      .filter(entity => entity.layer && layersInGroup.includes(entity.layer))
-      .map(entity => entity.id);
-    
-    const remainingEntities = scene.entities.filter(
-      entity => !entity.layer || !layersInGroup.includes(entity.layer)
-    );
+
+    // ADR-129: Centralized entity filtering
+    const deletedEntityIds = getEntityIdsByLayers(scene.entities, layersInGroup);
+    const remainingEntities = getEntitiesNotInLayers(scene.entities, layersInGroup);
     
     const updatedScene = {
       ...scene,
@@ -386,10 +381,9 @@ export class LayerOperationsService {
           : entity
       )
     };
-    
-    const affectedEntityIds = scene.entities
-      .filter(entity => entity.layer && layersInGroup.includes(entity.layer))
-      .map(entity => entity.id);
+
+    // ADR-129: Centralized entity filtering
+    const affectedEntityIds = getEntityIdsByLayers(scene.entities, layersInGroup);
 
     return {
       updatedScene,
@@ -398,7 +392,7 @@ export class LayerOperationsService {
       message: `Changed color group "${colorGroupName}" to ${color}`
     };
   }
-  
+
   /**
    * Get statistics about layers
    */

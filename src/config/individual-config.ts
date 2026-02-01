@@ -181,7 +181,7 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
       },
       {
         id: 'amka',
-        label: PERSONAL_INFO_FIELD_LABELS.AMKA,
+        label: IDENTITY_DOCUMENT_FIELD_LABELS.AMKA,
         type: 'input',
         maxLength: 11,
         placeholder: '12345678901',
@@ -416,6 +416,27 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
         label: 'contacts.individual.sections.files.title',
         type: 'input'
         // Dummy field - actual UI rendered by EntityFilesManager
+      }
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 9. ΤΡΑΠΕΖΙΚΑ - 🏢 ENTERPRISE BANKING SYSTEM (ADR-126)
+  // -------------------------------------------------------------------------
+  {
+    id: 'banking',
+    title: 'individual.sections.banking.title',
+    icon: 'credit-card',
+    description: 'individual.sections.banking.description',
+    order: 9,
+    fields: [
+      // 🎯 DUMMY FIELD για custom renderer triggering
+      // Fields are handled by ContactBankingTab component
+      {
+        id: 'banking',
+        label: 'contacts.individual.sections.banking.title',
+        type: 'input'
+        // Dummy field - actual UI rendered by ContactBankingTab
       }
     ],
   },

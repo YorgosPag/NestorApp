@@ -3,6 +3,12 @@ import { publishHighlight } from '../../../../events/selection-bus';
 import type { SceneModel } from '../../../../types/scene';
 import { setSelection } from './selection';
 import { DEFAULT_LAYER_COLOR } from '../../../../config/color-config';
+// ADR-129: Centralized entity layer filtering
+import {
+  getVisibleEntityIdsByLayer,
+  getVisibleEntityIdsByLayers,
+  getVisibleEntityIdsInLayers
+} from '../../../../services/shared/layer-operation-utils';
 
 interface LayersCallbacksProps {
   scene: SceneModel | null;
@@ -20,22 +26,26 @@ interface LayersCallbacksProps {
   customColorGroupNames: Map<string, string>;
 }
 
+/**
+ * Collect visible entity IDs from color groups
+ * ADR-129: Helper function using centralized utilities
+ */
 function collectEntityIdsOfColorGroups(scene: SceneModel | null, groups: string[]): string[] {
-  if (!scene || !scene.entities) return [];
-  const layerIsInGroups = (layerName: string) => {
-    const layer = scene.layers?.[layerName];
-    const cg = `Color ${layer?.color ?? DEFAULT_LAYER_COLOR}`;
-    return groups.includes(cg);
-  };
-  const ids: string[] = [];
-  if (scene.entities) {
-    scene.entities.forEach(e => {
-      if (e.visible !== false && e.layer && layerIsInGroups(e.layer)) {
-        ids.push(e.id);
+  if (!scene?.entities) return [];
+
+  // Find all layer names that belong to the specified color groups
+  const layerNamesInGroups: string[] = [];
+  if (scene.layers) {
+    Object.entries(scene.layers).forEach(([layerName, layer]) => {
+      const colorGroup = `Color ${layer?.color ?? DEFAULT_LAYER_COLOR}`;
+      if (groups.includes(colorGroup)) {
+        layerNamesInGroups.push(layerName);
       }
     });
   }
-  return ids;
+
+  // Use centralized filtering with visibility check
+  return getVisibleEntityIdsByLayers(scene.entities, layerNamesInGroups);
 }
 
 export function useLayersCallbacks({
@@ -62,16 +72,12 @@ export function useLayersCallbacks({
     return customColorGroupNames.get(originalColorName) || originalColorName;
   }, [customColorGroupNames]);
 
-  // Simple layer click
+  // Simple layer click - ADR-129: Using centralized layer filtering
   const handleLayerClick = useCallback((layerName: string) => {
-    if (!scene || !onEntitySelectionChange) return;
-    
-    const entityIds: string[] = [];
-    scene.entities?.forEach(entity => {
-      if (entity.layer === layerName && entity.visible !== false) {
-        entityIds.push(entity.id);
-      }
-    });
+    if (!scene?.entities || !onEntitySelectionChange) return;
+
+    // Use centralized visible entity filtering
+    const entityIds = getVisibleEntityIdsByLayer(scene.entities, layerName);
 
     // Use setSelection helper to ensure both highlight and selection state are updated
     setSelection(entityIds, { onEntitySelectionChange }, { layerName });
@@ -141,20 +147,15 @@ export function useLayersCallbacks({
       setSelectedEntitiesForMerge(new Set());
       setSelectedColorGroupsForMerge(new Set());
 
-      // ✅ UNION όλων των entity ids από τα επιλεγμένα layers
-      if (scene) {
+      // ✅ UNION όλων των entity ids από τα επιλεγμένα layers - ADR-129
+      if (scene?.entities) {
         const selectedLayerNames = Array.from(newSelected);
-        const unionIds: string[] = [];
-        scene.entities?.forEach(ent => {
-          if (ent.visible !== false && ent.layer && selectedLayerNames.includes(ent.layer)) {
-            unionIds.push(ent.id);
-          }
-        });
+        // Use centralized visible entity filtering
+        const unionIds = getVisibleEntityIdsByLayers(scene.entities, selectedLayerNames);
 
         // ✅ Ενημέρωσε selection + ΠΕΣ ΤΟ στον καμβά (grips για ΟΛΑ)
         // Δεν θέλουμε merge-entities mode εδώ, άρα forMerge:false
         setSelection(unionIds, { onEntitySelectionChange }, { forMerge: false });
-
       }
     } else {
       // Regular single click - use existing handler
@@ -220,21 +221,18 @@ export function useLayersCallbacks({
   ]);
 
   // Color Group click handler (for grips) - ✅ ένα event – όχι χιλιάδες
+  // ADR-129: Using centralized layer filtering with layer visibility check
   const handleColorGroupClick = useCallback((colorName: string, layerNames: string[]) => {
-    if (!scene || !onEntitySelectionChange) return;
-    
-    // ✅ Μάζεψε πρώτα όλα τα IDs και στείλε μία φορά
-    const ids = scene.entities
-      .filter(e => e.layer && layerNames.includes(e.layer) && scene.layers[e.layer]?.visible !== false && e.visible !== false)
-      .map(e => e.id);
+    if (!scene?.entities || !onEntitySelectionChange) return;
+
+    // ✅ Use centralized filtering with both entity and layer visibility
+    const ids = getVisibleEntityIdsInLayers(scene.entities, scene.layers, layerNames);
 
     // ✅ ένα event – όχι καταιγισμό
     publishHighlight({ ids, mode: 'select' });
-    
+
     // Update local selection state
-    if (onEntitySelectionChange) {
-      onEntitySelectionChange(ids);
-    }
+    onEntitySelectionChange(ids);
   }, [scene, onEntitySelectionChange]);
 
   // Merge functions

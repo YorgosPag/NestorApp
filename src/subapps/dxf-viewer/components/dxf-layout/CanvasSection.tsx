@@ -18,6 +18,8 @@ import { OverlayProperties } from '../../ui/OverlayProperties';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLevels } from '../../systems/levels';
 import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
+// 🏢 ADR-127: Centralized Ruler Dimensions
+import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 import { useCursorSettings, useCursorActions } from '../../systems/cursor';
 // 🏢 ENTERPRISE (2026-01-25): Immediate position store για zero-latency crosshair
 import { setImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
@@ -1813,8 +1815,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           {/* ✅ ADR-009: RulerCornerBox - Interactive corner box at ruler intersection */}
           {/* 🏢 CAD-GRADE: Industry standard (AutoCAD/Revit/Blender) corner box with zoom controls */}
           <RulerCornerBox
-            rulerWidth={rulerSettings.width ?? 30}
-            rulerHeight={rulerSettings.height ?? 30}
+            rulerWidth={rulerSettings.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}
+            rulerHeight={rulerSettings.height ?? RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT}
             currentScale={transform.scale}
             backgroundColor={globalRulerSettings.horizontal.backgroundColor}
             textColor={globalRulerSettings.horizontal.textColor}

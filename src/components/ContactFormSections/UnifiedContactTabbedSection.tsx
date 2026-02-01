@@ -12,6 +12,8 @@ import { RelationshipProvider } from '@/components/contacts/relationships/contex
 import { DynamicContactArrays } from '@/components/contacts/dynamic/DynamicContactArrays';
 // 🏢 ENTERPRISE: File Management System (ADR-031)
 import { EntityFilesManager } from '@/components/shared/files';
+// 🏢 ENTERPRISE: Banking System (ADR-126)
+import { ContactBankingTab } from '@/components/contacts/tabs/ContactBankingTab';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext'; // 🏢 ENTERPRISE: Workspace context για company name display
 import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
@@ -329,6 +331,22 @@ export function UnifiedContactTabbedSection({
               currentUserId={currentUserId}
               entityLabel={entityLabel}
               companyName={companyDisplayName} // 🏢 ENTERPRISE: Pass company name from CompaniesService (ADR-031)
+            />
+          );
+        },
+
+        // 🏢 ENTERPRISE: Custom renderer for banking tab - ADR-126 Bank Accounts System
+        banking: () => {
+          // ContactBankingTab expects `data` prop with the contact
+          // Convert formData to Contact-like structure
+          return (
+            <ContactBankingTab
+              data={{
+                id: formData.id || '',
+                type: contactType,
+                ...(formData as unknown as Record<string, unknown>)
+              } as Parameters<typeof ContactBankingTab>[0]['data']}
+              additionalData={{ disabled }}
             />
           );
         }

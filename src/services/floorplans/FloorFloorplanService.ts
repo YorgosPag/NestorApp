@@ -1,26 +1,31 @@
 'use client';
 
 /**
- * 🏢 ENTERPRISE Floor Floorplan Service
+ * =============================================================================
+ * 🏢 ENTERPRISE Floor Floorplan Service (V2)
+ * =============================================================================
  *
- * Manages floor-level floorplan DXF/PDF data using Firebase Storage + Metadata pattern.
- * Follows the same architecture as BuildingFloorplanService.
+ * Manages floor-level floorplan files using the Enterprise File Storage pattern.
+ * Uses FileRecordService for metadata and canonical storage paths.
  *
  * @module services/floorplans/FloorFloorplanService
- * @version 1.0.0
+ * @version 2.0.0
+ * @enterprise ADR-031 - Canonical File Storage System
  *
- * Architecture:
- * - Scene data → Firebase Storage (unlimited size, cheap)
- * - Metadata → Firestore (fast queries, small docs)
- * - Uses DxfFirestoreService for storage operations
+ * Storage Pattern:
+ * - Firestore: `files` collection (FileRecord documents)
+ * - Storage: `companies/{companyId}/projects/{projectId}/entities/floor/{floorId}/domains/construction/categories/floorplans/files/{fileId}.json`
  *
- * @see BuildingFloorplanService for the pattern reference
+ * @see FileRecordService for the core file operations
  */
 
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { DxfFirestoreService } from '@/subapps/dxf-viewer/services/dxf-firestore.service';
+import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
+import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
+import { FileRecordService } from '@/services/file-record.service';
+import { generateFileId } from '@/services/upload/utils/storage-path';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
+import type { FileRecord } from '@/types/file-record';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
@@ -29,29 +34,11 @@ import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE LOGGER CONFIGURATION
 // =============================================================================
 
-/**
- * FloorFloorplan Logger - Enterprise-grade logging
- *
- * PRODUCTION: Only ERROR level (clean console)
- * DEVELOPMENT: DEBUG level (verbose for debugging)
- */
 const floorplanLogger = new Logger({
   level: process.env.NODE_ENV === 'production' ? LogLevel.ERROR : LogLevel.DEBUG,
   prefix: '[FloorFloorplan]',
   output: process.env.NODE_ENV === 'production' ? new DevNullOutput() : undefined
 });
-
-/**
- * Error classification for intelligent logging
- * @enterprise Pattern: Expected errors (file not found) → silent, real errors → logged
- */
-const isExpectedError = (error: Error): boolean => {
-  const message = error.message.toLowerCase();
-  return message.includes('not found') ||
-         message.includes('404') ||
-         message.includes('does not exist') ||
-         (message.includes('permission') && message.includes('missing'));
-};
 
 // ============================================================================
 // TYPES
@@ -59,12 +46,6 @@ const isExpectedError = (error: Error): boolean => {
 
 /**
  * 🏢 ENTERPRISE: Floor floorplan data structure
- *
- * Supports two formats:
- * - DXF floorplans: scene + fileName
- * - PDF floorplans: pdfImageUrl + pdfDimensions
- *
- * Uses SceneModel instead of `any` for type safety when scene is present.
  */
 export interface FloorFloorplanData {
   /** Building ID that contains this floor */
@@ -87,28 +68,38 @@ export interface FloorFloorplanData {
   pdfImageUrl?: string;
   /** PDF dimensions (present for PDF files) */
   pdfDimensions?: { width: number; height: number } | null;
+  /** FileRecord ID (for Enterprise pattern) */
+  fileRecordId?: string;
 }
 
 /**
- * Legacy Firestore document structure (for backward compatibility)
- * Supports both DXF and PDF formats stored in Firestore
+ * Parameters for saving a floor floorplan
  */
-interface LegacyFloorplanDocument {
+export interface SaveFloorplanParams {
+  /** Company ID (REQUIRED for Enterprise pattern) */
+  companyId: string;
+  /** Project ID (optional but recommended) */
+  projectId?: string;
+  /** Building ID */
   buildingId: string;
+  /** Floor ID */
   floorId: string;
+  /** Floor number for display */
   floorNumber?: number;
-  type: 'floor';
-  fileName: string;
-  timestamp: number;
-  updatedAt?: string;
-  deleted?: boolean;
-  deletedAt?: string;
-  // DXF format fields
-  scene?: SceneModel;
-  // PDF format fields
-  fileType?: 'dxf' | 'pdf';
-  pdfImageUrl?: string;
-  pdfDimensions?: { width: number; height: number } | null;
+  /** Floorplan data */
+  data: FloorFloorplanData;
+  /** User ID who created this */
+  createdBy: string;
+}
+
+/**
+ * Parameters for loading a floor floorplan
+ */
+export interface LoadFloorplanParams {
+  /** Company ID (REQUIRED) */
+  companyId: string;
+  /** Floor ID */
+  floorId: string;
 }
 
 // ============================================================================
@@ -116,104 +107,97 @@ interface LegacyFloorplanDocument {
 // ============================================================================
 
 export class FloorFloorplanService {
-  /** Firestore collection for floor floorplans */
-  private static readonly COLLECTION = 'floor_floorplans';
-
   /**
-   * Generate enterprise file ID for floor floorplan
-   * Format: floor_floorplan_{buildingId}_{floorId}
-   */
-  private static generateFileId(buildingId: string, floorId: string): string {
-    const sanitizedBuildingId = buildingId.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
-    const sanitizedFloorId = floorId.toString().replace(/[^a-zA-Z0-9_-]/g, '_');
-    return `floor_floorplan_${sanitizedBuildingId}_${sanitizedFloorId}`;
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Save floor floorplan
+   * 🏢 ENTERPRISE: Save floor floorplan using FileRecordService
    *
-   * Handles two formats:
-   * - DXF floorplans: Uses DxfFirestoreService.saveToStorage() for enterprise storage
-   * - PDF floorplans: Uses Firestore (metadata only, PDF stored elsewhere)
+   * Flow:
+   * 1. Create FileRecord with status: pending
+   * 2. Upload scene JSON to Storage at canonical path
+   * 3. Finalize FileRecord with downloadUrl
    */
-  static async saveFloorplan(
-    buildingId: string,
-    floorId: string,
-    data: FloorFloorplanData
-  ): Promise<boolean> {
-    try {
-      const fileId = this.generateFileId(buildingId, floorId);
-      const fileName = data.fileName || `${buildingId}_floor_${floorId}_floorplan`;
+  static async saveFloorplan(params: SaveFloorplanParams): Promise<boolean> {
+    const { companyId, projectId, buildingId, floorId, data, createdBy } = params;
 
+    try {
       // Determine file type
       const isPdfFloorplan = data.fileType === 'pdf' || (!data.scene && data.pdfImageUrl);
 
       if (isPdfFloorplan) {
-        // PDF floorplans: Store metadata in Firestore (PDF image stored separately)
-        floorplanLogger.debug(`Saving PDF floor floorplan to Firestore`, { fileId, buildingId, floorId });
+        // PDF floorplans: Use FileRecordService for the PDF file itself
+        floorplanLogger.debug(`Saving PDF floor floorplan`, { floorId, buildingId });
 
-        const docId = `${buildingId}_${floorId}_floor`;
-        await setDoc(doc(db, this.COLLECTION, docId), {
-          buildingId,
-          floorId,
-          floorNumber: data.floorNumber,
-          type: 'floor',
-          fileType: 'pdf',
-          fileName: data.fileName,
-          pdfImageUrl: data.pdfImageUrl,
-          pdfDimensions: data.pdfDimensions,
-          timestamp: data.timestamp,
-          updatedAt: new Date().toISOString()
-        });
-
-        floorplanLogger.info(`PDF save complete for floor`, { buildingId, floorId });
-
-        // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-        RealtimeService.dispatchFloorplanCreated({
-          floorplanId: docId,
-          floorplan: {
-            buildingId,
-            floorId,
-            type: 'floor',
-            fileType: 'pdf',
-            fileName: data.fileName,
-          },
-          timestamp: Date.now(),
-        });
-
-        return true;
+        // For PDF, we assume the PDF is already uploaded and we just need to create/update the FileRecord
+        // This would typically be handled by the upload flow, not here
+        floorplanLogger.warn(`PDF floorplan save not implemented in V2 - use FileRecordService directly`);
+        return false;
       }
 
-      // DXF floorplans: Use enterprise DxfFirestoreService for storage
+      // DXF floorplans: Save scene JSON using Enterprise pattern
       if (!data.scene) {
         floorplanLogger.warn(`No scene data for DXF floorplan`, { buildingId, floorId });
         return false;
       }
 
-      floorplanLogger.debug(`Saving DXF floor floorplan via enterprise storage`, { fileId, buildingId, floorId });
+      floorplanLogger.debug(`Saving DXF floor floorplan via Enterprise storage`, { floorId, buildingId });
 
-      const success = await DxfFirestoreService.saveToStorage(fileId, fileName, data.scene);
+      // Step 1: Create pending FileRecord
+      const fileName = data.fileName || `floor_${floorId}_floorplan.json`;
 
-      if (success) {
-        floorplanLogger.info(`Enterprise save complete for floor`, { buildingId, floorId });
+      const createResult = await FileRecordService.createPendingFileRecord({
+        companyId,
+        projectId,
+        entityType: ENTITY_TYPES.FLOOR,
+        entityId: floorId,
+        domain: FILE_DOMAINS.CONSTRUCTION,
+        category: FILE_CATEGORIES.FLOORPLANS,
+        originalFilename: fileName,
+        contentType: 'application/json',
+        createdBy,
+        // 🏢 ENTERPRISE: Naming context for display name generation
+        entityLabel: `Floor ${data.floorNumber || floorId}`,
+        purpose: 'floor-floorplan',
+        // Store buildingId in descriptors for retrieval
+        descriptors: [buildingId, `floor-${data.floorNumber || 0}`],
+      });
 
-        // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-        RealtimeService.dispatchFloorplanCreated({
-          floorplanId: fileId,
-          floorplan: {
-            buildingId,
-            floorId,
-            type: 'floor',
-            fileType: 'dxf',
-            fileName,
-          },
-          timestamp: Date.now(),
-        });
-      } else {
-        floorplanLogger.error(`Enterprise save failed for floor`, { buildingId, floorId });
-      }
+      // Step 2: Upload scene JSON to Storage
+      const sceneJson = JSON.stringify(data.scene);
+      const sceneBytes = new TextEncoder().encode(sceneJson);
 
-      return success;
+      const storageRef = ref(storage, createResult.storagePath);
+      const uploadResult = await uploadBytes(storageRef, sceneBytes, {
+        contentType: 'application/json',
+      });
+
+      // Step 3: Get download URL
+      const downloadUrl = await getDownloadURL(uploadResult.ref);
+
+      // Step 4: Finalize FileRecord
+      await FileRecordService.finalizeFileRecord({
+        fileId: createResult.fileId,
+        sizeBytes: sceneBytes.length,
+        downloadUrl,
+      });
+
+      floorplanLogger.info(`Enterprise save complete for floor`, {
+        floorId,
+        buildingId,
+        fileId: createResult.fileId,
+        storagePath: createResult.storagePath,
+      });
+
+      // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+      RealtimeService.dispatchFloorplanCreated({
+        floorplanId: createResult.fileId,
+        floorplan: {
+          name: fileName,
+          entityType: ENTITY_TYPES.FLOOR,
+          entityId: floorId,
+        },
+        timestamp: Date.now(),
+      });
+
+      return true;
     } catch (error) {
       floorplanLogger.error(`Error saving floor floorplan`, {
         buildingId,
@@ -225,113 +209,110 @@ export class FloorFloorplanService {
   }
 
   /**
-   * 🏢 ENTERPRISE: Load floor floorplan with intelligent fallback
+   * 🏢 ENTERPRISE: Load floor floorplan from FileRecordService
    *
-   * Loading strategy:
-   * 1. Check Firestore for PDF floorplans first (fast)
-   * 2. Try enterprise Storage-based loading for DXF (new format)
-   * 3. Fallback to legacy Firestore document (old DXF format)
-   * 4. Return null if not found in any location
+   * Strategy:
+   * 1. Query `files` collection for floor floorplans
+   * 2. Download scene JSON from Storage
+   * 3. Return FloorFloorplanData
    */
-  static async loadFloorplan(
-    buildingId: string,
-    floorId: string
-  ): Promise<FloorFloorplanData | null> {
+  static async loadFloorplan(params: LoadFloorplanParams): Promise<FloorFloorplanData | null> {
+    const { companyId, floorId } = params;
+
     try {
-      const fileId = this.generateFileId(buildingId, floorId);
+      floorplanLogger.debug(`Loading floor floorplan`, { floorId, companyId });
 
-      floorplanLogger.debug(`Loading floor floorplan`, { fileId, buildingId, floorId });
-
-      // 1. Check Firestore first (handles both PDF and old DXF format)
-      const firestoreResult = await this.loadFromFirestore(buildingId, floorId);
-
-      if (firestoreResult) {
-        // If it's a PDF floorplan, return directly (no migration needed)
-        if (firestoreResult.fileType === 'pdf' || firestoreResult.pdfImageUrl) {
-          floorplanLogger.debug(`Loaded PDF from Firestore`, { buildingId, floorId });
-          return firestoreResult;
+      // Query files collection for this floor's floorplans
+      // 🏢 ENTERPRISE: Using positional args as per FileRecordService API
+      const fileRecords = await FileRecordService.getFilesByEntity(
+        ENTITY_TYPES.FLOOR,
+        floorId,
+        {
+          companyId,
+          category: FILE_CATEGORIES.FLOORPLANS,
+          purpose: 'floor-floorplan',
         }
+      );
 
-        // If it's a legacy DXF with scene data, return it
-        if (firestoreResult.scene) {
-          floorplanLogger.debug(`Loaded legacy DXF from Firestore`, { buildingId, floorId });
-          return firestoreResult;
-        }
+      if (!fileRecords || fileRecords.length === 0) {
+        floorplanLogger.debug(`No floorplan found for floor`, { floorId });
+        return null;
       }
 
-      // 2. Try enterprise Storage-based loading for DXF
-      const storageResult = await DxfFirestoreService.loadFileV2(fileId);
+      // Get the most recent floorplan
+      const fileRecord = fileRecords[0];
 
-      if (storageResult) {
-        floorplanLogger.debug(`Loaded DXF from enterprise storage`, { fileId });
+      // Check file type from extension or contentType
+      const isPdf = fileRecord.ext?.toLowerCase() === 'pdf' ||
+                    fileRecord.contentType?.includes('pdf');
+
+      // Extract buildingId from descriptors (first element)
+      const buildingId = fileRecord.purpose === 'floor-floorplan' &&
+                         Array.isArray((fileRecord as FileRecord & { descriptors?: string[] }).descriptors)
+                           ? (fileRecord as FileRecord & { descriptors?: string[] }).descriptors?.[0] || ''
+                           : '';
+
+      // Extract floorNumber from descriptors (second element, format: "floor-N")
+      const floorNumberDescriptor = Array.isArray((fileRecord as FileRecord & { descriptors?: string[] }).descriptors)
+        ? (fileRecord as FileRecord & { descriptors?: string[] }).descriptors?.[1] || ''
+        : '';
+      const floorNumber = parseInt(floorNumberDescriptor.replace('floor-', ''), 10) || 0;
+
+      if (isPdf) {
+        // PDF floorplan - return URL directly
+        floorplanLogger.debug(`Loaded PDF floorplan`, { floorId, fileId: fileRecord.id });
         return {
           buildingId,
           floorId,
-          floorNumber: 0, // Will be updated from context
+          floorNumber,
           type: 'floor',
-          fileType: 'dxf',
-          scene: storageResult.scene,
-          fileName: storageResult.fileName,
-          timestamp: storageResult.lastModified?.toMillis?.() || Date.now()
+          fileName: fileRecord.originalFilename,
+          timestamp: typeof fileRecord.createdAt === 'string'
+            ? new Date(fileRecord.createdAt).getTime()
+            : fileRecord.createdAt instanceof Date
+              ? fileRecord.createdAt.getTime()
+              : Date.now(),
+          fileType: 'pdf',
+          pdfImageUrl: fileRecord.downloadUrl,
+          fileRecordId: fileRecord.id,
         };
       }
 
-      // 🏢 ENTERPRISE: Silent on "not found" - expected for floors without floorplans
-      return null;
-    } catch (error) {
-      // 🏢 ENTERPRISE: Intelligent error classification
-      if (error instanceof Error && isExpectedError(error)) {
+      // DXF floorplan - download scene JSON
+      if (!fileRecord.downloadUrl) {
+        floorplanLogger.warn(`No download URL for DXF floorplan`, { floorId, fileId: fileRecord.id });
         return null;
       }
-      floorplanLogger.error(`Error loading floor floorplan`, {
+
+      // Download scene JSON from Storage
+      const storageRef = ref(storage, fileRecord.storagePath);
+      const sceneBytes = await getBytes(storageRef);
+      const sceneJson = new TextDecoder().decode(sceneBytes);
+      const scene = JSON.parse(sceneJson) as SceneModel;
+
+      floorplanLogger.debug(`Loaded DXF floorplan`, {
+        floorId,
+        fileId: fileRecord.id,
+        entityCount: scene.entities?.length || 0,
+      });
+
+      return {
         buildingId,
         floorId,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      return null;
-    }
-  }
-
-  /**
-   * Load from Firestore document
-   */
-  private static async loadFromFirestore(
-    buildingId: string,
-    floorId: string
-  ): Promise<FloorFloorplanData | null> {
-    try {
-      const docId = `${buildingId}_${floorId}_floor`;
-      const docSnap = await getDoc(doc(db, this.COLLECTION, docId));
-
-      if (docSnap.exists()) {
-        const data = docSnap.data() as LegacyFloorplanDocument;
-
-        // Skip deleted documents
-        if (data.deleted) {
-          return null;
-        }
-
-        return {
-          buildingId: data.buildingId || buildingId,
-          floorId: data.floorId || floorId,
-          floorNumber: data.floorNumber || 0,
-          type: 'floor',
-          fileName: data.fileName,
-          timestamp: data.timestamp,
-          fileType: data.fileType,
-          scene: data.scene,
-          pdfImageUrl: data.pdfImageUrl,
-          pdfDimensions: data.pdfDimensions
-        };
-      }
-
-      return null;
+        floorNumber,
+        type: 'floor',
+        fileName: fileRecord.originalFilename,
+        timestamp: typeof fileRecord.createdAt === 'string'
+          ? new Date(fileRecord.createdAt).getTime()
+          : fileRecord.createdAt instanceof Date
+            ? fileRecord.createdAt.getTime()
+            : Date.now(),
+        fileType: 'dxf',
+        scene,
+        fileRecordId: fileRecord.id,
+      };
     } catch (error) {
-      if (error instanceof Error && isExpectedError(error)) {
-        return null;
-      }
-      floorplanLogger.warn('Firestore load failed', {
-        buildingId,
+      floorplanLogger.error(`Error loading floor floorplan`, {
         floorId,
         error: error instanceof Error ? error.message : String(error)
       });
@@ -341,35 +322,22 @@ export class FloorFloorplanService {
 
   /**
    * 🏢 ENTERPRISE: Check if floor floorplan exists
-   *
-   * Checks both enterprise storage and Firestore
    */
-  static async hasFloorplan(buildingId: string, floorId: string): Promise<boolean> {
+  static async hasFloorplan(companyId: string, floorId: string): Promise<boolean> {
     try {
-      const fileId = this.generateFileId(buildingId, floorId);
+      const fileRecords = await FileRecordService.getFilesByEntity(
+        ENTITY_TYPES.FLOOR,
+        floorId,
+        {
+          companyId,
+          category: FILE_CATEGORIES.FLOORPLANS,
+          purpose: 'floor-floorplan',
+        }
+      );
 
-      // Check enterprise storage first
-      const enterpriseExists = await DxfFirestoreService.fileExists(fileId);
-      if (enterpriseExists) {
-        return true;
-      }
-
-      // Check Firestore
-      const docId = `${buildingId}_${floorId}_floor`;
-      const docSnap = await getDoc(doc(db, this.COLLECTION, docId));
-
-      if (docSnap.exists()) {
-        const data = docSnap.data() as LegacyFloorplanDocument;
-        return !data.deleted;
-      }
-
-      return false;
+      return fileRecords && fileRecords.length > 0;
     } catch (error) {
-      if (error instanceof Error && isExpectedError(error)) {
-        return false;
-      }
       floorplanLogger.warn(`Error checking floor floorplan`, {
-        buildingId,
         floorId,
         error: error instanceof Error ? error.message : String(error)
       });
@@ -378,33 +346,62 @@ export class FloorFloorplanService {
   }
 
   /**
-   * Delete floor floorplan (soft delete)
+   * 🏢 ENTERPRISE: Delete floor floorplan (soft delete via FileRecordService)
+   * @param companyId - Company ID
+   * @param floorId - Floor ID
+   * @param deletedBy - User ID who is deleting (REQUIRED for trash audit)
    */
-  static async deleteFloorplan(buildingId: string, floorId: string): Promise<boolean> {
+  static async deleteFloorplan(companyId: string, floorId: string, deletedBy: string): Promise<boolean> {
     try {
-      // Soft delete in Firestore
-      const docId = `${buildingId}_${floorId}_floor`;
-      await setDoc(doc(db, this.COLLECTION, docId), {
-        deleted: true,
-        deletedAt: new Date().toISOString()
-      });
+      const fileRecords = await FileRecordService.getFilesByEntity(
+        ENTITY_TYPES.FLOOR,
+        floorId,
+        {
+          companyId,
+          category: FILE_CATEGORIES.FLOORPLANS,
+          purpose: 'floor-floorplan',
+        }
+      );
 
-      floorplanLogger.info(`Deleted floor floorplan`, { buildingId, floorId });
+      if (!fileRecords || fileRecords.length === 0) {
+        return true; // Nothing to delete
+      }
+
+      // Move to trash all floorplans for this floor
+      for (const fileRecord of fileRecords) {
+        await FileRecordService.moveToTrash(fileRecord.id, deletedBy);
+      }
+
+      floorplanLogger.info(`Deleted floor floorplan(s)`, { floorId, count: fileRecords.length });
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchFloorplanDeleted({
-        floorplanId: docId,
+        floorplanId: floorId,
         timestamp: Date.now(),
       });
 
       return true;
     } catch (error) {
       floorplanLogger.error(`Error deleting floor floorplan`, {
-        buildingId,
         floorId,
         error: error instanceof Error ? error.message : String(error)
       });
       return false;
     }
+  }
+
+  // ============================================================================
+  // 🏢 LEGACY COMPATIBILITY: Old signature support
+  // ============================================================================
+
+  /**
+   * @deprecated Use loadFloorplan({ companyId, floorId }) instead
+   * Legacy signature for backward compatibility with existing code
+   */
+  static async loadFloorplanLegacy(buildingId: string, floorId: string): Promise<FloorFloorplanData | null> {
+    floorplanLogger.warn(`Using deprecated loadFloorplanLegacy - migrate to new API with companyId`);
+    // Cannot load without companyId - return null
+    // This is a breaking change but necessary for Enterprise pattern
+    return null;
   }
 }

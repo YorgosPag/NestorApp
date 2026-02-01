@@ -9,6 +9,7 @@ export { ContactBasicInfoTab } from './ContactBasicInfoTab';
 export { ContactCommunicationTab } from './ContactCommunicationTab';
 export { ContactRelationshipsTab } from './ContactRelationshipsTab';
 export { ContactPhotosTab } from './ContactPhotosTab';
+export { ContactBankingTab } from './ContactBankingTab'; // 🏢 ENTERPRISE: Banking accounts tab (2026-02-01)
 export { PlaceholderContactTab } from './PlaceholderContactTab';
 
 // Type-only exports for TypeScript
@@ -16,4 +17,5 @@ export type { ContactBasicInfoTab as ContactBasicInfoTabType } from './ContactBa
 export type { ContactCommunicationTab as ContactCommunicationTabType } from './ContactCommunicationTab';
 export type { ContactRelationshipsTab as ContactRelationshipsTabType } from './ContactRelationshipsTab';
 export type { ContactPhotosTab as ContactPhotosTabType } from './ContactPhotosTab';
+export type { ContactBankingTab as ContactBankingTabType } from './ContactBankingTab';
 export type { PlaceholderContactTab as PlaceholderContactTabType } from './PlaceholderContactTab';

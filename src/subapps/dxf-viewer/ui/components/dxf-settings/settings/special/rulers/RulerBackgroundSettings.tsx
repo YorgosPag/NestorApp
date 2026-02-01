@@ -186,9 +186,11 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {backgroundVisible ? t('rulerSettings.common.active') : t('rulerSettings.common.inactive')}
             </span>
+            {/* 🏢 ADR-128: Status variant - Green ON / Red OFF */}
             <Switch
               checked={backgroundVisible}
               onCheckedChange={handleBackgroundVisibilityChange}
+              variant="status"
             />
           </div>
         </div>
@@ -282,9 +284,11 @@ export const RulerBackgroundSettings: React.FC<RulerBackgroundSettingsProps> = (
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {rulerSettings.horizontal.showMinorTicks ? t('rulerSettings.common.active') : t('rulerSettings.common.inactive')}
             </span>
+            {/* 🏢 ADR-128: Status variant - Green ON / Red OFF */}
             <Switch
               checked={rulerSettings.horizontal.showMinorTicks}
               onCheckedChange={handleRulerUnitsEnabledChange}
+              variant="status"
             />
           </div>
         </div>

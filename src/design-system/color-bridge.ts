@@ -247,6 +247,30 @@ export const COLOR_BRIDGE = {
     },
   },
 
+  /** 🔘 ENTERPRISE SWITCH TOKENS - Status-based toggle colors (ADR-128) */
+  switch: {
+    // Default variant (primary/input)
+    default: {
+      checked: 'data-[state=checked]:bg-primary',
+      unchecked: 'data-[state=unchecked]:bg-input',
+    },
+    // Status variant (green ON / red OFF) - for visibility toggles
+    status: {
+      checked: 'data-[state=checked]:bg-green-500',
+      unchecked: 'data-[state=unchecked]:bg-red-500',
+    },
+    // Success variant (green ON / muted OFF)
+    success: {
+      checked: 'data-[state=checked]:bg-green-500',
+      unchecked: 'data-[state=unchecked]:bg-input',
+    },
+    // Destructive variant (red ON / muted OFF)
+    destructive: {
+      checked: 'data-[state=checked]:bg-destructive',
+      unchecked: 'data-[state=unchecked]:bg-input',
+    },
+  },
+
   /** 🌈 ENTERPRISE GRADIENT MAPPINGS - Professional gradient patterns */
   gradients: {
     // Map-specific gradients

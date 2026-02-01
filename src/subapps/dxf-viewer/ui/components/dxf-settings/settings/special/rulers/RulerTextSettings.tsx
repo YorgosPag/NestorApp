@@ -167,9 +167,11 @@ export const RulerTextSettings: React.FC<RulerTextSettingsProps> = ({ className 
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {textVisible ? t('rulerSettings.common.active') : t('rulerSettings.common.inactive')}
             </span>
+            {/* 🏢 ADR-128: Status variant - Green ON / Red OFF */}
             <Switch
               checked={textVisible}
               onCheckedChange={handleTextVisibilityChange}
+              variant="status"
             />
           </div>
         </div>

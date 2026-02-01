@@ -3,7 +3,8 @@
  * React hooks for level management functionality
  */
 
-import { useContext, createContext } from 'react';
+import * as React from 'react';
+import { useContext } from 'react';
 import type {
   Level,
   FloorplanDoc,
@@ -70,11 +71,31 @@ export interface LevelSystemActions extends ImportWizardActions {
 
 export interface LevelsHookReturn extends LevelSystemState, LevelSystemActions {}
 
-// Create context directly here - will be used by LevelsSystem
-export const LevelsContext = createContext<LevelsHookReturn | null>(null);
+// ============================================================================
+// 🏢 ENTERPRISE: CONTEXT RE-EXPORT FOR BACKWARD COMPATIBILITY (ADR-125)
+// ============================================================================
+// Context is now defined in LevelsSystem.tsx (canonical location).
+// This re-export ensures existing imports continue to work.
+// Pattern: Autodesk/Microsoft/Google enterprise standard
+// ============================================================================
+
+// Re-export context from canonical location
+export { LevelsContext } from './LevelsSystem';
+
+// Internal reference for hooks (lazy loaded to prevent circular dependency)
+let _cachedLevelsContext: React.Context<LevelsHookReturn | null> | null = null;
+
+function getLevelsContext(): React.Context<LevelsHookReturn | null> {
+  if (!_cachedLevelsContext) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { LevelsContext } = require('./LevelsSystem');
+    _cachedLevelsContext = LevelsContext;
+  }
+  return _cachedLevelsContext;
+}
 
 export function useLevels(): LevelsHookReturn {
-  const context = useContext(LevelsContext);
+  const context = useContext(getLevelsContext());
   if (!context) {
     throw new Error('useLevels must be used within LevelsSystem');
   }

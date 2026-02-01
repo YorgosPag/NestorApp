@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Project } from '@/types/project';
 import type { NavigationCompany } from '@/components/navigation/core/types';
@@ -13,6 +13,10 @@ import { Briefcase } from 'lucide-react';
 import { EntityListColumn } from '@/core/containers';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+
+// 🏢 ENTERPRISE: Sort types from CompactToolbar
+import type { SortField } from '@/components/core/CompactToolbar/types';
+type SortDirection = 'asc' | 'desc';
 
 interface ProjectsListProps {
   projects: Project[];
@@ -33,6 +37,10 @@ export function ProjectsList({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
 
+  // 🏢 ENTERPRISE: Sorting state
+  const [sortBy, setSortBy] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
   const toggleFavorite = (projectId: string) => {
     setFavorites(prev =>
       prev.includes(projectId)
@@ -40,9 +48,42 @@ export function ProjectsList({
         : [...prev, projectId]
     );
   };
-  
-  // Use projects directly since CompactToolbar handles filtering and sorting
-  const displayProjects = projects || [];
+
+  // 🏢 ENTERPRISE: Sort handler
+  const handleSortChange = useCallback((field: SortField, direction: SortDirection) => {
+    setSortBy(field);
+    setSortDirection(direction);
+  }, []);
+
+  // 🏢 ENTERPRISE: Sorted projects with memoization
+  const displayProjects = useMemo(() => {
+    if (!projects || projects.length === 0) return [];
+
+    const sorted = [...projects].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'name':
+          comparison = (a.name || '').localeCompare(b.name || '', 'el');
+          break;
+        case 'date':
+          // 🏢 ENTERPRISE: Use startDate or lastUpdate for date sorting
+          const dateA = a.startDate ? new Date(a.startDate).getTime() : (a.lastUpdate ? new Date(a.lastUpdate).getTime() : 0);
+          const dateB = b.startDate ? new Date(b.startDate).getTime() : (b.lastUpdate ? new Date(b.lastUpdate).getTime() : 0);
+          comparison = dateA - dateB;
+          break;
+        case 'status':
+          comparison = (a.status || '').localeCompare(b.status || '', 'el');
+          break;
+        default:
+          comparison = 0;
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [projects, sortBy, sortDirection]);
 
 
   return (
@@ -59,8 +100,9 @@ export function ProjectsList({
       <div className="hidden md:block">
         <CompactToolbar
           config={projectsConfig}
+          sortBy={sortBy}
           onFiltersChange={() => {}}
-          onSortChange={() => {}}
+          onSortChange={handleSortChange}
         />
       </div>
 
@@ -69,8 +111,9 @@ export function ProjectsList({
         {showToolbar && (
           <CompactToolbar
             config={projectsConfig}
+            sortBy={sortBy}
             onFiltersChange={() => {}}
-            onSortChange={() => {}}
+            onSortChange={handleSortChange}
           />
         )}
       </div>

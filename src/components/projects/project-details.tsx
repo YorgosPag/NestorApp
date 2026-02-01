@@ -41,6 +41,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectDetailsProps {
   project: Project & { companyName: string };
+  /** 🏢 ENTERPRISE: Callback for edit button (ADR-087) */
+  onEdit?: () => void;
 }
 
 // ============================================================================
@@ -54,7 +56,7 @@ interface ProjectDetailsProps {
  * Floorplan tabs (ProjectFloorplanTab) are self-contained and handle
  * their own upload/display using centralized EntityFilesManager pattern.
  */
-export function ProjectDetails({ project }: ProjectDetailsProps) {
+export function ProjectDetails({ project, onEdit }: ProjectDetailsProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
 
@@ -64,7 +66,7 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
   return (
     <DetailsContainer
       selectedItem={project}
-      header={<ProjectDetailsHeader project={project!} />}
+      header={<ProjectDetailsHeader project={project!} onEdit={onEdit} />}
       tabsRenderer={
         <UniversalTabsRenderer
           tabs={projectTabs.map(convertToUniversalConfig)}

@@ -35,6 +35,8 @@ import { AdvancedFiltersPanel, buildingFiltersConfig } from '@/components/core/A
 import { ListContainer, PageContainer } from '@/core/containers';
 // [ENTERPRISE] i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// [ENTERPRISE] Add Building Dialog
+import { AddBuildingDialog } from './dialogs/AddBuildingDialog';
 
 // Re-export Building type for backward compatibility
 export type { Building } from '@/types/building/contracts';
@@ -65,6 +67,9 @@ export function BuildingsPageContent() {
 
   // Mobile-only filter toggle state
   const [showFilters, setShowFilters] = React.useState(false);
+
+  // [ENTERPRISE] Add Building Dialog state
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
   // [ENTERPRISE] Sync selectedBuilding with NavigationContext for breadcrumb display
   React.useEffect(() => {
@@ -210,6 +215,7 @@ export function BuildingsPageContent() {
           setShowDashboard={setShowDashboard}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
+          onNewBuilding={() => setIsAddDialogOpen(true)}
         />
 
         {showDashboard && (
@@ -305,6 +311,17 @@ export function BuildingsPageContent() {
             />
           )}
         </ListContainer>
+
+        {/* [ENTERPRISE] Add Building Dialog */}
+        <AddBuildingDialog
+          open={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
+          onBuildingAdded={() => {
+            // Refresh will happen automatically via useFirestoreBuildings
+          }}
+          companyId={companies[0]?.id || ''}
+          companyName={companies[0]?.companyName}
+        />
       </PageContainer>
     </TooltipProvider>
   );

@@ -11,6 +11,8 @@ import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransfor
 import { ZOOM_FACTORS, TRANSFORM_SCALE_LIMITS, FIT_TO_VIEW_DEFAULTS } from '../../../config/transform-config';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-089: Centralized Point-In-Bounds
+import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 
 // === TRANSFORM CALCULATIONS ===
 
@@ -144,17 +146,14 @@ export function getVisibleBounds(
 
 /**
  * Έλεγχος αν point είναι εντός bounds
+ * 🏢 ADR-089: Wrapper για SpatialUtils.pointInRect() - Single Source of Truth
+ * @deprecated Prefer using SpatialUtils.pointInRect() directly for new code
  */
 export function isPointInBounds(
   point: Point2D,
   bounds: { min: Point2D; max: Point2D }
 ): boolean {
-  return (
-    point.x >= bounds.min.x &&
-    point.x <= bounds.max.x &&
-    point.y >= bounds.min.y &&
-    point.y <= bounds.max.y
-  );
+  return SpatialUtils.pointInRect(point, bounds);
 }
 
 /**

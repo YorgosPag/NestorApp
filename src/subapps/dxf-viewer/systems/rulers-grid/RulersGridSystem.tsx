@@ -33,7 +33,8 @@ declare global {
   }
 }
 import { RulersGridCalculations, RulersGridRendering, RulersGridSnapping } from './utils';
-import { type RulersGridHookReturn } from './useRulersGrid';
+// 🏢 ADR-125: Types imported from types.ts to prevent circular dependencies
+import type { RulersGridHookReturn, RulersGridContextType } from './types';
 import { RulersGridSystemProps, DEFAULT_ORIGIN } from './types';
 import { useRulerManagement } from './useRulerManagement';
 import { useGridManagement } from './useGridManagement';
@@ -459,13 +460,20 @@ function useRulersGridSystemIntegration({
 }
 
 // ============================================================================
-// 🏢 ENTERPRISE: USE SHARED STATIC CONTEXT
+// 🏢 ENTERPRISE: STATIC CONTEXT CREATION (ADR-125)
 // ============================================================================
-// CRITICAL: Import the shared context from useRulersGrid.ts instead of creating
-// a new one here. Using multiple context instances causes "Provider is null"
-// errors in production builds.
+// CRITICAL: Context MUST be created in the SAME file as the Provider component.
+// This prevents "Provider is null" errors in production builds due to bundler
+// optimizations that can reorder module evaluation.
+// Pattern: Autodesk/Microsoft/Google enterprise standard
 // ============================================================================
-import { RulersGridContext } from './useRulersGrid';
+
+/**
+ * Static context instance (created once at module load)
+ * This is the CANONICAL location for RulersGridContext.
+ * RulersGridContextType is imported at the top of the file.
+ */
+export const RulersGridContext = React.createContext<RulersGridContextType | null>(null);
 
 export function useRulersGridContext(): RulersGridHookReturn {
   const context = React.useContext(RulersGridContext);

@@ -38,6 +38,8 @@ import { getDevicePixelRatio } from '../../systems/cursor/utils';
 import { useCanvasResize } from '../../hooks/canvas';
 // 🏢 ADR-119: Centralized RAF via UnifiedFrameScheduler
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
+// 🏢 ADR-127: Centralized Ruler Dimensions
+import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 
 // ✅ MOVED OUTSIDE COMPONENT - Prevents re-render loop
 const DEFAULT_RENDER_OPTIONS: DxfRenderOptions = {
@@ -268,14 +270,15 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
 
     // Check if transform is still at default (0,0,0) - meaning not yet initialized
     if (transform.offsetX === 0 && transform.offsetY === 0 && transform.scale === 1) {
-      const RULER_WIDTH = 30;
-      const RULER_HEIGHT = 30;
+      // 🏢 ADR-127: Use centralized ruler dimensions
+      const RULER_WIDTH = RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH;
+      const RULER_HEIGHT = RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT;
 
       // Set world (0,0) at bottom-left ruler corner
       const initialTransform: ViewTransform = {
         scale: 1,
-        offsetX: RULER_WIDTH,  // 30px from left (ruler width)
-        offsetY: viewport.height - RULER_HEIGHT  // viewport height - 30px (ruler height)
+        offsetX: RULER_WIDTH,  // ruler width from left
+        offsetY: viewport.height - RULER_HEIGHT  // viewport height - ruler height
       };
 
       onTransformChange(initialTransform);

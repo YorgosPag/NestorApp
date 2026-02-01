@@ -738,6 +738,7 @@
       "floors": "Floors",
       "amenities": "Amenities",
       "documents": "Documents",
+      "banking": "Banking",
       "notes": "Notes",
       "history": "History",
       "buildings": "Buildings",
@@ -1364,6 +1365,56 @@
         "mechanicalSecurity": "Mechanical Security",
         "emergencyExits": "Emergency Exits"
       }
+    }
+  },
+  "dialog": {
+    "addTitle": "Add New Building",
+    "addDescription": "Create a new building by filling in the details below.",
+    "tabs": {
+      "basic": "Basic Info",
+      "details": "Details",
+      "features": "Features"
+    },
+    "fields": {
+      "name": "Building Name",
+      "namePlaceholder": "Enter building name...",
+      "project": "Project",
+      "projectPlaceholder": "Select project...",
+      "status": "Status",
+      "statusPlaceholder": "Select status...",
+      "category": "Category",
+      "categoryPlaceholder": "Select category...",
+      "description": "Description",
+      "descriptionPlaceholder": "Enter building description...",
+      "address": "Address",
+      "addressPlaceholder": "Enter address...",
+      "city": "City",
+      "cityPlaceholder": "Enter city...",
+      "totalArea": "Total Area (m\u00B2)",
+      "totalAreaPlaceholder": "0",
+      "builtArea": "Built Area (m\u00B2)",
+      "builtAreaPlaceholder": "0",
+      "floors": "Number of Floors",
+      "floorsPlaceholder": "0",
+      "units": "Number of Units",
+      "unitsPlaceholder": "0",
+      "totalValue": "Total Value (\u20AC)",
+      "totalValuePlaceholder": "0",
+      "startDate": "Start Date",
+      "completionDate": "Completion Date",
+      "type": "Building Type",
+      "typePlaceholder": "Select type...",
+      "priority": "Priority",
+      "priorityPlaceholder": "Select priority...",
+      "energyClass": "Energy Class",
+      "energyClassPlaceholder": "Select energy class..."
+    },
+    "validation": {
+      "addressRequired": "Address is required"
+    },
+    "messages": {
+      "success": "Building created successfully!",
+      "error": "Error creating building. Please try again."
     }
   },
   "error": {

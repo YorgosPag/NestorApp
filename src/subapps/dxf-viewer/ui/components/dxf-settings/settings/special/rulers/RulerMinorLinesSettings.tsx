@@ -185,9 +185,11 @@ export const RulerMinorLinesSettings: React.FC<RulerMinorLinesSettingsProps> = (
             <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {rulerSettings.horizontal.showMinorTicks ? t('rulerSettings.common.active') : t('rulerSettings.common.inactive')}
             </span>
+            {/* 🏢 ADR-128: Status variant - Green ON / Red OFF */}
             <Switch
               checked={rulerSettings.horizontal.showMinorTicks}
               onCheckedChange={handleMinorTicksVisibilityChange}
+              variant="status"
             />
           </div>
         </div>
