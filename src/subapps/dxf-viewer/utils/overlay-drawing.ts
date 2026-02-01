@@ -4,9 +4,13 @@ import type { ViewTransform } from '../rendering/types/Types';
 import type { GripSettings } from '../types/gripSettings';
 import { getStatusColors } from '../config/color-mapping'; // 🔺 Κεντρική function για ελληνικά/αγγλικά mapping
 import { CAD_UI_COLORS, UI_COLORS, OPACITY } from '../config/color-config'; // 🏢 ADR-119: Centralized Opacity
+// 🏢 ADR-151: Centralized Simple Coordinate Transforms
+import { worldToScreenSimple } from '../rendering/core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized Line Widths
+// 🏢 ADR-083: Centralized Line Dash Patterns
 // 🏢 ADR-090: Centralized UI Fonts
-import { RENDER_LINE_WIDTHS, UI_FONTS } from '../config/text-rendering-config';
+// 🏢 ADR-139: Centralized Label Box Dimensions
+import { RENDER_LINE_WIDTHS, UI_FONTS, LINE_DASH_PATTERNS, TEXT_LABEL_OFFSETS } from '../config/text-rendering-config';
 import { drawVerticesPath } from '../rendering/entities/shared/geometry-rendering-utils';
 
 // 🏢 ADR-048: Unified Grip Rendering System
@@ -55,10 +59,8 @@ export class OverlayDrawingEngine {
 
     // Convert vertices to screen coordinates using OVERLAY coordinate system (not UGS)
     // This matches the coordinate system used by the original OverlayLayer
-    const screenVertices = region.vertices.map(v => ({
-      x: v.x * transform.scale + transform.offsetX,
-      y: v.y * transform.scale + transform.offsetY
-    }));
+    // 🏢 ADR-151: Use centralized worldToScreenSimple (no Y-inversion for overlays)
+    const screenVertices = region.vertices.map(v => worldToScreenSimple(v, transform));
 
     // Draw region fill using ToolStyle if available
     ctx.save();
@@ -91,7 +93,7 @@ export class OverlayDrawingEngine {
       // DXF HOVER STYLE: white, thick, dashed
       ctx.strokeStyle = UI_COLORS.WHITE;
       ctx.lineWidth = Math.max(3, lineWidth);
-      ctx.setLineDash([12, 6]);
+      ctx.setLineDash([...LINE_DASH_PATTERNS.HOVER]); // 🏢 ADR-083
 
     } else if (isSelected) {
       // SELECTED STYLE: red border
@@ -106,7 +108,7 @@ export class OverlayDrawingEngine {
     }
     
     if (region.locked) {
-      ctx.setLineDash([4, 4]);
+      ctx.setLineDash([...LINE_DASH_PATTERNS.LOCKED]); // 🏢 ADR-083
     }
     
     ctx.stroke();
@@ -138,10 +140,8 @@ export class OverlayDrawingEngine {
 
     const ctx = this.ctx;
     // Convert vertices to screen coordinates using OVERLAY coordinate system (not UGS)
-    const screenVertices = vertices.map(v => ({
-      x: v.x * transform.scale + transform.offsetX,
-      y: v.y * transform.scale + transform.offsetY
-    }));
+    // 🏢 ADR-151: Use centralized worldToScreenSimple (no Y-inversion for overlays)
+    const screenVertices = vertices.map(v => worldToScreenSimple(v, transform));
 
     ctx.save();
     
@@ -219,13 +219,13 @@ export class OverlayDrawingEngine {
     ctx.strokeStyle = UI_COLORS.WHITE;
     ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
 
-    const padding = 6;
+    const padding = TEXT_LABEL_OFFSETS.OVERLAY_LABEL_PADDING; // 🏢 ADR-139
     const text = region.name ?? '';
     ctx.font = UI_FONTS.SYSTEM.NORMAL; // 🏢 ADR-090: Centralized font
     const textWidth = ctx.measureText(text).width;
 
     const w = textWidth + padding * 2;
-    const h = 18;
+    const h = TEXT_LABEL_OFFSETS.OVERLAY_LABEL_HEIGHT; // 🏢 ADR-139
 
     const x = centerX - w / 2;
     const y = centerY - h / 2;

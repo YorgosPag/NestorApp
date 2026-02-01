@@ -10,7 +10,8 @@ import type { Point2D, BoundingBox } from '../../types/Types';
 // 🏢 ADR-072: Centralized Dot Product
 // 🏢 ADR-073: Centralized Midpoint Calculation
 // 🏢 ADR-090: Centralized Point Vector Operations
-import { calculateDistance, calculateAngle, vectorMagnitude, dotProduct, calculateMidpoint, subtractPoints, getUnitVector } from './geometry-rendering-utils';
+// 🏢 ADR-164: Added getPerpendicularUnitVector for line direction normalization
+import { calculateDistance, calculateAngle, vectorMagnitude, dotProduct, calculateMidpoint, subtractPoints, getUnitVector, getPerpendicularUnitVector } from './geometry-rendering-utils';
 // 🏢 ADR-077: Centralized TAU Constant (TAU)
 import { TAU } from '../../primitives/canvasPaths';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
@@ -286,7 +287,8 @@ export function circleBestFit(points: Point2D[]): { center: Point2D; radius: num
   const det = Suu * Svv - Suv * Suv;
 
   // Check for degenerate case (collinear points)
-  if (Math.abs(det) < 1e-10) {
+  // 🏢 ADR-156: Centralized degenerate determinant tolerance
+  if (Math.abs(det) < GEOMETRY_PRECISION.DENOMINATOR_ZERO) {
     // Fallback: Use simple centroid method
     // Calculate center as centroid and radius as average distance
     // 🏢 ADR-065: Use centralized distance calculation
@@ -454,15 +456,10 @@ export function circleFrom2PointsAndRadius(
   // Half chord length
   const halfChord = chordLength / 2;
 
-  // Calculate the perpendicular distance from midpoint to radiusIndicator
-  // First, find the chord direction vector (normalized)
-  const chordDx = p2.x - p1.x;
-  const chordDy = p2.y - p1.y;
-  const chordLen = Math.sqrt(chordDx * chordDx + chordDy * chordDy);
-
-  // Perpendicular direction (rotated 90 degrees)
-  const perpX = -chordDy / chordLen;
-  const perpY = chordDx / chordLen;
+  // 🏢 ADR-164: Use centralized perpendicular unit vector
+  const perp = getPerpendicularUnitVector(p1, p2);
+  const perpX = perp.x;
+  const perpY = perp.y;
 
   // Vector from midpoint to radiusIndicator
   const toIndicatorX = radiusIndicator.x - midpoint.x;
@@ -539,44 +536,38 @@ export function createPerpendicularLine(
   throughPoint: Point2D,
   length: number = 100
 ): { start: Point2D; end: Point2D } | null {
-  // Calculate reference line direction
-  const dx = refEnd.x - refStart.x;
-  const dy = refEnd.y - refStart.y;
-  const refLength = Math.sqrt(dx * dx + dy * dy);
+  // 🏢 ADR-164: Use centralized distance calculation
+  const refLength = calculateDistance(refStart, refEnd);
 
   // 🏢 ADR-079: Use centralized tolerance
   if (refLength < GEOMETRY_PRECISION.POINT_MATCH) {
     return null; // Reference line is degenerate (point)
   }
 
-  // Normalized reference direction
-  const refDirX = dx / refLength;
-  const refDirY = dy / refLength;
-
-  // Perpendicular direction (rotate 90° counterclockwise)
-  const perpDirX = -refDirY;
-  const perpDirY = refDirX;
+  // 🏢 ADR-065/ADR-164: Use centralized unit vector functions
+  const refDir = getUnitVector(refStart, refEnd);
+  const perpDir = getPerpendicularUnitVector(refStart, refEnd);
 
   // Project throughPoint onto reference line to find intersection
   const toPointX = throughPoint.x - refStart.x;
   const toPointY = throughPoint.y - refStart.y;
-  const projLength = toPointX * refDirX + toPointY * refDirY;
+  const projLength = toPointX * refDir.x + toPointY * refDir.y;
 
   // Intersection point (foot of perpendicular)
-  const footX = refStart.x + projLength * refDirX;
-  const footY = refStart.y + projLength * refDirY;
+  const footX = refStart.x + projLength * refDir.x;
+  const footY = refStart.y + projLength * refDir.y;
 
   // Create perpendicular line centered at the foot
   const halfLength = length / 2;
 
   return {
     start: {
-      x: footX - perpDirX * halfLength,
-      y: footY - perpDirY * halfLength
+      x: footX - perpDir.x * halfLength,
+      y: footY - perpDir.y * halfLength
     },
     end: {
-      x: footX + perpDirX * halfLength,
-      y: footY + perpDirY * halfLength
+      x: footX + perpDir.x * halfLength,
+      y: footY + perpDir.y * halfLength
     }
   };
 }
@@ -611,39 +602,32 @@ export function createParallelLine(
   refEnd: Point2D,
   offsetPoint: Point2D
 ): { start: Point2D; end: Point2D } | null {
-  // Calculate reference line direction
-  const dx = refEnd.x - refStart.x;
-  const dy = refEnd.y - refStart.y;
-  const refLength = Math.sqrt(dx * dx + dy * dy);
+  // 🏢 ADR-164: Use centralized distance calculation
+  const refLength = calculateDistance(refStart, refEnd);
 
   // 🏢 ADR-079: Use centralized tolerance
   if (refLength < GEOMETRY_PRECISION.POINT_MATCH) {
     return null; // Reference line is degenerate (point)
   }
 
-  // Normalized reference direction
-  const refDirX = dx / refLength;
-  const refDirY = dy / refLength;
-
-  // Perpendicular direction (rotate 90° counterclockwise)
-  const perpDirX = -refDirY;
-  const perpDirY = refDirX;
+  // 🏢 ADR-065/ADR-164: Use centralized unit vector functions
+  const perpDir = getPerpendicularUnitVector(refStart, refEnd);
 
   // Calculate signed distance from offsetPoint to reference line
   // Using the perpendicular direction as normal
   const toPointX = offsetPoint.x - refStart.x;
   const toPointY = offsetPoint.y - refStart.y;
-  const signedDistance = toPointX * perpDirX + toPointY * perpDirY;
+  const signedDistance = toPointX * perpDir.x + toPointY * perpDir.y;
 
   // Create parallel line by offsetting reference endpoints
   return {
     start: {
-      x: refStart.x + perpDirX * signedDistance,
-      y: refStart.y + perpDirY * signedDistance
+      x: refStart.x + perpDir.x * signedDistance,
+      y: refStart.y + perpDir.y * signedDistance
     },
     end: {
-      x: refEnd.x + perpDirX * signedDistance,
-      y: refEnd.y + perpDirY * signedDistance
+      x: refEnd.x + perpDir.x * signedDistance,
+      y: refEnd.y + perpDir.y * signedDistance
     }
   };
 }
@@ -891,10 +875,8 @@ export function arcFromCenterStartEnd(
 
   // 🏢 ENTERPRISE: Calculate angular direction (AutoCAD pattern)
   // Determine if user moved counterclockwise or clockwise from start to end
-  let angleDiff = endAngleRad - startAngleRad;
-  // Normalize to (-π, π] to find the "short" direction
-  while (angleDiff > Math.PI) angleDiff -= TAU;
-  while (angleDiff <= -Math.PI) angleDiff += TAU;
+  // 🏢 ADR-134: Use centralized angle difference normalization
+  const angleDiff = normalizeAngleDiff(endAngleRad - startAngleRad);
 
   // If angleDiff > 0, user moved counterclockwise (CCW) → draw CCW arc
   // If angleDiff < 0, user moved clockwise (CW) → draw CW arc
@@ -1206,6 +1188,33 @@ export function radToDeg(radians: number): number {
 // ===== ANGLE NORMALIZATION =====
 // 🏢 ADR-068: Centralized Angle Normalization (2026-01-31)
 // 🏢 ADR-077: TAU imported from canvasPaths.ts (see imports at top)
+// 🏢 ADR-134: Centralized Angle Difference Normalization (2026-02-01)
+
+/**
+ * 🏢 ADR-134: Normalize angle difference to (-π, π] range
+ * Finds the "short" angular direction between two angles
+ *
+ * Mathematical range: (-π, π]
+ * - Result > 0: counterclockwise direction
+ * - Result < 0: clockwise direction
+ *
+ * Used by: arc direction detection, angle measurement, arc drawing tools
+ *
+ * @param angleDiff - Raw angle difference in radians (angle2 - angle1)
+ * @returns Normalized angle in range (-π, π]
+ *
+ * @example
+ * normalizeAngleDiff(3 * Math.PI)   // → π (wraps around)
+ * normalizeAngleDiff(-3 * Math.PI)  // → -π (wraps around)
+ * normalizeAngleDiff(Math.PI / 2)   // → π/2 (unchanged, already in range)
+ * normalizeAngleDiff(-Math.PI)      // → π (boundary case: -π maps to π)
+ */
+export function normalizeAngleDiff(angleDiff: number): number {
+  let diff = angleDiff;
+  while (diff > Math.PI) diff -= TAU;
+  while (diff <= -Math.PI) diff += TAU;
+  return diff;
+}
 
 /**
  * Normalize angle in RADIANS to [0, 2π) range

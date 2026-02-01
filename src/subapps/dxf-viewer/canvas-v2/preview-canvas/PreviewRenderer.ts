@@ -62,7 +62,8 @@ import { renderDistanceLabel, PREVIEW_LABEL_DEFAULTS } from '../../rendering/ent
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-090: Centralized UI Fonts
 // 🏢 ADR-097: Centralized Line Dash Patterns
-import { RENDER_LINE_WIDTHS, UI_FONTS, LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
+// 🏢 ADR-140: Added RENDER_GEOMETRY for angle measurement visualization constants
+import { RENDER_LINE_WIDTHS, UI_FONTS, LINE_DASH_PATTERNS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 // 🏢 ADR-066: Centralized Angle Calculation
 // 🏢 ADR-080: Centralized Rectangle Bounds
 import { calculateAngle, rectFromTwoPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -105,7 +106,7 @@ export interface PreviewRenderOptions {
 const DEFAULT_PREVIEW_OPTIONS: Required<PreviewRenderOptions> = {
   color: UI_COLORS.BRIGHT_GREEN, // 🏢 ADR-123: Green preview (AutoCAD standard)
   lineWidth: 1,
-  opacity: 0.9,
+  opacity: OPACITY.HIGH,  // 🏢 ADR-134: Centralized opacity (0.9)
   dashPattern: [],
   showGrips: true,
   gripSize: 6,
@@ -478,8 +479,9 @@ export class PreviewRenderer {
     ctx.lineTo(screenPoint2.x, screenPoint2.y);
     ctx.stroke();
 
-    // Draw arc for angle visualization (40px radius in screen space)
-    const arcRadius = 40;
+    // Draw arc for angle visualization (screen space)
+    // 🏢 ADR-140: Use centralized angle measurement constants
+    const arcRadius = RENDER_GEOMETRY.ANGLE_ARC_RADIUS;
     // 🏢 ADR-066: Use centralized angle calculation
     const angle1 = calculateAngle(entity.vertex, entity.point1);
     const angle2 = calculateAngle(entity.vertex, entity.point2);
@@ -510,7 +512,8 @@ export class PreviewRenderer {
 
     // 🏢 ADR-073: Use centralized bisector angle calculation
     const bisectorAngleValue = bisectorAngle(angle1, angle2);
-    const textDistance = 50;
+    // 🏢 ADR-140: Use centralized angle measurement constants
+    const textDistance = RENDER_GEOMETRY.ANGLE_TEXT_DISTANCE;
     const textX = screenVertex.x + Math.cos(bisectorAngleValue) * textDistance;
     const textY = screenVertex.y + Math.sin(bisectorAngleValue) * textDistance;
 
@@ -560,7 +563,7 @@ export class PreviewRenderer {
     if (entity.showConstructionLines && entity.constructionVertices && entity.constructionVertices.length >= 2) {
       ctx.save();
       // Use dashed line style for construction lines
-      ctx.setLineDash([8, 4]);
+      ctx.setLineDash([...LINE_DASH_PATTERNS.CONSTRUCTION]); // 🏢 ADR-083
       ctx.strokeStyle = PANEL_LAYOUT.CAD_COLORS.CONSTRUCTION_LINE || opts.color;
       ctx.lineWidth = RENDER_LINE_WIDTHS.PREVIEW_CONSTRUCTION || 1;
       ctx.globalAlpha = OPACITY.MEDIUM; // 🏢 ADR-119: Centralized opacity

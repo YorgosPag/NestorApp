@@ -103,17 +103,25 @@ export class OriginMarkersRenderer implements UIRenderer {
         ctx.font = UI_FONTS.MONOSPACE.LARGE; // 🏢 ADR-042: Centralized UI Font
 
         // X-Axis label (only if horizontal line is visible)
+        // 🏢 ADR-153: Centralized X/Y axis label positioning
         if (originScreenY >= 0 && originScreenY <= viewport.height) {
           ctx.textAlign = 'right';
           ctx.textBaseline = 'bottom';
-          ctx.fillText('X', viewport.width - 10, originScreenY - 5);
+          ctx.fillText('X',
+            viewport.width - TEXT_LABEL_OFFSETS.X_AXIS_LABEL_RIGHT_MARGIN,
+            originScreenY - TEXT_LABEL_OFFSETS.X_AXIS_LABEL_BOTTOM_OFFSET
+          );
         }
 
         // Y-Axis label (only if vertical line is visible)
+        // 🏢 ADR-153: Centralized X/Y axis label positioning
         if (originScreenX >= 0 && originScreenX <= viewport.width) {
           ctx.textAlign = 'left';
           ctx.textBaseline = 'top';
-          ctx.fillText('Y', originScreenX + 5, 10);
+          ctx.fillText('Y',
+            originScreenX + TEXT_LABEL_OFFSETS.Y_AXIS_LABEL_LEFT_OFFSET,
+            TEXT_LABEL_OFFSETS.Y_AXIS_LABEL_TOP_MARGIN
+          );
         }
       }
     }
@@ -164,14 +172,16 @@ export class OriginMarkersRenderer implements UIRenderer {
       ctx.textBaseline = 'top';
 
       // Position label below and to the right
-      const labelX = originScreenX + markerSize + 5;
-      const labelY = originScreenY + 5;
+      // 🏢 ADR-141: Centralized label fine offset
+      const labelX = originScreenX + markerSize + TEXT_LABEL_OFFSETS.LABEL_FINE_OFFSET;
+      const labelY = originScreenY + TEXT_LABEL_OFFSETS.LABEL_FINE_OFFSET;
 
       ctx.fillText('(0,0)', labelX, labelY);
 
       // Additional debug info
       ctx.font = UI_FONTS.MONOSPACE.SMALL; // 🏢 ADR-042: Centralized UI Font
-      ctx.fillText(`Screen: (${originScreenX.toFixed(1)}, ${originScreenY.toFixed(1)})`, labelX, labelY + 15);
+      // 🏢 ADR-141: Centralized origin label line spacing
+      ctx.fillText(`Screen: (${originScreenX.toFixed(1)}, ${originScreenY.toFixed(1)})`, labelX, labelY + TEXT_LABEL_OFFSETS.ORIGIN_LABEL_LINE_SPACING);
     }
 
     // 🎯 ORIGIN LABEL ENHANCEMENT
@@ -181,7 +191,8 @@ export class OriginMarkersRenderer implements UIRenderer {
       ctx.globalAlpha = settings.axisOpacity;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('O', originScreenX - markerSize - 15, originScreenY);
+      // 🏢 ADR-141: Centralized origin "O" label horizontal gap
+      ctx.fillText('O', originScreenX - markerSize - TEXT_LABEL_OFFSETS.ORIGIN_LABEL_HORIZONTAL_GAP, originScreenY);
     }
 
     ctx.restore();

@@ -34,3 +34,7 @@ export type {
   UseCanvasResizeOptions,
   UseCanvasResizeResult,
 } from './useCanvasResize';
+
+// === useCanvasSizeObserver === (ADR-146)
+export { useCanvasSizeObserver } from './useCanvasSizeObserver';
+export type { UseCanvasSizeObserverOptions } from './useCanvasSizeObserver';

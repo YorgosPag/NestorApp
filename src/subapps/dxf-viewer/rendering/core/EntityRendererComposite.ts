@@ -19,6 +19,8 @@ import { PointRenderer } from '../entities/PointRenderer';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
+// 🏢 ADR-151: Centralized grip tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { hitTestingService } from '../../services/HitTestingService';
 
 export class EntityRendererComposite {
@@ -114,7 +116,7 @@ export class EntityRendererComposite {
   }
 
   // Find grip at point
-  findGripAtPoint(entity: Entity, screenPoint: Point2D, tolerance: number = 8): GripInfo | null {
+  findGripAtPoint(entity: Entity, screenPoint: Point2D, tolerance: number = TOLERANCE_CONFIG.GRIP_APERTURE): GripInfo | null {
     const renderer = this.getRenderer(entity.type);
     if (renderer) {
       return renderer.findGripAtPoint(entity, screenPoint, tolerance);

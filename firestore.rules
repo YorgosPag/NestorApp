@@ -1112,10 +1112,16 @@ service cloud.firestore {
 
       // ✍️ CREATE: Authenticated users with companyId from claims
       // 🔐 SECURITY: companyId MUST match user's company claim (no cross-tenant creation)
+      // 🏢 EXCEPTION: Super Admin can create contacts for any company (same as projects)
       allow create: if isAuthenticated()
                     && isValidContactData(request.resource.data)
-                    && request.resource.data.companyId == getUserCompanyId()
-                    && resource == null;
+                    && resource == null
+                    && (
+                         // Super Admin can create for any company
+                         isSuperAdminOnly()
+                         // OR user creates for their own company
+                         || request.resource.data.companyId == getUserCompanyId()
+                       );
 
       // 📝 UPDATE: Creator or company admin of contact's company
       // 🔒 SECURITY: Prevents cross-tenant modification
@@ -1128,6 +1134,8 @@ service cloud.firestore {
                          || isCompanyAdminOfCompany(resource.data.companyId)
                          // OR super admin can update any contact
                          || isSuperAdminOnly()
+                         // 🔄 LEGACY FALLBACK: Contacts without createdBy can be updated by same-company users
+                         || (!resource.data.keys().hasAny(['createdBy']) && belongsToCompany(resource.data.companyId))
                        )
                     && !isAttemptingToModifySystemFields(request.resource.data, resource.data)
                     // Prevent changing companyId (no re-tenanting)
@@ -2229,8 +2237,8 @@ service cloud.firestore {
       return data.keys().hasAll(['companyId'])
              && data.companyId is string
              && data.companyId.size() > 0
-             // Email validation (if present)
-             && (!data.keys().hasAny(['email']) || (data.email is string && data.email.matches('.*@.*\\..*')))
+             // Email validation (if present) - allows empty string
+             && (!data.keys().hasAny(['email']) || data.email == '' || (data.email is string && data.email.matches('.*@.*\\..*')))
              // Type validation (if present)
              && (!data.keys().hasAny(['type']) || data.type in ['individual', 'company', 'service'])
              // Status validation (if present)

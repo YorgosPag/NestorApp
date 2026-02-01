@@ -27,7 +27,7 @@ export const capitalSection: SectionConfig = {
   title: 'sections.capitalFinancials', // i18n key
   icon: 'dollar-sign',
   description: 'sectionDescriptions.capitalFinancials', // i18n key (will fallback if not exists)
-  order: 3,
+  order: 4, // 🔄 Moved from 3 to 4 (addresses is now 2nd)
   fields: [
     {
       id: 'capitalAmount',

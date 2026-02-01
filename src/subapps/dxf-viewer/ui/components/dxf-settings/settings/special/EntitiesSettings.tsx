@@ -49,28 +49,8 @@ import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Shadcn Tooltip component
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-
-// Default grip settings for LinePreview
-const DEFAULT_GRIP_SETTINGS = {
-  enabled: true,
-  gripSize: 5,              // ✅ AutoCAD GRIPSIZE default: 5 DIP
-  pickBoxSize: 3,           // ✅ AutoCAD PICKBOX default: 3 DIP
-  apertureSize: 10,         // ✅ AutoCAD APERTURE default: 10 pixels
-  opacity: 1.0,
-  colors: {
-    cold: ACI_PALETTE[5],   // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
-    warm: PANEL_LAYOUT.CAD_COLORS.GRIP_WARM,        // ✅ AutoCAD standard: Hot Pink - hover grips
-    hot: ACI_PALETTE[1],    // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-    contour: UI_COLORS.BLACK // ✅ AutoCAD standard: Black contour
-  },
-  showAperture: true,
-  multiGripEdit: true,
-  snapToGrips: true,
-  showMidpoints: true,
-  showCenters: true,
-  showQuadrants: true,      // ✅ Show quadrant grips
-  maxGripsPerEntity: 50
-};
+// 🏢 ADR: Centralized DEFAULT_GRIP_SETTINGS - Single Source of Truth
+import { DEFAULT_GRIP_SETTINGS } from '../../../../../types/gripSettings';
 
 // Mock data για UI-only functionality - αντιγράφουμε τη δομή από dxf-viewer-kalo
 interface DropdownOption {

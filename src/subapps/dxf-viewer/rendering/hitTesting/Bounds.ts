@@ -7,7 +7,10 @@ import type { EntityModel, Point2D } from '../types/Types';
 // 🏢 ADR-070: Centralized Vector Magnitude
 import { vectorMagnitude } from '../entities/shared/geometry-rendering-utils';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
-import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
+// 🏢 ADR-142: Centralized Default Font Size
+import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
+// 🏢 ADR-151: Centralized Simple Coordinate Transforms
+import { transformBoundsToScreen } from '../core/CoordinateTransforms';
 
 // 🏢 ENTERPRISE: Entity-specific type interfaces for safe type casting
 interface LineEntityProperties {
@@ -214,7 +217,8 @@ export class BoundsCalculator {
     const textEntity = entity as EntityWithText;
     const position = textEntity.position;
     const text = textEntity.text || '';
-    const fontSize = textEntity.fontSize || 12;
+    // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
+    const fontSize = textEntity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
 
     // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
     const estimatedWidth = text.length * fontSize * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
@@ -407,14 +411,18 @@ export class ViewportBounds {
   /**
    * 🔺 TRANSFORM BOUNDS
    * Εφαρμόζει transform σε bounding box
+   * 🏢 ADR-151: Delegates to centralized transformBoundsToScreen
    */
   static transform(box: BoundingBox, transform: { scale: number; offsetX: number; offsetY: number }): BoundingBox {
-    const minX = box.minX * transform.scale + transform.offsetX;
-    const minY = box.minY * transform.scale + transform.offsetY;
-    const maxX = box.maxX * transform.scale + transform.offsetX;
-    const maxY = box.maxY * transform.scale + transform.offsetY;
+    // 🏢 ADR-151: Use centralized transformBoundsToScreen
+    const transformed = transformBoundsToScreen(box, transform);
 
-    return BoundsCalculator['createBoundingBox'](minX, minY, maxX, maxY);
+    return BoundsCalculator['createBoundingBox'](
+      transformed.minX,
+      transformed.minY,
+      transformed.maxX,
+      transformed.maxY
+    );
   }
 
   /**

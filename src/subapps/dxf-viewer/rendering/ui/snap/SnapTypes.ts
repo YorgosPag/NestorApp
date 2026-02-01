@@ -5,9 +5,11 @@
 
 import type { Point2D } from '../../types/Types';
 import type { UIElementSettings } from '../core/UIRenderer';
-import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ADR-134: Centralized Opacity Constants
+import { UI_COLORS, OPACITY } from '../../../config/color-config';
 // 🏢 ADR-095: Centralized Snap Tolerance
-import { SNAP_TOLERANCE } from '../../../config/tolerance-config';
+// 🏢 ADR-153: Centralized Snap Tooltip Offset
+import { SNAP_TOLERANCE, SNAP_TOOLTIP_OFFSET } from '../../../config/tolerance-config';
 
 /**
  * 🔺 SNAP TYPES
@@ -87,7 +89,7 @@ export type SnapRenderMode =
 export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
   enabled: true,
   visible: true,
-  opacity: 0.9,
+  opacity: OPACITY.HIGH,  // 🏢 ADR-134: Centralized opacity (0.9)
   color: UI_COLORS.SNAP_DEFAULT,           // Yellow default
   size: 8,
   lineWidth: 2,
@@ -101,7 +103,7 @@ export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
 
   // Visual feedback
   showTooltip: true,
-  tooltipOffset: 15,
+  tooltipOffset: SNAP_TOOLTIP_OFFSET,  // 🏢 ADR-153: Centralized snap tooltip offset
   highlightColor: UI_COLORS.SNAP_HIGHLIGHT,
   zIndex: 950                 // Very high priority for snap visibility
 };

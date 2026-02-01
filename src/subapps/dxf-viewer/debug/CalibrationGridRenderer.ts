@@ -10,7 +10,8 @@ import type { RulerDebugSettings, CalibrationGridSettings } from './RulerDebugTy
 import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-091: Centralized UI Fonts
-import { RENDER_LINE_WIDTHS, UI_FONTS, buildUIFont } from '../config/text-rendering-config';
+// 🏢 ADR-141: Centralized Origin/Cursor Offsets
+import { RENDER_LINE_WIDTHS, UI_FONTS, TEXT_LABEL_OFFSETS, buildUIFont } from '../config/text-rendering-config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../rendering/primitives/canvasPaths';
 // 🏢 ADR-118: Centralized Zero Point Pattern
@@ -152,13 +153,15 @@ export class CalibrationGridRenderer implements UIRenderer {
     ctx.fill();
 
     // Draw crosshair at origin
+    // 🏢 ADR-141: Centralized origin crosshair arm length
+    const armLength = TEXT_LABEL_OFFSETS.ORIGIN_CROSSHAIR_ARM;
     ctx.strokeStyle = settings.originMarkerColor;
     ctx.lineWidth = RENDER_LINE_WIDTHS.DEBUG; // 🏢 ADR-044
     ctx.beginPath();
-    ctx.moveTo(originScreenX - 15, originScreenY);
-    ctx.lineTo(originScreenX + 15, originScreenY);
-    ctx.moveTo(originScreenX, originScreenY - 15);
-    ctx.lineTo(originScreenX, originScreenY + 15);
+    ctx.moveTo(originScreenX - armLength, originScreenY);
+    ctx.lineTo(originScreenX + armLength, originScreenY);
+    ctx.moveTo(originScreenX, originScreenY - armLength);
+    ctx.lineTo(originScreenX, originScreenY + armLength);
     ctx.stroke();
 
     // Label

@@ -35,7 +35,8 @@ interface ContactDetailsProps {
 }
 
 // 🏢 ENTERPRISE: Subcollection tabs that save independently (Salesforce/SAP/Dynamics pattern)
-const SUBCOLLECTION_TABS = ['banking', 'files', 'relationships'];
+// Note: 'relationships' removed - it uses the main edit mode for contact relationships
+const SUBCOLLECTION_TABS = ['banking', 'files'];
 
 export function ContactDetails({ contact, onEditContact, onDeleteContact, onContactUpdated }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);

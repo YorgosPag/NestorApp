@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+// 🏢 ADR-142: Centralized Icon Click Sequence Colors
+import { ICON_CLICK_COLORS } from '../../../config/color-config';
 
 /**
  * 🏢 ENTERPRISE (2026-01-31): Line Tool Icons - ADR-060
@@ -13,15 +15,9 @@ import { PANEL_LAYOUT } from '../../../config/panel-tokens';
  * - 🔴 Red: 1st click/selection
  * - 🟠 Orange: 2nd click/selection
  * - 🟢 Green: Final click/result
+ *
+ * @see ADR-142: Icon Click Sequence Colors Centralization
  */
-
-// 🎨 Color coding for click sequence
-const CLICK_COLORS = {
-  FIRST: '#ef4444',   // 🔴 Red - 1st click (always)
-  SECOND: '#f97316',  // 🟠 Orange - 2nd click
-  THIRD: '#22c55e',   // 🟢 Green - last click/result
-  REFERENCE: '#9ca3af', // Gray - reference line
-} as const;
 
 export type LineVariant = 'normal' | 'perpendicular' | 'parallel';
 
@@ -50,9 +46,9 @@ export const LineIcon: React.FC<LineIconProps> = ({
             {/* Main line */}
             <line x1="4" y1="18" x2="20" y2="6" strokeWidth="1.5" stroke="currentColor" />
             {/* 1st click - Start point (Red) */}
-            <circle cx="4" cy="18" r="2.5" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="4" cy="18" r="2.5" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
             {/* 2nd/Last click - End point (Green) */}
-            <circle cx="20" cy="6" r="2.5" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="20" cy="6" r="2.5" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 
@@ -62,17 +58,17 @@ export const LineIcon: React.FC<LineIconProps> = ({
         return (
           <>
             {/* Reference line (gray, horizontal) - to be selected */}
-            <line x1="3" y1="14" x2="21" y2="14" strokeWidth="1.5" stroke={CLICK_COLORS.REFERENCE} />
+            <line x1="3" y1="14" x2="21" y2="14" strokeWidth="1.5" stroke={ICON_CLICK_COLORS.REFERENCE} />
             {/* Perpendicular line (colored) - the result */}
             <line x1="12" y1="14" x2="12" y2="4" strokeWidth="1.5" stroke="currentColor" />
             {/* 90° angle indicator (small square at intersection) */}
             <rect x="12" y="11" width="3" height="3" fill="none" stroke="currentColor" strokeWidth="1" />
             {/* Reference line selection indicator (Orange dot) */}
-            <circle cx="6" cy="14" r="2" fill={CLICK_COLORS.SECOND} stroke="none" />
+            <circle cx="6" cy="14" r="2" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
             {/* Point for perpendicular (Green - the click point) */}
-            <circle cx="12" cy="4" r="2.5" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="12" cy="4" r="2.5" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
             {/* Intersection point */}
-            <circle cx="12" cy="14" r="1.5" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="12" cy="14" r="1.5" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
           </>
         );
 
@@ -82,7 +78,7 @@ export const LineIcon: React.FC<LineIconProps> = ({
         return (
           <>
             {/* Reference line (gray) - to be selected */}
-            <line x1="3" y1="8" x2="21" y2="8" strokeWidth="1.5" stroke={CLICK_COLORS.REFERENCE} />
+            <line x1="3" y1="8" x2="21" y2="8" strokeWidth="1.5" stroke={ICON_CLICK_COLORS.REFERENCE} />
             {/* Parallel line (colored) - the result */}
             <line x1="3" y1="16" x2="21" y2="16" strokeWidth="1.5" stroke="currentColor" />
             {/* Offset indicator arrows (vertical) */}
@@ -92,9 +88,9 @@ export const LineIcon: React.FC<LineIconProps> = ({
             {/* Arrow head down */}
             <path d="M 5 14 L 7 15.5 L 9 14" fill="none" stroke="currentColor" strokeWidth="1" />
             {/* Reference line selection indicator (Orange dot) */}
-            <circle cx="12" cy="8" r="2" fill={CLICK_COLORS.SECOND} stroke="none" />
+            <circle cx="12" cy="8" r="2" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
             {/* Click point for offset (Green) */}
-            <circle cx="12" cy="16" r="2.5" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="12" cy="16" r="2.5" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 

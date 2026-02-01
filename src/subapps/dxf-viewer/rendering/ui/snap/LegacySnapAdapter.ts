@@ -9,6 +9,8 @@ import type { SnapSettings as LayerSnapSettings, SnapResult as LayerSnapResult }
 import { SnapRenderer } from './SnapRenderer';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../core/UIRenderContext';
 import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ADR-153: Centralized Snap Tooltip Offset
+import { SNAP_TOOLTIP_OFFSET } from '../../../config/tolerance-config';
 import type { UITransform } from '../core/UIRenderer';
 
 /**
@@ -54,7 +56,7 @@ export class LegacySnapAdapter {
 
       // Visual feedback
       showTooltip: true,
-      tooltipOffset: 15,
+      tooltipOffset: SNAP_TOOLTIP_OFFSET,  // 🏢 ADR-153: Centralized snap tooltip offset
       highlightColor: UI_COLORS.SNAP_HIGHLIGHT,
       zIndex: 950
     };

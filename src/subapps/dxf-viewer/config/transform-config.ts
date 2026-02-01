@@ -38,6 +38,28 @@ export const TRANSFORM_SCALE_LIMITS = {
   DEFAULT_SCALE: 1,
 } as const;
 
+// ============================================
+// PDF SCALE LIMITS
+// ============================================
+
+/**
+ * 🏢 ADR-XXX: PDF-specific scale limits
+ *
+ * RATIONALE:
+ * - PDF backgrounds need tighter limits than DXF canvas
+ * - MIN_SCALE: 0.01 (1%) - Για μεγάλα PDF documents
+ * - MAX_SCALE: 10 (1000%) - Reasonable για PDF overlay alignment
+ *
+ * @see pdf-background/types/pdf.types.ts - Primary consumer
+ */
+export const PDF_SCALE_LIMITS = {
+  /** Minimum scale for PDF background (1%) */
+  MIN_SCALE: 0.01,
+
+  /** Maximum scale for PDF background (1000%) */
+  MAX_SCALE: 10,
+} as const;
+
 /**
  * Practical zoom limits για UI controls
  *
@@ -432,6 +454,53 @@ export function validateScale(
   }
 ): number {
   return clamp(scale, limits.min, limits.max);
+}
+
+// ============================================
+// CLAMP SCALE FUNCTIONS (CENTRALIZED)
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: Unified clampScale function
+ *
+ * Clamp scale value within configurable limits.
+ * Supports both Zoom system and PDF use cases.
+ *
+ * @param scale - The scale value to clamp
+ * @param minScale - Minimum scale limit (default: TRANSFORM_SCALE_LIMITS.MIN_SCALE)
+ * @param maxScale - Maximum scale limit (default: TRANSFORM_SCALE_LIMITS.MAX_SCALE)
+ * @returns Clamped scale value
+ *
+ * @example
+ * // With explicit limits (Zoom system use case)
+ * const clamped = clampScale(0.5, 0.1, 50);
+ *
+ * @example
+ * // With default limits
+ * const clamped = clampScale(value);
+ */
+export function clampScale(
+  scale: number,
+  minScale: number = TRANSFORM_SCALE_LIMITS.MIN_SCALE,
+  maxScale: number = TRANSFORM_SCALE_LIMITS.MAX_SCALE
+): number {
+  return clamp(scale, minScale, maxScale);
+}
+
+/**
+ * 🏢 ENTERPRISE: PDF-specific scale clamping
+ *
+ * Convenience function for PDF background scale clamping.
+ * Uses PDF_SCALE_LIMITS for tighter control.
+ *
+ * @param scale - The scale value to clamp
+ * @returns Clamped scale value within PDF limits (0.01 - 10)
+ *
+ * @example
+ * const pdfScale = clampPdfScale(userInputScale);
+ */
+export function clampPdfScale(scale: number): number {
+  return clamp(scale, PDF_SCALE_LIMITS.MIN_SCALE, PDF_SCALE_LIMITS.MAX_SCALE);
 }
 
 /**

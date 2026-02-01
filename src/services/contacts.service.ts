@@ -4,7 +4,7 @@ import {
   writeBatch, serverTimestamp, onSnapshot, Unsubscribe, deleteField, FieldValue,
   QuerySnapshot,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import {
   Contact, ContactType, ContactStatus, isIndividualContact, isCompanyContact, isServiceContact,
   AddressInfo, PhoneInfo, EmailInfo,
@@ -195,9 +195,33 @@ export class ContactsService {
       // 🎯 PHASE 3: SAFE CONTACT CREATION με SANITIZED DATA
       console.log('✅ DUPLICATE CHECK PASSED: Proceeding με safe contact creation...');
 
+      // 🏢 ENTERPRISE: Get user's companyId from auth claims for tenant isolation
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.error('🚨 CREATE CONTACT ERROR: No authenticated user');
+        throw new Error('AUTHENTICATION_ERROR: User must be logged in to create contacts');
+      }
+
+      const tokenResult = await currentUser.getIdTokenResult();
+      const userCompanyId = tokenResult.claims?.companyId as string | undefined;
+
+      console.log('🔍 CREATE CONTACT AUTH:', {
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        companyId: userCompanyId,
+        globalRole: tokenResult.claims?.globalRole
+      });
+
+      if (!userCompanyId) {
+        console.error('🚨 CREATE CONTACT ERROR: User has no companyId claim');
+        throw new Error('AUTHORIZATION_ERROR: User is not assigned to a company');
+      }
+
       const colRef = getCol<Contact>(CONTACTS_COLLECTION, contactConverter);
       const createData: ContactFirestoreData = {
         ...sanitizedData,
+        companyId: userCompanyId, // 🏢 ENTERPRISE: Tenant isolation - CRITICAL for Firestore rules
+        createdBy: currentUser.uid, // 🏢 ENTERPRISE: Track creator for authorization
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -410,15 +434,56 @@ export class ContactsService {
         throw new Error('Contact not found');
       }
 
+      // 🔍 DIAGNOSTIC STEP 1: Force refresh token and log claims
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const tokenResult = await currentUser.getIdTokenResult(true); // Force refresh!
+        console.log('🔐 DIAGNOSTIC - CLAIMS (force refreshed):');
+        console.log('   globalRole:', tokenResult.claims.globalRole);
+        console.log('   globalRole type:', typeof tokenResult.claims.globalRole);
+        console.log('   globalRole === "super_admin":', tokenResult.claims.globalRole === 'super_admin');
+        console.log('   companyId:', tokenResult.claims.companyId);
+        console.log('   companyId type:', typeof tokenResult.claims.companyId);
+        console.log('   uid:', currentUser.uid);
+        console.log('   ALL CLAIMS:', JSON.stringify(tokenResult.claims, null, 2));
+      } else {
+        console.log('🔐 DIAGNOSTIC - NO CURRENT USER!');
+      }
+
+      // 🔍 DIAGNOSTIC STEP 2: Log raw document fields (each on separate line)
+      const ec = existingContact as Record<string, unknown>;
+
+      // 🔍 LOG ALL KEYS in existing document
+      console.log('📄 DIAGNOSTIC - ALL DOCUMENT KEYS:', Object.keys(ec).join(', '));
+
+      // Check for emails array (where email might be stored)
+      console.log('📄 DIAGNOSTIC - emails array:', ec.emails);
+      console.log('📄 DIAGNOSTIC - emails type:', typeof ec.emails);
+      console.log('📄 DIAGNOSTIC - emails isArray:', Array.isArray(ec.emails));
+
+      console.log('📄 DIAGNOSTIC - RAW DOCUMENT FIELDS:');
+      console.log('   hasCreatedByKey:', 'createdBy' in ec);
+      console.log('   createdByValue:', ec.createdBy);
+      console.log('   hasStatusKey:', 'status' in ec);
+      console.log('   statusValue:', ec.status);
+      console.log('   statusValid:', ['active', 'inactive', 'archived'].includes(ec.status as string));
+      console.log('   hasEmailKey:', 'email' in ec);
+      console.log('   emailValue:', ec.email);
+      console.log('   hasCompanyIdKey:', 'companyId' in ec);
+      console.log('   companyIdValue:', ec.companyId);
+      console.log('   hasTypeKey:', 'type' in ec);
+      console.log('   typeValue:', ec.type);
+
       // Convert form data to enterprise structure
       const enterpriseData = EnterpriseContactSaver.updateExistingContact(existingContact, formData);
 
-      console.log('🏢 ENTERPRISE UPDATE: Converted data:', {
-        hasAddresses: !!enterpriseData.addresses?.length,
-        hasWebsites: !!enterpriseData.websites?.length,
-        addressExample: enterpriseData.addresses?.[0],
-        websiteExample: enterpriseData.websites?.[0]
-      });
+      // 🏢 ENTERPRISE: Ensure companyId is preserved for Firestore rules
+      // The rule requires: request.resource.data.companyId == resource.data.companyId
+      if (existingContact.companyId && !enterpriseData.companyId) {
+        enterpriseData.companyId = existingContact.companyId;
+      }
+
+      console.log('🔍 UPDATE DEBUG - enterpriseData companyId:', enterpriseData.companyId);
 
       // Save using standard method
       await this.updateContact(id, enterpriseData);
@@ -432,15 +497,6 @@ export class ContactsService {
 
   // Update
   static async updateContact(id: string, updates: ContactUpdatePayload): Promise<void> {
-    console.log('🚨 CONTACTS SERVICE: updateContact called for ID:', id);
-    console.log('🚨 CONTACTS SERVICE: Received updates:', {
-      hasMultiplePhotoURLs: 'multiplePhotoURLs' in updates,
-      multiplePhotoURLsValue: updates.multiplePhotoURLs,
-      multiplePhotoURLsLength: Array.isArray(updates.multiplePhotoURLs) ? updates.multiplePhotoURLs.length : 'not array',
-      hasPhotoURL: 'photoURL' in updates,
-      photoURLValue: updates.photoURL
-    });
-
     try {
       const docRef = doc(getCol<Contact>(CONTACTS_COLLECTION, contactConverter), id);
 
@@ -448,10 +504,18 @@ export class ContactsService {
       // Spread into new object and add timestamp - Firestore accepts FieldValue for updatedAt
       const updateData = { ...updates, updatedAt: serverTimestamp() } as ContactUpdatePayload;
 
+      // 🛡️ ENTERPRISE: Remove system fields that Firestore rules protect
+      // These fields cannot be modified according to isAttemptingToModifySystemFields rule
+      const systemFields = ['id', 'createdAt', 'createdBy', 'ownerId'] as const;
+      for (const field of systemFields) {
+        if (field in updateData) {
+          delete (updateData as Record<string, unknown>)[field];
+        }
+      }
+
       // Εάν υπάρχει το multiplePhotoURLs και είναι κενό array, το στέλνουμε ρητά
       if ('multiplePhotoURLs' in updates) {
         if (Array.isArray(updates.multiplePhotoURLs) && updates.multiplePhotoURLs.length === 0) {
-          console.log('🛠️ CONTACTS SERVICE: 🔥 CONFIRMED: Sending EMPTY array for multiplePhotoURLs to Firebase! 🔥');
           updateData.multiplePhotoURLs = [];
         } else if (updates.multiplePhotoURLs === null || updates.multiplePhotoURLs === undefined) {
           // Αν θέλουμε να διαγράψουμε το field τελείως από τη βάση
@@ -459,21 +523,47 @@ export class ContactsService {
         }
       }
 
-      console.log('🚨 CONTACTS SERVICE: About to send updateData to Firebase:', {
-        id,
-        updateDataMultiplePhotoURLs: updateData.multiplePhotoURLs,
-        updateDataPhotoURL: updateData.photoURL,
-        fullUpdateDataKeys: Object.keys(updateData)
-      });
+      // 🏢 ENTERPRISE FIX: Remove legacy fields from payload ONLY (don't use deleteField)
+      // The Firestore rules validate the MERGED document, and deleteField() is seen as an object!
+      // If the field doesn't exist in the document, we don't need to delete it.
+      // Just remove from payload to avoid sending invalid data.
+      delete (updateData as Record<string, unknown>).email;
+      delete (updateData as Record<string, unknown>).phone;
+      delete (updateData as Record<string, unknown>).street;
+      delete (updateData as Record<string, unknown>).streetNumber;
+      delete (updateData as Record<string, unknown>).city;
+      delete (updateData as Record<string, unknown>).postalCode;
+      delete (updateData as Record<string, unknown>).website;
+
+      // 🔍 DIAGNOSTIC STEP 3: Log final payload fields
+      const ud = updateData as Record<string, unknown>;
+      console.log('📤 DIAGNOSTIC - FINAL UPDATE PAYLOAD:');
+      console.log('   hasStatusInPayload:', 'status' in ud);
+      console.log('   statusInPayload:', ud.status);
+      console.log('   statusTypeInPayload:', typeof ud.status);
+      console.log('   hasEmailInPayload:', 'email' in ud);
+      console.log('   emailInPayload:', ud.email);
+      console.log('   emailTypeInPayload:', typeof ud.email);
+      console.log('   hasCompanyIdInPayload:', 'companyId' in ud);
+      console.log('   companyIdInPayload:', ud.companyId);
+      console.log('   hasTypeInPayload:', 'type' in ud);
+      console.log('   typeInPayload:', ud.type);
+      console.log('   allPayloadKeys:', Object.keys(ud).join(', '));
+
+      // 🧪 TEST: Send ULTRA-MINIMAL payload - ONLY updatedAt with actual Timestamp (not serverTimestamp)
+      // If this fails too, the problem is in authorization rules, not data validation
+      const ultraMinimalPayload = {
+        updatedAt: Timestamp.now(), // Using Timestamp.now() instead of serverTimestamp()
+      };
+      console.log('🧪 TEST - Sending ULTRA-MINIMAL payload:', Object.keys(ultraMinimalPayload));
+      console.log('🧪 TEST - updatedAt type:', typeof ultraMinimalPayload.updatedAt);
+      console.log('🧪 TEST - updatedAt value:', ultraMinimalPayload.updatedAt);
+
+      // Also log the document path for debugging
+      console.log('📍 Document path: contacts/' + id);
 
       // Type assertion needed for Firestore updateDoc compatibility
-      await updateDoc(docRef, updateData as Record<string, unknown>);
-
-      console.log('✅ CONTACTS SERVICE: 🔥 Firebase UPDATE COMPLETED! 🔥 Check the database now!', {
-        id,
-        sentEmptyMultiplePhotos: Array.isArray(updateData.multiplePhotoURLs) && updateData.multiplePhotoURLs.length === 0,
-        sentEmptyPhotoURL: updateData.photoURL === ''
-      });
+      await updateDoc(docRef, ultraMinimalPayload as Record<string, unknown>);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       // Dispatch event for all components to update their local state

@@ -8,6 +8,40 @@ import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-090: Centralized UI Fonts
 import { LINE_DASH_PATTERNS, UI_FONTS } from '../../config/text-rendering-config';
 
+// ============================================================================
+// 🏢 ENTERPRISE: Overlay Dimension Constants (ADR-138)
+// Single source of truth for all UI overlay sizes
+// ============================================================================
+
+/**
+ * Centralized overlay dimension constants
+ * Eliminates magic numbers and ensures consistency across the codebase
+ *
+ * @see ADR-138: Overlay Dimensions Centralization
+ * @see OverlayPass.ts - Uses CROSSHAIR and MOVE_ARROW
+ * @see SnapIndicatorOverlay.tsx - Uses SNAP_INDICATOR (via SNAP_ICON_GEOMETRY)
+ */
+export const OVERLAY_DIMENSIONS = {
+  /** Snap indicator marker size (pixels) - CAD standard */
+  SNAP_INDICATOR: 12,
+
+  /** Crosshair cursor size (pixels) - extends from center in each direction */
+  CROSSHAIR: 20,
+
+  /** Minimum marquee selection size (pixels) - prevents accidental tiny selections */
+  MIN_MARQUEE: 5,
+
+  /** Arrow indicator size for move cursor (pixels) - 4-way arrow indicator */
+  MOVE_ARROW: 8,
+
+  /** Snap crosshair size in OverlayPass (pixels) - smaller than main crosshair */
+  SNAP_CROSSHAIR: 8,
+
+  /** Arrow head size for directional indicators (pixels) - ghost entities, dimension lines */
+  // 🏢 ADR-150: Centralized arrow/marker size for visual consistency
+  ARROW_HEAD: 8,
+} as const;
+
 export interface HoverConfig {
   colors: {
     distance: string;

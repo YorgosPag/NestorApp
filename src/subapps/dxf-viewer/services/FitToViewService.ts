@@ -106,7 +106,8 @@ export class FitToViewService {
     const scale = clamp(Math.min(scaleX, scaleY), minScale, maxScale);
 
     // 🛡️ FINAL GUARD: Check for NaN/Infinity in scale
-    if (!isFinite(scale) || scale <= 0) {
+    // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
+    if (!Number.isFinite(scale) || scale <= 0) {
       console.error('🚨 [1] Invalid scale calculated:', { scale, scaleX, scaleY, boundsWidth, boundsHeight });
       return {
         transform: null,
@@ -261,7 +262,8 @@ export class FitToViewService {
     const scale = clamp(Math.min(scaleX, scaleY), minScale, maxScale);
 
     // 🛡️ FINAL GUARD: Check for NaN/Infinity in scale
-    if (!isFinite(scale) || scale <= 0) {
+    // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
+    if (!Number.isFinite(scale) || scale <= 0) {
       console.error('🚨 [2] Invalid scale calculated:', { scale, scaleX, scaleY, boundsWidth, boundsHeight });
       return {
         transform: null,

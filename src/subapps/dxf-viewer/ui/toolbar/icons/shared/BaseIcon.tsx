@@ -1,6 +1,8 @@
 import React from 'react';
 // 🏢 ENTERPRISE: Centralized icon sizes - Zero hardcoded values (ADR-002)
 import { componentSizes } from '../../../../../../styles/design-tokens';
+// 🏢 ADR-133: Centralized SVG stroke width tokens
+import { PANEL_LAYOUT } from '../../../../config/panel-tokens';
 
 // 🏢 ENTERPRISE: Default icon size from centralized design tokens
 const DEFAULT_ICON_SIZE_LG = componentSizes.icon.numeric.lg; // 24px
@@ -32,8 +34,8 @@ function BaseSvgWrapper({ className = "", size = DEFAULT_ICON_SIZE_LG, children 
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round" 
+      strokeWidth={PANEL_LAYOUT.SVG_ICON.STROKE_WIDTH.STANDARD}
+      strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
     >

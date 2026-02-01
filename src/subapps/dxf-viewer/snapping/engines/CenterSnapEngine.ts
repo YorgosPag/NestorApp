@@ -11,7 +11,8 @@ import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
-import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
+// 🏢 ADR-149: Centralized Snap Engine Priorities
+import { GEOMETRY_PRECISION, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class CenterSnapEngine extends BaseSnapEngine {
   private spatialIndex: ISpatialIndex | null = null;
@@ -39,7 +40,8 @@ export class CenterSnapEngine extends BaseSnapEngine {
     }
 
     const candidates: SnapCandidate[] = [];
-    const priority = 3; // After endpoints, midpoints, intersections
+    // 🏢 ADR-149: Use centralized snap engine priorities
+    const priority = SNAP_ENGINE_PRIORITIES.CENTER;
 
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.CENTER);
 

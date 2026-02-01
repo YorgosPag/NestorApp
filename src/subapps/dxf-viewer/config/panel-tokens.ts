@@ -1146,6 +1146,27 @@ export const PANEL_LAYOUT = {
     '2': 'border-2',                     // 2px border
     '4': 'border-4',                     // 4px border
   },
+
+  // ============================================================================
+  // 🎨 SVG_ICON - SVG Icon Stroke Width Tokens (ADR-133)
+  // ============================================================================
+  // Industry standards: Material Design, Figma, AutoCAD = 2px stroke
+  // Single source of truth for all SVG icon/overlay stroke widths
+  // ============================================================================
+  SVG_ICON: {
+    // Stroke widths (numeric for JSX strokeWidth={})
+    STROKE_WIDTH: {
+      THIN: 1,        // Details, grid lines, dashed patterns
+      STANDARD: 2,    // Primary icons, snap indicators, overlays
+      BOLD: 3,        // Emphasis, active states, selected
+    },
+    // Stroke width as strings (for inline SVG attributes)
+    STROKE: {
+      THIN: '1',
+      STANDARD: '2',
+      BOLD: '3',
+    },
+  },
 } as const;
 
 // ============================================================================

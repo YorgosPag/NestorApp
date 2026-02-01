@@ -17,6 +17,8 @@
 import type { RecentColorsState, RecentColorsActions } from './types';
 // 🏢 ADR-092: Centralized localStorage Service
 import { storageGet, storageSet, STORAGE_KEYS } from '../../utils/storage-utils';
+// 🏢 ADR-068: Centralized color utilities
+import { normalizeHex as normalizeHexBase, isValidHex } from './utils';
 
 // ===== CONSTANTS =====
 
@@ -25,30 +27,14 @@ const DEFAULT_MAX_COLORS = 10;
 // ===== UTILITY FUNCTIONS =====
 
 /**
- * Normalize hex color to lowercase #RRGGBB format
+ * Normalize hex color with strict validation (throws on invalid)
+ * 🏢 ADR-068: Uses centralized normalizeHex with added validation
  */
-function normalizeHex(color: string): string {
-  let hex = color.trim().toLowerCase();
-
-  // Remove # if present
-  if (hex.startsWith('#')) {
-    hex = hex.slice(1);
-  }
-
-  // Expand shorthand #RGB → #RRGGBB
-  if (hex.length === 3) {
-    hex = hex
-      .split('')
-      .map((c) => c + c)
-      .join('');
-  }
-
-  // Validate hex format
-  if (!/^[0-9a-f]{6}([0-9a-f]{2})?$/.test(hex)) {
+function normalizeHexStrict(color: string): string {
+  if (!isValidHex(color)) {
     throw new Error(`Invalid hex color: ${color}`);
   }
-
-  return `#${hex}`;
+  return normalizeHexBase(color).toLowerCase();
 }
 
 /**
@@ -64,7 +50,7 @@ function loadFromStorage(): string[] {
       .filter((c) => typeof c === 'string')
       .map((c) => {
         try {
-          return normalizeHex(c as string);
+          return normalizeHexStrict(c as string);
         } catch {
           return null;
         }
@@ -111,7 +97,7 @@ export function createRecentColorsStore(
      */
     addColor(color: string): void {
       try {
-        const normalized = normalizeHex(color);
+        const normalized = normalizeHexStrict(color);
 
         // Remove if already exists (dedupe)
         colors = colors.filter((c) => c !== normalized);

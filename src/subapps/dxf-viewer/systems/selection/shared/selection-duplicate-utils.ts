@@ -11,6 +11,8 @@ import type { AnySceneEntity } from '../../../types/scene';
 import { calculateVerticesBounds } from '../../../utils/geometry/GeometryUtils';
 // 🏢 ADR-089: Centralized Point-In-Bounds
 import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
+// 🏢 ADR-158: Centralized Infinity Bounds Initialization
+import { createInfinityBounds } from '../../../config/geometry-constants';
 
 /**
  * Calculate bounding box for entities
@@ -26,10 +28,8 @@ export function calculateBoundingBox(entities: Entity[]): {
     return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
   }
 
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
+  // 🏢 ADR-158: Centralized Infinity Bounds Initialization
+  const bounds = createInfinityBounds();
 
   entities.forEach(entity => {
     // Extract bounds from different entity types using type narrowing
@@ -38,33 +38,38 @@ export function calculateBoundingBox(entities: Entity[]): {
       const lineEntity = entity as LineEntity;
       const { start, end } = lineEntity;
       if (start && end) {
-        minX = Math.min(minX, start.x, end.x);
-        minY = Math.min(minY, start.y, end.y);
-        maxX = Math.max(maxX, start.x, end.x);
-        maxY = Math.max(maxY, start.y, end.y);
+        bounds.minX = Math.min(bounds.minX, start.x, end.x);
+        bounds.minY = Math.min(bounds.minY, start.y, end.y);
+        bounds.maxX = Math.max(bounds.maxX, start.x, end.x);
+        bounds.maxY = Math.max(bounds.maxY, start.y, end.y);
       }
     } else if (isCircleEntity(entity)) {
       const circleEntity = entity as CircleEntity;
       const { center, radius } = circleEntity;
       if (center && radius !== undefined) {
-        minX = Math.min(minX, center.x - radius);
-        minY = Math.min(minY, center.y - radius);
-        maxX = Math.max(maxX, center.x + radius);
-        maxY = Math.max(maxY, center.y + radius);
+        bounds.minX = Math.min(bounds.minX, center.x - radius);
+        bounds.minY = Math.min(bounds.minY, center.y - radius);
+        bounds.maxX = Math.max(bounds.maxX, center.x + radius);
+        bounds.maxY = Math.max(bounds.maxY, center.y + radius);
       }
     } else if (isRectangleEntity(entity)) {
       const rectEntity = entity as RectangleEntity;
       const { x, y, width, height } = rectEntity;
       if (x !== undefined && y !== undefined && width !== undefined && height !== undefined) {
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x + width);
-        maxY = Math.max(maxY, y + height);
+        bounds.minX = Math.min(bounds.minX, x);
+        bounds.minY = Math.min(bounds.minY, y);
+        bounds.maxX = Math.max(bounds.maxX, x + width);
+        bounds.maxY = Math.max(bounds.maxY, y + height);
       }
     }
   });
 
-  return { minX, minY, maxX, maxY };
+  return {
+    minX: bounds.minX,
+    minY: bounds.minY,
+    maxX: bounds.maxX,
+    maxY: bounds.maxY
+  };
 }
 
 /**

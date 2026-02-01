@@ -32,6 +32,8 @@ import {
   isXLineEntity,
   isRayEntity
 } from '../../types/entities';
+// 🏢 ADR-149: Centralized Snap Engine Priorities
+import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 /**
  * 🏢 ENTERPRISE: Helper interfaces for non-centralized entity data access
@@ -60,7 +62,8 @@ export class InsertionSnapEngine extends BaseSnapEngine {
   }
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
-    const priority = 2; // High priority for insertion points
+    // 🏢 ADR-149: Use centralized snap engine priorities
+    const priority = SNAP_ENGINE_PRIORITIES.INSERTION;
     
     const candidates = this.processCandidateLoop(
       context.entities,

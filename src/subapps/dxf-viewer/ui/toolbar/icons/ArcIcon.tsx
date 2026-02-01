@@ -1,11 +1,14 @@
 import * as React from 'react';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+// 🏢 ADR-142: Centralized Icon Click Sequence Colors
+import { ICON_CLICK_COLORS } from '../../../config/color-config';
 
 /**
  * 🏢 ENTERPRISE: Arc Icon Variants
  * Pattern: AutoCAD Arc command modes
  *
  * @see ADR-059: Arc Drawing Tool Implementation
+ * @see ADR-142: Icon Click Sequence Colors Centralization
  */
 export type ArcVariant =
   | '3point'           // Arc through 3 points (Start, Point on Arc, End)
@@ -16,15 +19,6 @@ interface ArcIconProps {
   variant: ArcVariant;
   className?: string;
 }
-
-// 🎨 Color coding for click sequence (consistent across all variants)
-// 2 στάσεις: Κόκκινο → Πράσινο
-// 3 στάσεις: Κόκκινο → Πορτοκαλί → Πράσινο
-const CLICK_COLORS = {
-  FIRST: '#ef4444',   // 🔴 Red - 1st click (always)
-  SECOND: '#f97316',  // 🟠 Orange - 2nd click (only for 3-step)
-  THIRD: '#22c55e',   // 🟢 Green - last click (always)
-} as const;
 
 /**
  * Arc Icon Component
@@ -50,11 +44,11 @@ export const ArcIcon: React.FC<ArcIconProps> = ({
               strokeWidth="1.5"
             />
             {/* 1st click - Start (Red) */}
-            <circle cx="3" cy="19" r="3" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="3" cy="19" r="3" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
             {/* 2nd click - Point on Arc (Orange) */}
-            <circle cx="12" cy="5" r="3" fill={CLICK_COLORS.SECOND} stroke="none" />
+            <circle cx="12" cy="5" r="3" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
             {/* 3rd/Last click - End (Green) */}
-            <circle cx="21" cy="19" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="21" cy="19" r="3" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 
@@ -69,13 +63,13 @@ export const ArcIcon: React.FC<ArcIconProps> = ({
               strokeWidth="1.5"
             />
             {/* 1st click - Center (Red, marked with +) */}
-            <circle cx="12" cy="12" r="2.5" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="12" cy="12" r="2.5" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
             <line x1="9" y1="12" x2="15" y2="12" strokeWidth="1" stroke="white" />
             <line x1="12" y1="9" x2="12" y2="15" strokeWidth="1" stroke="white" />
             {/* 2nd click - Start (Orange) */}
-            <circle cx="3" cy="12" r="3" fill={CLICK_COLORS.SECOND} stroke="none" />
+            <circle cx="3" cy="12" r="3" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
             {/* 3rd/Last click - End (Green) */}
-            <circle cx="21" cy="12" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="21" cy="12" r="3" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
             {/* Radius line */}
             <line x1="12" y1="12" x2="3" y2="12" strokeDasharray="2,1.5" strokeWidth="0.75" opacity="0.5" />
           </>
@@ -92,13 +86,13 @@ export const ArcIcon: React.FC<ArcIconProps> = ({
               strokeWidth="1.5"
             />
             {/* 1st click - Start (Red) */}
-            <circle cx="3" cy="10" r="3" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="3" cy="10" r="3" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
             {/* 2nd click - Center (Orange, marked with +) */}
-            <circle cx="12" cy="10" r="2.5" fill={CLICK_COLORS.SECOND} stroke="none" />
+            <circle cx="12" cy="10" r="2.5" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
             <line x1="9" y1="10" x2="15" y2="10" strokeWidth="1" stroke="white" />
             <line x1="12" y1="7" x2="12" y2="13" strokeWidth="1" stroke="white" />
             {/* 3rd/Last click - End (Green) */}
-            <circle cx="21" cy="10" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="21" cy="10" r="3" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 
@@ -111,8 +105,8 @@ export const ArcIcon: React.FC<ArcIconProps> = ({
               fill="none"
               strokeWidth="1.5"
             />
-            <circle cx="3" cy="19" r="3" fill={CLICK_COLORS.FIRST} stroke="none" />
-            <circle cx="21" cy="19" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="3" cy="19" r="3" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="21" cy="19" r="3" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
     }

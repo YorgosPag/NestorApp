@@ -12,6 +12,8 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { EntityModel } from '../../rendering/types/Types';
 import { PhaseManager } from '../phase-manager/PhaseManager';
+// 🏢 ADR-151: Centralized grip tolerance
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 // 🏢 ENTERPRISE: Type-safe geometry union for entity properties
 export type EntityGeometry =
@@ -69,7 +71,7 @@ export class GripInteractionManager {
    * 🔺 UNIVERSAL GRIP HOVER DETECTION
    * Works for ALL entity types automatically
    */
-  checkGripHover(entity: EntityModel, mousePosition: Point2D, tolerance: number = 8): boolean {
+  checkGripHover(entity: EntityModel, mousePosition: Point2D, tolerance: number = TOLERANCE_CONFIG.GRIP_APERTURE): boolean {
     // This would use the entity's renderer to get grips
     // For now, simplified detection
     const wasHovering = this.state.hoveredGrip !== null;

@@ -164,3 +164,17 @@ export function isValidPoint(point: unknown): point is Point2D {
     !isNaN(pointRecord.y)
   );
 }
+
+/**
+ * 🏢 ENTERPRISE: Strict point validation including Infinity check
+ * Use for bounds calculations where Infinity invalidates results
+ *
+ * @param point - Point to validate
+ * @returns true if point is valid AND finite (no NaN, no Infinity)
+ */
+export function isValidPointStrict(point: unknown): point is Point2D {
+  if (!isValidPoint(point)) return false;
+  const p = point as Point2D;
+  // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
+  return Number.isFinite(p.x) && Number.isFinite(p.y);
+}

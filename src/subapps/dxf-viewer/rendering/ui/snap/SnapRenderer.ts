@@ -30,6 +30,13 @@ import {
 } from '../../primitives/canvasPaths';
 // 🏢 ADR-106: Centralized grip size multipliers για hover/highlight effects
 import { GRIP_SIZE_MULTIPLIERS } from '../../grips/constants';
+// 🏢 ADR-137: Centralized Snap Icon Geometry
+import {
+  SNAP_ICON_GEOMETRY,
+  getSnapIconQuarter,
+  getTangentCircleRadius,
+  getGridDotRadius
+} from './snap-icon-config';
 
 /**
  * 🔺 CENTRALIZED SNAP RENDERER
@@ -181,8 +188,8 @@ export class SnapRenderer implements UIRenderer {
         break;
 
       case 'perpendicular': {
-        // Right angle symbol (special case - not centralized)
-        const quarter = halfSize / 2;
+        // 🏢 ADR-137: Right angle symbol - using centralized quarter calculation
+        const quarter = getSnapIconQuarter(size);
         ctx.moveTo(x - quarter, y - halfSize);
         ctx.lineTo(x - quarter, y - quarter);
         ctx.lineTo(x - halfSize, y - quarter);
@@ -190,18 +197,18 @@ export class SnapRenderer implements UIRenderer {
       }
 
       case 'parallel': {
-        // Parallel lines (special case - not centralized)
-        const quarter = halfSize / 2;
-        ctx.moveTo(x - halfSize, y - quarter);
-        ctx.lineTo(x + halfSize, y - quarter);
-        ctx.moveTo(x - halfSize, y + quarter);
-        ctx.lineTo(x + halfSize, y + quarter);
+        // 🏢 ADR-137: Parallel lines - using centralized quarter calculation
+        const parallelQuarter = getSnapIconQuarter(size);
+        ctx.moveTo(x - halfSize, y - parallelQuarter);
+        ctx.lineTo(x + halfSize, y - parallelQuarter);
+        ctx.moveTo(x - halfSize, y + parallelQuarter);
+        ctx.lineTo(x + halfSize, y + parallelQuarter);
         break;
       }
 
       case 'tangent':
-        // Circle with tangent line
-        addCirclePath(ctx, center, halfSize * 0.6);
+        // 🏢 ADR-137: Circle with tangent line - UNIFIED: was 0.6, now 0.5
+        addCirclePath(ctx, center, getTangentCircleRadius(halfSize));
         ctx.moveTo(x - halfSize, y);
         ctx.lineTo(x + halfSize, y);
         break;
@@ -217,8 +224,8 @@ export class SnapRenderer implements UIRenderer {
         break;
 
       case 'grid':
-        // Grid dot
-        addCirclePath(ctx, center, 2);
+        // 🏢 ADR-137: Grid dot - UNIFIED: was 2px, now 3px for consistency
+        addCirclePath(ctx, center, getGridDotRadius());
         ctx.fill();
         return; // Skip stroke for filled dot
 

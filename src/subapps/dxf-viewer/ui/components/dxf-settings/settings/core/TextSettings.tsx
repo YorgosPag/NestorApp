@@ -71,7 +71,8 @@ import { layoutUtilities } from '../../../../../../../styles/design-tokens';
 // 🏢 ENTERPRISE: Import centralized panel spacing (Single Source of Truth)
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
-import { TEXT_METRICS_RATIOS } from '../../../../../config/text-rendering-config';
+// 🏢 ADR-141: Centralized UI Text Input Constraints
+import { TEXT_METRICS_RATIOS, UI_TEXT_INPUT_CONSTRAINTS } from '../../../../../config/text-rendering-config';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 // 🏢 ENTERPRISE: Shadcn Tooltip component
@@ -278,12 +279,14 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
   };
 
   const increaseFontSize = () => {
-    const newSize = Math.min(200, textSettings.fontSize + 1);
+    // 🏢 ADR-141: Centralized UI text input constraints
+    const newSize = Math.min(UI_TEXT_INPUT_CONSTRAINTS.FONT_SIZE_MAX, textSettings.fontSize + 1);
     updateTextSettings({ fontSize: newSize });
   };
 
   const decreaseFontSize = () => {
-    const newSize = Math.max(6, textSettings.fontSize - 1);
+    // 🏢 ADR-141: Centralized UI text input constraints
+    const newSize = Math.max(UI_TEXT_INPUT_CONSTRAINTS.FONT_SIZE_MIN, textSettings.fontSize - 1);
     updateTextSettings({ fontSize: newSize });
   };
 

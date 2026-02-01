@@ -14,7 +14,8 @@ import { CoordinateUtils } from '../../systems/constraints/utils';
 import { getNearestPointOnLine, getLineParameter } from '../../rendering/entities/shared/geometry-utils';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-087: Centralized Snap Engine Configuration
-import { SNAP_RADIUS_MULTIPLIERS, SNAP_GRID_DISTANCES } from '../../config/tolerance-config';
+// 🏢 ADR-149: Centralized Snap Engine Priorities
+import { SNAP_RADIUS_MULTIPLIERS, SNAP_GRID_DISTANCES, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class ExtensionSnapEngine extends BaseSnapEngine {
 
@@ -27,7 +28,8 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
   }
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
-    const priority = 5; // Medium priority
+    // 🏢 ADR-149: Use centralized snap engine priorities
+    const priority = SNAP_ENGINE_PRIORITIES.EXTENSION;
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.EXTENSION);
     
     // 🏢 ADR-087: Use centralized snap radius multiplier

@@ -57,6 +57,8 @@ import { calculateDistance, getPerpendicularUnitVector, calculateTextGap } from 
 import { isLineEntity, type Entity } from '../../types/entities';
 // 🏢 ADR-124: Centralized Dot Radius
 import { RENDER_GEOMETRY } from '../../config/text-rendering-config';
+// 🏢 ADR-150: Centralized Arrow/Marker Size
+import { OVERLAY_DIMENSIONS } from '../../utils/hover/config';
 
 export class LineRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -170,7 +172,8 @@ export class LineRenderer extends BaseEntityRenderer {
       const perp = getPerpendicularUnitVector(screenStart, screenEnd);
 
       // Draw perpendicular markers at start and end with centralized color
-      const markerSize = 8;
+      // 🏢 ADR-150: Centralized marker size from OVERLAY_DIMENSIONS
+      const markerSize = OVERLAY_DIMENSIONS.ARROW_HEAD;
       this.ctx.save();
       this.applyDimensionTextStyle(); // Use centralized fuchsia color
       this.ctx.strokeStyle = this.ctx.fillStyle; // Use same color as text

@@ -61,6 +61,24 @@ export const TEXT_SIZE_LIMITS = {
    * Entities with height below this are considered invalid
    */
   MIN_VALID_HEIGHT: 0.1,
+
+  /**
+   * 🏢 ADR-142: Default font size for text entities (drawing units)
+   * Used when entity has no fontSize/height specified
+   * Safe fallback that provides readable text in most contexts
+   *
+   * Note: Different from DEFAULT_HEIGHT (2.5) which is ISO 3098 standard
+   * This is a practical fallback for entities with missing fontSize
+   *
+   * @see entities.ts - getEntityBounds()
+   * @see Bounds.ts - calculateTextBounds()
+   * @see text-spline-renderers.ts - renderTextHover()
+   * @see bounds.ts - createBoundsFromDxfScene()
+   * @see useTextPreviewStyle.ts - getTextPreviewStyle()
+   * @see dxf-scene-builder.ts - normalizeTextHeights()
+   * @since 2026-02-01
+   */
+  DEFAULT_FONT_SIZE: 12,
 } as const;
 
 // ============================================
@@ -291,8 +309,11 @@ export const RENDER_LINE_WIDTHS = {
   /** Selection marquee/rectangle stroke */
   SELECTION: 2,
 
-  /** Grip point outlines */
+  /** Grip point outlines (cold/normal state) */
   GRIP_OUTLINE: 1,
+
+  /** 🏢 ADR-154: Grip point outlines (warm/hot/active state) */
+  GRIP_OUTLINE_ACTIVE: 2,
 
   /** Debug/development overlays */
   DEBUG: 2,
@@ -361,6 +382,28 @@ export const RENDER_GEOMETRY = {
    * STANDARD: Visual indicator size consistent across all entity renderers
    */
   DOT_RADIUS: 4,
+
+  // ────────────────────────────────────────────
+  // 🏢 ADR-140: ANGLE MEASUREMENT VISUALIZATION
+  // ────────────────────────────────────────────
+
+  /**
+   * Arc radius in screen pixels for angle indicator visualization
+   * Used in: AngleMeasurementRenderer, PreviewRenderer
+   *
+   * USAGE: Visual arc showing angle span from vertex point
+   * STANDARD: AutoCAD dimension arc radius (consistent 40px screen size)
+   */
+  ANGLE_ARC_RADIUS: 40,
+
+  /**
+   * Text distance in screen pixels for angle label positioning
+   * Used in: AngleMeasurementRenderer, PreviewRenderer
+   *
+   * USAGE: Positions angle text (e.g., "45.0°") on bisector line
+   * STANDARD: AutoCAD dimension text placement (50px from vertex)
+   */
+  ANGLE_TEXT_DISTANCE: 50,
 } as const;
 
 // ============================================
@@ -445,6 +488,167 @@ export const TEXT_LABEL_OFFSETS = {
    * @see SnapModeIndicator.tsx - tooltip positioning
    */
   CIRCLE_LABEL: 25,
+
+  // ────────────────────────────────────────────
+  // 🏢 ADR-139: LABEL BOX DIMENSIONS (2026-02-01)
+  // ────────────────────────────────────────────
+
+  /**
+   * Standard label box padding (pixels)
+   * Used for: Ghost readouts, distance labels, entity count labels
+   *
+   * STANDARD: 4px padding provides compact but readable labels
+   * @see ghost-entity-renderer.ts - entity count & coordinate readout
+   * @see distance-label-utils.ts - PREVIEW_LABEL_DEFAULTS
+   */
+  LABEL_BOX_PADDING: 4,
+
+  /**
+   * Overlay region label box padding (pixels)
+   * Slightly larger (6px) for region name labels for better readability
+   *
+   * USAGE: Region polygon name labels in overlay-drawing.ts
+   * @see overlay-drawing.ts - drawLabel()
+   */
+  OVERLAY_LABEL_PADDING: 6,
+
+  /**
+   * Standard label box height (pixels)
+   * Used for: Ghost readouts, coordinate displays, entity count labels
+   *
+   * STANDARD: 16px height fits 10-12px fonts comfortably
+   * @see ghost-entity-renderer.ts - all label backgrounds
+   */
+  LABEL_BOX_HEIGHT: 16,
+
+  /**
+   * Overlay region label box height (pixels)
+   * Slightly larger (18px) for better readability of region names
+   *
+   * USAGE: Region polygon name labels in overlay-drawing.ts
+   * @see overlay-drawing.ts - drawLabel()
+   */
+  OVERLAY_LABEL_HEIGHT: 18,
+
+  /**
+   * Entity count label Y offset (pixels)
+   * Distance from center to top of background box
+   *
+   * USAGE: Ghost simplified box shows "X entities" label at center
+   * @see ghost-entity-renderer.ts - renderSimplifiedGhost()
+   */
+  ENTITY_COUNT_OFFSET_Y: 8,
+
+  /**
+   * Coordinate readout Y offset (pixels)
+   * Vertical offset for readout background box positioning
+   *
+   * USAGE: Delta coordinate readout during entity drag
+   * @see ghost-entity-renderer.ts - renderCoordinateReadout()
+   */
+  READOUT_OFFSET_Y: 14,
+
+  // ────────────────────────────────────────────
+  // 🏢 ADR-141: ORIGIN MARKER OFFSETS (2026-02-01)
+  // ────────────────────────────────────────────
+
+  /**
+   * Origin crosshair arm length (pixels)
+   * Used for: Debug origin marker crosshair rendering
+   *
+   * USAGE: Crosshair extends ±15px from origin point
+   * @see CalibrationGridRenderer.ts - renderOriginMarker()
+   */
+  ORIGIN_CROSSHAIR_ARM: 15,
+
+  /**
+   * Origin label line spacing (pixels)
+   * Used for: Multi-line debug labels at origin
+   *
+   * USAGE: Second line of label positioned 15px below first
+   * @see OriginMarkersRenderer.ts, OriginMarkersDebugOverlay.ts
+   */
+  ORIGIN_LABEL_LINE_SPACING: 15,
+
+  /**
+   * Origin "O" label horizontal gap (pixels)
+   * Used for: Positioning "O" marker label
+   *
+   * USAGE: "O" label positioned (markerSize + 15)px left of origin
+   * @see OriginMarkersRenderer.ts, OriginMarkersDebugOverlay.ts
+   */
+  ORIGIN_LABEL_HORIZONTAL_GAP: 15,
+
+  /**
+   * Small label offset (pixels)
+   * Used for: Fine positioning of labels near markers
+   *
+   * USAGE: 5px offset for label positioning adjustments
+   * @see OriginMarkersRenderer.ts, CalibrationGridRenderer.ts
+   */
+  LABEL_FINE_OFFSET: 5,
+
+  // ────────────────────────────────────────────
+  // 🏢 ADR-141: DYNAMIC INPUT CURSOR OFFSETS
+  // ────────────────────────────────────────────
+
+  /**
+   * Dynamic input horizontal offset from cursor (pixels)
+   * Used for: Positioning dynamic input overlay
+   *
+   * USAGE: Input positioned 15px right of cursor
+   * @see useDynamicInputLayout.ts
+   */
+  CURSOR_OFFSET_X: 15,
+
+  /**
+   * Dynamic input vertical offset from cursor (pixels)
+   * Used for: Positioning dynamic input overlay base
+   *
+   * USAGE: Input base positioned 15px above cursor
+   * @see useDynamicInputLayout.ts
+   */
+  CURSOR_OFFSET_Y: 15,
+
+  // ────────────────────────────────────────────
+  // 🏢 ADR-153: X/Y AXIS LABEL POSITIONING (2026-02-01)
+  // ────────────────────────────────────────────
+
+  /**
+   * X-axis label right margin from viewport edge (pixels)
+   * Used for: Positioning "X" label on horizontal axis line
+   *
+   * PATTERN: ctx.fillText('X', viewport.width - X_AXIS_LABEL_RIGHT_MARGIN, ...)
+   * @see OriginMarkersRenderer.ts, OriginMarkersDebugOverlay.ts
+   */
+  X_AXIS_LABEL_RIGHT_MARGIN: 10,
+
+  /**
+   * X-axis label bottom offset from axis line (pixels)
+   * Used for: Vertical positioning of "X" label above horizontal axis
+   *
+   * PATTERN: ctx.fillText('X', ..., originScreenY - X_AXIS_LABEL_BOTTOM_OFFSET)
+   * @see OriginMarkersRenderer.ts, OriginMarkersDebugOverlay.ts
+   */
+  X_AXIS_LABEL_BOTTOM_OFFSET: 5,
+
+  /**
+   * Y-axis label left offset from axis line (pixels)
+   * Used for: Horizontal positioning of "Y" label right of vertical axis
+   *
+   * PATTERN: ctx.fillText('Y', originScreenX + Y_AXIS_LABEL_LEFT_OFFSET, ...)
+   * @see OriginMarkersRenderer.ts, OriginMarkersDebugOverlay.ts
+   */
+  Y_AXIS_LABEL_LEFT_OFFSET: 5,
+
+  /**
+   * Y-axis label top margin from viewport edge (pixels)
+   * Used for: Vertical positioning of "Y" label near top of viewport
+   *
+   * PATTERN: ctx.fillText('Y', ..., Y_AXIS_LABEL_TOP_MARGIN)
+   * @see OriginMarkersRenderer.ts, OriginMarkersDebugOverlay.ts
+   */
+  Y_AXIS_LABEL_TOP_MARGIN: 10,
 } as const;
 
 // ============================================
@@ -894,6 +1098,82 @@ export function applyLineDash(
 export function resetLineDash(ctx: CanvasRenderingContext2D): void {
   ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
 }
+
+/**
+ * 🏢 ADR-083: Scale dash pattern for zoom-aware rendering
+ *
+ * Multiplies each value in the pattern by a scale factor.
+ * Used for line completion styles where dash size varies with zoom.
+ *
+ * @param pattern - Base dash pattern from LINE_DASH_PATTERNS
+ * @param scale - Scale factor (typically from dashScale setting)
+ * @returns New array with scaled values
+ *
+ * @example
+ * scaleDashPattern(LINE_DASH_PATTERNS.CONSTRUCTION, 2)
+ * // Returns [16, 8] (original [8, 4] * 2)
+ */
+export function scaleDashPattern(
+  pattern: readonly number[],
+  scale: number
+): number[] {
+  return pattern.map(v => v * scale);
+}
+
+// ============================================
+// 🏢 ADR-141: UI TEXT INPUT CONSTRAINTS (2026-02-01)
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: UI Text Input Size Constraints
+ *
+ * Limits for user-adjustable font sizes in settings panels.
+ * Different from TEXT_SIZE_LIMITS which is for canvas rendering.
+ *
+ * @see TextSettings.tsx - Font size +/- buttons
+ * @see ADR-141: UI Text Input Constraints Centralization
+ * @since 2026-02-01
+ */
+export const UI_TEXT_INPUT_CONSTRAINTS = {
+  /** Minimum font size for user input (pixels) - Readable threshold */
+  FONT_SIZE_MIN: 6,
+
+  /** Maximum font size for user input (pixels) - Practical limit */
+  FONT_SIZE_MAX: 200,
+} as const;
+
+// ============================================
+// 🏢 ADR-141: ARC LABEL POSITIONING (2026-02-01)
+// ============================================
+
+/**
+ * 🏢 ENTERPRISE: Arc Label Positioning Constants
+ *
+ * Constants for positioning angle labels on arc measurements.
+ * Used in polyline/polygon angle annotations.
+ *
+ * @see BaseEntityRenderer.ts - renderAngleAtVertex()
+ * @see ADR-141: Arc Label Positioning Centralization
+ * @since 2026-02-01
+ */
+export const ARC_LABEL_POSITIONING = {
+  /**
+   * Arc label distance ratio (66% of arc radius)
+   * Positions the angle text at 2/3 of the arc radius from vertex
+   *
+   * RATIONALE: 0.66 provides good readability without overlapping the arc
+   * Industry standard for dimension text placement
+   */
+  OFFSET_RATIO: 0.66,
+
+  /**
+   * Minimum arc label offset in pixels
+   * Fallback when arc radius is too small
+   *
+   * RATIONALE: 6px ensures text doesn't overlap with vertex point
+   */
+  MIN_OFFSET_PX: 6,
+} as const;
 
 // ============================================
 // HELPER FUNCTIONS

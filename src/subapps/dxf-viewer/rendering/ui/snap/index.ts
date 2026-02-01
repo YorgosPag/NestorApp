@@ -20,4 +20,14 @@ export type {
 
 export { DEFAULT_SNAP_SETTINGS } from './SnapTypes';
 
+// 🏢 ADR-137: Snap Icon Geometry Centralization
+export {
+  SNAP_ICON_GEOMETRY,
+  getSnapIconHalf,
+  getSnapIconQuarter,
+  getTangentCircleRadius,
+  getGridDotRadius,
+  getNodeDotRadius
+} from './snap-icon-config';
+
 // ✅ REMOVED: Περιττή wrapper function - χρησιμοποιήστε απευθείας new SnapRenderer()

@@ -2,7 +2,8 @@ import type { Point2D } from '../rendering/types/Types';
 import type { Region, RegionStatus, OverlayLayer } from '../types/overlay';
 import { calculateRegionArea, calculateRegionPerimeter } from '../types/overlay';
 import { getStatusColors } from '../config/color-mapping';
-import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-134: Centralized Opacity Constants
+import { UI_COLORS, OPACITY } from '../config/color-config';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
 import { GEOMETRY_PRECISION } from '../config/tolerance-config';
 
@@ -90,7 +91,7 @@ export class RegionOperations {
       name: 'Default Layer',
       visible: true,
       locked: false,
-      opacity: 0.7,
+      opacity: OPACITY.MEDIUM_LOW,  // 🏢 ADR-134: Centralized opacity (0.7)
       regionIds: [],
       order: 0
     };
@@ -115,7 +116,7 @@ export class RegionOperations {
       levelId,
       layer: 'base', // Default to 'base' layer (from centralized OverlayLayer type)
       color: getStatusColors(status)?.fill || UI_COLORS.BUTTON_PRIMARY,
-      opacity: 0.7,
+      opacity: OPACITY.MEDIUM_LOW,  // 🏢 ADR-134: Centralized opacity (0.7)
       status,
       vertices: vertices.map(v => ({ x: v.x, y: v.y })),
       locked: false,

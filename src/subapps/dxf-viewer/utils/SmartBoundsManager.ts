@@ -13,6 +13,10 @@ import type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../canvas-v2/layer-canvas/layer-types';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Import centralized BoundingBox από rulers-grid system
 import type { BoundingBox } from '../systems/rulers-grid/config';
+// 🏢 ADR-119: UnifiedFrameScheduler για centralized RAF management
+import { UnifiedFrameScheduler } from '../rendering/core/UnifiedFrameScheduler';
+// 🏢 ADR-158: Centralized Infinity Bounds Initialization
+import { createInfinityBounds, isInfinityBounds } from '../config/geometry-constants';
 
 // Local interface for legacy compatibility (different from centralized BoundingBox)
 interface LegacyBoundingBox {
@@ -47,7 +51,8 @@ export class SmartBoundsManager {
   private lastBounds: LegacyBoundingBox | null = null;
   private sceneBoundsVersion = 0;
   private pendingFitToView = false;
-  private rafId: number | null = null;
+  // 🏢 ADR-119: Cancel function from scheduleOnceDelayed (replaces raw rafId)
+  private cancelScheduledFit: (() => void) | null = null;
 
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Helper method που χρησιμοποιεί κεντρική υπηρεσία
   private executeCentralizedFitToView(
@@ -91,20 +96,18 @@ export class SmartBoundsManager {
       return null;
     }
 
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
+    // 🏢 ADR-158: Centralized Infinity Bounds Initialization
+    const bounds = createInfinityBounds();
     let hasValidBounds = false;
 
     for (const entity of scene.entities) {
       try {
         const entityBounds = this.getEntityBounds(entity);
         if (entityBounds) {
-          minX = Math.min(minX, entityBounds.minX);
-          minY = Math.min(minY, entityBounds.minY);
-          maxX = Math.max(maxX, entityBounds.maxX);
-          maxY = Math.max(maxY, entityBounds.maxY);
+          bounds.minX = Math.min(bounds.minX, entityBounds.minX);
+          bounds.minY = Math.min(bounds.minY, entityBounds.minY);
+          bounds.maxX = Math.max(bounds.maxX, entityBounds.maxX);
+          bounds.maxY = Math.max(bounds.maxY, entityBounds.maxY);
           hasValidBounds = true;
         }
       } catch (error) {
@@ -117,12 +120,12 @@ export class SmartBoundsManager {
     }
 
     return {
-      minX,
-      minY,
-      maxX,
-      maxY,
-      width: maxX - minX,
-      height: maxY - minY
+      minX: bounds.minX,
+      minY: bounds.minY,
+      maxX: bounds.maxX,
+      maxY: bounds.maxY,
+      width: bounds.maxX - bounds.minX,
+      height: bounds.maxY - bounds.minY
     };
   }
 
@@ -166,23 +169,26 @@ export class SmartBoundsManager {
 
       case 'polyline':
         if (entity.vertices && Array.isArray(entity.vertices) && entity.vertices.length > 0) {
-          let minX = Infinity, minY = Infinity;
-          let maxX = -Infinity, maxY = -Infinity;
+          // 🏢 ADR-158: Centralized Infinity Bounds Initialization
+          const polyBounds = createInfinityBounds();
 
           for (const vertex of entity.vertices) {
             if (vertex.x != null && vertex.y != null) {
-              minX = Math.min(minX, vertex.x);
-              minY = Math.min(minY, vertex.y);
-              maxX = Math.max(maxX, vertex.x);
-              maxY = Math.max(maxY, vertex.y);
+              polyBounds.minX = Math.min(polyBounds.minX, vertex.x);
+              polyBounds.minY = Math.min(polyBounds.minY, vertex.y);
+              polyBounds.maxX = Math.max(polyBounds.maxX, vertex.x);
+              polyBounds.maxY = Math.max(polyBounds.maxY, vertex.y);
             }
           }
 
-          if (minX !== Infinity) {
+          if (!isInfinityBounds(polyBounds)) {
             return {
-              minX, minY, maxX, maxY,
-              width: maxX - minX,
-              height: maxY - minY
+              minX: polyBounds.minX,
+              minY: polyBounds.minY,
+              maxX: polyBounds.maxX,
+              maxY: polyBounds.maxY,
+              width: polyBounds.maxX - polyBounds.minX,
+              height: polyBounds.maxY - polyBounds.minY
             };
           }
         }
@@ -257,10 +263,10 @@ export class SmartBoundsManager {
       return;
     }
 
-    // Cancel any pending fit-to-view
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
+    // 🏢 ADR-119: Cancel any pending fit-to-view via UnifiedFrameScheduler
+    if (this.cancelScheduledFit) {
+      this.cancelScheduledFit();
+      this.cancelScheduledFit = null;
     }
 
     if (this.pendingFitToView) {
@@ -270,9 +276,11 @@ export class SmartBoundsManager {
 
     this.pendingFitToView = true;
 
-    // Schedule after next paint για σωστό timing
-    this.rafId = requestAnimationFrame(() => {
-      this.rafId = requestAnimationFrame(() => {
+    // 🏢 ADR-119: Use UnifiedFrameScheduler.scheduleOnceDelayed for RAF coordination
+    // Pattern: RAF → setTimeout(0) → RAF ensures layout is stable before fit
+    this.cancelScheduledFit = UnifiedFrameScheduler.scheduleOnceDelayed(
+      'smart-bounds-fit-to-view',
+      () => {
         try {
           // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση κεντρικοποιημένης μεθόδου
           this.executeCentralizedFitToView(renderer, scene);
@@ -281,10 +289,11 @@ export class SmartBoundsManager {
           dwarn('Error in fit-to-view:', error);
         } finally {
           this.pendingFitToView = false;
-          this.rafId = null;
+          this.cancelScheduledFit = null;
         }
-      });
-    });
+      },
+      0 // Minimal delay - just need double-RAF pattern
+    );
   }
 
   // ═══ IMMEDIATE FIT-TO-VIEW (για import) ═══
@@ -317,16 +326,17 @@ export class SmartBoundsManager {
   }
 
   reset(): void {
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
+    // 🏢 ADR-119: Cancel via UnifiedFrameScheduler cancel function
+    if (this.cancelScheduledFit) {
+      this.cancelScheduledFit();
+      this.cancelScheduledFit = null;
     }
-    
+
     this.lastBoundsHash = null;
     this.lastBounds = null;
     this.sceneBoundsVersion = 0;
     this.pendingFitToView = false;
-    
+
     dlog('🔺 SmartBoundsManager reset');
   }
 

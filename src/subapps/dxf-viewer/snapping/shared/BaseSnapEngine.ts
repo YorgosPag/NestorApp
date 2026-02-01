@@ -8,6 +8,8 @@ import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { GeometricCalculations } from './GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { SpatialFactory, type ISpatialIndex } from '../../core/spatial';
+// 🏢 ADR-158: Centralized Infinity Bounds Initialization
+import { createInfinityBounds, isInfinityBounds } from '../../config/geometry-constants';
 
 export interface SnapEngineContext {
   entities: EntityModel[];
@@ -179,30 +181,31 @@ export abstract class BaseSnapEngine {
       return { minX: -1000, minY: -1000, maxX: 1000, maxY: 1000 };
     }
 
-    let minX = Infinity, minY = Infinity;
-    let maxX = -Infinity, maxY = -Infinity;
+    // 🏢 ADR-158: Centralized Infinity Bounds Initialization
+    const bounds = createInfinityBounds();
 
     for (const entity of entities) {
       const points = getPoints(entity);
       for (const point of points) {
-        minX = Math.min(minX, point.x);
-        minY = Math.min(minY, point.y);
-        maxX = Math.max(maxX, point.x);
-        maxY = Math.max(maxY, point.y);
+        bounds.minX = Math.min(bounds.minX, point.x);
+        bounds.minY = Math.min(bounds.minY, point.y);
+        bounds.maxX = Math.max(bounds.maxX, point.x);
+        bounds.maxY = Math.max(bounds.maxY, point.y);
       }
     }
 
-    if (minX === Infinity) {
+    // 🏢 ADR-158: Use centralized isInfinityBounds check
+    if (isInfinityBounds(bounds)) {
       return { minX: -1000, minY: -1000, maxX: 1000, maxY: 1000 };
     }
 
     // Add margin (10% or minimum 100 units)
-    const margin = Math.max((maxX - minX), (maxY - minY)) * 0.1 || 100;
+    const margin = Math.max((bounds.maxX - bounds.minX), (bounds.maxY - bounds.minY)) * 0.1 || 100;
     return {
-      minX: minX - margin,
-      minY: minY - margin,
-      maxX: maxX + margin,
-      maxY: maxY + margin
+      minX: bounds.minX - margin,
+      minY: bounds.minY - margin,
+      maxX: bounds.maxX + margin,
+      maxY: bounds.maxY + margin
     };
   }
 }

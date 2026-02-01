@@ -10,6 +10,8 @@ import { BaseSnapEngine } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-149: Centralized Snap Engine Priorities
+import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class NearestSnapEngine extends BaseSnapEngine {
 
@@ -23,7 +25,8 @@ export class NearestSnapEngine extends BaseSnapEngine {
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
     const candidates: SnapCandidate[] = [];
-    const priority = 8; // Low priority - fallback option
+    // 🏢 ADR-149: Use centralized snap engine priorities
+    const priority = SNAP_ENGINE_PRIORITIES.NEAREST;
     
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.NEAREST);
     let closestPoint: Point2D | null = null;

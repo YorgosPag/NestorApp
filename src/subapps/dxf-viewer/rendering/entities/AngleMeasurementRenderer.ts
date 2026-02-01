@@ -27,9 +27,12 @@ import { isAngleMeasurementEntity } from '../../types/entities';
 // 🏢 ADR-073: Centralized Bisector Angle
 // 🏢 ADR-077: Centralized TAU Constant
 import { extractAngleMeasurementPoints, calculateDistance, calculateAngle } from './shared';
-import { bisectorAngle, TAU } from './shared/geometry-utils';
+// 🏢 ADR-134: Centralized Angle Difference Normalization
+import { bisectorAngle, normalizeAngleDiff } from './shared/geometry-utils';
 // 🏢 ADR-090: Centralized Number Formatting
 import { formatAngle } from './shared/distance-label-utils';
+// 🏢 ADR-140: Centralized Angle Measurement Visualization Constants
+import { RENDER_GEOMETRY } from '../../config/text-rendering-config';
 
 export class AngleMeasurementRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -113,15 +116,14 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
     this.renderDistanceTextPhaseAware(vertex, point1, screenVertex, screenPoint1, entity, options);
     this.renderDistanceTextPhaseAware(vertex, point2, screenVertex, screenPoint2, entity, options);
 
-    // 🏢 ENTERPRISE: Centralized arc rendering (orange dashed arc)
-    const arcRadius = 40; // Screen pixels
-    // 🏢 ADR-066: Use centralized angle calculation
-    const angle1 = calculateAngle(vertex, point1);
-    const angle2 = calculateAngle(vertex, point2);
+    // 🏢 ENTERPRISE: Centralized INTERNAL arc rendering (orange dashed arc)
+    // 🎯 FIX: Χρήση drawInternalAngleArc για σωστά ΕΣΩΤΕΡΙΚΑ τόξα (dot product logic)
+    // 🏢 ADR-140: Use centralized angle measurement constants
+    const arcRadius = RENDER_GEOMETRY.ANGLE_ARC_RADIUS;
 
     // Convert to world coordinates for consistent appearance at all zoom levels
     const arcRadiusWorld = arcRadius / this.transform.scale;
-    this.drawCentralizedArc(vertex.x, vertex.y, arcRadiusWorld, angle1, angle2);
+    this.drawInternalAngleArc(vertex, point1, point2, arcRadiusWorld);
 
     // 🏢 ENTERPRISE: Centralized angle text rendering (fuchsia)
     this.drawAngleText(screenVertex, screenPoint1, screenPoint2, angle);
@@ -151,10 +153,8 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
     // 🏢 ADR-073: Use centralized bisector angle calculation
     let bisectorAngleValue = bisectorAngle(angle1, angle2);
 
-    // Normalize angle difference to [-π, π]
-    let angleDiff = angle2 - angle1;
-    while (angleDiff > Math.PI) angleDiff -= TAU;
-    while (angleDiff < -Math.PI) angleDiff += TAU;
+    // 🏢 ADR-134: Use centralized angle difference normalization
+    const angleDiff = normalizeAngleDiff(angle2 - angle1);
 
     // If angle is > 180°, flip bisector to exterior
     if (Math.abs(angleDiff) > Math.PI) {
@@ -162,7 +162,8 @@ export class AngleMeasurementRenderer extends BaseEntityRenderer {
     }
 
     // Text offset from vertex (screen pixels for consistent appearance)
-    const textDistance = 50;
+    // 🏢 ADR-140: Use centralized angle measurement constants
+    const textDistance = RENDER_GEOMETRY.ANGLE_TEXT_DISTANCE;
     const textX = vertex.x + Math.cos(bisectorAngleValue) * textDistance;
     const textY = vertex.y + Math.sin(bisectorAngleValue) * textDistance;
 

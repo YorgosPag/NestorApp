@@ -4,7 +4,8 @@
  */
 
 import type { UIElementSettings } from '../core/UIRenderer';
-import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ADR-134: Centralized Opacity Constants
+import { UI_COLORS, OPACITY } from '../../../config/color-config';
 
 /**
  * 🎯 ORIGIN MARKERS SETTINGS
@@ -33,7 +34,7 @@ export const DEFAULT_ORIGIN_MARKERS_SETTINGS: OriginMarkersSettings = {
   // UIElementSettings
   enabled: false,             // 🚫 OFF by default - debug only
   visible: true,              // Visible όταν enabled
-  opacity: 0.8,               // Slightly transparent
+  opacity: OPACITY.MEDIUM,    // 🏢 ADR-134: Centralized opacity (0.8) - Slightly transparent
   zIndex: 1000,               // Top-most layer για debugging
 
   // Origin crosshair

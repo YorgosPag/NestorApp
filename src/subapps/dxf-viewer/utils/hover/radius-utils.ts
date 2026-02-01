@@ -29,7 +29,8 @@ export function renderRadiusWithMeasurement(
   // Add radius measurement text at midpoint
   const midX = (screenCenter.x + radiusEndX) / 2;
   const midY = (screenCenter.y + radiusEndY) / 2;
-  const textY = midY - (HOVER_CONFIG.offsets?.gripAvoidance || 15);
+  // 🏢 ADR-138: Removed fallback || 15 - HOVER_CONFIG.offsets.gripAvoidance is always defined (= 20)
+  const textY = midY - HOVER_CONFIG.offsets.gripAvoidance;
 
   ctx.save();
   ctx.fillStyle = HOVER_CONFIG.colors?.distance || UI_COLORS.MEASUREMENT_TEXT;

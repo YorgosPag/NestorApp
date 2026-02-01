@@ -12,6 +12,8 @@ import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
 import { UI_COLORS } from '../../config/color-config';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault } from '../../config/layer-config';
+// 🏢 ADR-142: Centralized Default Font Size
+import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 // CanvasProvider removed - not needed for Canvas V2
 // OverlayCanvas import removed - it was dead code
 import { FloatingPanelContainer } from '../../ui/FloatingPanelContainer';
@@ -31,12 +33,13 @@ import type { OverlayEditorMode, Status, OverlayKind, Overlay } from '../../over
 import type { RegionStatus } from '../../types/overlay';
 import { getStatusColors } from '../../config/color-mapping';
 import { createOverlayHandlers } from '../../overlays/types';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { calculateDistance, squaredDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ENTERPRISE (2026-01-31): Import pointToLineDistance for Circle TTT hit testing
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-079: Centralized Movement Detection Constants
 // 🏢 ADR-099: Centralized Polygon Tolerances
-import { MOVEMENT_DETECTION, POLYGON_TOLERANCES } from '../../config/tolerance-config';
+// 🏢 ADR-147: Centralized Hit Tolerance for Entity Picking
+import { MOVEMENT_DETECTION, POLYGON_TOLERANCES, TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // 🏢 ENTERPRISE (2026-01-25): Edge detection for polygon vertex insertion
 import { findOverlayEdgeForGrip } from '../../utils/entity-conversion';
 // 🏢 ENTERPRISE (2026-01-25): Centralized Grip Settings via Provider (CANONICAL - SINGLE SOURCE OF TRUTH)
@@ -50,6 +53,7 @@ import { isLineEntity, isPolylineEntity, type Entity } from '../../types/entitie
 import { useZoom } from '../../systems/zoom';
 import {
   CoordinateTransforms,
+  COORDINATE_LAYOUT,
   getPointerSnapshotFromElement,
   getScreenPosFromEvent,
   screenToWorldWithSnapshot,
@@ -107,6 +111,8 @@ import { useOverlayLayers } from '../../hooks/layers';
 import { useSpecialTools } from '../../hooks/tools';
 // 🏢 ENTERPRISE (2026-01-31): Centralized grip system state management - ADR-XXX
 import { useGripSystem } from '../../hooks/grips';
+// 🏢 ADR-119: UnifiedFrameScheduler for centralized RAF management
+import { UnifiedFrameScheduler } from '../../rendering/core/UnifiedFrameScheduler';
 
 /**
  * Renders the main canvas area, including the renderer and floating panels.
@@ -392,10 +398,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   //           1. RAF: Περιμένει το επόμενο paint frame
   //           2. setTimeout: Δίνει χρόνο στον browser να κάνει reflow
   // RESULT: Το viewport έχει σωστές dimensions ΠΡΙΝ ο χρήστης κάνει click
+  // 🏢 ADR-119: Migrated to UnifiedFrameScheduler.scheduleOnceDelayed for centralized RAF management
   React.useEffect(() => {
-    let rafId: number;
-    let timeoutId: ReturnType<typeof setTimeout>;
-
     const forceViewportUpdate = () => {
       const dxfCanvas = dxfCanvasRef?.current?.getCanvas?.();
       if (dxfCanvas && dxfCanvas instanceof HTMLCanvasElement) {
@@ -406,18 +410,15 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
       }
     };
 
-    // Double-RAF pattern για σίγουρη layout stabilization
-    // 🏢 ADR-045: Using centralized TIMING constant (not hardcoded value)
-    rafId = requestAnimationFrame(() => {
-      timeoutId = setTimeout(() => {
-        requestAnimationFrame(forceViewportUpdate);
-      }, PANEL_LAYOUT.TIMING.VIEWPORT_LAYOUT_STABILIZATION);
-    });
+    // 🏢 ADR-119: Use UnifiedFrameScheduler for centralized RAF coordination
+    // Pattern: RAF → setTimeout → RAF ensures layout is stable before measurement
+    const cancelScheduled = UnifiedFrameScheduler.scheduleOnceDelayed(
+      'canvas-section-viewport-layout',
+      forceViewportUpdate,
+      PANEL_LAYOUT.TIMING.VIEWPORT_LAYOUT_STABILIZATION
+    );
 
-    return () => {
-      cancelAnimationFrame(rafId);
-      clearTimeout(timeoutId);
-    };
+    return cancelScheduled;
   }, []); // Empty deps - run once on mount
 
   // ✅ AUTO FIT TO VIEW: Trigger existing fit-to-view event after canvas mount
@@ -758,11 +759,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           case 'text': {
             // ╔════════════════════════════════════════════════════════════════════╗
             // ║ ⚠️ VERIFIED WORKING (2026-01-03) - ΜΗΝ ΑΛΛΑΞΕΤΕ!                   ║
-            // ║ height || fontSize || 12 είναι η ΣΩΣΤΗ σειρά προτεραιότητας       ║
+            // ║ height || fontSize || DEFAULT_FONT_SIZE είναι η ΣΩΣΤΗ σειρά       ║
             // ║ ΜΗΝ αλλάξετε σε fontSize || height - ΧΑΛΑΕΙ τα κείμενα!           ║
+            // ║ 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback        ║
             // ╚════════════════════════════════════════════════════════════════════╝
             const textEntity = entity as typeof entity & { position: Point2D; text: string; fontSize?: number; height?: number; rotation?: number };
-            const textHeight = textEntity.height || textEntity.fontSize || 12;
+            const textHeight = textEntity.height || textEntity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
             return { ...base, type: 'text' as const, position: textEntity.position, text: textEntity.text, height: textHeight, rotation: textEntity.rotation } as DxfEntityUnion;
           }
           case 'angle-measurement': {
@@ -997,7 +999,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
       if (scene?.entities) {
         // Find entity at click point (check lines and polylines only)
-        const hitTolerance = 10 / transform.scale; // 10 screen pixels in world units
+        // 🏢 ADR-147: Use centralized SNAP_DEFAULT tolerance for entity picking
+        const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale; // screen pixels in world units
 
         for (const entity of scene.entities) {
           // 🏢 ADR-102: Use centralized type guards
@@ -1063,7 +1066,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           : null;
 
         if (scene?.entities) {
-          const hitTolerance = 10 / transform.scale;
+          // 🏢 ADR-147: Use centralized SNAP_DEFAULT tolerance for entity picking
+          const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
 
           for (const entity of scene.entities) {
             // 🏢 ADR-102: Use centralized type guard
@@ -1103,7 +1107,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           : null;
 
         if (scene?.entities) {
-          const hitTolerance = 10 / transform.scale;
+          // 🏢 ADR-147: Use centralized SNAP_DEFAULT tolerance for entity picking
+          const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / transform.scale;
 
           for (const entity of scene.entities) {
             // 🏢 ADR-102: Use centralized type guard
@@ -1628,9 +1633,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                       // 1. Check vertex grips first (higher priority)
                       for (let i = 0; i < overlay.polygon.length; i++) {
                         const vertex = overlay.polygon[i];
-                        const dx = worldPoint.x - vertex[0];
-                        const dy = worldPoint.y - vertex[1];
-                        const distSq = dx * dx + dy * dy; // 🚀 PERF: Skip sqrt
+                        // 🏢 ADR-157: Use centralized squaredDistance (ADR-109)
+                        const distSq = squaredDistance(worldPoint, { x: vertex[0], y: vertex[1] });
                         const toleranceSq = gripToleranceWorld * gripToleranceWorld;
 
                         if (distSq < toleranceSq) {
@@ -1794,9 +1798,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
             isActive={crosshairSettings.enabled}
             // ✅ ADR-008: REMOVED viewport prop - canvas gets actual size from layout via ResizeObserver
             rulerMargins={{
-              left: rulerSettings.width ?? 30,
-              top: 0,
-              bottom: 0
+              left: rulerSettings.width ?? COORDINATE_LAYOUT.RULER_LEFT_WIDTH,
+              top: rulerSettings.height ?? COORDINATE_LAYOUT.RULER_TOP_HEIGHT,
+              bottom: COORDINATE_LAYOUT.MARGINS.bottom
             }}
             className={`absolute ${PANEL_LAYOUT.POSITION.LEFT_0} ${PANEL_LAYOUT.POSITION.RIGHT_0} ${PANEL_LAYOUT.POSITION.TOP_0} ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             style={{ height: `calc(100% - ${rulerSettings.height ?? 30}px)` }}

@@ -126,7 +126,8 @@ export class EnterpriseContactSaver {
     }
 
     // ========================================================================
-    // REMOVE FLAT FIELDS - They should not exist in database
+    // REMOVE FLAT FIELDS FROM PAYLOAD
+    // Note: This removes from payload only. Service layer handles deleteField() for updates
     // ========================================================================
 
     delete enterpriseData.street;
@@ -134,6 +135,8 @@ export class EnterpriseContactSaver {
     delete enterpriseData.city;
     delete enterpriseData.postalCode;
     delete enterpriseData.website;
+    delete enterpriseData.email;
+    delete enterpriseData.phone;
 
     console.log('✅ ENTERPRISE SAVER: Conversion complete');
     return enterpriseData as EnterpriseContactData;
@@ -213,6 +216,16 @@ export class EnterpriseContactSaver {
       // Replace all websites for now (simpler logic)
       updatedData.websites = newData.websites;
     }
+
+    // Remove legacy flat fields from the data object
+    // Note: Service layer will handle actual Firestore deletion with deleteField()
+    delete (updatedData as Record<string, unknown>).email;
+    delete (updatedData as Record<string, unknown>).phone;
+    delete (updatedData as Record<string, unknown>).street;
+    delete (updatedData as Record<string, unknown>).streetNumber;
+    delete (updatedData as Record<string, unknown>).city;
+    delete (updatedData as Record<string, unknown>).postalCode;
+    delete (updatedData as Record<string, unknown>).website;
 
     console.log('✅ ENTERPRISE SAVER: Update complete');
     return updatedData;

@@ -10,6 +10,8 @@ import { EntityRendererComposite } from '../rendering/core/EntityRendererComposi
 import type { Point2D, ViewTransform, GripInfo } from '../rendering/types/Types';
 import type { GripSettings, GripInteractionState } from '../types/gripSettings';
 import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-151: Centralized grip tolerance
+import { TOLERANCE_CONFIG } from '../config/tolerance-config';
 
 // ✅ ENTERPRISE: EntityModel now imported from centralized entity system
 // ✅ REMOVED DUPLICATE: No need for local EntityModel interface
@@ -90,7 +92,7 @@ export class EntityRenderer {
     this.composite.renderEntities(entities as Entity[], options);
   }
 
-  findGripAtPoint(entity: EntityModel, screenPoint: Point2D, tolerance: number = 8): GripInfo | null {
+  findGripAtPoint(entity: EntityModel, screenPoint: Point2D, tolerance: number = TOLERANCE_CONFIG.GRIP_APERTURE): GripInfo | null {
     return this.composite.findGripAtPoint(entity as Entity, screenPoint, tolerance);
   }
 

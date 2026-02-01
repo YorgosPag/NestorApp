@@ -4,6 +4,10 @@ import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
 import { getAciColor } from '../settings/standards/aci';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault } from '../config/layer-config';
+// 🏢 ADR-142: Centralized Default Font Size
+import { TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
+// 🏢 ADR-158: Centralized Infinity Bounds Initialization
+import { createInfinityBounds } from '../config/geometry-constants';
 
 export class DxfSceneBuilder {
   static buildScene(content: string): SceneModel {
@@ -209,38 +213,38 @@ export class DxfSceneBuilder {
   }
 
   static calculateBounds(entities: AnySceneEntity[]) {
-    let minX = Infinity, minY = Infinity;
-    let maxX = -Infinity, maxY = -Infinity;
-    
+    // 🏢 ADR-158: Centralized Infinity Bounds Initialization
+    const bounds = createInfinityBounds();
+
     entities.forEach(entity => {
       switch (entity.type) {
         case 'line':
-          minX = Math.min(minX, entity.start.x, entity.end.x);
-          minY = Math.min(minY, entity.start.y, entity.end.y);
-          maxX = Math.max(maxX, entity.start.x, entity.end.x);
-          maxY = Math.max(maxY, entity.start.y, entity.end.y);
+          bounds.minX = Math.min(bounds.minX, entity.start.x, entity.end.x);
+          bounds.minY = Math.min(bounds.minY, entity.start.y, entity.end.y);
+          bounds.maxX = Math.max(bounds.maxX, entity.start.x, entity.end.x);
+          bounds.maxY = Math.max(bounds.maxY, entity.start.y, entity.end.y);
           break;
         case 'polyline':
           entity.vertices.forEach(v => {
-            minX = Math.min(minX, v.x);
-            minY = Math.min(minY, v.y);
-            maxX = Math.max(maxX, v.x);
-            maxY = Math.max(maxY, v.y);
+            bounds.minX = Math.min(bounds.minX, v.x);
+            bounds.minY = Math.min(bounds.minY, v.y);
+            bounds.maxX = Math.max(bounds.maxX, v.x);
+            bounds.maxY = Math.max(bounds.maxY, v.y);
           });
           break;
         case 'circle':
         case 'arc':
-          minX = Math.min(minX, entity.center.x - entity.radius);
-          minY = Math.min(minY, entity.center.y - entity.radius);
-          maxX = Math.max(maxX, entity.center.x + entity.radius);
-          maxY = Math.max(maxY, entity.center.y + entity.radius);
+          bounds.minX = Math.min(bounds.minX, entity.center.x - entity.radius);
+          bounds.minY = Math.min(bounds.minY, entity.center.y - entity.radius);
+          bounds.maxX = Math.max(bounds.maxX, entity.center.x + entity.radius);
+          bounds.maxY = Math.max(bounds.maxY, entity.center.y + entity.radius);
           break;
       }
     });
-    
+
     return {
-      min: { x: minX, y: minY },
-      max: { x: maxX, y: maxY }
+      min: { x: bounds.minX, y: bounds.minY },
+      max: { x: bounds.maxX, y: bounds.maxY }
     };
   }
 
@@ -332,7 +336,8 @@ export class DxfSceneBuilder {
 
       // Type guard για fontSize
       const textEntity = entity as typeof entity & { fontSize?: number; height?: number };
-      let currentHeight = textEntity.fontSize || textEntity.height || 12;
+      // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
+      let currentHeight = textEntity.fontSize || textEntity.height || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
       let appliedFix = '';
 
       // ╔═══════════════════════════════════════════════════════════════════════╗

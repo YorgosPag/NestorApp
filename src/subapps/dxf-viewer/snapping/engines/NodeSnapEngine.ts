@@ -12,6 +12,8 @@ import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance, pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { processRectangleSnapping } from './shared/snap-engine-utils';
+// 🏢 ADR-149: Centralized Snap Engine Priorities
+import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class NodeSnapEngine extends BaseSnapEngine {
   private spatialIndex: ISpatialIndex | null = null;
@@ -35,7 +37,8 @@ export class NodeSnapEngine extends BaseSnapEngine {
     }
 
     const candidates: SnapCandidate[] = [];
-    const priority = 1; // Very high priority for nodes
+    // 🏢 ADR-149: Use centralized snap engine priorities
+    const priority = SNAP_ENGINE_PRIORITIES.NODE;
 
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.NODE);
 

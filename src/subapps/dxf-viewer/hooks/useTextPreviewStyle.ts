@@ -6,7 +6,8 @@
 import { textStyleStore } from '../stores/TextStyleStore';
 import { UI_COLORS } from '../config/color-config';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
-import { TEXT_METRICS_RATIOS } from '../config/text-rendering-config';
+// 🏢 ADR-142: Centralized Default Font Size
+import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
 
 export interface TextPreviewStyle {
   enabled: boolean;          // ΝΕΟ! Ενεργοποίηση/απενεργοποίηση κειμένου
@@ -40,7 +41,8 @@ export function getTextPreviewStyle(): TextPreviewStyle {
   return {
     enabled: textStyle.enabled !== undefined ? textStyle.enabled : true, // Default: enabled
     fontFamily: textStyle.fontFamily || 'Arial, sans-serif',
-    fontSize: `${textStyle.fontSize || 12}px`,
+    // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
+    fontSize: `${textStyle.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE}px`,
     color: textStyle.color || UI_COLORS.WHITE, // Λευκό default (συνεπές με DXF ρυθμίσεις)
     fontWeight: textStyle.fontWeight || 'normal',
     fontStyle: textStyle.fontStyle || 'normal',
@@ -80,7 +82,8 @@ export function getTextPreviewStyleWithOverride(): TextPreviewStyle {
     return {
       enabled: specificSettings.enabled !== undefined ? specificSettings.enabled : true,
       fontFamily: specificSettings.fontFamily || 'Arial, sans-serif',
-      fontSize: `${specificSettings.fontSize || 12}px`,
+      // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
+      fontSize: `${specificSettings.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE}px`,
       color: specificSettings.color || UI_COLORS.TEST_PREVIEW_RED, // ✅ AutoCAD standard: Red for preview text
       fontWeight: specificSettings.isBold ? 'bold' : 'normal',
       fontStyle: specificSettings.isItalic ? 'italic' : 'normal',

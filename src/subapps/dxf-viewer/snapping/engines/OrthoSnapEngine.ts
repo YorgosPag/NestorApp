@@ -9,7 +9,8 @@ import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/B
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-087: Centralized Snap Engine Configuration
-import { SNAP_SEARCH_RADIUS, SNAP_RADIUS_MULTIPLIERS, SNAP_GEOMETRY } from '../../config/tolerance-config';
+// 🏢 ADR-149: Centralized Snap Engine Priorities
+import { SNAP_SEARCH_RADIUS, SNAP_RADIUS_MULTIPLIERS, SNAP_GEOMETRY, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class OrthoSnapEngine extends BaseSnapEngine {
   private lastPoint: Point2D | null = null;
@@ -24,7 +25,8 @@ export class OrthoSnapEngine extends BaseSnapEngine {
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
     const candidates: SnapCandidate[] = [];
-    const priority = 7; // Medium priority
+    // 🏢 ADR-149: Use centralized snap engine priorities
+    const priority = SNAP_ENGINE_PRIORITIES.ORTHO;
     
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.ORTHO);
     

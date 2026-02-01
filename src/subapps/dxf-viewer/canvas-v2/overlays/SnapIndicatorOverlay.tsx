@@ -14,6 +14,14 @@ import { canvasUI } from '@/styles/design-tokens/canvas';
 import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 // 🏢 ENTERPRISE: Centralized layout tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ADR-137: Centralized Snap Icon Geometry
+import {
+  SNAP_ICON_GEOMETRY,
+  getSnapIconQuarter,
+  getTangentCircleRadius,
+  getGridDotRadius,
+  getNodeDotRadius
+} from '../../rendering/ui/snap/snap-icon-config';
 
 // 🏢 ENTERPRISE NOTE: This component uses a simplified SnapResult interface
 // TODO: Migrate to use ProSnapResult.snappedPoint instead of point when refactoring
@@ -36,16 +44,19 @@ interface SnapIndicatorOverlayProps {
  *
  * @see AutoCAD Object Snap Markers: https://knowledge.autodesk.com/support/autocad
  * @see MicroStation AccuSnap: https://docs.bentley.com
+ * @see ADR-137: Snap Icon Geometry Centralization
  */
-const SNAP_INDICATOR_SIZE = 12; // pixels - CAD standard size
-const SNAP_INDICATOR_HALF = SNAP_INDICATOR_SIZE / 2;
+// 🏢 ADR-137: Using centralized snap icon geometry
+const SNAP_INDICATOR_SIZE = SNAP_ICON_GEOMETRY.SIZE;
+const SNAP_INDICATOR_HALF = SNAP_INDICATOR_SIZE * SNAP_ICON_GEOMETRY.HALF_RATIO;
 
 /**
  * 🎯 ENTERPRISE: Renders industry-standard snap shape based on type
  * Each snap type has a unique geometric symbol for instant recognition
  */
 function SnapShape({ type, color }: { type: string; color: string }) {
-  const strokeWidth = 2;
+  // 🏢 ADR-133: Centralized SVG stroke width
+  const strokeWidth = PANEL_LAYOUT.SVG_ICON.STROKE_WIDTH.STANDARD;
   const size = SNAP_INDICATOR_SIZE;
   const half = SNAP_INDICATOR_HALF;
 
@@ -105,7 +116,8 @@ function SnapShape({ type, color }: { type: string; color: string }) {
 
     // ⊥ PERPENDICULAR: Right angle symbol - AutoCAD standard
     case 'perpendicular':
-      const quarter = half / 2;
+      // 🏢 ADR-137: Using centralized quarter calculation
+      const quarter = getSnapIconQuarter(size);
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <polyline
@@ -119,7 +131,8 @@ function SnapShape({ type, color }: { type: string; color: string }) {
 
     // ║ PARALLEL: Two parallel lines - AutoCAD standard
     case 'parallel':
-      const lineOffset = size / 4;
+      // 🏢 ADR-137: Using centralized quarter calculation (same as perpendicular)
+      const lineOffset = getSnapIconQuarter(size);
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <line x1={strokeWidth} y1={half - lineOffset} x2={size - strokeWidth} y2={half - lineOffset} stroke={color} strokeWidth={strokeWidth} />
@@ -131,7 +144,8 @@ function SnapShape({ type, color }: { type: string; color: string }) {
     case 'tangent':
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle cx={half} cy={half} r={half * 0.5} fill="none" stroke={color} strokeWidth={strokeWidth} />
+          {/* 🏢 ADR-137: Using centralized tangent circle radius (UNIFIED: was 0.5 vs 0.6) */}
+          <circle cx={half} cy={half} r={getTangentCircleRadius(half)} fill="none" stroke={color} strokeWidth={strokeWidth} />
           <line x1={strokeWidth} y1={half} x2={size - strokeWidth} y2={half} stroke={color} strokeWidth={strokeWidth} />
         </svg>
       );
@@ -163,7 +177,8 @@ function SnapShape({ type, color }: { type: string; color: string }) {
     case 'grid':
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle cx={half} cy={half} r={3} fill={color} />
+          {/* 🏢 ADR-137: Using centralized grid dot radius (UNIFIED: was 3 vs 2) */}
+          <circle cx={half} cy={half} r={getGridDotRadius()} fill={color} />
         </svg>
       );
 
@@ -181,7 +196,8 @@ function SnapShape({ type, color }: { type: string; color: string }) {
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <circle cx={half} cy={half} r={half - strokeWidth} fill="none" stroke={color} strokeWidth={strokeWidth} />
-          <circle cx={half} cy={half} r={2} fill={color} />
+          {/* 🏢 ADR-137: Using centralized node dot radius */}
+          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
         </svg>
       );
 

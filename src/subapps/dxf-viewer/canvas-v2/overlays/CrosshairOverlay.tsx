@@ -19,13 +19,15 @@
  * - Full TypeScript support (ZERO any)
  */
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { getCursorSettings, subscribeToCursorSettings, type CursorSettings } from '../../systems/cursor/config';
 import { useCursorState } from '../../systems/cursor/useCursor';
 import { useGripContext } from '../../providers/GripProvider';
 import { portalComponents } from '@/styles/design-tokens';
 import type { Point2D } from '../../rendering/types/Types';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ENTERPRISE: Centralized ruler margins from Single Source of Truth
+import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ADR-088: Centralized Pixel-Perfect Alignment
 import { pixelPerfect } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ✅ ADR-030: UnifiedFrameScheduler Integration
@@ -35,6 +37,8 @@ import { registerDirectRender, getImmediatePosition } from '../../systems/cursor
 // 🏢 ADR-094: Centralized Device Pixel Ratio
 // 🏢 ADR-117: DPI-Aware Pixel Calculations Centralization
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
+// 🏢 ADR-146: Canvas Size Observer Centralization
+import { useCanvasSizeObserver } from '../../hooks/canvas';
 
 interface Viewport {
   width: number;
@@ -59,7 +63,7 @@ export default function CrosshairOverlay({
   className = '',
   isActive = true,
   viewport = { width: 0, height: 0 },
-  rulerMargins = { left: 30, top: 0, bottom: 0 },
+  rulerMargins = COORDINATE_LAYOUT.MARGINS,
   style,
 }: CrosshairOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -96,46 +100,34 @@ export default function CrosshairOverlay({
   const { gripSettings } = useGripContext();
 
   // ============================================================================
-  // 🏢 ENTERPRISE: Canvas Size Management via ResizeObserver
+  // 🏢 ADR-146: Centralized Canvas Size Observer
   // Pattern: ADR-008 - Canvas size from actual layout, not from props
   // ============================================================================
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const handleCanvasSizeChange = useCallback((canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = getDevicePixelRatio(); // 🏢 ADR-094
 
-    const updateCanvasSize = () => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = getDevicePixelRatio(); // 🏢 ADR-094
+    // 🏢 ADR-117: Use centralized toDevicePixels for DPI-aware calculations
+    const w = toDevicePixels(rect.width, dpr);
+    const h = toDevicePixels(rect.height, dpr);
 
-      const cssWidth = rect.width;
-      const cssHeight = rect.height;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
 
-      if (cssWidth === 0 || cssHeight === 0) return;
-
-      // 🏢 ADR-117: Use centralized toDevicePixels for DPI-aware calculations
-      const w = toDevicePixels(cssWidth, dpr);
-      const h = toDevicePixels(cssHeight, dpr);
-
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          ctx.imageSmoothingEnabled = settingsRef.current.performance.precision_mode;
-        }
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.imageSmoothingEnabled = settingsRef.current.performance.precision_mode;
       }
-    };
-
-    updateCanvasSize();
-
-    const resizeObserver = new ResizeObserver(updateCanvasSize);
-    resizeObserver.observe(canvas);
-
-    return () => resizeObserver.disconnect();
+    }
   }, []);
+
+  useCanvasSizeObserver({
+    canvasRef,
+    onSizeChange: handleCanvasSizeChange,
+  });
 
   // ============================================================================
   // 🏢 ENTERPRISE: Crosshair Render Function

@@ -116,6 +116,9 @@ export const STORAGE_TIMING = {
 
   /** Save status display duration (2000ms / 2s) - "Saved" message visibility */
   SAVE_STATUS_DISPLAY: 2000,
+
+  /** Scene auto-save debounce (2000ms / 2s) - Firestore write throttling */
+  SCENE_AUTOSAVE_DEBOUNCE: 2000,
 } as const;
 
 // ============================================

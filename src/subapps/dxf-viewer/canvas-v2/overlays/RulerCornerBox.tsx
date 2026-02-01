@@ -40,6 +40,15 @@ import { MOVEMENT_DETECTION } from '../../config/tolerance-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-081: Centralized percentage formatting
 import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
+// 🏢 ENTERPRISE (2026-02-01): Centralized Menu Icons - ADR-133
+import {
+  FitIcon,
+  ZoomInIcon,
+  ZoomOutIcon,
+  Zoom100Icon,
+  HistoryIcon,
+  OriginMarkerIcon,
+} from '../../ui/icons/MenuIcons';
 
 // ===== TYPES =====
 
@@ -84,78 +93,6 @@ const ZOOM_PRESETS = [
   { label: '200%', scale: 2.0 },
   { label: '400%', scale: 4.0 },
 ] as const;
-
-// ===== ORIGIN MARKER ICON =====
-
-function OriginMarkerIcon({ color }: { color: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {/* Horizontal line */}
-      <line x1="4" y1="12" x2="20" y2="12" />
-      {/* Vertical line */}
-      <line x1="12" y1="4" x2="12" y2="20" />
-      {/* Center circle */}
-      <circle cx="12" cy="12" r="2" fill={color} />
-    </svg>
-  );
-}
-
-// ===== MENU ICONS =====
-
-function FitIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-    </svg>
-  );
-}
-
-function ZoomInIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-      <line x1="11" y1="8" x2="11" y2="14" />
-      <line x1="8" y1="11" x2="14" y2="11" />
-    </svg>
-  );
-}
-
-function ZoomOutIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-      <line x1="8" y1="11" x2="14" y2="11" />
-    </svg>
-  );
-}
-
-function Zoom100Icon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <text x="12" y="15" textAnchor="middle" fontSize="8" fill="currentColor">1:1</text>
-    </svg>
-  );
-}
-
-function HistoryIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-      <path d="M3 3v5h5" />
-    </svg>
-  );
-}
 
 // ===== MAIN COMPONENT =====
 

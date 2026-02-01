@@ -38,6 +38,8 @@ import {
   isArcEntity,
   isRectangleEntity
 } from '../../types/entities';
+// 🏢 ADR-149: Centralized Snap Engine Priorities
+import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 // 🚀 PERFORMANCE: Spatial grid cell size for intersection lookup
 const GRID_CELL_SIZE = 100; // World units - tune based on typical DXF scale
@@ -149,7 +151,8 @@ export class IntersectionSnapEngine extends BaseSnapEngine {
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
     const candidates: SnapCandidate[] = [];
-    const priority = 0; // Highest priority for intersections
+    // 🏢 ADR-149: Use centralized snap engine priorities
+    const priority = SNAP_ENGINE_PRIORITIES.INTERSECTION;
 
     // 🚀 PERFORMANCE: Use pre-computed cache with spatial grid lookup
     // This is O(1) instead of O(n²) on every mouse move!

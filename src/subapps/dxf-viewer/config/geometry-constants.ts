@@ -164,3 +164,61 @@ export function isEmptyBounds(bounds: BoundingBox): boolean {
  * Kept for backward compatibility with rulers-grid system
  */
 export const DEFAULT_ORIGIN: Readonly<Point2D> = WORLD_ORIGIN;
+
+// ============================================================================
+// 🏢 ADR-158: INFINITY BOUNDS INITIALIZATION
+// ============================================================================
+
+/**
+ * 🏢 ADR-158: Infinity Bounds structure for accumulation algorithms
+ *
+ * Use for iterating points/entities to find min/max values.
+ * The Infinity pattern ensures first point always wins.
+ */
+export interface InfinityBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/**
+ * 🏢 ADR-158: Creates bounds initialized with Infinity for accumulation
+ *
+ * Use when iterating points/entities to find min/max values.
+ * Pattern: minX/minY start at +Infinity, maxX/maxY start at -Infinity
+ * so that any real value will immediately become the new min/max.
+ *
+ * @returns Fresh InfinityBounds object for accumulation
+ *
+ * @example
+ * const bounds = createInfinityBounds();
+ * for (const point of points) {
+ *   bounds.minX = Math.min(bounds.minX, point.x);
+ *   bounds.minY = Math.min(bounds.minY, point.y);
+ *   bounds.maxX = Math.max(bounds.maxX, point.x);
+ *   bounds.maxY = Math.max(bounds.maxY, point.y);
+ * }
+ * // Now bounds contains the tight bounding box of all points
+ */
+export function createInfinityBounds(): InfinityBounds {
+  return {
+    minX: Infinity,
+    minY: Infinity,
+    maxX: -Infinity,
+    maxY: -Infinity
+  };
+}
+
+/**
+ * 🏢 ADR-158: Check if bounds are still at initial Infinity state
+ *
+ * After creating with createInfinityBounds(), if no points were processed,
+ * the bounds will still be at Infinity. This checks for that state.
+ *
+ * @param bounds - The bounds to check
+ * @returns true if bounds are still at Infinity (no points processed)
+ */
+export function isInfinityBounds(bounds: InfinityBounds): boolean {
+  return bounds.minX === Infinity;
+}

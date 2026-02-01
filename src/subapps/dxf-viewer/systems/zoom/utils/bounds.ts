@@ -9,11 +9,16 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { DxfScene } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../../canvas-v2/layer-canvas/layer-types';
 // 🏢 ADR-107: Centralized UI Size Defaults and Text Metrics Ratios
-import { UI_SIZE_DEFAULTS, TEXT_METRICS_RATIOS } from '../../../config/text-rendering-config';
+// 🏢 ADR-142: Centralized Default Font Size
+import { UI_SIZE_DEFAULTS, TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../../../config/text-rendering-config';
 // 🏢 ADR-114: Centralized Bounding Box Calculation
 import { calculateBoundingBox } from '../../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { EMPTY_BOUNDS, DEFAULT_BOUNDS } from '../../../config/geometry-constants';
+// 🏢 ADR-158: Centralized Infinity Bounds Initialization
+import { createInfinityBounds, isInfinityBounds } from '../../../config/geometry-constants';
+// 🏢 ADR: Centralized point validation
+import { isValidPoint, isValidPointStrict } from '../../../rendering/entities/shared/entity-validation-utils';
 
 // ============================================================================
 // 🏢 CANONICAL TYPES
@@ -89,17 +94,17 @@ export function createBoundsFromDxfScene(
   for (const entity of scene.entities) {
     switch (entity.type) {
       case 'line':
-        // 🛡️ GUARD: Ensure start/end exist and have valid coordinates
-        if (entity.start && entity.end &&
-            isFinite(entity.start.x) && isFinite(entity.start.y) &&
-            isFinite(entity.end.x) && isFinite(entity.end.y)) {
+        // 🛡️ GUARD: Ensure start/end exist and have valid finite coordinates
+        // 🏢 ADR: Use centralized isValidPointStrict for bounds calculations
+        if (isValidPointStrict(entity.start) && isValidPointStrict(entity.end)) {
           allPoints.push(entity.start, entity.end);
         }
         break;
       case 'circle':
-        // 🛡️ GUARD: Ensure center/radius exist
-        if (entity.center && isFinite(entity.radius) &&
-            isFinite(entity.center.x) && isFinite(entity.center.y)) {
+        // 🛡️ GUARD: Ensure center/radius exist and are finite
+        // 🏢 ADR: Use centralized isValidPointStrict for bounds calculations
+        // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
+        if (isValidPointStrict(entity.center) && Number.isFinite(entity.radius)) {
           allPoints.push(
             { x: entity.center.x - entity.radius, y: entity.center.y - entity.radius },
             { x: entity.center.x + entity.radius, y: entity.center.y + entity.radius }
@@ -107,9 +112,10 @@ export function createBoundsFromDxfScene(
         }
         break;
       case 'arc':
-        // 🛡️ GUARD: Ensure center/radius exist
-        if (entity.center && isFinite(entity.radius) &&
-            isFinite(entity.center.x) && isFinite(entity.center.y)) {
+        // 🛡️ GUARD: Ensure center/radius exist and are finite
+        // 🏢 ADR: Use centralized isValidPointStrict for bounds calculations
+        // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
+        if (isValidPointStrict(entity.center) && Number.isFinite(entity.radius)) {
           allPoints.push(
             { x: entity.center.x - entity.radius, y: entity.center.y - entity.radius },
             { x: entity.center.x + entity.radius, y: entity.center.y + entity.radius }
@@ -118,22 +124,23 @@ export function createBoundsFromDxfScene(
         break;
       case 'polyline':
         // 🛡️ GUARD: Ensure vertices exist and are valid
+        // 🏢 ADR: Use centralized isValidPointStrict for bounds calculations
         if (entity.vertices && Array.isArray(entity.vertices)) {
-          const validVertices = entity.vertices.filter(
-            v => v && isFinite(v.x) && isFinite(v.y)
-          );
+          const validVertices = entity.vertices.filter(isValidPointStrict);
           allPoints.push(...validVertices);
         }
         break;
       case 'text':
-        // 🛡️ GUARD: Ensure position exists
-        if (entity.position && isFinite(entity.position.x) && isFinite(entity.position.y)) {
+        // 🛡️ GUARD: Ensure position exists and is finite
+        // 🏢 ADR: Use centralized isValidPointStrict for bounds calculations
+        if (isValidPointStrict(entity.position)) {
           allPoints.push(entity.position);
           // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
-          const textWidth = (entity.text?.length || 1) * (entity.height || 12) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
+          // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
+          const textWidth = (entity.text?.length || 1) * (entity.height || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
           allPoints.push({
             x: entity.position.x + textWidth,
-            y: entity.position.y + (entity.height || 12)
+            y: entity.position.y + (entity.height || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE)
           });
         }
         break;
@@ -208,11 +215,12 @@ export function createCombinedBounds(
 export function isValidBounds(bounds: { min: Point2D; max: Point2D } | null): boolean {
   if (!bounds) return false;
 
+  // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
   return (
-    isFinite(bounds.min.x) &&
-    isFinite(bounds.min.y) &&
-    isFinite(bounds.max.x) &&
-    isFinite(bounds.max.y) &&
+    Number.isFinite(bounds.min.x) &&
+    Number.isFinite(bounds.min.y) &&
+    Number.isFinite(bounds.max.x) &&
+    Number.isFinite(bounds.max.y) &&
     bounds.max.x > bounds.min.x &&
     bounds.max.y > bounds.min.y
   );
@@ -398,20 +406,22 @@ export function getEntityBounds(entity: BoundsEntity): Bounds | null {
     case 'polyline':
     case 'lwpolyline': {
       if (entity.vertices && Array.isArray(entity.vertices) && entity.vertices.length > 0) {
-        let minX = Infinity, minY = Infinity;
-        let maxX = -Infinity, maxY = -Infinity;
+        // 🏢 ADR-158: Centralized Infinity Bounds Initialization
+        const polyBounds = createInfinityBounds();
 
         for (const vertex of entity.vertices) {
-          if (vertex.x !== undefined && vertex.y !== undefined) {
-            minX = Math.min(minX, vertex.x);
-            minY = Math.min(minY, vertex.y);
-            maxX = Math.max(maxX, vertex.x);
-            maxY = Math.max(maxY, vertex.y);
+          // 🏢 ADR: Use centralized isValidPoint for coordinate validation
+          if (isValidPoint(vertex)) {
+            polyBounds.minX = Math.min(polyBounds.minX, vertex.x);
+            polyBounds.minY = Math.min(polyBounds.minY, vertex.y);
+            polyBounds.maxX = Math.max(polyBounds.maxX, vertex.x);
+            polyBounds.maxY = Math.max(polyBounds.maxY, vertex.y);
           }
         }
 
-        if (isFinite(minX)) {
-          return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
+        // 🏢 ADR-158: Use centralized isInfinityBounds check
+        if (!isInfinityBounds(polyBounds)) {
+          return { min: { x: polyBounds.minX, y: polyBounds.minY }, max: { x: polyBounds.maxX, y: polyBounds.maxY } };
         }
       }
       break;
@@ -554,27 +564,26 @@ export function calculateTightBounds(
     return { ...DEFAULT_BOUNDS };
   }
 
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
+  // 🏢 ADR-158: Centralized Infinity Bounds Initialization
+  const bounds = createInfinityBounds();
 
   // ΒΗΜΑ 1: Εύρεση ΑΚΡΙΒΩΝ bounds
   for (const entity of entities) {
     try {
       const entityBounds = getEntityBounds(entity);
       if (entityBounds) {
-        minX = Math.min(minX, entityBounds.min.x);
-        minY = Math.min(minY, entityBounds.min.y);
-        maxX = Math.max(maxX, entityBounds.max.x);
-        maxY = Math.max(maxY, entityBounds.max.y);
+        bounds.minX = Math.min(bounds.minX, entityBounds.min.x);
+        bounds.minY = Math.min(bounds.minY, entityBounds.min.y);
+        bounds.maxX = Math.max(bounds.maxX, entityBounds.max.x);
+        bounds.maxY = Math.max(bounds.maxY, entityBounds.max.y);
       }
     } catch (error) {
       console.warn('Error processing entity bounds:', entity, error);
     }
   }
 
-  if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
+  // 🏢 ADR-158: Use centralized isInfinityBounds check
+  if (isInfinityBounds(bounds)) {
     console.warn('Invalid bounds calculated, using defaults');
     // 🏢 ADR-118: Use centralized DEFAULT_BOUNDS for invalid bounds fallback
     return { ...DEFAULT_BOUNDS };
@@ -582,20 +591,20 @@ export function calculateTightBounds(
 
   // ΒΗΜΑ 2: Optional normalization
   if (normalize) {
-    const offsetX = -minX;
-    const offsetY = -minY;
+    const offsetX = -bounds.minX;
+    const offsetY = -bounds.minY;
     normalizeEntityPositions(entities as MutableBoundsEntity[], offsetX, offsetY);
 
     // Return normalized bounds
     return {
       min: { x: 0, y: 0 },
-      max: { x: maxX - minX, y: maxY - minY }
+      max: { x: bounds.maxX - bounds.minX, y: bounds.maxY - bounds.minY }
     };
   }
 
   return {
-    min: { x: minX, y: minY },
-    max: { x: maxX, y: maxY }
+    min: { x: bounds.minX, y: bounds.minY },
+    max: { x: bounds.maxX, y: bounds.maxY }
   };
 }
 
@@ -643,7 +652,8 @@ export function normalizeEntityPositions(
         case 'lwpolyline': {
           if (entity.vertices && Array.isArray(entity.vertices)) {
             for (const vertex of entity.vertices) {
-              if (vertex.x !== undefined && vertex.y !== undefined) {
+              // 🏢 ADR: Use centralized isValidPoint for coordinate validation
+              if (isValidPoint(vertex)) {
                 vertex.x += offsetX;
                 vertex.y += offsetY;
               }

@@ -6,6 +6,8 @@
 
 import type { ColorLayer } from '../canvas-v2/layer-canvas/layer-types';
 import type { Point2D } from '../rendering/types/Types';
+// 🏢 ADR-158: Centralized Infinity Bounds Initialization
+import { createInfinityBounds } from '../config/geometry-constants';
 
 export interface OverlayEntity {
   id: string;
@@ -32,21 +34,21 @@ export class ColorLayerUtils {
     const overlayEntities = this.toOverlayEntities(colorLayers);
     if (overlayEntities.length === 0) return null;
 
-    let minX = Infinity, minY = Infinity;
-    let maxX = -Infinity, maxY = -Infinity;
+    // 🏢 ADR-158: Centralized Infinity Bounds Initialization
+    const bounds = createInfinityBounds();
 
     for (const entity of overlayEntities) {
       for (const vertex of entity.vertices) {
-        minX = Math.min(minX, vertex.x);
-        minY = Math.min(minY, vertex.y);
-        maxX = Math.max(maxX, vertex.x);
-        maxY = Math.max(maxY, vertex.y);
+        bounds.minX = Math.min(bounds.minX, vertex.x);
+        bounds.minY = Math.min(bounds.minY, vertex.y);
+        bounds.maxX = Math.max(bounds.maxX, vertex.x);
+        bounds.maxY = Math.max(bounds.maxY, vertex.y);
       }
     }
 
     return {
-      min: { x: minX, y: minY },
-      max: { x: maxX, y: maxY }
+      min: { x: bounds.minX, y: bounds.minY },
+      max: { x: bounds.maxX, y: bounds.maxY }
     };
   }
 

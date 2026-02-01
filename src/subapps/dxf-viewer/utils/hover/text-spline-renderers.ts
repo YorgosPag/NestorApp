@@ -9,9 +9,11 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { HoverRenderContext } from './types';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { UI_COLORS } from '../../config/color-config';
+// 🏢 ADR-083: Centralized Line Dash Patterns
 // 🏢 ADR-086: Centralized Font Definitions
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
-import { UI_FONTS, buildUIFont } from '../../config/text-rendering-config';
+// 🏢 ADR-142: Centralized Default Font Size
+import { UI_FONTS, buildUIFont, LINE_DASH_PATTERNS, TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 // 🏢 ADR-086: Centralized Angle Formatting
 import { formatAngle } from '../../rendering/entities/shared/distance-label-utils';
 import { isTextEntity, isAngleMeasurementEntity } from '../../types/entities';
@@ -22,7 +24,8 @@ export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRe
 
   const position = entity.position;
   const text = entity.text;
-  const height = entity.fontSize || 12;
+  // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
+  const height = entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
   
   if (!position || !text) return;
   
@@ -37,7 +40,7 @@ export function renderTextHover({ entity, ctx, worldToScreen, options }: HoverRe
   
   // Draw bounding rectangle
   ctx.strokeStyle = UI_COLORS.BRIGHT_YELLOW;
-  ctx.setLineDash([2, 2]);
+  ctx.setLineDash([...LINE_DASH_PATTERNS.TEXT_BOUNDING]); // 🏢 ADR-083
   ctx.strokeRect(screenPos.x, screenPos.y - screenHeight, width, screenHeight);
   
   ctx.restore();

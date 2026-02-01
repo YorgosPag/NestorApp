@@ -9,7 +9,13 @@
  */
 
 // dialogComponents removed - not available in design-tokens
-import { UI_COLORS, withOpacity } from '../config/color-config';
+import {
+  UI_COLORS,
+  withOpacity,
+  FOCUS_RING_SHADOWS,
+  BUTTON_HOVER_COLORS,
+  FORM_BORDER_COLORS
+} from '../config/color-config';
 
 // 🏢 ENTERPRISE: Type-safe button style interface
 interface ButtonStyle {
@@ -40,7 +46,7 @@ interface DialogComponentsType {
 // Mock dialogComponents for TypeScript compatibility
 const dialogComponents: DialogComponentsType = {
   modal: {
-    backdrop: { position: 'fixed' as const, inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 50 },
+    backdrop: { position: 'fixed' as const, inset: 0, backgroundColor: UI_COLORS.MODAL_OVERLAY_HEAVY, zIndex: 50 },
     content: { position: 'relative' as const, backgroundColor: 'white', borderRadius: '0.5rem', padding: '1.5rem' },
     header: { marginBottom: '1rem' },
     title: { fontSize: '1.5rem', fontWeight: '600' },
@@ -49,14 +55,14 @@ const dialogComponents: DialogComponentsType = {
   form: {
     fieldset: { marginBottom: '1rem' },
     label: { fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' },
-    select: { width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #ccc' }
+    select: { width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: `1px solid ${FORM_BORDER_COLORS.DEFAULT}` }
   },
   buttons: {
-    primary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.BUTTON_PRIMARY, color: 'white', '&:focus': { boxShadow: `0 0 0 3px ${UI_COLORS.PRIMARY_FILL_20}` }, '&:hover': { backgroundColor: UI_COLORS.BUTTON_PRIMARY_HOVER } },
-    secondary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.BUTTON_SECONDARY, color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(107, 114, 128, 0.2)' }, '&:hover': { backgroundColor: UI_COLORS.BUTTON_SECONDARY_HOVER } },
-    success: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.SUCCESS, color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.2)' }, '&:hover': { backgroundColor: '#059669' } },
-    destructive: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.ERROR, color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(239, 68, 68, 0.2)' }, '&:hover': { backgroundColor: '#DC2626' } },
-    warning: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.WARNING, color: 'white', '&:focus': { boxShadow: '0 0 0 3px rgba(245, 158, 11, 0.2)' }, '&:hover': { backgroundColor: '#D97706' } }
+    primary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.BUTTON_PRIMARY, color: 'white', '&:focus': { boxShadow: `0 0 0 3px ${FOCUS_RING_SHADOWS.PRIMARY}` }, '&:hover': { backgroundColor: UI_COLORS.BUTTON_PRIMARY_HOVER } },
+    secondary: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.BUTTON_SECONDARY, color: 'white', '&:focus': { boxShadow: `0 0 0 3px ${FOCUS_RING_SHADOWS.SECONDARY}` }, '&:hover': { backgroundColor: UI_COLORS.BUTTON_SECONDARY_HOVER } },
+    success: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.SUCCESS, color: 'white', '&:focus': { boxShadow: `0 0 0 3px ${FOCUS_RING_SHADOWS.SUCCESS}` }, '&:hover': { backgroundColor: BUTTON_HOVER_COLORS.SUCCESS } },
+    destructive: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.ERROR, color: 'white', '&:focus': { boxShadow: `0 0 0 3px ${FOCUS_RING_SHADOWS.DESTRUCTIVE}` }, '&:hover': { backgroundColor: BUTTON_HOVER_COLORS.DESTRUCTIVE } },
+    warning: { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.WARNING, color: 'white', '&:focus': { boxShadow: `0 0 0 3px ${FOCUS_RING_SHADOWS.WARNING}` }, '&:hover': { backgroundColor: BUTTON_HOVER_COLORS.WARNING } }
   }
 };
 
@@ -123,7 +129,7 @@ export const getSelectFocusHandlers = () => ({
  * Button hover handlers for action buttons
  */
 export const getButtonHoverHandlers = (variant: 'primary' | 'secondary' | 'success' | 'destructive' | 'warning') => {
-  const baseStyles = dialogComponents.buttons?.[variant] || { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: '#6B7280', color: 'white' };
+  const baseStyles = dialogComponents.buttons?.[variant] || { padding: '0.5rem 1rem', borderRadius: '0.375rem', backgroundColor: UI_COLORS.BUTTON_SECONDARY, color: 'white' };
   const hoverStyle = baseStyles['&:hover'];
 
   return {

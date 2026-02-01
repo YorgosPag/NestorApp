@@ -36,6 +36,8 @@ import { calculateDistance, calculateAngle } from './geometry-rendering-utils';
 import { FormatterRegistry, type Precision } from '../../../formatting';
 // 🏢 ADR-112: Centralized Text Rotation Pattern
 import { normalizeTextAngle } from './geometry-utils';
+// 🏢 ADR-XXX: Centralized Overlay Colors
+import { UI_COLORS } from '../../../config/color-config';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -68,7 +70,7 @@ export interface DistanceLabelOptions {
  */
 export const PREVIEW_LABEL_DEFAULTS: Required<DistanceLabelOptions> = {
   showBackground: true,
-  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+  backgroundColor: UI_COLORS.MODAL_OVERLAY_MEDIUM,
   padding: 4,
   verticalOffset: -10,
   rotateWithLine: false,
@@ -82,7 +84,7 @@ export const PREVIEW_LABEL_DEFAULTS: Required<DistanceLabelOptions> = {
  */
 export const FINAL_LABEL_DEFAULTS: Required<DistanceLabelOptions> = {
   showBackground: false,
-  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+  backgroundColor: UI_COLORS.MODAL_OVERLAY_MEDIUM,
   padding: 4,
   verticalOffset: 0,
   rotateWithLine: true,

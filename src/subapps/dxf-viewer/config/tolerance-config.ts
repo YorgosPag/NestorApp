@@ -264,3 +264,86 @@ export const MEASUREMENT_OFFSETS = {
   /** Top edge offset adjustment for labels near top edge (60 pixels) */
   TOP_EDGE: 60,
 } as const;
+
+// ===== RULER CONFIGURATION =====
+// 🏢 ADR-148: Centralized Ruler Grid Configuration (2026-02-01)
+
+/**
+ * 🎯 RULER CONFIGURATION
+ * Centralized ruler tick spacing for LayerRenderer
+ *
+ * Used for:
+ * - Ruler label positioning at major tick intervals
+ * - Horizontal and vertical ruler rendering
+ *
+ * @example
+ * import { RULER_CONFIG } from '../config/tolerance-config';
+ * const step = RULER_CONFIG.MAJOR_TICK_SPACING * transform.scale;
+ */
+export const RULER_CONFIG = {
+  /** Major tick spacing in world units (100) */
+  MAJOR_TICK_SPACING: 100,
+} as const;
+
+// ===== SNAP ENGINE PRIORITIES =====
+// 🏢 ADR-149: Centralized Snap Engine Priority Configuration (2026-02-01)
+
+/**
+ * 🎯 SNAP ENGINE PRIORITIES
+ * Priority values for snap engines. Lower values = higher priority.
+ *
+ * Hierarchy:
+ * 0 = Highest (Endpoint, Intersection) - Most precise geometric points
+ * 1 = Very High (Midpoint, Node) - Important construction points
+ * 2 = High (Insertion) - Text/block insertion points
+ * 3 = Medium (Center) - Circle/arc centers
+ * 4 = Medium-Low (Parallel) - Parallel line construction
+ * 5 = Low (Extension) - Line extension points
+ * 7 = Very Low (Ortho) - Orthogonal constraints
+ * 8 = Fallback (Nearest) - Last resort nearest point
+ *
+ * Note: Gap at 6 reserved for future engines (e.g., Tangent, Quadrant)
+ *
+ * @example
+ * import { SNAP_ENGINE_PRIORITIES } from '../config/tolerance-config';
+ * const priority = SNAP_ENGINE_PRIORITIES.ENDPOINT; // 0
+ */
+export const SNAP_ENGINE_PRIORITIES = {
+  /** Highest priority - exact endpoints of lines/arcs */
+  ENDPOINT: 0,
+  /** Highest priority - intersection points between entities */
+  INTERSECTION: 0,
+  /** Very high priority - midpoints of line segments */
+  MIDPOINT: 1,
+  /** Very high priority - node/vertex points */
+  NODE: 1,
+  /** High priority - text/block insertion points */
+  INSERTION: 2,
+  /** Medium priority - circle/arc/rectangle centers */
+  CENTER: 3,
+  /** Medium-low priority - parallel line construction */
+  PARALLEL: 4,
+  /** Low priority - line extension points */
+  EXTENSION: 5,
+  /** Very low priority - orthogonal constraints */
+  ORTHO: 7,
+  /** Fallback priority - nearest point on any entity */
+  NEAREST: 8,
+} as const;
+
+// ===== SNAP UI OFFSETS =====
+// 🏢 ADR-153: Centralized Snap Tooltip Offset (2026-02-01)
+
+/**
+ * 🎯 SNAP TOOLTIP OFFSET
+ * Distance from snap indicator to tooltip label (in pixels)
+ *
+ * Used for:
+ * - Snap indicator tooltip positioning (SnapTypes.ts, LegacySnapAdapter.ts)
+ * - Visual feedback consistency across snap rendering systems
+ *
+ * @example
+ * import { SNAP_TOOLTIP_OFFSET } from '../config/tolerance-config';
+ * tooltipOffset: SNAP_TOOLTIP_OFFSET, // 15 pixels
+ */
+export const SNAP_TOOLTIP_OFFSET = 15;

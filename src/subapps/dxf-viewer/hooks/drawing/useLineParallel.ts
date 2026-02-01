@@ -21,6 +21,7 @@ import { isLineEntity, isPolylineEntity, generateEntityId } from '../../types/sc
 // 🏢 ADR-XXX: Centralized geometry utils - pointToLineDistance replaces local pointToLineDistance
 import { createParallelLine, pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { EventBus } from '../../systems/events';
+import { UI_COLORS } from '../../config/color-config';
 
 // ============================================================================
 // TYPES
@@ -281,6 +282,7 @@ export function useLineParallel(options: {
       end: result.end,
       visible: true,
       layer: currentLevelId,
+      color: UI_COLORS.BRIGHT_GREEN, // 🏢 ENTERPRISE: Consistent green color for new entities
     };
 
     console.log('⫽ [LineParallel] Line created:', lineEntity);

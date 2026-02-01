@@ -21,7 +21,8 @@ import {
   isLWPolylineEntity
 } from '../../types/entities';
 // 🏢 ADR-087: Centralized Snap Engine Configuration
-import { SNAP_RADIUS_MULTIPLIERS, SNAP_GRID_DISTANCES } from '../../config/tolerance-config';
+// 🏢 ADR-149: Centralized Snap Engine Priorities
+import { SNAP_RADIUS_MULTIPLIERS, SNAP_GRID_DISTANCES, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class ParallelSnapEngine extends BaseSnapEngine {
   private referenceLine: {start: Point2D, end: Point2D} | null = null;
@@ -36,7 +37,8 @@ export class ParallelSnapEngine extends BaseSnapEngine {
 
   findSnapCandidates(cursorPoint: Point2D, context: SnapEngineContext): SnapEngineResult {
     const candidates: SnapCandidate[] = [];
-    const priority = 4; // Medium-high priority
+    // 🏢 ADR-149: Use centralized snap engine priorities
+    const priority = SNAP_ENGINE_PRIORITIES.PARALLEL;
     
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.PARALLEL);
     

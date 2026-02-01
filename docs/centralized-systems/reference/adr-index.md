@@ -4,7 +4,7 @@
 >
 > Single source of truth για όλες τις αρχιτεκτονικές αποφάσεις της εφαρμογής
 
-**📊 Stats**: 128 ADRs (ADR-130 Default Layer Name Centralization) | Last Updated: 2026-02-01
+**📊 Stats**: 164 ADRs (ADR-164 Line Direction Normalization, ADR-163 Canvas Layer Synchronization) | Last Updated: 2026-02-01
 
 ---
 
@@ -152,6 +152,39 @@
 | **ADR-128** | Switch Status Variant (Green ON / Red OFF) | ✅ APPROVED | 2026-02-01 | UI Components |
 | **ADR-129** | Layer Entity Filtering Centralization | ✅ IMPLEMENTED | 2026-02-01 | Entity Systems |
 | **ADR-130** | Default Layer Name Centralization | ✅ IMPLEMENTED | 2026-02-01 | Entity Systems |
+| **ADR-131** | clampScale Function Centralization (PDF + Zoom) | ✅ IMPLEMENTED | 2026-02-01 | Data & State |
+| **ADR-132** | Coordinate Validation Centralization (isValidPoint/isValidPointStrict) | ✅ IMPLEMENTED | 2026-02-01 | Data & State |
+| **ADR-133** | SVG Stroke Width Centralization (PANEL_LAYOUT.SVG_ICON) | ✅ IMPLEMENTED | 2026-02-01 | Design System |
+| **ADR-134** | Angle Difference Normalization (normalizeAngleDiff) | ✅ IMPLEMENTED | 2026-02-01 | Data & State |
+| **ADR-135** | Menu Icons Centralization (Context Menu + Zoom Controls) | ✅ IMPLEMENTED | 2026-02-01 | UI Components |
+| **ADR-136** | Canvas Opacity Constants Centralization (OPACITY.HIGH/MEDIUM/LOW) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-137** | Snap Icon Geometry Centralization (SNAP_ICON_GEOMETRY) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-138** | Overlay Dimensions Centralization (OVERLAY_DIMENSIONS) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-139** | Label Box Dimensions Centralization (TEXT_LABEL_OFFSETS extension) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-140** | Angle Measurement Visualization Constants (ANGLE_ARC_RADIUS, ANGLE_TEXT_DISTANCE) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-141** | UI Text Input & Arc Label Constraints (UI_TEXT_INPUT_CONSTRAINTS, ARC_LABEL_POSITIONING) | ✅ IMPLEMENTED | 2026-02-01 | Design System |
+| **ADR-142** | Default Font Size Centralization (TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-143** | Origin/Cursor Offset Constants Centralization (ORIGIN_CROSSHAIR_ARM, CURSOR_OFFSET_X/Y) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-144** | Icon Click Sequence Colors (ICON_CLICK_COLORS: FIRST/SECOND/THIRD/REFERENCE) | ✅ IMPLEMENTED | 2026-02-01 | UI Components |
+| **ADR-145** | MIN_POLY_POINTS Centralization (minimum vertices for polygon) | ✅ IMPLEMENTED | 2026-02-01 | Data & State |
+| **ADR-146** | Canvas Size Observer Hook Centralization (useCanvasSizeObserver) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-147** | Hit Tolerance Centralization (TOLERANCE_CONFIG.SNAP_DEFAULT for entity picking) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-148** | Ruler Grid Tick Spacing Centralization (RULER_CONFIG.MAJOR_TICK_SPACING) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-149** | Snap Engine Priorities Centralization (SNAP_ENGINE_PRIORITIES) | ✅ IMPLEMENTED | 2026-02-01 | Data & State |
+| **ADR-150** | Arrow Head Size Centralization (OVERLAY_DIMENSIONS.ARROW_HEAD) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-151** | Grip Tolerance Centralization (TOLERANCE_CONFIG.GRIP_APERTURE) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-152** | Simple Coordinate Transform Centralization (worldToScreenSimple, transformBoundsToScreen) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-153** | Snap Tooltip Offset Centralization (SNAP_TOOLTIP_OFFSET) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-154** | Grip Line Width Centralization (RENDER_LINE_WIDTHS.GRIP_OUTLINE_ACTIVE) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-155** | Focus Ring & Button Hover Colors (FOCUS_RING_SHADOWS, BUTTON_HOVER_COLORS) | ✅ IMPLEMENTED | 2026-02-01 | Design System |
+| **ADR-156** | Degenerate Determinant Tolerance (GEOMETRY_PRECISION.DENOMINATOR_ZERO) | ✅ IMPLEMENTED | 2026-02-01 | Data & State |
+| **ADR-157** | Squared Distance Delegation (distanceSq → squaredDistance) | ✅ IMPLEMENTED | 2026-02-01 | Data & State |
+| **ADR-158** | Origin Axis Label Offsets Centralization (X/Y axis labels) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
+| **ADR-159** | Measurement Text Colors Separation (ANGLE vs DISTANCE) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System |
+| **ADR-160** | Internal Angle Arc Rendering (dot product logic) | ✅ IMPLEMENTED | 2026-02-01 | Drawing System |
+| **ADR-161** | isFinite() Standardization (global → Number.isFinite) | ✅ IMPLEMENTED | 2026-02-01 | Data & State |
+| **ADR-162** | Infinity Bounds Initialization Centralization (createInfinityBounds) | ✅ IMPLEMENTED | 2026-02-01 | Data & State |
+| **ADR-163** | Canvas Layer Synchronization (forceDirty + anyCanvasNeedsRender) | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering |
 | **ADR-059** | Separate Audit Bootstrap from Projects List | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-060** | Building Floorplan Enterprise Storage | ✅ APPROVED | 2026-01-11 | Backend Systems |
 | **ADR-061** | Path Aliases Strategy | ✅ APPROVED | 2026-01-13 | Infrastructure |
@@ -215,6 +248,18 @@
 - **Canonical**: `EnhancedDXFToolbar` with collapsible sections
 - **Pattern**: AutoCAD Ribbon pattern
 
+### ADR-135: Menu Icons Centralization
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: SVG icons για context menus ορίζονταν inline σε κάθε component (hardcoded strokeWidth)
+- **Decision**: Κεντρικοποίηση όλων των menu icons σε ένα αρχείο με χρήση PANEL_LAYOUT.SVG_ICON tokens
+- **Canonical Location**: `src/subapps/dxf-viewer/ui/icons/MenuIcons.tsx`
+- **Icons Centralized**:
+  - **Zoom Icons**: FitIcon, ZoomInIcon, ZoomOutIcon, Zoom100Icon, HistoryIcon, OriginMarkerIcon
+  - **Drawing Icons**: EnterIcon, ClosePolygonIcon, UndoIcon, CancelIcon, FlipArcIcon
+- **Files Updated**: RulerCornerBox.tsx, DrawingContextMenu.tsx
+- **Result**: ~70 γραμμές inline code αφαιρέθηκαν, χρήση centralized strokeWidth tokens
+
 ---
 
 ## 🎨 **DESIGN SYSTEM**
@@ -241,6 +286,64 @@
 ### ADR-UI-001: Visual Primitive Ownership
 - **Owner**: `useBorderTokens.ts` for all visual primitives
 - **API**: `quick.*` semantic tokens (not just helpers)
+
+### ADR-133: SVG Stroke Width Centralization
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: 50+ hardcoded `strokeWidth="2"` values scattered across SVG components
+- **Decision**: Add `SVG_ICON` section to `PANEL_LAYOUT` with centralized stroke width tokens
+- **Canonical Location**: `config/panel-tokens.ts` → `PANEL_LAYOUT.SVG_ICON`
+- **Values Available**:
+  - `STROKE_WIDTH.THIN`: 1 (details, grid lines, dashed patterns)
+  - `STROKE_WIDTH.STANDARD`: 2 (primary icons, snap indicators, overlays)
+  - `STROKE_WIDTH.BOLD`: 3 (emphasis, active states, selected)
+  - `STROKE.THIN/STANDARD/BOLD`: String versions for inline attributes
+- **Files Updated**:
+  - `canvas-v2/overlays/SnapIndicatorOverlay.tsx`
+  - `canvas-v2/overlays/RulerCornerBox.tsx` (7 icons)
+  - `ui/toolbar/icons/shared/BaseIcon.tsx`
+- **Pattern**: Industry standard (Material Design, Figma, AutoCAD = 2px stroke)
+
+### ADR-134: Angle Difference Normalization (normalizeAngleDiff)
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: 4 scattered `while (angleDiff > Math.PI) angleDiff -= TAU` patterns across 3 files with inconsistent boundary conditions (`<` vs `<=`)
+- **Decision**: Centralize angle difference normalization to single function `normalizeAngleDiff()`
+- **Canonical Location**: `rendering/entities/shared/geometry-utils.ts` → `normalizeAngleDiff()`
+- **Mathematical Range**: (-π, π]
+  - Result > 0: counterclockwise direction
+  - Result < 0: clockwise direction
+- **Pattern Fixed**: Standardized boundary condition to `<= -Math.PI` (mathematically correct for (-π, π] range)
+- **Files Updated**:
+  - `rendering/entities/shared/geometry-utils.ts` - Function added + internal refactor (`arcFromCenterStartEnd`)
+  - `rendering/entities/AngleMeasurementRenderer.ts` - 1 occurrence replaced
+  - `utils/angle-calculation.ts` - 2 occurrences replaced (`calculateAngleForArc`, `calculateAngleBisector`)
+- **API**:
+  ```typescript
+  export function normalizeAngleDiff(angleDiff: number): number;
+  // Returns normalized angle in range (-π, π]
+  ```
+- **Example**:
+  ```typescript
+  normalizeAngleDiff(3 * Math.PI)   // → π
+  normalizeAngleDiff(-3 * Math.PI)  // → -π → then +TAU = π
+  normalizeAngleDiff(Math.PI / 2)   // → π/2 (unchanged)
+  ```
+- **Use Cases**: Arc direction detection, angle measurement, arc drawing tools, sweep angle calculation
+- **Companion ADRs**: ADR-068 (Angle Normalization [0, 2π)), ADR-077 (TAU Constant)
+
+### ADR-156: Degenerate Determinant Tolerance (GEOMETRY_PRECISION.DENOMINATOR_ZERO)
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Hardcoded `1e-10` for determinant zero-check in `circleBestFit()` function
+- **Decision**: Replace with existing centralized constant `GEOMETRY_PRECISION.DENOMINATOR_ZERO`
+- **Canonical Location**: `config/tolerance-config.ts` → `GEOMETRY_PRECISION.DENOMINATOR_ZERO`
+- **File Updated**:
+  - `rendering/entities/shared/geometry-utils.ts` - Line 289 (degenerate case check in circleBestFit)
+- **Context**: The determinant is the denominator of the linear system solution; same tolerance applies
+- **Pattern**: No new constant created - reused existing centralized tolerance
+- **Mathematical Use Case**: Detecting collinear points in Kasa circle fit algorithm
+- **Companion ADRs**: ADR-079 (Geometric Epsilon/Precision)
 
 ### ADR-091: Scattered Code Centralization (Fonts + Formatting)
 - **Decision**: Migrate hardcoded `ctx.font` strings and inline `.toFixed()` calls to centralized systems
@@ -796,7 +899,593 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - Consistent visual appearance across canvas operations
   - Easy global adjustments (change one constant, affects all)
   - Type-safe references (TypeScript autocomplete)
-- **Companion**: ADR-044 (Line Widths), ADR-083 (Line Dash Patterns)
+- **Companion**: ADR-044 (Line Widths), ADR-083 (Line Dash Patterns), ADR-136 (Extended Opacity)
+
+### ADR-136: Canvas Opacity Constants Centralization (Extended)
+- **Canonical**: `OPACITY` from `config/color-config.ts`
+- **Decision**: Extend OPACITY constant with additional values for complete coverage
+- **Status**: ✅ IMPLEMENTED
+- **Problem**: 68+ hardcoded opacity values in 25+ files; original OPACITY constant missing values (0.85, 0.95, 0.4)
+- **Solution**: Extended OPACITY constant with new semantic values:
+  ```typescript
+  export const OPACITY = {
+    OPAQUE: 1.0,        // Full opacity - no transparency
+    VERY_HIGH: 0.95,    // Near-opaque (electrical cables, critical elements)
+    HIGH: 0.9,          // Snap indicators, preview lines
+    MEDIUM_HIGH: 0.85,  // Constraints, furniture lines
+    MEDIUM: 0.8,        // Selection, cursor, axes (CHANGED from 0.7)
+    MEDIUM_LOW: 0.7,    // Regions, secondary elements
+    SUBTLE: 0.6,        // Origin markers, subtle overlays
+    LOW: 0.5,           // PDF backgrounds, disabled states
+    DISABLED: 0.4,      // Disabled menu items
+    VERY_LOW: 0.3,      // Grid opacity
+    FAINT: 0.1,         // Barely visible elements
+  } as const;
+  ```
+- **Files Migrated (Phase 1)**:
+  - `rendering/ui/snap/SnapTypes.ts` - opacity: 0.9 → OPACITY.HIGH
+  - `rendering/ui/cursor/CursorTypes.ts` - opacity: 0.8 → OPACITY.MEDIUM
+  - `rendering/ui/origin/OriginMarkersTypes.ts` - opacity: 0.8 → OPACITY.MEDIUM
+  - `rendering/ui/grid/GridTypes.ts` - opacity: 0.3 → OPACITY.VERY_LOW
+  - `canvas-v2/preview-canvas/PreviewRenderer.ts` - opacity: 0.9 → OPACITY.HIGH
+  - `utils/region-operations.ts` - opacity: 0.7 → OPACITY.MEDIUM_LOW (x2)
+- **Benefits**:
+  - Complete opacity spectrum (11 values vs original 7)
+  - Semantic naming for all use cases
+  - Zero hardcoded values in UI rendering types
+- **Companion**: ADR-120 (Original Opacity Centralization), ADR-004 (Canvas Theme)
+
+### ADR-137: Snap Icon Geometry Centralization
+- **Canonical**: `SNAP_ICON_GEOMETRY` from `rendering/ui/snap/snap-icon-config.ts`
+- **Decision**: Centralize all snap indicator geometry constants to eliminate inconsistencies
+- **Status**: ✅ IMPLEMENTED
+- **Problem**: Snap icon dimensions scattered across 2 files with inconsistencies:
+  - Tangent circle ratio: 0.5 (SnapIndicatorOverlay) vs 0.6 (SnapRenderer)
+  - Grid dot radius: 3px (SnapIndicatorOverlay) vs 2px (SnapRenderer)
+- **Solution**: Single source of truth for snap geometry:
+  ```typescript
+  export const SNAP_ICON_GEOMETRY = {
+    SIZE: 12,                    // Base size in pixels
+    HALF_RATIO: 0.5,            // SIZE / 2
+    QUARTER_RATIO: 0.25,        // SIZE / 4 (perpendicular, parallel)
+    TANGENT_CIRCLE_RATIO: 0.5,  // UNIFIED: was 0.5 vs 0.6
+    GRID_DOT_RADIUS: 3,         // UNIFIED: was 3 vs 2
+    NODE_DOT_RADIUS: 2,         // Node/insertion center dot
+    STROKE_WIDTH: 1.5,          // From ADR-133
+  } as const;
+  ```
+- **Helper Functions**:
+  - `getSnapIconHalf(size)` - Calculate half size
+  - `getSnapIconQuarter(size)` - Calculate quarter size
+  - `getTangentCircleRadius(halfSize)` - Tangent circle radius
+  - `getGridDotRadius()` - Grid dot radius
+  - `getNodeDotRadius()` - Node dot radius
+- **Files Migrated**:
+  - `canvas-v2/overlays/SnapIndicatorOverlay.tsx` - SVG-based rendering
+  - `rendering/ui/snap/SnapRenderer.ts` - Canvas path-based rendering
+- **Benefits**:
+  - Visual consistency between SVG and Canvas renderers
+  - Single source of truth for snap icon dimensions
+  - AutoCAD/MicroStation compatible standard sizes
+- **Companion**: ADR-133 (SVG Stroke Width), ADR-064 (Shape Primitives)
+
+### ADR-138: Overlay Dimensions Centralization
+- **Canonical**: `OVERLAY_DIMENSIONS` from `utils/hover/config.ts`
+- **Decision**: Centralize all overlay UI dimension constants (crosshair, snap, move arrows)
+- **Status**: ✅ IMPLEMENTED
+- **Problem**: Magic numbers scattered across files with inconsistencies:
+  - OverlayPass.ts: `size = 20` (crosshair), `arrowSize = 8` (move cursor), `size = 8` (snap crosshair)
+  - radius-utils.ts: fallback `|| 15` (conflicted with `gripAvoidance: 20`)
+  - SnapIndicatorOverlay.tsx: `SNAP_INDICATOR_SIZE = 12`
+- **Solution**: Single source of truth in existing hover config:
+  ```typescript
+  export const OVERLAY_DIMENSIONS = {
+    SNAP_INDICATOR: 12,    // Snap indicator marker size (pixels)
+    CROSSHAIR: 20,         // Crosshair cursor size (pixels)
+    MIN_MARQUEE: 5,        // Minimum marquee selection size
+    MOVE_ARROW: 8,         // 4-way arrow indicator size
+    SNAP_CROSSHAIR: 8,     // Snap crosshair in OverlayPass
+  } as const;
+  ```
+- **Files Migrated**:
+  - `rendering/passes/OverlayPass.ts` - CROSSHAIR, MOVE_ARROW, SNAP_CROSSHAIR
+  - `utils/hover/radius-utils.ts` - Removed fallback `|| 15` (HOVER_CONFIG.offsets.gripAvoidance always defined)
+- **Benefits**:
+  - Eliminates magic numbers in rendering code
+  - Ensures visual consistency across overlays
+  - Documents purpose of each constant
+- **Companion**: ADR-137 (Snap Icon Geometry), ADR-075 (Grip Size Multipliers)
+
+### ADR-139: Label Box Dimensions Centralization
+- **Canonical**: `TEXT_LABEL_OFFSETS` extension in `config/text-rendering-config.ts`
+- **Decision**: Centralize all label box padding, height, and offset constants
+- **Status**: ✅ IMPLEMENTED
+- **Problem**: Hardcoded values scattered across files with inconsistencies:
+  - `overlay-drawing.ts`: `padding = 6`, `h = 18` (region labels)
+  - `ghost-entity-renderer.ts`: `4, 8, 8, 16` (entity count), `14, 16` (coordinate readout)
+  - Inconsistent padding: 4px vs 6px across different contexts
+  - Inconsistent heights: 16px vs 18px
+- **Solution**: Extended `TEXT_LABEL_OFFSETS` with semantic constants:
+  ```typescript
+  // 🏢 ADR-139: LABEL BOX DIMENSIONS
+  LABEL_BOX_PADDING: 4,        // Standard label box padding (ghost readouts, entity count)
+  OVERLAY_LABEL_PADDING: 6,    // Region name labels (larger for readability)
+  LABEL_BOX_HEIGHT: 16,        // Standard label box height (ghost readouts)
+  OVERLAY_LABEL_HEIGHT: 18,    // Region name label height (larger)
+  ENTITY_COUNT_OFFSET_Y: 8,    // Y offset for entity count label background
+  READOUT_OFFSET_Y: 14,        // Y offset for coordinate readout background
+  ```
+- **Files Migrated**:
+  - `utils/overlay-drawing.ts` - padding (6 → OVERLAY_LABEL_PADDING), h (18 → OVERLAY_LABEL_HEIGHT)
+  - `rendering/utils/ghost-entity-renderer.ts` - entity count & readout dimensions
+- **Benefits**:
+  - Eliminates 6 hardcoded magic numbers
+  - Semantic naming (OVERLAY vs LABEL_BOX for different contexts)
+  - Single source of truth for label dimensions
+  - Preserves intentional differences (overlay=6/18, ghost=4/16)
+- **Companion**: ADR-091 (Text Label Offsets), ADR-107 (UI Size Defaults)
+
+### ADR-140: Angle Measurement Visualization Constants
+- **Canonical**: `RENDER_GEOMETRY` extension in `config/text-rendering-config.ts`
+- **Decision**: Centralize angle measurement arc radius and text distance constants
+- **Status**: ✅ IMPLEMENTED
+- **Problem**: Hardcoded values scattered across 2 files with identical values:
+  - `AngleMeasurementRenderer.ts`: `arcRadius = 40`, `textDistance = 50`
+  - `PreviewRenderer.ts`: `arcRadius = 40`, `textDistance = 50`
+  - No documentation why 40 and 50 pixels were chosen
+  - Risk: Updates require changes in 2 files (easy to miss one)
+- **Solution**: Extended `RENDER_GEOMETRY` with semantic constants:
+  ```typescript
+  // 🏢 ADR-140: ANGLE MEASUREMENT VISUALIZATION
+  ANGLE_ARC_RADIUS: 40,      // Arc radius in screen pixels for angle indicator
+  ANGLE_TEXT_DISTANCE: 50,   // Text distance for angle label positioning (e.g., "45.0°")
+  ```
+- **Files Migrated**:
+  - `rendering/entities/AngleMeasurementRenderer.ts` - arcRadius, textDistance
+  - `canvas-v2/preview-canvas/PreviewRenderer.ts` - arcRadius, textDistance
+- **Benefits**:
+  - Eliminates 4 hardcoded magic numbers (2 per file)
+  - Single source of truth for angle measurement visualization
+  - CAD-standard documentation (AutoCAD dimension arc patterns)
+  - Easy to adjust values globally (e.g., for different screen DPIs)
+- **Companion**: ADR-048 (Rendering Geometry), ADR-124 (Renderer Constants)
+
+### ADR-143: Origin/Cursor Offset Constants Centralization
+- **Canonical**: `TEXT_LABEL_OFFSETS` extension in `config/text-rendering-config.ts`
+- **Decision**: Centralize all origin marker and cursor offset constants
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Hardcoded `15` pixel offset scattered across 4 files with different purposes:
+  - `CalibrationGridRenderer.ts`: `± 15` - Origin crosshair arm length
+  - `OriginMarkersRenderer.ts`: `+ 15` - Label line spacing, `- markerSize - 15` - "O" label gap
+  - `OriginMarkersDebugOverlay.ts`: Same as OriginMarkersRenderer (duplicate code)
+  - `useDynamicInputLayout.ts`: `+ 15`, `- 15` - Cursor offset for dynamic input
+  - Additional `+ 5` offsets for fine label positioning
+- **Solution**: Extended `TEXT_LABEL_OFFSETS` with 6 new constants:
+  ```typescript
+  // 🏢 ADR-143: ORIGIN MARKER OFFSETS
+  ORIGIN_CROSSHAIR_ARM: 15,        // Crosshair extends ±15px from origin point
+  ORIGIN_LABEL_LINE_SPACING: 15,   // Second line of label positioned 15px below first
+  ORIGIN_LABEL_HORIZONTAL_GAP: 15, // "O" label positioned (markerSize + 15)px left of origin
+  LABEL_FINE_OFFSET: 5,            // 5px offset for fine label positioning
+
+  // 🏢 ADR-143: DYNAMIC INPUT CURSOR OFFSETS
+  CURSOR_OFFSET_X: 15,             // Input positioned 15px right of cursor
+  CURSOR_OFFSET_Y: 15,             // Input base positioned 15px above cursor
+  ```
+- **Files Migrated** (5 files):
+  - `debug/CalibrationGridRenderer.ts` - ORIGIN_CROSSHAIR_ARM
+  - `rendering/ui/origin/OriginMarkersRenderer.ts` - ORIGIN_LABEL_LINE_SPACING, ORIGIN_LABEL_HORIZONTAL_GAP, LABEL_FINE_OFFSET
+  - `debug/OriginMarkersDebugOverlay.ts` - ORIGIN_LABEL_LINE_SPACING, ORIGIN_LABEL_HORIZONTAL_GAP, LABEL_FINE_OFFSET
+  - `systems/dynamic-input/hooks/useDynamicInputLayout.ts` - CURSOR_OFFSET_X, CURSOR_OFFSET_Y
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Eliminates ~10 magic numbers (6x `15` + 4x `5`)
+  - Zero duplicate offset code between OriginMarkersRenderer & OriginMarkersDebugOverlay
+  - Consistent positioning for origin markers and dynamic input
+  - Easy global adjustment (e.g., for high-DPI displays)
+  - Clear documentation of offset purposes
+- **Companion**: ADR-091 (Text Label Offsets), ADR-139 (Label Box Dimensions)
+
+### ADR-144: Icon Click Sequence Colors Centralization
+- **Canonical**: `ICON_CLICK_COLORS` in `config/color-config.ts`
+- **Decision**: Centralize all icon click sequence colors (Red→Orange→Green pattern)
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Identical `CLICK_COLORS` constant duplicated across 5 icon files:
+  - `ui/toolbar/icons/LineIcon.tsx` (lines 19-24)
+  - `ui/toolbar/icons/CircleIcon.tsx` (lines 7-11)
+  - `ui/toolbar/icons/ArcIcon.tsx` (lines 23-27)
+  - `ui/toolbar/icons/shared/AngleIconBase.tsx` (lines 18-22)
+  - `ui/toolbar/icons/AngleTwoArcsIcon.tsx` (lines 17-21)
+  - All 5 files had identical values:
+    - FIRST: `#ef4444` (Red - 1st click)
+    - SECOND: `#f97316` (Orange - 2nd click)
+    - THIRD: `#22c55e` (Green - last click)
+    - REFERENCE: `#9ca3af` (Gray - reference line, only in LineIcon)
+- **Solution**: Single centralized constant in `color-config.ts`:
+  ```typescript
+  // 🏢 ADR-144: ICON CLICK SEQUENCE COLORS
+  export const ICON_CLICK_COLORS = {
+    FIRST: '#ef4444',     // 🔴 Red - 1st click (start point)
+    SECOND: '#f97316',    // 🟠 Orange - 2nd click (intermediate)
+    THIRD: '#22c55e',     // 🟢 Green - 3rd/last click (end point)
+    REFERENCE: '#9ca3af', // Gray - Reference line (perpendicular/parallel)
+  } as const;
+  ```
+- **Files Migrated** (5 files):
+  - `ui/toolbar/icons/LineIcon.tsx` - Import ICON_CLICK_COLORS
+  - `ui/toolbar/icons/CircleIcon.tsx` - Import ICON_CLICK_COLORS
+  - `ui/toolbar/icons/ArcIcon.tsx` - Import ICON_CLICK_COLORS
+  - `ui/toolbar/icons/shared/AngleIconBase.tsx` - Import ICON_CLICK_COLORS
+  - `ui/toolbar/icons/AngleTwoArcsIcon.tsx` - Import ICON_CLICK_COLORS
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - 5x duplicate elimination (5 local constants → 1 centralized)
+  - Consistent color coding across all drawing tool icons
+  - Easy global theme changes (e.g., color blind friendly palette)
+  - JSDoc documentation for each color's semantic meaning
+  - Type-safe with `IconClickColor` type export
+- **Companion**: ADR-026 (DXF Toolbar Colors), ADR-042 (UI Fonts)
+
+### ADR-145: MIN_POLY_POINTS Centralization
+- **Canonical**: `MIN_POLY_POINTS` in `config/tolerance-config.ts`
+- **Decision**: Centralize minimum vertices constant for polygon validation
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Same constant `= 3` (minimum vertices for polygon) existed in 3 places:
+  - `config/tolerance-config.ts:55` - `MIN_POLY_POINTS = 3` (centralized)
+  - `overlays/overlay-store.tsx:314` - `MIN_VERTICES = 3` (local duplicate)
+  - `systems/phase-manager/drag-measurements/PolylineDragMeasurement.ts:20` - `MIN_VERTICES_FOR_AREA = 3` (local duplicate)
+- **Risk**: If only one of the three was changed, inconsistency would occur
+- **Solution**: Import existing centralized `MIN_POLY_POINTS` from tolerance-config:
+  ```typescript
+  // 🏢 ADR-145: Centralized MIN_POLY_POINTS constant
+  import { MIN_POLY_POINTS } from '../config/tolerance-config';
+
+  // Usage: minimum vertices for valid polygon
+  if (polygon.length <= MIN_POLY_POINTS) { ... }
+  ```
+- **Files Migrated** (2 files):
+  - `overlays/overlay-store.tsx` - removeVertex() validation
+  - `systems/phase-manager/drag-measurements/PolylineDragMeasurement.ts` - area calculation check
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - 2x duplicate elimination (3 constants → 1 centralized)
+  - Consistency guaranteed: change in one place = change everywhere
+  - Semantic clarity: polygon validation uses same constant as area calculation
+- **Companion**: ADR-099 (Polygon Tolerances), ADR-034 (Geometry Calculations)
+
+### ADR-146: Canvas Size Observer Hook Centralization
+- **Canonical**: `useCanvasSizeObserver` from `hooks/canvas/useCanvasSizeObserver.ts`
+- **Decision**: Centralize ResizeObserver + canvas size setup pattern to single reusable hook
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Duplicate ResizeObserver setup code (~35-18 lines) in 2 files:
+  - `canvas-v2/overlays/CrosshairOverlay.tsx` (lines 105-140): ~35 lines ResizeObserver + DPI canvas sizing
+  - `canvas-v2/preview-canvas/PreviewCanvas.tsx` (lines 159-176): ~18 lines ResizeObserver + renderer.updateSize()
+  - Both files had identical patterns:
+    - Create ResizeObserver
+    - Observe canvas element
+    - Handle zero-dimension check
+    - Call resize callback
+    - Disconnect on cleanup
+- **Solution**: Single Source of Truth hook:
+  ```typescript
+  // 🏢 ADR-146: Centralized Canvas Size Observer Hook
+  export interface UseCanvasSizeObserverOptions {
+    canvasRef: RefObject<HTMLCanvasElement | null>;
+    onSizeChange: (canvas: HTMLCanvasElement) => void;
+    skipZeroDimensions?: boolean;  // Default: true
+  }
+
+  export function useCanvasSizeObserver(options: UseCanvasSizeObserverOptions): void;
+  ```
+- **Files Migrated** (2 files):
+  - `canvas-v2/overlays/CrosshairOverlay.tsx`:
+    - Before: ~35 lines manual ResizeObserver setup
+    - After: ~10 lines with `useCanvasSizeObserver({ canvasRef, onSizeChange: handleCanvasSizeChange })`
+  - `canvas-v2/preview-canvas/PreviewCanvas.tsx`:
+    - Before: ~18 lines manual ResizeObserver setup
+    - After: ~5 lines with `useCanvasSizeObserver({ canvasRef, onSizeChange })`
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - ~53 lines duplicate code eliminated (35 + 18 lines)
+  - Consistent ResizeObserver pattern across all canvas components
+  - `skipZeroDimensions` option prevents invalid canvas operations
+  - Proper cleanup via `disconnect()` guaranteed
+  - Reusable for future canvas components
+  - Works seamlessly with:
+    - `CanvasUtils.setupCanvasContext()` (ADR-115)
+    - `getDevicePixelRatio()` (ADR-094)
+    - `toDevicePixels()` (ADR-117)
+- **Companion**: ADR-115 (Canvas Context Setup), ADR-118 (useCanvasResize), ADR-094 (Device Pixel Ratio), ADR-117 (toDevicePixels)
+
+### ADR-150: Arrow Head Size Centralization
+- **Canonical**: `OVERLAY_DIMENSIONS.ARROW_HEAD` from `utils/hover/config.ts`
+- **Decision**: Centralize arrow head / marker size (8px) to single source of truth
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Duplicate hardcoded `8` (pixels) for arrow/marker sizes in 2 files:
+  - `rendering/utils/ghost-entity-renderer.ts:488` - `arrowSize = 8` for ghost delta display arrows
+  - `rendering/entities/LineRenderer.ts:173` - `markerSize = 8` for perpendicular markers on dimension lines
+  - Risk: Visual inconsistency if one is changed without the other
+- **Solution**: Add `ARROW_HEAD: 8` to existing `OVERLAY_DIMENSIONS` constant object:
+  ```typescript
+  // 🏢 ADR-150: Centralized arrow/marker size for visual consistency
+  export const OVERLAY_DIMENSIONS = {
+    // ... existing constants ...
+    ARROW_HEAD: 8,  // Arrow head size for directional indicators (pixels)
+  } as const;
+  ```
+- **Files Migrated** (2 files):
+  - `rendering/utils/ghost-entity-renderer.ts`:
+    - Before: `const arrowSize = 8;`
+    - After: `const arrowSize = OVERLAY_DIMENSIONS.ARROW_HEAD;`
+  - `rendering/entities/LineRenderer.ts`:
+    - Before: `const markerSize = 8;`
+    - After: `const markerSize = OVERLAY_DIMENSIONS.ARROW_HEAD;`
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Visual consistency between ghost entity arrows and dimension line markers
+  - Single place to adjust arrow/marker size for all UI elements
+  - Follows established OVERLAY_DIMENSIONS centralization pattern (ADR-138)
+- **Companion**: ADR-138 (Overlay Dimensions Centralization)
+
+### ADR-151: Grip Tolerance Centralization
+- **Canonical**: `TOLERANCE_CONFIG.GRIP_APERTURE` from `config/tolerance-config.ts`
+- **Decision**: Centralize grip detection tolerance (8 pixels) to single source of truth
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Duplicate hardcoded `tolerance: number = 8` for grip detection in 3 files:
+  - `utils/entity-renderer.ts:93` - `findGripAtPoint(..., tolerance: number = 8)`
+  - `systems/grip-interaction/GripInteractionManager.ts:72` - `checkGripHover(..., tolerance: number = 8)`
+  - `rendering/core/EntityRendererComposite.ts:117` - `findGripAtPoint(..., tolerance: number = 8)`
+  - Risk: Inconsistent grip detection behavior if values diverge
+- **Solution**: Use existing `TOLERANCE_CONFIG.GRIP_APERTURE: 8` constant:
+  ```typescript
+  // 🏢 ADR-151: Centralized grip tolerance
+  import { TOLERANCE_CONFIG } from '../config/tolerance-config';
+
+  findGripAtPoint(..., tolerance: number = TOLERANCE_CONFIG.GRIP_APERTURE): GripInfo | null
+  ```
+- **Files Migrated** (3 files):
+  - `utils/entity-renderer.ts`:
+    - Before: `findGripAtPoint(..., tolerance: number = 8)`
+    - After: `findGripAtPoint(..., tolerance: number = TOLERANCE_CONFIG.GRIP_APERTURE)`
+  - `systems/grip-interaction/GripInteractionManager.ts`:
+    - Before: `checkGripHover(..., tolerance: number = 8)`
+    - After: `checkGripHover(..., tolerance: number = TOLERANCE_CONFIG.GRIP_APERTURE)`
+  - `rendering/core/EntityRendererComposite.ts`:
+    - Before: `findGripAtPoint(..., tolerance: number = 8)`
+    - After: `findGripAtPoint(..., tolerance: number = TOLERANCE_CONFIG.GRIP_APERTURE)`
+- **Pattern**: Single Source of Truth (SSOT)
+- **Benefits**:
+  - Consistent grip detection tolerance across all components
+  - Single place to adjust grip aperture size
+  - Uses existing centralized constant (no new file created)
+  - Follows established TOLERANCE_CONFIG pattern (ADR-105, ADR-147)
+- **Companion**: ADR-105 (Hit Test Tolerance), ADR-147 (Hit Tolerance Centralization)
+
+### ADR-152: Simple Coordinate Transform Centralization
+- **Canonical**: `worldToScreenSimple`, `screenToWorldSimple`, `transformBoundsToScreen`, `transformBoundsToWorld` from `rendering/core/CoordinateTransforms.ts`
+- **Decision**: Centralize inline coordinate transform patterns to eliminate duplicate code
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Duplicate inline coordinate transform patterns in ~20 occurrences across 6 files:
+  ```typescript
+  // BEFORE: Inline pattern repeated everywhere
+  x: point.x * transform.scale + transform.offsetX,
+  y: point.y * transform.scale + transform.offsetY
+  ```
+  Files with duplicates:
+  - `utils/overlay-drawing.ts:60-62, 143-145` - Point transforms for overlays
+  - `rendering/passes/EntityPass.ts:284-287` - BoundingBox transforms for visibility
+  - `rendering/hitTesting/Bounds.ts:414-417` - BoundingBox transforms
+  - `hooks/interfaces/useCanvasOperations.ts:220-228` - Local transform functions
+  - `canvas-v2/layer-canvas/LayerRenderer.ts:154` - Fallback (no viewport)
+  - `CoordinateTransforms.ts:59-60, 69` - Fallback (invalid viewport)
+- **Solution**: Add standalone export functions to CoordinateTransforms.ts:
+  ```typescript
+  // 🏢 ADR-152: Centralized Simple Coordinate Transforms
+  import { worldToScreenSimple, transformBoundsToScreen } from '../rendering/core/CoordinateTransforms';
+
+  // Point transform (no Y-inversion)
+  const screenVertices = vertices.map(v => worldToScreenSimple(v, transform));
+
+  // BoundingBox transform (no Y-inversion)
+  const screenBounds = transformBoundsToScreen(bounds, transform);
+  ```
+- **Files Migrated** (6 files):
+  - `utils/overlay-drawing.ts`:
+    - Before: Inline pattern in 2 places
+    - After: `worldToScreenSimple(v, transform)`
+  - `rendering/passes/EntityPass.ts`:
+    - Before: Inline screenBounds calculation
+    - After: `transformBoundsToScreen(bounds, transform)`
+  - `rendering/hitTesting/Bounds.ts`:
+    - Before: Inline transform in ViewportBounds.transform()
+    - After: Delegates to `transformBoundsToScreen()`
+  - `hooks/interfaces/useCanvasOperations.ts`:
+    - Before: Local worldToScreen/screenToWorld functions
+    - After: `worldToScreenSimple()` and `screenToWorldSimple()`
+  - `canvas-v2/layer-canvas/LayerRenderer.ts`:
+    - Before: Inline fallback calculation
+    - After: `worldToScreenSimple(point, transform)`
+- **New Functions Added** to `CoordinateTransforms.ts`:
+  - `worldToScreenSimple(point, transform)` - Point world→screen (no Y-flip)
+  - `screenToWorldSimple(point, transform)` - Point screen→world (no Y-flip)
+  - `transformBoundsToScreen(bounds, transform)` - BoundingBox world→screen
+  - `transformBoundsToWorld(bounds, transform)` - BoundingBox screen→world
+- **Pattern**: Single Source of Truth (SSOT)
+- **Key Distinction**:
+  - `CoordinateTransforms.worldToScreen()` - With Y-axis inversion (for CAD rendering)
+  - `worldToScreenSimple()` - Without Y-axis inversion (for overlays, visibility checks)
+- **Benefits**:
+  - Eliminated ~20 lines of duplicate inline code
+  - Single source of truth for simple coordinate transforms
+  - Clear distinction between CAD transforms (Y-flip) and simple transforms (no flip)
+  - Consistent behavior across overlay systems, visibility checks, bounding boxes
+  - Easier maintenance - change in one place affects all
+- **Companion**: ADR-046 (Single Coordinate Transform)
+
+### ADR-153: Snap Tooltip Offset Centralization
+- **Canonical**: `SNAP_TOOLTIP_OFFSET` from `config/tolerance-config.ts`
+- **Decision**: Centralize snap tooltip offset (15 pixels) to single source of truth
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Duplicate hardcoded `15` (pixels) for tooltip offset in 2 files:
+  - `rendering/ui/snap/SnapTypes.ts:105` - `tooltipOffset: 15` in DEFAULT_SNAP_SETTINGS
+  - `rendering/ui/snap/LegacySnapAdapter.ts:57` - `tooltipOffset: 15` in flatSettings
+  - Risk: Visual inconsistency in snap tooltips if one is changed without the other
+- **Solution**: Add `SNAP_TOOLTIP_OFFSET` constant to existing `tolerance-config.ts`:
+  ```typescript
+  // 🏢 ADR-153: Centralized Snap Tooltip Offset (2026-02-01)
+  export const SNAP_TOOLTIP_OFFSET = 15;
+  ```
+- **Files Migrated** (2 files):
+  - `rendering/ui/snap/SnapTypes.ts`:
+    - Before: `tooltipOffset: 15,`
+    - After: `tooltipOffset: SNAP_TOOLTIP_OFFSET,  // 🏢 ADR-153`
+  - `rendering/ui/snap/LegacySnapAdapter.ts`:
+    - Before: `tooltipOffset: 15,`
+    - After: `tooltipOffset: SNAP_TOOLTIP_OFFSET,  // 🏢 ADR-153`
+- **Pattern**: Single Source of Truth (SSOT) in tolerance-config.ts
+- **Benefits**:
+  - Single place to adjust snap tooltip offset
+  - Consistent visual feedback across snap rendering systems
+  - Follows established snap constants pattern (SNAP_TOLERANCE, SNAP_ENGINE_PRIORITIES)
+- **Companion**: ADR-095 (Snap Tolerance), ADR-149 (Snap Engine Priorities)
+
+### ADR-154: Grip Line Width Centralization
+- **Canonical**: `RENDER_LINE_WIDTHS.GRIP_OUTLINE_ACTIVE` from `config/text-rendering-config.ts`
+- **Decision**: Centralize grip outline line width for active state (warm/hot) to single source of truth
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Duplicate hardcoded `gripState !== 'cold' ? 2 : 1` pattern in 2 places:
+  - `canvas-v2/layer-canvas/LayerRenderer.ts:650` - Vertex grip outlines
+  - `canvas-v2/layer-canvas/LayerRenderer.ts:738` - Edge midpoint grip outlines
+  - Inconsistency: Lines 660, 669, 753, 781 use `RENDER_LINE_WIDTHS.NORMAL` but grip outlines were hardcoded
+  - Existing constant `GRIP_OUTLINE: 1` only covered cold state
+- **Solution**: Add `GRIP_OUTLINE_ACTIVE: 2` to existing `RENDER_LINE_WIDTHS` constant:
+  ```typescript
+  // config/text-rendering-config.ts
+  export const RENDER_LINE_WIDTHS = {
+    /** Grip point outlines (cold/normal state) */
+    GRIP_OUTLINE: 1,
+
+    /** 🏢 ADR-154: Grip point outlines (warm/hot/active state) */
+    GRIP_OUTLINE_ACTIVE: 2,
+    // ...
+  };
+  ```
+- **Files Migrated** (1 file, 2 locations):
+  - `canvas-v2/layer-canvas/LayerRenderer.ts`:
+    - Vertex grips (line ~650):
+      - Before: `this.ctx.lineWidth = gripState !== 'cold' ? 2 : 1;`
+      - After: `this.ctx.lineWidth = gripState !== 'cold' ? RENDER_LINE_WIDTHS.GRIP_OUTLINE_ACTIVE : RENDER_LINE_WIDTHS.GRIP_OUTLINE;`
+    - Edge midpoint grips (line ~738):
+      - Before: `this.ctx.lineWidth = gripState !== 'cold' ? 2 : 1;`
+      - After: `this.ctx.lineWidth = gripState !== 'cold' ? RENDER_LINE_WIDTHS.GRIP_OUTLINE_ACTIVE : RENDER_LINE_WIDTHS.GRIP_OUTLINE;`
+- **Pattern**: Single Source of Truth (SSOT) in text-rendering-config.ts
+- **Benefits**:
+  - Complete grip outline width centralization (cold + active states)
+  - Consistent with other line width constants in the same file
+  - Easy to adjust grip visual feedback globally
+  - Follows established rendering constants pattern (ADR-044)
+- **Companion**: ADR-044 (Canvas Line Widths), ADR-075 (Grip Size Multipliers), ADR-106 (Edge Grip Multipliers)
+
+### ADR-158: Origin Axis Label Offsets Centralization (X/Y axis labels)
+- **Canonical**: `TEXT_LABEL_OFFSETS` extension in `config/text-rendering-config.ts`
+- **Decision**: Centralize X/Y axis label positioning offsets for origin markers
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Duplicate hardcoded magic numbers for axis label positioning in 2 files:
+  - `rendering/ui/origin/OriginMarkersRenderer.ts` (lines 109, 116):
+    - `ctx.fillText('X', viewport.width - 10, originScreenY - 5);`
+    - `ctx.fillText('Y', originScreenX + 5, 10);`
+  - `debug/OriginMarkersDebugOverlay.ts` (lines 235, 242):
+    - Identical hardcoded values: `10`, `5`, `5`, `10`
+- **Magic Numbers Eliminated**:
+  | Value | Purpose | Used In |
+  |-------|---------|---------|
+  | `10` | X-label right margin from viewport edge | 2 files |
+  | `5` | X-label bottom offset from axis | 2 files |
+  | `5` | Y-label left offset from axis | 2 files |
+  | `10` | Y-label top margin from viewport edge | 2 files |
+- **Solution**: Extended `TEXT_LABEL_OFFSETS` (ADR-143 extension) with 4 new constants:
+  ```typescript
+  // 🏢 ADR-158: X/Y AXIS LABEL POSITIONING (2026-02-01)
+  X_AXIS_LABEL_RIGHT_MARGIN: 10,   // ctx.fillText('X', viewport.width - X_AXIS_LABEL_RIGHT_MARGIN, ...)
+  X_AXIS_LABEL_BOTTOM_OFFSET: 5,   // ctx.fillText('X', ..., originScreenY - X_AXIS_LABEL_BOTTOM_OFFSET)
+  Y_AXIS_LABEL_LEFT_OFFSET: 5,     // ctx.fillText('Y', originScreenX + Y_AXIS_LABEL_LEFT_OFFSET, ...)
+  Y_AXIS_LABEL_TOP_MARGIN: 10,     // ctx.fillText('Y', ..., Y_AXIS_LABEL_TOP_MARGIN)
+  ```
+- **Files Migrated** (2 files, 4 replacements):
+  - `rendering/ui/origin/OriginMarkersRenderer.ts`:
+    - Line ~109: X-label position → `TEXT_LABEL_OFFSETS.X_AXIS_LABEL_RIGHT_MARGIN`, `TEXT_LABEL_OFFSETS.X_AXIS_LABEL_BOTTOM_OFFSET`
+    - Line ~116: Y-label position → `TEXT_LABEL_OFFSETS.Y_AXIS_LABEL_LEFT_OFFSET`, `TEXT_LABEL_OFFSETS.Y_AXIS_LABEL_TOP_MARGIN`
+  - `debug/OriginMarkersDebugOverlay.ts`:
+    - Lines ~235, 242: Same 4 replacements
+- **Pattern**: Single Source of Truth (SSOT) in text-rendering-config.ts
+- **Benefits**:
+  - Eliminates 8 hardcoded magic numbers (4 values × 2 files)
+  - Single source of truth for axis label positioning
+  - Extends existing ADR-143 pattern (origin/cursor offsets)
+  - Consistent X/Y label positioning between renderer and debug overlay
+  - Easy global adjustment for different viewport sizes or accessibility needs
+- **Companion**: ADR-143 (Origin/Cursor Offset Constants), ADR-091 (Text Label Offsets), ADR-102 (Origin Markers)
+
+### ADR-159: Measurement Text Colors Separation (ANGLE vs DISTANCE)
+- **Canonical**: `UI_COLORS.ANGLE_MEASUREMENT_TEXT` & `UI_COLORS.DISTANCE_MEASUREMENT_TEXT` from `config/color-config.ts`
+- **Decision**: Separate measurement text colors for autonomy - angles (fuchsia) vs distances (white)
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Single `DIMENSION_TEXT` color used for both angles and distances, no autonomy
+- **Solution**: Two distinct centralized constants:
+  ```typescript
+  // 🏢 ADR-159: Measurement Text Colors - Separate for autonomy
+  ANGLE_MEASUREMENT_TEXT: 'fuchsia',    // Φούξια για μέτρηση γωνιών (μοίρες, radians)
+  DISTANCE_MEASUREMENT_TEXT: '#FFFFFF', // Λευκό για μέτρηση μηκών ευθύγραμμων τμημάτων
+  DIMENSION_TEXT: 'fuchsia',            // @deprecated - backward compatibility alias
+  ```
+- **New Methods in BaseEntityRenderer**:
+  - `applyAngleMeasurementTextStyle()` - Φούξια χρώμα για γωνίες
+  - `applyDistanceMeasurementTextStyle()` - Λευκό χρώμα για μήκη
+  - `applyDimensionTextStyle()` - @deprecated, delegates to applyAngleMeasurementTextStyle()
+- **Benefits**:
+  - Αυτονομία χρωμάτων: Γωνίες και αποστάσεις ανεξάρτητα
+  - Κεντρικοποίηση: Single Source of Truth για κάθε τύπο
+  - Backward compatibility: Παλιές κλήσεις συνεχίζουν να λειτουργούν
+- **Companion**: ADR-048 (Rendering System), ADR-140 (Angle Measurement)
+
+### ADR-160: Internal Angle Arc Rendering (dot product logic)
+- **Canonical**: `drawInternalAngleArc()` from `rendering/entities/BaseEntityRenderer.ts`
+- **Decision**: Use dot product logic for ALWAYS rendering INTERNAL angle arcs
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: `AngleMeasurementRenderer` used simple arc logic (angle1 → angle2), sometimes rendering EXTERNAL arcs
+- **Existing Correct Logic**: `drawInternalArc()` (lines 667-718) uses dot product to select correct CCW/CW direction
+- **Solution**: New method `drawInternalAngleArc(vertex, point1, point2, radiusWorld)` that:
+  1. Calculates unit vectors from vertex to each point
+  2. Delegates to `drawInternalArc()` which uses dot product for correct direction
+- **Algorithm** (from drawInternalArc):
+  ```typescript
+  // Calculate bisector (interior direction)
+  const bisectorX = (prevUnit.x + nextUnit.x) / 2;
+  const bisectorY = (prevUnit.y + nextUnit.y) / 2;
+  // Dot product to choose CCW or CW
+  const useCCW = dot(midCCW, cNorm) > dot(midCW, cNorm);
+  addArcPath(ctx, v, rPx, a1, a2, useCCW);
+  ```
+- **Files Changed**:
+  - `BaseEntityRenderer.ts`: Added `drawInternalAngleArc()` method
+  - `AngleMeasurementRenderer.ts`: Changed from `drawCentralizedArc()` to `drawInternalAngleArc()`
+- **Benefits**:
+  - Τόξα ΠΑΝΤΑ εσωτερικά (μικρότερη γωνία)
+  - Consistent με Polyline/Rectangle angle rendering
+  - CAD-standard behavior (AutoCAD dimension arcs)
+- **Companion**: ADR-140 (Angle Measurement Constants), ADR-159 (Measurement Colors)
 
 ---
 
@@ -814,6 +1503,78 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
 ### ADR-034: Geometry Calculations Centralization
 - **Canonical**: `geometry-utils.ts` (SSOT for polygon calculations)
 - **Separation**: Math (geometry-utils) ↔ Rendering (geometry-rendering-utils)
+
+### ADR-161: isFinite() Standardization (global → Number.isFinite)
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: Mixed usage of global `isFinite()` and `Number.isFinite()` across 4 files (13 occurrences)
+- **Risk**: Global `isFinite()` does type coercion (`isFinite("123")` = true) which can cause subtle bugs in a TypeScript codebase
+- **Decision**: Standardize to `Number.isFinite()` for strict type checking (no coercion)
+- **Pattern**: Use `Number.isFinite()` for all finite number checks in TypeScript code
+- **Industry Standard**: ESLint rule `no-restricted-globals` recommends `Number.isFinite` over global
+- **Files Updated** (4 files, 13 replacements):
+  - `systems/zoom/utils/bounds.ts` - 6 replacements (circle/arc radius, bounds validation, polyline bounds)
+  - `systems/zoom/utils/calculations.ts` - 2 replacements (viewport validation, padding validation)
+  - `services/FitToViewService.ts` - 2 replacements (scale validation)
+  - `rendering/entities/shared/entity-validation-utils.ts` - 2 replacements (isValidPointStrict function)
+- **Before/After**:
+  ```typescript
+  // ❌ BEFORE: Global isFinite (type coercion)
+  return isFinite(p.x) && isFinite(p.y);
+
+  // ✅ AFTER: Number.isFinite (strict, no coercion)
+  // 🏢 ADR-161: Use Number.isFinite() for strict type checking
+  return Number.isFinite(p.x) && Number.isFinite(p.y);
+  ```
+- **Benefits**:
+  - Type-safe: No implicit coercion (strings, objects won't pass)
+  - Consistent: Same behavior across all validation checks
+  - Modern JavaScript: `Number.isFinite()` is the recommended approach (ES6+)
+- **Companion**: ADR-034 (Geometry), ADR-065 (Distance)
+
+### ADR-164: Line Direction Normalization → ADR-065 Functions
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Problem**: 3 functions in `geometry-utils.ts` had duplicate inline calculations for normalized direction + perpendicular:
+  ```typescript
+  // Επαναλαμβανόταν 3 ΦΟΡΕΣ:
+  const dx = refEnd.x - refStart.x;
+  const dy = refEnd.y - refStart.y;
+  const refLength = Math.sqrt(dx * dx + dy * dy);
+  const refDirX = dx / refLength;
+  const refDirY = dy / refLength;
+  const perpDirX = -refDirY;
+  const perpDirY = refDirX;
+  ```
+- **Existing Solution**: ADR-065 already provided `getUnitVector()` and `getPerpendicularUnitVector()` in `geometry-rendering-utils.ts`
+- **Decision**: Replace inline calculations with existing centralized functions
+- **Files Updated**:
+  - `rendering/entities/shared/geometry-utils.ts` - 3 function refactors + import update
+- **Functions Refactored**:
+  - `circleFrom2PointsAndRadius` - Now uses `getPerpendicularUnitVector()`
+  - `createPerpendicularLine` - Now uses `getUnitVector()` + `getPerpendicularUnitVector()`
+  - `createParallelLine` - Now uses `getPerpendicularUnitVector()`
+- **Before/After**:
+  ```typescript
+  // ❌ BEFORE: Inline calculations (10+ lines each function)
+  const dx = refEnd.x - refStart.x;
+  const dy = refEnd.y - refStart.y;
+  const refLength = Math.sqrt(dx * dx + dy * dy);
+  const refDirX = dx / refLength;
+  const perpDirX = -refDirY;
+
+  // ✅ AFTER: Centralized functions (3-4 lines)
+  const refLength = calculateDistance(refStart, refEnd);
+  const refDir = getUnitVector(refStart, refEnd);
+  const perpDir = getPerpendicularUnitVector(refStart, refEnd);
+  ```
+- **Benefits**:
+  - Zero duplicate direction normalization code
+  - Consistent use of existing ADR-065 centralized functions
+  - Implicit bug fix for edge cases (`normalizeVector` handles zero-length vectors)
+  - ~30 lines inline code → ~15 lines with centralized calls
+- **Pattern**: Single Source of Truth (SSOT) + Code Reuse
+- **Companion**: ADR-065 (Distance & Vector Operations), ADR-034 (Geometry Calculations)
 
 ### ADR-065: Distance & Vector Operations Centralization
 - **Canonical Functions** (from `geometry-rendering-utils.ts`):
@@ -978,13 +1739,14 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
 
 ### ADR-068: Angle Normalization Centralization
 - **Canonical**: `normalizeAngleRad()`, `normalizeAngleDeg()` from `geometry-utils.ts`
-- **Impact**: 6+ inline angle normalization implementations → 2 functions
+- **Impact**: 7+ inline angle normalization implementations → 2 functions
 - **Files Migrated**:
   - `geometry-utils.ts` - `arcFrom3Points()` + `isAngleBetween()` internal normalizations
   - `line-utils.ts` - `hitTestArcEntity()` angle/startAngle/endAngle normalization
   - `angle-calculation.ts` - `calculateAngleData()` positive angle conversion
   - `useUnifiedDrawing.tsx` - `measure-angle` tool angle conversion
   - `constraints/utils.ts` - `AngleUtils.normalizeAngle` delegates to canonical
+  - `pdf-background/types/pdf.types.ts` - `normalizeRotation()` now delegates to `normalizeAngleDeg` (2026-02-01)
 - **Pattern**: Single Source of Truth (SSOT)
 - **Algorithm**: `modulo + if` (more efficient than while loops for extreme values)
 - **Benefits**:
@@ -1133,6 +1895,60 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - Type-safe number parameters
 - **Companion**: ADR-065 (Distance), ADR-066 (Angle), ADR-067 (Deg↔Rad), ADR-070 (Magnitude)
 
+### ADR-131: clampScale Function Centralization (PDF + Zoom)
+- **Canonical**: `clampScale()`, `clampPdfScale()` from `config/transform-config.ts`
+- **Problem**: 2 duplicate `clampScale` implementations with different signatures:
+  - `pdf.types.ts:321` - `clampScale(scale: number): number` with hardcoded MIN=0.01, MAX=10
+  - `calculations.ts:185` - `clampScale(scale, minScale, maxScale): number` with parameters
+- **Solution**: Unified `clampScale()` in transform-config.ts with:
+  - Default parameters for Zoom system (0.01 - 1000)
+  - `clampPdfScale()` wrapper for PDF-specific limits (0.01 - 10)
+- **Files Migrated**:
+  - `config/transform-config.ts` - Added `PDF_SCALE_LIMITS`, `clampScale()`, `clampPdfScale()`
+  - `pdf-background/types/pdf.types.ts` - Re-exports `clampPdfScale` as `clampScale` for backward compatibility
+  - `systems/zoom/utils/calculations.ts` - Re-exports centralized `clampScale`
+- **Consumers** (no changes needed - backward compatible):
+  - `pdfBackgroundStore.ts` - Uses `clampScale` from pdf.types.ts (lines 188, 210)
+  - `ZoomManager.ts` - Uses `clampScale` from calculations.ts (lines 69, 88)
+- **Pattern**: Single Source of Truth + Backward Compatibility via re-exports
+- **API**:
+  - `clampScale(scale, minScale?, maxScale?)`: Generic scale clamping with defaults
+  - `clampPdfScale(scale)`: PDF-specific clamping (0.01 - 10)
+  - `PDF_SCALE_LIMITS`: Constants { MIN_SCALE: 0.01, MAX_SCALE: 10 }
+- **Benefits**:
+  - Single source of truth for scale limits
+  - PDF and Zoom systems share same core function
+  - Backward compatible - no consumer changes needed
+  - Consistent with ADR-043 (Zoom Constants) and ADR-071 (Clamp Function)
+- **Companion**: ADR-043 (Zoom Constants), ADR-071 (Clamp Function)
+
+### ADR-132: Coordinate Validation Centralization (isValidPoint/isValidPointStrict)
+- **Status**: ✅ IMPLEMENTED
+- **Date**: 2026-02-01
+- **Canonical**: `isValidPoint()`, `isValidPointStrict()` from `rendering/entities/shared/entity-validation-utils.ts`
+- **Problem**: Scattered coordinate validation patterns across codebase:
+  - `vertex.x !== undefined && vertex.y !== undefined` (4 occurrences)
+  - `isFinite(entity.start.x) && isFinite(entity.start.y)` (6 occurrences)
+- **Solution**: Centralized type guard functions:
+  - `isValidPoint(point)`: Type predicate for basic coordinate validation (undefined, null, NaN)
+  - `isValidPointStrict(point)`: Extends isValidPoint with Infinity check for bounds calculations
+- **Files Migrated**:
+  - `utils/dxf-converter-helpers.ts` - 2 undefined checks → `isValidPoint()`
+  - `systems/zoom/utils/bounds.ts` - 10 patterns → `isValidPoint()` and `isValidPointStrict()`
+- **API**:
+  - `isValidPoint(point: unknown): point is Point2D` - Checks null, undefined, NaN
+  - `isValidPointStrict(point: unknown): point is Point2D` - Also checks Infinity
+- **Use Cases**:
+  - `isValidPoint()`: Vertex parsing, entity normalization
+  - `isValidPointStrict()`: Bounds calculations where Infinity invalidates results
+- **Benefits**:
+  - Type narrowing with TypeScript type predicates
+  - Consistent validation across codebase
+  - Single source of truth for coordinate validation rules
+  - Existing `isValidPoint()` was unused - now activated
+- **Pattern**: Single Source of Truth (SSOT) + Type Predicates
+- **Companion**: ADR-114 (Bounding Box), ADR-089 (Point-In-Bounds)
+
 ### ADR-072: Dot Product Centralization
 - **Canonical**: `dotProduct()` from `geometry-rendering-utils.ts`
 - **Impact**: 9+ inline `v1.x * v2.x + v1.y * v2.y` implementations → 1 function
@@ -1271,8 +2087,8 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
 - **Companion**: ADR-075 (Grip Size Multipliers), ADR-048 (Unified Grip Rendering System)
 
 ### ADR-076: RGB ↔ HEX Color Conversion Centralization
-- **Canonical**: `parseHex()`, `rgbToHex()` from `ui/color/utils.ts`
-- **Impact**: 12+ inline color conversion implementations → 2 functions
+- **Canonical**: `parseHex()`, `rgbToHex()`, `normalizeHex()`, `isValidHex()` from `ui/color/utils.ts`
+- **Impact**: 13+ inline color conversion implementations → canonical functions
 - **Files Migrated**:
   - `aci.ts` - Removed duplicate `hexToRgb()`, uses `parseHex()`
   - `useContrast.ts` - Removed duplicate `hexToRgb()` and `rgbToHex()`, uses imports
@@ -1282,10 +2098,13 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - `RulerMajorLinesSettings.tsx` - Uses `rgbToHex()` in `getBaseColor()`
   - `RulerMinorLinesSettings.tsx` - Uses `rgbToHex()` in `getBaseColor()`
   - `RulerUnitsSettings.tsx` - Uses `rgbToHex()` in `getPreviewColor()`
+  - `RecentColorsStore.ts` - Uses `normalizeHex()` and `isValidHex()` from utils (2026-02-01)
 - **Pattern**: Single Source of Truth (SSOT)
 - **API**:
   - `parseHex(hex: string): RGBColor` - Parses #RGB, #RRGGBB, #RRGGBBAA
   - `rgbToHex(rgb: RGBColor, options?: FormatOptions): string` - Converts RGB to hex
+  - `normalizeHex(hex: string, options?: FormatOptions): string` - Normalizes hex format
+  - `isValidHex(hex: string): boolean` - Validates hex color format
 - **Benefits**:
   - Zero duplicate color conversion code
   - Consistent parsing with error handling
@@ -1996,19 +2815,30 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
 - **Problem**: Multiple parallel RAF loops competing for resources:
   - `UnifiedFrameScheduler` - Main render loop ✅
   - `DxfPerformanceOptimizer` - FPS measurement loop ❌ DUPLICATE
+  - `SmartBoundsManager` - Nested RAF for fit-to-view ❌ DUPLICATE
+  - `CanvasSection` - Double-RAF for viewport layout ❌ DUPLICATE
   - `useCentralizedMouseHandlers` - Panning (keep separate - high-frequency state updates)
   - `useEntityDrag` - Throttling (keep separate - state updates, not rendering)
 - **Solution**:
   - `DxfPerformanceOptimizer` now uses `UnifiedFrameScheduler.onFrame()` instead of own RAF loop
+  - Added `scheduleOnce()` and `scheduleOnceDelayed()` APIs to UnifiedFrameScheduler
+  - `SmartBoundsManager` migrated to use `scheduleOnceDelayed()` for fit-to-view
+  - `CanvasSection` migrated to use `scheduleOnceDelayed()` for viewport layout
   - Panning/drag RAF loops remain separate (high-frequency state updates, risky to consolidate)
+- **New APIs Added** (2026-02-01):
+  - `scheduleOnce(id, callback)` - One-shot RAF for next frame
+  - `scheduleOnceDelayed(id, callback, delayMs)` - RAF → setTimeout → RAF pattern
+  - `cancelOnce(id)` - Cancel pending one-shot callback
 - **Changes Made**:
+  - `UnifiedFrameScheduler.ts`: Added scheduleOnce/scheduleOnceDelayed APIs
   - `DxfPerformanceOptimizer.ts`: Removed `measureFPS()` RAF loop, now subscribes to scheduler metrics
-  - Uses `UnifiedFrameScheduler.onFrame()` callback for FPS updates
-  - Added cleanup via `unsubscribeFrameMetrics` in `destroy()` method
+  - `SmartBoundsManager.ts`: Replaced nested RAF with scheduleOnceDelayed()
+  - `CanvasSection.tsx`: Replaced double-RAF pattern with scheduleOnceDelayed()
 - **Benefits**:
   - Reduced from 5+ parallel RAF loops to 1 central + 2 specialized
   - More accurate FPS measurement (60-frame rolling average from scheduler)
   - Reduced CPU overhead from competing RAF loops
+  - Centralized cleanup and coordination for one-shot operations
 - **Companion**: ADR-030 (Unified Frame Scheduler), ADR-019 (Performance Thresholds)
 
 ### ADR-036: Enterprise Structured Logging
@@ -2085,7 +2915,7 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - `INPUT_TIMING`: Focus delays (10ms, 50ms)
   - `FIELD_TIMING`: Field render delays (150ms)
   - `UI_TIMING`: Menu guards, tool transitions, anchor display (50ms, 100ms, 1000ms)
-  - `STORAGE_TIMING`: Settings debounce, save status display (150ms, 500ms, 2000ms)
+  - `STORAGE_TIMING`: Settings debounce, save status display, scene autosave (150ms, 500ms, 2000ms)
   - `COLLABORATION_TIMING`: Connection delays, cursor updates (100ms, 500ms)
 - **Files Migrated**:
   - `useDynamicInputKeyboard.ts` (8 replacements)
@@ -2095,6 +2925,8 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
   - `useColorMenuState.ts` (1 replacement)
   - `useDynamicInputAnchoring.ts` (1 replacement)
   - `DxfSettingsStore.ts` (1 replacement)
+  - `useAutoSaveSceneManager.ts` (1 replacement - SCENE_AUTOSAVE_DEBOUNCE)
+- **Removed Dead Code**: `AUTOSAVE_DEBOUNCE_MS` from `overlays/types.ts` (exported but never used)
 - **Benefits**: Single Source of Truth, easy performance tuning, no magic numbers
 
 ---
@@ -2470,6 +3302,6 @@ withCanvasState(ctx, { fill: UI_COLORS.WHITE, opacity: 0.5 }, () => {
 
 > **💡 Tip**: Use `Ctrl+F` to search for specific ADR numbers or keywords
 >
-> **🔄 Last Updated**: 2026-01-31
+> **🔄 Last Updated**: 2026-02-01
 >
 > **👥 Maintainers**: Γιώργος Παγώνης + Claude Code (Anthropic AI)

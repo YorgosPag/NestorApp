@@ -297,7 +297,11 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
   }, [state.overlays, update]);
 
   // 🏢 ENTERPRISE (2026-01-25): Remove vertex from polygon at specified index
+  // 🏢 ADR-145: Use centralized MIN_POLY_POINTS from tolerance-config
   const removeVertex = useCallback(async (id: string, vertexIndex: number): Promise<boolean> => {
+    // Import dynamically to avoid circular dependencies at module level
+    const { MIN_POLY_POINTS } = await import('../config/tolerance-config');
+
     const overlay = state.overlays[id];
     if (!overlay) {
       console.error('❌ removeVertex: Overlay not found:', id);
@@ -310,9 +314,8 @@ export function OverlayStoreProvider({ children }: { children: React.ReactNode }
       return false;
     }
 
-    // Minimum 3 vertices for a valid polygon
-    const MIN_VERTICES = 3;
-    if (currentPolygon.length <= MIN_VERTICES) {
+    // 🏢 ADR-145: Minimum vertices for valid polygon - centralized constant
+    if (currentPolygon.length <= MIN_POLY_POINTS) {
       console.warn('⚠️ removeVertex: Cannot remove - minimum vertices reached');
       return false;
     }

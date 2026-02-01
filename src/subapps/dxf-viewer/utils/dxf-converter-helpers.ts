@@ -19,6 +19,8 @@ import type { Point2D } from '../rendering/types/Types';
 
 // 🏢 ENTERPRISE: Import ACI color system for DXF color extraction
 import { getAciColor } from '../settings/standards/aci';
+// 🏢 ADR: Centralized point validation
+import { isValidPoint } from '../rendering/entities/shared/entity-validation-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: TYPE DEFINITIONS
@@ -96,8 +98,8 @@ export function parseVerticesFromData(data: Record<string, string>): Point2D[] {
 
   Object.keys(data).forEach(code => {
     if (code === '10') {
-      // Add previous vertex if complete
-      if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
+      // Add previous vertex if complete - 🏢 ADR: Use centralized isValidPoint
+      if (isValidPoint(currentVertex)) {
         vertices.push({ x: currentVertex.x, y: currentVertex.y });
       }
       // Start new vertex
@@ -107,8 +109,8 @@ export function parseVerticesFromData(data: Record<string, string>): Point2D[] {
     }
   });
 
-  // Add final vertex
-  if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
+  // Add final vertex - 🏢 ADR: Use centralized isValidPoint
+  if (isValidPoint(currentVertex)) {
     vertices.push({ x: currentVertex.x, y: currentVertex.y });
   }
 

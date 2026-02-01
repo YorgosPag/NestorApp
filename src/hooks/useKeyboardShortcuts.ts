@@ -13,6 +13,9 @@ export function useKeyboardShortcut(
 ) {
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      // 🛡️ ENTERPRISE: Guard against undefined e.key (dead keys, composition events, etc.)
+      if (!e.key) return;
+
       if (
         e.key.toLowerCase() === key.toLowerCase() &&
         (e.metaKey || e.ctrlKey) &&

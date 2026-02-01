@@ -24,7 +24,7 @@
  * - Full TypeScript (ZERO any)
  */
 
-import React, { useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
+import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { PreviewRenderer, type PreviewRenderOptions } from './PreviewRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
@@ -33,6 +33,8 @@ import { portalComponents } from '@/styles/design-tokens';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ENTERPRISE (2026-01-27): Event Bus for drawing completion notification - ADR-040
 import { EventBus } from '../../systems/events';
+// 🏢 ADR-146: Canvas Size Observer Centralization
+import { useCanvasSizeObserver } from '../../hooks/canvas';
 
 // ============================================================================
 // TYPES - Enterprise TypeScript Standards (ZERO any)
@@ -153,27 +155,16 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
     }, []);
 
     // ============================================================================
-    // CANVAS RESIZE HANDLING
+    // 🏢 ADR-146: Centralized Canvas Size Observer
     // ============================================================================
 
-    useEffect(() => {
-      const canvas = canvasRef.current;
-      const renderer = rendererRef.current;
-      if (!canvas || !renderer) return;
-
-      const updateSize = () => {
+    useCanvasSizeObserver({
+      canvasRef,
+      onSizeChange: (canvas) => {
         const rect = canvas.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          renderer.updateSize(rect.width, rect.height);
-        }
-      };
-
-      // Use ResizeObserver for reliable size tracking
-      const resizeObserver = new ResizeObserver(updateSize);
-      resizeObserver.observe(canvas);
-
-      return () => resizeObserver.disconnect();
-    }, []);
+        rendererRef.current?.updateSize(rect.width, rect.height);
+      },
+    });
 
     // ============================================================================
     // UNIFIED FRAME SCHEDULER INTEGRATION (ADR-030)

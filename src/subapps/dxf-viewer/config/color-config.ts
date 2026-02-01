@@ -217,22 +217,32 @@ const UI_COLORS_BASE = {
   OVERLAY_AXIS_Y: '#00ff00',    // Green for Y axis
   OVERLAY_ORIGIN: '#0000ff',    // Blue for origin
 
-  // 🏢 ENTERPRISE (2027-01-27): Dimension Text Color - ADR-048 Hardcoded Values Centralization
-  DIMENSION_TEXT: 'fuchsia',    // Fuchsia for dimension measurements (area, perimeter, angles)
+  // 🏢 ENTERPRISE (2027-01-27): Measurement Text Colors - ADR-048 Hardcoded Values Centralization
+  // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Δύο ξεχωριστές σταθερές για αυτονομία χρωμάτων
+  ANGLE_MEASUREMENT_TEXT: 'fuchsia',   // Φούξια για μέτρηση γωνιών (μοίρες, radians)
+  DISTANCE_MEASUREMENT_TEXT: '#FFFFFF', // Λευκό για μέτρηση μηκών ευθύγραμμων τμημάτων
+
+  // 🔄 LEGACY ALIAS - για backward compatibility
+  DIMENSION_TEXT: 'fuchsia',    // @deprecated - χρησιμοποίησε ANGLE_MEASUREMENT_TEXT ή DISTANCE_MEASUREMENT_TEXT
 } as const;
 
 // ✅ ENTERPRISE FIX: Export UI_COLORS moved after CAD_UI_COLORS and LEGACY_COLORS
 
 // Opacity variations
 // 🏢 ADR-119: Centralized Canvas globalAlpha Opacity Values
+// 🏢 ADR-134: Extended Opacity Values - Complete opacity spectrum
 export const OPACITY = {
-  OPAQUE: 1.0,
-  HIGH: 0.9,
-  MEDIUM: 0.7,
-  SUBTLE: 0.6,    // 🏢 ADR-119: For origin markers, subtle overlays
-  LOW: 0.5,
-  VERY_LOW: 0.3,
-  FAINT: 0.1,
+  OPAQUE: 1.0,        // Full opacity - no transparency
+  VERY_HIGH: 0.95,    // 🏢 ADR-134: Near-opaque (electrical cables, critical elements)
+  HIGH: 0.9,          // Snap indicators, preview lines
+  MEDIUM_HIGH: 0.85,  // 🏢 ADR-134: Constraints, furniture lines
+  MEDIUM: 0.8,        // 🏢 ADR-134: Selection, cursor, axes (was 0.7)
+  MEDIUM_LOW: 0.7,    // 🏢 ADR-134: Regions, secondary elements
+  SUBTLE: 0.6,        // 🏢 ADR-119: For origin markers, subtle overlays
+  LOW: 0.5,           // PDF backgrounds, disabled states
+  DISABLED: 0.4,      // 🏢 ADR-134: Disabled menu items
+  VERY_LOW: 0.3,      // Grid opacity
+  FAINT: 0.1,         // Barely visible elements
 } as const;
 
 // Color utility functions
@@ -487,6 +497,112 @@ export const CANVAS_THEME = {
 // Type exports για TypeScript safety
 export type CanvasThemeKey = keyof typeof CANVAS_THEME;
 export type CanvasThemeValue = typeof CANVAS_THEME[CanvasThemeKey];
+
+// ============================================================================
+// 🏢 ADR-142: ICON CLICK SEQUENCE COLORS (2026-02-01)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Icon Click Sequence Colors
+ *
+ * Unified colors for tool icon click indicators.
+ * Used across all drawing tool icons (Line, Circle, Arc, Angle).
+ *
+ * Pattern: Red → Orange → Green (1st → 2nd → 3rd click)
+ *
+ * @see LineIcon.tsx, CircleIcon.tsx, ArcIcon.tsx
+ * @see AngleIconBase.tsx, AngleTwoArcsIcon.tsx
+ * @see ADR-142: Icon Click Sequence Colors Centralization
+ * @since 2026-02-01
+ */
+export const ICON_CLICK_COLORS = {
+  /** 🔴 Red - 1st click (start point) */
+  FIRST: '#ef4444',
+
+  /** 🟠 Orange - 2nd click (intermediate point) */
+  SECOND: '#f97316',
+
+  /** 🟢 Green - 3rd/last click (end point/result) */
+  THIRD: '#22c55e',
+
+  /** Gray - Reference line (for perpendicular/parallel tools) */
+  REFERENCE: '#9ca3af',
+} as const;
+
+export type IconClickColor = typeof ICON_CLICK_COLORS[keyof typeof ICON_CLICK_COLORS];
+
+// ============================================================================
+// 🏢 ADR-143: FOCUS RING & BUTTON HOVER COLORS (2026-02-01)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Focus Ring Shadow Colors
+ *
+ * Unified focus ring colors for button variants.
+ * Used for box-shadow focus states across all dialogs.
+ *
+ * Pattern: 0 0 0 3px [color] (3px ring with 20% opacity)
+ *
+ * @see SimpleProjectDialog.styles.ts
+ * @see ADR-143: Focus Ring Colors Centralization
+ * @since 2026-02-01
+ */
+export const FOCUS_RING_SHADOWS = {
+  /** Primary focus ring - blue @ 20% */
+  PRIMARY: UI_COLORS_BASE.PRIMARY_FILL_20,
+
+  /** Secondary focus ring - gray-600 @ 20% */
+  SECONDARY: 'rgba(107, 114, 128, 0.2)',
+
+  /** Success focus ring - green @ 20% */
+  SUCCESS: 'rgba(16, 185, 129, 0.2)',
+
+  /** Destructive focus ring - red @ 20% */
+  DESTRUCTIVE: 'rgba(239, 68, 68, 0.2)',
+
+  /** Warning focus ring - amber @ 20% */
+  WARNING: 'rgba(245, 158, 11, 0.2)',
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Button Hover Background Colors
+ *
+ * Hover state background colors for button variants.
+ * Slightly darker than base colors for visual feedback.
+ *
+ * @see SimpleProjectDialog.styles.ts
+ * @see ADR-143: Button Hover Colors Centralization
+ * @since 2026-02-01
+ */
+export const BUTTON_HOVER_COLORS = {
+  /** Success hover - green-600 */
+  SUCCESS: '#059669',
+
+  /** Destructive hover - red-600 */
+  DESTRUCTIVE: '#DC2626',
+
+  /** Warning hover - amber-600 */
+  WARNING: '#D97706',
+} as const;
+
+/**
+ * 🏢 ENTERPRISE: Form Border Colors
+ *
+ * Border colors for form elements (inputs, selects, etc.)
+ *
+ * @see SimpleProjectDialog.styles.ts
+ * @since 2026-02-01
+ */
+export const FORM_BORDER_COLORS = {
+  /** Default border - light gray */
+  DEFAULT: '#cccccc',
+
+  /** Focus border - primary blue */
+  FOCUS: UI_COLORS_BASE.BUTTON_PRIMARY,
+} as const;
+
+export type FocusRingShadowKey = keyof typeof FOCUS_RING_SHADOWS;
+export type ButtonHoverColorKey = keyof typeof BUTTON_HOVER_COLORS;
 
 // ============================================================================
 // UI GRADIENTS SYSTEM - Enterprise Color Picker Gradients

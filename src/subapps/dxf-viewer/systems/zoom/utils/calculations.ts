@@ -8,7 +8,12 @@ import type { Point2D, ViewTransform } from '../../../rendering/types/Types';
 import { FitToViewService } from '../../../services/FitToViewService';
 import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
 // 🏢 ENTERPRISE: Use centralized constants
-import { ZOOM_FACTORS, TRANSFORM_SCALE_LIMITS, FIT_TO_VIEW_DEFAULTS } from '../../../config/transform-config';
+import {
+  ZOOM_FACTORS,
+  TRANSFORM_SCALE_LIMITS,
+  FIT_TO_VIEW_DEFAULTS,
+  clampScale as centralizedClampScale
+} from '../../../config/transform-config';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-089: Centralized Point-In-Bounds
@@ -48,7 +53,8 @@ export function calculateFitTransform(
   alignToOrigin: boolean = false
 ): ViewTransform | null {
   // 🛡️ GUARD: Validate viewport before calculations
-  if (!viewport || viewport.width <= 0 || viewport.height <= 0 || !isFinite(viewport.width) || !isFinite(viewport.height)) {
+  // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
+  if (!viewport || viewport.width <= 0 || viewport.height <= 0 || !Number.isFinite(viewport.width) || !Number.isFinite(viewport.height)) {
     console.error('🚨 calculateFitTransform: Invalid viewport!');
     return null; // 🏢 FIX: Return null instead of default transform
   }
@@ -58,7 +64,8 @@ export function calculateFitTransform(
   // Now uses consistent 10% padding regardless of viewport size
   const paddingPercentage = FIT_TO_VIEW_DEFAULTS.PADDING_PERCENTAGE;
 
-  if (!isFinite(paddingPercentage)) {
+  // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
+  if (!Number.isFinite(paddingPercentage)) {
     console.error('🚨 calculateFitTransform: Invalid paddingPercentage!');
     return null; // 🏢 FIX: Return null instead of default transform
   }
@@ -176,19 +183,14 @@ export function unionBounds(
 }
 
 // === SCALE UTILITIES ===
-// 🏢 ADR-071: Using centralized clamp from geometry-utils.ts
+// 🏢 CENTRALIZED: Re-export from transform-config for backward compatibility
 
 /**
  * Clamp scale within limits
- * 🏢 ADR-071: Wrapper using centralized clamp function
+ * 🏢 CENTRALIZED: Re-export from transform-config.ts - Single source of truth
+ * @see config/transform-config.ts - clampScale function
  */
-export function clampScale(
-  scale: number,
-  minScale: number,
-  maxScale: number
-): number {
-  return clamp(scale, minScale, maxScale);
-}
+export const clampScale = centralizedClampScale;
 
 /**
  * Υπολογισμός επόμενου zoom level

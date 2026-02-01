@@ -5,7 +5,8 @@
 
 import type { Point2D } from '../../types/Types';
 import type { UIElementSettings } from '../core/UIRenderer';
-import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ADR-134: Centralized Opacity Constants
+import { UI_COLORS, OPACITY } from '../../../config/color-config';
 
 /**
  * 🔺 CURSOR LINE STYLES
@@ -72,7 +73,7 @@ export type CursorRenderMode =
 export const DEFAULT_UI_CURSOR_SETTINGS: UICursorSettings = {
   enabled: true,
   visible: true,
-  opacity: 0.8,
+  opacity: OPACITY.MEDIUM,  // 🏢 ADR-134: Centralized opacity (0.8)
   color: UI_COLORS.WHITE,
   size: 12,              // 12px pickbox
   lineWidth: 1,

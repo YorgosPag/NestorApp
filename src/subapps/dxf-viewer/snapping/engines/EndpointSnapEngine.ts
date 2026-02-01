@@ -16,6 +16,8 @@ import { SpatialFactory } from '../../core/spatial';
 import type { ISpatialIndex, SpatialBounds } from '../../core/spatial';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { findStandardSnapCandidates, StandardSnapCandidate } from './shared/snap-engine-utils';
+// 🏢 ADR-149: Centralized Snap Engine Priorities
+import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
 export class EndpointSnapEngine extends BaseSnapEngine {
   private spatialIndex: ISpatialIndex | null = null;
@@ -75,7 +77,8 @@ export class EndpointSnapEngine extends BaseSnapEngine {
     }
 
     const candidates: SnapCandidate[] = [];
-    const priority = 0; // Highest priority for endpoints
+    // 🏢 ADR-149: Use centralized snap engine priorities
+    const priority = SNAP_ENGINE_PRIORITIES.ENDPOINT;
 
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.ENDPOINT);
 

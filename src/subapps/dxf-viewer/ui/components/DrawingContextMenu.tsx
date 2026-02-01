@@ -29,6 +29,14 @@ import {
 import { cn } from '@/lib/utils';
 import styles from './DrawingContextMenu.module.css';
 import type { ToolType } from '../toolbar/types';
+// 🏢 ENTERPRISE (2026-02-01): Centralized Menu Icons - ADR-133
+import {
+  EnterIcon,
+  ClosePolygonIcon,
+  UndoIcon,
+  CancelIcon,
+  FlipArcIcon,
+} from '../icons/MenuIcons';
 
 // ===== TYPES =====
 
@@ -53,61 +61,6 @@ interface DrawingContextMenuProps {
   onCancel: () => void;
   /** 🏢 ENTERPRISE (2026-01-31): Callback for Flip Arc direction */
   onFlipArc?: () => void;
-}
-
-// ===== ICONS =====
-
-function EnterIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="9 10 4 15 9 20" />
-      <path d="M20 4v7a4 4 0 0 1-4 4H4" />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="12 2 2 7 12 12 22 7 12 2" />
-      <path d="M2 17l10 5 10-5" />
-      <path d="M2 12l10 5 10-5" />
-    </svg>
-  );
-}
-
-function UndoIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 7v6h6" />
-      <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
-    </svg>
-  );
-}
-
-function CancelIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="15" y1="9" x2="9" y2="15" />
-      <line x1="9" y1="9" x2="15" y2="15" />
-    </svg>
-  );
-}
-
-// 🏢 ENTERPRISE (2026-01-31): Flip Arc Direction Icon
-// 🔧 OPTIMIZED: Απλό, καθαρό design - δύο αντίθετα τόξα με βέλη
-function FlipArcIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      {/* Πάνω τόξο με βέλος δεξιά */}
-      <path d="M5 12 A 7 7 0 0 1 19 12" />
-      <polyline points="16 9 19 12 16 15" />
-      {/* Κάτω τόξο με βέλος αριστερά (dashed) */}
-      <path d="M5 12 A 7 7 0 0 0 19 12" strokeDasharray="3,2" opacity="0.6" />
-      <polyline points="8 9 5 12 8 15" opacity="0.6" />
-    </svg>
-  );
 }
 
 // ===== HELPER FUNCTIONS =====
@@ -273,7 +226,7 @@ export default function DrawingContextMenu({
             onClick={handleClose}
             disabled={!canClose}
           >
-            <span className={styles.menuItemIcon}><CloseIcon /></span>
+            <span className={styles.menuItemIcon}><ClosePolygonIcon /></span>
             <span className={styles.menuItemLabel}>Close</span>
             <span className={styles.menuItemShortcut}>C</span>
           </DropdownMenuItem>

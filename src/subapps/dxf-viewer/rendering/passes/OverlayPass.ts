@@ -8,6 +8,8 @@ import type { EntityModel } from '../types/Types';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../primitives/canvasPaths';
+// 🏢 ADR-138: Centralized Overlay Dimensions
+import { OVERLAY_DIMENSIONS } from '../../utils/hover/config';
 
 export interface GripInfo {
   entityId: string;
@@ -272,8 +274,8 @@ export class OverlayPass implements IRenderPass {
     for (const snapPoint of this.snapPoints) {
       const screenPos = context.worldToScreen(snapPoint);
 
-      // Draw snap crosshair
-      const size = 8;
+      // Draw snap crosshair - 🏢 ADR-138: Centralized overlay dimensions
+      const size = OVERLAY_DIMENSIONS.SNAP_CROSSHAIR;
       context.beginPath();
       // Horizontal line
       context.moveTo(screenPos.x - size, screenPos.y);
@@ -310,8 +312,8 @@ export class OverlayPass implements IRenderPass {
 
     switch (this.cursor.type) {
       case 'crosshair':
-        // Draw crosshair cursor
-        const size = 20;
+        // Draw crosshair cursor - 🏢 ADR-138: Centralized overlay dimensions
+        const size = OVERLAY_DIMENSIONS.CROSSHAIR;
         context.beginPath();
         // Horizontal line
         context.moveTo(screenPos.x - size, screenPos.y);
@@ -329,9 +331,9 @@ export class OverlayPass implements IRenderPass {
         break;
 
       case 'move':
-        // Draw move cursor (4-way arrow)
+        // Draw move cursor (4-way arrow) - 🏢 ADR-138: Centralized overlay dimensions
         context.beginPath();
-        const arrowSize = 8;
+        const arrowSize = OVERLAY_DIMENSIONS.MOVE_ARROW;
         // Up arrow
         context.moveTo(screenPos.x, screenPos.y - arrowSize);
         context.lineTo(screenPos.x - 3, screenPos.y - arrowSize + 3);

@@ -5,7 +5,8 @@
 
 import type { Point2D } from '../rendering/types/Types';
 // 🏢 ADR-107: Centralized Text Metrics Ratios
-import { TEXT_METRICS_RATIOS } from '../config/text-rendering-config';
+// 🏢 ADR-142: Centralized Default Font Size
+import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
 
 // ✅ ENTERPRISE FIX: Enhanced grip point interface for preview system
 // 🎯 ADR-047: Added 'close' type and optional color for close-on-first-point indicator
@@ -458,8 +459,9 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
       };
     case 'text':
       // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
-      const textWidth = entity.text.length * (entity.fontSize || 12) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
-      const textHeight = entity.fontSize || 12;
+      // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
+      const textWidth = entity.text.length * (entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
+      const textHeight = entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
       return {
         minX: entity.position.x,
         minY: entity.position.y - textHeight,
@@ -467,7 +469,8 @@ export const getEntityBounds = (entity: Entity): { minX: number; minY: number; m
         maxY: entity.position.y
       };
     case 'mtext':    // ✅ ENTERPRISE: AutoCAD multiline text bounds
-      const mtextHeight = entity.height || (entity.fontSize || 12);
+      // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
+      const mtextHeight = entity.height || (entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE);
       return {
         minX: entity.position.x,
         minY: entity.position.y - mtextHeight,

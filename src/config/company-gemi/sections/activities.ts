@@ -27,7 +27,7 @@ export const activitiesSection: SectionConfig = {
   title: 'sections.activitiesKad', // i18n key
   icon: 'file-text',
   description: 'sectionDescriptions.activitiesKad', // i18n key (will fallback if not exists)
-  order: 2,
+  order: 3, // 🔄 Moved from 2 to 3 (addresses is now 2nd)
   fields: [
     {
       id: 'activityCodeKAD',

@@ -415,3 +415,89 @@ export function screenToWorldFromElement(
   }
   return CoordinateTransforms.screenToWorld(screenPoint, transform, snap.viewport);
 }
+
+// ============================================================================
+// 🏢 ADR-151: SIMPLE COORDINATE TRANSFORM FUNCTIONS (Standalone Exports)
+// ============================================================================
+// PURPOSE: Eliminate scattered inline coordinate transform patterns like:
+//   x: point.x * transform.scale + transform.offsetX,
+//   y: point.y * transform.scale + transform.offsetY
+//
+// USE CASES: Overlay systems, visibility checks, bounding boxes (NO Y-inversion needed)
+// For CAD rendering with Y-inversion, use CoordinateTransforms.worldToScreen() instead
+// ============================================================================
+
+/**
+ * 🏢 ADR-151: Simple world-to-screen coordinate transform (NO Y-inversion)
+ *
+ * Standalone export wrapper for CoordinateTransforms.worldToScreenSimple()
+ * Use this for overlay systems, visibility checks, and bounding box calculations
+ * where Y-axis inversion is NOT needed.
+ *
+ * @param point - World coordinates to convert
+ * @param transform - Current view transform (scale, offsetX, offsetY)
+ * @returns Screen coordinates (without Y-axis inversion)
+ */
+export function worldToScreenSimple(point: Point2D, transform: ViewTransform): Point2D {
+  return CoordinateTransforms.worldToScreenSimple(point, transform);
+}
+
+/**
+ * 🏢 ADR-151: Simple screen-to-world coordinate transform (NO Y-inversion)
+ *
+ * Inverse of worldToScreenSimple - converts screen coordinates back to world.
+ * Use this for overlay systems and visibility checks where Y-axis inversion is NOT needed.
+ *
+ * @param point - Screen coordinates to convert
+ * @param transform - Current view transform (scale, offsetX, offsetY)
+ * @returns World coordinates (without Y-axis inversion)
+ */
+export function screenToWorldSimple(point: Point2D, transform: ViewTransform): Point2D {
+  return {
+    x: (point.x - transform.offsetX) / transform.scale,
+    y: (point.y - transform.offsetY) / transform.scale
+  };
+}
+
+/**
+ * 🏢 ADR-151: Transform bounding box from world to screen (NO Y-inversion)
+ *
+ * Converts all four corners of a bounding box from world to screen coordinates.
+ * Use this for visibility checks and culling operations.
+ *
+ * @param bounds - World-space bounding box
+ * @param transform - Current view transform (scale, offsetX, offsetY)
+ * @returns Screen-space bounding box
+ */
+export function transformBoundsToScreen(
+  bounds: { minX: number; minY: number; maxX: number; maxY: number },
+  transform: ViewTransform
+): { minX: number; minY: number; maxX: number; maxY: number } {
+  return {
+    minX: bounds.minX * transform.scale + transform.offsetX,
+    minY: bounds.minY * transform.scale + transform.offsetY,
+    maxX: bounds.maxX * transform.scale + transform.offsetX,
+    maxY: bounds.maxY * transform.scale + transform.offsetY
+  };
+}
+
+/**
+ * 🏢 ADR-151: Transform bounding box from screen to world (NO Y-inversion)
+ *
+ * Inverse of transformBoundsToScreen - converts screen bounds back to world.
+ *
+ * @param bounds - Screen-space bounding box
+ * @param transform - Current view transform (scale, offsetX, offsetY)
+ * @returns World-space bounding box
+ */
+export function transformBoundsToWorld(
+  bounds: { minX: number; minY: number; maxX: number; maxY: number },
+  transform: ViewTransform
+): { minX: number; minY: number; maxX: number; maxY: number } {
+  return {
+    minX: (bounds.minX - transform.offsetX) / transform.scale,
+    minY: (bounds.minY - transform.offsetY) / transform.scale,
+    maxX: (bounds.maxX - transform.offsetX) / transform.scale,
+    maxY: (bounds.maxY - transform.offsetY) / transform.scale
+  };
+}

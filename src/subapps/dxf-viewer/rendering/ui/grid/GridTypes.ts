@@ -4,7 +4,8 @@
  */
 
 import type { UIElementSettings } from '../core/UIRenderer';
-import { UI_COLORS } from '../../../config/color-config';
+// 🏢 ADR-134: Centralized Opacity Constants
+import { UI_COLORS, OPACITY } from '../../../config/color-config';
 
 /**
  * 🔺 GRID STYLES
@@ -68,7 +69,7 @@ export type GridRenderMode =
 export const DEFAULT_GRID_SETTINGS: GridSettings = {
   enabled: true,
   visible: true,
-  opacity: 0.3,
+  opacity: OPACITY.VERY_LOW,  // 🏢 ADR-134: Centralized opacity (0.3)
   color: UI_COLORS.MEDIUM_GRAY,
   size: 10,              // 10 units spacing
   style: 'lines',

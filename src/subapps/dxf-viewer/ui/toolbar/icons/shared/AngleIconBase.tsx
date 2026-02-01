@@ -4,22 +4,18 @@
  *
  * 🎨 COLOR CODED (2026-01-31): Click sequence visualization
  * 3 STEPS: Point1 → Vertex → Point2: 🔴 → 🟠 → 🟢
+ *
+ * @see ADR-142: Icon Click Sequence Colors Centralization
  */
 
 import * as React from 'react';
 // 🏢 ENTERPRISE: Centralized icon sizes - Zero hardcoded values (ADR-002)
 import { componentSizes } from '../../../../../../styles/design-tokens';
+// 🏢 ADR-142: Centralized Icon Click Sequence Colors
+import { ICON_CLICK_COLORS } from '../../../../config/color-config';
 
 // 🏢 ENTERPRISE: Default icon size from centralized design tokens
 const DEFAULT_ICON_SIZE = componentSizes.icon.numeric.sm; // 16px
-
-// 🎨 Color coding for click sequence (consistent with ArcIcon/CircleIcon)
-// 3 στάσεις: Κόκκινο → Πορτοκαλί → Πράσινο
-const CLICK_COLORS = {
-  FIRST: '#ef4444',   // 🔴 Red - 1st click (Point on first ray)
-  SECOND: '#f97316',  // 🟠 Orange - 2nd click (Vertex)
-  THIRD: '#22c55e',   // 🟢 Green - 3rd/last click (Point on second ray)
-} as const;
 
 interface AngleIconBaseProps {
   size?: number;
@@ -74,11 +70,11 @@ export function AngleIconBase({
       {showClickSequence ? (
         <>
           {/* 1st click - Point on first ray (Red) */}
-          <circle cx="5" cy="4" r="2.5" fill={CLICK_COLORS.FIRST} stroke="none" />
+          <circle cx="5" cy="4" r="2.5" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
           {/* 2nd click - Vertex (Orange) */}
-          <circle cx="5" cy="19" r="2.5" fill={CLICK_COLORS.SECOND} stroke="none" />
+          <circle cx="5" cy="19" r="2.5" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
           {/* 3rd/Last click - Point on second ray (Green) */}
-          <circle cx="20" cy="4" r="2.5" fill={CLICK_COLORS.THIRD} stroke="none" />
+          <circle cx="20" cy="4" r="2.5" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
         </>
       ) : (
         <>

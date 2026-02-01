@@ -16,6 +16,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import type { OverlayEditorMode, OverlayKind, Status } from '../../overlays/types';
 // 🏢 ADR-092: Centralized localStorage Service
 import { storageGet, storageSet, STORAGE_KEYS } from '../../utils/storage-utils';
+// 🏢 ADR-098: Centralized Timing Constants
+import { STORAGE_TIMING } from '../../config/timing-config';
 
 // ✅ ENTERPRISE: Type-safe state schema with validation
 interface OverlayState {
@@ -61,8 +63,7 @@ function validateOverlayState(state: Partial<OverlayState>): OverlayState {
   return validated;
 }
 
-// ✅ ENTERPRISE: Debounce auto-save
-const STORAGE_DEBOUNCE_MS = 500;
+// ✅ ENTERPRISE: Debounce auto-save - 🏢 ADR-098: Uses centralized timing constant
 
 // ✅ ENTERPRISE: Load state from localStorage with error handling
 // 🏢 ADR-092: Uses centralized storage service
@@ -99,7 +100,7 @@ export function useOverlayState() {
     // Debounce save
     saveTimeoutRef.current = setTimeout(() => {
       savePersistedState(state);
-    }, STORAGE_DEBOUNCE_MS);
+    }, STORAGE_TIMING.OVERLAY_DEBOUNCE);
 
     // Cleanup
     return () => {

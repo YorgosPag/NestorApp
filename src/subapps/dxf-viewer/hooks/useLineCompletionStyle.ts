@@ -31,6 +31,8 @@
 
 import { completionStyleStore, type CompletionStyle } from '../stores/CompletionStyleStore';
 import type { LineType } from '../settings-core/types';
+// 🏢 ADR-083: Centralized Line Dash Patterns
+import { LINE_DASH_PATTERNS, scaleDashPattern } from '../config/text-rendering-config';
 
 /**
  * Entity completion styles interface
@@ -158,20 +160,20 @@ export function applyCompletionStylesToContext(ctx: CanvasRenderingContext2D): v
   ctx.lineCap = styles.lineCap;
   ctx.lineJoin = styles.lineJoin;
 
-  // Apply line dash based on lineType
+  // 🏢 ADR-083: Use centralized dash patterns with scaling
   switch (styles.lineType) {
     case 'dashed':
-      ctx.setLineDash([8 * styles.dashScale, 4 * styles.dashScale]);
+      ctx.setLineDash(scaleDashPattern(LINE_DASH_PATTERNS.CONSTRUCTION, styles.dashScale));
       break;
     case 'dotted':
-      ctx.setLineDash([2 * styles.dashScale, 2 * styles.dashScale]);
+      ctx.setLineDash(scaleDashPattern(LINE_DASH_PATTERNS.TEXT_BOUNDING, styles.dashScale));
       break;
     case 'dashdot':
-      ctx.setLineDash([8 * styles.dashScale, 4 * styles.dashScale, 2 * styles.dashScale, 4 * styles.dashScale]);
+      ctx.setLineDash(scaleDashPattern(LINE_DASH_PATTERNS.DASH_DOT, styles.dashScale));
       break;
     case 'solid':
     default:
-      ctx.setLineDash([]);
+      ctx.setLineDash(LINE_DASH_PATTERNS.SOLID);
       break;
   }
 }

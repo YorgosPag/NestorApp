@@ -27,7 +27,7 @@ import type {
   ZoomMode
 } from './zoom-types';
 // 🏢 ADR-043: Direct import from centralized config (eliminated zoom-constants middleman)
-import { DEFAULT_ZOOM_CONFIG, ZOOM_FACTORS, ZOOM_LIMITS } from '../../config/transform-config';
+import { DEFAULT_ZOOM_CONFIG, ZOOM_FACTORS, ZOOM_LIMITS, VIEWPORT_DEFAULTS } from '../../config/transform-config';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση centralized CoordinateTransforms για zoom calculations
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import {
@@ -53,7 +53,11 @@ export class ZoomManager implements IZoomManager {
     this.history = [];
     this.historyIndex = -1;
     // 🏢 ENTERPRISE: Store viewport reference (default fallback για backward compatibility)
-    this.viewport = viewport || { width: 800, height: 600 };
+    // Uses centralized VIEWPORT_DEFAULTS for single source of truth
+    this.viewport = viewport || {
+      width: VIEWPORT_DEFAULTS.WIDTH,
+      height: VIEWPORT_DEFAULTS.HEIGHT
+    };
 
     // Add initial state to history
     this.addToHistory('fit');

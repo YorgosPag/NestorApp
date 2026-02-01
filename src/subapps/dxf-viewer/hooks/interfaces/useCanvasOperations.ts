@@ -19,6 +19,8 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { useCanvasContext } from '../../contexts/CanvasContext';
 // ✅ ENTERPRISE: Import zoom constants for consistent zoom factors
 import { ZOOM_FACTORS } from '../../config/transform-config';
+// 🏢 ADR-151: Centralized Simple Coordinate Transforms
+import { worldToScreenSimple, screenToWorldSimple } from '../../rendering/core/CoordinateTransforms';
 
 export interface CanvasOperations {
   getCanvas: () => HTMLCanvasElement | null;
@@ -213,24 +215,16 @@ export const useCanvasOperations = (): CanvasOperations => {
   }, [context]);
 
   // ✅ ENTERPRISE FIX: Transform utilities for drawing operations
+  // 🏢 ADR-151: Use centralized worldToScreenSimple/screenToWorldSimple
   const getTransformUtils = useCallback(() => {
-    const canvas = getCanvas();
     const transform = getTransform();
 
-    const worldToScreen = (point: Point2D): Point2D => {
-      const x = point.x * transform.scale + transform.offsetX;
-      const y = point.y * transform.scale + transform.offsetY;
-      return { x, y };
-    };
-
-    const screenToWorld = (point: Point2D): Point2D => {
-      const x = (point.x - transform.offsetX) / transform.scale;
-      const y = (point.y - transform.offsetY) / transform.scale;
-      return { x, y };
-    };
+    // 🏢 ADR-151: Delegates to centralized simple transform functions
+    const worldToScreen = (point: Point2D): Point2D => worldToScreenSimple(point, transform);
+    const screenToWorld = (point: Point2D): Point2D => screenToWorldSimple(point, transform);
 
     return { worldToScreen, screenToWorld };
-  }, [getCanvas, getTransform]);
+  }, [getTransform]);
 
   return {
     getCanvas,

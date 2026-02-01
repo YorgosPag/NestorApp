@@ -1,14 +1,7 @@
 import * as React from 'react';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
-
-// 🎨 Color coding for click sequence (consistent with ArcIcon)
-// 2 στάσεις: Κόκκινο → Πράσινο
-// 3 στάσεις: Κόκκινο → Πορτοκαλί → Πράσινο
-const CLICK_COLORS = {
-  FIRST: '#ef4444',   // 🔴 Red - 1st click (always)
-  SECOND: '#f97316',  // 🟠 Orange - 2nd click (only for 3-step)
-  THIRD: '#22c55e',   // 🟢 Green - last click (always)
-} as const;
+// 🏢 ADR-142: Centralized Icon Click Sequence Colors
+import { ICON_CLICK_COLORS } from '../../../config/color-config';
 
 export type CircleVariant =
   | 'radius'
@@ -56,9 +49,9 @@ export const CircleIcon: React.FC<CircleIconProps> = ({
             {/* Radius line from center to edge */}
             <line x1="12" y1="12" x2="20" y2="12" strokeWidth="1.5" />
             {/* 1st click - Center (Red) */}
-            {renderCenterDot(CLICK_COLORS.FIRST)}
+            {renderCenterDot(ICON_CLICK_COLORS.FIRST)}
             {/* 2nd/Last click - Edge point (Green) */}
-            <circle cx="20" cy="12" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="20" cy="12" r="3" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 
@@ -69,9 +62,9 @@ export const CircleIcon: React.FC<CircleIconProps> = ({
             {/* Diameter line from edge to edge through center */}
             <line x1="4" y1="12" x2="20" y2="12" strokeWidth="1.5" />
             {/* 1st click - Center (Red) */}
-            {renderCenterDot(CLICK_COLORS.FIRST)}
+            {renderCenterDot(ICON_CLICK_COLORS.FIRST)}
             {/* 2nd/Last click - Edge point (Green) */}
-            <circle cx="20" cy="12" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="20" cy="12" r="3" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 
@@ -80,11 +73,11 @@ export const CircleIcon: React.FC<CircleIconProps> = ({
         return (
           <>
             {/* 1st click - Point 1 (Red) */}
-            <circle cx="12" cy="3" r="3" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="12" cy="3" r="3" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
             {/* 2nd click - Point 2 (Orange) */}
-            <circle cx="20" cy="16" r="3" fill={CLICK_COLORS.SECOND} stroke="none" />
+            <circle cx="20" cy="16" r="3" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
             {/* 3rd/Last click - Point 3 (Green) */}
-            <circle cx="4" cy="16" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="4" cy="16" r="3" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 
@@ -95,9 +88,9 @@ export const CircleIcon: React.FC<CircleIconProps> = ({
             {/* Radius line */}
             <line x1="12" y1="12" x2="20" y2="12" strokeWidth="1" strokeDasharray="2,1.5" opacity="0.5" />
             {/* 1st click - Point 1 (Red) */}
-            <circle cx="6" cy="12" r="3" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="6" cy="12" r="3" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
             {/* 2nd/Last click - Point 2 (Green) */}
-            <circle cx="18" cy="12" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="18" cy="12" r="3" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
             {/* Center dot */}
             {renderCenterDot()}
           </>
@@ -110,9 +103,9 @@ export const CircleIcon: React.FC<CircleIconProps> = ({
             {/* Diameter line */}
             <line x1="4" y1="12" x2="20" y2="12" strokeWidth="1.5" />
             {/* 1st click - Point 1 (Red) */}
-            <circle cx="4" cy="12" r="3" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="4" cy="12" r="3" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
             {/* 2nd/Last click - Point 2 (Green) */}
-            <circle cx="20" cy="12" r="3" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="20" cy="12" r="3" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 
@@ -121,12 +114,12 @@ export const CircleIcon: React.FC<CircleIconProps> = ({
         return (
           <>
             {/* Points in sequence */}
-            <circle cx="12" cy="3" r="2" fill={CLICK_COLORS.FIRST} stroke="none" />
-            <circle cx="20" cy="8" r="2" fill={CLICK_COLORS.SECOND} stroke="none" />
-            <circle cx="20" cy="16" r="2" fill={CLICK_COLORS.THIRD} stroke="none" />
-            <circle cx="12" cy="21" r="2" fill={CLICK_COLORS.FIRST} stroke="none" />
-            <circle cx="4" cy="16" r="2" fill={CLICK_COLORS.SECOND} stroke="none" />
-            <circle cx="4" cy="8" r="2" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="12" cy="3" r="2" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="20" cy="8" r="2" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
+            <circle cx="20" cy="16" r="2" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="12" cy="21" r="2" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="4" cy="16" r="2" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
+            <circle cx="4" cy="8" r="2" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
             {/* Center remains neutral */}
             {renderCenterDot()}
           </>
@@ -143,11 +136,11 @@ export const CircleIcon: React.FC<CircleIconProps> = ({
             {/* Arrow on sagitta */}
             <path d="M 10 7 L 12 5 L 14 7" fill="none" stroke="currentColor" strokeWidth="1" />
             {/* 1st click - Chord start (Red) */}
-            <circle cx="6" cy="16" r="2.5" fill={CLICK_COLORS.FIRST} stroke="none" />
+            <circle cx="6" cy="16" r="2.5" fill={ICON_CLICK_COLORS.FIRST} stroke="none" />
             {/* 2nd click - Chord end (Orange) */}
-            <circle cx="18" cy="16" r="2.5" fill={CLICK_COLORS.SECOND} stroke="none" />
+            <circle cx="18" cy="16" r="2.5" fill={ICON_CLICK_COLORS.SECOND} stroke="none" />
             {/* 3rd/Last click - Sagitta point (Green) */}
-            <circle cx="12" cy="5" r="2.5" fill={CLICK_COLORS.THIRD} stroke="none" />
+            <circle cx="12" cy="5" r="2.5" fill={ICON_CLICK_COLORS.THIRD} stroke="none" />
           </>
         );
 
@@ -159,11 +152,11 @@ export const CircleIcon: React.FC<CircleIconProps> = ({
           <>
             {/* 3 lines forming a triangle */}
             {/* Line 1 - bottom (highlighted red) */}
-            <line x1="3" y1="18" x2="21" y2="18" strokeWidth="1.5" stroke={CLICK_COLORS.FIRST} />
+            <line x1="3" y1="18" x2="21" y2="18" strokeWidth="1.5" stroke={ICON_CLICK_COLORS.FIRST} />
             {/* Line 2 - left side (highlighted orange) */}
-            <line x1="5" y1="5" x2="12" y2="18" strokeWidth="1.5" stroke={CLICK_COLORS.SECOND} />
+            <line x1="5" y1="5" x2="12" y2="18" strokeWidth="1.5" stroke={ICON_CLICK_COLORS.SECOND} />
             {/* Line 3 - right side (highlighted green) */}
-            <line x1="19" y1="5" x2="12" y2="18" strokeWidth="1.5" stroke={CLICK_COLORS.THIRD} />
+            <line x1="19" y1="5" x2="12" y2="18" strokeWidth="1.5" stroke={ICON_CLICK_COLORS.THIRD} />
             {/* Tangent points on each line - small dots */}
             <circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none" />
             <circle cx="8.5" cy="11.5" r="1.5" fill="currentColor" stroke="none" />

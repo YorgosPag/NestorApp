@@ -45,6 +45,8 @@ import { addCirclePath, TAU } from '../primitives/canvasPaths';
 import { calculateAngle, rectFromTwoPoints } from '../entities/shared/geometry-rendering-utils';
 // 🏢 ADR-XXX: Centralized Angular Constants
 import { ARROW_ANGLE } from '../entities/shared/geometry-utils';
+// 🏢 ADR-150: Centralized Arrow Head Size
+import { OVERLAY_DIMENSIONS } from '../../utils/hover/config';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration
@@ -72,8 +74,8 @@ export const GHOST_RENDER_CONFIG = {
   READOUT_COLOR: 'rgba(0, 0, 0, 0.8)',
   /** Coordinate readout background */
   READOUT_BG: 'rgba(255, 255, 255, 0.9)',
-  /** Coordinate readout text padding (pixels) */
-  READOUT_PADDING: 4,
+  /** @deprecated Use TEXT_LABEL_OFFSETS.LABEL_BOX_PADDING - 🏢 ADR-137 */
+  READOUT_PADDING: 4, // Kept for backward compatibility, use TEXT_LABEL_OFFSETS instead
   /** Maximum entities to render detailed ghost (performance) */
   DETAIL_THRESHOLD: 50,
   /** Simplified box rendering for large selections */
@@ -440,10 +442,16 @@ function renderSimplifiedGhost(
   const textX = x + width / 2;
   const textY = y + height / 2;
 
-  // Background
+  // Background - 🏢 ADR-139: Centralized label box dimensions
   const metrics = ctx.measureText(label);
+  const pad = TEXT_LABEL_OFFSETS.LABEL_BOX_PADDING;
   ctx.fillStyle = GHOST_RENDER_CONFIG.READOUT_BG;
-  ctx.fillRect(textX - metrics.width / 2 - 4, textY - 8, metrics.width + 8, 16);
+  ctx.fillRect(
+    textX - metrics.width / 2 - pad,
+    textY - TEXT_LABEL_OFFSETS.ENTITY_COUNT_OFFSET_Y,
+    metrics.width + pad * 2,
+    TEXT_LABEL_OFFSETS.LABEL_BOX_HEIGHT
+  );
 
   // Text
   ctx.fillStyle = GHOST_RENDER_CONFIG.READOUT_COLOR;
@@ -479,7 +487,8 @@ function renderDeltaLine(
   // 🏢 ADR-066: Use centralized angle calculation
   // 🏢 ADR-XXX: Use centralized ARROW_ANGLE constant (30° = π/6)
   const angle = calculateAngle(startScreen, endScreen);
-  const arrowSize = 8;
+  // 🏢 ADR-150: Centralized arrow head size from OVERLAY_DIMENSIONS
+  const arrowSize = OVERLAY_DIMENSIONS.ARROW_HEAD;
 
   ctx.beginPath();
   ctx.moveTo(endScreen.x, endScreen.y);
@@ -510,14 +519,19 @@ function renderCoordinateReadout(
   ctx.textBaseline = 'bottom';
 
   const metrics = ctx.measureText(label);
-  const padding = GHOST_RENDER_CONFIG.READOUT_PADDING;
+  const padding = TEXT_LABEL_OFFSETS.LABEL_BOX_PADDING; // 🏢 ADR-139
   // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
   const x = screenPosition.x + TEXT_LABEL_OFFSETS.TOOLTIP_HORIZONTAL;
   const y = screenPosition.y - TEXT_LABEL_OFFSETS.TOOLTIP_VERTICAL;
 
-  // Background
+  // Background - 🏢 ADR-139: Centralized label box dimensions
   ctx.fillStyle = GHOST_RENDER_CONFIG.READOUT_BG;
-  ctx.fillRect(x - padding, y - 14, metrics.width + padding * 2, 16);
+  ctx.fillRect(
+    x - padding,
+    y - TEXT_LABEL_OFFSETS.READOUT_OFFSET_Y,
+    metrics.width + padding * 2,
+    TEXT_LABEL_OFFSETS.LABEL_BOX_HEIGHT
+  );
 
   // Text
   ctx.fillStyle = GHOST_RENDER_CONFIG.READOUT_COLOR;

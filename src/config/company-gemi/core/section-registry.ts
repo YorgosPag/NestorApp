@@ -38,7 +38,7 @@ const datesLocationSection: SectionConfig = {
   title: 'sections.datesLocation', // i18n key
   icon: 'calendar',
   description: 'sectionDescriptions.datesLocation', // i18n key
-  order: 4,
+  order: 5, // 🔄 Moved from 4 to 5 (addresses is now 2nd)
   fields: [
     {
       id: 'registrationDate',
@@ -78,7 +78,7 @@ const addressesSection: SectionConfig = {
   title: 'sections.addressesBranches', // i18n key
   icon: 'map-pin',
   description: 'sectionDescriptions.addressesBranches', // i18n key
-  order: 5,
+  order: 2, // 🔄 Moved to 2nd position after basicInfo (per user request)
   fields: [
     {
       id: 'addressType',

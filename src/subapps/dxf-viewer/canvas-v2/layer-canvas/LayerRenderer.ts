@@ -16,7 +16,8 @@ import type {
 } from './layer-types';
 import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
 import type { CursorSettings } from '../../systems/cursor/config';
-import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+// 🏢 ADR-151: Added worldToScreenSimple for simple transforms (no Y-inversion)
+import { CoordinateTransforms, COORDINATE_LAYOUT, worldToScreenSimple } from '../../rendering/core/CoordinateTransforms';
 import { getStatusColors } from '../../config/color-mapping';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-042: Centralized UI Fonts, ADR-044: Centralized Line Widths
@@ -37,7 +38,8 @@ import { TAU } from '../../rendering/primitives/canvasPaths';
 // 🏢 ADR-XXX: Centralized Angular Constants
 import { RIGHT_ANGLE } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
-import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
+// 🏢 ADR-148: Centralized Ruler Grid Tick Spacing
+import { TOLERANCE_CONFIG, RULER_CONFIG } from '../../config/tolerance-config';
 // 🏢 ADR-127: Centralized Ruler Dimensions
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 
@@ -147,10 +149,12 @@ export class LayerRenderer {
   /**
    * 🏢 ENTERPRISE (2026-01-25): Convert world coordinates to screen coordinates
    * Helper method for real-time drag preview
+   * 🏢 ADR-151: Uses centralized worldToScreenSimple when no viewport (no Y-inversion)
    */
   private worldToScreen(point: Point2D, transform: ViewTransform, viewport: Viewport | null): Point2D {
     if (!viewport) {
-      return { x: point.x * transform.scale + transform.offsetX, y: point.y * transform.scale + transform.offsetY };
+      // 🏢 ADR-151: Use centralized worldToScreenSimple (no Y-inversion)
+      return worldToScreenSimple(point, transform);
     }
     return CoordinateTransforms.worldToScreen(point, transform, viewport);
   }
@@ -643,7 +647,10 @@ export class LayerRenderer {
         this.ctx.save();
         this.ctx.fillStyle = fillColor;
         this.ctx.strokeStyle = GRIP_COLOR_CONTOUR;
-        this.ctx.lineWidth = gripState !== 'cold' ? 2 : 1;
+        // 🏢 ADR-154: Centralized grip outline line widths
+        this.ctx.lineWidth = gripState !== 'cold'
+          ? RENDER_LINE_WIDTHS.GRIP_OUTLINE_ACTIVE
+          : RENDER_LINE_WIDTHS.GRIP_OUTLINE;
 
         // Draw filled square grip
         const halfSize = gripSize / 2;
@@ -731,7 +738,10 @@ export class LayerRenderer {
         this.ctx.save();
         this.ctx.fillStyle = fillColor;
         this.ctx.strokeStyle = gripState !== 'cold' ? fillColor : GRIP_COLOR_CONTOUR;
-        this.ctx.lineWidth = gripState !== 'cold' ? 2 : 1;
+        // 🏢 ADR-154: Centralized grip outline line widths
+        this.ctx.lineWidth = gripState !== 'cold'
+          ? RENDER_LINE_WIDTHS.GRIP_OUTLINE_ACTIVE
+          : RENDER_LINE_WIDTHS.GRIP_OUTLINE;
 
         // Draw diamond shape (rotated square)
         this.ctx.beginPath();
@@ -872,7 +882,8 @@ export class LayerRenderer {
     rulerHeight: number,
     yPosition: number = 0
   ): void {
-    const step = 100 * transform.scale; // 100 units steps
+    // 🏢 ADR-148: Use centralized major tick spacing
+    const step = RULER_CONFIG.MAJOR_TICK_SPACING * transform.scale; // world units steps
     if (step < 20) return;
 
     const startX = -(transform.offsetX % step);
@@ -942,7 +953,8 @@ export class LayerRenderer {
     settings: RulerSettings,
     rulerWidth: number
   ): void {
-    const step = 100 * transform.scale; // 100 units steps
+    // 🏢 ADR-148: Use centralized major tick spacing
+    const step = RULER_CONFIG.MAJOR_TICK_SPACING * transform.scale; // world units steps
     if (step < 20) return;
 
     // ✅ UNIFIED WITH COORDINATETRANSFORMS

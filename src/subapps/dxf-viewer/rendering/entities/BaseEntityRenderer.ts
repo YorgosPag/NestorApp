@@ -22,8 +22,10 @@ import { DEFAULT_TOLERANCE } from '../../config/tolerance-config';
 import { UI_COLORS, OPACITY } from '../../config/color-config';
 // 🏢 ADR-044: Centralized Line Widths
 // 🏢 ADR-048: Centralized Rendering Geometry (2027-01-27)
+// 🏢 ADR-083: Centralized Line Dash Patterns
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
-import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY, buildUIFont } from '../../config/text-rendering-config';
+// 🏢 ADR-141: Arc Label Positioning Constants
+import { RENDER_LINE_WIDTHS, RENDER_GEOMETRY, LINE_DASH_PATTERNS, buildUIFont, ARC_LABEL_POSITIONING } from '../../config/text-rendering-config';
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS } from '../grips/constants';
 // 🏢 ADR-065: Centralized Distance Calculation & Vector Operations
@@ -131,24 +133,45 @@ export abstract class BaseEntityRenderer {
   }
 
   /**
-   * Style για μετρήσεις διαστάσεων (δίπλα στα grips)
-   * 🏢 ADR-048: Uses centralized DIMENSION_TEXT color (2027-01-27)
+   * Style για μετρήσεις γωνιών (μοίρες, radians)
+   * 🏢 ADR-048: Uses centralized ANGLE_MEASUREMENT_TEXT color
+   * 🎯 Φούξια χρώμα - κεντρικοποιημένο
    */
-  protected applyDimensionTextStyle(): void {
-    this.ctx.fillStyle = UI_COLORS.DIMENSION_TEXT;  // 🏢 Centralized fuchsia color
+  protected applyAngleMeasurementTextStyle(): void {
+    this.ctx.fillStyle = UI_COLORS.ANGLE_MEASUREMENT_TEXT;  // 🏢 Centralized fuchsia for angles
     this.ctx.font = buildUIFont(this.getBaseFontSize(), 'arial');
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
   }
 
   /**
-   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ ΧΡΏΜΑ DISTANCE TEXT - παίρνει styling από ρυθμίσεις κειμένου
+   * @deprecated Χρησιμοποίησε applyAngleMeasurementTextStyle() ή applyDistanceMeasurementTextStyle()
+   * Διατηρείται για backward compatibility
+   */
+  protected applyDimensionTextStyle(): void {
+    this.applyAngleMeasurementTextStyle(); // Delegate to new method
+  }
+
+  /**
+   * Style για μετρήσεις μηκών ευθύγραμμων τμημάτων
+   * 🏢 ADR-048: Uses centralized DISTANCE_MEASUREMENT_TEXT color
+   * 🎯 Λευκό χρώμα - κεντρικοποιημένο
+   */
+  protected applyDistanceMeasurementTextStyle(): void {
+    this.ctx.fillStyle = UI_COLORS.DISTANCE_MEASUREMENT_TEXT;  // 🏢 Centralized white for distances
+    this.ctx.font = buildUIFont(this.getBaseFontSize(), 'arial');
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+  }
+
+  /**
+   * 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΈΝΟ ΧΡΏΜΑ DISTANCE TEXT - για preview με δυναμικό styling
    * Χρώμα για τα κείμενα αποστάσεων στη φάση προεπισκόπησης
    */
   protected applyDistanceTextStyle(): void {
-    // Χρήση δυναμικού styling από τις ρυθμίσεις κειμένου
+    // 🏢 ENTERPRISE: Χρήση κεντρικοποιημένου χρώματος, αλλά με δυναμικό font styling
     const textStyle = getTextPreviewStyleWithOverride();
-    this.ctx.fillStyle = textStyle.color;
+    this.ctx.fillStyle = UI_COLORS.DISTANCE_MEASUREMENT_TEXT;  // 🎯 Centralized white color
     this.ctx.font = `${textStyle.fontStyle} ${textStyle.fontWeight} ${textStyle.fontSize} ${textStyle.fontFamily}`;
     this.ctx.globalAlpha = textStyle.opacity;
     this.ctx.textAlign = 'center';
@@ -473,7 +496,7 @@ export abstract class BaseEntityRenderer {
    */
   protected applyArcStyle(): void {
     this.ctx.strokeStyle = UI_COLORS.DRAWING_TEMP; // Πορτοκαλί χρώμα
-    this.ctx.setLineDash([3, 3]); // Διακεκομμένες γραμμές
+    this.ctx.setLineDash([...LINE_DASH_PATTERNS.ARC]); // 🏢 ADR-083
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN; // 🏢 ADR-044
   }
 
@@ -485,25 +508,59 @@ export abstract class BaseEntityRenderer {
    */
     // 🔺 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΜΕΘΟΔΟΣ ΓΙΑ ΚΥΚΛΑ/ΤΟΞΑ (χωρίς γωνίες)
   protected drawCentralizedArc(
-    centerX: number, 
-    centerY: number, 
-    radius: number, 
-    startAngle: number, 
+    centerX: number,
+    centerY: number,
+    radius: number,
+    startAngle: number,
     endAngle: number
   ): void {
     this.ctx.save();
     this.applyArcStyle();
-    
+
     const screenCenter = this.worldToScreen({ x: centerX, y: centerY });
     const screenRadius = radius * this.transform.scale;
-    
+
     // Για κύκλα/τόξα χωρίς γωνίες, χρησιμοποιούμε απλή λογική
     // 🏢 ADR-058: Use centralized canvas primitives
     this.ctx.beginPath();
     addArcPath(this.ctx, screenCenter, screenRadius, startAngle, endAngle);
     this.ctx.stroke();
-    
+
     this.ctx.restore();
+  }
+
+  /**
+   * 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΗ ΜΕΘΟΔΟΣ ΓΙΑ ΕΣΩΤΕΡΙΚΑ ΤΟΞΑ ΓΩΝΙΩΝ
+   * Χρησιμοποιεί τη σωστή λογική με dot product για να σχεδιάσει
+   * ΠΑΝΤΑ το εσωτερικό τόξο της γωνίας (μικρότερη γωνία)
+   *
+   * @param vertex - Κορυφή της γωνίας (world coordinates)
+   * @param point1 - Πρώτο σημείο (world coordinates)
+   * @param point2 - Δεύτερο σημείο (world coordinates)
+   * @param radiusWorld - Ακτίνα τόξου σε world units
+   */
+  protected drawInternalAngleArc(
+    vertex: Point2D,
+    point1: Point2D,
+    point2: Point2D,
+    radiusWorld: number
+  ): void {
+    // Υπολογισμός unit vectors από vertex προς κάθε σημείο
+    const toPoint1 = { x: point1.x - vertex.x, y: point1.y - vertex.y };
+    const toPoint2 = { x: point2.x - vertex.x, y: point2.y - vertex.y };
+
+    // 🏢 ADR-070: Use centralized vector magnitude
+    const len1 = vectorMagnitude(toPoint1);
+    const len2 = vectorMagnitude(toPoint2);
+
+    if (len1 === 0 || len2 === 0) return;
+
+    const prevUnit = { x: toPoint1.x / len1, y: toPoint1.y / len1 };
+    const nextUnit = { x: toPoint2.x / len2, y: toPoint2.y / len2 };
+
+    // Χρήση της υπάρχουσας σωστής λογικής για εσωτερικό τόξο
+    const rPx = radiusWorld * this.transform.scale;
+    this.drawInternalArc(vertex, prevUnit, nextUnit, rPx);
   }
 
   /**
@@ -614,7 +671,11 @@ export abstract class BaseEntityRenderer {
     
     // 🏢 ADR-073: Use centralized bisector angle calculation
     const bisectorAngleValue = bisectorAngle(angle1, angle2);
-    const rTextPx = Math.max(arcRadius * 0.66, 6);
+    // 🏢 ADR-141: Centralized arc label positioning constants
+    const rTextPx = Math.max(
+      arcRadius * ARC_LABEL_POSITIONING.OFFSET_RATIO,
+      ARC_LABEL_POSITIONING.MIN_OFFSET_PX
+    );
     const rWorld = rTextPx / this.transform.scale;
     
     const worldLabelX = currentVertex.x + Math.cos(bisectorAngleValue) * rWorld;
@@ -623,20 +684,17 @@ export abstract class BaseEntityRenderer {
     
     // Draw label
     this.ctx.save();
-    this.applyArcStyle();
-    this.ctx.fillStyle = this.ctx.strokeStyle;
-    this.ctx.font = buildUIFont(this.getBaseFontSize(), 'arial');
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
+    // 🏢 ENTERPRISE: Use centralized angle measurement text style (fuchsia color)
+    // NOT renderStyledTextWithOverride which would override with white
+    this.applyAngleMeasurementTextStyle();
 
     // 🏢 ADR-090: Centralized number formatting
     const angleText = formatAngle(degrees, 1);
-    // Χρήση δυναμικού styling με πλήρη υποστήριξη decorations
-    renderStyledTextWithOverride(this.ctx, angleText, screenLabel.x, screenLabel.y);
+    this.ctx.fillText(angleText, screenLabel.x, screenLabel.y);
     this.ctx.restore();
   }
 
-  // 🔺 ΑΚΡΙΒΗΣ ΥΛΟΠΟΙΗΣΗ ΑΠΟ TODO.MD - Λογική με dot product για σωστή επιλογή τεταρτημορίου
+  // 🔺 ΑΠΛΟΠΟΙΗΜΕΝΗ ΛΟΓΙΚΗ - Πάντα σχεδιάζει το ΜΙΚΡΟΤΕΡΟ τόξο (εσωτερική γωνία)
   private drawInternalArc(
     vertex: Point2D,
     prevUnit: Point2D,
@@ -644,43 +702,25 @@ export abstract class BaseEntityRenderer {
     rPx: number
   ): void {
     const v = this.worldToScreen(vertex);
-    
-    // Υπολογισμός centerUnit (διάνυσμα προς το εσωτερικό της γωνίας)
-    const bisectorX = (prevUnit.x + nextUnit.x) / 2;
-    const bisectorY = (prevUnit.y + nextUnit.y) / 2;
-    // 🏢 ADR-070: Use centralized vector magnitude
-    const bisectorLength = vectorMagnitude({ x: bisectorX, y: bisectorY });
-    
-    let centerUnit = { x: 0, y: 0 };
-    if (bisectorLength > 0) {
-      centerUnit = { x: bisectorX / bisectorLength, y: bisectorY / bisectorLength };
-    }
-    
-    // Μετατροπή σε screen-space (flip Y)
+
+    // Μετατροπή σε screen-space (flip Y για canvas coordinate system)
     const u1 = { x: prevUnit.x, y: -prevUnit.y };
     const u2 = { x: nextUnit.x, y: -nextUnit.y };
-    const c = { x: centerUnit.x, y: -centerUnit.y };
-    
-    // Normalize center προς τα μέσα
-    // 🏢 ADR-070: Use centralized vector magnitude
-    const centerLength = vectorMagnitude(c) || 1;
-    const cNorm = { x: c.x / centerLength, y: c.y / centerLength };
-    
+
     // 🏢 ADR-078: Use centralized vectorAngle
     const a1 = vectorAngle(u1);
     const a2 = vectorAngle(u2);
-    
+
+    // Υπολογισμός διαφοράς γωνιών (normalized 0 to 2π)
     const norm = (t: number) => (t % (TAU) + TAU) % (TAU);
-    const dCCW = norm(a2 - a1);
-    const dCW = TAU - dCCW;
-    
-    const midCCW = a1 + dCCW / 2;
-    const midCW = a1 - dCW / 2;
-    
-    const dot = (ax: number, ay: number, bx: number, by: number) => ax * bx + ay * by;
-    const useCCW = dot(Math.cos(midCCW), Math.sin(midCCW), cNorm.x, cNorm.y) >
-                   dot(Math.cos(midCW), Math.sin(midCW), cNorm.x, cNorm.y);
-    
+    const dCCW = norm(a2 - a1);  // Counter-clockwise distance
+    const dCW = TAU - dCCW;       // Clockwise distance
+
+    // 🎯 ΣΩΣΤΗ ΛΟΓΙΚΗ: Επιλέγουμε την κατεύθυνση που δίνει το ΜΙΚΡΟΤΕΡΟ τόξο (εσωτερική γωνία)
+    // - Αν dCCW < π, το CCW path είναι μικρότερο → useCCW = true
+    // - Αν dCCW > π, το CW path είναι μικρότερο → useCCW = false
+    const useCCW = dCCW < Math.PI;
+
     this.ctx.save();
     this.applyArcStyle();
     this.ctx.beginPath();

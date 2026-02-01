@@ -12,7 +12,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { ExtendedSnapType } from '../extended-types';
 import type { Entity } from '../extended-types';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
-import { calculateDistance, rotatePoint, pointOnCircle } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { calculateDistance, rotatePoint, pointOnCircle, squaredDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-079: Centralized Geometric Precision Constants
 import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 // 🏢 ENTERPRISE: Import centralized entity types and type guards
@@ -50,9 +50,8 @@ export class GeometricCalculations {
   // Διαγράφηκε το περιττό wrapper calculateDistance - χρησιμοποιείστε απευθείας calculateDistance από geometry-rendering-utils
 
   static distanceSq(p1: Point2D, p2: Point2D): number {
-    const dx = p1.x - p2.x;
-    const dy = p1.y - p2.y;
-    return dx * dx + dy * dy;
+    // 🏢 ADR-157: Delegates to centralized squaredDistance (ADR-109)
+    return squaredDistance(p1, p2);
   }
 
   static distancePointToLine(point: Point2D, lineStart: Point2D, lineEnd: Point2D): number {

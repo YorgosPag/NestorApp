@@ -241,8 +241,8 @@ export function ContactDetailsHeader({
                 }
               ]
             ) : []),
-            // Delete Action - Μόνο αν υπάρχει το callback
-            ...(onDeleteContact ? [{
+            // Delete Action - Κρύβεται στα subcollection tabs (banking, files, relationships)
+            ...(!hideEditControls && onDeleteContact ? [{
               label: t('header.actions.delete'),
               onClick: () => onDeleteContact?.(),
               icon: Trash2,

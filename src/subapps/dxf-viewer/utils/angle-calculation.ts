@@ -7,7 +7,8 @@ import type { Point2D } from '../rendering/types/Types';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 // 🏢 ADR-068: Centralized Angle Normalization
 // 🏢 ADR-077: Centralized TAU Constant
-import { radToDeg, normalizeAngleRad, TAU } from '../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-134: Centralized Angle Difference Normalization
+import { radToDeg, normalizeAngleRad, TAU, normalizeAngleDiff } from '../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-072: Centralized Dot Product
 import { dotProduct } from '../rendering/entities/shared/geometry-rendering-utils';
 
@@ -65,11 +66,9 @@ export function calculateAngleData(
   const startAngle = Math.atan2(screenVec1.y, screenVec1.x);
   const endAngle = Math.atan2(screenVec2.y, screenVec2.x);
   
-  // Determine arc direction (shortest path)
-  let angleDiff = endAngle - startAngle;
-  if (angleDiff > Math.PI) angleDiff -= TAU;
-  if (angleDiff < -Math.PI) angleDiff += TAU;
-  
+  // 🏢 ADR-134: Use centralized angle difference normalization
+  const angleDiff = normalizeAngleDiff(endAngle - startAngle);
+
   const clockwise = angleDiff < 0;
   
   return { degrees, startAngle, endAngle, clockwise };
@@ -83,11 +82,10 @@ export function calculateAngleBisector(startAngle: number, endAngle: number): {
   angleDiff: number;
   bisectorAngle: number;
 } {
-  let angleDiff = endAngle - startAngle;
-  if (angleDiff > Math.PI) angleDiff -= TAU;
-  if (angleDiff < -Math.PI) angleDiff += TAU;
-  
+  // 🏢 ADR-134: Use centralized angle difference normalization
+  const angleDiff = normalizeAngleDiff(endAngle - startAngle);
+
   const bisectorAngle = startAngle + angleDiff / 2;
-  
+
   return { angleDiff, bisectorAngle };
 }

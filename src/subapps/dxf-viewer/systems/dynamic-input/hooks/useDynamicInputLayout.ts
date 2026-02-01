@@ -2,6 +2,8 @@
 
 import { useCallback } from 'react';
 import type { Point2D, Phase } from '../../../rendering/types/Types';
+// 🏢 ADR-141: Centralized Origin/Cursor Offsets
+import { TEXT_LABEL_OFFSETS } from '../../../config/text-rendering-config';
 
 interface UseDynamicInputLayoutArgs {
   activeTool: string;
@@ -65,8 +67,9 @@ export function useDynamicInputLayout({
     // ΑΓΚΥΡΩΣΗ ΒΑΣΗΣ CONTAINER:
     // Θέλουμε η ΒΑΣΗ (bottom) του container να απέχει 15px ΠΑΝΩ από την οριζόντια του κέρσορα.
     // Χρησιμοποιούμε top = cursorY - 15 και transform: translateY(-100%) ώστε το bottom να «κάθεται» στο cursorY - 15.
-    const x = cursorPosition.x + 15; // 15px δεξιά από την κάθετη του κέρσορα
-    const y = cursorPosition.y - 15; // top ώστε η ΒΑΣΗ να είναι 15px ΠΑΝΩ από την οριζόντια του κέρσορα
+    // 🏢 ADR-141: Centralized cursor offsets
+    const x = cursorPosition.x + TEXT_LABEL_OFFSETS.CURSOR_OFFSET_X; // 15px δεξιά από την κάθετη του κέρσορα
+    const y = cursorPosition.y - TEXT_LABEL_OFFSETS.CURSOR_OFFSET_Y; // top ώστε η ΒΑΣΗ να είναι 15px ΠΑΝΩ από την οριζόντια του κέρσορα
     
     // Debug log για positioning
     console.debug('[DynamicInputOverlay] pos', { overlayX: x, overlayY: y, transform: 'translateY(-100%)' });

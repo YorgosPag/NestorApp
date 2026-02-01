@@ -17,6 +17,8 @@ import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
 import { SNAP_TOLERANCE } from '../../config/tolerance-config';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault } from '../../config/layer-config';
+// 🏢 ADR-158: Centralized Infinity Bounds Initialization
+import { createInfinityBounds, isInfinityBounds } from '../../config/geometry-constants';
 
 export interface HitTestOptions extends SpatialQueryOptions {
   // Hit-test specific options
@@ -134,18 +136,18 @@ export class HitTester {
   private calculateBoundsFromEntities(entities: Entity[]): BoundingBox | null {
     if (!entities.length) return null;
 
-    let minX = Infinity, minY = Infinity;
-    let maxX = -Infinity, maxY = -Infinity;
+    // 🏢 ADR-158: Centralized Infinity Bounds Initialization
+    const bounds = createInfinityBounds();
 
     for (const entity of entities) {
       // ✅ ENTERPRISE FIX: Use Bounds utility to calculate entity bounds
       try {
         const entityBounds = BoundsCalculator.calculateEntityBounds(entity, 0);
         if (entityBounds) {
-          minX = Math.min(minX, entityBounds.minX);
-          minY = Math.min(minY, entityBounds.minY);
-          maxX = Math.max(maxX, entityBounds.maxX);
-          maxY = Math.max(maxY, entityBounds.maxY);
+          bounds.minX = Math.min(bounds.minX, entityBounds.minX);
+          bounds.minY = Math.min(bounds.minY, entityBounds.minY);
+          bounds.maxX = Math.max(bounds.maxX, entityBounds.maxX);
+          bounds.maxY = Math.max(bounds.maxY, entityBounds.maxY);
         }
       } catch (error) {
         // Skip entities that can't have bounds calculated
@@ -153,19 +155,20 @@ export class HitTester {
       }
     }
 
-    if (minX === Infinity) return null;
+    // 🏢 ADR-158: Use centralized isInfinityBounds check
+    if (isInfinityBounds(bounds)) return null;
 
-    const width = maxX - minX;
-    const height = maxY - minY;
+    const width = bounds.maxX - bounds.minX;
+    const height = bounds.maxY - bounds.minY;
     return {
-      minX,
-      minY,
-      maxX,
-      maxY,
+      minX: bounds.minX,
+      minY: bounds.minY,
+      maxX: bounds.maxX,
+      maxY: bounds.maxY,
       width,
       height,
-      centerX: minX + width / 2,
-      centerY: minY + height / 2
+      centerX: bounds.minX + width / 2,
+      centerY: bounds.minY + height / 2
     };
   }
 

@@ -8,6 +8,8 @@ import { UI_COLORS } from '../../config/color-config';
 import { TAU } from '../primitives/canvasPaths';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault } from '../../config/layer-config';
+// 🏢 ADR-151: Centralized Simple Coordinate Transforms
+import { transformBoundsToScreen } from '../core/CoordinateTransforms';
 
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
 import type { Entity } from '../../types/entities';  // ✅ ENTERPRISE FIX: Use proper Entity type instead of EntityModel
@@ -280,12 +282,8 @@ export class EntityPass implements IRenderPass {
     const bounds = this.calculateEntityBounds(entity);
     if (!bounds) return true; // If can't calculate bounds, assume visible
 
-    const screenBounds = {
-      minX: bounds.minX * transform.scale + transform.offsetX,
-      minY: bounds.minY * transform.scale + transform.offsetY,
-      maxX: bounds.maxX * transform.scale + transform.offsetX,
-      maxY: bounds.maxY * transform.scale + transform.offsetY
-    };
+    // 🏢 ADR-151: Use centralized transformBoundsToScreen
+    const screenBounds = transformBoundsToScreen(bounds, transform);
 
     const viewportX = viewport.x ?? 0;
     const viewportY = viewport.y ?? 0;

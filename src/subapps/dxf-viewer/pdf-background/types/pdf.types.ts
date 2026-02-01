@@ -14,7 +14,10 @@
 
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-071: Centralized clamp function
-import { clamp, clamp01 } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 ADR-068: Centralized angle normalization
+import { clamp, clamp01, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
+// 🏢 CENTRALIZED: PDF scale clamping from transform-config
+import { clampPdfScale } from '../../config/transform-config';
 
 // ============================================================================
 // PDF DOCUMENT TYPES
@@ -315,18 +318,13 @@ export function clampOpacity(opacity: number): number {
 
 /**
  * Clamp scale to valid range
- * 🏢 ADR-071: Using centralized clamp with PDF-specific limits
+ * 🏢 CENTRALIZED: Re-export from transform-config for backward compatibility
+ * @see config/transform-config.ts - Single source of truth
  */
-export function clampScale(scale: number): number {
-  // Reasonable limits for PDF background scale
-  const MIN_SCALE = 0.01;
-  const MAX_SCALE = 10;
-  return clamp(scale, MIN_SCALE, MAX_SCALE);
-}
+export const clampScale = clampPdfScale;
 
 /**
  * Normalize rotation to 0-360 range
+ * 🏢 ADR-068: Delegates to centralized normalizeAngleDeg from geometry-utils
  */
-export function normalizeRotation(rotation: number): number {
-  return ((rotation % 360) + 360) % 360;
-}
+export const normalizeRotation = normalizeAngleDeg;

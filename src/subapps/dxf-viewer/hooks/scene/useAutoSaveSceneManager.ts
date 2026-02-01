@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { STORAGE_TIMING } from '../../config/timing-config';
 import { useSceneManager, type SceneManagerState } from './useSceneManager';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import type { SceneModel } from '../../types/scene';
@@ -22,7 +23,6 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   
   // Debounce auto-save to prevent excessive Firestore writes
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
-  const AUTO_SAVE_DELAY = 2000; // 2 seconds after last change
   
   // Flag to prevent auto-save when loading from Firestore
   const isLoadingFromFirestoreRef = useRef<boolean>(false);
@@ -73,7 +73,7 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
         
         // Reset status after delay
         setTimeout(() => setSaveStatus('idle'), PANEL_LAYOUT.TIMING.SAVE_STATUS_RESET);
-      }, AUTO_SAVE_DELAY);
+      }, STORAGE_TIMING.SCENE_AUTOSAVE_DEBOUNCE); // 🏢 ADR-098
     }
   }, [sceneManager, autoSaveEnabled, currentFileName]);
   

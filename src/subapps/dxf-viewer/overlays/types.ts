@@ -150,7 +150,6 @@ export interface BoundingBox {
  */
 export const DEFAULT_STATUS: Status = DEFAULT_PROPERTY_STATUS;
 export const DEFAULT_KIND: OverlayKind = 'unit';
-export const AUTOSAVE_DEBOUNCE_MS = 600;
 export const UNDO_STACK_SIZE = 50;
 
 /**

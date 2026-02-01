@@ -11,13 +11,8 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { PolylineEntity } from '../../../types/entities';
 import type { DragMeasurementContext, MeasurementData } from '../types';
 import { BaseDragMeasurementRenderer } from './BaseDragMeasurementRenderer';
-
-// ============================================================================
-// CONFIGURATION CONSTANTS
-// ============================================================================
-
-/** Minimum vertices required for area calculation */
-const MIN_VERTICES_FOR_AREA = 3;
+// 🏢 ADR-145: Centralized MIN_POLY_POINTS constant
+import { MIN_POLY_POINTS } from '../../../config/tolerance-config';
 
 /**
  * Polyline-specific drag measurement renderer
@@ -47,8 +42,8 @@ export class PolylineDragMeasurement extends BaseDragMeasurementRenderer {
     // Calculate total length
     const totalLength = this.calculateTotalLength(newVertices);
 
-    // Calculate area if closed
-    const area = entity.closed && newVertices.length >= MIN_VERTICES_FOR_AREA
+    // Calculate area if closed (🏢 ADR-145: centralized MIN_POLY_POINTS)
+    const area = entity.closed && newVertices.length >= MIN_POLY_POINTS
       ? this.calculatePolygonArea(newVertices)
       : 0;
 
