@@ -1,6 +1,14 @@
-# 📋 ADR-048: UNIFIED GRIP RENDERING SYSTEM (2027-01-27) - 🏢 ENTERPRISE
+# ADR-048: Unified Grip Rendering System
 
-**Status**: ✅ **APPROVED & IMPLEMENTED** | **Decision Date**: 2027-01-27
+| Metadata | Value |
+|----------|-------|
+| **Status** | IMPLEMENTED |
+| **Date** | 2027-01-27 |
+| **Category** | Drawing System |
+| **Canonical Location** | `rendering/grips/UnifiedGripRenderer.ts` |
+| **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
+
+---
 
 **🏢 ENTERPRISE LEVEL**: **10/10** - SAP/Autodesk/Google/Microsoft Standards
 

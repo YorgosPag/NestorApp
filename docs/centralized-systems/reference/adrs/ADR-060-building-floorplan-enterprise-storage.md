@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Category** | Backend |
+| **Category** | Backend Systems |
 | **Status** | ✅ Active |
 | **Date** | 2026-01-11 |
 | **Owners** | Platform / Storage |

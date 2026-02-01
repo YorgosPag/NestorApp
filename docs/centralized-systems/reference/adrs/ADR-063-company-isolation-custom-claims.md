@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Category** | Security |
+| **Category** | Security & Auth |
 | **Status** | ✅ Active |
 | **Date** | 2026-01-18 |
 | **Decision Makers** | Enterprise Security Team |
