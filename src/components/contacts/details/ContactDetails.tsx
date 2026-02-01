@@ -34,11 +34,18 @@ interface ContactDetailsProps {
   onContactUpdated?: () => void;
 }
 
+// 🏢 ENTERPRISE: Subcollection tabs that save independently (Salesforce/SAP/Dynamics pattern)
+const SUBCOLLECTION_TABS = ['banking', 'files', 'relationships'];
+
 export function ContactDetails({ contact, onEditContact, onDeleteContact, onContactUpdated }: ContactDetailsProps) {
   const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<Partial<ContactFormData>>({});
+  const [activeTab, setActiveTab] = useState<string>('basicInfo'); // 🏢 ENTERPRISE: Track active tab
   const photoModal = useGlobalPhotoPreview();
+
+  // 🏢 ENTERPRISE: Check if current tab is a subcollection tab
+  const isSubcollectionTab = SUBCOLLECTION_TABS.includes(activeTab);
 
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
@@ -162,6 +169,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
             onStartEdit={handleStartEdit}
             onSaveEdit={handleSaveEdit}
             onCancelEdit={handleCancelEdit}
+            hideEditControls={isSubcollectionTab} // 🏢 ENTERPRISE: Hide save/cancel on subcollection tabs
           />
         }
         emptyStateProps={{
@@ -214,6 +222,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
           disabled={!isEditing} // 🎯 Enable editing when in edit mode
           relationshipsMode={isEditing ? "full" : "summary"} // 🎯 KEY: Full mode when editing, summary when viewing
           onPhotoClick={handlePhotoClick} // 🖼️ Photo click handler για gallery preview
+          onActiveTabChange={setActiveTab} // 🏢 ENTERPRISE: Track active tab for hiding header controls
         />
       </DetailsContainer>
 

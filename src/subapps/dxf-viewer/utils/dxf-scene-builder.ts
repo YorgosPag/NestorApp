@@ -2,6 +2,8 @@ import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
 import { DxfEntityParser, type EntityData, type DxfHeaderData, type DimStyleMap, type LayerColorMap } from './dxf-entity-parser';
 import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
 import { getAciColor } from '../settings/standards/aci';
+// ADR-130: Centralized Default Layer Name
+import { getLayerNameOrDefault } from '../config/layer-config';
 
 export class DxfSceneBuilder {
   static buildScene(content: string): SceneModel {
@@ -68,7 +70,8 @@ export class DxfSceneBuilder {
     parsedEntities.forEach((entityData, index) => {
       const entity = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles);
       if (entity) {
-        const layerName = (entity.layer as string) || 'default';
+        // ADR-130: Centralized default layer
+        const layerName = getLayerNameOrDefault(entity.layer as string);
 
         // Register layer with REAL ACI colors from parsed LAYER table
         DxfSceneBuilder.registerLayer(layers, layerName, layerColors);

@@ -3,33 +3,23 @@
  *
  * @description
  * Provides mode-specific settings for selected line state.
- * Includes override toggle and effective settings computation.
+ * This is a thin wrapper around useLineSettingsByMode for backward compatibility.
+ *
+ * @see useLineSettingsByMode for the centralized implementation
+ * @enterprise ADR-044: Line Settings Centralization
+ *
+ * @example
+ * ```tsx
+ * const { settings, toggleOverride } = useLineSelectionSettings();
+ * ```
  */
 
-import * as React from 'react';
-import { useEnterpriseDxfSettings } from '../settings-provider';
-import type { LineSettings } from '../settings-core/types';
+import { useLineSettingsByMode, type UseLineSettingsReturn } from './useLineSettingsByMode';
 
-export function useLineSelectionSettings() {
-  const { getEffectiveLineSettings, updateSpecificLineSettings, toggleLineOverride, settings } =
-    useEnterpriseDxfSettings();
-  const isOverrideEnabled = settings.overrideEnabled?.line?.selection ?? false;
-
-  // ✅ ENTERPRISE: Stable dependency - depend on data, not functions
-  const effectiveSettings = React.useMemo(
-    () => getEffectiveLineSettings('normal'),
-    [settings] // Stable dependency prevents infinite loops
-  );
-
-  return {
-    settings: effectiveSettings, // Selection uses normal mode
-    updateSettings: (updates: Partial<LineSettings>) => {
-      updateSpecificLineSettings?.('selection', updates);
-    },
-    getEffectiveSettings: () => getEffectiveLineSettings('normal'),
-    isOverrideEnabled,
-    toggleOverride: (enabled: boolean) => {
-      toggleLineOverride('selection', enabled);
-    }
-  };
+/**
+ * Hook for line selection settings
+ * @returns UseLineSettingsReturn with settings and update functions
+ */
+export function useLineSelectionSettings(): UseLineSettingsReturn {
+  return useLineSettingsByMode('selection');
 }

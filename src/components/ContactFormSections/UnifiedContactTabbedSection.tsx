@@ -75,6 +75,9 @@ interface UnifiedContactTabbedSectionProps {
   // 🏢 CANONICAL UPLOAD CONTEXT (ADR-031)
   // If provided, photo uploads use canonical pipeline instead of legacy folderPath
   canonicalUploadContext?: CanonicalUploadContext;
+
+  // 🏢 ENTERPRISE: Callback when active tab changes (for hiding save controls on subcollection tabs)
+  onActiveTabChange?: (tabId: string) => void;
 }
 
 // Configuration logic moved to ContactFormConfigProvider utility
@@ -97,6 +100,7 @@ export function UnifiedContactTabbedSection({
   relationshipsMode = 'full',
   onPhotoClick,
   canonicalUploadContext,
+  onActiveTabChange,
 }: UnifiedContactTabbedSectionProps) {
 
   // 🏢 ENTERPRISE: Get auth context for file management
@@ -167,6 +171,7 @@ export function UnifiedContactTabbedSection({
       onChange: handleChange,
       onSelectChange: handleSelectChange,
       disabled,
+      onActiveTabChange, // 🏢 ENTERPRISE: Pass tab change callback for hiding header save controls
       customRenderers: {
         // 🚀 DYNAMIC COMMUNICATION: Custom renderer for communication & social media
         communication: (_field: CustomRendererField, _fieldFormData: Record<string, unknown>, _fieldOnChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, _fieldOnSelectChange: (name: string, value: string) => void, fieldDisabled: boolean) => (
@@ -336,6 +341,8 @@ export function UnifiedContactTabbedSection({
         },
 
         // 🏢 ENTERPRISE: Custom renderer for banking tab - ADR-126 Bank Accounts System
+        // 🎯 ENTERPRISE PATTERN (Salesforce/SAP/Dynamics): Banking is ALWAYS editable via modals
+        // The parent's edit mode does NOT affect banking - subcollections save independently
         banking: () => {
           // ContactBankingTab expects `data` prop with the contact
           // Convert formData to Contact-like structure
@@ -346,7 +353,7 @@ export function UnifiedContactTabbedSection({
                 type: contactType,
                 ...(formData as unknown as Record<string, unknown>)
               } as Parameters<typeof ContactBankingTab>[0]['data']}
-              additionalData={{ disabled }}
+              additionalData={{ disabled: false }} // 🏢 ENTERPRISE: Always editable - subcollections save independently
             />
           );
         }
@@ -371,7 +378,7 @@ export function UnifiedContactTabbedSection({
     handleFileChange, unifiedPhotosChange, handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection, handleLogoChange, handleUploadedLogoURL,
     handleUploadedPhotoURL, setFormData, relationshipsMode, onPhotoClick,
-    canonicalUploadContext,
+    canonicalUploadContext, onActiveTabChange,
     companyDisplayName, // 🏢 ENTERPRISE: Re-render when company name is fetched (ADR-031)
     user?.companyId, // 🏢 ENTERPRISE: Re-render when companyId changes
   ]);

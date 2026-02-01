@@ -41,6 +41,8 @@ interface ContactDetailsHeaderProps {
   onStartEdit?: () => void;
   onSaveEdit?: () => void;
   onCancelEdit?: () => void;
+  // 🏢 ENTERPRISE: Hide edit controls on subcollection tabs (banking, files, relationships)
+  hideEditControls?: boolean;
 }
 
 export function ContactDetailsHeader({
@@ -51,7 +53,8 @@ export function ContactDetailsHeader({
   isEditing,
   onStartEdit,
   onSaveEdit,
-  onCancelEdit
+  onCancelEdit,
+  hideEditControls = false
 }: ContactDetailsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('contacts');
@@ -214,27 +217,30 @@ export function ContactDetailsHeader({
           onAvatarClick={avatarImageUrl ? handleAvatarClick : undefined}
           actions={[
             // 🎯 Edit Mode Actions - Μόνο για Desktop
-            ...(!isEditing ? [
-              {
-                label: t('header.actions.edit'),
-                onClick: () => onStartEdit?.(),
-                icon: Edit,
-                className: GRADIENT_HOVER_EFFECTS.BLUE
-              }
-            ] : [
-              {
-                label: t('header.actions.save'),
-                onClick: () => onSaveEdit?.(),
-                icon: Check,
-                className: GRADIENT_HOVER_EFFECTS.GREEN
-              },
-              {
-                label: t('header.actions.cancel'),
-                onClick: () => onCancelEdit?.(),
-                icon: X,
-                className: GRADIENT_HOVER_EFFECTS.GRAY
-              }
-            ]),
+            // 🏢 ENTERPRISE: Hidden on subcollection tabs (banking, files, relationships) - they save independently
+            ...(!hideEditControls ? (
+              !isEditing ? [
+                {
+                  label: t('header.actions.edit'),
+                  onClick: () => onStartEdit?.(),
+                  icon: Edit,
+                  className: GRADIENT_HOVER_EFFECTS.BLUE
+                }
+              ] : [
+                {
+                  label: t('header.actions.save'),
+                  onClick: () => onSaveEdit?.(),
+                  icon: Check,
+                  className: GRADIENT_HOVER_EFFECTS.GREEN
+                },
+                {
+                  label: t('header.actions.cancel'),
+                  onClick: () => onCancelEdit?.(),
+                  icon: X,
+                  className: GRADIENT_HOVER_EFFECTS.GRAY
+                }
+              ]
+            ) : []),
             // Delete Action - Μόνο αν υπάρχει το callback
             ...(onDeleteContact ? [{
               label: t('header.actions.delete'),

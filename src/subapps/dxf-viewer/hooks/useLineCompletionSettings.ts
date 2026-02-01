@@ -3,33 +3,23 @@
  *
  * @description
  * Provides mode-specific settings for completed/final line state.
- * Includes override toggle and effective settings computation.
+ * This is a thin wrapper around useLineSettingsByMode for backward compatibility.
+ *
+ * @see useLineSettingsByMode for the centralized implementation
+ * @enterprise ADR-044: Line Settings Centralization
+ *
+ * @example
+ * ```tsx
+ * const { settings, getEffectiveSettings } = useLineCompletionSettings();
+ * ```
  */
 
-import * as React from 'react';
-import { useEnterpriseDxfSettings } from '../settings-provider';
-import type { LineSettings } from '../settings-core/types';
+import { useLineSettingsByMode, type UseLineSettingsReturn } from './useLineSettingsByMode';
 
-export function useLineCompletionSettings() {
-  const { getEffectiveLineSettings, updateSpecificLineSettings, toggleLineOverride, settings } =
-    useEnterpriseDxfSettings();
-  const isOverrideEnabled = settings.overrideEnabled?.line?.completion ?? false;
-
-  // ✅ ENTERPRISE: Stable dependency - depend on data, not functions
-  const effectiveSettings = React.useMemo(
-    () => getEffectiveLineSettings('completion'),
-    [settings] // Stable dependency prevents infinite loops
-  );
-
-  return {
-    settings: effectiveSettings,
-    updateSettings: (updates: Partial<LineSettings>) => {
-      updateSpecificLineSettings?.('completion', updates);
-    },
-    getEffectiveSettings: () => getEffectiveLineSettings('completion'),
-    isOverrideEnabled,
-    toggleOverride: (enabled: boolean) => {
-      toggleLineOverride('completion', enabled);
-    }
-  };
+/**
+ * Hook for line completion settings
+ * @returns UseLineSettingsReturn with settings and update functions
+ */
+export function useLineCompletionSettings(): UseLineSettingsReturn {
+  return useLineSettingsByMode('completion');
 }

@@ -263,6 +263,37 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     isDirtyRef.current = true; // Mark dirty for initial render
   }, [setupCanvas]);
 
+  // 🏢 ENTERPRISE FIX (2026-02-01): Sync backing store when viewport changes
+  // PROBLEM: When OverlayToolbarSection opens, CSS size changes but backing store stays the same
+  // This causes the old ruler to persist in the larger backing store area (ghost/double ruler bug)
+  // SOLUTION: Re-run setupCanvas when viewport dimensions change to synchronize backing store with CSS size
+  // REF: Canvas backing store (canvas.width/height) MUST match CSS size for proper clearRect behavior
+  const prevViewportRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+
+  useEffect(() => {
+    // Skip if viewport not yet established
+    if (!viewport.width || !viewport.height) return;
+
+    // Check if viewport actually changed (not just React re-render)
+    const prevViewport = prevViewportRef.current;
+    if (prevViewport.width === viewport.width && prevViewport.height === viewport.height) {
+      return;
+    }
+
+    // Update previous viewport ref
+    prevViewportRef.current = { width: viewport.width, height: viewport.height };
+
+    // Skip initial setup (already handled by mount effect above)
+    if (prevViewport.width === 0 && prevViewport.height === 0) {
+      return;
+    }
+
+    // 🎯 CRITICAL: Re-setup canvas to sync backing store with new CSS dimensions
+    // This ensures clearRect operates on the correct area and prevents ghost rulers
+    setupCanvas();
+    isDirtyRef.current = true; // Mark dirty for re-render
+  }, [viewport.width, viewport.height, setupCanvas]);
+
   // 🎯 INITIAL TRANSFORM: Set world (0,0) at bottom-left ruler corner
   useEffect(() => {
     // Only run once when viewport is first established

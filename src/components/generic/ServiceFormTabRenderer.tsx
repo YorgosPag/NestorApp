@@ -57,6 +57,8 @@ export interface ServiceFormTabRendererProps {
   onPhotosChange?: (photos: PhotoSlot[]) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>;
+  /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
+  onActiveTabChange?: (tabId: string) => void;
 }
 
 // ============================================================================
@@ -209,7 +211,8 @@ export function ServiceFormTabRenderer({
   onSelectChange,
   disabled = false,
   onPhotosChange,
-  customRenderers
+  customRenderers,
+  onActiveTabChange
 }: ServiceFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n hook for translating tab labels
   const { t } = useTranslation('contacts');
@@ -237,6 +240,7 @@ export function ServiceFormTabRenderer({
         tabs={tabs}
         defaultTab={tabs[0]?.id || "basicInfo"}
         theme="clean"
+        onTabChange={onActiveTabChange}
       >
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="mt-4">

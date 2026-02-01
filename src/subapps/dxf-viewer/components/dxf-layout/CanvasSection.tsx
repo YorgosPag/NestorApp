@@ -10,6 +10,8 @@ import { useCanvasOperations } from '../../hooks/interfaces/useCanvasOperations'
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
 import { UI_COLORS } from '../../config/color-config';
+// ADR-130: Centralized Default Layer Name
+import { getLayerNameOrDefault } from '../../config/layer-config';
 // CanvasProvider removed - not needed for Canvas V2
 // OverlayCanvas import removed - it was dead code
 import { FloatingPanelContainer } from '../../ui/FloatingPanelContainer';
@@ -720,7 +722,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
         const base = {
           id: entity.id,
-          layer: entity.layer || 'default',
+          // ADR-130: Centralized default layer
+          layer: getLayerNameOrDefault(entity.layer),
           color: String(entity.color || layerInfo?.color || UI_COLORS.WHITE), // ✅ ENTERPRISE FIX: Ensure string type
           lineWidth: entity.lineweight || 1,
           visible: entity.visible ?? true, // ✅ ENTERPRISE FIX: Default to true if undefined

@@ -61,6 +61,8 @@ export interface IndividualFormTabRendererProps {
   customRenderers?: Record<string, IndividualCustomRendererFn>;
   /** Photo click handler για gallery preview */
   onPhotoClick?: (index: number) => void;
+  /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
+  onActiveTabChange?: (tabId: string) => void;
 }
 
 // ============================================================================
@@ -185,7 +187,8 @@ export function IndividualFormTabRenderer({
   onMultiplePhotoUploadComplete,
   onProfilePhotoSelection,
   customRenderers,
-  onPhotoClick
+  onPhotoClick,
+  onActiveTabChange
 }: IndividualFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('contacts');
@@ -221,6 +224,7 @@ export function IndividualFormTabRenderer({
         tabs={tabs}
         defaultTab={tabs[0]?.id || "basicInfo"}
         theme="clean"
+        onTabChange={onActiveTabChange}
       >
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="">

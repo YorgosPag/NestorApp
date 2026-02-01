@@ -18,6 +18,8 @@ import {
   isAngleMeasurementEntity,
   type Entity
 } from '../../types/entities';
+// ADR-130: Centralized Default Layer Name
+import { getLayerNameOrDefault } from '../../config/layer-config';
 import { createRectangleVertices, calculateEntityBounds } from './shared/selection-duplicate-utils';
 import { calculateVerticesBounds } from '../../utils/geometry/GeometryUtils';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -75,7 +77,8 @@ export class UnifiedEntitySelection {
     // Iterate backwards to find topmost entity
     for (let i = entities.length - 1; i >= 0; i--) {
       const entity = entities[i];
-      const layer = layers[('layer' in entity ? entity.layer : '') || 'default'];
+      // ADR-130: Centralized default layer
+      const layer = layers[getLayerNameOrDefault('layer' in entity ? entity.layer : '')];
       
       if (layer && !layer.visible) {
         continue;

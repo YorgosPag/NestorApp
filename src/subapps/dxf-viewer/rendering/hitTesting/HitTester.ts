@@ -15,6 +15,8 @@ import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
 import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
 // 🏢 ADR-095: Centralized Snap Tolerance
 import { SNAP_TOLERANCE } from '../../config/tolerance-config';
+// ADR-130: Centralized Default Layer Name
+import { getLayerNameOrDefault } from '../../config/layer-config';
 
 export interface HitTestOptions extends SpatialQueryOptions {
   // Hit-test specific options
@@ -376,7 +378,8 @@ export class HitTester {
             y: (entityBounds.minY + entityBounds.maxY) / 2
           },
           // ✅ ENTERPRISE FIX: Access entity properties with type safety
-          layer: ('layer' in candidate.data ? candidate.data.layer : undefined) || 'default',
+          // ADR-130: Centralized default layer
+          layer: getLayerNameOrDefault('layer' in candidate.data ? (candidate.data as { layer?: string }).layer : undefined),
           selectable: ('selectable' in candidate.data ? candidate.data.selectable : true) !== false,
           priority: this.calculatePriority(candidate.data),
           vertexIndex: undefined,
@@ -497,7 +500,8 @@ export class HitTester {
       ...detailedHit,
       entityId: entity.id, // ✅ ENTERPRISE FIX: Add required entityId property
       entityType: entity.type, // ✅ ENTERPRISE FIX: Add entity type
-      layer: entity.layer || 'default',
+      // ADR-130: Centralized default layer
+      layer: getLayerNameOrDefault(entity.layer),
       selectable: entity.selected !== false,
       priority: this.calculatePriority(entity)
     } as HitTestResult;

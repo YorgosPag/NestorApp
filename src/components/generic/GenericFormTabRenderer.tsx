@@ -52,6 +52,8 @@ export interface GenericFormTabRendererProps {
   onPhotosChange?: (photos: PhotoSlotData[]) => void;
   /** Custom field renderers for forms */
   customRenderers?: Record<string, FieldRendererFn | LocalCustomRendererFn>;
+  /** 🏢 ENTERPRISE: Callback when active tab changes (for parent state management) */
+  onActiveTabChange?: (tabId: string) => void;
 }
 
 // ============================================================================
@@ -202,7 +204,8 @@ export function GenericFormTabRenderer({
   onSelectChange,
   disabled = false,
   onPhotosChange,
-  customRenderers
+  customRenderers,
+  onActiveTabChange
 }: GenericFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n support for tab labels
   const { t } = useTranslation('forms');
@@ -230,6 +233,7 @@ export function GenericFormTabRenderer({
         tabs={tabs}
         defaultTab={tabs[0]?.id || "basicInfo"}
         theme="clean"
+        onTabChange={onActiveTabChange}
       >
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="mt-4">

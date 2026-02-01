@@ -7,7 +7,14 @@
 // EXTRACTED HOOKS (from EnterpriseDxfSettingsProvider)
 // ============================================================================
 
-// Line Settings Hooks
+// Line Settings Hooks - Centralized Factory (ADR-044)
+export {
+  useLineSettingsByMode,
+  type LineSettingsMode,
+  type UseLineSettingsReturn,
+} from './useLineSettingsByMode';
+
+// Line Settings Hooks - Legacy Wrappers (backward compatible)
 export { useLineDraftSettings } from './useLineDraftSettings';
 export { useLineHoverSettings } from './useLineHoverSettings';
 export { useLineSelectionSettings } from './useLineSelectionSettings';

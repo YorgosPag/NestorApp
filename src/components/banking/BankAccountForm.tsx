@@ -112,8 +112,14 @@ export function BankAccountForm({
     return createEmptyBankAccount();
   });
 
-  // Validation state
-  const [ibanValid, setIbanValid] = useState(false);
+  // Validation state - validate initial IBAN if editing
+  const [ibanValid, setIbanValid] = useState(() => {
+    if (account?.iban) {
+      const result = validateIBAN(account.iban);
+      return result.valid;
+    }
+    return false;
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Auto-detect bank from IBAN
@@ -184,14 +190,24 @@ export function BankAccountForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log('[BankAccountForm] Submit clicked', {
+      ibanValid,
+      iban: formData.iban,
+      bankName: formData.bankName
+    });
+
     if (!validateForm()) {
+      console.log('[BankAccountForm] Validation failed', errors);
       return;
     }
 
+    console.log('[BankAccountForm] Validation passed, submitting...');
+
     try {
       await onSubmit(formData);
+      console.log('[BankAccountForm] Submit successful');
     } catch (error) {
-      console.error('Form submission error:', error);
+      console.error('[BankAccountForm] Submit error:', error);
       if (error instanceof Error) {
         setErrors({ submit: error.message });
       }

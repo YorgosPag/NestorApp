@@ -5,6 +5,8 @@
 
 import { SceneModel } from '../types/scene';
 import { mergeColorGroups } from '../ui/components/layers/utils/scene-merge';
+// ADR-130: Centralized Default Layer Name
+import { getLayerNameOrDefault } from '../config/layer-config';
 import {
   validateLayerExists,
   updateLayerProperties,
@@ -409,7 +411,8 @@ export class LayerOperationsService {
     
     const entitiesByLayer: Record<string, number> = {};
     scene.entities.forEach(entity => {
-      const layerName = entity.layer || 'default';
+      // ADR-130: Centralized default layer
+      const layerName = getLayerNameOrDefault(entity.layer);
       entitiesByLayer[layerName] = (entitiesByLayer[layerName] || 0) + 1;
     });
     

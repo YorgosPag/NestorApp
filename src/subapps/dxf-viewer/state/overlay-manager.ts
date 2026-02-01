@@ -13,15 +13,18 @@ interface ExtendedOverlayState {
 }
 import { RegionOperations, DuplicationGuard } from '../utils/region-operations';
 import { useDrawingSystem } from '../hooks/drawing/useDrawingSystem';
+// ADR-130: Centralized Default Layer Name
+import { DEFAULT_LAYER_NAME } from '../config/layer-config';
 // ✅ ENTERPRISE FIX: Import hooks only, not React components
 import { useSelection } from '../systems/selection';
 import { useLevels } from '../systems/levels';
 
+// ADR-130: Centralized default layer
 const initialState: ExtendedOverlayState = {
   regions: {},
-  layers: { default: RegionOperations.createDefaultLayer() },
+  layers: { [DEFAULT_LAYER_NAME]: RegionOperations.createDefaultLayer() },
   groups: {},
-  currentLayerId: 'default'
+  currentLayerId: DEFAULT_LAYER_NAME
 };
 
 export function useOverlayManager() {
@@ -97,7 +100,8 @@ export function useOverlayManager() {
       const region = RegionOperations.createRegion(vertices, currentLevelId, status);
       
       setCoreState(prev => {
-        const layerId = prev.currentLayerId || 'default';
+        // ADR-130: Centralized default layer
+        const layerId = prev.currentLayerId || DEFAULT_LAYER_NAME;
         const updatedLayers = RegionOperations.addRegionToLayer(prev.layers, layerId, region.id);
         
         return {

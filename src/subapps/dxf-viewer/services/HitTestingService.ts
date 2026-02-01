@@ -15,6 +15,8 @@ import type {
 import type { DxfScene, DxfEntityUnion, DxfLine, DxfCircle, DxfPolyline, DxfArc, DxfText } from '../canvas-v2/dxf-canvas/dxf-types';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
 import { TOLERANCE_CONFIG } from '../config/tolerance-config';
+// ADR-130: Centralized Default Layer Name
+import { getLayerNameOrDefault } from '../config/layer-config';
 
 export interface HitTestResult {
   entityId: string | null;
@@ -152,7 +154,8 @@ export class HitTestingService {
       type: entity.type,
       visible: entity.visible,
       selected: false,
-      layer: entity.layer || 'default',
+      // ADR-130: Centralized default layer
+      layer: getLayerNameOrDefault(entity.layer),
       color: entity.color,
       lineType: (entityWithLineType.lineType as "solid" | "dashed" | "dotted" | "dashdot") || 'solid',
       lineweight: entity.lineWidth,

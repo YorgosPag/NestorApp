@@ -6,6 +6,8 @@
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-077: Centralized TAU Constant
 import { TAU } from '../primitives/canvasPaths';
+// ADR-130: Centralized Default Layer Name
+import { getLayerNameOrDefault } from '../../config/layer-config';
 
 import type { IRenderPass, IRenderContext, RenderPassOptions } from '../core/RenderPipeline';
 import type { Entity } from '../../types/entities';  // ✅ ENTERPRISE FIX: Use proper Entity type instead of EntityModel
@@ -131,8 +133,9 @@ export class EntityPass implements IRenderPass {
     for (const entity of entities) {
       // Create batch key based on type, layer, and style
       // ✅ ENTERPRISE FIX: Safe property access with type guards
+      // ADR-130: Centralized default layer
       const entityWithStyle = entity as Entity & { layer?: string; color?: string; lineWidth?: number; };
-      const batchKey = `${entity.type}_${entityWithStyle.layer || 'default'}_${entityWithStyle.color || UI_COLORS.WHITE}_${entityWithStyle.lineWidth || 1}`;
+      const batchKey = `${entity.type}_${getLayerNameOrDefault(entityWithStyle.layer)}_${entityWithStyle.color || UI_COLORS.WHITE}_${entityWithStyle.lineWidth || 1}`;
 
       if (!batchMap.has(batchKey)) {
         batchMap.set(batchKey, {
