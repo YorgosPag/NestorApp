@@ -18,10 +18,14 @@ import { useSnapContext } from '../snapping/context/SnapContext';
 import { useCommandHistory } from '../core/commands';
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
 import { useToolState, toolStateStore } from '../stores/ToolStateStore';
+// 🏢 ENTERPRISE FIX (2026-02-02): Get reactive transform from CanvasContext
+import { useCanvasContext } from '../contexts/CanvasContext';
 
 export function useDxfViewerState() {
   const { gripSettings } = useGripContext();
   const canvasOps = useCanvasOperations();
+  // 🏢 ENTERPRISE FIX (2026-02-02): Get reactive transform for zoom display
+  const canvasContext = useCanvasContext();
   // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
   const { undo, redo, canUndo, canRedo } = useCommandHistory();
 
@@ -193,7 +197,9 @@ export function useDxfViewerState() {
     // 🏢 ENTERPRISE (2026-01-26): Undo/Redo from Command History - ADR-032
     canUndo,
     canRedo,
-    currentZoom: 1, // TODO: Get from ZoomManager
+    // 🏢 ENTERPRISE FIX (2026-02-02): Get REACTIVE zoom from CanvasContext transform
+    // Using canvasContext.transform directly (not getTransform()) for proper re-renders
+    currentZoom: canvasContext?.transform?.scale ?? 1,
     handleCalibrationToggle: toolbarState.toggleCalibration
   };
 }
