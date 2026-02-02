@@ -614,6 +614,71 @@ nextjs-portal code,
   -webkit-user-select: text !important;
 }
 
+/* =============================================================
+   🏢 ENTERPRISE: Next.js "Issue" Button (Bottom Left)
+
+   The red "1 Issue" button at bottom-left must be ALWAYS clickable
+   ============================================================= */
+
+/* Next.js build indicator / issue button */
+[data-nextjs-build-indicator],
+[class*="Toast"],
+[class*="toast"],
+button[data-nextjs-toast],
+[data-nextjs-toast-wrapper],
+/* Target by position - bottom left fixed elements */
+div[style*="position: fixed"][style*="bottom"][style*="left"],
+/* Next.js 15+ issues indicator */
+[data-nextjs-issues],
+[class*="NextjsIssues"],
+/* Generic dev overlay buttons */
+button[style*="position: fixed"][style*="bottom"] {
+  z-index: 2147483647 !important; /* Maximum z-index */
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  isolation: isolate !important;
+}
+
+/* Ensure the container that holds the button is also interactive */
+div:has(> button[data-nextjs-toast]),
+div:has(> [data-nextjs-build-indicator]) {
+  pointer-events: auto !important;
+  z-index: 2147483647 !important;
+}
+
+/* 🚨 CRITICAL: Prevent ANY element from blocking the bottom-left corner */
+/* This creates a "safe zone" for the Next.js issue button */
+@supports selector(:has(*)) {
+  /* Any fixed positioned element at bottom-left that is NOT a Next.js element
+     should NOT block pointer events in that area */
+  body > div:not(nextjs-portal):not([data-nextjs-dialog]) {
+    /* Allow clicks to pass through to elements below */
+  }
+}
+
+/* Force ALL Next.js dev tools to be interactive and on top */
+nextjs-portal,
+NEXTJS-PORTAL,
+[id^="__next"],
+[class^="__next"],
+#__next-build-watcher {
+  pointer-events: auto !important;
+  z-index: 2147483647 !important;
+}
+
+/* Specific rule for the small red issue button */
+/* It's typically a button or div at position: fixed; bottom: 10px; left: 10px */
+body > div[style*="fixed"][style*="bottom: 1"][style*="left: 1"],
+body > div[style*="fixed"][style*="bottom:1"][style*="left:1"],
+body > button[style*="fixed"][style*="bottom"],
+/* Shadow DOM elements */
+::part(toast),
+::part(issue-button) {
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
 /* ✅ ENTERPRISE: Force high z-index for Radix Popper wrapper */
 [data-radix-popper-content-wrapper] {
   z-index: var(--z-index-dropdown);
@@ -963,10 +1028,11 @@ body [data-navigation-scroll="true"]::-webkit-scrollbar-corner {
 }
 
 /* Force z-index order with !important */
-[data-canvas-type="dxf"] {
-  z-index: 0 !important;
+/* 🔧 FIX (2026-02-02): CORRECTED z-index order - DxfCanvas MUST be ABOVE LayerCanvas! */
+[data-canvas-type="layer"] {
+  z-index: 0 !important; /* Background layer - colored overlays */
 }
 
-[data-canvas-type="layer"] {
-  z-index: 10 !important; /* overlay πάνω */
+[data-canvas-type="dxf"] {
+  z-index: 10 !important; /* Foreground layer - DXF drawing + mouse events */
 }
