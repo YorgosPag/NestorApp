@@ -115,6 +115,17 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     viewportProp,
   });
 
+  // 🏢 FIX (2026-02-01): Transform and viewport refs for RAF callback - prevents stale closures
+  // PROBLEM: ResizeObserver → setTransform (async) → RAF fires before useEffect registers new callback
+  //          The OLD callback has OLD closured values → origin marker misaligned!
+  // SOLUTION: Use refs that are ALWAYS current, updated synchronously before render
+  const transformRef = useRef(transform);
+  transformRef.current = transform; // Always keep in sync
+
+  // 🏢 FIX (2026-02-01): Viewport ref - useCanvasResize's viewportRef doesn't update when viewportProp exists!
+  const resolvedViewportRef = useRef(viewport);
+  resolvedViewportRef.current = viewport; // Always keep in sync
+
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση του CursorSystem αντί για local state
   const cursor = useCursor();
 
@@ -319,17 +330,23 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // Computed styles check disabled for performance
 
   // 🏢 ADR-119: Memoized render function for UnifiedFrameScheduler
+  // 🏢 FIX (2026-02-01): Use refs for transform/viewport - prevents RAF stale closure issue
   const renderScene = useCallback(() => {
     const renderer = rendererRef.current;
-    if (!renderer || !viewport.width || !viewport.height) return;
+    // Use refs for viewport check - always current!
+    const currentViewport = resolvedViewportRef.current;
+    if (!renderer || !currentViewport.width || !currentViewport.height) return;
+
+    // Get current values from refs
+    const currentTransform = transformRef.current;
 
     try {
       // ✅ ENTERPRISE MIGRATION: Get service from registry
       const hitTesting = serviceRegistry.get('hit-testing');
       hitTesting.updateScene(scene);
 
-      // 1️⃣ RENDER SCENE FIRST
-      renderer.render(scene, transform, viewport, renderOptions);
+      // 1️⃣ RENDER SCENE FIRST - using refs for transform/viewport
+      renderer.render(scene, currentTransform, currentViewport, renderOptions);
 
       // 2️⃣ RENDER GRID (after scene, so it's on top)
       if (gridRendererRef.current && gridSettings?.enabled) {
@@ -338,14 +355,14 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         if (canvas && ctx) {
           // 🎯 TYPE-SAFE: Create proper UIRenderContext
           const uiTransform = {
-            scale: transform.scale,
-            offsetX: transform.offsetX,
-            offsetY: transform.offsetY,
+            scale: currentTransform.scale,
+            offsetX: currentTransform.offsetX,
+            offsetY: currentTransform.offsetY,
             rotation: 0
           };
-          const context = createUIRenderContext(ctx, viewport, uiTransform);
+          const context = createUIRenderContext(ctx, currentViewport, uiTransform);
           // 🏢 ENTERPRISE: Type-safe UIElementSettings cast for GridRenderer
-          gridRendererRef.current.render(context, viewport, gridSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
+          gridRendererRef.current.render(context, currentViewport, gridSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
         }
       }
 
@@ -356,20 +373,21 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
         if (canvas && ctx) {
           // 🎯 TYPE-SAFE: Create proper UIRenderContext
           const uiTransform = {
-            scale: transform.scale,
-            offsetX: transform.offsetX,
-            offsetY: transform.offsetY,
+            scale: currentTransform.scale,
+            offsetX: currentTransform.offsetX,
+            offsetY: currentTransform.offsetY,
             rotation: 0
           };
-          const context = createUIRenderContext(ctx, viewport, uiTransform);
+          const context = createUIRenderContext(ctx, currentViewport, uiTransform);
           // 🏢 ENTERPRISE: Type-safe UIElementSettings cast for RulerRenderer
-          rulerRendererRef.current.render(context, viewport, rulerSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
+          rulerRendererRef.current.render(context, currentViewport, rulerSettings as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
         }
       }
     } catch (error) {
       console.error('Failed to render DXF scene:', error);
     }
-  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings]);
+  // 🏢 FIX (2026-02-01): REMOVED transform, viewport from dependencies - using refs instead
+  }, [scene, renderOptions, gridSettings, rulerSettings]);
 
   // 🏢 ADR-119: Register with UnifiedFrameScheduler for centralized RAF
   useEffect(() => {
