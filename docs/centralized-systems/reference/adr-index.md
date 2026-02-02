@@ -306,7 +306,6 @@
 | **ADR-104** | Entity Type Guards Centralization | ✅ APPROVED | [View](./adrs/ADR-104-entity-type-guards-centralization.md) |
 | **ADR-129** | Layer Entity Filtering Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-129-layer-entity-filtering-centralization.md) |
 | **ADR-130** | Default Layer Name Centralization | ✅ IMPLEMENTED | [View](./adrs/ADR-130-default-layer-name-centralization.md) |
-| **ADR-167** | Enterprise Project Address System | ✅ APPROVED | [View](./adrs/ADR-167-enterprise-project-address-system.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | [View](./adrs/ADR-018-1-photos-tab-base-template.md) |
 
 ---
