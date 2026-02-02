@@ -111,8 +111,7 @@ export interface UseCanvasMouseProps {
   setActive: (active: boolean) => void;
   /** Container element ref */
   containerRef: React.RefObject<HTMLDivElement>;
-  /** Callback for mouse coordinates change (for status bar) */
-  onMouseCoordinatesChange?: (point: Point2D) => void;
+  // 🏢 ENTERPRISE (2026-02-02): onMouseCoordinatesChange REMOVED - ToolbarStatusBar uses CursorContext (SSoT)
   /** Hovered vertex info (for grip system) */
   hoveredVertexInfo: VertexHoverInfo | null;
   /** Hovered edge info (for grip system) */
@@ -237,7 +236,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     updatePosition,
     setActive,
     containerRef,
-    onMouseCoordinatesChange,
+    // 🏢 ENTERPRISE (2026-02-02): onMouseCoordinatesChange REMOVED - using CursorContext (SSoT)
     hoveredVertexInfo,
     hoveredEdgeInfo,
     selectedGrips,
@@ -296,16 +295,19 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
   /**
    * 🚀 PERFORMANCE: Update World mouse position only when changed significantly
    * World position updates only when changed by more than 0.1 world units
+   *
+   * 🏢 ENTERPRISE (2026-02-02): onMouseCoordinatesChange REMOVED
+   * ToolbarStatusBar now uses CursorContext.worldPosition directly (SSoT)
+   * The worldPosition is updated by useCentralizedMouseHandlers → cursor.updateWorldPosition()
    */
   const updateMouseWorld = useCallback((point: Point2D) => {
     const last = lastMouseWorldRef.current;
     if (!last || Math.abs(point.x - last.x) > 0.1 || Math.abs(point.y - last.y) > 0.1) {
       lastMouseWorldRef.current = point;
       setMouseWorld(point);
-      // 🏢 ENTERPRISE: Notify parent of mouse coordinate changes for status bar
-      onMouseCoordinatesChange?.(point);
+      // 🏢 ENTERPRISE (2026-02-02): onMouseCoordinatesChange REMOVED - using CursorContext (SSoT)
     }
-  }, [onMouseCoordinatesChange]);
+  }, []);
 
   // ============================================================================
   // EVENT HANDLERS
@@ -333,14 +335,11 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
     // Update CSS coordinates
     updateMouseCss(screenPos);
 
-    // 🏢 FIX (2026-02-01): Calculate world coordinates for status bar
-    // This was missing - Y coordinate was always 0 because world pos was never calculated!
-    const snap = getPointerSnapshotFromElement(container);
-    if (snap) {
-      const worldPos = screenToWorldWithSnapshot(screenPos, transform, snap);
-      updateMouseWorld(worldPos);
-    }
-  }, [containerRef, updatePosition, updateMouseCss, updateMouseWorld, transform]);
+    // 🏢 ENTERPRISE (2026-02-02): World coordinates calculation REMOVED
+    // ToolbarStatusBar now uses CursorContext.worldPosition (SSoT)
+    // The worldPosition is updated by useCentralizedMouseHandlers in LayerCanvas/DxfCanvas
+    // This eliminates duplicate coordinate calculation and duplicate mouse handling systems
+  }, [containerRef, updatePosition, updateMouseCss]);
 
   /**
    * 🏢 ENTERPRISE: Container mouse enter handler
