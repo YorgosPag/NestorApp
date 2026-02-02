@@ -1,0 +1,37 @@
+npm info using npm@10.8.2
+npm info using node@v20.19.0
+
+> nextn@0.1.1 build
+> pnpm run build:tokens && next build
+
+
+> nextn@0.1.1 build:tokens C:\Nestor_Pagonis
+> node scripts/build-design-tokens.js
+
+🏢 Enterprise Design Token Generator v2.0.0
+============================================
+
+📖 Loading design-tokens.json...
+🎨 Generating CSS Variables...
+📝 Generating TypeScript types...
+🎯 Generating Tailwind config...
+
+✅ Design tokens generated successfully!
+📁 Files created:
+   - src\styles\design-system\generated\variables.css
+   - src\styles\design-tokens\generated\tokens.ts
+   - tailwind.tokens.js
+
+🚀 Ready for production!
+   ▲ Next.js 15.5.7
+   - Environments: .env.local, .env
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+uncaughtException [Error: EPERM: operation not permitted, open 'C:\Nestor_Pagonis\.next\trace'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Nestor_Pagonis\\.next\\trace'
+}

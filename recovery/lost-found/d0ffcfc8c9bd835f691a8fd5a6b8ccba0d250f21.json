@@ -1,0 +1,27 @@
+{
+  "testName": "grid-1024x768",
+  "passed": true,
+  "mismatchedPixels": 0,
+  "totalPixels": 786432,
+  "mismatchRate": 0,
+  "threshold": 0.0001,
+  "dimensions": {
+    "width": 1024,
+    "height": 768
+  },
+  "timestamp": "2026-02-02T14:24:54.819Z",
+  "duration": 6034,
+  "artifacts": {
+    "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+    "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.baseline.png",
+    "actual": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.actual.png",
+    "diff": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.diff.png",
+    "report": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.report.json"
+  },
+  "metadata": {
+    "overlayType": "grid",
+    "seed": 42,
+    "maxMismatchPixels": 78,
+    "deterministic": true
+  }
+}
