@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { ToolType, ToolbarState, ToolRunner } from '../config';
+import type { ToolType, ToolbarState, ToolRunner, ToolEvents, ActionParameters } from '../config';
 import { ToolbarSystemUtils } from '../utils';
 
 interface ToolManagementParams {
@@ -7,7 +7,7 @@ interface ToolManagementParams {
   setState: React.Dispatch<React.SetStateAction<ToolbarState>>;
   toolRunner: ToolRunner;
   setToolRunner: React.Dispatch<React.SetStateAction<ToolRunner>>;
-  eventListeners: Record<string, (...args: unknown[]) => void>;
+  eventListeners: Partial<ToolEvents>;
   onToolChange?: (toolId: ToolType | null) => void;
   onError?: (error: string) => void;
 }
@@ -87,7 +87,7 @@ export function useToolManagement({
     }
   }, [state.activeTool, activateTool, deactivateTool]);
 
-  const executeAction = useCallback((actionId: string, parameters?: unknown) => {
+  const executeAction = useCallback((actionId: string, parameters?: ActionParameters) => {
     const action = state.actions[actionId];
     if (!action || !action.enabled) return;
 

@@ -10,7 +10,6 @@ export * from './core/RendererRegistry';
 export * from './core/CoordinateTransforms';
 
 // ===== ΦΑΣΗ 4: RENDER PIPELINE =====
-export * from './core/RenderPipeline';
 export * from './passes';
 export * from './adapters/canvas2d/Canvas2DContext';
 

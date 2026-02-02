@@ -465,8 +465,20 @@
       "lng": "Γεωγρ. Μήκος",
       "lat": "Γεωγρ. Πλάτος"
     },
+    "coordinate": {
+      "displayLabel": "Εμφάνιση Συντεταγμένων",
+      "currentPosition": "Τρέχουσα Θέση",
+      "longitude": "Γεωγρ. Μήκος",
+      "latitude": "Γεωγρ. Πλάτος",
+      "altitude": "Υψόμετρο",
+      "loading": "Φόρτωση...",
+      "clickPrompt": "Κλικ για προσθήκη {mode} σημείου",
+      "geographic": "γεωγραφικό",
+      "dxf": "DXF"
+    },
     "styleSelector": {
-      "style": "Στυλ:"
+      "style": "Στυλ:",
+      "quickSwitcher": "Γρήγορη Αλλαγή Στυλ"
     }
   },
   "accuracy": {

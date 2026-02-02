@@ -40,6 +40,8 @@ export interface InteractiveMapProps {
   children?: React.ReactNode;
   /** Hide GeoStatusBar (for non-DXF contexts like AddressMap) */
   showStatusBar?: boolean;
+  /** Hide GeoMapControls (coordinate picker & style selector) */
+  showMapControls?: boolean;
   searchMarker?: {
     lat: number;
     lng: number;

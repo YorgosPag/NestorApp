@@ -7,7 +7,7 @@ interface UtilityManagementParams {
   state: ToolbarState;
   setState: React.Dispatch<React.SetStateAction<ToolbarState>>;
   activateTool: (toolId: ToolType) => void;
-  eventListeners: ToolEvents;
+  eventListeners: Partial<ToolEvents>;
 }
 
 export function useUtilityManagement({
@@ -72,7 +72,7 @@ export function useUtilityManagement({
   useEffect(() => {
     // Initialize default tools and hotkeys
     Object.entries(state.tools).forEach(([toolId, tool]) => {
-      if (tool.hotkey) {
+      if (tool?.hotkey) {
         registerHotkey(tool.hotkey, toolId as ToolType);
       }
     });

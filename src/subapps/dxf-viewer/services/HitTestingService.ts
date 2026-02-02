@@ -149,7 +149,7 @@ export class HitTestingService {
     // Type guard: Τα DXF entities μπορεί να έχουν optional lineType property
     const entityWithLineType = entity as typeof entity & { lineType?: string };
 
-    const baseModel: EntityModel = {
+    const baseModel = {
       id: entity.id,
       type: entity.type,
       visible: entity.visible,
@@ -158,66 +158,81 @@ export class HitTestingService {
       layer: getLayerNameOrDefault(entity.layer),
       color: entity.color,
       lineType: (entityWithLineType.lineType as "solid" | "dashed" | "dotted" | "dashdot") || 'solid',
-      lineweight: entity.lineWidth,
-      ...this.mapEntityGeometry(entity)
+      lineweight: entity.lineWidth
     };
 
-    return baseModel;
+    switch (entity.type) {
+      case 'line': {
+        const lineEntity = entity as DxfLine;
+        return {
+          ...baseModel,
+          type: 'line',
+          start: lineEntity.start,
+          end: lineEntity.end
+        };
+      }
+      case 'circle': {
+        const circleEntity = entity as DxfCircle;
+        return {
+          ...baseModel,
+          type: 'circle',
+          center: circleEntity.center,
+          radius: circleEntity.radius
+        };
+      }
+      case 'polyline': {
+        const polylineEntity = entity as DxfPolyline;
+        return {
+          ...baseModel,
+          type: 'polyline',
+          vertices: polylineEntity.vertices,
+          closed: polylineEntity.closed
+        };
+      }
+      case 'arc': {
+        const arcEntity = entity as DxfArc;
+        return {
+          ...baseModel,
+          type: 'arc',
+          center: arcEntity.center,
+          radius: arcEntity.radius,
+          startAngle: arcEntity.startAngle,
+          endAngle: arcEntity.endAngle,
+          counterclockwise: arcEntity.counterclockwise
+        };
+      }
+      case 'text': {
+        const textEntity = entity as DxfText;
+        return {
+          ...baseModel,
+          type: 'text',
+          position: textEntity.position,
+          text: textEntity.text,
+          height: textEntity.height,
+          rotation: textEntity.rotation
+        };
+      }
+      case 'angle-measurement': {
+        const angleEntity = entity as import('../canvas-v2/dxf-canvas/dxf-types').DxfAngleMeasurement;
+        return {
+          ...baseModel,
+          type: 'angle-measurement',
+          vertex: angleEntity.vertex,
+          point1: angleEntity.point1,
+          point2: angleEntity.point2,
+          angle: angleEntity.angle
+        };
+      }
+      default:
+        return baseModel;
+    }
   }
 
   /**
    * ✅ MAP ENTITY GEOMETRY
    * Κεντρικοποιημένη geometry mapping
    */
-  // ✅ ENTERPRISE FIX: Fixed return type - use proper types instead of any
-  private mapEntityGeometry(entity: DxfEntityUnion): Record<string, unknown> {
-    switch (entity.type) {
-      case 'line': {
-        const lineEntity = entity as DxfLine;
-        return {
-          start: lineEntity.start,
-          end: lineEntity.end
-        };
-      }
-
-      case 'circle': {
-        const circleEntity = entity as DxfCircle;
-        return {
-          center: circleEntity.center,
-          radius: circleEntity.radius
-        };
-      }
-
-      case 'polyline': {
-        const polylineEntity = entity as DxfPolyline;
-        return {
-          points: polylineEntity.vertices
-        };
-      }
-
-      case 'arc': {
-        const arcEntity = entity as DxfArc;
-        return {
-          center: arcEntity.center,
-          radius: arcEntity.radius,
-          startAngle: arcEntity.startAngle,
-          endAngle: arcEntity.endAngle
-        };
-      }
-
-      case 'text': {
-        const textEntity = entity as DxfText;
-        return {
-          position: textEntity.position,
-          text: textEntity.text,
-          height: textEntity.height
-        };
-      }
-
-      default:
-        return {};
-    }
-  }
+  // (deprecated) Geometry mapping is now handled inline in convertToEntityModel.
 
   /**
    * ✅ GET STATISTICS

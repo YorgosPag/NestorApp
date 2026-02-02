@@ -4,7 +4,7 @@
  */
 
 import type { Viewport } from '../types/Types';
-import type { Entity, BaseEntity } from '../../types/entities';
+import type { Entity } from '../../types/entities';
 import { getEntityBounds } from '../../types/entities';
 import { SpatialFactory, type ISpatialIndex, type SpatialQueryOptions, type SpatialQueryResult } from '../../core/spatial';
 import type { Point2D } from '../types/Types';
@@ -36,7 +36,7 @@ export interface HitTestOptions extends SpatialQueryOptions {
   debugMode?: boolean;
 }
 
-export interface HitTestResult extends SpatialQueryResult {
+export interface HitTestResult extends SpatialQueryResult<Entity> {
   // Extended hit information
   hitType: 'entity' | 'vertex' | 'edge' | 'center' | 'grid';
   hitPoint: Point2D;
@@ -75,7 +75,7 @@ export class HitTester {
 
   // Configuration
   private defaultTolerance = 5; // pixels
-  private snapTolerance = SNAP_TOLERANCE; // 🏢 ADR-095: Centralized
+  private snapTolerance: number = SNAP_TOLERANCE; // 🏢 ADR-095: Centralized
   private maxResults = 50;
 
   // Performance tracking
@@ -243,17 +243,18 @@ export class HitTester {
     const tolerance = options.tolerance || this.defaultTolerance;
 
     // Επιλογή μεθόδου query
-    let candidates: SpatialQueryResult[];
+    let candidates: SpatialQueryResult<Entity>[];
 
     if (this.spatialIndex && options.useSpatialIndex !== false) {
       // ✅ ENTERPRISE FIX: Use proper ISpatialIndex API
       // Use queryNear for radius-based search
-      candidates = this.spatialIndex.queryNear(point, tolerance, {
+      const rawCandidates = this.spatialIndex.queryNear(point, tolerance, {
         maxResults: options.maxCandidates || this.maxResults,
         includeInvisible: options.includeInvisible,
         layerFilter: options.layerFilter,
         typeFilter: options.typeFilter
       });
+      candidates = this.normalizeResults(rawCandidates);
       this.stats.spatialQueries++;
     } else {
       // Linear search fallback
@@ -351,16 +352,17 @@ export class HitTester {
   hitTestRegion(region: BoundingBox, options: HitTestOptions = {}): HitTestResult[] {
     if (!this.enabled) return [];
 
-    let candidates: SpatialQueryResult[];
+    let candidates: SpatialQueryResult<Entity>[];
 
     if (this.spatialIndex && options.useSpatialIndex !== false) {
       // ✅ ENTERPRISE FIX: Use queryBounds instead of queryRegion
-      candidates = this.spatialIndex.queryBounds({
+      const rawCandidates = this.spatialIndex.queryBounds({
         minX: region.minX,
         minY: region.minY,
         maxX: region.maxX,
         maxY: region.maxY
       }, options);
+      candidates = this.normalizeResults(rawCandidates);
     } else {
       candidates = this.linearRegionTest(region, options);
     }
@@ -411,8 +413,8 @@ export class HitTester {
         maxX: (viewport.x ?? 0) - transform.offsetX + viewport.width / transform.scale,
         maxY: (viewport.y ?? 0) - transform.offsetY + viewport.height / transform.scale
       };
-      const results = this.spatialIndex.queryBounds(viewportBounds, options);
-      return results.map(r => r.data);
+      const rawResults = this.spatialIndex.queryBounds(viewportBounds, options);
+      return this.normalizeResults(rawResults).map(result => result.data);
     } else {
       // Linear viewport culling
       return this.entities.filter(entity => {
@@ -436,8 +438,8 @@ export class HitTester {
    * 🔺 LINEAR HIT TEST
    * Fallback linear search implementation
    */
-  private linearHitTest(point: Point2D, tolerance: number, options: HitTestOptions): SpatialQueryResult[] {
-    const results: SpatialQueryResult[] = [];
+  private linearHitTest(point: Point2D, tolerance: number, options: HitTestOptions): SpatialQueryResult<Entity>[] {
+    const results: SpatialQueryResult<Entity>[] = [];
 
     for (const entity of this.entities) {
       if (!this.passesFilters(entity, options)) continue;
@@ -464,8 +466,8 @@ export class HitTester {
    * 🔺 LINEAR REGION TEST
    * Fallback linear region test
    */
-  private linearRegionTest(region: BoundingBox, options: HitTestOptions): SpatialQueryResult[] {
-    const results: SpatialQueryResult[] = [];
+  private linearRegionTest(region: BoundingBox, options: HitTestOptions): SpatialQueryResult<Entity>[] {
+    const results: SpatialQueryResult<Entity>[] = [];
 
     for (const entity of this.entities) {
       if (!this.passesFilters(entity, options)) continue;
@@ -490,7 +492,7 @@ export class HitTester {
    * 🔺 ANALYZE HIT
    * Μετατρέπει SpatialQueryResult σε HitTestResult με detailed analysis
    */
-  private analyzeHit(candidate: SpatialQueryResult, point: Point2D, tolerance: number, options: HitTestOptions): HitTestResult | null {
+  private analyzeHit(candidate: SpatialQueryResult<Entity>, point: Point2D, tolerance: number, options: HitTestOptions): HitTestResult | null {
     // ✅ ENTERPRISE FIX: Access entity through data property
     const entity = candidate.data;
 
@@ -775,6 +777,34 @@ export class HitTester {
     if (options.tolerance !== undefined) this.defaultTolerance = options.tolerance;
     if (options.snapTolerance !== undefined) this.snapTolerance = options.snapTolerance;
     if (options.maxResults !== undefined) this.maxResults = options.maxResults;
+  }
+
+  private normalizeResults(results: SpatialQueryResult[]): SpatialQueryResult<Entity>[] {
+    return results
+      .map(result => this.normalizeResult(result))
+      .filter((result): result is SpatialQueryResult<Entity> => Boolean(result));
+  }
+
+  private normalizeResult(result: SpatialQueryResult): SpatialQueryResult<Entity> | null {
+    const directEntity = this.isEntity(result.data) ? result.data : null;
+    const itemEntity = !directEntity && this.isEntity(result.item?.data) ? result.item.data : null;
+    const entity = directEntity ?? itemEntity;
+    if (!entity) return null;
+
+    return {
+      ...result,
+      data: entity,
+      item: {
+        ...result.item,
+        data: entity
+      }
+    };
+  }
+
+  private isEntity(value: unknown): value is Entity {
+    if (!value || typeof value !== 'object') return false;
+    if (!('id' in value) || !('type' in value)) return false;
+    return typeof (value as { id?: unknown }).id === 'string';
   }
 }
 
