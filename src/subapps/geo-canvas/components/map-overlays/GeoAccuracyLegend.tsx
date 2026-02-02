@@ -84,7 +84,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
   const { t } = useTranslationLazy('geo-canvas');
 
   // Early return if no control points
-  if (!showAccuracyCircles || controlPoints.length === 0) {
+  if (!showAccuracyCircles || !controlPoints || controlPoints.length === 0) {
     return null;
   }
 
@@ -93,7 +93,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
   // ========================================================================
 
   const accuracyStats = React.useMemo(() => {
-    if (controlPoints.length === 0) return null;
+    if (!controlPoints || controlPoints.length === 0) return null;
 
     const accuracyValues = controlPoints.map(cp => cp.accuracy);
     const avgAccuracy = accuracyValues.reduce((sum, acc) => sum + acc, 0) / accuracyValues.length;

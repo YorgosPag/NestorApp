@@ -3,15 +3,7 @@
  * Manages scene statistics and performance monitoring
  */
 
-import type { AnySceneEntity, SceneLayer } from '../types/scene';
-
-interface Scene {
-  entities: AnySceneEntity[];
-  layers: Record<string, SceneLayer>;
-  version: number;
-  metadata?: Record<string, unknown>;
-  [key: string]: unknown;
-}
+import type { SceneModel } from '../types/scene';
 
 interface SceneStats {
   totalUpdates: number;
@@ -55,7 +47,7 @@ export class SceneStatistics {
 
   getStats(
     sceneVersion: number,
-    currentScene: Scene | null,
+    currentScene: SceneModel | null,
     hasRenderer: boolean,
     hasReactCallback: boolean,
     updateInProgress: boolean

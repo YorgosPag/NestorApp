@@ -4,26 +4,33 @@
  */
 
 import dynamic from 'next/dynamic';
-import React, { ComponentType } from 'react';
+import React from 'react';
+import type { ToolbarsSystemProps } from '../systems/toolbars/ToolbarsContext.types';
+import type { RulersGridSystemProps } from '../systems/rulers-grid/types';
+import type { ConstraintsSystemProps } from '../systems/constraints/ConstraintsSystem';
 
-export const DynamicToolbarsSystem = dynamic(
-  () => import('../systems/toolbars/ToolbarsSystem').then(mod => ({ default: mod.ToolbarsSystem || (() => null) })) as Promise<{ default: ComponentType<any> }>,
+const EmptyToolbarsSystem: React.FC<ToolbarsSystemProps> = () => null;
+const EmptyRulersGridSystem: React.FC<RulersGridSystemProps> = () => null;
+const EmptyConstraintsSystem: React.FC<ConstraintsSystemProps> = () => null;
+
+export const DynamicToolbarsSystem = dynamic<ToolbarsSystemProps>(
+  () => import('../systems/toolbars/ToolbarsSystem').then(mod => ({ default: mod.ToolbarsSystem || EmptyToolbarsSystem })),
   {
     loading: () => React.createElement('div', { className: 'animate-pulse bg-muted rounded' }, 'Loading toolbars...'),
     ssr: false
   }
 );
 
-export const DynamicRulersGridSystem = dynamic(
-  () => import('../systems/rulers-grid/RulersGridSystem').then(mod => ({ default: mod.RulersGridSystem || (() => null) })) as Promise<{ default: ComponentType<any> }>,
+export const DynamicRulersGridSystem = dynamic<RulersGridSystemProps>(
+  () => import('../systems/rulers-grid/RulersGridSystem').then(mod => ({ default: mod.RulersGridSystem || EmptyRulersGridSystem })),
   {
     loading: () => React.createElement('div', { className: 'animate-pulse bg-muted rounded' }, 'Loading rulers/grid...'),
     ssr: false
   }
 );
 
-export const DynamicConstraintsSystem = dynamic(
-  () => import('../systems/constraints/ConstraintsSystem').then(mod => ({ default: mod.ConstraintsSystem || (() => null) })) as Promise<{ default: ComponentType<any> }>,
+export const DynamicConstraintsSystem = dynamic<ConstraintsSystemProps>(
+  () => import('../systems/constraints/ConstraintsSystem').then(mod => ({ default: mod.ConstraintsSystem || EmptyConstraintsSystem })),
   {
     loading: () => React.createElement('div', { className: 'animate-pulse bg-muted rounded' }, 'Loading constraints...'),
     ssr: false

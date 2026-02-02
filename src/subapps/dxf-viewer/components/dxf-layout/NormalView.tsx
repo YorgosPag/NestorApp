@@ -4,7 +4,6 @@ import type { DXFViewerLayoutProps } from '../../integration/types';
 import { ToolbarSection } from './ToolbarSection';
 import { CanvasSection } from './CanvasSection';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
-import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ENTERPRISE: Centralized spacing tokens (ADR-013)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // ⚠️ PANEL_COLORS REMOVED (2026-01-03): BG_SECONDARY → bg-muted caused canvas visibility issues
@@ -24,9 +23,6 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
 
   // 🏢 ADR-050: Overlay section collapse state
   const [isOverlaySectionCollapsed, setIsOverlaySectionCollapsed] = useState(false);
-
-  // 🏢 ENTERPRISE (2027-01-27): Mouse coordinates for status bar real-time updates
-  const [mouseCoordinates, setMouseCoordinates] = useState<Point2D | null>(null);
 
   // 🎯 ENTERPRISE: Use props when available, fallback to local state
   // This ensures NormalView and FloatingPanelsSection share the same state
@@ -59,7 +55,6 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
         showOverlayToolbar={showOverlayToolbar}
         isOverlaySectionCollapsed={isOverlaySectionCollapsed}
         onToggleOverlaySection={() => setIsOverlaySectionCollapsed(prev => !prev)}
-        mouseCoordinates={mouseCoordinates}
       />
       <div className={`flex-1 flex ${PANEL_LAYOUT.OVERFLOW.HIDDEN}`}>
         <CanvasSection
@@ -67,7 +62,6 @@ export const NormalView: React.FC<DXFViewerLayoutProps> = (props) => {
           overlayMode={overlayMode}
           currentStatus={currentStatus}
           currentKind={currentKind}
-          onMouseCoordinatesChange={setMouseCoordinates}
         />
       </div>
 

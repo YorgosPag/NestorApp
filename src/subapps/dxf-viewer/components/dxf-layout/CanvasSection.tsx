@@ -578,7 +578,6 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     updatePosition,
     setActive,
     containerRef,
-    onMouseCoordinatesChange: props.onMouseCoordinatesChange,
     // Grip state from useGripSystem
     hoveredVertexInfo,
     hoveredEdgeInfo,

@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import type { AnySceneEntity, SceneModel } from '../../types/scene';
 
 // Event type definitions - centralized and type-safe
 export interface DrawingEventMap {
@@ -25,7 +26,7 @@ export interface DrawingEventMap {
     previousTool: string;
   };
   'drawing:entity-created': {
-    entity: Record<string, unknown>;
+    entity: AnySceneEntity;
     tool: string;
   };
   'drawing:cancelled': {
@@ -39,8 +40,8 @@ export interface DrawingEventMap {
   'drawing:complete': {
     tool: string;
     entityId: string;
-    entity?: Record<string, unknown>; // The created entity
-    updatedScene?: Record<string, unknown>; // The updated scene with the new entity
+    entity?: AnySceneEntity; // The created entity
+    updatedScene?: SceneModel; // The updated scene with the new entity
     levelId?: string; // The level ID where entity was added
   };
   // 🔧 PHASE 3: Additional events from DxfViewerContent
@@ -76,14 +77,14 @@ export interface DrawingEventMap {
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration
   // useUnifiedDrawing emits this event - EntityCreationManager handles saving
   'entity:create-request': {
-    entity: Record<string, unknown>;
+    entity: AnySceneEntity;
     toolType: string;
     requestId: string;
     targetLevelId?: string; // Optional - if not provided, uses currentLevelId
   };
   // Confirmation event after entity is successfully created
   'entity:created-confirmed': {
-    entity: Record<string, unknown>;
+    entity: AnySceneEntity;
     levelId: string;
     commandId?: string; // For undo/redo tracking
   };

@@ -374,3 +374,56 @@ export function sortAddresses(addresses: ProjectAddress[]): ProjectAddress[] {
     return orderA - orderB;
   });
 }
+
+// =============================================================================
+// GEOCODING HELPERS
+// =============================================================================
+
+/**
+ * Check if address has valid coordinates
+ * Enterprise pattern: Data completeness validation
+ *
+ * @param address - Address to check
+ * @returns True if coordinates are valid
+ */
+export function hasCoordinates(address: ProjectAddress): boolean {
+  return !!(
+    address.coordinates &&
+    typeof address.coordinates.lat === 'number' &&
+    typeof address.coordinates.lng === 'number' &&
+    isFinite(address.coordinates.lat) &&
+    isFinite(address.coordinates.lng)
+  );
+}
+
+/**
+ * Format address for geocoding API
+ * Enterprise pattern: API-specific formatting
+ *
+ * @param address - Address to format
+ * @returns Geocoding-ready string
+ */
+export function formatAddressForGeocoding(address: ProjectAddress): string {
+  const parts = [
+    address.street,
+    address.number,
+    address.city,
+    address.postalCode,
+    address.country || 'Greece'
+  ].filter(Boolean);
+
+  return parts.join(', ');
+}
+
+/**
+ * Filter addresses that can be geocoded
+ * Enterprise pattern: Data readiness filtering
+ *
+ * @param addresses - Addresses to filter
+ * @returns Geocodable addresses (have street + city)
+ */
+export function getGeocodableAddresses(addresses: ProjectAddress[]): ProjectAddress[] {
+  return addresses.filter(addr =>
+    addr.street?.trim() && addr.city?.trim()
+  );
+}

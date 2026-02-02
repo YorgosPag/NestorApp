@@ -54,7 +54,7 @@ import { LegacySnapAdapter } from '../../rendering/ui/snap/LegacySnapAdapter';
 import { SelectionRenderer } from './selection/SelectionRenderer';
 import { UIRendererComposite, type UICategory } from '../../rendering/ui/core/UIRendererComposite';
 import { createUIRenderContext, DEFAULT_UI_TRANSFORM } from '../../rendering/ui/core/UIRenderContext';
-import type { UIRenderOptions, UIElementSettings } from '../../rendering/ui/core/UIRenderer';
+import type { UIRenderOptions, UIElementSettings, UIRenderMetrics } from '../../rendering/ui/core/UIRenderer';
 // 🏢 ENTERPRISE: Centralized GripSettings type
 import type { GripSettings } from '../../types/gripSettings';
 
@@ -1083,7 +1083,7 @@ export class LayerRenderer {
   /**
    * ✅ ΦΑΣΗ 6: Get performance metrics από centralized system
    */
-  getUIMetrics(): Array<{ name: string; renderTime?: number; lastRender?: number }> {
+  getUIMetrics(): UIRenderMetrics[] {
     return this.uiComposite.getMetrics();
   }
 

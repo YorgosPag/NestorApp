@@ -56,6 +56,7 @@ import { useCursor } from '../systems/cursor';
 import { useSnapContext } from '../snapping/context/SnapContext';
 import { useCanvasOperations } from '../hooks/interfaces/useCanvasOperations';
 import { useEventBus, EventBus } from '../systems/events/EventBus';
+import type { DrawingEventPayload } from '../systems/events/EventBus';
 // 🏢 ENTERPRISE (2026-01-26): Centralized tool metadata - ADR-033
 import { preservesOverlayMode } from '../systems/tools/ToolStateManager';
 // 🏢 ENTERPRISE (2026-01-30): ADR-055 Entity Creation Manager - Event Bus + Command Pattern
@@ -315,25 +316,19 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
     // 🔍 DEBUG (2026-01-31): Log effect mount
     console.log('🔌 [DxfViewerContent] Subscribing to drawing:complete event (ONCE)');
 
-    const handleDrawingComplete = (payload: {
-      tool: string;
-      entityId: string;
-      entity?: Record<string, unknown>;
-      updatedScene?: Record<string, unknown>;
-      levelId?: string;
-    }) => {
+    const handleDrawingComplete = (payload: DrawingEventPayload<'drawing:complete'>) => {
       const sceneChange = handleSceneChangeRef.current;
 
       // 🔍 DEBUG: Log when handler is called
       console.log('📨 [DxfViewerContent] drawing:complete received!', {
         payload,
         hasUpdatedScene: !!payload.updatedScene,
-        updatedSceneEntityCount: (payload.updatedScene as SceneModel | undefined)?.entities?.length || 0
+        updatedSceneEntityCount: payload.updatedScene?.entities?.length || 0
       });
 
       // 🔧 FIX (2026-01-31): Use updatedScene from payload directly (avoids stale closure)
       if (payload.updatedScene) {
-        const scene = payload.updatedScene as SceneModel;
+        const scene = payload.updatedScene;
         // 🔍 DEBUG: Check if arc entities have counterclockwise
         const arcEntities = scene.entities?.filter(e => e.type === 'arc') || [];
         console.log('🔄 [DxfViewerContent] Syncing updatedScene to currentScene', {
@@ -383,7 +378,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const { updateGripSettings } = useGripContext();
 
   // 🧪 WRAP handleAction to intercept special actions
-  const wrappedHandleAction = React.useCallback((action: string, data?: unknown) => {
+  const wrappedHandleAction = React.useCallback((action: string, data?: string | number | Record<string, unknown>) => {
     if (action === 'run-tests') {
       setTestsModalOpen(true);
       return;
@@ -394,7 +389,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
       const newState = !perfMonitorEnabled;
       notifications.success(
         `Performance Monitor: ${newState ? 'ON ✅' : 'OFF ❌'}`,
-        newState ? 'Μετρήσεις FPS, Memory, Rendering ενεργές' : 'Καλύτερη απόδοση - παρακολούθηση απενεργοποιημένη'
+        { content: newState ? 'Μετρήσεις FPS, Memory, Rendering ενεργές' : 'Καλύτερη απόδοση - παρακολούθηση απενεργοποιημένη' }
       );
       return;
     }

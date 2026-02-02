@@ -12,11 +12,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UI_COLORS } from '../config/color-config';
 import type { SceneModel } from '../types/scene';
 import type { OverlayEditorMode, OverlayKind, Status, Overlay } from '../overlays/types';
 import type { ToolType } from '../ui/toolbar/types';
 import { ColorManager } from '../ui/components/ColorManager';
+import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import CursorSettingsPanel from '../ui/CursorSettingsPanel';
 import CoordinateCalibrationOverlay from '../ui/CoordinateCalibrationOverlay';
 import { DraggableOverlayToolbar } from '../ui/components/DraggableOverlayToolbar';
@@ -39,7 +39,7 @@ interface FloatingPanelsSectionProps {
   currentScene: SceneModel | null;
   handleSceneChange: (scene: SceneModel) => void;
   closeColorMenu: () => void;
-  floatingRef: React.RefObject<any>;
+  floatingRef: React.RefObject<FloatingPanelHandle>;
 
   // Settings Panels
   showCursorSettings: boolean;

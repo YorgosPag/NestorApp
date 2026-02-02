@@ -25,10 +25,11 @@
  * @updated 2026-02-02 - Refactored to inline editing (Procore pattern)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Project } from '@/types/project';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { AddressCard, AddressFormSection } from '@/components/shared/addresses';
+import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Plus, Star, Trash2, ChevronDown, ChevronUp, Map, X, Pencil } from 'lucide-react';
@@ -109,6 +110,23 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       toast.error('Σφάλμα ενημέρωσης διεύθυνσης');
     }
   };
+
+  /**
+   * 🗺️ Handle marker click - scroll to address card
+   */
+  const handleMarkerClick = useCallback((address: ProjectAddress, index: number) => {
+    // Scroll to address card
+    const cardElement = document.getElementById(`address-card-${address.id}`);
+    if (cardElement) {
+      cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      // Highlight card temporarily
+      cardElement.classList.add('ring-2', 'ring-primary');
+      setTimeout(() => {
+        cardElement.classList.remove('ring-2', 'ring-primary');
+      }, 2000);
+    }
+  }, []);
 
   /**
    * Delete address
@@ -297,17 +315,17 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
         )}
       </div>
 
-      {/* Google Maps Placeholder (Optional Future) */}
-      {primary && !isAddFormOpen && (
-        <div className="bg-muted rounded-lg p-8 text-center border-2 border-dashed">
-          <Map className={`${iconSizes.xl} mx-auto mb-4 text-muted-foreground`} />
-          <p className="text-sm text-muted-foreground">
-            Google Maps Integration - Coming Soon
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Η χαρτογράφηση όλων των διευθύνσεων θα είναι διαθέσιμη σύντομα
-          </p>
-        </div>
+      {/* 🗺️ ENTERPRISE: Address Map Integration (ADR-168) */}
+      {localAddresses.length > 0 && !isAddFormOpen && editingIndex === null && (
+        <AddressMap
+          addresses={localAddresses}
+          highlightPrimary={true}
+          showGeocodingStatus={true}
+          enableClickToFocus={true}
+          onMarkerClick={handleMarkerClick}
+          height={400}
+          className="rounded-lg border shadow-sm"
+        />
       )}
 
       {/* 🏢 ENTERPRISE: Inline Add Form (Procore Pattern) */}
@@ -360,6 +378,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           {localAddresses.map((address, index) => (
             <div
               key={address.id}
+              id={`address-card-${address.id}`}
               className="relative border rounded-lg p-6 hover:shadow-md transition-shadow"
             >
               {/* 🏢 ENTERPRISE: Inline Edit Mode or Display Mode */}

@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Point2D } from '../rendering/types/Types';
-import type { Region, OverlayLayer, RegionStatus } from '../types/overlay';
+import type { Region, RegionStatus } from '../types/overlay';
 // 🏢 ADR-092: Centralized localStorage Service
 import { storageGet, storageSet, STORAGE_KEYS } from '../utils/storage-utils';
 
 // ✅ ENTERPRISE FIX: Extended OverlayState for manager use
 interface ExtendedOverlayState {
   regions: Record<string, Region>; // Object instead of array for efficient lookup
-  layers: Record<string, any>;
-  groups: Record<string, any>;
+  layers: Record<string, RegionLayerObject>;
+  groups: Record<string, unknown>;
   currentLayerId: string;
 }
-import { RegionOperations, DuplicationGuard } from '../utils/region-operations';
+import { RegionOperations, DuplicationGuard, type RegionLayerObject } from '../utils/region-operations';
 import { useDrawingSystem } from '../hooks/drawing/useDrawingSystem';
 // ADR-130: Centralized Default Layer Name
 import { DEFAULT_LAYER_NAME } from '../config/layer-config';
@@ -43,7 +43,7 @@ export function useOverlayManager() {
 
     interface PersistedOverlayData {
       regions?: Record<string, Region>;
-      layers?: Record<string, OverlayLayer>;
+      layers?: Record<string, RegionLayerObject>;
       groups?: Record<string, unknown>;
     }
 

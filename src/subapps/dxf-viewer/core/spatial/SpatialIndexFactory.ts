@@ -27,7 +27,9 @@ import type {
   SpatialBounds,
   SpatialIndexStats,
   SpatialQueryResult,
-  SpatialQueryOptions
+  SpatialQueryOptions,
+  SpatialItem,
+  SpatialDebugInfo
 } from './ISpatialIndex';
 import type { Point2D } from '../../rendering/types/Types';
 import { SpatialIndexType } from './ISpatialIndex';
@@ -211,16 +213,16 @@ class PlaceholderSpatialIndex implements ISpatialIndex {
     this.bounds = bounds;
   }
 
-  insert(): void {
+  insert(_item: SpatialItem): void {
     console.warn('🚧 PlaceholderSpatialIndex.insert() - not implemented');
   }
 
-  remove(): boolean {
+  remove(_itemId: string): boolean {
     console.warn('🚧 PlaceholderSpatialIndex.remove() - not implemented');
     return false;
   }
 
-  update(): boolean {
+  update(_item: SpatialItem): boolean {
     console.warn('🚧 PlaceholderSpatialIndex.update() - not implemented');
     return false;
   }
@@ -272,11 +274,11 @@ class PlaceholderSpatialIndex implements ISpatialIndex {
     console.warn('🚧 PlaceholderSpatialIndex.optimize() - not implemented');
   }
 
-  debug(): Record<string, unknown> {
+  debug(): SpatialDebugInfo {
     return {
-      type: 'placeholder',
       indexType: this.indexType,
-      bounds: this.bounds
+      bounds: this.bounds,
+      itemCount: this.itemCount
     };
   }
 }

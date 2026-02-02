@@ -8,7 +8,7 @@ import { UI_COLORS, OPACITY } from '../config/color-config';
 import { GEOMETRY_PRECISION } from '../config/tolerance-config';
 
 // Local interface for layer management (different from the centralized OverlayLayer union type)
-interface RegionLayerObject {
+export interface RegionLayerObject {
   id: string;
   name: string;
   visible: boolean;

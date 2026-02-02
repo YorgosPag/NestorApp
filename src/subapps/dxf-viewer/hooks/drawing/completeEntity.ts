@@ -224,8 +224,8 @@ export function completeEntity(
     EventBus.emit('drawing:complete', {
       tool,
       entityId: entity.id,
-      entity: entity as unknown as Record<string, unknown>,
-      updatedScene: finalScene as unknown as Record<string, unknown>,
+      entity,
+      updatedScene: finalScene,
       levelId,
     });
   }

@@ -6,7 +6,6 @@ import { Button } from "../../../../components/ui/button";
 import { CommonBadge } from '../../../../core/badges';
 import { RotateCcw, Minimize } from "lucide-react";
 import type { DXFViewerLayoutProps } from '../../integration/types';
-import type { Point2D } from '../../rendering/types/Types';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -29,23 +28,19 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
   const [isOverlaySectionCollapsed, setIsOverlaySectionCollapsed] = React.useState(false);
   const showOverlayToolbar = props.activeTool === 'layering';
 
-  // 🏢 ENTERPRISE (2027-01-27): Mouse coordinates for status bar real-time updates
-  const [mouseCoordinates, setMouseCoordinates] = React.useState<Point2D | null>(null);
-
   return (
   <div className={`fixed ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.Z_INDEX['50']} ${colors.bg.accent} flex flex-col`}>
     <ToolbarSection
       {...props}
       overlayMode={"draw" as OverlayEditorMode}
-      setOverlayMode={() => {}}
+      setOverlayMode={(_mode) => {}}
       currentStatus={"for-sale" as PropertyStatus}
-      setCurrentStatus={() => {}}
+      setCurrentStatus={(_status) => {}}
       currentKind={"unit" as OverlayKind}
-      setCurrentKind={() => {}}
+      setCurrentKind={(_kind) => {}}
       showOverlayToolbar={showOverlayToolbar}
       isOverlaySectionCollapsed={isOverlaySectionCollapsed}
       onToggleOverlaySection={() => setIsOverlaySectionCollapsed(prev => !prev)}
-      mouseCoordinates={mouseCoordinates}
     />
     <div className={`flex justify-between items-center ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.secondary} ${getDirectionalBorder('muted', 'bottom')}`}>
       <div className={`flex ${PANEL_LAYOUT.GAP.SM} items-center`}>
@@ -97,7 +92,6 @@ export const FullscreenView: React.FC<DXFViewerLayoutProps> = (props) => {
           overlayMode="draw"
           currentStatus="for-sale"
           currentKind="unit"
-          onMouseCoordinatesChange={setMouseCoordinates}
         />
     </div>
   </div>

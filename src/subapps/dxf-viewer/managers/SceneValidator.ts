@@ -4,18 +4,10 @@
  */
 
 import { dwarn } from '../debug';
-import type { AnySceneEntity, SceneLayer } from '../types/scene';
-
-interface Scene {
-  entities: AnySceneEntity[];
-  layers: Record<string, SceneLayer>;
-  version: number;
-  metadata?: Record<string, unknown>;
-  [key: string]: unknown;
-}
+import type { AnySceneEntity, SceneModel } from '../types/scene';
 
 export class SceneValidator {
-  validateScene(scene: Scene): boolean {
+  validateScene(scene: SceneModel): boolean {
     if (!scene || typeof scene !== 'object') {
       return false;
     }

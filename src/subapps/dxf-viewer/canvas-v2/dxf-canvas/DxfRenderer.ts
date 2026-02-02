@@ -20,6 +20,7 @@ import { renderOriginMarker } from '../../rendering/ui/origin/OriginMarkerUtils'
 import { EntityRendererComposite } from '../../rendering/core/EntityRendererComposite';
 import { Canvas2DContext } from '../../rendering/adapters/canvas2d/Canvas2DContext';
 import type { EntityModel, RenderOptions } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
 import type { LineType } from '../../settings-core/types';
 
 
@@ -119,35 +120,7 @@ export class DxfRenderer {
   ): void {
     const isSelected = options.selectedEntityIds.includes(entity.id);
 
-    // Convert DxfEntityUnion to EntityModel για compatibility
-    // Type guard: Τα DXF entities μπορεί να έχουν optional lineType property
-    const entityWithLineType = entity as typeof entity & { lineType?: string };
-
-    // 🏢 ENTERPRISE (2026-01-27): Type guard for measurement properties
-    // Measurement entities (from useUnifiedDrawing) have these flags for distance label rendering
-    const entityWithMeasurement = entity as typeof entity & {
-      measurement?: boolean;
-      showEdgeDistances?: boolean;
-    };
-
-    const entityModel: EntityModel = {
-      id: entity.id,
-      type: entity.type,
-      visible: entity.visible,
-      selected: isSelected,
-      layer: entity.layer,
-      color: entity.color,
-      lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
-      lineweight: entity.lineWidth, // ✅ ENTERPRISE FIX: Use correct property name 'lineweight' not 'lineWeight'
-
-      // 🏢 ENTERPRISE (2026-01-27): Pass measurement flags for distance label rendering
-      // These flags come from useUnifiedDrawing when creating measurement entities
-      ...(entityWithMeasurement.measurement !== undefined && { measurement: entityWithMeasurement.measurement }),
-      ...(entityWithMeasurement.showEdgeDistances !== undefined && { showEdgeDistances: entityWithMeasurement.showEdgeDistances }),
-
-      // Geometry mapping βάσει τύπου
-      ...this.mapEntityGeometry(entity)
-    };
+    const entityModel: EntityModel = this.toEntityModel(entity, isSelected);
 
     // ✅ COMPOSITE RENDERING: Ένα κεντρικό call αντί για switch
     const renderOptions: RenderOptions = {
@@ -159,84 +132,66 @@ export class DxfRenderer {
     };
 
     // 🚀 ΑΥΤΟ ΑΝΤΙΚΑΘΙΣΤΑ ΤΟ SWITCH STATEMENT!
-    // 🏢 ENTERPRISE: EntityModel is compatible with Entity - both extend BaseEntity
-    this.entityComposite.render(entityModel as import('../../types/entities').Entity, renderOptions);
+    this.entityComposite.render(entityModel, renderOptions);
   }
 
+  private toEntityModel(entity: DxfEntityUnion, isSelected: boolean): Entity {
+    const entityWithLineType = entity as typeof entity & { lineType?: string };
+    const entityWithMeasurement = entity as typeof entity & {
+      measurement?: boolean;
+      showEdgeDistances?: boolean;
+    };
+    const base = {
+      id: entity.id,
+      visible: entity.visible,
+      selected: isSelected,
+      layer: entity.layer,
+      color: entity.color,
+      lineType: mapDxfLineTypeToEnterprise(entityWithLineType.lineType),
+      lineweight: entity.lineWidth,
+      ...(entityWithMeasurement.measurement !== undefined && { measurement: entityWithMeasurement.measurement }),
+      ...(entityWithMeasurement.showEdgeDistances !== undefined && { showEdgeDistances: entityWithMeasurement.showEdgeDistances })
+    };
 
-  /**
-   * ✅ HELPER: Map DxfEntityUnion geometry σε EntityModel format
-   */
-  private mapEntityGeometry(entity: DxfEntityUnion): Record<string, any> { // ✅ ENTERPRISE FIX: Return flexible object for geometry properties
     switch (entity.type) {
       case 'line':
-        return {
-          start: entity.start,
-          end: entity.end
-        };
-
+        return { ...base, type: 'line', start: entity.start, end: entity.end };
       case 'circle':
+        return { ...base, type: 'circle', center: entity.center, radius: entity.radius };
+      case 'polyline':
+        return { ...base, type: 'polyline', vertices: entity.vertices, closed: entity.closed };
+      case 'arc':
         return {
-          center: entity.center,
-          radius: entity.radius
-        };
-
-      case 'polyline': {
-        // Type guard: Polyline entities έχουν vertices property
-        // 🐛 FIX (2026-01-30): PolylineRenderer expects 'vertices' NOT 'points'!
-        const polyline = entity as typeof entity & { vertices?: Point2D[]; points?: Point2D[]; closed?: boolean };
-        return {
-          vertices: polyline.vertices || polyline.points || [],
-          closed: polyline.closed ?? false
-        };
-      }
-
-      case 'arc': {
-        // Arc entities ήδη έχουν τα properties στο DxfArc type
-        // 🔧 FIX (2026-01-31): Προσθήκη counterclockwise για σωστή κατεύθυνση τόξου
-        const arcEntity = entity as typeof entity & { counterclockwise?: boolean };
-        return {
+          ...base,
+          type: 'arc',
           center: entity.center,
           radius: entity.radius,
           startAngle: entity.startAngle,
           endAngle: entity.endAngle,
-          counterclockwise: arcEntity.counterclockwise
+          counterclockwise: entity.counterclockwise
         };
-      }
-
       case 'text':
-        // ╔════════════════════════════════════════════════════════════════════╗
-        // ║ ⚠️ VERIFIED WORKING (2026-01-03) - ΜΗΝ ΑΛΛΑΞΕΤΕ!                   ║
-        // ║                                                                    ║
-        // ║ ΚΡΙΣΙΜΟ: Αυτός ο κώδικας είναι ΑΠΑΡΑΙΤΗΤΟΣ για σωστή εμφάνιση     ║
-        // ║ κειμένων διαστάσεων (dimension text) με τη σωστή κατεύθυνση.      ║
-        // ║                                                                    ║
-        // ║ ✅ position: Θέση κειμένου στο DXF                                 ║
-        // ║ ✅ text: Περιεχόμενο κειμένου                                      ║
-        // ║ ✅ height: Ύψος γραμματοσειράς (ΟΧΙ fontSize!)                     ║
-        // ║ ✅ rotation: Γωνία περιστροφής σε μοίρες (ΚΡΙΣΙΜΟ!)               ║
-        // ║                                                                    ║
-        // ║ 🔧 FIX (2026-01-03): Προσθήκη rotation - χωρίς αυτό τα κείμενα    ║
-        // ║    διαστάσεων εμφανίζονταν ΠΑΝΤΑ οριζόντια!                       ║
-        // ╚════════════════════════════════════════════════════════════════════╝
         return {
+          ...base,
+          type: 'text',
           position: entity.position,
           text: entity.text,
           height: entity.height,
           rotation: entity.rotation
         };
-
       case 'angle-measurement':
-        // 🏢 ENTERPRISE (2026-01-27): Angle measurement entity support
         return {
+          ...base,
+          type: 'angle-measurement',
           vertex: entity.vertex,
           point1: entity.point1,
           point2: entity.point2,
           angle: entity.angle
         };
-
-      default:
-        return {};
+      default: {
+        const exhaustiveCheck: never = entity;
+        return exhaustiveCheck;
+      }
     }
   }
 

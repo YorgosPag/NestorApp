@@ -83,7 +83,7 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
   // ========================================================================
 
   const accuracyStats = React.useMemo(() => {
-    if (controlPoints.length === 0) return null;
+    if (!controlPoints || controlPoints.length === 0) return null;
 
     const accuracyValues = controlPoints.map(cp => cp.accuracy);
     const avgAccuracy = accuracyValues.reduce((sum, acc) => sum + acc, 0) / accuracyValues.length;
@@ -146,10 +146,10 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
   const renderControlPointStats = () => (
     <div className="space-y-1" role="group" aria-label={t('map.status.controlPoints')}>
       <div className="text-xs text-gray-400">
-        {t('map.status.points')}: {controlPoints.length}
+        {t('map.status.points')}: {controlPoints?.length ?? 0}
       </div>
 
-      {controlPoints.length > 0 && showAccuracyCircles && accuracyStats && (
+      {controlPoints && controlPoints.length > 0 && showAccuracyCircles && accuracyStats && (
         <>
           <div className="text-xs text-gray-400">
             {t('accuracy.stats.avgAccuracy')}: {t('accuracy.stats.format', { value: accuracyStats.avg })}

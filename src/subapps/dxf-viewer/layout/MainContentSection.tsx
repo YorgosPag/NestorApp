@@ -29,8 +29,8 @@ import { PANEL_LAYOUT } from '../config/panel-tokens';
 interface MainContentSectionProps {
   // State from useDxfViewerState
   state: DxfViewerState & {
-    handleAction?: (action: string, data?: unknown) => void;
-    onAction?: (action: string, data?: unknown) => void;
+    handleAction?: (action: string, data?: string | number | Record<string, unknown>) => void;
+    onAction?: (action: string, data?: string | number | Record<string, unknown>) => void;
   };
 
   // Scene and file handling

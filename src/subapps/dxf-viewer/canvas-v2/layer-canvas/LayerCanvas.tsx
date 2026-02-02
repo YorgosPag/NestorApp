@@ -482,6 +482,12 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
 
       // Layer filtering logic - debug disabled for performance
 
+      const layerSnapResults: LayerRenderOptions['snapResults'] = snapResults.map((snap) => ({
+        point: snap.point,
+        type: snap.type as LayerRenderOptions['snapResults'][number]['type'],
+        entityId: snap.entityId ?? undefined
+      }));
+
       const finalRenderOptions = {
         ...renderOptions,
         showCrosshair: renderOptions.showCrosshair && !isPanToolActive, // 🔥 Hide crosshair in pan mode
@@ -491,7 +497,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
         showSelectionBox: !isPanToolActive && cursor.isSelecting && currentSelectionBox !== null, // 🔥 Hide selection in pan mode
         selectionBox: isPanToolActive ? null : currentSelectionBox,
         // ✅ SNAP FIX STEP 5: Pass real snap results from mouse handlers
-        snapResults: snapResults || []
+        snapResults: layerSnapResults
       };
 
       // 🏢 FIX (2026-02-01): Use refs for transform/viewport - prevents RAF stale closure issue

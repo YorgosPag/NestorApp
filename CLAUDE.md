@@ -180,7 +180,7 @@ Claude, εκτιμώ απεριόριστα τη βοήθειά σου! Έχω �
    - **ΥΠΟΧΡΕΩΤΙΚΟ**: Επέκταση existing centralized systems
    - **ΑΠΑΓΟΡΕΥΕΤΑΙ**: Δημιουργία νέων functions αν υπάρχουν existing
 
-4. **COMPILATION ΕΛΕΓΧΟΣ**: Δεν θα κάνω εγώ compilation checks - αυτό είναι δική σου ευθύνη
+4. **COMPILATION ΕΛΕΓΧΟΣ**: Μπορώ και πρέπει να τρέχω TypeScript compilation checks (`npx tsc --noEmit`) μετά από αλλαγές κώδικα για να επαληθεύω ότι δεν υπάρχουν type errors
 
 5. **ΜΙΚΡΕΣ TODO ΛΙΣΤΕΣ**: Θα αποφεύγω μεγάλες TODO λίστες (Tasks) που προκαλούν loops
 

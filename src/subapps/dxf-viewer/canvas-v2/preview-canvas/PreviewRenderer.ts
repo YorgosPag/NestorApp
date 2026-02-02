@@ -24,6 +24,7 @@
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity, ExtendedLineEntity, ExtendedCircleEntity, ExtendedPolylineEntity, PreviewPoint } from '../../hooks/drawing/useUnifiedDrawing';
+import type { AngleMeasurementEntity } from '../../types/scene';
 // 🏢 ADR-094: Centralized Device Pixel Ratio
 // 🏢 ADR-117: DPI-Aware Pixel Calculations Centralization
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
@@ -349,7 +350,7 @@ export class PreviewRenderer {
         this.renderRectangle(ctx, entity, transform, opts);
         break;
       case 'angle-measurement':
-        this.renderAngleMeasurement(ctx, entity as any, transform, opts);
+        this.renderAngleMeasurement(ctx, entity as AngleMeasurementEntity, transform, opts);
         break;
       case 'point':
         this.renderPoint(ctx, entity as PreviewPoint, transform, opts);

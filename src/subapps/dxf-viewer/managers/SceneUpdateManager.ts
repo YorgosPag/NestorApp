@@ -6,16 +6,7 @@
 import { dlog, dwarn, derr } from '../debug';
 import { SceneValidator } from './SceneValidator';
 import { SceneStatistics } from './SceneStatistics';
-import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
-// Note: IEntityRenderer interface removed - using any for renderer type
-
-interface Scene {
-  entities: AnySceneEntity[];
-  layers: Record<string, SceneLayer>;
-  version: number;
-  metadata?: Record<string, unknown>;
-  [key: string]: unknown;
-}
+import type { SceneModel, AnySceneEntity } from '../types/scene';
 
 interface SceneUpdateOptions {
   skipRendererUpdate?: boolean;
@@ -25,15 +16,15 @@ interface SceneUpdateOptions {
 
 // 🏢 ENTERPRISE: Type-safe renderer interface
 interface SceneRenderer {
-  setScene: (scene: Scene | null) => void;
+  setScene: (scene: SceneModel | null) => void;
   render?: () => void;
   clear?: () => void;
 }
 
 export class SceneUpdateManager {
-  private currentScene: Scene | null = null;
+  private currentScene: SceneModel | null = null;
   private renderer: SceneRenderer | null = null;
-  private reactSetScene: ((scene: Scene | null) => void) | null = null;
+  private reactSetScene: ((scene: SceneModel | null) => void) | null = null;
   private sceneVersion = 0;
   private updateInProgress = false;
   private validator: SceneValidator;
@@ -51,7 +42,7 @@ export class SceneUpdateManager {
     dlog('🎬 Renderer registered');
   }
 
-  setReactSetScene(setScene: (scene: Scene | null) => void): void {
+  setReactSetScene(setScene: (scene: SceneModel | null) => void): void {
     this.reactSetScene = setScene;
     dlog('🎭 React setScene registered');
   }
@@ -59,7 +50,7 @@ export class SceneUpdateManager {
   // ═══ SCENE UPDATE ═══
 
   updateScene(
-    newScene: Scene | null, 
+    newScene: SceneModel | null,
     options: SceneUpdateOptions = {}
   ): void {
     const { 
@@ -88,7 +79,8 @@ export class SceneUpdateManager {
 
       // Update version
       if (newScene) {
-        newScene.version = ++this.sceneVersion;
+        // SceneModel.version is optional string
+        newScene.version = String(++this.sceneVersion);
       }
 
       const oldScene = this.currentScene;
@@ -157,7 +149,7 @@ export class SceneUpdateManager {
       entities
     };
 
-    this.updateScene(updatedScene as Scene, { source, reason: `entity-${entityId}` });
+    this.updateScene(updatedScene, { source, reason: `entity-${entityId}` });
   }
 
   addEntity(entity: AnySceneEntity, source = 'add-entity'): void {
@@ -195,7 +187,7 @@ export class SceneUpdateManager {
 
   // ═══ GETTERS ═══
 
-  getCurrentScene(): Scene | null {
+  getCurrentScene(): SceneModel | null {
     return this.currentScene;
   }
 
@@ -253,11 +245,11 @@ export const unifiedSceneManager = new SceneUpdateManager();
 
 // ═══ CONVENIENCE FUNCTIONS (previously from UnifiedSceneManager) ═══
 
-export function setScene(scene: Scene | null, options?: SceneUpdateOptions): void {
+export function setScene(scene: SceneModel | null, options?: SceneUpdateOptions): void {
   unifiedSceneManager.updateScene(scene, options);
 }
 
-export function getCurrentScene(): Scene | null {
+export function getCurrentScene(): SceneModel | null {
   return unifiedSceneManager.getCurrentScene();
 }
 

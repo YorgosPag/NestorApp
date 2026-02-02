@@ -1,8 +1,11 @@
 // Module declarations for DXF Viewer
 import type { Point2D, ViewTransform } from '../rendering/types/Types';
-import type { SceneModel } from './scene';
+import type { SceneModel, AnySceneEntity, SceneLayer } from './scene';
 import type { AnyMeasurement } from './measurements';
 import type { GripSettings } from './gripSettings';
+import type { DrawingState } from '../hooks/drawing/useUnifiedDrawing';
+import type { DxfCanvasRef } from '../canvas-v2';
+import type { RefObject } from 'react';
 
 declare module './ui/toolbar/EnhancedDXFToolbar' {
   import { FC } from 'react';
@@ -120,10 +123,11 @@ declare module './overlays/overlay-store' {
 
 declare module './types/scene' {
   export interface SceneModel {
-    entities: any[];
-    layers: any[];
+    entities: AnySceneEntity[];
+    layers: Record<string, SceneLayer>;
     bounds: { min: Point2D; max: Point2D };
-    metadata: Record<string, any>;
+    units: 'mm' | 'cm' | 'm' | 'in' | 'ft';
+    metadata?: Record<string, unknown>;
     version?: string; // ✅ ENTERPRISE FIX: Added version property για DxfSecurityValidator.ts
   }
 }
@@ -146,10 +150,10 @@ declare module './canvas-v2/shared/useDxfImport' {
 }
 
 declare module './hooks/useDxfViewerState' {
-  export function useDxfViewerState(canvasRef: React.RefObject<any>): {
+  export function useDxfViewerState(canvasRef?: RefObject<DxfCanvasRef>): {
     activeTool: string;
     handleToolChange: (tool: string) => void;
-    handleAction: (action: string) => void;
+    handleAction: (action: string, data?: number | string | Record<string, unknown>) => void;
     showGrid: boolean;
     canUndo: boolean;
     canRedo: boolean;
@@ -165,8 +169,7 @@ declare module './hooks/useDxfViewerState' {
     handleTransformChange: (transform: ViewTransform) => void;
     handleSceneChange: (scene: SceneModel) => void;
     handleCalibrationToggle: () => void;
-    measurementSystem: any; // Complex measurement system
-    drawingState: any; // Complex drawing state
+    drawingState: DrawingState;
     onMeasurementPoint: (point: Point2D) => void;
     onMeasurementHover: (point: Point2D | null) => void;
     onMeasurementCancel: () => void;
@@ -174,7 +177,7 @@ declare module './hooks/useDxfViewerState' {
     onDrawingHover: (point: Point2D | null) => void;
     onDrawingCancel: () => void;
     onDrawingDoubleClick: (point: Point2D) => void;
-    onEntityCreated: (entity: any) => void;
+    onEntityCreated: (entity: AnySceneEntity) => void;
     gripSettings: GripSettings;
   };
 }

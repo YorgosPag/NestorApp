@@ -22,7 +22,13 @@ import { GEO_COLORS } from '../../config/color-config';
 // 🎯 ENTERPRISE TYPE DEFINITIONS
 // ============================================================================
 
-export interface TransformState {
+/**
+ * 🏢 ENTERPRISE: CalibrationTransformState
+ * Renamed from TransformState to avoid collision με useMapInteractions.TransformState
+ *
+ * Represents DXF-to-Geographic calibration transformation state
+ */
+export interface CalibrationTransformState {
   isCalibrated: boolean;
   controlPoints: Array<{
     id: string;
@@ -50,7 +56,7 @@ export interface TransformationPreviewLayerProps {
   /** Whether to show transformation preview */
   showTransformationPreview?: boolean;
   /** Transform state with calibration data */
-  transformState: TransformState;
+  transformState: CalibrationTransformState;
   /** Whether map is loaded */
   mapLoaded?: boolean;
   /** DXF entities to transform and display (future feature) */
