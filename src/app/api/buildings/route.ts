@@ -1,9 +1,11 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db as getAdminDb } from '@/lib/firebase-admin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { withAuth } from '@/lib/auth';
+import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { FieldValue } from 'firebase-admin/firestore';
+import { isRoleBypass } from '@/lib/auth/roles';
 
 /** Building document with optional createdAt for sorting */
 interface BuildingDocument {
@@ -86,4 +88,217 @@ export const GET = withAuth<ApiSuccessResponse<BuildingsResponseData>>(
     );
   },
   { permissions: 'buildings:buildings:view' }
+);
+
+/**
+ * 🏗️ ENTERPRISE: Create new building via Admin SDK
+ *
+ * @security Firestore rules block client-side writes (allow write: if false)
+ *           This endpoint uses Admin SDK to bypass rules with proper auth
+ * @permission buildings:buildings:create
+ */
+interface BuildingCreatePayload {
+  name: string;
+  description?: string;
+  address?: string;
+  city?: string;
+  totalArea?: number | string;
+  builtArea?: number | string;
+  floors?: number | string;
+  units?: number | string;
+  totalValue?: number | string;
+  startDate?: string;
+  completionDate?: string;
+  status?: string;
+  projectId?: string | null;
+  companyId?: string;
+  company?: string;
+}
+
+interface BuildingCreateResponse {
+  buildingId: string;
+  building: BuildingCreatePayload & { id: string };
+}
+
+export const POST = withAuth<ApiSuccessResponse<BuildingCreateResponse> | NextResponse>(
+  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    // 🔐 ADMIN SDK: Get server-side Firestore instance
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+      console.error('❌ Firebase Admin not initialized');
+      return NextResponse.json(
+        { success: false, error: 'Database unavailable' },
+        { status: 500 }
+      );
+    }
+
+    try {
+      // 🏢 ENTERPRISE: Parse request body
+      const body: BuildingCreatePayload = await request.json();
+
+      // 🔒 SECURITY: Override companyId with authenticated user's company
+      // This prevents cross-tenant building creation
+      const sanitizedData = {
+        ...body,
+        companyId: ctx.companyId,  // 🔒 FORCED: Always use auth context companyId
+        progress: 0,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        createdBy: ctx.uid,
+      };
+
+      // 🏢 ENTERPRISE: Remove undefined fields (Firestore doesn't accept undefined)
+      const cleanData = Object.fromEntries(
+        Object.entries(sanitizedData).filter(([, value]) => value !== undefined)
+      );
+
+      console.log(`🏗️ [Buildings] Creating new building for tenant ${ctx.companyId}...`);
+
+      // 🏗️ CREATE: Use Admin SDK (bypasses Firestore rules)
+      const docRef = await adminDb.collection(COLLECTIONS.BUILDINGS).add(cleanData);
+
+      console.log(`✅ [Buildings] Building created with ID: ${docRef.id}`);
+
+      // 🏢 ENTERPRISE: Return created building with ID
+      return apiSuccess<BuildingCreateResponse>(
+        {
+          buildingId: docRef.id,
+          building: { ...body, id: docRef.id }
+        },
+        'Building created successfully'
+      );
+
+    } catch (error) {
+      console.error('❌ [Buildings] Error creating building:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to create building'
+        },
+        { status: 500 }
+      );
+    }
+  },
+  { permissions: 'buildings:buildings:create' }
+);
+
+// =============================================================================
+// PATCH - Update Building (Admin SDK)
+// =============================================================================
+
+interface BuildingUpdatePayload {
+  name?: string;
+  description?: string;
+  address?: string;
+  city?: string;
+  totalArea?: number;
+  builtArea?: number;
+  floors?: number;
+  units?: number;
+  totalValue?: number;
+  startDate?: string;
+  completionDate?: string;
+  status?: string;
+  projectId?: string | null;
+}
+
+interface BuildingUpdateResponse {
+  buildingId: string;
+  updated: boolean;
+}
+
+/**
+ * 🏗️ ENTERPRISE: Update building via Admin SDK
+ *
+ * @security Firestore rules block client-side writes (allow write: if false)
+ *           This endpoint uses Admin SDK to bypass rules with proper auth
+ * @permission buildings:buildings:edit
+ */
+export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse> | NextResponse>(
+  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+    // 🔐 ADMIN SDK: Get server-side Firestore instance
+    const adminDb = getAdminDb();
+    if (!adminDb) {
+      console.error('❌ Firebase Admin not initialized');
+      return NextResponse.json(
+        { success: false, error: 'Database unavailable' },
+        { status: 500 }
+      );
+    }
+
+    try {
+      // 🏢 ENTERPRISE: Parse request body
+      const body = await request.json();
+      const { buildingId, ...updates } = body as { buildingId: string } & BuildingUpdatePayload;
+
+      if (!buildingId) {
+        return NextResponse.json(
+          { success: false, error: 'Building ID is required' },
+          { status: 400 }
+        );
+      }
+
+      // 🔐 Get building to check ownership
+      const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+
+      if (!buildingDoc.exists) {
+        return NextResponse.json(
+          { success: false, error: 'Building not found' },
+          { status: 404 }
+        );
+      }
+
+      const buildingData = buildingDoc.data();
+      const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
+      // 🔒 TENANT ISOLATION: Check ownership (unless super_admin)
+      if (!isSuperAdmin && buildingData?.companyId !== ctx.companyId) {
+        console.warn(`🚫 [Buildings] Unauthorized update attempt by ${ctx.email} on building ${buildingId}`);
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized: Building belongs to different company' },
+          { status: 403 }
+        );
+      }
+
+      // 🔒 SECURITY: Sanitize - remove undefined fields
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([, value]) => value !== undefined)
+      );
+
+      console.log(`🏗️ [Buildings] Updating building ${buildingId} for tenant ${ctx.companyId}...`);
+
+      // 🏗️ UPDATE: Use Admin SDK (bypasses Firestore rules)
+      await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).update({
+        ...cleanUpdates,
+        updatedAt: FieldValue.serverTimestamp(),
+        updatedBy: ctx.uid,
+      });
+
+      console.log(`✅ [Buildings] Building ${buildingId} updated by ${ctx.email}`);
+
+      // 📊 Audit log
+      await logAuditEvent(ctx, 'data_updated', 'buildings', 'api', {
+        metadata: {
+          buildingId,
+          fields: Object.keys(cleanUpdates),
+        }
+      });
+
+      return apiSuccess<BuildingUpdateResponse>(
+        { buildingId, updated: true },
+        'Building updated successfully'
+      );
+
+    } catch (error) {
+      console.error('❌ [Buildings] Error updating building:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to update building'
+        },
+        { status: 500 }
+      );
+    }
+  },
+  { permissions: 'buildings:buildings:edit' }
 );
