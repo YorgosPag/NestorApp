@@ -11,30 +11,31 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ✅ ENTERPRISE: Single translation hook για όλα τα components
+// 🔧 FIX (2026-02-02): Must specify 'toolbars' namespace to load translations!
 const useActionTranslations = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('toolbars');
   return {
-    save: t('toolbars:common.actions.save'),
-    save_loading: t('toolbars:common.actions.save_loading'),
-    cancel: t('toolbars:common.actions.cancel'),
-    delete: t('toolbars:common.actions.delete'),
-    delete_loading: t('toolbars:common.actions.delete_loading'),
-    add: t('toolbars:common.actions.add'),
-    edit: t('toolbars:common.actions.edit'),
-    archive: t('toolbars:common.actions.archive'),
-    archive_loading: t('toolbars:common.actions.archive_loading'),
-    restore: t('toolbars:common.actions.restore'),
-    restore_loading: t('toolbars:common.actions.restore_loading'),
-    call: t('toolbars:common.actions.call'),
-    email: t('toolbars:common.actions.email'),
-    sms: t('toolbars:common.actions.sms'),
-    export: t('toolbars:common.actions.export'),
-    import: t('toolbars:common.actions.import'),
-    help: t('toolbars:common.actions.help'),
-    refresh: t('toolbars:common.actions.refresh'),
-    sort: t('toolbars:common.sort.sort'),
-    favorites: t('toolbars:common.actions.favorites'),
-    archived: t('toolbars:common.actions.archived')
+    save: t('common.actions.save'),
+    save_loading: t('common.actions.save_loading'),
+    cancel: t('common.actions.cancel'),
+    delete: t('common.actions.delete'),
+    delete_loading: t('common.actions.delete_loading'),
+    add: t('common.actions.add'),
+    edit: t('common.actions.edit'),
+    archive: t('common.actions.archive'),
+    archive_loading: t('common.actions.archive_loading'),
+    restore: t('common.actions.restore'),
+    restore_loading: t('common.actions.restore_loading'),
+    call: t('contacts.actions.call'),
+    email: t('contacts.actions.email'),
+    sms: t('common.actions.sms'),
+    export: t('common.actions.export'),
+    import: t('common.actions.import'),
+    help: t('common.actions.help'),
+    refresh: t('common.actions.refresh'),
+    sort: t('common.sort.sort'),
+    favorites: t('common.actions.favorites'),
+    archived: t('common.actions.archived')
   };
 };
 
