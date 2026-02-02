@@ -48,7 +48,7 @@
 'use client';
 
 // DEBUG FLAG - 🔍 ENABLE FOR TRACING PREVIEW ISSUES
-const DEBUG_DRAWING_HANDLERS = true; // 🔍 ENABLED (2026-02-01) - tracing preview flow
+const DEBUG_DRAWING_HANDLERS = false; // 🔧 DISABLED (2026-02-02) - performance investigation
 
 import { useCallback, useRef, useMemo } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
@@ -177,13 +177,15 @@ export function useDrawingHandlers(
   // 🎯 ENTERPRISE (2026-01-27): ADR-047 - Close polygon on first-point click
   const onDrawingPoint = useCallback((p: Pt) => {
     // 🔍 DEBUG (2026-01-31): Log drawing point for circle debugging
-    console.log('🎯 [onDrawingPoint]', {
-      activeTool,
-      point: p,
-      drawingState: drawingState.currentTool,
-      isDrawing: drawingState.isDrawing,
-      tempPoints: drawingState.tempPoints?.length || 0
-    });
+    if (DEBUG_DRAWING_HANDLERS) {
+      console.log('🎯 [onDrawingPoint]', {
+        activeTool,
+        point: p,
+        drawingState: drawingState.currentTool,
+        isDrawing: drawingState.isDrawing,
+        tempPoints: drawingState.tempPoints?.length || 0
+      });
+    }
 
     // 🎯 ADR-047: CLOSE POLYGON ON FIRST-POINT CLICK (AutoCAD/BricsCAD pattern)
     // CRITICAL: Check distance BEFORE snap, using RAW point!
@@ -239,18 +241,24 @@ export function useDrawingHandlers(
     }
 
     if (p) {
+      // 🔍 PERF DEBUG (2026-02-02): Measure where the bottleneck is
+      const t0 = performance.now();
+
       // 🚀 PERFORMANCE (2026-01-27): REMOVED RAF throttling for synchronous preview rendering
       // Now that CrosshairOverlay uses ImmediatePositionStore for zero-latency updates,
       // the preview grips must also update synchronously to avoid visible lag.
       // The mouse event handler is already called on each mousemove - no need to batch.
       const transformUtils = canvasOps.getTransformUtils();
+      const t1 = performance.now();
 
       // Update the preview entity (calculates geometry, updates ref)
       updatePreview(p, transformUtils);
+      const t2 = performance.now();
 
       // 🏢 ADR-040: Direct rendering to PreviewCanvas (ZERO React overhead)
       if (previewCanvasRef?.current) {
         const previewEntity = getLatestPreviewEntity();
+        const t3 = performance.now();
 
         // 🔍 DEBUG TRACE: Log preview entity details
         if (DEBUG_DRAWING_HANDLERS) {
@@ -270,6 +278,11 @@ export function useDrawingHandlers(
           // Without this, the old preview distance label stays visible
           previewCanvasRef.current.clear();
         }
+        const t4 = performance.now();
+
+        // 🔍 PERF DEBUG: Log timing for EVERY call
+        const total = t4 - t0;
+        console.error(`PERF_DRAWHOVER ${total.toFixed(1)}ms transform=${(t1-t0).toFixed(1)} preview=${(t2-t1).toFixed(1)} entity=${(t3-t2).toFixed(1)} draw=${(t4-t3).toFixed(1)}`);
       }
     } else {
       // 🏢 ADR-040: Clear preview when mouse leaves
