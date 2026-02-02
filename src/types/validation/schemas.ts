@@ -210,7 +210,8 @@ export const buildingAddressConfigsSchema = z.array(buildingAddressReferenceSche
 );
 
 // Building management schemas (uses buildingAddressConfigsSchema from above)
-export const buildingBaseSchema = z.object({
+// Raw schema without refine (for .extend() compatibility)
+const buildingBaseSchemaRaw = z.object({
   name: validationRules.required().pipe(validationRules.minLength(2)),
   address: validationRules.required(), // Legacy - kept for backward compatibility
   description: z.string().optional(),
@@ -230,7 +231,10 @@ export const buildingBaseSchema = z.object({
    * @see src/types/project/address-helpers.ts - resolveBuildingPrimaryAddress()
    */
   primaryProjectAddressId: z.string().optional(),
-}).refine(
+});
+
+// Building base schema with invariants
+export const buildingBaseSchema = buildingBaseSchemaRaw.refine(
   (data) => {
     // INVARIANT: If primaryProjectAddressId is set, addressConfigs must also exist
     if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
@@ -244,13 +248,37 @@ export const buildingBaseSchema = z.object({
   }
 );
 
-export const buildingCreateSchema = buildingBaseSchema.extend({
+export const buildingCreateSchema = buildingBaseSchemaRaw.extend({
   projectId: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    // Apply same invariant for create schema
+    if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'primaryProjectAddressId requires addressConfigs to be set',
+    path: ['primaryProjectAddressId'],
+  }
+);
 
-export const buildingEditSchema = buildingBaseSchema.extend({
+export const buildingEditSchema = buildingBaseSchemaRaw.extend({
   id: z.string(),
-});
+}).refine(
+  (data) => {
+    // Apply same invariant for edit schema
+    if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'primaryProjectAddressId requires addressConfigs to be set',
+    path: ['primaryProjectAddressId'],
+  }
+);
 
 // Project schemas
 export const projectBaseSchema = z.object({
