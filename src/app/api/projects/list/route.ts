@@ -301,7 +301,7 @@ interface ProjectCreateResponse {
  * @permission projects:projects:create
  */
 export async function POST(request: NextRequest) {
-  const handler = withAuth<ApiSuccessResponse<ProjectCreateResponse> | NextResponse>(
+  const handler = withAuth<ApiSuccessResponse<ProjectCreateResponse>>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         // 🏢 ENTERPRISE: Parse request body
@@ -331,10 +331,11 @@ export async function POST(request: NextRequest) {
         console.log(`✅ [Projects] Project created with ID: ${docRef.id}`);
 
         // 📊 Audit log
-        await logAuditEvent(ctx, 'data_created', 'projects', 'api', {
+        await logAuditEvent(ctx, 'data_created', docRef.id, 'project', {
+          newValue: { type: 'project_create', value: body.name },
           metadata: {
-            projectId: docRef.id,
-            projectName: body.name,
+            path: '/api/projects/list',
+            reason: `Project created: ${body.name}`
           }
         });
 
@@ -353,13 +354,7 @@ export async function POST(request: NextRequest) {
 
       } catch (error) {
         console.error('❌ [Projects] Error creating project:', error);
-        return NextResponse.json(
-          {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to create project'
-          },
-          { status: 500 }
-        );
+        throw error instanceof Error ? error : new Error('Failed to create project');
       }
     },
     { permissions: 'projects:projects:create' }
