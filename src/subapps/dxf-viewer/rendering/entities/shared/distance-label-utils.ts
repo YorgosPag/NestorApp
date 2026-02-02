@@ -227,6 +227,25 @@ export function formatPercent(value: number, includeSymbol: boolean = true): str
 }
 
 /**
+ * 🏢 ENTERPRISE (2026-02-02): Format coordinate value for display
+ * Canonical source for coordinate formatting across DXF Viewer
+ *
+ * Unlike formatDistance(), this function supports NEGATIVE values
+ * because coordinates can be negative (left of origin, below origin).
+ *
+ * @param value - Coordinate value (X or Y) - can be negative
+ * @param decimals - Number of decimal places (default: 4 for CAD precision)
+ * @returns Formatted string (e.g., "-123.4567" or "456.7890")
+ *
+ * @see formatDistance - For distance values (always positive)
+ */
+export function formatCoordinate(value: number, decimals: number = 4): string {
+  // Handle NaN or undefined
+  if (!Number.isFinite(value)) return (0).toFixed(decimals);
+  return value.toFixed(decimals);
+}
+
+/**
  * 🏢 ADR-082: Format coordinate value with locale awareness
  *
  * Uses FormatterRegistry for locale-aware decimal separators.
