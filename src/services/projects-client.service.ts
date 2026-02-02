@@ -11,12 +11,15 @@
  * This file is for client-side operations that need immediate real-time dispatch.
  */
 
-import { collection, getDocs, query, orderBy, limit, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🏢 ENTERPRISE: Direct Firestore writes removed - now using Admin SDK via API endpoints
 import type { Project } from '@/types/project';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+// 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 /**
  * 🏢 ENTERPRISE: Project create payload type
@@ -47,28 +50,32 @@ export interface ProjectUpdatePayload {
 }
 
 /**
- * 🎯 ENTERPRISE: Δημιουργία νέου έργου στο Firebase (Client-side)
- * Αποθηκεύει τα δεδομένα στη βάση και ενημερώνει το real-time service
+ * 🎯 ENTERPRISE: Δημιουργία νέου έργου μέσω API (Admin SDK)
+ *
+ * 🔒 SECURITY: Firestore rules απαγορεύουν client-side writes (allow write: if false)
+ *              Χρησιμοποιούμε API endpoint που τρέχει με Admin SDK
+ *
+ * @see src/app/api/projects/list/route.ts (POST handler)
  */
 export async function createProject(
   data: ProjectCreatePayload
 ): Promise<{ success: boolean; projectId?: string; error?: string }> {
   try {
-    console.log(`🎯 [createProject] Creating new project...`);
+    console.log(`🎯 [createProject] Creating new project via API...`);
 
-    const projectsRef = collection(db, COLLECTIONS.PROJECTS);
-    const docRef = await addDoc(projectsRef, {
-      ...data,
-      progress: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
+    // 🔒 SECURITY: apiClient handles Firebase ID token injection
+    interface ProjectCreateResult {
+      projectId: string;
+    }
+    const result = await apiClient.post<ProjectCreateResult>('/api/projects/list', data);
 
-    console.log(`✅ [createProject] Project created with ID: ${docRef.id}`);
+    const projectId = result?.projectId;
+    console.log(`✅ [createProject] Project created with ID: ${projectId}`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchProjectCreated({
-      projectId: docRef.id,
+      projectId,
       project: {
         name: data.name,
         title: data.title,
@@ -78,7 +85,7 @@ export async function createProject(
       timestamp: Date.now()
     });
 
-    return { success: true, projectId: docRef.id };
+    return { success: true, projectId };
 
   } catch (error) {
     console.error('❌ [createProject] Error:', error);
@@ -90,24 +97,23 @@ export async function createProject(
 }
 
 /**
- * 🎯 ENTERPRISE: Ενημέρωση έργου στο Firebase (Client-side)
- * Αποθηκεύει τα δεδομένα στη βάση και ενημερώνει το real-time service
+ * 🎯 ENTERPRISE: Ενημέρωση έργου μέσω API (Admin SDK)
  *
- * NOTE: Prefer using server action updateProject() from projects.service.ts
- * Use this only when you need immediate client-side dispatch
+ * 🔒 SECURITY: Firestore rules απαγορεύουν client-side writes (allow write: if false)
+ *              Χρησιμοποιούμε API endpoint που τρέχει με Admin SDK
+ *
+ * @see src/app/api/projects/[projectId]/route.ts (PATCH handler)
  */
 export async function updateProjectClient(
   projectId: string,
   updates: ProjectUpdatePayload
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🎯 [updateProjectClient] Updating project ${projectId}...`);
+    console.log(`🎯 [updateProjectClient] Updating project ${projectId} via API...`);
 
-    const projectRef = doc(db, COLLECTIONS.PROJECTS, projectId);
-    await updateDoc(projectRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
+    // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
+    // 🔒 SECURITY: apiClient handles Firebase ID token injection
+    await apiClient.patch(`/api/projects/${projectId}`, updates);
 
     console.log(`✅ [updateProjectClient] Project ${projectId} updated successfully`);
 
@@ -134,17 +140,22 @@ export async function updateProjectClient(
 }
 
 /**
- * 🎯 ENTERPRISE: Διαγραφή έργου από το Firebase (Client-side)
- * Διαγράφει τα δεδομένα από τη βάση και ενημερώνει το real-time service
+ * 🎯 ENTERPRISE: Διαγραφή έργου μέσω API (Admin SDK)
+ *
+ * 🔒 SECURITY: Firestore rules απαγορεύουν client-side writes (allow write: if false)
+ *              Χρησιμοποιούμε API endpoint που τρέχει με Admin SDK
+ *
+ * @see src/app/api/projects/[projectId]/route.ts (DELETE handler)
  */
 export async function deleteProject(
   projectId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🎯 [deleteProject] Deleting project ${projectId}...`);
+    console.log(`🎯 [deleteProject] Deleting project ${projectId} via API...`);
 
-    const projectRef = doc(db, COLLECTIONS.PROJECTS, projectId);
-    await deleteDoc(projectRef);
+    // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
+    // 🔒 SECURITY: apiClient handles Firebase ID token injection
+    await apiClient.delete(`/api/projects/${projectId}`);
 
     console.log(`✅ [deleteProject] Project ${projectId} deleted successfully`);
 

@@ -8,7 +8,7 @@ import { useUniversalSelection } from '../../systems/selection';
 import { useCommandHistory, DeleteOverlayCommand } from '../../core/commands';
 import type { DXFViewerLayoutProps } from '../../integration/types';
 import type { OverlayEditorMode, Status, OverlayKind } from '../../overlays/types';
-import type { Point2D } from '../../rendering/types/Types';
+// 🏢 ENTERPRISE (2026-02-02): Point2D REMOVED - mouseCoordinates now from CursorContext (SSoT)
 import { PANEL_LAYOUT } from '../../config/panel-tokens';  // ✅ ENTERPRISE: Centralized spacing tokens
 // 🏢 ADR-050: Overlay Toolbar Integration (2027-01-27)
 import type { OverlayToolbarState, OverlayToolbarHandlers } from '../../ui/toolbar/overlay-section/types';
@@ -25,8 +25,7 @@ interface ToolbarSectionProps extends DXFViewerLayoutProps {
   showOverlayToolbar?: boolean;
   isOverlaySectionCollapsed?: boolean;
   onToggleOverlaySection?: () => void;
-  // 🏢 ENTERPRISE (2027-01-27): Mouse coordinates for status bar
-  mouseCoordinates?: Point2D | null;
+  // 🏢 ENTERPRISE (2026-02-02): mouseCoordinates REMOVED - ToolbarStatusBar uses CursorContext (SSoT)
 }
 
 export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
@@ -40,7 +39,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
     showOverlayToolbar = false,
     isOverlaySectionCollapsed = false,
     onToggleOverlaySection,
-    mouseCoordinates = null,
+    // 🏢 ENTERPRISE (2026-02-02): mouseCoordinates REMOVED - using CursorContext (SSoT)
     ...dxfProps
   } = props;
 
@@ -116,8 +115,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
           selectedOverlayId={universalSelection.getPrimaryId()}
           isOverlaySectionCollapsed={isOverlaySectionCollapsed}
           onToggleOverlaySection={onToggleOverlaySection}
-          // 🏢 ENTERPRISE (2027-01-27): Mouse coordinates for status bar real-time updates
-          mouseCoordinates={mouseCoordinates}
+          // 🏢 ENTERPRISE (2026-02-02): mouseCoordinates REMOVED - ToolbarStatusBar uses CursorContext (SSoT)
           showCoordinates={true}
           // 🏢 ENTERPRISE: Removed unnecessary empty spread - all required props are passed explicitly
         />

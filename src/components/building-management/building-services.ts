@@ -8,12 +8,15 @@
  * Όλα τα δεδομένα προέρχονται από production βάση δεδομένων.
  */
 
-import { collection, getDocs, query, orderBy, limit, doc, updateDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, query, orderBy, limit } from 'firebase/firestore';
+// 🏢 ENTERPRISE: updateDoc, serverTimestamp removed - now using Admin SDK via API endpoints
 import { db } from '@/lib/firebase';
 import type { Building } from '@/types/building/contracts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+// 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 /**
  * 🏗️ Ανάκτηση κτιρίων από Firebase
@@ -60,24 +63,27 @@ export interface BuildingUpdatePayload {
   address?: string;
   city?: string;
   status?: string;
+  projectId?: string | null;  // 🏢 ENTERPRISE: Link building to project
 }
 
 /**
- * 🏗️ ENTERPRISE: Ενημέρωση κτιρίου στο Firebase
- * Αποθηκεύει τα δεδομένα στη βάση και ενημερώνει το real-time service
+ * 🏗️ ENTERPRISE: Ενημέρωση κτιρίου μέσω API (Admin SDK)
+ *
+ * 🔒 SECURITY: Firestore rules απαγορεύουν client-side writes (allow write: if false)
+ *              Χρησιμοποιούμε API endpoint που τρέχει με Admin SDK
+ *
+ * @see src/app/api/buildings/route.ts (PATCH handler)
  */
 export async function updateBuilding(
   buildingId: string,
   updates: BuildingUpdatePayload
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`🏗️ [updateBuilding] Updating building ${buildingId}...`);
+    console.log(`🏗️ [updateBuilding] Updating building ${buildingId} via API...`);
 
-    const buildingRef = doc(db, COLLECTIONS.BUILDINGS, buildingId);
-    await updateDoc(buildingRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
+    // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
+    // 🔒 SECURITY: apiClient handles Firebase ID token injection
+    await apiClient.patch('/api/buildings', { buildingId, ...updates });
 
     console.log(`✅ [updateBuilding] Building ${buildingId} updated successfully`);
 
@@ -130,28 +136,32 @@ export interface BuildingCreatePayload {
 }
 
 /**
- * 🏗️ ENTERPRISE: Δημιουργία νέου κτιρίου στο Firebase
- * Αποθηκεύει τα δεδομένα στη βάση και ενημερώνει το real-time service
+ * 🏗️ ENTERPRISE: Δημιουργία νέου κτιρίου μέσω API (Admin SDK)
+ *
+ * 🔒 SECURITY: Firestore rules απαγορεύουν client-side writes (allow write: if false)
+ *              Χρησιμοποιούμε API endpoint που τρέχει με Admin SDK
+ *
+ * @see src/app/api/buildings/route.ts (POST handler)
  */
 export async function createBuilding(
   data: BuildingCreatePayload
 ): Promise<{ success: boolean; buildingId?: string; error?: string }> {
   try {
-    console.log(`🏗️ [createBuilding] Creating new building...`);
+    console.log(`🏗️ [createBuilding] Creating new building via API...`);
 
-    const buildingsRef = collection(db, COLLECTIONS.BUILDINGS);
-    const docRef = await addDoc(buildingsRef, {
-      ...data,
-      progress: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
+    // 🔒 SECURITY: apiClient handles Firebase ID token injection
+    interface BuildingCreateResult {
+      buildingId: string;
+    }
+    const result = await apiClient.post<BuildingCreateResult>('/api/buildings', data);
 
-    console.log(`✅ [createBuilding] Building created with ID: ${docRef.id}`);
+    const buildingId = result?.buildingId;
+    console.log(`✅ [createBuilding] Building created with ID: ${buildingId}`);
 
     // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
     RealtimeService.dispatchBuildingCreated({
-      buildingId: docRef.id,
+      buildingId,
       building: {
         name: data.name,
         address: data.address,
@@ -161,7 +171,7 @@ export async function createBuilding(
       timestamp: Date.now()
     });
 
-    return { success: true, buildingId: docRef.id };
+    return { success: true, buildingId };
 
   } catch (error) {
     console.error('❌ [createBuilding] Error:', error);
