@@ -48,6 +48,124 @@
       "public": "Public",
       "renovation": "Renovation",
       "infrastructure": "Infrastructure"
+    },
+    "searchFilters": "Search Filters",
+    "typeLabel": "Type:",
+    "typeAriaLabel": "Type filters",
+    "filterBy": "Filter by:",
+    "all": "All",
+    "showAll": "Show all",
+    "allTypes": "All Types",
+    "allStatuses": "All Statuses",
+    "allFloors": "All Floors",
+    "allUnits": "All Units",
+    "allAreas": "All Areas",
+    "allProjects": "All Projects",
+    "allLocations": "All Locations",
+    "allCompanies": "All Companies",
+    "allClients": "All Clients",
+    "allPriorities": "All Priorities",
+    "allEnergyClasses": "All Energy Classes",
+    "allRenovations": "All Renovations",
+    "allRiskLevels": "All Risk Levels",
+    "allComplexities": "All Complexities",
+    "allBuildings": "All Buildings",
+    "fields": {
+      "search": "Search",
+      "priceRange": "Price Range",
+      "areaRange": "Area Range",
+      "status": "Status",
+      "project": "Project",
+      "building": "Building",
+      "floor": "Floor",
+      "propertyType": "Property Type"
+    },
+    "placeholders": {
+      "general": "Search...",
+      "unitsSearch": "Search units...",
+      "contactsSearch": "Search contacts...",
+      "buildingsSearch": "Search buildings...",
+      "projectsSearch": "Search projects...",
+      "selectStatus": "Select status",
+      "selectProject": "Select project",
+      "selectBuilding": "Select building",
+      "selectFloor": "Select floor",
+      "selectType": "Select type",
+      "selectPriority": "Select priority",
+      "selectLocation": "Select location",
+      "selectCompany": "Select company",
+      "selectEnergyClass": "Select energy class",
+      "selectRenovation": "Select renovation",
+      "selectClient": "Select client",
+      "selectRiskLevel": "Select risk level",
+      "selectComplexity": "Select complexity"
+    },
+    "unitTypes": {
+      "ariaLabel": "Unit type filters",
+      "all": "All",
+      "allTooltip": "Show all types",
+      "studio": "Studio",
+      "studioTooltip": "Studio / Bedsit",
+      "apartment": "Apartment",
+      "apartmentTooltip": "Apartment",
+      "maisonette": "Maisonette",
+      "maisonetteTooltip": "Maisonette",
+      "shop": "Shop",
+      "shopTooltip": "Shop",
+      "office": "Office",
+      "officeTooltip": "Office"
+    },
+    "contactTypes": {
+      "ariaLabel": "Contact type filters",
+      "all": "All",
+      "allTooltip": "Show all contacts",
+      "individual": "Individual",
+      "company": "Company",
+      "service": "Service"
+    },
+    "channels": {
+      "ariaLabel": "Channel filters",
+      "all": "All",
+      "allTooltip": "Show all channels",
+      "email": "Email",
+      "emailTooltip": "Email messages",
+      "sms": "SMS",
+      "smsTooltip": "SMS messages",
+      "telegram": "Telegram",
+      "telegramTooltip": "Telegram messages"
+    },
+    "common": {
+      "search": "Search",
+      "status": "Status",
+      "selectStatus": "Select status",
+      "type": "Type",
+      "selectType": "Select type",
+      "building": "Building",
+      "selectBuilding": "Select building",
+      "level": "Level",
+      "selectLevel": "Select level",
+      "project": "Project",
+      "selectProject": "Select project",
+      "area": "Area",
+      "price": "Price",
+      "updateDate": "Update Date",
+      "from": "From",
+      "to": "To"
+    },
+    "parking": {
+      "title": "Parking Filters",
+      "searchPlaceholder": "Search parking spots...",
+      "ariaLabels": {
+        "search": "Search parking spots",
+        "status": "Filter by status",
+        "type": "Filter by type",
+        "building": "Filter by building",
+        "level": "Filter by level",
+        "project": "Filter by project",
+        "area": "Filter by area",
+        "price": "Filter by price",
+        "date": "Filter by date"
+      }
     }
   },
   "navigation": {
@@ -88,7 +206,17 @@
         "label": "Filter",
         "description": "Filter results"
       }
-    }
+    },
+    "home": "Home",
+    "properties": "Properties",
+    "crm": "CRM",
+    "admin": "Administration",
+    "contacts": "Contacts",
+    "projects": "Projects",
+    "buildings": "Buildings",
+    "units": "Units",
+    "storages": "Storages",
+    "details": "Details"
   },
   "toolbar": {
     "filters": {
@@ -121,20 +249,20 @@
     },
     "sort": {
       "name": {
-        "asc": "Name (A → Z)",
-        "desc": "Name (Z → A)"
+        "asc": "Name ascending",
+        "desc": "Name descending"
       },
       "date": {
-        "asc": "Date (Oldest)",
-        "desc": "Date (Newest)"
+        "asc": "Oldest first",
+        "desc": "Newest first"
       },
       "status": {
-        "asc": "Status (A → Z)",
-        "desc": "Status (Z → A)"
+        "asc": "Status (A-Z)",
+        "desc": "Status (Z-A)"
       },
       "channel": {
-        "asc": "Channel (A → Z)",
-        "desc": "Channel (Z → A)"
+        "asc": "Channel (A-Z)",
+        "desc": "Channel (Z-A)"
       }
     },
     "ui": {
@@ -173,24 +301,6 @@
       "storage": {
         "edit": "Edit storage",
         "delete": "Delete storage"
-      }
-    },
-    "sort": {
-      "name": {
-        "asc": "Name ascending",
-        "desc": "Name descending"
-      },
-      "date": {
-        "asc": "Oldest first",
-        "desc": "Newest first"
-      },
-      "status": {
-        "asc": "Status (A-Z)",
-        "desc": "Status (Z-A)"
-      },
-      "channel": {
-        "asc": "Channel (A-Z)",
-        "desc": "Channel (Z-A)"
       }
     },
     "communications": {
@@ -298,18 +408,6 @@
   "dropdown": {
     "clearSelection": "Clear selection",
     "totalContacts": "{count} total contacts - use scroll or search to navigate"
-  },
-  "navigation": {
-    "home": "Home",
-    "properties": "Properties",
-    "crm": "CRM",
-    "admin": "Administration",
-    "contacts": "Contacts",
-    "projects": "Projects",
-    "buildings": "Buildings",
-    "units": "Units",
-    "storages": "Storages",
-    "details": "Details"
   },
   "actions": {
     "save": "Save",
@@ -729,143 +827,6 @@
     "noLayersFound": "No layers found",
     "noResultsFor": "No results found for \"{{query}}\"",
     "tryChangingFilters": "Try changing the filters"
-  },
-  "filters": {
-    "searchFilters": "Search Filters",
-    "typeLabel": "Type:",
-    "typeAriaLabel": "Type filters",
-    "filterBy": "Filter by:",
-    "all": "All",
-    "showAll": "Show all",
-    "allTypes": "All Types",
-    "allStatuses": "All Statuses",
-    "allFloors": "All Floors",
-    "allUnits": "All Units",
-    "allAreas": "All Areas",
-    "allProjects": "All Projects",
-    "allLocations": "All Locations",
-    "allCompanies": "All Companies",
-    "allClients": "All Clients",
-    "allPriorities": "All Priorities",
-    "allEnergyClasses": "All Energy Classes",
-    "allRenovations": "All Renovations",
-    "allRiskLevels": "All Risk Levels",
-    "allComplexities": "All Complexities",
-    "allBuildings": "All Buildings",
-    "status": {
-      "available": "Available",
-      "sold": "Sold",
-      "reserved": "Reserved",
-      "maintenance": "Maintenance",
-      "occupied": "Occupied",
-      "planning": "Planning",
-      "inProgress": "In Progress",
-      "completed": "Completed",
-      "onHold": "On Hold",
-      "active": "Active",
-      "inactive": "Inactive",
-      "archived": "Archived",
-      "lead": "Lead",
-      "pending": "Pending",
-      "construction": "Under Construction"
-    },
-    "fields": {
-      "search": "Search",
-      "priceRange": "Price Range",
-      "areaRange": "Area Range",
-      "status": "Status",
-      "project": "Project",
-      "building": "Building",
-      "floor": "Floor",
-      "propertyType": "Property Type"
-    },
-    "placeholders": {
-      "general": "Search...",
-      "unitsSearch": "Search units...",
-      "contactsSearch": "Search contacts...",
-      "buildingsSearch": "Search buildings...",
-      "projectsSearch": "Search projects...",
-      "selectStatus": "Select status",
-      "selectProject": "Select project",
-      "selectBuilding": "Select building",
-      "selectFloor": "Select floor",
-      "selectType": "Select type",
-      "selectPriority": "Select priority",
-      "selectLocation": "Select location",
-      "selectCompany": "Select company",
-      "selectEnergyClass": "Select energy class",
-      "selectRenovation": "Select renovation",
-      "selectClient": "Select client",
-      "selectRiskLevel": "Select risk level",
-      "selectComplexity": "Select complexity"
-    },
-    "unitTypes": {
-      "ariaLabel": "Unit type filters",
-      "all": "All",
-      "allTooltip": "Show all types",
-      "studio": "Studio",
-      "studioTooltip": "Studio / Bedsit",
-      "apartment": "Apartment",
-      "apartmentTooltip": "Apartment",
-      "maisonette": "Maisonette",
-      "maisonetteTooltip": "Maisonette",
-      "shop": "Shop",
-      "shopTooltip": "Shop",
-      "office": "Office",
-      "officeTooltip": "Office"
-    },
-    "contactTypes": {
-      "ariaLabel": "Contact type filters",
-      "all": "All",
-      "allTooltip": "Show all contacts",
-      "individual": "Individual",
-      "company": "Company",
-      "service": "Service"
-    },
-    "channels": {
-      "ariaLabel": "Channel filters",
-      "all": "All",
-      "allTooltip": "Show all channels",
-      "email": "Email",
-      "emailTooltip": "Email messages",
-      "sms": "SMS",
-      "smsTooltip": "SMS messages",
-      "telegram": "Telegram",
-      "telegramTooltip": "Telegram messages"
-    },
-    "common": {
-      "search": "Search",
-      "status": "Status",
-      "selectStatus": "Select status",
-      "type": "Type",
-      "selectType": "Select type",
-      "building": "Building",
-      "selectBuilding": "Select building",
-      "level": "Level",
-      "selectLevel": "Select level",
-      "project": "Project",
-      "selectProject": "Select project",
-      "area": "Area",
-      "price": "Price",
-      "updateDate": "Update Date",
-      "from": "From",
-      "to": "To"
-    },
-    "parking": {
-      "title": "Parking Filters",
-      "searchPlaceholder": "Search parking spots...",
-      "ariaLabels": {
-        "search": "Search parking spots",
-        "status": "Filter by status",
-        "type": "Filter by type",
-        "building": "Filter by building",
-        "level": "Filter by level",
-        "project": "Filter by project",
-        "area": "Filter by area",
-        "price": "Filter by price",
-        "date": "Filter by date"
-      }
-    }
   },
   "sharing": {
     "shareOn": "Share on {platform}",
@@ -1582,16 +1543,29 @@
     }
   },
   "search": {
-    "placeholder": {
-      "default": "Search...",
-      "contacts": "Search contacts...",
-      "projects": "Search projects...",
-      "buildings": "Search buildings...",
-      "files": "Search files...",
-      "units": "Search units...",
-      "storages": "Search storages...",
-      "parking": "Search parking...",
-      "communications": "Search messages..."
+    "placeholder": "Search projects, contacts, buildings...",
+    "globalSearch": "Global Search",
+    "noResults": "No results found",
+    "tryDifferent": "Try a different search",
+    "results": "Search results",
+    "resultsCount": "{{count}} results",
+    "resultsCount_one": "{{count}} result",
+    "resultsCount_other": "{{count}} results",
+    "navigate": "navigate",
+    "select": "select",
+    "hints": {
+      "startTyping": "Start typing to search...",
+      "minChars": "At least {{count}} characters",
+      "escKey": "ESC"
+    },
+    "entityTypes": {
+      "project": "Project",
+      "building": "Building",
+      "unit": "Unit",
+      "contact": "Contact",
+      "file": "File",
+      "parking": "Parking",
+      "storage": "Storage"
     }
   },
   "photoCard": {
@@ -1617,32 +1591,6 @@
       "company": "Company",
       "officeDirectory": "Office Directory",
       "personal": "Personal"
-    }
-  },
-  "search": {
-    "globalSearch": "Global Search",
-    "placeholder": "Search projects, contacts, buildings...",
-    "noResults": "No results found",
-    "tryDifferent": "Try a different search",
-    "results": "Search results",
-    "resultsCount": "{{count}} results",
-    "resultsCount_one": "{{count}} result",
-    "resultsCount_other": "{{count}} results",
-    "navigate": "navigate",
-    "select": "select",
-    "hints": {
-      "startTyping": "Start typing to search...",
-      "minChars": "At least {{count}} characters",
-      "escKey": "ESC"
-    },
-    "entityTypes": {
-      "project": "Project",
-      "building": "Building",
-      "unit": "Unit",
-      "contact": "Contact",
-      "file": "File",
-      "parking": "Parking",
-      "storage": "Storage"
     }
   },
   "productTour": {
