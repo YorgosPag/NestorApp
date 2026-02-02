@@ -69,6 +69,7 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-099: Centralized Polygon Tolerances
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
+import { dperf } from '../../debug';
 
 type Pt = { x: number, y: number };
 
@@ -280,9 +281,9 @@ export function useDrawingHandlers(
         }
         const t4 = performance.now();
 
-        // 🔍 PERF DEBUG: Log timing for EVERY call
+        // 🔍 PERF DEBUG: Log timing via centralized logger
         const total = t4 - t0;
-        console.error(`PERF_DRAWHOVER ${total.toFixed(1)}ms transform=${(t1-t0).toFixed(1)} preview=${(t2-t1).toFixed(1)} entity=${(t3-t2).toFixed(1)} draw=${(t4-t3).toFixed(1)}`);
+        dperf('Performance', `DRAWHOVER ${total.toFixed(1)}ms transform=${(t1-t0).toFixed(1)} preview=${(t2-t1).toFixed(1)} entity=${(t3-t2).toFixed(1)} draw=${(t4-t3).toFixed(1)}`);
       }
     } else {
       // 🏢 ADR-040: Clear preview when mouse leaves

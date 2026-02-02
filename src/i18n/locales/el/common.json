@@ -32,6 +32,140 @@
       "lead": "Lead",
       "pending": "Εκκρεμεί",
       "construction": "Υπό Κατασκευή"
+    },
+    "searchFilters": "Φίλτρα Αναζήτησης",
+    "typeLabel": "Τύπος:",
+    "typeAriaLabel": "Φίλτρα τύπου",
+    "filterBy": "Φιλτράρισμα:",
+    "all": "Όλες",
+    "showAll": "Εμφάνιση όλων",
+    "allTypes": "Όλοι οι Τύποι",
+    "allStatuses": "Όλες οι Καταστάσεις",
+    "allFloors": "Όλοι οι Όροφοι",
+    "allUnits": "Όλες οι Μονάδες",
+    "allAreas": "Όλες οι Περιοχές",
+    "allProjects": "Όλα τα Έργα",
+    "allLocations": "Όλες οι Τοποθεσίες",
+    "allCompanies": "Όλες οι Εταιρείες",
+    "allClients": "Όλοι οι Πελάτες",
+    "allPriorities": "Όλες οι Προτεραιότητες",
+    "allEnergyClasses": "Όλες οι Ενεργειακές Κλάσεις",
+    "allRenovations": "Όλες οι Ανακαινίσεις",
+    "allRiskLevels": "Όλα τα Επίπεδα Κινδύνου",
+    "allComplexities": "Όλες οι Πολυπλοκότητες",
+    "allBuildings": "Όλα τα Κτίρια",
+    "types": {
+      "individual": "Φυσικό Πρόσωπο",
+      "company": "Εταιρεία",
+      "service": "Υπηρεσία",
+      "residential": "Κατοικία",
+      "commercial": "Εμπορικό",
+      "industrial": "Βιομηχανικό",
+      "office": "Γραφείο",
+      "mixed": "Μικτή Χρήση",
+      "warehouse": "Αποθήκη",
+      "retail": "Λιανικό Εμπόριο",
+      "hotel": "Ξενοδοχείο",
+      "public": "Δημόσιο",
+      "renovation": "Ανακαίνιση",
+      "infrastructure": "Υποδομή"
+    },
+    "fields": {
+      "search": "Αναζήτηση",
+      "priceRange": "Εύρος Τιμής",
+      "areaRange": "Εύρος Επιφάνειας",
+      "status": "Κατάσταση",
+      "project": "Έργο",
+      "building": "Κτίριο",
+      "floor": "Όροφος",
+      "propertyType": "Τύπος Ακινήτου"
+    },
+    "placeholders": {
+      "general": "Αναζήτηση...",
+      "unitsSearch": "Αναζήτηση μονάδων...",
+      "contactsSearch": "Αναζήτηση επαφών...",
+      "buildingsSearch": "Αναζήτηση κτιρίων...",
+      "projectsSearch": "Αναζήτηση έργων...",
+      "selectStatus": "Επιλέξτε κατάσταση",
+      "selectProject": "Επιλέξτε έργο",
+      "selectBuilding": "Επιλέξτε κτίριο",
+      "selectFloor": "Επιλέξτε όροφο",
+      "selectType": "Επιλέξτε τύπο",
+      "selectPriority": "Επιλέξτε προτεραιότητα",
+      "selectLocation": "Επιλέξτε τοποθεσία",
+      "selectCompany": "Επιλέξτε εταιρεία",
+      "selectEnergyClass": "Επιλέξτε ενεργειακή κλάση",
+      "selectRenovation": "Επιλέξτε ανακαίνιση",
+      "selectClient": "Επιλέξτε πελάτη",
+      "selectRiskLevel": "Επιλέξτε επίπεδο κινδύνου",
+      "selectComplexity": "Επιλέξτε πολυπλοκότητα"
+    },
+    "unitTypes": {
+      "ariaLabel": "Φίλτρα τύπου μονάδας",
+      "all": "Όλες",
+      "allTooltip": "Εμφάνιση όλων των τύπων",
+      "studio": "Studio",
+      "studioTooltip": "Studio / Γκαρσονιέρα",
+      "apartment": "Διαμέρισμα",
+      "apartmentTooltip": "Διαμέρισμα",
+      "maisonette": "Μεζονέτα",
+      "maisonetteTooltip": "Μεζονέτα",
+      "shop": "Κατάστημα",
+      "shopTooltip": "Κατάστημα",
+      "office": "Γραφείο",
+      "officeTooltip": "Γραφείο"
+    },
+    "contactTypes": {
+      "ariaLabel": "Φίλτρα τύπου επαφής",
+      "all": "Όλες",
+      "allTooltip": "Εμφάνιση όλων των επαφών",
+      "individual": "Φυσικό",
+      "company": "Εταιρεία",
+      "service": "Υπηρεσία"
+    },
+    "channels": {
+      "ariaLabel": "Φίλτρα καναλιών",
+      "all": "Όλα",
+      "allTooltip": "Εμφάνιση όλων των καναλιών",
+      "email": "Email",
+      "emailTooltip": "Email μηνύματα",
+      "sms": "SMS",
+      "smsTooltip": "SMS μηνύματα",
+      "telegram": "Telegram",
+      "telegramTooltip": "Telegram μηνύματα"
+    },
+    "common": {
+      "search": "Αναζήτηση",
+      "status": "Κατάσταση",
+      "selectStatus": "Επιλέξτε κατάσταση",
+      "type": "Τύπος",
+      "selectType": "Επιλέξτε τύπο",
+      "building": "Κτίριο",
+      "selectBuilding": "Επιλέξτε κτίριο",
+      "level": "Επίπεδο",
+      "selectLevel": "Επιλέξτε επίπεδο",
+      "project": "Έργο",
+      "selectProject": "Επιλέξτε έργο",
+      "area": "Εμβαδόν",
+      "price": "Τιμή",
+      "updateDate": "Ημ/νία Ενημέρωσης",
+      "from": "Από",
+      "to": "Έως"
+    },
+    "parking": {
+      "title": "Φίλτρα Θέσεων Στάθμευσης",
+      "searchPlaceholder": "Αναζήτηση θέσεων...",
+      "ariaLabels": {
+        "search": "Αναζήτηση θέσεων στάθμευσης",
+        "status": "Φιλτράρισμα κατά κατάσταση",
+        "type": "Φιλτράρισμα κατά τύπο",
+        "building": "Φιλτράρισμα κατά κτίριο",
+        "level": "Φιλτράρισμα κατά επίπεδο",
+        "project": "Φιλτράρισμα κατά έργο",
+        "area": "Φιλτράρισμα κατά εμβαδόν",
+        "price": "Φιλτράρισμα κατά τιμή",
+        "date": "Φιλτράρισμα κατά ημερομηνία"
+      }
     }
   },
   "navigation": {
@@ -72,7 +206,17 @@
         "label": "Φίλτρο",
         "description": "Φιλτράρισμα αποτελεσμάτων"
       }
-    }
+    },
+    "home": "Αρχική",
+    "properties": "Ακίνητα",
+    "crm": "CRM",
+    "admin": "Διαχείριση",
+    "contacts": "Επαφές",
+    "projects": "Έργα",
+    "buildings": "Κτίρια",
+    "units": "Μονάδες",
+    "storages": "Αποθήκες",
+    "details": "Λεπτομέρειες"
   },
   "toolbar": {
     "filters": {
@@ -105,20 +249,20 @@
     },
     "sort": {
       "name": {
-        "asc": "Όνομα (Α → Ω)",
-        "desc": "Όνομα (Ω → Α)"
+        "asc": "Αύξουσα κατά όνομα",
+        "desc": "Φθίνουσα κατά όνομα"
       },
       "date": {
-        "asc": "Ημερομηνία (Παλαιότερα)",
-        "desc": "Ημερομηνία (Νεότερα)"
+        "asc": "Παλαιότερα πρώτα",
+        "desc": "Νεότερα πρώτα"
       },
       "status": {
-        "asc": "Κατάσταση (Α → Ω)",
-        "desc": "Κατάσταση (Ω → Α)"
+        "asc": "Κατάσταση (Α-Ω)",
+        "desc": "Κατάσταση (Ω-Α)"
       },
       "channel": {
-        "asc": "Κανάλι (Α → Ω)",
-        "desc": "Κανάλι (Ω → Α)"
+        "asc": "Κανάλι (Α-Ω)",
+        "desc": "Κανάλι (Ω-Α)"
       }
     },
     "ui": {
@@ -157,24 +301,6 @@
       "storage": {
         "edit": "Επεξεργασία αποθήκης",
         "delete": "Διαγραφή αποθήκης"
-      }
-    },
-    "sort": {
-      "name": {
-        "asc": "Αύξουσα κατά όνομα",
-        "desc": "Φθίνουσα κατά όνομα"
-      },
-      "date": {
-        "asc": "Παλαιότερα πρώτα",
-        "desc": "Νεότερα πρώτα"
-      },
-      "status": {
-        "asc": "Κατάσταση (Α-Ω)",
-        "desc": "Κατάσταση (Ω-Α)"
-      },
-      "channel": {
-        "asc": "Κανάλι (Α-Ω)",
-        "desc": "Κανάλι (Ω-Α)"
       }
     },
     "communications": {
@@ -282,18 +408,6 @@
   "dropdown": {
     "clearSelection": "Καθαρισμός επιλογής",
     "totalContacts": "{count} συνολικές επαφές - χρησιμοποιήστε scroll ή αναζήτηση για πλοήγηση"
-  },
-  "navigation": {
-    "home": "Αρχική",
-    "properties": "Ακίνητα",
-    "crm": "CRM",
-    "admin": "Διαχείριση",
-    "contacts": "Επαφές",
-    "projects": "Έργα",
-    "buildings": "Κτίρια",
-    "units": "Μονάδες",
-    "storages": "Αποθήκες",
-    "details": "Λεπτομέρειες"
   },
   "actions": {
     "save": "Αποθήκευση",
@@ -714,159 +828,6 @@
     "noLayersFound": "Δεν βρέθηκαν layers",
     "noResultsFor": "Δεν βρέθηκαν αποτελέσματα για \"{{query}}\"",
     "tryChangingFilters": "Δοκιμάστε να αλλάξετε τα φίλτρα"
-  },
-  "filters": {
-    "searchFilters": "Φίλτρα Αναζήτησης",
-    "typeLabel": "Τύπος:",
-    "typeAriaLabel": "Φίλτρα τύπου",
-    "filterBy": "Φιλτράρισμα:",
-    "all": "Όλες",
-    "showAll": "Εμφάνιση όλων",
-    "allTypes": "Όλοι οι Τύποι",
-    "allStatuses": "Όλες οι Καταστάσεις",
-    "allFloors": "Όλοι οι Όροφοι",
-    "allUnits": "Όλες οι Μονάδες",
-    "allAreas": "Όλες οι Περιοχές",
-    "allProjects": "Όλα τα Έργα",
-    "allLocations": "Όλες οι Τοποθεσίες",
-    "allCompanies": "Όλες οι Εταιρείες",
-    "allClients": "Όλοι οι Πελάτες",
-    "allPriorities": "Όλες οι Προτεραιότητες",
-    "allEnergyClasses": "Όλες οι Ενεργειακές Κλάσεις",
-    "allRenovations": "Όλες οι Ανακαινίσεις",
-    "allRiskLevels": "Όλα τα Επίπεδα Κινδύνου",
-    "allComplexities": "Όλες οι Πολυπλοκότητες",
-    "allBuildings": "Όλα τα Κτίρια",
-    "status": {
-      "available": "Διαθέσιμο",
-      "sold": "Πωλημένο",
-      "reserved": "Κρατημένο",
-      "maintenance": "Συντήρηση",
-      "occupied": "Κατειλημμένο",
-      "planning": "Σχεδιασμός",
-      "inProgress": "Σε Εξέλιξη",
-      "completed": "Ολοκληρωμένο",
-      "onHold": "Σε Αναμονή",
-      "active": "Ενεργό",
-      "inactive": "Ανενεργό",
-      "archived": "Αρχειοθετημένο",
-      "lead": "Lead",
-      "pending": "Εκκρεμεί",
-      "construction": "Υπό Κατασκευή"
-    },
-    "types": {
-      "individual": "Φυσικό Πρόσωπο",
-      "company": "Εταιρεία",
-      "service": "Υπηρεσία",
-      "residential": "Κατοικία",
-      "commercial": "Εμπορικό",
-      "industrial": "Βιομηχανικό",
-      "office": "Γραφείο",
-      "mixed": "Μικτή Χρήση",
-      "warehouse": "Αποθήκη",
-      "retail": "Λιανικό Εμπόριο",
-      "hotel": "Ξενοδοχείο",
-      "public": "Δημόσιο",
-      "renovation": "Ανακαίνιση",
-      "infrastructure": "Υποδομή"
-    },
-    "fields": {
-      "search": "Αναζήτηση",
-      "priceRange": "Εύρος Τιμής",
-      "areaRange": "Εύρος Επιφάνειας",
-      "status": "Κατάσταση",
-      "project": "Έργο",
-      "building": "Κτίριο",
-      "floor": "Όροφος",
-      "propertyType": "Τύπος Ακινήτου"
-    },
-    "placeholders": {
-      "general": "Αναζήτηση...",
-      "unitsSearch": "Αναζήτηση μονάδων...",
-      "contactsSearch": "Αναζήτηση επαφών...",
-      "buildingsSearch": "Αναζήτηση κτιρίων...",
-      "projectsSearch": "Αναζήτηση έργων...",
-      "selectStatus": "Επιλέξτε κατάσταση",
-      "selectProject": "Επιλέξτε έργο",
-      "selectBuilding": "Επιλέξτε κτίριο",
-      "selectFloor": "Επιλέξτε όροφο",
-      "selectType": "Επιλέξτε τύπο",
-      "selectPriority": "Επιλέξτε προτεραιότητα",
-      "selectLocation": "Επιλέξτε τοποθεσία",
-      "selectCompany": "Επιλέξτε εταιρεία",
-      "selectEnergyClass": "Επιλέξτε ενεργειακή κλάση",
-      "selectRenovation": "Επιλέξτε ανακαίνιση",
-      "selectClient": "Επιλέξτε πελάτη",
-      "selectRiskLevel": "Επιλέξτε επίπεδο κινδύνου",
-      "selectComplexity": "Επιλέξτε πολυπλοκότητα"
-    },
-    "unitTypes": {
-      "ariaLabel": "Φίλτρα τύπου μονάδας",
-      "all": "Όλες",
-      "allTooltip": "Εμφάνιση όλων των τύπων",
-      "studio": "Studio",
-      "studioTooltip": "Studio / Γκαρσονιέρα",
-      "apartment": "Διαμέρισμα",
-      "apartmentTooltip": "Διαμέρισμα",
-      "maisonette": "Μεζονέτα",
-      "maisonetteTooltip": "Μεζονέτα",
-      "shop": "Κατάστημα",
-      "shopTooltip": "Κατάστημα",
-      "office": "Γραφείο",
-      "officeTooltip": "Γραφείο"
-    },
-    "contactTypes": {
-      "ariaLabel": "Φίλτρα τύπου επαφής",
-      "all": "Όλες",
-      "allTooltip": "Εμφάνιση όλων των επαφών",
-      "individual": "Φυσικό",
-      "company": "Εταιρεία",
-      "service": "Υπηρεσία"
-    },
-    "channels": {
-      "ariaLabel": "Φίλτρα καναλιών",
-      "all": "Όλα",
-      "allTooltip": "Εμφάνιση όλων των καναλιών",
-      "email": "Email",
-      "emailTooltip": "Email μηνύματα",
-      "sms": "SMS",
-      "smsTooltip": "SMS μηνύματα",
-      "telegram": "Telegram",
-      "telegramTooltip": "Telegram μηνύματα"
-    },
-    "common": {
-      "search": "Αναζήτηση",
-      "status": "Κατάσταση",
-      "selectStatus": "Επιλέξτε κατάσταση",
-      "type": "Τύπος",
-      "selectType": "Επιλέξτε τύπο",
-      "building": "Κτίριο",
-      "selectBuilding": "Επιλέξτε κτίριο",
-      "level": "Επίπεδο",
-      "selectLevel": "Επιλέξτε επίπεδο",
-      "project": "Έργο",
-      "selectProject": "Επιλέξτε έργο",
-      "area": "Εμβαδόν",
-      "price": "Τιμή",
-      "updateDate": "Ημ/νία Ενημέρωσης",
-      "from": "Από",
-      "to": "Έως"
-    },
-    "parking": {
-      "title": "Φίλτρα Θέσεων Στάθμευσης",
-      "searchPlaceholder": "Αναζήτηση θέσεων...",
-      "ariaLabels": {
-        "search": "Αναζήτηση θέσεων στάθμευσης",
-        "status": "Φιλτράρισμα κατά κατάσταση",
-        "type": "Φιλτράρισμα κατά τύπο",
-        "building": "Φιλτράρισμα κατά κτίριο",
-        "level": "Φιλτράρισμα κατά επίπεδο",
-        "project": "Φιλτράρισμα κατά έργο",
-        "area": "Φιλτράρισμα κατά εμβαδόν",
-        "price": "Φιλτράρισμα κατά τιμή",
-        "date": "Φιλτράρισμα κατά ημερομηνία"
-      }
-    }
   },
   "sharing": {
     "shareOn": "Κοινοποίηση σε {platform}",
@@ -1583,16 +1544,29 @@
     }
   },
   "search": {
-    "placeholder": {
-      "default": "Αναζήτηση...",
-      "contacts": "Αναζήτηση επαφών...",
-      "projects": "Αναζήτηση έργων...",
-      "buildings": "Αναζήτηση κτιρίων...",
-      "files": "Αναζήτηση αρχείων...",
-      "units": "Αναζήτηση μονάδων...",
-      "storages": "Αναζήτηση αποθηκών...",
-      "parking": "Αναζήτηση θέσεων...",
-      "communications": "Αναζήτηση μηνυμάτων..."
+    "placeholder": "Αναζήτηση σε έργα, επαφές, κτίρια...",
+    "globalSearch": "Παγκόσμια Αναζήτηση",
+    "noResults": "Δεν βρέθηκαν αποτελέσματα",
+    "tryDifferent": "Δοκιμάστε διαφορετική αναζήτηση",
+    "results": "Αποτελέσματα αναζήτησης",
+    "resultsCount": "{{count}} αποτελέσματα",
+    "resultsCount_one": "{{count}} αποτέλεσμα",
+    "resultsCount_other": "{{count}} αποτελέσματα",
+    "navigate": "πλοήγηση",
+    "select": "επιλογή",
+    "hints": {
+      "startTyping": "Πληκτρολογήστε για αναζήτηση...",
+      "minChars": "Τουλάχιστον {{count}} χαρακτήρες",
+      "escKey": "ESC"
+    },
+    "entityTypes": {
+      "project": "Έργο",
+      "building": "Κτίριο",
+      "unit": "Μονάδα",
+      "contact": "Επαφή",
+      "file": "Αρχείο",
+      "parking": "Πάρκινγκ",
+      "storage": "Αποθήκη"
     }
   },
   "photoCard": {
@@ -1618,32 +1592,6 @@
       "company": "Εταιρεία",
       "officeDirectory": "Κοινός Κατάλογος",
       "personal": "Προσωπικός"
-    }
-  },
-  "search": {
-    "globalSearch": "Παγκόσμια Αναζήτηση",
-    "placeholder": "Αναζήτηση σε έργα, επαφές, κτίρια...",
-    "noResults": "Δεν βρέθηκαν αποτελέσματα",
-    "tryDifferent": "Δοκιμάστε διαφορετική αναζήτηση",
-    "results": "Αποτελέσματα αναζήτησης",
-    "resultsCount": "{{count}} αποτελέσματα",
-    "resultsCount_one": "{{count}} αποτέλεσμα",
-    "resultsCount_other": "{{count}} αποτελέσματα",
-    "navigate": "πλοήγηση",
-    "select": "επιλογή",
-    "hints": {
-      "startTyping": "Πληκτρολογήστε για αναζήτηση...",
-      "minChars": "Τουλάχιστον {{count}} χαρακτήρες",
-      "escKey": "ESC"
-    },
-    "entityTypes": {
-      "project": "Έργο",
-      "building": "Κτίριο",
-      "unit": "Μονάδα",
-      "contact": "Επαφή",
-      "file": "Αρχείο",
-      "parking": "Πάρκινγκ",
-      "storage": "Αποθήκη"
     }
   },
   "productTour": {
