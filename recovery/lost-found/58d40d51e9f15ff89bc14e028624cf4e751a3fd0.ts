@@ -1,0 +1,1038 @@
+/* 🤖 AUTO-GENERATED DESIGN SYSTEM - Enterprise CSS Variables */
+/* ⚠️ @import MUST be at the very top (CSS spec requirement) */
+@import '../styles/design-system/generated/variables.css';
+
+/* 🏢 ENTERPRISE: Message Content Styling (Telegram-compatible HTML rendering) */
+@import '../styles/design-system/components/message-content.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import dropdown z-index overrides */
+/* Dropdown overrides inlined for Next.js 16 compatibility */
+
+@layer base {
+  :root {
+    --background: 214 95% 93%; /* ✅ ENTERPRISE: Beautiful light blue (was light grey) */
+    --foreground: 222.2 47.4% 11.2%;
+
+    --card: 213 92% 95%; /* ✅ ENTERPRISE: Elegant light blue card (was grey) */
+    --card-foreground: 222.2 47.4% 11.2%;
+
+    --popover: 212 89% 97%; /* ✅ ENTERPRISE: Soft blue popover (was white) */
+    --popover-foreground: 222.2 47.4% 11.2%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 214 95% 97%;
+
+    --secondary: 213 88% 96%; /* ✅ ENTERPRISE: Refined blue secondary (was grey) */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 212 85% 94%; /* ✅ ENTERPRISE: Harmonious blue muted (was grey) */
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 211 83% 92%; /* ✅ ENTERPRISE: Sophisticated blue accent (was grey) */
+    --accent-foreground: 222.2 47.4% 11.2%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 220 13% 91%; /* 🏢 ENTERPRISE: Matches Tailwind gray-200 (#e5e7eb) exactly */
+    --input: 220 13% 81%; /* Πιο σκούρο για ορατότητα */
+    --ring: 222.2 47.4% 11.2%;
+    
+    --radius: 0.5rem;
+
+    /* Semantic Status Colors */
+    --status-success: 142 71% 45%;    /* Green for success/available */
+    --status-info: 221 83% 53%;       /* Blue for info/active */
+    --status-warning: 32 95% 44%;     /* Orange for warning/reserved */
+    --status-error: 0 72% 51%;        /* Red for error/sold */
+    --status-purple: 271 76% 53%;     /* Purple for special states */
+
+    /* Enterprise Background Variables - SINGLE SOURCE OF TRUTH */
+    --bg-success: 142 45% 97%;        /* success background - green-50 */
+    --bg-error: 0 86% 97%;            /* error background - red-50 */
+    --bg-warning: 48 96% 95%;         /* warning background - yellow-50 */
+    --bg-info: 214 95% 97%;           /* info background - blue-50 */
+
+    /* Enterprise Text Colors for Status Badges */
+    --text-success: 142 76% 36%;      /* success text - green-700 */
+    --text-error: 0 84% 60%;          /* error text - red-500 */
+    --text-warning: 43 96% 56%;       /* warning text - yellow-600 */
+    --text-info: 217 91% 60%;         /* info text - blue-600 */
+    --bg-primary: 214 95% 93%;        /* ✅ ENTERPRISE: primary background - Beautiful light blue (no white) */
+    --bg-secondary: 213 92% 95%;      /* ✅ ENTERPRISE: secondary background - Elegant blue (no grey) */
+    --bg-hover: 212 89% 90%;          /* ✅ ENTERPRISE: hover background - Rich blue interaction */
+    --bg-active: 211 85% 87%;         /* ✅ ENTERPRISE: active background - Deep blue state */
+
+    /* Additional Enterprise Surface Variables */
+    --bg-elevated: 212 87% 96%;       /* ✅ ENTERPRISE: elevated surface - Soft blue (no grey) */
+    --bg-sunken: 211 82% 91%;         /* ✅ ENTERPRISE: sunken surface - Refined blue (no grey) */
+    --bg-overlay: 220 26% 14%;        /* overlay background - dark slate (keep dark) */
+    --bg-modal: 213 90% 97%;          /* ✅ ENTERPRISE: modal background - Clean blue (no white) */
+    --bg-disabled: 212 80% 94%;       /* ✅ ENTERPRISE: disabled state - Muted blue (no grey) */
+    --bg-selected: 210 78% 89%;       /* ✅ ENTERPRISE: selected state - Vibrant blue selection */
+
+    /* Sidebar Variables */
+    --sidebar-background: 214 92% 94%; /* ✅ ENTERPRISE: Beautiful sidebar blue (no grey) */
+    --sidebar-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 213 88% 96%;     /* ✅ ENTERPRISE: Refined sidebar accent (no grey) */
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 212 85% 89%;     /* ✅ ENTERPRISE: Harmonious border blue (no grey) */
+    --sidebar-ring: 222.2 47.4% 11.2%;
+
+    /* ✅ ENTERPRISE: Dropdown positioning variables (NO MORE INLINE STYLES) */
+    /* 🏢 NOTE: z-index comes from design-tokens.json via var(--z-index-dropdown) */
+    --dropdown-top: 0px;
+    --dropdown-left: 0px;
+    --dropdown-width: 0px;
+
+    /* 🏢 ENTERPRISE: Entity List Column Tokens (SINGLE SOURCE OF TRUTH)
+       @see src/styles/design-tokens.ts - ENTITY_LIST_TOKENS
+       @see src/core/containers/EntityListColumn.tsx
+       These values are used via CSS variables to ensure Tailwind JIT generates
+       the required CSS classes (static class names, not template literals) */
+    --entity-list-min: 300px;
+    --entity-list-max: 420px;
+    --entity-list-scrollbar-space: 8px;
+  }
+
+  .dark {
+    --background: 220 20% 11%; /* #1e293b */
+    --foreground: 210 40% 98%;
+
+    --card: 217 33% 17%; /* #293345 */
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 20% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 33% 17%; /* ✅ ENTERPRISE: Dark primary background - NO WHITE BACKGROUNDS! */
+    --primary-foreground: 210 40% 98%;
+    
+    --secondary: 217 33% 25%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 25%; /* Same as secondary */
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217 33% 25%;
+    --accent-foreground: 210 40% 98%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 217 19% 27%; /* 🏢 ENTERPRISE: Matches Tailwind gray-700 (#374151) exactly */
+    --input: 217 19% 35%; /* Λίγο πιο ανοιχτό για dark mode */
+    --ring: 210 40% 98%;
+
+    /* Semantic Status Colors - Dark Mode */
+    --status-success: 142 76% 36%;    /* Darker green for dark mode */
+    --status-info: 221 83% 53%;       /* Same blue works in dark */
+    --status-warning: 32 95% 44%;     /* Same orange works in dark */
+    --status-error: 0 72% 51%;        /* Same red works in dark */
+    --status-purple: 271 76% 53%;     /* Same purple works in dark */
+
+    /* Enterprise Background Variables - Dark Mode */
+    --bg-success: 142 45% 15%;        /* dark success background */
+    --bg-error: 0 86% 15%;            /* dark error background */
+    --bg-warning: 48 96% 15%;         /* dark warning background */
+    --bg-info: 214 95% 15%;           /* dark info background */
+
+    /* Enterprise Text Colors for Status Badges - Dark Mode */
+    --text-success: 142 76% 56%;      /* success text - green-400 (lighter for dark mode) */
+    --text-error: 0 84% 70%;          /* error text - red-400 (lighter for dark mode) */
+    --text-warning: 43 96% 66%;       /* warning text - yellow-400 (lighter for dark mode) */
+    --text-info: 217 91% 70%;         /* info text - blue-400 (lighter for dark mode) */
+    --bg-primary: 217 33% 17%;        /* ✅ ENTERPRISE: dark primary - Rich slate (no white) */
+    --bg-secondary: 216 30% 20%;      /* ✅ ENTERPRISE: dark secondary - Elegant slate (no light grey) */
+    --bg-hover: 215 28% 23%;          /* ✅ ENTERPRISE: dark hover - Interactive slate */
+    --bg-active: 214 25% 26%;         /* ✅ ENTERPRISE: dark active - Deep slate state */
+    --bg-elevated: 218 35% 19%;       /* ✅ ENTERPRISE: dark elevated - Sophisticated slate */
+    --bg-sunken: 219 38% 12%;         /* ✅ ENTERPRISE: dark sunken - Deep contrast slate */
+    --bg-overlay: 220 40% 8%;         /* ✅ ENTERPRISE: dark overlay - Premium overlay */
+    --bg-modal: 217 33% 17%;          /* dark modal background */
+    --bg-disabled: 216 30% 15%;       /* ✅ ENTERPRISE: dark disabled - Muted slate */
+    --bg-selected: 214 95% 25%;       /* dark selected state */
+
+    /* Sidebar Variables - Dark Mode */
+    --sidebar-background: 220 20% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 25%;
+    --sidebar-ring: 210 40% 98%;
+
+    /* ✅ ENTERPRISE: Dropdown positioning variables - Dark Mode (same values) */
+    /* 🏢 NOTE: z-index comes from design-tokens.json via var(--z-index-dropdown) */
+    --dropdown-top: 0px;
+    --dropdown-left: 0px;
+    --dropdown-width: 0px;
+
+    /* 🏢 ENTERPRISE: Entity List Column Tokens - Dark Mode (same values)
+       @see src/styles/design-tokens.ts - ENTITY_LIST_TOKENS */
+    --entity-list-min: 300px;
+    --entity-list-max: 420px;
+    --entity-list-scrollbar-space: 8px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    position: relative;
+  }
+}
+
+/* ΔΟΛΟΦΟΝΟΣ CURSOR για τον viewer */
+.dxf-viewer-root,
+.dxf-viewer-root * {
+  cursor: none !important;
+}
+
+/* 🎯 DROPDOWN CONTACT CARDS - ENTERPRISE BLUE BACKGROUND */
+/* ✅ ENTERPRISE: Using beautiful blue shades (no grey/white) */
+[data-dropdown-contact-item="true"] {
+  background-color: hsl(213, 88%, 96%) !important; /* ✅ ENTERPRISE: Beautiful blue (was grey) */
+  background: hsl(213, 88%, 96%) !important; /* Double override για safety */
+  background-image: none !important; /* Prevent any background images */
+}
+
+[data-dropdown-contact-item="true"]:hover {
+  background-color: hsl(212, 85%, 93%) !important; /* ✅ ENTERPRISE: Rich blue hover (was grey) */
+  background: hsl(212, 85%, 93%) !important;
+}
+
+/* Special case για highlighted items (enhanced blue background) */
+[data-dropdown-contact-item="true"].bg-blue-100,
+[data-dropdown-contact-item="true"][class*="bg-blue"] {
+  background-color: hsl(211, 82%, 90%) !important; /* ✅ ENTERPRISE: Vibrant blue selection */
+  background: hsl(211, 82%, 90%) !important;
+}
+
+/* 🔥 UNIVERSAL MOBILE OVERFLOW PROTECTION */
+@layer utilities {
+  /* ♿ Screen Reader Only - WCAG 2.1 AA Compliance */
+  .sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  /* Hide scrollbars while maintaining scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Safari and Chrome */
+  }
+
+  /* Mobile slide-in animations */
+  @keyframes slide-in-from-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-out-to-right {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-in {
+    animation-fill-mode: both;
+  }
+
+  .slide-in-from-right {
+    animation-name: slide-in-from-right;
+  }
+
+  .slide-out-to-right {
+    animation-name: slide-out-to-right;
+  }
+
+  .duration-300 {
+    animation-duration: 300ms;
+  }
+
+  /* Force all containers to respect viewport boundaries */
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Prevent horizontal overflow on mobile */
+  /* 🏢 ENTERPRISE FIX: Removed 'div' from selector - it was overriding
+     Tailwind max-w-[...] classes and causing EntityListColumn to be full-width.
+     @see local_4.log analysis for details */
+  .container,
+  [class*="container"],
+  header,
+  main,
+  section {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Mobile-specific fixes */
+  @media (max-width: 640px) {
+    /* Force all flex containers to wrap and constrain */
+    .flex {
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+
+    /* Force all grid containers to fit viewport */
+    .grid {
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+
+    /* Constrain all text elements */
+    /* 🏢 ENTERPRISE FIX: Removed 'div' - it overrides Tailwind max-w-[...] classes */
+    h1, h2, h3, h4, h5, h6, p, span {
+      max-width: 100% !important;
+      word-wrap: break-word !important;
+      overflow-wrap: break-word !important;
+    }
+
+    /* Force sidebar to hide on mobile if needed */
+    [data-sidebar] {
+      max-width: 100vw !important;
+    }
+  }
+}
+
+/* =============================================================
+   MOBILE CONTACTS SEARCH FOCUS FEATURE
+   ============================================================= */
+
+/* Mobile Search Focus Feature for Contacts Header */
+@media (max-width: 767px) {
+  .contacts-header-mobile-container:has(input:focus) > div > div > div:first-child {
+    display: none !important;
+  }
+
+  .contacts-header-mobile-container:has(input:focus) > div > div > div:last-child {
+    display: none !important;
+  }
+
+  .contacts-header-mobile-container:has(input:focus) > div > div > div:nth-child(2) {
+    flex: 1 !important;
+    max-width: 100% !important;
+  }
+}
+
+/* =============================================================
+   FINAL NUCLEAR SOLUTION - HIDE ALL ARROW INDICATORS
+   ============================================================= */
+
+/* Hide ALL possible scrollbar arrows and indicators */
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE */
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+}
+
+*::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* 🏢 ENTERPRISE: Hide Unicode triangle characters via data attributes */
+/* Modern replacement for :contains() using data attributes */
+[data-hide-arrows="true"] span,
+[data-hide-arrows="true"] div,
+.hide-unicode-arrows,
+*[data-text-content*="arrow"],
+*[aria-label*="arrow"],
+*[title*="arrow"] {
+  display: none !important;
+  font-size: 0 !important;
+  color: transparent !important;
+  visibility: hidden !important;
+}
+
+/* 🏢 ENTERPRISE: Hide CSS generated arrow content */
+/* Modern approach: Use specific classes instead of content attribute selectors */
+.hide-arrow-before::before,
+.hide-arrow-after::after,
+[data-hide-arrow-content="true"]::before,
+[data-hide-arrow-content="true"]::after {
+  content: "" !important;
+  display: none !important;
+}
+
+/* 🏢 ENTERPRISE: Remove border-based arrows via class targeting */
+/* Modern approach: Use specific classes instead of style attribute selectors */
+.remove-triangle-borders,
+[data-remove-arrows="true"],
+.arrow-border-reset {
+  border: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+}
+
+/* 🏢 ENTERPRISE: Lucide icons are managed by design tokens system
+   See: src/hooks/useIconSizes.ts for centralized icon sizing
+   NOTE: Previously had CSS hiding rules here - REMOVED as anti-pattern */
+
+/* =============================================================
+   DEBUG PANEL KILLER - FORCE HIDE ALL DEBUG PANELS
+   ============================================================= */
+
+/**
+ * 🚫 DEBUG PANEL KILLER - Force Hide All Debug Panels
+ *
+ * This CSS section contains aggressive rules to hide any debug panels
+ * that might be appearing due to browser cache or other issues.
+ */
+
+/* Hide any element containing "OVERLAY" and "TOOLS" */
+[data-debug*="overlay" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide any element containing "DEBUG" */
+[data-debug*="debug" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide elements with green borders that might be debug panels */
+div[style*="border-color: green" i],
+div[style*="border: 2px solid green" i],
+div[style*="border: 1px solid green" i] {
+  display: none !important;
+}
+
+/* [REMOVED] Invalid CSS - :has-text() is Playwright selector, not CSS */
+/* Use data attributes or classes instead if you need to hide specific elements */
+
+/* CSS4 selector fallback - hide divs containing debug-related text */
+div[class*="debug" i],
+div[id*="debug" i],
+div[class*="overlay-debug" i],
+div[id*="overlay-debug" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide DraggableOverlayToolbar completely */
+div[data-component="DraggableOverlayToolbar"],
+div[class*="DraggableOverlayToolbar" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Nuclear option - hide any fixed positioned div with green styling */
+div[style*="position: fixed" i][style*="green" i] {
+  display: none !important;
+}
+
+/* Hide any div with z-index 99999 that might be a debug overlay */
+/* ⚠️ EXCEPTION: Next.js error overlay must remain visible and interactive */
+div[style*="z-index: 99999" i]:not([class*="nextjs"]):not([id*="nextjs"]):not([data-nextjs]) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 🏢 ENTERPRISE: Next.js Error Overlay - Ensure visibility & interactivity */
+/* This ensures the error overlay is NEVER hidden by debug panel killer rules above */
+[data-nextjs-dialog],
+[data-nextjs-dialog-overlay],
+[data-nextjs-dialog-content],
+nextjs-portal,
+#__next-build-watcher,
+[class*="nextjs-toast"],
+[class*="Toast"],
+/* Next.js 15+ specific selectors */
+[data-nextjs-codeframe],
+[data-nextjs-terminal],
+[data-nextjs-call-stack] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 2147483647 !important; /* Maximum z-index - above EVERYTHING */
+  user-select: text !important; /* Allow text selection */
+  -webkit-user-select: text !important;
+}
+
+/* =============================================================
+   DROPDOWN Z-INDEX OVERRIDES & ENTERPRISE STYLING
+   ============================================================= */
+
+@layer base {
+  /* Κρατάει μόνιμα χώρο για scrollbar - αποτρέπει shift εξ' αρχής */
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  /* Override scroll lock χωρίς side effects */
+  body[data-scroll-locked] {
+    --removed-body-scroll-bar-size: 0px !important;  /* Μηδενίζει το compensation width */
+    margin-right: 0 !important;                      /* Ακυρώνει extra margin */
+    padding-right: 0 !important;                     /* Extra για padding conflicts */
+  }
+}
+
+/* ✅ ENTERPRISE: Force high z-index for Radix Select Content using centralized system */
+[data-radix-select-content] {
+  z-index: var(--z-index-dropdown);
+  min-width: 320px !important;
+  width: 320px !important;
+  max-width: 400px !important;
+}
+
+/* ✅ ENTERPRISE: Extra high z-index for obligations page dropdowns using centralized system */
+/* Ensure project dropdown appears above labels in obligations/new page */
+[data-radix-select-content],
+.radix-select-content,
+[data-state="open"][data-radix-select-content] {
+  z-index: var(--z-index-dropdown);
+  position: fixed !important;
+}
+
+/* ✅ ENTERPRISE: Extra protection for Select Portal containers */
+[data-radix-portal] {
+  z-index: var(--z-index-dropdown);
+}
+
+/* =============================================================
+   🏢 ENTERPRISE: Next.js Error Overlay - FULL INTERACTIVITY
+
+   Ensures the error overlay is ALWAYS:
+   - Above all other elements (z-index: 2147483647)
+   - Fully clickable (pointer-events: auto)
+   - Text selectable (user-select: text)
+   ============================================================= */
+
+/* Main Next.js portal container - allow pass-through by default */
+nextjs-portal,
+NEXTJS-PORTAL {
+  pointer-events: none !important;
+}
+
+/* But ENABLE full interaction for error dialogs and their content */
+nextjs-portal > *,
+NEXTJS-PORTAL > *,
+[data-nextjs-dialog],
+[data-nextjs-dialog-overlay],
+[data-nextjs-dialog-content],
+[data-nextjs-toast],
+[class*="nextjs-toast"],
+[class*="Toast"],
+nextjs-portal dialog,
+nextjs-portal [role="dialog"],
+nextjs-portal [role="alertdialog"] {
+  pointer-events: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  z-index: 2147483647 !important;
+}
+
+/* Ensure ALL elements inside the dialog are interactive */
+[data-nextjs-dialog] *,
+[data-nextjs-dialog-content] *,
+nextjs-portal dialog *,
+nextjs-portal [role="dialog"] *,
+nextjs-portal [role="alertdialog"] * {
+  pointer-events: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Buttons and links must be clickable */
+nextjs-portal button,
+nextjs-portal a,
+nextjs-portal [role="button"],
+[data-nextjs-dialog] button,
+[data-nextjs-dialog] a {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Code blocks must be selectable */
+nextjs-portal pre,
+nextjs-portal code,
+[data-nextjs-dialog] pre,
+[data-nextjs-dialog] code {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* =============================================================
+   🏢 ENTERPRISE: Next.js "Issue" Button (Bottom Left)
+
+   The red "1 Issue" button at bottom-left must be ALWAYS clickable
+   ============================================================= */
+
+/* Next.js build indicator / issue button */
+[data-nextjs-build-indicator],
+[class*="Toast"],
+[class*="toast"],
+button[data-nextjs-toast],
+[data-nextjs-toast-wrapper],
+/* Target by position - bottom left fixed elements */
+div[style*="position: fixed"][style*="bottom"][style*="left"],
+/* Next.js 15+ issues indicator */
+[data-nextjs-issues],
+[class*="NextjsIssues"],
+/* Generic dev overlay buttons */
+button[style*="position: fixed"][style*="bottom"] {
+  z-index: 2147483647 !important; /* Maximum z-index */
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  isolation: isolate !important;
+}
+
+/* Ensure the container that holds the button is also interactive */
+div:has(> button[data-nextjs-toast]),
+div:has(> [data-nextjs-build-indicator]) {
+  pointer-events: auto !important;
+  z-index: 2147483647 !important;
+}
+
+/* 🚨 CRITICAL: Prevent ANY element from blocking the bottom-left corner */
+/* This creates a "safe zone" for the Next.js issue button */
+@supports selector(:has(*)) {
+  /* Any fixed positioned element at bottom-left that is NOT a Next.js element
+     should NOT block pointer events in that area */
+  body > div:not(nextjs-portal):not([data-nextjs-dialog]) {
+    /* Allow clicks to pass through to elements below */
+  }
+}
+
+/* Force ALL Next.js dev tools to be interactive and on top */
+nextjs-portal,
+NEXTJS-PORTAL,
+[id^="__next"],
+[class^="__next"],
+#__next-build-watcher {
+  pointer-events: auto !important;
+  z-index: 2147483647 !important;
+}
+
+/* Specific rule for the small red issue button */
+/* It's typically a button or div at position: fixed; bottom: 10px; left: 10px */
+body > div[style*="fixed"][style*="bottom: 1"][style*="left: 1"],
+body > div[style*="fixed"][style*="bottom:1"][style*="left:1"],
+body > button[style*="fixed"][style*="bottom"],
+/* Shadow DOM elements */
+::part(toast),
+::part(issue-button) {
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* ✅ ENTERPRISE: Force high z-index for Radix Popper wrapper */
+[data-radix-popper-content-wrapper] {
+  z-index: var(--z-index-dropdown);
+}
+
+/* Force width for Radix Select Viewport */
+[data-radix-select-viewport] {
+  min-width: 320px !important;
+  width: 320px !important;
+}
+
+/* Better styling for Select Items */
+[data-radix-select-item] {
+  padding: 12px 16px !important;
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 300px !important;
+}
+
+/* Select item content wrapper */
+[data-radix-select-item] > div {
+  width: 100% !important;
+  min-width: 280px !important;
+}
+
+/* Select item text should not wrap */
+[data-radix-select-item] span {
+  white-space: nowrap !important;
+  flex: 1 !important;
+}
+
+/* ✅ ENTERPRISE: Contact item styling using CSS variables (NO HARDCODED VALUES) */
+[data-dropdown-contact-item="true"] {
+  background-color: hsl(var(--bg-secondary)) !important;
+}
+
+[data-dropdown-contact-item="true"]:hover {
+  background-color: hsl(var(--bg-hover)) !important;
+}
+
+[data-dropdown-contact-item="true"].bg-blue-100 {
+  background-color: hsl(var(--bg-selected)) !important;
+}
+
+/* ✅ ENTERPRISE: Use centralized modal z-index (NO HARDCODED VALUES) */
+[data-custom-relationship-select="true"] {
+  z-index: var(--z-index-dropdown);
+  position: fixed !important;
+}
+
+/* ✅ ENTERPRISE: Ensure no parent containers interfere with portal dropdowns */
+[data-custom-dropdown-portal="true"] {
+  z-index: var(--z-index-dropdown);
+  position: fixed !important;
+  isolation: isolate !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Prevent any parent container stacking context from interfering */
+body {
+  isolation: auto !important;
+}
+
+/* ✅ ENTERPRISE: Force portal dropdowns to always be on top using centralized system */
+[data-custom-relationship-select="true"],
+[data-custom-dropdown-portal="true"] {
+  z-index: var(--z-index-dropdown); /* 🏢 ENTERPRISE: From design-tokens.json */
+}
+
+/* =============================================================
+   🏢 ENTERPRISE NOTE: CHEVRON/ARROW ICONS
+
+   Chevron icons are managed by the centralized design tokens system:
+   - Icon sizes: src/hooks/useIconSizes.ts
+   - Design tokens: src/styles/design-tokens.ts
+
+   REMOVED: Previous CSS rules that were hiding chevron icons globally.
+   This was an anti-pattern introduced during centralization work.
+   Components should manage their own icon visibility through props.
+   ============================================================= */
+
+/* =============================================================
+   FIX TEXT WRAPPING ISSUE - NO MORE "ARROWS" FROM BROKEN WORDS
+   ============================================================= */
+
+/* Prevent text wrapping in relationship headers */
+/* [REMOVED] :contains() is jQuery/Sizzle selector, not valid CSS */
+[class*="card"] h1,
+[class*="card"] h2,
+[class*="card"] h3,
+[class*="CardTitle"],
+[class*="card-title"] {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* Specific fix for relationship card titles */
+.card .card-title,
+[data-radix-collection-item] *,
+*[role="heading"] {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  hyphens: none !important;
+}
+
+/* Ensure container has enough space */
+.card-header,
+.card .header,
+*[class*="CardHeader"] {
+  min-width: max-content !important;
+  overflow: visible !important;
+}
+
+/* =============================================================
+   ENTERPRISE CONTACT DROPDOWN SCROLLING - EXCEPTION RULES
+
+   Allow scrolling specifically for the enterprise contact dropdown
+   These rules OVERRIDE the nuclear scrollbar hiding above
+   ============================================================= */
+
+/* Show scrollbar for enterprise contact dropdown */
+[data-enterprise-contact-dropdown="true"] {
+  scrollbar-width: thin !important; /* Firefox */
+  scrollbar-color: #cbd5e1 transparent !important; /* Firefox */
+  -ms-overflow-style: auto !important; /* Internet Explorer 10+ */
+}
+
+/* Show webkit scrollbar for enterprise dropdown - FORCE OVERRIDE */
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar,
+.overflow-y-scroll::-webkit-scrollbar,
+div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: rgba(0,0,0,0.1) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track,
+.overflow-y-scroll::-webkit-scrollbar-track,
+div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track {
+  display: block !important;
+  background: rgba(0,0,0,0.05) !important;
+  border-radius: 4px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb,
+.overflow-y-scroll::-webkit-scrollbar-thumb,
+div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb {
+  display: block !important;
+  background: #94a3b8 !important;
+  border-radius: 4px !important;
+  transition: background-color 0.2s ease !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* Ensure the dropdown container allows overflow */
+[data-enterprise-contact-dropdown="true"] {
+  overflow-y: auto !important;
+  max-height: 300px !important;
+}
+
+/* =============================================================
+   RADICAL SCROLLBAR OVERRIDE - FORCE SCROLLBAR FOR DROPDOWN
+
+   This completely overrides the nuclear option above for our specific dropdown
+   ============================================================= */
+
+/* Force show scrollbar with MAXIMUM specificity */
+body [data-enterprise-contact-dropdown="true"],
+body div[data-enterprise-contact-dropdown="true"],
+div[data-enterprise-contact-dropdown="true"].overflow-y-scroll {
+  scrollbar-width: thin !important;
+  scrollbar-color: #94a3b8 rgba(0,0,0,0.1) !important;
+  -ms-overflow-style: auto !important;
+  overflow-y: scroll !important;
+}
+
+/* FORCE webkit scrollbar with maximum specificity */
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar,
+body div[data-enterprise-contact-dropdown="true"]::-webkit-scrollbar,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar {
+  display: block !important;
+  width: 10px !important;
+  height: 10px !important;
+  background: rgba(0,0,0,0.1) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-track {
+  display: block !important;
+  background: rgba(0,0,0,0.05) !important;
+  border-radius: 5px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb {
+  display: block !important;
+  background: #64748b !important;
+  border-radius: 5px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover,
+html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hover {
+  background: #475569 !important;
+}
+
+/* =============================================================
+   ENTERPRISE NAVIGATION SCROLLBAR - EXCEPTION RULES
+
+   Allow visible scrolling for navigation column lists
+   These rules OVERRIDE the nuclear scrollbar hiding above
+   ============================================================= */
+
+/* 🏢 ENTERPRISE: Navigation column scrollbar visibility */
+/* Maximum specificity to override nuclear scrollbar hiding */
+/* scrollbar-gutter: stable reserves space even without scrollbar */
+html body [data-navigation-scroll="true"],
+body [data-navigation-scroll="true"],
+[data-navigation-scroll="true"] {
+  scrollbar-width: thin !important; /* Firefox */
+  scrollbar-color: #94a3b8 transparent !important; /* Firefox - slate-400 */
+  -ms-overflow-style: auto !important; /* IE */
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important; /* Prevent scroll chaining to parent */
+  scrollbar-gutter: stable !important; /* Reserve scrollbar space even without overflow */
+}
+
+/* Dark mode scrollbar colors */
+.dark [data-navigation-scroll="true"] {
+  scrollbar-color: #64748b transparent !important; /* slate-500 for dark mode */
+}
+
+/* Force webkit scrollbar for navigation lists */
+body [data-navigation-scroll="true"]::-webkit-scrollbar,
+html body [data-navigation-scroll="true"]::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+  background: transparent !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body [data-navigation-scroll="true"]::-webkit-scrollbar-track,
+html body [data-navigation-scroll="true"]::-webkit-scrollbar-track {
+  display: block !important;
+  background: rgba(0,0,0,0.03) !important;
+  border-radius: 4px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Dark mode track */
+.dark body [data-navigation-scroll="true"]::-webkit-scrollbar-track,
+html body.dark [data-navigation-scroll="true"]::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.05) !important;
+}
+
+body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb,
+html body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb {
+  display: block !important;
+  background: #94a3b8 !important; /* slate-400 */
+  border-radius: 4px !important;
+  transition: background-color 0.2s ease !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Dark mode thumb */
+.dark body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb,
+html body.dark [data-navigation-scroll="true"]::-webkit-scrollbar-thumb {
+  background: #64748b !important; /* slate-500 */
+}
+
+body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb:hover,
+html body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb:hover {
+  background: #64748b !important; /* slate-500 on hover */
+}
+
+/* Dark mode thumb hover */
+.dark body [data-navigation-scroll="true"]::-webkit-scrollbar-thumb:hover,
+html body.dark [data-navigation-scroll="true"]::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important; /* slate-400 on hover */
+}
+
+/* Hide scrollbar buttons (arrows) */
+body [data-navigation-scroll="true"]::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+body [data-navigation-scroll="true"]::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* =============================================================
+   CANVAS Z-INDEX STACKING SYSTEM - DXF VIEWER
+   ============================================================= */
+
+/**
+ * 🎯 CANVAS Z-INDEX FIX - Following ChatGPT5 recommendation
+ *
+ * Professional canvas layering for DXF viewer with proper z-index management
+ */
+
+/* Canvas stack container */
+.canvas-stack {
+  position: relative;
+}
+
+/* All canvas elements in stack */
+.canvas-stack > canvas,
+.canvas-stack > [data-canvas-type] {
+  position: absolute;
+  inset: 0;
+}
+
+/* Force z-index order with !important */
+/* 🔧 FIX (2026-02-02): CORRECTED z-index order - DxfCanvas MUST be ABOVE LayerCanvas! */
+[data-canvas-type="layer"] {
+  z-index: 0 !important; /* Background layer - colored overlays */
+}
+
+[data-canvas-type="dxf"] {
+  z-index: 10 !important; /* Foreground layer - DXF drawing + mouse events */
+}

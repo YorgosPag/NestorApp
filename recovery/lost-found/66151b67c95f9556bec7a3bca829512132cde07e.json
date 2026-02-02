@@ -1,0 +1,27 @@
+{
+  "testName": "origin-800x600",
+  "passed": true,
+  "mismatchedPixels": 0,
+  "totalPixels": 480000,
+  "mismatchRate": 0,
+  "threshold": 0.0001,
+  "dimensions": {
+    "width": 800,
+    "height": 600
+  },
+  "timestamp": "2026-02-02T14:24:20.565Z",
+  "duration": 4704,
+  "artifacts": {
+    "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+    "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.baseline.png",
+    "actual": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.actual.png",
+    "diff": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.diff.png",
+    "report": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.report.json"
+  },
+  "metadata": {
+    "overlayType": "origin",
+    "seed": 42,
+    "maxMismatchPixels": 24,
+    "deterministic": true
+  }
+}

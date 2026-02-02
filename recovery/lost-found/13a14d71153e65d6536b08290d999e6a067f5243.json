@@ -1,0 +1,27 @@
+{
+  "testName": "combined-320x240",
+  "passed": true,
+  "mismatchedPixels": 0,
+  "totalPixels": 76800,
+  "mismatchRate": 0,
+  "threshold": 0.0002,
+  "dimensions": {
+    "width": 320,
+    "height": 240
+  },
+  "timestamp": "2026-02-02T14:24:48.780Z",
+  "duration": 661,
+  "artifacts": {
+    "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+    "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.baseline.png",
+    "actual": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.actual.png",
+    "diff": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.diff.png",
+    "report": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.report.json"
+  },
+  "metadata": {
+    "overlayType": "combined",
+    "seed": 42,
+    "maxMismatchPixels": 15,
+    "deterministic": true
+  }
+}

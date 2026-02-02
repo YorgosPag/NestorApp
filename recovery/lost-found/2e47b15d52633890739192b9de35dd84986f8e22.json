@@ -1,0 +1,27 @@
+{
+  "testName": "crosshair-800x800",
+  "passed": true,
+  "mismatchedPixels": 0,
+  "totalPixels": 640000,
+  "mismatchRate": 0,
+  "threshold": 0.0001,
+  "dimensions": {
+    "width": 800,
+    "height": 800
+  },
+  "timestamp": "2026-02-02T14:24:48.115Z",
+  "duration": 4977,
+  "artifacts": {
+    "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+    "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.baseline.png",
+    "actual": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.actual.png",
+    "diff": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.diff.png",
+    "report": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.report.json"
+  },
+  "metadata": {
+    "overlayType": "crosshair",
+    "seed": 42,
+    "maxMismatchPixels": 32,
+    "deterministic": true
+  }
+}

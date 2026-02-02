@@ -1,0 +1,205 @@
+{
+  "timestamp": "2026-02-02T14:24:55.001Z",
+  "duration": 47922,
+  "total": 7,
+  "passed": 7,
+  "failed": 0,
+  "skipped": 0,
+  "results": [
+    {
+      "testName": "combined-800x600",
+      "passed": true,
+      "mismatchedPixels": 0,
+      "totalPixels": 480000,
+      "mismatchRate": 0,
+      "threshold": 0.0001,
+      "dimensions": {
+        "width": 800,
+        "height": 600
+      },
+      "timestamp": "2026-02-02T14:24:15.742Z",
+      "duration": 8653,
+      "artifacts": {
+        "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+        "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-800x600.baseline.png",
+        "actual": "C:\\Nestor_Pagonis\\reports\\visual\\combined-800x600.actual.png",
+        "diff": "C:\\Nestor_Pagonis\\reports\\visual\\combined-800x600.diff.png",
+        "report": "C:\\Nestor_Pagonis\\reports\\visual\\combined-800x600.report.json"
+      },
+      "metadata": {
+        "overlayType": "combined",
+        "seed": 42,
+        "maxMismatchPixels": 48,
+        "deterministic": true
+      }
+    },
+    {
+      "testName": "origin-800x600",
+      "passed": true,
+      "mismatchedPixels": 0,
+      "totalPixels": 480000,
+      "mismatchRate": 0,
+      "threshold": 0.0001,
+      "dimensions": {
+        "width": 800,
+        "height": 600
+      },
+      "timestamp": "2026-02-02T14:24:20.565Z",
+      "duration": 4704,
+      "artifacts": {
+        "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+        "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.baseline.png",
+        "actual": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.actual.png",
+        "diff": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.diff.png",
+        "report": "C:\\Nestor_Pagonis\\reports\\visual\\origin-800x600.report.json"
+      },
+      "metadata": {
+        "overlayType": "origin",
+        "seed": 42,
+        "maxMismatchPixels": 24,
+        "deterministic": true
+      }
+    },
+    {
+      "testName": "grid-800x600",
+      "passed": true,
+      "mismatchedPixels": 0,
+      "totalPixels": 480000,
+      "mismatchRate": 0,
+      "threshold": 0.0001,
+      "dimensions": {
+        "width": 800,
+        "height": 600
+      },
+      "timestamp": "2026-02-02T14:24:25.531Z",
+      "duration": 4954,
+      "artifacts": {
+        "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+        "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\grid-800x600.baseline.png",
+        "actual": "C:\\Nestor_Pagonis\\reports\\visual\\grid-800x600.actual.png",
+        "diff": "C:\\Nestor_Pagonis\\reports\\visual\\grid-800x600.diff.png",
+        "report": "C:\\Nestor_Pagonis\\reports\\visual\\grid-800x600.report.json"
+      },
+      "metadata": {
+        "overlayType": "grid",
+        "seed": 42,
+        "maxMismatchPixels": 40,
+        "deterministic": true
+      }
+    },
+    {
+      "testName": "combined-1920x1080",
+      "passed": true,
+      "mismatchedPixels": 0,
+      "totalPixels": 2073600,
+      "mismatchRate": 0,
+      "threshold": 0.0001,
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "timestamp": "2026-02-02T14:24:43.126Z",
+      "duration": 17588,
+      "artifacts": {
+        "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+        "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.baseline.png",
+        "actual": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.actual.png",
+        "diff": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.diff.png",
+        "report": "C:\\Nestor_Pagonis\\reports\\visual\\combined-1920x1080.report.json"
+      },
+      "metadata": {
+        "overlayType": "combined",
+        "seed": 42,
+        "maxMismatchPixels": 207,
+        "deterministic": true
+      }
+    },
+    {
+      "testName": "crosshair-800x800",
+      "passed": true,
+      "mismatchedPixels": 0,
+      "totalPixels": 640000,
+      "mismatchRate": 0,
+      "threshold": 0.0001,
+      "dimensions": {
+        "width": 800,
+        "height": 800
+      },
+      "timestamp": "2026-02-02T14:24:48.115Z",
+      "duration": 4977,
+      "artifacts": {
+        "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+        "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.baseline.png",
+        "actual": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.actual.png",
+        "diff": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.diff.png",
+        "report": "C:\\Nestor_Pagonis\\reports\\visual\\crosshair-800x800.report.json"
+      },
+      "metadata": {
+        "overlayType": "crosshair",
+        "seed": 42,
+        "maxMismatchPixels": 32,
+        "deterministic": true
+      }
+    },
+    {
+      "testName": "combined-320x240",
+      "passed": true,
+      "mismatchedPixels": 0,
+      "totalPixels": 76800,
+      "mismatchRate": 0,
+      "threshold": 0.0002,
+      "dimensions": {
+        "width": 320,
+        "height": 240
+      },
+      "timestamp": "2026-02-02T14:24:48.780Z",
+      "duration": 661,
+      "artifacts": {
+        "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+        "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.baseline.png",
+        "actual": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.actual.png",
+        "diff": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.diff.png",
+        "report": "C:\\Nestor_Pagonis\\reports\\visual\\combined-320x240.report.json"
+      },
+      "metadata": {
+        "overlayType": "combined",
+        "seed": 42,
+        "maxMismatchPixels": 15,
+        "deterministic": true
+      }
+    },
+    {
+      "testName": "grid-1024x768",
+      "passed": true,
+      "mismatchedPixels": 0,
+      "totalPixels": 786432,
+      "mismatchRate": 0,
+      "threshold": 0.0001,
+      "dimensions": {
+        "width": 1024,
+        "height": 768
+      },
+      "timestamp": "2026-02-02T14:24:54.819Z",
+      "duration": 6034,
+      "artifacts": {
+        "directory": "C:\\Nestor_Pagonis\\reports\\visual",
+        "baseline": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.baseline.png",
+        "actual": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.actual.png",
+        "diff": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.diff.png",
+        "report": "C:\\Nestor_Pagonis\\reports\\visual\\grid-1024x768.report.json"
+      },
+      "metadata": {
+        "overlayType": "grid",
+        "seed": 42,
+        "maxMismatchPixels": 78,
+        "deterministic": true
+      }
+    }
+  ],
+  "summary": {
+    "avgMismatchRate": 0,
+    "maxMismatchRate": 0,
+    "totalArtifacts": 21,
+    "artifactSize": 172355
+  }
+}
