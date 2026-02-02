@@ -20,13 +20,14 @@
  * - Tenant isolation: Query filtered by ctx.companyId
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // ============================================================================
 // TYPES - Project List Response
@@ -267,6 +268,101 @@ export async function GET(request: NextRequest) {
     {
       permissions: 'projects:projects:view'
     }
+  );
+
+  return handler(request);
+}
+
+// ============================================================================
+// POST - Create Single Project (Admin SDK)
+// ============================================================================
+
+interface ProjectCreatePayload {
+  name: string;
+  title?: string;
+  description?: string;
+  status?: string;
+  companyId: string;
+  company?: string;
+  address?: string;
+  city?: string;
+}
+
+interface ProjectCreateResponse {
+  projectId: string;
+  project: ProjectCreatePayload & { id: string };
+}
+
+/**
+ * 🎯 ENTERPRISE: Create new project via Admin SDK
+ *
+ * 🔒 SECURITY: Firestore rules block client-side writes (allow write: if false)
+ *              This endpoint uses Admin SDK to bypass rules with proper auth
+ * @permission projects:projects:create
+ */
+export async function POST(request: NextRequest) {
+  const handler = withAuth<ApiSuccessResponse<ProjectCreateResponse> | NextResponse>(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      try {
+        // 🏢 ENTERPRISE: Parse request body
+        const body: ProjectCreatePayload = await req.json();
+
+        // 🔒 SECURITY: Override companyId with authenticated user's company
+        // This prevents cross-tenant project creation
+        const sanitizedData = {
+          ...body,
+          companyId: ctx.companyId,  // 🔒 FORCED: Always use auth context companyId
+          progress: 0,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          createdBy: ctx.uid,
+        };
+
+        // 🏢 ENTERPRISE: Remove undefined fields (Firestore doesn't accept undefined)
+        const cleanData = Object.fromEntries(
+          Object.entries(sanitizedData).filter(([, value]) => value !== undefined)
+        );
+
+        console.log(`🎯 [Projects] Creating new project for tenant ${ctx.companyId}...`);
+
+        // 🏗️ CREATE: Use Admin SDK (bypasses Firestore rules)
+        const docRef = await adminDb.collection(COLLECTIONS.PROJECTS).add(cleanData);
+
+        console.log(`✅ [Projects] Project created with ID: ${docRef.id}`);
+
+        // 📊 Audit log
+        await logAuditEvent(ctx, 'data_created', 'projects', 'api', {
+          metadata: {
+            projectId: docRef.id,
+            projectName: body.name,
+          }
+        });
+
+        // 🔄 Invalidate cache for this tenant
+        const cache = EnterpriseAPICache.getInstance();
+        cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
+        cache.delete(`${CACHE_KEY_PREFIX}:all`);
+
+        return apiSuccess<ProjectCreateResponse>(
+          {
+            projectId: docRef.id,
+            project: { ...body, id: docRef.id }
+          },
+          'Project created successfully'
+        );
+
+      } catch (error) {
+        console.error('❌ [Projects] Error creating project:', error);
+        return NextResponse.json(
+          {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to create project'
+          },
+          { status: 500 }
+        );
+      }
+    },
+    { permissions: 'projects:projects:create' }
   );
 
   return handler(request);

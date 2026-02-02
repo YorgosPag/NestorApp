@@ -2,19 +2,20 @@
  * 🏗️ PROJECTS BY COMPANY ENDPOINT
  *
  * @module api/projects/by-company/[companyId]
- * @version 2.0.0
- * @updated 2026-01-15 - AUTHZ PHASE 2: CRITICAL SECURITY FIX
+ * @version 2.1.0
+ * @updated 2026-02-02 - SUPER_ADMIN CROSS-TENANT ACCESS
  *
- * 🚨 SECURITY FIX:
+ * 🚨 SECURITY:
  * - Migrated from Client SDK to Admin SDK
  * - Added withAuth + RBAC protection
- * - CRITICAL: URL param [companyId] is IGNORED for security
- * - Always uses ctx.companyId from authenticated user
- * - Prevents cross-tenant data breach via URL manipulation
+ * - URL param [companyId] honored ONLY for super_admin
+ * - Regular users: Always uses ctx.companyId (tenant isolation)
+ * - super_admin: Can access any company's projects via URL param
  *
- * 🔒 SECURITY:
+ * 🔒 SECURITY MODEL:
  * - Permission: projects:projects:view
- * - Tenant isolation: Uses ctx.companyId ONLY (URL param ignored)
+ * - Tenant isolation: Regular users restricted to own company
+ * - Cross-tenant: super_admin only (with audit logging)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -24,6 +25,8 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
+// 🏢 ENTERPRISE: Role bypass check for super_admin cross-tenant access
+import { isRoleBypass } from '@/lib/auth/roles';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,13 +62,22 @@ export async function GET(
 
   const handler = withAuth<ByCompanyResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ByCompanyResponse>> => {
-      // 🔒 SECURITY: Use authenticated user's companyId ONLY
-      const companyId = ctx.companyId;
       const startTime = Date.now();
 
-      // 🚨 SECURITY: Log URL param mismatch (informational only - no PII)
-      if (urlCompanyId !== companyId) {
-        console.warn(`🚫 URL param mismatch detected (using authenticated scope)`);
+      // 🏢 ENTERPRISE: Super admin can access any company's projects
+      // Regular users can only access their own company's projects
+      const isSuperAdmin = isRoleBypass(ctx.globalRole);
+
+      // 🔒 SECURITY: Use URL param ONLY for super_admin, otherwise use ctx.companyId
+      const companyId = isSuperAdmin ? urlCompanyId : ctx.companyId;
+
+      // 🚨 SECURITY: Log cross-tenant access by super_admin
+      if (urlCompanyId !== ctx.companyId) {
+        if (isSuperAdmin) {
+          console.log(`🔓 [SUPER_ADMIN] Cross-tenant access: ${ctx.email} accessing companyId=${urlCompanyId}`);
+        } else {
+          console.warn(`🚫 URL param mismatch detected (using authenticated scope)`);
+        }
       }
 
       try {
