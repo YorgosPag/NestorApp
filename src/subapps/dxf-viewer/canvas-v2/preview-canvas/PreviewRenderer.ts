@@ -153,6 +153,11 @@ export class PreviewRenderer {
   private isDirty = false;
   private dpr = 1;
 
+  // 🔍 DEBUG (2026-02-02): FPS counter for preview rendering investigation
+  private debugFpsCounter = 0;
+  private debugFpsLastTime = 0;
+  private debugFpsEnabled = false; // 🔧 DISABLED (2026-02-02): z-index fix confirmed working (12-17 FPS vs 3-5 FPS before)
+
   // ============================================================================
   // INITIALIZATION
   // ============================================================================
@@ -220,12 +225,17 @@ export class PreviewRenderer {
     viewport: Viewport,
     options?: PreviewRenderOptions
   ): void {
-    // 🔍 DEBUG (2026-02-01): Trace preview calls
-    console.log('🎨 [PreviewRenderer.drawPreview]', {
-      entityType: entity?.type,
-      hasTransform: !!transform,
-      viewport: viewport ? `${viewport.width}x${viewport.height}` : 'null'
-    });
+    // 🔍 DEBUG (2026-02-02): FPS counter - logs once per second
+    // Using console.error to FORCE bypass suppress-console.js filtering
+    if (this.debugFpsEnabled) {
+      const now = performance.now();
+      this.debugFpsCounter++;
+      if (now - this.debugFpsLastTime >= 1000) {
+        console.error(`📊 [PREVIEW FPS] ${this.debugFpsCounter} calls/sec | entity: ${entity?.type || 'null'}`);
+        this.debugFpsCounter = 0;
+        this.debugFpsLastTime = now;
+      }
+    }
 
     this.currentPreview = entity;
     this.currentTransform = transform;
@@ -277,7 +287,6 @@ export class PreviewRenderer {
    */
   render(): void {
     if (!this.ctx || !this.canvas) {
-      console.log('🎨 [PreviewRenderer.render] SKIP: no ctx or canvas');
       return;
     }
 
@@ -288,11 +297,6 @@ export class PreviewRenderer {
     // This prevents the "entities disappear" bug where we clear but don't redraw
     // because viewport is invalid (0x0)
     if (!this.currentPreview || !this.currentTransform || !this.currentViewport) {
-      console.log('🎨 [PreviewRenderer.render] SKIP: missing data', {
-        hasPreview: !!this.currentPreview,
-        hasTransform: !!this.currentTransform,
-        hasViewport: !!this.currentViewport
-      });
       this.isDirty = false;
       return;
     }
@@ -300,17 +304,9 @@ export class PreviewRenderer {
     // 🏢 ADR-163: Additional check - skip if viewport is invalid (0x0)
     // This can happen during component mount/unmount transitions
     if (this.currentViewport.width <= 0 || this.currentViewport.height <= 0) {
-      console.log('🎨 [PreviewRenderer.render] SKIP: invalid viewport', this.currentViewport);
       this.isDirty = false;
       return;
     }
-
-    // 🔍 DEBUG: Confirm rendering is happening
-    console.log('🎨 [PreviewRenderer.render] RENDERING:', {
-      type: this.currentPreview.type,
-      viewport: `${this.currentViewport.width}x${this.currentViewport.height}`,
-      canvasSize: `${this.canvas.width}x${this.canvas.height}`
-    });
 
     // Reset transform and clear
     ctx.setTransform(1, 0, 0, 1, 0, 0);

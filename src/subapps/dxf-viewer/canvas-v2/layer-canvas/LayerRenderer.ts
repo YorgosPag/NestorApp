@@ -28,8 +28,8 @@ import { UI_FONTS, RENDER_LINE_WIDTHS, buildUIFont, LINE_DASH_PATTERNS, UI_SIZE_
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-073: Centralized Midpoint Calculation
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-rendering-utils';
-// 🏢 ADR-102: Centralized Origin Markers
-import { renderOriginMarker } from '../../rendering/ui/origin/OriginMarkerUtils';
+// 🏢 ADR-102: Origin Markers - REMOVED from LayerRenderer (now rendered ONLY by DxfRenderer)
+// This eliminates dual-canvas alignment issues - single source of truth pattern
 // 🏢 ADR-075: Centralized Grip Size Multipliers
 // 🏢 ADR-106: Centralized Edge Grip Size Multipliers
 import { GRIP_SIZE_MULTIPLIERS, EDGE_GRIP_SIZE_MULTIPLIERS } from '../../rendering/grips/constants';
@@ -138,8 +138,8 @@ export class LayerRenderer {
       this.uiComposite.register('snap', () => new (require('../../rendering/ui/snap/SnapRenderer')).SnapRenderer(), 30, 'feedback');
       this.uiComposite.register('selection', () => this.selectionRenderer, 35, 'feedback'); // Use existing instance
 
-      // 🎯 DEBUG: Origin markers overlay (top-most z-index for debugging)
-      this.uiComposite.register('origin-markers', () => new (require('../../rendering/ui/origin/OriginMarkersRenderer')).OriginMarkersRenderer(), 1000, 'overlay');
+      // 🏢 ADR-102: Origin markers REMOVED - now rendered ONLY by DxfRenderer (single source of truth)
+      // this.uiComposite.register('origin-markers', ...) - REMOVED to eliminate dual-canvas alignment issues
     } catch (error) {
       console.error('🔥 LayerRenderer: Error initializing UI renderers:', error);
       // Continue with basic initialization even if UI renderers fail
@@ -229,8 +229,13 @@ export class LayerRenderer {
     // Clear canvas using unified utils
     CanvasUtils.clearCanvas(this.ctx, this.canvas, 'transparent');
 
-    // 🏢 ADR-102: Centralized Origin Marker (Blue inverted L-shape: BOTTOM + RIGHT)
-    renderOriginMarker(this.ctx, transform, viewport, { variant: 'layer' });
+    // 🏢 ENTERPRISE FIX (2026-02-01): Use ACTUAL canvas dimensions, not stale viewport prop!
+    const canvasRect = this.canvas.getBoundingClientRect();
+    const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
+
+    // 🏢 ADR-102: Origin Marker is now rendered ONLY by DxfRenderer (single source of truth)
+    // This eliminates alignment issues between two canvases trying to render the same marker
+    // The DXF canvas (z-index higher) renders the origin marker, visible through transparent Layer canvas
 
     this.ctx.save();
 
@@ -1166,28 +1171,9 @@ export class LayerRenderer {
       } as UIElementSettings);
     }
 
-    // 🎯 DEBUG: Origin Markers (always check global state)
-    // Read from global singleton to get current debug state
-    // 🏢 ENTERPRISE: Type assertion for debug overlay window global
-    interface OriginMarkersDebug {
-      getStatus: () => { enabled: boolean };
-    }
-    const originWin = window as Window & { originMarkersDebug?: OriginMarkersDebug };
-    if (typeof window !== 'undefined' && originWin.originMarkersDebug) {
-      const debugOverlay = originWin.originMarkersDebug;
-      const debugStatus = debugOverlay.getStatus();
-
-      if (debugStatus.enabled) {
-        // Import default settings
-        const { DEFAULT_ORIGIN_MARKERS_SETTINGS } = require('../../rendering/ui/origin/OriginMarkersTypes');
-
-        settings.set('origin-markers', {
-          ...DEFAULT_ORIGIN_MARKERS_SETTINGS,
-          enabled: true,
-          visible: true
-        } as UIElementSettings);
-      }
-    }
+    // 🏢 ADR-102: Origin Markers REMOVED from LayerRenderer
+    // Origin markers are now rendered ONLY by DxfRenderer (single source of truth)
+    // This eliminates dual-canvas alignment issues
 
     return settings;
   }
