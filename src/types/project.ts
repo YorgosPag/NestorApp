@@ -1,4 +1,5 @@
-
+// 🏢 ENTERPRISE: Multi-address support (ADR-167)
+import type { ProjectAddress } from './project/addresses';
 
 export type ProjectStatus = 'planning' | 'in_progress' | 'completed' | 'on_hold' | 'cancelled';
 
@@ -23,8 +24,16 @@ export interface Project {
   status: ProjectStatus;
   company: string;
   companyId: string;
+
+  // 🏢 LEGACY: Backward compatibility (kept for migration)
+  // Use addresses[] for new data, these for existing records
   address: string;
   city: string;
+
+  // 🏢 ENTERPRISE: Multi-address system (ADR-167)
+  /** Project addresses - supports multiple entrances, deliveries, etc. */
+  addresses?: ProjectAddress[];
+
   progress: number;
   totalValue: number;
   startDate?: string;
