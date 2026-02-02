@@ -30,6 +30,10 @@ export const formatDate = (date: Date | string | number, options?: Intl.DateTime
 
 /**
  * Format date and time according to current locale
+ *
+ * 🏢 ENTERPRISE: Handles both explicit style options (dateStyle/timeStyle)
+ * and granular options (year/month/day/hour/minute)
+ * Note: dateStyle/timeStyle cannot be combined with granular options
  */
 export const formatDateTime = (date: Date | string | number, options?: Intl.DateTimeFormatOptions): string => {
   if (!date) return '-';
@@ -41,16 +45,24 @@ export const formatDateTime = (date: Date | string | number, options?: Intl.Date
 
   const locale = getCurrentLocale();
 
-  const defaultOptions: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  };
+  // 🔒 ENTERPRISE: If dateStyle or timeStyle is provided, use ONLY those options
+  // (they cannot be combined with granular options like hour/minute/year etc)
+  const hasStyleOptions = options?.dateStyle || options?.timeStyle;
+
+  const finalOptions: Intl.DateTimeFormatOptions = hasStyleOptions
+    ? options  // Use only the style options
+    : {
+        // Default granular options
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        ...options
+      };
 
   try {
-    return new Intl.DateTimeFormat(locale, { ...defaultOptions, ...options }).format(dateObj);
+    return new Intl.DateTimeFormat(locale, finalOptions).format(dateObj);
   } catch (error) {
     console.warn('formatDateTime error:', error);
     return '-';
