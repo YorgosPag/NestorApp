@@ -77,8 +77,13 @@ export class DxfRenderer {
     // Clear canvas
     CanvasUtils.clearCanvas(this.ctx, this.canvas, 'transparent');
 
-    // 🏢 ADR-102: Centralized Origin Marker (Orange L-shape: TOP + LEFT)
-    renderOriginMarker(this.ctx, transform, viewport, { variant: 'dxf' });
+    // 🏢 ENTERPRISE FIX (2026-02-01): Use ACTUAL canvas dimensions, not stale viewport prop!
+    const canvasRect = this.canvas.getBoundingClientRect();
+    const actualViewport: Viewport = { width: canvasRect.width, height: canvasRect.height };
+
+    // 🏢 ADR-102: Centralized Origin Marker (Single Source of Truth)
+    // Only DxfCanvas renders the origin marker - eliminates dual-canvas alignment issues
+    renderOriginMarker(this.ctx, transform, actualViewport, { variant: 'dxf' });
 
     // Early return if no scene
       if (!scene || !scene.entities.length) {
