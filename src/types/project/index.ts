@@ -1,0 +1,21 @@
+// 🏢 ENTERPRISE: Project Types Central Export
+// ADR-167: Enterprise Project Address System
+
+// Address types and interfaces
+export type {
+  ProjectAddress,
+  ProjectAddressType,
+  BlockSideDirection,
+  BuildingAddressReference,
+} from './addresses';
+
+// Address helper functions
+export {
+  getPrimaryAddress,
+  formatAddressLine,
+  formatBlockSide,
+  createProjectAddress,
+  migrateLegacyAddress,
+  resolveBuildingAddresses,
+  getBuildingPrimaryAddress,
+} from './address-helpers';

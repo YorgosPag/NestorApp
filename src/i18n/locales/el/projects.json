@@ -646,5 +646,61 @@
       "combined": "Συνδυασμένο = % Συνδ. × Δόμηση",
       "volume": "Όγκος = Συντ. Όγκου × Δόμηση"
     }
+  },
+  "address": {
+    "types": {
+      "site": "Εργοτάξιο",
+      "entrance": "Είσοδος",
+      "delivery": "Παραλαβή",
+      "legal": "Νομική",
+      "postal": "Ταχυδρομική",
+      "billing": "Τιμολόγησης",
+      "correspondence": "Αλληλογραφίας",
+      "other": "Άλλο"
+    },
+    "blockSides": {
+      "north": "Βόρεια",
+      "south": "Νότια",
+      "east": "Ανατολική",
+      "west": "Δυτική",
+      "northeast": "Βορειοανατολική",
+      "northwest": "Βορειοδυτική",
+      "southeast": "Νοτιοανατολική",
+      "southwest": "Νοτιοδυτική",
+      "corner": "Γωνία",
+      "internal": "Εσωτερική"
+    },
+    "fields": {
+      "street": "Οδός",
+      "number": "Αριθμός",
+      "city": "Πόλη",
+      "postalCode": "Τ.Κ.",
+      "region": "Περιοχή",
+      "country": "Χώρα",
+      "label": "Ετικέτα",
+      "blockSide": "Πλευρά Ο.Τ.",
+      "cadastralCode": "ΚΑΕΚ",
+      "municipality": "Δήμος",
+      "neighborhood": "Συνοικία",
+      "coordinates": "Συντεταγμένες"
+    },
+    "labels": {
+      "primary": "Κύρια Διεύθυνση",
+      "secondary": "Δευτερεύουσα Διεύθυνση",
+      "addAddress": "Προσθήκη Διεύθυνσης",
+      "editAddress": "Επεξεργασία Διεύθυνσης",
+      "removeAddress": "Αφαίρεση Διεύθυνσης",
+      "primaryAddress": "Κύρια Διεύθυνση",
+      "additionalAddresses": "Πρόσθετες Διευθύνσεις",
+      "multipleAddresses": "Πολλαπλές Διευθύνσεις"
+    },
+    "validation": {
+      "streetRequired": "Η οδός είναι υποχρεωτική",
+      "cityRequired": "Η πόλη είναι υποχρεωτική",
+      "postalCodeRequired": "Ο ταχυδρομικός κώδικας είναι υποχρεωτικός",
+      "countryRequired": "Η χώρα είναι υποχρεωτική",
+      "exactlyOnePrimary": "Πρέπει να υπάρχει ακριβώς μία κύρια διεύθυνση",
+      "uniqueIds": "Οι κωδικοί διευθύνσεων πρέπει να είναι μοναδικοί"
+    }
   }
 }

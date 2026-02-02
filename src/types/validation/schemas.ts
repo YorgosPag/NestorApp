@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { validationRules } from '@/utils/validation';
 import { PROJECT_STATUSES as CENTRALIZED_PROJECT_STATUSES, BUILDING_STATUSES as CENTRALIZED_BUILDING_STATUSES } from '@/core/status/StatusConstants';
+import type { ProjectAddressType, BlockSideDirection } from '@/types/project/addresses';
 
 // 🏢 ENTERPRISE: Use centralized status constants (NO MORE DUPLICATES)
 const PROJECT_STATUSES = Object.keys(CENTRALIZED_PROJECT_STATUSES);
@@ -82,14 +83,166 @@ export const calculatedFinancialSchema = z.object({
   completionAmount: validationRules.number(),
 });
 
-// Building management schemas
+// 🏢 ENTERPRISE: Project Address Schemas (ADR-167) - MUST be defined BEFORE buildingBaseSchema
+const PROJECT_ADDRESS_TYPES: ProjectAddressType[] = [
+  'site', 'entrance', 'delivery', 'legal', 'postal', 'billing', 'correspondence', 'other'
+];
+
+const BLOCK_SIDE_DIRECTIONS: BlockSideDirection[] = [
+  'north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest', 'corner', 'internal'
+];
+
+// BASE SCHEMA: Persisted type - allows empty strings for legacy migration compatibility
+export const projectAddressSchema = z.object({
+  id: z.string(),
+  street: z.string(), // Allows empty string for legacy migration
+  number: z.string().optional(),
+  city: z.string(), // Allows empty string for legacy migration
+  postalCode: z.string(), // Allows empty string for legacy migration
+  region: z.string().optional(),
+  country: z.string(), // Allows empty string for legacy migration
+  type: z.enum(PROJECT_ADDRESS_TYPES as [ProjectAddressType, ...ProjectAddressType[]]),
+  isPrimary: z.boolean(),
+  label: z.string().optional(),
+  blockSide: z.enum(BLOCK_SIDE_DIRECTIONS as [BlockSideDirection, ...BlockSideDirection[]]).optional(),
+  blockSideDescription: z.string().optional(),
+  cadastralCode: z.string().optional(),
+  municipality: z.string().optional(),
+  neighborhood: z.string().optional(),
+  coordinates: z.object({
+    lat: z.number(),
+    lng: z.number(),
+  }).optional(),
+  sortOrder: z.number().optional(),
+});
+
+// CREATE/EDIT SCHEMA: Enforces non-empty strings for user input
+export const projectAddressCreateSchema = projectAddressSchema.extend({
+  street: validationRules.required(), // MUST be non-empty when creating
+  city: validationRules.required(),   // MUST be non-empty when creating
+  postalCode: validationRules.required(), // MUST be non-empty when creating
+  country: validationRules.required(), // MUST be non-empty when creating
+});
+
+// Building address reference schema with invariants
+export const buildingAddressReferenceSchema = z.object({
+  inheritFromProject: z.boolean(),
+  projectAddressId: z.string().optional(),
+  override: z.object({
+    label: z.string().optional(),
+    coordinates: z.object({
+      lat: z.number(),
+      lng: z.number(),
+    }).optional(),
+    blockSideDescription: z.string().optional(),
+  }).partial().optional(),
+}).refine(
+  (data) => {
+    // INVARIANT: If inheritFromProject=true, projectAddressId is REQUIRED
+    if (data.inheritFromProject && !data.projectAddressId) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'projectAddressId is required when inheritFromProject is true',
+    path: ['projectAddressId'],
+  }
+);
+
+// Project address array schema with invariants (PERSISTED - allows empty strings)
+export const projectAddressesSchema = z.array(projectAddressSchema).refine(
+  (addresses) => {
+    // INVARIANT: Exactly ONE isPrimary=true per project
+    const primaryCount = addresses.filter((addr) => addr.isPrimary).length;
+    return primaryCount === 1;
+  },
+  {
+    message: 'Exactly one address must be marked as primary',
+  }
+).refine(
+  (addresses) => {
+    // INVARIANT: No duplicate IDs
+    const ids = addresses.map((addr) => addr.id);
+    const uniqueIds = new Set(ids);
+    return ids.length === uniqueIds.size;
+  },
+  {
+    message: 'Address IDs must be unique',
+  }
+);
+
+// CREATE/EDIT array schema (enforces non-empty strings)
+export const projectAddressesCreateSchema = z.array(projectAddressCreateSchema).refine(
+  (addresses) => {
+    // INVARIANT: Exactly ONE isPrimary=true per project
+    const primaryCount = addresses.filter((addr) => addr.isPrimary).length;
+    return primaryCount === 1;
+  },
+  {
+    message: 'Exactly one address must be marked as primary',
+  }
+).refine(
+  (addresses) => {
+    // INVARIANT: No duplicate IDs
+    const ids = addresses.map((addr) => addr.id);
+    const uniqueIds = new Set(ids);
+    return ids.length === uniqueIds.size;
+  },
+  {
+    message: 'Address IDs must be unique',
+  }
+);
+
+// Building address configs schema with invariants
+export const buildingAddressConfigsSchema = z.array(buildingAddressReferenceSchema).refine(
+  (configs) => {
+    // INVARIANT: No duplicate projectAddressId references
+    const refs = configs
+      .filter((c) => c.inheritFromProject && c.projectAddressId)
+      .map((c) => c.projectAddressId);
+    const uniqueRefs = new Set(refs);
+    return refs.length === uniqueRefs.size;
+  },
+  {
+    message: 'Duplicate address references are not allowed',
+  }
+);
+
+// Building management schemas (uses buildingAddressConfigsSchema from above)
 export const buildingBaseSchema = z.object({
   name: validationRules.required().pipe(validationRules.minLength(2)),
-  address: validationRules.required(),
+  address: validationRules.required(), // Legacy - kept for backward compatibility
   description: z.string().optional(),
   category: validationRules.selection(BUILDING_CATEGORIES),
   status: validationRules.selection(BUILDING_STATUSES),
-});
+  // 🏢 ENTERPRISE: Address inheritance (ADR-167)
+  addressConfigs: buildingAddressConfigsSchema.optional(),
+  /**
+   * Primary project address ID
+   *
+   * 🏢 ENTERPRISE INVARIANT (runtime validation):
+   * If specified, MUST correspond to an existing ProjectAddress.id in the parent project.
+   *
+   * Validation is performed at runtime by resolveBuildingPrimaryAddress() helper,
+   * not at schema level (schema doesn't have access to project addresses).
+   *
+   * @see src/types/project/address-helpers.ts - resolveBuildingPrimaryAddress()
+   */
+  primaryProjectAddressId: z.string().optional(),
+}).refine(
+  (data) => {
+    // INVARIANT: If primaryProjectAddressId is set, addressConfigs must also exist
+    if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'primaryProjectAddressId requires addressConfigs to be set',
+    path: ['primaryProjectAddressId'],
+  }
+);
 
 export const buildingCreateSchema = buildingBaseSchema.extend({
   projectId: z.string().optional(),
@@ -107,14 +260,20 @@ export const projectBaseSchema = z.object({
   startDate: validationRules.date().optional(),
   endDate: validationRules.date().optional(),
   status: validationRules.selection(PROJECT_STATUSES),
+  // 🏢 ENTERPRISE: Multi-address support (ADR-167) - PERSISTED (allows empty strings)
+  addresses: projectAddressesSchema.optional(),
 });
 
 export const projectCreateSchema = projectBaseSchema.extend({
   clientId: z.string().optional(),
+  // 🏢 ENTERPRISE: Override addresses with strict validation (NO empty strings!)
+  addresses: projectAddressesCreateSchema.optional(),
 });
 
 export const projectEditSchema = projectBaseSchema.extend({
   id: z.string(),
+  // 🏢 ENTERPRISE: Override addresses with strict validation (NO empty strings!)
+  addresses: projectAddressesCreateSchema.optional(),
 });
 
 // Authentication schemas
