@@ -115,7 +115,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
           <Button variant="ghost" className={`w-full justify-start ${layout.filterButtonPadding} text-sm font-semibold`}>
             <Filter className={`${iconSizes.sm} ${spacing.margin.right.sm}`} />
             {/* 🏢 ENTERPRISE: Support both translation keys and direct labels */}
-            {t(config.title)}
+            {translateLabel(config.title)}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -143,7 +143,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                   <CollapsibleTrigger asChild>
                     <Button variant="outline" size="sm" className="text-sm font-medium">
                       <Filter className={`${iconSizes.sm} ${spacing.margin.right.sm}`}/>
-                      {showAdvanced ? t('hideAdvanced') : t('showAdvanced')}
+                      {showAdvanced ? translateLabel('filters.hideAdvanced') : translateLabel('filters.showAdvanced')}
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className={`!mt-2 !p-2 ${quick.card} ${colors.bg.primary} animate-in fade-in-0 zoom-in-95`}>
@@ -171,7 +171,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                 <div className="flex justify-end">
                   <Button variant="ghost" size="sm" onClick={clearAllFilters}>
                     <RotateCcw className={`${iconSizes.sm} ${spacing.margin.right.sm}`} />
-                    {t('filters.resetFilters')}
+                    {translateLabel('filters.resetFilters')}
                   </Button>
                 </div>
               )}
