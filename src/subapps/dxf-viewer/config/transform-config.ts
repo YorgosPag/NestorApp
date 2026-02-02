@@ -72,8 +72,8 @@ export const UI_ZOOM_LIMITS = {
   /** Minimum scale για UI controls (10%) */
   MIN_SCALE: 0.1,
 
-  /** Maximum scale για UI controls (5000%) */
-  MAX_SCALE: 50,
+  /** Maximum scale για UI controls (50000%) - Increased for detailed CAD work */
+  MAX_SCALE: 500,
 } as const;
 
 // ============================================

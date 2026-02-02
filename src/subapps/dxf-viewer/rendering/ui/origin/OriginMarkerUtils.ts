@@ -80,9 +80,12 @@ export const ORIGIN_MARKER_CONFIG = {
 
 /**
  * Origin marker variant type
- * - 'dxf': Orange L-shape (TOP + LEFT) - used in DxfRenderer
- * - 'layer': Blue inverted L-shape (BOTTOM + RIGHT) - used in LayerRenderer
+ * - 'dxf': Orange L-shape (RIGHT + UP) - used in DxfRenderer
+ * - 'layer': Blue L-shape (RIGHT + UP) - used in LayerRenderer
  * - 'debug': Magenta crosshair (full) - used in OriginMarkersRenderer
+ *
+ * 🏢 ENTERPRISE (2026-02-01): DXF and LAYER now draw IDENTICAL L-shapes!
+ * Only color differs. This fixes visual misalignment when panel opens/closes.
  */
 export type OriginMarkerVariant = 'dxf' | 'layer' | 'debug';
 
@@ -135,22 +138,28 @@ export function getOriginScreenPosition(
 /**
  * 🏢 ENTERPRISE: Draw origin marker on canvas
  *
- * Renders origin marker with variant-specific shape and color.
- * Centralizes 24+ lines of duplicate code from DxfRenderer/LayerRenderer.
+ * Renders origin marker with UNIFIED shape (L-shape: RIGHT + UP).
+ * All variants draw IDENTICAL geometry - only color differs.
+ * This ensures the visual intersection point is EXACTLY at screenOrigin.
  *
  * @param ctx - Canvas 2D rendering context
  * @param screenOrigin - Screen position of origin (use getOriginScreenPosition)
  * @param options - Marker configuration
  *
+ * 🔧 FIX (2026-02-01): Previously DXF drew UP+LEFT, LAYER drew DOWN+RIGHT
+ * This caused visual misalignment when panel opened/closed because the
+ * "optical center" was different even though screenOrigin was identical.
+ * Now ALL variants draw the SAME L-shape (RIGHT + UP from origin).
+ *
  * @example
  * ```typescript
- * // DXF canvas - Orange L-shape (TOP + LEFT)
+ * // DXF canvas - Orange L-shape
  * drawOriginMarker(ctx, screenOrigin, { variant: 'dxf' });
  *
- * // Layer canvas - Blue inverted L-shape (BOTTOM + RIGHT)
+ * // Layer canvas - Blue L-shape (SAME shape as DXF, different color)
  * drawOriginMarker(ctx, screenOrigin, { variant: 'layer' });
  *
- * // Debug overlay - Magenta crosshair
+ * // Debug overlay - Magenta crosshair (full cross for debugging)
  * drawOriginMarker(ctx, screenOrigin, { variant: 'debug' });
  * ```
  */
@@ -171,36 +180,31 @@ export function drawOriginMarker(
   // Setup stroke style
   ctx.strokeStyle = color;
   ctx.lineWidth = ORIGIN_MARKER_CONFIG.LINE_WIDTH;
+  ctx.lineCap = 'square'; // 🏢 Enterprise: Crisp corners at origin point
   ctx.beginPath();
 
-  // Draw variant-specific shape
+  // 🏢 ENTERPRISE FIX (2026-02-01): UNIFIED L-shape for DXF and LAYER
+  // PROBLEM: Different arm directions caused visual misalignment
+  // SOLUTION: Both variants draw IDENTICAL L-shape (RIGHT + UP from origin)
+  //           The intersection point is EXACTLY at screenOrigin for both
   switch (variant) {
     case 'dxf':
-      // L-shape: TOP + LEFT arms
-      // Vertical arm (UP from origin)
-      ctx.moveTo(originX, originY);
-      ctx.lineTo(originX, originY - armLength);
-      // Horizontal arm (LEFT from origin)
-      ctx.moveTo(originX, originY);
-      ctx.lineTo(originX - armLength, originY);
-      break;
-
     case 'layer':
-      // Inverted L-shape: BOTTOM + RIGHT arms
-      // Vertical arm (DOWN from origin)
-      ctx.moveTo(originX, originY);
-      ctx.lineTo(originX, originY + armLength);
+      // 🏢 UNIFIED L-shape: RIGHT + UP arms (both variants identical!)
       // Horizontal arm (RIGHT from origin)
       ctx.moveTo(originX, originY);
       ctx.lineTo(originX + armLength, originY);
+      // Vertical arm (UP from origin - negative Y in canvas coords)
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(originX, originY - armLength);
       break;
 
     case 'debug':
-      // Full crosshair: all 4 directions
-      // Horizontal line (LEFT to RIGHT)
+      // Full crosshair: all 4 directions (for debugging/calibration)
+      // Horizontal line (LEFT to RIGHT through origin)
       ctx.moveTo(originX - armLength, originY);
       ctx.lineTo(originX + armLength, originY);
-      // Vertical line (TOP to BOTTOM)
+      // Vertical line (TOP to BOTTOM through origin)
       ctx.moveTo(originX, originY - armLength);
       ctx.lineTo(originX, originY + armLength);
       break;
@@ -208,7 +212,7 @@ export function drawOriginMarker(
 
   ctx.stroke();
 
-  // Draw label if enabled
+  // Draw label if enabled (labels can still have different positions per variant)
   if (showLabel) {
     ctx.fillStyle = color;
     ctx.font = ORIGIN_MARKER_CONFIG.FONT;
@@ -252,12 +256,5 @@ export function renderOriginMarker(
   options: OriginMarkerOptions
 ): void {
   const screenOrigin = getOriginScreenPosition(transform, viewport);
-
-  // 🔍 DEBUG (2026-02-01): Investigate origin marker misalignment
-  // Remove this logging after bug is fixed
-  // Using timestamp to see timing of renders
-  const now = performance.now().toFixed(0);
-  console.log(`[${now}ms][OriginMarker:${options.variant.toUpperCase()}] vp.h=${viewport.height.toFixed(1)}, offsetY=${transform.offsetY.toFixed(1)}, screenY=${screenOrigin.y.toFixed(1)}`);
-
   drawOriginMarker(ctx, screenOrigin, options);
 }
