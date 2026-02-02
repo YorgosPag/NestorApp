@@ -162,6 +162,19 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     viewportProp,
   });
 
+  // 🏢 FIX (2026-02-01): Transform ref for RAF callback - prevents stale closures
+  // PROBLEM: ResizeObserver → setTransform (async) → RAF fires before useEffect registers new callback
+  //          The OLD callback has OLD closured transform → origin marker misaligned!
+  // SOLUTION: Use ref that is ALWAYS current, updated synchronously before render
+  const transformRef = useRef(transform);
+  transformRef.current = transform; // Always keep in sync
+
+  // 🏢 FIX (2026-02-01): Viewport ref for RAF callback - useCanvasResize's viewportRef doesn't update when viewportProp exists!
+  // PROBLEM: viewportRef from hook stays {0,0} when viewportProp is provided (ResizeObserver skipped)
+  // SOLUTION: Keep our own viewport ref that is ALWAYS synced with resolved viewport
+  const resolvedViewportRef = useRef(viewport);
+  resolvedViewportRef.current = viewport; // Always keep in sync
+
   // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση του CursorSystem αντί για local state
   const cursor = useCursor();
 
@@ -481,10 +494,13 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
         snapResults: snapResults || []
       };
 
+      // 🏢 FIX (2026-02-01): Use refs for transform/viewport - prevents RAF stale closure issue
+      // CRITICAL: transformRef.current and resolvedViewportRef.current are ALWAYS current
+      //           even when RAF callback fires before useEffect re-registers
       renderer.render(
         filteredLayers, // ✅ FILTERED: Κενά layers αν δεν είναι layering active
-        transform,
-        viewport,
+        transformRef.current,        // 🏢 FIX: Use ref - always current!
+        resolvedViewportRef.current, // 🏢 FIX: Use ref - always current!
         crosshairSettings,
         cursorSettings,
         snapSettings,
@@ -498,8 +514,9 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     }
   }, [
     layers,
-    transform,
-    viewport,
+    // 🏢 FIX (2026-02-01): REMOVED transform, viewport from dependencies
+    // These are now accessed via refs (transformRef.current, viewportRef.current)
+    // which are ALWAYS current - no need to recreate callback on every transform change
     // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Use centralized cursor state
     cursor.position,
     cursor.isSelecting,
