@@ -3,14 +3,14 @@
 
 import { UI_COLORS } from '../config/color-config';
 
-interface StepResult {
+export interface StepResult {
   step: string;
   status: "success" | "failed";
   error?: string;
   durationMs: number;
 }
 
-interface WorkflowResult {
+export interface WorkflowResult {
   success: boolean;
   steps: StepResult[];
   layerDisplayed: boolean;

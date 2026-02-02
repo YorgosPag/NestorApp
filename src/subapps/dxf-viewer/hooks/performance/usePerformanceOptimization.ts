@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { dxfPerformanceOptimizer, type PerformanceMetrics, type PerformanceAlert, type OptimizationAction } from '../../performance/DxfPerformanceOptimizer';
+import { dxfPerformanceOptimizer, type PerformanceMetrics, type PerformanceAlert, type OptimizationAction, type DxfPerformanceConfig } from '../../performance/DxfPerformanceOptimizer';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 export interface UsePerformanceOptimizationOptions {
@@ -47,22 +47,7 @@ export interface PerformanceStatus {
 }
 
 // 🏢 ENTERPRISE: Type-safe performance configuration
-export interface PerformanceOptimizerConfig {
-  monitoring?: {
-    performanceThresholds?: {
-      maxLoadTime?: number;
-      maxRenderTime?: number;
-      maxMemoryUsage?: number;
-      minFPS?: number;
-    };
-    enableRealTimeMonitoring?: boolean;
-    enableAlerts?: boolean;
-  };
-  optimization?: {
-    enableAutoOptimizations?: boolean;
-    optimizationLevel?: 'low' | 'medium' | 'high';
-  };
-}
+export type PerformanceOptimizerConfig = Partial<DxfPerformanceConfig>;
 
 // 🏢 ENTERPRISE: Type-safe custom events
 export interface PerformanceAlertEvent extends CustomEvent {

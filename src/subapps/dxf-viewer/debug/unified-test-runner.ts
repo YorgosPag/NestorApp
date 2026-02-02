@@ -61,23 +61,29 @@ async function safeExecuteTest(
     ]);
 
     const duration = performance.now() - startTime;
+    const details = (result && typeof result === 'object')
+      ? result as Record<string, unknown>
+      : { value: result };
 
     return {
       name: testName,
       status: 'success',
       duration,
       summary: `✅ ${testName} completed successfully`,
-      details: result,
+      details,
       timestamp
     };
   } catch (error) {
     const duration = performance.now() - startTime;
+    const details = error instanceof Error
+      ? { message: error.message }
+      : { error: String(error) };
     return {
       name: testName,
       status: 'error',
       duration,
       summary: `❌ ${testName} failed: ${error instanceof Error ? error.message : String(error)}`,
-      details: error,
+      details,
       timestamp
     };
   }

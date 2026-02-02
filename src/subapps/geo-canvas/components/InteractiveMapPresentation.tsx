@@ -108,6 +108,9 @@ export interface InteractiveMapPresentationProps {
 
   // Hover Coordinate
   hoveredCoordinate: { lat: number; lng: number } | null;
+
+  /** 🗺️ ENTERPRISE: Children elements (markers, layers) to render inside the map */
+  children?: React.ReactNode;
 }
 
 // ============================================================================
@@ -159,7 +162,10 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
   cursor = 'default',
 
   // Hover Coordinate
-  hoveredCoordinate
+  hoveredCoordinate,
+
+  // Children markers/layers
+  children
 }) => {
   return (
     <div className="h-full w-full relative">
@@ -241,6 +247,11 @@ export const InteractiveMapPresentation: React.FC<InteractiveMapPresentationProp
           exportAsGeoJSON={exportAsGeoJSON}
           enablePolygonDrawing={enablePolygonDrawing}
         />
+
+        {/* ================================================================ */}
+        {/* 📍 CUSTOM CHILDREN (Markers, Custom Layers) */}
+        {/* ================================================================ */}
+        {children}
       </Map>
     </div>
   );

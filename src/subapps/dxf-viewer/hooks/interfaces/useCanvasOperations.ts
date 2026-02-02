@@ -187,10 +187,7 @@ export const useCanvasOperations = (): CanvasOperations => {
   const resetToOrigin = useCallback(() => {
     if (context?.setTransform) {
       context.setTransform({
-        x: 0,
-        y: 0,
         scale: 1,
-        rotation: 0,
         offsetX: 0,
         offsetY: 0
       });

@@ -263,11 +263,34 @@ export function ProjectHierarchyProvider({ children }: { children: React.ReactNo
       const projects: Project[] = projectsData.map((project: { id: string | number; name: string; company?: string; buildings?: Array<{ id: string; name: string; floors?: unknown[] }> }) => {
 
         // Transform buildings if they exist in the project data
-        const buildings: Building[] = (project.buildings || []).map((building: { id: string; name: string; floors?: unknown[] }) => ({
-          id: building.id,
-          name: building.name,
-          floors: building.floors || []
-        }));
+        const buildings: Building[] = (project.buildings || []).map((building: { id: string; name: string; floors?: unknown[] }) => {
+          const floors: Floor[] = Array.isArray(building.floors)
+            ? building.floors.reduce<Floor[]>((acc, floor) => {
+              if (!floor || typeof floor !== 'object') {
+                return acc;
+              }
+              const floorRecord = floor as Record<string, unknown>;
+              const id = floorRecord.id;
+              const name = floorRecord.name;
+              if ((typeof id !== 'string' && typeof id !== 'number') || typeof name !== 'string') {
+                return acc;
+              }
+              const numberValue = typeof floorRecord.number === 'number' ? floorRecord.number : 0;
+              acc.push({
+                id: String(id),
+                name,
+                number: numberValue,
+                units: []
+              });
+              return acc;
+            }, [])
+            : [];
+          return {
+            id: building.id,
+            name: building.name,
+            floors
+          };
+        });
         
         return {
           id: project.id.toString(),

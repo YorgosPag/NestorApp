@@ -108,6 +108,8 @@ export interface InteractiveMapContainerProps {
       fillOpacity?: number;
     };
   }[];
+  /** 🗺️ ENTERPRISE: Children elements (markers, layers) to render inside the map */
+  children?: React.ReactNode;
 }
 
 // ============================================================================
@@ -133,7 +135,9 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   onPolygonCreated,
   onPolygonModified,
   onPolygonDeleted,
-  administrativeBoundaries = []
+  administrativeBoundaries = [],
+  showStatusBar = true, // 🗺️ ENTERPRISE: Hide for non-DXF contexts
+  children // 🗺️ ENTERPRISE: Children markers/layers
 }) => {
   // ========================================================================
   // 🎯 ENTERPRISE: CENTRALIZED DESIGN TOKENS
@@ -417,7 +421,10 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
 
         // Hover Coordinate
         hoveredCoordinate={mapState.hoveredCoordinate}
-      />
+      >
+        {/* 🗺️ ENTERPRISE: Pass children markers/layers to presentation */}
+        {children}
+      </InteractiveMapPresentation>
 
       {/* Enterprise Map Overlays */}
       <GeoAccuracyLegend
@@ -444,15 +451,17 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
         mapLoaded={mapState.mapLoaded}
       />
 
-      <GeoStatusBar
-        mapLoaded={mapState.mapLoaded}
-        isCalibrated={transformState.isCalibrated}
-        controlPoints={transformState.controlPoints}
-        enablePolygonDrawing={enablePolygonDrawing}
-        isDrawing={systemIsDrawing}
-        polygonStats={{ totalPolygons: stats.totalPolygons, isDrawing: systemIsDrawing }}
-        showAccuracyCircles={mapState.showAccuracyCircles}
-      />
+      {showStatusBar && (
+        <GeoStatusBar
+          mapLoaded={mapState.mapLoaded}
+          isCalibrated={transformState.isCalibrated}
+          controlPoints={transformState.controlPoints}
+          enablePolygonDrawing={enablePolygonDrawing}
+          isDrawing={systemIsDrawing}
+          polygonStats={{ totalPolygons: stats.totalPolygons, isDrawing: systemIsDrawing }}
+          showAccuracyCircles={mapState.showAccuracyCircles}
+        />
+      )}
     </div>
   );
 };

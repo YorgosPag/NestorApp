@@ -119,7 +119,6 @@ export interface UseEnhancedSelectionReturn {
 interface EntityWithLayer {
   id: string;
   layer?: string;
-  layerId?: string;
 }
 
 // ============================================================================
@@ -242,9 +241,7 @@ export function useEnhancedSelection(): UseEnhancedSelectionReturn {
         .filter(entity => {
           if (!hasLayerInfo(entity)) return false;
 
-          // Check both layer property variants
-          const entityLayer = entity.layer ?? entity.layerId;
-          return entityLayer === layerId;
+          return entity.layer === layerId;
         })
         .map(entity => (entity as EntityWithLayer).id);
 

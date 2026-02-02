@@ -23,8 +23,8 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
-import { Marker } from 'react-map-gl/maplibre';
+import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
+import { Source, Layer } from 'react-map-gl/maplibre';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { LngLatBounds } from 'maplibre-gl';
 import type { Map as MaplibreMap } from 'maplibre-gl';
@@ -103,6 +103,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   const [geocodingStatus, setGeocodingStatus] = useState<'idle' | 'loading' | 'success' | 'partial' | 'error'>('idle');
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   const mapRef = useRef<MaplibreMap | null>(null);
   const addressResolver = useRef(new AddressResolver({
@@ -233,16 +234,80 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   }, [geocodedAddresses, mapReady]);
 
   // ===========================================================================
+  // GEOJSON DATA
+  // ===========================================================================
+
+  /**
+   * Create GeoJSON FeatureCollection from geocoded addresses
+   */
+  const markersGeoJSON = useMemo(() => {
+    const features = addresses
+      .map(address => {
+        const geocoded = geocodedAddresses.get(address.id);
+        if (!geocoded) return null;
+
+        return {
+          type: 'Feature' as const,
+          geometry: {
+            type: 'Point' as const,
+            coordinates: [geocoded.lng, geocoded.lat]
+          },
+          properties: {
+            id: address.id,
+            street: address.street,
+            city: address.city,
+            isPrimary: address.isPrimary,
+            label: address.label || address.type
+          }
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      type: 'FeatureCollection' as const,
+      features: features as any[]
+    };
+  }, [addresses, geocodedAddresses]);
+
+  // ===========================================================================
   // EVENT HANDLERS
   // ===========================================================================
 
   /**
    * Handle map ready event
+   * Enterprise pattern: Load custom marker icon into map sprite
    */
   const handleMapReady = useCallback((map: MaplibreMap) => {
     console.log('🗺️ Map ready!', { map });
     mapRef.current = map;
     setMapReady(true);
+
+    // 🏢 ENTERPRISE: Load custom pin marker icon
+    // SVG data URL for a professional map pin (teardrop shape)
+    // Uses primary blue color (#3b82f6) for brand consistency
+    const pinSVG = `
+      <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
+        <!-- Pin shadow -->
+        <ellipse cx="20" cy="47" rx="8" ry="3" fill="rgba(0,0,0,0.3)"/>
+        <!-- Pin body (teardrop) -->
+        <path d="M 20 0 C 11.163 0 4 7.163 4 16 C 4 25 20 45 20 45 C 20 45 36 25 36 16 C 36 7.163 28.837 0 20 0 Z"
+              fill="#3b82f6"
+              stroke="#fff"
+              stroke-width="2"/>
+        <!-- Inner circle -->
+        <circle cx="20" cy="16" r="6" fill="#fff"/>
+      </svg>
+    `.trim();
+
+    const pinImage = new Image(40, 50);
+    pinImage.onload = () => {
+      if (!map.hasImage('address-pin')) {
+        map.addImage('address-pin', pinImage);
+      }
+      setMapLoaded(true);
+      console.log('✅ Map fully loaded - custom pin icon added');
+    };
+    pinImage.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(pinSVG)}`;
   }, []);
 
   /**
@@ -318,41 +383,39 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                 offsetY: 0
               }}
               onMapReady={handleMapReady}
+              showStatusBar={false}
               className="w-full h-full rounded-lg overflow-hidden"
             >
-            {/* 📍 Address Markers */}
-            {addresses.map((address, index) => {
-              const geocoded = geocodedAddresses.get(address.id);
-
-              // 🐛 DEBUG: Log marker rendering
-              console.log('📍 Marker render attempt', {
-                addressId: address.id,
-                geocoded: geocoded ? { lat: geocoded.lat, lng: geocoded.lng } : null,
-              });
-
-              if (!geocoded) {
-                console.warn('⚠️ Skipping marker - no geocoded data for address:', address.id);
-                return null; // Skip addresses που δεν geocoded
-              }
-
-              console.log('✅ Rendering marker at:', { lat: geocoded.lat, lng: geocoded.lng });
-
-              return (
-                <Marker
-                  key={address.id}
-                  latitude={geocoded.lat}
-                  longitude={geocoded.lng}
-                  anchor="bottom"
-                >
-                  <AddressMarker
-                    address={address}
-                    isPrimary={highlightPrimary && address.isPrimary}
-                    isSelected={enableClickToFocus && selectedMarkerId === address.id}
-                    onClick={() => handleMarkerClick(address, index)}
-                  />
-                </Marker>
-              );
-            })}
+            {/* 📍 Address Markers - Enterprise Symbol Layer με custom pin icon */}
+            {mapLoaded && markersGeoJSON.features.length > 0 && (
+              <Source
+                id="address-markers"
+                type="geojson"
+                data={markersGeoJSON}
+              >
+                {/* Symbol layer με professional pin icon */}
+                <Layer
+                  id="address-markers-symbols"
+                  type="symbol"
+                  layout={{
+                    'icon-image': 'address-pin',
+                    'icon-size': 1,
+                    'icon-anchor': 'bottom',
+                    'icon-allow-overlap': true,
+                    'text-field': ['get', 'label'],
+                    'text-size': 12,
+                    'text-anchor': 'top',
+                    'text-offset': [0, 0.5],
+                    'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular']
+                  }}
+                  paint={{
+                    'text-color': '#1e293b', // slate-800 for readability
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 2
+                  }}
+                />
+              </Source>
+            )}
             </InteractiveMap>
           )}
 

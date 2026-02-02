@@ -103,12 +103,13 @@ export class SceneUpdateManager {
       }
 
       // ═══ RENDERER UPDATE (Secondary) ═══
-      if (!skipRendererUpdate && this.renderer) {
+      const renderer = this.renderer;
+      if (!skipRendererUpdate && renderer) {
         // Use requestAnimationFrame να μην clash με React rendering
         requestAnimationFrame(() => {
           try {
-            if (this.renderer.setScene) {
-              this.renderer.setScene(newScene);
+            if (renderer.setScene) {
+              renderer.setScene(newScene);
               this.statistics.incrementRendererUpdates();
               dlog('🎭 Renderer updated');
             }
@@ -137,9 +138,9 @@ export class SceneUpdateManager {
       return;
     }
 
-    const entities = this.currentScene.entities.map(entity => {
+    const entities: AnySceneEntity[] = this.currentScene.entities.map(entity => {
       if (entity.id === entityId) {
-        return { ...entity, ...updates };
+        return { ...entity, ...updates } as AnySceneEntity;
       }
       return entity;
     });

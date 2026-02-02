@@ -25,6 +25,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import { runAllTests, formatReportForCopy, type UnifiedTestReport } from './unified-test-runner';
+import type { WorkflowResult } from './layering-workflow-test';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 // ⌨️ ENTERPRISE: Centralized keyboard shortcuts - Single source of truth
 import { matchesShortcut } from '../config/keyboard-shortcuts';
@@ -34,18 +35,10 @@ import { matchesShortcut } from '../config/keyboard-shortcuts';
 // ============================================================================
 
 /** Workflow test step result */
-interface WorkflowTestStep {
-  status: 'success' | 'failure' | 'warning';
-  name: string;
-  duration?: number;
-}
+type WorkflowTestStep = WorkflowResult['steps'][number];
 
 /** Layering workflow test result */
-interface LayeringWorkflowResult {
-  success: boolean;
-  steps: WorkflowTestStep[];
-  layerDisplayed: boolean;
-}
+type LayeringWorkflowResult = WorkflowResult;
 
 /** Enterprise cursor test results */
 interface EnterpriseCursorTestResults {
@@ -65,10 +58,11 @@ interface EnterpriseCursorTestModule {
 
 /** DOM inspection result */
 interface DOMInspectionResult {
-  floatingPanels: Array<{ found: boolean; element?: HTMLElement }>;
-  tabs: HTMLElement[];
-  cards: HTMLElement[];
-  canvases: HTMLCanvasElement[];
+  floatingPanels: Array<{ selector: string; found: boolean; element?: HTMLElement }>;
+  tabs: Array<{ text: string; element: HTMLElement; className: string }>;
+  cards: Array<{ text: string; element: HTMLElement; className: string }>;
+  canvases: Array<{ type: string; element: HTMLCanvasElement; rect: DOMRect }>;
+  overlayContainers: Array<{ selector: string; found: boolean; element?: HTMLElement }>;
 }
 
 /** Window with layering test function (using intersection type to avoid index signature conflict) */

@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 /**
  * 🎲 PROPERTY-BASED TESTING για Coordinate Transforms
  * Enterprise-level testing με fast-check library

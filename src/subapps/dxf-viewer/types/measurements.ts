@@ -50,7 +50,15 @@ export interface DiameterMeasurement extends BaseMeasurement {
 }
 
 // ✅ ENTERPRISE FIX: Add MeasurementType for useToolbarState compatibility
-export type MeasurementType = 'linear' | 'angular' | 'area' | 'radial' | 'diameter';
+export type MeasurementType =
+  | 'linear'
+  | 'angular'
+  | 'area'
+  | 'radial'
+  | 'diameter'
+  | 'distance'
+  | 'distance-continuous'
+  | 'angle';
 
 // Union type for all measurement types
 export type AnyMeasurement =

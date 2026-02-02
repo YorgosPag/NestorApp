@@ -36,9 +36,10 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { dxfImportService } from '../io/dxf-import';
 import { FloorplanService, type FloorplanData } from '../../../services/floorplans/FloorplanService';
 import { BuildingFloorplanService } from '../../../services/floorplans/BuildingFloorplanService';
-import { UnitFloorplanService } from '../../../services/floorplans/UnitFloorplanService';
+import { UnitFloorplanService, type UnitFloorplanData } from '../../../services/floorplans/UnitFloorplanService';
 import { FloorFloorplanService } from '../../../services/floorplans/FloorFloorplanService';
 import { useNotifications } from '../../../providers/NotificationProvider';
+import { useAuth } from '@/hooks/useAuth';
 import DxfImportModal from './DxfImportModal';
 import type { SceneModel } from '../types/scene';
 // 🏢 ENTERPRISE: PDF Background support
@@ -77,6 +78,7 @@ type DialogStep = 'company' | 'project' | 'building' | 'unit';
 export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimpleProjectDialogProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('dxf-viewer');
+  const { user } = useAuth();
 
   const {
     companies,
@@ -415,7 +417,7 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         const unitData = {
           unitId: selectedUnitId,
           type: 'unit' as const,
-          scene,
+          scene: scene as unknown as UnitFloorplanData['scene'],
           fileName: file.name,
           timestamp: Date.now()
         };
@@ -432,7 +434,20 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
           fileName: file.name,
           timestamp: Date.now()
         };
-        saved = await FloorFloorplanService.saveFloorplan(selectedBuildingId, selectedFloorId, floorData);
+        const createdBy = user?.uid;
+        if (selectedCompanyId && createdBy) {
+          saved = await FloorFloorplanService.saveFloorplan({
+            companyId: selectedCompanyId,
+            projectId: selectedProjectId || undefined,
+            buildingId: selectedBuildingId,
+            floorId: selectedFloorId,
+            floorNumber: selectedFloorData?.number,
+            data: floorData,
+            createdBy
+          });
+        } else {
+          saved = false;
+        }
       } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
         const buildingData = {
           buildingId: selectedBuildingId,
@@ -723,7 +738,20 @@ export function SimpleProjectDialog({ isOpen, onClose, onFileImport }: SimplePro
         fileName: file.name,
         timestamp: Date.now()
       };
-      saved = await FloorFloorplanService.saveFloorplan(selectedBuildingId, selectedFloorId, floorData);
+      const createdBy = user?.uid;
+      if (selectedCompanyId && createdBy) {
+        saved = await FloorFloorplanService.saveFloorplan({
+          companyId: selectedCompanyId,
+          projectId: selectedProjectId || undefined,
+          buildingId: selectedBuildingId,
+          floorId: selectedFloorId,
+          floorNumber: selectedFloorData?.number,
+          data: floorData,
+          createdBy
+        });
+      } else {
+        saved = false;
+      }
     } else if (currentStep === 'building' && (type === 'building' || type === 'storage')) {
       const buildingData = {
         buildingId: selectedBuildingId,

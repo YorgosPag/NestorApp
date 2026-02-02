@@ -597,7 +597,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
         const hasMovement = Math.abs(delta.x) > movementDetectionThreshold ||
                            Math.abs(delta.y) > movementDetectionThreshold;
 
-        if (hasMovement && overlayStore.update) {
+        if (hasMovement) {
           const { MoveOverlayCommand } = await import('../../core/commands');
           const command = new MoveOverlayCommand(
             draggingOverlayBody.overlayId,

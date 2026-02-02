@@ -36,6 +36,10 @@ export interface InteractiveMapProps {
   className?: string;
   onPolygonComplete?: () => void;
   onMapReady?: (map: MaplibreMap) => void;
+  /** 🗺️ ENTERPRISE: Children elements (markers, layers) to render inside the map */
+  children?: React.ReactNode;
+  /** Hide GeoStatusBar (for non-DXF contexts like AddressMap) */
+  showStatusBar?: boolean;
   searchMarker?: {
     lat: number;
     lng: number;

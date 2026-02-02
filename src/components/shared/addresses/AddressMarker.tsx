@@ -69,65 +69,32 @@ export const AddressMarker: React.FC<AddressMarkerProps> = memo(({
       : ADDRESS_MAP_CONFIG.MARKER_SIZE.SECONDARY;
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div
-          className={cn(
-            'rounded-full border-2 flex items-center justify-center',
-            'transition-all cursor-pointer shadow-md hover:shadow-lg',
-            isPrimary
-              ? 'border-primary bg-primary/20'
-              : 'border-accent bg-accent/20',
-            isSelected && 'ring-4 ring-primary/30'
-          )}
-          style={{
-            width: size,
-            height: size,
-            transition: `all ${ADDRESS_MAP_CONFIG.ANIMATION.MARKER_HIGHLIGHT}ms ease-in-out`
-          }}
-          onClick={onClick}
-          role="button"
-          tabIndex={0}
-          aria-label={`Marker: ${formatAddressLine(address)}`}
-        >
-          <MapPin
-            className={cn(
-              'fill-current',
-              isPrimary ? 'text-primary' : 'text-accent'
-            )}
-            size={size * 0.6} // Icon size = 60% of marker size
-          />
-        </div>
-      </TooltipTrigger>
-
-      <TooltipContent side="top" className="max-w-xs">
-        <div className="text-xs space-y-1">
-          {/* Address label or type */}
-          <div className="font-semibold">
-            {address.label || address.type}
-          </div>
-
-          {/* Formatted address line */}
-          <div className="text-muted-foreground">
-            {formatAddressLine(address)}
-          </div>
-
-          {/* Primary badge */}
-          {isPrimary && (
-            <Badge size="sm" variant="default">
-              Κύρια Διεύθυνση
-            </Badge>
-          )}
-
-          {/* Additional info */}
-          {address.blockSide && (
-            <div className="text-muted-foreground text-xs">
-              {address.blockSideDescription || address.blockSide}
-            </div>
-          )}
-        </div>
-      </TooltipContent>
-    </Tooltip>
+    <div
+      className={cn(
+        'rounded-full border-4 flex items-center justify-center',
+        'transition-all cursor-pointer shadow-xl',
+        isSelected && 'ring-4 ring-blue-500/50'
+      )}
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: isPrimary ? '#3b82f6' : '#f97316', // Blue for primary, Orange for secondary
+        borderColor: isPrimary ? '#1e40af' : '#ea580c',
+        transition: `all ${ADDRESS_MAP_CONFIG.ANIMATION.MARKER_HIGHLIGHT}ms ease-in-out`,
+        zIndex: 1000 // Ensure marker is on top
+      }}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`Marker: ${formatAddressLine(address)}`}
+      title={formatAddressLine(address)} // Simple tooltip
+    >
+      <MapPin
+        className="text-white"
+        size={size * 0.6} // Icon size = 60% of marker size
+        fill="white"
+      />
+    </div>
   );
 });
 

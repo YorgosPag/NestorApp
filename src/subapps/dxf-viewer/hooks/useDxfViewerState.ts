@@ -97,17 +97,33 @@ export function useDxfViewerState() {
       else if (action === 'zoom-reset') canvasActions.resetToOrigin();
     };
 
+    const onMeasurementStart = (type: MeasurementType) => {
+      const measurementTool: DrawingTool | null = (() => {
+        if (type === 'distance') return 'measure-distance';
+        if (type === 'distance-continuous') return 'measure-distance-continuous';
+        if (type === 'area') return 'measure-area';
+        if (type === 'angle') return 'measure-angle';
+        if (type === 'linear') return 'measure-distance';
+        if (type === 'angular') return 'measure-angle';
+        return null;
+      })();
+
+      if (measurementTool) {
+        drawingHandlers.startDrawing(measurementTool);
+      }
+    };
+
     // 🏢 ENTERPRISE (2026-01-27): Connect drawing/measurement tools to unified drawing system
     // Both onMeasurementStart and onDrawingStart call the same startDrawing from useUnifiedDrawing
     // This enables measure-angle, measure-area, measure-distance, line, rectangle, etc.
     toolbarState.handleToolChange(
       tool,
-      drawingHandlers.startDrawing, // ✅ MEASUREMENT TOOLS: measure-angle, measure-area, measure-distance
+      onMeasurementStart, // ✅ MEASUREMENT TOOLS: measure-angle, measure-area, measure-distance
       drawingHandlers.startDrawing, // ✅ DRAWING TOOLS: line, rectangle, circle, polyline, polygon
       onZoomAction,
       drawingHandlers.cancelAllOperations // ✅ CANCEL: Stop any ongoing drawing/measurement
     );
-  }, [toolbarState, canvasActions, drawingHandlers]);
+  }, [toolbarState, canvasActions, drawingHandlers, setActiveTool]);
 
   // Enhanced action handler
   const handleAction = useCallback((action: string, data?: number | string | Record<string, unknown>) => {

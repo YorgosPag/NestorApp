@@ -40,6 +40,8 @@
 import { useCallback, useRef, useState, useMemo } from 'react';
 import type { Point2D } from '../rendering/types/Types';
 import { useMoveEntities } from './useMoveEntities';
+import type { ISceneManager, SceneEntity } from '../core/commands/interfaces';
+import type { AnySceneEntity } from '../types/scene';
 import { useCommandHistory, MoveVertexCommand } from '../core/commands';
 import { useLevels } from '../systems/levels';
 // 🏢 ADR-065: Centralized Distance Calculation
@@ -238,19 +240,32 @@ export function useGripMovement({
   /**
    * Create SceneManager adapter for vertex commands
    */
-  const createSceneManagerAdapter = useCallback(() => {
+  const createSceneManagerAdapter = useCallback((): ISceneManager | null => {
     if (!currentLevelId) return null;
 
     return {
-      getEntity: (id: string) => {
-        const scene = getLevelScene(currentLevelId);
-        return scene?.entities?.find(e => e.id === id);
-      },
-      updateEntity: (id: string, updates: Record<string, unknown>) => {
+      addEntity: (entity: SceneEntity) => {
         const scene = getLevelScene(currentLevelId);
         if (scene) {
-          const updatedEntities = scene.entities.map(e =>
-            e.id === id ? { ...e, ...updates } : e
+          setLevelScene(currentLevelId, { ...scene, entities: [...scene.entities, entity as unknown as AnySceneEntity] });
+        }
+      },
+      removeEntity: (id: string) => {
+        const scene = getLevelScene(currentLevelId);
+        if (scene) {
+          const updatedEntities = scene.entities.filter(e => e.id !== id);
+          setLevelScene(currentLevelId, { ...scene, entities: updatedEntities });
+        }
+      },
+      getEntity: (id: string) => {
+        const scene = getLevelScene(currentLevelId);
+        return scene?.entities?.find(e => e.id === id) as SceneEntity | undefined;
+      },
+      updateEntity: (id: string, updates: Partial<SceneEntity>) => {
+        const scene = getLevelScene(currentLevelId);
+        if (scene) {
+          const updatedEntities: AnySceneEntity[] = scene.entities.map(e =>
+            e.id === id ? ({ ...e, ...updates } as AnySceneEntity) : e
           );
           setLevelScene(currentLevelId, { ...scene, entities: updatedEntities });
         }
@@ -263,6 +278,37 @@ export function useGripMovement({
               const vertices = [...e.vertices];
               if (vertexIndex >= 0 && vertexIndex < vertices.length) {
                 vertices[vertexIndex] = position;
+              }
+              return { ...e, vertices };
+            }
+            return e;
+          });
+          setLevelScene(currentLevelId, { ...scene, entities: updatedEntities });
+        }
+      },
+      insertVertex: (id: string, insertIndex: number, position: Point2D) => {
+        const scene = getLevelScene(currentLevelId);
+        if (scene) {
+          const updatedEntities = scene.entities.map(e => {
+            if (e.id === id && 'vertices' in e && Array.isArray(e.vertices)) {
+              const vertices = [...e.vertices];
+              const safeIndex = Math.max(0, Math.min(insertIndex, vertices.length));
+              vertices.splice(safeIndex, 0, position);
+              return { ...e, vertices };
+            }
+            return e;
+          });
+          setLevelScene(currentLevelId, { ...scene, entities: updatedEntities });
+        }
+      },
+      removeVertex: (id: string, vertexIndex: number) => {
+        const scene = getLevelScene(currentLevelId);
+        if (scene) {
+          const updatedEntities = scene.entities.map(e => {
+            if (e.id === id && 'vertices' in e && Array.isArray(e.vertices)) {
+              const vertices = [...e.vertices];
+              if (vertexIndex >= 0 && vertexIndex < vertices.length) {
+                vertices.splice(vertexIndex, 1);
               }
               return { ...e, vertices };
             }
@@ -391,7 +437,7 @@ export function useGripMovement({
               activeGrip.gripIndex,
               oldPosition,
               newPosition,
-              sceneManager as unknown as Parameters<typeof MoveVertexCommand['prototype']['constructor']>[4]
+              sceneManager
             );
             execute(command);
           }

@@ -159,7 +159,7 @@ export interface MapInteractionHandlers {
     finishDrawing?: () => void,
     cancelDrawing?: () => void,
     systemIsDrawing?: boolean
-  ) => (mapRef?: MapRef) => void;
+  ) => (event: { target: MapInstance }) => void;
   handleMapError: (
     error: MapErrorEvent,
     currentMapStyle: MapStyleType,
@@ -377,35 +377,45 @@ export const useMapInteractions = (config: MapInteractionConfig): MapInteraction
     cancelDrawing?: () => void,
     systemIsDrawing?: boolean
   ) => {
-    return (mapRef?: MapRef) => {
+    return (event: { target: MapInstance }) => {
+      console.log('🗺️ Map onLoad event fired!', { event });
+
+      const map = event?.target;
+      if (!map) {
+        console.warn('⚠️ Map instance not found in event.target');
+        return;
+      }
+
       // Initialize polygon system with map instance
-      if (enablePolygonDrawing && mapRef?.current) {
-        const map = mapRef.current.getMap?.();
-        if (map) {
-          // Note: We don't have a canvas here, so we initialize with map only
-          // The canvas would be used for overlay drawing if needed
-        }
+      if (enablePolygonDrawing) {
+        // Note: We don't have a canvas here, so we initialize with map only
+        // The canvas would be used for overlay drawing if needed
+        console.log('📦 Polygon drawing enabled');
+      }
+
+      // ✅ ENTERPRISE FIX: Pass map to centralized polygon system
+      if (enablePolygonDrawing && setMapRef) {
+        // Create MapRef object
+        const mapRef: MapRef = { current: map };
+        setMapRef(mapRef);
+
+        map._polygonSystem = {
+          polygons: polygons || [],
+          stats: stats || {},
+          startDrawing,
+          finishDrawing,
+          cancelDrawing,
+          isDrawing: systemIsDrawing || false
+        };
+        console.log('✅ Polygon system initialized on map');
       }
 
       // Notify parent that map is ready
-      if (onMapReady && mapRef?.current) {
-        const map = mapRef.current.getMap?.();
-        if (map) {
-          // ✅ ENTERPRISE FIX: Pass mapRef to centralized polygon system
-          if (enablePolygonDrawing && setMapRef) {
-            setMapRef(mapRef);
-
-            map._polygonSystem = {
-              polygons: polygons || [],
-              stats: stats || {},
-              startDrawing,
-              finishDrawing,
-              cancelDrawing,
-              isDrawing: systemIsDrawing || false
-            };
-          }
-          onMapReady(map);
-        }
+      if (onMapReady) {
+        console.log('📣 Calling onMapReady callback');
+        onMapReady(map);
+      } else {
+        console.warn('⚠️ No onMapReady callback provided');
       }
     };
   }, []);

@@ -21,6 +21,7 @@ import { completionStyleStore } from '../stores/CompletionStyleStore';
 import { withOpacity } from '../config/color-config';
 // 🏢 ADR-056: Import proper LineSettings type from settings-core
 import type { LineSettings as CoreLineSettings } from '../settings-core/types';
+import type { GripSettings } from '../rendering/types/Types';
 
 // ===== CONTEXT CREATION =====
 
@@ -44,15 +45,6 @@ interface TextSettings {
   isSuperscript?: boolean;
   isSubscript?: boolean;
   opacity: number;
-}
-
-/** Grip settings for store synchronization */
-interface GripSettings {
-  showGrips: boolean;
-  gripSize: number;
-  pickBoxSize: number;
-  apertureSize: number;
-  colors: Record<string, string>;
 }
 
 // 🔄 MIGRATION NOTE: Type assertion needed because adapter returns Old types
