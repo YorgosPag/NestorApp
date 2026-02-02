@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/design-system';
 import { useTheme } from 'next-themes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -75,7 +75,7 @@ export default function PreferencesPage() {
             <SelectContent>
               {SUPPORTED_LANGUAGES.filter(lang => lang !== 'pseudo').map((lang) => (
                 <SelectItem key={lang} value={lang}>
-                  {lang === 'el' ? 'Ελληνικά' : 'English'}
+                  {lang === 'el' ? t('account.preferences.languageGreek') : 'English'}
                 </SelectItem>
               ))}
             </SelectContent>

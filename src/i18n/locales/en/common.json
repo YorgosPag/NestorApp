@@ -504,6 +504,7 @@
       "description": "Customize appearance and language",
       "language": "Language",
       "selectLanguage": "Select language",
+      "languageGreek": "Greek",
       "languageHint": "Application display language",
       "theme": "Theme",
       "selectTheme": "Select theme",
