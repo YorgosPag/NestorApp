@@ -64,7 +64,9 @@ export function useDefinitionManagement({
   const getTools = useCallback(() => state.tools, [state.tools]);
   
   const getToolsByCategory = useCallback((category: string) => 
-    Object.values(state.tools).filter(tool => tool.category === category),
+    Object.values(state.tools)
+      .filter((tool): tool is ToolDefinition => Boolean(tool))
+      .filter(tool => tool.category === category),
     [state.tools]
   );
 

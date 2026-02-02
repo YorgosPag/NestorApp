@@ -8,7 +8,8 @@ import type {
   ActionDefinition,
   ToolbarConfig,
   ToolbarOperationResult,
-  ToolbarsSettings
+  ToolbarSettings,
+  ToolbarPosition
 } from '../config';
 import { DEFAULT_TOOLBAR_SETTINGS } from '../config';
 import { ToolbarSystemUtils } from '../utils';
@@ -16,13 +17,13 @@ import type { ToolbarsContextType } from '../ToolbarsContext.types';
 
 type ContextValueParams = ToolbarsContextType & {
   setState: React.Dispatch<React.SetStateAction<ToolbarState>>;
-  setEventListeners: React.Dispatch<React.SetStateAction<ToolEvents>>;
+  setEventListeners: React.Dispatch<React.SetStateAction<Partial<ToolEvents>>>;
   unregisterHotkey: (hotkey: string) => void;
   executeHotkey: (hotkey: string) => void;
   getHotkeys: () => Record<string, ToolType>;
-  updateSettings: (updates: Partial<ToolbarsSettings>) => void;
+  updateSettings: (updates: Partial<ToolbarSettings>) => void;
   resetSettings: () => void;
-  getSettings: () => unknown;
+  getSettings: () => ToolbarSettings;
   searchTools: (query: string) => ToolDefinition[];
   getToolTooltip: (toolId: ToolType) => string;
 };
@@ -87,7 +88,7 @@ export function useToolbarsContextValue(params: ContextValueParams): ToolbarsCon
     toggleToolbar: (toolbarId) => setState(prev => ({ ...prev, toolbars: { ...prev.toolbars, [toolbarId]: { ...prev.toolbars[toolbarId], visible: !prev.toolbars[toolbarId].visible } } })),
     collapseToolbar: (toolbarId) => setState(prev => ({ ...prev, toolbars: { ...prev.toolbars, [toolbarId]: { ...prev.toolbars[toolbarId], collapsed: true } } })),
     expandToolbar: (toolbarId) => setState(prev => ({ ...prev, toolbars: { ...prev.toolbars, [toolbarId]: { ...prev.toolbars[toolbarId], collapsed: false } } })),
-    moveToolbar: (toolbarId, newPosition) => setState((prev: ToolbarState) => ({
+    moveToolbar: (toolbarId, newPosition: ToolbarPosition) => setState((prev: ToolbarState) => ({
       ...prev,
       toolbars: {
         ...prev.toolbars,
@@ -134,13 +135,20 @@ export function useToolbarsContextValue(params: ContextValueParams): ToolbarsCon
     removeCustomization: (customizationId) => setState(prev => ({ ...prev, customizations: prev.customizations.filter(c => c.id !== customizationId) })),
     applyCustomization: (customizationId) => {
       const customization = state.customizations.find(c => c.id === customizationId);
-      if (customization && customization.changes) {
-        // ✅ ENTERPRISE FIX: Use changes instead of config, apply modifiedProperties
-        setState((prev: ToolbarState) => ({
+      if (!customization) return;
+
+      setState((prev: ToolbarState) => {
+        const targetToolbar = prev.toolbars[customization.toolbarId];
+        if (!targetToolbar) {
+          return prev;
+        }
+
+        const updatedToolbar = ToolbarSystemUtils.applyCustomization(targetToolbar, customization);
+        return {
           ...prev,
-          toolbars: { ...prev.toolbars, ...customization.changes.modifiedProperties },
-        }));
-      }
+          toolbars: { ...prev.toolbars, [customization.toolbarId]: updatedToolbar }
+        };
+      });
     },
     getCustomizations: () => state.customizations,
     exportCustomizations: () => JSON.stringify(state.customizations),
@@ -158,7 +166,7 @@ export function useToolbarsContextValue(params: ContextValueParams): ToolbarsCon
     
     // Event Management
     addEventListener: (event, callback) => setEventListeners(prev => ({ ...prev, [event]: callback })),
-    removeEventListener: (event) => setEventListeners((prev: ToolEvents) => { const { [event]: removed, ...remaining } = prev; return remaining; }),
+    removeEventListener: (event) => setEventListeners((prev: Partial<ToolEvents>) => { const { [event]: removed, ...remaining } = prev; return remaining; }),
     
     // Utility Functions
     searchTools,

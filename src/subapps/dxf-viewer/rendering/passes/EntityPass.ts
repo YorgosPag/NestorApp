@@ -401,7 +401,13 @@ export class EntityPass implements IRenderPass {
     const vertices = entity.vertices as { x: number; y: number }[];
     if (!vertices || vertices.length < 4) return;
 
-    this.renderPolyline(context, { ...entity, closed: true }, options);
+    const polylineEntity: Entity = {
+      ...entity,
+      type: 'polyline',
+      vertices,
+      closed: true
+    };
+    this.renderPolyline(context, polylineEntity, options);
   }
 
   /**

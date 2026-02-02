@@ -14,6 +14,7 @@ import { useToolbarState } from './common/useToolbarState';
 import { useSceneState } from './scene/useSceneState';
 import { useDrawingHandlers } from './drawing/useDrawingHandlers';
 import { useSnapContext } from '../snapping/context/SnapContext';
+import type { MeasurementType } from '../types/measurements';
 // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
 import { useCommandHistory } from '../core/commands';
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence

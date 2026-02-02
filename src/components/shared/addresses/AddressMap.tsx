@@ -46,6 +46,7 @@ import {
   type GeocodingResult
 } from '@/services/real-estate-monitor/AddressResolver';
 import { ADDRESS_MAP_CONFIG } from '@/config/address-map-config';
+import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 
 // =============================================================================
 // COMPONENT INTERFACE
@@ -98,6 +99,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   // ===========================================================================
   // STATE MANAGEMENT
   // ===========================================================================
+
+  const { t } = useTranslationLazy('projects');
 
   const [geocodedAddresses, setGeocodedAddresses] = useState<Map<string, GeocodingResult>>(new Map());
   const [geocodingStatus, setGeocodingStatus] = useState<'idle' | 'loading' | 'success' | 'partial' | 'error'>('idle');
@@ -239,12 +242,16 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
   /**
    * Create GeoJSON FeatureCollection from geocoded addresses
+   * 🏢 ENTERPRISE: Uses i18n for address type labels
    */
   const markersGeoJSON = useMemo(() => {
     const features = addresses
       .map(address => {
         const geocoded = geocodedAddresses.get(address.id);
         if (!geocoded) return null;
+
+        // Translate address type (billing -> Τιμολόγηση, site -> Εργοτάξιο, etc.)
+        const translatedLabel = address.label || t(`address.types.${address.type}`);
 
         return {
           type: 'Feature' as const,
@@ -257,7 +264,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
             street: address.street,
             city: address.city,
             isPrimary: address.isPrimary,
-            label: address.label || address.type
+            label: translatedLabel
           }
         };
       })
@@ -267,7 +274,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       type: 'FeatureCollection' as const,
       features: features as any[]
     };
-  }, [addresses, geocodedAddresses]);
+  }, [addresses, geocodedAddresses, t]);
 
   // ===========================================================================
   // EVENT HANDLERS
@@ -341,7 +348,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
         <div className="text-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
           <p className="text-sm text-muted-foreground">
-            Εντοπισμός διευθύνσεων στον χάρτη...
+            {t('address.map.loading')}
           </p>
         </div>
       </div>
@@ -354,8 +361,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       <Alert variant="destructive" className={className}>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          Δεν ήταν δυνατός ο εντοπισμός των διευθύνσεων στον χάρτη.
-          Βεβαιωθείτε ότι οι διευθύνσεις είναι έγκυρες.
+          {t('address.map.error')}
         </AlertDescription>
       </Alert>
     );
@@ -384,6 +390,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               }}
               onMapReady={handleMapReady}
               showStatusBar={false}
+              showMapControls={false}
               className="w-full h-full rounded-lg overflow-hidden"
             >
             {/* 📍 Address Markers - Enterprise Symbol Layer με custom pin icon */}
@@ -424,7 +431,10 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
             <div className="absolute top-4 right-4">
               <Badge variant="secondary" className="shadow-md">
                 <AlertTriangle className="w-3 h-3 mr-1" />
-                {geocodedAddresses.size} από {getGeocodableAddresses(addresses).length} διευθύνσεις
+                {t('address.map.partialStatus', {
+                  count: geocodedAddresses.size,
+                  total: getGeocodableAddresses(addresses).length
+                })}
               </Badge>
             </div>
           )}

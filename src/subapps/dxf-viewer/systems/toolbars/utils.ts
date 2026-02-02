@@ -13,10 +13,9 @@ import type {
   ToolbarOrientation,
   ToolbarCustomization,
   ToolRunner,
-  ToolStep,
-  TOOLBAR_CONFIG
+  ToolStep
 } from './config';
-import { DEFAULT_TOOLBAR_STYLE } from './config';
+import { DEFAULT_TOOLBAR_STYLE, TOOLBAR_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { generateCustomizationId } from '@/services/enterprise-id.service';
 // 🏢 ADR-095: Centralized Snap Tolerance
@@ -83,16 +82,18 @@ export const ToolUtils = {
   /**
    * Gets tools by category
    */
-  getToolsByCategory: (tools: Record<ToolType, ToolDefinition>, category: ToolCategory): ToolDefinition[] => {
-    return Object.values(tools).filter(tool => tool.category === category);
+  getToolsByCategory: (tools: Partial<Record<ToolType, ToolDefinition>>, category: ToolCategory): ToolDefinition[] => {
+    return Object.values(tools).filter((tool): tool is ToolDefinition => Boolean(tool)).filter(tool => tool.category === category);
   },
 
   /**
    * Searches tools by query
    */
-  searchTools: (tools: Record<ToolType, ToolDefinition>, query: string): ToolDefinition[] => {
+  searchTools: (tools: Partial<Record<ToolType, ToolDefinition>>, query: string): ToolDefinition[] => {
     const lowerQuery = query.toLowerCase();
-    return Object.values(tools).filter(tool =>
+    return Object.values(tools)
+      .filter((tool): tool is ToolDefinition => Boolean(tool))
+      .filter(tool =>
       tool.name.toLowerCase().includes(lowerQuery) ||
       tool.label.toLowerCase().includes(lowerQuery) ||
       tool.tooltip.toLowerCase().includes(lowerQuery) ||
@@ -445,7 +446,7 @@ export const CustomizationUtils = {
     name: string,
     description: string,
     toolbarId: string,
-    changes: Record<string, unknown>,
+    changes: ToolbarCustomization['changes'],
     createdBy: string = 'user'
   // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
   ): ToolbarCustomization => {

@@ -191,7 +191,8 @@ export class HitTestingService {
       case 'polyline': {
         const polylineEntity = entity as DxfPolyline;
         return {
-          points: polylineEntity.vertices
+          vertices: polylineEntity.vertices,
+          closed: polylineEntity.closed
         };
       }
 
@@ -201,7 +202,8 @@ export class HitTestingService {
           center: arcEntity.center,
           radius: arcEntity.radius,
           startAngle: arcEntity.startAngle,
-          endAngle: arcEntity.endAngle
+          endAngle: arcEntity.endAngle,
+          counterclockwise: arcEntity.counterclockwise
         };
       }
 
@@ -210,7 +212,17 @@ export class HitTestingService {
         return {
           position: textEntity.position,
           text: textEntity.text,
-          height: textEntity.height
+          height: textEntity.height,
+          rotation: textEntity.rotation
+        };
+      }
+      case 'angle-measurement': {
+        const angleEntity = entity as import('../canvas-v2/dxf-canvas/dxf-types').DxfAngleMeasurement;
+        return {
+          vertex: angleEntity.vertex,
+          point1: angleEntity.point1,
+          point2: angleEntity.point2,
+          angle: angleEntity.angle
         };
       }
 

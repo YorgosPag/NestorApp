@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { ToolType, ToolRunner, ToolEvents, ActionParameters, ToolExecutionResult } from '../config';
+import type { ToolType, ToolRunner, ToolEvents, ActionParameters, ToolExecutionResult, ToolInput } from '../config';
 import { ToolbarSystemUtils } from '../utils';
 
 interface ToolRunnerManagementParams {
@@ -7,7 +7,7 @@ interface ToolRunnerManagementParams {
   setToolRunner: React.Dispatch<React.SetStateAction<ToolRunner>>;
   activateTool: (toolId: ToolType) => void;
   deactivateTool: (toolId?: ToolType) => void;
-  eventListeners: ToolEvents;
+  eventListeners: Partial<ToolEvents>;
 }
 
 export function useToolRunnerManagement({
@@ -19,7 +19,7 @@ export function useToolRunnerManagement({
 }: ToolRunnerManagementParams) {
 
   // ===== TOOL RUNNER FUNCTIONS =====
-  const startTool = useCallback((toolId: ToolType, parameters?: unknown) => {
+  const startTool = useCallback((toolId: ToolType, parameters?: ActionParameters) => {
     activateTool(toolId);
     
     setToolRunner(prev => ({
@@ -45,7 +45,7 @@ export function useToolRunnerManagement({
     }
   }, [toolRunner.currentTool, deactivateTool, eventListeners, setToolRunner]);
 
-  const completeTool = useCallback((result?: unknown) => {
+  const completeTool = useCallback((result?: ToolExecutionResult) => {
     const currentTool = toolRunner.currentTool;
     
     if (currentTool) {
@@ -56,7 +56,7 @@ export function useToolRunnerManagement({
     deactivateTool(currentTool || undefined);
   }, [toolRunner.currentTool, eventListeners, deactivateTool, setToolRunner]);
 
-  const addToolInput = useCallback((input: unknown) => {
+  const addToolInput = useCallback((input: ToolInput) => {
     setToolRunner((prev: ToolRunner) => ({
       ...prev,
       inputPoints: [...prev.inputPoints, input]

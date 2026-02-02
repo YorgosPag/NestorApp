@@ -1,6 +1,7 @@
 import type {
   ToolType,
   ToolbarConfig,
+  ToolbarPosition,
   ToolbarState,
   ToolbarSettings,
   ToolDefinition,
@@ -10,7 +11,11 @@ import type {
   ToolRunner,
   ToolEvents,
   ToolState,
-  ActionState
+  ActionState,
+  ActionParameters,
+  ToolParameters,
+  ToolExecutionResult,
+  ToolInput
 } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 
@@ -18,17 +23,8 @@ import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
 
-/** Action parameters for executeAction */
-export type ActionParameters = Record<string, unknown>;
-
-/** Tool parameters for startTool */
-export type ToolParameters = Record<string, unknown>;
-
 /** Tool completion result */
-export type ToolResult = Record<string, unknown> | undefined;
-
-/** Tool input data */
-export type ToolInput = { point?: Point2D; value?: unknown; [key: string]: unknown };
+export type ToolResult = ToolExecutionResult | undefined;
 
 /** Toolbar layout information */
 export interface ToolbarLayout {
@@ -40,7 +36,7 @@ export interface ToolbarLayout {
 }
 
 /** Event callback function type */
-export type EventCallback = (...args: unknown[]) => void;
+export type EventCallback<K extends keyof ToolEvents> = ToolEvents[K];
 
 // ===== CONTEXT TYPE DEFINITION =====
 export interface ToolbarsContextType {
@@ -63,7 +59,7 @@ export interface ToolbarsContextType {
   unregisterTool: (toolId: ToolType) => void;
   updateTool: (toolId: ToolType, updates: Partial<ToolDefinition>) => void;
   getTool: (toolId: ToolType) => ToolDefinition | undefined;
-  getTools: () => Record<ToolType, ToolDefinition>;
+  getTools: () => Partial<Record<ToolType, ToolDefinition>>;
   getToolsByCategory: (category: string) => ToolDefinition[];
   
   // Action Definition Management
@@ -87,7 +83,7 @@ export interface ToolbarsContextType {
   toggleToolbar: (toolbarId: string) => void;
   collapseToolbar: (toolbarId: string) => void;
   expandToolbar: (toolbarId: string) => void;
-  moveToolbar: (toolbarId: string, position: Point2D) => void;
+  moveToolbar: (toolbarId: string, position: ToolbarPosition) => void;
   
   // Tool States Management
   setToolState: (toolId: ToolType, state: Partial<ToolState>) => void;
@@ -139,8 +135,8 @@ export interface ToolbarsContextType {
   resetLayout: () => void;
 
   // Event Management
-  addEventListener: (event: keyof ToolEvents, callback: EventCallback) => void;
-  removeEventListener: (event: keyof ToolEvents, callback: EventCallback) => void;
+  addEventListener: <K extends keyof ToolEvents>(event: K, callback: EventCallback<K>) => void;
+  removeEventListener: <K extends keyof ToolEvents>(event: K, callback: EventCallback<K>) => void;
   
   // Utility Functions
   searchTools: (query: string) => ToolDefinition[];
@@ -157,7 +153,7 @@ export interface ToolbarsContextType {
 export interface ToolbarsSystemProps {
   children: React.ReactNode;
   initialToolbars?: Record<string, ToolbarConfig>;
-  initialTools?: Record<ToolType, ToolDefinition>;
+  initialTools?: Partial<Record<ToolType, ToolDefinition>>;
   initialActions?: Record<string, ActionDefinition>;
   initialSettings?: Partial<ToolbarSettings>;
   onToolChange?: (toolId: ToolType | null) => void;

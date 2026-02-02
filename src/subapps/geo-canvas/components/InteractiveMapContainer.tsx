@@ -137,6 +137,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   onPolygonDeleted,
   administrativeBoundaries = [],
   showStatusBar = true, // 🗺️ ENTERPRISE: Hide for non-DXF contexts
+  showMapControls = true, // 🗺️ ENTERPRISE: Hide coordinate picker & style selector
   children // 🗺️ ENTERPRISE: Children markers/layers
 }) => {
   // ========================================================================
@@ -442,14 +443,16 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
         clickMode={mapState.clickMode}
       />
 
-      <GeoMapControls
-        clickMode={mapState.clickMode}
-        onStartCoordinatePicking={mapState.startCoordinatePicking}
-        onStopCoordinatePicking={mapState.stopCoordinatePicking}
-        currentMapStyle={mapState.currentMapStyle}
-        onMapStyleChange={(newStyle: MapStyleType) => mapInteractionHandlers.handleMapStyleChange(newStyle, mapState.setCurrentMapStyle, mapState.setMapLoaded)}
-        mapLoaded={mapState.mapLoaded}
-      />
+      {showMapControls && (
+        <GeoMapControls
+          clickMode={mapState.clickMode}
+          onStartCoordinatePicking={mapState.startCoordinatePicking}
+          onStopCoordinatePicking={mapState.stopCoordinatePicking}
+          currentMapStyle={mapState.currentMapStyle}
+          onMapStyleChange={(newStyle: MapStyleType) => mapInteractionHandlers.handleMapStyleChange(newStyle, mapState.setCurrentMapStyle, mapState.setMapLoaded)}
+          mapLoaded={mapState.mapLoaded}
+        />
+      )}
 
       {showStatusBar && (
         <GeoStatusBar

@@ -41,7 +41,7 @@ export interface RenderEvent extends CanvasEvent {
 }
 
 // 🏢 ENTERPRISE: Type-safe event callback with unknown default
-export type EventCallback<T = unknown> = (event: T) => void;
+export type EventCallback<T extends CanvasEvent = CanvasEvent> = (event: T) => void;
 
 /**
  * 🔺 CENTRALIZED CANVAS EVENT SYSTEM
@@ -49,7 +49,7 @@ export type EventCallback<T = unknown> = (event: T) => void;
  * Provides unified event handling για όλα τα canvas instances
  */
 export class CanvasEventSystem {
-  private listeners = new Map<string, Set<EventCallback>>();
+  private listeners = new Map<string, Set<EventCallback<CanvasEvent>>>();
   private eventHistory: CanvasEvent[] = [];
   private maxHistorySize = 1000;
   private debugMode = false;
@@ -65,7 +65,11 @@ export class CanvasEventSystem {
       this.listeners.set(eventType, new Set());
     }
 
-    this.listeners.get(eventType)!.add(callback);
+    const wrappedCallback: EventCallback<CanvasEvent> = (event) => {
+      callback(event as T);
+    };
+
+    this.listeners.get(eventType)!.add(wrappedCallback);
 
     if (this.debugMode) {
       console.log(`🎧 Event subscription: ${eventType}`);
@@ -75,7 +79,7 @@ export class CanvasEventSystem {
     return () => {
       const eventListeners = this.listeners.get(eventType);
       if (eventListeners) {
-        eventListeners.delete(callback);
+        eventListeners.delete(wrappedCallback);
         if (eventListeners.size === 0) {
           this.listeners.delete(eventType);
         }

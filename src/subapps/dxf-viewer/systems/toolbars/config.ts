@@ -121,6 +121,14 @@ export interface ActionParameters {
   context?: Record<string, ToolValue>;
 }
 
+export type ToolParameters = ActionParameters;
+
+export type ToolInput = {
+  point?: Point2D;
+  value?: ToolValue;
+  [key: string]: ToolValue | undefined;
+};
+
 export interface ValidationInput {
   value: ToolValue;
   type: string;
@@ -245,16 +253,16 @@ export interface ToolbarLayout {
 // ===== TOOLBAR STATE =====
 export interface ToolbarState {
   toolbars: Record<string, ToolbarConfig>;
-  tools: Record<ToolType, ToolDefinition>;
+  tools: Partial<Record<ToolType, ToolDefinition>>;
   actions: Record<string, ActionDefinition>;
   activeTool: ToolType | null;
   activeToolbar: string | null;
-  toolStates: Record<ToolType, {
+  toolStates: Partial<Record<ToolType, {
     active: boolean;
     enabled: boolean;
     visible: boolean;
     data?: ToolData;
-  }>;
+  }>>;
   actionStates: Record<string, {
     enabled: boolean;
     visible: boolean;
@@ -318,7 +326,7 @@ export interface ToolbarCustomization {
 export interface ToolRunner {
   currentTool: ToolType | null;
   isActive: boolean;
-  inputPoints: Array<Point2D>;
+  inputPoints: Array<ToolInput>;
   requiredPoints: number;
   minPoints: number;
   maxPoints: number;
@@ -335,7 +343,7 @@ export interface ToolStep {
   prompt: string;
   inputType: 'point' | 'distance' | 'angle' | 'text' | 'option';
   required: boolean;
-  validation?: (input: ValidationInput) => ValidationResult;
+  validation?: (input: unknown) => ValidationResult;
   defaultValue?: unknown;
   options?: ToolStepOption[];
 }
@@ -531,5 +539,5 @@ export interface ToolEvents {
 }
 
 // ===== TYPE EXPORTS =====
-export type ToolState = ToolbarState['toolStates'][ToolType];
-export type ActionState = ToolbarState['actionStates'][string];
+export type ToolState = NonNullable<ToolbarState['toolStates'][ToolType]>;
+export type ActionState = NonNullable<ToolbarState['actionStates'][string]>;
