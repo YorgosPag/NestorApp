@@ -8,7 +8,7 @@
 
 import { GEOGRAPHIC_CONFIG } from './geographic-config';
 import { generateProjectId } from '@/services/enterprise-id.service';
-import type { ProjectAddressType } from '@/types/project'; // Central export surface
+import { PROJECT_ADDRESS_TYPES, type ProjectAddressType } from '@/types/project/addresses'; // Runtime enum + type
 
 /**
  * Address configuration interface
@@ -23,11 +23,16 @@ interface AddressConfig {
 
 /**
  * 🏢 ENTERPRISE: Get address configuration from environment
+ * Uses validated parsing (NO `as` type assertion)
  */
 function getAddressConfig(): AddressConfig {
+  // Validated parsing για address type (NO `as` assertion!)
+  const rawType = process.env.NEXT_PUBLIC_DEFAULT_ADDRESS_TYPE || 'site';
+  const validatedType = isValidAddressTypeInternal(rawType) ? rawType : 'site';
+
   return {
-    // Default address type για new addresses
-    DEFAULT_TYPE: (process.env.NEXT_PUBLIC_DEFAULT_ADDRESS_TYPE || 'site') as ProjectAddressType,
+    // Default address type για new addresses (validated from env)
+    DEFAULT_TYPE: validatedType,
 
     // Default primary flag (new addresses are NOT primary by default)
     DEFAULT_IS_PRIMARY: process.env.NEXT_PUBLIC_DEFAULT_IS_PRIMARY === 'true' || false,
@@ -41,6 +46,13 @@ function getAddressConfig(): AddressConfig {
     // Default postal code for migration (empty string when unknown)
     DEFAULT_POSTAL_CODE: process.env.NEXT_PUBLIC_DEFAULT_POSTAL_CODE || '',
   } as const;
+}
+
+/**
+ * Internal validation function (used before AddressUtils is defined)
+ */
+function isValidAddressTypeInternal(type: string): type is ProjectAddressType {
+  return PROJECT_ADDRESS_TYPES.includes(type as ProjectAddressType);
 }
 
 /**
@@ -121,16 +133,13 @@ export const AddressUtils = {
 
   /**
    * Validate address type
+   * 🏢 ENTERPRISE: Uses SSoT from addresses.ts (NO hardcoded array!)
    *
    * @param type - Address type to validate
    * @returns True if valid address type
    */
   isValidAddressType: (type: string): type is ProjectAddressType => {
-    const validTypes: ProjectAddressType[] = [
-      'site', 'entrance', 'delivery', 'legal',
-      'postal', 'billing', 'correspondence', 'other'
-    ];
-    return validTypes.includes(type as ProjectAddressType);
+    return PROJECT_ADDRESS_TYPES.includes(type as ProjectAddressType);
   },
 } as const;
 

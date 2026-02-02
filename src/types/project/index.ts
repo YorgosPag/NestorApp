@@ -9,6 +9,12 @@ export type {
   BuildingAddressReference,
 } from './addresses';
 
+// Address runtime enums (SSoT)
+export {
+  PROJECT_ADDRESS_TYPES,
+  BLOCK_SIDE_DIRECTIONS,
+} from './addresses';
+
 // Address helper functions
 export {
   getPrimaryAddress,
@@ -18,4 +24,5 @@ export {
   migrateLegacyAddress,
   resolveBuildingAddresses,
   getBuildingPrimaryAddress,
+  resolveBuildingPrimaryAddress, // Enterprise primary resolver
 } from './address-helpers';

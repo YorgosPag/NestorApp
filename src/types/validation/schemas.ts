@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { validationRules } from '@/utils/validation';
 import { PROJECT_STATUSES as CENTRALIZED_PROJECT_STATUSES, BUILDING_STATUSES as CENTRALIZED_BUILDING_STATUSES } from '@/core/status/StatusConstants';
-import type { ProjectAddressType, BlockSideDirection } from '@/types/project'; // Central export surface
+import { PROJECT_ADDRESS_TYPES, BLOCK_SIDE_DIRECTIONS } from '@/types/project/addresses'; // Runtime enums (SSoT)
 
 // 🏢 ENTERPRISE: Use centralized status constants (NO MORE DUPLICATES)
 const PROJECT_STATUSES = Object.keys(CENTRALIZED_PROJECT_STATUSES);
@@ -84,13 +84,7 @@ export const calculatedFinancialSchema = z.object({
 });
 
 // 🏢 ENTERPRISE: Project Address Schemas (ADR-167) - MUST be defined BEFORE buildingBaseSchema
-const PROJECT_ADDRESS_TYPES: ProjectAddressType[] = [
-  'site', 'entrance', 'delivery', 'legal', 'postal', 'billing', 'correspondence', 'other'
-];
-
-const BLOCK_SIDE_DIRECTIONS: BlockSideDirection[] = [
-  'north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest', 'corner', 'internal'
-];
+// Runtime enums imported from SSoT (addresses.ts) - NO MORE LOCAL DUPLICATES
 
 // BASE SCHEMA: Persisted type - allows empty strings for legacy migration compatibility
 export const projectAddressSchema = z.object({
@@ -101,10 +95,10 @@ export const projectAddressSchema = z.object({
   postalCode: z.string(), // Allows empty string for legacy migration
   region: z.string().optional(),
   country: z.string(), // Allows empty string for legacy migration
-  type: z.enum(PROJECT_ADDRESS_TYPES as [ProjectAddressType, ...ProjectAddressType[]]),
+  type: z.enum(PROJECT_ADDRESS_TYPES), // No type assertion - derived from SSoT
   isPrimary: z.boolean(),
   label: z.string().optional(),
-  blockSide: z.enum(BLOCK_SIDE_DIRECTIONS as [BlockSideDirection, ...BlockSideDirection[]]).optional(),
+  blockSide: z.enum(BLOCK_SIDE_DIRECTIONS).optional(), // No type assertion - derived from SSoT
   blockSideDescription: z.string().optional(),
   cadastralCode: z.string().optional(),
   municipality: z.string().optional(),
@@ -236,14 +230,32 @@ const buildingBaseSchemaRaw = z.object({
 // Building base schema with invariants
 export const buildingBaseSchema = buildingBaseSchemaRaw.refine(
   (data) => {
-    // INVARIANT: If primaryProjectAddressId is set, addressConfigs must also exist
+    // 🏢 ENTERPRISE INVARIANT 1: If primaryProjectAddressId is set → addressConfigs must exist
     if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
       return false;
     }
+
+    // 🏢 ENTERPRISE INVARIANT 2: If addressConfigs exist → primaryProjectAddressId REQUIRED
+    if (data.addressConfigs && data.addressConfigs.length > 0 && !data.primaryProjectAddressId) {
+      return false;
+    }
+
+    // 🏢 ENTERPRISE INVARIANT 3: primaryProjectAddressId must match one of the addressConfigs
+    if (data.primaryProjectAddressId && data.addressConfigs && data.addressConfigs.length > 0) {
+      const referencedIds = data.addressConfigs
+        .filter((c) => c.inheritFromProject)
+        .map((c) => c.projectAddressId)
+        .filter(Boolean); // Remove undefined
+
+      if (!referencedIds.includes(data.primaryProjectAddressId)) {
+        return false;
+      }
+    }
+
     return true;
   },
   {
-    message: 'primaryProjectAddressId requires addressConfigs to be set',
+    message: 'Building address invariants violated: (1) primaryProjectAddressId requires addressConfigs, (2) addressConfigs require primaryProjectAddressId, (3) primaryProjectAddressId must match one of the addressConfigs',
     path: ['primaryProjectAddressId'],
   }
 );
@@ -252,14 +264,32 @@ export const buildingCreateSchema = buildingBaseSchemaRaw.extend({
   projectId: z.string().optional(),
 }).refine(
   (data) => {
-    // Apply same invariant for create schema
+    // 🏢 ENTERPRISE INVARIANT 1: If primaryProjectAddressId is set → addressConfigs must exist
     if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
       return false;
     }
+
+    // 🏢 ENTERPRISE INVARIANT 2: If addressConfigs exist → primaryProjectAddressId REQUIRED
+    if (data.addressConfigs && data.addressConfigs.length > 0 && !data.primaryProjectAddressId) {
+      return false;
+    }
+
+    // 🏢 ENTERPRISE INVARIANT 3: primaryProjectAddressId must match one of the addressConfigs
+    if (data.primaryProjectAddressId && data.addressConfigs && data.addressConfigs.length > 0) {
+      const referencedIds = data.addressConfigs
+        .filter((c) => c.inheritFromProject)
+        .map((c) => c.projectAddressId)
+        .filter(Boolean);
+
+      if (!referencedIds.includes(data.primaryProjectAddressId)) {
+        return false;
+      }
+    }
+
     return true;
   },
   {
-    message: 'primaryProjectAddressId requires addressConfigs to be set',
+    message: 'Building address invariants violated: (1) primaryProjectAddressId requires addressConfigs, (2) addressConfigs require primaryProjectAddressId, (3) primaryProjectAddressId must match one of the addressConfigs',
     path: ['primaryProjectAddressId'],
   }
 );
@@ -268,14 +298,32 @@ export const buildingEditSchema = buildingBaseSchemaRaw.extend({
   id: z.string(),
 }).refine(
   (data) => {
-    // Apply same invariant for edit schema
+    // 🏢 ENTERPRISE INVARIANT 1: If primaryProjectAddressId is set → addressConfigs must exist
     if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
       return false;
     }
+
+    // 🏢 ENTERPRISE INVARIANT 2: If addressConfigs exist → primaryProjectAddressId REQUIRED
+    if (data.addressConfigs && data.addressConfigs.length > 0 && !data.primaryProjectAddressId) {
+      return false;
+    }
+
+    // 🏢 ENTERPRISE INVARIANT 3: primaryProjectAddressId must match one of the addressConfigs
+    if (data.primaryProjectAddressId && data.addressConfigs && data.addressConfigs.length > 0) {
+      const referencedIds = data.addressConfigs
+        .filter((c) => c.inheritFromProject)
+        .map((c) => c.projectAddressId)
+        .filter(Boolean);
+
+      if (!referencedIds.includes(data.primaryProjectAddressId)) {
+        return false;
+      }
+    }
+
     return true;
   },
   {
-    message: 'primaryProjectAddressId requires addressConfigs to be set',
+    message: 'Building address invariants violated: (1) primaryProjectAddressId requires addressConfigs, (2) addressConfigs require primaryProjectAddressId, (3) primaryProjectAddressId must match one of the addressConfigs',
     path: ['primaryProjectAddressId'],
   }
 );

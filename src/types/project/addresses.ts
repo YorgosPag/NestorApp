@@ -3,35 +3,49 @@
 // Based on: SAP multi-address, Salesforce ContactPointAddress, Procore Locations
 
 /**
- * Block side directions for buildings facing multiple streets
- * Based on: Google Maps Platform building entrances
- */
-export type BlockSideDirection =
-  | 'north'
-  | 'south'
-  | 'east'
-  | 'west'
-  | 'northeast'
-  | 'northwest'
-  | 'southeast'
-  | 'southwest'
-  | 'corner'
-  | 'internal';
-
-/**
  * Project address types - following enterprise ERP/CRM patterns
+ * 🏢 ENTERPRISE: Single Source of Truth for address type validation
  * SAP: address usage roles
  * Salesforce: ContactPointAddress with usage classification
  */
-export type ProjectAddressType =
-  | 'site'           // Construction site / main location
-  | 'entrance'       // Building entrance
-  | 'delivery'       // Material delivery point
-  | 'legal'          // Legal/administrative address
-  | 'postal'         // Postal/mailing address
-  | 'billing'        // Billing address
-  | 'correspondence' // Correspondence address
-  | 'other';         // Custom use case
+export const PROJECT_ADDRESS_TYPES = [
+  'site',           // Construction site / main location
+  'entrance',       // Building entrance
+  'delivery',       // Material delivery point
+  'legal',          // Legal/administrative address
+  'postal',         // Postal/mailing address
+  'billing',        // Billing address
+  'correspondence', // Correspondence address
+  'other',          // Custom use case
+] as const;
+
+/**
+ * Derive type from runtime array (SSoT pattern)
+ */
+export type ProjectAddressType = typeof PROJECT_ADDRESS_TYPES[number];
+
+/**
+ * Block side directions for buildings facing multiple streets
+ * 🏢 ENTERPRISE: Single Source of Truth for block side validation
+ * Based on: Google Maps Platform building entrances
+ */
+export const BLOCK_SIDE_DIRECTIONS = [
+  'north',
+  'south',
+  'east',
+  'west',
+  'northeast',
+  'northwest',
+  'southeast',
+  'southwest',
+  'corner',
+  'internal',
+] as const;
+
+/**
+ * Derive type from runtime array (SSoT pattern)
+ */
+export type BlockSideDirection = typeof BLOCK_SIDE_DIRECTIONS[number];
 
 /**
  * Complete project address definition
