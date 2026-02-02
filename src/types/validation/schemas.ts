@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { validationRules } from '@/utils/validation';
 import { PROJECT_STATUSES as CENTRALIZED_PROJECT_STATUSES, BUILDING_STATUSES as CENTRALIZED_BUILDING_STATUSES } from '@/core/status/StatusConstants';
-import type { ProjectAddressType, BlockSideDirection } from '@/types/project/addresses';
+import type { ProjectAddressType, BlockSideDirection } from '@/types/project'; // Central export surface
 
 // 🏢 ENTERPRISE: Use centralized status constants (NO MORE DUPLICATES)
 const PROJECT_STATUSES = Object.keys(CENTRALIZED_PROJECT_STATUSES);

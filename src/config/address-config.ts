@@ -8,7 +8,7 @@
 
 import { GEOGRAPHIC_CONFIG } from './geographic-config';
 import { generateProjectId } from '@/services/enterprise-id.service';
-import type { ProjectAddressType } from '@/types/project/addresses';
+import type { ProjectAddressType } from '@/types/project'; // Central export surface
 
 /**
  * Address configuration interface
