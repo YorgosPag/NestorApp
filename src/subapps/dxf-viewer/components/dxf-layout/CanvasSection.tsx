@@ -896,16 +896,16 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
           const viewport = { width: rect.width, height: rect.height };
 
           // Use professional zoom system for fit-to-view with actual viewport
-          // 🎯 ENTERPRISE: alignToOrigin=true to position world (0,0) at bottom-left ruler intersection
-          zoomSystem.zoomToFit(dxfScene.bounds, viewport, true);
+          // 🎯 ENTERPRISE: preserve original origin (allow negative coordinates)
+          zoomSystem.zoomToFit(dxfScene.bounds, viewport, false);
         } else {
           // Fallback to container dimensions if canvas not ready
           const container = document.querySelector('.relative.w-full.h-full.overflow-hidden');
           if (container) {
             // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Χρήση CanvasBoundsService (works with any element)
             const rect = container.getBoundingClientRect();
-            // 🎯 ENTERPRISE: alignToOrigin=true to position world (0,0) at bottom-left ruler intersection
-            zoomSystem.zoomToFit(dxfScene.bounds, { width: rect.width, height: rect.height }, true);
+            // 🎯 ENTERPRISE: preserve original origin (allow negative coordinates)
+            zoomSystem.zoomToFit(dxfScene.bounds, { width: rect.width, height: rect.height }, false);
           }
         }
       }
@@ -1336,8 +1336,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         }
 
         try {
-          // 🎯 ENTERPRISE: alignToOrigin = true → (0,0) at axis intersection (bottom-left)
-          const zoomResult = zoomSystem.zoomToFit(combinedBounds, snap.viewport, true);
+          // 🎯 ENTERPRISE: preserve original origin (allow negative coordinates)
+          const zoomResult = zoomSystem.zoomToFit(combinedBounds, snap.viewport, false);
 
           // 🔥 ΚΡΙΣΙΜΟ: Εφαρμογή του νέου transform με null checks + NaN guards
           if (zoomResult && zoomResult.transform) {

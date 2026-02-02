@@ -42,7 +42,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
-import { Building2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Building2, Plus, Trash2, Star } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized dialog sizing tokens (ADR-031)
 import { cn } from '@/lib/utils';
 import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-tokens';
@@ -64,6 +66,10 @@ import type {
   ProjectRiskLevel,
   ProjectComplexity,
 } from '@/types/project';
+// 🏢 ENTERPRISE: Address system (ADR-167)
+import type { ProjectAddress } from '@/types/project/addresses';
+import { AddressFormSection, AddressCard } from '@/components/shared/addresses';
+import { migrateLegacyAddress } from '@/types/project/address-helpers';
 
 // =============================================================================
 // TYPES
@@ -140,6 +146,10 @@ export function AddProjectDialog({
     handleCheckboxChange,
     handleNumberChange,
     resetForm,
+    // 🏢 ENTERPRISE: Address handlers (ADR-167)
+    handleAddAddress,
+    handleSetPrimary,
+    handleRemoveAddress,
   } = useProjectForm({ onProjectAdded, onOpenChange, editProject });
 
   // 🏢 ENTERPRISE: Companies for dropdown
@@ -148,6 +158,9 @@ export function AddProjectDialog({
 
   // 🏢 ENTERPRISE: Active tab state
   const [activeTab, setActiveTab] = useState('basic');
+
+  // 🏢 ENTERPRISE: Temp address for form (ADR-167)
+  const [tempAddress, setTempAddress] = useState<Partial<ProjectAddress> | null>(null);
 
   // Load companies on mount
   useEffect(() => {
@@ -172,6 +185,11 @@ export function AddProjectDialog({
         address: editProject.address || '',
         city: editProject.city || '',
         description: editProject.description || '',
+        // 🏢 ENTERPRISE: Lazy migration for addresses (ADR-167)
+        addresses: editProject.addresses ||
+          (editProject.address && editProject.city
+            ? migrateLegacyAddress(editProject.address, editProject.city)
+            : []),
         location: editProject.location || '',
         client: editProject.client || '',
         type: editProject.type || '',
@@ -231,10 +249,11 @@ export function AddProjectDialog({
 
         <form onSubmit={handleSubmit}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="basic">{t('dialog.tabs.basic')}</TabsTrigger>
               <TabsTrigger value="details">{t('dialog.tabs.details')}</TabsTrigger>
               <TabsTrigger value="features">{t('dialog.tabs.features')}</TabsTrigger>
+              <TabsTrigger value="addresses">Διευθύνσεις</TabsTrigger>
             </TabsList>
 
             {/* ================================================================
@@ -685,6 +704,75 @@ export function AddProjectDialog({
                   </Label>
                 </div>
               </section>
+            </TabsContent>
+
+            {/* ================================================================
+                TAB 4: ΔΙΕΥΘΥΝΣΕΙΣ (ADR-167)
+            ================================================================ */}
+            <TabsContent value="addresses" className={spacing.margin.top.md}>
+              <div className="space-y-4">
+                {/* Existing Addresses List */}
+                {formData.addresses.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-muted-foreground">
+                      Υπάρχουσες Διευθύνσεις ({formData.addresses.length})
+                    </h3>
+                    {formData.addresses.map((address, index) => (
+                      <div key={address.id} className="relative border rounded-lg p-4">
+                        <AddressCard address={address} />
+                        <div className="absolute top-2 right-2 flex gap-2">
+                          {!address.isPrimary && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSetPrimary(index)}
+                              disabled={loading}
+                            >
+                              <Star className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {address.isPrimary && (
+                            <Badge variant="default">Κύρια</Badge>
+                          )}
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRemoveAddress(index)}
+                            disabled={loading || formData.addresses.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add New Address Form */}
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">
+                    Προσθήκη Νέας Διεύθυνσης
+                  </h3>
+                  <AddressFormSection onChange={setTempAddress} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (tempAddress && tempAddress.street && tempAddress.city) {
+                        handleAddAddress(tempAddress);
+                        setTempAddress(null);
+                      }
+                    }}
+                    disabled={loading || !tempAddress?.street || !tempAddress?.city}
+                    className="mt-3"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Προσθήκη Διεύθυνσης
+                  </Button>
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
 

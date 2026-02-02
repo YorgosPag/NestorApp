@@ -31,6 +31,12 @@ import type {
   ProjectRiskLevel,
   ProjectComplexity
 } from '@/types/project';
+import type { ProjectAddress } from '@/types/project/addresses';
+import {
+  createProjectAddress,
+  extractLegacyFields,
+  migrateLegacyAddress,
+} from '@/types/project/address-helpers';
 
 // =============================================================================
 // TYPES
@@ -46,6 +52,8 @@ export interface ProjectFormData {
   address: string;
   city: string;
   description: string;
+  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+  addresses: ProjectAddress[];
   // Λεπτομέρειες
   location: string;
   client: string;
@@ -77,6 +85,7 @@ const INITIAL_FORM_DATA: ProjectFormData = {
   address: '',
   city: '',
   description: '',
+  addresses: [],
   location: '',
   client: '',
   type: '',
@@ -156,6 +165,8 @@ export function useProjectForm({ onProjectAdded, onOpenChange, editProject }: Us
           address: formData.address,
           city: formData.city,
           description: formData.description,
+          // 🏢 ENTERPRISE: Include addresses if any (ADR-167)
+          ...(formData.addresses.length > 0 && { addresses: formData.addresses }),
         });
 
         if (result.success) {
@@ -177,6 +188,8 @@ export function useProjectForm({ onProjectAdded, onOpenChange, editProject }: Us
           address: formData.address,
           city: formData.city,
           description: formData.description,
+          // 🏢 ENTERPRISE: Include addresses if any (ADR-167)
+          ...(formData.addresses.length > 0 && { addresses: formData.addresses }),
         });
 
         if (result.success) {
@@ -224,6 +237,80 @@ export function useProjectForm({ onProjectAdded, onOpenChange, editProject }: Us
     setFormData(prev => ({ ...prev, [name]: numValue }));
   }, []);
 
+  // ==========================================================================
+  // ADDRESS HANDLERS (ADR-167)
+  // ==========================================================================
+
+  /**
+   * Add new address to project
+   * Auto-sync legacy fields from primary address
+   */
+  const handleAddAddress = useCallback((addressData: Partial<ProjectAddress>) => {
+    setFormData(prev => {
+      const newAddress = createProjectAddress({
+        ...addressData,
+        street: addressData.street || '',
+        city: addressData.city || '',
+        isPrimary: prev.addresses.length === 0, // First address = primary
+      });
+      const newAddresses = [...prev.addresses, newAddress];
+      const legacy = extractLegacyFields(newAddresses);
+
+      return {
+        ...prev,
+        addresses: newAddresses,
+        address: legacy.address,
+        city: legacy.city,
+      };
+    });
+  }, []);
+
+  /**
+   * Set address as primary
+   * Auto-sync legacy fields
+   */
+  const handleSetPrimary = useCallback((index: number) => {
+    setFormData(prev => {
+      const newAddresses = prev.addresses.map((addr, i) => ({
+        ...addr,
+        isPrimary: i === index,
+      }));
+      const legacy = extractLegacyFields(newAddresses);
+
+      return {
+        ...prev,
+        addresses: newAddresses,
+        address: legacy.address,
+        city: legacy.city,
+      };
+    });
+  }, []);
+
+  /**
+   * Remove address from project
+   * Auto-assign new primary if needed
+   */
+  const handleRemoveAddress = useCallback((index: number) => {
+    setFormData(prev => {
+      const newAddresses = prev.addresses.filter((_, i) => i !== index);
+
+      // If removed address was primary and there are remaining addresses,
+      // make the first one primary
+      if (newAddresses.length > 0 && prev.addresses[index]?.isPrimary) {
+        newAddresses[0].isPrimary = true;
+      }
+
+      const legacy = extractLegacyFields(newAddresses);
+
+      return {
+        ...prev,
+        addresses: newAddresses,
+        address: legacy.address,
+        city: legacy.city,
+      };
+    });
+  }, []);
+
   const resetForm = useCallback(() => {
     setFormData(INITIAL_FORM_DATA);
     setErrors({});
@@ -244,6 +331,10 @@ export function useProjectForm({ onProjectAdded, onOpenChange, editProject }: Us
     handleCheckboxChange,
     handleNumberChange,
     resetForm,
+    // 🏢 ENTERPRISE: Address handlers (ADR-167)
+    handleAddAddress,
+    handleSetPrimary,
+    handleRemoveAddress,
   };
 }
 

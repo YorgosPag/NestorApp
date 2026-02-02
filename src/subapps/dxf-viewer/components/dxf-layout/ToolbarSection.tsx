@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { EnhancedDXFToolbar } from '../../ui/toolbar/EnhancedDXFToolbar';
+import { ToolbarWithCursorCoordinates } from '../../ui/components/ToolbarWithCursorCoordinates';
 import { useOverlayStore } from '../../overlays/overlay-store';
 // 🏢 ENTERPRISE (2026-01-25): Universal Selection System - ADR-030
 import { useUniversalSelection } from '../../systems/selection';
@@ -92,7 +92,7 @@ export const ToolbarSection: React.FC<ToolbarSectionProps> = (props) => {
   return (
     <div className={PANEL_LAYOUT.FLEX_SHRINK.NONE}>
       {/* 🏢 ENTERPRISE: Removed wrapper padding (PANEL_LAYOUT.SPACING.SM) - toolbar has internal padding */}
-      <EnhancedDXFToolbar
+      <ToolbarWithCursorCoordinates
           activeTool={dxfProps.activeTool}
           onToolChange={dxfProps.onToolChange}
           onAction={(action, data) => {

@@ -270,8 +270,10 @@ export function useCentralizedMouseHandlers({
   // 🚀 MOUSE MOVE HANDLER - HIGH PERFORMANCE CAD-style tracking
   // 🏢 ENTERPRISE (2026-01-27): Optimized to reduce React re-renders
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    // 🔍 PERF DEBUG (2026-02-02): Log EVERY native mousemove event
-    console.error('PERF_NATIVE_MOUSEMOVE');
+    // 🔍 PERF DEBUG (2026-02-02): Log ONLY when debug is enabled to avoid console noise
+    if (DEBUG_MOUSE_HANDLERS) {
+      dperf('Performance', 'NATIVE_MOUSEMOVE');
+    }
 
     // 🏢 ENTERPRISE (2026-01-30): Unified Pointer Snapshot (rect + viewport from SAME element)
     // Pattern: Autodesk/Bentley - Single snapshot per event, no caching for transforms
@@ -338,9 +340,11 @@ export function useCentralizedMouseHandlers({
 
     // 🏢 ENTERPRISE (2026-01-26): ADR-038 - Call drawing hover for preview line
     // Uses centralized isInDrawingMode (Single Source of Truth)
-    // 🔍 PERF DEBUG (2026-02-02): Log EVERY mousemove to find bottleneck
+    // 🔍 PERF DEBUG (2026-02-02): Log ONLY when debug is enabled to avoid console noise
     const inDrawingMode = isInDrawingMode(activeTool, overlayMode);
-    console.error(`PERF_MOUSEMOVE tool=${activeTool} drawing=${inDrawingMode} cb=${!!onDrawingHover}`);
+    if (DEBUG_MOUSE_HANDLERS) {
+      dperf('Performance', `MOUSEMOVE tool=${activeTool} drawing=${inDrawingMode} cb=${!!onDrawingHover}`);
+    }
 
     if (onDrawingHover && inDrawingMode) {
       if (DEBUG_MOUSE_HANDLERS) {

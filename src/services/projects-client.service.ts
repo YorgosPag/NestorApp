@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Direct Firestore writes removed - now using Admin SDK via API endpoints
 import type { Project } from '@/types/project';
+import type { ProjectAddress } from '@/types/project/addresses';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
@@ -24,6 +25,10 @@ import { apiClient } from '@/lib/api/enterprise-api-client';
 /**
  * 🏢 ENTERPRISE: Project create payload type
  * Type-safe data for project creation
+ *
+ * 🏢 ADR-167: Multi-address support
+ * - Legacy fields (address, city) maintained for backward compatibility
+ * - New addresses[] array for multi-address projects
  */
 export interface ProjectCreatePayload {
   name: string;
@@ -32,21 +37,31 @@ export interface ProjectCreatePayload {
   status?: string;
   companyId: string;
   company?: string;
+  // Legacy fields (auto-synced from primary address)
   address?: string;
   city?: string;
+  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+  addresses?: ProjectAddress[];
 }
 
 /**
  * 🏢 ENTERPRISE: Project update payload type
  * Type-safe updates for project modifications
+ *
+ * 🏢 ADR-167: Multi-address support
+ * - Legacy fields (address, city) maintained for backward compatibility
+ * - New addresses[] array for multi-address projects
  */
 export interface ProjectUpdatePayload {
   name?: string;
   title?: string;
   description?: string;
   status?: string;
+  // Legacy fields (auto-synced from primary address)
   address?: string;
   city?: string;
+  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+  addresses?: ProjectAddress[];
 }
 
 /**

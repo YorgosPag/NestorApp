@@ -32,6 +32,8 @@ import { ProjectCustomersTab } from '@/components/projects/customers-tab';
 import { ProjectStructureTab } from '@/components/projects/tabs/ProjectStructureTab';
 import { FloorplanViewerTab } from '@/components/projects/tabs/FloorplanViewerTab';
 import { ProjectFloorplanTab } from '@/components/projects/tabs/ProjectFloorplanTab';
+// 🏢 ENTERPRISE: Multi-address locations tab (ADR-167)
+import { ProjectLocationsTab } from '@/components/projects/tabs/ProjectLocationsTab';
 
 // ============================================================================
 // PROJECT COMPONENT MAPPING
@@ -54,6 +56,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'ProjectFloorplanTab': ProjectFloorplanTab,
   // 🔄 LEGACY: FloorplanViewerTab kept for backward compatibility
   'FloorplanViewerTab': FloorplanViewerTab,
+  // 🏢 ENTERPRISE: Multi-address locations management tab (ADR-167)
+  'ProjectLocationsTab': ProjectLocationsTab,
 } as const;
 
 // ============================================================================

@@ -15,7 +15,7 @@ export function ProjectCardContent({ project }: ProjectCardContentProps) {
   return (
     <div className="p-6 space-y-4">
       <ProjectCardTitle name={project.name} description={project.title} />
-      <ProjectCardLocation address={project.address} city={project.city} />
+      <ProjectCardLocation project={project} />
       <ProjectCardProgress progress={project.progress} />
       <ProjectCardMetrics project={project} />
     </div>

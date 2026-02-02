@@ -7,7 +7,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-081: Centralized percentage formatting
 // 🏢 ADR-090: Centralized Number Formatting
-import { formatPercent, formatDistance } from '../../rendering/entities/shared/distance-label-utils';
+import { formatPercent, formatCoordinate } from '../../rendering/entities/shared/distance-label-utils';
 // 🏢 ADR-082: Step-by-step tool hints
 import { useToolHints } from '../../hooks/useToolHints';
 import type { ToolType } from './types';
@@ -97,8 +97,8 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
             <span>
               Συντεταγμένες: <strong className={`${colors.text.accent}`}>
                 {throttledCoordinates ?
-                  `X: ${formatDistance(throttledCoordinates.x, precision)}, Y: ${formatDistance(throttledCoordinates.y, precision)}` :
-                  `X: ${formatDistance(0, precision)}, Y: ${formatDistance(0, precision)}`}
+                  `X: ${formatCoordinate(throttledCoordinates.x, precision)}, Y: ${formatCoordinate(throttledCoordinates.y, precision)}` :
+                  `X: ${formatCoordinate(0, precision)}, Y: ${formatCoordinate(0, precision)}`}
               </strong>
             </span>
           </>

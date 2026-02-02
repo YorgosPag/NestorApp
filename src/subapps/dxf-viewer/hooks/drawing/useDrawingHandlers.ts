@@ -280,9 +280,11 @@ export function useDrawingHandlers(
         }
         const t4 = performance.now();
 
-        // 🔍 PERF DEBUG: Log timing for EVERY call
-        const total = t4 - t0;
-        console.error(`PERF_DRAWHOVER ${total.toFixed(1)}ms transform=${(t1-t0).toFixed(1)} preview=${(t2-t1).toFixed(1)} entity=${(t3-t2).toFixed(1)} draw=${(t4-t3).toFixed(1)}`);
+        // 🔍 PERF DEBUG: Log timing only when explicitly enabled
+        if (DEBUG_DRAWING_HANDLERS) {
+          const total = t4 - t0;
+          console.debug(`PERF_DRAWHOVER ${total.toFixed(1)}ms transform=${(t1-t0).toFixed(1)} preview=${(t2-t1).toFixed(1)} entity=${(t3-t2).toFixed(1)} draw=${(t4-t3).toFixed(1)}`);
+        }
       }
     } else {
       // 🏢 ADR-040: Clear preview when mouse leaves

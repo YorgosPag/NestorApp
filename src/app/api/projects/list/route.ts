@@ -42,6 +42,8 @@ interface ProjectListItem {
   companyId: string;
   address: string;
   city: string;
+  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+  addresses?: unknown[];
   progress: number;
   totalValue: number;
   totalArea: number;
@@ -90,6 +92,14 @@ function getString(data: Record<string, unknown>, field: string, defaultValue: s
 function getNumber(data: Record<string, unknown>, field: string, defaultValue: number = 0): number {
   const value = data[field];
   return typeof value === 'number' ? value : defaultValue;
+}
+
+/**
+ * 🔒 ENTERPRISE: Type-safe array extraction
+ */
+function getArray(data: Record<string, unknown>, field: string): unknown[] | undefined {
+  const value = data[field];
+  return Array.isArray(value) ? value : undefined;
 }
 
 /**
@@ -223,6 +233,8 @@ export async function GET(request: NextRequest) {
       companyId: getString(data, 'companyId'),
       address: getString(data, 'address'),
       city: getString(data, 'city'),
+      // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+      addresses: getArray(data, 'addresses'),
       progress: getNumber(data, 'progress'),
       totalValue: getNumber(data, 'totalValue'),
       totalArea: getNumber(data, 'totalArea'),

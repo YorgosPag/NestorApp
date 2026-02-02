@@ -80,7 +80,7 @@ export class DxfImportService {
             
             if (result.success && result.scene) {
               // 🏢 ENTERPRISE: Use centralized bounds calculation with normalization
-              const perfectBounds = calculateTightBounds(result.scene.entities, true);
+              const perfectBounds = calculateTightBounds(result.scene.entities, false);
               result.scene.bounds = perfectBounds;
             }
             
@@ -164,7 +164,7 @@ export class DxfImportService {
 
       // 🏢 ENTERPRISE: Use centralized bounds calculation with normalization
       if (scene.entities.length > 0) {
-        const perfectBounds = calculateTightBounds(scene.entities, true);
+        const perfectBounds = calculateTightBounds(scene.entities, false);
         scene.bounds = perfectBounds;
       }
 
