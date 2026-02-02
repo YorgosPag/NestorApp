@@ -82,6 +82,7 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { TRANSITION_PRESETS } from '@/components/ui/effects/transitions';
 import type { AuthFormMode, AuthFormProps } from '../types/auth.types';
+import { AUTH_ROUTES } from '@/lib/routes';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Reuse existing header components for auth pages (ADR-020.1)
@@ -107,7 +108,7 @@ interface FormData {
 export function AuthForm({
   defaultMode = 'signin',
   onSuccess,
-  redirectTo = '/'
+  redirectTo = AUTH_ROUTES.home
 }: AuthFormProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('auth');
@@ -120,6 +121,7 @@ export function AuthForm({
   const typography = useTypography();
   const layout = useLayoutClasses();
   const {
+    user,
     signIn,
     signInWithGoogle,
     signUp,
@@ -141,6 +143,14 @@ export function AuthForm({
       router.prefetch(redirectTo);
     }
   }, [router, redirectTo]);
+
+  // 🏢 ENTERPRISE: Redirect authenticated users away from login screen
+  useEffect(() => {
+    if (!loading && user) {
+      setIsRedirecting(true);
+      router.replace(redirectTo);
+    }
+  }, [loading, user, router, redirectTo]);
 
   // Form state
   const [mode, setMode] = useState<AuthFormMode>(defaultMode);
@@ -284,15 +294,11 @@ export function AuthForm({
       console.log('[ENTERPRISE] [AuthForm] Google Sign-In attempt');
       await signInWithGoogle();
 
+      // Success! Show message and redirect
       setSuccessMessage(t('google.success'));
       onSuccess?.();
-
-      // Redirect after successful Google sign-in
       setIsRedirecting(true);
-      console.log('[ENTERPRISE] [AuthForm] Redirecting to:', redirectTo);
-      setTimeout(() => {
-        router.push(redirectTo);
-      }, 100);
+      router.push(redirectTo);
     } catch (err) {
       console.error('[ERROR] [AuthForm] Google Sign-In error:', err);
     } finally {

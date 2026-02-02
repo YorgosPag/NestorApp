@@ -63,6 +63,7 @@ export { ProductTour, TourProvider, TourRenderer } from './ProductTour';
 // =============================================================================
 
 export { useTour, createTourConfig, createButtonStep, createSectionStep } from './useTour';
+export { useTourSafe } from './useTourSafe';
 export { useTourContext } from './ProductTour.context';
 
 // =============================================================================

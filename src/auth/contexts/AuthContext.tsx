@@ -406,6 +406,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // ==========================================================================
+  // REDIRECT RESULT HANDLING (Google Sign-In Redirect)
+  // ==========================================================================
   // AUTHENTICATION METHODS
   // ==========================================================================
 
@@ -448,9 +450,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         prompt: 'select_account' // Always show account selector
       });
 
-      const result = await signInWithPopup(auth, provider);
+      // Use popup flow (works reliably on localhost)
+      await signInWithPopup(auth, provider);
 
-      console.log('[OK] [AuthContext] Google Sign-In successful:', result.user.email);
+      console.log('[OK] [AuthContext] Google Sign-In successful');
     } catch (error) {
       // 🔐 ENTERPRISE: Check if MFA is required
       const resolver = twoFactorService.getMfaResolver(error);

@@ -610,6 +610,7 @@
       "description": "Προσαρμόστε την εμφάνιση και τη γλώσσα",
       "language": "Γλώσσα",
       "selectLanguage": "Επιλέξτε γλώσσα",
+      "languageGreek": "Ελληνικά",
       "languageHint": "Η γλώσσα εμφάνισης της εφαρμογής",
       "theme": "Θέμα",
       "selectTheme": "Επιλέξτε θέμα",

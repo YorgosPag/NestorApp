@@ -1,134 +1,143 @@
-// 🏢 ENTERPRISE: Project Address System
-// ADR-167: Enterprise Multi-Address Projects with Building Inheritance
-// Based on: SAP multi-address, Salesforce ContactPointAddress, Procore Locations
-
 /**
- * Project address types - following enterprise ERP/CRM patterns
- * 🏢 ENTERPRISE: Single Source of Truth for address type validation
- * SAP: address usage roles
- * Salesforce: ContactPointAddress with usage classification
+ * =============================================================================
+ * 🏢 ENTERPRISE PROJECT ADDRESS SYSTEM
+ * =============================================================================
+ *
+ * Multi-address support for construction projects
+ * Supports buildings with multiple street sides
+ *
+ * Pattern: SAP Real Estate, Salesforce CPQ, Procore
+ *
+ * Features:
+ * - Multiple addresses per project
+ * - Primary/secondary classification
+ * - Block side tracking (north, south, east, west)
+ * - Address type taxonomy (site, entrance, delivery, legal)
+ * - Greek cadastral code support (ΚΑΕΚ)
+ *
+ * @file addresses.ts
+ * @created 2026-02-02
  */
-export const PROJECT_ADDRESS_TYPES = [
-  'site',           // Construction site / main location
-  'entrance',       // Building entrance
-  'delivery',       // Material delivery point
-  'legal',          // Legal/administrative address
-  'postal',         // Postal/mailing address
-  'billing',        // Billing address
-  'correspondence', // Correspondence address
-  'other',          // Custom use case
-] as const;
+
+// =============================================================================
+// ADDRESS TYPES & ENUMS
+// =============================================================================
 
 /**
- * Derive type from runtime array (SSoT pattern)
+ * Block side directions for multi-sided buildings
+ * Common in Greek urban construction (οικοδομικά τετράγωνα)
  */
-export type ProjectAddressType = typeof PROJECT_ADDRESS_TYPES[number];
+export type BlockSideDirection =
+  | 'north'      // Βόρεια πλευρά
+  | 'south'      // Νότια πλευρά
+  | 'east'       // Ανατολική πλευρά
+  | 'west'       // Δυτική πλευρά
+  | 'northeast'  // Βορειοανατολική
+  | 'northwest'  // Βορειοδυτική
+  | 'southeast'  // Νοτιοανατολική
+  | 'southwest'  // Νοτιοδυτική
+  | 'corner'     // Γωνιακή πλευρά
+  | 'internal';  // Εσωτερική (χωρίς πρόσοψη)
 
 /**
- * Block side directions for buildings facing multiple streets
- * 🏢 ENTERPRISE: Single Source of Truth for block side validation
- * Based on: Google Maps Platform building entrances
+ * Address type taxonomy for construction projects
  */
-export const BLOCK_SIDE_DIRECTIONS = [
-  'north',
-  'south',
-  'east',
-  'west',
-  'northeast',
-  'northwest',
-  'southeast',
-  'southwest',
-  'corner',
-  'internal',
-] as const;
+export type ProjectAddressType =
+  | 'site'           // Γενική διεύθυνση εργοταξίου
+  | 'entrance'       // Κύρια είσοδος
+  | 'delivery'       // Παράδοση υλικών
+  | 'legal'          // Νομική έδρα
+  | 'postal'         // Ταχυδρομική διεύθυνση
+  | 'billing'        // Διεύθυνση τιμολόγησης
+  | 'correspondence' // Αλληλογραφία
+  | 'other';         // Άλλο
+
+// =============================================================================
+// MAIN INTERFACES
+// =============================================================================
 
 /**
- * Derive type from runtime array (SSoT pattern)
- */
-export type BlockSideDirection = typeof BLOCK_SIDE_DIRECTIONS[number];
-
-/**
- * Complete project address definition
- * Enterprise pattern: Primary + Secondary with type/role classification
+ * Project address with full metadata
+ * Supports Greek construction industry requirements
  */
 export interface ProjectAddress {
   /** Unique identifier */
   id: string;
 
-  /** Street name */
+  // 📍 Basic address fields
+  /** Street name (e.g., "Σαμοθράκης") */
   street: string;
-
-  /** Street number (optional for entrances without clear numbering) */
+  /** Street number (e.g., "16") */
   number?: string;
-
-  /** City */
+  /** City (e.g., "Θεσσαλονίκη") */
   city: string;
-
-  /** Postal code */
+  /** Postal code (e.g., "54621") */
   postalCode: string;
-
-  /** Region/State (optional) */
+  /** Region (e.g., "Κεντρική Μακεδονία") */
   region?: string;
-
-  /** Country */
+  /** Country (default: "Greece") */
   country: string;
 
-  /** Address type/usage */
+  // 🏷️ Classification
+  /** Address type */
   type: ProjectAddressType;
-
-  /** Primary address flag - exactly ONE per project (Zod invariant) */
+  /** Is this the primary address? */
   isPrimary: boolean;
-
-  /** Human-readable label (e.g., "Είσοδος Α - Σαμοθράκης 16") */
+  /** Optional label (e.g., "Κύρια Είσοδος") */
   label?: string;
 
-  /** Block side for multi-frontage buildings */
+  // 🏗️ Construction-specific
+  /** Which side of the building block */
   blockSide?: BlockSideDirection;
-
-  /** Block side description (e.g., "Νότια πλευρά, γωνία") */
+  /** Human-readable description (e.g., "Πρόσοψη επί Σαμοθράκης") */
   blockSideDescription?: string;
 
-  /** ΚΑΕΚ (Κωδικός Αριθμός Εντοπισμού Κτημάτων) - Greek Cadastral Code */
+  // 🇬🇷 Greek cadastral system
+  /** Κτηματολογικός Αναγνωριστικός Κωδικός (ΚΑΕΚ) */
   cadastralCode?: string;
-
-  /** Municipality */
+  /** Municipality (e.g., "Δήμος Καλαμαριάς") */
   municipality?: string;
-
-  /** Neighborhood */
+  /** Neighborhood (e.g., "Άνω Τούμπα") */
   neighborhood?: string;
 
-  /** Geographic coordinates (GIS-ready) */
+  // 🗺️ Geographic
+  /** GPS coordinates for mapping */
   coordinates?: {
     lat: number;
     lng: number;
   };
 
-  /** Sort order for display (lower = higher priority) */
+  // 📊 Ordering
+  /** Sort order for display (lower = first) */
   sortOrder?: number;
 }
 
 /**
- * Building address configuration - INHERITANCE PATTERN
- * Buildings reference Project addresses instead of duplicating data
- *
- * Enterprise pattern: Reference + controlled overrides
- * Procore: Location hierarchy
- * Autodesk: Location Breakdown Structure (LBS)
+ * Building address reference - Inheritance pattern
+ * Buildings can inherit from project or have custom address
  */
 export interface BuildingAddressReference {
-  /** Inherit from project addresses (default: true) */
+  /** Should inherit address from parent project? */
   inheritFromProject: boolean;
-
-  /**
-   * Reference to ProjectAddress.id
-   * REQUIRED when inheritFromProject=true (Zod invariant)
-   */
+  /** If inheriting, which project address? */
   projectAddressId?: string;
-
-  /**
-   * Controlled overrides - only for permitted fields
-   * Enterprise pattern: override only what's necessary (label, coordinates)
-   * NOT full address duplication
-   */
-  override?: Partial<Pick<ProjectAddress, 'label' | 'coordinates' | 'blockSideDescription'>>;
+  /** Override specific fields (e.g., different floor/unit number) */
+  override?: Partial<ProjectAddress>;
 }
+
+// =============================================================================
+// HELPER TYPES
+// =============================================================================
+
+/**
+ * Partial address for forms (before full validation)
+ */
+export type PartialProjectAddress = Partial<ProjectAddress> & {
+  street: string; // Street is required
+  city: string;   // City is required
+};
+
+/**
+ * Address update payload (excludes id)
+ */
+export type ProjectAddressUpdate = Partial<Omit<ProjectAddress, 'id'>>;

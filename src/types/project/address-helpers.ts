@@ -1,244 +1,376 @@
-// 🏢 ENTERPRISE: Project Address Helper Functions
-// ADR-167: Single source of truth for address operations
+/**
+ * =============================================================================
+ * 🏢 ENTERPRISE ADDRESS HELPERS
+ * =============================================================================
+ *
+ * Utility functions for project address management
+ * Pattern: SAP Real Estate, Salesforce CPQ, Microsoft Dynamics
+ *
+ * Features:
+ * - Primary address extraction
+ * - Address formatting (Greek standards)
+ * - Legacy migration (backward compatibility)
+ * - Building address inheritance resolution
+ *
+ * @file address-helpers.ts
+ * @created 2026-02-02
+ */
 
-import type { ProjectAddress, BuildingAddressReference } from './addresses';
-import { ADDRESS_CONFIG, AddressUtils } from '@/config/address-config';
+import type {
+  ProjectAddress,
+  BuildingAddressReference,
+  BlockSideDirection,
+  ProjectAddressType
+} from './addresses';
+
+// =============================================================================
+// PRIMARY ADDRESS EXTRACTION
+// =============================================================================
 
 /**
- * Get the primary address from an array
- * Enterprise invariant: exactly ONE isPrimary=true per project
+ * Get primary address from array
+ * Enterprise pattern: Always return the first primary, or first address as fallback
  *
  * @param addresses - Array of project addresses
- * @returns Primary address or undefined if not found
+ * @returns Primary address or undefined
  */
-export function getPrimaryAddress(addresses?: ProjectAddress[]): ProjectAddress | undefined {
-  if (!addresses || addresses.length === 0) return undefined;
-  return addresses.find((addr) => addr.isPrimary);
+export function getPrimaryAddress(
+  addresses: ProjectAddress[]
+): ProjectAddress | undefined {
+  if (!addresses || addresses.length === 0) {
+    return undefined;
+  }
+
+  // Find first primary address
+  const primary = addresses.find(addr => addr.isPrimary);
+  if (primary) {
+    return primary;
+  }
+
+  // Fallback: return first address
+  return addresses[0];
 }
 
+// =============================================================================
+// ADDRESS FORMATTING
+// =============================================================================
+
 /**
- * Format address for display
- * Pattern: "Street Number, City PostalCode"
+ * Format address for display (Greek format)
+ * Pattern: "Οδός Αριθμός, Πόλη ΤΚ"
  *
- * @param address - Project address
- * @returns Formatted address string
+ * @param address - Project address to format
+ * @returns Formatted string
  */
 export function formatAddressLine(address: ProjectAddress): string {
   const parts: string[] = [];
 
   // Street + Number
   if (address.street) {
-    parts.push(address.number ? `${address.street} ${address.number}` : address.street);
+    parts.push(address.street);
+    if (address.number) {
+      parts[parts.length - 1] = `${parts[parts.length - 1]} ${address.number}`;
+    }
   }
 
-  // City + Postal Code
+  // City
   if (address.city) {
-    const cityPart = address.postalCode
-      ? `${address.city} ${address.postalCode}`
-      : address.city;
-    parts.push(cityPart);
+    parts.push(address.city);
+  }
+
+  // Postal Code
+  if (address.postalCode) {
+    parts.push(address.postalCode);
   }
 
   return parts.join(', ');
 }
 
 /**
- * Format block side for display (localized)
+ * Format block side for display (Greek)
+ *
  * @param side - Block side direction
- * @param locale - i18n locale (default: 'el')
- * @returns Formatted block side string
+ * @param locale - Language (currently only 'el' supported)
+ * @returns Formatted string
  */
-export function formatBlockSide(side: string, locale: string = 'el'): string {
-  // This will use i18n in actual implementation
-  // For now, return the key (i18n will handle translation)
-  return side;
+export function formatBlockSide(
+  side: BlockSideDirection | undefined,
+  locale: string = 'el'
+): string {
+  if (!side) {
+    return '';
+  }
+
+  const labels: Record<BlockSideDirection, string> = {
+    north: 'Βόρεια',
+    south: 'Νότια',
+    east: 'Ανατολική',
+    west: 'Δυτική',
+    northeast: 'Βορειοανατολική',
+    northwest: 'Βορειοδυτική',
+    southeast: 'Νοτιοανατολική',
+    southwest: 'Νοτιοδυτική',
+    corner: 'Γωνία',
+    internal: 'Εσωτερική'
+  };
+
+  return labels[side] || '';
 }
 
 /**
- * Create a new ProjectAddress with defaults
- * Factory pattern for consistent address creation
+ * Format address type for display (Greek)
  *
- * 🏢 ENTERPRISE: Uses centralized config (NO hardcoded values)
+ * @param type - Address type
+ * @param locale - Language (currently only 'el' supported)
+ * @returns Formatted string
+ */
+export function formatAddressType(
+  type: ProjectAddressType,
+  locale: string = 'el'
+): string {
+  const labels: Record<ProjectAddressType, string> = {
+    site: 'Εργοτάξιο',
+    entrance: 'Είσοδος',
+    delivery: 'Παράδοση',
+    legal: 'Νομική Έδρα',
+    postal: 'Ταχυδρομείο',
+    billing: 'Τιμολόγηση',
+    correspondence: 'Αλληλογραφία',
+    other: 'Άλλο'
+  };
+
+  return labels[type];
+}
+
+// =============================================================================
+// FACTORY FUNCTIONS
+// =============================================================================
+
+/**
+ * Create new ProjectAddress with defaults
+ * Enterprise pattern: Factory function with sensible defaults
  *
  * @param data - Partial address data
- * @returns Complete ProjectAddress with defaults
+ * @returns Complete ProjectAddress
  */
 export function createProjectAddress(
-  data: Partial<ProjectAddress> & Pick<ProjectAddress, 'id' | 'street' | 'city' | 'postalCode' | 'country'>
+  data: Partial<ProjectAddress> & { street: string; city: string }
 ): ProjectAddress {
-  const defaults = AddressUtils.getNewAddressDefaults();
   return {
-    type: defaults.type,
-    isPrimary: defaults.isPrimary,
-    sortOrder: defaults.sortOrder,
-    ...data,
+    id: data.id || crypto.randomUUID(),
+    street: data.street,
+    number: data.number,
+    city: data.city,
+    postalCode: data.postalCode || '',
+    region: data.region,
+    country: data.country || 'Greece',
+    type: data.type || 'site',
+    isPrimary: data.isPrimary ?? false,
+    label: data.label,
+    blockSide: data.blockSide,
+    blockSideDescription: data.blockSideDescription,
+    cadastralCode: data.cadastralCode,
+    municipality: data.municipality,
+    neighborhood: data.neighborhood,
+    coordinates: data.coordinates,
+    sortOrder: data.sortOrder ?? 0
   };
 }
 
-/**
- * Migrate legacy single address to new multi-address format
- * Backward compatibility helper
- *
- * 🏢 ENTERPRISE: Uses centralized config + enterprise ID generation (NO hardcoded values)
- *
- * @param legacy - Legacy address/city strings
- * @returns ProjectAddress array with single site address
- */
-export function migrateLegacyAddress(legacy: {
-  address?: string;
-  city?: string;
-  id?: string;
-}): ProjectAddress[] {
-  // If no legacy data, return empty array
-  if (!legacy.address && !legacy.city) {
-    return [];
-  }
-
-  // Get defaults from centralized config
-  const defaults = AddressUtils.getLegacyDefaults();
-
-  // Create a single "site" address from legacy data
-  const address: ProjectAddress = {
-    id: legacy.id || AddressUtils.generateAddressId(), // Enterprise ID generation (NOT Date.now()!)
-    street: legacy.address || '',
-    city: legacy.city || '',
-    postalCode: defaults.postalCode, // From centralized config
-    country: defaults.country,       // From geographic-config (NOT 'GR'!)
-    type: defaults.type,             // From address-config
-    isPrimary: defaults.isPrimary,   // Legacy addresses are always primary
-    label: defaults.label,           // From address-config
-  };
-
-  return [address];
-}
+// =============================================================================
+// LEGACY MIGRATION
+// =============================================================================
 
 /**
- * Resolve building addresses from references
- * SINGLE SOURCE OF TRUTH for building address resolution
+ * Convert legacy single address to new format
+ * Enterprise pattern: Backward compatibility migration
  *
- * Enterprise pattern: Always use this function for building address display
- * Never compute addresses inline - prevents duplicates and inconsistencies
- *
- * @param buildingConfigs - Building address configurations (references)
- * @param projectAddresses - Source project addresses
- * @returns Resolved addresses with overrides applied
+ * @param legacyAddress - Old "address" string field
+ * @param legacyCity - Old "city" string field
+ * @returns ProjectAddress array (single primary address)
  */
-export function resolveBuildingAddresses(
-  buildingConfigs: BuildingAddressReference[] | undefined,
-  projectAddresses: ProjectAddress[] | undefined
+export function migrateLegacyAddress(
+  legacyAddress: string,
+  legacyCity: string
 ): ProjectAddress[] {
-  // No configs = inherit all project addresses
-  if (!buildingConfigs || buildingConfigs.length === 0) {
-    return projectAddresses || [];
-  }
-
-  // No project addresses available
-  if (!projectAddresses || projectAddresses.length === 0) {
+  if (!legacyAddress || !legacyCity) {
     return [];
   }
 
-  const resolved: ProjectAddress[] = [];
+  // Parse street and number from legacy address
+  // Pattern: "Σαμοθράκης 16" → street: "Σαμοθράκης", number: "16"
+  const match = legacyAddress.match(/^(.+?)\s+(\d+[Α-Ωα-ω]?)$/);
 
-  for (const config of buildingConfigs) {
-    if (!config.inheritFromProject) {
-      // Not inheriting - skip (should not happen in Phase 1)
-      continue;
-    }
+  const street = match ? match[1].trim() : legacyAddress;
+  const number = match ? match[2].trim() : undefined;
 
-    if (!config.projectAddressId) {
-      // Invalid config - skip (Zod should catch this)
-      continue;
-    }
-
-    // Find the referenced project address
-    const projectAddress = projectAddresses.find((addr) => addr.id === config.projectAddressId);
-    if (!projectAddress) {
-      // Referenced address not found - skip
-      continue;
-    }
-
-    // Apply overrides if any
-    const resolvedAddress: ProjectAddress = {
-      ...projectAddress,
-      ...(config.override || {}),
-    };
-
-    resolved.push(resolvedAddress);
-  }
-
-  return resolved;
+  return [
+    createProjectAddress({
+      street,
+      number,
+      city: legacyCity,
+      postalCode: '', // Unknown in legacy
+      country: 'Greece',
+      type: 'site',
+      isPrimary: true,
+      sortOrder: 0
+    })
+  ];
 }
 
 /**
- * Get building primary address (first in configs or primary from resolved)
- * @param buildingConfigs - Building address configurations
- * @param projectAddresses - Source project addresses
- * @returns Primary building address or undefined
- */
-export function getBuildingPrimaryAddress(
-  buildingConfigs: BuildingAddressReference[] | undefined,
-  projectAddresses: ProjectAddress[] | undefined
-): ProjectAddress | undefined {
-  const resolved = resolveBuildingAddresses(buildingConfigs, projectAddresses);
-  if (resolved.length === 0) return undefined;
-
-  // Return first primary, or first address if no primary
-  return resolved.find((addr) => addr.isPrimary) || resolved[0];
-}
-
-/**
- * Resolve building primary address using primaryProjectAddressId
- * 🏢 ENTERPRISE: Authoritative primary address resolver
+ * Extract legacy fields from new address array (for backward compatibility)
+ * Enterprise pattern: Bidirectional compatibility
  *
- * This function respects the Building.primaryProjectAddressId field,
- * which is the single source of truth for which address is primary.
- *
- * @param primaryProjectAddressId - Building's primary address ID
- * @param buildingConfigs - Building address configurations
- * @param projectAddresses - Source project addresses
- * @returns Primary address or fallback to first resolved address
+ * @param addresses - New address array
+ * @returns Legacy { address, city } object
  */
-export function resolveBuildingPrimaryAddress(
-  primaryProjectAddressId: string | undefined,
-  buildingConfigs: BuildingAddressReference[] | undefined,
-  projectAddresses: ProjectAddress[] | undefined
-): ProjectAddress | undefined {
-  // If no primaryProjectAddressId specified, fallback to legacy behavior
-  if (!primaryProjectAddressId) {
-    return getBuildingPrimaryAddress(buildingConfigs, projectAddresses);
+export function extractLegacyFields(
+  addresses: ProjectAddress[]
+): { address: string; city: string } {
+  const primary = getPrimaryAddress(addresses);
+
+  if (!primary) {
+    return { address: '', city: '' };
   }
 
-  // ENTERPRISE INVARIANT: primaryProjectAddressId MUST exist in project addresses
-  if (!projectAddresses || projectAddresses.length === 0) {
-    console.warn(
-      `[ADR-167] Building has primaryProjectAddressId="${primaryProjectAddressId}" but no project addresses available`
-    );
+  // Format legacy address: "Street Number"
+  const legacyAddress = primary.number
+    ? `${primary.street} ${primary.number}`
+    : primary.street;
+
+  return {
+    address: legacyAddress,
+    city: primary.city
+  };
+}
+
+// =============================================================================
+// BUILDING ADDRESS INHERITANCE
+// =============================================================================
+
+/**
+ * Resolve building address reference (inheritance from project)
+ * Enterprise pattern: Parent-child relationship resolution
+ *
+ * @param ref - Building address reference
+ * @param projectAddresses - Parent project addresses
+ * @returns Resolved address or undefined
+ */
+export function resolveBuildingAddress(
+  ref: BuildingAddressReference,
+  projectAddresses: ProjectAddress[]
+): ProjectAddress | undefined {
+  // No inheritance - building has custom address
+  if (!ref.inheritFromProject) {
     return undefined;
   }
 
-  // Find the primary address by ID
-  const primaryAddress = projectAddresses.find((addr) => addr.id === primaryProjectAddressId);
+  // Find specified project address
+  let baseAddress: ProjectAddress | undefined;
 
-  if (!primaryAddress) {
-    console.warn(
-      `[ADR-167] Building primaryProjectAddressId="${primaryProjectAddressId}" not found in project addresses`
-    );
-    // Fallback to legacy behavior
-    return getBuildingPrimaryAddress(buildingConfigs, projectAddresses);
+  if (ref.projectAddressId) {
+    baseAddress = projectAddresses.find(addr => addr.id === ref.projectAddressId);
+  } else {
+    // Default: use primary address
+    baseAddress = getPrimaryAddress(projectAddresses);
   }
 
-  // Check if building has configs - if yes, apply overrides
-  if (buildingConfigs && buildingConfigs.length > 0) {
-    const config = buildingConfigs.find((c) => c.projectAddressId === primaryProjectAddressId);
-    if (config && config.override) {
-      // Apply overrides to primary address
-      return {
-        ...primaryAddress,
-        ...config.override,
-      };
-    }
+  if (!baseAddress) {
+    return undefined;
   }
 
-  // Return primary address as-is (no overrides)
-  return primaryAddress;
+  // Apply overrides (e.g., different floor/unit number)
+  if (ref.override) {
+    return {
+      ...baseAddress,
+      ...ref.override
+    };
+  }
+
+  return baseAddress;
+}
+
+// =============================================================================
+// VALIDATION
+// =============================================================================
+
+/**
+ * Validate address data
+ * Enterprise pattern: Data integrity checks
+ *
+ * @param address - Address to validate
+ * @returns Validation errors or null if valid
+ */
+export function validateAddress(
+  address: Partial<ProjectAddress>
+): string[] {
+  const errors: string[] = [];
+
+  // Required fields
+  if (!address.street?.trim()) {
+    errors.push('Η οδός είναι υποχρεωτική');
+  }
+
+  if (!address.city?.trim()) {
+    errors.push('Η πόλη είναι υποχρεωτική');
+  }
+
+  if (!address.postalCode?.trim()) {
+    errors.push('Ο Τ.Κ. είναι υποχρεωτικός');
+  }
+
+  // Postal code format (Greek: 5 digits)
+  if (address.postalCode && !/^\d{5}$/.test(address.postalCode)) {
+    errors.push('Ο Τ.Κ. πρέπει να είναι 5 ψηφία');
+  }
+
+  return errors;
+}
+
+/**
+ * Check if address array has exactly one primary
+ * Enterprise pattern: Data consistency validation
+ *
+ * @param addresses - Address array to validate
+ * @returns Validation error or null
+ */
+export function validatePrimaryAddressUniqueness(
+  addresses: ProjectAddress[]
+): string | null {
+  const primaryCount = addresses.filter(addr => addr.isPrimary).length;
+
+  if (primaryCount === 0) {
+    return 'Πρέπει να υπάρχει μία κύρια διεύθυνση';
+  }
+
+  if (primaryCount > 1) {
+    return 'Μόνο μία διεύθυνση μπορεί να είναι κύρια';
+  }
+
+  return null;
+}
+
+// =============================================================================
+// SORTING & ORDERING
+// =============================================================================
+
+/**
+ * Sort addresses: primary first, then by sortOrder
+ * Enterprise pattern: Predictable ordering
+ *
+ * @param addresses - Addresses to sort
+ * @returns Sorted array (does not mutate original)
+ */
+export function sortAddresses(addresses: ProjectAddress[]): ProjectAddress[] {
+  return [...addresses].sort((a, b) => {
+    // Primary addresses first
+    if (a.isPrimary && !b.isPrimary) return -1;
+    if (!a.isPrimary && b.isPrimary) return 1;
+
+    // Then by sortOrder
+    const orderA = a.sortOrder ?? 999;
+    const orderB = b.sortOrder ?? 999;
+    return orderA - orderB;
+  });
 }

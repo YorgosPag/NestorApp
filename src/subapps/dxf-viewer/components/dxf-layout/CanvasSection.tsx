@@ -64,6 +64,7 @@ import { serviceRegistry } from '../../services';
 // 🏢 ENTERPRISE (2026-01-30): canvasBoundsService kept ONLY for ResizeObserver cache clearing
 // NOT used for coordinate transforms - using getPointerSnapshotFromElement instead
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
+import { dlog } from '../../debug';
 // ✅ ADR-006 FIX: Import CrosshairOverlay για crosshair rendering
 import CrosshairOverlay from '../../canvas-v2/overlays/CrosshairOverlay';
 // 🏢 ADR-040: PreviewCanvas for direct preview rendering (performance optimization)
@@ -378,7 +379,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
 
                 // 🔍 DEBUG: Detailed logging to understand the issue
                 const timestamp = performance.now().toFixed(0);
-                console.log(`[${timestamp}ms][ResizeObserver] ADJUSTING:
+                dlog('Canvas', `[${timestamp}ms][ResizeObserver] ADJUSTING:
   oldHeight=${oldHeight.toFixed(1)}, newHeight=${height.toFixed(1)}, deltaHeight=${deltaHeight.toFixed(1)}
   oldOffsetY=${currentTransform.offsetY.toFixed(1)}, newOffsetY=${newOffsetY.toFixed(1)}
   transformRef.current.offsetY BEFORE=${transformRef.current.offsetY.toFixed(1)}`);
@@ -392,9 +393,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
                 // React state update for dependencies (async)
                 setTransform(newTransform);
 
-                console.log(`[${timestamp}ms][ResizeObserver] AFTER: transformRef.current.offsetY=${transformRef.current.offsetY.toFixed(1)}`);
+                dlog('Canvas', `[${timestamp}ms][ResizeObserver] AFTER: transformRef.current.offsetY=${transformRef.current.offsetY.toFixed(1)}`);
               } else {
-                console.log(`[ResizeObserver] SKIP adjust: oldHeight=${oldHeight.toFixed(1)}, deltaHeight=${deltaHeight.toFixed(1)}`);
+                dlog('Canvas', `[ResizeObserver] SKIP adjust: oldHeight=${oldHeight.toFixed(1)}, deltaHeight=${deltaHeight.toFixed(1)}`);
               }
 
               const newViewport = { width, height };

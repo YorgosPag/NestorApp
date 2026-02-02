@@ -16,8 +16,8 @@ import type { TFunction } from 'i18next';
 import { generateErrorId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
-// 🏢 ENTERPRISE: Product Tour System (ADR-037)
-import { useTour } from '@/components/ui/ProductTour';
+// 🏢 ENTERPRISE: Product Tour System (ADR-037) - Safe wrapper for graceful degradation
+import { useTourSafe } from '@/components/ui/ProductTour';
 import { ERROR_DIALOG_BUTTON_IDS, createErrorDialogTourConfig } from './errorDialogTour';
 
 // ============================================================================
@@ -1086,7 +1086,8 @@ export function RouteErrorFallback({
   const spacingTokens = useSpacingTokens();
   const { t } = useTranslation('errors');
   const { reportError } = useErrorReporting();
-  const { startTour, shouldShowTour } = useTour();
+  // 🏢 ENTERPRISE: Use safe tour hook - graceful degradation if TourProvider not available
+  const { startTour, shouldShowTour } = useTourSafe();
 
   // 🏢 ENTERPRISE: Start tour handler
   const handleStartTour = React.useCallback(() => {
