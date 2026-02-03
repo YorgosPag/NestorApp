@@ -310,6 +310,8 @@ export interface CustomClaims {
   mfaEnrolled?: boolean;
   /** Email verification status */
   emailVerified?: boolean;
+  /** Fine-grained permissions (optional) */
+  permissions?: PermissionId[];
 }
 
 // =============================================================================

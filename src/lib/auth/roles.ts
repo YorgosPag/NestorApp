@@ -65,6 +65,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
     name: 'auth.roles.companyAdmin.name',
     description: 'auth.roles.companyAdmin.description',
     permissions: [
+      'admin_access',
       'users:users:view',
       'users:users:manage',
       'projects:projects:view',

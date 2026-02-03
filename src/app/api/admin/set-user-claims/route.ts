@@ -17,11 +17,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, isValidGlobalRole } from '@/lib/auth';
-import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
+import { withAuth, isValidGlobalRole, isValidPermission, PREDEFINED_ROLES, GLOBAL_ROLES } from '@/lib/auth';
+import type { AuthContext, PermissionCache, GlobalRole, PermissionId } from '@/lib/auth';
 import { logClaimsUpdated, extractRequestMetadata } from '@/lib/auth';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
+import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { createModuleLogger } from '@/lib/telemetry/Logger';
+
+// ============================================================================
+// LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('SET_USER_CLAIMS');
 
 // ============================================================================
 // TYPES
@@ -36,6 +44,8 @@ interface SetUserClaimsRequest {
   globalRole: GlobalRole;
   /** Email του χρήστη (για verification) */
   email: string;
+  /** Optional explicit permissions override/extension */
+  permissions?: PermissionId[];
 }
 
 interface SetUserClaimsResponse {
@@ -46,6 +56,7 @@ interface SetUserClaimsResponse {
     email: string;
     companyId: string;
     globalRole: GlobalRole;
+    permissions?: PermissionId[];
     customClaimsSet: boolean;
     firestoreDocCreated: boolean;
   };
@@ -81,7 +92,11 @@ async function handleSetUserClaims(
   ctx: AuthContext
 ): Promise<NextResponse<SetUserClaimsResponse>> {
   const startTime = Date.now();
-  console.log(`🔐 [SET_USER_CLAIMS] Request from ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+  logger.info('Request received', {
+    callerEmail: ctx.email,
+    callerRole: ctx.globalRole,
+    callerCompanyId: ctx.companyId,
+  });
 
   try {
     // ========================================================================
@@ -89,7 +104,7 @@ async function handleSetUserClaims(
     // ========================================================================
 
     const body: SetUserClaimsRequest = await request.json();
-    const { uid, companyId, globalRole, email } = body;
+    const { uid, companyId, globalRole, email, permissions } = body;
 
     // ========================================================================
     // INPUT VALIDATION
@@ -125,7 +140,21 @@ async function handleSetUserClaims(
         {
           success: false,
           message: 'Invalid globalRole',
-          error: `globalRole must be one of: super_admin, company_admin, company_staff, company_user`
+          error: `globalRole must be one of: ${GLOBAL_ROLES.join(', ')}`
+        },
+        { status: 400 }
+      );
+    }
+
+    if (permissions && (!Array.isArray(permissions) || permissions.some((perm) => !isValidPermission(perm)))) {
+      logger.warn('Invalid permissions payload', {
+        permissions,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid permissions',
+          error: 'permissions must be a valid PermissionId array',
         },
         { status: 400 }
       );
@@ -153,9 +182,15 @@ async function handleSetUserClaims(
       );
     }
 
-    console.log(`🔐 [SET_USER_CLAIMS] Setting claims for user ${uid} (${email})`);
-    console.log(`🔐 [SET_USER_CLAIMS] Target: Company ${companyId}, Role ${globalRole}`);
-    console.log(`🔐 [SET_USER_CLAIMS] Caller: ${ctx.email} (${ctx.globalRole}, company: ${ctx.companyId})`);
+    logger.info('Setting claims', {
+      targetUid: uid,
+      targetEmail: email,
+      targetCompanyId: companyId,
+      targetGlobalRole: globalRole,
+      callerEmail: ctx.email,
+      callerRole: ctx.globalRole,
+      callerCompanyId: ctx.companyId,
+    });
 
     // ========================================================================
     // STEP 2: Verify user exists in Firebase Auth + Get existing claims
@@ -166,17 +201,25 @@ async function handleSetUserClaims(
 
     try {
       firebaseUser = await adminAuth.getUser(uid);
-      console.log(`✅ [SET_USER_CLAIMS] User found in Firebase Auth: ${firebaseUser.email}`);
+      logger.info('User found in Firebase Auth', {
+        targetUid: uid,
+        targetEmail: firebaseUser.email,
+      });
 
       // Store previous claims for audit logging
       previousClaims = firebaseUser.customClaims || {};
 
       // Verify email matches
       if (firebaseUser.email !== email) {
-        console.warn(`⚠️ [SET_USER_CLAIMS] Email mismatch: provided=${email}, actual=${firebaseUser.email}`);
+        logger.warn('Email mismatch for claims update', {
+          providedEmail: email,
+          actualEmail: firebaseUser.email,
+        });
       }
     } catch (error) {
-      console.error(`❌ [SET_USER_CLAIMS] User not found in Firebase Auth:`, error);
+      logger.error('User not found in Firebase Auth', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return NextResponse.json(
         {
           success: false,
@@ -191,15 +234,32 @@ async function handleSetUserClaims(
     // STEP 3: Set custom claims on Firebase Auth token
     // ========================================================================
 
+    const rolePermissions = PREDEFINED_ROLES[globalRole]?.permissions ?? [];
+    const explicitPermissions = Array.isArray(permissions) ? permissions : [];
+    const mergedPermissions = new Set<PermissionId>([
+      ...rolePermissions,
+      ...explicitPermissions,
+    ]);
+
+    if (globalRole === 'super_admin' || globalRole === 'company_admin') {
+      mergedPermissions.add('admin_access');
+    }
+
+    const finalPermissions = Array.from(mergedPermissions).filter(isValidPermission);
+
     const newClaims = {
       companyId,
       globalRole,
       mfaEnrolled: false, // Default to false
+      permissions: finalPermissions,
     };
 
     try {
       await adminAuth.setCustomUserClaims(uid, newClaims);
-      console.log(`✅ [SET_USER_CLAIMS] Custom claims set successfully`);
+      logger.info('Custom claims set successfully', {
+        targetUid: uid,
+        permissionsCount: finalPermissions.length,
+      });
 
       // 🏢 ENTERPRISE: Audit logging (non-blocking)
       const metadata = extractRequestMetadata(request);
@@ -210,11 +270,15 @@ async function handleSetUserClaims(
         newClaims,
         `Claims updated by ${ctx.globalRole} ${ctx.email}`
       ).catch((err) => {
-        console.error('⚠️ [SET_USER_CLAIMS] Audit logging failed (non-blocking):', err);
+        logger.warn('Audit logging failed (non-blocking)', {
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
       });
 
     } catch (error) {
-      console.error(`❌ [SET_USER_CLAIMS] Failed to set custom claims:`, error);
+      logger.error('Failed to set custom claims', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return NextResponse.json(
         {
           success: false,
@@ -241,29 +305,33 @@ async function handleSetUserClaims(
         displayName: firebaseUser.displayName || null,
         companyId,
         globalRole,
+        permissions: finalPermissions,
         status: 'active',
-        updatedAt: new Date(),
+        updatedAt: AdminFieldValue.serverTimestamp(),
       };
 
       if (userDoc.exists) {
         // Update existing user
         await userRef.update(userData);
-        console.log(`✅ [SET_USER_CLAIMS] Updated existing user document`);
+        logger.info('Updated existing user document', { targetUid: uid });
         firestoreDocCreated = false;
       } else {
         // Create new user document
         await userRef.set({
           ...userData,
-          createdAt: new Date(),
+          createdAt: AdminFieldValue.serverTimestamp(),
         });
-        console.log(`✅ [SET_USER_CLAIMS] Created new user document`);
+        logger.info('Created new user document', { targetUid: uid });
         firestoreDocCreated = true;
       }
     } catch (error) {
-      console.error(`❌ [SET_USER_CLAIMS] Failed to create/update user document:`, error);
+      logger.error('Failed to create/update user document', {
+        targetUid: uid,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       firestoreSuccess = false;
       // Don't fail the entire request - custom claims are already set
-      console.warn(`⚠️ [SET_USER_CLAIMS] Continuing despite Firestore error`);
+      logger.warn('Continuing despite Firestore error', { targetUid: uid });
     }
 
     // ========================================================================
@@ -271,11 +339,14 @@ async function handleSetUserClaims(
     // ========================================================================
 
     const duration = Date.now() - startTime;
-    console.log(
-      `✅ [SET_USER_CLAIMS] Complete in ${duration}ms: ` +
-      `${ctx.email} (${ctx.globalRole}) set claims for ${email} ` +
-      `(company: ${companyId}, role: ${globalRole})`
-    );
+    logger.info('Claims update completed', {
+      durationMs: duration,
+      callerEmail: ctx.email,
+      callerRole: ctx.globalRole,
+      targetEmail: email,
+      targetCompanyId: companyId,
+      targetGlobalRole: globalRole,
+    });
 
     return NextResponse.json({
       success: true,
@@ -285,6 +356,7 @@ async function handleSetUserClaims(
         email: firebaseUser.email || email,
         companyId,
         globalRole,
+        permissions: finalPermissions,
         customClaimsSet: true,
         firestoreDocCreated,
       },
@@ -293,7 +365,10 @@ async function handleSetUserClaims(
 
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error(`❌ [SET_USER_CLAIMS] Unexpected error (${duration}ms):`, error);
+    logger.error('Unexpected error', {
+      durationMs: duration,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return NextResponse.json(
       {
         success: false,
@@ -330,7 +405,8 @@ export async function GET(): Promise<NextResponse> {
           uid: 'string (required) - Firebase Auth UID',
           companyId: 'string (required) - Target company ID',
           globalRole: 'GlobalRole (required) - One of: super_admin, company_admin, company_staff, company_user',
-          email: 'string (required) - User email for verification'
+          email: 'string (required) - User email for verification',
+          permissions: 'PermissionId[] (optional) - Additional explicit permissions'
         },
         auditLogging: 'All claims updates are logged to /companies/{companyId}/audit_logs',
       }
