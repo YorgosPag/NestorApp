@@ -13,6 +13,7 @@ import type {
   EntityModel
 } from '../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion, DxfLine, DxfCircle, DxfPolyline, DxfArc, DxfText } from '../canvas-v2/dxf-canvas/dxf-types';
+import type { BaseEntity } from '../types/entities';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
 import { TOLERANCE_CONFIG } from '../config/tolerance-config';
 // ADR-130: Centralized Default Layer Name
@@ -149,7 +150,7 @@ export class HitTestingService {
     // Type guard: Τα DXF entities μπορεί να έχουν optional lineType property
     const entityWithLineType = entity as typeof entity & { lineType?: string };
 
-    const baseModel = {
+    const baseModel: Omit<BaseEntity, 'type'> & { type: DxfEntityUnion['type'] } = {
       id: entity.id,
       type: entity.type,
       visible: entity.visible,
@@ -223,8 +224,10 @@ export class HitTestingService {
           angle: angleEntity.angle
         };
       }
-      default:
-        return baseModel;
+      default: {
+        const exhaustiveCheck: never = entity;
+        return exhaustiveCheck;
+      }
     }
   }
 

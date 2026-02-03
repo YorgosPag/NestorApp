@@ -92,7 +92,9 @@ export class EndpointSnapEngine extends BaseSnapEngine {
     }
 
     // Query using modern core spatial system
-    const results = this.spatialIndex.querySnap(cursorPoint, radius, 'endpoint');
+    const results = this.normalizeSnapResults(
+      this.spatialIndex.querySnap(cursorPoint, radius, 'endpoint')
+    );
 
     if (DEBUG_ENDPOINT_SNAP) {
       console.log('🔍 [EndpointSnapEngine] querySnap returned', results.length, 'results');

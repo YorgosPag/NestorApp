@@ -125,6 +125,9 @@ export function useConstraintsSystemState({
     previousPoints: [],
     referencePoint: undefined,
     baseAngle: 0,
+    currentTool: undefined,
+    inputMode: 'point',
+    lastPoint: null,
     mousePosition: { x: 0, y: 0 },
     keyboardModifiers: {
       shift: false,

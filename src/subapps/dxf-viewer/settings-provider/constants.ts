@@ -13,9 +13,6 @@
  * @since 2025-10-09
  */
 
-// ADR-130: Centralized Default Layer Name - Re-export from layer-config
-import { DEFAULT_LAYER_NAME } from '../config/layer-config';
-
 /**
  * Enterprise provider configuration constants
  */
@@ -31,9 +28,9 @@ export const ENTERPRISE_CONSTANTS = {
 
   /**
    * Default layer for old API calls
-   * ADR-130: Now uses centralized DEFAULT_LAYER_NAME from layer-config
+   * Settings layer (general/specific/overrides) - default to general
    */
-  DEFAULT_LAYER: DEFAULT_LAYER_NAME
+  DEFAULT_SETTINGS_LAYER: 'general' as const
 } as const;
 
 /**

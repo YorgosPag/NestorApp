@@ -4,6 +4,7 @@
  */
 
 import { useContext } from 'react';
+import type { Context } from 'react';
 import type {
   ConstraintType,
   ConstraintDefinition,
@@ -20,13 +21,10 @@ import type {
   CartesianCoordinates
 } from './config';
 
-// ✅ ENTERPRISE FIX: Fixed circular reference - use generic interface to break cycle
-interface ConstraintsContextType {
-  [key: string]: unknown; // Generic interface to break circular reference
-}
+export type ConstraintsContextType = ConstraintContext;
 
 export function useConstraints(): ConstraintsContextType {
-  const { ConstraintsContext } = require('./ConstraintsSystem');
+  const { ConstraintsContext } = require('./ConstraintsSystem') as { ConstraintsContext: Context<ConstraintsContextType | null> };
   const context = useContext(ConstraintsContext);
   if (!context) {
     throw new Error('useConstraints must be used within a ConstraintsSystem');
@@ -140,10 +138,9 @@ export const useOrtho = useOrthoConstraints;
 export const usePolar = usePolarConstraints;
 export const useOrthoPolar = useConstraints;
 
-// ✅ ENTERPRISE FIX: Fixed circular reference - use proper type alias
 export type ConstraintsHookReturn = ConstraintsContextType;
 
-export function setConstraintsContext(context: ConstraintsContextType) {
+export function setConstraintsContext(_context: Context<ConstraintsContextType | null>) {
   // TODO: Implement proper context setter if needed
   // This is a placeholder to resolve import error
   console.warn('setConstraintsContext called but not implemented');

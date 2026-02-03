@@ -23,6 +23,7 @@ interface CursorContextType extends CursorState {
   // ✅ CORE MOUSE ACTIONS (Professional CAD Interface)
   updatePosition: (position: Point2D | null) => void;
   updateWorldPosition: (position: Point2D | null) => void;
+  setWorldPosition: (position: Point2D | null) => void;
   updateViewport: (viewport: Viewport) => void;
 
   // ✅ MOUSE BUTTON ACTIONS

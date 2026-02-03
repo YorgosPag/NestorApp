@@ -5,7 +5,8 @@ import type {
   ConstraintDefinition,
   OrthoConstraintSettings,
   PolarConstraintSettings,
-  ConstraintsSettings
+  ConstraintsSettings,
+  ConstraintPreset
 } from './config';
 import {
   DEFAULT_ORTHO_SETTINGS,
@@ -13,6 +14,7 @@ import {
   DEFAULT_CONSTRAINTS_SETTINGS,
   CONSTRAINT_PRESETS
 } from './config';
+import { mergeConstraintSettings } from './utils';
 
 export interface ConstraintOperationsHook {
   performOperation: (operation: ConstraintOperation) => Promise<ConstraintOperationResult>;
@@ -33,6 +35,22 @@ export function useConstraintOperations(
   toggleOrtho: () => void,
   togglePolar: () => void
 ): ConstraintOperationsHook {
+  const getPresetById = useCallback((presetId: string): ConstraintPreset | undefined => {
+    return CONSTRAINT_PRESETS.find(preset => preset.id === presetId);
+  }, []);
+
+  const toConstraintsRecord = useCallback((list: ConstraintDefinition[]): Record<string, ConstraintDefinition> => {
+    return list.reduce<Record<string, ConstraintDefinition>>((acc, constraint) => {
+      acc[constraint.id] = constraint;
+      return acc;
+    }, {});
+  }, []);
+
+  const applyPreset = useCallback((preset: ConstraintPreset): void => {
+    setSettings(prev => mergeConstraintSettings(prev, preset.settings));
+    setConstraints(toConstraintsRecord(preset.constraints));
+  }, [setSettings, setConstraints, toConstraintsRecord]);
+
   const performOperation = useCallback(async (operation: ConstraintOperation): Promise<ConstraintOperationResult> => {
     try {
       switch (operation.type) {
@@ -48,12 +66,11 @@ export function useConstraintOperations(
           break;
         case 'load-preset':
           if (operation.presetId) {
-            const presetsMap = CONSTRAINT_PRESETS as unknown as Record<string, { orthoSettings: unknown; polarSettings: unknown }>;
-            const preset = presetsMap[operation.presetId];
-            if (preset) {
-              setOrthoSettings(preset.orthoSettings);
-              setPolarSettings(preset.polarSettings);
+            const preset = getPresetById(operation.presetId);
+            if (!preset) {
+              throw new Error(`Preset not found: ${operation.presetId}`);
             }
+            applyPreset(preset);
           }
           break;
         default:
@@ -68,21 +85,16 @@ export function useConstraintOperations(
         error: error instanceof Error ? error.message : 'Operation failed'
       };
     }
-  }, [toggleOrtho, togglePolar, setOrthoSettings, setPolarSettings]);
+  }, [toggleOrtho, togglePolar, setOrthoSettings, setPolarSettings, getPresetById, applyPreset]);
 
   const loadPreset = useCallback((presetId: string): ConstraintOperationResult => {
     try {
-      const presetsMap = CONSTRAINT_PRESETS as unknown as Record<string, { orthoSettings: unknown; polarSettings: unknown; constraints?: unknown }>;
-      const preset = presetsMap[presetId];
+      const preset = getPresetById(presetId);
       if (!preset) {
         throw new Error(`Preset not found: ${presetId}`);
       }
 
-      setOrthoSettings(preset.orthoSettings);
-      setPolarSettings(preset.polarSettings);
-      if (preset.constraints) {
-        setConstraints(preset.constraints);
-      }
+      applyPreset(preset);
       
       return { success: true, operation: { type: 'load-preset', presetId }, data: preset };
     } catch (error) {
@@ -92,7 +104,7 @@ export function useConstraintOperations(
         error: error instanceof Error ? error.message : 'Failed to load preset'
       };
     }
-  }, [setOrthoSettings, setPolarSettings, setConstraints]);
+  }, [getPresetById, applyPreset]);
 
   const exportSettings = useCallback(() => {
     return {
@@ -118,10 +130,17 @@ export function useConstraintOperations(
           setPolarSettings({ ...DEFAULT_POLAR_SETTINGS, ...validData.polarSettings as Partial<PolarConstraintSettings> });
         }
         if ('settings' in validData && validData.settings) {
-          setSettings({ ...DEFAULT_CONSTRAINTS_SETTINGS, ...validData.settings as Partial<ConstraintsSettings> });
+          setSettings(prev => mergeConstraintSettings({ ...prev, ...DEFAULT_CONSTRAINTS_SETTINGS }, validData.settings as Partial<ConstraintsSettings>));
         }
         if ('constraints' in validData && validData.constraints) {
-          setConstraints(validData.constraints as Record<string, ConstraintDefinition>);
+          if (Array.isArray(validData.constraints)) {
+            const list = validData.constraints.filter((item): item is ConstraintDefinition => {
+              return typeof item === 'object' && item !== null && 'id' in item;
+            });
+            setConstraints(toConstraintsRecord(list));
+          } else if (typeof validData.constraints === 'object') {
+            setConstraints(validData.constraints as Record<string, ConstraintDefinition>);
+          }
         }
       }
       
@@ -133,7 +152,7 @@ export function useConstraintOperations(
         error: error instanceof Error ? error.message : 'Import failed'
       };
     }
-  }, [setOrthoSettings, setPolarSettings, setSettings, setConstraints]);
+  }, [setOrthoSettings, setPolarSettings, setSettings, setConstraints, toConstraintsRecord]);
 
   return {
     performOperation,

@@ -46,7 +46,9 @@ export class CenterSnapEngine extends BaseSnapEngine {
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.CENTER);
 
     // Query centers using standard spatial query
-    const nearbyIndexedCenters = this.spatialIndex.querySnap(cursorPoint, radius, 'center');
+    const nearbyIndexedCenters = this.normalizeSnapResults(
+      this.spatialIndex.querySnap(cursorPoint, radius, 'center')
+    );
 
     for (const result of nearbyIndexedCenters) {
       const { point: center, entity } = result.data;

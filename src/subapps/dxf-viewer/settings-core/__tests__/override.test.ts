@@ -5,9 +5,21 @@
  */
 
 // ✅ ENTERPRISE FIX: Mock testing utilities for environments without Jest
-const describe = globalThis.describe || ((name: string, fn: () => void) => fn());
-const it = globalThis.it || ((name: string, fn: () => void) => fn());
-const expect = globalThis.expect || ((value: unknown) => ({
+const globalTest = globalThis as {
+  describe?: (name: string, fn: () => void) => void;
+  it?: (name: string, fn: () => void) => void;
+  expect?: (value: unknown) => {
+    toBe: (expected: unknown) => void;
+    toEqual: (expected: unknown) => void;
+    toBeNull: () => void;
+    toBeDefined: () => void;
+    toBeLessThan: (expected: number) => void;
+    not: { toBe: (expected: unknown) => void };
+  };
+};
+const describe = globalTest.describe || ((name: string, fn: () => void) => fn());
+const it = globalTest.it || ((name: string, fn: () => void) => fn());
+const expect = globalTest.expect || ((value: unknown) => ({
   toBe: () => ({}),
   toEqual: () => ({}),
   toBeNull: () => ({}),
@@ -37,7 +49,7 @@ describe('Override Engine', () => {
   describe('mergeSettings', () => {
     it('should return base when no override', () => {
       const base = DEFAULT_LINE_SETTINGS;
-      const result = mergeSettings(base, undefined);
+      const result = mergeSettings<typeof base>(base, undefined);
 
       expect(result).toBe(base); // Same reference
     });
@@ -46,7 +58,7 @@ describe('Override Engine', () => {
       const base = DEFAULT_LINE_SETTINGS;
       const override = { color: UI_COLORS.SELECTED_RED, lineWidth: 3 }; // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
 
-      const result = mergeSettings(base, override);
+      const result = mergeSettings<typeof base>(base, override);
 
       expect(result.color).toBe(UI_COLORS.SELECTED_RED); // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
       expect(result.lineWidth).toBe(3);
@@ -57,7 +69,7 @@ describe('Override Engine', () => {
       const base = DEFAULT_LINE_SETTINGS;
       const override = {};
 
-      const result = mergeSettings(base, override);
+      const result = mergeSettings<typeof base>(base, override);
 
       expect(result).toBe(base); // Same reference when no changes
     });
@@ -142,7 +154,7 @@ describe('Override Engine', () => {
         lineType: 'solid'     // Same
       };
 
-      const diff = diffSettings(base, compare as any);
+      const diff = diffSettings(base, compare as unknown as typeof base);
 
       expect(diff).toEqual({
         color: UI_COLORS.SELECTED_RED
@@ -322,13 +334,14 @@ describe('Override Engine', () => {
       const result = mergeDxfSettings(base, override as PartialDxfSettings);
 
       expect(result.line.color).toBe(UI_COLORS.SELECTED_RED); // ✅ ENTERPRISE FIX: LineSettings uses 'color', not 'color'
-      expect((result.line as any).nested).toEqual({ value: 'test' });
+      const lineWithNested = result.line as unknown as { nested?: unknown };
+      expect(lineWithNested.nested).toEqual({ value: 'test' });
     });
 
     it('should handle circular references gracefully', () => {
       const base = DEFAULT_DXF_SETTINGS;
       const override: Record<string, any> = { line: {} };
-      (override.line as any).circular = override; // Create circular reference
+      (override.line as unknown as { circular?: unknown }).circular = override; // Create circular reference
 
       // Should not throw or infinite loop
       const result = mergeDxfSettings(base, override);

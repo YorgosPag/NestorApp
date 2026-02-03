@@ -10,10 +10,12 @@
 
 import type { Dispatch, SetStateAction, RefObject, MutableRefObject } from 'react';
 import type { Point2D } from '../../../rendering/types/Types';
+import type { DynamicSubmitDetail } from '../utils/events';
 import type {
   Field,
   FullFieldState,
-  CoordinateFieldState
+  CoordinateFieldState,
+  ManualInputState
 } from '../types/common-interfaces';
 
 // Re-export Phase type for convenience
@@ -55,7 +57,7 @@ export interface KeyboardHandlerActions {
   setFieldUnlocked: Dispatch<SetStateAction<FullFieldState>>;
   setDrawingPhase: (p: Phase) => void;
   setIsCoordinateAnchored: (s: CoordinateFieldState) => void;
-  setIsManualInput: (s: CoordinateFieldState) => void;
+  setIsManualInput: (s: ManualInputState) => void;
 
   // Value setters
   setXValue: (v: string) => void;
@@ -70,7 +72,7 @@ export interface KeyboardHandlerActions {
   setFirstClickPoint: (p: Point2D | null) => void;
 
   // Dispatch
-  dispatchDynamicSubmit: (detail: DynamicSubmitPayload) => void;
+  dispatchDynamicSubmit: (detail: DynamicSubmitPayload) => CustomEvent;
   resetForNextPointFirstPhase: () => void;
 
   // Feedback
@@ -101,14 +103,7 @@ export interface KeyboardHandlerRefs {
  * 🏢 ENTERPRISE: Dynamic Submit Payload
  * Unified payload for dispatchDynamicSubmit
  */
-export interface DynamicSubmitPayload {
-  tool: string;
-  coordinates: Point2D;
-  action: string;
-  angle?: number;
-  length?: number;
-  secondPoint?: Point2D;
-}
+export type DynamicSubmitPayload = DynamicSubmitDetail;
 
 /**
  * 🏢 ENTERPRISE: Keyboard Handler Function Signature

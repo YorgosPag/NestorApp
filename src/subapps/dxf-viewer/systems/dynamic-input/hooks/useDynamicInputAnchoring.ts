@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import type { Phase } from './useDynamicInputState';
-import type { CoordinateFieldState, CircleFieldState } from '../types/common-interfaces';
+import type { CoordinateFieldState, FullFieldState, ManualInputState } from '../types/common-interfaces';
 // 🏢 ADR-098: Centralized Timing Constants
 import { UI_TIMING } from '../../../config/timing-config';
 
@@ -13,8 +13,8 @@ interface UseDynamicInputAnchoringArgs {
 
   // Setters
   setIsCoordinateAnchored: (s: CoordinateFieldState) => void;
-  setIsManualInput: (s: CoordinateFieldState) => void;
-  setFieldUnlocked: (u: CircleFieldState) => void;
+  setIsManualInput: (s: ManualInputState) => void;
+  setFieldUnlocked: (u: FullFieldState) => void;
 }
 
 export function useDynamicInputAnchoring({
@@ -33,7 +33,7 @@ export function useDynamicInputAnchoring({
       const resetTimer = setTimeout(() => {
         // ΕΠΑΝΑΦΟΡΑ anchoring για το κίτρινο highlighting
         setIsCoordinateAnchored({ x: false, y: false });
-        setIsManualInput({ x: false, y: false });
+        setIsManualInput({ x: false, y: false, radius: false });
         console.debug('[DynamicInputOverlay] Reset anchor state after anchor display duration');
 
         // ΕΠΑΝΑΦΟΡΑ της κανονικής κατάστασης fieldUnlocked - tool-aware reset για second-point

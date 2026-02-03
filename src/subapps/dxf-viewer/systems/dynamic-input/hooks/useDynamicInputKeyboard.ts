@@ -16,7 +16,7 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction, RefObject, MutableRefObject } from 'react';
-import type { FieldValueSetters, FieldValues, FullFieldState, CoordinateFieldState, Field } from '../types/common-interfaces';
+import type { FieldValueSetters, FieldValues, FullFieldState, CoordinateFieldState, ManualInputState, Field } from '../types/common-interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 // 🏢 ADR-098: Centralized Timing Constants
 import { INPUT_TIMING } from '../../../config/timing-config';
@@ -48,7 +48,7 @@ interface UseDynamicInputKeyboardArgs extends FieldValueSetters, FieldValues {
   // gating / flags
   setFieldUnlocked: Dispatch<SetStateAction<FullFieldState>>;
   setIsCoordinateAnchored: (s: CoordinateFieldState) => void;
-  setIsManualInput: (s: CoordinateFieldState) => void;
+  setIsManualInput: (s: ManualInputState) => void;
 
   // validators
   normalizeNumber: (v: string) => string;
@@ -66,7 +66,7 @@ interface UseDynamicInputKeyboardArgs extends FieldValueSetters, FieldValues {
   CADFeedback: { onError: () => void; onInputConfirm: () => void };
 
   // dispatcher for custom events
-  dispatchDynamicSubmit: (detail: DynamicSubmitPayload) => void;
+  dispatchDynamicSubmit: (detail: DynamicSubmitPayload) => CustomEvent;
 
   // helpers for reset after actions
   resetForNextPointFirstPhase: () => void;

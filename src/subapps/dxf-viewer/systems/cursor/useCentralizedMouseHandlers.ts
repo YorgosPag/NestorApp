@@ -55,6 +55,7 @@ import { useSnapManager } from '../../snapping/hooks/useSnapManager';
 import { setImmediatePosition } from './ImmediatePositionStore';
 // 🏢 ADR-096: Centralized Interaction Timing Constants
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+import { dperf } from '../../debug';
 
 interface CentralizedMouseHandlersProps {
   scene: DxfScene | null;

@@ -3,11 +3,11 @@
  * Unifies drawing processes scattered across multiple components
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useUnifiedDrawing } from '../../hooks/drawing/useUnifiedDrawing';
 import { useDynamicInputHandler } from '../dynamic-input/hooks/useDynamicInputHandler';
 import type { DrawingTool } from '../../hooks/drawing/useUnifiedDrawing';
-import type { Point2D, AnySceneEntity, ViewTransform, Entity } from '../../rendering/types/Types';
+import type { Point2D, AnySceneEntity, ViewTransform } from '../../rendering/types/Types';
 
 interface DrawingOrchestratorOptions {
   activeTool: string;
@@ -35,6 +35,10 @@ export function useDrawingOrchestrator({
   
   // Transform reference for coordinate calculations
   const transformRef = useRef({ scale: 1, offsetX: 0, offsetY: 0 });
+  const defaultTransform = useMemo(() => ({
+    worldToScreen: (point: Point2D) => point,
+    screenToWorld: (point: Point2D) => point
+  }), []);
   
   // ============================================================================
   // WORKFLOW COORDINATION
@@ -59,7 +63,7 @@ export function useDrawingOrchestrator({
     }
     
     // Add point to drawing system
-    const result = drawingSystem.addPoint(point);
+    const result = drawingSystem.addPoint(point, defaultTransform);
     
     // Notify drawing point handler
     onDrawingPoint?.(point);
@@ -71,15 +75,15 @@ export function useDrawingOrchestrator({
     if (transform) {
       transformRef.current = transform;
     }
-    drawingSystem.updatePreview(point);
-  }, [drawingSystem]);
+    drawingSystem.updatePreview(point, defaultTransform);
+  }, [drawingSystem, defaultTransform]);
   
   const finishDrawing = useCallback(() => {
 
     const result = drawingSystem.finishEntity(); // ✅ ENTERPRISE FIX: Use finishEntity method instead of finishDrawing
 
     if (result && onEntityCreated) {
-      onEntityCreated(result as Entity);
+      onEntityCreated(result);
     }
 
     // Return to select tool after completion
@@ -93,7 +97,7 @@ export function useDrawingOrchestrator({
     const result = drawingSystem.finishPolyline(); // ✅ ENTERPRISE FIX: Use finishPolyline method instead of finishDrawing
     
     if (result && onEntityCreated) {
-      onEntityCreated(result as Entity);
+      onEntityCreated(result);
     }
 
     // Return to select tool after polyline completion

@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import type { Field, Phase } from './useDynamicInputState';
-import type { CircleFieldState, CoordinateFieldState, ManualInputState } from '../types/common-interfaces';
+import type { FullFieldState, CoordinateFieldState, ManualInputState } from '../types/common-interfaces';
 
 /**
  * Interface for field value management
@@ -26,7 +26,7 @@ export interface FieldStateActions {
   getActiveField: () => Field;
   setActiveField: (field: Field) => void;
   isFieldUnlocked: (field: Field) => boolean;
-  setFieldUnlocked: (state: CircleFieldState) => void;
+  setFieldUnlocked: (state: FullFieldState) => void;
 }
 
 /**

@@ -47,7 +47,9 @@ export class MidpointSnapEngine extends BaseSnapEngine {
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.MIDPOINT);
 
     // Query using modern core spatial system
-    const results = this.spatialIndex.querySnap(cursorPoint, radius, 'midpoint');
+    const results = this.normalizeSnapResults(
+      this.spatialIndex.querySnap(cursorPoint, radius, 'midpoint')
+    );
 
     for (const result of results) {
       const { point, entity } = result.data;

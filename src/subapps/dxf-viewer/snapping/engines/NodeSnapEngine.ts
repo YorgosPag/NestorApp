@@ -43,7 +43,9 @@ export class NodeSnapEngine extends BaseSnapEngine {
     const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.NODE);
 
     // Query nodes using standard spatial query
-    const nearbyNodes = this.spatialIndex.querySnap(cursorPoint, radius, 'endpoint');
+    const nearbyNodes = this.normalizeSnapResults(
+      this.spatialIndex.querySnap(cursorPoint, radius, 'endpoint')
+    );
 
     for (const result of nearbyNodes) {
       const { point, entity } = result.data;

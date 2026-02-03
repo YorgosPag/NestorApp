@@ -6,11 +6,12 @@
 import type {
   ConstraintType,
   ConstraintDefinition,
-  ConstraintContext,
+  ConstraintContextData,
   ConstraintResult,
   ConstraintFeedback,
   OrthoConstraintSettings,
   PolarConstraintSettings,
+  ConstraintsSettings,
   PolarCoordinates,
   CartesianCoordinates
 } from './config';
@@ -456,7 +457,7 @@ export const ConstraintApplicationUtils = {
   applyConstraints: (
     point: Point2D,
     constraints: ConstraintDefinition[],
-    context: ConstraintContext
+    context: ConstraintContextData
   ): ConstraintResult => {
     let constrainedPoint = { ...point };
     const appliedConstraints: ConstraintDefinition[] = [];
@@ -492,13 +493,12 @@ export const ConstraintApplicationUtils = {
     }
 
     // Calculate metadata
-    const contextData = context.getConstraintContext ? context.getConstraintContext() : null;
-    const angle = contextData?.referencePoint
-      ? AngleUtils.angleBetweenPoints(contextData.referencePoint, constrainedPoint)
+    const angle = context.referencePoint
+      ? AngleUtils.angleBetweenPoints(context.referencePoint, constrainedPoint)
       : 0;
 
-    const distance = contextData?.referencePoint
-      ? DistanceUtils.distance(contextData.referencePoint, constrainedPoint)
+    const distance = context.referencePoint
+      ? DistanceUtils.distance(context.referencePoint, constrainedPoint)
       : 0;
 
     return {
@@ -623,9 +623,38 @@ export const ConstraintCalculations = {
 
   // Combined calculation methods
   calculateConstraintResult: ConstraintApplicationUtils.applyConstraints,
-  validateConstraintPoint: (point: Point2D, context: ConstraintContext): boolean => {
+  validateConstraintPoint: (point: Point2D, context: ConstraintContextData): boolean => {
     return point && typeof point.x === 'number' && typeof point.y === 'number';
   }
+};
+
+export const mergeConstraintSettings = (
+  base: ConstraintsSettings,
+  updates: Partial<ConstraintsSettings>
+): ConstraintsSettings => {
+  return {
+    ...base,
+    ...updates,
+    general: { ...base.general, ...updates.general },
+    display: { ...base.display, ...updates.display },
+    input: {
+      ...base.input,
+      ...updates.input,
+      keyboardShortcuts: {
+        ...base.input.keyboardShortcuts,
+        ...updates.input?.keyboardShortcuts
+      },
+      mouseModifiers: {
+        ...base.input.mouseModifiers,
+        ...updates.input?.mouseModifiers
+      },
+      touchGestures: {
+        ...base.input.touchGestures,
+        ...updates.input?.touchGestures
+      }
+    },
+    performance: { ...base.performance, ...updates.performance }
+  };
 };
 
 /**

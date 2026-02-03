@@ -4,6 +4,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
+import type { FullFieldState } from '../types/common-interfaces';
 
 export type Field = 'x' | 'y' | 'angle' | 'length' | 'radius' | 'diameter';
 
@@ -17,9 +18,9 @@ export interface FieldSetters {
 }
 
 export interface PhaseResetActions {
-  setFirstClickPoint: (point: Point2D) => void;
+  setFirstClickPoint: (point: Point2D | null) => void;
   setLengthValue: (value: string) => void;
-  setFieldUnlocked: (fields: Record<string, boolean>) => void;
+  setFieldUnlocked: (fields: FullFieldState) => void;
   setActiveField: (field: Field) => void;
 }
 
@@ -51,6 +52,6 @@ export function setFieldValue(
 export function resetPhaseForNewShape(actions: PhaseResetActions): void {
   actions.setFirstClickPoint({ x: 0, y: 0 });
   actions.setLengthValue('');
-  actions.setFieldUnlocked({ x: true, y: false, angle: false, length: false, radius: false });
+  actions.setFieldUnlocked({ x: true, y: false, angle: false, length: false, radius: false, diameter: false });
   actions.setActiveField('x');
 }
