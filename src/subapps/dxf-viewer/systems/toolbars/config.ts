@@ -502,6 +502,7 @@ export const TOOLBAR_CONFIG = {
 // ===== TOOLBAR OPERATIONS =====
 export type ToolbarOperation = 
   | 'create-toolbar'
+  | 'update-toolbar'
   | 'delete-toolbar'
   | 'show-toolbar'
   | 'hide-toolbar'

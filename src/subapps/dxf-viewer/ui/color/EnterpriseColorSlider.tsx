@@ -30,6 +30,7 @@ import type { AriaColorSliderProps } from '@react-aria/color';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-081: Centralized percentage formatting
 import { formatPercent } from '../../rendering/entities/shared/distance-label-utils';
+import { useFormatter } from '../../formatting/useFormatter';
 
 type SliderChannel = 'hue' | 'saturation' | 'brightness' | 'lightness' | 'red' | 'green' | 'blue' | 'alpha';
 
@@ -79,6 +80,7 @@ export function EnterpriseColorSlider({
   const trackRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const colors = useSemanticColors();
+  const { locale } = useFormatter();
 
   // ✅ FIX (ChatGPT-5): Guard against undefined/null value
   // Default to white if value is missing
@@ -110,6 +112,7 @@ export function EnterpriseColorSlider({
       onChangeEnd?.(hex);
     },
     isDisabled: disabled,
+    locale,
   });
 
   // Use React Aria slider hook

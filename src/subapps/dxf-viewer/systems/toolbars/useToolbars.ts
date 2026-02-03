@@ -5,9 +5,9 @@
 
 import { useContext } from 'react';
 import type { ToolbarsContextType } from './ToolbarsContext.types';
+import { ToolbarsContext } from './ToolbarsSystem';
 
 export function useToolbars(): ToolbarsContextType {
-  const { ToolbarsContext } = require('./ToolbarsSystem');
   const context = useContext(ToolbarsContext);
   if (!context) {
     throw new Error('useToolbars must be used within a ToolbarsSystem');

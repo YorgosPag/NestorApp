@@ -216,6 +216,9 @@ function getContext(): React.Context<RulersGridContextType | null> {
     const { RulersGridContext } = require('./RulersGridSystem');
     _cachedContext = RulersGridContext;
   }
+  if (!_cachedContext) {
+    throw new Error('RulersGridContext is not available');
+  }
   return _cachedContext;
 }
 

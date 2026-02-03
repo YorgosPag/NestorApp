@@ -35,12 +35,13 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { EventBus } from '../../systems/events';
+import { EventBus, type DrawingEventPayload } from '../../systems/events';
 import { useCommandHistory } from '../../core/commands';
 import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateEntityCommand';
 import { LevelSceneManagerAdapter } from './LevelSceneManagerAdapter';
-import type { SceneModel } from '../../types/scene';
+import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import type { SceneEntity, CreateEntityOptions } from '../../core/commands/interfaces';
+import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 
 /**
  * Configuration for the entity creation manager
@@ -62,12 +63,7 @@ export interface EntityCreationManagerConfig {
 /**
  * Payload for entity:create-request event (from EventBus.ts)
  */
-interface EntityCreateRequestPayload {
-  entity: Record<string, unknown>;
-  toolType: string;
-  requestId: string;
-  targetLevelId?: string;
-}
+type EntityCreateRequestPayload = DrawingEventPayload<'entity:create-request'>;
 
 /**
  * 🏢 ENTERPRISE: Hook that manages entity creation via Event Bus + Command Pattern
@@ -119,14 +115,19 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
 
       // Prepare entity data for command (strip 'id' as command generates its own)
       // This follows Command Pattern best practice - command owns entity lifecycle
-      const { id: existingId, ...entityDataWithoutId } = entity;
+      const normalizedEntity: SceneEntity = {
+        ...entity,
+        layer: entity.layer ?? DXF_DEFAULT_LAYER,
+        visible: entity.visible ?? true
+      };
+      const { id: existingId, ...entityDataWithoutId } = normalizedEntity;
 
       // Create options from entity data
       const options: CreateEntityOptions = {
-        layer: (entity.layer as string) || '0',
-        color: entity.color as string | undefined,
-        lineweight: entity.lineweight as number | undefined,
-        opacity: entity.opacity as number | undefined,
+        layer: entity.layer ?? DXF_DEFAULT_LAYER,
+        color: entity.color,
+        lineweight: entity.lineweight,
+        opacity: entity.opacity,
       };
 
       // 🏢 ENTERPRISE: Create and execute command via CommandHistory
@@ -154,10 +155,10 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
         // 🏢 ENTERPRISE: Emit confirmation event
         // Other components can listen for this to update their state
         EventBus.emit('entity:created-confirmed', {
-          entity: createdEntity as Record<string, unknown>,
-          levelId,
-          commandId: command.id,
-        });
+        entity: createdEntity ? (createdEntity as unknown as AnySceneEntity) : entity,
+        levelId,
+        commandId: command.id,
+      });
       } catch (error) {
         console.error('❌ [EntityCreationManager] Failed to create entity:', error);
       }
@@ -199,7 +200,7 @@ export function useEntityCreationManager(config: EntityCreationManagerConfig): v
  * ```
  */
 export function emitEntityCreateRequest(params: {
-  entity: Record<string, unknown>;
+  entity: AnySceneEntity;
   toolType: string;
   targetLevelId?: string;
 }): string {

@@ -22,10 +22,20 @@ export interface FileUploadProgress {
 }
 
 export interface FileUploadResult {
+  success?: boolean;
   url: string;
   fileName: string;
   fileSize: number;
   mimeType: string;
+  compressionInfo?: {
+    wasCompressed: boolean;
+    originalSize: number;
+    compressedSize: number;
+    compressionRatio: number;
+    strategy?: string;
+    quality?: number;
+    savings?: string;
+  };
 }
 
 export interface FileUploadState {

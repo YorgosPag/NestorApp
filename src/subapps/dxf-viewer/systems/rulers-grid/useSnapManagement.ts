@@ -59,14 +59,15 @@ export function useSnapManagement(
   const findSnapPoint = useCallback((point: Point2D): SnapResult | null => {
     if (!viewTransform) return null;
     
-    return RulersGridSnapping.findSnapPoint(
+    const result = RulersGridSnapping.findSnapPoint(
       point,
-      state as GridSettings,
-      rulers as RulerSettings,
-      viewTransform,
-      onSnapResult
+      grid,
+      rulers,
+      viewTransform
     );
-  }, [state, rulers, viewTransform, onSnapResult]);
+    onSnapResult?.(result);
+    return result;
+  }, [grid, rulers, viewTransform, onSnapResult]);
 
   return {
     toggleRulerSnap,

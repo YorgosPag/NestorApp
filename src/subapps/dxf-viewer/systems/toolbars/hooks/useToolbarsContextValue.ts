@@ -9,15 +9,49 @@ import type {
   ToolbarConfig,
   ToolbarOperationResult,
   ToolbarSettings,
-  ToolbarPosition
+  ToolbarPosition,
+  ActionParameters,
+  ToolParameters,
+  ToolExecutionResult,
+  ToolInput
 } from '../config';
 import { DEFAULT_TOOLBAR_SETTINGS } from '../config';
 import { ToolbarSystemUtils } from '../utils';
 import type { ToolbarsContextType } from '../ToolbarsContext.types';
 
-type ContextValueParams = ToolbarsContextType & {
+type ContextValueParams = {
+  state: ToolbarState;
+  toolRunner: ToolRunner;
   setState: React.Dispatch<React.SetStateAction<ToolbarState>>;
   setEventListeners: React.Dispatch<React.SetStateAction<Partial<ToolEvents>>>;
+  activateTool: (toolId: ToolType) => void;
+  deactivateTool: (toolId?: ToolType) => void;
+  toggleTool: (toolId: ToolType) => void;
+  executeAction: (actionId: string, parameters?: ActionParameters) => void;
+  registerTool: (tool: ToolDefinition) => void;
+  unregisterTool: (toolId: ToolType) => void;
+  updateTool: (toolId: ToolType, updates: Partial<ToolDefinition>) => void;
+  getTool: (toolId: ToolType) => ToolDefinition | undefined;
+  getTools: () => Partial<Record<ToolType, ToolDefinition>>;
+  getToolsByCategory: (category: string) => ToolDefinition[];
+  registerAction: (action: ActionDefinition) => void;
+  unregisterAction: (actionId: string) => void;
+  updateAction: (actionId: string, updates: Partial<ActionDefinition>) => void;
+  getAction: (actionId: string) => ActionDefinition | undefined;
+  getActions: () => Record<string, ActionDefinition>;
+  createToolbar: (config: ToolbarConfig) => Promise<ToolbarOperationResult>;
+  deleteToolbar: (toolbarId: string) => Promise<ToolbarOperationResult>;
+  getToolbar: (toolbarId: string) => ToolbarConfig | undefined;
+  getToolbars: () => Record<string, ToolbarConfig>;
+  getVisibleToolbars: () => ToolbarConfig[];
+  startTool: (toolId: ToolType, parameters?: ToolParameters) => void;
+  cancelTool: () => void;
+  completeTool: (result?: ToolExecutionResult) => void;
+  addToolInput: (input: ToolInput) => void;
+  removeLastInput: () => void;
+  clearToolInputs: () => void;
+  getToolProgress: () => { current: number; total: number; percentage: number };
+  registerHotkey: (hotkey: string, toolId: ToolType) => void;
   unregisterHotkey: (hotkey: string) => void;
   executeHotkey: (hotkey: string) => void;
   getHotkeys: () => Record<string, ToolType>;

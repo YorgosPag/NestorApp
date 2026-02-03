@@ -7,21 +7,13 @@ import { UI_COLORS } from '../config/color-config';
 // 🏢 ADR-XXX: Centralized viewport defaults
 import { VIEWPORT_DEFAULTS } from '../config/transform-config';
 
-// ✅ ENTERPRISE FIX: Vitest compatibility layer
-import { vi as jest } from 'vitest';
+type JestMockFactory = {
+  fn: <T extends (...args: unknown[]) => unknown>(implementation?: T) => T;
+};
 
-declare global {
-  const vi: typeof jest;
-  const beforeEach: (fn: () => void) => void;
-  const afterEach: (fn: () => void) => void;
-  const expect: any;
-
-  namespace vitest {
-    interface Matchers<R> {
-      toMatchVisualBaseline(baselinePath: string, options?: any): R;
-      toBeWithinVisualThreshold(expected: number, threshold?: number): R;
-    }
-  }
+const jest = (globalThis as { jest?: JestMockFactory }).jest;
+if (!jest) {
+  throw new Error('Jest globals are not available in the test environment.');
 }
 
 // JSDOM + Canvas mocks για browser environment simulation

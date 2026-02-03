@@ -74,15 +74,24 @@ function useRulersGridSystemIntegration({
 
   const persistedData = loadPersistedSettings();
 
+  const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
   // Deep merge helper for nested objects
-  const deepMerge = <T extends Record<string, unknown>>(target: T, source: T): T => {
+  const deepMerge = <T extends Record<string, unknown>>(target: T, source?: Partial<T>): T => {
     if (!source) return target;
-    const result = { ...target };
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = deepMerge(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
+    const result = { ...target } as T;
+    for (const key of Object.keys(source)) {
+      const typedKey = key as keyof T;
+      const sourceValue = source[typedKey];
+      if (isPlainObject(sourceValue) && isPlainObject(result[typedKey])) {
+        const merged = deepMerge(
+          result[typedKey] as Record<string, unknown>,
+          sourceValue as Record<string, unknown>
+        );
+        result[typedKey] = merged as T[typeof typedKey];
+      } else if (sourceValue !== undefined) {
+        result[typedKey] = sourceValue as T[typeof typedKey];
       }
     }
     return result;
@@ -309,10 +318,14 @@ function useRulersGridSystemIntegration({
   // 🛡️ ΣΤΑΘΕΡΟΠΟΙΗΣΗ: Χωρίζουμε το bounds calculation από τα snap points
   useEffect(() => {
     if (viewTransform && canvasBounds) {
-      const bounds = RulersGridCalculations.calculateVisibleBounds(viewTransform, canvasBounds);
+      const bounds = RulersGridCalculations.calculateVisibleBounds(
+        viewTransform,
+        canvasBounds,
+        grid.visual.step
+      );
       setLastCalculatedBounds(bounds);
     }
-  }, [viewTransform, canvasBounds]);
+  }, [viewTransform, canvasBounds, grid.visual.step]);
 
   // 🛡️ ΣΤΑΘΕΡΟΠΟΙΗΣΗ: Ruler snap points μόνο όταν χρειάζεται
   useEffect(() => {
@@ -392,8 +405,8 @@ function useRulersGridSystemIntegration({
     }
   }, [rulerMethods, gridMethods, snapMethods, resetOrigin]);
 
-  const exportSettings = useCallback(() => {
-    return {
+  const exportSettings = useCallback((): string => {
+    const payload = {
       rulers,
       grid,
       origin,
@@ -401,16 +414,22 @@ function useRulersGridSystemIntegration({
       version: '1.0',
       timestamp: Date.now()
     };
+    return JSON.stringify(payload);
   }, [rulers, grid, origin, isVisible]);
 
-  const importSettings = useCallback((data: unknown): RulersGridOperationResult => {
+  const importSettings = useCallback(async (data: string): Promise<RulersGridOperationResult> => {
     try {
-      const settings = data as { rulers?: RulerSettings; grid?: GridSettings; origin?: Point2D; isVisible?: boolean };
-      if (settings.rulers) setRulers({ ...DEFAULT_RULER_SETTINGS, ...settings.rulers });
-      if (settings.grid) setGrid({ ...DEFAULT_GRID_SETTINGS, ...settings.grid });
-      if (settings.origin) setOrigin(settings.origin);
-      if (settings.isVisible !== undefined) setIsVisible(settings.isVisible);
-      
+      const parsed = JSON.parse(data) as {
+        rulers?: RulerSettings;
+        grid?: GridSettings;
+        origin?: Point2D;
+        isVisible?: boolean;
+      };
+      if (parsed.rulers) setRulers({ ...DEFAULT_RULER_SETTINGS, ...parsed.rulers });
+      if (parsed.grid) setGrid({ ...DEFAULT_GRID_SETTINGS, ...parsed.grid });
+      if (parsed.origin) setOrigin(parsed.origin);
+      if (parsed.isVisible !== undefined) setIsVisible(parsed.isVisible);
+
       return { success: true, operation: 'import-settings' };
     } catch (error) {
       return {

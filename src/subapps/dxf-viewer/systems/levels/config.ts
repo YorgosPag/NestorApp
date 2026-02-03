@@ -91,6 +91,8 @@ export const DEFAULT_LEVEL_SETTINGS: LevelSystemSettings = {
   autoSelectNewLevel: true,
 };
 
+export const LEVELS_EXPORT_VERSION = '1.0' as const;
+
 /**
  * Shared interface for Import Wizard actions to eliminate duplicates
  * Used by both hooks/common/useImportWizard.ts and systems/levels/useLevels.ts

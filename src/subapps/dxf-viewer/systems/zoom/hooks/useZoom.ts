@@ -80,10 +80,14 @@ export const useZoom = ({
     zoomManager.setViewport(viewport);
   }
 
+  const applyTransform = useCallback((transform: ViewTransform) => {
+    onTransformChange?.(transform);
+  }, [onTransformChange]);
+
   // Helper function to handle zoom result
   const handleZoomResult = useCallback((result: ZoomResult) => {
-    onTransformChange?.(result.transform);
-  }, [onTransformChange]);
+    applyTransform(result.transform);
+  }, [applyTransform]);
 
   // === CORE ZOOM FUNCTIONS ===
 
@@ -136,11 +140,7 @@ export const useZoom = ({
     const result = FitToViewService.calculateFitToViewTransform(scene, colorLayers, viewport);
 
     if (result.success && result.transform) {
-      handleZoomResult({
-        transform: result.transform,
-        success: true,
-        zoomType: 'fit'
-      });
+      applyTransform(result.transform);
       return true;
     }
 

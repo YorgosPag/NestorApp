@@ -143,7 +143,7 @@ export function createDeterministicCanvas(
   canvas.height = height * pixelRatio;
 
   // Force creation του napi canvas
-  const ctx = canvas.getContext('2d') as SKRSContext2D;
+  const ctx = canvas.getContext('2d');
 
   if (ctx) {
     // Apply deterministic settings

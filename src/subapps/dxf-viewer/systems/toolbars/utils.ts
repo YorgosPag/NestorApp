@@ -608,9 +608,9 @@ export const HookPatternUtils = {
     return {
       success,
       operation,
-      ...(toolbarId && { toolbarId }),
-      ...(data && { data }),
-      ...(error && { error })
+      ...(toolbarId ? { toolbarId } : {}),
+      ...(data !== undefined ? { data } : {}),
+      ...(error ? { error } : {})
     };
   },
 

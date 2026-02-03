@@ -8,7 +8,8 @@ import {
   ImportWizardState, 
   CalibrationData, 
   LevelSystemSettings,
-  DEFAULT_LEVEL_SETTINGS 
+  DEFAULT_LEVEL_SETTINGS,
+  LEVELS_EXPORT_VERSION
 } from './config';
 import { LevelOperations, FloorplanOperations, CalibrationOperations } from './utils';
 import { type LevelsHookReturn } from './useLevels';
@@ -451,12 +452,16 @@ function useLevelsSystemState({
   }, [importWizardHook]);
 
   const completeImport = useCallback((): FloorplanDoc | null => {
-    const result = importWizardHook.completeImport();
+    const result = importWizardHook.completeImport(levels, floorplans);
     if (result) {
+      setLevels(result.updatedLevels);
+      setFloorplans(result.updatedFloorplans);
+      setCurrentLevelId(result.levelId);
       setImportWizard(DEFAULT_IMPORT_WIZARD_STATE);
+      return result.floorplan;
     }
-    return result;
-  }, [importWizardHook]);
+    return null;
+  }, [importWizardHook, levels, floorplans]);
 
   const cancelImportWizard = useCallback(() => {
     setImportWizard(DEFAULT_IMPORT_WIZARD_STATE);
@@ -482,7 +487,8 @@ function useLevelsSystemState({
       levels,
       floorplans,
       settings,
-      exportedAt: new Date().toISOString()
+      version: LEVELS_EXPORT_VERSION,
+      timestamp: Date.now()
     };
   }, [levels, floorplans, settings]);
 

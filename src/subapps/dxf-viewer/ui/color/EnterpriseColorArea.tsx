@@ -112,10 +112,7 @@ export function EnterpriseColorArea({
   const { focusProps, isFocusVisible } = useFocusRing();
 
   // Get thumb position
-  const thumbPosition = state.getThumbPosition({
-    width: size,
-    height: size,
-  });
+  const thumbPosition = state.getThumbPosition();
 
   // Background gradient (HSV-based)
   const hue = state.value.getChannelValue('hue');
