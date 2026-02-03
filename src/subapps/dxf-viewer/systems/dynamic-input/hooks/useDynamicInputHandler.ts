@@ -1,16 +1,17 @@
 import { useEffect } from 'react';
-import type { Point2D as Point } from '../../../rendering/types/Types';
+import type { Point2D as Point, AnySceneEntity } from '../../../rendering/types/Types';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from '../../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
 import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { DXF_DEFAULT_LAYER } from '../../../config/layer-config';
 
 interface UseDynamicInputHandlerProps {
   activeTool: string;
   onDrawingPoint?: (worldPoint: Point) => void;
-  onEntityCreated: (entity: unknown) => void;
+  onEntityCreated: (entity: AnySceneEntity) => void;
 }
 
 interface UseDynamicInputHandlerReturn {
@@ -40,14 +41,13 @@ export function useDynamicInputHandler({
           };
 
           if (onEntityCreated) {
-            const lineEntity = {
+            const lineEntity: AnySceneEntity = {
               // 🏢 ADR-065: Crypto-secure ID generation
               id: generateEntityId(),
-              type: 'LINE',
-              startPoint: { x: coordinates.x, y: coordinates.y, z: 0 },
-              endPoint: { x: secondPoint.x, y: secondPoint.y, z: 0 },
-              layer: 'default',
-              color: 'white'
+              type: 'line',
+              start: { x: coordinates.x, y: coordinates.y },
+              end: { x: secondPoint.x, y: secondPoint.y },
+              layer: DXF_DEFAULT_LAYER
             };
 
             onEntityCreated(lineEntity);
@@ -74,40 +74,37 @@ export function useDynamicInputHandler({
           const diameter = calculateDistance(p1, p2);
           const radius = diameter / 2;
           
-          const circleEntity = {
+          const circleEntity: AnySceneEntity = {
             // 🏢 ADR-065: Crypto-secure ID generation
             id: generateEntityId(),
             type: 'circle',
-            center: { x: center.x, y: center.y, z: 0 },
+            center: { x: center.x, y: center.y },
             radius: radius,
-            layer: 'default',
-            color: 'white'
+            layer: DXF_DEFAULT_LAYER
           };
 
           onEntityCreated(circleEntity);
         } else if (onEntityCreated && typeof length === 'number' && Number.isFinite(length)) {
           // Circle completion - create circle entity with radius (length is already radius for both tools)
-          const circleEntity = {
+          const circleEntity: AnySceneEntity = {
             // 🏢 ADR-065: Crypto-secure ID generation
             id: generateEntityId(),
             type: 'circle',
-            center: { x: coordinates.x, y: coordinates.y, z: 0 },
+            center: { x: coordinates.x, y: coordinates.y },
             radius: length, // For circle: direct radius, for circle-diameter: converted from diameter to radius
-            layer: 'default',
-            color: 'white'
+            layer: DXF_DEFAULT_LAYER
           };
 
           onEntityCreated(circleEntity);
         }
       } else if (onEntityCreated) {
         // Create a point entity for other tools
-        const pointEntity = {
+        const pointEntity: AnySceneEntity = {
           // 🏢 ADR-065: Crypto-secure ID generation
           id: generateEntityId(),
-          type: 'POINT',
-          x: coordinates.x,
-          y: coordinates.y,
-          z: 0
+          type: 'point',
+          position: { x: coordinates.x, y: coordinates.y },
+          layer: DXF_DEFAULT_LAYER
         };
 
         onEntityCreated(pointEntity);

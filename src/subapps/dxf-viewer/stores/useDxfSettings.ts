@@ -19,10 +19,10 @@ import { STORAGE_TIMING } from '../config/timing-config';
 // DEBOUNCE UTILITY
 // ============================================================================
 
-function useDebounce<T extends (...args: unknown[]) => void>(
-  callback: T,
+function useDebounce<Args extends unknown[]>(
+  callback: (...args: Args) => void,
   delay: number
-): T {
+): (...args: Args) => void {
   const timeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
@@ -34,7 +34,7 @@ function useDebounce<T extends (...args: unknown[]) => void>(
   }, []);
 
   const debouncedCallback = useCallback(
-    (...args: Parameters<T>) => {
+    (...args: Args) => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
@@ -44,7 +44,7 @@ function useDebounce<T extends (...args: unknown[]) => void>(
       }, delay);
     },
     [callback, delay]
-  ) as T;
+  );
 
   return debouncedCallback;
 }

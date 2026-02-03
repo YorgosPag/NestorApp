@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useRef } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { IDENTITY_COORDINATE_TRANSFORM } from '../../rendering/core/CoordinateTransforms';
 
 // Import the main unified drawing hook
 import { useUnifiedDrawing } from '../../hooks/drawing/useUnifiedDrawing';
@@ -27,21 +28,21 @@ export function EntityCreationSystem({ children }: { children: React.ReactNode }
   // Entity creation methods
   const createLine = (start: Point2D, end: Point2D) => {
     drawingSystem.startDrawing('line');
-    drawingSystem.addPoint(start, { scale: 1, offsetX: 0, offsetY: 0 });
-    drawingSystem.addPoint(end, { scale: 1, offsetX: 0, offsetY: 0 });
+    drawingSystem.addPoint(start, IDENTITY_COORDINATE_TRANSFORM);
+    drawingSystem.addPoint(end, IDENTITY_COORDINATE_TRANSFORM);
   };
 
   const createRectangle = (corner1: Point2D, corner2: Point2D) => {
     drawingSystem.startDrawing('rectangle');
-    drawingSystem.addPoint(corner1, { scale: 1, offsetX: 0, offsetY: 0 });
-    drawingSystem.addPoint(corner2, { scale: 1, offsetX: 0, offsetY: 0 });
+    drawingSystem.addPoint(corner1, IDENTITY_COORDINATE_TRANSFORM);
+    drawingSystem.addPoint(corner2, IDENTITY_COORDINATE_TRANSFORM);
   };
 
   const createCircle = (center: Point2D, radius: number) => {
     const edge = { x: center.x + radius, y: center.y };
     drawingSystem.startDrawing('circle');
-    drawingSystem.addPoint(center, { scale: 1, offsetX: 0, offsetY: 0 });
-    drawingSystem.addPoint(edge, { scale: 1, offsetX: 0, offsetY: 0 });
+    drawingSystem.addPoint(center, IDENTITY_COORDINATE_TRANSFORM);
+    drawingSystem.addPoint(edge, IDENTITY_COORDINATE_TRANSFORM);
   };
 
   const createPolyline = (points: Point2D[]) => {
@@ -49,7 +50,7 @@ export function EntityCreationSystem({ children }: { children: React.ReactNode }
     
     drawingSystem.startDrawing('polyline');
     points.forEach(point => {
-      drawingSystem.addPoint(point, { scale: 1, offsetX: 0, offsetY: 0 });
+      drawingSystem.addPoint(point, IDENTITY_COORDINATE_TRANSFORM);
     });
     drawingSystem.finishPolyline();
   };

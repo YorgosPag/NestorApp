@@ -13,6 +13,7 @@ import type { Point2D, Phase } from '../../../rendering/types/Types';
 
 // Re-export Phase for other modules
 export type { Phase };
+export type Point = Point2D;
 
 export type Field = 'x' | 'y' | 'angle' | 'length' | 'radius' | 'diameter';
 
@@ -79,9 +80,9 @@ export function useDynamicInputState({ activeTool }: UseDynamicInputStateProps) 
 
   const setCurrentFieldValue = useCallback((value: string) => {
     setFieldValue(activeField, value, {
-      setXValue, setYValue, setAngleValue, setLengthValue, setRadiusValue
+      setXValue, setYValue, setAngleValue, setLengthValue, setRadiusValue, setDiameterValue
     });
-  }, [activeField]);
+  }, [activeField, setDiameterValue, setAngleValue, setLengthValue, setRadiusValue, setXValue, setYValue]);
 
   // Interface implementations για cleaner API
   const fieldValueActions: FieldValueActions = {
@@ -123,6 +124,7 @@ export function useDynamicInputState({ activeTool }: UseDynamicInputStateProps) 
         case 'angle': return fieldUnlocked.angle;
         case 'length': return fieldUnlocked.length;
         case 'radius': return fieldUnlocked.radius;
+        case 'diameter': return fieldUnlocked.diameter;
         default: return false;
       }
     }, [fieldUnlocked]),

@@ -501,3 +501,8 @@ export function transformBoundsToWorld(
     maxY: (bounds.maxY - transform.offsetY) / transform.scale
   };
 }
+
+export const IDENTITY_COORDINATE_TRANSFORM = {
+  worldToScreen: (point: Point2D): Point2D => point,
+  screenToWorld: (point: Point2D): Point2D => point
+} as const;

@@ -8,7 +8,11 @@ import type { Point2D } from '../../../rendering/types/Types';
  * 🏗️ ENTERPRISE: Enhanced DynamicSubmit interface
  * Supports all CAD tool operations with proper TypeScript typing
  */
-export interface DynamicSubmitDetail extends Point2D {
+export interface DynamicSubmitDetail {
+  /** Legacy coordinate access */
+  x?: number;
+  y?: number;
+
   /** Source identifier for backward compatibility */
   source?: string;
 

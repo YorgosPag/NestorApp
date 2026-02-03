@@ -7,7 +7,7 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { GeometricCalculations } from './GeometricCalculations';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { SpatialFactory, type ISpatialIndex } from '../../core/spatial';
+import { SpatialFactory, type ISpatialIndex, type SpatialQueryResult } from '../../core/spatial';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
 import { createInfinityBounds, isInfinityBounds } from '../../config/geometry-constants';
 
@@ -33,6 +33,11 @@ export interface SnapEngineResult {
     timestamp: number;
   };
 }
+
+type SnapSpatialData = {
+  point: Point2D;
+  entity: EntityModel;
+};
 
 export abstract class BaseSnapEngine {
   protected snapType: ExtendedSnapType;
@@ -207,6 +212,25 @@ export abstract class BaseSnapEngine {
       maxX: bounds.maxX + margin,
       maxY: bounds.maxY + margin
     };
+  }
+
+  protected normalizeSnapResults(results: SpatialQueryResult[]): Array<SpatialQueryResult<SnapSpatialData>> {
+    return results
+      .map(result => {
+        const data = result.data;
+        if (!this.isSnapSpatialData(data)) {
+          return null;
+        }
+        return { ...result, data };
+      })
+      .filter((result): result is SpatialQueryResult<SnapSpatialData> => Boolean(result));
+  }
+
+  private isSnapSpatialData(value: unknown): value is SnapSpatialData {
+    if (!value || typeof value !== 'object') return false;
+    if (!('point' in value) || !('entity' in value)) return false;
+    const entity = (value as { entity?: unknown }).entity;
+    return Boolean(entity && typeof entity === 'object' && 'id' in entity);
   }
 }
 

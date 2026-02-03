@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 /**
  * @file Store Sync Unit Tests
  * @module settings/sync/storeSync.test
@@ -13,11 +14,15 @@
  * @since 2025-10-09
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
 import { createStoreSync } from './storeSync';
 import type { SyncDependencies, ToolStylePort, LoggerPort, Unsubscribe } from './ports';
 import type { EffectiveSettingsGetter } from './storeSync';
 import { UI_COLORS } from '../../config/color-config';
+import {
+  DEFAULT_LINE_SETTINGS,
+  DEFAULT_TEXT_SETTINGS
+} from '../../settings-core/defaults';
+import { DEFAULT_GRIP_SETTINGS } from '../../types/gripSettings';
 
 // ============================================================================
 // FAKE PORTS (Test Doubles)
@@ -51,7 +56,7 @@ class FakeLogger implements LoggerPort {
  */
 class FakeToolStylePort implements ToolStylePort {
   public applyCalls: Array<Parameters<ToolStylePort['apply']>[0]> = [];
-  public changeHandlers: Array<(partial: unknown) => void> = [];
+  public changeHandlers: Array<(partial: Parameters<ToolStylePort['apply']>[0]) => void> = [];
 
   getCurrent() {
     return {
@@ -90,61 +95,9 @@ class FakeToolStylePort implements ToolStylePort {
  */
 function createFakeEffectiveGetter(): EffectiveSettingsGetter {
   return {
-    line: () => ({
-      enabled: true,
-      lineType: 'solid',
-      lineWidth: 0.25,
-      color: UI_COLORS.WHITE,
-      opacity: 1.0,
-      dashScale: 1.0,
-      dashOffset: 0,
-      lineCap: 'round',
-      lineJoin: 'round',
-      breakAtCenter: false,
-      hoverColor: UI_COLORS.LEGACY_COLORS.YELLOW,
-      hoverType: 'solid',
-      hoverWidth: 0.35,
-      hoverOpacity: 0.8,
-      finalColor: UI_COLORS.LEGACY_COLORS.GREEN,
-      finalType: 'solid',
-      finalWidth: 0.35,
-      finalOpacity: 1.0,
-      activeTemplate: null
-    }),
-    text: () => ({
-      enabled: true,
-      fontFamily: 'Arial',
-      fontSize: 12,
-      color: UI_COLORS.WHITE,
-      isBold: false,
-      isItalic: false,
-      isUnderline: false,
-      isStrikethrough: false,
-      isSuperscript: false,
-      isSubscript: false
-    }),
-    grip: () => ({
-      enabled: true,
-      gripSize: 5,
-      pickBoxSize: 3,
-      apertureSize: 10,
-      opacity: 1.0,
-      colors: {
-        cold: UI_COLORS.CAD_UI_COLORS.grips.cold,
-        warm: UI_COLORS.CAD_UI_COLORS.grips.warm,
-        hot: UI_COLORS.CAD_UI_COLORS.grips.hot,
-        contour: UI_COLORS.BLACK
-      },
-      showAperture: true,
-      multiGripEdit: true,
-      snapToGrips: true,
-      showGripTips: false,
-      dpiScale: 1.0,
-      showMidpoints: true,
-      showCenters: true,
-      showQuadrants: true,
-      maxGripsPerEntity: 50
-    })
+    line: () => ({ ...DEFAULT_LINE_SETTINGS }),
+    text: () => ({ ...DEFAULT_TEXT_SETTINGS }),
+    grip: () => ({ ...DEFAULT_GRIP_SETTINGS })
   };
 }
 

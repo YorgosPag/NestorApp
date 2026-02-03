@@ -7,7 +7,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { resetPhaseForNewShape, type PhaseResetActions } from '../utils/field-value-utils';
 import type { Point2D, Phase } from '../../../rendering/types/Types';
-import type { CircleFieldState, ManualInputState, CoordinateFieldState } from '../types/common-interfaces';
+import type { FullFieldState, ManualInputState, CoordinateFieldState, Field } from '../types/common-interfaces';
 
 interface UseDynamicInputPhaseArgs {
   activeTool: string;
@@ -23,8 +23,8 @@ interface UseDynamicInputPhaseArgs {
   setXValue: (v: string) => void;
   setYValue: (v: string) => void;
   setLengthValue: (v: string) => void;
-  setActiveField: (f: 'x' | 'y' | 'angle' | 'length' | 'radius') => void;
-  setFieldUnlocked: Dispatch<SetStateAction<CircleFieldState>>;
+  setActiveField: (f: Field) => void;
+  setFieldUnlocked: Dispatch<SetStateAction<FullFieldState>>;
   setIsCoordinateAnchored: (s: CoordinateFieldState) => void;
   setIsManualInput: (s: ManualInputState) => void;
 
@@ -96,7 +96,12 @@ export function useDynamicInputPhase(args: UseDynamicInputPhaseArgs) {
         console.debug('[DIO] phase after:', 'first-point');
         
         // Reset για νέο σχήμα
-        resetPhaseForNewShape(currentArgs as PhaseResetActions);
+        resetPhaseForNewShape({
+          setFirstClickPoint: currentArgs.setFirstClickPoint,
+          setLengthValue: currentArgs.setLengthValue,
+          setFieldUnlocked: currentArgs.setFieldUnlocked,
+          setActiveField: currentArgs.setActiveField
+        });
       }
     } else if (circleTools.includes(currentArgs.activeTool)) {
       // Circle tools: Special 2-phase logic
@@ -114,7 +119,7 @@ export function useDynamicInputPhase(args: UseDynamicInputPhaseArgs) {
         }
         
         // Switch to radius field and unlock it
-        currentArgs.setFieldUnlocked({ x: false, y: false, angle: false, length: false, radius: true });
+        currentArgs.setFieldUnlocked({ x: false, y: false, angle: false, length: false, radius: true, diameter: false });
         currentArgs.setActiveField('radius');
         console.debug('[DIO] Switched to radius field for circle');
       } else if (currentArgs.drawingPhaseRef.current === 'second-point') {
@@ -155,7 +160,12 @@ export function useDynamicInputPhase(args: UseDynamicInputPhaseArgs) {
         console.debug('[DIO] Three-point tool: completed, reset to first-point');
         
         // Reset για νέα μέτρηση
-        resetPhaseForNewShape(currentArgs as PhaseResetActions);
+        resetPhaseForNewShape({
+          setFirstClickPoint: currentArgs.setFirstClickPoint,
+          setLengthValue: currentArgs.setLengthValue,
+          setFieldUnlocked: currentArgs.setFieldUnlocked,
+          setActiveField: currentArgs.setActiveField
+        });
       }
     }
 

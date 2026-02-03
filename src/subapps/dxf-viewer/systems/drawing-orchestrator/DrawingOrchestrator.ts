@@ -7,7 +7,8 @@ import { useCallback, useRef } from 'react';
 import { useUnifiedDrawing } from '../../hooks/drawing/useUnifiedDrawing';
 import { useDynamicInputHandler } from '../dynamic-input/hooks/useDynamicInputHandler';
 import type { DrawingTool } from '../../hooks/drawing/useUnifiedDrawing';
-import type { Point2D, AnySceneEntity, ViewTransform, Entity } from '../../rendering/types/Types';
+import type { Point2D, AnySceneEntity, ViewTransform } from '../../rendering/types/Types';
+import { IDENTITY_COORDINATE_TRANSFORM } from '../../rendering/core/CoordinateTransforms';
 
 interface DrawingOrchestratorOptions {
   activeTool: string;
@@ -59,7 +60,7 @@ export function useDrawingOrchestrator({
     }
     
     // Add point to drawing system
-    const result = drawingSystem.addPoint(point);
+    const result = drawingSystem.addPoint(point, IDENTITY_COORDINATE_TRANSFORM);
     
     // Notify drawing point handler
     onDrawingPoint?.(point);
@@ -71,7 +72,7 @@ export function useDrawingOrchestrator({
     if (transform) {
       transformRef.current = transform;
     }
-    drawingSystem.updatePreview(point);
+    drawingSystem.updatePreview(point, IDENTITY_COORDINATE_TRANSFORM);
   }, [drawingSystem]);
   
   const finishDrawing = useCallback(() => {
@@ -79,7 +80,7 @@ export function useDrawingOrchestrator({
     const result = drawingSystem.finishEntity(); // ✅ ENTERPRISE FIX: Use finishEntity method instead of finishDrawing
 
     if (result && onEntityCreated) {
-      onEntityCreated(result as Entity);
+      onEntityCreated(result);
     }
 
     // Return to select tool after completion
@@ -93,7 +94,7 @@ export function useDrawingOrchestrator({
     const result = drawingSystem.finishPolyline(); // ✅ ENTERPRISE FIX: Use finishPolyline method instead of finishDrawing
     
     if (result && onEntityCreated) {
-      onEntityCreated(result as Entity);
+      onEntityCreated(result);
     }
 
     // Return to select tool after polyline completion

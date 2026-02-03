@@ -21,7 +21,7 @@ import type {
  * @param override - Οι ειδικές ρυθμίσεις (partial overrides)
  * @returns Τα effective settings (merged)
  */
-export function mergeSettings<T>(
+export function mergeSettings<T extends object>(
   general: T,
   override: Partial<T> | null | undefined
 ): T {
@@ -30,26 +30,23 @@ export function mergeSettings<T>(
   }
 
   // Deep merge για nested objects όπως colors
-  const merged = { ...general };
+  const merged = { ...general } as T;
 
-  for (const key in override) {
-    const overrideValue = override[key];
-    const generalValue = general[key];
+  for (const key of Object.keys(override)) {
+    const typedKey = key as keyof T;
+    const overrideValue = override[typedKey];
+    const generalValue = general[typedKey];
 
     if (overrideValue !== undefined) {
-      if (
-        typeof overrideValue === 'object' &&
-        overrideValue !== null &&
-        !Array.isArray(overrideValue) &&
-        typeof generalValue === 'object' &&
-        generalValue !== null &&
-        !Array.isArray(generalValue)
-      ) {
+      const overrideIsObject = typeof overrideValue === 'object' && overrideValue !== null && !Array.isArray(overrideValue);
+      const generalIsObject = typeof generalValue === 'object' && generalValue !== null && !Array.isArray(generalValue);
+
+      if (overrideIsObject && generalIsObject) {
         // Deep merge για nested objects
-        merged[key] = { ...generalValue, ...overrideValue };
+        merged[typedKey] = { ...generalValue, ...overrideValue } as T[typeof typedKey];
       } else {
         // Direct assignment για primitives και arrays
-        merged[key] = overrideValue;
+        merged[typedKey] = overrideValue as T[typeof typedKey];
       }
     }
   }
@@ -64,7 +61,7 @@ export function mergeLineSettings(
   general: LineSettings,
   override: Partial<LineSettings> | null
 ): LineSettings {
-  return mergeSettings(general, override);
+  return mergeSettings<LineSettings>(general, override);
 }
 
 /**
@@ -74,7 +71,7 @@ export function mergeTextSettings(
   general: TextSettings,
   override: Partial<TextSettings> | null
 ): TextSettings {
-  return mergeSettings(general, override);
+  return mergeSettings<TextSettings>(general, override);
 }
 
 /**
@@ -84,7 +81,7 @@ export function mergeGripSettings(
   general: GripSettings,
   override: Partial<GripSettings> | null
 ): GripSettings {
-  return mergeSettings(general, override);
+  return mergeSettings<GripSettings>(general, override);
 }
 
 /**

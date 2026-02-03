@@ -295,6 +295,7 @@ export function EnterpriseDxfSettingsProvider({
 
     // Actions
     ...actions,
+    resetToFactory: actions.resetToDefaults,
 
     // Effective settings
     ...effectiveSettings,

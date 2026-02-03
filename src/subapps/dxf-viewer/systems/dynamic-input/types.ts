@@ -44,5 +44,5 @@ export interface DynamicInputFieldProps {
   isAnchored?: boolean;
   placeholder?: string;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  fieldType?: 'coordinate' | 'angle' | 'length';
+  fieldType?: 'coordinate' | 'angle' | 'length' | 'radius' | 'diameter';
 }

@@ -19,6 +19,7 @@
 import type { StorageDriver } from './StorageDriver';
 import type { SettingsState } from '../core/types';
 import { validateSettingsState, validateAndCoerce } from './schema';
+import type { SettingsStateType } from './schema';
 import { needsMigration, migrateToVersion, createBackup } from './migrationRegistry';
 import { CURRENT_VERSION, FACTORY_DEFAULTS } from '../FACTORY_DEFAULTS';
 
@@ -186,7 +187,10 @@ export async function safeLoad(
     // Debug disabled: Validation failed, attempting to coerce
     warnings.push('Schema validation failed, data was coerced');
 
-    const coercedData = validateAndCoerce(processedData, FACTORY_DEFAULTS as unknown);
+    const coercedData = validateAndCoerce(
+      processedData,
+      FACTORY_DEFAULTS as unknown as SettingsStateType
+    );
 
     return {
       success: true,

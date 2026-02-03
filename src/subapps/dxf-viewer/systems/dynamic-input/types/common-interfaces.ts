@@ -38,6 +38,7 @@ export interface CircleFieldState {
   angle: boolean;
   length: boolean;
   radius: boolean;
+  diameter: boolean;
 }
 
 /**

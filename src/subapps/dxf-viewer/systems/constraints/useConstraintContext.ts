@@ -1,43 +1,31 @@
 import { useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { ConstraintContext } from './config';
+import type { ConstraintContextData } from './config';
 
 export interface ConstraintContextHook {
-  updateContext: (updates: Partial<ConstraintContext>) => void;
+  updateContext: (updates: Partial<ConstraintContextData>) => void;
   setCurrentTool: (tool: string) => void;
   setInputMode: (mode: 'point' | 'distance' | 'angle') => void;
   setLastPoint: (point: Point2D | null) => void;
 }
 
 export function useConstraintContext(
-  setConstraintContext: React.Dispatch<React.SetStateAction<ConstraintContext>>
+  setConstraintContext: React.Dispatch<React.SetStateAction<ConstraintContextData>>
 ): ConstraintContextHook {
-  const updateContext = useCallback((updates: Partial<ConstraintContext>) => {
+  const updateContext = useCallback((updates: Partial<ConstraintContextData>) => {
     setConstraintContext(prev => ({ ...prev, ...updates }));
   }, [setConstraintContext]);
 
   const setCurrentTool = useCallback((tool: string) => {
-    // Update context through setConstraintContext with method call
-    setConstraintContext(prev => {
-      prev.setCurrentTool(tool);
-      return prev;
-    });
+    setConstraintContext(prev => ({ ...prev, currentTool: tool }));
   }, [setConstraintContext]);
 
   const setInputMode = useCallback((mode: 'point' | 'distance' | 'angle') => {
-    // Update context through setConstraintContext with method call
-    setConstraintContext(prev => {
-      prev.setInputMode(mode);
-      return prev;
-    });
+    setConstraintContext(prev => ({ ...prev, inputMode: mode }));
   }, [setConstraintContext]);
 
   const setLastPoint = useCallback((point: Point2D | null) => {
-    // Update context through setConstraintContext with method call
-    setConstraintContext(prev => {
-      prev.setLastPoint(point);
-      return prev;
-    });
+    setConstraintContext(prev => ({ ...prev, lastPoint: point }));
   }, [setConstraintContext]);
 
   return {

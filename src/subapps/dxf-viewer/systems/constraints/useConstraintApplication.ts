@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type {
-  ConstraintContext,
   ConstraintContextData,
   ConstraintResult,
   ConstraintDefinition,
@@ -66,7 +65,7 @@ export function useConstraintApplication(
 
     // Apply custom constraints
     const activeConstraintDefs = getActiveConstraints();
-    result = ConstraintCalculations.applyConstraints(result.constrainedPoint, activeConstraintDefs, fullContext as ConstraintContext);
+    result = ConstraintCalculations.applyConstraints(result.constrainedPoint, activeConstraintDefs, fullContext);
 
     setLastAppliedResult(result);
     onConstraintResult?.(result);

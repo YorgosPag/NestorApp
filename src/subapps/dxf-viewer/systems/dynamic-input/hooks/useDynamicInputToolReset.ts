@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import type { Field, Phase } from './useDynamicInputState';
-import type { FieldValueSetters, FullFieldState, CoordinateFieldState } from '../types/common-interfaces';
+import type { FieldValueSetters, FullFieldState, ManualInputState } from '../types/common-interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 
 interface UseDynamicInputToolResetArgs extends FieldValueSetters {
@@ -10,7 +10,7 @@ interface UseDynamicInputToolResetArgs extends FieldValueSetters {
   drawingPhase: Phase;
   getFieldsToShow: () => string[];
   setActiveField: (f: Field) => void;
-  setIsManualInput: (s: CoordinateFieldState) => void;
+  setIsManualInput: (s: ManualInputState) => void;
   setHideAngleLengthFields: (h: boolean) => void;
   setShowLengthDuringDraw: (s: boolean) => void;
   setFirstClickPoint: (p: Point2D | null) => void;
@@ -48,7 +48,7 @@ export function useDynamicInputToolReset({
     setRadiusValue('');
     setDiameterValue('');
     setActiveField('x');
-    setIsManualInput({ x: false, y: false });
+    setIsManualInput({ x: false, y: false, radius: false });
     // ΔΕΝ reset-άρουμε το drawingPhase εδώ - μόνο από canvas-click
     // setDrawingPhase('first-point'); // Reset to first point
     // drawingPhaseRef.current = 'first-point';

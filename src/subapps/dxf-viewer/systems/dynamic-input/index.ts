@@ -7,7 +7,7 @@ export { default as DynamicInputSystem } from './DynamicInputSystem';
 export * from './useDynamicInput';
 
 // Components
-export { DynamicInputOverlay } from './components/DynamicInputOverlay';
+export { default as DynamicInputOverlay } from './components/DynamicInputOverlay';
 export { DynamicInputContainer } from './components/DynamicInputContainer';
 export { DynamicInputHeader } from './components/DynamicInputHeader';
 export { DynamicInputFooter } from './components/DynamicInputFooter';

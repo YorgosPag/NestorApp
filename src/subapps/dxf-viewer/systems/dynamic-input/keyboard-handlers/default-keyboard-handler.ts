@@ -170,7 +170,7 @@ function createPoint(
     setYValue('');
     setLengthValue('');
     setActiveField('x');
-    setIsManualInput({ x: false, y: false });
+    setIsManualInput({ x: false, y: false, radius: false });
 
     focusSoon(refs.xInputRef, INPUT_TIMING.FOCUS_DEFAULT);
     return true;

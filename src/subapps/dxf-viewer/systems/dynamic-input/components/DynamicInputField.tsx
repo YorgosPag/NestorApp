@@ -15,7 +15,7 @@ interface DynamicInputFieldProps {
   isAnchored?: boolean;
   placeholder?: string;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  fieldType?: 'coordinate' | 'angle' | 'length';
+  fieldType?: 'coordinate' | 'angle' | 'length' | 'radius' | 'diameter';
 }
 
 export function DynamicInputField({
@@ -50,7 +50,7 @@ export function DynamicInputField({
         }
       }
       return; // Don't call onChange if validation fails
-    } else if (fieldType === 'length') {
+    } else if (fieldType === 'length' || fieldType === 'radius' || fieldType === 'diameter') {
       // Length-specific validation: no negative values
       if (!inputValue.startsWith('-')) {
         onChange(e);
@@ -64,7 +64,7 @@ export function DynamicInputField({
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (fieldType === 'length') {
+    if (fieldType === 'length' || fieldType === 'radius' || fieldType === 'diameter') {
       // Block minus key for length field
       if (e.key === '-' || e.key === 'Minus' || e.code === 'NumpadSubtract') {
         e.preventDefault();

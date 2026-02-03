@@ -85,9 +85,9 @@ export interface ConstraintDefinition {
   enabled: boolean;
   priority: number; // Higher priority constraints are applied first
   parameters: Record<string, unknown>;
-  validation?: (point: Point2D, context: ConstraintContext) => boolean;
-  transform?: (point: Point2D, context: ConstraintContext) => Point2D;
-  feedback?: (point: Point2D, context: ConstraintContext) => ConstraintFeedback;
+  validation?: (point: Point2D, context: ConstraintContextData) => boolean;
+  transform?: (point: Point2D, context: ConstraintContextData) => Point2D;
+  feedback?: (point: Point2D, context: ConstraintContextData) => ConstraintFeedback;
 }
 
 // ===== CONSTRAINT CONTEXT DATA =====
@@ -96,6 +96,9 @@ export interface ConstraintContextData {
   previousPoints: Point2D[];
   referencePoint?: Point2D;
   baseAngle?: number;
+  currentTool?: string;
+  inputMode?: 'point' | 'distance' | 'angle';
+  lastPoint?: Point2D | null;
   mousePosition: Point2D;
   keyboardModifiers: {
     shift: boolean;
