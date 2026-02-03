@@ -2,6 +2,7 @@
 'use client';
 
 import { Timestamp } from 'firebase/firestore';
+import type { MessageIntentAnalysis } from '@/schemas/ai-analysis';
 
 export type FirestoreishTimestamp = Date | string | { toDate(): Date };
 
@@ -72,6 +73,38 @@ export interface Communication {
   requiresFollowUp?: boolean;
   followUpDate?: FirestoreishTimestamp;
   metadata?: Record<string, unknown>;
+
+  // =========================================================================
+  // 🏢 ENTERPRISE: AI ANALYSIS FIELDS (Phase 1 - Omnichannel Intake)
+  // =========================================================================
+
+  /**
+   * AI analysis result for message intent extraction
+   * @enterprise Only present for inbound messages με AI processing
+   * @see src/schemas/ai-analysis.ts - MessageIntentAnalysis type (SSoT)
+   *
+   * Structure:
+   * - kind: 'message_intent' (discriminator)
+   * - intentType: IntentTypeValue (SSoT enum)
+   * - extractedEntities: ExtractedBusinessEntities
+   * - confidence: number (0-1 validated)
+   * - needsTriage: boolean
+   * - aiModel: string
+   * - analysisTimestamp: string (ISO 8601)
+   */
+  intentAnalysis?: MessageIntentAnalysis;
+
+  /**
+   * Triage status for manual review
+   * @enterprise Workflow states for communications requiring human review
+   */
+  triageStatus?: 'pending' | 'reviewed' | 'approved' | 'rejected';
+
+  /**
+   * Linked CRM task ID (if auto-created)
+   * @enterprise Links communication → task for audit trail
+   */
+  linkedTaskId?: string;
 }
 
 // Tasks

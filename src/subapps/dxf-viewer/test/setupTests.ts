@@ -9,12 +9,22 @@ import { VIEWPORT_DEFAULTS } from '../config/transform-config';
 
 type JestMockFactory = {
   fn: <T extends (...args: unknown[]) => unknown>(implementation?: T) => T;
+  clearAllMocks: () => void;
 };
 
-const jest = (globalThis as { jest?: JestMockFactory }).jest;
-if (!jest) {
-  throw new Error('Jest globals are not available in the test environment.');
+type MockFunction = {
+  mockClear: () => void;
+};
+
+function requireJest(): JestMockFactory {
+  const current = (globalThis as { jest?: JestMockFactory }).jest;
+  if (!current) {
+    throw new Error('Jest globals are not available in the test environment.');
+  }
+  return current;
 }
+
+const jest = requireJest();
 
 // JSDOM + Canvas mocks για browser environment simulation
 Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
@@ -311,7 +321,7 @@ function cleanupMockElements(): void {
 beforeEach(() => {
   // Reset performance mocks
   if (global.performance?.now) {
-    (global.performance.now as jest.Mock).mockClear();
+    (global.performance.now as MockFunction).mockClear();
   }
 });
 

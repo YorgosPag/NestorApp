@@ -40,7 +40,7 @@ const MESSAGE_INTENT_FIXTURES: Record<string, MessageIntentAnalysis> = {
   delivery: {
     kind: 'message_intent',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.95,
     needsTriage: false,
     intentType: 'delivery',
@@ -52,11 +52,11 @@ const MESSAGE_INTENT_FIXTURES: Record<string, MessageIntentAnalysis> = {
   appointment: {
     kind: 'message_intent',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.92,
     needsTriage: false,
     intentType: 'appointment',
-    eventDate: new Date('2026-01-15T10:00:00Z').toISOString(),
+    eventDate: '2026-01-15T10:00:00.000Z',
     extractedEntities: {},
     rawMessage: 'appointment test message',
   },
@@ -65,7 +65,7 @@ const MESSAGE_INTENT_FIXTURES: Record<string, MessageIntentAnalysis> = {
   issue: {
     kind: 'message_intent',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.88,
     needsTriage: false,
     intentType: 'issue',
@@ -77,7 +77,7 @@ const MESSAGE_INTENT_FIXTURES: Record<string, MessageIntentAnalysis> = {
   payment: {
     kind: 'message_intent',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.90,
     needsTriage: false,
     intentType: 'payment',
@@ -89,7 +89,7 @@ const MESSAGE_INTENT_FIXTURES: Record<string, MessageIntentAnalysis> = {
   info: {
     kind: 'message_intent',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.85,
     needsTriage: false,
     intentType: 'info_update',
@@ -101,7 +101,7 @@ const MESSAGE_INTENT_FIXTURES: Record<string, MessageIntentAnalysis> = {
   ambiguous: {
     kind: 'message_intent',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.45,
     needsTriage: true,
     intentType: 'triage_needed',
@@ -119,7 +119,7 @@ const DOCUMENT_CLASSIFY_FIXTURES: Record<string, DocumentClassifyAnalysis> = {
   invoice: {
     kind: 'document_classify',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.96,
     needsTriage: false,
     documentType: 'invoice',
@@ -131,7 +131,7 @@ const DOCUMENT_CLASSIFY_FIXTURES: Record<string, DocumentClassifyAnalysis> = {
   contract: {
     kind: 'document_classify',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.94,
     needsTriage: false,
     documentType: 'contract',
@@ -143,7 +143,7 @@ const DOCUMENT_CLASSIFY_FIXTURES: Record<string, DocumentClassifyAnalysis> = {
   'photo-exterior': {
     kind: 'document_classify',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.91,
     needsTriage: false,
     documentType: 'photo-exterior',
@@ -155,7 +155,7 @@ const DOCUMENT_CLASSIFY_FIXTURES: Record<string, DocumentClassifyAnalysis> = {
   'photo-interior': {
     kind: 'document_classify',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.89,
     needsTriage: false,
     documentType: 'photo-interior',
@@ -167,7 +167,7 @@ const DOCUMENT_CLASSIFY_FIXTURES: Record<string, DocumentClassifyAnalysis> = {
   floorplan: {
     kind: 'document_classify',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.93,
     needsTriage: false,
     documentType: 'floorplan',
@@ -179,7 +179,7 @@ const DOCUMENT_CLASSIFY_FIXTURES: Record<string, DocumentClassifyAnalysis> = {
   other: {
     kind: 'document_classify',
     aiModel: 'mock-provider-v1',
-    analysisTimestamp: new Date('2026-01-01T12:00:00Z').toISOString(),
+    analysisTimestamp: '2026-01-01T12:00:00.000Z',
     confidence: 0.50,
     needsTriage: true,
     documentType: 'other',
@@ -336,10 +336,11 @@ export class MockAIAnalysisProvider implements IAIAnalysisProvider {
       return DOCUMENT_CLASSIFY_FIXTURES.contract;
     }
 
+    // Photo classification: Keywords first, then fallback to generic image
     if (
       filename.includes('exterior') ||
       filename.includes('εξωτ') ||
-      input.mimeType?.startsWith('image/')
+      filename.includes('outside')
     ) {
       return DOCUMENT_CLASSIFY_FIXTURES['photo-exterior'];
     }
@@ -347,9 +348,15 @@ export class MockAIAnalysisProvider implements IAIAnalysisProvider {
     if (
       filename.includes('interior') ||
       filename.includes('εσωτ') ||
-      input.mimeType?.startsWith('image/')
+      filename.includes('inside')
     ) {
       return DOCUMENT_CLASSIFY_FIXTURES['photo-interior'];
+    }
+
+    // Fallback για generic images (χωρίς specific keywords)
+    if (input.mimeType?.startsWith('image/')) {
+      // Default to exterior για generic photos
+      return DOCUMENT_CLASSIFY_FIXTURES['photo-exterior'];
     }
 
     if (

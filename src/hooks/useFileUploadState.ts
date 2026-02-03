@@ -23,6 +23,7 @@ export interface FileUploadProgress {
 
 export interface FileUploadResult {
   success?: boolean;
+  error?: string;
   url: string;
   fileName: string;
   fileSize: number;

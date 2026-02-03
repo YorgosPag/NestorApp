@@ -11,6 +11,8 @@ import { Image, Plus, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { UploadPurpose } from '@/config/file-upload-config';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 import {
   PHOTO_SIZES,
   PHOTO_TEXT_COLORS,
@@ -45,7 +47,7 @@ export interface MultiplePhotosCompactProps {
   /** Add cache buster to URLs */
   addCacheBuster: (url: string | undefined) => string | undefined;
   /** Purpose of photos (logo, representative, etc.) */
-  purpose?: string;
+  purpose?: UploadPurpose;
   /** Upload handler */
   uploadHandler?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
   /** Upload complete handler */
@@ -65,7 +67,7 @@ export interface MultiplePhotosCompactProps {
   /** Profile photo selection callback */
   onProfilePhotoSelection?: (index: number) => void;
   /** 🔥 RESTORED: Contact data for FileNamingService */
-  contactData?: Record<string, unknown>;
+  contactData?: ContactFormData;
   /** 🏢 ENTERPRISE: Photo click handler για gallery preview */
   onPhotoClick?: (index: number) => void;
   /** Show photos even when component is disabled (for read-only views) */

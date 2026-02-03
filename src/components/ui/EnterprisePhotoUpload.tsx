@@ -24,6 +24,7 @@ import {
   PHOTO_TEXT_COLORS,
   PHOTO_COLORS,
   PHOTO_HOVER_EFFECTS,
+  PHOTO_TRANSITIONS,
   PHOTO_TYPOGRAPHY,
   PHOTO_SEMANTIC_COLORS,
   PHOTO_COMBINED_EFFECTS,
@@ -31,6 +32,7 @@ import {
 } from '@/components/generic/config/photo-config';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -58,7 +60,7 @@ export interface EnterprisePhotoUploadProps extends Omit<UseEnterpriseFileUpload
   /** External loading state (για sync με parent state) */
   isLoading?: boolean;
   /** 🔥 RESTORED: Contact data for FileNamingService */
-  contactData?: Record<string, unknown>;
+  contactData?: ContactFormData;
   /** 🔥 RESTORED: Photo index for FileNamingService */
   photoIndex?: number;
   /** 🔥 RESTORED: Custom filename override */
@@ -267,7 +269,7 @@ export function EnterprisePhotoUpload({
       <div className={`relative ${className}`}>
         <div
           className={`
-            relative h-full w-full text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} overflow-hidden
+            relative h-full w-full text-center cursor-pointer ${PHOTO_TRANSITIONS.COLORS} overflow-hidden
             ${compactUploadClasses}
             ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
             ${hasError ? `${quick.error} bg-red-50` : ''}
@@ -294,10 +296,10 @@ export function EnterprisePhotoUpload({
           ) : (
             <div className="flex flex-col items-center justify-center">
               <Camera className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.MUTED} mb-3`} />
-              <span className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>
+              <span className={`${PHOTO_TYPOGRAPHY.UPLOAD_TEXT} ${PHOTO_TEXT_COLORS.LIGHT_MUTED} mb-2`}>
                 {purpose === 'logo' ? t('upload.addLogo') : t('upload.addPhoto')}
               </span>
-              <span className={`${PHOTO_TYPOGRAPHY.CAPTION} ${PHOTO_TEXT_COLORS.MUTED}`}>{t('upload.clickOrDrag')}</span>
+              <span className={`${PHOTO_TYPOGRAPHY.METADATA} ${PHOTO_TEXT_COLORS.MUTED}`}>{t('upload.clickOrDrag')}</span>
             </div>
           )}
 
@@ -306,7 +308,7 @@ export function EnterprisePhotoUpload({
 
         {/* Error display */}
         {hasError && (
-          <p className={`${PHOTO_TYPOGRAPHY.ERROR} ${PHOTO_SEMANTIC_COLORS.ERROR} mt-1`}>{hasError}</p>
+          <p className={`${PHOTO_TYPOGRAPHY.ERROR_TEXT} ${PHOTO_SEMANTIC_COLORS.ERROR} mt-1`}>{hasError}</p>
         )}
       </div>
     );
@@ -325,7 +327,7 @@ export function EnterprisePhotoUpload({
       {/* Upload Area */}
       <div
         className={`
-          relative p-6 text-center cursor-pointer ${PHOTO_HOVER_EFFECTS.COLOR_TRANSITION} ${PHOTO_HEIGHTS.STANDARD} flex flex-col items-center justify-center
+          relative p-6 text-center cursor-pointer ${PHOTO_TRANSITIONS.COLORS} ${PHOTO_HEIGHTS.STANDARD} flex flex-col items-center justify-center
           ${fullUploadClasses}
           ${disabled && !currentPreview ? 'opacity-50 cursor-not-allowed' : disabled ? 'cursor-default' : ''}
           ${hasError ? `${quick.error} bg-red-50` : ''}
@@ -341,7 +343,7 @@ export function EnterprisePhotoUpload({
           <div className={`absolute inset-0 ${PHOTO_COLORS.LOADING_OVERLAY} flex items-center justify-center`}>
             <div className="text-center">
               <Loader2 className={`${iconSizes.lg} animate-spin ${PHOTO_SEMANTIC_COLORS.LOADING} mx-auto mb-2`} />
-              <p className={`${PHOTO_TYPOGRAPHY.LOADING} ${PHOTO_SEMANTIC_COLORS.INFO}`}>
+              <p className={`${PHOTO_TYPOGRAPHY.UPLOAD_TEXT} ${PHOTO_SEMANTIC_COLORS.INFO}`}>
                 {upload.uploadPhase === 'upload' && t('upload.phases.uploading')}
                 {upload.uploadPhase === 'processing' && t('upload.phases.processing')}
                 {upload.uploadPhase === 'complete' && t('upload.phases.complete')}
@@ -349,7 +351,7 @@ export function EnterprisePhotoUpload({
               {showProgress && (
                 <div className={`${iconSizes.xl8} ${PHOTO_COLORS.PROGRESS_BACKGROUND} rounded-full h-2 mt-2 mx-auto`}>
                   <div
-                    className={`bg-blue-600 h-2 rounded-full ${PHOTO_HOVER_EFFECTS.ALL_TRANSITION}`}
+                    className={`bg-blue-600 h-2 rounded-full ${PHOTO_TRANSITIONS.STANDARD}`}
                     style={getProgressBarWidthStyles(upload.progress)}
                   />
                 </div>
@@ -378,13 +380,13 @@ export function EnterprisePhotoUpload({
             {hasError ? (
               <>
                 <AlertCircle className={`${iconSizes.xl} ${PHOTO_SEMANTIC_COLORS.ERROR} mx-auto mb-2`} />
-                <p className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_SEMANTIC_COLORS.ERROR} mb-1`}>{t('upload.errors.fileSelection')}</p>
-                <p className={`${PHOTO_TYPOGRAPHY.ERROR} ${PHOTO_SEMANTIC_COLORS.ERROR}`}>{hasError}</p>
+                <p className={`${PHOTO_TYPOGRAPHY.DESCRIPTION} ${PHOTO_SEMANTIC_COLORS.ERROR} mb-1`}>{t('upload.errors.fileSelection')}</p>
+                <p className={`${PHOTO_TYPOGRAPHY.ERROR_TEXT} ${PHOTO_SEMANTIC_COLORS.ERROR}`}>{hasError}</p>
               </>
             ) : (
               <>
                 <Camera className={`${iconSizes.xl} ${PHOTO_TEXT_COLORS.ICON_LIGHT} mx-auto mb-2`} />
-                <p className={`${PHOTO_TYPOGRAPHY.BODY} ${PHOTO_TEXT_COLORS.ICON_LIGHT} mb-1`}>
+                <p className={`${PHOTO_TYPOGRAPHY.DESCRIPTION} ${PHOTO_TEXT_COLORS.ICON_LIGHT} mb-1`}>
                   {purpose === 'logo' ? t('upload.clickOrDragLogo') : t('upload.clickOrDragPhoto')}
                 </p>
                 <p className={`text-xs ${PHOTO_TEXT_COLORS.ICON_LIGHT}`}>
@@ -401,7 +403,7 @@ export function EnterprisePhotoUpload({
       {/* Upload Actions */}
       {currentFile && !isLoading && upload.success && (
         <div className="text-center">
-          <p className={`${PHOTO_TYPOGRAPHY.SUCCESS} ${PHOTO_SEMANTIC_COLORS.SUCCESS} flex items-center justify-center gap-1`}>
+          <p className={`${PHOTO_TYPOGRAPHY.LABEL} ${PHOTO_SEMANTIC_COLORS.SUCCESS} flex items-center justify-center gap-1`}>
             <CheckCircle className={iconSizes.sm} />
             {purpose === 'logo' ? t('upload.success.logoUploaded') : t('upload.success.photoUploaded')}
           </p>
@@ -414,7 +416,7 @@ export function EnterprisePhotoUpload({
           <button
             type="button"
             onClick={upload.cancelUpload}
-            className={`px-3 py-1 ${PHOTO_COLORS.CANCEL_BUTTON} ${PHOTO_TEXT_COLORS.LABEL} text-xs rounded ${PHOTO_HOVER_EFFECTS.CANCEL_BUTTON}`}
+            className={`px-3 py-1 ${PHOTO_COLORS.CANCEL_BUTTON} ${PHOTO_TEXT_COLORS.LABEL} text-xs rounded ${PHOTO_HOVER_EFFECTS.BUTTON}`}
           >
             {t('buttons.cancel')}
           </button>

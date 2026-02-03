@@ -11,7 +11,8 @@ import type {
   GridLine,
   RulerTick,
   RulersLayoutInfo,
-  RulersGridOperationResult
+  RulersGridOperationResult,
+  RulersGridOperation
 } from './config';
 
 // DOMRect is a native browser type, use global DOMRect
@@ -60,6 +61,9 @@ export interface RulersGridContextType {
   setSnapTolerance: (tolerance: number) => void;
   findSnapPoint: (point: Point2D, transform: ViewTransform, canvasRect: DOMRectReadOnly) => SnapResult | null;
 
+  // Operations
+  performOperation: (operation: RulersGridOperation) => Promise<RulersGridOperationResult>;
+
   // Calculation Functions
   calculateGridBounds: (transform: ViewTransform, canvasRect: DOMRectReadOnly) => GridBounds;
   calculateGridLines: (bounds: GridBounds, settings: GridSettings, transform: ViewTransform) => GridLine[];
@@ -98,6 +102,10 @@ export interface RulersGridContextType {
   exportSettings: () => string;
   importSettings: (data: string) => Promise<RulersGridOperationResult>;
   validateSettings: (settings: unknown) => { valid: boolean; errors: string[] };
+
+  // System Visibility
+  setVisibility: (visible: boolean) => void;
+  getVisibility: () => boolean;
 
   // Auto-fit and Smart Behavior
   autoFitGrid: (transform: ViewTransform, canvasRect: DOMRectReadOnly) => void;

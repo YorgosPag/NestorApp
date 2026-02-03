@@ -130,7 +130,7 @@ export function PhotoPreview({
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  className={`absolute top-2 right-2 ${colors.bg.error} ${colors.text.error} rounded-full p-1.5 ${PHOTO_HOVER_EFFECTS.REMOVE_BUTTON} z-10`}
+                  className={`absolute top-2 right-2 ${colors.bg.error} ${colors.text.error} rounded-full p-1.5 ${PHOTO_HOVER_EFFECTS.BUTTON} z-10`}
                   onClick={handleRemoveClick}
                 >
                   <X className={iconSizes.sm} />

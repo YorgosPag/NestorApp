@@ -17,6 +17,7 @@ import { useCacheBusting } from '@/hooks/useCacheBusting';
 // Removed usePhotoSlotHandlers - using enterprise standard EnterprisePhotoUpload
 import { MultiplePhotosCompact } from './MultiplePhotosCompact';
 import { MultiplePhotosFull } from './MultiplePhotosFull';
+import type { UploadPurpose } from '@/config/file-upload-config';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -52,7 +53,7 @@ export interface MultiplePhotosUploadProps {
   /** Compact mode (smaller UI) */
   compact?: boolean;
   /** Purpose for validation and compression */
-  purpose?: 'photo' | 'logo';
+  purpose?: UploadPurpose;
   /** Contact data for FileNamingService (optional) */
   contactData?: Record<string, unknown>;
   /** 🆕 Profile selection props */
@@ -110,10 +111,10 @@ export function MultiplePhotosUpload({
 
   // Ensure photos array has the correct length
   const normalizedPhotos = React.useMemo(() => {
-    const emptySlot = {};
+    const emptySlot: PhotoSlot = { file: null, isUploading: false, uploadProgress: 0 };
 
     // 🚨 CRITICAL: Force exactly maxPhotos slots, no more, no less!
-    const result = [];
+    const result: PhotoSlot[] = [];
     for (let i = 0; i < maxPhotos; i++) {
       if (photos && photos[i] && (photos[i].file || photos[i].uploadUrl || photos[i].preview)) {
         result[i] = photos[i];

@@ -134,7 +134,7 @@ export function EnterpriseColorSlider({
   const trackStyle = getTrackGradient(channel, ariaColor.toString('hex'));
 
   // Thumb position
-  const thumbPosition = state.getThumbPercent() * 100;
+  const thumbPosition = state.getThumbPercent(0) * 100;
 
   return (
     <div className={`${PANEL_LAYOUT.SPACING.GAP_SM} ${className}`}>

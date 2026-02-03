@@ -6,6 +6,7 @@ import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterprise
 import { useAutoUploadEffect } from '@/hooks/upload/useAutoUploadEffect';
 import { useFileSelectionHandlers } from '@/hooks/upload/useFileSelectionHandlers';
 import { createUploadHandlerFromPreset } from '@/services/upload-handlers';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -27,7 +28,7 @@ export interface UsePhotoUploadLogicProps {
   /** Purpose για logging */
   purpose?: string;
   /** Contact data για FileNamingService */
-  contactData?: Record<string, unknown>;
+  contactData?: ContactFormData;
   /** Photo index για multiple photos */
   photoIndex?: number;
   /** Custom filename override */
@@ -161,7 +162,7 @@ export function usePhotoUploadLogic({
         success: true,
         url: '',
         fileName: '',
-        compressionInfo: { originalSize: 0, compressedSize: 0, compressionRatio: 1, quality: 1 },
+        compressionInfo: { wasCompressed: false, originalSize: 0, compressedSize: 0, compressionRatio: 1, quality: 1 },
       });
     }
 

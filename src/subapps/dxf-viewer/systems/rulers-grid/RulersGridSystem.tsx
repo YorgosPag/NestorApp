@@ -28,7 +28,7 @@ import { storageGet, storageSet } from '../../utils/storage-utils';
 // ✅ ENTERPRISE: Window interface extension for debug globals
 declare global {
   interface Window {
-    __GRID_SETTINGS__?: GridSettings;
+    __GRID_SETTINGS__?: Partial<GridSettings>;
     __RULER_SETTINGS__?: RulerSettings;
   }
 }
@@ -99,7 +99,7 @@ function useRulersGridSystemIntegration({
 
   // State initialization with deep merge
   const [rulers, setRulersInternal] = useState<RulerSettings>(() => {
-    let result = { ...DEFAULT_RULER_SETTINGS };
+    let result: RulerSettings = { ...DEFAULT_RULER_SETTINGS };
     if (persistedData?.rulers) {
       result = deepMerge(result, persistedData.rulers);
     }
@@ -165,7 +165,7 @@ function useRulersGridSystemIntegration({
   });
 
   const [grid, setGridInternal] = useState<GridSettings>(() => {
-    let result = { ...DEFAULT_GRID_SETTINGS };
+    let result: GridSettings = { ...DEFAULT_GRID_SETTINGS };
     if (persistedData?.grid) {
       result = deepMerge(result, persistedData.grid);
     }
@@ -469,7 +469,7 @@ function useRulersGridSystemIntegration({
     // System Control
     setVisibility: setIsVisible,
     getVisibility: () => isVisible,
-    resetSettings: () => {
+    resetAllSettings: () => {
       setRulers(DEFAULT_RULER_SETTINGS);
       setGrid(DEFAULT_GRID_SETTINGS);
       resetOrigin();

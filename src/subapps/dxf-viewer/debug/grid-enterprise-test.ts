@@ -9,33 +9,13 @@
 // 5. TOPOLOGICAL INTEGRITY: Grid-Canvas-Context integration
 
 import { UI_COLORS } from '../config/color-config';
+import type { GridSettings } from '../systems/rulers-grid/config';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions for Grid Testing
 // ============================================================================
 
-/**
- * Grid visual settings structure
- */
-interface GridVisualSettings {
-  enabled?: boolean;
-  step?: number;
-  opacity?: number;
-  color?: string;
-  style?: 'lines' | 'dots' | 'crosses';
-  majorGridColor?: string;
-  minorGridColor?: string;
-  majorGridWeight?: number;
-  minorGridWeight?: number;
-  subDivisions?: number;
-}
-
-/**
- * Window grid settings object
- */
-interface WindowGridSettings {
-  visual?: GridVisualSettings;
-}
+type WindowGridSettings = Partial<GridSettings>;
 
 /**
  * Extended window interface for grid settings

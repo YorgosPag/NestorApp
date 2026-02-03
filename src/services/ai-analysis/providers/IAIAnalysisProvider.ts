@@ -46,12 +46,15 @@ export interface MessageIntentInput {
 /**
  * Document classification input
  * @enterprise For analyzing uploaded files/attachments
+ *
+ * ⚠️ SERVER-ONLY: Buffer type requires Node.js environment.
+ * Do NOT import this interface in client-side code.
  */
 export interface DocumentClassifyInput {
   /** Discriminator field */
   kind: 'document_classify';
 
-  /** File content (text or buffer) */
+  /** File content (text or buffer) - Buffer is server-only! */
   content: string | Buffer;
 
   /** Original filename (for context) */

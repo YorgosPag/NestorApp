@@ -293,15 +293,23 @@ export function ColorDialogTrigger({
   onChange,
   disabled = false,
   label = 'Choose Color',
+  children,
+  onDialogClose,
   ...dialogProps
 }: Omit<EnterpriseColorDialogProps, 'isOpen' | 'onClose'> & {
   label?: string;
+  children?: React.ReactNode;
+  onDialogClose?: () => void;
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const { quick, getStatusBorder, radius } = useBorderTokens();
   const colors = useSemanticColors();
   // 🔧 FIX: Hook must be called at top-level, not inside JSX
   const dynamicBgClass = useDynamicBackgroundClass(value);
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+    onDialogClose?.();
+  }, [onDialogClose]);
 
   return (
     <>
@@ -315,16 +323,20 @@ export function ColorDialogTrigger({
           disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
         `}
       >
-        <div
-          className={`${PANEL_LAYOUT.ICON.SWATCH} ${radius.md} ${getStatusBorder('default')} ${dynamicBgClass}`}
-        />
-        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary}`}>{label}</span>
+        {children ?? (
+          <>
+            <div
+              className={`${PANEL_LAYOUT.ICON.SWATCH} ${radius.md} ${getStatusBorder('default')} ${dynamicBgClass}`}
+            />
+            <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary}`}>{label}</span>
+          </>
+        )}
       </button>
 
       <EnterpriseColorDialog
         {...dialogProps}
         isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
+        onClose={handleClose}
         value={value}
         onChange={onChange}
       />

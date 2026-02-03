@@ -9,6 +9,8 @@ import type {
   ToolDefinition,
   ActionDefinition,
   ToolbarConfig,
+  ToolbarOperation,
+  ToolbarOperationResult,
   ToolbarPosition,
   ToolbarOrientation,
   ToolbarCustomization,
@@ -599,12 +601,12 @@ export const HookPatternUtils = {
    * 🏢 ENTERPRISE: Using unknown for type-safe data passing
    */
   createOperationResult: (
-    operation: string,
+    operation: ToolbarOperation,
     success: boolean,
     data?: unknown,
     error?: string,
     toolbarId?: string
-  ) => {
+  ): ToolbarOperationResult => {
     return {
       success,
       operation,

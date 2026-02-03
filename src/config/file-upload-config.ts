@@ -14,7 +14,7 @@
 // ============================================================================
 
 export type FileType = 'image' | 'video' | 'pdf' | 'document' | 'any';
-export type UploadPurpose = 'photo' | 'logo' | 'document' | 'floorplan' | 'avatar' | 'representative';
+export type UploadPurpose = 'photo' | 'logo' | 'document' | 'floorplan' | 'avatar' | 'representative' | 'business-card';
 
 export interface FileTypeConfig {
   mimeTypes: string[];
@@ -101,6 +101,10 @@ export const PURPOSE_CONFIG: Record<UploadPurpose, PurposeConfig> = {
   representative: {
     label: 'Φωτογραφία Εκπροσώπου',
     description: 'Κάντε κλικ ή σύρετε φωτογραφία εκπροσώπου εδώ'
+  },
+  'business-card': {
+    label: 'Επαγγελματική Κάρτα',
+    description: 'Κάντε κλικ ή σύρετε επαγγελματική κάρτα εδώ'
   }
 };
 

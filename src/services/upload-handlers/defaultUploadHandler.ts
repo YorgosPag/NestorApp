@@ -2,6 +2,7 @@
 
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';
 import type { UsageContext } from '@/config/photo-compression-config';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -29,7 +30,7 @@ export interface UploadHandlerConfig {
   /** Upload purpose for FileNamingService */
   purpose?: string;
   /** Contact data for filename generation */
-  contactData?: Record<string, unknown>;
+  contactData?: ContactFormData | Record<string, unknown>;
   /** Photo index for multiple photos */
   photoIndex?: number;
   /** Custom filename override */

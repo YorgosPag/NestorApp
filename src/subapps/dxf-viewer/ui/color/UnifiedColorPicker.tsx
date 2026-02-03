@@ -13,7 +13,7 @@
  * @since 2025-10-10
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -208,24 +208,17 @@ function ModalColorPicker({
   modes = ['hex', 'rgb', 'hsl'],
   showPalettes = true,
   showRecent = true,
-  size = 'standard'
 }: UnifiedColorPickerProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors(); // 🔧 FIX: Missing colors definition
-  const [isOpen, setIsOpen] = useState(false);
-
   const handleClose = useCallback(() => {
-    setIsOpen(false);
     onModalClose?.();
   }, [onModalClose]);
 
-  const trigger = (
-    <ColorDialogTrigger
-      value={value}
-      disabled={disabled}
-      className={`inline-flex items-center ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM}`}
-    >
+  const palettes = showPalettes ? undefined : [];
+  const triggerContent = (
+    <>
       <div
         className={`${iconSizes.md} rounded ${getStatusBorder('muted')}`}
         style={layoutUtilities.dxf.colors.backgroundColor(value)}
@@ -233,22 +226,23 @@ function ModalColorPicker({
       {triggerText && (
         <span className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.secondary}`}>{triggerText}</span>
       )}
-    </ColorDialogTrigger>
+    </>
   );
 
   return (
-    <EnterpriseColorDialog
-      trigger={trigger}
-      title={title}
+    <ColorDialogTrigger
       value={value}
       onChange={onChange}
-      onClose={handleClose}
+      disabled={disabled}
+      label={triggerText || title}
+      onDialogClose={handleClose}
       showFooter={showModalFooter}
       modes={modes}
-      showPalettes={showPalettes}
-      showRecent={showRecent}
-      size={size}
-    />
+      palettes={palettes}
+      recent={showRecent}
+    >
+      {triggerContent}
+    </ColorDialogTrigger>
   );
 }
 
@@ -262,16 +256,15 @@ function FullColorPicker({
   modes = ['hex', 'rgb', 'hsl'],
   showPalettes = true,
   showRecent = true,
-  size = 'standard'
 }: UnifiedColorPickerProps) {
+  const palettes = showPalettes ? undefined : [];
   return (
     <EnterpriseColorPicker
       value={value}
       onChange={onChange}
       modes={modes}
-      showPalettes={showPalettes}
-      showRecent={showRecent}
-      size={size}
+      palettes={palettes}
+      recent={showRecent}
     />
   );
 }

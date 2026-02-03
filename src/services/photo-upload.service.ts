@@ -22,6 +22,7 @@ import {
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { createModuleLogger } from '@/lib/telemetry';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
 // MODULE LOGGERS
@@ -57,7 +58,7 @@ export interface PhotoUploadOptions {
   /** Maximum file size before compression is forced (default: 500KB) */
   maxSizeKB?: number;
   /** Contact data for FileNamingService (optional) */
-  contactData?: { type?: string; name?: string; id?: string; [key: string]: unknown };
+  contactData?: ContactFormData | { type?: string; name?: string; id?: string; [key: string]: unknown };
   /** Upload purpose for FileNamingService (optional) */
   purpose?: string;
   /** Photo index for FileNamingService (optional) */
@@ -231,6 +232,8 @@ export class PhotoUploadService {
         success: canonicalResult.success,
         url: canonicalResult.url,
         fileName: canonicalResult.fileName,
+        fileSize: canonicalResult.fileSize,
+        mimeType: canonicalResult.mimeType,
         storagePath: canonicalResult.storagePath,
         compressionInfo: canonicalResult.compressionInfo,
       };
