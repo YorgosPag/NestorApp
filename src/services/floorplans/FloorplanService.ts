@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import pako from 'pako';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // 🏢 ENTERPRISE: Floorplan file types
 export type FloorplanFileType = 'dxf' | 'pdf';
@@ -201,10 +202,9 @@ export class FloorplanService {
       RealtimeService.dispatchFloorplanCreated({
         floorplanId: docId,
         floorplan: {
-          projectId,
-          type,
-          fileType,
-          fileName: data.fileName,
+          entityType: ENTITY_TYPES.PROJECT,
+          entityId: projectId,
+          name: data.fileName,
         },
         timestamp: Date.now(),
       });

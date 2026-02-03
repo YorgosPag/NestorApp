@@ -221,9 +221,3 @@ export function getTriageAssignee(
 ): AssignmentPolicy['triageSettings']['triageAssignedTo'] | undefined {
   return policy?.triageSettings.triageAssignedTo;
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export { resolveAssignment, requiresTriage, getTriageAssignee };

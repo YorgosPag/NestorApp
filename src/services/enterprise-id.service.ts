@@ -188,7 +188,9 @@ export class EnterpriseIdService {
     // Cache management
     if (this.config.enableCache && this.cache.size >= this.config.cacheSize) {
       const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      if (firstKey) {
+        this.cache.delete(firstKey);
+      }
     }
 
     const enterpriseId: EnterpriseId = {

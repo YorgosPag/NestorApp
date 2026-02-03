@@ -162,6 +162,8 @@ export function usePhotoUploadLogic({
         success: true,
         url: '',
         fileName: '',
+        fileSize: 0,
+        mimeType: '',
         compressionInfo: { wasCompressed: false, originalSize: 0, compressedSize: 0, compressionRatio: 1, quality: 1 },
       });
     }

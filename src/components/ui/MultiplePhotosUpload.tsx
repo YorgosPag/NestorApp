@@ -18,6 +18,7 @@ import { useCacheBusting } from '@/hooks/useCacheBusting';
 import { MultiplePhotosCompact } from './MultiplePhotosCompact';
 import { MultiplePhotosFull } from './MultiplePhotosFull';
 import type { UploadPurpose } from '@/config/file-upload-config';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -55,7 +56,7 @@ export interface MultiplePhotosUploadProps {
   /** Purpose for validation and compression */
   purpose?: UploadPurpose;
   /** Contact data for FileNamingService (optional) */
-  contactData?: Record<string, unknown>;
+  contactData?: ContactFormData;
   /** 🆕 Profile selection props */
   showProfileSelector?: boolean;
   selectedProfilePhotoIndex?: number;

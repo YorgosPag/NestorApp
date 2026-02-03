@@ -48,7 +48,7 @@ export interface WebSocketListener<T = unknown> {
 class WebSocketService {
   private ws: WebSocket | null = null;
   private config: WebSocketConfig;
-  private listeners: Map<string, WebSocketListener[]> = new Map();
+  private listeners: Map<string, WebSocketListener<unknown>[]> = new Map();
   private connectionState: WebSocketConnectionState = 'disconnected';
   private reconnectAttempts = 0;
   private reconnectTimeoutId: NodeJS.Timeout | null = null;
@@ -251,13 +251,13 @@ class WebSocketService {
   }
 
   // Event listeners
-  addEventListener<T = unknown>(
+  addEventListener(
     type: WebSocketEventType | '*',
-    handler: (message: WebSocketMessage<T>) => void,
+    handler: (message: WebSocketMessage<unknown>) => void,
     options: { once?: boolean } = {}
   ): string {
     const listenerId = this.generateListenerId();
-    const listener: WebSocketListener<T> = {
+    const listener: WebSocketListener<unknown> = {
       id: listenerId,
       type: type as WebSocketEventType,
       handler,

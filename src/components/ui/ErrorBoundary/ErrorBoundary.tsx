@@ -4,7 +4,7 @@ import React, { Component, ErrorInfo as ReactErrorInfo, ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug, Copy, Check, Mail, Send, Globe, HelpCircle, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
-import { errorTracker } from '@/services/ErrorTracker';
+import { errorTracker, type MetadataRecord } from '@/services/ErrorTracker';
 import { notificationConfig } from '@/config/error-reporting';
 import { componentSizes } from '@/styles/design-tokens';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -144,7 +144,7 @@ interface ErrorBoundaryProps {
 // ============================================================================
 
 function ErrorDialogTourTrigger() {
-  const { startTour, shouldShowTour } = useTour();
+  const { startTour, shouldShowTour } = useTourSafe();
 
   React.useEffect(() => {
     const TOUR_PERSISTENCE_KEY = 'error-dialog-tour-v1';
@@ -924,7 +924,7 @@ export function useErrorReporting() {
     },
 
     // **🆕 NEW: Direct access to ErrorTracker methods**
-    captureUserError: (message: string, action: string, metadata?: Record<string, unknown>) => {
+    captureUserError: (message: string, action: string, metadata?: MetadataRecord) => {
       return errorTracker.captureUserError(message, action, metadata);
     },
 

@@ -52,19 +52,19 @@ export function useTourSafe(): UseTourReturn {
     // Null Object Pattern - safe dummy implementation
     return {
       isActive: false,
-      currentStepIndex: 0,
-      currentTour: null,
+      currentStep: 0,
+      totalSteps: 0,
       startTour: useCallback((config: TourConfig) => {
         // No-op - tours not available
-        console.debug('[useTourSafe] startTour called but TourProvider not available:', config.id);
+        console.debug('[useTourSafe] startTour called but TourProvider not available:', config.tourId);
       }, []),
-      shouldShowTour: useCallback((tourId: string) => {
+      shouldShowTour: useCallback((_tourId: string, _persistenceKey?: string) => {
         // Always return false - tours not available
         return false;
       }, []),
-      resetTourPersistence: useCallback((tourId?: string) => {
+      resetTour: useCallback((persistenceKey: string) => {
         // No-op - nothing to reset
-        console.debug('[useTourSafe] resetTourPersistence called but TourProvider not available:', tourId);
+        console.debug('[useTourSafe] resetTour called but TourProvider not available:', persistenceKey);
       }, [])
     };
   }

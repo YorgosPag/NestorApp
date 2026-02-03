@@ -250,6 +250,9 @@
     "geoCanvas": "Geo-Canvas System",
     "fileManager": "Διαχείριση Αρχείων"
   },
+  "admin": {
+    "aiInbox": "AI Inbox"
+  },
   "badges": {
     "new": "Νέο",
     "pro": "PRO",

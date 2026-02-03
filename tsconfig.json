@@ -28,6 +28,7 @@
     "src/subapps/dxf-viewer/test.BACK/**",
     "src/ai/**",
     "src/ai.back/**",
-    "DxfViewerApp.tsx"
+    "DxfViewerApp.tsx",
+    "recovery/**"
   ]
 }

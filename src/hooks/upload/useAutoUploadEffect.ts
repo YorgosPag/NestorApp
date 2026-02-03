@@ -166,9 +166,15 @@ export function useAutoUploadEffect({
 
         // Call onUploadComplete even on failure to prevent hanging
         if (onUploadComplete) {
+          const fallbackFileSize = file ? file.size : 0;
+          const fallbackMimeType = file ? file.type : '';
           onUploadComplete({
             success: false,
             error: err instanceof Error ? err.message : 'Upload failed',
+            url: '',
+            fileName: file?.name ?? '',
+            fileSize: fallbackFileSize,
+            mimeType: fallbackMimeType,
           });
         }
       }

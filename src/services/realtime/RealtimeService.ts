@@ -108,6 +108,8 @@ interface SubscriptionEntry {
   createdAt: number;
 }
 
+type RealtimeDocument = DocumentData & { id: string };
+
 // ============================================================================
 // REALTIME SERVICE CLASS
 // ============================================================================
@@ -138,9 +140,9 @@ class RealtimeServiceCore {
   /**
    * 🏢 ENTERPRISE: Subscribe to a collection query with real-time updates
    */
-  subscribeToCollection<T extends DocumentData>(
+  subscribeToCollection(
     options: RealtimeQueryOptions,
-    onData: (data: T[]) => void,
+    onData: (data: RealtimeDocument[]) => void,
     onError?: (error: Error) => void
   ): Unsubscribe {
     const { collection: collectionName, constraints = [], enabled = true } = options;
@@ -165,10 +167,10 @@ class RealtimeServiceCore {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const data = snapshot.docs.map((docSnapshot) => ({
+        const data: RealtimeDocument[] = snapshot.docs.map((docSnapshot) => ({
           id: docSnapshot.id,
           ...docSnapshot.data(),
-        })) as T[];
+        }));
 
         console.log(`📡 [RealtimeService] ${collectionName}: Received ${data.length} documents`);
         onData(data);
@@ -199,9 +201,9 @@ class RealtimeServiceCore {
   /**
    * 🏢 ENTERPRISE: Subscribe to a single document with real-time updates
    */
-  subscribeToDocument<T extends DocumentData>(
+  subscribeToDocument(
     options: RealtimeDocOptions,
-    onData: (data: T | null) => void,
+    onData: (data: RealtimeDocument | null) => void,
     onError?: (error: Error) => void
   ): Unsubscribe {
     const { collection: collectionName, documentId, enabled = true } = options;
@@ -226,7 +228,7 @@ class RealtimeServiceCore {
       docRef,
       (snapshot) => {
         if (snapshot.exists()) {
-          const data = { id: snapshot.id, ...snapshot.data() } as T;
+          const data: RealtimeDocument = { id: snapshot.id, ...snapshot.data() };
           console.log(`📡 [RealtimeService] ${collectionName}/${documentId}: Updated`);
           onData(data);
         } else {

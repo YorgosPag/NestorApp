@@ -131,7 +131,7 @@ function generateUniqueFileName(originalName: string, prefix?: string): string {
  */
 function resolveContactName(
   contactName: string | undefined,
-  contactData: { name?: string; [key: string]: unknown } | undefined
+  contactData: { name?: string } | undefined
 ): string | undefined {
   // Priority: explicit contactName > contactData.name
   if (contactName && typeof contactName === 'string' && contactName.trim()) {

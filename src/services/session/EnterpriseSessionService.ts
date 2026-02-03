@@ -410,10 +410,7 @@ export class EnterpriseSessionService {
       sessionId,
       session: {
         userId,
-        deviceType: deviceInfo.type,
-        browser: deviceInfo.browser,
-        location: location.city,
-        status: 'active',
+        deviceInfo: `${deviceInfo.browser} on ${deviceInfo.os}`,
       },
       timestamp: Date.now(),
     });
@@ -469,7 +466,6 @@ export class EnterpriseSessionService {
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       RealtimeService.dispatchSessionDeleted({
         sessionId,
-        reason: reason || 'user_requested',
         timestamp: Date.now(),
       });
 

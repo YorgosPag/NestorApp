@@ -55,6 +55,7 @@ import {
   ShoppingCart,
   CheckCircle,
   FolderTree,
+  Inbox,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
@@ -88,6 +89,9 @@ const NAVIGATION_LABELS = {
 
   // 🏢 ENTERPRISE: File Manager
   file_manager: 'tools.fileManager',
+
+  // 🏢 ENTERPRISE: AI Inbox (Admin)
+  ai_inbox: 'admin.aiInbox',
 
   // Badges
   badge_new: 'badges.new',
@@ -526,7 +530,15 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
             },
             subItems: [
               {
-                                icon: Keyboard,
+                icon: Inbox,
+                href: '/admin/ai-inbox',
+                smartConfig: {
+                  priority: 'high',
+                  analyticsKey: 'nav_admin_ai_inbox'
+                }
+              },
+              {
+                icon: Keyboard,
                 href: '/settings/shortcuts',
                 smartConfig: {
                   priority: 'low'
@@ -613,6 +625,9 @@ function getLabelKeyForPath(path: string): string {
     // Settings subpaths
     'settings': 'settings',
     'settings/shortcuts': 'shortcuts',
+
+    // Admin paths
+    'admin/ai-inbox': 'ai_inbox',
 
     // Tools paths
     'files': 'file_manager',

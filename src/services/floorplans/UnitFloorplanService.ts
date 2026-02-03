@@ -4,6 +4,7 @@ import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // 🏢 ENTERPRISE: DXF scene data structure
 interface DxfSceneData {
@@ -47,10 +48,9 @@ export class UnitFloorplanService {
       RealtimeService.dispatchFloorplanCreated({
         floorplanId: docId,
         floorplan: {
-          unitId,
-          type: 'unit',
-          fileType: 'dxf',
-          fileName: data.fileName,
+          entityType: ENTITY_TYPES.UNIT,
+          entityId: unitId,
+          name: data.fileName,
         },
         timestamp: Date.now(),
       });

@@ -250,6 +250,9 @@
     "geoCanvas": "Geo-Canvas System",
     "fileManager": "File Manager"
   },
+  "admin": {
+    "aiInbox": "AI Inbox"
+  },
   "badges": {
     "new": "New",
     "pro": "PRO",

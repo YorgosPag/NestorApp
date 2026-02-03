@@ -110,7 +110,7 @@ export function useRealtimeQuery<T extends DocumentData = DocumentData>(
     };
 
     // Subscribe via RealtimeService
-    unsubscribeRef.current = RealtimeService.subscribeToCollection<T>(
+    unsubscribeRef.current = RealtimeService.subscribeToCollection(
       {
         collection: collectionName,
         constraints,

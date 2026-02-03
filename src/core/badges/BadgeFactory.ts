@@ -51,7 +51,7 @@ export class BadgeFactory {
       variant: options.variant || badgeConfig.variant,
       size: options.size || badgeConfig.size || 'default',
       className: cn(badgeConfig.className, options.className),
-      label: options.customLabel || badgeConfig.label,
+      label: this.resolveLabel(options, badgeConfig.label),
       // Προσθήκη icon logic
       icon: options.showIcon === false ? undefined : badgeConfig.icon
     };
@@ -144,7 +144,7 @@ export class BadgeFactory {
       variant: options.variant || badgeConfig.variant,
       size: options.size || badgeConfig.size || 'default',
       className: cn(badgeConfig.className, options.className),
-      label: options.customLabel || badgeConfig.label
+      label: this.resolveLabel(options, badgeConfig.label)
     };
   }
 
@@ -166,13 +166,24 @@ export class BadgeFactory {
     options: BadgeFactoryOptions
   ): BadgeDefinition {
     return {
-      label: options.customLabel || status,
+      label: this.resolveLabel(options, status),
       variant: options.variant || 'outline',
       size: options.size || 'default',
       color: '#6B7280',
       backgroundColor: '#F9FAFB',
       className: cn('badge-fallback', options.className)
     };
+  }
+
+  private static resolveLabel(options: BadgeFactoryOptions, fallback: string): string {
+    const { customLabel } = options;
+    if (typeof customLabel === 'string') {
+      return customLabel;
+    }
+    if (typeof customLabel === 'number') {
+      return String(customLabel);
+    }
+    return fallback;
   }
 
   // ===== UTILITY METHODS =====

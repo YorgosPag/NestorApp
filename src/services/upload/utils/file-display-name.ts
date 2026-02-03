@@ -26,6 +26,7 @@
  */
 
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
+import type { Language, Namespace } from '@/i18n/lazy-config';
 import {
   ENTITY_TYPES,
   FILE_DOMAINS,
@@ -80,7 +81,9 @@ async function getI18nInstance(): Promise<typeof import('i18next').default | nul
 /**
  * 🏢 ENTERPRISE: Lazy load loadNamespace function
  */
-async function getLoadNamespaceFunc(): Promise<((ns: string, lang: string) => Promise<void>) | null> {
+type LoadNamespace = (namespace: Namespace, language?: Language) => Promise<void>;
+
+async function getLoadNamespaceFunc(): Promise<LoadNamespace | null> {
   if (isServerContext()) {
     return null;
   }

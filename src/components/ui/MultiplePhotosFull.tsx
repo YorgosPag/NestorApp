@@ -6,6 +6,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { EnterprisePhotoUpload } from './EnterprisePhotoUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { UploadPurpose } from '@/config/file-upload-config';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 import {
   PHOTO_SIZES,
   PHOTO_TEXT_COLORS,
@@ -21,7 +23,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 // ============================================================================
 
 export interface PhotoSlot {
-  file: File | null;
+  file?: File | null;
   preview?: string;
   uploadUrl?: string;
   fileName?: string;
@@ -40,7 +42,7 @@ export interface MultiplePhotosFullProps {
   /** Add cache buster to URLs */
   addCacheBuster: (url: string | undefined) => string | undefined;
   /** Purpose of photos (logo, representative, etc.) */
-  purpose?: string;
+  purpose?: UploadPurpose;
   /** Upload handler */
   uploadHandler?: (file: File, onProgress: (progress: FileUploadProgress) => void) => Promise<FileUploadResult>;
   /** Upload complete handler */
@@ -54,7 +56,7 @@ export interface MultiplePhotosFullProps {
   /** Custom className */
   className?: string;
   /** 🔥 RESTORED: Contact data for FileNamingService */
-  contactData?: Record<string, unknown>;
+  contactData?: ContactFormData;
   /** 🏢 ENTERPRISE: Photo click handler για gallery preview */
   onPhotoClick?: (index: number) => void;
   /** Show photos even when component is disabled (for read-only views) */
@@ -202,7 +204,7 @@ export function MultiplePhotosFull({
       <div className={PHOTO_LAYOUTS.INDIVIDUAL_GRID.container}>
         {normalizedPhotos.map((photo, index) => {
           // 🎯 MOBILE + DESKTOP FIX: Calculate responsive style first
-          const responsiveStyle = {
+          const responsiveStyle: React.CSSProperties = {
             // Mobile: Fixed 240x320 (3:4 ratio - πιο ψηλά)
             width: '240px',
             height: '320px',
@@ -250,7 +252,7 @@ export function MultiplePhotosFull({
             >
               <EnterprisePhotoUpload
                 key={`full-enterprise-slot-${index}-${photosKey}`}
-                purpose={purpose}
+                purpose={purpose ?? 'photo'}
                 maxSize={5 * 1024 * 1024} // 5MB
                 photoFile={photo.file}
                 photoPreview={photoPreviewWithCacheBuster}

@@ -28,7 +28,7 @@ import { layoutUtilities } from '@/styles/design-tokens';
 // ============================================================================
 
 export interface PhotoSlot {
-  file: File | null;
+  file?: File | null;
   preview?: string;
   uploadUrl?: string;
   fileName?: string;
@@ -243,7 +243,7 @@ export function MultiplePhotosCompact({
             >
               <EnterprisePhotoUpload
                 key={`compact-enterprise-slot-${index}-${photosKey}`}
-                purpose={purpose}
+                purpose={purpose ?? 'photo'}
                 maxSize={5 * 1024 * 1024} // 5MB
                 photoFile={photo.file}
                 photoPreview={photoPreviewWithCacheBuster}

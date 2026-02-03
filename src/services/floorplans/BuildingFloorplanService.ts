@@ -24,6 +24,7 @@ import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import { Logger, LogLevel, DevNullOutput } from '@/subapps/dxf-viewer/settings/telemetry/Logger';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // =============================================================================
 // 🏢 ENTERPRISE LOGGER CONFIGURATION
@@ -162,10 +163,9 @@ export class BuildingFloorplanService {
         RealtimeService.dispatchFloorplanCreated({
           floorplanId: docId,
           floorplan: {
-            buildingId,
-            type,
-            fileType: 'pdf',
-            fileName: data.fileName,
+            entityType: ENTITY_TYPES.BUILDING,
+            entityId: buildingId,
+            name: data.fileName,
           },
           timestamp: Date.now(),
         });
@@ -190,10 +190,9 @@ export class BuildingFloorplanService {
         RealtimeService.dispatchFloorplanCreated({
           floorplanId: fileId,
           floorplan: {
-            buildingId,
-            type,
-            fileType: 'dxf',
-            fileName,
+            entityType: ENTITY_TYPES.BUILDING,
+            entityId: buildingId,
+            name: fileName,
           },
           timestamp: Date.now(),
         });

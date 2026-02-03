@@ -374,6 +374,15 @@ export class EnterpriseSecurityService {
     }
   }
 
+  private getDb(): Firestore {
+    this.ensureInitialized();
+    const db = this.db;
+    if (!db) {
+      throw new Error('EnterpriseSecurityService not initialized. Call initialize(firestore) first.');
+    }
+    return db;
+  }
+
   // ============================================================================
   // CACHE MANAGEMENT (SECURITY-ENHANCED)
   // ============================================================================
@@ -470,7 +479,7 @@ export class EnterpriseSecurityService {
     try {
       // Query database for roles
       const rolesQuery = query(
-        collection(this.db, 'security_roles'),
+        collection(this.getDb(), 'security_roles'),
         where('tenantId', '==', tenantId),
         where('environment', '==', environment),
         where('isActive', '==', true),
@@ -632,7 +641,7 @@ export class EnterpriseSecurityService {
     try {
       // Query database for email policies
       const policiesQuery = query(
-        collection(this.db, 'email_domain_policies'),
+        collection(this.getDb(), 'email_domain_policies'),
         where('tenantId', '==', tenantId),
         where('environment', '==', environment),
         where('isActive', '==', true),
@@ -746,7 +755,7 @@ export class EnterpriseSecurityService {
     try {
       // Query database for country policies
       const policiesQuery = query(
-        collection(this.db, 'country_security_policies'),
+        collection(this.getDb(), 'country_security_policies'),
         where('tenantId', '==', tenantId),
         where('environment', '==', environment),
         where('isActive', '==', true),

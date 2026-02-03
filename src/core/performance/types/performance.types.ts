@@ -111,7 +111,7 @@ export interface ApplicationContext {
   readonly route: string;
   readonly subapp: 'dxf-viewer' | 'geo-canvas' | 'main-app' | 'admin';
   readonly version: string;
-  readonly environment: 'development' | 'staging' | 'production';
+  readonly environment: 'development' | 'staging' | 'production' | 'test';
   readonly userId?: string;
   readonly sessionId: string;
 }

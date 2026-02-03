@@ -367,14 +367,14 @@ export class EnterpriseConfigurationManager {
     }
 
     try {
-      const doc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'company'));
+      const configDoc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'company'));
 
-      if (!doc.exists()) {
+      if (!configDoc.exists()) {
         console.warn('🏢 Company config not found, using defaults');
         return DEFAULT_COMPANY_CONFIG;
       }
 
-      const companyConfig = this.validateCompanyConfig(doc.data());
+      const companyConfig = this.validateCompanyConfig(configDoc.data());
 
       // Cache the result
       this.configCache.set(cacheKey, companyConfig);
@@ -400,14 +400,14 @@ export class EnterpriseConfigurationManager {
     }
 
     try {
-      const doc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'settings'));
+      const configDoc = await getDoc(doc(db, COLLECTIONS.SYSTEM, 'settings'));
 
-      if (!doc.exists()) {
+      if (!configDoc.exists()) {
         console.warn('⚙️ System config not found, using defaults');
         return DEFAULT_SYSTEM_CONFIG;
       }
 
-      const systemConfig = this.validateSystemConfig(doc.data());
+      const systemConfig = this.validateSystemConfig(configDoc.data());
 
       this.configCache.set(cacheKey, systemConfig);
       setTimeout(() => this.configCache.delete(cacheKey), this.cacheTimeout);
@@ -577,64 +577,234 @@ export class EnterpriseConfigurationManager {
   // 🛡️ VALIDATION METHODS - ENTERPRISE TYPE SAFETY
   // ============================================================================
 
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+
+  private hasString(record: Record<string, unknown>, key: string): boolean {
+    return typeof record[key] === 'string';
+  }
+
+  private hasNumber(record: Record<string, unknown>, key: string): boolean {
+    return typeof record[key] === 'number';
+  }
+
+  private hasBoolean(record: Record<string, unknown>, key: string): boolean {
+    return typeof record[key] === 'boolean';
+  }
+
+  private isStringArray(value: unknown): value is readonly string[] {
+    return Array.isArray(value) && value.every((item) => typeof item === 'string');
+  }
+
+  private isCompanyConfiguration(value: unknown): value is CompanyConfiguration {
+    if (!this.isRecord(value)) return false;
+
+    if (
+      !this.hasString(value, 'id') ||
+      !this.hasString(value, 'name') ||
+      !this.hasString(value, 'legalName') ||
+      !this.hasString(value, 'email') ||
+      !this.hasString(value, 'phone') ||
+      !this.hasString(value, 'website')
+    ) {
+      return false;
+    }
+
+    const address = value.address;
+    if (!this.isRecord(address)) return false;
+    if (
+      !this.hasString(address, 'street') ||
+      !this.hasString(address, 'number') ||
+      !this.hasString(address, 'city') ||
+      !this.hasString(address, 'postalCode') ||
+      !this.hasString(address, 'country')
+    ) {
+      return false;
+    }
+
+    const branding = value.branding;
+    if (!this.isRecord(branding)) return false;
+    if (
+      !this.hasString(branding, 'logoUrl') ||
+      !this.hasString(branding, 'primaryColor') ||
+      !this.hasString(branding, 'secondaryColor') ||
+      !this.hasString(branding, 'accentColor')
+    ) {
+      return false;
+    }
+
+    const tax = value.tax;
+    if (!this.isRecord(tax)) return false;
+    if (
+      !this.hasString(tax, 'vatNumber') ||
+      !this.hasString(tax, 'taxOffice') ||
+      !this.hasString(tax, 'gemiNumber')
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private isSystemConfiguration(value: unknown): value is SystemConfiguration {
+    if (!this.isRecord(value)) return false;
+
+    const app = value.app;
+    if (!this.isRecord(app)) return false;
+    if (
+      !this.hasString(app, 'name') ||
+      !this.hasString(app, 'version') ||
+      !this.hasString(app, 'environment') ||
+      !this.hasString(app, 'baseUrl') ||
+      !this.hasString(app, 'apiUrl')
+    ) {
+      return false;
+    }
+
+    const admin = value.admin;
+    if (!this.isRecord(admin)) return false;
+    if (
+      !this.hasString(admin, 'primaryAdminUid') ||
+      !this.hasString(admin, 'adminEmail') ||
+      !this.isStringArray(admin.additionalAdminUids) ||
+      !this.hasBoolean(admin, 'enableErrorReporting')
+    ) {
+      return false;
+    }
+
+    const security = value.security;
+    if (!this.isRecord(security)) return false;
+    if (
+      !this.hasNumber(security, 'sessionTimeoutMinutes') ||
+      !this.hasNumber(security, 'maxLoginAttempts') ||
+      !this.hasNumber(security, 'passwordExpiryDays') ||
+      !this.hasBoolean(security, 'enableTwoFactor')
+    ) {
+      return false;
+    }
+
+    const features = value.features;
+    if (!this.isRecord(features)) return false;
+    if (
+      !this.hasBoolean(features, 'enableNotifications') ||
+      !this.hasBoolean(features, 'enableFileUpload') ||
+      !this.hasBoolean(features, 'enableReporting') ||
+      !this.hasNumber(features, 'maxFileUploadMB')
+    ) {
+      return false;
+    }
+
+    const integrations = value.integrations;
+    if (!this.isRecord(integrations)) return false;
+
+    const webhooks = integrations.webhooks;
+    if (!this.isRecord(webhooks)) return false;
+    if (
+      !this.hasString(webhooks, 'telegram') ||
+      !this.hasString(webhooks, 'slack') ||
+      !this.hasString(webhooks, 'email')
+    ) {
+      return false;
+    }
+
+    const apis = integrations.apis;
+    if (!this.isRecord(apis)) return false;
+    if (
+      !this.hasString(apis, 'maps') ||
+      !this.hasString(apis, 'weather') ||
+      !this.hasString(apis, 'notifications')
+    ) {
+      return false;
+    }
+
+    const businessRules = value.businessRules;
+    if (!this.isRecord(businessRules)) return false;
+
+    const obligations = businessRules.obligations;
+    if (!this.isRecord(obligations)) return false;
+    if (
+      !this.hasNumber(obligations, 'qualityThreshold') ||
+      !this.hasNumber(obligations, 'defaultReadingSpeed')
+    ) {
+      return false;
+    }
+
+    const progressThresholds = obligations.progressThresholds;
+    if (!this.isRecord(progressThresholds)) return false;
+    if (
+      !this.hasNumber(progressThresholds, 'excellent') ||
+      !this.hasNumber(progressThresholds, 'good') ||
+      !this.hasNumber(progressThresholds, 'moderate')
+    ) {
+      return false;
+    }
+
+    const wordCountThresholds = obligations.wordCountThresholds;
+    if (!this.isRecord(wordCountThresholds)) return false;
+    if (
+      !this.hasNumber(wordCountThresholds, 'minimum') ||
+      !this.hasNumber(wordCountThresholds, 'excellent')
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private isProjectTemplateConfiguration(value: unknown): value is ProjectTemplateConfiguration {
+    if (!this.isRecord(value)) return false;
+
+    if (!this.hasString(value, 'id') || !this.hasString(value, 'name') || !this.hasString(value, 'category')) {
+      return false;
+    }
+
+    const defaultValues = value.defaultValues;
+    if (!this.isRecord(defaultValues)) return false;
+    if (
+      !this.hasString(defaultValues, 'status') ||
+      !this.hasString(defaultValues, 'currency') ||
+      !this.hasNumber(defaultValues, 'taxRate') ||
+      !this.hasNumber(defaultValues, 'paymentTerms')
+    ) {
+      return false;
+    }
+
+    if (!this.isStringArray(value.requiredFields) || !this.isStringArray(value.optionalFields)) {
+      return false;
+    }
+
+    return true;
+  }
+
   private validateCompanyConfig(data: unknown): CompanyConfiguration {
-    if (!data || typeof data !== 'object') {
+    if (!this.isCompanyConfiguration(data)) {
       throw new Error('Invalid company configuration data');
-    }
-
-    const config = data as Record<string, unknown>;
-
-    // Required fields validation
-    if (!config.id || typeof config.id !== 'string') {
-      throw new Error('Company ID is required');
-    }
-
-    if (!config.name || typeof config.name !== 'string') {
-      throw new Error('Company name is required');
-    }
-
-    if (!config.email || typeof config.email !== 'string') {
-      throw new Error('Company email is required');
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(config.email)) {
+    if (!emailRegex.test(data.email)) {
       throw new Error('Invalid email format');
     }
 
-    return config as CompanyConfiguration;
+    return data;
   }
 
   private validateSystemConfig(data: unknown): SystemConfiguration {
-    if (!data || typeof data !== 'object') {
+    if (!this.isSystemConfiguration(data)) {
       throw new Error('Invalid system configuration data');
     }
 
-    const config = data as Record<string, unknown>;
-
-    // App validation
-    if (!config.app || typeof config.app !== 'object') {
-      throw new Error('App configuration is required');
-    }
-
-    return config as SystemConfiguration;
+    return data;
   }
 
   private validateProjectTemplate(data: unknown): ProjectTemplateConfiguration | null {
-    if (!data || typeof data !== 'object') {
+    if (!this.isProjectTemplateConfiguration(data)) {
       console.warn('Invalid project template data');
       return null;
     }
-
-    const template = data as Record<string, unknown>;
-
-    if (!template.id || !template.name || !template.category) {
-      console.warn('Project template missing required fields');
-      return null;
-    }
-
-    return template as ProjectTemplateConfiguration;
+    return data;
   }
 
   private parseAndValidateConfiguration(data: unknown): EnterpriseConfiguration {
