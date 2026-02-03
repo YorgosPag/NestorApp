@@ -51,6 +51,7 @@ export interface Opportunity {
 // Communications
 export interface Communication {
   id?: string;
+  companyId?: string; // 🏢 ENTERPRISE: Tenant isolation (added 2026-02-03)
   contactId: string;
   projectId?: string;
   unitId?: string;

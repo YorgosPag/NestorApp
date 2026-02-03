@@ -4,7 +4,6 @@
 import { useUserRole } from '@/auth';
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
-import { UnifiedProviders } from '@/subapps/dxf-viewer/providers/UnifiedProviders';
 import { AnimatedSpinner } from '@/subapps/dxf-viewer/components/modal/ModalLoadingStates';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
@@ -76,21 +75,18 @@ export default function DxfViewerPage() {
   const { t } = useTranslation('common');
   return (
     <AdminGuard>
-      {/* UnifiedProviders includes all required contexts: Levels, Overlay, Selection, Cursor, etc. */}
-      <UnifiedProviders enableLegacyMode={true}>
-        <main className="w-full h-full" role="application" aria-label="DXF Viewer">
-          <Suspense fallback={
-            <section className="w-full h-full flex items-center justify-center" role="status" aria-live="polite">
-              <div className="text-center">
-                <AnimatedSpinner size="large" className="mx-auto mb-4" />
-                <p className="text-gray-600">{t('dxfViewer.loading')}</p>
-              </div>
-            </section>
-          }>
-            <DxfViewerApp className="w-full h-full" />
-          </Suspense>
-        </main>
-      </UnifiedProviders>
+      <main className="w-full h-full" role="application" aria-label="DXF Viewer">
+        <Suspense fallback={
+          <section className="w-full h-full flex items-center justify-center" role="status" aria-live="polite">
+            <div className="text-center">
+              <AnimatedSpinner size="large" className="mx-auto mb-4" />
+              <p className="text-gray-600">{t('dxfViewer.loading')}</p>
+            </div>
+          </section>
+        }>
+          <DxfViewerApp className="w-full h-full" />
+        </Suspense>
+      </main>
     </AdminGuard>
   );
 }

@@ -14,11 +14,12 @@ import { SNAP_TOLERANCE } from '../../config/tolerance-config';
 
 // 🏢 ADR-125: Context type imported from types.ts to prevent circular dependencies
 import type { RulersGridContextType, RulersGridHookReturn } from './types';
+import { RulersGridContext } from './RulersGridSystem';
 
 export function useRulersGrid(): RulersGridContextType | null {
   // 🏢 ENTERPRISE: Use lazy-loaded context reference (ADR-125)
   // Context is defined in RulersGridSystem.tsx to prevent "Provider is null" errors.
-  const context = useContext(getContext());
+  const context = useContext(RulersGridContext);
 
   if (!context) {
     if (DEBUG_RULERS_GRID) console.warn('🚨 [useRulersGrid] No context found, component may be outside RulersGridSystem provider');
@@ -205,22 +206,7 @@ export function useRulersGridSettings() {
 // ============================================================================
 
 // Re-export context from canonical location
-export { RulersGridContext } from './RulersGridSystem';
-
-// Internal reference for hooks (lazy loaded to prevent circular dependency)
-let _cachedContext: React.Context<RulersGridContextType | null> | null = null;
-
-function getContext(): React.Context<RulersGridContextType | null> {
-  if (!_cachedContext) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { RulersGridContext } = require('./RulersGridSystem');
-    _cachedContext = RulersGridContext;
-  }
-  if (!_cachedContext) {
-    throw new Error('RulersGridContext is not available');
-  }
-  return _cachedContext;
-}
+export { RulersGridContext };
 
 // DEPRECATED: No longer needed with static context colocation
 export function setRulersGridContext(_context: React.Context<RulersGridContextType | null>) {
@@ -228,7 +214,7 @@ export function setRulersGridContext(_context: React.Context<RulersGridContextTy
 }
 
 export function getRulersGridContext(): React.Context<RulersGridContextType | null> {
-  return getContext();
+  return RulersGridContext;
 }
 
 // Re-export types for consumers (ADR-125)

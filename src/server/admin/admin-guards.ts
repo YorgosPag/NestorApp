@@ -45,6 +45,7 @@ export interface AdminContext {
   operationId: string;
   environment: string;
   mfaEnrolled: boolean;
+  companyId?: string; // 🏢 ENTERPRISE: Tenant isolation - from Firebase Auth custom claims
 }
 
 /**
@@ -577,6 +578,112 @@ export async function requireStaffContext(
   return {
     success: true,
     context: adminResult.context,
+  };
+}
+
+// ============================================================================
+// SERVER COMPONENT AUTHENTICATION (THIN WRAPPER)
+// ============================================================================
+
+/**
+ * Require admin authentication for Server Components (Next.js App Router)
+ *
+ * Thin wrapper around requireAdminContext for use in Server Components.
+ * Extracts token from cookies and performs same admin verification.
+ *
+ * @param operationId - Unique operation ID for audit trail
+ * @returns AdminContext on success
+ * @throws Error with specific message if authentication fails
+ *
+ * @enterprise Server Component only - uses cookies() from next/headers
+ * @example
+ * ```typescript
+ * // In page.tsx (Server Component)
+ * import { requireAdminForPage } from '@/server/admin/admin-guards';
+ *
+ * export default async function AdminPage() {
+ *   try {
+ *     const adminCtx = await requireAdminForPage('ADMIN_PAGE_ACCESS');
+ *     return <AdminPageClient adminContext={adminCtx} />;
+ *   } catch (error) {
+ *     return <UnauthorizedView error={error.message} />;
+ *   }
+ * }
+ * ```
+ */
+export async function requireAdminForPage(
+  operationId: string
+): Promise<AdminContext> {
+  const environment = getCurrentRuntimeEnvironment();
+
+  // Gate 1: Environment check
+  const envValidation = validateEnvironmentForOperation('requireAdminForPage');
+  if (!envValidation.allowed) {
+    throw new Error(
+      envValidation.reason || `Operation not allowed in ${environment} environment`
+    );
+  }
+
+  // Gate 2: Extract token from cookies
+  // Dynamic import to avoid client-side bundling
+  const { cookies } = await import('next/headers');
+
+  // Firebase Auth stores session token in __session cookie (production)
+  // or in localStorage (development - client-side only)
+  // ⚠️ Next.js 15: cookies() must be awaited
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('__session')?.value;
+
+  // Development bypass (when no token and in development)
+  if (!sessionCookie && environment === 'development') {
+    console.log('[ADMIN_GUARDS] Development mode: bypassing page auth (no session cookie)');
+    return {
+      uid: 'dev-admin',
+      email: 'dev@localhost',
+      role: 'admin',
+      operationId,
+      environment,
+      mfaEnrolled: true,
+      companyId: 'dev-company', // 🏢 ENTERPRISE: Dev tenant isolation
+    };
+  }
+
+  if (!sessionCookie) {
+    throw new Error('Not authenticated - no session cookie found');
+  }
+
+  // Gate 3: Verify token with Firebase Admin
+  const decodedToken = await verifyIdToken(sessionCookie);
+  if (!decodedToken) {
+    throw new Error('Invalid or expired authentication token');
+  }
+
+  // Gate 4: Check admin role
+  const role = hasAdminRole(decodedToken);
+  if (!role) {
+    throw new Error('User does not have admin privileges');
+  }
+
+  // Gate 5: MFA Enforcement
+  const mfaEnrolled = decodedToken.mfaEnrolled === true;
+
+  if (roleRequiresMfa(role) && !mfaEnrolled) {
+    console.log(`🔐 [ADMIN_GUARDS] MFA DENIED (Page): User ${decodedToken.email} (${role}) - MFA not enrolled`);
+    throw new Error(`MFA enrollment required for ${role} role`);
+  }
+
+  // 🏢 ENTERPRISE: Extract companyId from Firebase Auth custom claims for tenant isolation
+  const companyId = decodedToken.companyId as string | undefined;
+
+  // Success - return admin context
+  return {
+    uid: decodedToken.uid,
+    email: decodedToken.email || 'unknown',
+    role,
+    operationId,
+    environment,
+    mfaEnrolled,
+    companyId, // 🏢 ENTERPRISE: Tenant-scoped admin context
   };
 }
 
