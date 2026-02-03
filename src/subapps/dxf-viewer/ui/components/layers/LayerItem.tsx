@@ -7,7 +7,7 @@
 import React from 'react';
 import { Eye, EyeOff, Trash2, Edit2, ChevronRight, ChevronDown } from 'lucide-react';
 import { EntityCard } from './components/EntityCard';
-import type { SceneModel } from '../../../types/scene';
+import type { AnySceneEntity, SceneModel } from '../../../types/scene';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 
-interface LayerItemProps {
+export interface LayerItemProps {
   layerName: string;
   scene: SceneModel;
   
@@ -37,7 +37,7 @@ interface LayerItemProps {
   
   // Callbacks
   handleLayerMultiSelectForMerge: (layerName: string, ctrlPressed: boolean) => void;
-  getFilteredEntities: (layerName: string) => Array<{ id: string; type: string; layer: string; [key: string]: unknown }>;
+  getFilteredEntities: (layerName: string) => AnySceneEntity[];
   
   // Event handlers
   onEntitySelectionChange?: (entityIds: string[]) => void;
@@ -54,7 +54,7 @@ interface LayerItemProps {
   editingEntityName: string;
   
   // Entity callbacks
-  handleEntityClick: (entity: { id: string; type: string; layer: string; [key: string]: unknown }, ctrlPressed: boolean) => void;
+  handleEntityClick: (entityId: string, ctrlPressed: boolean) => void;
   handleEntityMultiSelectForMerge: (entityId: string, ctrlPressed: boolean) => void;
   handleEntityKeyDown: (e: React.KeyboardEvent) => void;
   setFocusedEntityId: (id: string | null) => void;

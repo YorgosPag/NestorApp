@@ -45,7 +45,7 @@ export const ColorManager: React.FC<ColorManagerProps> = ({
     const newName = `COLOR_${hex.replace('#','').toUpperCase()}`;
     const newLayers = {
       ...scene.layers,
-      [newName]: { name: newName, color: hex, colorHex: hex, visible: true }
+      [newName]: { name: newName, color: hex, colorHex: hex, visible: true, locked: false }
     };
     return { scene: { ...scene, layers: newLayers }, layerName: newName };
   }, []);

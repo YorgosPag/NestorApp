@@ -64,12 +64,12 @@ const LazyLoadErrorFallback = (error: Error, _errorInfo: React.ErrorInfo, retry:
 /**
  * HOC για lazy loading με error handling
  */
-export function withLazyLoad<T extends ComponentType<React.ComponentProps<T>>>(
-  importFunction: () => Promise<{ default: T }>
+export function withLazyLoad<P extends object>(
+  importFunction: () => Promise<{ default: ComponentType<P> }>
 ) {
   const LazyComponent = lazy(importFunction);
 
-  return React.memo((props: React.ComponentProps<T>) => (
+  return React.memo((props: P) => (
     <ErrorBoundary
       componentName="LazyComponent"
       enableRetry={true}

@@ -19,6 +19,10 @@
 .DS_Store
 *.pem
 
+# Screenshots - ignore Windows Greek screenshots
+Στιγμιότυπο*
+*.jpg
+
 # debug
 npm-debug.log*
 yarn-debug.log*

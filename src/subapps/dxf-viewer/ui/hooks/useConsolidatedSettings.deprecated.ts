@@ -168,7 +168,7 @@ export const createGripConsolidatedSettings = (
 };
 
 // Utility για migration από παλιά contexts
-export const migrateFromLegacyContext = <T extends Record<string, any>>(
+export const migrateFromLegacyContext = <T extends Record<string, unknown>>(
   legacyContextResult: {
     settings: { overrideGlobalSettings: boolean } & Record<string, T>;
     updateSettings: (updates: Partial<{ overrideGlobalSettings: boolean } & Record<string, Partial<T>>>) => void;
@@ -181,7 +181,7 @@ export const migrateFromLegacyContext = <T extends Record<string, any>>(
 ): ConsolidatedSettingsResult<T> => {
   // Helper για migration χωρίς breaking changes
   const migratedSettings: OverrideSettings<T> = {
-    overrideGlobalSettings: legacyContextResult.settings.overrideGlobalSettings as T,
+    overrideGlobalSettings: legacyContextResult.settings.overrideGlobalSettings,
     specificSettings: legacyContextResult.settings[settingsPropertyName]
   };
 
@@ -189,7 +189,14 @@ export const migrateFromLegacyContext = <T extends Record<string, any>>(
     settings: migratedSettings,
     updateSettings: (updates) => {
       // Map το νέο format στο παλιό για backwards compatibility
-      legacyContextResult.updateSettings(updates as Partial<{ overrideGlobalSettings: boolean } & Record<string, Partial<T>>>);
+      const legacyUpdates: Partial<{ overrideGlobalSettings: boolean } & Record<string, Partial<T>>> = {};
+      if (typeof updates.overrideGlobalSettings === 'boolean') {
+        legacyUpdates.overrideGlobalSettings = updates.overrideGlobalSettings;
+      }
+      if (updates.specificSettings) {
+        legacyUpdates[settingsPropertyName] = updates.specificSettings;
+      }
+      legacyContextResult.updateSettings(legacyUpdates);
     },
     updateSpecificSettings: (updates) => {
       // Map στο specific property του παλιού context

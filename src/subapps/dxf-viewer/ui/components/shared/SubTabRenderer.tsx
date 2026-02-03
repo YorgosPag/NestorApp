@@ -145,6 +145,14 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
   }
 
   // 🏢 ENTERPRISE: Using centralized PANEL_LAYOUT spacing (Single Source of Truth)
+  const displayGripSettings = {
+    showGrips: gripSettings.showGrips,
+    gripSize: gripSettings.gripSize,
+    gripShape: 'square' as const,
+    showFill: true,
+    colors: gripSettings.colors
+  };
+
   return (
     <div className={`${PANEL_LAYOUT.CONTAINER.INNER_PADDING} ${colors.bg.secondary} ${PANEL_LAYOUT.CONTAINER.BORDER_RADIUS} ${PANEL_LAYOUT.CONTAINER.SECTION_SPACING}`}>
       {/* Preview Section */}
@@ -164,7 +172,7 @@ export const SubTabRenderer = React.memo<SubTabRendererProps>(function SubTabRen
             activeTab={activeSubTab}
             lineSettings={coloredLineSettings}
             textSettings={coloredTextSettings}
-            gripSettings={gripSettings}
+            gripSettings={displayGripSettings}
           />
         </>
       )}

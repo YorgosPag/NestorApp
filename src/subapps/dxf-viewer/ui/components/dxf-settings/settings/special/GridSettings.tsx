@@ -159,7 +159,8 @@ export const GridSettings: React.FC<GridSettingsProps> = ({ className = '' }) =>
     }
   };
 
-  const gridLinesLabels = getGridLinesLabels(gridSettings.visual.style);
+  const gridStyle = gridSettings.visual.style ?? 'lines';
+  const gridLinesLabels = getGridLinesLabels(gridStyle);
 
   const gridLinesTabs: TabDefinition[] = [
     {

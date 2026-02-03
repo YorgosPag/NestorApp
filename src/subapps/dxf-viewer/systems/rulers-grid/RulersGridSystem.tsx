@@ -32,7 +32,7 @@ declare global {
     __RULER_SETTINGS__?: RulerSettings;
   }
 }
-import { RulersGridCalculations, RulersGridRendering, RulersGridSnapping } from './utils';
+import { RulersGridCalculations, RulersGridRendering, RulersGridSnapping, PerformanceUtilities, UnitConversion } from './utils';
 // 🏢 ADR-125: Types imported from types.ts to prevent circular dependencies
 import type { RulersGridHookReturn, RulersGridContextType } from './types';
 import { RulersGridSystemProps, DEFAULT_ORIGIN } from './types';
@@ -78,15 +78,16 @@ function useRulersGridSystemIntegration({
     typeof value === 'object' && value !== null && !Array.isArray(value);
 
   // Deep merge helper for nested objects
-  const deepMerge = <T extends Record<string, unknown>>(target: T, source?: Partial<T>): T => {
+  const deepMerge = <T extends object>(target: T, source?: Partial<T>): T => {
     if (!source) return target;
     const result = { ...target } as T;
-    for (const key of Object.keys(source)) {
+    for (const key of Object.keys(source as object)) {
       const typedKey = key as keyof T;
       const sourceValue = source[typedKey];
-      if (isPlainObject(sourceValue) && isPlainObject(result[typedKey])) {
+      const resultValue = result[typedKey];
+      if (isPlainObject(sourceValue) && isPlainObject(resultValue)) {
         const merged = deepMerge(
-          result[typedKey] as Record<string, unknown>,
+          resultValue as Record<string, unknown>,
           sourceValue as Record<string, unknown>
         );
         result[typedKey] = merged as T[typeof typedKey];
@@ -191,24 +192,126 @@ function useRulersGridSystemIntegration({
     persistedData?.isVisible ?? initialVisibility
   );
 
-  // 🆕 UNIFIED AUTOSAVE: Wrapped setters για integration με DxfSettingsProvider
-  // ✅ CLEANUP (2026-02-01): Removed unused CustomEvent dispatch - nobody listens to 'dxf-grid-settings-update'
-  // Sync now happens via globalGridStore subscription pattern (lines 310-333)
-  const setGrid = useCallback((updater: React.SetStateAction<GridSettings>) => {
-    setGridInternal(prev => {
-      const newGrid = typeof updater === 'function' ? updater(prev) : updater;
-      return newGrid;
-    });
+  const calculateGridBounds = useCallback((transform: ViewTransform, canvasRect: DOMRectReadOnly): GridBounds => {
+    const step = RulersGridCalculations.calculateAdaptiveSpacing(transform.scale, grid.visual.step, grid);
+    return RulersGridCalculations.calculateVisibleBounds(transform, canvasRect as DOMRect, step);
+  }, [grid]);
+
+  const calculateGridLines = useCallback(
+    (bounds: GridBounds, settings: GridSettings, transform: ViewTransform): GridLine[] =>
+      RulersGridCalculations.generateGridLines(bounds, settings, transform),
+    []
+  );
+
+  const calculateRulerTicks = useCallback(
+    (
+      type: 'horizontal' | 'vertical',
+      bounds: GridBounds,
+      settings: RulerSettings,
+      transform: ViewTransform,
+      canvasRect: DOMRectReadOnly
+    ): RulerTick[] =>
+      RulersGridCalculations.calculateTicks(type, bounds, settings, transform, canvasRect as DOMRect),
+    []
+  );
+
+  const getLayoutInfo = useCallback(
+    (canvasRect: DOMRectReadOnly): RulersLayoutInfo =>
+      RulersGridCalculations.calculateLayout(canvasRect as DOMRect, rulers),
+    [rulers]
+  );
+
+  const getContentArea = useCallback(
+    (canvasRect: DOMRectReadOnly): DOMRectReadOnly => {
+      const layout = getLayoutInfo(canvasRect);
+      const { x, y, width, height } = layout.contentRect;
+      return new DOMRect(x, y, width, height);
+    },
+    [getLayoutInfo]
+  );
+
+  const convertUnits = useCallback(
+    (value: number, fromUnit: UnitType, toUnit: UnitType): number =>
+      UnitConversion.convert(value, fromUnit, toUnit),
+    []
+  );
+
+  const formatValue = useCallback(
+    (value: number, units: UnitType, precision?: number): string =>
+      UnitConversion.format(value, units, precision),
+    []
+  );
+
+  const isRulerVisible = useCallback(
+    (type: 'horizontal' | 'vertical') => isVisible && rulers[type].enabled,
+    [isVisible, rulers]
+  );
+
+  const isGridVisible = useCallback(() => isVisible && grid.visual.enabled, [isVisible, grid]);
+
+  const getEffectiveOpacity = useCallback(
+    (transform: ViewTransform): number =>
+      RulersGridCalculations.getEffectiveOpacity(grid.visual.opacity, transform, grid),
+    [grid]
+  );
+
+  const shouldRenderGrid = useCallback(
+    (transform: ViewTransform): boolean => PerformanceUtilities.shouldRenderGrid(transform, grid),
+    [grid]
+  );
+
+  const shouldRenderRulers = useCallback(
+    (transform: ViewTransform): boolean => PerformanceUtilities.shouldRenderRulers(transform, rulers),
+    [rulers]
+  );
+
+  const getMaxGridLines = useCallback(() => RULERS_GRID_CONFIG.MAX_GRID_LINES, []);
+  const getMaxRulerTicks = useCallback(() => RULERS_GRID_CONFIG.MAX_RULER_TICKS, []);
+  const isPerformanceOptimized = useCallback(
+    () => grid.behavior.adaptiveGrid || grid.behavior.fadeAtDistance,
+    [grid]
+  );
+
+  const resetRulerSettings = useCallback(() => {
+    setRulers(DEFAULT_RULER_SETTINGS);
+  }, [setRulers]);
+
+  const resetGridSettings = useCallback(() => {
+    setGrid(DEFAULT_GRID_SETTINGS);
+  }, [setGrid]);
+
+  const validateSettings = useCallback((settings: unknown): { valid: boolean; errors: string[] } => {
+    if (!isPlainObject(settings)) {
+      return { valid: false, errors: ['Invalid settings object'] };
+    }
+
+    if ('horizontal' in settings && 'vertical' in settings) {
+      return RulersGridCalculations.validateRulerSettings(settings as RulerSettings);
+    }
+
+    if ('visual' in settings && 'behavior' in settings) {
+      return RulersGridCalculations.validateGridSettings(settings as GridSettings);
+    }
+
+    return { valid: false, errors: ['Unknown settings shape'] };
   }, []);
 
-  // ✅ CLEANUP (2026-02-01): Removed unused CustomEvent dispatch - nobody listens to 'dxf-ruler-settings-update'
-  // Sync now happens via globalRulerStore subscription pattern (lines 310-333)
-  const setRulers = useCallback((updater: React.SetStateAction<RulerSettings>) => {
-    setRulersInternal(prev => {
-      const newRulers = typeof updater === 'function' ? updater(prev) : updater;
-      return newRulers;
-    });
-  }, []);
+  const getOptimalGridStep = useCallback(
+    (transform: ViewTransform): number =>
+      RulersGridCalculations.calculateAdaptiveSpacing(transform.scale, grid.visual.step, grid),
+    [grid]
+  );
+
+  const getOptimalTickSpacing = useCallback(
+    (transform: ViewTransform, _type: 'horizontal' | 'vertical'): number => {
+      const scaledSpacing = RULERS_GRID_CONFIG.DEFAULT_TICK_SPACING / Math.max(transform.scale, 0.001);
+      return Math.min(
+        Math.max(scaledSpacing, RULERS_GRID_CONFIG.MIN_TICK_SPACING),
+        RULERS_GRID_CONFIG.MAX_TICK_SPACING
+      );
+    },
+    []
+  );
 
   // ✅ CLEANUP (2026-02-01): Removed unused bidirectional sync event listeners
   // Events 'dxf-provider-grid-sync' and 'dxf-provider-ruler-sync' were never dispatched by any component.
@@ -250,6 +353,16 @@ function useRulersGridSystemIntegration({
   const rulerMethods = useRulerManagement(rulers, setRulers);
   const gridMethods = useGridManagement(grid, setGrid);
   const snapMethods = useSnapManagement(rulers, setRulers, grid, setGrid, state, viewTransform, onSnapResult);
+
+  const { setGridStep } = gridMethods;
+
+  const autoFitGrid = useCallback(
+    (transform: ViewTransform, _canvasRect: DOMRectReadOnly) => {
+      const optimalStep = getOptimalGridStep(transform);
+      setGridStep(optimalStep);
+    },
+    [getOptimalGridStep, setGridStep]
+  );
   const renderingMethods = useRenderingCalculations(rulers, grid, origin);
 
   // ===== ΣΥΓΧΡΟΝΙΣΜΟΣ ΜΕ DXFSETTINGSPROVIDER =====
@@ -460,6 +573,27 @@ function useRulersGridSystemIntegration({
     
     // Calculations and Rendering
     ...renderingMethods,
+    calculateGridBounds,
+    calculateGridLines,
+    calculateRulerTicks,
+    getLayoutInfo,
+    getContentArea,
+    convertUnits,
+    formatValue,
+    isRulerVisible,
+    isGridVisible,
+    getEffectiveOpacity,
+    shouldRenderGrid,
+    shouldRenderRulers,
+    getMaxGridLines,
+    getMaxRulerTicks,
+    isPerformanceOptimized,
+    resetRulerSettings,
+    resetGridSettings,
+    validateSettings,
+    autoFitGrid,
+    getOptimalGridStep,
+    getOptimalTickSpacing,
     
     // Operations
     performOperation,

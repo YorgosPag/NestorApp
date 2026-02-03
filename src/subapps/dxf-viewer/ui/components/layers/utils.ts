@@ -3,7 +3,9 @@
  * Common functions for ColorGroup components
  */
 
+import type { Dispatch, SetStateAction } from 'react';
 import type { SceneModel } from '../../../types/scene';
+import type { LayerItemProps } from './LayerItem';
 
 /**
  * Creates a consistent key for color group identification
@@ -27,7 +29,7 @@ export interface ColorGroupCommonProps {
   selectedColorGroupsForMerge: Set<string>;
   
   // State setters
-  setExpandedColorGroups: (groups: Set<string>) => void;
+  setExpandedColorGroups: Dispatch<SetStateAction<Set<string>>>;
   setEditingColorGroup: (group: string | null) => void;
   setEditingColorGroupName: (name: string) => void;
   setColorPickerColorGroup: (group: string | null) => void;
@@ -42,5 +44,5 @@ export interface ColorGroupCommonProps {
   onColorGroupDelete?: (colorGroupName: string, layersInGroup: string[]) => void;
   
   // Layer item props
-  layerItemProps: Record<string, unknown>;
+  layerItemProps: Omit<LayerItemProps, 'layerName' | 'scene'>;
 }

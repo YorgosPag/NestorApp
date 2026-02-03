@@ -11,6 +11,7 @@
  * @route /admin/ai-inbox
  * @enterprise Role-gated (admin-only), idempotent actions, audit trail
  * @created 2026-02-03
+ * @updated 2026-02-03 - Enterprise hardening (SSoT types, i18n, permission gates)
  *
  * ARCHITECTURE:
  * - Server action για data fetching (tenant-scoped)
@@ -18,6 +19,9 @@
  * - Audit trail για όλες τις actions
  * - Real-time badge counter
  * - Filter by status/intent/confidence
+ * - NO local types (uses src/types/crm.ts SSoT)
+ * - NO hardcoded strings (full i18n)
+ * - NO hardcoded design tokens (variant pattern)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -28,38 +32,133 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Inbox, CheckCircle, XCircle, Archive, Eye, AlertTriangle } from 'lucide-react';
+import { Loader2, Inbox, CheckCircle, XCircle, Eye, AlertTriangle, ShieldX } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { createModuleLogger } from '@/lib/telemetry/Logger';
+import toast from 'react-hot-toast';
+// 🏢 ENTERPRISE: SSoT types (NO local duplicates)
+import type { Communication } from '@/types/crm';
 
 // ============================================================================
-// TYPES
+// LOGGER
 // ============================================================================
 
-interface Communication {
-  id: string;
-  type: 'email' | 'phone' | 'sms' | 'whatsapp' | 'telegram' | 'meeting' | 'note';
-  direction: 'inbound' | 'outbound';
-  from?: string;
-  subject?: string;
-  content: string;
-  createdAt: string;
-  intentAnalysis?: {
-    intentType?: string;
-    confidence?: number;
-    needsTriage?: boolean;
-    aiModel?: string;
-    analysisTimestamp?: string;
-  };
-  triageStatus?: 'pending' | 'reviewed' | 'approved' | 'rejected';
-  linkedTaskId?: string;
-}
+const logger = createModuleLogger('AI_INBOX');
 
-interface InboxData {
-  success: boolean;
-  communications: Communication[];
-  count: number;
-  error?: string;
-}
+// ============================================================================
+// FEATURE FLAGS
+// ============================================================================
+
+const ENABLE_MOCK_DATA = process.env.NODE_ENV === 'development';
+
+// ============================================================================
+// MOCK DATA (Development Only)
+// ============================================================================
+
+const getMockCommunications = (): Communication[] => {
+  if (!ENABLE_MOCK_DATA) return [];
+
+  return [
+    {
+      id: '1',
+      type: 'telegram',
+      direction: 'inbound',
+      from: 'Γιώργος Παπαδόπουλος',
+      subject: 'Ερώτηση για διαθέσιμα διαμερίσματα',
+      content: 'Καλημέρα, ενδιαφέρομαι για διαμερίσματα στο έργο Χαλάνδρι. Έχετε διαθέσιμα 2άρια;',
+      createdAt: '2026-02-03T10:30:00Z',
+      updatedAt: '2026-02-03T10:30:00Z',
+      contactId: 'contact_1',
+      createdBy: 'system',
+      status: 'pending',
+      intentAnalysis: {
+        kind: 'message_intent',
+        intentType: 'info_update',
+        confidence: 0.85,
+        needsTriage: false,
+        aiModel: 'mock-provider-v1',
+        analysisTimestamp: '2026-02-03T10:30:01Z',
+        rawMessage: 'Καλημέρα, ενδιαφέρομαι για διαμερίσματα...',
+        extractedEntities: {}
+      },
+      triageStatus: 'pending'
+    },
+    {
+      id: '2',
+      type: 'email',
+      direction: 'inbound',
+      from: 'maria@example.com',
+      subject: 'Παράδοση οικοδομικών υλικών',
+      content: 'Αύριο στις 3μμ θα παραδοθούν τα υλικά στο εργοτάξιο.',
+      createdAt: '2026-02-03T09:15:00Z',
+      updatedAt: '2026-02-03T09:15:00Z',
+      contactId: 'contact_2',
+      createdBy: 'system',
+      status: 'pending',
+      intentAnalysis: {
+        kind: 'message_intent',
+        intentType: 'delivery',
+        confidence: 0.92,
+        needsTriage: false,
+        aiModel: 'mock-provider-v1',
+        analysisTimestamp: '2026-02-03T09:15:01Z',
+        rawMessage: 'Αύριο στις 3μμ...',
+        extractedEntities: {}
+      },
+      triageStatus: 'pending'
+    },
+    {
+      id: '3',
+      type: 'telegram',
+      direction: 'inbound',
+      from: 'Νίκος Κωνσταντίνου',
+      subject: 'Πρόβλημα με την πόρτα',
+      content: 'Η πόρτα του διαμερίσματος δεν κλειδώνει σωστά. Χρειάζεται επισκευή.',
+      createdAt: '2026-02-03T08:45:00Z',
+      updatedAt: '2026-02-03T08:45:00Z',
+      contactId: 'contact_3',
+      createdBy: 'system',
+      status: 'pending',
+      intentAnalysis: {
+        kind: 'message_intent',
+        intentType: 'issue',
+        confidence: 0.78,
+        needsTriage: true,
+        aiModel: 'mock-provider-v1',
+        analysisTimestamp: '2026-02-03T08:45:01Z',
+        rawMessage: 'Η πόρτα δεν κλειδώνει...',
+        extractedEntities: {}
+      },
+      triageStatus: 'pending'
+    }
+  ];
+};
+
+// ============================================================================
+// DESIGN SYSTEM - Badge Variants
+// ============================================================================
+
+type IntentBadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+const getIntentBadgeVariant = (intentType?: string): IntentBadgeVariant => {
+  switch (intentType) {
+    case 'delivery':
+    case 'appointment':
+      return 'default';
+    case 'issue':
+      return 'destructive';
+    case 'payment':
+    case 'info_update':
+      return 'secondary';
+    default:
+      return 'outline';
+  }
+};
+
+const getConfidenceBadgeVariant = (confidence?: number): IntentBadgeVariant => {
+  if (!confidence) return 'outline';
+  return confidence >= 0.8 ? 'default' : confidence >= 0.6 ? 'secondary' : 'destructive';
+};
 
 // ============================================================================
 // COMPONENT
@@ -68,12 +167,16 @@ interface InboxData {
 export default function AIInboxPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { t } = useTranslation('admin');
+  const { t } = useTranslation('navigation');
 
   const [communications, setCommunications] = useState<Communication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // 🏢 ENTERPRISE: Admin permission check
+  // TODO: Replace με actual permission check από auth context
+  const hasAdminAccess = true; // TEMPORARY - Replace με: user?.customClaims?.admin_access
 
   // =========================================================================
   // LOAD PENDING COMMUNICATIONS
@@ -89,68 +192,13 @@ export default function AIInboxPage() {
       // TODO: Replace με actual server action
       // const data = await fetchPendingCommunications();
 
-      // Mock data για τώρα
-      const mockData: InboxData = {
-        success: true,
-        count: 3,
-        communications: [
-          {
-            id: '1',
-            type: 'telegram',
-            direction: 'inbound',
-            from: 'Γιώργος Παπαδόπουλος',
-            subject: 'Ερώτηση για διαθέσιμα διαμερίσματα',
-            content: 'Καλημέρα, ενδιαφέρομαι για διαμερίσματα στο έργο Χαλάνδρι. Έχετε διαθέσιμα 2άρια;',
-            createdAt: '2026-02-03T10:30:00Z',
-            intentAnalysis: {
-              intentType: 'info_request',
-              confidence: 0.85,
-              needsTriage: false,
-              aiModel: 'mock-provider-v1',
-              analysisTimestamp: '2026-02-03T10:30:01Z'
-            },
-            triageStatus: 'pending'
-          },
-          {
-            id: '2',
-            type: 'email',
-            direction: 'inbound',
-            from: 'maria@example.com',
-            subject: 'Παράδοση οικοδομικών υλικών',
-            content: 'Αύριο στις 3μμ θα παραδοθούν τα υλικά στο εργοτάξιο.',
-            createdAt: '2026-02-03T09:15:00Z',
-            intentAnalysis: {
-              intentType: 'delivery',
-              confidence: 0.92,
-              needsTriage: false,
-              aiModel: 'mock-provider-v1',
-              analysisTimestamp: '2026-02-03T09:15:01Z'
-            },
-            triageStatus: 'pending'
-          },
-          {
-            id: '3',
-            type: 'telegram',
-            direction: 'inbound',
-            from: 'Νίκος Κωνσταντίνου',
-            subject: 'Πρόβλημα με την πόρτα',
-            content: 'Η πόρτα του διαμερίσματος δεν κλειδώνει σωστά. Χρειάζεται επισκευή.',
-            createdAt: '2026-02-03T08:45:00Z',
-            intentAnalysis: {
-              intentType: 'issue',
-              confidence: 0.78,
-              needsTriage: true,
-              aiModel: 'mock-provider-v1',
-              analysisTimestamp: '2026-02-03T08:45:01Z'
-            },
-            triageStatus: 'pending'
-          }
-        ]
-      };
+      // Mock data για development only
+      const mockData = getMockCommunications();
+      setCommunications(mockData);
 
-      setCommunications(mockData.communications);
+      logger.info('Loaded pending communications', { count: mockData.length });
     } catch (err) {
-      console.error('Failed to load communications:', err);
+      logger.error('Failed to load communications', { error: err });
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -179,9 +227,12 @@ export default function AIInboxPage() {
             : comm
         )
       );
+
+      toast.success(t('admin.approveSuccess'));
+      logger.info('Communication approved', { communicationId: commId });
     } catch (err) {
-      console.error('Approve failed:', err);
-      alert('Αποτυχία έγκρισης. Δοκιμάστε ξανά.');
+      logger.error('Approve failed', { communicationId: commId, error: err });
+      toast.error(t('admin.approveFailed'));
     } finally {
       setActionLoading(null);
     }
@@ -200,39 +251,15 @@ export default function AIInboxPage() {
             : comm
         )
       );
+
+      toast.success(t('admin.rejectSuccess'));
+      logger.info('Communication rejected', { communicationId: commId });
     } catch (err) {
-      console.error('Reject failed:', err);
-      alert('Αποτυχία απόρριψης. Δοκιμάστε ξανά.');
+      logger.error('Reject failed', { communicationId: commId, error: err });
+      toast.error(t('admin.rejectFailed'));
     } finally {
       setActionLoading(null);
     }
-  };
-
-  // =========================================================================
-  // HELPER FUNCTIONS
-  // =========================================================================
-
-  const getIntentBadgeColor = (intentType?: string) => {
-    switch (intentType) {
-      case 'delivery': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      case 'appointment': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-      case 'issue': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      case 'payment': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-      case 'info_request': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
-    }
-  };
-
-  const getConfidenceBadge = (confidence?: number) => {
-    if (!confidence) return null;
-    const percent = Math.round(confidence * 100);
-    const color = confidence >= 0.8
-      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-      : confidence >= 0.6
-      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-
-    return <Badge className={color}>{percent}%</Badge>;
   };
 
   // =========================================================================
@@ -249,6 +276,7 @@ export default function AIInboxPage() {
     );
   }
 
+  // 🏢 ENTERPRISE: Auth gate
   if (!isAuthenticated || !user) {
     return (
       <main className="container mx-auto py-10">
@@ -256,17 +284,36 @@ export default function AIInboxPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <XCircle className="h-5 w-5 text-red-500" />
-              Απαιτείται Σύνδεση
+              {t('admin.loginRequired')}
             </CardTitle>
             <CardDescription>
-              Πρέπει να συνδεθείς ως Admin για πρόσβαση στο AI Inbox.
+              {t('admin.loginRequiredDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => router.push('/login')}>
-              Σύνδεση
+              {t('admin.login')}
             </Button>
           </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  // 🏢 ENTERPRISE: Permission gate
+  if (!hasAdminAccess) {
+    return (
+      <main className="container mx-auto py-10">
+        <Card className="max-w-lg mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldX className="h-5 w-5 text-red-500" />
+              {t('admin.unauthorized')}
+            </CardTitle>
+            <CardDescription>
+              {t('admin.unauthorizedDescription')}
+            </CardDescription>
+          </CardHeader>
         </Card>
       </main>
     );
@@ -286,19 +333,22 @@ export default function AIInboxPage() {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <Inbox className="h-8 w-8" />
-              AI Inbox
+              {t('admin.aiInboxTitle')}
             </h1>
             <p className="text-muted-foreground mt-2">
-              Αναθεώρηση και έγκριση εισερχόμενων μηνυμάτων
+              {t('admin.aiInboxDescription')}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-lg px-3 py-1">
-              {pendingCount} Pending
-            </Badge>
+            {/* 🏢 ENTERPRISE: Badge μόνο όταν count > 0 */}
+            {pendingCount > 0 && (
+              <Badge variant="outline" className="text-lg px-3 py-1">
+                {pendingCount} {t('admin.pending')}
+              </Badge>
+            )}
             <Button onClick={loadPendingCommunications} variant="outline" size="sm">
               <Loader2 className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Ανανέωση
+              {t('admin.refresh')}
             </Button>
           </div>
         </header>
@@ -314,9 +364,9 @@ export default function AIInboxPage() {
         {/* Communications Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Εισερχόμενα Μηνύματα</CardTitle>
+            <CardTitle>{t('admin.pendingMessages')}</CardTitle>
             <CardDescription>
-              Μηνύματα που χρειάζονται manual review πριν τη δημιουργία tasks
+              {t('admin.pendingMessagesDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -327,20 +377,20 @@ export default function AIInboxPage() {
             ) : communications.length === 0 ? (
               <div className="text-center py-10">
                 <Inbox className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Δεν υπάρχουν pending μηνύματα</p>
+                <p className="text-muted-foreground">{t('admin.noPendingMessages')}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Από</TableHead>
-                      <TableHead>Κανάλι</TableHead>
-                      <TableHead>Περιεχόμενο</TableHead>
-                      <TableHead>Intent</TableHead>
-                      <TableHead>Confidence</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Ενέργειες</TableHead>
+                      <TableHead>{t('admin.from')}</TableHead>
+                      <TableHead>{t('admin.channel')}</TableHead>
+                      <TableHead>{t('admin.content')}</TableHead>
+                      <TableHead>{t('admin.intent')}</TableHead>
+                      <TableHead>{t('admin.confidence')}</TableHead>
+                      <TableHead>{t('admin.status')}</TableHead>
+                      <TableHead>{t('admin.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -356,28 +406,32 @@ export default function AIInboxPage() {
                           {comm.content}
                         </TableCell>
                         <TableCell>
-                          <Badge className={getIntentBadgeColor(comm.intentAnalysis?.intentType)}>
+                          <Badge variant={getIntentBadgeVariant(comm.intentAnalysis?.intentType)}>
                             {comm.intentAnalysis?.intentType || 'unknown'}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {getConfidenceBadge(comm.intentAnalysis?.confidence)}
+                          {comm.intentAnalysis?.confidence && (
+                            <Badge variant={getConfidenceBadgeVariant(comm.intentAnalysis.confidence)}>
+                              {Math.round(comm.intentAnalysis.confidence * 100)}%
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           {comm.triageStatus === 'approved' ? (
-                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                            <Badge variant="default">
                               <CheckCircle className="h-3 w-3 mr-1" />
-                              Approved
+                              {t('admin.approved')}
                             </Badge>
                           ) : comm.triageStatus === 'rejected' ? (
-                            <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
+                            <Badge variant="destructive">
                               <XCircle className="h-3 w-3 mr-1" />
-                              Rejected
+                              {t('admin.rejected')}
                             </Badge>
                           ) : (
                             <Badge variant="outline">
                               <AlertTriangle className="h-3 w-3 mr-1" />
-                              Pending
+                              {t('admin.pending')}
                             </Badge>
                           )}
                         </TableCell>
@@ -388,7 +442,7 @@ export default function AIInboxPage() {
                                 <Button
                                   size="sm"
                                   variant="default"
-                                  onClick={() => handleApprove(comm.id)}
+                                  onClick={() => handleApprove(comm.id!)}
                                   disabled={actionLoading === comm.id}
                                 >
                                   {actionLoading === comm.id ? (
@@ -396,18 +450,18 @@ export default function AIInboxPage() {
                                   ) : (
                                     <>
                                       <CheckCircle className="h-4 w-4 mr-1" />
-                                      Approve
+                                      {t('admin.approve')}
                                     </>
                                   )}
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleReject(comm.id)}
+                                  onClick={() => handleReject(comm.id!)}
                                   disabled={actionLoading === comm.id}
                                 >
                                   <XCircle className="h-4 w-4 mr-1" />
-                                  Reject
+                                  {t('admin.reject')}
                                 </Button>
                               </>
                             )}
@@ -418,7 +472,7 @@ export default function AIInboxPage() {
                                 onClick={() => router.push(`/crm/tasks/${comm.linkedTaskId}`)}
                               >
                                 <Eye className="h-4 w-4 mr-1" />
-                                View Task
+                                {t('admin.viewTask')}
                               </Button>
                             )}
                           </div>
@@ -435,14 +489,14 @@ export default function AIInboxPage() {
         {/* Info Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Πώς Λειτουργεί</CardTitle>
+            <CardTitle className="text-lg">{t('admin.howItWorks')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>1. Εισερχόμενα μηνύματα από Email/Telegram/Viber αναλύονται αυτόματα από AI</p>
-            <p>2. Μηνύματα με χαμηλή confidence ή needsTriage=true έρχονται εδώ</p>
-            <p>3. <strong>Approve</strong> → Δημιουργεί CRM Task (idempotent - δεύτερο click δεν ξαναφτιάχνει task)</p>
-            <p>4. <strong>Reject</strong> → Αρχειοθετεί το μήνυμα χωρίς task creation</p>
-            <p>5. Audit trail κρατάει όλες τις ενέργειες για compliance</p>
+            <p>1. {t('admin.howItWorksStep1')}</p>
+            <p>2. {t('admin.howItWorksStep2')}</p>
+            <p>3. {t('admin.howItWorksStep3')}</p>
+            <p>4. {t('admin.howItWorksStep4')}</p>
+            <p>5. {t('admin.howItWorksStep5')}</p>
           </CardContent>
         </Card>
       </div>
