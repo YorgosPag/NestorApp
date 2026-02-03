@@ -1,6 +1,7 @@
 {
   "title": "Filters",
   "propertiesTitle": "Property Filters",
+  "aiInboxTitle": "AI Inbox Filters",
   "searchFilters": "Search Filters",
   "showAdvanced": "Show advanced",
   "hideAdvanced": "Hide advanced",
@@ -8,6 +9,9 @@
   "typeLabel": "Type:",
   "typeAriaLabel": "Type filters",
   "filterBy": "Filter by:",
+  "channel": "Channel",
+  "dateFrom": "From date",
+  "dateTo": "To date",
   "all": "All",
   "showAll": "Show all",
   "allTypes": "All Types",
@@ -89,6 +93,9 @@
     "archived": "Archived",
     "lead": "Lead",
     "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "reviewed": "Reviewed",
     "construction": "Under Construction"
   },
   "fields": {
@@ -129,7 +136,9 @@
     "buildingsSearch": "Search buildings...",
     "projectsSearch": "Search projects...",
     "propertiesSearch": "Search properties...",
+    "communicationsSearch": "Search communications...",
     "selectStatus": "Select status",
+    "selectChannel": "Select channel",
     "selectProject": "Select project",
     "selectBuilding": "Select building",
     "selectFloor": "Select floor",

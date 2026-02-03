@@ -56,6 +56,13 @@ export async function getAllTasks(): Promise<CrmTask[]> {
 }
 
 /**
+ * Get a single task by ID
+ */
+export async function getTaskById(taskId: string): Promise<CrmTask | null> {
+  return tasksRepository.getById(taskId);
+}
+
+/**
  * Get tasks assigned to a specific user
  */
 export async function getTasksByUser(userId: string): Promise<CrmTask[]> {

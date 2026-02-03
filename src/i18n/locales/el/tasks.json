@@ -60,6 +60,33 @@
     "notDefined": "Μη καθορισμένη",
     "prioritySuffix": "προτεραιότητα"
   },
+  "detail": {
+    "title": "Λεπτομέρειες εργασίας",
+    "loading": "Φόρτωση εργασίας...",
+    "backToTasks": "Επιστροφή στις εργασίες",
+    "invalidTaskId": "Μη έγκυρο αναγνωριστικό εργασίας",
+    "errorTitle": "Κάτι πήγε στραβά",
+    "notFoundTitle": "Η εργασία δεν βρέθηκε",
+    "notFoundDescription": "Η εργασία που ζητάς δεν υπάρχει ή δεν έχεις πλέον πρόσβαση.",
+    "aria": {
+      "taskNavigation": "Πλοήγηση εργασίας"
+    },
+    "sections": {
+      "summary": "Σύνοψη",
+      "related": "Σχετικές οντότητες",
+      "metadata": "Μεταδεδομένα"
+    },
+    "labels": {
+      "assignedTo": "Ανατέθηκε σε",
+      "dueDate": "Ημερομηνία λήξης",
+      "createdAt": "Δημιουργήθηκε",
+      "updatedAt": "Ενημερώθηκε",
+      "completedAt": "Ολοκληρώθηκε",
+      "contactId": "Επαφή",
+      "projectId": "Έργο",
+      "unitId": "Μονάδα"
+    }
+  },
   "time": {
     "overdue": "Εκπρόθεσμη",
     "today": "Σήμερα",

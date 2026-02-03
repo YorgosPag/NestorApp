@@ -10,6 +10,7 @@ import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { ServiceSectionConfig } from '@/config/service-config';
 // 🏢 ENTERPRISE: i18n support for tab labels
 import { useTranslation } from 'react-i18next';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
 // INTERFACES
@@ -36,7 +37,7 @@ interface FormField {
 /** Custom renderer function type */
 type CustomRendererFn = (
   field: FormField,
-  formData: Record<string, unknown>,
+  formData: ContactFormData,
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean
@@ -46,7 +47,7 @@ export interface ServiceFormTabRendererProps {
   /** Sections configuration from service config file */
   sections: ServiceSectionConfig[];
   /** Form data object */
-  formData: Record<string, unknown>;
+  formData: ContactFormData;
   /** Input change handler */
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   /** Select change handler */
@@ -71,7 +72,7 @@ export interface ServiceFormTabRendererProps {
  */
 function createServiceFormTabsFromConfig(
   sections: ServiceSectionConfig[],
-  formData: Record<string, unknown>,
+  formData: ContactFormData,
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,

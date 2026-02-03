@@ -11,20 +11,11 @@ import { FileText, Settings } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-
-/** Permit data structure */
-interface PermitData {
-    buildingBlock: string;
-    protocolNumber: string;
-    licenseNumber: string;
-    issuingAuthority: string;
-    status: string;
-    showOnWeb: boolean;
-}
+import type { ProjectFormData } from './general-tab/types';
 
 interface PermitsAndStatusTabProps {
-    data: PermitData;
-    setData: React.Dispatch<React.SetStateAction<PermitData>>;
+    data: ProjectFormData;
+    setData: React.Dispatch<React.SetStateAction<ProjectFormData>>;
     isEditing: boolean;
 }
 
@@ -33,15 +24,15 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setData((prev: PermitData) => ({...prev, [e.target.name]: e.target.value}));
+        setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
 
-    const handleSelectChange = (value: string) => {
-        setData((prev: PermitData) => ({...prev, status: value}));
+    const handleSelectChange = (value: ProjectFormData['status']) => {
+        setData((prev: ProjectFormData) => ({...prev, status: value}));
     };
 
     const handleCheckboxChange = (checked: boolean | "indeterminate") => {
-        setData((prev: PermitData) => ({...prev, showOnWeb: checked === true}));
+        setData((prev: ProjectFormData) => ({...prev, showOnWeb: checked === true}));
     };
 
     return (
@@ -78,12 +69,12 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <div className="space-y-2">
                         <Label className="text-sm font-medium">{t('permitsTab.projectStatus')}</Label>
-                        <Select value={data.status} onValueChange={handleSelectChange} disabled={!isEditing}>
+                        <Select value={data.status} onValueChange={(value) => handleSelectChange(value as ProjectFormData['status'])} disabled={!isEditing}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="constructed" className="text-popover-foreground">{t('permitsTab.statusConstructed')}</SelectItem>
+                                <SelectItem value="completed" className="text-popover-foreground">{t('permitsTab.statusConstructed')}</SelectItem>
                                 <SelectItem value="planning" className="text-popover-foreground">{t('permitsTab.statusPlanning')}</SelectItem>
                                 <SelectItem value="in_progress" className="text-popover-foreground">{t('permitsTab.statusInProgress')}</SelectItem>
                             </SelectContent>

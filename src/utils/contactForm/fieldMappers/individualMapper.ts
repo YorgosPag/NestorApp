@@ -1,6 +1,7 @@
 import type { Contact, IndividualContact } from '@/types/contacts';
 import { isIndividualContact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { initialFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import { getSafeFieldValue, getSafeArrayValue } from '../contactMapper';
 
@@ -24,7 +25,11 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
   // 🏢 ENTERPRISE: Type-safe access to individual contact fields
   if (!isIndividualContact(contact)) {
     console.warn('🔍 INDIVIDUAL MAPPER: Contact is not an individual, returning minimal form data');
-    return {} as ContactFormData;
+    return {
+      ...initialFormData,
+      type: contact.type,
+      id: contact.id
+    };
   }
 
   const individualContact: IndividualContact = contact;
@@ -64,15 +69,16 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
         preview: url.trim(),
         uploadUrl: url.trim(),
         isUploading: false,
-        error: null,
+        error: undefined,
         file: null
       }));
   }
 
 
   const formData: ContactFormData = {
+    ...initialFormData,
     // Basic info
-    type: 'individual',
+    type: contact.type,
     id: contact.id, // 🔥 CRITICAL FIX: Include contact ID for relationship management
 
     // 👤 Βασικά Στοιχεία Φυσικού Προσώπου
@@ -131,63 +137,13 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     photoFile: null,
     // 🔥 CRITICAL FIX: Clear photoURL όταν δεν υπάρχουν φωτογραφίες
     photoPreview: multiplePhotos.length === 0 ? '' : getSafeFieldValue(individualContact, 'photoURL'),
+    photoURL: multiplePhotos.length === 0 ? '' : getSafeFieldValue(individualContact, 'photoURL'),
     multiplePhotos: multiplePhotos.length > 0 ? multiplePhotos : [], // 📸 Multiple photos array
 
     // 📝 Notes
     notes: getSafeFieldValue(contact, 'notes'),
 
-    // Company fields (empty for individual)
-    companyName: '',
-    companyVatNumber: '',
-    logoFile: null,
-    logoPreview: '',
-
-    // Service fields (empty for individual)
-    serviceName: '',
-    serviceType: 'other',
-    gemiNumber: '',
-    serviceVatNumber: '',
-    serviceTaxOffice: '',
-    serviceTitle: '',
-    tradeName: '',
-    legalForm: '',
-    gemiStatus: '',
-    gemiStatusDate: '',
-    chamber: '',
-    isBranch: false,
-    registrationMethod: '',
-    registrationDate: '',
-    lastUpdateDate: '',
-    gemiDepartment: '',
-    prefecture: '',
-    municipality: '',
-    activityCodeKAD: '',
-    activityDescription: '',
-    activityType: 'main',
-    activityValidFrom: '',
-    activityValidTo: '',
-    capitalAmount: '',
-    currency: '',
-    extraordinaryCapital: '',
-    serviceCode: '',
-    parentMinistry: '',
-    serviceCategory: '',
-    officialWebsite: '',
-    serviceAddress: {
-      street: '',
-      number: '',
-      postalCode: '',
-      city: ''
-    },
-    representatives: [],
-    shareholders: [],
-    branches: [],
-    documents: {
-      announcementDocs: [],
-      registrationDocs: []
-    },
-    decisions: [],
-    announcements: []
+    // Company & service fields παραμένουν από initialFormData
   };
 
 

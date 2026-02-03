@@ -30,6 +30,7 @@ import type {
   CustomClaims,
 } from './types';
 import { isValidGlobalRole } from './types';
+import { getDevCompanyId } from '@/config/dev-environment';
 
 // =============================================================================
 // CONSTANTS
@@ -255,7 +256,7 @@ export function createDevContext(overrides?: Partial<AuthContext>): AuthContext 
   return {
     uid: 'dev-user',
     email: 'dev@localhost',
-    companyId: 'dev-company',
+    companyId: getDevCompanyId(),
     globalRole: 'company_admin',
     mfaEnrolled: false,
     isAuthenticated: true,

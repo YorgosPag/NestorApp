@@ -11,13 +11,16 @@
  */
 
 import type { CrmTask } from '@/types/crm';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
+import type { QueryDocumentSnapshot, DocumentSnapshot } from 'firebase/firestore';
 
 /** Intermediate type for task transformation */
 type TaskTransformOutput = Partial<CrmTask> & { id: string; [key: string]: unknown };
 
-export const transformTask = (snap: QueryDocumentSnapshot): CrmTask => {
+export const transformTask = (snap: QueryDocumentSnapshot | DocumentSnapshot): CrmTask => {
   const data = snap.data();
+  if (!data) {
+    throw new Error('Task document missing');
+  }
   const out: TaskTransformOutput = { id: snap.id };
   for (const k in data) {
     const v = data[k];

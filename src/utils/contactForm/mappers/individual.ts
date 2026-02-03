@@ -9,9 +9,10 @@
 // ============================================================================
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import type { EmailInfo, PhoneInfo, SocialMediaInfo } from '@/types/contacts';
+import type { AddressInfo, EmailInfo, PhoneInfo, SocialMediaInfo, WebsiteInfo } from '@/types/contacts';
 import { extractPhotoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
 import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
+import EnterpriseContactSaver from '@/utils/contacts/EnterpriseContactSaver';
 
 /** Mapped individual contact data (partial, without timestamps) */
 interface MappedIndividualContactData {
@@ -37,20 +38,16 @@ interface MappedIndividualContactData {
   position?: string;
   workAddress?: string;
   workWebsite?: string;
-  socialMedia?: SocialMediaInfo | Record<string, string>;
-  websites?: string;
+  socialMedia?: SocialMediaInfo[];
+  websites?: WebsiteInfo[];
   photoURL?: string;
   multiplePhotoURLs: string[];
-  emails: EmailInfo[];
-  phones: PhoneInfo[];
+  emails?: EmailInfo[];
+  phones?: PhoneInfo[];
+  addresses?: AddressInfo[];
   isFavorite: boolean;
   status: 'active' | 'inactive' | 'archived';
   notes?: string;
-  address?: string;
-  city?: string;
-  postalCode?: string;
-  email?: string;
-  phone?: string;
 }
 
 /**
@@ -62,6 +59,13 @@ interface MappedIndividualContactData {
 export function mapIndividualFormData(formData: ContactFormData): MappedIndividualContactData {
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData);
   const photoURL = extractPhotoURL(formData, 'individual');
+  const enterpriseData = EnterpriseContactSaver.convertToEnterpriseStructure(formData);
+  const emails = enterpriseData.emails && enterpriseData.emails.length > 0
+    ? enterpriseData.emails
+    : createEmailsArray(formData.email);
+  const phones = enterpriseData.phones && enterpriseData.phones.length > 0
+    ? enterpriseData.phones
+    : createPhonesArray(formData.phone, 'mobile');
 
   console.log('🚨 MAP INDIVIDUAL: extractPhotoURL returned:', {
     photoURLValue: photoURL,
@@ -99,21 +103,15 @@ export function mapIndividualFormData(formData: ContactFormData): MappedIndividu
     position: formData.position,
     workAddress: formData.workAddress,
     workWebsite: formData.workWebsite,
-    socialMedia: formData.socialMedia,
-    websites: formData.websites,
+    socialMedia: enterpriseData.socialMedia,
+    websites: enterpriseData.websites,
     photoURL,
     multiplePhotoURLs, // 📸 Multiple photos array
-    emails: createEmailsArray(formData.email),
-    phones: createPhonesArray(formData.phone, 'mobile'),
+    emails,
+    phones,
+    addresses: enterpriseData.addresses,
     isFavorite: false,
     status: 'active',
     notes: formData.notes,
-
-    // 🔥 NEW: Additional Contact Information
-    address: formData.address,
-    city: formData.city,
-    postalCode: formData.postalCode,
-    email: formData.email, // Add raw email for compatibility
-    phone: formData.phone, // Add raw phone for compatibility
   };
 }

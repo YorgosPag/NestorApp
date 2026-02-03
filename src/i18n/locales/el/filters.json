@@ -1,6 +1,7 @@
 {
   "title": "Φίλτρα",
   "propertiesTitle": "Φίλτρα Ακινήτων",
+  "aiInboxTitle": "Φίλτρα AI Inbox",
   "searchFilters": "Φίλτρα Αναζήτησης",
   "showAdvanced": "Εμφάνιση προχωρημένων",
   "hideAdvanced": "Απόκρυψη προχωρημένων",
@@ -8,6 +9,9 @@
   "typeLabel": "Τύπος:",
   "typeAriaLabel": "Φίλτρα τύπου",
   "filterBy": "Φιλτράρισμα:",
+  "channel": "Κανάλι",
+  "dateFrom": "Από ημερομηνία",
+  "dateTo": "Έως ημερομηνία",
   "all": "Όλες",
   "showAll": "Εμφάνιση όλων",
   "allTypes": "Όλοι οι Τύποι",
@@ -89,6 +93,9 @@
     "archived": "Αρχειοθετημένο",
     "lead": "Lead",
     "pending": "Εκκρεμεί",
+    "approved": "Εγκεκριμένο",
+    "rejected": "Απορρίφθηκε",
+    "reviewed": "Ελέγχθηκε",
     "construction": "Υπό Κατασκευή"
   },
   "fields": {
@@ -129,7 +136,9 @@
     "buildingsSearch": "Αναζήτηση κτιρίων...",
     "projectsSearch": "Αναζήτηση έργων...",
     "propertiesSearch": "Αναζήτηση ακινήτων...",
+    "communicationsSearch": "Αναζήτηση επικοινωνιών...",
     "selectStatus": "Επιλέξτε κατάσταση",
+    "selectChannel": "Επιλέξτε κανάλι",
     "selectProject": "Επιλέξτε έργο",
     "selectBuilding": "Επιλέξτε κτίριο",
     "selectFloor": "Επιλέξτε όροφο",

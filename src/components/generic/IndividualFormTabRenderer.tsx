@@ -11,6 +11,7 @@ import { UnifiedPhotoManager } from '@/components/ui/UnifiedPhotoManager';
 import type { IndividualSectionConfig } from '@/config/individual-config';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -32,7 +33,7 @@ interface FormField {
 /** Custom renderer function type */
 type IndividualCustomRendererFn = (
   field: FormField,
-  formData: Record<string, unknown>,
+  formData: ContactFormData,
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean
@@ -42,7 +43,7 @@ export interface IndividualFormTabRendererProps {
   /** Sections configuration from individual config file */
   sections: IndividualSectionConfig[];
   /** Form data object */
-  formData: Record<string, unknown>;
+  formData: ContactFormData;
   /** Input change handler */
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   /** Select change handler */
@@ -74,7 +75,7 @@ export interface IndividualFormTabRendererProps {
  */
 function createIndividualFormTabsFromConfig(
   sections: IndividualSectionConfig[],
-  formData: Record<string, unknown>,
+  formData: ContactFormData,
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,

@@ -13,7 +13,7 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import { mapIndividualFormData } from '../mappers/individual';
 import { mapCompanyFormData } from '../mappers/company';
 import { mapServiceFormData } from '../mappers/service';
-import { cleanUndefinedValues, type ContactDataRecord } from '../utils/data-cleaning';
+import { cleanUndefinedValues } from '../utils/data-cleaning';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -74,10 +74,10 @@ export function mapFormDataToContact(formData: ContactFormData): FormDataMapping
     }
 
     // Clean undefined values - type assertion needed for compatibility
-    const cleanedData = cleanUndefinedValues(contactData as unknown as ContactDataRecord);
+    const cleanedData = cleanUndefinedValues(contactData);
 
     return {
-      contactData: cleanedData as Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>,
+      contactData: cleanedData,
       multiplePhotoURLs,
       photoURL,
       logoURL,

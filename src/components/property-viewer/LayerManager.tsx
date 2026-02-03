@@ -8,7 +8,7 @@ import React, {
   useEffect,
 } from 'react';
 
-import { DxfCanvas as DxfCanvasCore } from '@/subapps/dxf-viewer/canvas/DxfCanvas';
+import { DxfCanvas as DxfCanvasCore } from '@/subapps/dxf-viewer/canvas-v2';
 import ZoomWindowOverlay from '@/subapps/dxf-viewer/canvas-v2/overlays/ZoomWindowOverlay';
 import SelectionMarqueeOverlay from '@/subapps/dxf-viewer/canvas-v2/overlays/SelectionMarqueeOverlay';
 import CoordinateCalibrationOverlay from '@/subapps/dxf-viewer/ui/CoordinateCalibrationOverlay';

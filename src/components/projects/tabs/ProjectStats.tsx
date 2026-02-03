@@ -18,7 +18,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
 interface ProjectStatsProps {
-  projectId: number;
+  projectId: string;
 }
 
 const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => {

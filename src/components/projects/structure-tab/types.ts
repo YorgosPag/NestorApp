@@ -2,7 +2,7 @@
 import type { ProjectStructure, ProjectBuilding, ProjectUnit, ProjectStorage, ProjectParking } from "@/services/projects/contracts";
 
 export interface ProjectStructureTabProps {
-  projectId: number;
+  projectId: string;
 }
 
 /** 🏢 ENTERPRISE: Building model with full hierarchy */

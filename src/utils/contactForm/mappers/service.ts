@@ -9,9 +9,10 @@
 // ============================================================================
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import type { EmailInfo, PhoneInfo } from '@/types/contacts';
+import type { AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo } from '@/types/contacts';
 import { extractPhotoURL, extractLogoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
 import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
+import EnterpriseContactSaver from '@/utils/contacts/EnterpriseContactSaver';
 
 /** Mapped service contact data (partial, without timestamps) */
 interface MappedServiceContactData {
@@ -28,17 +29,15 @@ interface MappedServiceContactData {
   logoURL?: string;
   photoURL?: string;
   multiplePhotoURLs: string[];
-  address?: string;
-  postalCode?: string;
-  city?: string;
   fax?: string;
-  website?: string;
+  websites?: WebsiteInfo[];
+  addresses?: AddressInfo[];
   mainResponsibilities?: string;
   citizenServices?: string;
   onlineServices?: string;
   serviceHours?: string;
-  emails: EmailInfo[];
-  phones: PhoneInfo[];
+  emails?: EmailInfo[];
+  phones?: PhoneInfo[];
   isFavorite: boolean;
   status: 'active' | 'inactive' | 'archived';
   notes?: string;
@@ -54,6 +53,13 @@ export function mapServiceFormData(formData: ContactFormData): MappedServiceCont
   const logoURL = extractLogoURL(formData, 'service');
   const photoURL = extractPhotoURL(formData, 'service representative');
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για services
+  const enterpriseData = EnterpriseContactSaver.convertToEnterpriseStructure(formData);
+  const emails = enterpriseData.emails && enterpriseData.emails.length > 0
+    ? enterpriseData.emails
+    : createEmailsArray(formData.email);
+  const phones = enterpriseData.phones && enterpriseData.phones.length > 0
+    ? enterpriseData.phones
+    : createPhonesArray(formData.phone, 'work');
 
   // 🔧 FIX: Support both serviceName (old) and name (service-config) fields
   const serviceName = formData.serviceName || formData.name || '';
@@ -76,11 +82,9 @@ export function mapServiceFormData(formData: ContactFormData): MappedServiceCont
     multiplePhotoURLs, // 📸 Multiple photos array για service photos
 
     // Επικοινωνία Υπηρεσίας (Contact Section)
-    address: formData.address,
-    postalCode: formData.postalCode,
-    city: formData.city,
     fax: formData.fax,
-    website: formData.website,
+    websites: enterpriseData.websites,
+    addresses: enterpriseData.addresses,
 
     // Υπηρεσίες Φορέα (Services Section)
     mainResponsibilities: formData.mainResponsibilities,
@@ -88,8 +92,8 @@ export function mapServiceFormData(formData: ContactFormData): MappedServiceCont
     onlineServices: formData.onlineServices,
     serviceHours: formData.serviceHours,
 
-    emails: createEmailsArray(formData.email),
-    phones: createPhonesArray(formData.phone, 'work'),
+    emails,
+    phones,
     isFavorite: false,
     status: 'active',
     notes: formData.notes,

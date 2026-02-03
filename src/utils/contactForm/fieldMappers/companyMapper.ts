@@ -13,7 +13,7 @@ interface ExtendedCompanyContact extends CompanyContact {
  */
 function getContactValue(contact: ExtendedCompanyContact, fieldName: string): string {
   // Try root level first
-  const rootValue = getSafeFieldValue(contact, fieldName);
+  const rootValue = getSafeFieldValue<string>(contact, fieldName, '');
   if (rootValue) return rootValue;
 
   // Try customFields
@@ -95,7 +95,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
       linkedin: '',
       twitter: ''
     },
-    websites: '',
+    websites: contact.websites ?? [],
     photoFile: null,
     photoPreview: getSafeFieldValue(companyContact, 'photoURL'), // 🔧 FIX: Get representative photo from contact
     photoURL: getSafeFieldValue(companyContact, 'photoURL'), // Added for tab display

@@ -34,6 +34,8 @@
     "description": "Review and approve incoming messages before tasks are created.",
     "pendingMessagesTitle": "Pending Messages",
     "pendingMessagesDescription": "Messages requiring manual review before task creation.",
+    "queueTitle": "Triage Queue",
+    "queueDescription": "Review messages by status, channel, and confidence.",
     "pending": "Pending",
     "refresh": "Refresh",
     "approve": "Approve",
@@ -59,11 +61,34 @@
     "unknownIntent": "Unknown intent",
     "approveSuccess": "Message approved.",
     "approveFailed": "Approval failed.",
-    "approveFailedWithErrorId": "Approval failed. Error ID: {{errorId}}",
+    "approveFailedWithErrorId": "Approval failed. Error ID: {errorId}",
     "rejectSuccess": "Message rejected.",
     "rejectFailed": "Rejection failed.",
-    "rejectFailedWithErrorId": "Rejection failed. Error ID: {{errorId}}",
-    "loadFailedWithErrorId": "Load failed. Error ID: {{errorId}}"
+    "rejectFailedWithErrorId": "Rejection failed. Error ID: {errorId}",
+    "loadFailedWithErrorId": "Load failed. Error ID: {errorId}",
+    "mockActionBlocked": "This is mock data. Action is disabled.",
+    "stats": {
+      "total": "Total",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "tabs": {
+      "all": "All",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "filters": {
+      "title": "Filters"
+    },
+    "accessibility": {
+      "toggleFilters": "Toggle filters"
+    },
+    "empty": {
+      "title": "No messages",
+      "description": "No messages match the current filters."
+    }
   },
   "link": {
     "title": "Link Sold Units to Customers",

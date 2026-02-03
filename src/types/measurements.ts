@@ -3,9 +3,9 @@
  * Unified measurement and ruler system για DXF Viewer
  */
 
-import type { Point2D } from './scene';
+import type { Point2D } from '@/core/canvas/primitives/coordinates';
 
-export type { Point2D } from './scene';
+export type { Point2D } from '@/core/canvas/primitives/coordinates';
 
 // === MEASUREMENT TYPES ===
 export type MeasurementType = 'distance' | 'area' | 'angle' | 'radius' | 'perimeter';

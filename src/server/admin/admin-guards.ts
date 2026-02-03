@@ -10,6 +10,7 @@ import {
   getCurrentRuntimeEnvironment,
   type RuntimeEnvironment,
 } from '@/config/environment-security-config';
+import { getDevCompanyId } from '@/config/dev-environment';
 
 /**
  * ENTERPRISE: Centralized Admin Guards Module
@@ -644,7 +645,7 @@ export async function requireAdminForPage(
       operationId,
       environment,
       mfaEnrolled: true,
-      companyId: 'dev-company', // 🏢 ENTERPRISE: Dev tenant isolation
+      companyId: getDevCompanyId(), // 🏢 ENTERPRISE: Dev tenant isolation (SSoT)
     };
   }
 

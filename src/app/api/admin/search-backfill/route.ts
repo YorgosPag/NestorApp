@@ -770,17 +770,20 @@ async function backfillEntityType(
       stats.indexed++;
 
       // 🏢 ENTERPRISE: BulkWriter.set() - non-blocking, auto-batched
-      const writePromise = bulkWriter.set(searchDocRef, {
-        ...firestoreDoc,
-        updatedAt: FieldValue.serverTimestamp(),
-        createdAt: FieldValue.serverTimestamp(),
-        indexedAt: FieldValue.serverTimestamp(),
-      }).catch((error) => {
-        console.error(`   ❌ Write failed for ${searchDocId}:`, error);
-        // Revert optimistic count on error
-        stats.indexed--;
-        stats.errors++;
-      });
+      const writePromise = bulkWriter
+        .set(searchDocRef, {
+          ...firestoreDoc,
+          updatedAt: FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
+          indexedAt: FieldValue.serverTimestamp(),
+        })
+        .then(() => undefined)
+        .catch((error) => {
+          console.error(`   ❌ Write failed for ${searchDocId}:`, error);
+          // Revert optimistic count on error
+          stats.indexed--;
+          stats.errors++;
+        });
 
       writePromises.push(writePromise);
     }

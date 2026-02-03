@@ -60,6 +60,33 @@
     "notDefined": "Not defined",
     "prioritySuffix": "priority"
   },
+  "detail": {
+    "title": "Task Details",
+    "loading": "Loading task...",
+    "backToTasks": "Back to tasks",
+    "invalidTaskId": "Invalid task ID",
+    "errorTitle": "Something went wrong",
+    "notFoundTitle": "Task not found",
+    "notFoundDescription": "The task you are looking for does not exist or you no longer have access.",
+    "aria": {
+      "taskNavigation": "Task navigation"
+    },
+    "sections": {
+      "summary": "Summary",
+      "related": "Related entities",
+      "metadata": "Metadata"
+    },
+    "labels": {
+      "assignedTo": "Assigned to",
+      "dueDate": "Due date",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "completedAt": "Completed",
+      "contactId": "Contact",
+      "projectId": "Project",
+      "unitId": "Unit"
+    }
+  },
   "time": {
     "overdue": "Overdue",
     "today": "Today",

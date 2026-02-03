@@ -12,18 +12,11 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-
-// 🏢 ENTERPRISE: Project basic info data type
-interface ProjectBasicInfo {
-    name: string;
-    licenseTitle: string;
-    description: string;
-    companyName: string;
-}
+import type { ProjectFormData } from './general-tab/types';
 
 interface BasicProjectInfoTabProps {
-    data: ProjectBasicInfo;
-    setData: React.Dispatch<React.SetStateAction<ProjectBasicInfo>>;
+    data: ProjectFormData;
+    setData: React.Dispatch<React.SetStateAction<ProjectFormData>>;
     isEditing: boolean;
 }
 
@@ -32,7 +25,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setData((prev: ProjectBasicInfo) => ({...prev, [e.target.name]: e.target.value}));
+        setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
 
     return (

@@ -4,6 +4,7 @@ import type { getTasksStats } from './services/TasksService';
 
 export interface ITasksRepository {
   add(data: Omit<CrmTask,'id'|'createdAt'|'updatedAt'|'completedAt'|'reminderSent'>): Promise<{id:string}>;
+  getById(taskId: string): Promise<CrmTask | null>;
   getAll(): Promise<CrmTask[]>;
   getByUser(userId: string): Promise<CrmTask[]>;
   getByLead(leadId: string): Promise<CrmTask[]>;
@@ -17,6 +18,7 @@ export interface ITasksRepository {
 
 export interface ITasksService {
   addTask(taskData: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>): Promise<{ id: string; success: boolean }>;
+  getTaskById(taskId: string): Promise<CrmTask | null>;
   getAllTasks(): Promise<CrmTask[]>;
   getTasksByUser(userId: string): Promise<CrmTask[]>;
   getTasksByLead(leadId: string): Promise<CrmTask[]>;

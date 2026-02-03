@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db as getAdminDb } from '@/lib/firebase-admin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { FieldValue } from 'firebase-admin/firestore';
 import { isRoleBypass } from '@/lib/auth/roles';
 
@@ -120,16 +120,13 @@ interface BuildingCreateResponse {
   building: BuildingCreatePayload & { id: string };
 }
 
-export const POST = withAuth<ApiSuccessResponse<BuildingCreateResponse> | NextResponse>(
+export const POST = withAuth<ApiSuccessResponse<BuildingCreateResponse>>(
   async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
     // 🔐 ADMIN SDK: Get server-side Firestore instance
     const adminDb = getAdminDb();
     if (!adminDb) {
       console.error('❌ Firebase Admin not initialized');
-      return NextResponse.json(
-        { success: false, error: 'Database unavailable' },
-        { status: 500 }
-      );
+      throw new ApiError(503, 'Database unavailable');
     }
 
     try {
@@ -170,13 +167,7 @@ export const POST = withAuth<ApiSuccessResponse<BuildingCreateResponse> | NextRe
 
     } catch (error) {
       console.error('❌ [Buildings] Error creating building:', error);
-      return NextResponse.json(
-        {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to create building'
-        },
-        { status: 500 }
-      );
+      throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create building');
     }
   },
   { permissions: 'buildings:buildings:create' }
@@ -214,16 +205,13 @@ interface BuildingUpdateResponse {
  *           This endpoint uses Admin SDK to bypass rules with proper auth
  * @permission buildings:buildings:edit
  */
-export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse> | NextResponse>(
+export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse>>(
   async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
     // 🔐 ADMIN SDK: Get server-side Firestore instance
     const adminDb = getAdminDb();
     if (!adminDb) {
       console.error('❌ Firebase Admin not initialized');
-      return NextResponse.json(
-        { success: false, error: 'Database unavailable' },
-        { status: 500 }
-      );
+      throw new ApiError(503, 'Database unavailable');
     }
 
     try {
@@ -232,20 +220,14 @@ export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse> | NextR
       const { buildingId, ...updates } = body as { buildingId: string } & BuildingUpdatePayload;
 
       if (!buildingId) {
-        return NextResponse.json(
-          { success: false, error: 'Building ID is required' },
-          { status: 400 }
-        );
+        throw new ApiError(400, 'Building ID is required');
       }
 
       // 🔐 Get building to check ownership
       const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
 
       if (!buildingDoc.exists) {
-        return NextResponse.json(
-          { success: false, error: 'Building not found' },
-          { status: 404 }
-        );
+        throw new ApiError(404, 'Building not found');
       }
 
       const buildingData = buildingDoc.data();
@@ -254,10 +236,7 @@ export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse> | NextR
       // 🔒 TENANT ISOLATION: Check ownership (unless super_admin)
       if (!isSuperAdmin && buildingData?.companyId !== ctx.companyId) {
         console.warn(`🚫 [Buildings] Unauthorized update attempt by ${ctx.email} on building ${buildingId}`);
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized: Building belongs to different company' },
-          { status: 403 }
-        );
+        throw new ApiError(403, 'Unauthorized: Building belongs to different company');
       }
 
       // 🔒 SECURITY: Sanitize - remove undefined fields
@@ -278,10 +257,14 @@ export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse> | NextR
 
       // 📊 Audit log
       await logAuditEvent(ctx, 'data_updated', 'buildings', 'api', {
-        metadata: {
-          buildingId,
-          fields: Object.keys(cleanUpdates),
-        }
+        newValue: {
+          type: 'building_update',
+          value: {
+            buildingId,
+            fields: Object.keys(cleanUpdates),
+          },
+        },
+        metadata: { reason: 'Building updated' },
       });
 
       return apiSuccess<BuildingUpdateResponse>(
@@ -291,13 +274,7 @@ export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse> | NextR
 
     } catch (error) {
       console.error('❌ [Buildings] Error updating building:', error);
-      return NextResponse.json(
-        {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to update building'
-        },
-        { status: 500 }
-      );
+      throw new ApiError(500, error instanceof Error ? error.message : 'Failed to update building');
     }
   },
   { permissions: 'buildings:buildings:edit' }

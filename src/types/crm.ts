@@ -99,7 +99,7 @@ export interface Communication {
    * Triage status for manual review
    * @enterprise Workflow states for communications requiring human review
    */
-  triageStatus?: 'pending' | 'reviewed' | 'approved' | 'rejected';
+  triageStatus?: TriageStatus;
 
   /**
    * Linked CRM task ID (if auto-created)
@@ -107,6 +107,16 @@ export interface Communication {
    */
   linkedTaskId?: string;
 }
+
+// Triage status (SSoT)
+export const TRIAGE_STATUSES = {
+  PENDING: 'pending',
+  REVIEWED: 'reviewed',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+
+export type TriageStatus = typeof TRIAGE_STATUSES[keyof typeof TRIAGE_STATUSES];
 
 // Tasks
 export interface CrmTask {

@@ -21,11 +21,12 @@ import {
   DocumentData
 } from 'firebase/firestore';
 import { FieldValue as AdminFieldValue, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
-import type { Communication } from '@/types/crm';
+import type { Communication, TriageStatus } from '@/types/crm';
+import { TRIAGE_STATUSES } from '@/types/crm';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { getCompanyWidePolicy, getProjectPolicy } from '@/services/assignment/AssignmentPolicyRepository';
+import { getCompanyWidePolicyAdmin, getProjectPolicyAdmin } from '@/services/assignment/AssignmentPolicyRepository';
 import { resolveTaskDueInHours } from '@/services/assignment/AssignmentPolicyService';
 
 // 🏢 ENTERPRISE: Centralized collection configuration
@@ -88,6 +89,57 @@ const transformCommunication = (docSnapshot: QueryDocumentSnapshot<DocumentData>
     }
     return communication as Communication;
 };
+
+// ============================================================================
+// 🏢 ENTERPRISE: Shared triage query helper (Admin SDK)
+// ============================================================================
+
+const TRIAGE_STATUS_VALUES = Object.values(TRIAGE_STATUSES);
+
+async function fetchTriageCommunications(params: {
+  companyId: string;
+  status?: TriageStatus;
+}): Promise<Communication[]> {
+  const adminDb = getAdminFirestore();
+  const messagesRef = adminDb.collection(COLLECTIONS.MESSAGES);
+
+  const snapshots = params.status
+    ? [await messagesRef.where('companyId', '==', params.companyId).where('triageStatus', '==', params.status).get()]
+    : await Promise.all(
+        TRIAGE_STATUS_VALUES.map((status) =>
+          messagesRef
+            .where('companyId', '==', params.companyId)
+            .where('triageStatus', '==', status)
+            .get()
+        )
+      );
+
+  const communications = snapshots.flatMap((snapshot) =>
+    snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const communication: Partial<Communication> & { id: string } = { id: doc.id };
+
+      for (const key in data) {
+        const value = data[key];
+        if (value && typeof value === 'object' && 'toDate' in value) {
+          (communication as Record<string, unknown>)[key] = value.toDate().toISOString();
+        } else {
+          (communication as Record<string, unknown>)[key] = value;
+        }
+      }
+
+      return communication as Communication;
+    })
+  );
+
+  const sorted = communications.sort((a, b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateB - dateA;
+  });
+
+  return sorted;
+}
 
 export async function addCommunication(communicationData: Omit<Communication, 'id' | 'createdAt' | 'updatedAt'>) {
   try {
@@ -174,62 +226,104 @@ export async function getPendingTriageCommunications(
   | { ok: true; data: Communication[] }
   | { ok: false; errorId: string; code: ActionErrorCode }
 > {
+  return getTriageCommunications(companyId, operationId, TRIAGE_STATUSES.PENDING);
+}
+
+/**
+ * Get triage communications for AI Inbox (optional status filter)
+ *
+ * @param companyId - Company ID for tenant isolation
+ * @param status - Optional triage status filter
+ * @returns Array of communications in triage workflow
+ *
+ * @enterprise Tenant-scoped query, server-side only
+ */
+export async function getTriageCommunications(
+  companyId: string,
+  operationId?: string,
+  status?: TriageStatus
+): Promise<
+  | { ok: true; data: Communication[] }
+  | { ok: false; errorId: string; code: ActionErrorCode }
+> {
   const errorId = randomUUID();
 
   if (!companyId) {
     logger.error(
-      'Invalid context for pending communications fetch',
+      'Invalid context for triage communications fetch',
       buildActionErrorMetadata({ errorId, companyId, operationId, error: new Error('Missing companyId') })
     );
     return { ok: false, errorId, code: 'invalid_context' };
   }
 
   try {
-    // 🏢 ENTERPRISE: Use Firebase Admin SDK for server-side queries
+    const data = await fetchTriageCommunications({ companyId, status });
+    return { ok: true, data };
+  } catch (error) {
+    logger.error(
+      'Failed to fetch triage communications',
+      buildActionErrorMetadata({ errorId, companyId, operationId, error })
+    );
+    return { ok: false, errorId, code: 'unknown' };
+  }
+}
+
+/**
+ * Get triage summary stats for AI Inbox
+ *
+ * @param companyId - Company ID for tenant isolation
+ * @returns Counts per triage status
+ *
+ * @enterprise Tenant-scoped query, server-side only
+ */
+export async function getTriageStats(
+  companyId: string,
+  operationId?: string
+): Promise<
+  | { ok: true; data: { total: number; pending: number; approved: number; rejected: number; reviewed: number } }
+  | { ok: false; errorId: string; code: ActionErrorCode }
+> {
+  const errorId = randomUUID();
+
+  if (!companyId) {
+    logger.error(
+      'Invalid context for triage stats fetch',
+      buildActionErrorMetadata({ errorId, companyId, operationId, error: new Error('Missing companyId') })
+    );
+    return { ok: false, errorId, code: 'invalid_context' };
+  }
+
+  try {
     const adminDb = getAdminFirestore();
     const messagesRef = adminDb.collection(COLLECTIONS.MESSAGES);
 
-    // 🏢 ENTERPRISE: Tenant-scoped query with companyId filtering
-    // Query without orderBy to avoid composite index requirement (client-side sorting below)
-    // TODO: Re-enable .orderBy('createdAt', 'desc') when Firestore composite index is created
-    //       Index needed: messages collection with [companyId ASC, triageStatus ASC, createdAt DESC]
-    //       Create at: https://console.firebase.google.com/project/pagonis-87766/firestore/indexes
-    const querySnapshot = await messagesRef
-      .where('companyId', '==', companyId) // 🏢 ENTERPRISE: Tenant isolation (STOP 3 fix)
-      .where('triageStatus', '==', 'pending')
+    const pendingSnap = await messagesRef
+      .where('companyId', '==', companyId)
+      .where('triageStatus', '==', TRIAGE_STATUSES.PENDING)
+      .get();
+    const approvedSnap = await messagesRef
+      .where('companyId', '==', companyId)
+      .where('triageStatus', '==', TRIAGE_STATUSES.APPROVED)
+      .get();
+    const rejectedSnap = await messagesRef
+      .where('companyId', '==', companyId)
+      .where('triageStatus', '==', TRIAGE_STATUSES.REJECTED)
+      .get();
+    const reviewedSnap = await messagesRef
+      .where('companyId', '==', companyId)
+      .where('triageStatus', '==', TRIAGE_STATUSES.REVIEWED)
       .get();
 
-    // Transform Firestore Admin docs to Communication objects
-    const communications = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      const communication: Partial<Communication> & { id: string } = { id: doc.id };
+    const pending = pendingSnap.size;
+    const approved = approvedSnap.size;
+    const rejected = rejectedSnap.size;
+    const reviewed = reviewedSnap.size;
+    const total = pending + approved + rejected + reviewed;
 
-      // Convert Firestore Admin Timestamps to ISO strings
-      for (const key in data) {
-        const value = data[key];
-        if (value && typeof value === 'object' && 'toDate' in value) {
-          (communication as Record<string, unknown>)[key] = value.toDate().toISOString();
-        } else {
-          (communication as Record<string, unknown>)[key] = value;
-        }
-      }
-
-      return communication as Communication;
-    });
-
-    // 🏢 ENTERPRISE: Client-side sort by createdAt DESC (newest first)
-    // This is a temporary workaround until the Firestore composite index is created
-    // Performance impact: Negligible for <1000 items (typical inbox size)
-    const sorted = communications.sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return dateB - dateA; // DESC order (newest first)
-    });
-
-    return { ok: true, data: sorted };
+    return { ok: true, data: { total, pending, approved, rejected, reviewed } };
   } catch (error) {
     logger.error(
-      'Failed to fetch pending communications',
+      'Failed to fetch triage stats',
       buildActionErrorMetadata({ errorId, companyId, operationId, error })
     );
     return { ok: false, errorId, code: 'unknown' };
@@ -327,9 +421,9 @@ export async function approveCommunication(
     }
 
     const projectPolicy = comm.projectId
-      ? await getProjectPolicy(companyId, comm.projectId)
+      ? await getProjectPolicyAdmin(companyId, comm.projectId)
       : null;
-    const companyPolicy = projectPolicy ?? await getCompanyWidePolicy(companyId);
+    const companyPolicy = projectPolicy ?? await getCompanyWidePolicyAdmin(companyId);
     const dueInHours = resolveTaskDueInHours(comm.intentAnalysis?.intentType, companyPolicy ?? undefined);
     const dueDate = AdminTimestamp.fromMillis(Date.now() + dueInHours * 60 * 60 * 1000);
 

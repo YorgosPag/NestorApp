@@ -34,7 +34,7 @@ interface UseProjectCustomersReturn extends UseProjectCustomersState {
 // ============================================================================
 
 export function useProjectCustomers(
-  projectId: number,
+  projectId: string,
   options: UseProjectCustomersOptions = {}
 ): UseProjectCustomersReturn {
   const { enabled = true } = options;

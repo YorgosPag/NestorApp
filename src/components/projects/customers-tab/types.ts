@@ -2,7 +2,7 @@
 import type { ProjectCustomer } from "@/types/project";
 
 export interface ProjectCustomersTabProps {
-  projectId: number;
+  projectId: string;
 }
 
 export interface UseProjectCustomersState {

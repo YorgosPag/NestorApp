@@ -54,6 +54,8 @@ import {
   RISK_COMPLEXITY_LABELS
   // Note: OPERATIONAL_STATUS_LABELS not imported - using i18n keys directly to avoid circular dependency
 } from '@/constants/property-statuses-enterprise';
+import { COMMUNICATION_CHANNELS } from '@/types/communications';
+import { TRIAGE_STATUSES } from '@/types/crm';
 
 // ====================================================================
 // [ENTERPRISE] CENTRALIZED IMPORTS - 100% ELIMINATION OF HARDCODED LABELS
@@ -1140,6 +1142,95 @@ export const defaultCommunicationsFilters: CommunicationsFilterState = {
   searchTerm: '',
   channel: 'all',
   status: 'all',
+  dateFrom: '',
+  dateTo: ''
+};
+
+// ====================================================================
+// [ENTERPRISE] AI Inbox Filters Configuration
+// ====================================================================
+
+export const aiInboxFiltersConfig: FilterPanelConfig = {
+  title: 'filters.aiInboxTitle',
+  searchPlaceholder: 'filters.placeholders.communicationsSearch',
+  i18nNamespace: 'filters',
+  rows: [
+    {
+      id: 'ai-inbox-basic',
+      fields: [
+        {
+          id: 'searchTerm',
+          type: 'search',
+          label: FL.search,
+          placeholder: 'filters.placeholders.communicationsSearch',
+          ariaLabel: 'Search AI Inbox',
+          width: 2
+        },
+        {
+          id: 'channel',
+          type: 'select',
+          label: 'filters.channel',
+          placeholder: 'filters.placeholders.selectChannel',
+          ariaLabel: 'AI Inbox channel filter',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.channels.all' },
+            { value: COMMUNICATION_CHANNELS.EMAIL, label: 'filters.channels.email' },
+            { value: COMMUNICATION_CHANNELS.SMS, label: 'filters.channels.sms' },
+            { value: COMMUNICATION_CHANNELS.TELEGRAM, label: 'filters.channels.telegram' }
+          ]
+        },
+        {
+          id: 'status',
+          type: 'select',
+          label: FL.status,
+          placeholder: SP.status_placeholder,
+          ariaLabel: 'AI Inbox status filter',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.allStatuses' },
+            { value: TRIAGE_STATUSES.PENDING, label: 'filters.status.pending' },
+            { value: TRIAGE_STATUSES.APPROVED, label: 'filters.status.approved' },
+            { value: TRIAGE_STATUSES.REJECTED, label: 'filters.status.rejected' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'ai-inbox-date',
+      fields: [
+        {
+          id: 'dateFrom',
+          type: 'date',
+          label: 'filters.dateFrom',
+          ariaLabel: 'AI Inbox from date filter',
+          width: 1
+        },
+        {
+          id: 'dateTo',
+          type: 'date',
+          label: 'filters.dateTo',
+          ariaLabel: 'AI Inbox to date filter',
+          width: 1
+        }
+      ]
+    }
+  ]
+};
+
+export interface AIInboxFilterState {
+  [key: string]: unknown;
+  searchTerm: string;
+  channel: string;
+  status: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+export const defaultAIInboxFilters: AIInboxFilterState = {
+  searchTerm: '',
+  channel: 'all',
+  status: TRIAGE_STATUSES.PENDING,
   dateFrom: '',
   dateTo: ''
 };

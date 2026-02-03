@@ -34,6 +34,8 @@
     "description": "Αναθεώρηση και έγκριση εισερχόμενων μηνυμάτων πριν τη δημιουργία εργασιών.",
     "pendingMessagesTitle": "Εισερχόμενα Μηνύματα",
     "pendingMessagesDescription": "Μηνύματα που χρειάζονται χειροκίνητο έλεγχο πριν τη δημιουργία εργασιών.",
+    "queueTitle": "Ουρά Ελέγχου",
+    "queueDescription": "Έλεγχος μηνυμάτων ανά κατάσταση, κανάλι και βεβαιότητα.",
     "pending": "Σε εκκρεμότητα",
     "refresh": "Ανανέωση",
     "approve": "Έγκριση",
@@ -59,11 +61,34 @@
     "unknownIntent": "Άγνωστη πρόθεση",
     "approveSuccess": "Το μήνυμα εγκρίθηκε.",
     "approveFailed": "Η έγκριση απέτυχε.",
-    "approveFailedWithErrorId": "Η έγκριση απέτυχε. Κωδικός σφάλματος: {{errorId}}",
+    "approveFailedWithErrorId": "Η έγκριση απέτυχε. Κωδικός σφάλματος: {errorId}",
     "rejectSuccess": "Το μήνυμα απορρίφθηκε.",
     "rejectFailed": "Η απόρριψη απέτυχε.",
-    "rejectFailedWithErrorId": "Η απόρριψη απέτυχε. Κωδικός σφάλματος: {{errorId}}",
-    "loadFailedWithErrorId": "Αποτυχία φόρτωσης. Κωδικός σφάλματος: {{errorId}}"
+    "rejectFailedWithErrorId": "Η απόρριψη απέτυχε. Κωδικός σφάλματος: {errorId}",
+    "loadFailedWithErrorId": "Αποτυχία φόρτωσης. Κωδικός σφάλματος: {errorId}",
+    "mockActionBlocked": "Αυτή είναι δοκιμαστική εγγραφή. Η ενέργεια δεν εκτελείται.",
+    "stats": {
+      "total": "Σύνολο",
+      "pending": "Εκκρεμεί",
+      "approved": "Εγκεκριμένα",
+      "rejected": "Απορριφθέντα"
+    },
+    "tabs": {
+      "all": "Όλα",
+      "pending": "Εκκρεμεί",
+      "approved": "Εγκεκριμένα",
+      "rejected": "Απορριφθέντα"
+    },
+    "filters": {
+      "title": "Φίλτρα"
+    },
+    "accessibility": {
+      "toggleFilters": "Εναλλαγή φίλτρων"
+    },
+    "empty": {
+      "title": "Δεν υπάρχουν μηνύματα",
+      "description": "Δεν υπάρχουν μηνύματα που να ταιριάζουν με τα φίλτρα."
+    }
   },
   "link": {
     "title": "Σύνδεση Πωληθέντων Μονάδων με Πελάτες",

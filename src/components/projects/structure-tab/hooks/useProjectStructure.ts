@@ -35,7 +35,7 @@ interface UseProjectStructureReturn extends UseProjectStructureState {
 // ============================================================================
 
 export function useProjectStructure(
-  projectId: number,
+  projectId: string,
   options: UseProjectStructureOptions = {}
 ): UseProjectStructureReturn {
   const { enabled = true } = options;

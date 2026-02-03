@@ -24,7 +24,7 @@ import { useAutosave } from './hooks/useAutosave';
 import { StatCard } from './parts/StatCard';
 import { ProjectCustomersTable } from './parts/ProjectCustomersTable';
 import { ProjectBuildingsCard } from './parts/ProjectBuildingsCard';
-import type { GeneralProjectTabProps } from './types';
+import type { GeneralProjectTabProps, ProjectFormData } from './types';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Project update server action (SAP/Salesforce pattern)
@@ -38,7 +38,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   const [isEditing, setIsEditing] = useState(false);
-  const [projectData, setProjectData] = useState({
+  const [projectData, setProjectData] = useState<ProjectFormData>({
     name: project.name,
     licenseTitle: project.title,
     description: t('generalTab.defaultDescription'),

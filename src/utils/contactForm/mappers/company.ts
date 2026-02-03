@@ -9,9 +9,10 @@
 // ============================================================================
 
 import type { ContactFormData } from '@/types/ContactFormTypes';
-import type { EmailInfo, PhoneInfo } from '@/types/contacts';
+import type { AddressInfo, EmailInfo, PhoneInfo, WebsiteInfo } from '@/types/contacts';
 import { extractPhotoURL, extractLogoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
 import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
+import EnterpriseContactSaver from '@/utils/contacts/EnterpriseContactSaver';
 
 /** Custom fields for company contact */
 interface CompanyCustomFields {
@@ -41,6 +42,8 @@ interface MappedCompanyContactData {
   multiplePhotoURLs: string[];
   emails: EmailInfo[];
   phones: PhoneInfo[];
+  addresses?: AddressInfo[];
+  websites?: WebsiteInfo[];
   isFavorite: boolean;
   status: 'active' | 'inactive' | 'archived';
   notes?: string;
@@ -48,10 +51,6 @@ interface MappedCompanyContactData {
   gemiNumber?: string;
   tradeName?: string;
   legalForm?: string;
-  address?: string;
-  city?: string;
-  postalCode?: string;
-  website?: string;
   customFields: CompanyCustomFields;
 }
 
@@ -65,17 +64,26 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
   const logoURL = extractLogoURL(formData, 'company');
   const photoURL = extractPhotoURL(formData, 'company representative'); // 🔧 FIX: Εξαγωγή φωτογραφίας εκπροσώπου
   const multiplePhotoURLs = extractMultiplePhotoURLs(formData); // 📸 Multiple photos για companies
+  const enterpriseData = EnterpriseContactSaver.convertToEnterpriseStructure(formData);
+  const emails = enterpriseData.emails && enterpriseData.emails.length > 0
+    ? enterpriseData.emails
+    : createEmailsArray(formData.email);
+  const phones = enterpriseData.phones && enterpriseData.phones.length > 0
+    ? enterpriseData.phones
+    : createPhonesArray(formData.phone, 'work');
 
   // 🔍 DEBUG: Final mapped object
-  const result = {
+  const result: MappedCompanyContactData = {
     type: 'company',
     companyName: formData.companyName,
     vatNumber: formData.vatNumber, // 🔧 FIX: Use correct field name
     logoURL,
     photoURL,
     multiplePhotoURLs,
-    emails: createEmailsArray(formData.email),
-    phones: createPhonesArray(formData.phone, 'work'),
+    emails,
+    phones,
+    addresses: enterpriseData.addresses,
+    websites: enterpriseData.websites,
     isFavorite: false,
     status: 'active',
     notes: formData.notes,
@@ -83,10 +91,6 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
     gemiNumber: formData.gemiNumber,
     tradeName: formData.tradeName,
     legalForm: formData.legalForm,
-    address: formData.address,
-    city: formData.city,
-    postalCode: formData.postalCode,
-    website: formData.website,
     customFields: {
       gemiStatus: formData.gemiStatus,
       gemiStatusDate: formData.gemiStatusDate,

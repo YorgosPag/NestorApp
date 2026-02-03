@@ -189,12 +189,16 @@ async function handleUpdateProject(
 
   // 7. Audit log
   await logAuditEvent(ctx, 'data_updated', 'projects', 'api', {
-    metadata: {
-      projectId,
-      projectName: projectData?.name,
-      fieldsUpdated: Object.keys(cleanData),
-      duration
-    }
+    newValue: {
+      type: 'status',
+      value: {
+        projectId,
+        projectName: projectData?.name,
+        fieldsUpdated: Object.keys(cleanData),
+        duration,
+      },
+    },
+    metadata: { reason: 'Project updated' },
   });
 
   return apiSuccess<ProjectUpdateResponse>(
@@ -304,12 +308,16 @@ async function handleDeleteProject(
 
   // 5. Audit log
   await logAuditEvent(ctx, 'data_deleted', 'projects', 'api', {
-    metadata: {
-      projectId,
-      projectName: projectData?.name,
-      deleteType: hardDelete ? 'hard' : 'soft',
-      duration
-    }
+    newValue: {
+      type: 'status',
+      value: {
+        projectId,
+        projectName: projectData?.name,
+        deleteType: hardDelete ? 'hard' : 'soft',
+        duration,
+      },
+    },
+    metadata: { reason: 'Project deleted' },
   });
 
   return apiSuccess<ProjectDeleteResponse>(

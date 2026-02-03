@@ -1,7 +1,7 @@
 'use client';
 
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CrmTask } from '@/types/crm';
 import type { ITasksRepository } from '../contracts';
@@ -38,6 +38,14 @@ export class TasksRepository implements ITasksRepository {
       reminderSent: false,
     });
     return { id: docRef.id };
+  }
+
+  async getById(taskId: string): Promise<CrmTask | null> {
+    const snapshot = await getDoc(doc(db, this.collectionName, taskId));
+    if (!snapshot.exists()) {
+      return null;
+    }
+    return transformTask(snapshot);
   }
 
   async getAll(): Promise<CrmTask[]> {

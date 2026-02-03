@@ -41,7 +41,7 @@ export function ServiceContactTabbedSection({
   return (
     <ServiceFormTabRenderer
       sections={sections}
-      formData={formData as unknown as Record<string, unknown>}
+      formData={formData}
       onChange={handleChange}
       onSelectChange={handleSelectChange}
       onPhotosChange={onPhotosChange}

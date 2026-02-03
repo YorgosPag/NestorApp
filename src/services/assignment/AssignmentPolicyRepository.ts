@@ -31,6 +31,7 @@ import {
   serverTimestamp,
   type Timestamp,
 } from 'firebase/firestore';
+import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import type {
@@ -52,6 +53,15 @@ const logger = createModuleLogger('ASSIGNMENT_POLICY');
 
 function getPoliciesCollection() {
   return collection(db, COLLECTIONS.ASSIGNMENT_POLICIES);
+}
+
+// ============================================================================
+// ADMIN COLLECTION (SERVER-SIDE)
+// ============================================================================
+
+function getPoliciesAdminCollection() {
+  const adminDb = getAdminFirestore();
+  return adminDb.collection(COLLECTIONS.ASSIGNMENT_POLICIES);
 }
 
 // ============================================================================
@@ -180,6 +190,28 @@ export async function getCompanyWidePolicy(
 }
 
 /**
+ * Get company-wide policy (Admin SDK)
+ * @enterprise Server-side only, bypasses client rules
+ */
+export async function getCompanyWidePolicyAdmin(
+  companyId: string
+): Promise<AssignmentPolicy | null> {
+  const policiesRef = getPoliciesAdminCollection();
+  const snapshot = await policiesRef
+    .where('companyId', '==', companyId)
+    .where('projectId', '==', null)
+    .where('status', '==', 'active')
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  return snapshot.docs[0].data() as AssignmentPolicy;
+}
+
+/**
  * Get project-specific policy
  * @enterprise Project-scoped policy (higher priority than company-wide)
  */
@@ -195,6 +227,39 @@ export async function getProjectPolicy(
 
   // Return first active project-specific policy
   return policies.length > 0 ? policies[0] : null;
+}
+
+/**
+ * Get project-specific policy (Admin SDK)
+ * @enterprise Server-side only, bypasses client rules
+ */
+export async function getProjectPolicyAdmin(
+  companyId: string,
+  projectId: string
+): Promise<AssignmentPolicy | null> {
+  const policiesRef = getPoliciesAdminCollection();
+  const snapshot = await policiesRef
+    .where('companyId', '==', companyId)
+    .where('projectId', '==', projectId)
+    .where('status', '==', 'active')
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const policy = snapshot.docs[0].data() as AssignmentPolicy;
+  if (policy.companyId !== companyId) {
+    logger.warn('Tenant isolation violation: Policy belongs to different company', {
+      policyId: policy.id,
+      requestedCompanyId: companyId,
+      actualCompanyId: policy.companyId,
+    });
+    return null;
+  }
+
+  return policy;
 }
 
 // ============================================================================

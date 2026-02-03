@@ -10,6 +10,7 @@ import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { SectionConfig } from '@/config/company-gemi';
 // 🏢 ENTERPRISE: i18n support for tab labels
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { ContactFormData } from '@/types/ContactFormTypes';
 
 // ============================================================================
 // INTERFACES
@@ -35,13 +36,13 @@ interface FormFieldData {
 type LocalCustomRendererFn = () => React.ReactNode;
 
 /** Field renderer function type */
-type FieldRendererFn = (field: FormFieldData, formData: Record<string, unknown>, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, onSelectChange: (name: string, value: string) => void, disabled: boolean) => React.ReactNode;
+type FieldRendererFn = (field: FormFieldData, formData: ContactFormData, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void, onSelectChange: (name: string, value: string) => void, disabled: boolean) => React.ReactNode;
 
 export interface GenericFormTabRendererProps {
   /** Sections configuration from config file */
   sections: SectionConfig[];
   /** Form data object */
-  formData: Record<string, unknown>;
+  formData: ContactFormData;
   /** Input change handler */
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   /** Select change handler */
@@ -85,7 +86,7 @@ function translateLabel(text: string, t: (key: string) => string): string {
  */
 function createFormTabsFromConfig(
   sections: SectionConfig[],
-  formData: Record<string, unknown>,
+  formData: ContactFormData,
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
   onSelectChange: (name: string, value: string) => void,
   disabled: boolean,

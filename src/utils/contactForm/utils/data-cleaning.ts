@@ -83,7 +83,7 @@ export function requiresSpecialDeletion(key: string, value: ContactDataValue): b
  * @param obj - Object to clean
  * @returns Cleaned object
  */
-export function cleanUndefinedValues(obj: ContactDataRecord): ContactDataRecord {
+export function cleanUndefinedValues<T extends ContactDataRecord>(obj: T): T {
   const cleaned: ContactDataRecord = {};
 
   Object.keys(obj).forEach(key => {
@@ -134,7 +134,7 @@ export function cleanUndefinedValues(obj: ContactDataRecord): ContactDataRecord 
     }
   });
 
-  return cleaned;
+  return cleaned as T;
 }
 
 // ============================================================================

@@ -1,8 +1,24 @@
-import type { Project } from "@/types/project";
+import type { Project, ProjectStatus } from "@/types/project";
 import type { ProjectCustomer, ProjectStats } from "@/types/project";
 
 export interface GeneralProjectTabProps {
   project: Project & { companyName: string };
+}
+
+export interface ProjectFormData {
+  name: string;
+  licenseTitle: string;
+  description: string;
+  buildingBlock: string;
+  protocolNumber: string;
+  licenseNumber: string;
+  issuingAuthority: string;
+  status: ProjectStatus;
+  showOnWeb: boolean;
+  mapPath: string;
+  floorPlanPath: string;
+  percentagesPath: string;
+  companyName: string;
 }
 
 export interface StatCardProps {
@@ -15,7 +31,7 @@ export interface StatCardProps {
 }
 
 export interface ProjectCustomersTableProps {
-  projectId: number;
+  projectId: string;
 }
 
 export interface UseProjectStatsState {

@@ -182,7 +182,7 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
       linkedin: '',
       twitter: ''
     },
-    websites: '',
+    websites: contact.websites ?? [],
     // 🔧 FIX: Convert existing logoURL to multiplePhotos format for services
     multiplePhotos: getSafeFieldValue(serviceContact, 'logoURL') ?
       [{

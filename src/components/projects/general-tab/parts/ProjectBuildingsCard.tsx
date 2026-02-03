@@ -20,7 +20,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface ProjectBuildingsCardProps {
   /** Project ID για fetch buildings */
-  projectId: number;
+  projectId: string;
   /** Whether to start expanded (load immediately) @default false for lazy loading */
   defaultExpanded?: boolean;
 }

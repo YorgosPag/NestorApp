@@ -9,8 +9,7 @@ import { mapServiceContactToFormData } from './fieldMappers/serviceMapper';
 // ============================================================================
 
 /** Generic object type for safe field access */
-// 🏢 ENTERPRISE: Widened type to accept any object for Contact interface compatibility
-export type SafeFieldSource = Record<string, unknown> | object;
+export type SafeFieldSource = Record<string, unknown>;
 
 /** Generic field value type */
 export type SafeFieldValue = unknown;
@@ -119,7 +118,7 @@ export function mapContactToFormData(contact: Contact): ContactMappingResult {
           linkedin: '',
           twitter: ''
         },
-        websites: '',
+        websites: [],
         companyVatNumber: '',
         serviceType: 'other',
         gemiNumber: '',

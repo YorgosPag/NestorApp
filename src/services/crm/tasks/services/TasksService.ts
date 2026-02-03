@@ -17,6 +17,15 @@ class TasksService implements ITasksService {
     }
   }
 
+  async getTaskById(taskId: string): Promise<CrmTask | null> {
+    try {
+      return await this.repository.getById(taskId);
+    } catch (error) {
+      // Error logging removed
+      throw error;
+    }
+  }
+
   async getAllTasks(): Promise<CrmTask[]> {
     try {
       return await this.repository.getAll();
@@ -137,4 +146,10 @@ export async function getAllTasks(repository: ITasksRepository): Promise<CrmTask
   'use server';
   const service = await createTasksService(repository);
   return service.getAllTasks();
+}
+
+export async function getTaskById(taskId: string, repository: ITasksRepository): Promise<CrmTask | null> {
+  'use server';
+  const service = await createTasksService(repository);
+  return service.getTaskById(taskId);
 }

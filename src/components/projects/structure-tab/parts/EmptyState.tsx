@@ -4,7 +4,7 @@ import React from 'react';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-export function EmptyState({ projectId }: { projectId: number }) {
+export function EmptyState({ projectId }: { projectId: string }) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   return (

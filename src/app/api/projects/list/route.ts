@@ -20,11 +20,11 @@
  * - Tenant isolation: Query filtered by ctx.companyId
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -313,7 +313,7 @@ interface ProjectCreateResponse {
  * @permission projects:projects:create
  */
 export async function POST(request: NextRequest) {
-  const handler = withAuth<ApiSuccessResponse<ProjectCreateResponse> | NextResponse>(
+  const handler = withAuth<ApiSuccessResponse<ProjectCreateResponse>>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         // 🏢 ENTERPRISE: Parse request body
@@ -344,10 +344,14 @@ export async function POST(request: NextRequest) {
 
         // 📊 Audit log
         await logAuditEvent(ctx, 'data_created', 'projects', 'api', {
-          metadata: {
-            projectId: docRef.id,
-            projectName: body.name,
-          }
+          newValue: {
+            type: 'project_create',
+            value: {
+              projectId: docRef.id,
+              projectName: body.name,
+            },
+          },
+          metadata: { reason: 'Project created' },
         });
 
         // 🔄 Invalidate cache for this tenant
@@ -365,13 +369,7 @@ export async function POST(request: NextRequest) {
 
       } catch (error) {
         console.error('❌ [Projects] Error creating project:', error);
-        return NextResponse.json(
-          {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to create project'
-          },
-          { status: 500 }
-        );
+        throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create project');
       }
     },
     { permissions: 'projects:projects:create' }
