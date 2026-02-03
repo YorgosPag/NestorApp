@@ -22,7 +22,7 @@ export interface FloatingPanelState {
   /** Set the active panel */
   setActivePanel: (panel: PanelType) => void;
   /** Set the expanded keys */
-  setExpandedKeys: (keys: Set<string>) => void;
+  setExpandedKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
 
   // Enhanced actions from reducer
   /** Add a key to the expanded set */

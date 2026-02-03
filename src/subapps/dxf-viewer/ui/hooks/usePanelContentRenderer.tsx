@@ -34,7 +34,7 @@ interface UsePanelContentRendererParams {
   selectedEntityIds: string[];
   onEntitySelect: (ids: string[]) => void;
   expandedKeys: Set<string>;
-  setExpandedKeys: (keys: Set<string>) => void;
+  setExpandedKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
   layerOperations: LayerOperationsCallbacks;
 }
 
@@ -94,7 +94,7 @@ export function usePanelContentRenderer({
               onEntitiesMerge={layerOperations.handleEntitiesMerge}
               onLayersMerge={layerOperations.handleLayersMerge}
               onColorGroupsMerge={layerOperations.handleColorGroupsMerge}
-              onToolChange={(tool) => {
+              onToolChange={(tool: ToolType) => {
                 window.dispatchEvent(new CustomEvent('level-panel:tool-change', { detail: tool }));
               }}
             />

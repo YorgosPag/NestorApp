@@ -168,7 +168,7 @@ export class ImageParser {
     }
 
     // Check mime type
-    const validMimeTypes = Object.values(SUPPORTED_IMAGE_FORMATS).map(f => f.mimeType);
+    const validMimeTypes: string[] = Object.values(SUPPORTED_IMAGE_FORMATS).map(f => f.mimeType);
     if (!validMimeTypes.includes(file.type)) {
       throw new Error(`Unsupported image format: ${file.type}`);
     }
@@ -357,7 +357,7 @@ export class ImageParser {
    * Check if file is a supported image format
    */
   static isSupportedImageFormat(file: File): boolean {
-    const validMimeTypes = Object.values(SUPPORTED_IMAGE_FORMATS).map(f => f.mimeType);
+    const validMimeTypes: string[] = Object.values(SUPPORTED_IMAGE_FORMATS).map(f => f.mimeType);
     return validMimeTypes.includes(file.type);
   }
 

@@ -36,7 +36,7 @@ interface LevelPanelProps {
   // LayersSection specific props
   onEntitySelect?: (ids: string[]) => void;
   expandedKeys?: Set<string>;
-  onExpandChange?: (next: Set<string>) => void;
+  onExpandChange?: React.Dispatch<React.SetStateAction<Set<string>>>;
   // Layer operations
   onLayerToggle?: (layerName: string, visible: boolean) => void;
   onLayerDelete?: (layerName: string) => void;

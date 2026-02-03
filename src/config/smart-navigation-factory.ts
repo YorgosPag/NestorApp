@@ -534,7 +534,8 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                 href: '/admin/ai-inbox',
                 smartConfig: {
                   priority: 'high',
-                  analyticsKey: 'nav_admin_ai_inbox'
+                  analyticsKey: 'nav_admin_ai_inbox',
+                  permissions: ['admin_access']
                 }
               },
               {

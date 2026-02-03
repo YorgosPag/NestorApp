@@ -162,7 +162,7 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     top: dragPosition.y,
     transform: 'none', // Override center transform when dragging
     cursor: isDragging ? 'grabbing' : 'auto',
-    zIndex: portalComponents.overlay.toolbar.zIndex()  // ✅ ENTERPRISE: Centralized z-index (80)
+    zIndex: portalComponents.overlay.controls.zIndex()  // ✅ ENTERPRISE: Centralized z-index (80)
   };
 
   return (

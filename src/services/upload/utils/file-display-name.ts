@@ -43,7 +43,7 @@ import {
 
 // Lazy-loaded i18n instance (client-side only)
 let i18nInstance: typeof import('i18next').default | null = null;
-let loadNamespaceFunc: ((ns: string, lang: string) => Promise<void>) | null = null;
+let loadNamespaceFunc: LoadNamespace | null = null;
 
 /**
  * 🏢 ENTERPRISE: Check if we're in server/build context (no React available)

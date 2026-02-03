@@ -19,6 +19,21 @@ export type FloorPlanFormat =
   | 'UNKNOWN';
 
 /**
+ * Minimal GeoJSON FeatureCollection type (local, dependency-free)
+ */
+export type GeoJSONFeatureCollection = {
+  type: 'FeatureCollection';
+  features: Array<{
+    type: 'Feature';
+    geometry: {
+      type: string;
+      coordinates: unknown;
+    };
+    properties?: Record<string, unknown> | null;
+  }>;
+};
+
+/**
  * Parser result (base interface)
  */
 export interface ParserResult {
@@ -29,7 +44,7 @@ export interface ParserResult {
   format: FloorPlanFormat;
 
   /** GeoJSON data (για vector formats) */
-  geoJSON?: GeoJSON.FeatureCollection;
+  geoJSON?: GeoJSONFeatureCollection;
 
   /** Bounding box (local coordinates) */
   bounds?: {
@@ -60,7 +75,7 @@ export interface ParserResult {
  */
 export interface DxfParserResult extends ParserResult {
   format: 'DXF';
-  geoJSON: GeoJSON.FeatureCollection;
+  geoJSON: GeoJSONFeatureCollection;
   bounds: {
     minX: number;
     minY: number;

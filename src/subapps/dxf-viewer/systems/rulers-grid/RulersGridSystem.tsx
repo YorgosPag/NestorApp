@@ -32,7 +32,7 @@ declare global {
     __RULER_SETTINGS__?: RulerSettings;
   }
 }
-import { RulersGridCalculations, RulersGridRendering, RulersGridSnapping, PerformanceUtilities, UnitConversion } from './utils';
+import { RulersGridCalculations, RulersGridRendering, RulersGridSnapping, PerformanceUtilities, UnitConversion, SettingsValidationUtils } from './utils';
 // 🏢 ADR-125: Types imported from types.ts to prevent circular dependencies
 import type { RulersGridHookReturn, RulersGridContextType } from './types';
 import { RulersGridSystemProps, DEFAULT_ORIGIN } from './types';
@@ -192,6 +192,25 @@ function useRulersGridSystemIntegration({
     persistedData?.isVisible ?? initialVisibility
   );
 
+  // 🆕 UNIFIED AUTOSAVE: Wrapped setters για integration με DxfSettingsProvider
+  // ✅ CLEANUP (2026-02-01): Removed unused CustomEvent dispatch - nobody listens to 'dxf-grid-settings-update'
+  // Sync now happens via globalGridStore subscription pattern (lines 310-333)
+  const setGrid = useCallback((updater: React.SetStateAction<GridSettings>) => {
+    setGridInternal(prev => {
+      const newGrid = typeof updater === 'function' ? updater(prev) : updater;
+      return newGrid;
+    });
+  }, []);
+
+  // ✅ CLEANUP (2026-02-01): Removed unused CustomEvent dispatch - nobody listens to 'dxf-ruler-settings-update'
+  // Sync now happens via globalRulerStore subscription pattern (lines 310-333)
+  const setRulers = useCallback((updater: React.SetStateAction<RulerSettings>) => {
+    setRulersInternal(prev => {
+      const newRulers = typeof updater === 'function' ? updater(prev) : updater;
+      return newRulers;
+    });
+  }, []);
+
   const calculateGridBounds = useCallback((transform: ViewTransform, canvasRect: DOMRectReadOnly): GridBounds => {
     const step = RulersGridCalculations.calculateAdaptiveSpacing(transform.scale, grid.visual.step, grid);
     return RulersGridCalculations.calculateVisibleBounds(transform, canvasRect as DOMRect, step);
@@ -286,11 +305,11 @@ function useRulersGridSystemIntegration({
     }
 
     if ('horizontal' in settings && 'vertical' in settings) {
-      return RulersGridCalculations.validateRulerSettings(settings as RulerSettings);
+      return SettingsValidationUtils.validateRulerSettings(settings as unknown as RulerSettings);
     }
 
     if ('visual' in settings && 'behavior' in settings) {
-      return RulersGridCalculations.validateGridSettings(settings as GridSettings);
+      return SettingsValidationUtils.validateGridSettings(settings as unknown as GridSettings);
     }
 
     return { valid: false, errors: ['Unknown settings shape'] };

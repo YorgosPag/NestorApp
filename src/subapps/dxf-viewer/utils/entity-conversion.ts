@@ -393,10 +393,7 @@ export function overlayToRegion(overlay: Overlay): Region {
     id: overlay.id,
     vertices: overlay.polygon.map(overlayVertexToPoint2D),
     status: overlay.status ?? 'for-sale',
-    layer: overlay.kind === 'unit' ? 'units'
-         : overlay.kind === 'parking' ? 'parking'
-         : overlay.kind === 'storage' ? 'storage'
-         : 'common',
+    layer: 'base',
     metadata: overlay.linked ? { linked: overlay.linked } : undefined,
     locked: false,
     visible: true,

@@ -30,7 +30,7 @@ export function useUnifiedOverlayCreation() {
       return;
     }
 
-    const stop = startPolygon({
+    const polylineControl = startPolygon({
       isOverlay: true, // 🔺 ΚΛΕΙΔΙ: Σημαία για overlay styling
       onComplete: async (points) => {
 
@@ -60,7 +60,7 @@ export function useUnifiedOverlayCreation() {
     });
 
     // 🔺 ΔΙΟΡΘΩΣΗ: Επιστροφή του stop callback για double-click handling
-    return { stop };
+    return polylineControl;
   }, [add, startPolygon]);
 
   return { startOverlayCreation, isUsingUnifiedEngine: isFeatureEnabled('USE_UNIFIED_DRAWING_ENGINE') };

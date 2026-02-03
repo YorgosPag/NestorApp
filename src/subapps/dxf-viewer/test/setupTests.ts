@@ -320,8 +320,9 @@ function cleanupMockElements(): void {
 // Global test setup
 beforeEach(() => {
   // Reset performance mocks
-  if (global.performance?.now) {
-    (global.performance.now as MockFunction).mockClear();
+  const performanceNow = global.performance?.now;
+  if (performanceNow && typeof performanceNow === 'function' && 'mockClear' in performanceNow) {
+    (performanceNow as MockFunction).mockClear();
   }
 });
 

@@ -251,16 +251,19 @@ class WebSocketService {
   }
 
   // Event listeners
-  addEventListener(
+  addEventListener<T = unknown>(
     type: WebSocketEventType | '*',
-    handler: (message: WebSocketMessage<unknown>) => void,
+    handler: (message: WebSocketMessage<T>) => void,
     options: { once?: boolean } = {}
   ): string {
     const listenerId = this.generateListenerId();
+    const wrappedHandler = (message: WebSocketMessage<unknown>) => {
+      handler(message as WebSocketMessage<T>);
+    };
     const listener: WebSocketListener<unknown> = {
       id: listenerId,
       type: type as WebSocketEventType,
-      handler,
+      handler: wrappedHandler,
       once: options.once
     };
 

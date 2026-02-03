@@ -156,12 +156,17 @@ export function useFloatingPanelReducer() {
     hasExpandedKeys: state.expandedKeys.size > 0,
   }), [state.expandedKeys]);
 
+  const setExpandedKeys = React.useCallback((value: React.SetStateAction<Set<string>>) => {
+    const nextKeys = typeof value === 'function' ? value(state.expandedKeys) : value;
+    actions.setExpandedKeys(nextKeys);
+  }, [actions.setExpandedKeys, state.expandedKeys]);
+
   // Backwards compatibility interface - optimized
   const compatibility = React.useMemo(() => ({
     // Old useState-style setters για easy migration
     setActivePanel: actions.setActivePanel,
-    setExpandedKeys: actions.setExpandedKeys,
-  }), [actions.setActivePanel, actions.setExpandedKeys]);
+    setExpandedKeys,
+  }), [actions.setActivePanel, setExpandedKeys]);
 
   return {
     // New reducer interface

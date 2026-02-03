@@ -56,7 +56,7 @@ export interface LayerItemProps {
   // Entity callbacks
   handleEntityClick: (entityId: string, ctrlPressed: boolean) => void;
   handleEntityMultiSelectForMerge: (entityId: string, ctrlPressed: boolean) => void;
-  handleEntityKeyDown: (e: React.KeyboardEvent) => void;
+  handleEntityKeyDown: (e: React.KeyboardEvent, allVisibleEntities: Array<{ id: string }>) => void;
   setFocusedEntityId: (id: string | null) => void;
   setColorPickerEntity: (id: string | null) => void;
   setEditingEntity: (id: string | null) => void;

@@ -701,7 +701,7 @@ export class EnterprisePerformanceManager {
   }
 
   private getApplicationContext(): ApplicationContext {
-    const env = process.env.NODE_ENV;
+    const env = (process.env.NODE_ENV ?? 'development') as 'development' | 'production' | 'test' | 'staging';
     const environment: ApplicationContext['environment'] =
       env === 'production' ? 'production' :
       env === 'staging' ? 'staging' :

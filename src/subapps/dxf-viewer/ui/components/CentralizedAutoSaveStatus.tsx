@@ -164,6 +164,33 @@ export function CentralizedAutoSaveStatus() {
     return isModalOpen ? 10 : enterpriseZIndex.toast;
   };
 
+  const hasOverrides = (value: Record<string, unknown> | undefined): boolean =>
+    !!value && Object.keys(value).length > 0;
+
+  const generalSettingsFlags = {
+    line: !!settings.line,
+    text: !!settings.text,
+    grip: !!settings.grip,
+    cursor: undefined,
+    grid: undefined,
+    ruler: undefined
+  };
+
+  const specificSettingsFlags = {
+    ...generalSettingsFlags,
+    specific: {
+      line: {
+        draft: hasOverrides(settings.line?.specific?.draft),
+        hover: hasOverrides(settings.line?.specific?.hover),
+        selection: hasOverrides(settings.line?.specific?.selection),
+        completion: hasOverrides(settings.line?.specific?.completion)
+      },
+      text: {
+        draft: hasOverrides(settings.text?.specific?.draft)
+      }
+    }
+  };
+
   return (
     <section
       className={`
@@ -197,11 +224,11 @@ export function CentralizedAutoSaveStatus() {
       <aside className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
         {/* 🔵 ΓΕΝΙΚΑ SETTINGS (Blue dots) */}
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} style={centralizedAutoSaveStatusStyles.settingsDots.container} {...getSettingsIndicatorProps('general')}>
-          {getGeneralSettingsConfig(settings).map(({ key, isActive, label }) => (
+          {getGeneralSettingsConfig(generalSettingsFlags).map(({ key, isActive, label }) => (
             <div
               key={key}
-              style={getGeneralSettingsDotStyle(isActive)}
-              {...getSettingDotProps(isActive, label)}
+              style={getGeneralSettingsDotStyle(Boolean(isActive))}
+              {...getSettingDotProps(Boolean(isActive), label)}
             />
           ))}
         </div>
@@ -211,11 +238,11 @@ export function CentralizedAutoSaveStatus() {
 
         {/* 🟢 ΕΙΔΙΚΑ SETTINGS (Green dots) */}
         <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`} style={centralizedAutoSaveStatusStyles.settingsDots.container} {...getSettingsIndicatorProps('specific')}>
-          {getSpecificSettingsConfig(settings).map(({ key, isActive, label }) => (
+          {getSpecificSettingsConfig(specificSettingsFlags).map(({ key, isActive, label }) => (
             <div
               key={key}
-              style={getSpecificSettingsDotStyle(isActive)}
-              {...getSettingDotProps(isActive, label)}
+              style={getSpecificSettingsDotStyle(Boolean(isActive))}
+              {...getSettingDotProps(Boolean(isActive), label)}
             />
           ))}
         </div>

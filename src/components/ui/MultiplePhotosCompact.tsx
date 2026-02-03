@@ -32,8 +32,8 @@ export interface PhotoSlot {
   preview?: string;
   uploadUrl?: string;
   fileName?: string;
-  isUploading: boolean;
-  uploadProgress: number;
+  isUploading?: boolean;
+  uploadProgress?: number;
   error?: string;
 }
 

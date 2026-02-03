@@ -15,6 +15,27 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import ErrorBoundary from '@/components/ui/ErrorBoundary/ErrorBoundary';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+type DxfCanvasComponent = typeof import('../../canvas-v2/dxf-canvas/DxfCanvas').DxfCanvas;
+type FullLayoutDebugComponent = typeof import('../../debug/layout-debug').FullLayoutDebug;
+type AdminLayerManagerComponent = typeof import('./AdminLayerManager').AdminLayerManager;
+type LevelPanelComponent = typeof import('./LevelPanel').LevelPanel;
+type HierarchyDebugPanelComponent = typeof import('../../debug/panels/HierarchyDebugPanel').HierarchyDebugPanel;
+type DxfSettingsPanelComponent = typeof import('./DxfSettingsPanel').DxfSettingsPanel;
+type GlobalPerformanceDashboardComponent = typeof import('@/core/performance/components/GlobalPerformanceDashboard').default;
+
+type LazyLoadableComponent<P extends object> =
+  | ComponentType<P>
+  | React.ExoticComponent<P>;
+
+type NoProps = Record<string, never>;
+
+type DxfCanvasProps = React.ComponentPropsWithoutRef<DxfCanvasComponent>;
+type FullLayoutDebugProps = NoProps;
+type AdminLayerManagerProps = React.ComponentPropsWithoutRef<AdminLayerManagerComponent>;
+type LevelPanelProps = NonNullable<React.ComponentPropsWithoutRef<LevelPanelComponent>>;
+type HierarchyDebugPanelProps = NoProps;
+type DxfSettingsPanelProps = React.ComponentPropsWithoutRef<DxfSettingsPanelComponent>;
+type GlobalPerformanceDashboardProps = React.ComponentPropsWithoutRef<GlobalPerformanceDashboardComponent>;
 
 interface LazyLoadWrapperProps {
   fallback?: React.ReactNode;
@@ -64,12 +85,15 @@ const LazyLoadErrorFallback = (error: Error, _errorInfo: React.ErrorInfo, retry:
 /**
  * HOC για lazy loading με error handling
  */
-export function withLazyLoad<P extends object>(
-  importFunction: () => Promise<{ default: ComponentType<P> }>
+export function withLazyLoad<P extends object = Record<string, unknown>>(
+  importFunction: () => Promise<{ default: LazyLoadableComponent<P> }>
 ) {
-  const LazyComponent = lazy(importFunction);
+  const LazyComponent = lazy(async () => {
+    const module = await importFunction();
+    return { default: module.default as ComponentType<P> };
+  });
 
-  return React.memo((props: P) => (
+  return React.memo((props: React.PropsWithoutRef<P>) => (
     <ErrorBoundary
       componentName="LazyComponent"
       enableRetry={true}
@@ -141,35 +165,35 @@ export const LazyLoadWrapper: React.FC<LazyLoadWrapperProps> = ({
 /**
  * Lazy load common DXF Viewer components
  */
-export const LazyDxfCanvas = withLazyLoad(
-  () => import('../../canvas-v2/dxf-canvas/DxfCanvas').then(m => ({ default: m.DxfCanvas || m }))
+export const LazyDxfCanvas = withLazyLoad<DxfCanvasProps>(
+  () => import('../../canvas-v2/dxf-canvas/DxfCanvas').then(m => ({ default: m.DxfCanvas }))
 );
 
 // ✅ CENTRALIZED: Debug & Testing Components
-export const LazyFullLayoutDebug = withLazyLoad(
+export const LazyFullLayoutDebug = withLazyLoad<FullLayoutDebugProps>(
   () => import('../../debug/layout-debug').then(m => ({ default: m.FullLayoutDebug }))
 );
 
-export const LazyAdminLayerManager = withLazyLoad(
+export const LazyAdminLayerManager = withLazyLoad<AdminLayerManagerProps>(
   () => import('./AdminLayerManager').then(m => ({ default: m.AdminLayerManager }))
 );
 
-export const LazyLevelPanel = withLazyLoad(
+export const LazyLevelPanel = withLazyLoad<LevelPanelProps>(
   () => import('./LevelPanel').then(m => ({ default: m.LevelPanel }))
 );
 
-export const LazyHierarchyDebugPanel = withLazyLoad(
+export const LazyHierarchyDebugPanel = withLazyLoad<HierarchyDebugPanelProps>(
   () => import('../../debug/panels/HierarchyDebugPanel').then(m => ({ default: m.HierarchyDebugPanel }))
 );
 
-export const LazyColorPalettePanel = withLazyLoad(
+export const LazyColorPalettePanel = withLazyLoad<DxfSettingsPanelProps>(
   () => import('./DxfSettingsPanel').then(m => ({ default: m.DxfSettingsPanel }))
 );
 
 /**
  * 🚀 ENTERPRISE: Performance Dashboard - Client-Only
  */
-export const LazyGlobalPerformanceDashboard = withLazyLoad(
+export const LazyGlobalPerformanceDashboard = withLazyLoad<GlobalPerformanceDashboardProps>(
   () => import('@/core/performance/components/GlobalPerformanceDashboard')
 );
 

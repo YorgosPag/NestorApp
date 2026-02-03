@@ -215,7 +215,7 @@ export const DraggableOverlayToolbar: React.FC<DraggableOverlayToolbarProps> = (
       polylineControlPromise.then((polylineControl) => {
         if (polylineControl?.stop) {
           toolStyleStore.setOverlayCompletionCallback(() => {
-            polylineControl.stop?.stop();
+            polylineControl.stop();
           });
         }
       }).catch((error) => {

@@ -48,7 +48,7 @@ interface LayersSectionProps {
   onColorGroupsMerge?: (targetColorGroup: string, sourceColorGroups: string[]) => void;
   // Expansion state (optional - matching LevelPanel props)
   expandedKeys?: Set<string>;
-  onExpandChange?: (next: Set<string>) => void;
+  onExpandChange?: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 export function LayersSection({
@@ -70,8 +70,10 @@ export function LayersSection({
   onLayersMerge,
   onColorGroupsMerge,
   expandedKeys = new Set<string>(), // ✅ ENTERPRISE: Default value for optional prop
-  onExpandChange = () => {} // ✅ ENTERPRISE: Default no-op function for optional prop
+  onExpandChange
 }: LayersSectionProps) {
+  const noopExpandChange: React.Dispatch<React.SetStateAction<Set<string>>> = () => {};
+  const effectiveOnExpandChange = onExpandChange ?? noopExpandChange;
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
@@ -134,7 +136,7 @@ export function LayersSection({
     setColorPickerLayer: state.setColorPickerLayer,
     setEditingLayer: state.setEditingLayer,
     setEditingName: state.setEditingName,
-    setExpandedLayers: onExpandChange,
+    setExpandedLayers: effectiveOnExpandChange,
     
     // Callbacks
     handleLayerMultiSelectForMerge: callbacks.handleLayerMultiSelectForMerge,
@@ -198,7 +200,7 @@ export function LayersSection({
         colorPickerColorGroup={state.colorPickerColorGroup}
         selectedColorGroupsForMerge={state.selectedColorGroupsForMerge}
         
-        setExpandedColorGroups={onExpandChange}
+        setExpandedColorGroups={effectiveOnExpandChange}
         setEditingColorGroup={state.setEditingColorGroup}
         setEditingColorGroupName={state.setEditingColorGroupName}
         setColorPickerColorGroup={state.setColorPickerColorGroup}
