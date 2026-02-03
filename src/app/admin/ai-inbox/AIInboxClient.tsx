@@ -191,7 +191,11 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         throw new Error('Admin user has no companyId - tenant isolation violated');
       }
 
-      const data = await getPendingTriageCommunications(companyId);
+      const result = await getPendingTriageCommunications(companyId, adminContext.operationId);
+      if (!result.ok) {
+        throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
+      }
+      const data = result.data;
 
       // Fallback to mock data if empty (development only)
       const finalData = data.length > 0 ? data : (ENABLE_MOCK_DATA ? getMockCommunications() : []);
@@ -217,7 +221,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
     } finally {
       setLoading(false);
     }
-  }, [adminContext.uid]);
+  }, [adminContext.companyId, adminContext.operationId, adminContext.uid, t]);
 
   useEffect(() => {
     loadPendingCommunications();
@@ -231,7 +235,17 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
     setActionLoading(commId);
     try {
       // 🏢 ENTERPRISE: Real server action με idempotent task creation
-      const result = await approveCommunication(commId, adminContext.uid);
+      const result = await approveCommunication(
+        commId,
+        adminContext.uid,
+        adminContext.companyId,
+        adminContext.operationId
+      );
+
+      if (!result.ok) {
+        toast.error(t('aiInbox.approveFailedWithErrorId', { errorId: result.errorId }));
+        return;
+      }
 
       // Update local state
       setCommunications(prev =>
@@ -242,7 +256,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         )
       );
 
-      toast.success(t('admin.approveSuccess'));
+      toast.success(t('aiInbox.approveSuccess'));
       logger.info('Communication approved', {
         communicationId: commId,
         taskId: result.taskId,
@@ -250,7 +264,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
       });
     } catch (err) {
       logger.error('Approve failed', { communicationId: commId, error: err });
-      toast.error(t('admin.approveFailed'));
+      toast.error(t('aiInbox.approveFailed'));
     } finally {
       setActionLoading(null);
     }
@@ -260,7 +274,17 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
     setActionLoading(commId);
     try {
       // 🏢 ENTERPRISE: Real server action για reject
-      await rejectCommunication(commId);
+      const result = await rejectCommunication(
+        commId,
+        adminContext.companyId,
+        adminContext.uid,
+        adminContext.operationId
+      );
+
+      if (!result.ok) {
+        toast.error(t('aiInbox.rejectFailedWithErrorId', { errorId: result.errorId }));
+        return;
+      }
 
       setCommunications(prev =>
         prev.map(comm =>
@@ -270,14 +294,14 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         )
       );
 
-      toast.success(t('admin.rejectSuccess'));
+      toast.success(t('aiInbox.rejectSuccess'));
       logger.info('Communication rejected', {
         communicationId: commId,
         adminUid: adminContext.uid
       });
     } catch (err) {
       logger.error('Reject failed', { communicationId: commId, error: err });
-      toast.error(t('admin.rejectFailed'));
+      toast.error(t('aiInbox.rejectFailed'));
     } finally {
       setActionLoading(null);
     }
@@ -297,10 +321,10 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <Inbox className="h-8 w-8" />
-              {t('admin.aiInboxTitle')}
+              {t('aiInbox.title')}
             </h1>
             <p className="text-muted-foreground mt-2">
-              {t('admin.aiInboxDescription')}
+              {t('aiInbox.description')}
             </p>
             {/* Admin Context Debug (Development Only) */}
             {process.env.NODE_ENV === 'development' && (
@@ -313,12 +337,12 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
             {/* 🏢 ENTERPRISE: Badge μόνο όταν count > 0 */}
             {pendingCount > 0 && (
               <Badge variant="outline" className="text-lg px-3 py-1">
-                {pendingCount} {t('admin.pending')}
+                {pendingCount} {t('aiInbox.pending')}
               </Badge>
             )}
             <Button onClick={loadPendingCommunications} variant="outline" size="sm">
               <Loader2 className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              {t('admin.refresh')}
+              {t('aiInbox.refresh')}
             </Button>
           </div>
         </header>
@@ -334,9 +358,9 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         {/* Communications Table */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('admin.pendingMessages')}</CardTitle>
+            <CardTitle>{t('aiInbox.pendingMessagesTitle')}</CardTitle>
             <CardDescription>
-              {t('admin.pendingMessagesDescription')}
+              {t('aiInbox.pendingMessagesDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -347,27 +371,27 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
             ) : communications.length === 0 ? (
               <div className="text-center py-10">
                 <Inbox className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">{t('admin.noPendingMessages')}</p>
+                <p className="text-muted-foreground">{t('aiInbox.noPendingMessages')}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('admin.from')}</TableHead>
-                      <TableHead>{t('admin.channel')}</TableHead>
-                      <TableHead>{t('admin.content')}</TableHead>
-                      <TableHead>{t('admin.intent')}</TableHead>
-                      <TableHead>{t('admin.confidence')}</TableHead>
-                      <TableHead>{t('admin.status')}</TableHead>
-                      <TableHead>{t('admin.actions')}</TableHead>
+                      <TableHead>{t('aiInbox.from')}</TableHead>
+                      <TableHead>{t('aiInbox.channel')}</TableHead>
+                      <TableHead>{t('aiInbox.content')}</TableHead>
+                      <TableHead>{t('aiInbox.intent')}</TableHead>
+                      <TableHead>{t('aiInbox.confidence')}</TableHead>
+                      <TableHead>{t('aiInbox.status')}</TableHead>
+                      <TableHead>{t('aiInbox.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {communications.map((comm) => (
                       <TableRow key={comm.id}>
                         <TableCell className="font-medium">
-                          {comm.from || t('admin.unknownSender')}
+                          {comm.from || t('aiInbox.unknownSender')}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{comm.type}</Badge>
@@ -377,7 +401,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                         </TableCell>
                         <TableCell>
                           <Badge variant={getIntentBadgeVariant(comm.intentAnalysis?.intentType)}>
-                            {comm.intentAnalysis?.intentType || t('admin.unknownIntent')}
+                            {comm.intentAnalysis?.intentType || t('aiInbox.unknownIntent')}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -391,17 +415,17 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                           {comm.triageStatus === 'approved' ? (
                             <Badge variant="default">
                               <CheckCircle className="h-3 w-3 mr-1" />
-                              {t('admin.approved')}
+                              {t('aiInbox.approved')}
                             </Badge>
                           ) : comm.triageStatus === 'rejected' ? (
                             <Badge variant="destructive">
                               <XCircle className="h-3 w-3 mr-1" />
-                              {t('admin.rejected')}
+                              {t('aiInbox.rejected')}
                             </Badge>
                           ) : (
                             <Badge variant="outline">
                               <AlertTriangle className="h-3 w-3 mr-1" />
-                              {t('admin.pending')}
+                              {t('aiInbox.pending')}
                             </Badge>
                           )}
                         </TableCell>
@@ -420,7 +444,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                                   ) : (
                                     <>
                                       <CheckCircle className="h-4 w-4 mr-1" />
-                                      {t('admin.approve')}
+                                      {t('aiInbox.approve')}
                                     </>
                                   )}
                                 </Button>
@@ -431,7 +455,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                                   disabled={actionLoading === comm.id}
                                 >
                                   <XCircle className="h-4 w-4 mr-1" />
-                                  {t('admin.reject')}
+                                  {t('aiInbox.reject')}
                                 </Button>
                               </>
                             )}
@@ -442,7 +466,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                                 onClick={() => router.push(`/crm/tasks/${comm.linkedTaskId}`)}
                               >
                                 <Eye className="h-4 w-4 mr-1" />
-                                {t('admin.viewTask')}
+                                {t('aiInbox.viewTask')}
                               </Button>
                             )}
                           </div>
@@ -459,17 +483,18 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         {/* Info Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">{t('admin.howItWorks')}</CardTitle>
+            <CardTitle className="text-lg">{t('aiInbox.howItWorks')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>1. {t('admin.howItWorksStep1')}</p>
-            <p>2. {t('admin.howItWorksStep2')}</p>
-            <p>3. {t('admin.howItWorksStep3')}</p>
-            <p>4. {t('admin.howItWorksStep4')}</p>
-            <p>5. {t('admin.howItWorksStep5')}</p>
+            <p>1. {t('aiInbox.howItWorksStep1')}</p>
+            <p>2. {t('aiInbox.howItWorksStep2')}</p>
+            <p>3. {t('aiInbox.howItWorksStep3')}</p>
+            <p>4. {t('aiInbox.howItWorksStep4')}</p>
+            <p>5. {t('aiInbox.howItWorksStep5')}</p>
           </CardContent>
         </Card>
       </div>
     </main>
   );
 }
+

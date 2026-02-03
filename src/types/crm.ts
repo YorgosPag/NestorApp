@@ -111,6 +111,7 @@ export interface Communication {
 // Tasks
 export interface CrmTask {
   id?: string;
+  companyId?: string; // 🏢 ENTERPRISE: Tenant isolation
   title: string;
   description?: string;
   type: 'call' | 'email' | 'meeting' | 'viewing' | 'document' | 'follow_up' | 'other';

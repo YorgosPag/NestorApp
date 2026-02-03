@@ -2,6 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
+import { randomUUID } from 'crypto';
 import {
   collection,
   addDoc,
@@ -19,13 +20,58 @@ import {
   QueryDocumentSnapshot,
   DocumentData
 } from 'firebase/firestore';
+import { FieldValue as AdminFieldValue, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import type { Communication } from '@/types/crm';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
+import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { getCompanyWidePolicy, getProjectPolicy } from '@/services/assignment/AssignmentPolicyRepository';
+import { resolveTaskDueInHours } from '@/services/assignment/AssignmentPolicyService';
 
 // 🏢 ENTERPRISE: Centralized collection configuration
 // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES (COMMUNICATIONS collection deprecated)
 const COMMUNICATIONS_COLLECTION = COLLECTIONS.MESSAGES;
+
+// ============================================================================
+// LOGGER
+// ============================================================================
+
+const logger = createModuleLogger('COMMUNICATIONS_SERVICE');
+
+// ============================================================================
+// ERROR HELPERS
+// ============================================================================
+
+type ActionErrorCode = 'invalid_context' | 'not_found' | 'tenant_mismatch' | 'unknown';
+
+function getErrorDetails(error: unknown): { message: string; stack?: string; cause?: unknown } {
+  if (error instanceof Error) {
+    const withCause = error as Error & { cause?: unknown };
+    return { message: error.message, stack: error.stack, cause: withCause.cause };
+  }
+  return { message: 'Unknown error' };
+}
+
+function buildActionErrorMetadata(params: {
+  errorId: string;
+  companyId?: string;
+  communicationId?: string;
+  adminUid?: string;
+  operationId?: string;
+  error: unknown;
+}) {
+  const details = getErrorDetails(params.error);
+  return {
+    errorId: params.errorId,
+    companyId: params.companyId,
+    communicationId: params.communicationId,
+    adminUid: params.adminUid,
+    operationId: params.operationId,
+    errorMessage: details.message,
+    errorStack: details.stack,
+    errorCause: details.cause,
+  };
+}
 
 // 🏢 ENTERPRISE: Type-safe document transformation
 const transformCommunication = (docSnapshot: QueryDocumentSnapshot<DocumentData>): Communication => {
@@ -121,7 +167,23 @@ export async function deleteAllCommunications(): Promise<{ success: boolean; del
  * @enterprise Tenant-scoped query, server-side only
  * @created 2026-02-03 - Stage 2: Real Data + Actions
  */
-export async function getPendingTriageCommunications(companyId: string): Promise<Communication[]> {
+export async function getPendingTriageCommunications(
+  companyId: string,
+  operationId?: string
+): Promise<
+  | { ok: true; data: Communication[] }
+  | { ok: false; errorId: string; code: ActionErrorCode }
+> {
+  const errorId = randomUUID();
+
+  if (!companyId) {
+    logger.error(
+      'Invalid context for pending communications fetch',
+      buildActionErrorMetadata({ errorId, companyId, operationId, error: new Error('Missing companyId') })
+    );
+    return { ok: false, errorId, code: 'invalid_context' };
+  }
+
   try {
     // 🏢 ENTERPRISE: Use Firebase Admin SDK for server-side queries
     const adminDb = getAdminFirestore();
@@ -158,13 +220,19 @@ export async function getPendingTriageCommunications(companyId: string): Promise
     // 🏢 ENTERPRISE: Client-side sort by createdAt DESC (newest first)
     // This is a temporary workaround until the Firestore composite index is created
     // Performance impact: Negligible for <1000 items (typical inbox size)
-    return communications.sort((a, b) => {
+    const sorted = communications.sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
       return dateB - dateA; // DESC order (newest first)
     });
+
+    return { ok: true, data: sorted };
   } catch (error) {
-    throw new Error(`Failed to fetch pending communications: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    logger.error(
+      'Failed to fetch pending communications',
+      buildActionErrorMetadata({ errorId, companyId, operationId, error })
+    );
+    return { ok: false, errorId, code: 'unknown' };
   }
 }
 
@@ -180,15 +248,48 @@ export async function getPendingTriageCommunications(companyId: string): Promise
  */
 export async function approveCommunication(
   communicationId: string,
-  adminUid: string
-): Promise<{ success: boolean; taskId: string }> {
+  adminUid: string,
+  companyId: string,
+  operationId?: string
+): Promise<
+  | { ok: true; taskId: string }
+  | { ok: false; errorId: string; code: ActionErrorCode }
+> {
+  const errorId = randomUUID();
+
+  if (!companyId || !adminUid) {
+    logger.error(
+      'Invalid context for approveCommunication',
+      buildActionErrorMetadata({
+        errorId,
+        companyId,
+        communicationId,
+        adminUid,
+        operationId,
+        error: new Error('Missing companyId or adminUid'),
+      })
+    );
+    return { ok: false, errorId, code: 'invalid_context' };
+  }
+
   try {
     // 🏢 ENTERPRISE: Use Firebase Admin SDK
     const adminDb = getAdminFirestore();
     const commDoc = await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).get();
 
     if (!commDoc.exists) {
-      throw new Error('Communication not found');
+      logger.error(
+        'Communication not found on approveCommunication',
+        buildActionErrorMetadata({
+          errorId,
+          companyId,
+          communicationId,
+          adminUid,
+          operationId,
+          error: new Error('Communication not found'),
+        })
+      );
+      return { ok: false, errorId, code: 'not_found' };
     }
 
     const data = commDoc.data()!;
@@ -205,10 +306,32 @@ export async function approveCommunication(
     }
     const comm = communication as Communication;
 
+    if (comm.companyId !== companyId) {
+      logger.error(
+        'Tenant isolation violation on approveCommunication',
+        buildActionErrorMetadata({
+          errorId,
+          companyId,
+          communicationId,
+          adminUid,
+          operationId,
+          error: new Error('Communication belongs to different company'),
+        })
+      );
+      return { ok: false, errorId, code: 'tenant_mismatch' };
+    }
+
     // 2. Idempotency: If already approved and has linkedTaskId, return existing task ID
     if (comm.triageStatus === 'approved' && comm.linkedTaskId) {
-      return { success: true, taskId: comm.linkedTaskId };
+      return { ok: true, taskId: comm.linkedTaskId };
     }
+
+    const projectPolicy = comm.projectId
+      ? await getProjectPolicy(companyId, comm.projectId)
+      : null;
+    const companyPolicy = projectPolicy ?? await getCompanyWidePolicy(companyId);
+    const dueInHours = resolveTaskDueInHours(comm.intentAnalysis?.intentType, companyPolicy ?? undefined);
+    const dueDate = AdminTimestamp.fromMillis(Date.now() + dueInHours * 60 * 60 * 1000);
 
     // 3. Create CRM Task using Admin SDK (STOP 5 fix - no client-side repository)
     const tasksRef = adminDb.collection(COLLECTIONS.TASKS);
@@ -218,12 +341,13 @@ export async function approveCommunication(
       description: comm.content,
       type: 'follow_up',
       contactId: comm.contactId,
+      companyId,
       status: 'pending',
       priority: comm.intentAnalysis?.needsTriage ? 'high' : 'medium',
       assignedTo: adminUid, // TODO: Use AssignmentPolicyService to resolve assignee
-      dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      dueDate,
+      createdAt: AdminFieldValue.serverTimestamp(),
+      updatedAt: AdminFieldValue.serverTimestamp(),
       completedAt: null,
       reminderSent: false,
     };
@@ -236,12 +360,23 @@ export async function approveCommunication(
     await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).update({
       triageStatus: 'approved',
       linkedTaskId: taskId,
-      updatedAt: new Date().toISOString()
+      updatedAt: AdminFieldValue.serverTimestamp()
     });
 
-    return { success: true, taskId };
+    return { ok: true, taskId };
   } catch (error) {
-    throw new Error(`Failed to approve communication: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    logger.error(
+      'Failed to approve communication',
+      buildActionErrorMetadata({
+        errorId,
+        companyId,
+        communicationId,
+        adminUid,
+        operationId,
+        error,
+      })
+    );
+    return { ok: false, errorId, code: 'unknown' };
   }
 }
 
@@ -254,18 +389,86 @@ export async function approveCommunication(
  * @enterprise Simple status update
  * @audit Logs admin action
  */
-export async function rejectCommunication(communicationId: string): Promise<{ success: boolean }> {
+export async function rejectCommunication(
+  communicationId: string,
+  companyId: string,
+  adminUid: string,
+  operationId?: string
+): Promise<
+  | { ok: true }
+  | { ok: false; errorId: string; code: ActionErrorCode }
+> {
+  const errorId = randomUUID();
+
+  if (!companyId || !adminUid) {
+    logger.error(
+      'Invalid context for rejectCommunication',
+      buildActionErrorMetadata({
+        errorId,
+        companyId,
+        communicationId,
+        adminUid,
+        operationId,
+        error: new Error('Missing companyId or adminUid'),
+      })
+    );
+    return { ok: false, errorId, code: 'invalid_context' };
+  }
+
   try {
     // 🏢 ENTERPRISE: Use Firebase Admin SDK
     const adminDb = getAdminFirestore();
+    const commDoc = await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).get();
+
+    if (!commDoc.exists) {
+      logger.error(
+        'Communication not found on rejectCommunication',
+        buildActionErrorMetadata({
+          errorId,
+          companyId,
+          communicationId,
+          adminUid,
+          operationId,
+          error: new Error('Communication not found'),
+        })
+      );
+      return { ok: false, errorId, code: 'not_found' };
+    }
+
+    const data = commDoc.data() as Communication | undefined;
+    if (data?.companyId !== companyId) {
+      logger.error(
+        'Tenant isolation violation on rejectCommunication',
+        buildActionErrorMetadata({
+          errorId,
+          companyId,
+          communicationId,
+          adminUid,
+          operationId,
+          error: new Error('Communication belongs to different company'),
+        })
+      );
+      return { ok: false, errorId, code: 'tenant_mismatch' };
+    }
 
     await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).update({
       triageStatus: 'rejected',
-      updatedAt: new Date().toISOString()
+      updatedAt: AdminFieldValue.serverTimestamp()
     });
 
-    return { success: true };
+    return { ok: true };
   } catch (error) {
-    throw new Error(`Failed to reject communication: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    logger.error(
+      'Failed to reject communication',
+      buildActionErrorMetadata({
+        errorId,
+        companyId,
+        communicationId,
+        adminUid,
+        operationId,
+        error,
+      })
+    );
+    return { ok: false, errorId, code: 'unknown' };
   }
 }

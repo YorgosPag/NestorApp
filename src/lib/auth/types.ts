@@ -140,6 +140,9 @@ export const PERMISSIONS = {
   'settings:settings:view': true,
   'settings:settings:manage': true,
 
+  // Admin access (legacy permission ID)
+  'admin_access': true,
+
   // Admin & System Operations
   'admin:migrations:execute': true,
   'admin:data:fix': true,              // Data correction operations (fix incorrect data)

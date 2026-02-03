@@ -11,18 +11,48 @@ import {
 import { SidebarLogo } from "@/components/sidebar/sidebar-logo"
 import { SidebarMenuSection } from "@/components/sidebar/sidebar-menu-section"
 // 🗑️ REMOVED (2026-01-11): SidebarUserFooter - User management moved to header dropdown only
-import { mainMenuItems, toolsMenuItems, settingsMenuItem } from "@/config/navigation"
+import { getMainMenuItems, getToolsMenuItems, getSettingsMenuItems } from "@/config/navigation"
 import { useSidebarState } from "@/hooks/useSidebarState"
 import { useTranslationLazy } from "@/i18n/hooks/useTranslationLazy"
 import { MapPin } from "lucide-react"
 import { useSidebar } from "@/components/ui/sidebar"
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects"
+import { useAuth } from "@/auth/contexts/AuthContext"
 
 export function AppSidebar() {
   const iconSizes = useIconSizes()
     const { expandedItems, toggleExpanded, isItemActive } = useSidebarState()
-    const { t, isLoading } = useTranslationLazy('navigation')
+    const { t } = useTranslationLazy('navigation')
     const { isMobile, setOpenMobile } = useSidebar()
+    const { user } = useAuth()
+
+    // 🏢 ENTERPRISE: Build user permissions with role-based fallback
+    const userPermissions = React.useMemo(() => {
+        // Start with explicit permissions from custom claims
+        const permissions = user?.permissions ? [...user.permissions] : []
+
+        // 🏢 ENTERPRISE: Fallback - Admin users automatically get admin_access
+        // This handles cases where Firebase custom claims haven't been set yet
+        if (user?.globalRole === 'admin' || user?.globalRole === 'super_admin') {
+            if (!permissions.includes('admin_access')) {
+                permissions.push('admin_access')
+            }
+        }
+
+        return permissions
+    }, [user?.permissions, user?.globalRole])
+    const mainMenuItems = React.useMemo(
+        () => getMainMenuItems(userPermissions),
+        [userPermissions]
+    )
+    const toolsMenuItems = React.useMemo(
+        () => getToolsMenuItems(userPermissions),
+        [userPermissions]
+    )
+    const settingsMenuItem = React.useMemo(
+        () => getSettingsMenuItems(userPermissions),
+        [userPermissions]
+    )
 
     // Handle navigation click with mobile sidebar auto-close
     const handleNavigationClick = () => {
@@ -39,7 +69,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <SidebarMenuSection
-                    label={isLoading ? 'Main Menu' : t('menu.main')}
+                    label={t('menu.main')}
                     items={mainMenuItems}
                     expandedItems={expandedItems}
                     onToggleExpanded={toggleExpanded}
@@ -54,12 +84,12 @@ export function AppSidebar() {
                         className={`flex items-center gap-2 text-gray-700 dark:text-gray-300 py-2 px-1 w-full text-left rounded-md ${HOVER_TEXT_EFFECTS.GRAY} ${HOVER_BACKGROUND_EFFECTS.MUTED} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                     >
                         <MapPin className={iconSizes.sm} />
-                        <span className="font-medium">{isLoading ? 'Navigation' : t('pages.navigation')}</span>
+                        <span className="font-medium">{t('pages.navigation')}</span>
                     </a>
                 </div>
 
                 <SidebarMenuSection
-                    label={isLoading ? 'Tools' : t('menu.tools')}
+                    label={t('menu.tools')}
                     items={toolsMenuItems}
                     expandedItems={expandedItems}
                     onToggleExpanded={toggleExpanded}

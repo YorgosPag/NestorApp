@@ -16,18 +16,19 @@
  * - NO hardcoded thresholds (από policy)
  */
 
-'use server';
+import 'server-only';
 
 import type {
   AssignmentPolicy,
   AssignmentRule,
   PolicyResolutionResult,
 } from '@/types/assignment-policy';
-import type { MessageIntentAnalysis } from '@/schemas/ai-analysis';
+import type { MessageIntentAnalysis, IntentTypeValue } from '@/schemas/ai-analysis';
 import {
   getProjectPolicy,
   getCompanyWidePolicy,
 } from './AssignmentPolicyRepository';
+import { ASSIGNMENT_POLICY_DEFAULTS } from '@/types/assignment-policy';
 
 // ============================================================================
 // POLICY RESOLUTION
@@ -220,4 +221,24 @@ export function getTriageAssignee(
   policy?: AssignmentPolicy
 ): AssignmentPolicy['triageSettings']['triageAssignedTo'] | undefined {
   return policy?.triageSettings.triageAssignedTo;
+}
+
+// ============================================================================
+// TASK SLA HELPERS
+// ============================================================================
+
+/**
+ * Resolve task due date offset (hours) from policy
+ * @enterprise DB-driven, tenant-scoped defaults
+ */
+export function resolveTaskDueInHours(
+  intentType: IntentTypeValue | undefined,
+  policy?: AssignmentPolicy
+): number {
+  const defaults = policy?.taskDefaults ?? ASSIGNMENT_POLICY_DEFAULTS.taskDefaults;
+  const perIntent = intentType
+    ? policy?.taskDefaults?.dueInHoursByIntent?.[intentType]
+    : undefined;
+
+  return perIntent ?? defaults.defaultDueInHours;
 }

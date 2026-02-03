@@ -15,8 +15,8 @@
  * - Audit trail (createdBy, updatedBy, timestamps)
  */
 
-import 'server-only';
 'use server';
+import 'server-only';
 
 import { db } from '@/lib/firebase';
 import {
@@ -82,6 +82,7 @@ export async function createAssignmentPolicy(
     description: input.description,
     rules: rulesWithIds,
     triageSettings: input.triageSettings,
+    taskDefaults: input.taskDefaults,
     status: 'active',
     createdBy: input.createdBy,
     createdAt: serverTimestamp() as Timestamp,

@@ -36,11 +36,8 @@ interface MenuItem {
 const environment: NavigationEnvironment =
   process.env.NODE_ENV === 'development' ? 'development' : 'production';
 
-// 🏢 ENTERPRISE: User permissions (expandable για future features)
-const userPermissions: string[] = [
-  // Add user permissions here as needed
-  // 'admin_access', 'legal_access', etc.
-];
+// 🏢 ENTERPRISE: Default user permissions (empty for static usage)
+const defaultUserPermissions: string[] = [];
 
 // ============================================================================
 // 🏭 SMART FACTORY POWERED EXPORTS - ENTERPRISE GRADE
@@ -51,21 +48,37 @@ const userPermissions: string[] = [
  * ✅ BACKWARD COMPATIBLE: Same mainMenuItems export as before
  * ✅ CENTRALIZED: All configuration now comes from smart-navigation-factory.ts
  */
-export const mainMenuItems: MenuItem[] = createMainMenuItems(environment, userPermissions);
+export const mainMenuItems: MenuItem[] = createMainMenuItems(environment, defaultUserPermissions);
 
 /**
  * ✅ ENTERPRISE: Tools menu items via Smart Factory
  * ✅ BACKWARD COMPATIBLE: Same toolsMenuItems export as before
  * ✅ CENTRALIZED: All configuration now comes from smart-navigation-factory.ts
  */
-export const toolsMenuItems: MenuItem[] = createToolsMenuItems(environment, userPermissions);
+export const toolsMenuItems: MenuItem[] = createToolsMenuItems(environment, defaultUserPermissions);
 
 /**
  * ✅ ENTERPRISE: Settings menu items via Smart Factory
  * ✅ BACKWARD COMPATIBLE: Same settingsMenuItem export as before
  * ✅ CENTRALIZED: All configuration now comes from smart-navigation-factory.ts
  */
-export const settingsMenuItem: MenuItem[] = createSettingsMenuItems(environment, userPermissions);
+export const settingsMenuItem: MenuItem[] = createSettingsMenuItems(environment, defaultUserPermissions);
+
+// ============================================================================
+// 🏢 ENTERPRISE: Permission-aware exports (for runtime filtering)
+// ============================================================================
+
+export function getMainMenuItems(userPermissions: string[] = []): MenuItem[] {
+  return createMainMenuItems(environment, userPermissions);
+}
+
+export function getToolsMenuItems(userPermissions: string[] = []): MenuItem[] {
+  return createToolsMenuItems(environment, userPermissions);
+}
+
+export function getSettingsMenuItems(userPermissions: string[] = []): MenuItem[] {
+  return createSettingsMenuItems(environment, userPermissions);
+}
 
 // ============================================================================
 // 🏢 BACKWARD COMPATIBLE EXPORTS & DEVELOPMENT HELPERS
@@ -82,7 +95,10 @@ export default {
 
   // New: Smart factory utilities (optional usage)
   environment,
-  userPermissions
+  defaultUserPermissions,
+  getMainMenuItems,
+  getToolsMenuItems,
+  getSettingsMenuItems
 };
 
 // Development debug - disabled to reduce console noise

@@ -54,6 +54,15 @@ export const TriageSettingsSchema = z.object({
 });
 
 // ============================================================================
+// TASK DEFAULTS SCHEMA
+// ============================================================================
+
+export const TaskDefaultsSchema = z.object({
+  defaultDueInHours: z.number().int().min(1),
+  dueInHoursByIntent: z.record(IntentType, z.number().int().min(1)).optional(),
+});
+
+// ============================================================================
 // ASSIGNMENT POLICY SCHEMA
 // ============================================================================
 
@@ -65,6 +74,7 @@ export const AssignmentPolicySchema = z.object({
   description: z.string().optional(),
   rules: z.array(AssignmentRuleSchema),
   triageSettings: TriageSettingsSchema,
+  taskDefaults: TaskDefaultsSchema.optional(),
   status: z.enum(['active', 'inactive', 'archived']),
   createdBy: z.string().min(1),
   createdAt: z.string().datetime(), // ISO 8601 string
@@ -84,6 +94,7 @@ export const CreateAssignmentPolicyInputSchema = z.object({
   description: z.string().optional(),
   rules: z.array(AssignmentRuleSchema.omit({ id: true })),
   triageSettings: TriageSettingsSchema,
+  taskDefaults: TaskDefaultsSchema,
   createdBy: z.string().min(1),
 });
 
@@ -92,6 +103,7 @@ export const UpdateAssignmentPolicyInputSchema = z.object({
   description: z.string().optional(),
   rules: z.array(AssignmentRuleSchema).optional(),
   triageSettings: TriageSettingsSchema.optional(),
+  taskDefaults: TaskDefaultsSchema.optional(),
   status: z.enum(['active', 'inactive', 'archived']).optional(),
   updatedBy: z.string().min(1),
 });

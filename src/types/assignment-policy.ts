@@ -20,6 +20,16 @@
 import type { IntentTypeValue } from '@/schemas/ai-analysis';
 
 // ============================================================================
+// POLICY DEFAULTS (SSoT)
+// ============================================================================
+
+export const ASSIGNMENT_POLICY_DEFAULTS = {
+  taskDefaults: {
+    defaultDueInHours: 24,
+  },
+} as const;
+
+// ============================================================================
 // ASSIGNMENT TARGET (User or Role)
 // ============================================================================
 
@@ -124,6 +134,14 @@ export interface AssignmentPolicy {
     autoCreateTriageTask: boolean;
   };
 
+  /** Task defaults (SLA) */
+  taskDefaults?: {
+    /** Default due date offset (hours) */
+    defaultDueInHours: number;
+    /** Optional SLA overrides per intent type */
+    dueInHoursByIntent?: Partial<Record<IntentTypeValue, number>>;
+  };
+
   /** Policy status */
   status: 'active' | 'inactive' | 'archived';
 
@@ -182,6 +200,7 @@ export interface CreateAssignmentPolicyInput {
   description?: string;
   rules: Omit<AssignmentRule, 'id'>[];
   triageSettings: AssignmentPolicy['triageSettings'];
+  taskDefaults: NonNullable<AssignmentPolicy['taskDefaults']>;
   createdBy: string;
 }
 
@@ -193,6 +212,7 @@ export interface UpdateAssignmentPolicyInput {
   description?: string;
   rules?: AssignmentRule[];
   triageSettings?: AssignmentPolicy['triageSettings'];
+  taskDefaults?: AssignmentPolicy['taskDefaults'];
   status?: AssignmentPolicy['status'];
   updatedBy: string;
 }

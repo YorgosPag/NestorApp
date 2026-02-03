@@ -38,21 +38,29 @@ export function LanguageSwitcher() {
     try {
       // Import type from lazy-config
       type Language = 'el' | 'en' | 'pseudo';
+      const nextLanguage = languageCode as Language;
 
-      // Preload critical namespaces for the new language
-      await preloadCriticalNamespaces(languageCode as Language);
+      // Preload critical namespaces for the new language (non-blocking on failures)
+      try {
+        await preloadCriticalNamespaces(nextLanguage);
+      } catch (error) {
+        console.warn('⚠️ Failed to preload critical namespaces:', error);
+      }
 
-      // Also preload geo-canvas namespace if we're on that page
+      // Preload route-specific namespaces to avoid fallback-to-el
+      const { loadNamespace } = await import('@/i18n/lazy-config');
       if (window.location.pathname.includes('/geo/canvas')) {
-        const { loadNamespace } = await import('@/i18n/lazy-config');
-        await loadNamespace('geo-canvas', languageCode as Language);
+        await loadNamespace('geo-canvas', nextLanguage);
+      }
+      if (window.location.pathname.startsWith('/admin')) {
+        await loadNamespace('admin', nextLanguage);
       }
       
-      // Change language
-      await i18n.changeLanguage(languageCode);
+      // Change language (should proceed even if preloading failed)
+      await i18n.changeLanguage(nextLanguage);
       
       // Store preference in localStorage
-      localStorage.setItem('preferred-language', languageCode);
+      localStorage.setItem('preferred-language', nextLanguage);
       
     } catch (error) {
       console.error('❌ Failed to change language:', error);
