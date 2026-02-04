@@ -6,7 +6,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
-import { loadNamespace, type Namespace, type Language, SUPPORTED_LANGUAGES } from './lazy-config';
+import { loadNamespace, type Namespace, type Language, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from './lazy-config';
 
 // Load essential translations for initial boot
 import commonEl from './locales/el/common.json';
@@ -32,15 +32,9 @@ const resources = {
 };
 
 // Detect preferred language
-const getInitialLanguage = (): string => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('preferred-language');
-    if (saved) return saved;
-    
-    const browser = navigator.language.split('-')[0];
-    return browser === 'en' ? 'en' : 'el';
-  }
-  return 'el';
+const getInitialLanguage = (): Language => {
+  // Always start with default language to avoid SSR/CSR mismatch.
+  return DEFAULT_LANGUAGE;
 };
 
 // Initialize i18n with minimal resources
@@ -50,7 +44,7 @@ i18n
   .init({
     resources,
     lng: getInitialLanguage(),
-    fallbackLng: 'el',
+    fallbackLng: DEFAULT_LANGUAGE,
     debug: false, // Disabled to reduce console noise
     
     interpolation: {
@@ -89,10 +83,11 @@ if (typeof window !== 'undefined') {
       'dxf-viewer',
       'geo-canvas',
     ];
-    const currentLang = i18n.language as Language;
 
-    // Validate language is supported, fallback to 'el'
-    const validLang: Language = SUPPORTED_LANGUAGES.includes(currentLang as Language) ? currentLang : 'el';
+    const saved = localStorage.getItem('preferred-language');
+    const browser = navigator.language.split('-')[0];
+    const preferred = (saved || browser) as Language;
+    const validLang: Language = SUPPORTED_LANGUAGES.includes(preferred) ? preferred : DEFAULT_LANGUAGE;
 
     try {
       await Promise.all(
@@ -100,6 +95,10 @@ if (typeof window !== 'undefined') {
           await loadNamespace(ns, validLang);
         })
       );
+
+      if (validLang !== i18n.language) {
+        await i18n.changeLanguage(validLang);
+      }
     } catch (error) {
       console.error('❌ Failed to preload namespaces:', error);
     }

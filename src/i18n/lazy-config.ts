@@ -11,6 +11,9 @@ import ICU from 'i18next-icu';
 export const SUPPORTED_LANGUAGES = ['el', 'en', 'pseudo'] as const;
 export type Language = typeof SUPPORTED_LANGUAGES[number];
 
+// Default language (SSoT)
+export const DEFAULT_LANGUAGE: Language = 'el';
+
 // Available namespaces
 export const SUPPORTED_NAMESPACES = [
   'common',
