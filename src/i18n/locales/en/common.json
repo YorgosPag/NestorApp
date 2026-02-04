@@ -927,6 +927,8 @@
     "method": "Method",
     "enrolledAt": "Enabled on",
     "backupCodesRemaining": "Remaining codes",
+    "syncClaims": "Sync 2FA permissions",
+    "syncSuccess": "2FA permissions synced",
     "disable": "Disable 2FA",
     "disableTitle": "Disable Two-Factor Authentication",
     "disableDescription": "Are you sure you want to disable two-factor authentication? This will reduce the security of your account.",
@@ -934,7 +936,8 @@
       "startFailed": "Failed to start 2FA enrollment",
       "invalidCodeLength": "Code must be 6 digits",
       "verifyFailed": "Invalid verification code",
-      "disableFailed": "Failed to disable 2FA"
+      "disableFailed": "Failed to disable 2FA",
+      "syncFailed": "Failed to sync 2FA permissions"
     }
   },
   "priority": {

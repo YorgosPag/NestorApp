@@ -52,9 +52,10 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { twoFactorService } from '@/services/two-factor';
 import type { UserTwoFactorState, TotpSecretInfo } from '@/services/two-factor';
+import { AUTH_EVENTS } from '@/config/domain-constants';
 
 // =============================================================================
 // TYPES
@@ -93,6 +94,9 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
   const [copiedCodes, setCopiedCodes] = useState(false);
   const [showDisableDialog, setShowDisableDialog] = useState(false);
   const [twoFactorState, setTwoFactorState] = useState<UserTwoFactorState | null>(null);
+  const [claimsSynced, setClaimsSynced] = useState(false);
+  const [claimsSyncing, setClaimsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Initialize service
   React.useEffect(() => {
@@ -122,6 +126,44 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
   React.useEffect(() => {
     loadTwoFactorState();
   }, [loadTwoFactorState]);
+
+  // Sync custom claims if user is enrolled but token is stale
+  React.useEffect(() => {
+    const syncClaimsIfNeeded = async () => {
+      if (!auth.currentUser || !twoFactorState || twoFactorState.status !== 'enrolled') {
+        return;
+      }
+
+      if (claimsSynced || claimsSyncing) {
+        return;
+      }
+
+      setClaimsSyncing(true);
+      try {
+        const tokenResult = await auth.currentUser.getIdTokenResult(true);
+        const mfaEnrolled = tokenResult.claims.mfaEnrolled === true;
+
+        if (!mfaEnrolled) {
+          const syncResult = await twoFactorService.syncMfaEnrollmentClaim();
+          if (!syncResult.success) {
+            setError(syncResult.error || t('twoFactor.errors.syncFailed'));
+            return;
+          }
+
+          await auth.currentUser.getIdToken(true);
+          window.dispatchEvent(new CustomEvent(AUTH_EVENTS.REFRESH_SESSION));
+        }
+
+        setClaimsSynced(true);
+      } catch (err) {
+        console.error('Failed to sync MFA claims:', err);
+      } finally {
+        setClaimsSyncing(false);
+      }
+    };
+
+    syncClaimsIfNeeded();
+  }, [twoFactorState, claimsSynced, claimsSyncing, t]);
 
   // Start enrollment
   const handleStartEnrollment = async () => {
@@ -161,6 +203,17 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
       if (result.success && result.backupCodes) {
         setBackupCodes(result.backupCodes);
         setStep('backup_codes');
+
+        const syncResult = await twoFactorService.syncMfaEnrollmentClaim();
+        if (!syncResult.success) {
+          setError(syncResult.error || t('twoFactor.errors.syncFailed'));
+          return;
+        }
+
+        if (auth.currentUser) {
+          await auth.currentUser.getIdToken(true);
+          window.dispatchEvent(new CustomEvent(AUTH_EVENTS.REFRESH_SESSION));
+        }
       } else {
         setError(result.error || t('twoFactor.errors.verifyFailed'));
       }
@@ -236,6 +289,33 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
       setError(err instanceof Error ? err.message : t('twoFactor.errors.disableFailed'));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSyncClaims = async () => {
+    if (!auth.currentUser || claimsSyncing) {
+      return;
+    }
+
+    setClaimsSyncing(true);
+    setError(null);
+    setSyncMessage(null);
+
+    try {
+      const syncResult = await twoFactorService.syncMfaEnrollmentClaim();
+      if (!syncResult.success) {
+        setError(syncResult.error || t('twoFactor.errors.syncFailed'));
+        return;
+      }
+
+      await auth.currentUser.getIdToken(true);
+      window.dispatchEvent(new CustomEvent(AUTH_EVENTS.REFRESH_SESSION));
+      setClaimsSynced(true);
+      setSyncMessage(t('twoFactor.syncSuccess'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('twoFactor.errors.syncFailed'));
+    } finally {
+      setClaimsSyncing(false);
     }
   };
 
@@ -531,6 +611,36 @@ export function TwoFactorEnrollment({ userId, onStatusChange }: TwoFactorEnrollm
           </dl>
         </section>
       )}
+
+      {syncMessage && (
+        <output
+          role="status"
+          className={cn(
+            layout.flexCenterGap2,
+            layout.padding3,
+            borders.radiusClass.md,
+            colors.bg.success,
+            colors.text.success
+          )}
+        >
+          <Check className={iconSizes.sm} aria-hidden="true" />
+          {syncMessage}
+        </output>
+      )}
+
+      <Button
+        variant="outline"
+        onClick={handleSyncClaims}
+        disabled={claimsSyncing}
+        className="w-full"
+      >
+        {claimsSyncing ? (
+          <Loader2 className={cn(iconSizes.sm, 'animate-spin mr-2')} aria-hidden="true" />
+        ) : (
+          <Shield className={cn(iconSizes.sm, 'mr-2')} aria-hidden="true" />
+        )}
+        {t('twoFactor.syncClaims')}
+      </Button>
 
       <Button
         variant="destructive"

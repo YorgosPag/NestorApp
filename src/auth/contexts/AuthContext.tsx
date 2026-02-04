@@ -34,7 +34,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { sessionService } from '@/services/session';
 import { twoFactorService } from '@/services/two-factor/EnterpriseTwoFactorService';
-import { API_ROUTES } from '@/config/domain-constants';
+import { API_ROUTES, AUTH_EVENTS } from '@/config/domain-constants';
 import type {
   FirebaseAuthUser,
   SignUpData,
@@ -455,6 +455,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
 
     return () => unsubscribe();
+  }, []);
+
+  // 🔐 ENTERPRISE: External session refresh trigger (e.g., after MFA claim sync)
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleRefreshSession = async () => {
+      if (!auth.currentUser) {
+        return;
+      }
+
+      try {
+        await syncServerSession(auth.currentUser);
+        console.log('🔐 [AuthContext] Server session cookie refreshed (event)');
+      } catch (sessionError) {
+        console.warn('⚠️ [AuthContext] Failed to refresh server session cookie (event):', sessionError);
+      }
+    };
+
+    window.addEventListener(AUTH_EVENTS.REFRESH_SESSION, handleRefreshSession);
+
+    return () => {
+      window.removeEventListener(AUTH_EVENTS.REFRESH_SESSION, handleRefreshSession);
+    };
   }, []);
 
   // ==========================================================================

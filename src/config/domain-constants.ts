@@ -452,6 +452,20 @@ export const DEFAULTS = {
 export const API_ROUTES = {
   /** Create/clear Firebase session cookie for server-side auth */
   AUTH_SESSION: '/api/auth/session',
+  /** Mark MFA enrollment complete and sync custom claims */
+  AUTH_MFA_ENROLL_COMPLETE: '/api/auth/mfa/enroll/complete',
+} as const;
+
+// ============================================================================
+// AUTH EVENTS (SSoT)
+// ============================================================================
+
+/**
+ * Centralized auth-related browser events.
+ */
+export const AUTH_EVENTS = {
+  /** Request a server session cookie refresh */
+  REFRESH_SESSION: 'auth:refresh-session',
 } as const;
 
 // ============================================================================

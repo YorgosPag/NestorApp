@@ -30,6 +30,7 @@ import {
 import { doc, setDoc, getDoc, updateDoc, Firestore, serverTimestamp } from 'firebase/firestore';
 import QRCode from 'qrcode';
 import { auth } from '@/lib/firebase';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   TotpSecretInfo,
   EnrolledTotpFactor,
@@ -125,6 +126,41 @@ export class EnterpriseTwoFactorService {
 
   private constructor() {
     console.log('🔐 EnterpriseTwoFactorService created');
+  }
+
+  // ===========================================================================
+  // CLAIM SYNC
+  // ===========================================================================
+
+  /**
+   * Sync MFA enrollment to custom claims (server-side).
+   * Required so admin gates see mfaEnrolled=true.
+   */
+  async syncMfaEnrollmentClaim(): Promise<{ success: boolean; error?: string }> {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      return { success: false, error: 'No authenticated user' };
+    }
+
+    try {
+      const idToken = await currentUser.getIdToken(true);
+
+      const response = await fetch(API_ROUTES.AUTH_MFA_ENROLL_COMPLETE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json();
+        return { success: false, error: payload?.error || payload?.message || 'Failed to sync MFA' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to sync MFA' };
+    }
   }
 
   /**
