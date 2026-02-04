@@ -95,6 +95,37 @@ export const SESSION_POLICY = {
 } as const;
 
 // =============================================================================
+// SESSION COOKIE POLICY (SSoT)
+// =============================================================================
+
+/**
+ * Session cookie configuration (Firebase __session cookie).
+ * Centralized to avoid hardcoded values across the codebase.
+ */
+export const SESSION_COOKIE_CONFIG = {
+  /** Firebase session cookie name (required by Firebase hosting/Vercel) */
+  NAME: '__session',
+  /** Cookie path scope */
+  PATH: '/',
+  /** SameSite policy for session cookie */
+  SAME_SITE: 'lax',
+  /** HTTP-only cookie (not accessible by JS) */
+  HTTP_ONLY: true,
+} as const;
+
+/**
+ * Get session cookie duration in milliseconds.
+ * Uses centralized SESSION_POLICY.MAX_SESSION_HOURS.
+ */
+export function getSessionCookieDurationMs(): number {
+  const hours = SESSION_POLICY.MAX_SESSION_HOURS;
+  const minutesPerHour = 60;
+  const secondsPerMinute = 60;
+  const msPerSecond = 1000;
+  return hours * minutesPerHour * secondsPerMinute * msPerSecond;
+}
+
+// =============================================================================
 // DEVELOPMENT BYPASS POLICY
 // =============================================================================
 

@@ -34,6 +34,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { sessionService } from '@/services/session';
 import { twoFactorService } from '@/services/two-factor/EnterpriseTwoFactorService';
+import { API_ROUTES } from '@/config/domain-constants';
 import type {
   FirebaseAuthUser,
   SignUpData,
@@ -246,12 +247,63 @@ function clearCorruptedUserData(uid: string): void {
   }
 }
 
+/**
+ * Create/refresh server-side session cookie for admin pages.
+ * Required for production Server Components that rely on __session.
+ */
+async function syncServerSession(firebaseUser: FirebaseUser): Promise<void> {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const idToken = await firebaseUser.getIdToken(true);
+
+  const response = await fetch(API_ROUTES.AUTH_SESSION, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ idToken }),
+  });
+
+  if (!response.ok) {
+    let payload: SessionApiResponse | null = null;
+    try {
+      payload = (await response.json()) as SessionApiResponse;
+    } catch {
+      payload = null;
+    }
+
+    const errorMessage = payload?.error || payload?.message || 'Failed to create session cookie';
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Clear server-side session cookie on sign-out.
+ */
+async function clearServerSessionCookie(): Promise<void> {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  await fetch(API_ROUTES.AUTH_SESSION, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+}
+
 // =============================================================================
 // AUTH PROVIDER
 // =============================================================================
 
 interface AuthProviderProps {
   children: React.ReactNode;
+}
+
+interface SessionApiResponse {
+  success: boolean;
+  message: string;
+  error?: string;
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
@@ -382,7 +434,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Don't block login if session creation fails - just log
           console.warn('⚠️ [AuthContext] Failed to manage session (non-blocking):', sessionError);
         }
+
+        // 🔐 ENTERPRISE: Sync server-side session cookie for Server Components
+        try {
+          await syncServerSession(firebaseUser);
+          console.log('🔐 [AuthContext] Server session cookie synced');
+        } catch (sessionError) {
+          console.warn('⚠️ [AuthContext] Failed to sync server session cookie (non-blocking):', sessionError);
+        }
       } else {
+        try {
+          await clearServerSessionCookie();
+          console.log('🔐 [AuthContext] Server session cookie cleared');
+        } catch (sessionError) {
+          console.warn('⚠️ [AuthContext] Failed to clear server session cookie (non-blocking):', sessionError);
+        }
         setUser(null);
       }
       setLoading(false);
@@ -593,6 +659,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       await firebaseSignOut(auth);
       console.log('✅ [AuthContext] Sign out successful');
+
+      try {
+        await clearServerSessionCookie();
+        console.log('🔐 [AuthContext] Server session cookie cleared on sign-out');
+      } catch (sessionError) {
+        console.warn('⚠️ [AuthContext] Failed to clear server session cookie on sign-out:', sessionError);
+      }
     } catch (error) {
       handleError(error);
       throw error;

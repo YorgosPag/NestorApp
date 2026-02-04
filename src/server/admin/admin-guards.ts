@@ -11,6 +11,7 @@ import {
   type RuntimeEnvironment,
 } from '@/config/environment-security-config';
 import { getDevCompanyId } from '@/config/dev-environment';
+import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 
 /**
  * ENTERPRISE: Centralized Admin Guards Module
@@ -633,7 +634,7 @@ export async function requireAdminForPage(
   // or in localStorage (development - client-side only)
   // ⚠️ Next.js 15: cookies() must be awaited
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('__session')?.value;
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_CONFIG.NAME)?.value;
 
   // Development bypass (when no token and in development)
   if (!sessionCookie && environment === 'development') {

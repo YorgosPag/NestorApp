@@ -443,6 +443,18 @@ export const DEFAULTS = {
 } as const;
 
 // ============================================================================
+// API ROUTES (SSoT)
+// ============================================================================
+
+/**
+ * Centralized API routes to avoid hardcoded strings in client code.
+ */
+export const API_ROUTES = {
+  /** Create/clear Firebase session cookie for server-side auth */
+  AUTH_SESSION: '/api/auth/session',
+} as const;
+
+// ============================================================================
 // UI CONSTANTS
 // ============================================================================
 
