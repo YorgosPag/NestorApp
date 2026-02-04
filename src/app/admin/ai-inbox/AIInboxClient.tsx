@@ -116,6 +116,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const spacing = useSpacingTokens();
   const typography = useTypography();
   const iconSizes = useIconSizes();
+  const [isMounted, setIsMounted] = useState(false);
 
   // 🏢 ENTERPRISE: Type refinement - Firestore docs always have id
   const [communications, setCommunications] = useState<Array<Communication & { id: string }>>([]);
@@ -127,6 +128,14 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const [stats, setStats] = useState<TriageStats | null>(null);
   const [showDashboard, setShowDashboard] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
 
   const isTriageStatus = useCallback((value: string): value is TriageStatus => {
     return TRIAGE_STATUS_SET.has(value as TriageStatus);
