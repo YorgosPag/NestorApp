@@ -539,6 +539,18 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                 }
               },
               {
+                icon: Archive,
+                href: "/debug",
+                badge: "DEBUG",
+                smartConfig: {
+                  priority: 'low',
+                  displayOrder: 300,
+                  analyticsKey: 'nav_debug',
+                  environments: ['development'],
+                  permissions: ['admin_access']
+                }
+              },
+              {
                 icon: Keyboard,
                 href: '/settings/shortcuts',
                 smartConfig: {
@@ -550,20 +562,7 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
           // 🗑️ REMOVED (2026-01-11): Login menu item - moved to header user-menu only
           // Enterprise pattern: Login/logout handled exclusively via header dropdown
         ],
-        conditionalItems: {
-          development: [
-            {
-              icon: Archive,
-              href: "/debug",
-              badge: "DEBUG",
-              smartConfig: {
-                priority: 'low',
-                displayOrder: 300,
-                analyticsKey: 'nav_debug'
-              }
-            }
-          ]
-        },
+        conditionalItems: {},
         defaultSmartConfig: {
           priority: 'low',
           environments: ['development', 'production']

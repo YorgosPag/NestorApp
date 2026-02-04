@@ -247,6 +247,29 @@ function clearCorruptedUserData(uid: string): void {
   }
 }
 
+function buildAuthUser(firebaseUser: FirebaseUser, customClaims: Record<string, unknown>): FirebaseAuthUser {
+  const displayName = firebaseUser.displayName;
+  const isGoogleProvider = firebaseUser.providerData.some(
+    (provider) => provider.providerId === 'google.com'
+  );
+  const profileIncomplete = isGoogleProvider && !localStorage.getItem(`profile_complete_${firebaseUser.uid}`);
+
+  return {
+    uid: firebaseUser.uid,
+    email: firebaseUser.email,
+    displayName,
+    givenName: localStorage.getItem(`givenName_${firebaseUser.uid}`) || null,
+    familyName: localStorage.getItem(`familyName_${firebaseUser.uid}`) || null,
+    emailVerified: firebaseUser.emailVerified,
+    photoURL: firebaseUser.photoURL,
+    profileIncomplete,
+    globalRole: customClaims.globalRole as string | undefined,
+    companyId: customClaims.companyId as string | undefined,
+    permissions: customClaims.permissions as string[] | undefined,
+    mfaEnrolled: customClaims.mfaEnrolled as boolean | undefined
+  };
+}
+
 /**
  * Create/refresh server-side session cookie for admin pages.
  * Required for production Server Components that rely on __session.
@@ -351,22 +374,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (firebaseUser) {
-        // Extract givenName and familyName from displayName if available
-        // NOTE: We do NOT auto-split - we only use what Firebase provides
-        // For email/password signups, we store these explicitly
-        // For Google sign-in, displayName comes as "First Last" but we mark profile as incomplete
-        const displayName = firebaseUser.displayName;
-
-        // Check if this is a Google sign-in without explicit name data
-        // Google provides displayName but not separate given/family names
-        const isGoogleProvider = firebaseUser.providerData.some(
-          (provider) => provider.providerId === 'google.com'
-        );
-
-        // Profile is incomplete if we don't have structured name data
-        // This will be set to false once user completes their profile
-        const profileIncomplete = isGoogleProvider && !localStorage.getItem(`profile_complete_${firebaseUser.uid}`);
-
         // 🔐 ENTERPRISE: Load custom claims from Firebase ID token
         // forceRefresh=true ensures we get fresh claims after bootstrap/permission updates
         let customClaims: Record<string, unknown> = {};
@@ -382,22 +389,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.warn('⚠️ [AuthContext] Failed to load custom claims (non-blocking):', claimsError);
         }
 
-        const authUser: FirebaseAuthUser = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: displayName,
-          // These will be null for Google sign-in until profile completion
-          givenName: localStorage.getItem(`givenName_${firebaseUser.uid}`) || null,
-          familyName: localStorage.getItem(`familyName_${firebaseUser.uid}`) || null,
-          emailVerified: firebaseUser.emailVerified,
-          photoURL: firebaseUser.photoURL,
-          profileIncomplete,
-          // 🔐 ENTERPRISE: Add custom claims to user object
-          globalRole: customClaims.globalRole as string | undefined,
-          companyId: customClaims.companyId as string | undefined,
-          permissions: customClaims.permissions as string[] | undefined,
-          mfaEnrolled: customClaims.mfaEnrolled as boolean | undefined
-        };
+        const authUser = buildAuthUser(firebaseUser, customClaims);
 
         console.log('✅ [AuthContext] Valid session established:', authUser.email);
         setUser(authUser);
@@ -471,6 +463,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         await syncServerSession(auth.currentUser);
         console.log('🔐 [AuthContext] Server session cookie refreshed (event)');
+
+        const idTokenResult = await auth.currentUser.getIdTokenResult(true);
+        const updatedUser = buildAuthUser(auth.currentUser, idTokenResult.claims);
+        setUser(updatedUser);
       } catch (sessionError) {
         console.warn('⚠️ [AuthContext] Failed to refresh server session cookie (event):', sessionError);
       }
@@ -814,7 +810,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('🔄 [AuthContext] Force refreshing ID token...');
 
       // Force refresh (getIdToken with forceRefresh=true)
-      await auth.currentUser.getIdToken(true);
+      const idTokenResult = await auth.currentUser.getIdTokenResult(true);
+      setUser(buildAuthUser(auth.currentUser, idTokenResult.claims));
 
       console.log('✅ [AuthContext] Token refreshed successfully - new permissions loaded');
     } catch (error) {

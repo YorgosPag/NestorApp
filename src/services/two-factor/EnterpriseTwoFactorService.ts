@@ -30,6 +30,7 @@ import {
 import { doc, setDoc, getDoc, updateDoc, Firestore, serverTimestamp } from 'firebase/firestore';
 import QRCode from 'qrcode';
 import { auth } from '@/lib/firebase';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import { API_ROUTES } from '@/config/domain-constants';
 import type {
   TotpSecretInfo,
@@ -52,7 +53,7 @@ import type {
 const BACKUP_CODES_COUNT = 10;
 const BACKUP_CODE_LENGTH = 8;
 const APP_NAME = 'Nestor Pagonis';
-const FIRESTORE_COLLECTION = 'user_2fa_settings';
+const FIRESTORE_COLLECTION = COLLECTIONS.USER_2FA_SETTINGS;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -230,9 +231,19 @@ export class EnterpriseTwoFactorService {
         if (docSnap.exists()) {
           const data = docSnap.data();
           if (data.backupCodes) {
-            const codes = data.backupCodes as BackupCode[];
+            const backupCodesData = data.backupCodes as BackupCodesCollection | BackupCode[];
+            const codes = Array.isArray(backupCodesData)
+              ? backupCodesData
+              : Array.isArray(backupCodesData.codes)
+                ? backupCodesData.codes
+                : [];
+
             hasBackupCodes = codes.length > 0;
-            backupCodesRemaining = codes.filter(c => !c.used).length;
+            backupCodesRemaining = Array.isArray(backupCodesData)
+              ? codes.filter(c => !c.used).length
+              : typeof backupCodesData.remainingCount === 'number'
+                ? backupCodesData.remainingCount
+                : codes.filter(c => !c.used).length;
           }
         }
       } catch (error) {

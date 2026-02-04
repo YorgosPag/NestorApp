@@ -133,10 +133,6 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
     setIsMounted(true);
   }, []);
 
-  if (!isMounted) {
-    return null;
-  }
-
   const isTriageStatus = useCallback((value: string): value is TriageStatus => {
     return TRIAGE_STATUS_SET.has(value as TriageStatus);
   }, []);
@@ -200,12 +196,41 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         throw new Error('Admin user has no companyId - tenant isolation violated');
       }
 
-      const result = await getTriageStats(companyId, adminContext.operationId);
+      const result = await getTriageCommunications(companyId, adminContext.operationId);
       if (!result.ok) {
         throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
       }
 
-      setStats(result.data);
+      const counts = result.data.reduce(
+        (acc, comm) => {
+          switch (comm.triageStatus) {
+            case TRIAGE_STATUSES.PENDING:
+              acc.pending += 1;
+              break;
+            case TRIAGE_STATUSES.APPROVED:
+              acc.approved += 1;
+              break;
+            case TRIAGE_STATUSES.REJECTED:
+              acc.rejected += 1;
+              break;
+            case TRIAGE_STATUSES.REVIEWED:
+              acc.reviewed += 1;
+              break;
+            default:
+              break;
+          }
+          return acc;
+        },
+        { pending: 0, approved: 0, rejected: 0, reviewed: 0 }
+      );
+
+      setStats({
+        total: counts.pending + counts.approved + counts.rejected + counts.reviewed,
+        pending: counts.pending,
+        approved: counts.approved,
+        rejected: counts.rejected,
+        reviewed: counts.reviewed
+      });
     } catch (err) {
       logger.error('Failed to load triage stats', { error: err });
     } finally {
@@ -408,6 +433,10 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
       color: 'red'
     }
   ]), [stats, statsLoading, t]);
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <PageContainer ariaLabel={t('aiInbox.title')}>

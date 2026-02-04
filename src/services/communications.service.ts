@@ -318,33 +318,42 @@ export async function getTriageStats(
       return { ok: false, errorId, code: 'invalid_context' };
     }
 
-    const adminDb = getAdminFirestore();
-    const messagesRef = adminDb.collection(COLLECTIONS.MESSAGES);
+    const communications = await fetchTriageCommunications({ companyId });
+    const counts = communications.reduce(
+      (acc, comm) => {
+        switch (comm.triageStatus) {
+          case TRIAGE_STATUSES.PENDING:
+            acc.pending += 1;
+            break;
+          case TRIAGE_STATUSES.APPROVED:
+            acc.approved += 1;
+            break;
+          case TRIAGE_STATUSES.REJECTED:
+            acc.rejected += 1;
+            break;
+          case TRIAGE_STATUSES.REVIEWED:
+            acc.reviewed += 1;
+            break;
+          default:
+            break;
+        }
+        return acc;
+      },
+      { pending: 0, approved: 0, rejected: 0, reviewed: 0 }
+    );
 
-    const pendingSnap = await messagesRef
-      .where('companyId', '==', companyId)
-      .where('triageStatus', '==', TRIAGE_STATUSES.PENDING)
-      .get();
-    const approvedSnap = await messagesRef
-      .where('companyId', '==', companyId)
-      .where('triageStatus', '==', TRIAGE_STATUSES.APPROVED)
-      .get();
-    const rejectedSnap = await messagesRef
-      .where('companyId', '==', companyId)
-      .where('triageStatus', '==', TRIAGE_STATUSES.REJECTED)
-      .get();
-    const reviewedSnap = await messagesRef
-      .where('companyId', '==', companyId)
-      .where('triageStatus', '==', TRIAGE_STATUSES.REVIEWED)
-      .get();
+    const total = counts.pending + counts.approved + counts.rejected + counts.reviewed;
 
-    const pending = pendingSnap.size;
-    const approved = approvedSnap.size;
-    const rejected = rejectedSnap.size;
-    const reviewed = reviewedSnap.size;
-    const total = pending + approved + rejected + reviewed;
-
-    return { ok: true, data: { total, pending, approved, rejected, reviewed } };
+    return {
+      ok: true,
+      data: {
+        total,
+        pending: counts.pending,
+        approved: counts.approved,
+        rejected: counts.rejected,
+        reviewed: counts.reviewed
+      }
+    };
   } catch (error) {
     logger.error(
       'Failed to fetch triage stats',

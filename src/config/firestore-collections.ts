@@ -137,6 +137,7 @@ export const COLLECTIONS = {
 
   // ⚙️ USER PREFERENCES
   USER_NOTIFICATION_SETTINGS: process.env.NEXT_PUBLIC_USER_NOTIFICATION_SETTINGS_COLLECTION || 'user_notification_settings',
+  USER_2FA_SETTINGS: process.env.NEXT_PUBLIC_USER_2FA_SETTINGS_COLLECTION || 'user_2fa_settings',
 
   // 🤖 BOT CONFIGURATIONS (PR1: Telegram Enterprise Refactor)
   BOT_CONFIGS: process.env.NEXT_PUBLIC_BOT_CONFIGS_COLLECTION || 'bot_configs',
