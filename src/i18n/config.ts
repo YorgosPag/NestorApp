@@ -19,13 +19,16 @@ import landingPseudo from './locales/pseudo/landing.json';
 // 🏢 ENTERPRISE: Pre-load navigation (used on every page - prevents race condition warnings)
 import navigationEl from './locales/el/navigation.json';
 import navigationEn from './locales/en/navigation.json';
+// 🏢 ENTERPRISE: Pre-load admin (used on admin pages - prevents hydration mismatch)
+import adminEl from './locales/el/admin.json';
+import adminEn from './locales/en/admin.json';
 // Note: pseudo/navigation.json not needed - fallback to el
 
 // Initial resources - common, landing, and navigation for immediate availability
 const resources = {
-  el: { common: commonEl, landing: landingEl, navigation: navigationEl },
-  en: { common: commonEn, landing: landingEn, navigation: navigationEn },
-  pseudo: { common: commonPseudo, landing: landingPseudo, navigation: navigationEl },
+  el: { common: commonEl, landing: landingEl, navigation: navigationEl, admin: adminEl },
+  en: { common: commonEn, landing: landingEn, navigation: navigationEn, admin: adminEn },
+  pseudo: { common: commonPseudo, landing: landingPseudo, navigation: navigationEl, admin: adminEl },
 };
 
 // Detect preferred language
@@ -75,6 +78,7 @@ if (typeof window !== 'undefined') {
       'filters',       // 🏢 ENTERPRISE: Generic filter labels (domain separation)
       'auth',          // 🏢 Auth screens - critical for UX
       'forms',         // 🏢 ENTERPRISE: Form labels, sections, help texts (company-gemi, service forms)
+      'admin',         // 🏢 ENTERPRISE: Admin pages (AI Inbox, RBAC) - prevents hydration mismatch
       'building',      // Building management - core module
       'projects',      // Projects module
       'contacts',      // Contacts module
