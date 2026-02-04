@@ -1,5 +1,3 @@
-'use server';
-
 import { createHash } from 'crypto';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getAdminFirestore } from '@/server/admin/admin-guards';

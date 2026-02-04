@@ -1,5 +1,3 @@
-'use server';
-
 import type { MessageAttachment } from '@/types/conversations';
 
 export interface ParsedAddress {

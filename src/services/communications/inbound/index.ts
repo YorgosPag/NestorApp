@@ -1,5 +1,3 @@
-'use server';
-
 export {
   normalizeEmail,
   parseAddress,
