@@ -285,6 +285,27 @@ async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
 }
 
 /**
+ * Verify Firebase session cookie and extract claims.
+ * Used for Server Component auth via __session cookie.
+ */
+async function verifySessionCookieToken(sessionCookie: string): Promise<DecodedIdToken | null> {
+  try {
+    const app = initializeAdmin();
+    if (!app) {
+      console.log('[ADMIN_GUARDS] Cannot verify session cookie - Admin SDK not initialized');
+      return null;
+    }
+
+    const auth = getAuth(app);
+    const decodedToken = await auth.verifySessionCookie(sessionCookie, false);
+    return decodedToken;
+  } catch (error) {
+    console.log('[ADMIN_GUARDS] Session cookie verification failed:', (error as Error).message);
+    return null;
+  }
+}
+
+/**
  * Check if decoded token has admin role claim
  * 🏢 ENTERPRISE: Email-based role checking (matches EnterpriseSecurityService)
  */
@@ -655,7 +676,7 @@ export async function requireAdminForPage(
   }
 
   // Gate 3: Verify token with Firebase Admin
-  const decodedToken = await verifyIdToken(sessionCookie);
+  const decodedToken = await verifySessionCookieToken(sessionCookie);
   if (!decodedToken) {
     throw new Error('Invalid or expired authentication token');
   }
