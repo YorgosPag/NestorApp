@@ -2,6 +2,7 @@
   "title": "Filters",
   "propertiesTitle": "Property Filters",
   "aiInboxTitle": "AI Inbox Filters",
+  "tasksTitle": "Task Filters",
   "searchFilters": "Search Filters",
   "showAdvanced": "Show advanced",
   "hideAdvanced": "Hide advanced",
@@ -96,7 +97,23 @@
     "approved": "Approved",
     "rejected": "Rejected",
     "reviewed": "Reviewed",
+    "cancelled": "Cancelled",
     "construction": "Under Construction"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "taskTypes": {
+    "call": "Call",
+    "email": "Email",
+    "meeting": "Meeting",
+    "viewing": "Viewing",
+    "followUp": "Follow-up",
+    "document": "Document",
+    "other": "Other"
   },
   "fields": {
     "search": "Search",

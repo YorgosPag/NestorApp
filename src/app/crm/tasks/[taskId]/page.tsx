@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, AlertTriangle, Calendar, ClipboardList, Folder, Home, User } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Calendar, ClipboardList, Filter, Folder, Home, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
@@ -13,6 +14,13 @@ import { formatDate } from '@/lib/intl-utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { CrmTask, FirestoreishTimestamp } from '@/types/crm';
 import { getTaskById } from '@/services/tasks.service';
+import { PageContainer, ListContainer } from '@/core/containers';
+import { PageHeader } from '@/core/headers';
+import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { AdvancedFiltersPanel, defaultTaskFilters, taskFiltersConfig, type TaskFilterState } from '@/components/core/AdvancedFilters';
+import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
 
 type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
@@ -60,15 +68,21 @@ export default function TaskDetailPage() {
   const taskIdParam = params.taskId;
   const taskId = Array.isArray(taskIdParam) ? taskIdParam[0] : taskIdParam;
 
+  const layout = useLayoutClasses();
+  const spacing = useSpacingTokens();
+  const typography = useTypography();
   const iconSizes = useIconSizes();
-  const { getStatusBorder } = useBorderTokens();
+  const { getStatusBorder, quick } = useBorderTokens();
   const colors = useSemanticColors();
   const { t } = useTranslation('tasks');
+  const { t: tFilters } = useTranslation('filters');
 
   const [task, setTask] = useState<CrmTask | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
+  const [showFilters, setShowFilters] = useState(false);
 
   const formatTaskDate = useCallback((value: FirestoreishTimestamp | null | undefined) => {
     const date = resolveDate(value);
@@ -123,154 +137,243 @@ export default function TaskDetailPage() {
     return t(`types.${task.type}`, { defaultValue: task.type });
   }, [task, t]);
 
+  const dashboardStats = useMemo<DashboardStat[]>(() => {
+    if (!task) return [];
+
+    const statusColors: Record<CrmTask['status'], DashboardStat['color']> = {
+      pending: 'yellow',
+      in_progress: 'blue',
+      completed: 'green',
+      cancelled: 'gray'
+    };
+
+    const priorityColors: Record<CrmTask['priority'], DashboardStat['color']> = {
+      low: 'blue',
+      medium: 'yellow',
+      high: 'orange',
+      urgent: 'red'
+    };
+
+    return [
+      {
+        title: tFilters('fields.status'),
+        value: statusLabel,
+        icon: AlertTriangle,
+        color: statusColors[task.status]
+      },
+      {
+        title: tFilters('fields.priority'),
+        value: priorityLabel,
+        icon: ClipboardList,
+        color: priorityColors[task.priority]
+      },
+      {
+        title: t('detail.labels.dueDate'),
+        value: formatTaskDate(task.dueDate ?? null),
+        icon: Calendar,
+        color: 'indigo'
+      },
+      {
+        title: t('detail.labels.assignedTo'),
+        value: task.assignedTo,
+        icon: User,
+        color: 'purple'
+      }
+    ];
+  }, [formatTaskDate, priorityLabel, statusLabel, t, tFilters, task]);
+
   if (loading) {
     return (
-      <main className={`min-h-screen ${colors.bg.secondary} flex items-center justify-center`}>
-        <section className="text-center" aria-live="polite">
-          <AnimatedSpinner size="large" className="mx-auto mb-2" />
-          <p className={`${colors.text.muted}`}>{t('detail.loading')}</p>
+      <PageContainer ariaLabel={t('detail.title')} className={layout.minHeightScreen}>
+        <section className={`${layout.flex1} ${layout.centerContent} ${layout.textCenter}`} aria-live="polite">
+          <AnimatedSpinner size="large" className={`${layout.centerHorizontal} ${spacing.margin.bottom.sm}`} />
+          <p className={colors.text.muted}>{t('detail.loading')}</p>
         </section>
-      </main>
+      </PageContainer>
     );
   }
 
   if (error) {
     return (
-      <main className={`min-h-screen ${colors.bg.secondary}`}>
-        <section className="container mx-auto px-6 py-8">
-          <article className={`${colors.bg.errorLight} ${getStatusBorder('error')} rounded-lg p-8 text-center`}>
-            <AlertTriangle className={`${iconSizes.lg} ${colors.text.error} mx-auto mb-2`} />
-            <h2 className={`text-xl font-semibold ${colors.text.error} mb-2`}>{t('detail.errorTitle')}</h2>
-            <p className={`${colors.text.error} mb-4`}>{error}</p>
+      <PageContainer ariaLabel={t('detail.title')} className={layout.minHeightScreen}>
+        <section className={`${layout.flex1} ${spacing.padding.x.lg} ${spacing.padding.y.lg}`}>
+          <article className={`${colors.bg.errorLight} ${getStatusBorder('error')} ${quick.card} ${spacing.padding.lg} ${layout.textCenter}`}>
+            <AlertTriangle className={`${iconSizes.lg} ${colors.text.error} ${layout.centerHorizontal} ${spacing.margin.bottom.sm}`} />
+            <h2 className={`${typography.heading.lg} ${colors.text.error} ${spacing.margin.bottom.sm}`}>{t('detail.errorTitle')}</h2>
+            <p className={`${colors.text.error} ${spacing.margin.bottom.md}`}>{error}</p>
             <Button onClick={handleBack} variant="outline">
               {t('detail.backToTasks')}
             </Button>
           </article>
         </section>
-      </main>
+      </PageContainer>
     );
   }
 
   if (notFound || !task) {
     return (
-      <main className={`min-h-screen ${colors.bg.secondary}`}>
-        <section className="container mx-auto px-6 py-8">
-          <article className={`${colors.bg.primary} ${getStatusBorder('warning')} rounded-lg p-8 text-center`}>
-            <AlertTriangle className={`${iconSizes.lg} ${colors.text.warning} mx-auto mb-2`} />
-            <h2 className={`text-xl font-semibold ${colors.text.primary} mb-2`}>{t('detail.notFoundTitle')}</h2>
-            <p className={`${colors.text.muted} mb-4`}>{t('detail.notFoundDescription')}</p>
+      <PageContainer ariaLabel={t('detail.title')} className={layout.minHeightScreen}>
+        <section className={`${layout.flex1} ${spacing.padding.x.lg} ${spacing.padding.y.lg}`}>
+          <article className={`${colors.bg.primary} ${getStatusBorder('warning')} ${quick.card} ${spacing.padding.lg} ${layout.textCenter}`}>
+            <AlertTriangle className={`${iconSizes.lg} ${colors.text.warning} ${layout.centerHorizontal} ${spacing.margin.bottom.sm}`} />
+            <h2 className={`${typography.heading.lg} ${colors.text.primary} ${spacing.margin.bottom.sm}`}>{t('detail.notFoundTitle')}</h2>
+            <p className={`${colors.text.muted} ${spacing.margin.bottom.md}`}>{t('detail.notFoundDescription')}</p>
             <Button onClick={handleBack} variant="outline">
               {t('detail.backToTasks')}
             </Button>
           </article>
         </section>
-      </main>
+      </PageContainer>
     );
   }
 
   return (
-    <main className={`min-h-screen ${colors.bg.secondary}`}>
-      <header className={`${colors.bg.primary} shadow-sm border-b`}>
-        <div className="px-6 py-4">
-          <nav className="flex items-center gap-4" aria-label={t('detail.aria.taskNavigation')}>
-            <Button onClick={handleBack} variant="ghost" size="icon" aria-label={t('detail.backToTasks')}>
-              <ArrowLeft className={iconSizes.md} />
+    <PageContainer ariaLabel={t('detail.title')}>
+      <PageHeader
+        variant="sticky-rounded"
+        layout="compact"
+        spacing="compact"
+        title={{
+          icon: ClipboardList,
+          title: task.title,
+          subtitle: t('detail.title')
+        }}
+        actions={{
+          customActions: [
+            <Button key="back" onClick={handleBack} variant="outline" size="sm">
+              <ArrowLeft className={`${iconSizes.sm} ${layout.buttonIconSpacing}`} />
+              {t('detail.backToTasks')}
+            </Button>,
+            <Button
+              key="mobile-filters"
+              type="button"
+              variant={showFilters ? 'default' : 'outline'}
+              size="icon"
+              className="md:hidden"
+              onClick={() => setShowFilters(!showFilters)}
+              aria-label={tFilters('title')}
+            >
+              <Filter className={iconSizes.sm} />
             </Button>
-            <div className="flex items-center gap-3">
-              <ClipboardList className={`${iconSizes.lg} ${colors.text.info}`} />
-              <div>
-                <h1 className={`text-2xl font-bold ${colors.text.primary}`}>{task.title}</h1>
-                <p className={`${colors.text.muted}`}>{t('detail.title')}</p>
-              </div>
-            </div>
-          </nav>
-        </div>
-      </header>
+          ].filter(Boolean) as ReactNode[]
+        }}
+      />
 
-      <section className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <article className="lg:col-span-2 space-y-6" aria-label={t('detail.sections.summary')}>
-            <section className={`${colors.bg.primary} rounded-lg shadow p-6 space-y-4`}>
-              <header className="flex flex-wrap items-center gap-3">
-                <Badge variant={getStatusVariant(task.status)}>{statusLabel}</Badge>
-                <Badge variant={getPriorityVariant(task.priority)}>{priorityLabel}</Badge>
-                <Badge variant="outline">{typeLabel}</Badge>
-              </header>
-              {task.description && (
-                <p className={`${colors.text.secondary}`}>{task.description}</p>
+      <section className={`${layout.widthFull} overflow-hidden`} aria-label={t('detail.sections.summary')}>
+        <UnifiedDashboard
+          stats={dashboardStats}
+          columns={4}
+          className={`${layout.dashboardPadding} overflow-hidden`}
+        />
+      </section>
+
+      <section className={layout.widthFull} aria-label={tFilters('title')}>
+        <aside className="hidden md:block" role="complementary" aria-label={tFilters('title')}>
+          <AdvancedFiltersPanel
+            config={taskFiltersConfig}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+        </aside>
+
+        {showFilters && (
+          <aside className="md:hidden" role="complementary" aria-label={tFilters('title')}>
+            <AdvancedFiltersPanel
+              config={taskFiltersConfig}
+              filters={filters}
+              onFiltersChange={setFilters}
+              defaultOpen={true}
+            />
+          </aside>
+        )}
+      </section>
+
+      <ListContainer>
+        <section className={`${layout.flex1} ${layout.flexColGap4} min-h-0`} aria-label={t('detail.sections.summary')}>
+          <div className={`${layout.responsiveFlexRow} ${layout.flex1} ${layout.listItemsGap}`}>
+            <article className={`${layout.flex1} ${layout.flexColGap4} min-w-0`}>
+              <section className={`${quick.card} ${colors.bg.primary} ${spacing.padding.lg} ${spacing.spaceBetween.md}`}>
+                <header className={`${layout.flexCenterGap2} flex-wrap`}>
+                  <Badge variant={getStatusVariant(task.status)}>{statusLabel}</Badge>
+                  <Badge variant={getPriorityVariant(task.priority)}>{priorityLabel}</Badge>
+                  <Badge variant="outline">{typeLabel}</Badge>
+                </header>
+                {task.description && (
+                  <p className={`${typography.body.sm} ${colors.text.secondary}`}>{task.description}</p>
+                )}
+              </section>
+
+              {(task.contactId || task.projectId || task.unitId) && (
+                <section className={`${quick.card} ${colors.bg.primary} ${spacing.padding.lg}`}>
+                  <h2 className={`${typography.heading.md} ${colors.text.primary} ${spacing.margin.bottom.md}`}>{t('detail.sections.related')}</h2>
+                  <dl className={spacing.spaceBetween.sm}>
+                    {task.contactId && (
+                      <div className={layout.flexCenterGap2}>
+                        <User className={`${iconSizes.sm} ${colors.text.muted}`} />
+                        <div>
+                          <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.contactId')}</dt>
+                          <dd className={`${typography.body.sm} ${colors.text.primary}`}>{task.contactId}</dd>
+                        </div>
+                      </div>
+                    )}
+                    {task.projectId && (
+                      <div className={layout.flexCenterGap2}>
+                        <Folder className={`${iconSizes.sm} ${colors.text.muted}`} />
+                        <div>
+                          <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.projectId')}</dt>
+                          <dd className={`${typography.body.sm} ${colors.text.primary}`}>{task.projectId}</dd>
+                        </div>
+                      </div>
+                    )}
+                    {task.unitId && (
+                      <div className={layout.flexCenterGap2}>
+                        <Home className={`${iconSizes.sm} ${colors.text.muted}`} />
+                        <div>
+                          <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.unitId')}</dt>
+                          <dd className={`${typography.body.sm} ${colors.text.primary}`}>{task.unitId}</dd>
+                        </div>
+                      </div>
+                    )}
+                  </dl>
+                </section>
               )}
-            </section>
+            </article>
 
-            {(task.contactId || task.projectId || task.unitId) && (
-              <section className={`${colors.bg.primary} rounded-lg shadow p-6`}>
-                <h2 className={`text-lg font-semibold ${colors.text.primary} mb-4`}>{t('detail.sections.related')}</h2>
-                <dl className="space-y-3">
-                  {task.contactId && (
-                    <div className="flex items-center gap-3">
-                      <User className={`${iconSizes.sm} ${colors.text.muted}`} />
-                      <div>
-                        <dt className={`text-sm ${colors.text.muted}`}>{t('detail.labels.contactId')}</dt>
-                        <dd className={`${colors.text.primary}`}>{task.contactId}</dd>
-                      </div>
+            <aside className={`${layout.flex1} ${layout.flexColGap4}`} aria-label={t('detail.sections.metadata')}>
+              <section className={`${quick.card} ${colors.bg.primary} ${spacing.padding.lg}`}>
+                <h2 className={`${typography.heading.md} ${colors.text.primary} ${spacing.margin.bottom.md}`}>{t('detail.sections.metadata')}</h2>
+                <dl className={spacing.spaceBetween.md}>
+                  <div>
+                    <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.assignedTo')}</dt>
+                    <dd className={`${typography.body.sm} ${colors.text.primary}`}>{task.assignedTo}</dd>
+                  </div>
+                  <div className={layout.flexCenterGap2}>
+                    <Calendar className={`${iconSizes.sm} ${colors.text.muted}`} />
+                    <div>
+                      <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.dueDate')}</dt>
+                      <dd className={`${typography.body.sm} ${colors.text.primary}`}>{formatTaskDate(task.dueDate ?? null)}</dd>
                     </div>
-                  )}
-                  {task.projectId && (
-                    <div className="flex items-center gap-3">
-                      <Folder className={`${iconSizes.sm} ${colors.text.muted}`} />
-                      <div>
-                        <dt className={`text-sm ${colors.text.muted}`}>{t('detail.labels.projectId')}</dt>
-                        <dd className={`${colors.text.primary}`}>{task.projectId}</dd>
-                      </div>
-                    </div>
-                  )}
-                  {task.unitId && (
-                    <div className="flex items-center gap-3">
-                      <Home className={`${iconSizes.sm} ${colors.text.muted}`} />
-                      <div>
-                        <dt className={`text-sm ${colors.text.muted}`}>{t('detail.labels.unitId')}</dt>
-                        <dd className={`${colors.text.primary}`}>{task.unitId}</dd>
-                      </div>
+                  </div>
+                  <div>
+                    <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.createdAt')}</dt>
+                    <dd className={`${typography.body.sm} ${colors.text.primary}`}>{formatTaskDate(task.createdAt)}</dd>
+                  </div>
+                  <div>
+                    <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.updatedAt')}</dt>
+                    <dd className={`${typography.body.sm} ${colors.text.primary}`}>{formatTaskDate(task.updatedAt)}</dd>
+                  </div>
+                  {task.completedAt && (
+                    <div>
+                      <dt className={`${typography.label.simple} ${colors.text.muted}`}>{t('detail.labels.completedAt')}</dt>
+                      <dd className={`${typography.body.sm} ${colors.text.primary}`}>{formatTaskDate(task.completedAt)}</dd>
                     </div>
                   )}
                 </dl>
               </section>
-            )}
-          </article>
-
-          <aside className="space-y-6" aria-label={t('detail.sections.metadata')}>
-            <section className={`${colors.bg.primary} rounded-lg shadow p-6`}>
-              <h2 className={`text-lg font-semibold ${colors.text.primary} mb-4`}>{t('detail.sections.metadata')}</h2>
-              <dl className="space-y-4">
-                <div>
-                  <dt className={`text-sm ${colors.text.muted}`}>{t('detail.labels.assignedTo')}</dt>
-                  <dd className={`${colors.text.primary}`}>{task.assignedTo}</dd>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Calendar className={`${iconSizes.sm} ${colors.text.muted} mt-0.5`} />
-                  <div>
-                    <dt className={`text-sm ${colors.text.muted}`}>{t('detail.labels.dueDate')}</dt>
-                    <dd className={`${colors.text.primary}`}>{formatTaskDate(task.dueDate ?? null)}</dd>
-                  </div>
-                </div>
-                <div>
-                  <dt className={`text-sm ${colors.text.muted}`}>{t('detail.labels.createdAt')}</dt>
-                  <dd className={`${colors.text.primary}`}>{formatTaskDate(task.createdAt)}</dd>
-                </div>
-                <div>
-                  <dt className={`text-sm ${colors.text.muted}`}>{t('detail.labels.updatedAt')}</dt>
-                  <dd className={`${colors.text.primary}`}>{formatTaskDate(task.updatedAt)}</dd>
-                </div>
-                {task.completedAt && (
-                  <div>
-                    <dt className={`text-sm ${colors.text.muted}`}>{t('detail.labels.completedAt')}</dt>
-                    <dd className={`${colors.text.primary}`}>{formatTaskDate(task.completedAt)}</dd>
-                  </div>
-                )}
-              </dl>
-            </section>
-          </aside>
-        </div>
-      </section>
-    </main>
+            </aside>
+          </div>
+        </section>
+      </ListContainer>
+    </PageContainer>
   );
 }

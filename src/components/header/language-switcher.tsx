@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n';
-import { preloadCriticalNamespaces } from '@/i18n/lazy-config';
+import { changeLanguage, preloadCriticalNamespaces } from '@/i18n/lazy-config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 
 const languages = [
@@ -56,8 +56,8 @@ export function LanguageSwitcher() {
         await loadNamespace('admin', nextLanguage);
       }
       
-      // Change language (should proceed even if preloading failed)
-      await i18n.changeLanguage(nextLanguage);
+      // Change language (centralized helper also preloads critical namespaces)
+      await changeLanguage(nextLanguage);
       
       // Store preference in localStorage
       localStorage.setItem('preferred-language', nextLanguage);
@@ -87,7 +87,10 @@ export function LanguageSwitcher() {
         {languages.map((language) => (
           <DropdownMenuItem
             key={language.code}
-            onClick={() => handleLanguageChange(language.code)}
+            onSelect={(event) => {
+              event.preventDefault();
+              handleLanguageChange(language.code);
+            }}
             className={`flex items-center gap-2 ${
               currentLanguage.code === language.code ? 'bg-accent' : ''
             }`}

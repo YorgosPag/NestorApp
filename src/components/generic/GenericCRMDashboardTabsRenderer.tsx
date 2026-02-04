@@ -5,6 +5,7 @@ import { TabsContent } from "@/components/ui/tabs";
 import { TabsOnlyTriggers, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import type { CRMDashboardTabConfig } from '@/config/crm-dashboard-tabs-config';
 import { TrendingUp, Target, Users, MessageSquare, Clock, Calendar } from 'lucide-react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // ICON MAPPING
@@ -35,7 +36,6 @@ function getIconComponent(emojiIcon: string) {
 
 import { OverviewTab } from '../crm/dashboard/OverviewTab';
 import { PipelineTab } from '../crm/dashboard/PipelineTab';
-import { ContactsTab } from '../crm/dashboard/ContactsTab';
 import { CommunicationsTab } from '../crm/dashboard/CommunicationsTab';
 import { TasksTab } from '../crm/dashboard/TasksTab';
 import { CalendarTab } from '../crm/dashboard/CalendarTab';
@@ -46,7 +46,6 @@ import { CalendarTab } from '../crm/dashboard/CalendarTab';
 const COMPONENT_MAPPING = {
   'OverviewTab': OverviewTab,
   'PipelineTab': PipelineTab,
-  'ContactsTab': ContactsTab,
   'CommunicationsTab': CommunicationsTab,
   'TasksTab': TasksTab,
   'CalendarTab': CalendarTab,
@@ -115,6 +114,7 @@ export function GenericCRMDashboardTabsRenderer({
   customComponents = {},
   globalProps = {},
 }: GenericCRMDashboardTabsRendererProps) {
+  const { t } = useTranslation('crm');
   // Φιλτράρισμα enabled tabs
   const enabledTabs = tabs.filter(tab => tab.enabled !== false);
 
@@ -174,7 +174,7 @@ export function GenericCRMDashboardTabsRenderer({
 
     return {
       id: tab.value,
-      label: tab.label,
+      label: t(tab.label),
       icon: IconComponent,
       content: getContentWrapper(tab, <Component {...componentProps} />),
       disabled: tab.enabled === false,

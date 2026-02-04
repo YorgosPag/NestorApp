@@ -18,6 +18,7 @@ export {
   buildingFiltersConfig,
   projectFiltersConfig,
   communicationsFiltersConfig,
+  taskFiltersConfig,
   aiInboxFiltersConfig,
   propertyFiltersConfig,
   fileFiltersConfig,
@@ -26,6 +27,7 @@ export {
   defaultBuildingFilters,
   defaultProjectFilters,
   defaultCommunicationsFilters,
+  defaultTaskFilters,
   defaultAIInboxFilters,
   defaultPropertyFilters,
   defaultFileFilters
@@ -77,7 +79,7 @@ export {
 } from './types';
 
 // Communications Types (from configs.ts)
-export type { CommunicationsFilterState, FileFilterState, AIInboxFilterState } from './configs';
+export type { CommunicationsFilterState, TaskFilterState, FileFilterState, AIInboxFilterState } from './configs';
 
 // Storage Types
 export type {

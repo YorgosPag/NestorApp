@@ -1,5 +1,6 @@
 {
   "title": "[Φίλτρα]",
+  "tasksTitle": "[Φίλτρα Εργασιών]",
   "searchFilters": "[Φίλτρα Αναζήτησης]",
   "showAdvanced": "[Εμφάνιση προχωρημένων]",
   "hideAdvanced": "[Απόκρυψη προχωρημένων]",
@@ -39,7 +40,23 @@
     "archived": "[Αρχειοθετημένο]",
     "lead": "[Lead]",
     "pending": "[Εκκρεμεί]",
+    "cancelled": "[Ακυρώθηκε]",
     "construction": "[Υπό Κατασκευή]"
+  },
+  "priority": {
+    "low": "[Χαμηλή]",
+    "medium": "[Μέτρια]",
+    "high": "[Υψηλή]",
+    "urgent": "[Επείγουσα]"
+  },
+  "taskTypes": {
+    "call": "[Κλήση]",
+    "email": "[Email]",
+    "meeting": "[Συνάντηση]",
+    "viewing": "[Προβολή]",
+    "followUp": "[Παρακολούθηση]",
+    "document": "[Έγγραφο]",
+    "other": "[Άλλο]"
   },
   "fields": {
     "search": "[Αναζήτηση]",

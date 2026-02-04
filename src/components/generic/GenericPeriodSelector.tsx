@@ -5,6 +5,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PeriodConfig } from '@/config/period-selector-config';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // ============================================================================
 // INTERFACES
@@ -62,6 +63,7 @@ export function GenericPeriodSelector({
   theme = 'compact',
   disabled = false,
 }: GenericPeriodSelectorProps) {
+  const { t } = useTranslation('common');
   // Φιλτράρισμα enabled periods
   const enabledPeriods = periods.filter(period => period.enabled !== false);
 
@@ -81,10 +83,10 @@ export function GenericPeriodSelector({
                 disabled={disabled || period.enabled === false}
                 className={`text-xs data-[state=active]:bg-orange-500 data-[state=active]:text-white ${INTERACTIVE_PATTERNS.BUTTON_ORANGE_GHOST}`}
               >
-                {period.label}
+                {t(period.label)}
               </TabsTrigger>
             </TooltipTrigger>
-            <TooltipContent>{period.description}</TooltipContent>
+            <TooltipContent>{period.description ? t(period.description) : ''}</TooltipContent>
           </Tooltip>
         ))}
       </TabsList>

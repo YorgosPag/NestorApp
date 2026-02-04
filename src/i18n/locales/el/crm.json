@@ -7,6 +7,35 @@
       "pendingTasks": "Εκκρεμείς Εργασίες"
     }
   },
+  "page": {
+    "title": "Πίνακας CRM"
+  },
+  "tabs": {
+    "overview": {
+      "label": "Επισκόπηση",
+      "description": "Κύριες μετρήσεις και τάσεις του CRM"
+    },
+    "pipeline": {
+      "label": "Pipeline",
+      "description": "Διαχείριση pipeline και ευκαιριών"
+    },
+    "contacts": {
+      "label": "Επαφές",
+      "description": "Άτομα και εταιρείες στο CRM"
+    },
+    "communications": {
+      "label": "Επικοινωνίες",
+      "description": "Ενοποιημένα εισερχόμενα και ιστορικό επικοινωνίας"
+    },
+    "tasks": {
+      "label": "Εργασίες",
+      "description": "Εργασίες, υπενθυμίσεις και follow-ups"
+    },
+    "calendar": {
+      "label": "Ημερολόγιο",
+      "description": "Ραντεβού και προγραμματισμός"
+    }
+  },
   "quickActions": {
     "title": "Γρήγορες Ενέργειες",
     "ariaLabel": "Γρήγορες ενέργειες CRM",

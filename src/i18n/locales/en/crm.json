@@ -7,6 +7,35 @@
       "pendingTasks": "Pending Tasks"
     }
   },
+  "page": {
+    "title": "CRM Dashboard"
+  },
+  "tabs": {
+    "overview": {
+      "label": "Overview",
+      "description": "Key CRM performance metrics and trends"
+    },
+    "pipeline": {
+      "label": "Pipeline",
+      "description": "Sales pipeline and opportunity management"
+    },
+    "contacts": {
+      "label": "Contacts",
+      "description": "People and organizations in your CRM"
+    },
+    "communications": {
+      "label": "Communications",
+      "description": "Unified inbox and communication history"
+    },
+    "tasks": {
+      "label": "Tasks",
+      "description": "Tasks, reminders, and follow-ups"
+    },
+    "calendar": {
+      "label": "Calendar",
+      "description": "Appointments and scheduling"
+    }
+  },
   "quickActions": {
     "title": "Quick Actions",
     "ariaLabel": "CRM Quick Actions",

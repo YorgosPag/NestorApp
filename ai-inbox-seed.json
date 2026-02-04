@@ -1,0 +1,21 @@
+[
+  {
+    "from": "Pending Sender",
+    "subject": "Pending Subject",
+    "content": "Pending message for AI Inbox production test.",
+    "type": "telegram",
+    "direction": "inbound",
+    "contactId": "contact_pending",
+    "triageStatus": "pending",
+    "intentAnalysis": {
+      "kind": "message_intent",
+      "intentType": "info_update",
+      "confidence": 0.82,
+      "needsTriage": false,
+      "aiModel": "seed",
+      "analysisTimestamp": "2026-02-03T10:30:01Z",
+      "rawMessage": "Pending message for AI Inbox production test.",
+      "extractedEntities": {}
+    }
+  }
+]

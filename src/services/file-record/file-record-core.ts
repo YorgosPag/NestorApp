@@ -26,6 +26,7 @@ import type {
   FileStatus,
   FileLifecycleState,
 } from '@/config/domain-constants';
+import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 import {
   FILE_STATUS,
   FILE_LIFECYCLE_STATES,
@@ -87,6 +88,8 @@ export interface IngestionState {
     scannerVersion?: string;
     threats?: string[];
   };
+  /** AI document classification (if available) */
+  analysis?: DocumentClassifyAnalysis;
 }
 
 /**

@@ -1,34 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Users, Target, Calendar, Clock } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { RecentActivities } from './RecentActivities';
 import { QuickActions } from './QuickActions';
 import { TeamPerformance } from './TeamPerformance';
-import { getOpportunities } from '@/services/opportunities.service';
+import { getOpportunitiesClient } from '@/services/opportunities-client.service';
 import { useTranslation } from '@/i18n';
 import type { Opportunity } from '@/types/crm';
 
 export function OverviewTab() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslation('crm');
-  
-  const initialStats = [
-    { label: t('overview.stats.newLeads'), value: '0', icon: Users, color: 'blue', loading: true },
-    { label: t('overview.stats.activeOpportunities'), value: '0', icon: Target, color: 'green', loading: true },
-    { label: t('overview.stats.scheduledViewings'), value: '0', icon: Calendar, color: 'purple', loading: true },
-    { label: t('overview.stats.pendingTasks'), value: '0', icon: Clock, color: 'orange', loading: true }
-  ];
-  
-  const [stats, setStats] = useState(initialStats);
+  const { t, isNamespaceReady } = useTranslation('crm');
+
+  const [stats, setStats] = useState(() => ([
+    { label: 'overview.stats.newLeads', value: '0', icon: Users, color: 'blue', loading: true },
+    { label: 'overview.stats.activeOpportunities', value: '0', icon: Target, color: 'green', loading: true },
+    { label: 'overview.stats.scheduledViewings', value: '0', icon: Calendar, color: 'purple', loading: true },
+    { label: 'overview.stats.pendingTasks', value: '0', icon: Clock, color: 'orange', loading: true }
+  ]));
 
   useEffect(() => {
+    if (!isNamespaceReady) return;
+
     const fetchStats = async () => {
       try {
-        const opportunities = await getOpportunities();
+        const opportunities = await getOpportunitiesClient();
         
         const newLeads = opportunities.filter(opp => opp.stage === 'initial_contact').length;
         const activeOpportunities = opportunities.filter(opp => ['qualification', 'viewing', 'proposal', 'negotiation'].includes(opp.stage)).length;
@@ -44,12 +44,16 @@ export function OverviewTab() {
 
       } catch (error) {
         console.error("Failed to fetch opportunities stats:", error);
-        setStats(prev => prev.map(s => ({ ...s, value: 'N/A', loading: false })));
+        setStats(prev => prev.map(s => ({
+          ...s,
+          value: t('common:status.unknown'),
+          loading: false
+        })));
       }
     };
 
     fetchStats();
-  }, []);
+  }, [isNamespaceReady, t]);
 
   return (
     <div className="space-y-6">
@@ -59,7 +63,11 @@ export function OverviewTab() {
           <div key={idx} className={`${colors.bg.primary} rounded-lg shadow p-6`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-sm ${colors.text.muted}`}>{stat.label}</p>
+                <p className={`text-sm ${colors.text.muted}`}>
+                  {stat.label.startsWith('overview.stats.')
+                    ? t(stat.label)
+                    : stat.label}
+                </p>
                 {stat.loading ? (
                   <div className={`animate-pulse ${colors.bg.hover} h-8 w-16 rounded-md mt-1`}></div>
                 ) : (

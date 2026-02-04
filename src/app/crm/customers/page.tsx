@@ -1,7 +1,6 @@
-'use client';
-
-import { ContactsTab } from "@/components/crm/dashboard/ContactsTab";
+import { redirect } from 'next/navigation';
+import { APP_ROUTES } from '@/lib/routes';
 
 export default function CrmCustomersPage() {
-  return <ContactsTab />;
+  redirect(APP_ROUTES.contacts);
 }

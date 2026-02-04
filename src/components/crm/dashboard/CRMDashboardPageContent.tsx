@@ -33,7 +33,7 @@ export function CRMDashboardPageContent() {
       <header className={`${colors.bg.primary} shadow-sm border-b`}>
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
-            <h1 className={`text-2xl font-bold ${colors.text.foreground}`}>CRM Dashboard</h1>
+            <h1 className={`text-2xl font-bold ${colors.text.foreground}`}>{t('page.title')}</h1>
             <nav className="flex items-center space-x-3" aria-label="Dashboard controls">
               <TelegramNotifications />
               <GenericPeriodSelector

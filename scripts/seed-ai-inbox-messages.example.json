@@ -1,0 +1,21 @@
+[
+  {
+    "from": "Example Sender",
+    "subject": "Example Subject",
+    "content": "Example content for AI Inbox testing.",
+    "type": "telegram",
+    "direction": "inbound",
+    "contactId": "contact_example",
+    "triageStatus": "pending",
+    "intentAnalysis": {
+      "kind": "message_intent",
+      "intentType": "info_update",
+      "confidence": 0.85,
+      "needsTriage": false,
+      "aiModel": "seed",
+      "analysisTimestamp": "2026-02-03T10:30:01Z",
+      "rawMessage": "Example raw message",
+      "extractedEntities": {}
+    }
+  }
+]

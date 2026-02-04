@@ -31,6 +31,12 @@ const REQUIRED_ENV_VARS = {
   
     // AI Enhancement
     OPENAI_API_KEY: 'OpenAI API Key',
+    OPENAI_API_BASE_URL: 'OpenAI API Base URL',
+    OPENAI_TEXT_MODEL: 'OpenAI Text Model',
+    OPENAI_VISION_MODEL: 'OpenAI Vision Model',
+    OPENAI_TIMEOUT_MS: 'OpenAI Timeout (ms)',
+    OPENAI_MAX_RETRIES: 'OpenAI Max Retries',
+    AI_PROVIDER: 'AI Provider (openai|mock)',
   
     // Future Channels
     WHATSAPP_PHONE_NUMBER: 'WhatsApp Business Number',

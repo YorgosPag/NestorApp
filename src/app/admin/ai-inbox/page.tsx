@@ -25,46 +25,7 @@
 
 import { requireAdminForPage } from '@/server/admin/admin-guards';
 import AIInboxClient from './AIInboxClient';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ShieldX, LogIn } from 'lucide-react';
-import Link from 'next/link';
-
-// ============================================================================
-// UNAUTHORIZED VIEW
-// ============================================================================
-
-function UnauthorizedView({ error }: { error: string }) {
-  return (
-    <main className="container mx-auto py-10">
-      <Card className="max-w-lg mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldX className="h-5 w-5 text-red-500" />
-            Unauthorized Access
-          </CardTitle>
-          <CardDescription>
-            You do not have permission to access this page.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <div className="flex gap-2">
-            <Button asChild variant="default">
-              <Link href="/login">
-                <LogIn className="h-4 w-4 mr-2" />
-                Login
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/">Go Home</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </main>
-  );
-}
+import AIInboxUnauthorized from './AIInboxUnauthorized';
 
 // ============================================================================
 // SERVER COMPONENT (PAGE)
@@ -81,7 +42,7 @@ export default async function AIInboxPage() {
   } catch (error) {
     // Not authorized → render unauthorized view
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return <UnauthorizedView error={errorMessage} />;
+    return <AIInboxUnauthorized error={errorMessage} />;
   }
 }
 

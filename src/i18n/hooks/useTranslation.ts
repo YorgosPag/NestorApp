@@ -27,14 +27,15 @@ export const useTranslation = (namespace?: string) => {
   useEffect(() => {
     if (namespace && namespace !== 'common') {
       // Check if already loaded
-      if (i18n.hasResourceBundle(i18n.language, namespace)) {
+      const shouldForceReload = process.env.NODE_ENV === 'development';
+      if (!shouldForceReload && i18n.hasResourceBundle(i18n.language, namespace)) {
         setNamespaceLoaded(true);
         return;
       }
 
       // Load namespace asynchronously
       setNamespaceLoaded(false);
-      loadNamespace(namespace as Namespace)
+      loadNamespace(namespace as Namespace, i18n.language as Language, shouldForceReload)
         .then(() => {
           setNamespaceLoaded(true);
           if (process.env.NODE_ENV === 'development') {

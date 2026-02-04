@@ -52,10 +52,10 @@ const translationCache = new Map<string, TranslationData>();
 /**
  * Dynamic translation loader με webpack-compatible imports
  */
-async function loadTranslations(language: Language, namespace: Namespace) {
+async function loadTranslations(language: Language, namespace: Namespace, forceReload = false) {
   const cacheKey = `${language}:${namespace}`;
 
-  if (translationCache.has(cacheKey)) {
+  if (!forceReload && translationCache.has(cacheKey)) {
     // Map.has() guarantees value exists, so we can safely assert non-undefined
     return translationCache.get(cacheKey) as TranslationData;
   }
@@ -245,7 +245,9 @@ async function loadTranslations(language: Language, namespace: Namespace) {
     }
 
     const data = translations.default || translations;
-    translationCache.set(cacheKey, data);
+    if (!forceReload) {
+      translationCache.set(cacheKey, data);
+    }
     return data;
   } catch (error) {
     console.warn(`Failed to load translations for ${language}:${namespace}`, error);
@@ -253,7 +255,7 @@ async function loadTranslations(language: Language, namespace: Namespace) {
     // Fallback to Greek if available and not already trying Greek
     if (language !== 'el') {
       try {
-        return await loadTranslations('el', namespace);
+        return await loadTranslations('el', namespace, forceReload);
       } catch (fallbackError) {
         console.error(`Fallback failed for ${namespace}`, fallbackError);
       }
@@ -306,15 +308,15 @@ export async function initI18n(defaultLanguage: Language = 'el') {
 /**
  * Load namespace on demand
  */
-export async function loadNamespace(namespace: Namespace, language?: Language) {
+export async function loadNamespace(namespace: Namespace, language?: Language, forceReload = false) {
   const currentLanguage = (language || i18n.language || 'el') as Language;
   
   // Check if already loaded
-  if (i18n.hasResourceBundle(currentLanguage, namespace)) {
+  if (!forceReload && i18n.hasResourceBundle(currentLanguage, namespace)) {
     return;
   }
   
-  const translations = await loadTranslations(currentLanguage, namespace);
+  const translations = await loadTranslations(currentLanguage, namespace, forceReload);
   
   // Add to i18n instance
   i18n.addResourceBundle(currentLanguage, namespace, translations, true, true);

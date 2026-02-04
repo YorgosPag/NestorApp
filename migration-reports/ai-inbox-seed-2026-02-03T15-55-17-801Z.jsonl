@@ -1,0 +1,2 @@
+{"timestamp":"2026-02-03T15:55:19.857Z","action":"update","docId":"wCSrqVdoom6m7nOGxWea","before":null,"after":{"companyId":"pzNUy8ksddGCtcQMqumR","triageStatus":"pending"}}
+{"timestamp":"2026-02-03T15:55:19.857Z","action":"summary","collection":"ai-inbox-seed","stats":{"scanned":1,"updated":1,"skipped":0,"errors":0,"durationMs":2055},"skipReasons":{}}

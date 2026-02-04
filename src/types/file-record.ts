@@ -23,6 +23,7 @@ import type {
   FileLifecycleState,
   HoldType,
 } from '@/config/domain-constants';
+import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 
 // ============================================================================
 // 🏢 ENTERPRISE: FLOORPLAN PROCESSED DATA TYPES (ADR-033)
@@ -401,6 +402,8 @@ export interface FileRecord {
       scannerVersion?: string;
       threats?: string[];
     };
+    /** AI document classification (if available) */
+    analysis?: DocumentClassifyAnalysis;
   };
 
   // =========================================================================

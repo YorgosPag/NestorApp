@@ -11,12 +11,29 @@
     "refresh": "[Ŕέƒŕέŝĥ_]",
     "close": "[Ćłόŝέ_]"
   },
+  "periods": {
+    "day": "[Ðάȳ_]",
+    "week": "[Ŵéέķ_]",
+    "month": "[Μόńţĥ_]",
+    "year": "[Ŷéάř_]",
+    "dayDescription": "[Ţōðάȳ_]",
+    "weekDescription": "[Ţĥīŝ щéέķ_]",
+    "monthDescription": "[Ţĥīŝ ɱōńţĥ_]",
+    "yearDescription": "[Ţĥīŝ ȳéάř_]"
+  },
   "status": {
     "loading": "[Łόάðīńģ..._]",
     "error": "[Éŕŕόŕ_]",
     "success": "[Ŝūććέŝŝ_]",
     "pending": "[Ρέńðīńģ_]",
     "completed": "[Ćόɱρłέţέð_]"
+  },
+  "accessDenied": {
+    "ariaLabel": "[Άććέŝŝ ðέńīέð_]",
+    "title": "[Ūńåūţĥōřīžέð āććέŝŝ_]",
+    "description": "[Ŷōū ðō ńōţ ĥåνέ ρέřɱīŝŝīōń ţō åććέŝŝ ţĥīŝ ρåģέ._]",
+    "login": "[Łōģīń_]",
+    "home": "[Ģō Ĥōɱέ_]"
   },
   "placeholders": {
     "search": "[Ŝέάŕćĥ..._]",

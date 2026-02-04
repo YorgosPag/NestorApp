@@ -1,6 +1,6 @@
 'use client';
 
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { collection, addDoc, getDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CrmTask } from '@/types/crm';
@@ -14,7 +14,25 @@ const BATCH_SIZE = 500;
 export class TasksRepository implements ITasksRepository {
   private collectionName = TASKS_COLLECTION;
 
+  private async requireAuthContext(): Promise<{ uid: string; companyId: string }> {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error('AUTHENTICATION_ERROR: User must be logged in to access tasks');
+    }
+
+    const tokenResult = await currentUser.getIdTokenResult();
+    const companyId = tokenResult.claims?.companyId as string | undefined;
+
+    if (!companyId) {
+      throw new Error('AUTHORIZATION_ERROR: User is not assigned to a company');
+    }
+
+    return { uid: currentUser.uid, companyId };
+  }
+
   async add(data: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>): Promise<{ id: string; }> {
+    const { uid, companyId } = await this.requireAuthContext();
+
     // 🏢 ENTERPRISE: Proper FirestoreishTimestamp → Timestamp conversion
     let dueDateTimestamp: Timestamp | null = null;
     if (data.dueDate) {
@@ -29,14 +47,18 @@ export class TasksRepository implements ITasksRepository {
       }
     }
     
-    const docRef = await addDoc(collection(db, this.collectionName), {
+    const payload: Record<string, unknown> = {
       ...data,
       dueDate: dueDateTimestamp,
+      companyId,
+      createdBy: uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       completedAt: null,
       reminderSent: false,
-    });
+    };
+
+    const docRef = await addDoc(collection(db, this.collectionName), payload);
     return { id: docRef.id };
   }
 
@@ -49,35 +71,60 @@ export class TasksRepository implements ITasksRepository {
   }
 
   async getAll(): Promise<CrmTask[]> {
-    const q = query(collection(db, this.collectionName), orderBy('dueDate', 'asc'));
+    const { companyId } = await this.requireAuthContext();
+    const q = query(
+      collection(db, this.collectionName),
+      where('companyId', '==', companyId),
+      orderBy('dueDate', 'asc')
+    );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(transformTask);
   }
 
   async getByUser(userId: string): Promise<CrmTask[]> {
-    const q = query(collection(db, this.collectionName), where('assignedTo', '==', userId), orderBy('dueDate', 'asc'));
+    const { companyId } = await this.requireAuthContext();
+    const q = query(
+      collection(db, this.collectionName),
+      where('companyId', '==', companyId),
+      where('assignedTo', '==', userId),
+      orderBy('dueDate', 'asc')
+    );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(transformTask);
   }
 
   async getByLead(leadId: string): Promise<CrmTask[]> {
-    const q = query(collection(db, this.collectionName), where('leadId', '==', leadId), orderBy('dueDate', 'asc'));
+    const { companyId } = await this.requireAuthContext();
+    const q = query(
+      collection(db, this.collectionName),
+      where('companyId', '==', companyId),
+      where('leadId', '==', leadId),
+      orderBy('dueDate', 'asc')
+    );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(transformTask);
   }
   
   async getByStatus(status: CrmTask['status']): Promise<CrmTask[]> {
-    const q = query(collection(db, this.collectionName), where('status', '==', status), orderBy('dueDate', 'asc'));
+    const { companyId } = await this.requireAuthContext();
+    const q = query(
+      collection(db, this.collectionName),
+      where('companyId', '==', companyId),
+      where('status', '==', status),
+      orderBy('dueDate', 'asc')
+    );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(transformTask);
   }
   
   async getOverdue(): Promise<CrmTask[]> {
+    const { companyId } = await this.requireAuthContext();
     const today = new Date();
     today.setHours(23, 59, 59, 999);
     
     const q = query(
       collection(db, this.collectionName),
+      where('companyId', '==', companyId),
       where('status', 'in', ['pending', 'in_progress']),
       where('dueDate', '<=', Timestamp.fromDate(today)),
       orderBy('dueDate', 'asc')
@@ -113,17 +160,27 @@ export class TasksRepository implements ITasksRepository {
   }
 
   async deleteAll(): Promise<number> {
-    const snapshot = await getDocs(collection(db, this.collectionName));
+    const { companyId } = await this.requireAuthContext();
+    const q = query(
+      collection(db, this.collectionName),
+      where('companyId', '==', companyId)
+    );
+    const snapshot = await getDocs(q);
     if (snapshot.empty) return 0;
     
     // Simple delete all for client-side (no batch operations for simplicity)
     const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
     await Promise.all(deletePromises);
-    return snapshot.size;
+    return deletePromises.length;
   }
 
   async getStats(userId?: string | null) {
-    let q = query(collection(db, this.collectionName), where('status', '!=', 'cancelled'));
+    const { companyId } = await this.requireAuthContext();
+    let q = query(
+      collection(db, this.collectionName),
+      where('companyId', '==', companyId),
+      where('status', '!=', 'cancelled')
+    );
     if (userId) {
       q = query(q, where('assignedTo', '==', userId));
     }

@@ -14,14 +14,13 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Inbox, CheckCircle, XCircle, Eye, AlertTriangle, Filter } from 'lucide-react';
+import { Inbox, CheckCircle, XCircle, Eye, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import toast from 'react-hot-toast';
@@ -29,7 +28,8 @@ import type { Communication, FirestoreishTimestamp, TriageStatus } from '@/types
 import { TRIAGE_STATUSES } from '@/types/crm';
 import type { AdminContext } from '@/server/admin/admin-guards';
 import { PageContainer, ListContainer } from '@/core/containers';
-import { PageHeader } from '@/core/headers';
+import AIInboxHeader from '@/components/admin/ai-inbox/AIInboxHeader';
+import { Spinner } from '@/components/ui/spinner';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { AdvancedFiltersPanel, aiInboxFiltersConfig, defaultAIInboxFilters, type AIInboxFilterState } from '@/components/core/AdvancedFilters';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -364,6 +364,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   }, [communications, filters.channel, filters.dateFrom, filters.dateTo, filters.searchTerm]);
 
   const pendingCount = stats?.pending ?? 0;
+  const isRefreshing = loading || statsLoading;
 
   const dashboardStatusFilters = useMemo(() => ([
     'all',
@@ -401,41 +402,14 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
 
   return (
     <PageContainer ariaLabel={t('aiInbox.title')}>
-      <PageHeader
-        variant="sticky-rounded"
-        layout="compact"
-        spacing="compact"
-        title={{
-          icon: Inbox,
-          title: t('aiInbox.title'),
-          subtitle: t('aiInbox.description')
-        }}
-        actions={{
-          showDashboard,
-          onDashboardToggle: () => setShowDashboard(!showDashboard),
-          customActions: [
-            pendingCount > 0 ? (
-              <Badge key="pending-count" variant="outline" className={`${typography.body.sm} ${spacing.padding.x.sm} ${spacing.padding.y.xs}`}>
-                {pendingCount} {t('aiInbox.pending')}
-              </Badge>
-            ) : null,
-            <Button key="refresh" onClick={handleRefresh} variant="outline" size="sm">
-              <Loader2 className={`${iconSizes.sm} ${layout.buttonIconSpacing} ${loading || statsLoading ? 'animate-spin' : ''}`} />
-              {t('aiInbox.refresh')}
-            </Button>,
-            <Button
-              key="mobile-filters"
-              type="button"
-              variant={showFilters ? 'default' : 'outline'}
-              size="icon"
-              className="md:hidden"
-              onClick={() => setShowFilters(!showFilters)}
-              aria-label={t('aiInbox.accessibility.toggleFilters')}
-            >
-              <Filter className={iconSizes.sm} />
-            </Button>
-          ].filter(Boolean) as ReactNode[]
-        }}
+      <AIInboxHeader
+        showDashboard={showDashboard}
+        setShowDashboard={setShowDashboard}
+        pendingCount={pendingCount}
+        isRefreshing={isRefreshing}
+        onRefresh={handleRefresh}
+        showFilters={showFilters}
+        setShowFilters={setShowFilters}
       />
 
       {showDashboard && (
@@ -467,7 +441,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
               config={aiInboxFiltersConfig}
               filters={filters}
               onFiltersChange={setFilters}
-              defaultOpen={true}
+              defaultOpen
             />
           </aside>
         )}
@@ -492,7 +466,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
             <CardContent>
               {loading ? (
                 <div className={`flex items-center justify-center ${spacing.padding.y.lg}`}>
-                  <Loader2 className={`${iconSizes.xl} animate-spin text-muted-foreground`} />
+                  <Spinner size="large" />
                 </div>
               ) : filteredCommunications.length === 0 ? (
                 <div className={`${layout.textCenter} ${spacing.padding.y.lg}`}>
@@ -567,7 +541,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                                     disabled={actionLoading === comm.id}
                                   >
                                     {actionLoading === comm.id ? (
-                                      <Loader2 className={`${iconSizes.sm} animate-spin`} />
+                                      <Spinner size="small" />
                                     ) : (
                                       <>
                                         <CheckCircle className={`${iconSizes.sm} ${spacing.margin.right.xs}`} />

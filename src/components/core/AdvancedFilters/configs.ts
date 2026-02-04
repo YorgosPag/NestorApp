@@ -89,6 +89,24 @@ const RL = {
 };
 const ECL = {};
 
+// 🏢 ENTERPRISE: Task filter labels (i18n keys - centralized)
+const TASK_STATUS_LABELS = {
+  pending: 'filters.status.pending',
+  in_progress: 'filters.status.inProgress',
+  completed: 'filters.status.completed',
+  cancelled: 'filters.status.cancelled'
+} as const;
+
+const TASK_TYPE_LABELS = {
+  call: 'filters.taskTypes.call',
+  email: 'filters.taskTypes.email',
+  meeting: 'filters.taskTypes.meeting',
+  viewing: 'filters.taskTypes.viewing',
+  follow_up: 'filters.taskTypes.followUp',
+  document: 'filters.taskTypes.document',
+  other: 'filters.taskTypes.other'
+} as const;
+
 // 🏢 ENTERPRISE: Centralized filter labels - i18n translation keys
 const FL = PROPERTY_FILTER_LABELS;
 const SP = {
@@ -1142,6 +1160,113 @@ export const defaultCommunicationsFilters: CommunicationsFilterState = {
   searchTerm: '',
   channel: 'all',
   status: 'all',
+  dateFrom: '',
+  dateTo: ''
+};
+
+// ====================================================================
+// [ENTERPRISE] Task Filters Configuration
+// For CRM task detail/list surfaces (Pending Subjects)
+// ====================================================================
+export const taskFiltersConfig: FilterPanelConfig = {
+  title: 'filters.tasksTitle',
+  searchPlaceholder: SP.general,
+  i18nNamespace: 'filters',
+  rows: [
+    {
+      id: 'tasks-basic',
+      fields: [
+        {
+          id: 'searchTerm',
+          type: 'search',
+          label: FL.search,
+          placeholder: SP.general,
+          width: 2
+        },
+        {
+          id: 'status',
+          type: 'select',
+          label: FL.status,
+          placeholder: SP.status_placeholder,
+          width: 1,
+          options: [
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_STATUSES },
+            { value: 'pending', label: TASK_STATUS_LABELS.pending },
+            { value: 'in_progress', label: TASK_STATUS_LABELS.in_progress },
+            { value: 'completed', label: TASK_STATUS_LABELS.completed },
+            { value: 'cancelled', label: TASK_STATUS_LABELS.cancelled }
+          ]
+        },
+        {
+          id: 'priority',
+          type: 'select',
+          label: FL.priority,
+          placeholder: SP.priority_placeholder,
+          width: 1,
+          options: [
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_PRIORITIES },
+            { value: 'low', label: PRIORITY_LABELS.low },
+            { value: 'medium', label: PRIORITY_LABELS.medium },
+            { value: 'high', label: PRIORITY_LABELS.high },
+            { value: 'urgent', label: PRIORITY_LABELS.urgent }
+          ]
+        },
+        {
+          id: 'type',
+          type: 'select',
+          label: FL.type,
+          placeholder: SP.type_placeholder,
+          width: 1,
+          options: [
+            { value: 'all', label: COMMON_FILTER_LABELS.ALL_TYPES },
+            { value: 'call', label: TASK_TYPE_LABELS.call },
+            { value: 'email', label: TASK_TYPE_LABELS.email },
+            { value: 'meeting', label: TASK_TYPE_LABELS.meeting },
+            { value: 'viewing', label: TASK_TYPE_LABELS.viewing },
+            { value: 'follow_up', label: TASK_TYPE_LABELS.follow_up },
+            { value: 'document', label: TASK_TYPE_LABELS.document },
+            { value: 'other', label: TASK_TYPE_LABELS.other }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'tasks-date',
+      fields: [
+        {
+          id: 'dateFrom',
+          type: 'date',
+          label: 'filters.dateFrom',
+          width: 1
+        },
+        {
+          id: 'dateTo',
+          type: 'date',
+          label: 'filters.dateTo',
+          width: 1
+        }
+      ]
+    }
+  ]
+};
+
+// Task Filter State Interface
+export interface TaskFilterState {
+  [key: string]: unknown;
+  searchTerm: string;
+  status: string;
+  priority: string;
+  type: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+// Default Task Filters
+export const defaultTaskFilters: TaskFilterState = {
+  searchTerm: '',
+  status: 'all',
+  priority: 'all',
+  type: 'all',
   dateFrom: '',
   dateTo: ''
 };
