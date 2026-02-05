@@ -73,6 +73,7 @@ if (typeof window !== 'undefined') {
       'auth',          // 🏢 Auth screens - critical for UX
       'forms',         // 🏢 ENTERPRISE: Form labels, sections, help texts (company-gemi, service forms)
       'admin',         // 🏢 ENTERPRISE: Admin pages (AI Inbox, RBAC) - prevents hydration mismatch
+      'crm',           // 🏢 CRM module - tasks, opportunities, inbox
       'building',      // Building management - core module
       'projects',      // Projects module
       'contacts',      // Contacts module
