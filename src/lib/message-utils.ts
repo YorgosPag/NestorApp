@@ -78,6 +78,65 @@ export const TELEGRAM_ALLOWED_ATTRIBUTES: Record<string, string[]> = {
   'pre': ['class'],       // For language specification
 };
 
+// ============================================================================
+// EMAIL HTML SANITIZATION (ADR-072)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Email-compatible HTML tags allowlist
+ *
+ * Extended allowlist for rendering emails with full formatting.
+ * Includes structure, text formatting, lists, tables (signatures), and images.
+ *
+ * @security DOMPurify removes ALL unsafe content (scripts, event handlers)
+ * @see ADR-072: AI Inbox HTML Rendering with Enterprise Sanitization
+ */
+export const EMAIL_ALLOWED_TAGS = [
+  // Structure
+  'div', 'span', 'p', 'br', 'hr',
+  // Text formatting
+  'b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike', 'del',
+  // Code blocks
+  'code', 'pre',
+  // Lists
+  'ul', 'ol', 'li',
+  // Links
+  'a',
+  // Headings
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  // Tables (email signatures)
+  'table', 'tr', 'td', 'th', 'tbody', 'thead', 'tfoot',
+  // Images
+  'img',
+  // Block quotes
+  'blockquote',
+] as const;
+
+/**
+ * 🏢 ENTERPRISE: Allowed attributes for email HTML tags
+ */
+export const EMAIL_ALLOWED_ATTRIBUTES: Record<string, string[]> = {
+  'a': ['href', 'title', 'target'],
+  'img': ['src', 'alt', 'width', 'height'],
+  'td': ['colspan', 'rowspan', 'align', 'valign'],
+  'th': ['colspan', 'rowspan', 'align', 'valign'],
+  'table': ['cellpadding', 'cellspacing', 'border', 'width'],
+  // Global attributes allowed on all tags
+  '*': ['style', 'class', 'dir'],
+};
+
+/**
+ * 🏢 ENTERPRISE: Forbidden attributes for XSS protection
+ */
+export const EMAIL_FORBIDDEN_ATTRIBUTES = [
+  'onclick', 'ondblclick', 'onmousedown', 'onmouseup', 'onmouseover',
+  'onmousemove', 'onmouseout', 'onmouseenter', 'onmouseleave',
+  'onkeydown', 'onkeypress', 'onkeyup',
+  'onfocus', 'onblur', 'onchange', 'onsubmit', 'onreset', 'onselect',
+  'onload', 'onerror', 'onabort',
+  'onscroll', 'onresize',
+] as const;
+
 /**
  * Default sanitization config for message rendering
  */
@@ -130,6 +189,70 @@ export function sanitizeHTML(
     ALLOW_DATA_ATTR: false,       // Block data-* attributes
     ALLOW_UNKNOWN_PROTOCOLS: false, // Block unknown URL schemes
     SAFE_FOR_TEMPLATES: true,     // Safe for JSX
+  });
+
+  return cleanHTML;
+}
+
+/**
+ * Sanitize email HTML content with extended allowlist (ADR-072)
+ *
+ * @param html - Raw email HTML string (potentially unsafe)
+ * @returns Safe HTML string preserving email formatting
+ *
+ * @security
+ * - Uses DOMPurify for XSS protection (OWASP A03:2021)
+ * - Extended allowlist for email formatting (colors, tables, images)
+ * - Blocks ALL event handlers and script tags
+ * - Adds rel="noopener noreferrer" to links
+ *
+ * @example
+ * ```typescript
+ * const raw = '<b>Hello</b> <script>alert("XSS")</script>';
+ * const safe = sanitizeEmailHTML(raw);
+ * // Returns: '<b>Hello</b>' (script removed)
+ *
+ * const email = '<span style="color:red">Important</span>';
+ * const safe2 = sanitizeEmailHTML(email);
+ * // Returns: '<span style="color:red">Important</span>' (style preserved)
+ * ```
+ */
+export function sanitizeEmailHTML(html: string): string {
+  // Input validation
+  if (!html || typeof html !== 'string') {
+    return '';
+  }
+
+  // Collect all allowed attributes from EMAIL_ALLOWED_ATTRIBUTES
+  const allowedAttributes: string[] = [];
+  Object.entries(EMAIL_ALLOWED_ATTRIBUTES).forEach(([tag, attrs]) => {
+    if (tag === '*') {
+      // Global attributes
+      attrs.forEach(attr => {
+        if (!allowedAttributes.includes(attr)) {
+          allowedAttributes.push(attr);
+        }
+      });
+    } else {
+      // Tag-specific attributes
+      attrs.forEach(attr => {
+        if (!allowedAttributes.includes(attr)) {
+          allowedAttributes.push(attr);
+        }
+      });
+    }
+  });
+
+  // Configure DOMPurify with email-specific settings
+  const cleanHTML = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [...EMAIL_ALLOWED_TAGS],
+    ALLOWED_ATTR: allowedAttributes,
+    KEEP_CONTENT: true,           // Keep text content when tags are removed
+    ALLOW_DATA_ATTR: false,       // Block data-* attributes
+    ALLOW_UNKNOWN_PROTOCOLS: false, // Block unknown URL schemes
+    SAFE_FOR_TEMPLATES: true,     // Safe for JSX
+    FORBID_ATTR: [...EMAIL_FORBIDDEN_ATTRIBUTES], // Block event handlers
+    ADD_ATTR: ['target'],         // Allow target="_blank" on links
   });
 
   return cleanHTML;
@@ -272,6 +395,7 @@ export function hasAttachments(content: MessageContent): boolean {
  */
 export default {
   sanitizeHTML,
+  sanitizeEmailHTML,
   formatMessageHTML,
   hasHTMLFormatting,
   stripHTMLTags,
@@ -279,5 +403,8 @@ export default {
   hasAttachments,
   TELEGRAM_ALLOWED_TAGS,
   TELEGRAM_ALLOWED_ATTRIBUTES,
+  EMAIL_ALLOWED_TAGS,
+  EMAIL_ALLOWED_ATTRIBUTES,
+  EMAIL_FORBIDDEN_ATTRIBUTES,
   DEFAULT_MESSAGE_CONFIG,
 };

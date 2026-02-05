@@ -18,11 +18,12 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Inbox, CheckCircle, XCircle, Eye, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { sanitizeEmailHTML } from '@/lib/message-utils';
 import toast from 'react-hot-toast';
 import type { Communication, FirestoreishTimestamp, TriageStatus } from '@/types/crm';
 import { TRIAGE_STATUSES } from '@/types/crm';
@@ -135,6 +136,227 @@ const getDisplayContent = (content: unknown): string => {
   return '';
 };
 
+/**
+ * 🏢 ENTERPRISE: URL Detection & Linkification
+ * Converts URLs in text to clickable links while preserving text formatting
+ *
+ * Supports formats:
+ * 1. `Text <URL>` - Email/HTML style (shows "Text" as link)
+ * 2. `[Text](URL)` - Markdown style (shows "Text" as link)
+ * 3. Plain URLs - http://, https://, www. (shows shortened URL)
+ */
+
+interface TextPart {
+  type: 'text' | 'link';
+  content: string;
+  href?: string;
+  displayText?: string;
+}
+
+// Pattern 1: Text <URL> format (email style) - e.g., "Google Maps <https://...>"
+const EMAIL_LINK_REGEX = /([^<>\n]+?)\s*<(https?:\/\/[^>]+)>/gi;
+
+// Pattern 2: [Text](URL) format (markdown style)
+const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/gi;
+
+// Pattern 3: Plain URLs
+const PLAIN_URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"\]\)]+/gi;
+
+const parseTextWithLinks = (text: string): TextPart[] => {
+  const parts: TextPart[] = [];
+
+  // First, find all link patterns and their positions
+  interface LinkMatch {
+    start: number;
+    end: number;
+    displayText: string;
+    href: string;
+  }
+
+  const links: LinkMatch[] = [];
+
+  // Find email-style links: Text <URL>
+  EMAIL_LINK_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = EMAIL_LINK_REGEX.exec(text)) !== null) {
+    const displayText = match[1].trim();
+    // Skip if displayText looks like it's part of a URL or is empty
+    if (displayText && !displayText.startsWith('http') && !displayText.startsWith('www.')) {
+      links.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        displayText,
+        href: match[2]
+      });
+    }
+  }
+
+  // Find markdown-style links: [Text](URL)
+  MARKDOWN_LINK_REGEX.lastIndex = 0;
+  while ((match = MARKDOWN_LINK_REGEX.exec(text)) !== null) {
+    // Check if this position overlaps with existing links
+    const overlaps = links.some(l =>
+      (match!.index >= l.start && match!.index < l.end) ||
+      (match!.index + match![0].length > l.start && match!.index + match![0].length <= l.end)
+    );
+    if (!overlaps) {
+      links.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        displayText: match[1],
+        href: match[2]
+      });
+    }
+  }
+
+  // Find plain URLs (only those not already captured)
+  PLAIN_URL_REGEX.lastIndex = 0;
+  while ((match = PLAIN_URL_REGEX.exec(text)) !== null) {
+    // Check if this position overlaps with existing links
+    const overlaps = links.some(l =>
+      (match!.index >= l.start && match!.index < l.end) ||
+      (match!.index + match![0].length > l.start && match!.index + match![0].length <= l.end)
+    );
+    if (!overlaps) {
+      let url = match[0];
+      // Clean trailing punctuation
+      const trailingPunctuation = url.match(/[.,;:!?)>\]\\]+$/);
+      if (trailingPunctuation) {
+        url = url.slice(0, -trailingPunctuation[0].length);
+      }
+
+      // Create shortened display text for plain URLs
+      let displayText: string;
+      try {
+        const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+        displayText = urlObj.hostname.replace('www.', '');
+      } catch {
+        displayText = url.length > 40 ? url.slice(0, 40) + '...' : url;
+      }
+
+      links.push({
+        start: match.index,
+        end: match.index + url.length,
+        displayText,
+        href: url
+      });
+    }
+  }
+
+  // Sort links by position
+  links.sort((a, b) => a.start - b.start);
+
+  // Build parts array
+  let lastIndex = 0;
+  for (const link of links) {
+    // Add text before the link
+    if (link.start > lastIndex) {
+      const textContent = text.slice(lastIndex, link.start);
+      if (textContent) {
+        parts.push({ type: 'text', content: textContent });
+      }
+    }
+
+    // Add the link
+    parts.push({
+      type: 'link',
+      content: link.displayText,
+      href: link.href,
+      displayText: link.displayText
+    });
+
+    lastIndex = link.end;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push({ type: 'text', content: text.slice(lastIndex) });
+  }
+
+  return parts.length > 0 ? parts : [{ type: 'text', content: text }];
+};
+
+/**
+ * 🏢 ENTERPRISE: Render text with clickable links
+ * Returns React elements with proper link handling
+ */
+const RenderContentWithLinks = ({ content }: { content: string }) => {
+  const parts = parseTextWithLinks(content);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.type === 'link' && part.href) {
+          // Ensure URL has protocol
+          const href = part.href.startsWith('http')
+            ? part.href
+            : `https://${part.href}`;
+
+          return (
+            <a
+              key={index}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline hover:text-primary/80"
+              onClick={(e) => e.stopPropagation()}
+              title={part.href} // Show full URL on hover
+            >
+              {part.displayText || part.content}
+            </a>
+          );
+        }
+        return <span key={index}>{part.content}</span>;
+      })}
+    </>
+  );
+};
+
+/**
+ * 🏢 ENTERPRISE: Safe HTML Content Renderer (ADR-072)
+ *
+ * Renders email HTML content with:
+ * - XSS protection via DOMPurify sanitization
+ * - Preserved formatting (colors, fonts, tables)
+ * - Clickable links with proper styling
+ * - Image rendering (email signatures)
+ *
+ * @security Uses sanitizeEmailHTML() - never renders raw HTML directly
+ */
+const SafeHTMLContent = ({ html }: { html: string }) => {
+  // Check if content appears to be HTML
+  const hasHTMLContent = /<[^>]+>/.test(html);
+
+  if (!hasHTMLContent) {
+    // Plain text: use existing link parser
+    return (
+      <div className="whitespace-pre-wrap break-words">
+        <RenderContentWithLinks content={html} />
+      </div>
+    );
+  }
+
+  // HTML content: sanitize and render
+  const sanitizedHTML = sanitizeEmailHTML(html);
+
+  return (
+    <div
+      className="email-content prose prose-sm max-w-none dark:prose-invert
+        [&_a]:text-primary [&_a]:underline [&_a]:hover:text-primary/80
+        [&_table]:border-collapse [&_td]:p-1 [&_th]:p-1
+        [&_img]:max-w-full [&_img]:h-auto
+        [&_blockquote]:border-l-4 [&_blockquote]:border-muted [&_blockquote]:pl-4"
+      dangerouslySetInnerHTML={{ __html: sanitizedHTML }}
+      onClick={(e) => {
+        // Allow links to work
+        if ((e.target as HTMLElement).tagName === 'A') {
+          e.stopPropagation();
+        }
+      }}
+    />
+  );
+};
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -229,23 +451,22 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
       }
 
+      // 🏢 ENTERPRISE: Count messages - treat undefined/null triageStatus as 'pending'
       const counts = result.data.reduce(
         (acc, comm) => {
-          switch (comm.triageStatus) {
-            case TRIAGE_STATUSES.PENDING:
-              acc.pending += 1;
-              break;
-            case TRIAGE_STATUSES.APPROVED:
-              acc.approved += 1;
-              break;
-            case TRIAGE_STATUSES.REJECTED:
-              acc.rejected += 1;
-              break;
-            case TRIAGE_STATUSES.REVIEWED:
-              acc.reviewed += 1;
-              break;
-            default:
-              break;
+          const status = comm.triageStatus;
+          // Messages without triageStatus or with 'pending' are counted as pending
+          if (!status || status === TRIAGE_STATUSES.PENDING) {
+            acc.pending += 1;
+          } else if (status === TRIAGE_STATUSES.APPROVED) {
+            acc.approved += 1;
+          } else if (status === TRIAGE_STATUSES.REJECTED) {
+            acc.rejected += 1;
+          } else if (status === TRIAGE_STATUSES.REVIEWED) {
+            acc.reviewed += 1;
+          } else {
+            // Unknown status - treat as pending for safety
+            acc.pending += 1;
           }
           return acc;
         },
@@ -559,69 +780,99 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                   <p className={`${typography.body.sm} text-muted-foreground`}>{t('aiInbox.empty.description')}</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('aiInbox.from')}</TableHead>
-                        <TableHead>{t('aiInbox.channel')}</TableHead>
-                        <TableHead>{t('aiInbox.content')}</TableHead>
-                        <TableHead>{t('aiInbox.intent')}</TableHead>
-                        <TableHead>{t('aiInbox.confidence')}</TableHead>
-                        <TableHead>{t('aiInbox.status')}</TableHead>
-                        <TableHead>{t('aiInbox.actions')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCommunications.map((comm) => (
-                        <TableRow key={comm.id}>
-                        <TableCell className={typography.label.sm}>
-                          {comm.from || t('aiInbox.unknownSender')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{comm.type}</Badge>
-                        </TableCell>
-                        <TableCell className={layout.truncate}>
-                          {getDisplayContent(comm.content)}
-                        </TableCell>
-                          <TableCell>
-                            <Badge variant={getIntentBadgeVariant(comm.intentAnalysis?.intentType)}>
-                              {comm.intentAnalysis?.intentType || t('aiInbox.unknownIntent')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {comm.intentAnalysis?.confidence && (
-                              <Badge variant={getConfidenceBadgeVariant(comm.intentAnalysis.confidence)}>
-                                {Math.round(comm.intentAnalysis.confidence * 100)}%
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {comm.triageStatus === TRIAGE_STATUSES.APPROVED ? (
-                              <Badge variant="default">
+                <Accordion type="single" collapsible className="w-full">
+                  {filteredCommunications.map((comm) => {
+                    // 🏢 ENTERPRISE: Treat undefined/null triageStatus as 'pending'
+                    const isPending = !comm.triageStatus || comm.triageStatus === TRIAGE_STATUSES.PENDING;
+                    const isApproved = comm.triageStatus === TRIAGE_STATUSES.APPROVED;
+                    const isRejected = comm.triageStatus === TRIAGE_STATUSES.REJECTED;
+                    const createdAt = resolveFirestoreTimestamp(comm.createdAt);
+                    const formattedDate = createdAt ? createdAt.toLocaleString('el-GR') : '';
+
+                    return (
+                      <AccordionItem key={comm.id} value={comm.id} variant="bordered">
+                        <AccordionTrigger variant="bordered" size="md" className="hover:no-underline">
+                          <div className={`${layout.flexGap2} items-center w-full pr-4`}>
+                            {/* Status Badge */}
+                            {isApproved ? (
+                              <Badge variant="default" className="shrink-0">
                                 <CheckCircle className={`${iconSizes.xs} ${spacing.margin.right.xs}`} />
                                 {t('aiInbox.approved')}
                               </Badge>
-                          ) : comm.triageStatus === TRIAGE_STATUSES.REJECTED ? (
-                            <Badge variant="destructive">
-                              <XCircle className={`${iconSizes.xs} ${spacing.margin.right.xs}`} />
-                              {t('aiInbox.rejected')}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">
-                              <AlertTriangle className={`${iconSizes.xs} ${spacing.margin.right.xs}`} />
-                              {t('aiInbox.pending')}
-                            </Badge>
-                          )}
-                          </TableCell>
-                          <TableCell>
-                            <div className={layout.flexGap2}>
-                              {comm.triageStatus === TRIAGE_STATUSES.PENDING && (
+                            ) : isRejected ? (
+                              <Badge variant="destructive" className="shrink-0">
+                                <XCircle className={`${iconSizes.xs} ${spacing.margin.right.xs}`} />
+                                {t('aiInbox.rejected')}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="shrink-0">
+                                <AlertTriangle className={`${iconSizes.xs} ${spacing.margin.right.xs}`} />
+                                {t('aiInbox.pending')}
+                              </Badge>
+                            )}
+
+                            {/* Channel Badge */}
+                            <Badge variant="secondary" className="shrink-0">{comm.type}</Badge>
+
+                            {/* Sender */}
+                            <span className={`${typography.label.sm} truncate`}>
+                              {comm.from || t('aiInbox.unknownSender')}
+                            </span>
+
+                            {/* Subject (if available) */}
+                            {comm.subject && (
+                              <span className="text-muted-foreground truncate flex-1">
+                                - {comm.subject}
+                              </span>
+                            )}
+
+                            {/* Date */}
+                            <span className={`${typography.body.xs} text-muted-foreground shrink-0 ml-auto`}>
+                              {formattedDate}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+
+                        <AccordionContent variant="bordered">
+                          <div className={`${layout.flexColGap4} pt-2`}>
+                            {/* Message Content - safe HTML rendering with clickable links (ADR-072) */}
+                            <div className="bg-muted/50 rounded-lg p-4">
+                              <div className={typography.body.sm}>
+                                <SafeHTMLContent html={getDisplayContent(comm.content)} />
+                              </div>
+                            </div>
+
+                            {/* Intent Analysis */}
+                            {comm.intentAnalysis && (
+                              <div className={`${layout.flexGap4} flex-wrap`}>
+                                <div className={layout.flexGap2}>
+                                  <span className={typography.label.sm}>{t('aiInbox.intent')}:</span>
+                                  <Badge variant={getIntentBadgeVariant(comm.intentAnalysis.intentType)}>
+                                    {comm.intentAnalysis.intentType || t('aiInbox.unknownIntent')}
+                                  </Badge>
+                                </div>
+                                {comm.intentAnalysis.confidence && (
+                                  <div className={layout.flexGap2}>
+                                    <span className={typography.label.sm}>{t('aiInbox.confidence')}:</span>
+                                    <Badge variant={getConfidenceBadgeVariant(comm.intentAnalysis.confidence)}>
+                                      {Math.round(comm.intentAnalysis.confidence * 100)}%
+                                    </Badge>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Action Buttons - ALWAYS show for pending messages */}
+                            <div className={`${layout.flexGap2} pt-2 border-t`}>
+                              {isPending && (
                                 <>
                                   <Button
                                     size="sm"
                                     variant="default"
-                                    onClick={() => handleApprove(comm.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleApprove(comm.id);
+                                    }}
                                     disabled={actionLoading === comm.id}
                                   >
                                     {actionLoading === comm.id ? (
@@ -636,7 +887,10 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleReject(comm.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleReject(comm.id);
+                                    }}
                                     disabled={actionLoading === comm.id}
                                   >
                                     <XCircle className={`${iconSizes.sm} ${spacing.margin.right.xs}`} />
@@ -648,19 +902,22 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => router.push(`/crm/tasks/${comm.linkedTaskId}`)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/crm/tasks/${comm.linkedTaskId}`);
+                                  }}
                                 >
                                   <Eye className={`${iconSizes.sm} ${spacing.margin.right.xs}`} />
                                   {t('aiInbox.viewTask')}
                                 </Button>
                               )}
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
               )}
             </CardContent>
           </Card>
