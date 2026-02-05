@@ -14,7 +14,8 @@ const BATCH_SIZE = 500;
 export class TasksRepository implements ITasksRepository {
   private collectionName = TASKS_COLLECTION;
 
-  private async requireAuthContext(): Promise<{ uid: string; companyId: string }> {
+  // 🏢 ENTERPRISE: Auth context with super_admin support
+  private async requireAuthContext(): Promise<{ uid: string; companyId: string | null; isSuperAdmin: boolean }> {
     const currentUser = auth.currentUser;
     if (!currentUser) {
       throw new Error('AUTHENTICATION_ERROR: User must be logged in to access tasks');
@@ -22,16 +23,34 @@ export class TasksRepository implements ITasksRepository {
 
     const tokenResult = await currentUser.getIdTokenResult();
     const companyId = tokenResult.claims?.companyId as string | undefined;
+    const globalRole = tokenResult.claims?.globalRole as string | undefined;
+    const isSuperAdmin = globalRole === 'super_admin';
 
-    if (!companyId) {
+    // 🔍 DEBUG: Log claims for troubleshooting
+    console.log('🔍 [TasksRepository] Auth claims:', {
+      uid: currentUser.uid,
+      companyId,
+      globalRole,
+      isSuperAdmin,
+      allClaims: tokenResult.claims
+    });
+
+    // 🏢 ENTERPRISE: Super admins can access without companyId
+    if (!companyId && !isSuperAdmin) {
       throw new Error('AUTHORIZATION_ERROR: User is not assigned to a company');
     }
 
-    return { uid: currentUser.uid, companyId };
+    return { uid: currentUser.uid, companyId: companyId || null, isSuperAdmin };
   }
 
   async add(data: Omit<CrmTask, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'reminderSent'>): Promise<{ id: string; }> {
-    const { uid, companyId } = await this.requireAuthContext();
+    const { uid, companyId, isSuperAdmin } = await this.requireAuthContext();
+
+    // 🏢 ENTERPRISE: Super admin must specify companyId when creating tasks
+    const taskCompanyId = (data as Record<string, unknown>).companyId as string | undefined || companyId;
+    if (!taskCompanyId) {
+      throw new Error('VALIDATION_ERROR: companyId is required to create a task');
+    }
 
     // 🏢 ENTERPRISE: Proper FirestoreishTimestamp → Timestamp conversion
     let dueDateTimestamp: Timestamp | null = null;
@@ -50,7 +69,7 @@ export class TasksRepository implements ITasksRepository {
     const payload: Record<string, unknown> = {
       ...data,
       dueDate: dueDateTimestamp,
-      companyId,
+      companyId: taskCompanyId,
       createdBy: uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -71,65 +90,122 @@ export class TasksRepository implements ITasksRepository {
   }
 
   async getAll(): Promise<CrmTask[]> {
-    const { companyId } = await this.requireAuthContext();
-    const q = query(
-      collection(db, this.collectionName),
-      where('companyId', '==', companyId),
-      orderBy('dueDate', 'asc')
-    );
+    const { companyId, isSuperAdmin } = await this.requireAuthContext();
+
+    // 🔍 DEBUG: Log query parameters
+    console.log('🔍 [TasksRepository.getAll] Query params:', { companyId, isSuperAdmin });
+
+    // 🏢 ENTERPRISE: Super admin can see all tasks, regular users see only their company's
+    let q;
+    if (isSuperAdmin && !companyId) {
+      // Super admin without company - get all tasks
+      console.log('🔍 [TasksRepository.getAll] Using super admin query (no companyId filter)');
+      q = query(
+        collection(db, this.collectionName),
+        orderBy('dueDate', 'asc')
+      );
+    } else {
+      // Regular user or super admin with company - filter by companyId
+      console.log('🔍 [TasksRepository.getAll] Using companyId filter:', companyId);
+      q = query(
+        collection(db, this.collectionName),
+        where('companyId', '==', companyId),
+        orderBy('dueDate', 'asc')
+      );
+    }
     const snapshot = await getDocs(q);
     return snapshot.docs.map(transformTask);
   }
 
   async getByUser(userId: string): Promise<CrmTask[]> {
-    const { companyId } = await this.requireAuthContext();
-    const q = query(
-      collection(db, this.collectionName),
-      where('companyId', '==', companyId),
-      where('assignedTo', '==', userId),
-      orderBy('dueDate', 'asc')
-    );
+    const { companyId, isSuperAdmin } = await this.requireAuthContext();
+
+    let q;
+    if (isSuperAdmin && !companyId) {
+      q = query(
+        collection(db, this.collectionName),
+        where('assignedTo', '==', userId),
+        orderBy('dueDate', 'asc')
+      );
+    } else {
+      q = query(
+        collection(db, this.collectionName),
+        where('companyId', '==', companyId),
+        where('assignedTo', '==', userId),
+        orderBy('dueDate', 'asc')
+      );
+    }
     const snapshot = await getDocs(q);
     return snapshot.docs.map(transformTask);
   }
 
   async getByLead(leadId: string): Promise<CrmTask[]> {
-    const { companyId } = await this.requireAuthContext();
-    const q = query(
-      collection(db, this.collectionName),
-      where('companyId', '==', companyId),
-      where('leadId', '==', leadId),
-      orderBy('dueDate', 'asc')
-    );
+    const { companyId, isSuperAdmin } = await this.requireAuthContext();
+
+    let q;
+    if (isSuperAdmin && !companyId) {
+      q = query(
+        collection(db, this.collectionName),
+        where('leadId', '==', leadId),
+        orderBy('dueDate', 'asc')
+      );
+    } else {
+      q = query(
+        collection(db, this.collectionName),
+        where('companyId', '==', companyId),
+        where('leadId', '==', leadId),
+        orderBy('dueDate', 'asc')
+      );
+    }
     const snapshot = await getDocs(q);
     return snapshot.docs.map(transformTask);
   }
-  
+
   async getByStatus(status: CrmTask['status']): Promise<CrmTask[]> {
-    const { companyId } = await this.requireAuthContext();
-    const q = query(
-      collection(db, this.collectionName),
-      where('companyId', '==', companyId),
-      where('status', '==', status),
-      orderBy('dueDate', 'asc')
-    );
+    const { companyId, isSuperAdmin } = await this.requireAuthContext();
+
+    let q;
+    if (isSuperAdmin && !companyId) {
+      q = query(
+        collection(db, this.collectionName),
+        where('status', '==', status),
+        orderBy('dueDate', 'asc')
+      );
+    } else {
+      q = query(
+        collection(db, this.collectionName),
+        where('companyId', '==', companyId),
+        where('status', '==', status),
+        orderBy('dueDate', 'asc')
+      );
+    }
     const snapshot = await getDocs(q);
     return snapshot.docs.map(transformTask);
   }
-  
+
   async getOverdue(): Promise<CrmTask[]> {
-    const { companyId } = await this.requireAuthContext();
+    const { companyId, isSuperAdmin } = await this.requireAuthContext();
     const today = new Date();
     today.setHours(23, 59, 59, 999);
-    
-    const q = query(
-      collection(db, this.collectionName),
-      where('companyId', '==', companyId),
-      where('status', 'in', ['pending', 'in_progress']),
-      where('dueDate', '<=', Timestamp.fromDate(today)),
-      orderBy('dueDate', 'asc')
-    );
-      
+
+    let q;
+    if (isSuperAdmin && !companyId) {
+      q = query(
+        collection(db, this.collectionName),
+        where('status', 'in', ['pending', 'in_progress']),
+        where('dueDate', '<=', Timestamp.fromDate(today)),
+        orderBy('dueDate', 'asc')
+      );
+    } else {
+      q = query(
+        collection(db, this.collectionName),
+        where('companyId', '==', companyId),
+        where('status', 'in', ['pending', 'in_progress']),
+        where('dueDate', '<=', Timestamp.fromDate(today)),
+        orderBy('dueDate', 'asc')
+      );
+    }
+
     const snapshot = await getDocs(q);
     return snapshot.docs.map(transformTask);
   }
@@ -160,14 +236,22 @@ export class TasksRepository implements ITasksRepository {
   }
 
   async deleteAll(): Promise<number> {
-    const { companyId } = await this.requireAuthContext();
-    const q = query(
-      collection(db, this.collectionName),
-      where('companyId', '==', companyId)
-    );
+    const { companyId, isSuperAdmin } = await this.requireAuthContext();
+
+    // 🏢 ENTERPRISE: Super admin can delete all, regular users only their company's
+    let q;
+    if (isSuperAdmin && !companyId) {
+      // Super admin without company - this is dangerous, require explicit companyId
+      throw new Error('SAFETY_ERROR: Super admin must specify companyId to delete tasks');
+    } else {
+      q = query(
+        collection(db, this.collectionName),
+        where('companyId', '==', companyId)
+      );
+    }
     const snapshot = await getDocs(q);
     if (snapshot.empty) return 0;
-    
+
     // Simple delete all for client-side (no batch operations for simplicity)
     const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
     await Promise.all(deletePromises);
@@ -175,12 +259,29 @@ export class TasksRepository implements ITasksRepository {
   }
 
   async getStats(userId?: string | null) {
-    const { companyId } = await this.requireAuthContext();
-    let q = query(
-      collection(db, this.collectionName),
-      where('companyId', '==', companyId),
-      where('status', '!=', 'cancelled')
-    );
+    const { companyId, isSuperAdmin } = await this.requireAuthContext();
+
+    // 🔍 DEBUG: Log query parameters
+    console.log('🔍 [TasksRepository.getStats] Query params:', { companyId, isSuperAdmin, userId });
+
+    // 🏢 ENTERPRISE: Build query based on role
+    let q;
+    if (isSuperAdmin && !companyId) {
+      // Super admin without company - get all tasks stats
+      console.log('🔍 [TasksRepository.getStats] Using super admin query (no companyId filter)');
+      q = query(
+        collection(db, this.collectionName),
+        where('status', '!=', 'cancelled')
+      );
+    } else {
+      // Regular user or super admin with company - filter by companyId
+      console.log('🔍 [TasksRepository.getStats] Using companyId filter:', companyId);
+      q = query(
+        collection(db, this.collectionName),
+        where('companyId', '==', companyId),
+        where('status', '!=', 'cancelled')
+      );
+    }
     if (userId) {
       q = query(q, where('assignedTo', '==', userId));
     }

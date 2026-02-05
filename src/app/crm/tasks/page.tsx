@@ -19,6 +19,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from 'react-i18next';
+// 🏢 ENTERPRISE: Auth hook for race condition prevention
+import { useAuth } from '@/auth/contexts/AuthContext';
 
 // 🏢 ENTERPRISE: Task statistics interface
 interface TaskStats {
@@ -34,6 +36,8 @@ export default function CrmTasksPage() {
   const { t } = useTranslation('crm');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: Auth context for race condition prevention
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   // 🏢 ENTERPRISE: Proper type instead of any
@@ -41,6 +45,11 @@ export default function CrmTasksPage() {
   const [loadingStats, setLoadingStats] = useState(true);
 
   const fetchStats = async () => {
+    // 🏢 ENTERPRISE: Skip fetch if not authenticated (race condition prevention)
+    if (!isAuthenticated) {
+      console.log('⏳ [CrmTasksPage] Waiting for authentication...');
+      return;
+    }
     try {
       setLoadingStats(true);
       const statsData = await getTasksStats(null);
@@ -52,9 +61,12 @@ export default function CrmTasksPage() {
     }
   };
 
+  // 🏢 ENTERPRISE: Wait for auth before fetching data
   useEffect(() => {
-    fetchStats();
-  }, [refreshTrigger]);
+    if (!authLoading && isAuthenticated) {
+      fetchStats();
+    }
+  }, [refreshTrigger, authLoading, isAuthenticated]);
 
   const handleTaskCreated = () => {
     setRefreshTrigger(prev => prev + 1);

@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getAllTasks as getTasks, completeTask, deleteTask } from '@/services/tasks.service';
-import { getOpportunities } from '@/services/opportunities.service';
+// 🏢 ENTERPRISE: Use CLIENT service - Server Action has NO auth context!
+import { getOpportunitiesClient as getOpportunities } from '@/services/opportunities-client.service';
 import {
   Clock,
   CheckCircle,
@@ -35,6 +36,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import type { CrmTaskType, CrmTaskPriority, CrmTaskStatus } from '@/types/crm-extra';
 import { HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
+// 🏢 ENTERPRISE: Auth hook for race condition prevention
+import { useAuth } from '@/auth/contexts/AuthContext';
 
 type TimeframeFilter = 'all' | 'overdue' | 'today' | 'tomorrow' | 'week';
 
@@ -100,6 +103,8 @@ export function TasksTab() {
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const { t } = useTranslation('crm');
+  // 🏢 ENTERPRISE: Auth context for race condition prevention
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const formatDueDate = useMemo(() => createFormatDueDate(t), [t]);
   const priorityColors = getPriorityColors(colors);
   const statusColors = getStatusColors(colors);
@@ -108,7 +113,7 @@ export function TasksTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   const [filters, setFilters] = useState<TaskFilters>({
     status: 'all',
     priority: 'all',
@@ -118,6 +123,12 @@ export function TasksTab() {
   });
 
   const fetchData = useCallback(async () => {
+    // 🏢 ENTERPRISE: Skip fetch if not authenticated (race condition prevention)
+    if (!isAuthenticated) {
+      console.log('⏳ [TasksTab] Waiting for authentication...');
+      setLoading(false);
+      return;
+    }
     let isMounted = true;
     setLoading(true);
     try {
@@ -141,11 +152,14 @@ export function TasksTab() {
       }
     }
     return () => { isMounted = false; };
-  }, []);
+  }, [isAuthenticated, t]);
 
+  // 🏢 ENTERPRISE: Wait for auth before fetching data (race condition prevention)
   useEffect(() => {
-    fetchData();
-  }, []); // 🔧 FIX: Removed fetchData to prevent infinite loop - load once on mount
+    if (!authLoading && isAuthenticated) {
+      fetchData();
+    }
+  }, [authLoading, isAuthenticated, fetchData]);
 
   const filteredTasks = useMemo(() => {
     let list = [...tasks];

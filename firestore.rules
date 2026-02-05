@@ -529,22 +529,19 @@ service cloud.firestore {
     // =========================================================================
     match /tasks/{taskId} {
 
-      // 📖 READ: Tenant-scoped + assignee access
-      // 🔒 SECURITY: Prevents cross-tenant data leak
+      // 📖 READ: Creator, assignee, same company, or super admin
+      // 🔐 SECURITY: Tenant-scoped access
       allow read: if isAuthenticated()
                   && (
                        // Super admin can read all tasks
                        isSuperAdminOnly()
+                       // OR user is the creator
+                       || resource.data.createdBy == request.auth.uid
+                       // OR user is the assignee
+                       || resource.data.assignedTo == request.auth.uid
                        // OR user belongs to the task's company
                        || (resource.data.keys().hasAny(['companyId'])
                            && belongsToCompany(resource.data.companyId))
-                       // OR user is assigned to this task
-                       || (resource.data.keys().hasAny(['assignedTo'])
-                           && resource.data.assignedTo == request.auth.uid)
-                       // LEGACY FALLBACK: Tasks without companyId - assignee or creator only
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && (resource.data.assignedTo == request.auth.uid
-                               || resource.data.createdBy == request.auth.uid))
                      );
 
       // ✍️ CREATE: Authenticated users with companyId from claims
