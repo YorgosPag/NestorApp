@@ -303,15 +303,6 @@ const renderTextWithLineBreaks = (text: string, baseKey: string) => {
 const RenderContentWithLinks = ({ content }: { content: string }) => {
   const parts = parseTextWithLinks(content);
 
-  // DEBUG: Log parsing results
-  console.log('🔗 RenderContentWithLinks input:', {
-    contentLength: content.length,
-    hasCarriageReturn: content.includes('\r'),
-    hasNewline: content.includes('\n'),
-    first100chars: content.substring(0, 100)
-  });
-  console.log('🔗 Parsed parts:', parts.map(p => ({ type: p.type, content: p.content?.substring(0, 50), href: p.href?.substring(0, 50) })));
-
   return (
     <>
       {parts.map((part, index) => {
