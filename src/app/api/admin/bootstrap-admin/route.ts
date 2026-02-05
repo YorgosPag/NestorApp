@@ -23,6 +23,7 @@ import { isValidGlobalRole } from '@/lib/auth';
 import type { GlobalRole } from '@/lib/auth';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // TYPES
@@ -74,6 +75,7 @@ const BOOTSTRAP_SECRET = process.env.BOOTSTRAP_ADMIN_SECRET || 'change-me-in-pro
  * - Development only (NODE_ENV !== 'production')
  * - Requires BOOTSTRAP_ADMIN_SECRET
  * - No Firebase authentication required (bootstrap scenario)
+ * - Rate limited: 20 requests/minute (SENSITIVE category)
  *
  * @example
  * ```typescript
@@ -89,7 +91,7 @@ const BOOTSTRAP_SECRET = process.env.BOOTSTRAP_ADMIN_SECRET || 'change-me-in-pro
  * });
  * ```
  */
-export async function POST(request: NextRequest): Promise<NextResponse<BootstrapAdminResponse>> {
+async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<BootstrapAdminResponse>> {
   const startTime = Date.now();
   console.log(`🔐 [BOOTSTRAP_ADMIN] Bootstrap request received (env: ${process.env.NODE_ENV})`);
 
@@ -326,8 +328,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<Bootstrap
  * GET /api/admin/bootstrap-admin
  *
  * Health check endpoint
+ * Rate limited: 20 requests/minute (SENSITIVE category)
  */
-export async function GET(): Promise<NextResponse> {
+async function handleBootstrapGet(): Promise<NextResponse> {
   const isProduction = process.env.NODE_ENV === 'production';
 
   return NextResponse.json({
@@ -366,3 +369,21 @@ export async function GET(): Promise<NextResponse> {
     bootstrapSecretConfigured: !!process.env.BOOTSTRAP_ADMIN_SECRET && process.env.BOOTSTRAP_ADMIN_SECRET !== 'change-me-in-production'
   });
 }
+
+// =============================================================================
+// RATE-LIMITED EXPORTS (2026-02-06)
+// =============================================================================
+
+/**
+ * 🔒 Rate-limited POST handler
+ * Category: SENSITIVE (20 requests/minute)
+ * Prevents brute force attacks on bootstrap secret
+ */
+export const POST = withSensitiveRateLimit(handleBootstrapPost);
+
+/**
+ * 🔒 Rate-limited GET handler
+ * Category: SENSITIVE (20 requests/minute)
+ * Prevents endpoint enumeration attacks
+ */
+export const GET = withSensitiveRateLimit(handleBootstrapGet);

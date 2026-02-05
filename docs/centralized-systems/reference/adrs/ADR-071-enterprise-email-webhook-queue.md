@@ -93,7 +93,7 @@ interface EmailIngestionQueueItem {
   };
 
   // Raw payload
-  provider: 'mailgun' | 'brevo' | 'sendgrid';
+  provider: 'mailgun' | 'sendgrid';
   sender: { email: string; name?: string };
   recipients: string[];
   subject: string;

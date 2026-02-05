@@ -39,6 +39,28 @@ interface Props {
   onZoomWindowModeChange?: (active: boolean) => void;
 }
 
+/** Renderer interface */
+interface RendererInstance {
+  getCanvas?: () => HTMLCanvasElement | null;
+  setScene: (scene: SceneModel) => void;
+  fitToView: (scene: SceneModel | null) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  getTransform: () => TransformState;
+  findEntityAt: (point: Point, tolerance: number) => { id: string } | null;
+  setSelectedEntityIds?: (ids: string[]) => void;
+  clearCanvas?: () => void;
+  activateZoomWindow: () => void;
+  deactivateZoomWindow: () => void;
+  undo: () => boolean;
+  redo: () => boolean;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+  getCoordinateManager?: () => {
+    screenToWorld?: (point: Point) => Point | null;
+  };
+}
+
 interface DxfCanvasCompatProps {
   scene?: SceneModel | null;
   selectedEntityIds?: string[];
@@ -84,28 +106,6 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
   isZoomWindowActive = false,
   onZoomWindowModeChange,
 }: Props, ref) {
-
-  /** Renderer interface */
-  interface RendererInstance {
-    getCanvas?: () => HTMLCanvasElement | null;
-    setScene: (scene: SceneModel) => void;
-    fitToView: (scene: SceneModel | null) => void;
-    zoomIn: () => void;
-    zoomOut: () => void;
-    getTransform: () => TransformState;
-    findEntityAt: (point: Point, tolerance: number) => { id: string } | null;
-    setSelectedEntityIds?: (ids: string[]) => void;
-    clearCanvas?: () => void;
-    activateZoomWindow: () => void;
-    deactivateZoomWindow: () => void;
-    undo: () => boolean;
-    redo: () => boolean;
-    canUndo: () => boolean;
-    canRedo: () => boolean;
-    getCoordinateManager?: () => {
-      screenToWorld?: (point: Point) => Point | null;
-    };
-  }
 
   const rendererRef = useRef<RendererInstance | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

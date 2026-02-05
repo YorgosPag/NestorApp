@@ -158,7 +158,7 @@ function createFormTabsFromConfig(
         <FormGrid>
           <GenericFormRenderer
             sections={[section]} // Single section per tab
-            formData={formData as FormDataRecord} // 🏢 ENTERPRISE: Type assertion - formData is compatible
+            formData={formData as unknown as FormDataRecord} // 🏢 ENTERPRISE: Type assertion - formData is compatible
             onChange={onChange}
             onSelectChange={onSelectChange}
             disabled={disabled}

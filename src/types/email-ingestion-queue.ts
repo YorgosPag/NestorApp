@@ -31,7 +31,7 @@ export type EmailIngestionQueueStatus =
 // PROVIDER TYPES
 // ============================================================================
 
-export type EmailProvider = 'mailgun' | 'brevo' | 'sendgrid';
+export type EmailProvider = 'mailgun' | 'sendgrid';
 
 // ============================================================================
 // SERIALIZED ATTACHMENT TYPE
@@ -41,17 +41,58 @@ export type EmailProvider = 'mailgun' | 'brevo' | 'sendgrid';
  * Serialized attachment for queue storage
  * Unlike InboundEmailAttachment, this stores the actual data
  * so it can be processed asynchronously
+ *
+ * 🏢 ENTERPRISE: Supports two modes:
+ * 1. INLINE (small files): base64Content stored directly
+ * 2. DEFERRED (large files): storageUrl for later fetch from Mailgun Storage API
  */
 export interface SerializedAttachment {
   filename: string;
   contentType: string;
   sizeBytes: number;
+
   /**
-   * Base64-encoded attachment content
-   * Stored in queue for async processing
+   * Mode: How attachment data is stored
+   * - 'inline': base64Content is populated (small files, instant access)
+   * - 'deferred': storageUrl is populated (large files, fetch from Mailgun later)
    */
-  base64Content: string;
+  mode: 'inline' | 'deferred';
+
+  /**
+   * Base64-encoded attachment content (mode: 'inline')
+   * Only populated for small attachments (< INLINE_THRESHOLD)
+   */
+  base64Content?: string;
+
+  /**
+   * Mailgun Storage URL for deferred download (mode: 'deferred')
+   * Worker will fetch from this URL during processing
+   * @see https://documentation.mailgun.com/en/latest/api-sending-messages.html#retrieving-stored-messages
+   */
+  storageUrl?: string;
+
+  /**
+   * Mailgun storage key for deferred download
+   * Used with Mailgun API authentication
+   */
+  storageKey?: string;
 }
+
+/**
+ * 🏢 ENTERPRISE: Attachment mode thresholds
+ * Files smaller than INLINE_THRESHOLD are stored as base64 (fast)
+ * Files larger are stored as reference (deferred download)
+ */
+export const ATTACHMENT_MODE_CONFIG = {
+  /** Files <= 1MB: Store inline as base64 (fast processing) */
+  INLINE_THRESHOLD_BYTES: 1 * 1024 * 1024, // 1MB
+
+  /** Files > 1MB: Store reference, fetch from Mailgun later */
+  DEFERRED_THRESHOLD_BYTES: 1 * 1024 * 1024,
+
+  /** Mailgun stores messages for 3 days */
+  MAILGUN_STORAGE_RETENTION_HOURS: 72,
+} as const;
 
 // ============================================================================
 // ROUTING RESOLUTION
@@ -100,8 +141,15 @@ export interface EmailIngestionQueueItem {
   /** Email subject line */
   subject: string;
 
-  /** Plain text content (stripped) */
+  /** Plain text content (stripped) - for search/preview/fallback */
   contentText: string;
+
+  /**
+   * 🏢 ENTERPRISE: HTML content with formatting (colors, fonts, styles)
+   * Follows Gmail/Outlook/Salesforce dual-content pattern
+   * @optional Only present if email has HTML content
+   */
+  contentHtml?: string;
 
   /** Serialized attachments with base64 content */
   attachments: SerializedAttachment[];
@@ -174,7 +222,10 @@ export interface EmailIngestionQueueInput {
   sender: ParsedAddress;
   recipients: string[];
   subject: string;
+  /** Plain text content (for search/preview/fallback) */
   contentText: string;
+  /** 🏢 ENTERPRISE: HTML content with formatting (colors, fonts, styles) */
+  contentHtml?: string;
   attachments: SerializedAttachment[];
   emailReceivedAt?: string;
   rawMetadata?: Record<string, unknown>;
@@ -287,7 +338,7 @@ export function isValidQueueStatus(status: string): status is EmailIngestionQueu
 }
 
 export function isValidEmailProvider(provider: string): provider is EmailProvider {
-  return ['mailgun', 'brevo', 'sendgrid'].includes(provider);
+  return ['mailgun', 'sendgrid'].includes(provider);
 }
 
 // ============================================================================

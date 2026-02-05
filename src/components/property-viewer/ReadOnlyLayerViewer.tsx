@@ -44,16 +44,22 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-const isLayerCategory = (value: string): value is LayerCategory => {
-  return Object.hasOwn(LAYER_CATEGORIES, value);
+type LayerCategoryKey = Exclude<LayerCategory, undefined>;
+
+const isLayerCategory = (value: string | undefined): value is LayerCategoryKey => {
+  return !!value && Object.hasOwn(LAYER_CATEGORIES, value);
 };
 
 // ?? ENTERPRISE: Helper function for safe LAYER_CATEGORIES access with proper type guard
-const getCategoryInfo = (category: string): { color: string; name: string } => {
+const DEFAULT_LAYER_CATEGORY = LAYER_CATEGORIES.structural;
+const getCategoryInfo = (category?: string): { color: string; name: string } => {
   if (isLayerCategory(category)) {
     return LAYER_CATEGORIES[category];
   }
-  return { color: '#gray', name: category };
+  return {
+    color: DEFAULT_LAYER_CATEGORY.color,
+    name: category ?? DEFAULT_LAYER_CATEGORY.name
+  };
 };
 
 interface ReadOnlyLayerViewerProps {

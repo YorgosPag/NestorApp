@@ -6,7 +6,8 @@ import { ProjectBadge } from '@/core/badges';
 import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { Briefcase } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import type { Project } from '@/types/project';
+import type { Project, ProjectStatus } from '@/types/project';
+import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { cn } from '@/lib/utils';
 import { getProjectLabel } from '@/lib/project-utils';
@@ -23,6 +24,8 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
     const iconSizes = useIconSizes();
     const { quick } = useBorderTokens();
     const [projects, setProjects] = useState<Project[]>([]);
+    const projectStatusValues = Object.keys(PROJECT_STATUS_LABELS) as ProjectStatus[];
+    const isProjectStatus = (value?: string): value is ProjectStatus => !!value && projectStatusValues.includes(value as ProjectStatus);
 
     // 🚀 ENTERPRISE RELATIONSHIP ENGINE: Hook για centralized company-projects relationship
     const companyRelationships = useCompanyRelationships(companyId);
@@ -56,11 +59,19 @@ function CompanyProjectsTable({ companyId }: { companyId: string }) {
         const handleProjectUpdate = (payload: ProjectUpdatedPayload) => {
             console.log('🔄 [CompanyProjectsTable] Applying update for project:', payload.projectId);
 
-            setProjects(prev => prev.map(project =>
-                project.id === payload.projectId
-                    ? { ...project, ...payload.updates }
-                    : project
-            ));
+            setProjects(prev => prev.map(project => {
+                if (project.id !== payload.projectId) {
+                    return project;
+                }
+                const nextStatus = isProjectStatus(payload.updates.status)
+                    ? payload.updates.status
+                    : project.status;
+                return {
+                    ...project,
+                    ...payload.updates,
+                    status: nextStatus
+                };
+            }));
         };
 
         // Subscribe to project updates (same-page + cross-page)

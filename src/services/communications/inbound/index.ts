@@ -28,4 +28,5 @@ export type {
   InboundAttachmentDownload,
   InboundRoutingRule,
   RoutingResolution,
+  MailgunStorageInfo,
 } from './types';

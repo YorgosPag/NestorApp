@@ -554,6 +554,12 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     metadata.routingPattern = routing.matchedPattern;
   }
 
+  // 🏢 ENTERPRISE: Dual-content storage pattern (Gmail/Outlook/Salesforce)
+  // Priority: HTML with formatting > Plain text > Subject as fallback
+  // HTML content preserves colors, fonts, and formatting from the original email
+  // Security Note: Sanitization happens at render time in SafeHTMLContent (ADR-072)
+  const emailContent = input.contentHtml || input.contentText || input.subject;
+
   // Build communication object, excluding undefined values for Firestore compatibility
   const communication: Omit<Communication, 'id' | 'createdAt' | 'updatedAt'> = {
     companyId: routing.companyId,
@@ -563,7 +569,7 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     from: input.sender.email,
     to: input.recipients.join(', '),
     subject: input.subject,
-    content: input.contentText || input.subject,
+    content: emailContent,  // 🏢 ENTERPRISE: HTML preferred for formatting preservation
     createdBy: SYSTEM_IDENTITY.ID,
     status: 'pending',
     attachments: attachments.map((attachment) => attachment.url || '').filter(Boolean),
@@ -573,12 +579,15 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     ...(intentAnalysis && { intentAnalysis }),
   };
 
-  // Debug logging - verify triageStatus is not undefined before Firestore write
+  // Debug logging - verify data before Firestore write
   logger.info('Preparing to write communication to Firestore', {
     messageDocId,
     triageStatusValue: communication.triageStatus,
     triageStatusType: typeof communication.triageStatus,
     hasIntentAnalysis: Boolean(intentAnalysis),
+    // 🏢 ENTERPRISE: Track content type for debugging
+    contentType: input.contentHtml ? 'html' : 'text',
+    hasHtmlFormatting: Boolean(input.contentHtml),
   });
 
   await adminDb.collection(COLLECTIONS.MESSAGES).doc(messageDocId).set({

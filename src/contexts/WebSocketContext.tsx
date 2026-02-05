@@ -21,6 +21,7 @@ interface WebSocketStats {
   queuedMessages: number;
   activeListeners: number;
   connectionAttempts: number;
+  pendingListeners: number; // 🆕 ENTERPRISE: Pending listeners count
   user: { email: string; role: string } | null;
 }
 
@@ -49,6 +50,14 @@ interface WebSocketProviderProps {
   enableDevtools?: boolean;
 }
 
+// 🏢 ENTERPRISE: Pending Listener Queue System (SAP/Google/Microsoft Pattern)
+interface PendingListener {
+  id: string;
+  type: WebSocketEventType | '*';
+  handler: (message: WebSocketMessage<WebSocketPayload>) => void;
+  options?: { once?: boolean };
+}
+
 export function WebSocketProvider({
   children,
   wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws',
@@ -61,6 +70,11 @@ export function WebSocketProvider({
   const wsRef = useRef<WebSocketService | null>(null);
   const [connectionState, setConnectionState] = useState<WebSocketConnectionState>('disconnected');
   const [connectionAttempts, setConnectionAttempts] = useState(0);
+
+  // 🏢 ENTERPRISE: Queue for pending listeners (attached before WebSocket initialization)
+  const pendingListenersRef = useRef<PendingListener[]>([]);
+  // 🏢 ENTERPRISE: Map pending IDs to real IDs (for cleanup)
+  const listenerMapRef = useRef<Map<string, string>>(new Map());
 
   // Initialize WebSocket service
   const initializeWebSocket = useCallback(() => {
@@ -131,11 +145,11 @@ export function WebSocketProvider({
   useEffect(() => {
     if (isAuthenticated && user) {
       const ws = initializeWebSocket();
-      
+
       ws.connect().catch((error) => {
         console.warn('WebSocket connection failed:', error);
       });
-      
+
       return () => {
         // Send offline status before disconnect
         if (ws.isConnected()) {
@@ -148,6 +162,36 @@ export function WebSocketProvider({
       };
     }
   }, [isAuthenticated, user, initializeWebSocket]);
+
+  // 🏢 ENTERPRISE: Flush Pending Listeners when WebSocket is Ready
+  useEffect(() => {
+    if (wsRef.current && pendingListenersRef.current.length > 0) {
+      const ws = wsRef.current;
+      const pendingCount = pendingListenersRef.current.length;
+
+      if (enableDevtools) {
+        console.log(`[WebSocket] 🚀 Flushing ${pendingCount} pending listeners...`);
+      }
+
+      // Attach all pending listeners to the now-ready WebSocket
+      pendingListenersRef.current.forEach((pending) => {
+        const realId = ws.addEventListener(pending.type, pending.handler, pending.options);
+        // Map pending ID → real ID (for cleanup later)
+        listenerMapRef.current.set(pending.id, realId);
+
+        if (enableDevtools) {
+          console.log(`[WebSocket] ✅ Attached "${pending.type}" (${pending.id} → ${realId})`);
+        }
+      });
+
+      // Clear the pending queue
+      pendingListenersRef.current = [];
+
+      if (enableDevtools) {
+        console.log(`[WebSocket] ✅ All pending listeners attached successfully!`);
+      }
+    }
+  }, [wsRef.current, enableDevtools]);
 
   // Handle page visibility changes
   useEffect(() => {
@@ -207,27 +251,78 @@ export function WebSocketProvider({
     return wsRef.current.send(type, payload, options);
   }, []);
 
+  // 🏢 ENTERPRISE: addEventListener with Pending Queue Support
   const addEventListener = useCallback((
     type: WebSocketEventType | '*',
     handler: (message: WebSocketMessage<WebSocketPayload>) => void,
     options?: { once?: boolean }
   ) => {
+    // Case 1: WebSocket not ready → Queue the listener
     if (!wsRef.current) {
-      throw new Error('WebSocket not initialized');
-    }
-    return wsRef.current.addEventListener(type, handler, options);
-  }, []);
+      const pendingId = 'pending-' + Math.random().toString(36).substr(2, 9);
+      pendingListenersRef.current.push({
+        id: pendingId,
+        type,
+        handler,
+        options
+      });
 
+      if (enableDevtools) {
+        console.log(`[WebSocket] 📋 Queued listener for "${type}" (ID: ${pendingId})`);
+      }
+
+      return pendingId;
+    }
+
+    // Case 2: WebSocket ready → Attach immediately
+    return wsRef.current.addEventListener(type, handler, options);
+  }, [enableDevtools]);
+
+  // 🏢 ENTERPRISE: removeEventListener with Pending Queue Support
   const removeEventListener = useCallback((listenerId: string) => {
+    // Case 1: Pending listener (not yet attached)
+    if (listenerId.startsWith('pending-')) {
+      // Remove from pending queue
+      const index = pendingListenersRef.current.findIndex((p) => p.id === listenerId);
+      if (index !== -1) {
+        const removed = pendingListenersRef.current.splice(index, 1)[0];
+        if (enableDevtools) {
+          console.log(`[WebSocket] 🗑️ Removed pending listener "${removed.type}" (ID: ${listenerId})`);
+        }
+        return true;
+      }
+
+      // Check if it was already flushed and mapped to a real ID
+      const realId = listenerMapRef.current.get(listenerId);
+      if (realId && wsRef.current) {
+        listenerMapRef.current.delete(listenerId);
+        const success = wsRef.current.removeEventListener(realId);
+        if (enableDevtools && success) {
+          console.log(`[WebSocket] 🗑️ Removed mapped listener (${listenerId} → ${realId})`);
+        }
+        return success;
+      }
+
+      return false;
+    }
+
+    // Case 2: Regular listener (already attached)
     if (!wsRef.current) return false;
     return wsRef.current.removeEventListener(listenerId);
-  }, []);
+  }, [enableDevtools]);
 
+  // 🏢 ENTERPRISE: getStats with Pending Listeners Count
   const getStats = useCallback(() => {
-    if (!wsRef.current) return null;
+    const baseStats = wsRef.current ? wsRef.current.getStats() : {
+      reconnectAttempts: 0,
+      queuedMessages: 0,
+      activeListeners: 0
+    };
+
     return {
-      ...wsRef.current.getStats(),
+      ...baseStats,
       connectionAttempts,
+      pendingListeners: pendingListenersRef.current.length, // 🆕 ENTERPRISE: Track pending listeners
       user: user ? { email: user.email, role: user.role } : null
     };
   }, [connectionAttempts, user]);
@@ -453,6 +548,10 @@ export function WebSocketDebugPanel() {
                 <div className="flex justify-between">
                   <span>Active Listeners:</span>
                   <span>{stats.activeListeners}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pending Listeners:</span>
+                  <span className={stats.pendingListeners > 0 ? COLOR_BRIDGE.text.warning : ''}>{stats.pendingListeners}</span>
                 </div>
                 {stats.user && (
                   <div className="text-xs text-muted-foreground">

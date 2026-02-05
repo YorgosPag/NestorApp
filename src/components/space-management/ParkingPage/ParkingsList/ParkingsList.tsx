@@ -22,6 +22,7 @@ import { ParkingsListHeader } from './ParkingsListHeader';
 import { ParkingListCard } from '@/domain';
 import { CompactToolbar } from '@/components/core/CompactToolbar';
 import { parkingToolbarConfig } from '@/components/core/CompactToolbar/configs';
+import type { SortField } from '@/components/core/CompactToolbar/types';
 
 interface ParkingsListProps {
   parkingSpots: ParkingSpot[];
@@ -38,7 +39,7 @@ export function ParkingsList({
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<'name' | 'area' | 'price' | 'status' | 'floor' | 'type'>('name');
+  const [sortBy, setSortBy] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -85,7 +86,7 @@ export function ParkingsList({
         aValue = a.area || 0;
         bValue = b.area || 0;
         break;
-      case 'price':
+      case 'value':
         aValue = a.price || 0;
         bValue = b.price || 0;
         break;
@@ -93,15 +94,17 @@ export function ParkingsList({
         aValue = (a.status || '').toLowerCase();
         bValue = (b.status || '').toLowerCase();
         break;
-      case 'floor':
-        // 🏢 ENTERPRISE: Handle floor as number or string safely
-        if (typeof a.floor === 'number' && typeof b.floor === 'number') {
-          aValue = a.floor;
-          bValue = b.floor;
-        } else {
-          aValue = String(a.floor || '').toLowerCase();
-          bValue = String(b.floor || '').toLowerCase();
-        }
+      case 'location':
+        aValue = (a.location || '').toLowerCase();
+        bValue = (b.location || '').toLowerCase();
+        break;
+      case 'number':
+        aValue = String(a.floor || '').toLowerCase();
+        bValue = String(b.floor || '').toLowerCase();
+        break;
+      case 'date':
+        aValue = a.updatedAt?.getTime() ?? a.createdAt?.getTime() ?? 0;
+        bValue = b.updatedAt?.getTime() ?? b.createdAt?.getTime() ?? 0;
         break;
       case 'type':
         aValue = (a.type || '').toLowerCase();
@@ -144,7 +147,7 @@ export function ParkingsList({
           onFiltersChange={setActiveFilters}
           sortBy={sortBy}
           onSortChange={(newSortBy, newSortOrder) => {
-            setSortBy(newSortBy as typeof sortBy);
+            setSortBy(newSortBy);
             setSortOrder(newSortOrder);
           }}
           onNewItem={() => console.log('New parking')}
@@ -168,7 +171,7 @@ export function ParkingsList({
             onFiltersChange={setActiveFilters}
             sortBy={sortBy}
             onSortChange={(newSortBy, newSortOrder) => {
-              setSortBy(newSortBy as typeof sortBy);
+              setSortBy(newSortBy);
               setSortOrder(newSortOrder);
             }}
             onNewItem={() => console.log('New parking')}
@@ -207,3 +210,5 @@ export function ParkingsList({
     </EntityListColumn>
   );
 }
+
+

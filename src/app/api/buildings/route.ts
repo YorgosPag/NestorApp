@@ -203,7 +203,7 @@ interface BuildingUpdateResponse {
  *
  * @security Firestore rules block client-side writes (allow write: if false)
  *           This endpoint uses Admin SDK to bypass rules with proper auth
- * @permission buildings:buildings:edit
+ * @permission buildings:buildings:update
  */
 export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse>>(
   async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
@@ -277,5 +277,5 @@ export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse>>(
       throw new ApiError(500, error instanceof Error ? error.message : 'Failed to update building');
     }
   },
-  { permissions: 'buildings:buildings:edit' }
+  { permissions: 'buildings:buildings:update' }
 );

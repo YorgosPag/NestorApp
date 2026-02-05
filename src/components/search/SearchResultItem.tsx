@@ -71,6 +71,9 @@ const SEARCH_TO_NAVIGATION_ENTITY: Record<SearchEntityType, NavigationEntityType
   [SEARCH_ENTITY_TYPES.FILE]: 'file',
   [SEARCH_ENTITY_TYPES.PARKING]: 'parking',
   [SEARCH_ENTITY_TYPES.STORAGE]: 'storage',
+  [SEARCH_ENTITY_TYPES.OPPORTUNITY]: 'opportunity',
+  [SEARCH_ENTITY_TYPES.COMMUNICATION]: 'communication',
+  [SEARCH_ENTITY_TYPES.TASK]: 'task',
 };
 
 /**
@@ -84,21 +87,16 @@ const ENTITY_LABEL_KEYS: Record<SearchEntityType, string> = {
   [SEARCH_ENTITY_TYPES.FILE]: 'search.entityTypes.file',
   [SEARCH_ENTITY_TYPES.PARKING]: 'search.entityTypes.parking',
   [SEARCH_ENTITY_TYPES.STORAGE]: 'search.entityTypes.storage',
+  [SEARCH_ENTITY_TYPES.OPPORTUNITY]: 'search.entityTypes.opportunity',
+  [SEARCH_ENTITY_TYPES.COMMUNICATION]: 'search.entityTypes.communication',
+  [SEARCH_ENTITY_TYPES.TASK]: 'search.entityTypes.task',
 };
 
 /**
  * @deprecated Use ENTITY_LABEL_KEYS with useTranslation hook instead
  * Entity type labels for accessibility and display (fallbacks).
  */
-const ENTITY_LABELS: Record<SearchEntityType, string> = {
-  [SEARCH_ENTITY_TYPES.PROJECT]: 'Έργο',
-  [SEARCH_ENTITY_TYPES.BUILDING]: 'Κτίριο',
-  [SEARCH_ENTITY_TYPES.UNIT]: 'Μονάδα',
-  [SEARCH_ENTITY_TYPES.CONTACT]: 'Επαφή',
-  [SEARCH_ENTITY_TYPES.FILE]: 'Αρχείο',
-  [SEARCH_ENTITY_TYPES.PARKING]: 'Πάρκινγκ',
-  [SEARCH_ENTITY_TYPES.STORAGE]: 'Αποθήκη',
-};
+const ENTITY_LABELS: Partial<Record<SearchEntityType, string>> = {};
 
 // =============================================================================
 // COMPONENT
@@ -133,7 +131,7 @@ export function SearchResultItem({
   // === Computed Values ===
   const navigationEntityType = SEARCH_TO_NAVIGATION_ENTITY[result.entityType];
   const entityLabelKey = ENTITY_LABEL_KEYS[result.entityType];
-  const entityLabel = t(entityLabelKey, ENTITY_LABELS[result.entityType]);
+  const entityLabel = t(entityLabelKey, ENTITY_LABELS[result.entityType] ?? entityLabelKey);
 
   // === Badges ===
   // 🏢 ENTERPRISE: Show entity type badge + status badge for parking/storage
@@ -167,10 +165,11 @@ export function SearchResultItem({
     return result.stats.map((stat) => {
       // Get icon and color from NAVIGATION_ENTITIES if iconKey provided
       const entityConfig = stat.iconKey ? NAVIGATION_ENTITIES[stat.iconKey as NavigationEntityType] : null;
+      const fallbackConfig = NAVIGATION_ENTITIES.file;
 
       return {
-        icon: entityConfig?.icon,
-        iconColor: entityConfig?.color,
+        icon: entityConfig?.icon ?? fallbackConfig.icon,
+        iconColor: entityConfig?.color ?? fallbackConfig.color,
         label: stat.label,
         value: stat.value,
       };
@@ -264,7 +263,7 @@ export function SearchResultGroup({
   const iconColor = entityConfig?.color || 'text-muted-foreground';
 
   const entityLabelKey = ENTITY_LABEL_KEYS[entityType];
-  const label = t(entityLabelKey, ENTITY_LABELS[entityType]);
+  const label = t(entityLabelKey, ENTITY_LABELS[entityType] ?? entityLabelKey);
 
   return (
     <section className={spacing.margin.bottom.sm} aria-label={label}>
@@ -295,3 +294,5 @@ export type { SearchResultItemProps, SearchResultGroupProps };
 
 // 🏢 ENTERPRISE: Re-export mappings for other components that may need them
 export { ENTITY_LABEL_KEYS, ENTITY_LABELS, SEARCH_TO_NAVIGATION_ENTITY };
+
+

@@ -109,14 +109,9 @@ export interface Communication {
 }
 
 // Triage status (SSoT)
-export const TRIAGE_STATUSES = {
-  PENDING: 'pending',
-  REVIEWED: 'reviewed',
-  APPROVED: 'approved',
-  REJECTED: 'rejected',
-} as const;
-
-export type TriageStatus = typeof TRIAGE_STATUSES[keyof typeof TRIAGE_STATUSES];
+// 🏢 ENTERPRISE: Re-export από centralized constants (Single Source of Truth)
+// Pattern: Google Cloud, AWS, Microsoft Azure - Isomorphic constants
+export { TRIAGE_STATUSES, TRIAGE_STATUS_VALUES, type TriageStatus } from '@/constants/triage-statuses';
 
 // Tasks
 export interface CrmTask {

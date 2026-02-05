@@ -28,7 +28,7 @@
 ## 2. Decision
 
 Υλοποιήθηκε **Enterprise Email Ingestion Pipeline** με:
-- Multi-provider webhook support (Mailgun, Brevo, SendGrid)
+- Multi-provider webhook support (Mailgun, SendGrid)
 - AI analysis integration (mock + OpenAI providers)
 - Pattern-based routing
 - Automatic contact creation
@@ -47,7 +47,6 @@ Email Provider → Webhook → Signature Check → Routing → AI Analysis → F
 | **Email Service** | `src/services/communications/inbound/email-inbound-service.ts` |
 | **Types** | `src/services/communications/inbound/types.ts` |
 | **Mailgun Webhook** | `src/app/api/communications/webhooks/mailgun/inbound/route.ts` |
-| **Brevo Webhook** | `src/app/api/communications/webhooks/brevo/inbound/route.ts` |
 | **AI Interface** | `src/services/ai-analysis/providers/IAIAnalysisProvider.ts` |
 | **AI Factory** | `src/services/ai-analysis/providers/ai-provider-factory.ts` |
 | **Mock Provider** | `src/services/ai-analysis/providers/MockAIAnalysisProvider.ts` |

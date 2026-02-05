@@ -162,7 +162,7 @@ function createServiceFormTabsFromConfig(
         <div className="space-y-8 md:space-y-6">
           <ServiceFormRenderer
             sections={[section]} // Single section per tab
-            formData={formData as ServiceFormData} // 🏢 ENTERPRISE: Type assertion
+            formData={formData as unknown as ServiceFormData} // 🏢 ENTERPRISE: Type assertion
             onChange={onChange}
             onSelectChange={onSelectChange}
             disabled={disabled}

@@ -20,11 +20,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Inbox, CheckCircle, XCircle, Eye, AlertTriangle } from 'lucide-react';
+import { Inbox, CheckCircle, XCircle, Eye, AlertTriangle, Paperclip, FileText, FileImage, Download, File } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { sanitizeEmailHTML } from '@/lib/message-utils';
+import { sanitizeEmailHTML, detectEmailSignature } from '@/lib/message-utils';
 import toast from 'react-hot-toast';
+import { useWebSocket } from '@/contexts/WebSocketContext';
 import type { Communication, FirestoreishTimestamp, TriageStatus } from '@/types/crm';
 import { TRIAGE_STATUSES } from '@/types/crm';
 import type { AdminContext } from '@/server/admin/admin-guards';
@@ -426,6 +427,187 @@ const SafeHTMLContent = ({ html }: { html: string }) => {
   );
 };
 
+/**
+ * 🏢 ENTERPRISE: Email Content with Signature Detection (ADR-073)
+ *
+ * Renders email content with separated signature display.
+ * - Detects and extracts email signature automatically
+ * - Displays body content normally
+ * - Shows signature in muted, bordered section
+ */
+const EmailContentWithSignature = ({ content }: { content: string }) => {
+  const signatureDetection = detectEmailSignature(content);
+
+  return (
+    <div className="space-y-3">
+      {/* Email Body */}
+      <div>
+        <SafeHTMLContent html={signatureDetection.body} />
+      </div>
+
+      {/* Email Signature (if detected) */}
+      {signatureDetection.hasSignature && signatureDetection.signature && (
+        <div className="border-t border-muted pt-3 mt-3">
+          <div className="text-xs text-muted-foreground italic mb-1">
+            Email Signature:
+          </div>
+          <div className="text-sm text-muted-foreground opacity-75">
+            <SafeHTMLContent html={signatureDetection.signature} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// 🏢 ENTERPRISE: ATTACHMENT DISPLAY SYSTEM (Gmail/Outlook/Salesforce Pattern)
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: File Type Detection & Icon Mapping
+ *
+ * Maps file URL/extension to appropriate icon and styling.
+ * Pattern: Gmail, Outlook, Salesforce attachment display
+ */
+const getFileTypeInfo = (url: string) => {
+  const filename = url.split('/').pop() || url;
+  const extension = filename.split('.').pop()?.toLowerCase() || '';
+
+  // Images
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(extension)) {
+    return {
+      icon: FileImage,
+      type: 'image',
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-50 dark:bg-blue-950',
+    };
+  }
+
+  // PDF
+  if (extension === 'pdf') {
+    return {
+      icon: FileText,
+      type: 'pdf',
+      color: 'text-red-600 dark:text-red-400',
+      bgColor: 'bg-red-50 dark:bg-red-950',
+    };
+  }
+
+  // Documents (Word, Text)
+  if (['doc', 'docx', 'txt', 'rtf', 'odt'].includes(extension)) {
+    return {
+      icon: FileText,
+      type: 'document',
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-50 dark:bg-blue-950',
+    };
+  }
+
+  // Spreadsheets (Excel, CSV)
+  if (['xls', 'xlsx', 'csv', 'ods'].includes(extension)) {
+    return {
+      icon: FileText,
+      type: 'spreadsheet',
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-50 dark:bg-green-950',
+    };
+  }
+
+  // Generic file
+  return {
+    icon: File,
+    type: 'file',
+    color: 'text-gray-600 dark:text-gray-400',
+    bgColor: 'bg-gray-50 dark:bg-gray-950',
+  };
+};
+
+/**
+ * 🏢 ENTERPRISE: Attachment Display Component
+ *
+ * Features (Gmail/Outlook/Salesforce standard):
+ * - File type icons with semantic color coding
+ * - Filename with intelligent truncation
+ * - Download button with hover effects
+ * - Responsive grid layout (1 col mobile, 2 col desktop)
+ * - Accessibility (keyboard navigation, ARIA labels, focus states)
+ * - Firebase Storage URL support
+ *
+ * @param attachments - Array of attachment URLs from Firebase Storage
+ */
+const AttachmentDisplay = ({ attachments }: { attachments: string[] }) => {
+  const layout = useLayoutClasses();
+  const typography = useTypography();
+  const iconSizes = useIconSizes();
+
+  if (!attachments || attachments.length === 0) return null;
+
+  const handleDownload = (url: string) => {
+    // 🏢 ENTERPRISE: Open in new tab with security attributes
+    // Firebase Storage URLs are signed and secure
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Header */}
+      <div className={`${layout.flexGap2} items-center`}>
+        <Paperclip className={iconSizes.sm} />
+        <span className={`${typography.label.sm} text-muted-foreground`}>
+          {attachments.length} {attachments.length === 1 ? 'Attachment' : 'Attachments'}
+        </span>
+      </div>
+
+      {/* Attachments Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {attachments.map((url, index) => {
+          const filename = url.split('/').pop() || `attachment-${index + 1}`;
+          const fileInfo = getFileTypeInfo(url);
+          const FileIcon = fileInfo.icon;
+
+          return (
+            <div
+              key={index}
+              className={`${fileInfo.bgColor} rounded-lg p-3 ${layout.flexGap3} items-center group hover:shadow-sm transition-all border border-transparent hover:border-border`}
+            >
+              {/* File Icon */}
+              <div className={`flex-shrink-0 ${fileInfo.color}`}>
+                <FileIcon className={iconSizes.md} />
+              </div>
+
+              {/* Filename & Type */}
+              <div className="flex-1 min-w-0">
+                <p
+                  className={`${typography.body.sm} truncate font-medium`}
+                  title={filename}
+                >
+                  {filename}
+                </p>
+                <p className={`${typography.label.xs} text-muted-foreground`}>
+                  {fileInfo.type.toUpperCase()}
+                </p>
+              </div>
+
+              {/* Download Button */}
+              <button
+                onClick={() => handleDownload(url)}
+                className="flex-shrink-0 p-2 rounded-md hover:bg-background/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                aria-label={`Download ${filename}`}
+                type="button"
+              >
+                <Download
+                  className={`${iconSizes.sm} text-muted-foreground group-hover:text-foreground transition-colors`}
+                />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -450,9 +632,43 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const [showDashboard, setShowDashboard] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
+  // 🔄 ENTERPRISE: WebSocket real-time updates (ADR-074)
+  const ws = useWebSocket();
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // 🔄 WebSocket: Real-time email notifications
+  useEffect(() => {
+    if (!ws || !isMounted) return;
+
+    // Subscribe to email queue events
+    const emailReceivedId = ws.addEventListener('email_received', (message) => {
+      logger.info('📧 New email received via WebSocket', { payload: message.payload });
+
+      // Show toast notification
+      toast.success('📧 New email received! Refreshing inbox...', {
+        duration: 3000,
+      });
+
+      // Auto-refresh communications list
+      loadCommunications();
+    });
+
+    const emailProcessedId = ws.addEventListener('email_processed', (message) => {
+      logger.info('✅ Email processed via WebSocket', { payload: message.payload });
+
+      // Refresh to show processed email
+      loadCommunications();
+    });
+
+    // Cleanup on unmount
+    return () => {
+      if (emailReceivedId) ws.removeEventListener(emailReceivedId);
+      if (emailProcessedId) ws.removeEventListener(emailProcessedId);
+    };
+  }, [ws, isMounted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isTriageStatus = useCallback((value: string): value is TriageStatus => {
     return TRIAGE_STATUS_SET.has(value as TriageStatus);
@@ -520,6 +736,9 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
       if (!result.ok) {
         throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
       }
+
+      // 🐛 DEBUG: Log received stats
+      logger.info('📊 Received stats from API', result.data);
 
       // 🏢 ENTERPRISE: Service returns properly calculated stats
       setStats(result.data);
@@ -878,10 +1097,10 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
 
                         <AccordionContent variant="bordered">
                           <div className={`${layout.flexColGap4} pt-2`}>
-                            {/* Message Content - safe HTML rendering with clickable links (ADR-072) */}
+                            {/* Message Content - safe HTML rendering with signature detection (ADR-072, ADR-073) */}
                             <div className="bg-muted/50 rounded-lg p-4">
                               <div className={typography.body.sm}>
-                                <SafeHTMLContent html={getDisplayContent(comm.content)} />
+                                <EmailContentWithSignature content={getDisplayContent(comm.content)} />
                               </div>
                             </div>
 
@@ -902,6 +1121,13 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                                     </Badge>
                                   </div>
                                 )}
+                              </div>
+                            )}
+
+                            {/* 🏢 ENTERPRISE: Attachments Display (Gmail/Outlook Pattern) */}
+                            {comm.attachments && comm.attachments.length > 0 && (
+                              <div className="bg-background rounded-lg p-4 border border-border">
+                                <AttachmentDisplay attachments={comm.attachments} />
                               </div>
                             )}
 

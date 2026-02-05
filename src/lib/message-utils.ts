@@ -387,6 +387,139 @@ export function hasAttachments(content: MessageContent): boolean {
 }
 
 // ============================================================================
+// EMAIL SIGNATURE DETECTION (ADR-073)
+// ============================================================================
+
+/**
+ * Email signature detection result
+ */
+export interface SignatureDetectionResult {
+  /** Email body (without signature) */
+  body: string;
+  /** Detected signature (null if not found) */
+  signature: string | null;
+  /** Was signature detected? */
+  hasSignature: boolean;
+}
+
+/**
+ * Common email signature separators and patterns
+ */
+const SIGNATURE_PATTERNS = [
+  // Standard separators
+  /^--\s*$/m,                    // "-- " (RFC standard)
+  /^[-_]{3,}$/m,                 // "---" or "___"
+
+  // Common phrases (case insensitive)
+  /^(best regards?|regards?|sincerely|cheers|thanks?|thank you),?\s*$/im,
+  /^(kind regards?|warm regards?|with (best )?regards?),?\s*$/im,
+
+  // "Sent from" patterns (mobile signatures)
+  /^sent from (my )?(iphone|ipad|android|mobile|blackberry)/im,
+  /^get outlook for (ios|android)/im,
+
+  // Job title / position indicators (often in signatures)
+  /^\w+\s+\|\s+\w+/m,            // "Name | Title"
+  /^(ceo|cto|cfo|director|manager|president|founder)/im,
+] as const;
+
+/**
+ * Detect and separate email signature from body content.
+ *
+ * @param content - Raw email content (plain text or HTML)
+ * @returns Detection result with separated body and signature
+ *
+ * @enterprise
+ * - Preserves original formatting (HTML/plain text)
+ * - Multiple pattern matching for accuracy
+ * - Conservative approach (avoids false positives)
+ *
+ * @example
+ * ```typescript
+ * const email = 'Hello World\n\n--\nJohn Doe\nCEO';
+ * const result = detectEmailSignature(email);
+ * // result.body === 'Hello World'
+ * // result.signature === '--\nJohn Doe\nCEO'
+ * // result.hasSignature === true
+ * ```
+ */
+export function detectEmailSignature(content: string): SignatureDetectionResult {
+  if (!content || typeof content !== 'string') {
+    return {
+      body: '',
+      signature: null,
+      hasSignature: false,
+    };
+  }
+
+  // Split content into lines
+  const lines = content.split('\n');
+  let signatureStartIndex = -1;
+
+  // Search for signature separator
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    // Check each pattern
+    for (const pattern of SIGNATURE_PATTERNS) {
+      if (pattern.test(line)) {
+        signatureStartIndex = i;
+        break;
+      }
+    }
+
+    if (signatureStartIndex !== -1) {
+      break;
+    }
+  }
+
+  // No signature detected
+  if (signatureStartIndex === -1) {
+    return {
+      body: content,
+      signature: null,
+      hasSignature: false,
+    };
+  }
+
+  // Split body and signature
+  const bodyLines = lines.slice(0, signatureStartIndex);
+  const signatureLines = lines.slice(signatureStartIndex);
+
+  // Remove trailing empty lines from body
+  while (bodyLines.length > 0 && bodyLines[bodyLines.length - 1].trim() === '') {
+    bodyLines.pop();
+  }
+
+  const body = bodyLines.join('\n');
+  const signature = signatureLines.join('\n');
+
+  return {
+    body: body.trim(),
+    signature: signature.trim(),
+    hasSignature: true,
+  };
+}
+
+/**
+ * Strip email signature from content (returns body only).
+ *
+ * @param content - Raw email content
+ * @returns Email body without signature
+ *
+ * @example
+ * ```typescript
+ * const email = 'Hello World\n\n--\nJohn Doe';
+ * const body = stripEmailSignature(email);
+ * // body === 'Hello World'
+ * ```
+ */
+export function stripEmailSignature(content: string): string {
+  const result = detectEmailSignature(content);
+  return result.body;
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -401,6 +534,8 @@ export default {
   stripHTMLTags,
   getMessagePreview,
   hasAttachments,
+  detectEmailSignature,
+  stripEmailSignature,
   TELEGRAM_ALLOWED_TAGS,
   TELEGRAM_ALLOWED_ATTRIBUTES,
   EMAIL_ALLOWED_TAGS,

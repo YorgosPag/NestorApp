@@ -17,6 +17,7 @@ import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   EMAIL_QUEUE_CONFIG,
+  ATTACHMENT_MODE_CONFIG,
   getRetryDelayMs,
   shouldMoveToDeadLetter,
   type EmailIngestionQueueItem,
@@ -26,7 +27,7 @@ import {
   type SerializedAttachment,
 } from '@/types/email-ingestion-queue';
 import { processInboundEmail, resolveCompanyIdFromRecipients } from './email-inbound-service';
-import type { InboundEmailAttachment, InboundAttachmentDownload } from './types';
+import type { InboundEmailAttachment, InboundAttachmentDownload, MailgunStorageInfo } from './types';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const logger = createModuleLogger('EMAIL_QUEUE_SERVICE');
@@ -36,16 +37,23 @@ const logger = createModuleLogger('EMAIL_QUEUE_SERVICE');
 // ============================================================================
 
 /**
- * Serialize attachment to base64 for queue storage
+ * 🏢 ENTERPRISE: Serialize attachment with inline/deferred mode selection
+ *
+ * Pattern: "Store Reference, Fetch Later" (SAP, Salesforce, Microsoft)
+ *
+ * - INLINE (< 1MB): Download now, store as base64 (fast processing)
+ * - DEFERRED (>= 1MB): Store metadata only, fetch from Mailgun later (fast webhook)
  *
  * @param attachment - Original attachment with download function
+ * @param mailgunStorage - Mailgun storage info for deferred download
  * @returns Serialized attachment or null if failed/too large
  */
 async function serializeAttachment(
-  attachment: InboundEmailAttachment
+  attachment: InboundEmailAttachment,
+  mailgunStorage?: MailgunStorageInfo
 ): Promise<SerializedAttachment | null> {
   try {
-    // Check size limit before downloading
+    // Check absolute size limit
     if (
       attachment.sizeBytes &&
       attachment.sizeBytes > EMAIL_QUEUE_CONFIG.MAX_ATTACHMENT_SIZE_BYTES
@@ -58,6 +66,36 @@ async function serializeAttachment(
       return null;
     }
 
+    const sizeBytes = attachment.sizeBytes || 0;
+
+    // 🏢 ENTERPRISE: Decide mode based on size
+    // Small files: inline (download now, fast processing later)
+    // Large files: deferred (metadata only, download in worker)
+    const useDeferred =
+      mailgunStorage &&
+      sizeBytes > ATTACHMENT_MODE_CONFIG.INLINE_THRESHOLD_BYTES;
+
+    if (useDeferred) {
+      // 🚀 FAST PATH: Store metadata only, worker will fetch from Mailgun later
+      logger.info('Using DEFERRED mode for large attachment', {
+        filename: attachment.filename,
+        sizeBytes,
+        threshold: ATTACHMENT_MODE_CONFIG.INLINE_THRESHOLD_BYTES,
+        storageKey: mailgunStorage.storageKey,
+      });
+
+      return {
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+        sizeBytes,
+        mode: 'deferred',
+        storageUrl: mailgunStorage.messageUrl,
+        storageKey: mailgunStorage.storageKey,
+        // No base64Content - will be fetched by worker
+      };
+    }
+
+    // 📦 STANDARD PATH: Download now, store as base64
     const downloadResult = await attachment.download();
     if (!downloadResult) {
       logger.warn('Failed to download attachment for serialization', {
@@ -79,6 +117,7 @@ async function serializeAttachment(
       filename: attachment.filename,
       contentType: attachment.contentType || downloadResult.contentType,
       sizeBytes: downloadResult.buffer.length,
+      mode: 'inline',
       base64Content: downloadResult.buffer.toString('base64'),
     };
   } catch (error) {
@@ -91,13 +130,15 @@ async function serializeAttachment(
 }
 
 /**
- * Serialize all attachments for queue storage
+ * 🏢 ENTERPRISE: Serialize all attachments with smart mode selection
  *
  * @param attachments - Original attachments from webhook
+ * @param mailgunStorage - Mailgun storage info for deferred download
  * @returns Array of serialized attachments (skips failures)
  */
 async function serializeAttachments(
-  attachments: InboundEmailAttachment[] | undefined
+  attachments: InboundEmailAttachment[] | undefined,
+  mailgunStorage?: MailgunStorageInfo
 ): Promise<SerializedAttachment[]> {
   if (!attachments || attachments.length === 0) {
     return [];
@@ -105,12 +146,17 @@ async function serializeAttachments(
 
   const serialized: SerializedAttachment[] = [];
   let totalSize = 0;
+  let inlineCount = 0;
+  let deferredCount = 0;
 
   for (const attachment of attachments) {
-    const result = await serializeAttachment(attachment);
+    const result = await serializeAttachment(attachment, mailgunStorage);
     if (result) {
-      // Check total size limit
-      if (totalSize + result.sizeBytes > EMAIL_QUEUE_CONFIG.MAX_TOTAL_ATTACHMENTS_SIZE_BYTES) {
+      // Check total size limit (only for inline mode - deferred doesn't count)
+      if (
+        result.mode === 'inline' &&
+        totalSize + result.sizeBytes > EMAIL_QUEUE_CONFIG.MAX_TOTAL_ATTACHMENTS_SIZE_BYTES
+      ) {
         logger.warn('Total attachments size exceeded, skipping remaining', {
           currentTotal: totalSize,
           maxTotal: EMAIL_QUEUE_CONFIG.MAX_TOTAL_ATTACHMENTS_SIZE_BYTES,
@@ -118,9 +164,25 @@ async function serializeAttachments(
         });
         break;
       }
+
       serialized.push(result);
-      totalSize += result.sizeBytes;
+
+      if (result.mode === 'inline') {
+        totalSize += result.sizeBytes;
+        inlineCount++;
+      } else {
+        deferredCount++;
+      }
     }
+  }
+
+  if (serialized.length > 0) {
+    logger.info('Attachments serialized', {
+      total: serialized.length,
+      inlineCount,
+      deferredCount,
+      totalInlineSize: totalSize,
+    });
   }
 
   return serialized;
@@ -136,15 +198,20 @@ async function serializeAttachments(
  * @returns Queue item ID or null if failed
  */
 export async function enqueueInboundEmail(params: {
-  provider: 'mailgun' | 'brevo' | 'sendgrid';
+  provider: 'mailgun' | 'sendgrid';
   providerMessageId: string;
   sender: { email: string; name?: string };
   recipients: string[];
   subject: string;
+  /** Plain text content (for search/preview/fallback) */
   contentText: string;
+  /** 🏢 ENTERPRISE: HTML content with formatting (colors, fonts, styles) */
+  contentHtml?: string;
   emailReceivedAt?: string;
   attachments?: InboundEmailAttachment[];
   rawMetadata?: Record<string, unknown>;
+  /** 🏢 ENTERPRISE: Mailgun storage info for deferred attachment download */
+  mailgunStorage?: MailgunStorageInfo;
 }): Promise<{ queueId: string | null; status: 'queued' | 'duplicate' | 'routing_failed' | 'error' }> {
   const startTime = Date.now();
 
@@ -177,10 +244,12 @@ export async function enqueueInboundEmail(params: {
       return { queueId: duplicateCheck.docs[0].id, status: 'duplicate' };
     }
 
-    // Step 3: Serialize attachments (parallel downloads)
-    const serializedAttachments = await serializeAttachments(params.attachments);
+    // Step 3: Serialize attachments (parallel downloads for inline, metadata only for deferred)
+    // 🏢 ENTERPRISE: Pass mailgunStorage for "Store Reference, Fetch Later" pattern
+    const serializedAttachments = await serializeAttachments(params.attachments, params.mailgunStorage);
 
     // Step 4: Create queue item
+    // 🏢 ENTERPRISE: Store both text and HTML content (Gmail/Outlook/Salesforce pattern)
     const queueItem: Omit<EmailIngestionQueueItem, 'id'> = {
       providerMessageId: params.providerMessageId,
       status: 'pending',
@@ -193,6 +262,8 @@ export async function enqueueInboundEmail(params: {
       recipients: params.recipients,
       subject: params.subject,
       contentText: params.contentText,
+      // 🏢 ENTERPRISE: HTML content with formatting (only if present)
+      ...(params.contentHtml && { contentHtml: params.contentHtml }),
       attachments: serializedAttachments,
       rawMetadata: params.rawMetadata,
       retryCount: 0,
@@ -230,19 +301,106 @@ export async function enqueueInboundEmail(params: {
 // ============================================================================
 
 /**
+ * 🏢 ENTERPRISE: Fetch attachment from Mailgun Storage API
+ *
+ * Pattern: "Store Reference, Fetch Later" (SAP, Salesforce, Microsoft)
+ *
+ * Used by worker to download large attachments that were deferred during
+ * webhook processing for fast response times.
+ *
+ * @see https://documentation.mailgun.com/en/latest/api-sending-messages.html#retrieving-stored-messages
+ */
+async function fetchDeferredAttachment(
+  storageUrl: string,
+  filename: string
+): Promise<InboundAttachmentDownload | null> {
+  try {
+    const apiKey = process.env.MAILGUN_API_KEY;
+    if (!apiKey) {
+      logger.error('MAILGUN_API_KEY not configured for deferred attachment download', {
+        filename,
+      });
+      return null;
+    }
+
+    // Mailgun uses HTTP Basic Auth with api:key format
+    const authHeader = 'Basic ' + Buffer.from(`api:${apiKey}`).toString('base64');
+
+    logger.info('Fetching deferred attachment from Mailgun Storage', {
+      filename,
+      storageUrl: storageUrl.substring(0, 80) + '...',
+    });
+
+    const response = await fetch(storageUrl, {
+      method: 'GET',
+      headers: {
+        Authorization: authHeader,
+        Accept: 'message/rfc2822', // Get full message with attachments
+      },
+    });
+
+    if (!response.ok) {
+      logger.error('Failed to fetch from Mailgun Storage', {
+        filename,
+        status: response.status,
+        statusText: response.statusText,
+      });
+      return null;
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+
+    logger.info('Deferred attachment fetched successfully', {
+      filename,
+      sizeBytes: buffer.length,
+      contentType,
+    });
+
+    return { buffer, contentType };
+  } catch (error) {
+    logger.error('Error fetching deferred attachment', {
+      filename,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return null;
+  }
+}
+
+/**
  * Convert serialized attachment back to InboundEmailAttachment
  *
- * Creates a download function that returns the pre-loaded buffer
+ * 🏢 ENTERPRISE: Supports both inline (pre-downloaded) and deferred (fetch later) modes
+ *
+ * - INLINE: Returns pre-loaded buffer from base64
+ * - DEFERRED: Creates download function that fetches from Mailgun Storage API
  */
 function deserializeAttachment(serialized: SerializedAttachment): InboundEmailAttachment {
   return {
     filename: serialized.filename,
     contentType: serialized.contentType,
     sizeBytes: serialized.sizeBytes,
-    download: async (): Promise<InboundAttachmentDownload> => ({
-      buffer: Buffer.from(serialized.base64Content, 'base64'),
-      contentType: serialized.contentType,
-    }),
+    download: async (): Promise<InboundAttachmentDownload | null> => {
+      // 🏢 ENTERPRISE: Handle deferred mode (fetch from Mailgun Storage)
+      if (serialized.mode === 'deferred' && serialized.storageUrl) {
+        return fetchDeferredAttachment(serialized.storageUrl, serialized.filename);
+      }
+
+      // Standard inline mode: return pre-loaded buffer
+      if (serialized.base64Content) {
+        return {
+          buffer: Buffer.from(serialized.base64Content, 'base64'),
+          contentType: serialized.contentType,
+        };
+      }
+
+      // No content available
+      logger.warn('Attachment has no content (neither inline nor deferred)', {
+        filename: serialized.filename,
+        mode: serialized.mode,
+      });
+      return null;
+    },
   };
 }
 
@@ -447,6 +605,7 @@ export async function processQueueItem(item: EmailIngestionQueueItem): Promise<{
     const attachments = item.attachments.map(deserializeAttachment);
 
     // Call the full processing function
+    // 🏢 ENTERPRISE: Pass both text and HTML content for proper rendering
     const result = await processInboundEmail({
       provider: item.provider,
       providerMessageId: item.providerMessageId,
@@ -454,6 +613,7 @@ export async function processQueueItem(item: EmailIngestionQueueItem): Promise<{
       recipients: item.recipients,
       subject: item.subject,
       contentText: item.contentText,
+      contentHtml: item.contentHtml,  // 🏢 HTML with formatting (colors, fonts, styles)
       receivedAt: item.emailReceivedAt,
       attachments,
       raw: item.rawMetadata,

@@ -121,7 +121,7 @@ function createIndividualFormTabsFromConfig(
         <FormGrid>
           <IndividualFormRenderer
             sections={[section]} // Regular fields (like description)
-            formData={formData as IndividualFormData} // 🏢 ENTERPRISE: Type assertion
+            formData={formData as unknown as IndividualFormData} // 🏢 ENTERPRISE: Type assertion
             onChange={onChange}
             onSelectChange={onSelectChange}
             disabled={disabled}
@@ -134,7 +134,7 @@ function createIndividualFormTabsFromConfig(
       <FormGrid>
         <IndividualFormRenderer
           sections={[section]} // Single section per tab
-          formData={formData as IndividualFormData} // 🏢 ENTERPRISE: Type assertion
+          formData={formData as unknown as IndividualFormData} // 🏢 ENTERPRISE: Type assertion
           onChange={onChange}
           onSelectChange={onSelectChange}
           disabled={disabled}

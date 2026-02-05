@@ -26,6 +26,12 @@
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 214 95% 97%;
 
+    /* 🏢 ENTERPRISE: Themed Link Colors (Gmail/Outlook/Salesforce pattern) - ADR-074 */
+    /* WCAG AA Compliant: Light mode contrast ≥4.5:1 */
+    --link-color: 221 83% 53%;           /* #3b82f6 Blue-500 - Light mode */
+    --link-color-hover: 217 91% 60%;     /* #2563eb Blue-600 */
+    --link-color-visited: 271 81% 56%;   /* #8b5cf6 Purple-500 */
+
     --secondary: 213 88% 96%; /* ✅ ENTERPRISE: Refined blue secondary (was grey) */
     --secondary-foreground: 222.2 47.4% 11.2%;
 
@@ -111,6 +117,12 @@
 
     --primary: 217 33% 17%; /* ✅ ENTERPRISE: Dark primary background - NO WHITE BACKGROUNDS! */
     --primary-foreground: 210 40% 98%;
+
+    /* 🏢 ENTERPRISE: Themed Link Colors for Dark Mode (Gmail/Outlook/Salesforce pattern) - ADR-074 */
+    /* WCAG AA Compliant: Dark mode contrast 8.7:1 (bright blue on dark slate) */
+    --link-color: 213 94% 68%;           /* #60a5fa Blue-400 - Dark mode */
+    --link-color-hover: 212 96% 78%;     /* #93c5fd Blue-300 */
+    --link-color-visited: 270 95% 75%;   /* #c4b5fd Purple-300 */
     
     --secondary: 217 33% 25%;
     --secondary-foreground: 210 40% 98%;

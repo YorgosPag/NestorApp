@@ -21,8 +21,8 @@ import {
   DocumentData
 } from 'firebase/firestore';
 import { FieldValue as AdminFieldValue, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
-import type { Communication, TriageStatus } from '@/types/crm';
-import { TRIAGE_STATUSES } from '@/types/crm';
+import type { Communication } from '@/types/crm';
+import { TRIAGE_STATUSES, TRIAGE_STATUS_VALUES, type TriageStatus } from '@/constants/triage-statuses';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -94,7 +94,7 @@ const transformCommunication = (docSnapshot: QueryDocumentSnapshot<DocumentData>
 // 🏢 ENTERPRISE: Shared triage query helper (Admin SDK)
 // ============================================================================
 
-const TRIAGE_STATUS_VALUES = Object.values(TRIAGE_STATUSES);
+// NOTE: TRIAGE_STATUS_VALUES imported from @/constants/triage-statuses (isomorphic module)
 
 async function fetchTriageCommunications(params: {
   companyId?: string;  // Optional for global admin access
@@ -119,16 +119,30 @@ async function fetchTriageCommunications(params: {
         );
   } else {
     // Tenant-scoped: filter by companyId
-    snapshots = params.status
-      ? [await messagesRef.where('companyId', '==', params.companyId).where('triageStatus', '==', params.status).get()]
-      : await Promise.all(
-          TRIAGE_STATUS_VALUES.map((status) =>
-            messagesRef
-              .where('companyId', '==', params.companyId)
-              .where('triageStatus', '==', status)
-              .get()
-          )
-        );
+    if (params.status) {
+      snapshots = [await messagesRef.where('companyId', '==', params.companyId).where('triageStatus', '==', params.status).get()];
+    } else {
+      // 🐛 DEBUG: Log each query
+      logger.info('📊 Fetching stats - running queries for each status', {
+        companyId: params.companyId,
+        statuses: TRIAGE_STATUS_VALUES
+      });
+
+      snapshots = await Promise.all(
+        TRIAGE_STATUS_VALUES.map(async (status) => {
+          const snapshot = await messagesRef
+            .where('companyId', '==', params.companyId)
+            .where('triageStatus', '==', status)
+            .get();
+
+          logger.info(`📊 Query result for status "${status}"`, {
+            count: snapshot.size
+          });
+
+          return snapshot;
+        })
+      );
+    }
   }
 
   const communications = snapshots.flatMap((snapshot) =>
@@ -313,6 +327,17 @@ export async function getTriageStats(
     });
 
     const communications = await fetchTriageCommunications({ companyId });
+
+    // 🐛 DEBUG: Log communications for troubleshooting
+    logger.info('📊 Stats calculation', {
+      totalCommunications: communications.length,
+      sample: communications.slice(0, 2).map(c => ({
+        id: c.id,
+        triageStatus: c.triageStatus,
+        from: c.from
+      }))
+    });
+
     const counts = communications.reduce(
       (acc, comm) => {
         switch (comm.triageStatus) {
@@ -329,6 +354,11 @@ export async function getTriageStats(
             acc.reviewed += 1;
             break;
           default:
+            // 🐛 DEBUG: Log unknown status
+            logger.warn('Unknown triage status', {
+              status: comm.triageStatus,
+              commId: comm.id
+            });
             break;
         }
         return acc;
@@ -337,6 +367,8 @@ export async function getTriageStats(
     );
 
     const total = counts.pending + counts.approved + counts.rejected + counts.reviewed;
+
+    logger.info('📊 Stats result', { total, ...counts });
 
     return {
       ok: true,

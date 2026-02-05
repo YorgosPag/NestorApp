@@ -2,7 +2,7 @@
 
 > **Enterprise Documentation**: Email webhook processing, AI analysis, and communication ingestion
 >
-> **📊 Stats**: 1 ADR | 3 Providers | Last Updated: 2026-02-05
+> **📊 Stats**: 1 ADR | 2 Providers | Last Updated: 2026-02-05
 
 ---
 
@@ -23,9 +23,9 @@
 │                    EMAIL INGESTION PIPELINE                     │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                      │
-│  │ Mailgun  │  │  Brevo   │  │ SendGrid │  (Webhook Providers) │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘                      │
+│  ┌──────────┐  ┌──────────┐                                    │
+│  │ Mailgun  │  │ SendGrid │  (Webhook Providers)               │
+│  └────┬─────┘  └────┬─────┘                                    │
 │       │             │             │                             │
 │       └──────────┬──┴─────────────┘                             │
 │                  ▼                                              │
@@ -70,7 +70,6 @@
 | Provider | Endpoint | Method | Content-Type |
 |----------|----------|--------|--------------|
 | **Mailgun** | `/api/communications/webhooks/mailgun/inbound` | POST | `multipart/form-data` |
-| **Brevo** | `/api/communications/webhooks/brevo/inbound` | POST | `application/json` |
 | **SendGrid** | `/api/webhooks/sendgrid/inbound` | POST | `multipart/form-data` |
 
 ### Health Check

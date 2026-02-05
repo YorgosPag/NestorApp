@@ -42,6 +42,8 @@ import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import { FloorplanProvider } from '@/contexts/FloorplanContext';
 import { NotificationProvider } from '@/providers/NotificationProvider';
 import { SharedPropertiesProvider } from '@/contexts/SharedPropertiesProvider';
+import { CacheProvider } from '@/contexts/CacheProvider';
+import { WebSocketProvider } from '@/contexts/WebSocketContext';
 // 🏢 ENTERPRISE: Global components that need NotificationProvider
 import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 import { ToasterClient } from '@/components/ToasterClient';
@@ -133,28 +135,32 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     <WorkspaceProvider>
       <FloorplanProvider>
         <NotificationProvider>
-          <SharedPropertiesProvider>
-            <NavigationProvider>
-              <PhotoPreviewProvider>
-                <SidebarProvider>
-                  <div className={layout.shellAppContainer}>
-                    <AppSidebar />
-                    <SidebarInset className={layout.shellAppContent}>
-                      <AppHeader />
-                      <MainContentBridge>
-                        {children}
-                      </MainContentBridge>
-                    </SidebarInset>
-                  </div>
-                </SidebarProvider>
-              </PhotoPreviewProvider>
-            </NavigationProvider>
+          <CacheProvider>
+            <WebSocketProvider>
+              <SharedPropertiesProvider>
+                <NavigationProvider>
+                  <PhotoPreviewProvider>
+                    <SidebarProvider>
+                      <div className={layout.shellAppContainer}>
+                        <AppSidebar />
+                        <SidebarInset className={layout.shellAppContent}>
+                          <AppHeader />
+                          <MainContentBridge>
+                            {children}
+                          </MainContentBridge>
+                        </SidebarInset>
+                      </div>
+                    </SidebarProvider>
+                  </PhotoPreviewProvider>
+                </NavigationProvider>
 
-            {/* 🏢 ENTERPRISE: Global components that need providers */}
-            <NotificationDrawer />
-            <ToasterClient />
-            <GlobalErrorSetup />
-          </SharedPropertiesProvider>
+                {/* 🏢 ENTERPRISE: Global components that need providers */}
+                <NotificationDrawer />
+                <ToasterClient />
+                <GlobalErrorSetup />
+              </SharedPropertiesProvider>
+            </WebSocketProvider>
+          </CacheProvider>
         </NotificationProvider>
       </FloorplanProvider>
     </WorkspaceProvider>

@@ -87,7 +87,7 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
   const getStatusLabel = (status: string) => t(`general.statuses.${status}`) || t('general.unknown');
 
   // Generate history events based on storage data
-  const historyEvents: HistoryEvent[] = [
+  const baseEvents: HistoryEvent[] = [
     {
       id: '1',
       type: 'status_change',
@@ -170,7 +170,9 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
         newValue: storage.status
       }
     }
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  ];
+
+  const historyEvents = [...baseEvents].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const eventsByType = {
     total: historyEvents.length,
@@ -268,14 +270,14 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
                         {/* Metadata */}
                         {event.metadata && (
                           <div className="flex gap-2">
-                            {event.metadata.amount && (
+                            {typeof event.metadata.amount === 'number' && (
                               <span className={`${colors.bg.successSubtle} ${colors.text.success} px-2 py-1 rounded`}>
                                 {formatCurrency(event.metadata.amount)}
                               </span>
                             )}
-                            {event.metadata.oldValue && event.metadata.newValue && (
+                            {event.metadata.oldValue !== undefined && event.metadata.newValue !== undefined && (
                               <span className={`${colors.bg.infoSubtle} ${colors.text.info} px-2 py-1 rounded text-xs`}>
-                                {typeof event.metadata.oldValue === 'number' ?
+                                {typeof event.metadata.oldValue === 'number' && typeof event.metadata.newValue === 'number' ?
                                   `${formatCurrency(event.metadata.oldValue)} → ${formatCurrency(event.metadata.newValue)}`
                                   : `${event.metadata.oldValue} → ${event.metadata.newValue}`
                                 }
@@ -334,3 +336,4 @@ export function StorageHistoryTab({ storage }: StorageHistoryTabProps) {
     </div>
   );
 }
+

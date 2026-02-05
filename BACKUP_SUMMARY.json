@@ -79,7 +79,16 @@
     "RATE_LIMITING_QUICK_REFERENCE.md",
     "RATE_LIMITING_DOCUMENTATION_INDEX.md"
   ],
-  "commits": [],
+  "commits": [
+    {
+      "hash": "6aef85e0",
+      "message": "feat(security): fix critical API routes vulnerabilities + comprehensive audit",
+      "files": 9,
+      "insertions": 4890,
+      "deletions": 89,
+      "timestamp": "2026-02-06T02:31:00+02:00"
+    }
+  ],
   "statistics": {
     "filesChanged": 2,
     "insertions": 95,

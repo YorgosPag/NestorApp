@@ -28,7 +28,7 @@ export function AIInboxUnauthorized({ error }: AIInboxUnauthorizedProps) {
         <Card className={layout.cardLgWidth}>
           <CardHeader>
             <CardTitle className={layout.flexCenterGap2}>
-              <ShieldX className={`${iconSizes.sm} ${colors.text.destructive}`} />
+              <ShieldX className={`${iconSizes.sm} ${colors.text.error}`} />
               {t('accessDenied.title')}
             </CardTitle>
             <CardDescription>{t('accessDenied.description')}</CardDescription>

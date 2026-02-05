@@ -13,6 +13,9 @@ export type WebSocketEventType =
   | 'property_updated'
   | 'dxf_collaboration'
   | 'system_update'
+  | 'email_queue_updated'
+  | 'email_received'
+  | 'email_processed'
   | 'error';
 
 // 🏢 ENTERPRISE: Generic interface with unknown default for type safety

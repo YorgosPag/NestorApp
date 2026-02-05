@@ -15,6 +15,7 @@ import { StoragesListHeader } from './StoragesListHeader';
 import { StorageListCard } from '@/domain';
 import { CompactToolbar } from '@/components/core/CompactToolbar';
 import { storagesToolbarConfig } from '@/components/core/CompactToolbar/configs';
+import type { SortField } from '@/components/core/CompactToolbar/types';
 
 interface StoragesListProps {
   storages: Storage[];
@@ -31,7 +32,7 @@ export function StoragesList({
   const { t } = useTranslation('storage');
   const iconSizes = useIconSizes();
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<'name' | 'area' | 'price' | 'status' | 'building' | 'type'>('name');
+  const [sortBy, setSortBy] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -67,7 +68,8 @@ export function StoragesList({
   }, [storages, searchTerm]);
 
   const sortedStorages = [...filteredStorages].sort((a, b) => {
-    let aValue, bValue;
+    let aValue: string | number;
+    let bValue: string | number;
 
     switch (sortBy) {
       case 'name':
@@ -78,7 +80,7 @@ export function StoragesList({
         aValue = a.area;
         bValue = b.area;
         break;
-      case 'price':
+      case 'value':
         aValue = a.price || 0;
         bValue = b.price || 0;
         break;
@@ -86,9 +88,17 @@ export function StoragesList({
         aValue = a.status.toLowerCase();
         bValue = b.status.toLowerCase();
         break;
-      case 'building':
+      case 'location':
         aValue = a.building.toLowerCase();
         bValue = b.building.toLowerCase();
+        break;
+      case 'number':
+        aValue = a.floor.toLowerCase();
+        bValue = b.floor.toLowerCase();
+        break;
+      case 'date':
+        aValue = a.lastUpdated instanceof Date ? a.lastUpdated.getTime() : a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
+        bValue = b.lastUpdated instanceof Date ? b.lastUpdated.getTime() : b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
         break;
       case 'type':
         aValue = a.type.toLowerCase();
@@ -194,3 +204,6 @@ export function StoragesList({
     </EntityListColumn>
   );
 }
+
+
+

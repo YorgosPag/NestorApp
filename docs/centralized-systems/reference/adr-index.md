@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 131 ADRs | Last Updated: 2026-02-05
+**📊 Stats**: 133 ADRs | Last Updated: 2026-02-05
 
 ---
 
@@ -24,11 +24,11 @@
 | 📂 **Entity Systems** | 11 | [View](#entity-systems) |
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
-| 🔒 **Security & Auth** | 6 | [View](#security-auth) |
+| 🔒 **Security & Auth** | 7 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 9 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 10 | [View](#uncategorized) |
 
 ---
 
@@ -101,11 +101,13 @@
 | **ADR-065** | Inline ID Generation Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-065-inline-id-generation-centralization.md) |
 | **ADR-066** | Rendering Z-Index Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-066-rendering-zindex-centralization.md) |
 | **ADR-067** | FillText Offset Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-067-filltext-offset-centralization.md) |
+| **ADR-068** | API Rate Limiting System | ✅ APPROVED | 2026-02-06 | Security & Auth | [📄](./adrs/ADR-068-api-rate-limiting-system.md) |
 | **ADR-069** | Number Formatting Centralization (formatDistance/formatAngle) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-069-number-formatting-centralization-formatdistance-fo.md) |
 | **ADR-070** | Email & AI Ingestion System | ✅ APPROVED | 2026-02-05 | Backend Systems | [📄](./adrs/ADR-070-email-ai-ingestion-system.md) |
 | **ADR-071** | Enterprise Email Webhook Queue System | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-071-enterprise-email-webhook-queue.md) |
 | **ADR-072** | AI Inbox HTML Rendering with Enterprise Sanitization | ✅ IMPLEMENTED | 2026-02-05 | Security & Auth | [📄](./adrs/ADR-072-ai-inbox-html-rendering.md) |
 | **ADR-073** | Firestore Composite Index Strategy | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-073-firestore-indexes-strategy.md) |
+| **ADR-074** | AI Inbox UX Improvements - Link Visibility & Theme Colors | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-074-ai-inbox-ux-improvements.md) |
 | **ADR-075** | Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-075-grip-size-multipliers-centralization.md) |
 | **ADR-076** | RGB ↔ HEX Color Conversion Centralization | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-076-rgb-hex-color-conversion-centralization.md) |
 | **ADR-081** | Percentage Formatting Centralization (formatPercent) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-081-percentage-formatting-centralization-formatpercent.md) |
@@ -347,6 +349,7 @@
 | **ADR-024** | Environment Security Configuration | ✅ APPROVED | [View](./adrs/ADR-024-environment-security-configuration.md) |
 | **ADR-062** | No Debug/Admin Analysis Endpoints in Production | ✅ ✅ Active | [View](./adrs/ADR-062-no-debug-endpoints-in-production.md) |
 | **ADR-063** | Company Isolation via Custom Claims | ✅ ✅ Active | [View](./adrs/ADR-063-company-isolation-custom-claims.md) |
+| **ADR-068** | API Rate Limiting System | ✅ APPROVED | [View](./adrs/ADR-068-api-rate-limiting-system.md) |
 | **ADR-072** | AI Inbox HTML Rendering with Enterprise Sanitization | ✅ IMPLEMENTED | [View](./adrs/ADR-072-ai-inbox-html-rendering.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | [View](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 
@@ -393,6 +396,7 @@
 | **ADR-067** | FillText Offset Centralization | ✅ APPROVED | [View](./adrs/ADR-067-filltext-offset-centralization.md) |
 | **ADR-071** | Enterprise Email Webhook Queue System | ✅ APPROVED | [View](./adrs/ADR-071-enterprise-email-webhook-queue.md) |
 | **ADR-073** | Firestore Composite Index Strategy | ✅ APPROVED | [View](./adrs/ADR-073-firestore-indexes-strategy.md) |
+| **ADR-074** | AI Inbox UX Improvements - Link Visibility & Theme Colors | ✅ APPROVED | [View](./adrs/ADR-074-ai-inbox-ux-improvements.md) |
 | **ADR-165** | Entity Validation Centralization | ✅ APPROVED | [View](./adrs/ADR-165-entity-validation-centralization.md) |
 | **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | [View](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |

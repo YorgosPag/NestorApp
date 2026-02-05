@@ -29,6 +29,7 @@ import {
   resolveProviderMessageId,
   enqueueInboundEmail,
   type InboundEmailAttachment,
+  type MailgunStorageInfo,
 } from '@/services/communications/inbound';
 
 const logger = createModuleLogger('MAILGUN_INBOUND_WEBHOOK');
@@ -79,6 +80,33 @@ function verifyMailgunSignature(params: {
 
   const valid = timingSafeEqual(provided, expected);
   return valid ? { valid: true } : { valid: false, reason: 'signature_invalid' };
+}
+
+/**
+ * 🏢 ENTERPRISE: Extract Mailgun storage info for deferred download
+ *
+ * Mailgun provides a message-url that allows retrieving the full message
+ * with attachments later (up to 3 days). This enables the "Store Reference,
+ * Fetch Later" pattern used by SAP, Salesforce, and enterprise systems.
+ *
+ * @see https://documentation.mailgun.com/en/latest/api-sending-messages.html#retrieving-stored-messages
+ */
+function extractMailgunStorageInfo(formData: FormData): MailgunStorageInfo | undefined {
+  const messageUrl = getFormString(formData, ['message-url', 'Message-Url', 'message-headers']);
+
+  if (!messageUrl) {
+    return undefined;
+  }
+
+  // Extract storage key from URL (last path segment)
+  const urlMatch = messageUrl.match(/messages\/([A-Za-z0-9_-]+)$/);
+  const storageKey = urlMatch ? urlMatch[1] : undefined;
+
+  return {
+    messageUrl,
+    storageKey,
+    region: messageUrl.includes('europe') ? 'eu' : 'us',
+  };
 }
 
 function extractAttachments(formData: FormData): InboundEmailAttachment[] {
@@ -182,9 +210,16 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
     }
 
     const subject = resolveSubject(getFormString(formData, ['subject']));
-    const textBody = getFormString(formData, ['stripped-text', 'text']) || '';
-    const htmlBody = getFormString(formData, ['stripped-html', 'html']) || '';
-    const contentText = textBody || htmlBody;
+    const textBody = getFormString(formData, ['stripped-text', 'body-plain', 'text']) || '';
+    // 🏢 ENTERPRISE: Use 'body-html' FIRST (full HTML with formatting)
+    // 'stripped-html' removes quotes/signatures and may lose inline styles/colors
+    // Priority: body-html > html > stripped-html (fallback only)
+    const htmlBody = getFormString(formData, ['body-html', 'html', 'stripped-html']) || '';
+    // 🏢 ENTERPRISE: Dual-content pattern (Gmail/Outlook/Salesforce)
+    // - contentText: Plain text for search/preview/fallback
+    // - contentHtml: Rich HTML with formatting (colors, fonts, styles)
+    const contentText = textBody || ''; // Plain text only, no HTML fallback
+    const contentHtml = htmlBody || undefined; // HTML with formatting (colors preserved)
     const receivedAt = getFormString(formData, ['Date', 'date']);
 
     const messageId = getFormString(formData, ['Message-Id', 'message-id', 'messageId']);
@@ -199,16 +234,26 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
 
     const attachments = extractAttachments(formData);
 
+    // 🏢 ENTERPRISE: Extract Mailgun storage info for deferred attachment download
+    // This enables the "Store Reference, Fetch Later" pattern
+    const mailgunStorage = extractMailgunStorageInfo(formData);
+
     logger.info('Enqueuing inbound email for processing', {
       from: sender.email,
       to: recipients.join(', '),
       subject,
       attachmentCount: attachments.length,
       providerMessageId,
+      hasMailgunStorage: Boolean(mailgunStorage),
+      hasHtmlContent: Boolean(contentHtml),  // 🏢 NEW: Track HTML content presence
     });
 
     // 🏢 ENTERPRISE: Enqueue for background processing instead of sync processing
     // This is the "Acknowledge Fast, Process Later" pattern
+    // Attachments are processed based on size:
+    // - Small (< 1MB): Inline base64 for fast processing
+    // - Large (>= 1MB): Deferred download from Mailgun Storage API
+    // 🏢 ENTERPRISE: Enqueue with dual-content (text + HTML)
     const enqueueResult = await enqueueInboundEmail({
       provider: 'mailgun',
       providerMessageId,
@@ -216,8 +261,10 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
       recipients,
       subject,
       contentText,
+      contentHtml,  // 🏢 NEW: HTML with formatting (colors, fonts, styles)
       emailReceivedAt: receivedAt,
       attachments,
+      mailgunStorage,
       rawMetadata: {
         messageId,
         hasHtml: Boolean(htmlBody),
