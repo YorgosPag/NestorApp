@@ -103,79 +103,110 @@ function buildFallbackKey(params: {
 }
 
 async function handleMailgunInbound(request: NextRequest): Promise<Response> {
-  const contentType = request.headers.get('content-type') || '';
-  if (!contentType.includes('multipart/form-data')) {
-    return NextResponse.json({ ok: false, error: 'invalid_content_type' }, { status: 400 });
+  try {
+    const contentType = request.headers.get('content-type') || '';
+    if (!contentType.includes('multipart/form-data')) {
+      logger.warn('Invalid content type', { contentType });
+      return NextResponse.json({ ok: false, error: 'invalid_content_type' }, { status: 400 });
+    }
+
+    const formData = await request.formData();
+    const signatureCheck = verifyMailgunSignature({
+      timestamp: getFormString(formData, ['timestamp']),
+      token: getFormString(formData, ['token']),
+      signature: getFormString(formData, ['signature']),
+      signingKey: MAILGUN_WEBHOOK_SIGNING_KEY,
+    });
+
+    if (!signatureCheck.valid) {
+      logger.warn('Webhook signature rejected', { reason: signatureCheck.reason });
+      return NextResponse.json({ ok: false, error: signatureCheck.reason }, { status: 401 });
+    }
+
+    const fromRaw = getFormString(formData, ['from', 'sender']);
+    const sender = parseAddress(fromRaw);
+    if (!sender) {
+      logger.info('No valid sender found, skipping');
+      return NextResponse.json({ ok: true, processed: 0, skipped: 1 });
+    }
+
+    const toRaw = getFormString(formData, ['recipient', 'to']);
+    const ccRaw = getFormString(formData, ['cc']);
+    const recipients = [
+      ...splitAddresses(toRaw),
+      ...splitAddresses(ccRaw),
+    ];
+
+    if (recipients.length === 0) {
+      logger.info('No recipients found, skipping');
+      return NextResponse.json({ ok: true, processed: 0, skipped: 1 });
+    }
+
+    const subject = resolveSubject(getFormString(formData, ['subject']));
+    const textBody = getFormString(formData, ['stripped-text', 'text']) || '';
+    const htmlBody = getFormString(formData, ['stripped-html', 'html']) || '';
+    const contentText = textBody || htmlBody;
+    const receivedAt = getFormString(formData, ['Date', 'date']);
+
+    const messageId = getFormString(formData, ['Message-Id', 'message-id', 'messageId']);
+    const fallbackKey = buildFallbackKey({
+      senderEmail: sender.email,
+      recipients,
+      subject,
+      timestamp: receivedAt,
+      content: contentText,
+    });
+    const providerMessageId = resolveProviderMessageId('mailgun', fallbackKey, messageId);
+
+    const attachments = extractAttachments(formData);
+
+    logger.info('Processing inbound email', {
+      from: sender.email,
+      to: recipients.join(', '),
+      subject,
+      attachmentCount: attachments.length,
+    });
+
+    const result = await processInboundEmail({
+      provider: 'mailgun',
+      providerMessageId,
+      sender,
+      recipients,
+      subject,
+      contentText,
+      receivedAt,
+      attachments,
+      raw: {
+        messageId,
+        hasHtml: Boolean(htmlBody),
+      },
+    });
+
+    logger.info('Email processing completed', {
+      processed: result.processed,
+      skipped: result.skipped,
+      communicationId: result.communicationId,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      processed: result.processed ? 1 : 0,
+      skipped: result.skipped ? 1 : 0,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    logger.error('Mailgun inbound webhook error', {
+      error: errorMessage,
+      stack: errorStack,
+    });
+
+    return NextResponse.json(
+      { ok: false, error: 'internal_error', message: errorMessage },
+      { status: 500 }
+    );
   }
-
-  const formData = await request.formData();
-  const signatureCheck = verifyMailgunSignature({
-    timestamp: getFormString(formData, ['timestamp']),
-    token: getFormString(formData, ['token']),
-    signature: getFormString(formData, ['signature']),
-    signingKey: MAILGUN_WEBHOOK_SIGNING_KEY,
-  });
-
-  if (!signatureCheck.valid) {
-    logger.warn('Webhook rejected', { reason: signatureCheck.reason });
-    return NextResponse.json({ ok: false, error: signatureCheck.reason }, { status: 401 });
-  }
-
-  const fromRaw = getFormString(formData, ['from', 'sender']);
-  const sender = parseAddress(fromRaw);
-  if (!sender) {
-    return NextResponse.json({ ok: true, processed: 0, skipped: 1 });
-  }
-
-  const toRaw = getFormString(formData, ['recipient', 'to']);
-  const ccRaw = getFormString(formData, ['cc']);
-  const recipients = [
-    ...splitAddresses(toRaw),
-    ...splitAddresses(ccRaw),
-  ];
-
-  if (recipients.length === 0) {
-    return NextResponse.json({ ok: true, processed: 0, skipped: 1 });
-  }
-
-  const subject = resolveSubject(getFormString(formData, ['subject']));
-  const textBody = getFormString(formData, ['stripped-text', 'text']) || '';
-  const htmlBody = getFormString(formData, ['stripped-html', 'html']) || '';
-  const contentText = textBody || htmlBody;
-  const receivedAt = getFormString(formData, ['Date', 'date']);
-
-  const messageId = getFormString(formData, ['Message-Id', 'message-id', 'messageId']);
-  const fallbackKey = buildFallbackKey({
-    senderEmail: sender.email,
-    recipients,
-    subject,
-    timestamp: receivedAt,
-    content: contentText,
-  });
-  const providerMessageId = resolveProviderMessageId('mailgun', fallbackKey, messageId);
-
-  const attachments = extractAttachments(formData);
-
-  const result = await processInboundEmail({
-    provider: 'mailgun',
-    providerMessageId,
-    sender,
-    recipients,
-    subject,
-    contentText,
-    receivedAt,
-    attachments,
-    raw: {
-      messageId,
-      hasHtml: Boolean(htmlBody),
-    },
-  });
-
-  return NextResponse.json({
-    ok: true,
-    processed: result.processed ? 1 : 0,
-    skipped: result.skipped ? 1 : 0,
-  });
 }
 
 export const POST = withWebhookRateLimit(handleMailgunInbound);
