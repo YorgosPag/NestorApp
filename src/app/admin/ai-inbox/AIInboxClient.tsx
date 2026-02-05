@@ -277,8 +277,22 @@ const parseTextWithLinks = (text: string): TextPart[] => {
 };
 
 /**
+ * 🏢 ENTERPRISE: Render text content with line breaks preserved
+ * Splits text by newlines and renders with <br /> elements
+ */
+const renderTextWithLineBreaks = (text: string, baseKey: string) => {
+  const lines = text.split('\n');
+  return lines.map((line, lineIndex) => (
+    <span key={`${baseKey}-line-${lineIndex}`}>
+      {line}
+      {lineIndex < lines.length - 1 && <br />}
+    </span>
+  ));
+};
+
+/**
  * 🏢 ENTERPRISE: Render text with clickable links
- * Returns React elements with proper link handling
+ * Returns React elements with proper link handling and line break preservation
  */
 const RenderContentWithLinks = ({ content }: { content: string }) => {
   const parts = parseTextWithLinks(content);
@@ -306,7 +320,12 @@ const RenderContentWithLinks = ({ content }: { content: string }) => {
             </a>
           );
         }
-        return <span key={index}>{part.content}</span>;
+        // Render text with preserved line breaks
+        return (
+          <span key={index}>
+            {renderTextWithLineBreaks(part.content, `part-${index}`)}
+          </span>
+        );
       })}
     </>
   );
