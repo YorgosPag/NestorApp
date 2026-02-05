@@ -526,9 +526,11 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
 
   const intentAnalysis = isMessageIntentAnalysis(analysis) ? analysis : undefined;
 
-  const triageStatus = intentAnalysis?.needsTriage
-    ? TRIAGE_STATUSES.PENDING
-    : TRIAGE_STATUSES.REVIEWED;
+  // Defensive: Use explicit string values to avoid any import/constant issues
+  // Firestore will reject undefined values, so we must guarantee a value
+  const triageStatus: 'pending' | 'reviewed' = intentAnalysis?.needsTriage === true
+    ? 'pending'
+    : 'reviewed';
 
   const attachments = await processAttachments({
     companyId: routing.companyId,
@@ -567,11 +569,19 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     createdBy: SYSTEM_IDENTITY.ID,
     status: 'pending',
     attachments: attachments.map((attachment) => attachment.url || '').filter(Boolean),
-    triageStatus: triageStatus || TRIAGE_STATUSES.PENDING,
+    triageStatus: triageStatus ?? 'pending',  // Guaranteed non-undefined value
     metadata,
     // Only include intentAnalysis if it exists (Firestore doesn't accept undefined)
     ...(intentAnalysis && { intentAnalysis }),
   };
+
+  // Debug logging - verify triageStatus is not undefined before Firestore write
+  logger.info('Preparing to write communication to Firestore', {
+    messageDocId,
+    triageStatusValue: communication.triageStatus,
+    triageStatusType: typeof communication.triageStatus,
+    hasIntentAnalysis: Boolean(intentAnalysis),
+  });
 
   await adminDb.collection(COLLECTIONS.MESSAGES).doc(messageDocId).set({
     ...communication,
