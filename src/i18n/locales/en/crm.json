@@ -157,8 +157,23 @@
   },
   "tasks": {
     "title": "Tasks & Appointments",
+    "description": "Manage your tasks and appointments",
     "newTask": "New Task",
     "noTasks": "No tasks found",
+    "stats": {
+      "total": "Total",
+      "totalDesc": "All tasks",
+      "pending": "Pending",
+      "pendingDesc": "Tasks awaiting action",
+      "overdue": "Overdue",
+      "overdueDesc": "Past due date",
+      "completed": "Completed",
+      "completedDesc": "Tasks that have been completed",
+      "today": "Today",
+      "todayDesc": "Due today",
+      "thisWeek": "This Week",
+      "thisWeekDesc": "Due this week"
+    },
     "loading": "Loading...",
     "searchPlaceholder": "Search...",
     "clearFilters": "Clear",
