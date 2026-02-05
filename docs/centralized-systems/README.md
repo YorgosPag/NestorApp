@@ -69,6 +69,7 @@
 - **[🚨 Alert Engine](data-systems/alert-engine.md)** - Real-time monitoring & notifications
 - **[🌍 Polygon System](data-systems/polygon-system.md)** - Geographic drawing engine
 - **[🏗️ State Management](data-systems/state-management.md)** - Context providers & stores
+- **[📧 Email/AI Ingestion](data-systems/email-ai-ingestion.md)** - Email webhooks & AI analysis ✨ **NEW**
 
 ### 🖼️ **UI SYSTEMS**
 - **[📋 Overview](ui-systems/index.md)** - User interface systems architecture

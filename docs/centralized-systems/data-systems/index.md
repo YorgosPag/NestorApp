@@ -18,9 +18,10 @@
 | **Context Providers** | 900+ | 6 providers | ✅ **Complete** | Global state management |
 | **Config Systems** | 1,200+ | 50+ files | ✅ **Centralized** | Application configuration |
 | **Multi-Selection System** | 600+ | 5 files | ✅ **Enterprise** | AutoCAD-style Window/Crossing selection |
-| **Filter System** | 800+ | 7 files | ✅ **Enterprise** | ADR-051 Centralized Filtering ✨ **NEW** |
+| **Filter System** | 800+ | 7 files | ✅ **Enterprise** | ADR-051 Centralized Filtering |
+| **Email/AI Ingestion** | 1,200+ | 10 files | ✅ **Production** | ADR-070 Email webhooks & AI analysis ✨ **NEW** |
 
-**🏆 TOTAL**: **7 systems** | **7,175+ lines** | **Enterprise-grade** | **Real-time capable**
+**🏆 TOTAL**: **8 systems** | **8,375+ lines** | **Enterprise-grade** | **Real-time capable**
 
 ---
 
@@ -390,7 +391,8 @@ User Interaction → Context Providers → Business Logic → Alert Engine → U
 - **[🚨 Alert Engine](alert-engine.md)** - Complete monitoring system guide
 - **[🌍 Polygon System](polygon-system.md)** - Drawing engine documentation
 - **[🏗️ State Management](state-management.md)** - Context providers detailed guide
-- **[🎯 Multi-Selection](../../src/subapps/dxf-viewer/docs/HYBRID_LAYER_MOVEMENT_ARCHITECTURE.md#9-multi-selection--marquee-selection-system-2026-01-25)** - AutoCAD-style selection ✨ **NEW**
+- **[🎯 Multi-Selection](../../src/subapps/dxf-viewer/docs/HYBRID_LAYER_MOVEMENT_ARCHITECTURE.md#9-multi-selection--marquee-selection-system-2026-01-25)** - AutoCAD-style selection
+- **[📧 Email/AI Ingestion](email-ai-ingestion.md)** - Email webhooks & AI analysis ✨ **NEW**
 
 ### 🔗 **RELATED SYSTEMS**
 - **[📊 Original Documentation](../../src/subapps/dxf-viewer/docs/centralized_systems.md)** - Complete implementation details
