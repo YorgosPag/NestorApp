@@ -16,7 +16,7 @@ import React from 'react';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { getSortedParkingTabs } from '@/config/parking-tabs-config';
 // 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
-import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
+import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
 import { PARKING_COMPONENT_MAPPING } from '@/components/generic/mappings/parkingMappings';
 
 interface ParkingTabsProps {
@@ -39,9 +39,9 @@ export function ParkingTabs({ parking }: ParkingTabsProps) {
     <UniversalTabsRenderer
       tabs={tabs.map(convertToUniversalConfig)}
       data={parking}
-      componentMapping={PARKING_COMPONENT_MAPPING}
+      componentMapping={PARKING_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
       defaultTab="general"
-      theme="clean"
+      theme="default"
       // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
       translationNamespace="building"
     />

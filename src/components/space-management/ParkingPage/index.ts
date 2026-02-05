@@ -5,5 +5,5 @@
  */
 
 export { ParkingsHeader } from './ParkingsHeader';
-export { ParkingsList, ParkingListItem, ParkingsListHeader } from './ParkingsList';
+export { ParkingsList, ParkingsListHeader } from './ParkingsList';
 export { ParkingDetails, ParkingDetailsHeader, ParkingTabs } from './ParkingDetails';

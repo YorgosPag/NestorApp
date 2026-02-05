@@ -9,14 +9,11 @@ import { Folder, Eye } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { ProjectFormData } from './general-tab/types';
 
 interface ProjectAttachmentsTabProps {
-    data: {
-        mapPath: string;
-        floorPlanPath: string;
-        percentagesPath: string;
-    };
-    setData: React.Dispatch<React.SetStateAction<any>>;
+    data: Pick<ProjectFormData, 'mapPath' | 'floorPlanPath' | 'percentagesPath'>;
+    setData: React.Dispatch<React.SetStateAction<ProjectFormData>>;
 }
 
 export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabProps) {

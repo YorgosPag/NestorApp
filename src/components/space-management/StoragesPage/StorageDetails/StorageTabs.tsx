@@ -4,7 +4,7 @@ import React from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { getSortedStorageTabs } from '@/config/storage-tabs-config';
 // 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
-import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
+import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
 import { STORAGE_COMPONENT_MAPPING } from '@/components/generic/mappings/storageMappings';
 
 interface StorageTabsProps {
@@ -26,9 +26,9 @@ export function StorageTabs({ storage }: StorageTabsProps) {
     <UniversalTabsRenderer
       tabs={tabs.map(convertToUniversalConfig)}
       data={storage}
-      componentMapping={STORAGE_COMPONENT_MAPPING}
+      componentMapping={STORAGE_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
       defaultTab="general"
-      theme="clean"
+      theme="default"
       // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels
       translationNamespace="building"
     />

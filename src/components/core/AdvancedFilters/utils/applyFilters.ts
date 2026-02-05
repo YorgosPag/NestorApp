@@ -17,7 +17,7 @@ export interface FilterableEntity {
 }
 
 function getEntityField(entity: FilterableEntity, field: string): unknown {
-  return (entity as Record<string, unknown>)[field];
+  return (entity as unknown as Record<string, unknown>)[field];
 }
 
 /**
@@ -301,7 +301,8 @@ export function applyPropertyFilters(
 
   return properties.filter((property) => {
     // Type filter
-    if (filters.propertyType.length > 0 && !filters.propertyType.includes(property.type as string)) {
+    const propertyType = getEntityField(property, 'type');
+    if (filters.propertyType.length > 0 && !filters.propertyType.includes(propertyType as string)) {
       return false;
     }
 
@@ -311,12 +312,14 @@ export function applyPropertyFilters(
     }
 
     // Price range
-    if (priceRange.min && (property.price as number) < parseInt(priceRange.min)) return false;
-    if (priceRange.max && (property.price as number) > parseInt(priceRange.max)) return false;
+    const priceValue = getEntityField(property, 'price');
+    if (priceRange.min && typeof priceValue === 'number' && priceValue < parseInt(priceRange.min)) return false;
+    if (priceRange.max && typeof priceValue === 'number' && priceValue > parseInt(priceRange.max)) return false;
 
     // Area range
-    if (areaRange.min && (property.area as number) < parseInt(areaRange.min)) return false;
-    if (areaRange.max && (property.area as number) > parseInt(areaRange.max)) return false;
+    const areaValue = getEntityField(property, 'area');
+    if (areaRange.min && typeof areaValue === 'number' && areaValue < parseInt(areaRange.min)) return false;
+    if (areaRange.max && typeof areaValue === 'number' && areaValue > parseInt(areaRange.max)) return false;
 
     return true;
   });

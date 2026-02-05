@@ -27,7 +27,7 @@ import { ProjectDetailsHeader } from './ProjectDetailsHeader';
 import { Briefcase } from 'lucide-react';
 // 🏢 ENTERPRISE: Direct imports to avoid barrel (reduces module graph)
 // UniversalTabsRenderer from generic (renderer only, no mappings)
-import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
+import { UniversalTabsRenderer, convertToUniversalConfig, type TabComponentProps } from '@/components/generic/UniversalTabsRenderer';
 // PROJECT_COMPONENT_MAPPING from domain-scoped file (not master barrel)
 import { PROJECT_COMPONENT_MAPPING } from '@/components/generic/mappings/projectMappings';
 import { getSortedProjectTabs } from '@/config/project-tabs-config';
@@ -71,7 +71,7 @@ export function ProjectDetails({ project, onEdit }: ProjectDetailsProps) {
         <UniversalTabsRenderer
           tabs={projectTabs.map(convertToUniversalConfig)}
           data={project!}
-          componentMapping={PROJECT_COMPONENT_MAPPING}
+          componentMapping={PROJECT_COMPONENT_MAPPING as unknown as Record<string, React.ComponentType<TabComponentProps>>}
           defaultTab="general"
           theme="default"
           // 🏢 ENTERPRISE: i18n - Use building namespace for tab labels

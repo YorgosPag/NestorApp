@@ -39,6 +39,22 @@ interface Props {
   onZoomWindowModeChange?: (active: boolean) => void;
 }
 
+interface DxfCanvasCompatProps {
+  scene?: SceneModel | null;
+  selectedEntityIds?: string[];
+  alwaysShowCoarseGrid?: boolean;
+  isZoomWindowActive?: boolean;
+  onRendererReady: (renderer: RendererInstance) => void;
+  onMouseMove: (point: Point) => void;
+  onMouseLeave: () => void;
+  onMouseDown: (point: Point) => void;
+  onMouseUp: () => void;
+  onWheel: (event: React.WheelEvent) => void;
+  hoveredEntityId?: string | null;
+}
+
+const DxfCanvasCompat = DxfCanvasCore as unknown as React.ComponentType<DxfCanvasCompatProps>;
+
 export interface DxfCanvasRef {
   fitToView: () => void;
   zoomIn: () => void;
@@ -192,7 +208,7 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
   return (
     <>
       <div className={`relative h-full overflow-hidden ${className}`}>
-        <DxfCanvasCore
+        <DxfCanvasCompat
           onRendererReady={handleRendererReady}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
@@ -220,9 +236,7 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
           mousePos={mouseCss}
           worldPos={mouseWorld}
           canvasRect={canvasRect ?? undefined}
-          coordinateManager={rendererRef.current?.getCoordinateManager?.()}
           currentScene={currentScene ?? undefined}
-          onInjectTestEntity={() => {}}
           show={showCalibration}
           onToggle={onCalibrationToggle}
         />

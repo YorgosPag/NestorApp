@@ -23,7 +23,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import { CustomerActionButtons } from './CustomerActionButtons';
-import type { CustomerInfoCompactProps } from '../types/CustomerInfoTypes';
+import type { CustomerInfoCompactProps, CustomerActionType } from '../types/CustomerInfoTypes';
 
 /**
  * Compact customer info component για χρήση σε tables, lists και tight spaces
@@ -169,7 +169,7 @@ export function CustomerInfoCompact({
     if (!showActions || !displayInfo || nameOnly) return null;
 
     // Voor compact mode, toon alleen de meest belangrijke acties
-    const quickActions = context === 'unit'
+    const quickActions: CustomerActionType[] = context === 'unit'
       ? ['view']
       : ['view', 'call'];
 
@@ -179,7 +179,7 @@ export function CustomerInfoCompact({
           customerInfo={displayInfo}
           context={context}
           actions={quickActions.map(type => ({
-            type: type as Parameters<typeof CustomerActionButtons>[0]['actions'][0]['type'],
+            type,
             label: type === 'view' ? t('customerActions.view') : t('customerActions.call'),
             icon: type === 'view' ? Eye : Phone,
             variant: 'ghost' as const,

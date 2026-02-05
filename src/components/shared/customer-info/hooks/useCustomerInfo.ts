@@ -164,8 +164,8 @@ async function fetchCustomerExtendedInfo(contactId: string): Promise<CustomerExt
       unitsCount: unitsData?.unitsCount || units.length,
       unitIds: units.map((unit) => unit.id),
       totalValue: unitsData?.totalValue || 0,
-      profession: unitsData?.contactInfo?.profession || null,
-      city: unitsData?.contactInfo?.city || null,
+      profession: unitsData?.contactInfo?.profession ?? undefined,
+      city: unitsData?.contactInfo?.city ?? undefined,
       lastContactDate: unitsData?.contactInfo?.lastContactDate
         ? new Date(unitsData.contactInfo.lastContactDate)
         : undefined

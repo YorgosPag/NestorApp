@@ -150,7 +150,7 @@ export function VersionHistoryPanel({ buildingId, isOpen, onClose }: { buildingI
                         ) : (
                            <VersionList 
                                 versions={versions}
-                                selectedVersionId={selectedVersion?.id}
+                                selectedVersionId={selectedVersion?.id ?? null}
                                 onSelect={setSelectedVersion}
                            />
                         )}

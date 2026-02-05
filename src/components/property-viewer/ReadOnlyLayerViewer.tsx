@@ -44,12 +44,14 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
-// 🏢 ENTERPRISE: Helper function for safe LAYER_CATEGORIES access with proper type guard
+const isLayerCategory = (value: string): value is LayerCategory => {
+  return Object.hasOwn(LAYER_CATEGORIES, value);
+};
+
+// ?? ENTERPRISE: Helper function for safe LAYER_CATEGORIES access with proper type guard
 const getCategoryInfo = (category: string): { color: string; name: string } => {
-  // Type-safe check if category exists in LAYER_CATEGORIES
-  const validCategory = category as keyof typeof LAYER_CATEGORIES;
-  if (validCategory in LAYER_CATEGORIES) {
-    return LAYER_CATEGORIES[validCategory];
+  if (isLayerCategory(category)) {
+    return LAYER_CATEGORIES[category];
   }
   return { color: '#gray', name: category };
 };

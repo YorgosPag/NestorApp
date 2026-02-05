@@ -158,7 +158,8 @@ interface TextPart {
 }
 
 // Pattern 1: Text <URL> format (email style) - e.g., "Google Maps <https://...>"
-const EMAIL_LINK_REGEX = /([^<>\n]+?)\s*<(https?:\/\/[^>]+)>/gi;
+// Allows newlines between text and URL (common in email signatures)
+const EMAIL_LINK_REGEX = /([^<>\n\r]+?)[\s\r\n]*<(https?:\/\/[^>]+)>/gi;
 
 // Pattern 2: [Text](URL) format (markdown style)
 const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/gi;
@@ -168,6 +169,9 @@ const PLAIN_URL_REGEX = /(?:https?:\/\/|www\.)[^\s<>"\]\)]+/gi;
 
 const parseTextWithLinks = (text: string): TextPart[] => {
   const parts: TextPart[] = [];
+
+  // Normalize line endings for consistent regex matching
+  const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   // First, find all link patterns and their positions
   interface LinkMatch {
@@ -182,7 +186,7 @@ const parseTextWithLinks = (text: string): TextPart[] => {
   // Find email-style links: Text <URL>
   EMAIL_LINK_REGEX.lastIndex = 0;
   let match: RegExpExecArray | null;
-  while ((match = EMAIL_LINK_REGEX.exec(text)) !== null) {
+  while ((match = EMAIL_LINK_REGEX.exec(normalizedText)) !== null) {
     const displayText = match[1].trim();
     // Skip if displayText looks like it's part of a URL or is empty
     if (displayText && !displayText.startsWith('http') && !displayText.startsWith('www.')) {
@@ -197,7 +201,7 @@ const parseTextWithLinks = (text: string): TextPart[] => {
 
   // Find markdown-style links: [Text](URL)
   MARKDOWN_LINK_REGEX.lastIndex = 0;
-  while ((match = MARKDOWN_LINK_REGEX.exec(text)) !== null) {
+  while ((match = MARKDOWN_LINK_REGEX.exec(normalizedText)) !== null) {
     // Check if this position overlaps with existing links
     const overlaps = links.some(l =>
       (match!.index >= l.start && match!.index < l.end) ||
@@ -215,7 +219,7 @@ const parseTextWithLinks = (text: string): TextPart[] => {
 
   // Find plain URLs (only those not already captured)
   PLAIN_URL_REGEX.lastIndex = 0;
-  while ((match = PLAIN_URL_REGEX.exec(text)) !== null) {
+  while ((match = PLAIN_URL_REGEX.exec(normalizedText)) !== null) {
     // Check if this position overlaps with existing links
     const overlaps = links.some(l =>
       (match!.index >= l.start && match!.index < l.end) ||
@@ -255,7 +259,7 @@ const parseTextWithLinks = (text: string): TextPart[] => {
   for (const link of links) {
     // Add text before the link
     if (link.start > lastIndex) {
-      const textContent = text.slice(lastIndex, link.start);
+      const textContent = normalizedText.slice(lastIndex, link.start);
       if (textContent) {
         parts.push({ type: 'text', content: textContent });
       }
@@ -273,19 +277,21 @@ const parseTextWithLinks = (text: string): TextPart[] => {
   }
 
   // Add remaining text
-  if (lastIndex < text.length) {
-    parts.push({ type: 'text', content: text.slice(lastIndex) });
+  if (lastIndex < normalizedText.length) {
+    parts.push({ type: 'text', content: normalizedText.slice(lastIndex) });
   }
 
-  return parts.length > 0 ? parts : [{ type: 'text', content: text }];
+  return parts.length > 0 ? parts : [{ type: 'text', content: normalizedText }];
 };
 
 /**
  * 🏢 ENTERPRISE: Render text content with line breaks preserved
- * Splits text by newlines and renders with <br /> elements
+ * Handles both Unix (\n) and Windows (\r\n) line endings
  */
 const renderTextWithLineBreaks = (text: string, baseKey: string) => {
-  const lines = text.split('\n');
+  // Normalize line endings: \r\n → \n, then split
+  const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = normalizedText.split('\n');
   return lines.map((line, lineIndex) => (
     <span key={`${baseKey}-line-${lineIndex}`}>
       {line}
@@ -300,6 +306,15 @@ const renderTextWithLineBreaks = (text: string, baseKey: string) => {
  */
 const RenderContentWithLinks = ({ content }: { content: string }) => {
   const parts = parseTextWithLinks(content);
+
+  // DEBUG: Log parsing results
+  console.log('🔗 RenderContentWithLinks input:', {
+    contentLength: content.length,
+    hasCarriageReturn: content.includes('\r'),
+    hasNewline: content.includes('\n'),
+    first100chars: content.substring(0, 100)
+  });
+  console.log('🔗 Parsed parts:', parts.map(p => ({ type: p.type, content: p.content?.substring(0, 50), href: p.href?.substring(0, 50) })));
 
   return (
     <>
@@ -338,29 +353,74 @@ const RenderContentWithLinks = ({ content }: { content: string }) => {
 /**
  * 🏢 ENTERPRISE: Safe HTML Content Renderer (ADR-072)
  *
- * Renders email HTML content with:
- * - XSS protection via DOMPurify sanitization
- * - Preserved formatting (colors, fonts, tables)
- * - Clickable links with proper styling
- * - Image rendering (email signatures)
+ * Renders email content with:
+ * - Line breaks preserved (handles \r\n and \n)
+ * - Clickable links (email-style, markdown, plain URLs)
+ * - XSS protection via DOMPurify for HTML content
  *
- * @security Uses sanitizeEmailHTML() - never renders raw HTML directly
+ * @security Uses sanitizeEmailHTML() for HTML content
  */
 const SafeHTMLContent = ({ html }: { html: string }) => {
-  // Check if content appears to be HTML
-  const hasHTMLContent = /<[^>]+>/.test(html);
+  // Normalize line endings first
+  const normalizedContent = html.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Check if content appears to be HTML (has actual HTML tags, not just angle brackets in URLs)
+  const hasHTMLContent = /<(?!https?:)[a-z][^>]*>/i.test(normalizedContent);
 
   if (!hasHTMLContent) {
-    // Plain text: use existing link parser
+    // Plain text: Convert to HTML with links and line breaks
+    let processedContent = normalizedContent;
+
+    // 1. Escape HTML entities first
+    processedContent = processedContent
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // 2. Convert email-style links: Text <URL> or just <URL>
+    // Handle "Google Maps\n<URL>" pattern - restore the < and > for this pattern
+    processedContent = processedContent.replace(
+      /([^\n&]*?)\s*&lt;(https?:\/\/[^&]+)&gt;/gi,
+      (match, text, url) => {
+        const displayText = text.trim() || new URL(url).hostname.replace('www.', '');
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${displayText}</a>`;
+      }
+    );
+
+    // 3. Convert plain URLs (not already in links)
+    processedContent = processedContent.replace(
+      /(?<!href=")(https?:\/\/[^\s<>"]+|www\.[^\s<>"]+)/gi,
+      (url) => {
+        const href = url.startsWith('http') ? url : `https://${url}`;
+        const displayText = (() => {
+          try {
+            return new URL(href).hostname.replace('www.', '');
+          } catch {
+            return url.length > 40 ? url.substring(0, 40) + '...' : url;
+          }
+        })();
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${displayText}</a>`;
+      }
+    );
+
+    // 4. Convert newlines to <br>
+    processedContent = processedContent.replace(/\n/g, '<br />');
+
     return (
-      <div className="whitespace-pre-wrap break-words">
-        <RenderContentWithLinks content={html} />
-      </div>
+      <div
+        className="email-content text-foreground"
+        dangerouslySetInnerHTML={{ __html: processedContent }}
+        onClick={(e) => {
+          if ((e.target as HTMLElement).tagName === 'A') {
+            e.stopPropagation();
+          }
+        }}
+      />
     );
   }
 
   // HTML content: sanitize and render
-  const sanitizedHTML = sanitizeEmailHTML(html);
+  const sanitizedHTML = sanitizeEmailHTML(normalizedContent);
 
   return (
     <div
@@ -371,7 +431,6 @@ const SafeHTMLContent = ({ html }: { html: string }) => {
         [&_blockquote]:border-l-4 [&_blockquote]:border-muted [&_blockquote]:pl-4"
       dangerouslySetInnerHTML={{ __html: sanitizedHTML }}
       onClick={(e) => {
-        // Allow links to work
         if ((e.target as HTMLElement).tagName === 'A') {
           e.stopPropagation();
         }

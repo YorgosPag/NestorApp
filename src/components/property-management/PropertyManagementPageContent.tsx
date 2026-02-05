@@ -100,12 +100,12 @@ export function PropertyManagementPageContent() {
       propertyType: updated.propertyType || [],
       status: updated.status || [],
       priceRange: {
-        min: updated.priceRange?.min ?? null,
-        max: updated.priceRange?.max ?? null,
+        min: updated.priceRange?.min ?? undefined,
+        max: updated.priceRange?.max ?? undefined,
       },
       areaRange: {
-        min: updated.areaRange?.min ?? null,
-        max: updated.areaRange?.max ?? null,
+        min: updated.areaRange?.min ?? undefined,
+        max: updated.areaRange?.max ?? undefined,
       },
       floor: updated.floor || [],
       features: updated.features || [],

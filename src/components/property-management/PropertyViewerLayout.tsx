@@ -13,7 +13,9 @@ import { PropertyDashboard } from './PropertyDashboard';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type PropertyViewerLayoutProps = Omit<FloorPlanViewerLayoutProps, 'properties' | 'hoveredPropertyId'> & {
+type FloorPlanProps = Omit<FloorPlanViewerLayoutProps, 'properties' | 'hoveredPropertyId'>;
+
+type PropertyViewerLayoutProps = FloorPlanProps & {
   isLoading: boolean;
   viewMode: 'list' | 'grid';
   showDashboard: boolean;
@@ -27,20 +29,21 @@ type PropertyViewerLayoutProps = Omit<FloorPlanViewerLayoutProps, 'properties' |
   hoveredPropertyId?: string | null;
 };
 
-export function PropertyViewerLayout({
-  isLoading,
-  viewMode,
-  showDashboard,
-  stats,
-  filteredProperties,
-  selectedPropertyIds,
-  handlePolygonSelect,
-  onSelectFloor,
-  handleUpdateProperty,
-  properties,
-  hoveredPropertyId,
-  ...floorPlanProps
-}: PropertyViewerLayoutProps) {
+export function PropertyViewerLayout(props: PropertyViewerLayoutProps) {
+  const {
+    isLoading,
+    viewMode,
+    showDashboard,
+    stats,
+    filteredProperties,
+    selectedPropertyIds,
+    handlePolygonSelect,
+    onSelectFloor,
+    handleUpdateProperty,
+    properties,
+    hoveredPropertyId,
+  } = props;
+  const floorPlanProps: FloorPlanProps = props;
 
   return (
     <>

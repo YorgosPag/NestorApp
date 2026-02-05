@@ -351,9 +351,9 @@ export function UnifiedCustomerCard({
                 <h3 className={`${styles.title} text-foreground`}>
                   {displayInfo.displayName}
                 </h3>
-                {displayInfo.profession && (
+                {extendedInfo?.profession && (
                   <p className={`${styles.subtitle} text-muted-foreground`}>
-                    {displayInfo.profession}
+                    {extendedInfo.profession}
                   </p>
                 )}
               </div>

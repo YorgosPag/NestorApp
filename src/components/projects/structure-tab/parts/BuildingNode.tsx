@@ -26,21 +26,13 @@ import { ParkingNode } from './ParkingNode';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import type { BuildingModel, StorageModel, ParkingModel } from '../types';
+import type { BuildingModel, StorageModel, ParkingModel, UnitModel } from '../types';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // =============================================================================
 // TYPES
 // =============================================================================
-
-/** Unit model for type safety */
-interface UnitData {
-  id: string;
-  status?: string;
-  area?: number;
-  [key: string]: unknown;
-}
 
 /** Tab types for building spaces */
 type SpaceTab = 'units' | 'storage' | 'parking';
@@ -61,7 +53,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   // COMPUTED VALUES
   // ==========================================================================
 
-  const units = (building.units || []) as UnitData[];
+  const units = (building.units || []) as UnitModel[];
   const storages = (building.storages || []) as StorageModel[];
   const parkingSpots = (building.parkingSpots || []) as ParkingModel[];
 

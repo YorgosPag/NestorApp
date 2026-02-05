@@ -103,6 +103,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
 
         // 🏢 ENTERPRISE: Dropdown mode με predefined area values + custom input
         if (config.dropdownMode && config.id === 'areaRange') {
+          type AreaPresetId = (typeof UNIT_AREA_RANGE_PRESETS)[number]['id'];
           const areaPresets = UNIT_AREA_RANGE_PRESETS.map((preset) => ({
             ...preset,
             min: preset.min === null ? undefined : preset.min,
@@ -129,7 +130,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
           };
 
           // 🔧 ENTERPRISE: Local state για dropdown value tracking
-          const [selectedPreset, setSelectedPreset] = useState(getCurrentPreset());
+          const [selectedPreset, setSelectedPreset] = useState<AreaPresetId>(getCurrentPreset() as AreaPresetId);
 
           // 🏢 ENTERPRISE: Controlled input state με null safety
           const [minValue, setMinValue] = useState(() => {
@@ -189,12 +190,13 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
             <div className={`flex flex-col ${spacing.gap.sm}`}>
               <Select
                 onValueChange={(selectedValue) => {
+                  const presetId = selectedValue as AreaPresetId;
                   // Update local state first
-                  setSelectedPreset(selectedValue);
+                  setSelectedPreset(presetId);
 
-                  const preset = areaPresets.find(p => p.id === selectedValue);
+                  const preset = areaPresets.find(p => p.id === presetId);
 
-                  if (preset && selectedValue !== 'custom') {
+                  if (preset && presetId !== 'custom') {
                     // Set predefined range (normalize null → undefined for type safety)
                     onValueChange({
                       min: preset.min,

@@ -312,30 +312,6 @@ export async function getTriageStats(
       isGlobalAccess,
     });
 
-    const statusEntries: Array<{ key: keyof typeof TRIAGE_STATUSES; value: string | undefined }> = [
-      { key: 'PENDING', value: TRIAGE_STATUSES.PENDING },
-      { key: 'APPROVED', value: TRIAGE_STATUSES.APPROVED },
-      { key: 'REJECTED', value: TRIAGE_STATUSES.REJECTED },
-      { key: 'REVIEWED', value: TRIAGE_STATUSES.REVIEWED },
-    ];
-
-    const invalidStatus = statusEntries.find(
-      (entry) => typeof entry.value !== 'string' || entry.value.trim().length === 0
-    );
-
-    if (invalidStatus) {
-      logger.error(
-        'Invalid triage status configuration',
-        buildActionErrorMetadata({
-          errorId,
-          companyId: companyId || 'GLOBAL_ACCESS',
-          operationId,
-          error: new Error(`Invalid TRIAGE_STATUSES.${invalidStatus.key}`),
-        })
-      );
-      return { ok: false, errorId, code: 'invalid_context' };
-    }
-
     const communications = await fetchTriageCommunications({ companyId });
     const counts = communications.reduce(
       (acc, comm) => {

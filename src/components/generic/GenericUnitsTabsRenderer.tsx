@@ -75,17 +75,17 @@ import { UnitCustomerTab } from '@/components/units/tabs/UnitCustomerTab';
  * Component mapping για την αντιστοίχιση component names σε actual components
  */
 const COMPONENT_MAPPING: Record<string, React.ComponentType<GenericComponentProps>> = {
-  'PropertyDetailsContent': PropertyDetailsContent,
-  'UnitCustomerTab': UnitCustomerTab,
-  'FloorPlanTab': FloorPlanTab,
-  'PhotosTabContent': PhotosTabContent,
-  'VideosTabContent': VideosTabContent,
-  'DocumentsPlaceholder': ({ title, subtitle }: { title: string, subtitle: string }) => (
+  'PropertyDetailsContent': PropertyDetailsContent as unknown as React.ComponentType<GenericComponentProps>,
+  'UnitCustomerTab': UnitCustomerTab as unknown as React.ComponentType<GenericComponentProps>,
+  'FloorPlanTab': FloorPlanTab as unknown as React.ComponentType<GenericComponentProps>,
+  'PhotosTabContent': PhotosTabContent as unknown as React.ComponentType<GenericComponentProps>,
+  'VideosTabContent': VideosTabContent as unknown as React.ComponentType<GenericComponentProps>,
+  'DocumentsPlaceholder': (({ title, subtitle }: { title: string; subtitle: string }) => (
     <div className="text-center text-muted-foreground p-4">
       <p>{title} - Coming Soon</p>
       <p className="text-xs mt-2">{subtitle}</p>
     </div>
-  ),
+  )) as unknown as React.ComponentType<GenericComponentProps>,
 };
 
 // ============================================================================

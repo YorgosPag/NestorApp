@@ -42,9 +42,9 @@ export interface ProjectTabConfig {
   /** Whether tab is enabled by default */
   enabled?: boolean;
   /** Component to render for this tab */
-  component?: string;
+  component: string;
   /** Any additional props for the component */
-  componentProps?: Record<string, any>;
+  componentProps?: Record<string, unknown>;
 }
 
 // ============================================================================
