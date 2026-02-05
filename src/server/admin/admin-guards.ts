@@ -310,10 +310,19 @@ async function verifySessionCookieToken(sessionCookie: string): Promise<DecodedI
  * 🏢 ENTERPRISE: Email-based role checking (matches EnterpriseSecurityService)
  */
 function hasAdminRole(decodedToken: DecodedIdToken): AdminRole | null {
-  // Check custom claims for role (legacy support)
+  // Check custom claims for role - including super_admin
   const role = decodedToken.role as string | undefined;
+  const globalRole = (decodedToken as Record<string, unknown>).globalRole as string | undefined;
 
+  // Check globalRole first (preferred claim name)
+  if (globalRole && ADMIN_ROLES.includes(globalRole as AdminRole)) {
+    console.log(`🔐 [admin-guards] Role from globalRole claim: ${globalRole}`);
+    return globalRole as AdminRole;
+  }
+
+  // Check role claim (legacy)
   if (role && ADMIN_ROLES.includes(role as AdminRole)) {
+    console.log(`🔐 [admin-guards] Role from role claim: ${role}`);
     return role as AdminRole;
   }
 
@@ -337,7 +346,7 @@ function hasAdminRole(decodedToken: DecodedIdToken): AdminRole | null {
       .filter(Boolean);
 
     if (adminEmails.includes(email.toLowerCase())) {
-      console.log(`🔐 [admin-guards] Admin access granted for: ${email}`);
+      console.log(`🔐 [admin-guards] Admin access granted via email for: ${email}`);
       return 'admin';
     }
   }
