@@ -159,12 +159,9 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
     setError(null);
 
     try {
-      // 🏢 ENTERPRISE: Real data fetching via server action with tenant isolation
-      const companyId = adminContext.companyId;
-
-      if (!companyId) {
-        throw new Error('Admin user has no companyId - tenant isolation violated');
-      }
+      // 🏢 ENTERPRISE: Real data fetching via server action
+      // If companyId is undefined, user is global admin and sees ALL messages
+      const companyId = adminContext.companyId; // Can be undefined for global admin
 
       const result = await getTriageCommunications(companyId, adminContext.operationId, resolveStatusFilter());
       if (!result.ok) {
@@ -178,7 +175,8 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
       logger.info('Loaded pending communications', {
         count: data.length,
         source: 'firestore',
-        adminUid: adminContext.uid
+        adminUid: adminContext.uid,
+        isGlobalAdmin: !companyId,
       });
     } catch (err) {
       logger.error('Failed to load communications', { error: err });
@@ -191,10 +189,8 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const loadTriageStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      const companyId = adminContext.companyId;
-      if (!companyId) {
-        throw new Error('Admin user has no companyId - tenant isolation violated');
-      }
+      // 🏢 ENTERPRISE: Global admin sees all, tenant admin sees only their company
+      const companyId = adminContext.companyId; // Can be undefined for global admin
 
       const result = await getTriageCommunications(companyId, adminContext.operationId);
       if (!result.ok) {
@@ -257,11 +253,20 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const handleApprove = async (commId: string) => {
     setActionLoading(commId);
     try {
+      // 🏢 ENTERPRISE: Get companyId from the communication (supports global admin)
+      const comm = communications.find(c => c.id === commId);
+      const commCompanyId = comm?.companyId || adminContext.companyId;
+
+      if (!commCompanyId) {
+        toast.error('Cannot approve: missing company context');
+        return;
+      }
+
       // 🏢 ENTERPRISE: Real server action με idempotent task creation
       const result = await approveCommunication(
         commId,
         adminContext.uid,
-        requireCompanyId(),
+        commCompanyId,
         adminContext.operationId
       );
 
@@ -310,10 +315,19 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const handleReject = async (commId: string) => {
     setActionLoading(commId);
     try {
+      // 🏢 ENTERPRISE: Get companyId from the communication (supports global admin)
+      const comm = communications.find(c => c.id === commId);
+      const commCompanyId = comm?.companyId || adminContext.companyId;
+
+      if (!commCompanyId) {
+        toast.error('Cannot reject: missing company context');
+        return;
+      }
+
       // 🏢 ENTERPRISE: Real server action για reject
       const result = await rejectCommunication(
         commId,
-        requireCompanyId(),
+        commCompanyId,
         adminContext.uid,
         adminContext.operationId
       );

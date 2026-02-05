@@ -97,22 +97,39 @@ const transformCommunication = (docSnapshot: QueryDocumentSnapshot<DocumentData>
 const TRIAGE_STATUS_VALUES = Object.values(TRIAGE_STATUSES);
 
 async function fetchTriageCommunications(params: {
-  companyId: string;
+  companyId?: string;  // Optional for global admin access
   status?: TriageStatus;
 }): Promise<Communication[]> {
   const adminDb = getAdminFirestore();
   const messagesRef = adminDb.collection(COLLECTIONS.MESSAGES);
 
-  const snapshots = params.status
-    ? [await messagesRef.where('companyId', '==', params.companyId).where('triageStatus', '==', params.status).get()]
-    : await Promise.all(
-        TRIAGE_STATUS_VALUES.map((status) =>
-          messagesRef
-            .where('companyId', '==', params.companyId)
-            .where('triageStatus', '==', status)
-            .get()
-        )
-      );
+  // 🏢 ENTERPRISE: Global Admin Support
+  // If companyId is undefined/null, fetch ALL messages (global admin view)
+  const isGlobalAccess = !params.companyId;
+
+  let snapshots;
+  if (isGlobalAccess) {
+    // Global admin: fetch all messages without company filter
+    snapshots = params.status
+      ? [await messagesRef.where('triageStatus', '==', params.status).get()]
+      : await Promise.all(
+          TRIAGE_STATUS_VALUES.map((status) =>
+            messagesRef.where('triageStatus', '==', status).get()
+          )
+        );
+  } else {
+    // Tenant-scoped: filter by companyId
+    snapshots = params.status
+      ? [await messagesRef.where('companyId', '==', params.companyId).where('triageStatus', '==', params.status).get()]
+      : await Promise.all(
+          TRIAGE_STATUS_VALUES.map((status) =>
+            messagesRef
+              .where('companyId', '==', params.companyId)
+              .where('triageStatus', '==', status)
+              .get()
+          )
+        );
+  }
 
   const communications = snapshots.flatMap((snapshot) =>
     snapshot.docs.map((doc) => {
@@ -232,14 +249,14 @@ export async function getPendingTriageCommunications(
 /**
  * Get triage communications for AI Inbox (optional status filter)
  *
- * @param companyId - Company ID for tenant isolation
+ * @param companyId - Company ID for tenant isolation (undefined = global admin access)
  * @param status - Optional triage status filter
  * @returns Array of communications in triage workflow
  *
- * @enterprise Tenant-scoped query, server-side only
+ * @enterprise Tenant-scoped query OR global admin access (if companyId is undefined)
  */
 export async function getTriageCommunications(
-  companyId: string,
+  companyId: string | undefined,
   operationId?: string,
   status?: TriageStatus
 ): Promise<
@@ -248,21 +265,22 @@ export async function getTriageCommunications(
 > {
   const errorId = randomUUID();
 
-  if (!companyId) {
-    logger.error(
-      'Invalid context for triage communications fetch',
-      buildActionErrorMetadata({ errorId, companyId, operationId, error: new Error('Missing companyId') })
-    );
-    return { ok: false, errorId, code: 'invalid_context' };
-  }
+  // 🏢 ENTERPRISE: Global Admin Support
+  // companyId undefined = global admin access (all companies)
+  const isGlobalAccess = !companyId;
 
   try {
+    logger.info('Fetching triage communications', {
+      companyId: companyId || 'GLOBAL_ACCESS',
+      status,
+      isGlobalAccess,
+    });
     const data = await fetchTriageCommunications({ companyId, status });
     return { ok: true, data };
   } catch (error) {
     logger.error(
       'Failed to fetch triage communications',
-      buildActionErrorMetadata({ errorId, companyId, operationId, error })
+      buildActionErrorMetadata({ errorId, companyId: companyId || 'GLOBAL_ACCESS', operationId, error })
     );
     return { ok: false, errorId, code: 'unknown' };
   }
