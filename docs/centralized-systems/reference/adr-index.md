@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 127 ADRs | Last Updated: 2026-02-05
+**📊 Stats**: 128 ADRs | Last Updated: 2026-02-05
 
 ---
 
@@ -26,7 +26,7 @@
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 5 | [View](#security-auth) |
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
-| 🛠️ **Infrastructure** | 2 | [View](#infrastructure) |
+| 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
 | 📄 **Uncategorized** | 7 | [View](#uncategorized) |
 
@@ -160,6 +160,7 @@
 | **ADR-165** | Entity Validation Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-165-entity-validation-centralization.md) |
 | **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | 2026-02-02 | Entity Systems | [📄](./adrs/ADR-167-enterprise-project-address-system.md) |
+| **ADR-168** | Multi-Agent Development Environment | ✅ IMPLEMENTED | 2026-02-05 | Infrastructure | [📄](./adrs/ADR-168-multi-agent-development-environment.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
@@ -363,6 +364,7 @@
 |-----|----------|--------|------|
 | **ADR-061** | Path Aliases Strategy | ✅ ✅ Active | [View](./adrs/ADR-061-path-aliases.md) |
 | **ADR-092** | Centralized localStorage Service | ✅ APPROVED | [View](./adrs/ADR-092-centralized-localstorage-service.md) |
+| **ADR-168** | Multi-Agent Development Environment | ✅ IMPLEMENTED | [View](./adrs/ADR-168-multi-agent-development-environment.md) |
 
 ---
 
