@@ -540,6 +540,21 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     aiProvider,
   });
 
+  // Build metadata object first
+  const metadata: Record<string, unknown> = {
+    provider: PLATFORMS.EMAIL,
+    providerMessageId: input.providerMessageId,
+    senderName: input.sender.name || input.sender.email,
+    attachments,
+    raw: input.raw || {},
+  };
+
+  // Only add routingPattern if it exists
+  if (routing.matchedPattern) {
+    metadata.routingPattern = routing.matchedPattern;
+  }
+
+  // Build communication object, excluding undefined values for Firestore compatibility
   const communication: Omit<Communication, 'id' | 'createdAt' | 'updatedAt'> = {
     companyId: routing.companyId,
     contactId,
@@ -552,16 +567,10 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     createdBy: SYSTEM_IDENTITY.ID,
     status: 'pending',
     attachments: attachments.map((attachment) => attachment.url || '').filter(Boolean),
-    intentAnalysis,
-    triageStatus,
-    metadata: {
-      provider: PLATFORMS.EMAIL,
-      providerMessageId: input.providerMessageId,
-      routingPattern: routing.matchedPattern,
-      senderName: input.sender.name || input.sender.email,
-      attachments,
-      raw: input.raw || {},
-    },
+    triageStatus: triageStatus || TRIAGE_STATUSES.PENDING,
+    metadata,
+    // Only include intentAnalysis if it exists (Firestore doesn't accept undefined)
+    ...(intentAnalysis && { intentAnalysis }),
   };
 
   await adminDb.collection(COLLECTIONS.MESSAGES).doc(messageDocId).set({
