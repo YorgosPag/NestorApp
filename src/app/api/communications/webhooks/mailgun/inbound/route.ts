@@ -1,3 +1,20 @@
+/**
+ * 🏢 ENTERPRISE MAILGUN INBOUND WEBHOOK
+ *
+ * ADR-071: Enterprise Email Webhook Queue System
+ *
+ * Pattern: "Acknowledge Fast, Process Later"
+ * - Validate signature
+ * - Extract email data
+ * - Enqueue for background processing
+ * - Return 200 OK immediately (<1.5s target)
+ *
+ * The actual email processing (AI analysis, file uploads, etc.)
+ * happens in the background via the email-ingestion-worker.
+ *
+ * @module api/communications/webhooks/mailgun/inbound
+ */
+
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,7 +27,7 @@ import {
   splitAddresses,
   resolveSubject,
   resolveProviderMessageId,
-  processInboundEmail,
+  enqueueInboundEmail,
   type InboundEmailAttachment,
 } from '@/services/communications/inbound';
 
@@ -102,7 +119,22 @@ function buildFallbackKey(params: {
   return [params.senderEmail, recipientKey, params.subject, timestamp, content].join('|');
 }
 
+/**
+ * Handle Mailgun Inbound Webhook
+ *
+ * ENTERPRISE PATTERN: "Acknowledge Fast, Process Later"
+ *
+ * This handler:
+ * 1. Validates the webhook signature (security)
+ * 2. Extracts email data from form data
+ * 3. Enqueues the email for background processing
+ * 4. Returns 200 OK immediately
+ *
+ * Target response time: <1.5 seconds (Mailgun timeout is ~10s)
+ */
 async function handleMailgunInbound(request: NextRequest): Promise<Response> {
+  const startTime = Date.now();
+
   try {
     const contentType = request.headers.get('content-type') || '';
     // Mailgun can send multipart/form-data or application/x-www-form-urlencoded
@@ -167,52 +199,89 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
 
     const attachments = extractAttachments(formData);
 
-    logger.info('Processing inbound email', {
+    logger.info('Enqueuing inbound email for processing', {
       from: sender.email,
       to: recipients.join(', '),
       subject,
       attachmentCount: attachments.length,
+      providerMessageId,
     });
 
-    const result = await processInboundEmail({
+    // 🏢 ENTERPRISE: Enqueue for background processing instead of sync processing
+    // This is the "Acknowledge Fast, Process Later" pattern
+    const enqueueResult = await enqueueInboundEmail({
       provider: 'mailgun',
       providerMessageId,
       sender,
       recipients,
       subject,
       contentText,
-      receivedAt,
+      emailReceivedAt: receivedAt,
       attachments,
-      raw: {
+      rawMetadata: {
         messageId,
         hasHtml: Boolean(htmlBody),
       },
     });
 
-    logger.info('Email processing completed', {
-      processed: result.processed,
-      skipped: result.skipped,
-      communicationId: result.communicationId,
-    });
+    const elapsed = Date.now() - startTime;
 
+    // Log the result
+    if (enqueueResult.status === 'queued') {
+      logger.info('Email enqueued successfully', {
+        queueId: enqueueResult.queueId,
+        elapsedMs: elapsed,
+        from: sender.email,
+      });
+    } else if (enqueueResult.status === 'duplicate') {
+      logger.info('Duplicate email detected, already in queue', {
+        queueId: enqueueResult.queueId,
+        elapsedMs: elapsed,
+      });
+    } else if (enqueueResult.status === 'routing_failed') {
+      logger.warn('Email routing failed - no matching routing rule', {
+        recipients,
+        elapsedMs: elapsed,
+      });
+    } else {
+      logger.error('Failed to enqueue email', {
+        status: enqueueResult.status,
+        elapsedMs: elapsed,
+      });
+    }
+
+    // 🏢 ENTERPRISE: Always return 200 OK to Mailgun
+    // Even if enqueue fails, we don't want Mailgun to retry immediately
+    // because that could cause a flood of requests
+    // Failed items will be handled by our own retry logic or alerting
     return NextResponse.json({
       ok: true,
-      processed: result.processed ? 1 : 0,
-      skipped: result.skipped ? 1 : 0,
+      status: enqueueResult.status,
+      queueId: enqueueResult.queueId,
+      elapsedMs: elapsed,
     });
+
   } catch (error) {
+    const elapsed = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
 
     logger.error('Mailgun inbound webhook error', {
       error: errorMessage,
       stack: errorStack,
+      elapsedMs: elapsed,
     });
 
-    return NextResponse.json(
-      { ok: false, error: 'internal_error', message: errorMessage },
-      { status: 500 }
-    );
+    // 🏢 ENTERPRISE: Return 200 even on error to prevent Mailgun retry flood
+    // We'll handle recovery through our queue monitoring and alerting
+    return NextResponse.json({
+      ok: false,
+      error: 'internal_error',
+      message: errorMessage,
+      elapsedMs: elapsed,
+    });
+    // Note: Changed from status: 500 to 200 to prevent Mailgun retry storm
+    // Errors are logged and will be monitored via our logging/alerting system
   }
 }
 
@@ -222,6 +291,7 @@ export async function GET(): Promise<Response> {
   return NextResponse.json({
     status: 'ok',
     service: 'mailgun-inbound',
+    version: 'v2-queue', // ADR-071: Queue-based processing
     hasSigningKey: Boolean(MAILGUN_WEBHOOK_SIGNING_KEY),
   });
 }

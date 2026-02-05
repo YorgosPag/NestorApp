@@ -145,7 +145,10 @@ export const COLLECTIONS = {
   BOT_INTENTS: process.env.NEXT_PUBLIC_BOT_INTENTS_COLLECTION || 'bot_intents',
 
   // 🔍 SEARCH (Global Search v1)
-  SEARCH_DOCUMENTS: process.env.NEXT_PUBLIC_SEARCH_DOCUMENTS_COLLECTION || 'searchDocuments'
+  SEARCH_DOCUMENTS: process.env.NEXT_PUBLIC_SEARCH_DOCUMENTS_COLLECTION || 'searchDocuments',
+
+  // 📧 EMAIL INGESTION QUEUE (ADR-071: Enterprise Email Webhook Queue)
+  EMAIL_INGESTION_QUEUE: process.env.NEXT_PUBLIC_EMAIL_INGESTION_QUEUE_COLLECTION || 'email_ingestion_queue'
 } as const;
 
 // ============================================================================
