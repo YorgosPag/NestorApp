@@ -74,7 +74,7 @@ export interface UserAuthResult {
 /**
  * Supported admin roles from Firebase custom claims
  */
-export type AdminRole = 'admin' | 'broker' | 'builder';
+export type AdminRole = 'admin' | 'broker' | 'builder' | 'super_admin';
 
 /**
  * Authentication result
@@ -102,7 +102,7 @@ export interface AuditEntry {
 // CONSTANTS
 // ============================================================================
 
-const ADMIN_ROLES: AdminRole[] = ['admin', 'broker', 'builder'];
+const ADMIN_ROLES: AdminRole[] = ['admin', 'broker', 'builder', 'super_admin'];
 const AUTHORIZATION_HEADER = 'authorization';
 
 /**
@@ -113,7 +113,7 @@ const AUTHORIZATION_HEADER = 'authorization';
  *
  * @since 2026-01-29 - Security Gate Phase 1 (PR-1B)
  */
-const MFA_REQUIRED_ROLES: AdminRole[] = ['admin', 'broker', 'builder'];
+const MFA_REQUIRED_ROLES: AdminRole[] = ['admin', 'broker', 'builder', 'super_admin'];
 
 /**
  * Check if a role requires MFA enrollment

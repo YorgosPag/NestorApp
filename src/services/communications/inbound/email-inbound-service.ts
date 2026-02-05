@@ -526,11 +526,9 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
 
   const intentAnalysis = isMessageIntentAnalysis(analysis) ? analysis : undefined;
 
-  // Defensive: Use explicit string values to avoid any import/constant issues
-  // Firestore will reject undefined values, so we must guarantee a value
-  const triageStatus: 'pending' | 'reviewed' = intentAnalysis?.needsTriage === true
-    ? 'pending'
-    : 'reviewed';
+  // 🏢 ENTERPRISE: ALL inbound emails go to 'pending' for manual triage review
+  // This ensures admins review every incoming email before it becomes a task
+  const triageStatus: 'pending' = 'pending';
 
   const attachments = await processAttachments({
     companyId: routing.companyId,

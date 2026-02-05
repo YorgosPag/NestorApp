@@ -159,9 +159,10 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
     setError(null);
 
     try {
-      // 🏢 ENTERPRISE: Real data fetching via server action
-      // If companyId is undefined, user is global admin and sees ALL messages
-      const companyId = adminContext.companyId; // Can be undefined for global admin
+      // 🏢 ENTERPRISE: Super admin sees ALL messages, tenant admin sees only their company
+      // Check role first - super_admin bypasses company filter
+      const isSuperAdmin = adminContext.role === 'super_admin';
+      const companyId = isSuperAdmin ? undefined : adminContext.companyId;
 
       const result = await getTriageCommunications(companyId, adminContext.operationId, resolveStatusFilter());
       if (!result.ok) {
@@ -184,13 +185,14 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
     } finally {
       setLoading(false);
     }
-  }, [adminContext.companyId, adminContext.operationId, adminContext.uid, resolveStatusFilter, t]);
+  }, [adminContext.companyId, adminContext.operationId, adminContext.uid, adminContext.role, resolveStatusFilter, t]);
 
   const loadTriageStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      // 🏢 ENTERPRISE: Global admin sees all, tenant admin sees only their company
-      const companyId = adminContext.companyId; // Can be undefined for global admin
+      // 🏢 ENTERPRISE: Super admin sees all, tenant admin sees only their company
+      const isSuperAdmin = adminContext.role === 'super_admin';
+      const companyId = isSuperAdmin ? undefined : adminContext.companyId;
 
       const result = await getTriageCommunications(companyId, adminContext.operationId);
       if (!result.ok) {
@@ -232,7 +234,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
     } finally {
       setStatsLoading(false);
     }
-  }, [adminContext.companyId, adminContext.operationId, t]);
+  }, [adminContext.companyId, adminContext.operationId, adminContext.role, t]);
 
   useEffect(() => {
     loadTriageCommunications();
