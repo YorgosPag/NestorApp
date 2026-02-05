@@ -112,8 +112,12 @@ const resolveFirestoreTimestamp = (value?: FirestoreishTimestamp | null): Date |
  * from different message sources (email = string, telegram = object)
  */
 const getDisplayContent = (content: unknown): string => {
+  // DEBUG: Log content to see what we're receiving
+  console.log('📧 Email content raw:', JSON.stringify(content, null, 2));
+
   // Case 1: Already a string
   if (typeof content === 'string') {
+    console.log('📧 Content is string, has newlines:', content.includes('\n'));
     return content;
   }
 
@@ -462,15 +466,9 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
     setStatsLoading(true);
     try {
       // 🏢 ENTERPRISE: Use dedicated getTriageStats service function (ADR-073)
-      // Super admin requires companyId - use first available or skip stats
-      const companyId = adminContext.companyId;
-
-      if (!companyId) {
-        // Super admin without company context - stats require company scoping
-        logger.info('Skipping stats load for super admin without company context');
-        setStats({ total: 0, pending: 0, approved: 0, rejected: 0, reviewed: 0 });
-        return;
-      }
+      // Super admin sees ALL stats (companyId = undefined), tenant admin sees only their company
+      const isSuperAdmin = adminContext.role === 'super_admin';
+      const companyId = isSuperAdmin ? undefined : adminContext.companyId;
 
       const result = await getTriageStats(companyId, adminContext.operationId);
       if (!result.ok) {
@@ -484,7 +482,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
     } finally {
       setStatsLoading(false);
     }
-  }, [adminContext.companyId, adminContext.operationId, t]);
+  }, [adminContext.companyId, adminContext.operationId, adminContext.role, t]);
 
   useEffect(() => {
     loadTriageCommunications();

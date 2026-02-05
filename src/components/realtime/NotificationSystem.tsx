@@ -22,6 +22,17 @@ interface NotificationProps {
   closeable?: boolean;
 }
 
+const normalizeNotificationType = (value: unknown): NotificationProps['type'] => {
+  if (value === 'success' || value === 'error' || value === 'warning' || value === 'info') {
+    return value;
+  }
+  return 'info';
+};
+
+const normalizeNotificationText = (value: unknown, fallback: string): string => {
+  return typeof value === 'string' ? value : fallback;
+};
+
 const NotificationIcon = ({ type }: { type: NotificationProps['type'] }) => {
   const iconSizes = useIconSizes();
   const icons = {
@@ -131,9 +142,9 @@ export function NotificationCenter() {
                     notification={{
                       id: notification.id,
                       // 🏢 ENTERPRISE: Safe type casting with fallback
-                      type: (notification.payload.type as NotificationProps['type']) || 'info',
-                      title: notification.payload.title ?? 'Notification',
-                      message: notification.payload.message ?? '',
+                      type: normalizeNotificationType(notification.payload.type),
+                      title: normalizeNotificationText(notification.payload.title, 'Notification'),
+                      message: normalizeNotificationText(notification.payload.message, ''),
                       timestamp: notification.timestamp,
                       closeable: true
                     }}
@@ -157,9 +168,9 @@ export function ToastNotifications() {
     if (message.payload.showToast !== false) {
       const toast: NotificationProps = {
         id: message.id,
-        type: message.payload.type || 'info',
-        title: message.payload.title,
-        message: message.payload.message,
+        type: normalizeNotificationType(message.payload.type),
+        title: normalizeNotificationText(message.payload.title, 'Notification'),
+        message: normalizeNotificationText(message.payload.message, ''),
         timestamp: message.timestamp,
         autoClose: message.payload.autoClose !== false,
         closeable: true

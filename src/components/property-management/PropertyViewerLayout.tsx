@@ -3,6 +3,7 @@
 import React from 'react';
 import type { Property } from '@/types/property-viewer';
 import type { PropertyStats } from '@/types/property';
+import type { FloorPlanViewerLayoutProps } from '@/features/floorplan-viewer/types';
 import { PropertyList } from '../property-viewer/PropertyList';
 import { PropertyDetailsPanel } from '../property-viewer/PropertyDetailsPanel';
 import { PropertyHoverInfo } from '../property-viewer/PropertyHoverInfo';
@@ -12,7 +13,7 @@ import { PropertyDashboard } from './PropertyDashboard';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface PropertyViewerLayoutProps {
+type PropertyViewerLayoutProps = Omit<FloorPlanViewerLayoutProps, 'properties' | 'hoveredPropertyId'> & {
   isLoading: boolean;
   viewMode: 'list' | 'grid';
   showDashboard: boolean;
@@ -22,8 +23,9 @@ interface PropertyViewerLayoutProps {
   handlePolygonSelect: (propertyId: string, isShiftClick: boolean) => void;
   onSelectFloor: (floorId: string | null) => void;
   handleUpdateProperty: (propertyId: string, updates: Partial<Property>) => void;
-  [key: string]: unknown; // Catch-all for other props
-}
+  properties: Property[];
+  hoveredPropertyId?: string | null;
+};
 
 export function PropertyViewerLayout({
   isLoading,
@@ -35,7 +37,9 @@ export function PropertyViewerLayout({
   handlePolygonSelect,
   onSelectFloor,
   handleUpdateProperty,
-  ...viewerProps
+  properties,
+  hoveredPropertyId,
+  ...floorPlanProps
 }: PropertyViewerLayoutProps) {
 
   return (
@@ -64,7 +68,11 @@ export function PropertyViewerLayout({
             </div>
 
             <div className="flex-1 flex flex-col gap-4 min-w-0">
-              <FloorPlanViewer {...viewerProps} properties={filteredProperties} onSelectProperty={handlePolygonSelect} />
+              <FloorPlanViewer
+                {...floorPlanProps}
+                properties={filteredProperties}
+                onSelectProperty={handlePolygonSelect}
+              />
             </div>
             
             <div className="w-[320px] shrink-0 flex flex-col gap-4">
@@ -76,7 +84,7 @@ export function PropertyViewerLayout({
                   <PropertyDetailsPanel 
                     propertyIds={selectedPropertyIds} 
                     onSelectFloor={onSelectFloor}
-                    properties={viewerProps.properties}
+                    properties={properties}
                     onUpdateProperty={handleUpdateProperty}
                   />
                 </CardContent>
@@ -86,7 +94,7 @@ export function PropertyViewerLayout({
                   <CardTitle className="text-sm">Γρήγορες Πληροφορίες</CardTitle>
                 </CardHeader>
                 <CardContent className="p-3 pt-0 h-full">
-                  <PropertyHoverInfo propertyId={viewerProps.hoveredPropertyId} properties={viewerProps.properties} />
+                  <PropertyHoverInfo propertyId={hoveredPropertyId} properties={properties} />
                 </CardContent>
               </Card>
             </div>

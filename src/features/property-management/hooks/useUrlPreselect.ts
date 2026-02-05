@@ -6,7 +6,6 @@ import * as React from 'react';
 interface SelectableProperty {
   id: string;
   floorId?: string;
-  [key: string]: unknown;
 }
 
 type Args = {

@@ -40,7 +40,6 @@ function DefaultEmptyState({
 interface SelectedItemBase {
   id?: string;
   name?: string;
-  [key: string]: unknown;
 }
 
 interface DetailsContainerProps {

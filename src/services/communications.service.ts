@@ -289,13 +289,13 @@ export async function getTriageCommunications(
 /**
  * Get triage summary stats for AI Inbox
  *
- * @param companyId - Company ID for tenant isolation
+ * @param companyId - Company ID for tenant isolation (undefined = global admin access)
  * @returns Counts per triage status
  *
- * @enterprise Tenant-scoped query, server-side only
+ * @enterprise Tenant-scoped query OR global admin access (if companyId is undefined)
  */
 export async function getTriageStats(
-  companyId: string,
+  companyId: string | undefined,
   operationId?: string
 ): Promise<
   | { ok: true; data: { total: number; pending: number; approved: number; rejected: number; reviewed: number } }
@@ -303,15 +303,15 @@ export async function getTriageStats(
 > {
   const errorId = randomUUID();
 
-  if (!companyId) {
-    logger.error(
-      'Invalid context for triage stats fetch',
-      buildActionErrorMetadata({ errorId, companyId, operationId, error: new Error('Missing companyId') })
-    );
-    return { ok: false, errorId, code: 'invalid_context' };
-  }
+  // 🏢 ENTERPRISE: Global Admin Support - companyId undefined = all companies
+  const isGlobalAccess = !companyId;
 
   try {
+    logger.info('Fetching triage stats', {
+      companyId: companyId || 'GLOBAL_ACCESS',
+      isGlobalAccess,
+    });
+
     const statusEntries: Array<{ key: keyof typeof TRIAGE_STATUSES; value: string | undefined }> = [
       { key: 'PENDING', value: TRIAGE_STATUSES.PENDING },
       { key: 'APPROVED', value: TRIAGE_STATUSES.APPROVED },
@@ -328,7 +328,7 @@ export async function getTriageStats(
         'Invalid triage status configuration',
         buildActionErrorMetadata({
           errorId,
-          companyId,
+          companyId: companyId || 'GLOBAL_ACCESS',
           operationId,
           error: new Error(`Invalid TRIAGE_STATUSES.${invalidStatus.key}`),
         })
@@ -375,7 +375,7 @@ export async function getTriageStats(
   } catch (error) {
     logger.error(
       'Failed to fetch triage stats',
-      buildActionErrorMetadata({ errorId, companyId, operationId, error })
+      buildActionErrorMetadata({ errorId, companyId: companyId || 'GLOBAL_ACCESS', operationId, error })
     );
     return { ok: false, errorId, code: 'unknown' };
   }

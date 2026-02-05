@@ -14,7 +14,10 @@ import { hasActiveNumericRange, hasActiveDateRange, normalizeNumericRange } from
  */
 export interface FilterableEntity {
   id: string;
-  [key: string]: unknown;
+}
+
+function getEntityField(entity: FilterableEntity, field: string): unknown {
+  return (entity as Record<string, unknown>)[field];
 }
 
 /**
@@ -53,7 +56,7 @@ export function matchesSearchTerm(
   const normalizedTerm = caseSensitive ? searchTerm : searchTerm.toLowerCase();
 
   return searchFields.some(field => {
-    const value = entity[field];
+    const value = getEntityField(entity, field);
     if (value === undefined || value === null) return false;
 
     const stringValue = String(value);
@@ -210,7 +213,7 @@ export function applyFilters<T extends FilterableEntity>(
       if (Array.isArray(filterValue)) {
         if (filterValue.length === 0) continue;
 
-        const entityValue = entity[key];
+        const entityValue = getEntityField(entity, key);
 
         // Check if entity has a matching value
         if (Array.isArray(entityValue)) {
@@ -233,7 +236,7 @@ export function applyFilters<T extends FilterableEntity>(
 
         // Determine which field this range applies to
         const fieldName = key.replace('Range', '');
-        const entityValue = entity[fieldName];
+        const entityValue = getEntityField(entity, fieldName);
 
         // Numeric range (min/max)
         if ('min' in rangeFilter || 'max' in rangeFilter) {
@@ -258,7 +261,7 @@ export function applyFilters<T extends FilterableEntity>(
 
       // Handle boolean filters
       if (typeof filterValue === 'boolean' && filterValue === true) {
-        const entityValue = entity[key];
+        const entityValue = getEntityField(entity, key);
         if (entityValue !== true) {
           return false;
         }
@@ -267,7 +270,7 @@ export function applyFilters<T extends FilterableEntity>(
 
       // Handle direct string comparison
       if (typeof filterValue === 'string' && filterValue !== 'all') {
-        const entityValue = entity[key];
+        const entityValue = getEntityField(entity, key);
         if (entityValue !== filterValue) {
           return false;
         }

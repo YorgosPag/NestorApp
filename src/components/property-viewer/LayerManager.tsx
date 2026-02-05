@@ -183,8 +183,8 @@ const DxfCanvasComponent = forwardRef<DxfCanvasRef, Props>(function DxfCanvas({
     getTransform: () => rendererRef.current?.getTransform?.() ?? { scale: 1, offsetX: 0, offsetY: 0 },
     activateZoomWindow: () => rendererRef.current?.activateZoomWindow(),
     deactivateZoomWindow: () => rendererRef.current?.deactivateZoomWindow(),
-    undo: () => rendererRef.current?.undo(),
-    redo: () => rendererRef.current?.redo(),
+    undo: () => rendererRef.current?.undo() ?? false,
+    redo: () => rendererRef.current?.redo() ?? false,
     canUndo: () => rendererRef.current?.canUndo() ?? false,
     canRedo: () => rendererRef.current?.canRedo() ?? false,
   }));

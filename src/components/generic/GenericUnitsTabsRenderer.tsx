@@ -74,7 +74,7 @@ import { UnitCustomerTab } from '@/components/units/tabs/UnitCustomerTab';
 /**
  * Component mapping για την αντιστοίχιση component names σε actual components
  */
-const COMPONENT_MAPPING = {
+const COMPONENT_MAPPING: Record<string, React.ComponentType<GenericComponentProps>> = {
   'PropertyDetailsContent': PropertyDetailsContent,
   'UnitCustomerTab': UnitCustomerTab,
   'FloorPlanTab': FloorPlanTab,
@@ -86,7 +86,7 @@ const COMPONENT_MAPPING = {
       <p className="text-xs mt-2">{subtitle}</p>
     </div>
   ),
-} as const;
+};
 
 // ============================================================================
 // INTERFACES
@@ -157,7 +157,7 @@ export function GenericUnitsTabsRenderer({
   const enabledTabs = tabs.filter(tab => tab.enabled !== false);
 
   // Helper function to get component
-  const getComponent = (componentName: string) => {
+  const getComponent = (componentName: string): React.ComponentType<GenericComponentProps> => {
     // Πρώτα ελέγχουμε τα custom components
     if (customComponents[componentName]) {
       return customComponents[componentName];
@@ -179,8 +179,8 @@ export function GenericUnitsTabsRenderer({
   };
 
   // Helper function to get component props
-  const getComponentProps = (tab: UnitsTabConfig) => {
-    const baseProps = {
+  const getComponentProps = (tab: UnitsTabConfig): GenericComponentProps => {
+    const baseProps: GenericComponentProps = {
       selectedUnit,
       ...globalProps,
     };
@@ -192,11 +192,20 @@ export function GenericUnitsTabsRenderer({
 
     // Special handling για PropertyDetailsContent
     if (tab.component === 'PropertyDetailsContent') {
+      const onSelectFloor =
+        typeof additionalData.safeViewerPropsWithFloors?.onSelectFloor === 'function'
+          ? additionalData.safeViewerPropsWithFloors.onSelectFloor
+          : () => {};
+      const onUpdateProperty =
+        typeof additionalData.safeViewerPropsWithFloors?.handleUpdateProperty === 'function'
+          ? additionalData.safeViewerPropsWithFloors.handleUpdateProperty
+          : () => {};
+
       return {
         ...baseProps,
         property: selectedUnit,
-        onSelectFloor: additionalData.safeViewerPropsWithFloors?.onSelectFloor || (() => {}),
-        onUpdateProperty: additionalData.safeViewerPropsWithFloors?.handleUpdateProperty || (() => {}),
+        onSelectFloor,
+        onUpdateProperty,
       };
     }
 

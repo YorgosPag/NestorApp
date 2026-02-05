@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import type { FilterFieldConfig } from './types';
+import { UNIT_AREA_RANGE_PRESETS } from './configs';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -102,14 +103,11 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
 
         // 🏢 ENTERPRISE: Dropdown mode με predefined area values + custom input
         if (config.dropdownMode && config.id === 'areaRange') {
-          const areaPresets = [
-            { id: 'all', label: 'filters.areaPresets.all', min: null, max: null },
-            { id: 'small', label: 'filters.areaPresets.small', min: 0, max: 50 },
-            { id: 'medium', label: 'filters.areaPresets.medium', min: 50, max: 100 },
-            { id: 'large', label: 'filters.areaPresets.large', min: 100, max: 200 },
-            { id: 'veryLarge', label: 'filters.areaPresets.veryLarge', min: 200, max: null },
-            { id: 'custom', label: 'filters.areaPresets.custom', min: null, max: null },
-          ];
+          const areaPresets = UNIT_AREA_RANGE_PRESETS.map((preset) => ({
+            ...preset,
+            min: preset.min === null ? undefined : preset.min,
+            max: preset.max === null ? undefined : preset.max,
+          }));
 
           // 🔧 ENTERPRISE: Determine current preset based on range value
           const getCurrentPreset = () => {
@@ -121,8 +119,7 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
             const preset = areaPresets.find(p => {
               // For 'all' preset, both min and max should be null/undefined
               if (p.id === 'all') {
-                return (rangeValue.min === null || rangeValue.min === undefined) &&
-                       (rangeValue.max === null || rangeValue.max === undefined);
+                return rangeValue.min === undefined && rangeValue.max === undefined;
               }
               // For other presets, compare exact values
               return p.min === rangeValue.min && p.max === rangeValue.max;
@@ -200,8 +197,8 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
                   if (preset && selectedValue !== 'custom') {
                     // Set predefined range (normalize null → undefined for type safety)
                     onValueChange({
-                      min: preset.min === null ? undefined : preset.min,
-                      max: preset.max === null ? undefined : preset.max
+                      min: preset.min,
+                      max: preset.max
                     });
                   }
                   // Custom mode: Just update the dropdown state, let user type values
