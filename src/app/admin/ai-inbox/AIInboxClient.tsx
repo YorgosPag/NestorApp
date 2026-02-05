@@ -105,6 +105,36 @@ const resolveFirestoreTimestamp = (value?: FirestoreishTimestamp | null): Date |
   return null;
 };
 
+/**
+ * 🏢 ENTERPRISE: Safe content extractor
+ * Handles both string content AND object content { text, attachments }
+ * from different message sources (email = string, telegram = object)
+ */
+const getDisplayContent = (content: unknown): string => {
+  // Case 1: Already a string
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  // Case 2: Object with text property (Telegram/WhatsApp format)
+  if (content && typeof content === 'object') {
+    const contentObj = content as Record<string, unknown>;
+
+    // Extract text if present
+    if (typeof contentObj.text === 'string') {
+      return contentObj.text;
+    }
+
+    // Has attachments but no text
+    if (Array.isArray(contentObj.attachments) && contentObj.attachments.length > 0) {
+      return `[${contentObj.attachments.length} attachment(s)]`;
+    }
+  }
+
+  // Fallback
+  return '';
+};
+
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -386,7 +416,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
       list = list.filter(comm =>
         (comm.from || '').toLowerCase().includes(term) ||
         (comm.subject || '').toLowerCase().includes(term) ||
-        (comm.content || '').toLowerCase().includes(term)
+        getDisplayContent(comm.content).toLowerCase().includes(term)
       );
     }
 
@@ -552,7 +582,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                           <Badge variant="outline">{comm.type}</Badge>
                         </TableCell>
                         <TableCell className={layout.truncate}>
-                          {comm.content}
+                          {getDisplayContent(comm.content)}
                         </TableCell>
                           <TableCell>
                             <Badge variant={getIntentBadgeVariant(comm.intentAnalysis?.intentType)}>
