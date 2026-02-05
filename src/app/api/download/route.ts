@@ -164,24 +164,61 @@ async function handleDownload(request: NextRequest, ctx: AuthContext) {
   }
 }
 
-// 🔒 SECURITY: Only allow GET method
-export async function POST() {
-  return NextResponse.json(
-    { error: 'Method not allowed. Use GET.' },
-    { status: 405 }
-  );
-}
+// =============================================================================
+// 🔒 SECURITY: Protected Method Rejection (2026-02-06)
+// =============================================================================
+//
+// These methods are not supported but are protected with authentication
+// for consistency and to prevent future security issues if implementations
+// are added without proper security review.
+//
+// Pattern: Enterprise Security by Design
+// =============================================================================
 
-export async function PUT() {
-  return NextResponse.json(
-    { error: 'Method not allowed. Use GET.' },
-    { status: 405 }
-  );
-}
+/**
+ * POST /api/download
+ *
+ * 🔒 SECURITY: Protected but not allowed
+ * Returns 405 Method Not Allowed after auth check
+ */
+export const POST = withAuth(
+  async () => {
+    return NextResponse.json(
+      { error: 'Method not allowed. Use GET.' },
+      { status: 405 }
+    );
+  },
+  { permissions: 'photos:photos:upload' }
+);
 
-export async function DELETE() {
-  return NextResponse.json(
-    { error: 'Method not allowed. Use GET.' },
-    { status: 405 }
-  );
-}
+/**
+ * PUT /api/download
+ *
+ * 🔒 SECURITY: Protected but not allowed
+ * Returns 405 Method Not Allowed after auth check
+ */
+export const PUT = withAuth(
+  async () => {
+    return NextResponse.json(
+      { error: 'Method not allowed. Use GET.' },
+      { status: 405 }
+    );
+  },
+  { permissions: 'photos:photos:upload' }
+);
+
+/**
+ * DELETE /api/download
+ *
+ * 🔒 SECURITY: Protected but not allowed
+ * Returns 405 Method Not Allowed after auth check
+ */
+export const DELETE = withAuth(
+  async () => {
+    return NextResponse.json(
+      { error: 'Method not allowed. Use GET.' },
+      { status: 405 }
+    );
+  },
+  { permissions: 'photos:photos:upload' }
+);
