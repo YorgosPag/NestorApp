@@ -112,12 +112,8 @@ const resolveFirestoreTimestamp = (value?: FirestoreishTimestamp | null): Date |
  * from different message sources (email = string, telegram = object)
  */
 const getDisplayContent = (content: unknown): string => {
-  // DEBUG: Log content to see what we're receiving
-  console.log('📧 Email content raw:', JSON.stringify(content, null, 2));
-
   // Case 1: Already a string
   if (typeof content === 'string') {
-    console.log('📧 Content is string, has newlines:', content.includes('\n'));
     return content;
   }
 
@@ -331,7 +327,7 @@ const RenderContentWithLinks = ({ content }: { content: string }) => {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline hover:text-primary/80"
+              className="text-[hsl(var(--link-color))] underline hover:text-[hsl(var(--link-color-hover))] transition-colors"
               onClick={(e) => e.stopPropagation()}
               title={part.href} // Show full URL on hover
             >
@@ -383,7 +379,7 @@ const SafeHTMLContent = ({ html }: { html: string }) => {
       /([^\n&]*?)\s*&lt;(https?:\/\/[^&]+)&gt;/gi,
       (match, text, url) => {
         const displayText = text.trim() || new URL(url).hostname.replace('www.', '');
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${displayText}</a>`;
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-[hsl(var(--link-color))] underline hover:text-[hsl(var(--link-color-hover))] transition-colors">${displayText}</a>`;
       }
     );
 
@@ -399,7 +395,7 @@ const SafeHTMLContent = ({ html }: { html: string }) => {
             return url.length > 40 ? url.substring(0, 40) + '...' : url;
           }
         })();
-        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${displayText}</a>`;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-[hsl(var(--link-color))] underline hover:text-[hsl(var(--link-color-hover))] transition-colors">${displayText}</a>`;
       }
     );
 
@@ -425,7 +421,7 @@ const SafeHTMLContent = ({ html }: { html: string }) => {
   return (
     <div
       className="email-content prose prose-sm max-w-none dark:prose-invert
-        [&_a]:text-primary [&_a]:underline [&_a]:hover:text-primary/80
+        [&_a]:text-[hsl(var(--link-color))] [&_a]:underline [&_a]:hover:text-[hsl(var(--link-color-hover))] [&_a]:transition-colors
         [&_table]:border-collapse [&_td]:p-1 [&_th]:p-1
         [&_img]:max-w-full [&_img]:h-auto
         [&_blockquote]:border-l-4 [&_blockquote]:border-muted [&_blockquote]:pl-4"
