@@ -442,50 +442,30 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const loadTriageStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      // 🏢 ENTERPRISE: Super admin sees all, tenant admin sees only their company
-      const isSuperAdmin = adminContext.role === 'super_admin';
-      const companyId = isSuperAdmin ? undefined : adminContext.companyId;
+      // 🏢 ENTERPRISE: Use dedicated getTriageStats service function (ADR-073)
+      // Super admin requires companyId - use first available or skip stats
+      const companyId = adminContext.companyId;
 
-      const result = await getTriageCommunications(companyId, adminContext.operationId);
+      if (!companyId) {
+        // Super admin without company context - stats require company scoping
+        logger.info('Skipping stats load for super admin without company context');
+        setStats({ total: 0, pending: 0, approved: 0, rejected: 0, reviewed: 0 });
+        return;
+      }
+
+      const result = await getTriageStats(companyId, adminContext.operationId);
       if (!result.ok) {
         throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
       }
 
-      // 🏢 ENTERPRISE: Count messages - treat undefined/null triageStatus as 'pending'
-      const counts = result.data.reduce(
-        (acc, comm) => {
-          const status = comm.triageStatus;
-          // Messages without triageStatus or with 'pending' are counted as pending
-          if (!status || status === TRIAGE_STATUSES.PENDING) {
-            acc.pending += 1;
-          } else if (status === TRIAGE_STATUSES.APPROVED) {
-            acc.approved += 1;
-          } else if (status === TRIAGE_STATUSES.REJECTED) {
-            acc.rejected += 1;
-          } else if (status === TRIAGE_STATUSES.REVIEWED) {
-            acc.reviewed += 1;
-          } else {
-            // Unknown status - treat as pending for safety
-            acc.pending += 1;
-          }
-          return acc;
-        },
-        { pending: 0, approved: 0, rejected: 0, reviewed: 0 }
-      );
-
-      setStats({
-        total: counts.pending + counts.approved + counts.rejected + counts.reviewed,
-        pending: counts.pending,
-        approved: counts.approved,
-        rejected: counts.rejected,
-        reviewed: counts.reviewed
-      });
+      // 🏢 ENTERPRISE: Service returns properly calculated stats
+      setStats(result.data);
     } catch (err) {
       logger.error('Failed to load triage stats', { error: err });
     } finally {
       setStatsLoading(false);
     }
-  }, [adminContext.companyId, adminContext.operationId, adminContext.role, t]);
+  }, [adminContext.companyId, adminContext.operationId, t]);
 
   useEffect(() => {
     loadTriageCommunications();
