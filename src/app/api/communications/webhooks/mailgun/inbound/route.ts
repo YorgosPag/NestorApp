@@ -105,10 +105,17 @@ function buildFallbackKey(params: {
 async function handleMailgunInbound(request: NextRequest): Promise<Response> {
   try {
     const contentType = request.headers.get('content-type') || '';
-    if (!contentType.includes('multipart/form-data')) {
+    // Mailgun can send multipart/form-data or application/x-www-form-urlencoded
+    const isValidContentType =
+      contentType.includes('multipart/form-data') ||
+      contentType.includes('application/x-www-form-urlencoded');
+
+    if (!isValidContentType) {
       logger.warn('Invalid content type', { contentType });
-      return NextResponse.json({ ok: false, error: 'invalid_content_type' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'invalid_content_type', received: contentType }, { status: 400 });
     }
+
+    logger.info('Received webhook request', { contentType });
 
     const formData = await request.formData();
     const signatureCheck = verifyMailgunSignature({
