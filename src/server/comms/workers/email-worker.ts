@@ -83,7 +83,7 @@ export class EmailWorker {
 
       console.log(`📧 Processing ${pendingJobs.length} pending email job(s)...`);
 
-      // Process jobs sequentially to avoid overwhelming SendGrid
+      // Process jobs sequentially to avoid overwhelming Mailgun API
       for (const job of pendingJobs) {
         try {
           const success = await emailAdapter.processEmailJob(job.id);
@@ -93,7 +93,7 @@ export class EmailWorker {
             console.log(`❌ Email job ${job.id} failed to process`);
           }
           
-          // Small delay between jobs to be respectful to SendGrid API
+          // Small delay between jobs to be respectful to Mailgun API
           await this.delay(1000);
         } catch (error) {
           console.error(`❌ Error processing email job ${job.id}:`, error);

@@ -31,7 +31,7 @@ export type EmailIngestionQueueStatus =
 // PROVIDER TYPES
 // ============================================================================
 
-export type EmailProvider = 'mailgun' | 'sendgrid';
+export type EmailProvider = 'mailgun';
 
 // ============================================================================
 // SERIALIZED ATTACHMENT TYPE
@@ -338,7 +338,7 @@ export function isValidQueueStatus(status: string): status is EmailIngestionQueu
 }
 
 export function isValidEmailProvider(provider: string): provider is EmailProvider {
-  return ['mailgun', 'sendgrid'].includes(provider);
+  return provider === 'mailgun';
 }
 
 // ============================================================================

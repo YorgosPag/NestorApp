@@ -369,7 +369,7 @@ export default function AdminSetupPage() {
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             <p>1. Όταν χρήστης βλέπει error → Πατάει &quot;Αναφορά Σφάλματος&quot;</p>
             <p>2. Το email πηγαίνει στο errors@nestor-app.com</p>
-            <p>3. Το SendGrid webhook δημιουργεί in-app notification</p>
+            <p>3. Το Mailgun webhook δημιουργεί in-app notification</p>
             <p>4. Βλέπεις το notification στο bell icon 🔔</p>
           </CardContent>
         </Card>

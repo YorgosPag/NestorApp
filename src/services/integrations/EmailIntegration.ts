@@ -4,7 +4,7 @@ import { generateMessageId, generateTemplateId } from '@/services/enterprise-id.
 
 // Email Integration Service
 export interface EmailProvider {
-  type: 'smtp' | 'outlook' | 'gmail' | 'sendgrid' | 'ses';
+  type: 'smtp' | 'outlook' | 'gmail' | 'mailgun' | 'ses';
   config: Record<string, any>;
   isActive: boolean;
 }
@@ -127,8 +127,8 @@ class EmailIntegrationService {
       switch (provider.type) {
         case 'smtp':
           return this.sendViaSMTP(message, provider);
-        case 'sendgrid':
-          return this.sendViaSendGrid(message, provider);
+        case 'mailgun':
+          return this.sendViaMailgun(message, provider);
         case 'gmail':
           return this.sendViaGmail(message, provider);
         case 'outlook':
@@ -229,17 +229,14 @@ class EmailIntegrationService {
     };
   }
 
-  private async sendViaSendGrid(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
-    // Sample SendGrid implementation
-    // Debug logging removed - Sending email via SendGrid
-
+  private async sendViaMailgun(message: EmailMessage, provider: EmailProvider): Promise<EmailSendResult> {
     await this.delay(Math.random() * 800 + 300);
 
     // 🏢 ENTERPRISE: Using centralized ID generation (crypto-secure)
     return {
       success: true,
       messageId: generateMessageId(),
-      providerId: 'sendgrid'
+      providerId: 'mailgun'
     };
   }
 

@@ -308,7 +308,7 @@ function getFromAddress(channel: CommunicationChannel, params: EnqueueMessagePar
  */
 function getPlatformName(channel: CommunicationChannel): string {
   const platforms: Record<CommunicationChannel, string> = {
-    email: 'sendgrid',
+    email: 'mailgun',
     telegram: 'telegram',
     whatsapp: 'meta_cloud_api',
     sms: 'sms_provider'

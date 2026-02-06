@@ -605,7 +605,7 @@ export async function requireAdminForPage(
       operationId,
       environment,
       mfaEnrolled: true,
-      companyId: getDevCompanyId(), // 🏢 ENTERPRISE: Dev tenant isolation (SSoT)
+      companyId: await getDevCompanyId(), // 🏢 ENTERPRISE: Dev tenant isolation (SSoT - dynamic Firestore lookup)
     };
   }
 

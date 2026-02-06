@@ -218,15 +218,17 @@ function createUnauthenticatedContext(reason: UnauthReason): UnauthenticatedCont
  * @param overrides - Partial AuthContext overrides
  * @returns AuthContext
  */
-export function createDevContext(overrides?: Partial<AuthContext>): AuthContext {
+export async function createDevContext(overrides?: Partial<AuthContext>): Promise<AuthContext> {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('[AUTH_CONTEXT] createDevContext cannot be used in production');
   }
 
+  const companyId = await getDevCompanyId();
+
   return {
     uid: 'dev-user',
     email: 'dev@localhost',
-    companyId: getDevCompanyId(),
+    companyId,
     globalRole: 'company_admin',
     mfaEnrolled: false,
     isAuthenticated: true,

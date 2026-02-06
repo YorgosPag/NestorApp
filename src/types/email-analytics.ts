@@ -4,8 +4,8 @@ export interface EmailAnalyticsEvent {
   recipientEmail: string;
   propertyId?: string;
   timestamp: Date;
-  sendgridEventId: string;
-  sendgridMessageId: string;
+  providerEventId: string;
+  providerMessageId: string;
   metadata: {
     ip?: string;
     userAgent?: string;

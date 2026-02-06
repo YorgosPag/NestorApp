@@ -28,17 +28,21 @@ interface SendResult {
 
 export class EmailAdapter {
   private apiKey: string;
+  private domain: string;
   private fromEmail: string;
 
   constructor() {
-    // In production, this will be loaded from Firebase Functions Secrets
-    this.apiKey = process.env.SENDGRID_API_KEY || '';
+    this.apiKey = process.env.MAILGUN_API_KEY || '';
+    this.domain = process.env.MAILGUN_DOMAIN || '';
 
     // 🏢 ENTERPRISE: Configurable email domain for multi-tenant deployment
     this.fromEmail = this.getFromEmail();
 
     if (!this.apiKey) {
-      console.warn('⚠️ SENDGRID_API_KEY not found in environment');
+      console.warn('⚠️ MAILGUN_API_KEY not found in environment');
+    }
+    if (!this.domain) {
+      console.warn('⚠️ MAILGUN_DOMAIN not found in environment');
     }
   }
 
@@ -46,9 +50,9 @@ export class EmailAdapter {
    * 🏢 ENTERPRISE: Dynamic from email generation with configurable domain
    */
   private getFromEmail(): string {
-    // Primary: Use explicit SENDGRID_FROM_EMAIL if set
-    if (process.env.SENDGRID_FROM_EMAIL) {
-      return process.env.SENDGRID_FROM_EMAIL;
+    // Primary: Use explicit MAILGUN_FROM_EMAIL if set
+    if (process.env.MAILGUN_FROM_EMAIL) {
+      return process.env.MAILGUN_FROM_EMAIL;
     }
 
     // Secondary: Generate from company domain and name
@@ -59,57 +63,58 @@ export class EmailAdapter {
       return `${emailPrefix}@${domain}`;
     }
 
-    // Fallback: Generic configuration-driven default
+    // Fallback: Use Mailgun domain
+    if (this.domain) {
+      return `${emailPrefix}@${this.domain}`;
+    }
+
     const fallbackDomain = process.env.FALLBACK_EMAIL_DOMAIN || 'company.com';
     return `${emailPrefix}@${fallbackDomain}`;
   }
 
   /**
-   * Send email via SendGrid API
+   * 🏢 ENTERPRISE: Send email via Mailgun API
+   * @see https://documentation.mailgun.com/docs/mailgun/api-reference/openapi-final/tag/Messages/
    */
   async sendEmail(job: EmailJob): Promise<SendResult> {
-    if (!this.apiKey) {
+    if (!this.apiKey || !this.domain) {
       return {
         success: false,
-        error: 'SendGrid API key not configured'
+        error: 'Mailgun API key or domain not configured'
       };
     }
 
     try {
-      const payload = {
-        personalizations: [{
-          to: [{ email: job.to }],
-          subject: job.subject
-        }],
-        from: { email: job.from || this.fromEmail },
-        content: [{
-          type: 'text/plain',
-          value: job.content
-        }]
-      };
+      const formData = new FormData();
+      formData.append('from', job.from || this.fromEmail);
+      formData.append('to', job.to);
+      formData.append('subject', job.subject);
+      formData.append('text', job.content);
 
-      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      const region = process.env.MAILGUN_REGION === 'eu' ? 'api.eu.mailgun.net' : 'api.mailgun.net';
+      const url = `https://${region}/v3/${this.domain}/messages`;
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Basic ${Buffer.from(`api:${this.apiKey}`).toString('base64')}`,
         },
-        body: JSON.stringify(payload)
+        body: formData
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ SendGrid API error:', response.status, errorText);
+        console.error('❌ Mailgun API error:', response.status, errorText);
         return {
           success: false,
-          error: `SendGrid API error: ${response.status}`
+          error: `Mailgun API error: ${response.status}`
         };
       }
 
-      // SendGrid returns X-Message-Id header on success
-      const messageId = response.headers.get('X-Message-Id') || undefined;
-      
-      console.log(`✅ Email sent successfully via SendGrid. MessageId: ${messageId}`);
+      const result = await response.json() as { id?: string; message?: string };
+      const messageId = result.id || undefined;
+
+      console.log(`✅ Email sent successfully via Mailgun. MessageId: ${messageId}`);
       return {
         success: true,
         messageId

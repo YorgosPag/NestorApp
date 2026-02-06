@@ -25,6 +25,7 @@ import {
   type EmailIngestionQueueStats,
   type EmailIngestionQueueStatus,
   type SerializedAttachment,
+  type EmailProvider,
 } from '@/types/email-ingestion-queue';
 import { processInboundEmail, resolveCompanyIdFromRecipients } from './email-inbound-service';
 import type { InboundEmailAttachment, InboundAttachmentDownload, MailgunStorageInfo } from './types';
@@ -209,7 +210,7 @@ async function serializeAttachments(
  * @returns Queue item ID or null if failed
  */
 export async function enqueueInboundEmail(params: {
-  provider: 'mailgun' | 'sendgrid';
+  provider: EmailProvider;
   providerMessageId: string;
   sender: { email: string; name?: string };
   recipients: string[];

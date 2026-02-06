@@ -129,7 +129,7 @@ export function EmailAnalyticsDashboard() {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-6">
-              Τα analytics θα ενεργοποιηθούν μόλις ρυθμιστεί το SendGrid webhook.<br/>
+              Τα analytics θα ενεργοποιηθούν μόλις ρυθμιστεί το Mailgun webhook.<br/>
               Τώρα διαθέσιμα 3 email templates στο Share Modal!
             </p>
           </div>

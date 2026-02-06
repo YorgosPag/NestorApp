@@ -591,12 +591,12 @@ export function extractRequestMetadata(request: {
 /**
  * Log a webhook event from an external service.
  *
- * This function is designed for public webhooks (SendGrid, Telegram, etc.)
+ * This function is designed for public webhooks (Mailgun, Telegram, etc.)
  * that don't have an AuthContext but need audit logging for compliance.
  *
  * @enterprise SAP/Salesforce/Microsoft pattern: System-level audit logs
  *
- * @param webhookSource - Source service (e.g., 'sendgrid', 'telegram')
+ * @param webhookSource - Source service (e.g., 'mailgun', 'telegram')
  * @param webhookId - Unique webhook event ID (from external service)
  * @param details - Webhook event details
  * @param request - NextRequest για metadata extraction
@@ -604,8 +604,8 @@ export function extractRequestMetadata(request: {
  * @example
  * ```typescript
  * await logWebhookEvent(
- *   'sendgrid',
- *   event.sg_event_id,
+ *   'mailgun',
+ *   event.messageId,
  *   {
  *     eventType: 'delivered',
  *     recipientEmail: event.email,

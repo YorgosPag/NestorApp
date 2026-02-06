@@ -75,7 +75,7 @@ export const POST = withStandardRateLimit(
       const result = await response.json();
 
       // Log successful send with tenant context
-      console.log('✅ PRODUCTION Email sent via SendGrid:', {
+      console.log('✅ PRODUCTION Email sent via Mailgun:', {
         to: payload.to,
         messageId: result.messageId,
         status: result.status,
@@ -98,7 +98,7 @@ export const POST = withStandardRateLimit(
       return NextResponse.json({
         id: result.messageId,
         status: 'sent',
-        message: 'Email sent successfully via SendGrid',
+        message: 'Email sent successfully via Mailgun',
         production: true,
         messageId: result.messageId,
       });

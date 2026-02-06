@@ -237,7 +237,7 @@ export const AUDIT_ACTIONS = {
   'data_updated': true,              // API data update events (PATCH/PUT operations with tenant isolation)
   'data_deleted': true,              // API data delete events (DELETE operations with tenant isolation)
   // Webhook operations (External integrations)
-  'webhook_received': true,          // External webhook event received (SendGrid, Telegram, etc.)
+  'webhook_received': true,          // External webhook event received (Mailgun, Telegram, etc.)
 } as const;
 
 /**
