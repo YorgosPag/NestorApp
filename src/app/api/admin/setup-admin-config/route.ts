@@ -88,24 +88,24 @@ export async function POST(request: NextRequest) {
         // Save to Firestore
         const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
 
-        // Check if document exists and if routing rules are already configured
+        // Check if document exists
         const existingDoc = await docRef.get();
-        const existingData = existingDoc.exists ? existingDoc.data() : undefined;
-        const hasRoutingRules = Array.isArray(existingData?.integrations?.emailInboundRouting)
-          && existingData.integrations.emailInboundRouting.length > 0;
 
-        // 🏢 ENTERPRISE: Auto-provision email inbound routing rules (ADR-070)
+        // 🏢 ENTERPRISE: Always (re-)provision email inbound routing rules (ADR-070)
         // Pattern: Salesforce Email-to-Case auto-setup during org configuration
         // Uses MAILGUN_DOMAIN env var + user's companyId (no hardcoded values)
+        // Always refreshes rules to pick up env var changes or fix corrupted data
         const settingsPayload: Record<string, unknown> = {
           admin: adminConfig,
         };
 
-        if (!hasRoutingRules && ctx.companyId) {
-          const mailgunDomain = process.env.MAILGUN_DOMAIN;
+        if (ctx.companyId) {
+          const mailgunDomainRaw = process.env.MAILGUN_DOMAIN;
+          // Defensive: trim whitespace/newlines from env var
+          const mailgunDomain = mailgunDomainRaw?.trim();
 
           if (mailgunDomain) {
-            // Extract base domain from Mailgun domain (e.g., "nestorconstruct.gr" from "mg.nestorconstruct.gr" or "nestorconstruct.gr")
+            // Extract base domain from Mailgun domain (e.g., "nestorconstruct.gr" from "mg.nestorconstruct.gr")
             const baseDomain = mailgunDomain.startsWith('mg.')
               ? mailgunDomain.slice(3)
               : mailgunDomain;
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
               ],
             };
 
-            console.log(`✅ [SetupAdminConfig] Auto-provisioned email routing rules`, {
+            console.log(`✅ [SetupAdminConfig] Provisioned email routing rules`, {
               domain: baseDomain,
               companyId: ctx.companyId,
               rulesCount: 2,
@@ -133,8 +133,6 @@ export async function POST(request: NextRequest) {
           } else {
             console.warn(`⚠️ [SetupAdminConfig] MAILGUN_DOMAIN not set - skipping email routing setup`);
           }
-        } else if (hasRoutingRules) {
-          console.log(`ℹ️ [SetupAdminConfig] Email routing rules already configured - preserving existing`);
         }
 
         if (existingDoc.exists) {
