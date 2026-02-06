@@ -363,30 +363,60 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
 export const POST = withWebhookRateLimit(handleMailgunInbound);
 
 export async function GET(): Promise<Response> {
-  // Diagnostic: Check routing rules status
-  let routingDiagnostic: { rulesCount: number; hasIntegrations: boolean; hasSettings: boolean } = {
-    rulesCount: 0,
-    hasIntegrations: false,
-    hasSettings: false,
+  // Full diagnostic: routing rules + queue status
+  const diagnostic: Record<string, unknown> = {
+    routing: { rulesCount: 0, hasIntegrations: false, hasSettings: false, rules: [] as string[] },
+    queue: { total: 0, pending: 0, processing: 0, completed: 0, failed: 0, latestItem: null as string | null },
   };
 
   try {
     const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
     const { COLLECTIONS } = await import('@/config/firestore-collections');
     const adminDb = getAdminFirestore();
+
+    // Check routing rules
     const settingsDoc = await adminDb.collection(COLLECTIONS.SYSTEM).doc('settings').get();
-    routingDiagnostic.hasSettings = settingsDoc.exists;
+    const routingInfo = diagnostic.routing as Record<string, unknown>;
+    routingInfo.hasSettings = settingsDoc.exists;
 
     if (settingsDoc.exists) {
       const data = settingsDoc.data();
-      routingDiagnostic.hasIntegrations = Boolean(data?.integrations);
+      routingInfo.hasIntegrations = Boolean(data?.integrations);
       const rules = data?.integrations?.emailInboundRouting;
-      routingDiagnostic.rulesCount = Array.isArray(rules) ? rules.length : 0;
+      if (Array.isArray(rules)) {
+        routingInfo.rulesCount = rules.length;
+        routingInfo.rules = rules.map((r: Record<string, unknown>) =>
+          `${r.pattern} → ${typeof r.companyId === 'string' ? r.companyId.substring(0, 8) + '...' : 'none'} (active: ${r.isActive})`
+        );
+      }
     }
-  } catch (diagError) {
-    logger.warn('Diagnostic check failed', {
-      error: diagError instanceof Error ? diagError.message : 'Unknown',
+
+    // Check queue status
+    const queueRef = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE);
+    const queueInfo = diagnostic.queue as Record<string, unknown>;
+
+    const allItems = await queueRef.orderBy('createdAt', 'desc').limit(10).get();
+    queueInfo.total = allItems.size;
+
+    let pending = 0, processing = 0, completed = 0, failed = 0;
+    const items: string[] = [];
+    allItems.forEach(doc => {
+      const d = doc.data();
+      const status = d.status as string;
+      if (status === 'pending') pending++;
+      else if (status === 'processing') processing++;
+      else if (status === 'completed') completed++;
+      else if (status === 'failed' || status === 'dead_letter') failed++;
+      items.push(`${doc.id}: ${status} | ${d.subject || 'no-subject'} | ${d.sender?.email || 'unknown'} | ${d.createdAt?.toDate?.()?.toISOString?.() || 'no-date'}`);
     });
+    queueInfo.pending = pending;
+    queueInfo.processing = processing;
+    queueInfo.completed = completed;
+    queueInfo.failed = failed;
+    queueInfo.items = items;
+
+  } catch (diagError) {
+    diagnostic.error = diagError instanceof Error ? diagError.message : 'Unknown';
   }
 
   return NextResponse.json({
@@ -395,7 +425,7 @@ export async function GET(): Promise<Response> {
     version: 'v2-queue',
     hasSigningKey: Boolean(MAILGUN_WEBHOOK_SIGNING_KEY),
     hasMailgunDomain: Boolean(process.env.MAILGUN_DOMAIN),
-    mailgunDomainValue: process.env.MAILGUN_DOMAIN || 'NOT_SET',
-    routing: routingDiagnostic,
+    mailgunDomainValue: process.env.MAILGUN_DOMAIN?.trim() || 'NOT_SET',
+    diagnostic,
   });
 }
