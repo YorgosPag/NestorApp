@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { logWebhookEvent } from '@/lib/auth/audit';
 import { COMMUNICATION_CHANNELS } from '@/types/communications';
 import type { Communication } from '@/types/crm';
 import { TRIAGE_STATUSES } from '@/types/crm';
@@ -595,6 +596,99 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     createdAt: new Date(),
     updatedAt: new Date(),
   });
+
+  // 🏢 ENTERPRISE: Log audit event for communication creation (2026-02-06)
+  // Note: Using logWebhookEvent() because this is triggered by external Mailgun webhook
+  // (no authenticated user context). The audit log goes to system_audit_logs collection.
+  try {
+    await logWebhookEvent(
+      'mailgun_inbound',
+      messageDocId,
+      {
+        action: 'communication_created',
+        communicationType: 'email',
+        companyId: routing.companyId,
+        contactId,
+        from: input.sender.email,
+        to: input.recipients.join(', '),
+        subject: input.subject,
+        triageStatus: communication.triageStatus,
+        hasAttachments: attachments.length > 0,
+        attachmentCount: attachments.length,
+        hasIntentAnalysis: Boolean(intentAnalysis),
+        intentType: intentAnalysis?.intentType,
+        needsTriage: intentAnalysis?.needsTriage,
+      },
+      // Mock request object for metadata extraction (no actual request in background worker)
+      {
+        headers: { get: () => null },
+        url: undefined,
+      }
+    );
+
+    logger.info('Audit log created for communication creation', {
+      communicationId: messageDocId,
+      from: input.sender.email,
+      companyId: routing.companyId,
+    });
+  } catch (auditError) {
+    // Never throw on audit failure - just log
+    logger.error('Failed to log communication creation audit', {
+      communicationId: messageDocId,
+      error: auditError,
+    });
+  }
+
+  // 🏢 ENTERPRISE: Create email notification for AI Inbox (2026-02-06 - Phase 2)
+  // TODO: Replace SYSTEM_IDENTITY.ID with actual assigned admin userId (Phase 4 enhancement)
+  try {
+    const notificationData = {
+      tenantId: routing.companyId,
+      userId: SYSTEM_IDENTITY.ID, // TODO: Get assigned admin from contact/project assignment
+      createdAt: new Date(),
+      severity: (intentAnalysis?.needsTriage ? 'warning' : 'info') as 'info' | 'warning',
+      title: `📧 New Email from ${input.sender.name || input.sender.email}`,
+      body: input.subject || '(No subject)',
+      channel: 'inapp' as const,
+      delivery: {
+        state: 'delivered' as const,
+        attempts: 1,
+      },
+      source: {
+        service: 'email',
+        feature: 'ai-inbox',
+        env: (process.env.NODE_ENV || 'production') as 'dev' | 'staging' | 'prod',
+      },
+      actions: [
+        {
+          id: 'view_email',
+          label: 'View Email',
+          url: '/admin/ai-inbox',
+        },
+      ],
+      tags: ['email', 'ai-inbox', 'inbound'],
+      meta: {
+        communicationId: messageDocId,
+        contactId,
+        from: input.sender.email,
+        intentType: intentAnalysis?.intentType,
+      },
+    };
+
+    await adminDb.collection(COLLECTIONS.NOTIFICATIONS).add(notificationData);
+
+    logger.info('Email notification created', {
+      communicationId: messageDocId,
+      from: input.sender.email,
+      severity: notificationData.severity,
+    });
+  } catch (notificationError) {
+    // Never throw on notification failure - just log
+    logger.error('Failed to create email notification', {
+      communicationId: messageDocId,
+      error: notificationError,
+    });
+  }
 
   return { processed: true, skipped: false, communicationId: messageDocId, attachments };
 }

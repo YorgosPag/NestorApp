@@ -223,6 +223,10 @@ export const AUDIT_ACTIONS = {
   // Communications domain events (Phase 1)
   'email_sent': true,
   'message_sent': true,
+  // Communications audit trail (2026-02-06 - Enterprise Audit System Extension)
+  'communication_created': true,     // Communication created (email/phone/etc)
+  'communication_approved': true,    // Communication approved → CRM task created
+  'communication_rejected': true,    // Communication rejected (no action needed)
   // Admin operations (Phase 2)
   'data_fix_executed': true,        // Data correction operations (fix incorrect data)
   'direct_operation_executed': true, // Direct database operations (bypass normal flows)
@@ -254,6 +258,7 @@ export const AUDIT_TARGET_TYPES = {
   'api': true,
   'migration': true,
   'webhook': true,        // External webhook integrations
+  'communication': true,  // Communications/messages (2026-02-06 - Enterprise Audit Extension)
 } as const;
 
 /**
@@ -265,7 +270,7 @@ export type AuditTargetType = keyof typeof AUDIT_TARGET_TYPES;
  * Typed audit change value (NO any!).
  */
 export interface AuditChangeValue {
-  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook' | 'building_update' | 'project_create';
+  type: 'role' | 'permission' | 'grant' | 'status' | 'membership' | 'webhook' | 'building_update' | 'project_create' | 'communication_status' | 'task_linked';
   value: string | string[] | Record<string, unknown>;
 }
 

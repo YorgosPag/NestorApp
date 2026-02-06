@@ -28,6 +28,8 @@ import { getAdminFirestore } from '@/server/admin/admin-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getCompanyWidePolicyAdmin, getProjectPolicyAdmin } from '@/services/assignment/AssignmentPolicyRepository';
 import { resolveTaskDueInHours } from '@/services/assignment/AssignmentPolicyService';
+import { logCommunicationApproved, logCommunicationRejected } from '@/lib/auth/audit';
+import type { AuthContext } from '@/lib/auth/types';
 
 // 🏢 ENTERPRISE: Centralized collection configuration
 // 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES (COMMUNICATIONS collection deprecated)
@@ -516,6 +518,48 @@ export async function approveCommunication(
       updatedAt: AdminFieldValue.serverTimestamp()
     });
 
+    // 5. 🏢 ENTERPRISE: Log audit event for approval (2026-02-06)
+    try {
+      const authContext: AuthContext = {
+        uid: adminUid,
+        email: '', // Email not available here, audit will work without it
+        companyId,
+        globalRole: 'company_admin', // Assume company_admin for now
+        mfaEnrolled: false,
+        isAuthenticated: true,
+      };
+
+      await logCommunicationApproved(
+        authContext,
+        communicationId,
+        comm.triageStatus ?? 'pending',
+        taskId,
+        {
+          assignedTo: adminUid,
+          dueDate: dueDate.toDate().toISOString(),
+          priority: comm.intentAnalysis?.needsTriage ? 'high' : 'medium',
+          contactId: comm.contactId,
+          projectId: comm.projectId,
+        },
+        comm.intentAnalysis?.intentType
+          ? `Approved communication with intent: ${comm.intentAnalysis.intentType}`
+          : 'Communication approved'
+      );
+
+      logger.info('Audit log created for communication approval', {
+        communicationId,
+        taskId,
+        adminUid,
+      });
+    } catch (auditError) {
+      // Never throw on audit failure - just log
+      logger.error('Failed to log communication approval audit', {
+        communicationId,
+        taskId,
+        error: auditError,
+      });
+    }
+
     return { ok: true, taskId };
   } catch (error) {
     logger.error(
@@ -608,6 +652,36 @@ export async function rejectCommunication(
       triageStatus: 'rejected',
       updatedAt: AdminFieldValue.serverTimestamp()
     });
+
+    // 🏢 ENTERPRISE: Log audit event for rejection (2026-02-06)
+    try {
+      const authContext: AuthContext = {
+        uid: adminUid,
+        email: '', // Email not available here, audit will work without it
+        companyId,
+        globalRole: 'company_admin', // Assume company_admin for now
+        mfaEnrolled: false,
+        isAuthenticated: true,
+      };
+
+      await logCommunicationRejected(
+        authContext,
+        communicationId,
+        data?.triageStatus ?? 'pending',
+        'Communication rejected by admin'
+      );
+
+      logger.info('Audit log created for communication rejection', {
+        communicationId,
+        adminUid,
+      });
+    } catch (auditError) {
+      // Never throw on audit failure - just log
+      logger.error('Failed to log communication rejection audit', {
+        communicationId,
+        error: auditError,
+      });
+    }
 
     return { ok: true };
   } catch (error) {

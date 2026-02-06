@@ -453,6 +453,115 @@ export async function logSystemOperation(
 }
 
 // =============================================================================
+// COMMUNICATIONS AUDIT LOGGING (2026-02-06)
+// =============================================================================
+
+/**
+ * Log a communication creation event.
+ *
+ * Use this when a new communication is created (email inbound, phone call, etc.)
+ *
+ * @param ctx - Authenticated context
+ * @param communicationId - Communication ID
+ * @param communicationType - Type of communication (email, phone, sms, etc.)
+ * @param details - Communication details (from, to, subject, etc.)
+ * @param reason - Optional reason
+ *
+ * @example
+ * ```typescript
+ * await logCommunicationCreated(ctx, 'comm_123', 'email', {
+ *   from: 'customer@example.com',
+ *   to: 'sales@company.com',
+ *   subject: 'Product inquiry',
+ *   direction: 'inbound'
+ * });
+ * ```
+ *
+ * 🏢 ENTERPRISE: Communications audit trail for compliance and debugging.
+ */
+export async function logCommunicationCreated(
+  ctx: AuthContext,
+  communicationId: string,
+  communicationType: string,
+  details: Record<string, unknown>,
+  reason?: string
+): Promise<void> {
+  await logAuditEvent(ctx, 'communication_created', communicationId, 'communication', {
+    previousValue: null,
+    newValue: { type: 'communication_status', value: { type: communicationType, ...details } },
+    metadata: { reason: reason || `Communication created (${communicationType})` },
+  });
+}
+
+/**
+ * Log a communication approval event.
+ *
+ * Use this when a communication is approved and a CRM task is created.
+ *
+ * @param ctx - Authenticated context (admin who approved)
+ * @param communicationId - Communication ID
+ * @param previousStatus - Previous triage status
+ * @param linkedTaskId - Created task ID
+ * @param details - Additional details (assignedTo, dueDate, etc.)
+ * @param reason - Optional reason for approval
+ *
+ * @example
+ * ```typescript
+ * await logCommunicationApproved(ctx, 'comm_123', 'pending', 'task_456', {
+ *   assignedTo: 'user_789',
+ *   dueDate: '2026-02-10',
+ *   priority: 'high'
+ * }, 'High priority customer inquiry');
+ * ```
+ *
+ * 🏢 ENTERPRISE: Communications approval audit trail for accountability.
+ */
+export async function logCommunicationApproved(
+  ctx: AuthContext,
+  communicationId: string,
+  previousStatus: string,
+  linkedTaskId: string,
+  details: Record<string, unknown>,
+  reason?: string
+): Promise<void> {
+  await logAuditEvent(ctx, 'communication_approved', communicationId, 'communication', {
+    previousValue: { type: 'communication_status', value: previousStatus },
+    newValue: { type: 'task_linked', value: { status: 'approved', taskId: linkedTaskId, ...details } },
+    metadata: { reason: reason || 'Communication approved and task created' },
+  });
+}
+
+/**
+ * Log a communication rejection event.
+ *
+ * Use this when a communication is rejected (no action needed).
+ *
+ * @param ctx - Authenticated context (admin who rejected)
+ * @param communicationId - Communication ID
+ * @param previousStatus - Previous triage status
+ * @param reason - Reason for rejection
+ *
+ * @example
+ * ```typescript
+ * await logCommunicationRejected(ctx, 'comm_123', 'pending', 'Spam or irrelevant');
+ * ```
+ *
+ * 🏢 ENTERPRISE: Communications rejection audit trail for accountability.
+ */
+export async function logCommunicationRejected(
+  ctx: AuthContext,
+  communicationId: string,
+  previousStatus: string,
+  reason?: string
+): Promise<void> {
+  await logAuditEvent(ctx, 'communication_rejected', communicationId, 'communication', {
+    previousValue: { type: 'communication_status', value: previousStatus },
+    newValue: { type: 'communication_status', value: 'rejected' },
+    metadata: { reason: reason || 'Communication rejected' },
+  });
+}
+
+// =============================================================================
 // REQUEST METADATA EXTRACTION
 // =============================================================================
 

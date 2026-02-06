@@ -68,20 +68,20 @@ async function serializeAttachment(
 
     const sizeBytes = attachment.sizeBytes || 0;
 
-    // 🏢 ENTERPRISE: Decide mode based on size
-    // Small files: inline (download now, fast processing later)
-    // Large files: deferred (metadata only, download in worker)
-    const useDeferred =
-      mailgunStorage &&
-      sizeBytes > ATTACHMENT_MODE_CONFIG.INLINE_THRESHOLD_BYTES;
+    // 🏢 ENTERPRISE: Force deferred mode for ALL attachments (2026-02-06)
+    // Pattern: SAP/Salesforce/Microsoft - "Store Reference, Fetch Later"
+    // Rationale: Webhook MUST respond <1s (Mailgun timeout is 10s)
+    // Attachments downloaded in background worker from Mailgun Storage API
+    // Mailgun guarantees 3-day storage retention (production-grade SLA)
+    const useDeferred = Boolean(mailgunStorage); // Always use deferred if storage available
 
-    if (useDeferred) {
+    if (useDeferred && mailgunStorage) { // 🔒 Type-safe: explicit null check
       // 🚀 FAST PATH: Store metadata only, worker will fetch from Mailgun later
-      logger.info('Using DEFERRED mode for large attachment', {
+      logger.info('Using DEFERRED mode for attachment', {
         filename: attachment.filename,
         sizeBytes,
-        threshold: ATTACHMENT_MODE_CONFIG.INLINE_THRESHOLD_BYTES,
         storageKey: mailgunStorage.storageKey,
+        pattern: 'SAP/Salesforce deferred fetch',
       });
 
       return {
@@ -130,11 +130,22 @@ async function serializeAttachment(
 }
 
 /**
- * 🏢 ENTERPRISE: Serialize all attachments with smart mode selection
+ * 🏢 ENTERPRISE: Serialize all attachments with deferred mode (SAP/Salesforce pattern)
+ *
+ * Pattern: "Store Reference, Fetch Later"
+ * - Webhook stores ONLY metadata (ultra-fast <1s response)
+ * - Background worker downloads from Mailgun Storage API
+ * - Mailgun guarantees 3-day storage retention (enterprise SLA)
+ *
+ * This pattern is used by:
+ * - Google Gmail API (attachment references)
+ * - Microsoft Graph API (deferred fetching)
+ * - Salesforce Email-to-Case (attachment storage)
+ * - SAP Integration Hub (async processing)
  *
  * @param attachments - Original attachments from webhook
  * @param mailgunStorage - Mailgun storage info for deferred download
- * @returns Array of serialized attachments (skips failures)
+ * @returns Array of serialized attachments (metadata only, no downloads)
  */
 async function serializeAttachments(
   attachments: InboundEmailAttachment[] | undefined,
@@ -275,13 +286,35 @@ export async function enqueueInboundEmail(params: {
     const docRef = await queueCollection.add(queueItem);
 
     const elapsed = Date.now() - startTime;
+
+    // 🏢 ENTERPRISE: Performance monitoring (SAP/Salesforce pattern)
+    // Target SLA: <1000ms (enterprise webhook standard)
+    const exceededSLA = elapsed > 1000;
+
     logger.info('Email queued successfully', {
       queueId: docRef.id,
       provider: params.provider,
       companyId: routing.companyId,
       attachmentCount: serializedAttachments.length,
       elapsedMs: elapsed,
+      slaCompliant: !exceededSLA, // 🏢 Track SLA compliance
+      // 🏢 Enterprise metrics for monitoring dashboard
+      metrics: {
+        enqueueDuration: elapsed,
+        attachmentMode: serializedAttachments.length > 0 ? serializedAttachments[0].mode : null,
+        deferredCount: serializedAttachments.filter(a => a.mode === 'deferred').length,
+      },
     });
+
+    // 🏢 ENTERPRISE: Alert if SLA exceeded (production monitoring)
+    if (exceededSLA) {
+      logger.warn('Webhook SLA exceeded - performance degradation detected', {
+        queueId: docRef.id,
+        targetMs: 1000,
+        actualMs: elapsed,
+        exceedanceMs: elapsed - 1000,
+      });
+    }
 
     return { queueId: docRef.id, status: 'queued' };
   } catch (error) {
