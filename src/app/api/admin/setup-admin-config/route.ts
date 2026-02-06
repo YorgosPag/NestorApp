@@ -4,7 +4,13 @@
  * =============================================================================
  *
  * One-time setup endpoint to configure admin settings in Firestore.
- * Creates the system/settings document with admin configuration.
+ * Creates the system/settings document with:
+ * - Admin notification configuration (admin section)
+ * - Email inbound routing rules (integrations.emailInboundRouting)
+ *
+ * ADR-070: Email routing rules are auto-provisioned during setup
+ * using MAILGUN_DOMAIN env var + authenticated user's companyId.
+ * Pattern: Salesforce Email-to-Case auto-setup / SAP IMG auto-configuration
  *
  * 🔐 SECURITY:
  * - Requires authentication (withAuth)
@@ -82,31 +88,71 @@ export async function POST(request: NextRequest) {
         // Save to Firestore
         const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
 
-        // Check if document exists
+        // Check if document exists and if routing rules are already configured
         const existingDoc = await docRef.get();
+        const existingData = existingDoc.exists ? existingDoc.data() : undefined;
+        const hasRoutingRules = Array.isArray(existingData?.integrations?.emailInboundRouting)
+          && existingData.integrations.emailInboundRouting.length > 0;
+
+        // 🏢 ENTERPRISE: Auto-provision email inbound routing rules (ADR-070)
+        // Pattern: Salesforce Email-to-Case auto-setup during org configuration
+        // Uses MAILGUN_DOMAIN env var + user's companyId (no hardcoded values)
+        const settingsPayload: Record<string, unknown> = {
+          admin: adminConfig,
+        };
+
+        if (!hasRoutingRules && ctx.companyId) {
+          const mailgunDomain = process.env.MAILGUN_DOMAIN;
+
+          if (mailgunDomain) {
+            // Extract base domain from Mailgun domain (e.g., "nestorconstruct.gr" from "mg.nestorconstruct.gr" or "nestorconstruct.gr")
+            const baseDomain = mailgunDomain.startsWith('mg.')
+              ? mailgunDomain.slice(3)
+              : mailgunDomain;
+
+            settingsPayload.integrations = {
+              emailInboundRouting: [
+                {
+                  pattern: `inbound@${baseDomain}`,
+                  companyId: ctx.companyId,
+                  isActive: true,
+                },
+                {
+                  pattern: `@${baseDomain}`,
+                  companyId: ctx.companyId,
+                  isActive: true,
+                },
+              ],
+            };
+
+            console.log(`✅ [SetupAdminConfig] Auto-provisioned email routing rules`, {
+              domain: baseDomain,
+              companyId: ctx.companyId,
+              rulesCount: 2,
+            });
+          } else {
+            console.warn(`⚠️ [SetupAdminConfig] MAILGUN_DOMAIN not set - skipping email routing setup`);
+          }
+        } else if (hasRoutingRules) {
+          console.log(`ℹ️ [SetupAdminConfig] Email routing rules already configured - preserving existing`);
+        }
 
         if (existingDoc.exists) {
-          // Update existing document (merge admin section)
-          await docRef.set({
-            admin: adminConfig
-          }, { merge: true });
-
+          await docRef.set(settingsPayload, { merge: true });
           console.log(`✅ [SetupAdminConfig] Updated existing settings document`);
         } else {
-          // Create new document
           await docRef.set({
-            admin: adminConfig,
+            ...settingsPayload,
             createdAt: new Date(),
-            createdBy: ctx.uid
+            createdBy: ctx.uid,
           });
-
           console.log(`✅ [SetupAdminConfig] Created new settings document`);
         }
 
         console.log(`✅ [SetupAdminConfig] Admin config saved:`, {
           primaryAdminUid: adminConfig.primaryAdminUid,
           adminEmail: adminConfig.adminEmail,
-          enableErrorReporting: adminConfig.enableErrorReporting
+          enableErrorReporting: adminConfig.enableErrorReporting,
         });
 
         return NextResponse.json({
@@ -116,8 +162,8 @@ export async function POST(request: NextRequest) {
             primaryAdminUid: adminConfig.primaryAdminUid,
             adminEmail: adminConfig.adminEmail,
             additionalAdminUids: adminConfig.additionalAdminUids,
-            enableErrorReporting: adminConfig.enableErrorReporting
-          }
+            enableErrorReporting: adminConfig.enableErrorReporting,
+          },
         });
 
       } catch (error) {
