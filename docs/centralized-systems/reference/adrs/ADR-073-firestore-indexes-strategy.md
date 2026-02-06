@@ -113,11 +113,61 @@ firebase deploy --only firestore:indexes
 
 ---
 
+## Email Ingestion Queue Indexes (Added 2026-02-06)
+
+### Incident Context
+
+10 emails κολλήθηκαν ως "pending" στην ουρά `email_ingestion_queue` επειδή ΕΛΕΙΠΑΝ οι composite indexes. Η `after()` function πιανε τα errors σιωπηλά.
+
+### Required Indexes
+
+```json
+// INDEX 1: Worker batch processing - claimNextQueueItems()
+// Query: .where('status', '==', 'pending').orderBy('createdAt', 'asc')
+{
+  "collectionGroup": "email_ingestion_queue",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "status", "order": "ASCENDING" },
+    { "fieldPath": "createdAt", "order": "ASCENDING" }
+  ]
+}
+
+// INDEX 2: Deduplication check - enqueueInboundEmail()
+// Query: .where('providerMessageId', '==', id).where('provider', '==', 'mailgun')
+{
+  "collectionGroup": "email_ingestion_queue",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "providerMessageId", "order": "ASCENDING" },
+    { "fieldPath": "provider", "order": "ASCENDING" }
+  ]
+}
+```
+
+### Deployment Command
+
+```bash
+firebase deploy --only firestore:indexes --project pagonis-87766
+```
+
+### Critical Rules
+
+1. **ΠΟΤΕ μην αφαιρείς indexes** χωρίς να ελέγξεις ποιες queries τους χρησιμοποιούν
+2. **ΠΟΤΕ μην αλλάζεις field order** στους indexes - πρέπει να ταιριάζει με τη query
+3. **Μετά από deploy** - οι indexes χρειάζονται 2-5 λεπτά να χτιστούν
+4. **Η `FAILED_PRECONDITION` εξαφανίζεται** πριν ο index γεμίσει πλήρως - μπορεί να επιστρέφει κενά αποτελέσματα
+
+---
+
 ## Related
 
-- `EnterpriseSecurityService.ts` - Uses these indexes
-- `firestore.indexes.json` - Index definitions file
+- `EnterpriseSecurityService.ts` - Uses security indexes
+- `src/services/communications/inbound/email-queue-service.ts` - Uses email queue indexes
+- `src/server/comms/workers/email-ingestion-worker.ts` - Worker that depends on indexes
+- `firestore.indexes.json` - Index definitions file (SSoT)
 - ADR-063 - Company Isolation via Custom Claims
+- ADR-071 - Enterprise Email Webhook Queue System
 
 ---
 

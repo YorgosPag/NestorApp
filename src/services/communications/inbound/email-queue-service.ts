@@ -242,6 +242,9 @@ export async function enqueueInboundEmail(params: {
     const queueCollection = adminDb.collection(COLLECTIONS.EMAIL_INGESTION_QUEUE);
 
     // Step 2: Check for duplicate (idempotency)
+    // CRITICAL: This query REQUIRES a Firestore composite index on (providerMessageId ASC, provider ASC)
+    // Index defined in: firestore.indexes.json → email_ingestion_queue
+    // See: ADR-071, ADR-073
     const duplicateCheck = await queueCollection
       .where('providerMessageId', '==', params.providerMessageId)
       .where('provider', '==', params.provider)
@@ -455,6 +458,11 @@ export async function claimNextQueueItems(
 
   try {
     // Query for pending items, oldest first
+    // CRITICAL: This query REQUIRES a Firestore composite index on (status ASC, createdAt ASC)
+    // Without it: FAILED_PRECONDITION error, silent failure in after() → emails stuck as "pending"
+    // Index defined in: firestore.indexes.json → email_ingestion_queue
+    // Deploy: firebase deploy --only firestore:indexes --project pagonis-87766
+    // See: ADR-071 Production Incident Report (2026-02-06)
     const pendingQuery = await queueCollection
       .where('status', '==', 'pending')
       .orderBy('createdAt', 'asc')

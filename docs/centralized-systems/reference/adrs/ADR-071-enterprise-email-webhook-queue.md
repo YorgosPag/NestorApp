@@ -1,9 +1,9 @@
 # ADR-071: Enterprise Email Webhook Queue System
 
-**Status**: ✅ IMPLEMENTED
-**Date**: 2026-02-05
+**Status**: ✅ IMPLEMENTED & VERIFIED IN PRODUCTION
+**Date**: 2026-02-05 (Updated: 2026-02-06)
 **Category**: Backend Systems
-**Related**: ADR-070 (Email & AI Ingestion System)
+**Related**: ADR-070 (Email & AI Ingestion System), ADR-073 (Firestore Composite Index Strategy)
 
 ---
 
@@ -258,6 +258,97 @@ Items in `dead_letter` status need manual review:
 1. Query Firestore for `status == 'dead_letter'`
 2. Review `lastError` and `retryHistory`
 3. Fix the issue and reset to `pending` or delete
+
+---
+
+---
+
+## Production Incident Report (2026-02-06)
+
+### Incident: Emails Stuck in Queue (10 emails, ALL pending)
+
+**Duration**: ~6 ώρες debugging
+**Impact**: Κανένα email δεν επεξεργάστηκε - 10 emails κολλημένα ως "pending"
+
+### Root Causes (3 αλληλένδετα)
+
+#### 1. Missing MAILGUN_DOMAIN Environment Variable
+- **Πρόβλημα**: Η μεταβλητή `MAILGUN_DOMAIN` δεν υπήρχε στο Vercel
+- **Αποτέλεσμα**: Τα routing rules δεν μπορούσαν να δημιουργηθούν σωστά
+- **Λύση**: Προστέθηκε `MAILGUN_DOMAIN=mg.nestorconstruct.gr`
+
+#### 2. Trailing Newline στο MAILGUN_DOMAIN (ΚΡΙΣΙΜΟ)
+- **Πρόβλημα**: Χρησιμοποιήθηκε `echo` αντί `printf` για pipe στο Vercel CLI
+- **Αποτέλεσμα**: Η τιμή αποθηκεύτηκε ως `mg.nestorconstruct.gr\n` - τα routing patterns γίνονταν `inbound@nestorconstruct.gr\n` που δεν ταίριαζε ποτέ
+- **Λύση**: Χρήση `printf` (χωρίς newline) + `.trim()` στον κώδικα ως defensive measure
+- **ΚΑΝΟΝΑΣ**: **ΠΟΤΕ `echo` για env vars στο Vercel** → πάντα `printf`
+
+#### 3. Missing Firestore Composite Index (ROOT CAUSE)
+- **Πρόβλημα**: Η query `.where('status', '==', 'pending').orderBy('createdAt', 'asc')` στο `email_ingestion_queue` χρειάζεται composite index
+- **Αποτέλεσμα**: Η `claimNextQueueItems()` έσκαγε με `9 FAILED_PRECONDITION` - η `after()` function τον έπιανε σιωπηλά (caught error)
+- **Λύση**: Προστέθηκαν 2 composite indexes στο `firestore.indexes.json` και deploy με Firebase CLI
+- **ΚΑΝΟΝΑΣ**: **ΜΗΝ ΑΓΓΙΖΕΙΣ ΠΟΤΕ τους indexes χωρίς να τρέξεις `firebase deploy --only firestore:indexes`**
+
+### Required Composite Indexes
+
+```json
+// INDEX 1: Worker batch processing (claimNextQueueItems)
+{
+  "collectionGroup": "email_ingestion_queue",
+  "fields": [
+    { "fieldPath": "status", "order": "ASCENDING" },
+    { "fieldPath": "createdAt", "order": "ASCENDING" }
+  ]
+}
+
+// INDEX 2: Deduplication (enqueueInboundEmail)
+{
+  "collectionGroup": "email_ingestion_queue",
+  "fields": [
+    { "fieldPath": "providerMessageId", "order": "ASCENDING" },
+    { "fieldPath": "provider", "order": "ASCENDING" }
+  ]
+}
+```
+
+### Timeline
+
+| Ώρα | Γεγονός |
+|-----|---------|
+| ~12:00 | Πρώτα test emails στάλθηκαν - Mailgun 200 OK αλλά κανένα στη βάση |
+| ~13:00 | Εντοπίστηκε: MAILGUN_DOMAIN δεν υπήρχε στο Vercel |
+| ~13:30 | Προστέθηκε MAILGUN_DOMAIN (με echo - λάθος!) |
+| ~14:00 | Εντοπίστηκε: Trailing newline `\n` στο MAILGUN_DOMAIN |
+| ~14:30 | Διορθώθηκε με printf + .trim() - routing rules OK πλέον |
+| ~15:00 | 10 emails στην ουρά αλλά κανένα δεν processing |
+| ~15:30 | Diagnostic endpoint αποκάλυψε: FAILED_PRECONDITION - missing composite index |
+| ~15:45 | Firebase CLI installed, indexes deployed |
+| ~16:00 | Index built - ΟΛΑ ΤΑ 10 EMAILS PROCESSED SUCCESSFULLY |
+
+### Lessons Learned
+
+1. **Firestore composite indexes**: Κάθε `.where()` + `.orderBy()` σε διαφορετικά πεδία ΑΠΑΙΤΕΙ composite index
+2. **Index build time**: 2-5 λεπτά - η `FAILED_PRECONDITION` εξαφανίζεται πριν ο index γεμίσει πλήρως (κενά αποτελέσματα)
+3. **Silent failures**: Η `after()` function πιάνει τα errors σιωπηλά - ο diagnostic endpoint ήταν κρίσιμος
+4. **Defensive .trim()**: ΠΑΝΤΑ `.trim()` στα env vars ως defensive measure
+5. **Diagnostic endpoints**: Πολύτιμα για debugging production issues χωρίς code changes
+
+### Diagnostic Endpoint
+
+`GET /api/communications/webhooks/mailgun/inbound` επιστρέφει:
+- **routing**: Rules count, patterns, active status
+- **queue**: Total items, breakdown by status, latest items
+- **batchProcessResult**: Test batch processing (batchSize: 1)
+
+---
+
+### Environment Variables Checklist
+
+| Variable | Purpose | Status |
+|----------|---------|--------|
+| `MAILGUN_WEBHOOK_SIGNING_KEY` | Webhook signature verification | ✅ Set |
+| `MAILGUN_DOMAIN` | Domain for routing rules generation | ✅ Set (mg.nestorconstruct.gr) |
+| `MAILGUN_API_KEY` | Email sending + deferred attachment downloads | ⏳ Pending |
 
 ---
 
