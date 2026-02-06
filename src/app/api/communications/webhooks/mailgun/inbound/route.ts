@@ -415,6 +415,23 @@ export async function GET(): Promise<Response> {
     queueInfo.failed = failed;
     queueInfo.items = items;
 
+    // Try to process batch and capture any errors
+    try {
+      const { processEmailIngestionBatch } = await import('@/server/comms/workers/email-ingestion-worker');
+      const batchResult = await processEmailIngestionBatch({ batchSize: 1 });
+      diagnostic.batchProcessResult = {
+        processed: batchResult.processed,
+        failed: batchResult.failed,
+        recovered: batchResult.recovered,
+      };
+    } catch (batchError) {
+      diagnostic.batchProcessError = batchError instanceof Error ? batchError.message : 'Unknown batch error';
+      // Firestore missing index errors include a URL to create the index
+      if (batchError instanceof Error && batchError.message.includes('index')) {
+        diagnostic.missingIndexUrl = batchError.message;
+      }
+    }
+
   } catch (diagError) {
     diagnostic.error = diagError instanceof Error ? diagError.message : 'Unknown';
   }
