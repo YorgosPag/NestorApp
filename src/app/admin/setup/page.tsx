@@ -259,11 +259,28 @@ export default function AdminSetupPage() {
                 </div>
 
                 {currentConfig.primaryAdminUid === user.uid ? (
-                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                    <p className="text-sm text-green-800">
-                      <CheckCircle2 className="h-4 w-4 inline mr-1" />
-                      Είσαι ο κύριος διαχειριστής. Θα λαμβάνεις τα error notifications!
-                    </p>
+                  <div className="mt-4 space-y-3">
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-sm text-green-800">
+                        <CheckCircle2 className="h-4 w-4 inline mr-1" />
+                        Είσαι ο κύριος διαχειριστής. Θα λαμβάνεις τα error notifications!
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={setupAdmin}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Ενημέρωση...
+                        </>
+                      ) : (
+                        'Ενημέρωση Ρυθμίσεων'
+                      )}
+                    </Button>
                   </div>
                 ) : (
                   <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
