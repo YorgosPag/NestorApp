@@ -9,7 +9,9 @@ import { ProgressCard } from './GeneralTabContent/ProgressCard';
 import { FilesCard } from './GeneralTabContent/FilesCard';
 import { LegalInfoCard } from './GeneralTabContent/LegalInfoCard';
 import { SettingsCard } from './GeneralTabContent/SettingsCard';
+import { CompanySelectorCard } from './GeneralTabContent/CompanySelectorCard';
 import { ProjectSelectorCard } from './GeneralTabContent/ProjectSelectorCard';
+import { BuildingAddressesCard } from './GeneralTabContent/BuildingAddressesCard';
 import type { Building } from '../BuildingsPageContent';
 import { validateForm } from './GeneralTabContent/utils';
 import { BuildingStats } from './BuildingStats';
@@ -147,6 +149,15 @@ export function GeneralTabContent({ building }: { building: Building }) {
         isEditing={isEditing}
         errors={errors}
       />
+      {/* 🏢 ENTERPRISE: Company Selector για σύνδεση Κτιρίου→Εταιρείας */}
+      <CompanySelectorCard
+        buildingId={String(building.id)}
+        currentCompanyId={building.companyId}
+        isEditing={isEditing}
+        onCompanyChanged={(newCompanyId, companyName) => {
+          console.log(`✅ Building ${building.id} linked to company ${companyName} (${newCompanyId})`);
+        }}
+      />
       {/* 🏢 ENTERPRISE: Project Selector για σύνδεση Κτιρίου→Έργου */}
       <ProjectSelectorCard
         buildingId={String(building.id)}
@@ -155,6 +166,14 @@ export function GeneralTabContent({ building }: { building: Building }) {
         onProjectChanged={(newProjectId) => {
           console.log(`✅ Building ${building.id} linked to project ${newProjectId}`);
         }}
+      />
+      {/* 🏢 ENTERPRISE: Multi-address management (ADR-167) */}
+      <BuildingAddressesCard
+        buildingId={String(building.id)}
+        projectId={building.projectId}
+        addresses={building.addresses}
+        legacyAddress={building.address}
+        legacyCity={building.city}
       />
       <TechnicalSpecsCard
         formData={formData}

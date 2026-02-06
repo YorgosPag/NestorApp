@@ -6,7 +6,6 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
-import { getCompanies } from '@/components/building-management/building-services';
 import { AdvancedFiltersPanel, projectFiltersConfig } from '@/components/core/AdvancedFilters';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
@@ -39,6 +38,8 @@ export function ProjectsPageContent() {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
+  // Note: Deep-link tab is read from useProjectsPageState (same useSearchParams instance)
+
   // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
   const { companies, syncBreadcrumb } = useNavigation();
 
@@ -55,6 +56,7 @@ export function ProjectsPageContent() {
     filteredProjects,
     filters,
     setFilters,
+    tabFromUrl,
   } = useProjectsPageState(firestoreProjects || []);
 
   const projectsStats = useProjectsStats(filteredProjects || []);
@@ -266,6 +268,8 @@ export function ProjectsPageContent() {
             viewMode={viewMode}
             // 🏢 ENTERPRISE: Pass edit handler (ADR-087)
             onEditProject={handleEditProject}
+            // 🏢 ENTERPRISE: Deep-link initial tab (building → project addresses)
+            initialTab={tabFromUrl || undefined}
           />
         </ListContainer>
       </PageContainer>

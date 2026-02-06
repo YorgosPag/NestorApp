@@ -19,6 +19,7 @@
  * - Audit logging
  *
  * 🔒 SECURITY:
+ * - Permission: projects:projects:view (GET)
  * - Permission: projects:projects:update (PATCH)
  * - Permission: projects:projects:delete (DELETE)
  * - Tenant isolation: Verifies project ownership before updates
@@ -38,6 +39,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { isRoleBypass } from '@/lib/auth/roles';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -90,6 +92,79 @@ const CACHE_KEY_PREFIX = 'api:projects:list';
 // =============================================================================
 
 export const dynamic = 'force-dynamic';
+
+// =============================================================================
+// GET HANDLER - Get Single Project
+// =============================================================================
+
+/**
+ * GET /api/projects/[projectId]
+ *
+ * Fetch a single project by ID, including addresses array.
+ *
+ * @security Protected with RBAC - projects:projects:view
+ * @security Tenant isolation - only access own company's projects
+ */
+
+interface ProjectGetResponse {
+  project: {
+    id: string;
+    name?: string;
+    title?: string;
+    address?: string;
+    city?: string;
+    addresses?: ProjectAddress[];
+    companyId?: string;
+    status?: string;
+    [key: string]: unknown;
+  };
+}
+
+async function handleGet(
+  request: NextRequest,
+  segmentData: { params: Promise<{ projectId: string }> }
+): Promise<NextResponse> {
+  const { projectId } = await segmentData.params;
+
+  const handler = withAuth<ApiSuccessResponse<ProjectGetResponse>>(
+    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      const adminDb = getAdminFirestore();
+
+      const projectRef = adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId);
+      const projectDoc = await projectRef.get();
+
+      if (!projectDoc.exists) {
+        throw new ApiError(404, 'Project not found');
+      }
+
+      const projectData = projectDoc.data();
+
+      // Tenant isolation: bypass for Super Admin, enforce for regular users
+      const isSuperAdmin = isRoleBypass(ctx.globalRole);
+      if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
+        throw new ApiError(403, 'Access denied - Project not found');
+      }
+      if (isSuperAdmin && projectData?.companyId !== ctx.companyId) {
+        console.log(`🔓 [SUPER_ADMIN] Cross-tenant project view: ${ctx.email} → project ${projectId} (company: ${projectData?.companyId})`);
+      }
+
+      return apiSuccess<ProjectGetResponse>(
+        {
+          project: {
+            id: projectDoc.id,
+            ...projectData,
+          } as ProjectGetResponse['project'],
+        },
+        'Project fetched successfully'
+      );
+    },
+    { permissions: 'projects:projects:view' }
+  );
+
+  return handler(request);
+}
+
+export const GET = withStandardRateLimit(handleGet);
 
 // =============================================================================
 // PATCH HANDLER - Update Project
@@ -156,13 +231,17 @@ async function handleUpdateProject(
 
   const projectData = projectDoc.data();
 
-  // 3. Validate tenant isolation
-  if (projectData?.companyId !== ctx.companyId) {
+  // 3. Validate tenant isolation: bypass for Super Admin, enforce for regular users
+  const isSuperAdmin = isRoleBypass(ctx.globalRole);
+  if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
     console.warn(
       `🚫 [Projects/Update] TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) ` +
       `attempted to update project ${projectId} (company ${projectData?.companyId})`
     );
     throw new ApiError(403, 'Access denied - Project not found');
+  }
+  if (isSuperAdmin && projectData?.companyId !== ctx.companyId) {
+    console.log(`🔓 [SUPER_ADMIN] Cross-tenant project update: ${ctx.email} → project ${projectId} (company: ${projectData?.companyId})`);
   }
 
   // 4. Build update payload
@@ -279,13 +358,17 @@ async function handleDeleteProject(
 
   const projectData = projectDoc.data();
 
-  // 2. Validate tenant isolation
-  if (projectData?.companyId !== ctx.companyId) {
+  // 2. Validate tenant isolation: bypass for Super Admin, enforce for regular users
+  const isSuperAdmin = isRoleBypass(ctx.globalRole);
+  if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
     console.warn(
       `🚫 [Projects/Delete] TENANT ISOLATION VIOLATION: User ${ctx.uid} (company ${ctx.companyId}) ` +
       `attempted to delete project ${projectId} (company ${projectData?.companyId})`
     );
     throw new ApiError(403, 'Access denied - Project not found');
+  }
+  if (isSuperAdmin && projectData?.companyId !== ctx.companyId) {
+    console.log(`🔓 [SUPER_ADMIN] Cross-tenant project delete: ${ctx.email} → project ${projectId} (company: ${projectData?.companyId})`);
   }
 
   // 3. Delete project

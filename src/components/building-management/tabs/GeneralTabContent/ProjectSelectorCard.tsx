@@ -6,10 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { FolderKanban, Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { getProjectsList } from '../../building-services';
+import { getProjectsList, updateBuilding } from '../../building-services';
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -115,7 +112,8 @@ export function ProjectSelectorCard({
     setSaveStatus('idle');
   }, []);
 
-  // 🏢 ENTERPRISE: Save to Firestore
+  // 🏢 ENTERPRISE: Save via API (Admin SDK) — centralized updateBuilding()
+  // FIX (2026-02-06): Replaced direct Firestore write (doc/updateDoc) with Enterprise API
   const handleSave = useCallback(async () => {
     if (!buildingId) {
       console.error('❌ [ProjectSelectorCard] No buildingId provided');
@@ -126,40 +124,40 @@ export function ProjectSelectorCard({
     setSaveStatus('idle');
 
     try {
-      const buildingRef = doc(db, COLLECTIONS.BUILDINGS, buildingId);
-
-      // 🏢 ENTERPRISE: Convert "__none__" back to null for Firestore
       const projectIdToSave = selectedProjectId === '__none__' ? null : selectedProjectId || null;
 
-      await updateDoc(buildingRef, {
+      const result = await updateBuilding(buildingId, {
         projectId: projectIdToSave,
-        updatedAt: new Date().toISOString(),
       });
 
-      console.log(`✅ [ProjectSelectorCard] Building ${buildingId} linked to project ${projectIdToSave}`);
-      setSaveStatus('success');
+      if (result.success) {
+        console.log(`✅ [ProjectSelectorCard] Building ${buildingId} linked to project ${projectIdToSave}`);
+        setSaveStatus('success');
 
-      // 🏢 ENTERPRISE: Dispatch real-time event for Navigation updates
-      RealtimeService.dispatchBuildingProjectLinked({
-        buildingId,
-        previousProjectId: currentProjectId || null,
-        newProjectId: projectIdToSave,
-        timestamp: Date.now(),
-      });
+        // 🏢 ENTERPRISE: Dispatch real-time event for Navigation updates
+        RealtimeService.dispatchBuildingProjectLinked({
+          buildingId,
+          previousProjectId: currentProjectId || null,
+          newProjectId: projectIdToSave,
+          timestamp: Date.now(),
+        });
 
-      if (onProjectChanged && projectIdToSave) {
-        onProjectChanged(projectIdToSave);
+        if (onProjectChanged && projectIdToSave) {
+          onProjectChanged(projectIdToSave);
+        }
+
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } else {
+        console.error('❌ [ProjectSelectorCard] Error:', result.error);
+        setSaveStatus('error');
       }
-
-      // Reset success status after 3 seconds
-      setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
       console.error('❌ [ProjectSelectorCard] Error saving:', error);
       setSaveStatus('error');
     } finally {
       setSaving(false);
     }
-  }, [buildingId, selectedProjectId, onProjectChanged]);
+  }, [buildingId, selectedProjectId, currentProjectId, onProjectChanged]);
 
   // 🏢 ENTERPRISE: Check if value changed (using '__none__' for empty values)
   const hasChanges = selectedProjectId !== (currentProjectId || '__none__');

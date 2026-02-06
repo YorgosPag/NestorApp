@@ -116,6 +116,7 @@ interface BuildingCreatePayload {
   projectId?: string | null;
   companyId?: string;
   company?: string;
+  addresses?: Record<string, unknown>[];  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 }
 
 interface BuildingCreateResponse {
@@ -196,6 +197,7 @@ interface BuildingUpdatePayload {
   completionDate?: string;
   status?: string;
   projectId?: string | null;
+  addresses?: Record<string, unknown>[];  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 }
 
 interface BuildingUpdateResponse {

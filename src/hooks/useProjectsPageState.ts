@@ -9,6 +9,9 @@ export function useProjectsPageState(initialProjects: Project[]) {
   // 🏢 ENTERPRISE: URL parameter handling for contextual navigation
   const searchParams = useSearchParams();
   const projectIdFromUrl = searchParams.get('projectId');
+  // 🏢 ENTERPRISE: Deep-link tab param (building → project addresses navigation)
+  const tabFromUrl = searchParams.get('tab');
+
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   // 🏢 ENTERPRISE: Added 'grid' view mode for card grid layout (PR: Projects Grid View)
@@ -207,5 +210,7 @@ export function useProjectsPageState(initialProjects: Project[]) {
     // New centralized filter state
     filters,
     setFilters,
+    // 🏢 ENTERPRISE: Deep-link tab param for contextual navigation
+    tabFromUrl,
   };
 }

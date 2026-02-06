@@ -1,7 +1,7 @@
 // 🏢 ENTERPRISE: Import centralized building features registry
 import type { BuildingFeatureKey } from './features';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
-import type { BuildingAddressReference } from '../project/addresses';
+import type { BuildingAddressReference, ProjectAddress } from '../project/addresses';
 
 // Building hierarchy interfaces
 export interface Contact {
@@ -49,7 +49,11 @@ export interface Contact {
     address?: string;
     city?: string;
 
-    // 🏢 ENTERPRISE: Address inheritance system (ADR-167)
+    // 🏢 ENTERPRISE: Multi-address support (ADR-167)
+    /** Direct addresses array - same pattern as Project */
+    addresses?: ProjectAddress[];
+
+    // 🏢 ENTERPRISE: Address inheritance system (ADR-167, future use)
     /** Address configurations - references to project addresses */
     addressConfigs?: BuildingAddressReference[];
     /** Primary address ID from project addresses */

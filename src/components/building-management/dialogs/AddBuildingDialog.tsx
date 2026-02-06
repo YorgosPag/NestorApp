@@ -53,8 +53,11 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // ENTERPRISE: Form state management hook
 import { useBuildingForm, type BuildingStatus, type BuildingCategory } from '../hooks/useBuildingForm';
-// ENTERPRISE: Projects service for dropdown
-import { getProjectsList } from '../building-services';
+// ENTERPRISE: Projects service for dropdown (with company info)
+import { getProjectsList, type ProjectListItem } from '../building-services';
+// ENTERPRISE: Companies service for dropdown (same pattern as AddProjectDialog)
+import { getAllActiveCompanies } from '@/services/companies.service';
+import type { CompanyContact } from '@/types/contacts';
 import type { BuildingType, BuildingPriority, EnergyClass } from '@/types/building/contracts';
 
 // =============================================================================
@@ -129,23 +132,69 @@ export function AddBuildingDialog({
     handleNumberChange,
   } = useBuildingForm({ onBuildingAdded, onOpenChange, companyId, companyName });
 
-  // ENTERPRISE: Projects for dropdown
-  const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
+  // ENTERPRISE: Projects for dropdown (with company info for filtering)
+  const [allProjects, setAllProjects] = useState<ProjectListItem[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
+
+  // ENTERPRISE: Companies for dropdown filter (same pattern as AddProjectDialog)
+  const [companies, setCompanies] = useState<CompanyContact[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(true);
+  const [selectedCompanyFilter, setSelectedCompanyFilter] = useState<string>('');
 
   // ENTERPRISE: Active tab state
   const [activeTab, setActiveTab] = useState('basic');
 
-  // Load projects on mount
+  // ENTERPRISE: Auto-navigate to tab with validation errors
+  // Prevents "silent failure" when required field is in a hidden tab
+  useEffect(() => {
+    const errorFields = Object.keys(errors);
+    if (errorFields.length === 0) return;
+
+    const detailsFields: Array<keyof typeof formData> = [
+      'address', 'city', 'totalArea', 'builtArea', 'floors', 'units',
+      'totalValue', 'startDate', 'completionDate',
+    ];
+    const featuresFields: Array<keyof typeof formData> = [
+      'type', 'priority', 'energyClass',
+    ];
+
+    // Navigate to first tab that has errors
+    const hasBasicError = errorFields.some(f => !detailsFields.includes(f as keyof typeof formData) && !featuresFields.includes(f as keyof typeof formData));
+    const hasDetailsError = errorFields.some(f => detailsFields.includes(f as keyof typeof formData));
+    const hasFeaturesError = errorFields.some(f => featuresFields.includes(f as keyof typeof formData));
+
+    if (hasBasicError) {
+      setActiveTab('basic');
+    } else if (hasDetailsError) {
+      setActiveTab('details');
+    } else if (hasFeaturesError) {
+      setActiveTab('features');
+    }
+  }, [errors, formData]);
+
+  // Load projects + companies on mount
   useEffect(() => {
     if (open) {
       setProjectsLoading(true);
+      setCompaniesLoading(true);
+      setSelectedCompanyFilter('');
+
       getProjectsList()
-        .then(setProjects)
+        .then(setAllProjects)
         .catch(console.error)
         .finally(() => setProjectsLoading(false));
+
+      getAllActiveCompanies()
+        .then(setCompanies)
+        .catch(console.error)
+        .finally(() => setCompaniesLoading(false));
     }
   }, [open]);
+
+  // ENTERPRISE: Filter projects by selected company
+  const filteredProjects = selectedCompanyFilter
+    ? allProjects.filter(p => p.companyId === selectedCompanyFilter)
+    : allProjects;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -204,7 +253,36 @@ export function AddBuildingDialog({
                   </FormInput>
                 </FormField>
 
-                {/* Project */}
+                {/* Company Filter (filters projects dropdown) */}
+                <FormField label={t('dialog.fields.companyFilter')} htmlFor="companyFilter">
+                  <FormInput>
+                    <Select
+                      value={selectedCompanyFilter}
+                      onValueChange={(value) => {
+                        setSelectedCompanyFilter(value === '__all__' ? '' : value);
+                        // Clear project selection when company changes
+                        handleSelectChange('projectId', '');
+                      }}
+                      disabled={loading || companiesLoading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('dialog.fields.companyFilterPlaceholder')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">
+                          {t('dialog.fields.companyFilterPlaceholder')}
+                        </SelectItem>
+                        {companies.map((company) => (
+                          <SelectItem key={company.id} value={company.id!}>
+                            {company.companyName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormInput>
+                </FormField>
+
+                {/* Project (filtered by selected company) */}
                 <FormField label={t('dialog.fields.project')} htmlFor="projectId">
                   <FormInput>
                     <Select
@@ -216,7 +294,7 @@ export function AddBuildingDialog({
                         <SelectValue placeholder={t('dialog.fields.projectPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {projects.map((project) => (
+                        {filteredProjects.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name}
                           </SelectItem>

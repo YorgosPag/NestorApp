@@ -28,10 +28,12 @@ interface ProjectViewSwitchProps {
   viewMode?: ProjectsViewMode;
   /** 🏢 ENTERPRISE: Callback for editing selected project (ADR-087) */
   onEditProject?: (project: Project) => void;
+  /** 🏢 ENTERPRISE: Deep-link initial tab — forwarded to ProjectDetails → UniversalTabsRenderer */
+  initialTab?: string;
 }
 
 export function ProjectViewSwitch({
-  projects, selectedProject, onSelectProject, companies, viewMode = 'list', onEditProject }: ProjectViewSwitchProps) {
+  projects, selectedProject, onSelectProject, companies, viewMode = 'list', onEditProject, initialTab }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for translations
@@ -108,6 +110,7 @@ export function ProjectViewSwitch({
             <ProjectDetails
               project={getProjectWithCompanyName(selectedProject)}
               onEdit={() => onEditProject?.(selectedProject)}
+              initialTab={initialTab}
             />
           )}
         </MobileDetailsSlideIn>
@@ -130,6 +133,7 @@ export function ProjectViewSwitch({
           <ProjectDetails
             project={getProjectWithCompanyName(selectedProject)}
             onEdit={() => onEditProject?.(selectedProject)}
+            initialTab={initialTab}
           />
         )}
       </div>
@@ -172,6 +176,7 @@ export function ProjectViewSwitch({
           <ProjectDetails
             project={getProjectWithCompanyName(selectedProject)}
             onEdit={() => onEditProject?.(selectedProject)}
+            initialTab={initialTab}
           />
         )}
       </MobileDetailsSlideIn>

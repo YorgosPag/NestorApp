@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { TabsOnlyTriggers, TabsContent, type TabDefinition } from "@/components/ui/navigation/TabsComponents";
 import { getIconComponent } from './utils/IconMapping';
 import PlaceholderTab from '../building-management/tabs/PlaceholderTab';
@@ -160,6 +160,17 @@ export function UniversalTabsRenderer<TData = unknown>({
   // 🏢 ENTERPRISE: Track active tab for lazy rendering
   const computedDefaultTab = defaultTab || enabledTabs[0]?.value;
   const [activeTab, setActiveTab] = useState(computedDefaultTab);
+
+
+  // 🏢 ENTERPRISE: Sync activeTab when defaultTab prop changes (deep-link navigation)
+  // Only triggers when defaultTab actually changes value, NOT on user tab clicks
+  const prevDefaultTabRef = useRef(computedDefaultTab);
+  useEffect(() => {
+    if (defaultTab && defaultTab !== prevDefaultTabRef.current) {
+      prevDefaultTabRef.current = defaultTab;
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab]);
 
   // Sort by order
   const sortedTabs = enabledTabs.sort((a, b) => {

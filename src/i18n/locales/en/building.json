@@ -1135,6 +1135,18 @@
     },
     "view": "View"
   },
+  "companySelector": {
+    "title": "Link to Company",
+    "label": "Belongs to Company",
+    "placeholder": "Select company...",
+    "noCompany": "No company",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Building linked to company!",
+    "error": "Error saving",
+    "loading": "Loading companies...",
+    "currentCompany": "Current company:"
+  },
   "projectSelector": {
     "title": "Link to Project",
     "label": "Belongs to Project",
@@ -1378,6 +1390,8 @@
     "fields": {
       "name": "Building Name",
       "namePlaceholder": "Enter building name...",
+      "companyFilter": "Company",
+      "companyFilterPlaceholder": "All companies",
       "project": "Project",
       "projectPlaceholder": "Select project...",
       "status": "Status",
@@ -1415,6 +1429,85 @@
     "messages": {
       "success": "Building created successfully!",
       "error": "Error creating building. Please try again."
+    }
+  },
+  "address": {
+    "types": {
+      "site": "Site",
+      "entrance": "Entrance",
+      "delivery": "Delivery",
+      "legal": "Legal",
+      "postal": "Postal",
+      "billing": "Billing",
+      "correspondence": "Correspondence",
+      "other": "Other"
+    },
+    "blockSides": {
+      "north": "North",
+      "south": "South",
+      "east": "East",
+      "west": "West",
+      "northeast": "Northeast",
+      "northwest": "Northwest",
+      "southeast": "Southeast",
+      "southwest": "Southwest",
+      "corner": "Corner",
+      "internal": "Internal"
+    },
+    "fields": {
+      "street": "Street",
+      "number": "Number",
+      "city": "City",
+      "postalCode": "Postal Code",
+      "region": "Region",
+      "country": "Country",
+      "label": "Label",
+      "blockSide": "Block Side",
+      "cadastralCode": "Cadastral Code",
+      "municipality": "Municipality",
+      "neighborhood": "Neighborhood",
+      "coordinates": "Coordinates"
+    },
+    "labels": {
+      "title": "Building Addresses",
+      "primary": "Primary",
+      "secondary": "Secondary Address",
+      "addAddress": "New Address",
+      "editAddress": "Edit Address",
+      "removeAddress": "Remove Address",
+      "inheritFromProject": "Inherit from Project",
+      "primaryAddress": "Primary Address",
+      "additionalAddresses": "Additional Addresses",
+      "multipleEntrances": "Multiple Entrances",
+      "setPrimary": "Set as primary",
+      "noAddresses": "No addresses",
+      "addFirstAddress": "Add at least one address for the building",
+      "primaryUpdated": "Primary address updated!",
+      "addressAdded": "Address added successfully!",
+      "addressUpdated": "Address updated successfully!",
+      "addressDeleted": "Address deleted successfully!",
+      "cannotDeleteLast": "Cannot delete the last address!",
+      "confirmDelete": "Are you sure you want to delete this address?",
+      "saveError": "Error saving address",
+      "loadingProjectAddresses": "Loading project addresses...",
+      "projectNoAddresses": "Project has no registered addresses",
+      "projectNoAddressesHint": "Add addresses to the project first, so you can select them for the building",
+      "selectFromProject": "Select which project addresses apply to this building:",
+      "noAddressSelected": "No address selected. Please select at least one address for the building.",
+      "addressRemoved": "Address unlinked from building",
+      "addressLinked": "Address linked to building!",
+      "projectPrimary": "Project Primary",
+      "goToProjectAddresses": "Add Project Addresses"
+    },
+    "validation": {
+      "streetRequired": "Street is required",
+      "cityRequired": "City is required",
+      "postalCodeRequired": "Postal code is required",
+      "countryRequired": "Country is required",
+      "exactlyOnePrimary": "There must be exactly one primary address",
+      "uniqueIds": "Address IDs must be unique",
+      "noDuplicateRefs": "Duplicate address references are not allowed",
+      "projectAddressIdRequired": "Project address ID is required when inheriting from project"
     }
   },
   "error": {

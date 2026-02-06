@@ -352,16 +352,10 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
 
     try {
-      // 🌐 API CALL
-      const response = await fetch(
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const children = await apiClient.get<readonly TChild[]>(
         `/api/relationships/children?parentType=${parentType}&parentId=${parentId}&childType=${childType}`
       );
-
-      if (!response.ok) {
-        throw new Error(`Failed to get children: ${response.statusText}`);
-      }
-
-      const children: readonly TChild[] = await response.json();
 
       // 💾 CACHE RESULT
       if (useCache) {
@@ -403,16 +397,10 @@ export function useEnterpriseRelationships(): UseEnterpriseRelationshipsResult {
     setState(prevState => ({ ...prevState, loading: true, error: null }));
 
     try {
-      // 🌐 API CALL
-      const response = await fetch(
+      // 🏢 ENTERPRISE: Use centralized API client with automatic authentication
+      const parent = await apiClient.get<TParent | null>(
         `/api/relationships/parent?childType=${childType}&childId=${childId}&parentType=${parentType}`
       );
-
-      if (!response.ok) {
-        throw new Error(`Failed to get parent: ${response.statusText}`);
-      }
-
-      const parent: TParent | null = await response.json();
 
       // 💾 CACHE RESULT
       if (useCache) {
