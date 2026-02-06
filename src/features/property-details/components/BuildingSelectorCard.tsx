@@ -28,6 +28,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { RealtimeService } from '@/services/realtime';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -93,6 +94,7 @@ export function BuildingSelectorCard({
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
+  const typography = useTypography();
 
   // 🏢 ENTERPRISE: State management - Buildings
   const [buildings, setBuildings] = useState<BuildingOption[]>([]);
@@ -311,7 +313,7 @@ export function BuildingSelectorCard({
   return (
     <Card className={cn(quick.card, colors.bg.card)}>
       <CardHeader className="!p-2 flex flex-col space-y-2">
-        <CardTitle className={`flex items-center ${spacing.gap.sm}`}>
+        <CardTitle className={cn('flex items-center', spacing.gap.sm, typography.card.titleCompact)}>
           <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
           {t('buildingSelector.title')}
         </CardTitle>

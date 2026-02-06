@@ -10,6 +10,8 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { ConfigurationAPI } from '@/core/configuration';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -63,13 +65,14 @@ export function ContributorsTab() {
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
+  const typography = useTypography();
   const { contributors, isLoading, error } = useContributors();
 
   if (error) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{t('contributorsTab.loadError')}</CardTitle>
+          <CardTitle className={typography.card.titleCompact}>{t('contributorsTab.loadError')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p>{t('contributorsTab.loadErrorMessage')} {error}</p>
@@ -84,7 +87,7 @@ export function ContributorsTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">{t('contributorsTab.title')}</CardTitle>
+              <CardTitle className={typography.card.titleCompact}>{t('contributorsTab.title')}</CardTitle>
               <CardDescription>{t('contributorsTab.description')}</CardDescription>
             </div>
             <Button>

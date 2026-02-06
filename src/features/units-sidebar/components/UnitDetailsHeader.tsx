@@ -1,14 +1,10 @@
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { PropertyBadge } from '@/core/badges';
-import type { PropertyStatus } from '@/core/types/BadgeTypes';
-import { Eye, Pencil } from 'lucide-react';
+import { Pencil, Save, X } from 'lucide-react';
 import { EntityDetailsHeader } from '@/core/entity-headers';
-import { cn } from '@/lib/utils';
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { Property } from '@/types/property-viewer';
@@ -16,18 +12,39 @@ import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: Centralized Unit Icon & Color
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
 
-// Removed hardcoded getStatusColor and getStatusLabel functions - using centralized UnitBadge instead
-
 interface UnitDetailsHeaderProps {
   unit: Property | null;
   /** 🏢 ENTERPRISE: Edit mode state - Pattern A (entity header) */
   isEditMode?: boolean;
-  /** 🏢 ENTERPRISE: Toggle edit mode callback */
+  /** 🏢 ENTERPRISE: Toggle edit mode callback (enters edit mode) */
   onToggleEditMode?: () => void;
+  /** 🏢 ENTERPRISE: Exit edit mode callback (cancel without save) */
+  onExitEditMode?: () => void;
 }
 
-export function UnitDetailsHeader({ unit, isEditMode = false, onToggleEditMode }: UnitDetailsHeaderProps) {
+export function UnitDetailsHeader({
+  unit,
+  isEditMode = false,
+  onToggleEditMode,
+  onExitEditMode,
+}: UnitDetailsHeaderProps) {
   const { t } = useTranslation('units');
+
+  // 🏢 ENTERPRISE: Header Save — programmatically submits the UnitFieldsBlock form
+  const handleHeaderSave = useCallback(() => {
+    const form = document.getElementById('unit-fields-form') as HTMLFormElement | null;
+    if (form) {
+      form.requestSubmit();
+    } else {
+      // Fallback: just exit edit mode if form not found
+      onExitEditMode?.();
+    }
+  }, [onExitEditMode]);
+
+  // 🏢 ENTERPRISE: Header Cancel — exits edit mode (form resets via onExitEditMode)
+  const handleHeaderCancel = useCallback(() => {
+    onExitEditMode?.();
+  }, [onExitEditMode]);
 
   // Empty State - No unit selected
   if (!unit) {
@@ -44,6 +61,33 @@ export function UnitDetailsHeader({ unit, isEditMode = false, onToggleEditMode }
     );
   }
 
+  // 🏢 ENTERPRISE: Actions change based on edit mode
+  // Normal mode: "Επεξεργασία" button
+  // Edit mode: "Αποθήκευση" (green) + "Ακύρωση" (outline)
+  const actions = isEditMode
+    ? [
+        {
+          label: t('buildingSelector.save', { defaultValue: 'Αποθήκευση' }),
+          onClick: handleHeaderSave,
+          icon: Save,
+          className: 'bg-green-600 hover:bg-green-700 text-white',
+        },
+        {
+          label: t('dialog.cancel', { ns: 'common', defaultValue: 'Ακύρωση' }),
+          onClick: handleHeaderCancel,
+          icon: X,
+          variant: 'outline' as const,
+        },
+      ]
+    : [
+        {
+          label: t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }),
+          onClick: () => onToggleEditMode?.(),
+          icon: Pencil,
+          className: `bg-gradient-to-r from-amber-500 to-orange-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`,
+        },
+      ];
+
   // Selected State - Unit is selected
   return (
     <>
@@ -52,25 +96,7 @@ export function UnitDetailsHeader({ unit, isEditMode = false, onToggleEditMode }
         <EntityDetailsHeader
           icon={UnitIcon}
           title={unit.name}
-          actions={[
-            // 🏢 ENTERPRISE: Primary Edit action in entity header (Pattern A - Fortune 500)
-            {
-              label: isEditMode
-                ? t('navigation.actions.view.label', { defaultValue: 'Τέλος Επεξεργασίας' })
-                : t('navigation.actions.edit.label', { defaultValue: 'Επεξεργασία' }),
-              onClick: () => onToggleEditMode?.(),
-              icon: Pencil,
-              className: isEditMode
-                ? 'bg-green-600 hover:bg-green-700 text-white'
-                : `bg-gradient-to-r from-amber-500 to-orange-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
-            },
-            {
-              label: t('details.showUnit'),
-              onClick: () => console.log('Show unit details'),
-              icon: Eye,
-              className: `bg-gradient-to-r from-blue-500 to-purple-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
-            }
-          ]}
+          actions={actions}
           variant="detailed"
         />
       </div>

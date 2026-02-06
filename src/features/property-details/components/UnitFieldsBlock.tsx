@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Icons from lucide + centralized entity colors
 import { NAVIGATION_ACTIONS, NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import {
-  Bed, Bath, Compass, Wrench, Zap, Save, X,
+  Bed, Bath, Compass, Wrench, Zap,
   Ruler, Thermometer, Snowflake, Home, Shield, Flame
 } from 'lucide-react';
 
@@ -358,13 +358,13 @@ export function UnitFieldsBlock({
               Single "Edit details" button in PropertyMeta controls all fields */}
         </header>
 
-        {/* Content */}
-        {isEditing ? (
-          // Edit Mode
-          <form
-            className={spacing.spaceBetween.sm}
-            onSubmit={(e) => { e.preventDefault(); handleSave(); }}
-          >
+        {/* Content — 🏢 ENTERPRISE: Same layout in View & Edit mode (Salesforce/SAP pattern)
+            Fields are disabled when not editing. No layout shift between modes. */}
+        <form
+          id={isEditing ? 'unit-fields-form' : undefined}
+          className={spacing.spaceBetween.sm}
+          onSubmit={(e) => { e.preventDefault(); if (isEditing) handleSave(); }}
+        >
             {/* ═══════════════════════════════════════════════════════════════
                 🏢 ENTERPRISE: NAME & DESCRIPTION (Unit Identity)
             ═══════════════════════════════════════════════════════════════ */}
@@ -381,6 +381,7 @@ export function UnitFieldsBlock({
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  disabled={!isEditing}
                   className="h-8 text-sm"
                   placeholder={t('fields.identity.namePlaceholder', { defaultValue: 'π.χ. Διαμέρισμα Α1' })}
                 />
@@ -395,7 +396,11 @@ export function UnitFieldsBlock({
                   id="unit-description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full h-20 text-sm px-3 py-2 rounded-md border border-input bg-background resize-none"
+                  disabled={!isEditing}
+                  className={cn(
+                    'w-full h-20 text-sm px-3 py-2 rounded-md border border-input bg-background resize-none',
+                    !isEditing && 'disabled:cursor-default disabled:opacity-70'
+                  )}
                   placeholder={t('fields.identity.descriptionPlaceholder', { defaultValue: 'Προσθέστε περιγραφή για τη μονάδα...' })}
                 />
               </article>
@@ -422,6 +427,7 @@ export function UnitFieldsBlock({
                   max={20}
                   value={formData.bedrooms}
                   onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: parseInt(e.target.value) || 0 }))}
+                  disabled={!isEditing}
                   className={cn('h-8 text-xs mt-1', quick.input)}
                 />
               </article>
@@ -439,13 +445,15 @@ export function UnitFieldsBlock({
                   max={10}
                   value={formData.bathrooms}
                   onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: parseInt(e.target.value) || 0 }))}
+                  disabled={!isEditing}
                   className={cn('h-8 text-xs mt-1', quick.input)}
                 />
               </article>
 
               {/* WC */}
               <article>
-                <Label htmlFor="wc" className="text-xs">
+                <Label htmlFor="wc" className="text-xs flex items-center gap-1">
+                  <Bath className={cn(iconSizes.xs, 'text-sky-500')} />
                   {t('fields.layout.wc')}
                 </Label>
                 <Input
@@ -455,6 +463,7 @@ export function UnitFieldsBlock({
                   max={5}
                   value={formData.wc}
                   onChange={(e) => setFormData(prev => ({ ...prev, wc: parseInt(e.target.value) || 0 }))}
+                  disabled={!isEditing}
                   className={cn('h-8 text-xs mt-1', quick.input)}
                 />
               </article>
@@ -478,6 +487,7 @@ export function UnitFieldsBlock({
                     step={0.1}
                     value={formData.areaGross}
                     onChange={(e) => setFormData(prev => ({ ...prev, areaGross: parseFloat(e.target.value) || 0 }))}
+                    disabled={!isEditing}
                     className={cn('h-8 text-xs mt-1', quick.input)}
                   />
                 </article>
@@ -490,6 +500,7 @@ export function UnitFieldsBlock({
                     step={0.1}
                     value={formData.areaNet}
                     onChange={(e) => setFormData(prev => ({ ...prev, areaNet: parseFloat(e.target.value) || 0 }))}
+                    disabled={!isEditing}
                     className={cn('h-8 text-xs mt-1', quick.input)}
                   />
                 </article>
@@ -502,6 +513,7 @@ export function UnitFieldsBlock({
                     step={0.1}
                     value={formData.areaBalcony}
                     onChange={(e) => setFormData(prev => ({ ...prev, areaBalcony: parseFloat(e.target.value) || 0 }))}
+                    disabled={!isEditing}
                     className={cn('h-8 text-xs mt-1', quick.input)}
                   />
                 </article>
@@ -514,6 +526,7 @@ export function UnitFieldsBlock({
                     step={0.1}
                     value={formData.areaTerrace}
                     onChange={(e) => setFormData(prev => ({ ...prev, areaTerrace: parseFloat(e.target.value) || 0 }))}
+                    disabled={!isEditing}
                     className={cn('h-8 text-xs mt-1', quick.input)}
                   />
                 </article>
@@ -526,6 +539,7 @@ export function UnitFieldsBlock({
                     step={0.1}
                     value={formData.areaGarden}
                     onChange={(e) => setFormData(prev => ({ ...prev, areaGarden: parseFloat(e.target.value) || 0 }))}
+                    disabled={!isEditing}
                     className={cn('h-8 text-xs mt-1', quick.input)}
                   />
                 </article>
@@ -549,6 +563,7 @@ export function UnitFieldsBlock({
                       type="button"
                       variant={isSelected ? 'default' : 'outline'}
                       size="sm"
+                      disabled={!isEditing}
                       className="h-7 px-2 text-xs"
                       onClick={() => toggleArrayItem('orientations', orientation)}
                     >
@@ -571,6 +586,7 @@ export function UnitFieldsBlock({
                 <Select
                   value={formData.condition}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, condition: value }))}
+                  disabled={!isEditing}
                 >
                   <SelectTrigger id="condition" className="h-8 text-xs mt-1">
                     <SelectValue placeholder={t('condition.sectionTitle')} />
@@ -593,6 +609,7 @@ export function UnitFieldsBlock({
                 <Select
                   value={formData.energyClass}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, energyClass: value }))}
+                  disabled={!isEditing}
                 >
                   <SelectTrigger id="energyClass" className="h-8 text-xs mt-1">
                     <SelectValue placeholder={t('energy.class')} />
@@ -625,6 +642,7 @@ export function UnitFieldsBlock({
                   <Select
                     value={formData.heatingType}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, heatingType: value }))}
+                    disabled={!isEditing}
                   >
                     <SelectTrigger id="heatingType" className="h-8 text-xs mt-1">
                       <SelectValue placeholder={t('systems.heating.label')} />
@@ -647,6 +665,7 @@ export function UnitFieldsBlock({
                   <Select
                     value={formData.coolingType}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, coolingType: value }))}
+                    disabled={!isEditing}
                   >
                     <SelectTrigger id="coolingType" className="h-8 text-xs mt-1">
                       <SelectValue placeholder={t('systems.cooling.label')} />
@@ -685,6 +704,7 @@ export function UnitFieldsBlock({
                         variant={isSelected ? 'default' : 'outline'}
                         size="sm"
                         className="h-7 px-2 text-xs"
+                        disabled={!isEditing}
                         onClick={() => toggleArrayItem('flooring', floor)}
                       >
                         {t(`finishes.flooring.${floor}`)}
@@ -701,6 +721,7 @@ export function UnitFieldsBlock({
                   <Select
                     value={formData.windowFrames}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, windowFrames: value }))}
+                    disabled={!isEditing}
                   >
                     <SelectTrigger id="windowFrames" className="h-8 text-xs mt-1">
                       <SelectValue placeholder={t('finishes.frames.label')} />
@@ -720,6 +741,7 @@ export function UnitFieldsBlock({
                   <Select
                     value={formData.glazing}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, glazing: value }))}
+                    disabled={!isEditing}
                   >
                     <SelectTrigger id="glazing" className="h-8 text-xs mt-1">
                       <SelectValue placeholder={t('finishes.glazing.label')} />
@@ -758,6 +780,7 @@ export function UnitFieldsBlock({
                         variant={isSelected ? 'default' : 'outline'}
                         size="sm"
                         className="h-7 px-2 text-xs"
+                        disabled={!isEditing}
                         onClick={() => toggleArrayItem('interiorFeatures', feature)}
                       >
                         {t(`features.interior.${feature}`)}
@@ -780,6 +803,7 @@ export function UnitFieldsBlock({
                         variant={isSelected ? 'default' : 'outline'}
                         size="sm"
                         className="h-7 px-2 text-xs"
+                        disabled={!isEditing}
                         onClick={() => toggleArrayItem('securityFeatures', feature)}
                       >
                         {t(`features.security.${feature}`)}
@@ -790,153 +814,10 @@ export function UnitFieldsBlock({
               </div>
             </fieldset>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                ACTIONS (Save / Cancel)
-            ═══════════════════════════════════════════════════════════════ */}
-            <footer className={`flex justify-end ${spacing.gap.sm}`}>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleCancel}
-                disabled={isSaving}
-              >
-                <X className={cn(iconSizes.xs, spacing.margin.right.sm)} />
-                {t('dialog.cancel', { ns: 'common', defaultValue: 'Ακύρωση' })}
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSaving}
-              >
-                <Save className={cn(iconSizes.xs, spacing.margin.right.sm)} />
-                {isSaving ? '...' : t('buildingSelector.save', { defaultValue: 'Αποθήκευση' })}
-              </Button>
-            </footer>
+            {/* 🏢 ENTERPRISE: Save/Cancel actions moved to UnitDetailsHeader (single source)
+                The header's Save button triggers this form via requestSubmit('unit-fields-form')
+                The header's Cancel button calls onExitEditMode which resets form state */}
           </form>
-        ) : (
-          // ═══════════════════════════════════════════════════════════════
-          // VIEW MODE - 🏢 ENTERPRISE: Always show placeholders (Fortune 500 pattern)
-          // ═══════════════════════════════════════════════════════════════
-          <dl className={spacing.spaceBetween.sm}>
-            {/* Layout (Bedrooms, Bathrooms, WC) - Always visible */}
-            <div className={`flex flex-wrap ${spacing.gap.md} text-xs`}>
-              <div className="flex items-center gap-1">
-                <dt className="sr-only">{t('fields.layout.bedrooms')}</dt>
-                <Bed className={cn(iconSizes.xs, 'text-violet-600')} />
-                <dd>{(property.layout?.bedrooms ?? 0) > 0 ? property.layout?.bedrooms : '—'}</dd>
-              </div>
-              <div className="flex items-center gap-1">
-                <dt className="sr-only">{t('fields.layout.bathrooms')}</dt>
-                <Bath className={cn(iconSizes.xs, 'text-cyan-600')} />
-                <dd>{(property.layout?.bathrooms ?? 0) > 0 ? property.layout?.bathrooms : '—'}</dd>
-              </div>
-              <div className="flex items-center gap-1">
-                <dt className="sr-only">{t('fields.layout.wc')}</dt>
-                <dd>{(property.layout?.wc ?? 0) > 0 ? `${property.layout?.wc} WC` : '— WC'}</dd>
-              </div>
-            </div>
-
-            {/* Areas - Always visible */}
-            <div className={`flex flex-wrap ${spacing.gap.md} text-xs`}>
-              <div className="flex items-center gap-1">
-                <dt className="sr-only">{t('fields.areas.gross')}</dt>
-                <Ruler className={cn(iconSizes.xs, NAVIGATION_ENTITIES.area.color)} />
-                <dd>{(property.areas?.gross ?? 0) > 0 ? `${property.areas?.gross} τ.μ.` : '— τ.μ.'}</dd>
-              </div>
-              {(property.areas?.net ?? 0) > 0 && (
-                <dd className="text-muted-foreground">({t('fields.areas.net')}: {property.areas?.net})</dd>
-              )}
-              {(property.areas?.balcony ?? 0) > 0 && (
-                <dd className="text-muted-foreground">{t('fields.areas.balcony')}: {property.areas?.balcony}</dd>
-              )}
-            </div>
-
-            {/* Orientations - Always visible */}
-            <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
-              <dt className="flex items-center gap-1">
-                <Compass className={cn(iconSizes.xs, 'text-amber-600')} />
-              </dt>
-              <dd>
-                {(property.orientations?.length ?? 0) > 0
-                  ? property.orientations?.map(o => t(`orientation.short.${o}`)).join(', ')
-                  : '—'}
-              </dd>
-            </div>
-
-            {/* Condition & Energy - Always visible */}
-            <div className={`flex flex-wrap ${spacing.gap.md} text-xs`}>
-              <div className="flex items-center gap-1">
-                <dt className="flex items-center gap-1">
-                  <Wrench className={cn(iconSizes.xs, 'text-orange-600')} />
-                </dt>
-                <dd>{property.condition ? t(`condition.${property.condition}`) : '—'}</dd>
-              </div>
-              <div className="flex items-center gap-1">
-                <dt className="flex items-center gap-1">
-                  <Zap className={cn(iconSizes.xs, 'text-green-600')} />
-                </dt>
-                <dd className="font-medium">{property.energy?.class || '—'}</dd>
-              </div>
-            </div>
-
-            {/* Systems - Always visible */}
-            <div className={`flex flex-wrap ${spacing.gap.md} text-xs`}>
-              <div className="flex items-center gap-1">
-                <Flame className={cn(iconSizes.xs, 'text-orange-500')} />
-                <dd>{property.systemsOverride?.heatingType ? t(`systems.heating.${property.systemsOverride.heatingType}`) : '—'}</dd>
-              </div>
-              <div className="flex items-center gap-1">
-                <Snowflake className={cn(iconSizes.xs, 'text-blue-500')} />
-                <dd>{property.systemsOverride?.coolingType ? t(`systems.cooling.${property.systemsOverride.coolingType}`) : '—'}</dd>
-              </div>
-            </div>
-
-            {/* Finishes - Always visible */}
-            <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
-              <dt className="flex items-center gap-1">
-                <Home className={cn(iconSizes.xs, 'text-teal-600')} />
-              </dt>
-              <dd>
-                {(property.finishes?.flooring?.length ?? 0) > 0
-                  ? property.finishes?.flooring?.map(f => t(`finishes.flooring.${f}`)).join(', ')
-                  : '—'}
-              </dd>
-            </div>
-
-            {/* Interior Features - Always visible */}
-            <div className={`flex flex-wrap ${spacing.gap.sm} text-xs`}>
-              <dt className="sr-only">{t('features.interior.label')}</dt>
-              {(property.interiorFeatures?.length ?? 0) > 0 ? (
-                property.interiorFeatures?.map(feature => (
-                  <span key={feature} className="bg-muted px-2 py-0.5 rounded text-xs">
-                    {t(`features.interior.${feature}`)}
-                  </span>
-                ))
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </div>
-
-            {/* Security Features - Always visible */}
-            <div className={`flex items-center ${spacing.gap.sm} text-xs`}>
-              <dt className="flex items-center gap-1">
-                <Shield className={cn(iconSizes.xs, 'text-purple-600')} />
-              </dt>
-              <dd className="flex flex-wrap gap-1">
-                {(property.securityFeatures?.length ?? 0) > 0 ? (
-                  property.securityFeatures?.map(feature => (
-                    <span key={feature} className="bg-muted px-2 py-0.5 rounded text-xs">
-                      {t(`features.security.${feature}`)}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-muted-foreground">—</span>
-                )}
-              </dd>
-            </div>
-          </dl>
-        )}
       </section>
     </>
   );

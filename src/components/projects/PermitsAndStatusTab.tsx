@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileText, Settings } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectFormData } from './general-tab/types';
@@ -23,6 +24,7 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
     // 🏢 ENTERPRISE: i18n hook
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
+    const typography = useTypography();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
@@ -40,7 +42,7 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
             <CardHeader className="pb-4">
                 <div className="flex items-center gap-2">
                     <FileText className={`${iconSizes.md} text-primary`} />
-                    <CardTitle className="text-lg">{t('permitsTab.title')}</CardTitle>
+                    <CardTitle className={typography.card.titleCompact}>{t('permitsTab.title')}</CardTitle>
                 </div>
                 <CardDescription>
                     {t('permitsTab.description')}

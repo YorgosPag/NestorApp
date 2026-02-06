@@ -64,6 +64,7 @@ export interface DispatchRequest {
   eventId: string; // Required for idempotency
   entityId?: string;
   entityType?: NotificationEntityType;
+  actions?: Array<{ id: string; label: string; url?: string; destructive?: boolean }>;
 }
 
 /**
@@ -163,6 +164,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     eventId,
     entityId,
     entityType,
+    actions,
   } = request;
 
   // 1. Get event mapping from central registry
@@ -222,6 +224,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     channel: NOTIFICATION_CHANNELS.IN_APP,
     delivery: { ...DEFAULT_DELIVERY },
     source,
+    ...(actions && actions.length > 0 ? { actions } : {}),
     meta: {
       dedupeKey,
       eventType,

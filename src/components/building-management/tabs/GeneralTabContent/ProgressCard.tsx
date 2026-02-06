@@ -7,6 +7,7 @@ import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { TrendingUp } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -21,11 +22,12 @@ export function ProgressCard({ progress }: ProgressCardProps) {
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const typography = useTypography();
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <TrendingUp className={iconSizes.md} />
           {t('tabs.general.progress.title')}
         </CardTitle>

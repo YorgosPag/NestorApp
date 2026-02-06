@@ -7,6 +7,7 @@ import { CustomerInfoCompact } from '@/components/shared/customer-info';
 import { Users, Loader2, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import { useProjectCustomers } from '../../customers-tab/hooks/useProjectCustomers';
 import type { ProjectCustomersTableProps } from "../types";
@@ -41,6 +42,7 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const typography = useTypography();
 
   // 🏢 ENTERPRISE: Lazy loading state
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -63,7 +65,7 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
           className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
           onClick={handleToggleExpand}
         >
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
             <span className="flex items-center gap-2">
               <Users className={iconSizes.md} />
               {t('customers.title')}
@@ -86,7 +88,7 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
           className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
           onClick={handleToggleExpand}
         >
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
             <span className="flex items-center gap-2">
               <Users className={iconSizes.md} />
               {t('customers.title')}
@@ -112,7 +114,7 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
           className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
           onClick={handleToggleExpand}
         >
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
             <span className="flex items-center gap-2">
               <Users className={iconSizes.md} />
               {t('customers.title')}
@@ -141,7 +143,7 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
           className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
           onClick={handleToggleExpand}
         >
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
             <span className="flex items-center gap-2">
               <Users className={iconSizes.md} />
               {t('customers.title')}
@@ -171,7 +173,7 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
         className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
         onClick={handleToggleExpand}
       >
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
           <span className="flex items-center gap-2">
             <Users className={iconSizes.md} />
             {t('customers.title')}

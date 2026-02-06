@@ -6,6 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Settings } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -13,10 +15,11 @@ export function SettingsCard() {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
+  const typography = useTypography();
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <Settings className={iconSizes.md} />
           {t('tabs.general.settings.title')}
         </CardTitle>

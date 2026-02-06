@@ -28,6 +28,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -95,6 +96,7 @@ export function LinkedSpacesCard({
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const spacing = useSpacingTokens();
+  const typography = useTypography();
 
   // 🏢 ENTERPRISE: State management - Available options
   const [parkingOptions, setParkingOptions] = useState<ParkingOption[]>([]);
@@ -350,7 +352,7 @@ export function LinkedSpacesCard({
   return (
     <Card className={cn(quick.card, colors.bg.card)}>
       <CardHeader className="!p-2 flex flex-col space-y-2">
-        <CardTitle className={`flex items-center ${spacing.gap.sm} text-sm`}>
+        <CardTitle className={cn('flex items-center', spacing.gap.sm, typography.card.titleCompact)}>
           <Package className={cn(iconSizes.md, 'text-purple-600')} />
           {t('linkedSpaces.title', { defaultValue: 'Συνδεδεμένοι Χώροι' })}
         </CardTitle>

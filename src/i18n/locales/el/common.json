@@ -334,6 +334,22 @@
       "placeholder": "Αναζήτηση..."
     }
   },
+  "notifications": {
+    "title": "Ειδοποιήσεις",
+    "count": "{{count}} ειδοποιήσεις",
+    "markAllRead": "Ανάγνωση όλων",
+    "markRead": "Αναγνώστηκε",
+    "empty": "Δεν υπάρχουν ειδοποιήσεις",
+    "loading": "Φόρτωση...",
+    "error": "Αποτυχία φόρτωσης",
+    "retry": "Δοκιμή ξανά",
+    "loadMore": "Φόρτωση περισσότερων",
+    "dismiss": "Απόρριψη",
+    "actions": {
+      "view_email": "Προβολή",
+      "view_page": "Προβολή Σελίδας"
+    }
+  },
   "header": {
     "notifications": {
       "title": "Ειδοποιήσεις",

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Briefcase } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
     // 🏢 ENTERPRISE: i18n hook
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
+    const typography = useTypography();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
@@ -33,7 +35,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
             <CardHeader className="pb-4">
                 <div className="flex items-center gap-2">
                     <Briefcase className={`${iconSizes.md} text-primary`} />
-                    <CardTitle className="text-lg">{t('basicInfo.title')}</CardTitle>
+                    <CardTitle className={typography.card.titleCompact}>{t('basicInfo.title')}</CardTitle>
                 </div>
                 <CardDescription>
                     {t('basicInfo.description')}

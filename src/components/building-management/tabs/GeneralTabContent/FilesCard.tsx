@@ -2,9 +2,11 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { FileText, Camera, FileImage, Eye, Download, Trash2 } from 'lucide-react';
@@ -23,6 +25,7 @@ export function FilesCard() {
   const iconSizes = useIconSizes();
   const { createBorder, quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const typography = useTypography();
 
   /**
    * 🏢 ADR-054: Centralized file upload handler
@@ -45,7 +48,7 @@ export function FilesCard() {
     <Card>
       <CardHeader>
         <nav className="flex items-center justify-between" role="toolbar" aria-label="File management tools">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <FileText className={iconSizes.md} />
             {t('tabs.general.files.title')}
           </CardTitle>

@@ -42,6 +42,7 @@ import {
 import { updateBuilding, getProjectAddresses } from '../../building-services';
 import toast from 'react-hot-toast';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
@@ -69,6 +70,7 @@ export function BuildingAddressesCard({
   legacyCity,
 }: BuildingAddressesCardProps) {
   const iconSizes = useIconSizes();
+  const typography = useTypography();
   const { t } = useTranslation('building');
   const router = useRouter();
 
@@ -311,7 +313,7 @@ export function BuildingAddressesCard({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <MapPin className={iconSizes.md} />
             {t('address.labels.title')}
             {selectedCount > 0 && (

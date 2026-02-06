@@ -73,7 +73,7 @@ export function UnitsSidebar({
   const detailsContent = (
     <DetailsContainer
       selectedItem={selectedUnit}
-      header={<UnitDetailsHeader unit={selectedUnit} isEditMode={isEditMode} onToggleEditMode={handleToggleEditMode} />}
+      header={<UnitDetailsHeader unit={selectedUnit} isEditMode={isEditMode} onToggleEditMode={handleToggleEditMode} onExitEditMode={handleExitEditMode} />}
       tabsRenderer={
         <UniversalTabsRenderer
           tabs={unitsTabs.map(convertToUniversalConfig)}

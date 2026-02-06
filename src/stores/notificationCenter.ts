@@ -16,6 +16,7 @@ export type CenterState = {
   ingest: (ns: Notification[]) => void;
   addOrUpdate: (n: Notification) => void;
   markRead: (ids?: string[]) => void;
+  dismiss: (id: string) => void;
   setCursor: (c?: string) => void;
   setStatus: (s: CenterState['status']) => void;
   setError: (e?: string) => void;
@@ -38,6 +39,12 @@ export const useNotificationCenter = create<CenterState>()(devtools((set, get) =
     const items = new Map(s.items);
     let order = [...s.order];
     for (const n of ns) {
+      // Skip dismissed notifications — they should not appear in the UI
+      if (n.delivery.state === 'dismissed') {
+        items.delete(n.id);
+        order = order.filter(id => id !== n.id);
+        continue;
+      }
       items.set(n.id, n);
       if (!order.includes(n.id)) order.unshift(n.id);
     }
@@ -61,6 +68,13 @@ export const useNotificationCenter = create<CenterState>()(devtools((set, get) =
       }
     }
     return { items, unread: recalcUnread(items) };
+  }),
+
+  dismiss: (id) => set((s) => {
+    const items = new Map(s.items);
+    items.delete(id);
+    const order = s.order.filter(oid => oid !== id);
+    return { items, order, unread: recalcUnread(items) };
   }),
 
   setCursor: (c) => set({ cursor: c }),

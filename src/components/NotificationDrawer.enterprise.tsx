@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -12,10 +13,12 @@ import { useNotificationCenter } from '@/stores/notificationCenter';
 import { useTranslation } from '@/i18n';
 import type { Notification, Severity, UserPreferences } from '@/types/notification';
 import { NotificationClient } from '@/api/notificationClient';
-import { markNotificationsAsRead } from '@/services/notificationService';
+import { markNotificationsAsRead, dismissNotification } from '@/services/notificationService';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card } from '@/components/ui/card';
 
 type DrawerState = { isOpen: boolean; open: () => void; close: () => void; };
 
@@ -44,9 +47,10 @@ const colorMap: Record<Severity, string> = {
 export function NotificationDrawer() {
   // 🔐 ENTERPRISE: Wait for auth state before making API calls
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   const { isOpen, close } = useNotificationDrawer();
-  const { items, order, markRead: markReadLocal, status, error: storeError, ingest, setStatus, setError, cursor, setCursor } = useNotificationCenter();
+  const { items, order, markRead: markReadLocal, dismiss: dismissLocal, status, error: storeError, ingest, setStatus, setError, cursor, setCursor } = useNotificationCenter();
 
   // 🏢 ENTERPRISE: Mark as read with Firestore persistence
   const markRead = useCallback(async (ids?: string[]) => {
@@ -68,6 +72,21 @@ export function NotificationDrawer() {
       }
     }
   }, [markReadLocal, order, items]);
+
+  // 🏢 ENTERPRISE: Dismiss notification (hide from panel, keep email record)
+  const handleDismiss = useCallback(async (id: string) => {
+    // 1. Optimistic local removal
+    dismissLocal(id);
+
+    // 2. Persist to Firestore
+    try {
+      await dismissNotification(id);
+    } catch (error) {
+      console.error('[NotificationDrawer] Failed to persist dismiss:', error);
+      // Real-time subscription will sync the correct state
+    }
+  }, [dismissLocal]);
+
   const { t, i18n } = useTranslation('common');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
@@ -148,15 +167,23 @@ export function NotificationDrawer() {
 
   // ✅ ENTERPRISE: Notification action handler (CTAs)
   const handleAction = async (notificationId: string, actionId: string, url?: string) => {
-    if (!clientRef.current) return; // SSR-safe
     try {
-      // If action has a deep link, open it
+      // Navigate to the relevant page
       if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
+        if (url.startsWith('/')) {
+          // Internal URL: in-app navigation + close drawer
+          close();
+          router.push(url);
+        } else {
+          // External URL: open in new tab
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
       }
 
-      // Call server to acknowledge action
-      await clientRef.current.act({ id: notificationId, actionId });
+      // Call server to acknowledge action (non-blocking)
+      if (clientRef.current) {
+        await clientRef.current.act({ id: notificationId, actionId });
+      }
 
       // Mark notification as acted (update local state)
       const notification = items.get(notificationId);
@@ -289,7 +316,7 @@ export function NotificationDrawer() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <ScrollArea type="always" className="flex-1">
           {/* ✅ ENTERPRISE: Error state UI με Retry */}
           {storeError ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-4">
@@ -317,55 +344,83 @@ export function NotificationDrawer() {
               const Icon = iconMap[n.severity];
               const colorClass = colorMap[n.severity];
 
+              {/* Derive navigation URL: actions field first, then source.feature, then title-based detection */}
+              const actionUrl = n.actions?.[0]?.url
+                ?? (n.source?.feature === 'ai-inbox' ? '/admin/ai-inbox' : undefined)
+                ?? (n.title?.toLowerCase().includes('message') ? '/admin/ai-inbox' : undefined);
+
               return (
-                <article
+                <Card
                   key={n.id}
-                  className={`border-b p-4 ${HOVER_BACKGROUND_EFFECTS.ACCENT_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS} ${n.delivery.state !== 'seen' ? 'bg-accent/20' : ''}`}
+                  className={`mx-2 mt-2 first:mt-2 p-3 bg-muted/50 ${HOVER_BACKGROUND_EFFECTS.ACCENT_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS} ${n.delivery.state !== 'seen' ? 'ring-1 ring-primary/40 bg-muted/70' : ''}`}
                 >
-                  <div className="flex items-start gap-3">
+                  {/* Header row: icon + title + dismiss X */}
+                  <div className="flex items-start gap-2">
                     <Icon className={`${iconSizes.md} mt-0.5 flex-shrink-0 ${colorClass}`} />
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-sm mb-1">{n.title}</div>
+                      <div className="font-medium text-sm">{n.title}</div>
                       {n.body && (
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words mt-1">
                           {n.body}
                         </p>
                       )}
-                      <time className="text-xs text-muted-foreground mt-2 block">
+                      <time className="text-xs text-muted-foreground mt-1.5 block">
                         {dateFormatter.format(new Date(n.createdAt))}
                       </time>
-
-                      {/* ✅ ENTERPRISE: Notification Actions (CTAs) */}
-                      {n.actions && n.actions.length > 0 && (
-                        <div className="flex items-center gap-2 mt-3">
-                          {n.actions.map(action => (
-                            <button
-                              key={action.id}
-                              type="button"
-                              onClick={() => handleAction(n.id, action.id, action.url)}
-                              className={`text-xs px-3 py-1.5 rounded-md font-medium ${TRANSITION_PRESETS.STANDARD_COLORS} ${
-                                action.destructive
-                                  ? `bg-red-600 text-white ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`
-                                  : `bg-primary text-primary-foreground ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`
-                              }`}
-                            >
-                              {action.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
+                    {/* Dismiss X button — always visible */}
+                    <button
+                      type="button"
+                      onClick={() => void handleDismiss(n.id)}
+                      className={`p-1.5 rounded-md text-muted-foreground hover:text-foreground ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                      aria-label={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
+                      title={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
+                    >
+                      <X className={iconSizes.sm} />
+                    </button>
+                  </div>
+
+                  {/* Footer row: action buttons */}
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+                    {/* Προβολή button — shows for ALL notifications with a navigation URL */}
+                    {actionUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handleAction(n.id, n.actions?.[0]?.id ?? 'view_email', actionUrl)}
+                        className={`text-xs px-3 py-1.5 rounded-md font-medium ${TRANSITION_PRESETS.STANDARD_COLORS} bg-primary text-primary-foreground ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+                      >
+                        {t('notifications.actions.view_email', { defaultValue: 'View' })}
+                      </button>
+                    )}
+
+                    {/* Additional CTA actions (destructive, etc.) */}
+                    {n.actions && n.actions.length > 1 && n.actions.slice(1).map(action => (
+                      <button
+                        key={action.id}
+                        type="button"
+                        onClick={() => handleAction(n.id, action.id, action.url)}
+                        className={`text-xs px-3 py-1.5 rounded-md font-medium ${TRANSITION_PRESETS.STANDARD_COLORS} ${
+                          action.destructive
+                            ? `bg-red-600 text-white ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`
+                            : `${HOVER_BACKGROUND_EFFECTS.ACCENT}`
+                        }`}
+                      >
+                        {t(`notifications.actions.${action.id}`, { defaultValue: action.label })}
+                      </button>
+                    ))}
+
+                    {/* Mark as read — only for unread */}
                     {n.delivery.state !== 'seen' && (
                       <button
                         type="button"
                         onClick={() => void markRead([n.id])}
-                        className={`text-xs px-2 py-1 rounded-md flex-shrink-0 ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                        className={`text-xs px-2 py-1 rounded-md ml-auto ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       >
                         {t('notifications.markRead', { defaultValue: 'Mark read' })}
                       </button>
                     )}
                   </div>
-                </article>
+                </Card>
               );
             })
           )}
@@ -382,7 +437,7 @@ export function NotificationDrawer() {
               </button>
             </div>
           )}
-        </div>
+        </ScrollArea>
       </aside>
     </>
   );

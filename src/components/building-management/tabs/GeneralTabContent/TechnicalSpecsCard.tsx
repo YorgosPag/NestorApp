@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 import { calculateBuildingRatio, calculateCostPerSqm } from './utils';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
@@ -33,13 +34,14 @@ export function TechnicalSpecsCard({ formData, updateField, isEditing, errors }:
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const typography = useTypography();
   const costPerSqm = calculateCostPerSqm(formData.totalValue, formData.totalArea);
   const buildingRatio = calculateBuildingRatio(formData.builtArea, formData.totalArea);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <Settings className={iconSizes.md} />
           {t('tabs.general.technicalSpecs.title')}
         </CardTitle>

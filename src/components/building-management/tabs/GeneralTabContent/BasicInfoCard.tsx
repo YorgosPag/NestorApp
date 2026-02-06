@@ -10,6 +10,7 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { cn } from '@/lib/utils';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -25,10 +26,11 @@ export function BasicInfoCard({ formData, updateField, isEditing, errors }: Basi
   const { t } = useTranslation('building');
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
+  const typography = useTypography();
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
           {t('tabs.general.basicInfo.title')}
         </CardTitle>

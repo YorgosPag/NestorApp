@@ -1,49 +1,57 @@
 {
-  "backupId": "backup-2026-02-06-deep-link-building-to-project",
-  "timestamp": "2026-02-06T17:40:00+02:00",
+  "backupId": "backup-2026-02-06-units-inbox-email-pipeline",
+  "timestamp": "2026-02-06T23:30:00+02:00",
   "category": "FEATURE",
-  "shortDescription": "Deep-link navigation: Building Addresses → Project Locations tab",
-  "problem": "Όταν ένα κτίριο ανήκε σε έργο χωρίς διευθύνσεις, ο χρήστης έπρεπε να πλοηγηθεί χειροκίνητα: Έργα → βρες έργο → καρτέλα Τοποθεσίες. Πολλά βήματα χωρίς λόγο.",
-  "cause": "Δεν υπήρχε contextual deep-link button στο empty state της BuildingAddressesCard για άμεση πλοήγηση στο parent project.",
+  "shortDescription": "Server-side unit creation, AI Inbox realtime updates & email pipeline docs",
+  "problem": "Χρειάζονταν τρία σημαντικά features: (1) Server-side δημιουργία units με validation, (2) Realtime updates στο AI Inbox χωρίς manual refresh, (3) Ενημέρωση email pipeline documentation μετά την ολοκλήρωση του pipeline.",
+  "cause": "Τα units δημιουργούνταν client-side χωρίς server validation, το AI Inbox δεν είχε realtime Firestore listener, και τα ADR-070/071 χρειάζονταν ενημέρωση μετά το operational status.",
   "filesChanged": [
+    "BACKUP_SUMMARY.json",
+    "docs/centralized-systems/reference/adr-index.md",
+    "docs/centralized-systems/reference/adrs/ADR-070-email-ai-ingestion-system.md",
+    "docs/centralized-systems/reference/adrs/ADR-071-enterprise-email-webhook-queue.md",
+    "docs/centralized-systems/reference/adrs/ADR-078-server-side-unit-creation.md",
+    "docs/centralized-systems/reference/adrs/ADR-079-ai-inbox-realtime-updates.md",
     "firestore.indexes.json",
     "local_ToDo_2.txt",
-    "src/app/api/buildings/route.ts",
-    "src/app/api/projects/[projectId]/route.ts",
-    "src/components/building-management/building-services.ts",
-    "src/components/building-management/dialogs/AddBuildingDialog.tsx",
-    "src/components/building-management/tabs/GeneralTabContent.tsx",
-    "src/components/building-management/tabs/GeneralTabContent/BuildingAddressesCard.tsx",
-    "src/components/building-management/tabs/GeneralTabContent/CompanySelectorCard.tsx",
-    "src/components/building-management/tabs/GeneralTabContent/ProjectSelectorCard.tsx",
-    "src/components/generic/UniversalTabsRenderer.tsx",
-    "src/components/projects/ProjectViewSwitch.tsx",
-    "src/components/projects/project-details.tsx",
-    "src/components/projects/projects-page-content.tsx",
-    "src/hooks/useProjectsPageState.ts",
-    "src/i18n/locales/el/building.json",
-    "src/i18n/locales/en/building.json",
-    "src/services/relationships/hooks/useEnterpriseRelationships.ts",
-    "src/types/building/contracts.ts"
+    "src/app/admin/ai-inbox/AIInboxClient.tsx",
+    "src/app/api/units/create/route.ts",
+    "src/app/units/page.tsx",
+    "src/components/admin/ai-inbox/AIInboxHeader.tsx",
+    "src/components/units/dialogs/AddUnitDialog.tsx",
+    "src/components/units/hooks/useUnitForm.ts",
+    "src/contexts/WebSocketContext.tsx",
+    "src/features/property-details/components/LinkedSpacesCard.tsx",
+    "src/features/units-sidebar/UnitsSidebar.tsx",
+    "src/hooks/inbox/index.ts",
+    "src/hooks/inbox/useRealtimeTriageCommunications.ts",
+    "src/i18n/locales/el/units.json",
+    "src/i18n/locales/en/units.json",
+    "src/lib/api/enterprise-api-client.ts",
+    "src/lib/auth/roles.ts",
+    "src/lib/auth/types.ts",
+    "src/services/units.service.ts"
   ],
   "solution": {
-    "phase1": "Προσθήκη button 'Προσθήκη Διευθύνσεων Έργου' στο BuildingAddressesCard Mode 1 empty state",
-    "phase2": "router.push('/audit?projectId=xxx&tab=locations') για deep-link navigation",
-    "phase3": "useProjectsPageState extended με tabFromUrl (useSearchParams) — ίδιο instance που ήδη κάνει auto-select project",
-    "phase4": "UniversalTabsRenderer: reactive useEffect sync για defaultTab prop changes (λύνει timing issues)",
-    "phase5": "initialTab prop propagation: ProjectViewSwitch → ProjectDetails σε ΟΛΑ τα 3 render paths (grid, list desktop, list mobile)"
+    "phase1": "Server-side unit creation: API route /api/units/create με Firestore validation, auth check, duplicate detection (ADR-078)",
+    "phase2": "AddUnitDialog component + useUnitForm hook για enterprise unit management UI",
+    "phase3": "Realtime triage communications hook (useRealtimeTriageCommunications) με Firestore onSnapshot listener (ADR-079)",
+    "phase4": "AIInboxClient refactoring: realtime updates αντί manual polling, βελτιωμένο header με status indicators",
+    "phase5": "Email pipeline documentation updates: ADR-070/071 status OPERATIONAL, Firestore composite indexes, ADR index updates"
   },
   "testing": {
-    "typescript": "0 νέα errors (npx tsc --noEmit)",
-    "manual": "Click button → /audit?projectId=xxx&tab=locations → auto-select project → tab Τοποθεσίες ανοίγει αυτόματα",
-    "debugging": "Console debug logs επιβεβαίωσαν ροή params: useProjectsPageState ✅, ProjectDetails ✅, UniversalTabsRenderer ✅"
+    "typescript": "Pre-commit checks passed",
+    "manual": "25 αρχεία committed και pushed στο Vercel",
+    "deployment": "Vercel auto-deployment triggered via git push origin main"
   },
   "notes": [
-    "🐛 ROOT CAUSE: initialTab prop περνούσε μόνο στο grid view <ProjectDetails> (1/3 instances) αλλά ΟΧΙ στα list desktop και list mobile renders",
-    "🐛 SECONDARY BUG: UniversalTabsRenderer δεν ήταν reactive σε αλλαγές defaultTab prop (useState αρχικοποιεί μόνο 1 φορά)",
-    "🏢 ENTERPRISE PATTERN: SAP Real Estate, Procore, Salesforce — Contextual Deep Link",
-    "📝 Νέα i18n keys: address.labels.goToProjectAddresses (EL + EN)",
-    "📝 Νέα components: BuildingAddressesCard, CompanySelectorCard"
+    "🏢 ADR-078: Server-side unit creation με proper validation - enterprise pattern",
+    "🔄 ADR-079: AI Inbox realtime updates με Firestore onSnapshot - no more manual refresh",
+    "📧 Email pipeline fully operational - ADR-070/071 documentation updated to reflect OPERATIONAL status",
+    "🔐 Auth roles extended με νέα permissions για unit management",
+    "🌐 i18n: Νέα translations για units management (EN + EL, 48 keys each)",
+    "📊 Firestore indexes: Νέα composite indexes για email queue processing",
+    "🏷️ Safety checkpoint: checkpoint-2026-02-06-units-inbox-email"
   ],
   "contributors": {
     "user": "Γιώργος Παγώνης",
@@ -51,22 +59,23 @@
     "sessionDate": "2026-02-06"
   },
   "relatedBackups": [
+    "backup-2026-02-06-deep-link-building-to-project",
     "backup-2026-02-06-mailgun-webhook-timeout-fix"
   ],
   "commits": [
     {
-      "hash": "26b46618",
-      "message": "feat: deep-link navigation from building addresses to project locations tab",
-      "files": 19,
-      "insertions": 1365,
-      "deletions": 142
+      "hash": "51c4e075",
+      "message": "feat: server-side unit creation, AI inbox realtime updates & email pipeline docs",
+      "files": 25,
+      "insertions": 1728,
+      "deletions": 307
     }
   ],
   "statistics": {
-    "filesChanged": 19,
-    "insertions": 1365,
-    "deletions": 142,
-    "newFiles": 2,
+    "filesChanged": 25,
+    "insertions": 1728,
+    "deletions": 307,
+    "newFiles": 6,
     "commitsInBackup": 1
   }
 }

@@ -113,6 +113,17 @@ export async function markNotificationsAsRead(notificationIds: string[]): Promis
 }
 
 /**
+ * Dismiss a notification (hide from panel without deleting from Firestore)
+ * The email/business record remains intact — only the notification is dismissed
+ */
+export async function dismissNotification(notificationId: string): Promise<void> {
+  await updateDoc(doc(db, COLLECTION_NAME, notificationId), {
+    'delivery.state': 'dismissed',
+    dismissedAt: Timestamp.now()
+  });
+}
+
+/**
  * Record notification action
  */
 export async function recordNotificationAction(

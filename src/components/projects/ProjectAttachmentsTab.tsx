@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Folder, Eye } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectFormData } from './general-tab/types';
@@ -20,6 +21,7 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
     // 🏢 ENTERPRISE: i18n hook
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
+    const typography = useTypography();
     const handleFileSelect = (field: string) => {
         // This would open a file dialog in a real application
         console.log(`Selecting file for ${field}`);
@@ -30,7 +32,7 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
             <CardHeader className="pb-4">
                 <div className="flex items-center gap-2">
                     <Folder className={`${iconSizes.md} text-primary`} />
-                    <CardTitle className="text-lg">{t('attachmentsTab.title')}</CardTitle>
+                    <CardTitle className={typography.card.titleCompact}>{t('attachmentsTab.title')}</CardTitle>
                 </div>
                 <CardDescription>
                     {t('attachmentsTab.description')}

@@ -11,6 +11,7 @@ import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -50,6 +51,7 @@ export function ProjectSelectorCard({
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const typography = useTypography();
 
   // 🏢 ENTERPRISE: State management
   const [projects, setProjects] = useState<ProjectOption[]>([]);
@@ -168,7 +170,7 @@ export function ProjectSelectorCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <FolderKanban className={iconSizes.md} />
           {t('projectSelector.title')}
         </CardTitle>

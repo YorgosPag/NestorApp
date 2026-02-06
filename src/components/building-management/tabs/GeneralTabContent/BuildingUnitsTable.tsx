@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Package, Eye } from 'lucide-react';
 import { useBuildingRelationships } from '@/services/relationships/hooks/useEnterpriseRelationships';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
+import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -19,8 +21,9 @@ import { RealtimeService, type UnitUpdatedPayload, type UnitCreatedPayload, type
 function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
-  // 🏢 ENTERPRISE: Centralized icon sizes
+  // 🏢 ENTERPRISE: Centralized icon sizes + typography
   const iconSizes = useIconSizes();
+  const typography = useTypography();
 
   const [units, setUnits] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,7 +138,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
     return (
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Package className={iconSizes.md}/>{t('unitsTable.title')}</CardTitle>
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}><Package className={iconSizes.md}/>{t('unitsTable.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{t('unitsTable.noUnits')}</p>
@@ -147,7 +150,7 @@ function BuildingUnitsTable({ buildingId }: { buildingId: string }) {
   return (
     <Card className="mt-6">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Package className={iconSizes.md}/>{t('unitsTable.title')}</CardTitle>
+        <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}><Package className={iconSizes.md}/>{t('unitsTable.title')}</CardTitle>
         <CardDescription>{t('unitsTable.description')}</CardDescription>
       </CardHeader>
       <CardContent>

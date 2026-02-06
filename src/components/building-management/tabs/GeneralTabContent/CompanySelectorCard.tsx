@@ -28,6 +28,7 @@ import { getAllActiveCompanies } from '@/services/companies.service';
 import type { CompanyContact } from '@/types/contacts';
 import { updateBuilding } from '../../building-services';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,7 @@ export function CompanySelectorCard({
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const typography = useTypography();
 
   // State management
   const [companies, setCompanies] = useState<CompanyContact[]>([]);
@@ -151,7 +153,7 @@ export function CompanySelectorCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
           <Building2 className={iconSizes.md} />
           {t('companySelector.title')}
         </CardTitle>

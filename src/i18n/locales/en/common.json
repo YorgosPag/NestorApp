@@ -334,6 +334,22 @@
       "placeholder": "Search..."
     }
   },
+  "notifications": {
+    "title": "Notifications",
+    "count": "{{count}} notifications",
+    "markAllRead": "Mark all read",
+    "markRead": "Mark read",
+    "empty": "No notifications",
+    "loading": "Loading...",
+    "error": "Failed to load",
+    "retry": "Retry",
+    "loadMore": "Load More",
+    "dismiss": "Dismiss",
+    "actions": {
+      "view_email": "View",
+      "view_page": "View Page"
+    }
+  },
   "header": {
     "notifications": {
       "title": "Notifications",

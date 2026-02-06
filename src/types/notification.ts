@@ -10,7 +10,8 @@ export type DeliveryState =
   | 'seen'
   | 'acted'
   | 'failed'
-  | 'expired';
+  | 'expired'
+  | 'dismissed';
 
 export interface NotificationAction {
   id: string;

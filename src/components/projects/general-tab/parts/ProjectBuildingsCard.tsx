@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useProjectStructure } from '../../structure-tab/hooks/useProjectStructure';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -53,6 +54,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
   const router = useRouter();
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const typography = useTypography();
 
   // 🏢 ENTERPRISE: Lazy loading state
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -93,7 +95,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
           className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
           onClick={handleToggleExpand}
         >
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
             <span className="flex items-center gap-2">
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
               {t('buildings.cardTitle')}
@@ -116,7 +118,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
           className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
           onClick={handleToggleExpand}
         >
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
             <span className="flex items-center gap-2">
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
               {t('buildings.cardTitle')}
@@ -142,7 +144,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
           className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
           onClick={handleToggleExpand}
         >
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
             <span className="flex items-center gap-2">
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
               {t('buildings.cardTitle')}
@@ -171,7 +173,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
           className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
           onClick={handleToggleExpand}
         >
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
             <span className="flex items-center gap-2">
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
               {t('buildings.cardTitle')}
@@ -205,7 +207,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
         className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
         onClick={handleToggleExpand}
       >
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
           <span className="flex items-center gap-2">
             <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
             {t('buildings.cardTitle')}

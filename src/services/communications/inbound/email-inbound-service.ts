@@ -33,6 +33,14 @@ import {
 import { generateGlobalMessageDocId } from '@/server/lib/id-generation';
 import { FILE_TYPE_CONFIG, type FileType } from '@/config/file-upload-config';
 import type { IAIAnalysisProvider } from '@/services/ai-analysis/providers/IAIAnalysisProvider';
+import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
+import {
+  NOTIFICATION_EVENT_TYPES,
+  SOURCE_SERVICES,
+  NOTIFICATION_ENTITY_TYPES,
+  getCurrentEnvironment,
+} from '@/config/notification-events';
+import type { GlobalRole } from '@/lib/auth/types';
 import type {
   InboundEmailInput,
   InboundEmailResult,
@@ -639,52 +647,67 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     });
   }
 
-  // 🏢 ENTERPRISE: Create email notification for AI Inbox (2026-02-06 - Phase 2)
-  // TODO: Replace SYSTEM_IDENTITY.ID with actual assigned admin userId (Phase 4 enhancement)
+  // 🏢 ENTERPRISE: Dispatch bell notifications via orchestrator (ADR-026)
+  // Dynamic recipient resolution: notify all admins of the tenant company
   try {
-    const notificationData = {
-      tenantId: routing.companyId,
-      userId: SYSTEM_IDENTITY.ID, // TODO: Get assigned admin from contact/project assignment
-      createdAt: new Date(),
-      severity: (intentAnalysis?.needsTriage ? 'warning' : 'info') as 'info' | 'warning',
-      title: `📧 New Email from ${input.sender.name || input.sender.email}`,
-      body: input.subject || '(No subject)',
-      channel: 'inapp' as const,
-      delivery: {
-        state: 'delivered' as const,
-        attempts: 1,
-      },
-      source: {
-        service: 'email',
-        feature: 'ai-inbox',
-        env: (process.env.NODE_ENV || 'production') as 'dev' | 'staging' | 'prod',
-      },
-      actions: [
-        {
-          id: 'view_email',
-          label: 'View Email',
-          url: '/admin/ai-inbox',
-        },
-      ],
-      tags: ['email', 'ai-inbox', 'inbound'],
-      meta: {
-        communicationId: messageDocId,
-        contactId,
-        from: input.sender.email,
-        intentType: intentAnalysis?.intentType,
-      },
-    };
+    // Resolve admin recipients for this company
+    const ADMIN_GLOBAL_ROLES: GlobalRole[] = ['super_admin', 'company_admin'];
+    const usersSnapshot = await adminDb
+      .collection(COLLECTIONS.USERS)
+      .where('companyId', '==', routing.companyId)
+      .where('status', '==', 'active')
+      .where('globalRole', 'in', ADMIN_GLOBAL_ROLES)
+      .get();
 
-    await adminDb.collection(COLLECTIONS.NOTIFICATIONS).add(notificationData);
+    const adminUserIds = usersSnapshot.docs.map((doc) => doc.id);
 
-    logger.info('Email notification created', {
+    // Fallback: if no admins found, notify system identity (prevents silent failure)
+    const recipientIds = adminUserIds.length > 0 ? adminUserIds : [SYSTEM_IDENTITY.ID];
+
+    const notificationTitle = `New Email from ${input.sender.name || input.sender.email}`;
+    const notificationBody = input.subject || '(No subject)';
+    const severity = intentAnalysis?.needsTriage ? 'warning' as const : 'info' as const;
+
+    // Dispatch to each recipient via enterprise orchestrator
+    // Orchestrator handles: dedupe key, user preferences, atomic write, email queuing
+    const results = await Promise.allSettled(
+      recipientIds.map((recipientId) =>
+        dispatchNotification({
+          eventType: NOTIFICATION_EVENT_TYPES.CRM_NEW_COMMUNICATION,
+          recipientId,
+          tenantId: routing.companyId!, // Non-null: early return at line 509 guarantees non-null
+          title: notificationTitle,
+          body: notificationBody,
+          severity,
+          source: {
+            service: SOURCE_SERVICES.CRM,
+            feature: 'ai-inbox',
+            env: getCurrentEnvironment(),
+          },
+          eventId: messageDocId, // Idempotency: same email = same dedupe key per recipient
+          entityId: contactId,
+          entityType: NOTIFICATION_ENTITY_TYPES.CONTACT,
+          actions: [
+            { id: 'view_email', label: 'View', url: '/admin/ai-inbox' },
+          ],
+        })
+      )
+    );
+
+    const dispatched = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+
+    logger.info('Email bell notifications dispatched via orchestrator', {
       communicationId: messageDocId,
       from: input.sender.email,
-      severity: notificationData.severity,
+      severity,
+      recipientCount: recipientIds.length,
+      dispatched,
+      failed,
     });
   } catch (notificationError) {
     // Never throw on notification failure - just log
-    logger.error('Failed to create email notification', {
+    logger.error('Failed to dispatch email bell notifications', {
       communicationId: messageDocId,
       error: notificationError,
     });

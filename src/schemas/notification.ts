@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 export const Severity = z.enum(['info', 'success', 'warning', 'error', 'critical']);
 export const Channel = z.enum(['inapp', 'email', 'push', 'sms']);
-export const DeliveryState = z.enum(['queued','sent','delivered','seen','acted','failed','expired']);
+export const DeliveryState = z.enum(['queued','sent','delivered','seen','acted','failed','expired','dismissed']);
 
 export const NotificationAction = z.object({
   id: z.string().min(1),

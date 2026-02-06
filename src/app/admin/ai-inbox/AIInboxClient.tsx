@@ -632,9 +632,9 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const [showDashboard, setShowDashboard] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
-  // 🏢 ENTERPRISE: Determine if real-time mode is available
-  const isSuperAdmin = adminContext.role === 'super_admin';
-  const isRealtimeEnabled = !isSuperAdmin && !!adminContext.companyId;
+  // 🏢 ENTERPRISE: Real-time mode available for ANY role with tenant context
+  // super_admin with companyId gets real-time; without companyId falls back to server actions
+  const isRealtimeEnabled = !!adminContext.companyId;
 
   // 🔥 ENTERPRISE: Real-time Firestore listener (ADR-079)
   // Replaces WebSocket dead code + server action polling for tenant admins
@@ -1062,7 +1062,12 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                     const formattedDate = createdAt ? createdAt.toLocaleString('el-GR') : '';
 
                     return (
-                      <AccordionItem key={comm.id} value={comm.id} variant="bordered">
+                      <AccordionItem
+                        key={comm.id}
+                        value={comm.id}
+                        variant="bordered"
+                        className={isPending ? 'bg-accent/10' : ''}
+                      >
                         <AccordionTrigger variant="bordered" size="md" className="hover:no-underline">
                           <div className={`${layout.flexGap2} items-center w-full pr-4`}>
                             {/* Status Badge */}
@@ -1086,20 +1091,20 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
                             {/* Channel Badge */}
                             <Badge variant="secondary" className="shrink-0">{comm.type}</Badge>
 
-                            {/* Sender */}
-                            <span className={`${typography.label.sm} truncate`}>
+                            {/* Sender — Gmail-style: bold when pending/unread */}
+                            <span className={`${typography.label.sm} truncate ${isPending ? 'font-semibold text-foreground' : 'font-normal'}`}>
                               {comm.from || t('aiInbox.unknownSender')}
                             </span>
 
-                            {/* Subject (if available) */}
+                            {/* Subject — Gmail-style: bold + darker when pending/unread */}
                             {comm.subject && (
-                              <span className="text-muted-foreground truncate flex-1">
+                              <span className={`truncate flex-1 ${isPending ? 'font-semibold text-foreground' : 'font-normal text-muted-foreground'}`}>
                                 - {comm.subject}
                               </span>
                             )}
 
                             {/* Date */}
-                            <span className={`${typography.body.xs} text-muted-foreground shrink-0 ml-auto`}>
+                            <span className={`${typography.body.xs} shrink-0 ml-auto ${isPending ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
                               {formattedDate}
                             </span>
                           </div>
