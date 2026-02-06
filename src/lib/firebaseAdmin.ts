@@ -478,3 +478,23 @@ export function getAdminInitializationStatus(): { initialized: boolean; environm
 export function ensureAdminInitialized(): void {
   ensureInitialized();
 }
+
+// ============================================================================
+// BACKWARD COMPATIBILITY EXPORTS
+// ============================================================================
+
+/**
+ * Legacy Firestore export for backward compatibility.
+ * New code should use getAdminFirestore() instead.
+ *
+ * @deprecated Use getAdminFirestore() for better error handling
+ */
+export const adminDb = getAdminFirestore();
+
+/**
+ * Legacy Auth export for backward compatibility.
+ * New code should use getAdminAuth() instead.
+ *
+ * @deprecated Use getAdminAuth() for better error handling
+ */
+export const adminAuth = getAdminAuth();
