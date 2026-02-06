@@ -18,6 +18,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { withWebhookRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -31,6 +32,9 @@ import {
   type InboundEmailAttachment,
   type MailgunStorageInfo,
 } from '@/services/communications/inbound';
+import {
+  processEmailIngestionBatch,
+} from '@/server/comms/workers/email-ingestion-worker';
 
 const logger = createModuleLogger('MAILGUN_INBOUND_WEBHOOK');
 
@@ -294,6 +298,30 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
       logger.error('Failed to enqueue email', {
         status: enqueueResult.status,
         elapsedMs: elapsed,
+      });
+    }
+
+    // 🏢 ENTERPRISE: "Respond Fast, Process After" pattern (Next.js 15 after())
+    // Vercel Hobby plan limits cron to daily, so we trigger immediate processing
+    // after responding to Mailgun. The daily cron serves as backup for retries.
+    // Pattern used by: Salesforce Platform Events, SAP Event Mesh, Google Cloud Tasks
+    if (enqueueResult.status === 'queued') {
+      after(async () => {
+        try {
+          logger.info('after(): Starting immediate email processing', {
+            queueId: enqueueResult.queueId,
+          });
+          const result = await processEmailIngestionBatch();
+          logger.info('after(): Immediate processing completed', {
+            processed: result.processed,
+            failed: result.failed,
+          });
+        } catch (afterError) {
+          // Non-fatal: daily cron will retry failed items
+          logger.warn('after(): Immediate processing failed (cron will retry)', {
+            error: afterError instanceof Error ? afterError.message : 'Unknown',
+          });
+        }
       });
     }
 
