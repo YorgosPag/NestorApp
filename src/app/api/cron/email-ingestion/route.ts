@@ -6,12 +6,17 @@
  * This endpoint is triggered by Vercel Cron to process
  * emails from the ingestion queue.
  *
+ * 🏢 IMPORTANT: Vercel Cron sends GET requests (not POST).
+ * The GET handler processes the queue when authorized (cron trigger),
+ * and returns health check when unauthenticated (liveness probe).
+ * POST is available for manual/API triggers.
+ *
  * Configuration in vercel.json:
  * ```json
  * {
  *   "crons": [{
  *     "path": "/api/cron/email-ingestion",
- *     "schedule": "* * * * *"
+ *     "schedule": "0 * * * *"
  *   }]
  * }
  * ```
@@ -61,32 +66,26 @@ function verifyCronAuthorization(request: NextRequest): boolean {
   return false;
 }
 
-/**
- * POST /api/cron/email-ingestion
- *
- * Process pending emails from the queue.
- * Triggered by Vercel Cron every minute.
- *
- * @rateLimit SENSITIVE (20 req/min) - Cron job for email processing
- */
-async function handlePOST(request: NextRequest): Promise<Response> {
+// =============================================================================
+// 🏢 ENTERPRISE: Shared batch processing logic (DRY)
+// Used by both GET (Vercel Cron) and POST (manual/API trigger)
+// Pattern: SAP Job Scheduler / Salesforce Scheduled Apex
+// =============================================================================
+
+type CronTrigger = 'vercel-cron' | 'manual-post' | 'api-call';
+
+async function executeBatchProcessing(trigger: CronTrigger): Promise<Response> {
   const startTime = Date.now();
 
-  // Verify authorization
-  if (!verifyCronAuthorization(request)) {
-    logger.warn('Unauthorized cron request');
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  logger.info('Email ingestion cron triggered');
+  logger.info('Email ingestion batch triggered', { trigger });
 
   try {
-    // Process a batch of emails
     const result = await processEmailIngestionBatch();
 
     const elapsed = Date.now() - startTime;
 
-    logger.info('Email ingestion cron completed', {
+    logger.info('Email ingestion batch completed', {
+      trigger,
       processed: result.processed,
       failed: result.failed,
       recovered: result.recovered,
@@ -94,15 +93,16 @@ async function handlePOST(request: NextRequest): Promise<Response> {
       elapsedMs: elapsed,
     });
 
-    // Log warnings if any
     if (result.healthStatus.warnings.length > 0) {
       logger.warn('Queue health warnings', {
+        trigger,
         warnings: result.healthStatus.warnings,
       });
     }
 
     return NextResponse.json({
       ok: true,
+      trigger,
       processed: result.processed,
       failed: result.failed,
       recovered: result.recovered,
@@ -118,40 +118,53 @@ async function handlePOST(request: NextRequest): Promise<Response> {
     const elapsed = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    logger.error('Email ingestion cron error', {
+    logger.error('Email ingestion batch error', {
+      trigger,
       error: errorMessage,
       elapsedMs: elapsed,
     });
 
     return NextResponse.json({
       ok: false,
+      trigger,
       error: errorMessage,
       elapsedMs: elapsed,
     }, { status: 500 });
   }
 }
 
-export const POST = withSensitiveRateLimit(handlePOST);
+// =============================================================================
+// 🏢 GET /api/cron/email-ingestion
+//
+// Vercel Cron sends GET requests with Authorization header.
+// - Authorized (cron/admin) → Process email queue batch
+// - Unauthenticated → Health check / liveness probe only
+//
+// @rateLimit SENSITIVE (20 req/min)
+// =============================================================================
 
-/**
- * GET /api/cron/email-ingestion
- *
- * Health check and queue statistics.
- *
- * @rateLimit SENSITIVE (20 req/min) - Health check and queue statistics
- */
 async function handleGET(request: NextRequest): Promise<Response> {
-  // Verify authorization (optional for health check)
   const authorized = verifyCronAuthorization(request);
 
+  // 🏢 ENTERPRISE: Detect Vercel Cron via User-Agent (additional signal)
+  const userAgent = request.headers.get('user-agent') || '';
+  const isVercelCron = userAgent.includes('vercel-cron');
+
+  if (authorized) {
+    // Vercel Cron trigger OR authorized API call → process batch
+    const trigger: CronTrigger = isVercelCron ? 'vercel-cron' : 'api-call';
+    return executeBatchProcessing(trigger);
+  }
+
+  // Unauthenticated → health check only (liveness probe)
   try {
     const health = await getEmailIngestionQueueHealth();
 
     return NextResponse.json({
       ok: true,
       service: 'email-ingestion-worker',
-      version: 'v1',
-      authorized,
+      version: 'v2',
+      authorized: false,
       health: {
         healthy: health.healthy,
         warnings: health.warnings,
@@ -171,3 +184,23 @@ async function handleGET(request: NextRequest): Promise<Response> {
 }
 
 export const GET = withSensitiveRateLimit(handleGET);
+
+// =============================================================================
+// 🏢 POST /api/cron/email-ingestion
+//
+// Manual trigger for batch processing (admin tools, API calls).
+// Requires authorization.
+//
+// @rateLimit SENSITIVE (20 req/min)
+// =============================================================================
+
+async function handlePOST(request: NextRequest): Promise<Response> {
+  if (!verifyCronAuthorization(request)) {
+    logger.warn('Unauthorized POST cron request');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  return executeBatchProcessing('manual-post');
+}
+
+export const POST = withSensitiveRateLimit(handlePOST);
