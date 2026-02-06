@@ -22,7 +22,7 @@ import { Save, Loader2, CheckCircle, AlertCircle, Plus, X, Car, Package } from '
 // 🏢 ENTERPRISE: Using centralized entity config for consistent icons/colors
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -162,7 +162,12 @@ export function LinkedSpacesCard({
         setParkingOptions(availableParking);
         console.log(`✅ [LinkedSpacesCard] Loaded ${availableParking.length} available parking spots`);
       } catch (error) {
-        console.error('❌ [LinkedSpacesCard] Error loading parking:', error);
+        // 🏢 ENTERPRISE: 403/404 are expected (tenant isolation / no parking configured)
+        if (ApiClientError.isApiClientError(error) && (error.statusCode === 403 || error.statusCode === 404)) {
+          console.log(`ℹ️ [LinkedSpacesCard] No parking data for building (${error.statusCode})`);
+        } else {
+          console.warn('⚠️ [LinkedSpacesCard] Unexpected error loading parking:', error);
+        }
         setParkingOptions([]);
       } finally {
         setLoadingParking(false);
@@ -201,7 +206,12 @@ export function LinkedSpacesCard({
         setStorageOptions(buildingStorages);
         console.log(`✅ [LinkedSpacesCard] Loaded ${buildingStorages.length} available storages for building`);
       } catch (error) {
-        console.error('❌ [LinkedSpacesCard] Error loading storages:', error);
+        // 🏢 ENTERPRISE: 403/404 are expected (tenant isolation / no storages configured)
+        if (ApiClientError.isApiClientError(error) && (error.statusCode === 403 || error.statusCode === 404)) {
+          console.log(`ℹ️ [LinkedSpacesCard] No storage data for building (${error.statusCode})`);
+        } else {
+          console.warn('⚠️ [LinkedSpacesCard] Unexpected error loading storages:', error);
+        }
         setStorageOptions([]);
       } finally {
         setLoadingStorage(false);

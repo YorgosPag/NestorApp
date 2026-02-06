@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, Suspense } from 'react';
+import React, { useCallback, useState, Suspense } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useUnitsViewerState } from '@/hooks/useUnitsViewerState';
 import { UnitsHeader } from '@/components/units/page/UnitsHeader';
@@ -28,6 +28,8 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: AddUnitDialog for creating new units
+import { AddUnitDialog } from '@/components/units/dialogs/AddUnitDialog';
 
 // 🏢 ENTERPRISE: Translation key type for OPERATIONAL status labels (Physical Truth - No Sales!)
 type OperationalStatusKey = 'ready' | 'underConstruction' | 'inspection' | 'maintenance' | 'draft';
@@ -64,7 +66,7 @@ function UnitsPageContent() {
 
   // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
   const { companies, projects, syncBreadcrumb } = useNavigation();
-  const { buildings } = useFirestoreBuildings();
+  const { buildings, loading: buildingsLoading } = useFirestoreBuildings();
 
   const {
     properties,
@@ -121,6 +123,9 @@ function UnitsPageContent() {
     handleDelete,
     forceDataRefresh,
   } = useUnitsViewerState();
+
+  // 🏢 ENTERPRISE: Add Unit Dialog state
+  const [showAddUnitDialog, setShowAddUnitDialog] = useState(false);
 
   // Search state (for header search)
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -326,6 +331,7 @@ function UnitsPageContent() {
           setShowDashboard={setShowDashboard}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
+          onNewUnit={() => setShowAddUnitDialog(true)}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
         />
@@ -403,6 +409,15 @@ function UnitsPageContent() {
             {/* Placeholder for VersionHistoryPanel */}
           </div>
         )}
+
+        {/* 🏢 ENTERPRISE: Add Unit Dialog */}
+        <AddUnitDialog
+          open={showAddUnitDialog}
+          onOpenChange={setShowAddUnitDialog}
+          onUnitAdded={forceDataRefresh}
+          buildings={buildings}
+          buildingsLoading={buildingsLoading}
+        />
       </PageContainer>
     </TooltipProvider>
   );

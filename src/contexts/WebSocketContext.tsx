@@ -109,9 +109,16 @@ function resolveTransportConfig(): WebSocketTransportConfig {
     };
   }
 
-  // Case 4: Development without any config → localhost fallback
+  // Case 4: Development without any config → disabled (no WS server configured)
+  // 🏢 ENTERPRISE: Explicit opt-in policy — never auto-connect without configuration.
+  // Firestore onSnapshot provides real-time updates without WebSocket.
+  // To enable WS in dev: set NEXT_PUBLIC_WS_ENABLED=true and NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
   if (isDevelopment) {
-    return { isAvailable: true, url: 'ws://localhost:8080/ws', disabledReason: null };
+    return {
+      isAvailable: false,
+      url: '',
+      disabledReason: 'No WebSocket configuration in development — using Firestore real-time listeners',
+    };
   }
 
   // Case 5: Production without config → disabled (Vercel serverless)

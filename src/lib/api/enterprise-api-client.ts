@@ -726,12 +726,15 @@ export class EnterpriseApiClient {
   }
 
   /**
-   * Log error
+   * Log error — 4xx client errors use console.warn, 5xx/network errors use console.error
    */
   private logError(context: RequestContext, error: Error): void {
     const duration = Date.now() - context.startTime;
-    console.error(
-      `❌ [API] ${context.method} ${context.url} - Failed (${duration}ms):`,
+    const isClientError = error instanceof ApiClientError && error.statusCode >= 400 && error.statusCode < 500;
+    const logFn = isClientError ? console.warn : console.error;
+    const icon = isClientError ? '⚠️' : '❌';
+    logFn(
+      `${icon} [API] ${context.method} ${context.url} - ${isClientError ? error.statusCode : 'Failed'} (${duration}ms):`,
       error.message
     );
   }

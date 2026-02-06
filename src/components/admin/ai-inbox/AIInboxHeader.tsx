@@ -26,6 +26,8 @@ interface AIInboxHeaderProps {
   onRefresh: () => void;
   showFilters: boolean;
   setShowFilters: (show: boolean) => void;
+  /** Real-time Firestore listener is active (ADR-079) */
+  isLive?: boolean;
 }
 
 export function AIInboxHeader({
@@ -35,7 +37,8 @@ export function AIInboxHeader({
   isRefreshing,
   onRefresh,
   showFilters,
-  setShowFilters
+  setShowFilters,
+  isLive = false,
 }: AIInboxHeaderProps) {
   const { t } = useTranslation('admin');
   const iconSizes = useIconSizes();
@@ -57,6 +60,16 @@ export function AIInboxHeader({
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         customActions: [
+          isLive ? (
+            <Badge
+              key="live-indicator"
+              variant="default"
+              className="bg-green-600 hover:bg-green-600 text-white animate-pulse"
+            >
+              <span className="mr-1">&#9679;</span>
+              Live
+            </Badge>
+          ) : null,
           pendingCount > 0 ? (
             <Badge
               key="pending-count"

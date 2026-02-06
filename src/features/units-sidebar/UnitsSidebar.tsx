@@ -11,6 +11,8 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+// 🏢 ENTERPRISE: Viewport detection for conditional rendering (avoid duplicate mount)
+import { useIsMobile } from '@/hooks/useMobile';
 import { useTranslation } from 'react-i18next';
 
 import { UnitsList } from '@/components/units/UnitsList';
@@ -46,6 +48,11 @@ export function UnitsSidebar({
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
   const spacing = useSpacingTokens();
+
+  // 🏢 ENTERPRISE: Viewport detection — render detailsContent in ONE place only
+  // Without this, both Desktop and Mobile paths mount the same component tree,
+  // causing duplicate API calls (BuildingSelectorCard, LinkedSpacesCard, etc.)
+  const isMobile = useIsMobile();
 
   const {
     safeFloors,
@@ -113,7 +120,8 @@ export function UnitsSidebar({
           onSelectUnit={onSelectUnit}
           onAssignmentSuccess={onAssignmentSuccess}
         />
-        {selectedUnit && detailsContent}
+        {/* 🏢 ENTERPRISE: Render details ONLY on desktop — prevents duplicate mount */}
+        {!isMobile && selectedUnit && detailsContent}
       </div>
 
       {/* 📱 MOBILE: Show only UnitsList when no unit is selected */}
@@ -127,8 +135,9 @@ export function UnitsSidebar({
       </div>
 
       {/* 📱 MOBILE: Slide-in UnitDetails when unit is selected */}
+      {/* 🏢 ENTERPRISE: Render details ONLY on mobile — prevents duplicate mount */}
       <MobileDetailsSlideIn
-        isOpen={!!selectedUnit}
+        isOpen={isMobile && !!selectedUnit}
         onClose={() => onSelectUnit(null)}
         title={selectedUnit?.title || t('mobile.unitDetails')}
         actionButtons={
@@ -150,7 +159,7 @@ export function UnitsSidebar({
           </>
         }
       >
-        {selectedUnit && detailsContent}
+        {isMobile && selectedUnit && detailsContent}
       </MobileDetailsSlideIn>
     </>
   );

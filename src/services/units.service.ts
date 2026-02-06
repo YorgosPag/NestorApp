@@ -21,6 +21,8 @@ import type { UnitModel } from '@/types/unit';
 import type { DocumentSnapshot, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+// 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
+import { apiClient } from '@/lib/api/enterprise-api-client';
 
 const UNITS_COLLECTION = COLLECTIONS.UNITS;
 
@@ -73,6 +75,51 @@ export async function addUnit(unitData: Omit<Property, 'id'>): Promise<{ id: str
   } catch (error) {
     // Error logging removed
     throw error;
+  }
+}
+
+/**
+ * 🏢 ENTERPRISE: Create unit via server-side API (Admin SDK)
+ *
+ * 🔒 SECURITY: Firestore rules block client-side writes (allow create: if false)
+ *              Uses API endpoint with Admin SDK to bypass rules with proper auth
+ *
+ * @see src/app/api/units/create/route.ts (POST handler)
+ * @see ADR-078
+ */
+export async function createUnit(
+  unitData: Record<string, unknown>
+): Promise<{ success: boolean; unitId?: string; error?: string }> {
+  try {
+    console.log('🏢 [createUnit] Creating new unit via API...');
+
+    interface UnitCreateResult {
+      unitId: string;
+    }
+    const result = await apiClient.post<UnitCreateResult>('/api/units/create', unitData);
+
+    const unitId = result?.unitId;
+    console.log(`✅ [createUnit] Unit created with ID: ${unitId}`);
+
+    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
+    RealtimeService.dispatchUnitCreated({
+      unitId,
+      unit: {
+        name: unitData.name as string,
+        type: unitData.type as string,
+        buildingId: (unitData.buildingId as string) ?? null,
+      },
+      timestamp: Date.now()
+    });
+
+    return { success: true, unitId };
+
+  } catch (error) {
+    console.error('❌ [createUnit] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
   }
 }
 

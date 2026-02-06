@@ -19,3 +19,7 @@ export {
 export {
   useRealtimeMessages,
 } from './useRealtimeMessages';
+
+export {
+  useRealtimeTriageCommunications,
+} from './useRealtimeTriageCommunications';

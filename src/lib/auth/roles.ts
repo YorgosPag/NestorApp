@@ -80,6 +80,10 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'notifications:notifications:view',
       'audit:data:view',
       'floorplans:floorplans:process',
+      // Units
+      'units:units:view',
+      'units:units:create',
+      'units:units:update',
       // Communications
       'comm:conversations:list',
       'comm:conversations:view',
@@ -107,6 +111,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       'projects:floors:view',
       'buildings:buildings:view',
       'units:units:view',
+      'units:units:create',
       'units:units:update',
       'dxf:files:view',
       'dxf:files:upload',

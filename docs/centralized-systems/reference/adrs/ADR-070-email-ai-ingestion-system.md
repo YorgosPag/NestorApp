@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | APPROVED |
+| **Status** | ✅ FULLY OPERATIONAL (OpenAI Active) |
 | **Date** | 2026-02-05 |
 | **Category** | Backend Systems |
 | **Canonical Location** | `src/services/communications/inbound/email-inbound-service.ts` |
@@ -133,10 +133,10 @@ Stored in Firestore: `system/settings` → `integrations.emailInboundRouting`
 | Variable | Purpose | Required |
 |----------|---------|----------|
 | `MAILGUN_WEBHOOK_SIGNING_KEY` | Webhook signature verification | ✅ Production |
-| `OPENAI_API_KEY` | OpenAI API access | ❌ Optional |
-| `AI_PROVIDER` | Provider selection (`mock` / `openai`) | ❌ Optional |
-| `OPENAI_TEXT_MODEL` | Text analysis model | ❌ Default: `gpt-4o-mini` |
-| `OPENAI_VISION_MODEL` | Vision analysis model | ❌ Default: `gpt-4o-mini` |
+| `OPENAI_API_KEY` | OpenAI API access | ✅ Production |
+| `AI_PROVIDER` | Provider selection (`mock` / `openai`) | ✅ Production (`openai`) |
+| `OPENAI_TEXT_MODEL` | Text analysis model | ✅ Production (`gpt-4o-mini`) |
+| `OPENAI_VISION_MODEL` | Vision analysis model | ✅ Production (`gpt-4o-mini`) |
 
 ---
 
@@ -161,11 +161,12 @@ npm test -- MockAIAnalysisProvider.test.ts
 
 ## 7. Setup Checklist
 
-- [ ] Create Firestore routing rule in `system/settings`
-- [ ] Configure Mailgun receiving route
-- [ ] Add `MAILGUN_WEBHOOK_SIGNING_KEY` to Vercel
-- [ ] (Optional) Add `OPENAI_API_KEY` for AI analysis
-- [ ] (Optional) Set `AI_PROVIDER=openai`
+- [x] Create Firestore routing rule in `system/settings`
+- [x] Configure Mailgun receiving route
+- [x] Add `MAILGUN_WEBHOOK_SIGNING_KEY` to Vercel
+- [x] Add `OPENAI_API_KEY` to Vercel (activated 2026-02-06)
+- [x] Set `AI_PROVIDER=openai` on Vercel (activated 2026-02-06)
+- [x] Add `MAILGUN_API_KEY` to Vercel (activated 2026-02-06)
 
 ---
 
@@ -184,6 +185,9 @@ npm test -- MockAIAnalysisProvider.test.ts
 |------|----------|--------|
 | 2026-02-05 | ADR Created | Claude Code (Anthropic AI) |
 | 2026-02-05 | Status: Approved | Γιώργος Παγώνης |
+| 2026-02-06 | OpenAI activated in production (gpt-4o-mini) | Claude Code (Anthropic AI) |
+| 2026-02-06 | MAILGUN_API_KEY added, all env vars complete | Claude Code (Anthropic AI) |
+| 2026-02-06 | Status: FULLY OPERATIONAL | Γιώργος Παγώνης |
 
 ---
 

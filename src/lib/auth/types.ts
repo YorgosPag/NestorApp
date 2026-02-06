@@ -83,6 +83,7 @@ export const PERMISSIONS = {
 
   // Units
   'units:units:view': true,
+  'units:units:create': true,
   'units:units:update': true,
 
   // Buildings (Phase 2 - first vertical slice)

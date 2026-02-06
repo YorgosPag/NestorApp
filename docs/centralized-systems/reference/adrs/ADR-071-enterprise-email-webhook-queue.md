@@ -348,7 +348,7 @@ Items in `dead_letter` status need manual review:
 |----------|---------|--------|
 | `MAILGUN_WEBHOOK_SIGNING_KEY` | Webhook signature verification | ✅ Set |
 | `MAILGUN_DOMAIN` | Domain for routing rules generation | ✅ Set (mg.nestorconstruct.gr) |
-| `MAILGUN_API_KEY` | Email sending + deferred attachment downloads | ⏳ Pending |
+| `MAILGUN_API_KEY` | Email sending + deferred attachment downloads | ✅ Set (2026-02-06) |
 
 ---
 

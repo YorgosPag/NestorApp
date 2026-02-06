@@ -345,6 +345,54 @@
     }
   },
   "dialog": {
+    "addUnit": {
+      "title": "New Unit",
+      "description": "Create a new unit",
+      "tabs": {
+        "basic": "Basic",
+        "details": "Details"
+      },
+      "fields": {
+        "name": "Unit Name",
+        "code": "Code",
+        "type": "Type",
+        "building": "Building",
+        "floor": "Floor",
+        "status": "Operational Status",
+        "area": "Area (sq.m.)",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "description": "Description"
+      },
+      "placeholders": {
+        "name": "e.g. Apartment A1",
+        "code": "e.g. A-101",
+        "type": "Select type...",
+        "building": "Select building...",
+        "floor": "e.g. 1",
+        "status": "Select status...",
+        "area": "e.g. 85",
+        "bedrooms": "e.g. 2",
+        "bathrooms": "e.g. 1",
+        "description": "Add a description..."
+      },
+      "statusOptions": {
+        "draft": "Draft",
+        "under-construction": "Under Construction",
+        "inspection": "Under Inspection",
+        "ready": "Ready",
+        "maintenance": "Under Maintenance"
+      },
+      "validation": {
+        "nameRequired": "Name is required",
+        "buildingRequired": "Building is required",
+        "areaPositive": "Area must be a positive number"
+      },
+      "messages": {
+        "success": "Unit created successfully!",
+        "error": "Error creating unit"
+      }
+    },
     "deleteConfirmation": {
       "title": "Delete Confirmation",
       "message": "Are you sure you want to delete {count} unit(s)?",

@@ -25,7 +25,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { sanitizeEmailHTML, detectEmailSignature } from '@/lib/message-utils';
 import toast from 'react-hot-toast';
-import { useWebSocket } from '@/contexts/WebSocketContext';
+import { useRealtimeTriageCommunications } from '@/hooks/inbox/useRealtimeTriageCommunications';
 import type { Communication, FirestoreishTimestamp, TriageStatus } from '@/types/crm';
 import { TRIAGE_STATUSES } from '@/types/crm';
 import type { AdminContext } from '@/server/admin/admin-guards';
@@ -621,54 +621,58 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   const iconSizes = useIconSizes();
   const [isMounted, setIsMounted] = useState(false);
 
-  // 🏢 ENTERPRISE: Type refinement - Firestore docs always have id
-  const [communications, setCommunications] = useState<Array<Communication & { id: string }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [statsLoading, setStatsLoading] = useState(true);
+  // 🏢 ENTERPRISE: State for server actions fallback (super admin)
+  const [serverCommunications, setServerCommunications] = useState<Array<Communication & { id: string }>>([]);
+  const [serverLoading, setServerLoading] = useState(true);
+  const [serverStatsLoading, setServerStatsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [filters, setFilters] = useState<AIInboxFilterState>(defaultAIInboxFilters);
-  const [stats, setStats] = useState<TriageStats | null>(null);
+  const [serverStats, setServerStats] = useState<TriageStats | null>(null);
   const [showDashboard, setShowDashboard] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
-  // 🔄 ENTERPRISE: WebSocket real-time updates (ADR-074)
-  const ws = useWebSocket();
+  // 🏢 ENTERPRISE: Determine if real-time mode is available
+  const isSuperAdmin = adminContext.role === 'super_admin';
+  const isRealtimeEnabled = !isSuperAdmin && !!adminContext.companyId;
+
+  // 🔥 ENTERPRISE: Real-time Firestore listener (ADR-079)
+  // Replaces WebSocket dead code + server action polling for tenant admins
+  const realtimeStatusFilter = useMemo((): TriageStatus | undefined => {
+    if (filters.status === 'all') return undefined;
+    const validStatuses = new Set<string>(Object.values(TRIAGE_STATUSES));
+    return validStatuses.has(filters.status) ? (filters.status as TriageStatus) : undefined;
+  }, [filters.status]);
+
+  const {
+    communications: realtimeCommunications,
+    stats: realtimeStats,
+    loading: realtimeLoading,
+    error: realtimeError,
+    connected,
+  } = useRealtimeTriageCommunications({
+    companyId: adminContext.companyId,
+    statusFilter: realtimeStatusFilter,
+    enabled: isRealtimeEnabled,
+  });
+
+  // 🏢 ENTERPRISE: Unified data source
+  // Tenant admins → real-time data, Super admin → server actions
+  const communications = isRealtimeEnabled ? realtimeCommunications : serverCommunications;
+  const loading = isRealtimeEnabled ? realtimeLoading : serverLoading;
+  const stats = isRealtimeEnabled ? realtimeStats : serverStats;
+  const statsLoading = isRealtimeEnabled ? realtimeLoading : serverStatsLoading;
+
+  // Propagate realtime errors
+  useEffect(() => {
+    if (realtimeError && isRealtimeEnabled) {
+      setError(realtimeError);
+    }
+  }, [realtimeError, isRealtimeEnabled]);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  // 🔄 WebSocket: Real-time email notifications
-  useEffect(() => {
-    if (!ws || !isMounted) return;
-
-    // Subscribe to email queue events
-    const emailReceivedId = ws.addEventListener('email_received', (message) => {
-      logger.info('📧 New email received via WebSocket', { payload: message.payload });
-
-      // Show toast notification
-      toast.success('📧 New email received! Refreshing inbox...', {
-        duration: 3000,
-      });
-
-      // Auto-refresh communications list
-      loadCommunications();
-    });
-
-    const emailProcessedId = ws.addEventListener('email_processed', (message) => {
-      logger.info('✅ Email processed via WebSocket', { payload: message.payload });
-
-      // Refresh to show processed email
-      loadCommunications();
-    });
-
-    // Cleanup on unmount
-    return () => {
-      if (emailReceivedId) ws.removeEventListener(emailReceivedId);
-      if (emailProcessedId) ws.removeEventListener(emailProcessedId);
-    };
-  }, [ws, isMounted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isTriageStatus = useCallback((value: string): value is TriageStatus => {
     return TRIAGE_STATUS_SET.has(value as TriageStatus);
@@ -691,75 +695,74 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
   // LOAD PENDING COMMUNICATIONS
   // =========================================================================
 
+  // 🏢 ENTERPRISE: Server actions - ONLY for super admin fallback
+  // Tenant admins use real-time Firestore listener (ADR-079)
   const loadTriageCommunications = useCallback(async () => {
-    setLoading(true);
+    if (isRealtimeEnabled) return; // Real-time mode handles this
+
+    setServerLoading(true);
     setError(null);
 
     try {
-      // 🏢 ENTERPRISE: Super admin sees ALL messages, tenant admin sees only their company
-      // Check role first - super_admin bypasses company filter
-      const isSuperAdmin = adminContext.role === 'super_admin';
-      const companyId = isSuperAdmin ? undefined : adminContext.companyId;
-
-      const result = await getTriageCommunications(companyId, adminContext.operationId, resolveStatusFilter());
+      const result = await getTriageCommunications(undefined, adminContext.operationId, resolveStatusFilter());
       if (!result.ok) {
         throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
       }
       const data = result.data;
 
-      // 🏢 ENTERPRISE: Type assertion - all Firestore documents have id
-      setCommunications(data as Array<Communication & { id: string }>);
+      setServerCommunications(data as Array<Communication & { id: string }>);
 
-      logger.info('Loaded pending communications', {
+      logger.info('Loaded pending communications (super admin)', {
         count: data.length,
-        source: 'firestore',
+        source: 'server-action',
         adminUid: adminContext.uid,
-        isGlobalAdmin: !companyId,
       });
     } catch (err) {
       logger.error('Failed to load communications', { error: err });
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
-      setLoading(false);
+      setServerLoading(false);
     }
-  }, [adminContext.companyId, adminContext.operationId, adminContext.uid, adminContext.role, resolveStatusFilter, t]);
+  }, [isRealtimeEnabled, adminContext.operationId, adminContext.uid, resolveStatusFilter, t]);
 
   const loadTriageStats = useCallback(async () => {
-    setStatsLoading(true);
-    try {
-      // 🏢 ENTERPRISE: Use dedicated getTriageStats service function (ADR-073)
-      // Super admin sees ALL stats (companyId = undefined), tenant admin sees only their company
-      const isSuperAdmin = adminContext.role === 'super_admin';
-      const companyId = isSuperAdmin ? undefined : adminContext.companyId;
+    if (isRealtimeEnabled) return; // Real-time mode computes stats from live data
 
-      const result = await getTriageStats(companyId, adminContext.operationId);
+    setServerStatsLoading(true);
+    try {
+      const result = await getTriageStats(undefined, adminContext.operationId);
       if (!result.ok) {
         throw new Error(t('aiInbox.loadFailedWithErrorId', { errorId: result.errorId }));
       }
 
-      // 🐛 DEBUG: Log received stats
-      logger.info('📊 Received stats from API', result.data);
-
-      // 🏢 ENTERPRISE: Service returns properly calculated stats
-      setStats(result.data);
+      setServerStats(result.data);
     } catch (err) {
       logger.error('Failed to load triage stats', { error: err });
     } finally {
-      setStatsLoading(false);
+      setServerStatsLoading(false);
     }
-  }, [adminContext.companyId, adminContext.operationId, adminContext.role, t]);
+  }, [isRealtimeEnabled, adminContext.operationId, t]);
 
   useEffect(() => {
-    loadTriageCommunications();
-  }, [loadTriageCommunications]);
+    if (!isRealtimeEnabled) {
+      loadTriageCommunications();
+    }
+  }, [loadTriageCommunications, isRealtimeEnabled]);
 
   useEffect(() => {
-    loadTriageStats();
-  }, [loadTriageStats]);
+    if (!isRealtimeEnabled) {
+      loadTriageStats();
+    }
+  }, [loadTriageStats, isRealtimeEnabled]);
 
   const handleRefresh = useCallback(async () => {
+    if (isRealtimeEnabled) {
+      // Real-time: no manual refresh needed, but toast to confirm
+      toast.success('Live data is already up-to-date!', { duration: 2000 });
+      return;
+    }
     await Promise.all([loadTriageCommunications(), loadTriageStats()]);
-  }, [loadTriageCommunications, loadTriageStats]);
+  }, [isRealtimeEnabled, loadTriageCommunications, loadTriageStats]);
 
   // =========================================================================
   // ACTIONS
@@ -790,28 +793,31 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         return;
       }
 
-      // Update local state
-      setCommunications(prev => {
-        const updated = prev.map(comm =>
-          comm.id === commId
-            ? { ...comm, triageStatus: TRIAGE_STATUSES.APPROVED, linkedTaskId: result.taskId }
-            : comm
-        );
-        if (filters.status !== 'all' && filters.status !== TRIAGE_STATUSES.APPROVED) {
-          return updated.filter(comm => comm.id !== commId);
-        }
-        return updated;
-      });
+      // 🏢 ENTERPRISE: In real-time mode, Firestore listener auto-updates
+      // In server-action mode (super admin), manually update local state
+      if (!isRealtimeEnabled) {
+        setServerCommunications(prev => {
+          const updated = prev.map(comm =>
+            comm.id === commId
+              ? { ...comm, triageStatus: TRIAGE_STATUSES.APPROVED, linkedTaskId: result.taskId }
+              : comm
+          );
+          if (filters.status !== 'all' && filters.status !== TRIAGE_STATUSES.APPROVED) {
+            return updated.filter(comm => comm.id !== commId);
+          }
+          return updated;
+        });
 
-      setStats(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          pending: Math.max(0, prev.pending - 1),
-          approved: prev.approved + 1,
-          total: prev.total
-        };
-      });
+        setServerStats(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            pending: Math.max(0, prev.pending - 1),
+            approved: prev.approved + 1,
+            total: prev.total
+          };
+        });
+      }
 
       toast.success(t('aiInbox.approveSuccess'));
       logger.info('Communication approved', {
@@ -852,27 +858,30 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         return;
       }
 
-      setCommunications(prev => {
-        const updated = prev.map(comm =>
-          comm.id === commId
-            ? { ...comm, triageStatus: TRIAGE_STATUSES.REJECTED }
-            : comm
-        );
-        if (filters.status !== 'all' && filters.status !== TRIAGE_STATUSES.REJECTED) {
-          return updated.filter(comm => comm.id !== commId);
-        }
-        return updated;
-      });
+      // 🏢 ENTERPRISE: In real-time mode, Firestore listener auto-updates
+      if (!isRealtimeEnabled) {
+        setServerCommunications(prev => {
+          const updated = prev.map(comm =>
+            comm.id === commId
+              ? { ...comm, triageStatus: TRIAGE_STATUSES.REJECTED }
+              : comm
+          );
+          if (filters.status !== 'all' && filters.status !== TRIAGE_STATUSES.REJECTED) {
+            return updated.filter(comm => comm.id !== commId);
+          }
+          return updated;
+        });
 
-      setStats(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          pending: Math.max(0, prev.pending - 1),
-          rejected: prev.rejected + 1,
-          total: prev.total
-        };
-      });
+        setServerStats(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            pending: Math.max(0, prev.pending - 1),
+            rejected: prev.rejected + 1,
+            total: prev.total
+          };
+        });
+      }
 
       toast.success(t('aiInbox.rejectSuccess'));
       logger.info('Communication rejected', {
@@ -977,6 +986,7 @@ export default function AIInboxClient({ adminContext }: AIInboxClientProps) {
         onRefresh={handleRefresh}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
+        isLive={connected}
       />
 
       {showDashboard && (
