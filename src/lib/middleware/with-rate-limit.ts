@@ -24,6 +24,7 @@ import {
 } from './rate-limiter';
 import { type RateLimitCategory } from './rate-limit-config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { getCurrentSecurityPolicy } from '@/config/environment-security-config';
 
 // =============================================================================
 // LOGGER (Centralized - NO console.*)
@@ -37,10 +38,20 @@ const logger = createModuleLogger('RATE_LIMIT_WRAPPER');
 
 /**
  * API handler function type (matches Next.js App Router)
+ * Supports both sync params (legacy) and async params (Next.js 15+)
+ *
+ * Note: context can be:
+ * - undefined (no dynamic segments)
+ * - { params?: Record<string, string> } (legacy sync params - optional)
+ * - { params: Promise<Record<string, string>> } (Next.js 15+ async params - required)
+ *
+ * Using `any` for context to support all Next.js route patterns (forwarding only, not inspecting).
+ * This is acceptable as we don't access the context in the rate limit middleware.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ApiHandler = (
   request: NextRequest,
-  context?: { params?: Record<string, string> }
+  context?: any
 ) => Promise<Response> | Response;
 
 /**
@@ -166,6 +177,13 @@ export function withRateLimit(
   options: WithRateLimitOptions = {}
 ): ApiHandler {
   return async (request: NextRequest, context) => {
+    // 🔥 ENVIRONMENT-AWARE: Skip rate limiting if disabled in security policy
+    const policy = getCurrentSecurityPolicy();
+    if (!policy.enableRateLimiting) {
+      logger.info('Rate limiting disabled for development environment');
+      return handler(request, context);
+    }
+
     // Check if we should skip rate limiting
     if (options.skip?.(request)) {
       return handler(request, context);
