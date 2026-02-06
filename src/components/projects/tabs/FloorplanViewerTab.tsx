@@ -12,8 +12,11 @@ import { canvasUtilities } from '@/styles/design-tokens';
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: Import FloorplanData type for proper typing
 import type { FloorplanData, DxfSceneData, FloorplanFileType } from '@/services/floorplans/FloorplanService';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized typography tokens
+import { useTypography } from '@/hooks/useTypography';
 
 interface FloorplanViewerTabProps {
   title: string;
@@ -31,6 +34,8 @@ export function FloorplanViewerTab({
 }: FloorplanViewerTabProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('building');
+  // 🏢 ENTERPRISE: Centralized typography tokens
+  const typography = useTypography();
 
   // 🏢 ENTERPRISE: Translate title if it's an i18n key
   const translatedTitle = title.includes('.')
@@ -233,7 +238,7 @@ export function FloorplanViewerTab({
     <Card className="w-full h-full">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <Map className={iconSizes.md} />
             {translatedTitle}
           </CardTitle>

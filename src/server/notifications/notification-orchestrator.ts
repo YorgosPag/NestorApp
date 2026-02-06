@@ -65,6 +65,10 @@ export interface DispatchRequest {
   entityId?: string;
   entityType?: NotificationEntityType;
   actions?: Array<{ id: string; label: string; url?: string; destructive?: boolean }>;
+  /** i18n key for client-side translation (falls back to title if missing) */
+  titleKey?: string;
+  /** i18n interpolation params for titleKey (e.g. { sender: "John" }) */
+  titleParams?: Record<string, string>;
 }
 
 /**
@@ -225,6 +229,8 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     delivery: { ...DEFAULT_DELIVERY },
     source,
     ...(actions && actions.length > 0 ? { actions } : {}),
+    // i18n: store translation key + params for client-side rendering
+    ...(request.titleKey ? { titleKey: request.titleKey, titleParams: request.titleParams ?? {} } : {}),
     meta: {
       dedupeKey,
       eventType,

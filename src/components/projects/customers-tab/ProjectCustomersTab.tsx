@@ -11,10 +11,14 @@ import { EmptyState } from './parts/EmptyState';
 import type { ProjectCustomersTabProps } from './types';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized typography tokens
+import { useTypography } from '@/hooks/useTypography';
 
 export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
+  // 🏢 ENTERPRISE: Centralized typography tokens
+  const typography = useTypography();
   const { customers, loading, error } = useProjectCustomers(projectId);
 
   if (loading) {
@@ -32,7 +36,7 @@ export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('customers.titleWithCount', { count: customers.length })}</CardTitle>
+        <CardTitle className={typography.card.titleCompact}>{t('customers.titleWithCount', { count: customers.length })}</CardTitle>
         <CardDescription>{t('customers.description')}</CardDescription>
       </CardHeader>
       <CardContent>

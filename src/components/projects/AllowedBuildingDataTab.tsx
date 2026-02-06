@@ -4,6 +4,7 @@ import React, { useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { FormField } from './FormField';
+import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n';
 
 export interface AllowedDataInput {
@@ -43,6 +44,7 @@ const CalculationFormula = ({ text, className }: { text: string; className?: str
 
 export function AllowedBuildingDataTab({ allowedDataInput, calculatedData, onInputChange, isEditing }: AllowedBuildingDataTabProps) {
     const { t } = useTranslation('properties');
+    const typography = useTypography();
     const formRef = useRef<HTMLDivElement>(null);
     
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,7 +74,7 @@ export function AllowedBuildingDataTab({ allowedDataInput, calculatedData, onInp
     return (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg text-center">{t('projects.buildingData.title')}</CardTitle>
+            <CardTitle className={`${typography.card.titleCompact} text-center`}>{t('projects.buildingData.title')}</CardTitle>
           </CardHeader>
           <CardContent className="pt-4 flex justify-center">
             <div className="flex gap-x-8" ref={formRef}>

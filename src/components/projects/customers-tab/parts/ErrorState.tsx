@@ -7,6 +7,8 @@ import { AlertTriangle, RefreshCw, Database, Wifi, Server, AlertCircle } from 'l
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized typography tokens
+import { useTypography } from '@/hooks/useTypography';
 
 interface ErrorStateProps {
   error: string;
@@ -18,6 +20,8 @@ interface ErrorStateProps {
 export function ErrorState({ error, errorType, canRetry = true, onRetry }: ErrorStateProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
+  // 🏢 ENTERPRISE: Centralized typography tokens
+  const typography = useTypography();
   const iconSizes = useIconSizes();
 
   // 🔒 ENTERPRISE: Icon mapping based on error type
@@ -72,7 +76,7 @@ export function ErrorState({ error, errorType, canRetry = true, onRetry }: Error
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('customers.title')}</CardTitle>
+        <CardTitle className={typography.card.titleCompact}>{t('customers.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="text-center py-8">

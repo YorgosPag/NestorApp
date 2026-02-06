@@ -6,14 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized typography tokens
+import { useTypography } from '@/hooks/useTypography';
 
 export function LoadingCard() {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
+  // 🏢 ENTERPRISE: Centralized typography tokens
+  const typography = useTypography();
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('customers.title')}</CardTitle>
+        <CardTitle className={typography.card.titleCompact}>{t('customers.title')}</CardTitle>
         <CardDescription>{t('structure.loadingCustomers')}</CardDescription>
       </CardHeader>
       <CardContent>

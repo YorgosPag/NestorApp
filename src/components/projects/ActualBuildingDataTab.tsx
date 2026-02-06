@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField } from './FormField';
+import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -34,6 +35,7 @@ interface ActualBuildingDataTabProps {
 export function ActualBuildingDataTab({ actualData, calculatedData, onActualDataChange, isEditing }: ActualBuildingDataTabProps) {
     // 🏢 ENTERPRISE: i18n hook
     const { t } = useTranslation('properties');
+    const typography = useTypography();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -51,7 +53,7 @@ export function ActualBuildingDataTab({ actualData, calculatedData, onActualData
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="text-lg text-center">{t('projects.actualBuildingData.title')}</CardTitle>
+                <CardTitle className={`${typography.card.titleCompact} text-center`}>{t('projects.actualBuildingData.title')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                 <FormField label={t('projects.actualBuildingData.fields.construction')} id="construction" value={actualData.construction} unit={units.sqm} onChange={handleChange} useGrouping readOnly={!isEditing} />

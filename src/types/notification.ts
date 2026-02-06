@@ -49,6 +49,11 @@ export type Notification = {
   channel: Channel; // where it was delivered
   delivery: { state: DeliveryState; attempts: number; lastError?: string };
   meta?: TraceMeta;
+
+  /** i18n key for client-side translation (falls back to title if missing) */
+  titleKey?: string;
+  /** i18n interpolation params for titleKey (e.g. { sender: "John" }) */
+  titleParams?: Record<string, string>;
 };
 
 export type Cursor = string & { readonly brand: unique symbol };

@@ -338,16 +338,19 @@
     "title": "Ειδοποιήσεις",
     "count": "{{count}} ειδοποιήσεις",
     "markAllRead": "Ανάγνωση όλων",
-    "markRead": "Αναγνώστηκε",
+    "markRead": "Διαβάστηκε",
     "empty": "Δεν υπάρχουν ειδοποιήσεις",
     "loading": "Φόρτωση...",
     "error": "Αποτυχία φόρτωσης",
     "retry": "Δοκιμή ξανά",
     "loadMore": "Φόρτωση περισσότερων",
-    "dismiss": "Απόρριψη",
+    "dismiss": "Διαγραφή",
     "actions": {
       "view_email": "Προβολή",
       "view_page": "Προβολή Σελίδας"
+    },
+    "email": {
+      "newFrom": "Νέο email από {{sender}}"
     }
   },
   "header": {

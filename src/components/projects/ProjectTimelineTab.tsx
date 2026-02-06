@@ -14,6 +14,8 @@ import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { getStatusColor, getStatusLabel } from '@/lib/project-utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 ENTERPRISE: Centralized typography tokens
+import { useTypography } from '@/hooks/useTypography';
 
 // 🏢 ENTERPRISE: Typed mock building data
 interface MockBuilding {
@@ -34,13 +36,15 @@ const mockBuildingsConfig: MockBuilding[] = [
 export function ProjectTimelineTab({ project }: { project: Project }) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
+  // 🏢 ENTERPRISE: Centralized typography tokens
+  const typography = useTypography();
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t('timelineTab.title', { name: project.name })}</CardTitle>
+        <CardTitle className={typography.card.titleCompact}>{t('timelineTab.title', { name: project.name })}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>

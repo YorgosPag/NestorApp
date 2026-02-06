@@ -664,7 +664,8 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
     // Fallback: if no admins found, notify system identity (prevents silent failure)
     const recipientIds = adminUserIds.length > 0 ? adminUserIds : [SYSTEM_IDENTITY.ID];
 
-    const notificationTitle = `New Email from ${input.sender.name || input.sender.email}`;
+    const senderDisplay = input.sender.name || input.sender.email;
+    const notificationTitle = `New Email from ${senderDisplay}`;
     const notificationBody = input.subject || '(No subject)';
     const severity = intentAnalysis?.needsTriage ? 'warning' as const : 'info' as const;
 
@@ -676,7 +677,9 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
           eventType: NOTIFICATION_EVENT_TYPES.CRM_NEW_COMMUNICATION,
           recipientId,
           tenantId: routing.companyId!, // Non-null: early return at line 509 guarantees non-null
-          title: notificationTitle,
+          title: notificationTitle, // English fallback
+          titleKey: 'notifications.email.newFrom', // i18n key for client-side translation
+          titleParams: { sender: senderDisplay },
           body: notificationBody,
           severity,
           source: {

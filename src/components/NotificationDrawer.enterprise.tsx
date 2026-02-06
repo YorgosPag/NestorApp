@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw } from 'lucide-react';
+import { X, Trash2, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw, Eye, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useNotificationCenter } from '@/stores/notificationCenter';
@@ -14,9 +14,10 @@ import { useTranslation } from '@/i18n';
 import type { Notification, Severity, UserPreferences } from '@/types/notification';
 import { NotificationClient } from '@/api/notificationClient';
 import { markNotificationsAsRead, dismissNotification } from '@/services/notificationService';
-import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
+import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 
@@ -51,6 +52,9 @@ export function NotificationDrawer() {
 
   const { isOpen, close } = useNotificationDrawer();
   const { items, order, markRead: markReadLocal, dismiss: dismissLocal, status, error: storeError, ingest, setStatus, setError, cursor, setCursor } = useNotificationCenter();
+
+  // 🏢 ENTERPRISE: Persistent card selection (like project management cards)
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // 🏢 ENTERPRISE: Mark as read with Firestore persistence
   const markRead = useCallback(async (ids?: string[]) => {
@@ -90,6 +94,7 @@ export function NotificationDrawer() {
   const { t, i18n } = useTranslation('common');
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const { getStatusBorder } = useBorderTokens();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
@@ -316,7 +321,7 @@ export function NotificationDrawer() {
           </div>
         </header>
 
-        <ScrollArea type="always" className="flex-1">
+        <ScrollArea type="always" className="flex-1 overflow-hidden">
           {/* ✅ ENTERPRISE: Error state UI με Retry */}
           {storeError ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-4">
@@ -325,7 +330,7 @@ export function NotificationDrawer() {
               <button
                 type="button"
                 onClick={handleRetry}
-                className={`flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                className={`flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               >
                 <RefreshCw className={iconSizes.sm} />
                 {t('notifications.retry', { defaultValue: 'Retry' })}
@@ -340,94 +345,116 @@ export function NotificationDrawer() {
               <p>{t('notifications.empty', { defaultValue: 'No notifications' })}</p>
             </div>
           ) : (
-            notificationsList.map(n => {
-              const Icon = iconMap[n.severity];
-              const colorClass = colorMap[n.severity];
+            <div className="p-2 space-y-2">
+              {notificationsList.map(n => {
+                const Icon = iconMap[n.severity];
+                const colorClass = colorMap[n.severity];
+                const isUnread = n.delivery.state !== 'seen' && n.delivery.state !== 'acted';
 
-              {/* Derive navigation URL: actions field first, then source.feature, then title-based detection */}
-              const actionUrl = n.actions?.[0]?.url
-                ?? (n.source?.feature === 'ai-inbox' ? '/admin/ai-inbox' : undefined)
-                ?? (n.title?.toLowerCase().includes('message') ? '/admin/ai-inbox' : undefined);
+                // i18n: use titleKey if available, otherwise fall back to raw title
+                const displayTitle = n.titleKey
+                  ? t(n.titleKey, { ...n.titleParams, defaultValue: n.title })
+                  : n.title;
 
-              return (
-                <Card
-                  key={n.id}
-                  className={`mx-2 mt-2 first:mt-2 p-3 bg-muted/50 ${HOVER_BACKGROUND_EFFECTS.ACCENT_SUBTLE} ${TRANSITION_PRESETS.STANDARD_COLORS} ${n.delivery.state !== 'seen' ? 'ring-1 ring-primary/40 bg-muted/70' : ''}`}
-                >
-                  {/* Header row: icon + title + dismiss X */}
-                  <div className="flex items-start gap-2">
-                    <Icon className={`${iconSizes.md} mt-0.5 flex-shrink-0 ${colorClass}`} />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium text-sm">{n.title}</div>
-                      {n.body && (
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words mt-1">
-                          {n.body}
-                        </p>
-                      )}
-                      <time className="text-xs text-muted-foreground mt-1.5 block">
-                        {dateFormatter.format(new Date(n.createdAt))}
-                      </time>
+                // Derive navigation URL: actions → source.feature → title-based detection
+                const actionUrl = n.actions?.[0]?.url
+                  ?? (n.source?.feature === 'ai-inbox' ? '/admin/ai-inbox' : undefined)
+                  ?? (n.title?.toLowerCase().includes('message') ? '/admin/ai-inbox' : undefined);
+
+                // Card states: selected > unread > default (like project management cards)
+                const isSelected = selectedId === n.id;
+                const cardStateClass = isSelected
+                  ? `${getStatusBorder('info')} shadow-lg ring-2 ring-blue-200 dark:ring-blue-800 bg-blue-950/40 dark:bg-blue-950/50`
+                  : isUnread
+                    ? `${getStatusBorder('info')} shadow-md ring-1 ring-blue-500/30 dark:ring-blue-400/30 bg-blue-950/20 dark:bg-blue-950/30`
+                    : 'border-border';
+
+                return (
+                  <Card
+                    key={n.id}
+                    onClick={() => setSelectedId(prev => prev === n.id ? null : n.id)}
+                    className={[
+                      'p-3 cursor-pointer relative overflow-hidden',
+                      'transition-all duration-200',
+                      'hover:border-blue-500/60 hover:shadow-md dark:hover:border-blue-400/60',
+                      cardStateClass,
+                    ].join(' ')}
+                  >
+                    {/* Header row: severity icon + content + dismiss X */}
+                    <div className="flex items-start gap-2">
+                      <Icon className={`${iconSizes.md} mt-0.5 flex-shrink-0 ${colorClass}`} />
+
+                      <div className="min-w-0 flex-1">
+                        <span className={`text-sm leading-tight ${isUnread ? 'font-semibold text-foreground' : 'font-medium text-foreground/80'}`}>
+                          {displayTitle}
+                        </span>
+                        {n.body && (
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words mt-1">
+                            {n.body}
+                          </p>
+                        )}
+                        <time className="text-xs text-muted-foreground mt-1.5 block">
+                          {dateFormatter.format(new Date(n.createdAt))}
+                        </time>
+                      </div>
+
+                      {/* Dismiss X — always visible, prominent */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); void handleDismiss(n.id); }}
+                        className={`p-1 rounded-md flex-shrink-0 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                        aria-label={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
+                        title={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                    {/* Dismiss X button — always visible */}
-                    <button
-                      type="button"
-                      onClick={() => void handleDismiss(n.id)}
-                      className={`p-1.5 rounded-md text-muted-foreground hover:text-foreground ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                      aria-label={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
-                      title={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
-                    >
-                      <X className={iconSizes.sm} />
-                    </button>
-                  </div>
 
-                  {/* Footer row: action buttons */}
-                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-                    {/* Προβολή button — shows for ALL notifications with a navigation URL */}
-                    {actionUrl && (
+                    {/* Action buttons row */}
+                    <nav className="flex items-center gap-2 mt-2.5 pt-2 border-t border-border/40">
+                      {/* Προβολή (View) */}
+                      {actionUrl && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); void handleAction(n.id, n.actions?.[0]?.id ?? 'view', actionUrl); }}
+                          className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium bg-primary text-primary-foreground hover:bg-primary/90 ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          {t('notifications.actions.view_email', { defaultValue: 'Προβολή' })}
+                        </button>
+                      )}
+
+                      {/* Διαβάστηκε (Mark as Read) — only for unread */}
+                      {isUnread && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); void markRead([n.id]); }}
+                          className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium border border-border hover:bg-accent ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                        >
+                          <CheckCheck className="h-3.5 w-3.5" />
+                          {t('notifications.markRead', { defaultValue: 'Διαβάστηκε' })}
+                        </button>
+                      )}
+
+                      {/* Διαγραφή (Delete/Dismiss) — always visible */}
                       <button
                         type="button"
-                        onClick={() => handleAction(n.id, n.actions?.[0]?.id ?? 'view_email', actionUrl)}
-                        className={`text-xs px-3 py-1.5 rounded-md font-medium ${TRANSITION_PRESETS.STANDARD_COLORS} bg-primary text-primary-foreground ${INTERACTIVE_PATTERNS.PRIMARY_HOVER}`}
+                        onClick={(e) => { e.stopPropagation(); void handleDismiss(n.id); }}
+                        className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium ml-auto text-red-500 border border-red-500/30 hover:bg-red-500/10 ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                       >
-                        {t('notifications.actions.view_email', { defaultValue: 'View' })}
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {t('notifications.dismiss', { defaultValue: 'Διαγραφή' })}
                       </button>
-                    )}
-
-                    {/* Additional CTA actions (destructive, etc.) */}
-                    {n.actions && n.actions.length > 1 && n.actions.slice(1).map(action => (
-                      <button
-                        key={action.id}
-                        type="button"
-                        onClick={() => handleAction(n.id, action.id, action.url)}
-                        className={`text-xs px-3 py-1.5 rounded-md font-medium ${TRANSITION_PRESETS.STANDARD_COLORS} ${
-                          action.destructive
-                            ? `bg-red-600 text-white ${HOVER_BACKGROUND_EFFECTS.RED_DARKER}`
-                            : `${HOVER_BACKGROUND_EFFECTS.ACCENT}`
-                        }`}
-                      >
-                        {t(`notifications.actions.${action.id}`, { defaultValue: action.label })}
-                      </button>
-                    ))}
-
-                    {/* Mark as read — only for unread */}
-                    {n.delivery.state !== 'seen' && (
-                      <button
-                        type="button"
-                        onClick={() => void markRead([n.id])}
-                        className={`text-xs px-2 py-1 rounded-md ml-auto ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                      >
-                        {t('notifications.markRead', { defaultValue: 'Mark read' })}
-                      </button>
-                    )}
-                  </div>
-                </Card>
-              );
-            })
+                    </nav>
+                  </Card>
+                );
+              })}
+            </div>
           )}
 
           {/* ✅ ENTERPRISE: Load More με cursor pagination */}
           {cursor && status === 'ready' && notificationsList.length > 0 && (
-            <div className="p-4 border-t">
+            <div className="p-2 pt-0">
               <button
                 type="button"
                 onClick={handleLoadMore}

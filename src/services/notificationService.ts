@@ -74,7 +74,8 @@ export async function fetchNotifications(params: NotificationQuery): Promise<Not
       delivery: data.delivery || { state: 'delivered', attempts: 1 },
       source: data.source,
       actions: data.actions,
-      meta: data.meta
+      meta: data.meta,
+      ...(data.titleKey ? { titleKey: data.titleKey, titleParams: data.titleParams } : {}),
     } as Notification;
   });
 
@@ -171,7 +172,8 @@ export function subscribeToNotifications(
           delivery: data.delivery || { state: 'delivered', attempts: 1 },
           source: data.source,
           actions: data.actions,
-          meta: data.meta
+          meta: data.meta,
+          ...(data.titleKey ? { titleKey: data.titleKey, titleParams: data.titleParams } : {}),
         } as Notification;
       });
 
