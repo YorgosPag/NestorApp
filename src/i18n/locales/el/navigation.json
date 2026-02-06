@@ -251,7 +251,8 @@
     "fileManager": "Διαχείριση Αρχείων"
   },
   "admin": {
-    "aiInbox": "AI Inbox"
+    "aiInbox": "AI Inbox",
+    "setup": "Ρύθμιση Admin"
   },
   "badges": {
     "new": "Νέο",

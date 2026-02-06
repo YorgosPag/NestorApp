@@ -56,6 +56,7 @@ import {
   CheckCircle,
   FolderTree,
   Inbox,
+  Shield,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 
@@ -92,6 +93,9 @@ const NAVIGATION_LABELS = {
 
   // 🏢 ENTERPRISE: AI Inbox (Admin)
   ai_inbox: 'admin.aiInbox',
+
+  // 🏢 ENTERPRISE: Admin Setup
+  admin_setup: 'admin.setup',
 
   // Badges
   badge_new: 'badges.new',
@@ -539,6 +543,15 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                 }
               },
               {
+                icon: Shield,
+                href: '/admin/setup',
+                smartConfig: {
+                  priority: 'medium',
+                  analyticsKey: 'nav_admin_setup',
+                  permissions: ['admin_access']
+                }
+              },
+              {
                 icon: Archive,
                 href: "/debug",
                 badge: "DEBUG",
@@ -628,6 +641,7 @@ function getLabelKeyForPath(path: string): string {
 
     // Admin paths
     'admin/ai-inbox': 'ai_inbox',
+    'admin/setup': 'admin_setup',
 
     // Tools paths
     'files': 'file_manager',

@@ -251,7 +251,8 @@
     "fileManager": "File Manager"
   },
   "admin": {
-    "aiInbox": "AI Inbox"
+    "aiInbox": "AI Inbox",
+    "setup": "Admin Setup"
   },
   "badges": {
     "new": "New",
