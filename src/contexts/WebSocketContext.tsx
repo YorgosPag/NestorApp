@@ -50,6 +50,81 @@ interface WebSocketProviderProps {
   enableDevtools?: boolean;
 }
 
+// ============================================================================
+// 🏢 ENTERPRISE: WebSocket Transport Availability Detection
+// Pattern: SAP/Google/Microsoft - "Feature Availability + Graceful Degradation"
+//
+// Vercel Serverless does NOT support native WebSocket connections.
+// Real-time updates in production use Firestore onSnapshot listeners.
+// WebSocket is available ONLY when explicitly configured (e.g., development
+// with a local WS server, or production with a dedicated WS service).
+//
+// Configuration:
+//   NEXT_PUBLIC_WS_ENABLED=true   → Explicit opt-in for WebSocket
+//   NEXT_PUBLIC_WS_URL=wss://...  → WebSocket server endpoint
+//   Neither set                   → WebSocket disabled (graceful degradation)
+// ============================================================================
+
+/** WebSocket transport configuration resolved from environment */
+interface WebSocketTransportConfig {
+  /** Whether WebSocket transport is available */
+  readonly isAvailable: boolean;
+  /** Resolved WebSocket URL (empty if unavailable) */
+  readonly url: string;
+  /** Reason why WebSocket is disabled (for diagnostics) */
+  readonly disabledReason: string | null;
+}
+
+/**
+ * Resolve WebSocket transport availability from environment.
+ * @enterprise Explicit opt-in policy - never assume WS is available.
+ *
+ * Priority:
+ *   1. NEXT_PUBLIC_WS_ENABLED=true + NEXT_PUBLIC_WS_URL → enabled
+ *   2. NEXT_PUBLIC_WS_URL alone (dev only) → enabled with URL
+ *   3. Development without URL → enabled with localhost fallback
+ *   4. Production without explicit config → DISABLED (Vercel serverless)
+ */
+function resolveTransportConfig(): WebSocketTransportConfig {
+  const explicitUrl = process.env.NEXT_PUBLIC_WS_URL || '';
+  const explicitEnabled = process.env.NEXT_PUBLIC_WS_ENABLED === 'true';
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  // Case 1: Explicitly enabled with URL → always available
+  if (explicitEnabled && explicitUrl) {
+    return { isAvailable: true, url: explicitUrl, disabledReason: null };
+  }
+
+  // Case 2: URL provided without flag (dev) → available
+  if (explicitUrl && isDevelopment) {
+    return { isAvailable: true, url: explicitUrl, disabledReason: null };
+  }
+
+  // Case 3: URL provided without flag (production) → require explicit opt-in
+  if (explicitUrl && !isDevelopment && !explicitEnabled) {
+    return {
+      isAvailable: false,
+      url: '',
+      disabledReason: 'NEXT_PUBLIC_WS_URL set but NEXT_PUBLIC_WS_ENABLED is not "true" in production',
+    };
+  }
+
+  // Case 4: Development without any config → localhost fallback
+  if (isDevelopment) {
+    return { isAvailable: true, url: 'ws://localhost:8080/ws', disabledReason: null };
+  }
+
+  // Case 5: Production without config → disabled (Vercel serverless)
+  return {
+    isAvailable: false,
+    url: '',
+    disabledReason: 'No WebSocket configuration — using Firestore real-time listeners',
+  };
+}
+
+/** Singleton transport config (evaluated once at module load) */
+const WS_TRANSPORT = resolveTransportConfig();
+
 // 🏢 ENTERPRISE: Pending Listener Queue System (SAP/Google/Microsoft Pattern)
 interface PendingListener {
   id: string;
@@ -60,7 +135,7 @@ interface PendingListener {
 
 export function WebSocketProvider({
   children,
-  wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws',
+  wsUrl = WS_TRANSPORT.url,
   enableDevtools = process.env.NODE_ENV === 'development'
 }: WebSocketProviderProps) {
   const { user, isAuthenticated } = useUserRole();
@@ -141,13 +216,24 @@ export function WebSocketProvider({
     return ws;
   }, [wsUrl, enableDevtools, user, cache]);
 
-  // Connect when authenticated
+  // 🏢 ENTERPRISE: Connect when authenticated AND transport is available
+  // Pattern: SAP/Salesforce - "Graceful Degradation with Diagnostic Logging"
   useEffect(() => {
+    // Guard: WebSocket transport must be available
+    if (!WS_TRANSPORT.isAvailable) {
+      if (enableDevtools && WS_TRANSPORT.disabledReason) {
+        console.info(
+          `[WebSocket] ℹ️ Transport disabled: ${WS_TRANSPORT.disabledReason}`
+        );
+      }
+      return;
+    }
+
     if (isAuthenticated && user) {
       const ws = initializeWebSocket();
 
       ws.connect().catch((error) => {
-        console.warn('WebSocket connection failed:', error);
+        console.warn('[WebSocket] Connection failed:', error);
       });
 
       return () => {
@@ -161,7 +247,7 @@ export function WebSocketProvider({
         ws.destroy();
       };
     }
-  }, [isAuthenticated, user, initializeWebSocket]);
+  }, [isAuthenticated, user, initializeWebSocket, enableDevtools]);
 
   // 🏢 ENTERPRISE: Flush Pending Listeners when WebSocket is Ready
   useEffect(() => {
@@ -328,6 +414,11 @@ export function WebSocketProvider({
   }, [connectionAttempts, user]);
 
   const reconnect = useCallback(async () => {
+    // 🏢 ENTERPRISE: Prevent reconnect when transport is unavailable
+    if (!WS_TRANSPORT.isAvailable) {
+      console.info('[WebSocket] ℹ️ Reconnect skipped — transport not available');
+      return;
+    }
     if (!wsRef.current) {
       initializeWebSocket();
     }

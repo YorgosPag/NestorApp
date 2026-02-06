@@ -1,6 +1,6 @@
 // telegram-service.ts - Service for Telegram API interactions and CRM logging
 
-import { db, isFirebaseAvailable } from '@/lib/firebase-admin';
+import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { TelegramSendPayload, TelegramSendResult, TelegramMessageObject } from './telegram/types';
@@ -58,13 +58,13 @@ interface CRMMessageInput {
  * 🔄 2026-01-17: Changed from COMMUNICATIONS to MESSAGES
  */
 export async function storeMessageInCRM(message: CRMMessageInput, direction: 'inbound' | 'outbound') {
-  if (!isFirebaseAvailable()) {
+  if (!isFirebaseAdminAvailable()) {
     console.warn('⚠️ Firebase not available, skipping CRM storage');
     return null;
   }
 
   // 🏢 ENTERPRISE: Get database instance
-  const database = db();
+  const database = getAdminFirestore();
   if (!database) {
     console.warn('⚠️ Database not available');
     return null;

@@ -19,7 +19,7 @@ import type { Migration, MigrationResult, MigrationStep } from './types';
 import { DEFAULT_MIGRATION_CONFIG } from './types';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PROJECT_CODE_CONFIG, formatProjectCode } from '@/services/project-code.service';
-import { db } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 // ============================================================================
 // MIGRATION METADATA
@@ -67,7 +67,7 @@ interface DryRunResult {
  * Uses static import for reliable module resolution
  */
 function getFirestore(): FirebaseFirestore.Firestore {
-  const database = db();
+  const database = getAdminFirestore();
 
   if (!database) {
     throw new Error('Firestore database not available - check Firebase Admin initialization');
@@ -83,7 +83,7 @@ function getFirestore(): FirebaseFirestore.Firestore {
  * excludes documents that don't have the orderBy field. Sorting is done in JS.
  */
 async function fetchProjectsSorted(): Promise<ProjectDocument[]> {
-  const database = db();
+  const database = getAdminFirestore();
 
   if (!database) {
     throw new Error('Firestore database not available');

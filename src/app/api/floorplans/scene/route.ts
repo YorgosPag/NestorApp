@@ -17,14 +17,14 @@
  * - Caching headers for performance
  *
  * Pattern: Autodesk Forge Viewer, Google Docs (authenticated file serving)
+ * @rateLimit STANDARD (60 req/min) - Floorplan scene data retrieval
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getStorage } from 'firebase-admin/storage';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
 
 // ============================================================================
 // TYPES
@@ -79,7 +79,7 @@ export const dynamic = 'force-dynamic';
  *
  * Returns the processed scene JSON for a floorplan file.
  */
-export async function GET(request: NextRequest) {
+const getHandler = async (request: NextRequest) => {
   const handler = withAuth<SceneErrorResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleGetScene(req, ctx);
@@ -88,7 +88,9 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const GET = withStandardRateLimit(getHandler);
 
 // ============================================================================
 // CORE LOGIC
@@ -120,47 +122,11 @@ async function handleGetScene(
 
   try {
     // =========================================================================
-    // 2. INITIALIZE FIREBASE ADMIN
+    // 2. FIREBASE ADMIN (ADR-077: Centralized via @/lib/firebaseAdmin)
     // =========================================================================
 
-    let adminApp;
-    if (getApps().length === 0) {
-      const projectId =
-        process.env.FIREBASE_PROJECT_ID ||
-        process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
-      const storageBucket =
-        process.env.FIREBASE_STORAGE_BUCKET ||
-        process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
-        `${projectId}.appspot.com`;
-
-      if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-        try {
-          const serviceAccount = JSON.parse(
-            process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-          );
-          adminApp = initializeApp({
-            credential: cert(serviceAccount),
-            storageBucket,
-          });
-        } catch {
-          adminApp = initializeApp({
-            projectId,
-            storageBucket,
-          });
-        }
-      } else {
-        adminApp = initializeApp({
-          projectId,
-          storageBucket,
-        });
-      }
-    } else {
-      adminApp = getApps()[0];
-    }
-
-    const adminDb = getFirestore(adminApp);
-    const adminStorage = getStorage(adminApp);
+    const adminDb = getAdminFirestore();
+    const adminStorage = getAdminStorage();
 
     const storageBucket =
       process.env.FIREBASE_STORAGE_BUCKET ||

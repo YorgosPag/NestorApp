@@ -10,13 +10,16 @@
  * 🔒 SECURITY:
  * - Global Role: super_admin (break-glass utility)
  * - Admin SDK for secure server-side operations
+ *
+ * @rateLimit STANDARD (60 req/min) - Firestore connectivity diagnostic utility
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 
 interface FirestoreDiagnosticResult {
   timestamp: string;
@@ -63,7 +66,7 @@ interface FirestoreDiagnosticResult {
   };
 }
 
-export async function GET(request: NextRequest) {
+const getHandler = async (request: NextRequest) => {
   const handler = withAuth<FirestoreDiagnosticResult>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FirestoreDiagnosticResult>> => {
       const diagnosticStart = Date.now();
@@ -127,7 +130,7 @@ export async function GET(request: NextRequest) {
         const connectionStart = Date.now();
 
         try {
-          const testSnapshot = await adminDb.collection(COLLECTIONS.PROJECTS).limit(1).get();
+          const testSnapshot = await getAdminFirestore().collection(COLLECTIONS.PROJECTS).limit(1).get();
           const connectionLatency = Date.now() - connectionStart;
 
           result.connection.status = 'CONNECTED';
@@ -156,7 +159,7 @@ export async function GET(request: NextRequest) {
           console.log(`   Testing ${collectionName} (${collectionPath})...`);
 
           try {
-            const testSnapshot = await adminDb.collection(collectionPath).limit(5).get();
+            const testSnapshot = await getAdminFirestore().collection(collectionPath).limit(5).get();
             const testLatency = Date.now() - testStart;
 
             result.collections[collectionName] = {
@@ -196,7 +199,7 @@ export async function GET(request: NextRequest) {
 
         try {
           const floorsSnapshot = await Promise.race([
-            adminDb.collection(COLLECTIONS.FLOORS).limit(10).get(),
+            getAdminFirestore().collection(COLLECTIONS.FLOORS).limit(10).get(),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout after 10 seconds')), 10000))
           ]);
 
@@ -228,7 +231,7 @@ export async function GET(request: NextRequest) {
 
         try {
           const buildingsSnapshot = await Promise.race([
-            adminDb.collection(COLLECTIONS.BUILDINGS).limit(5).get(),
+            getAdminFirestore().collection(COLLECTIONS.BUILDINGS).limit(5).get(),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout after 5 seconds')), 5000))
           ]);
 
@@ -250,10 +253,10 @@ export async function GET(request: NextRequest) {
             try {
               const firstBuilding = buildingsSnapshot.docs[0];
               const subcollectionSnapshot = await Promise.race([
-                adminDb
+                getAdminFirestore()
                   .collection(COLLECTIONS.BUILDINGS)
                   .doc(firstBuilding.id)
-                  .collection('floors')
+                  .collection(SUBCOLLECTIONS.BUILDING_FLOORS)
                   .get(),
                 new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout after 5 seconds')), 5000))
               ]);
@@ -360,4 +363,6 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const GET = withStandardRateLimit(getHandler);

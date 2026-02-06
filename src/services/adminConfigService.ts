@@ -16,7 +16,7 @@
  * @created 2026-01-24
  */
 
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // =============================================================================
@@ -80,7 +80,7 @@ export async function getAdminConfiguration(): Promise<AdminConfiguration> {
   }
 
   try {
-    const docRef = adminDb.collection(COLLECTIONS.SYSTEM).doc('settings');
+    const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
     const docSnap = await docRef.get();
 
     if (!docSnap.exists) {
@@ -165,7 +165,7 @@ export async function updateAdminConfiguration(
   updates: Partial<AdminConfiguration>
 ): Promise<void> {
   try {
-    const docRef = adminDb.collection(COLLECTIONS.SYSTEM).doc('settings');
+    const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
 
     await docRef.set({
       admin: {

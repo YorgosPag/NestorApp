@@ -10,13 +10,16 @@
  * 🔒 SECURITY:
  * - Global Role: super_admin (break-glass utility)
  * - Admin SDK for secure server-side operations
+ *
+ * @rateLimit STANDARD (60 req/min) - Enterprise database architecture audit utility
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 
 interface EnterpriseDatabaseAudit {
   auditTimestamp: string;
@@ -55,7 +58,7 @@ interface EnterpriseDatabaseAudit {
   };
 }
 
-export async function GET(request: NextRequest) {
+const getHandler = async (request: NextRequest) => {
   const handler = withAuth<EnterpriseDatabaseAudit | { error: string }>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<EnterpriseDatabaseAudit | { error: string }>> => {
       try {
@@ -82,7 +85,7 @@ export async function GET(request: NextRequest) {
 
         console.log('[AUDIT 1] Checking normalized floors collection...');
         try {
-          const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS).limit(50).get();
+          const floorsSnapshot = await getAdminFirestore().collection(COLLECTIONS.FLOORS).limit(50).get();
           audit.collections.normalizedFloors.exists = true;
           audit.collections.normalizedFloors.documentCount = floorsSnapshot.docs.length;
 
@@ -118,16 +121,16 @@ export async function GET(request: NextRequest) {
 
         console.log('[AUDIT 2] Checking subcollections...');
         try {
-          const buildingsSnapshot = await adminDb.collection(COLLECTIONS.BUILDINGS).limit(10).get();
+          const buildingsSnapshot = await getAdminFirestore().collection(COLLECTIONS.BUILDINGS).limit(10).get();
           const buildingsToCheck = buildingsSnapshot.docs.slice(0, 5);
           audit.collections.subcollectionFloors.buildingsChecked = buildingsToCheck.length;
 
           for (const buildingDoc of buildingsToCheck) {
             try {
-              const floorsSnapshot = await adminDb
+              const floorsSnapshot = await getAdminFirestore()
                 .collection(COLLECTIONS.BUILDINGS)
                 .doc(buildingDoc.id)
-                .collection('floors')
+                .collection(SUBCOLLECTIONS.BUILDING_FLOORS)
                 .get();
 
               if (floorsSnapshot.docs.length > 0) {
@@ -218,4 +221,6 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const GET = withStandardRateLimit(getHandler);

@@ -36,7 +36,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { Timestamp as AdminTimestamp, FieldValue } from 'firebase-admin/firestore';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -151,7 +151,7 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
 
     // STEP 1: Get all navigation_companies documents (Admin SDK)
     console.log('📊 Step 1: Fetching all navigation_companies documents...');
-    const navigationSnapshot = await adminDb.collection(COLLECTIONS.NAVIGATION).get();
+    const navigationSnapshot = await getAdminFirestore().collection(COLLECTIONS.NAVIGATION).get();
 
     console.log(`   Found ${navigationSnapshot.docs.length} navigation companies documents`);
     result.stats.documentsChecked = navigationSnapshot.docs.length;
@@ -207,7 +207,7 @@ async function handleNormalizeSchemaExecute(request: NextRequest, ctx: AuthConte
           };
 
           // Update document (Admin SDK)
-          await adminDb.collection(COLLECTIONS.NAVIGATION).doc(docId).update(normalizedDoc);
+          await getAdminFirestore().collection(COLLECTIONS.NAVIGATION).doc(docId).update(normalizedDoc);
 
           const normalizedFields = Object.keys(normalizedDoc);
           result.stats.documentsNormalized++;

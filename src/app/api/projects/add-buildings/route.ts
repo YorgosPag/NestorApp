@@ -6,6 +6,7 @@
  * @module api/projects/add-buildings
  * @version 2.0.0
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ * @rateLimit STANDARD (60 req/min) - CRUD
  *
  * 🔒 SECURITY:
  * - Global Role: super_admin (break-glass utility)
@@ -13,11 +14,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Response types for type-safe withAuth
 type AddBuildingsSuccess = {
@@ -36,7 +38,7 @@ type AddBuildingsError = {
 
 type AddBuildingsResponse = AddBuildingsSuccess | AddBuildingsError;
 
-export async function POST(request: NextRequest) {
+export const POST = withStandardRateLimit(async (request: NextRequest) => {
   const handler = withAuth<AddBuildingsResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AddBuildingsResponse>> => {
       console.log('🏗️ [Projects/AddBuildings] Starting building assignment...');
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
         // STEP 1: GET BUILDINGS FOR CONFIGURED PROJECT
         // ============================================================================
 
-        const buildingsSnapshot = await adminDb
+        const buildingsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
           .where('projectId', '==', BUILDING_IDS.PROJECT_ID)
           .get();
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
         // STEP 2: UPDATE PROJECT WITH BUILDINGS (Admin SDK)
         // ============================================================================
 
-        await adminDb
+        await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .doc(BUILDING_IDS.PROJECT_ID.toString())
           .update({
@@ -113,4 +115,4 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+});

@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import {
   collection,
   query,

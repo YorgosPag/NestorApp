@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Admin SDK Storages Endpoint
@@ -175,8 +176,10 @@ interface StoragesResponse {
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: units:units:view
  * - Tenant Isolation: Filters storages by user's companyId through projects
+ * @rateLimit STANDARD (60 req/min) - CRUD
  */
-export async function GET(request: NextRequest) {
+export const GET = withStandardRateLimit(
+  async (request: NextRequest) => {
   const handler = withAuth<StoragesResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<StoragesResponse>> => {
       return handleGetStorages(req, ctx);
@@ -185,7 +188,8 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+  }
+);
 
 async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promise<NextResponse<StoragesResponse>> {
   console.log(`🗄️ API: Loading storages for user ${ctx.email} (company: ${ctx.companyId})...`);
@@ -199,7 +203,7 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
     // =========================================================================
     console.log('🔍 API: Getting authorized projects for user\'s company...');
 
-    const projectsSnapshot = await adminDb
+    const projectsSnapshot = await getAdminFirestore()
       .collection(COLLECTIONS.PROJECTS)
       .where('companyId', '==', ctx.companyId)
       .get();
@@ -241,14 +245,14 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
 
     if (requestedProjectId) {
       // Single project query (already validated as authorized)
-      snapshot = await adminDb
+      snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
         .where('projectId', '==', requestedProjectId)
         .get();
       console.log(`🔍 API: Querying storages for project ${requestedProjectId}`);
     } else {
       // Multiple projects query - get all and filter in-memory
-      snapshot = await adminDb
+      snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.STORAGE)
         .get();
       console.log(`🔍 API: Querying all storages (will filter by ${authorizedProjectIds.size} authorized projects)`);

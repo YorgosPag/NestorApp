@@ -10,12 +10,15 @@
  * 🔒 SECURITY:
  * - Global Role: super_admin (break-glass utility)
  * - Admin SDK for secure server-side operations
+ *
+ * @rateLimit STANDARD (60 req/min) - Real database update utility
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { CONTACT_INFO, ContactInfoUtils } from '@/config/contact-info-config';
@@ -44,7 +47,7 @@ type RealUpdateError = {
 
 type RealUpdateResponse = RealUpdateSuccess | RealUpdateError;
 
-export async function POST(request: NextRequest) {
+const postHandler = async (request: NextRequest) => {
   const handler = withAuth<RealUpdateResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<RealUpdateResponse>> => {
       try {
@@ -56,7 +59,7 @@ export async function POST(request: NextRequest) {
         // ============================================================================
 
         console.log('🔍 Finding sold units without customers...');
-        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
+        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         const soldUnitsToUpdate: Array<{ id: string; name: string }> = [];
         unitsSnapshot.docs.forEach(doc => {
@@ -101,7 +104,7 @@ export async function POST(request: NextRequest) {
 
         for (const contact of contacts) {
           try {
-            await adminDb.collection(COLLECTIONS.CONTACTS).doc(contact.id).set({
+            await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(contact.id).set({
               firstName: contact.name.split(' ')[0],
               lastName: contact.name.split(' ').slice(1).join(' '),
               email: contact.email,
@@ -141,7 +144,7 @@ export async function POST(request: NextRequest) {
           if (!contact) continue;
 
           try {
-            await adminDb.collection(COLLECTIONS.UNITS).doc(unit.id).update({
+            await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unit.id).update({
               soldTo: contact.id
             });
 
@@ -188,4 +191,6 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const POST = withStandardRateLimit(postHandler);

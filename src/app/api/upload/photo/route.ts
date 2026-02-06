@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getStorage } from 'firebase-admin/storage';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getAdminStorage } from '@/lib/firebaseAdmin';
 import { FileNamingService } from '@/services/FileNamingService';
 import { generateTempId } from '@/services/enterprise-id.service';
 
@@ -45,8 +45,10 @@ type PhotoUploadResponse = PhotoUploadSuccessResponse | PhotoUploadErrorResponse
  * - Permission: photos:photos:upload
  * - Only authenticated users can upload files
  * - Firebase Storage Security Rules provide additional file-level access control
+ *
+ * @rateLimit STANDARD (60 req/min) - Photo upload
  */
-export async function POST(request: NextRequest) {
+const postHandler = async (request: NextRequest) => {
   const handler = withAuth<unknown>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleUploadPhoto(req, ctx);
@@ -55,42 +57,15 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const POST = withStandardRateLimit(postHandler);
 
 async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
   console.log(`📁 API: Photo upload request from user ${ctx.email} (company: ${ctx.companyId})`);
 
   try {
     console.log('🚀 SERVER: Starting Firebase Admin server-side upload...');
-
-    // 🏢 ENTERPRISE: Initialize Firebase Admin
-    let adminApp;
-    if (getApps().length === 0) {
-      const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-      console.log('🔧 FIREBASE ADMIN CONFIG:', { projectId, hasServiceKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY });
-
-      if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-        try {
-          const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-          adminApp = initializeApp({
-            credential: cert(serviceAccount),
-            storageBucket: `${projectId}.appspot.com`
-          });
-        } catch (parseError) {
-          adminApp = initializeApp({
-            projectId,
-            storageBucket: `${projectId}.appspot.com`
-          });
-        }
-      } else {
-        adminApp = initializeApp({
-          projectId,
-          storageBucket: `${projectId}.appspot.com`
-        });
-      }
-    } else {
-      adminApp = getApps()[0];
-    }
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -177,8 +152,8 @@ async function handleUploadPhoto(request: NextRequest, ctx: AuthContext) {
     const storagePath = `${folderPath}/${fileName}`;
     console.log('📍 SERVER: Upload path:', storagePath);
 
-    // 🏢 ENTERPRISE: Upload using Firebase Admin Storage
-    const adminStorage = getStorage(adminApp);
+    // 🏢 ENTERPRISE: Upload using Firebase Admin Storage (ADR-077: Centralized)
+    const adminStorage = getAdminStorage();
     const bucket = adminStorage.bucket();
     const fileRef = bucket.file(storagePath);
 

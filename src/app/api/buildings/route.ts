@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
-import { db as getAdminDb } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { FieldValue } from 'firebase-admin/firestore';
 import { isRoleBypass } from '@/lib/auth/roles';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /** Building document with optional createdAt for sorting */
 interface BuildingDocument {
@@ -21,10 +22,11 @@ interface BuildingsResponseData {
   projectId?: string;
 }
 
-export const GET = withAuth<ApiSuccessResponse<BuildingsResponseData>>(
-  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+export const GET = withStandardRateLimit(
+  withAuth<ApiSuccessResponse<BuildingsResponseData>>(
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
     // 🔐 ADMIN SDK: Get server-side Firestore instance
-    const adminDb = getAdminDb();
+    const adminDb = getAdminFirestore();
     if (!adminDb) {
       console.error('❌ Firebase Admin not initialized');
       throw new Error('Database unavailable: Firebase Admin not initialized');
@@ -86,8 +88,9 @@ export const GET = withAuth<ApiSuccessResponse<BuildingsResponseData>>(
       },
       `Loaded ${buildings.length} buildings`
     );
-  },
-  { permissions: 'buildings:buildings:view' }
+    },
+    { permissions: 'buildings:buildings:view' }
+  )
 );
 
 /**
@@ -120,10 +123,11 @@ interface BuildingCreateResponse {
   building: BuildingCreatePayload & { id: string };
 }
 
-export const POST = withAuth<ApiSuccessResponse<BuildingCreateResponse>>(
-  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+export const POST = withStandardRateLimit(
+  withAuth<ApiSuccessResponse<BuildingCreateResponse>>(
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
     // 🔐 ADMIN SDK: Get server-side Firestore instance
-    const adminDb = getAdminDb();
+    const adminDb = getAdminFirestore();
     if (!adminDb) {
       console.error('❌ Firebase Admin not initialized');
       throw new ApiError(503, 'Database unavailable');
@@ -169,8 +173,9 @@ export const POST = withAuth<ApiSuccessResponse<BuildingCreateResponse>>(
       console.error('❌ [Buildings] Error creating building:', error);
       throw new ApiError(500, error instanceof Error ? error.message : 'Failed to create building');
     }
-  },
-  { permissions: 'buildings:buildings:create' }
+    },
+    { permissions: 'buildings:buildings:create' }
+  )
 );
 
 // =============================================================================
@@ -205,10 +210,11 @@ interface BuildingUpdateResponse {
  *           This endpoint uses Admin SDK to bypass rules with proper auth
  * @permission buildings:buildings:update
  */
-export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse>>(
-  async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+export const PATCH = withStandardRateLimit(
+  withAuth<ApiSuccessResponse<BuildingUpdateResponse>>(
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
     // 🔐 ADMIN SDK: Get server-side Firestore instance
-    const adminDb = getAdminDb();
+    const adminDb = getAdminFirestore();
     if (!adminDb) {
       console.error('❌ Firebase Admin not initialized');
       throw new ApiError(503, 'Database unavailable');
@@ -276,6 +282,7 @@ export const PATCH = withAuth<ApiSuccessResponse<BuildingUpdateResponse>>(
       console.error('❌ [Buildings] Error updating building:', error);
       throw new ApiError(500, error instanceof Error ? error.message : 'Failed to update building');
     }
-  },
-  { permissions: 'buildings:buildings:update' }
+    },
+    { permissions: 'buildings:buildings:update' }
+  )
 );

@@ -19,11 +19,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🔒 RATE LIMITING: STANDARD category (60 req/min)
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { MessageReactionsMap } from '@/types/conversations';
@@ -94,21 +96,26 @@ function isValidEmoji(emoji: string): boolean {
  * - Permission: comm:messages:send (need send permission to react)
  * - Tenant isolation validated
  *
+ * @rateLimit STANDARD (60 req/min) - Add/remove/toggle message reactions
+ *
  * @example
  * POST /api/messages/msg_123/reactions
  * Body: { emoji: "👍", action: "add" }
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withStandardRateLimit(async function POST(request: NextRequest, context?: RouteParams) {
   const handler = withAuth<ReactionCanonicalResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const { messageId } = await params;
+      if (!context?.params) {
+        throw new ApiError(400, 'Missing route params');
+      }
+      const { messageId } = await context.params;
       return handleReaction(req, ctx, messageId);
     },
     { permissions: 'comm:messages:send' }
   );
 
   return handler(request);
-}
+});
 
 /**
  * GET /api/messages/[messageId]/reactions
@@ -118,18 +125,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  * 🔒 SECURITY: Protected with RBAC
  * - Permission: comm:messages:view
  * - Tenant isolation validated
+ *
+ * @rateLimit STANDARD (60 req/min) - Get message reactions
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withStandardRateLimit(async function GET(request: NextRequest, context?: RouteParams) {
   const handler = withAuth<ApiSuccessResponse<{ reactions: MessageReactionsMap; userReactions: string[] }>>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const { messageId } = await params;
+      if (!context?.params) {
+        throw new ApiError(400, 'Missing route params');
+      }
+      const { messageId } = await context.params;
       return handleGetReactions(ctx, messageId);
     },
     { permissions: 'comm:messages:view' }
   );
 
   return handler(request);
-}
+});
 
 // ============================================================================
 // HANDLERS
@@ -161,7 +173,7 @@ async function handleReaction(
   }
 
   // 2. Get message document
-  const messageRef = adminDb.collection(COLLECTIONS.MESSAGES).doc(messageId);
+  const messageRef = getAdminFirestore().collection(COLLECTIONS.MESSAGES).doc(messageId);
   const messageDoc = await messageRef.get();
 
   if (!messageDoc.exists) {
@@ -299,7 +311,7 @@ async function handleGetReactions(
   console.log(`📋 [Reactions] User ${ctx.email} getting reactions for ${messageId} [${operationId}]`);
 
   // 1. Get message document
-  const messageRef = adminDb.collection(COLLECTIONS.MESSAGES).doc(messageId);
+  const messageRef = getAdminFirestore().collection(COLLECTIONS.MESSAGES).doc(messageId);
   const messageDoc = await messageRef.get();
 
   if (!messageDoc.exists) {

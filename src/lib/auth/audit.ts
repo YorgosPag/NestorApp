@@ -14,8 +14,9 @@
 
 import 'server-only';
 
-import { getApps } from 'firebase-admin/app';
-import { getFirestore, Firestore, FieldValue } from 'firebase-admin/firestore';
+import { getAdminFirestore, isFirebaseAdminAvailable, FieldValue } from '@/lib/firebaseAdmin';
+import type { Firestore } from 'firebase-admin/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 import type {
   AuthContext,
@@ -72,14 +73,13 @@ function removeUndefinedValues<T extends Record<string, unknown>>(obj: T): Parti
 // =============================================================================
 
 /**
- * Get Firestore instance for audit logging.
+ * Get Firestore instance for audit logging (ADR-077: Centralized via @/lib/firebaseAdmin).
  */
 function getDb(): Firestore | null {
-  const apps = getApps();
-  if (apps.length === 0) {
+  if (!isFirebaseAdminAvailable()) {
     return null;
   }
-  return getFirestore(apps[0]);
+  return getAdminFirestore();
 }
 
 // =============================================================================
@@ -160,7 +160,7 @@ export async function logAuditEvent(
   try {
     // Write to tenant-scoped collection: /companies/{companyId}/audit_logs/{autoId}
     await db
-      .collection('companies')
+      .collection(COLLECTIONS.COMPANIES)
       .doc(ctx.companyId)
       .collection(AUDIT_COLLECTION)
       .add(entry);
@@ -672,7 +672,7 @@ export async function logWebhookEvent(
   try {
     // Write to system-level audit logs collection
     await db
-      .collection('system_audit_logs')  // Separate collection for system events
+      .collection(COLLECTIONS.SYSTEM_AUDIT_LOGS)
       .add(entry);
   } catch (error) {
     // Never throw on audit failure - just log

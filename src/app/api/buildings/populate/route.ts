@@ -14,6 +14,7 @@ import { getRequiredAdminCompanyName } from '@/config/admin-env';
 import { generateOperationId } from '@/services/enterprise-id.service';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /**
  * ENTERPRISE POPULATE ROUTE: Create Buildings from Templates
@@ -92,7 +93,11 @@ interface VerifyResponse {
 // API ENDPOINTS
 // ============================================================================
 
-export const POST = withAuth<PopulateResponse>(
+/**
+ * @rateLimit STANDARD (60 req/min) - CRUD
+ */
+export const POST = withStandardRateLimit(
+  withAuth<PopulateResponse>(
   async (request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
     const response = await handleBuildingInstantiation(request, {
       source: 'api/buildings/populate',
@@ -116,13 +121,18 @@ export const POST = withAuth<PopulateResponse>(
     );
   },
   { requiredGlobalRoles: 'super_admin' }
+  )
 );
 
 // ============================================================================
 // VERIFICATION ENDPOINT
 // ============================================================================
 
-export const GET = withAuth<VerifyResponse>(
+/**
+ * @rateLimit STANDARD (60 req/min) - CRUD
+ */
+export const GET = withStandardRateLimit(
+  withAuth<VerifyResponse>(
   async (_request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
     const operationId = generateOperationId();
 
@@ -218,4 +228,5 @@ export const GET = withAuth<VerifyResponse>(
     }
   },
   { requiredGlobalRoles: 'super_admin' }
+  )
 );

@@ -14,8 +14,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
-import { adminAuth, adminDb, ensureAdminInitialized } from '@/lib/firebaseAdmin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
+import type { UserRecord } from 'firebase-admin/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // TYPES
@@ -35,7 +37,7 @@ interface MfaEnrollCompleteResponse {
 // HELPERS
 // ============================================================================
 
-function hasTotpEnrollment(userRecord: Awaited<ReturnType<typeof adminAuth.getUser>>): boolean {
+function hasTotpEnrollment(userRecord: UserRecord): boolean {
   const factors = userRecord.multiFactor?.enrolledFactors || [];
   return factors.length > 0;
 }
@@ -44,9 +46,13 @@ function hasTotpEnrollment(userRecord: Awaited<ReturnType<typeof adminAuth.getUs
 // HANDLER
 // ============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse<MfaEnrollCompleteResponse>> {
+/**
+ * @rateLimit SENSITIVE (20 req/min) - MFA enrollment completion
+ */
+async function handlePOST(request: NextRequest): Promise<NextResponse<MfaEnrollCompleteResponse>> {
   try {
-    ensureAdminInitialized();
+    const adminAuth = getAdminAuth();
+    const adminDb = getAdminFirestore();
 
     const body: MfaEnrollCompleteRequest = await request.json();
     const { idToken } = body;
@@ -116,3 +122,5 @@ export async function POST(request: NextRequest): Promise<NextResponse<MfaEnroll
     );
   }
 }
+
+export const POST = withSensitiveRateLimit(handlePOST);

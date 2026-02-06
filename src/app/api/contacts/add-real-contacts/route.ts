@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /** 🏢 ENTERPRISE: Discriminated union response types */
 interface AddContactsSuccessResponse {
@@ -26,10 +27,11 @@ type AddContactsResponse = AddContactsSuccessResponse | AddContactsErrorResponse
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection + tenant isolation
  * @security Admin SDK + withAuth + requiredGlobalRoles: super_admin + Tenant Isolation
  * @permission GLOBAL: super_admin only (bulk import utility)
+ * @rateLimit STANDARD (60 req/min) - CRUD
  */
 
-export async function POST(request: NextRequest) {
-  const handler = withAuth<AddContactsResponse>(
+export const POST = withStandardRateLimit(
+  withAuth<AddContactsResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         const { contacts } = await req.json();
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
         console.log(`📝 Processing ${contacts.length} contacts`);
         console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole || 'none'}), Company ${ctx.companyId}`);
 
-    if (!adminDb) {
+    if (!getAdminFirestore()) {
       return NextResponse.json({
         success: false,
         error: 'Firebase Admin SDK not initialized'
@@ -123,7 +125,7 @@ export async function POST(request: NextRequest) {
         };
 
         // Δημιουργία contact με auto-generated ID
-        const docRef = await adminDb.collection(COLLECTIONS.CONTACTS).add(contactData);
+        const docRef = await getAdminFirestore().collection(COLLECTIONS.CONTACTS).add(contactData);
         addedContactIds.push(docRef.id);
 
         console.log(`✅ Added contact: ${contact.firstName || contact.companyName} (ID: ${docRef.id})`);
@@ -156,7 +158,5 @@ export async function POST(request: NextRequest) {
       }
     },
     { requiredGlobalRoles: 'super_admin' }
-  );
-
-  return handler(request);
-}
+  )
+);

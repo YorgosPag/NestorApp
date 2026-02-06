@@ -26,7 +26,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
@@ -74,7 +74,7 @@ async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext)
     console.log('🧭 Starting navigation companies addition via API...');
     console.log(`📝 Processing ${companyIds.length} company IDs`);
 
-    if (!adminDb) {
+    if (!getAdminFirestore()) {
       return NextResponse.json({
         success: false,
         error: 'Firebase Admin SDK not initialized'
@@ -93,7 +93,7 @@ async function handleAddCompaniesExecute(request: NextRequest, ctx: AuthContext)
           addedBy: 'system'
         };
 
-        const docRef = await adminDb.collection(COLLECTIONS.NAVIGATION).add(navigationEntry);
+        const docRef = await getAdminFirestore().collection(COLLECTIONS.NAVIGATION).add(navigationEntry);
         addedNavigationIds.push(docRef.id);
 
         console.log(`✅ Added to navigation: Company ${contactId} (Entry ID: ${docRef.id})`);

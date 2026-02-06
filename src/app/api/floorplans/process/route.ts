@@ -21,9 +21,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getStorage } from 'firebase-admin/storage';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getAdminFirestore, getAdminStorage } from '@/lib/firebaseAdmin';
+import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import type {
   FloorplanProcessedData,
   DxfSceneData,
@@ -124,8 +123,10 @@ export const dynamic = 'force-dynamic';
  * 🔒 SECURITY: Protected with RBAC
  * - Permission: floorplans:floorplans:process
  * - Tenant isolation via companyId validation
+ * @rateLimit HEAVY (10 req/min) - Resource-intensive operation
  */
-export async function POST(request: NextRequest) {
+export const POST = withHeavyRateLimit(
+  async (request: NextRequest) => {
   const handler = withAuth<ProcessFloorplanResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleProcessFloorplan(req, ctx);
@@ -134,7 +135,8 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+  }
+);
 
 // ============================================================================
 // CORE PROCESSING LOGIC
@@ -193,51 +195,13 @@ async function handleProcessFloorplan(
     console.log(`🏭 [FloorplanProcess] Processing file: ${fileId}`);
 
     // =========================================================================
-    // 2. INITIALIZE FIREBASE ADMIN
+    // 2. FIREBASE ADMIN (ADR-077: Centralized via @/lib/firebaseAdmin)
     // =========================================================================
 
-    let adminApp;
-    if (getApps().length === 0) {
-      const projectId =
-        process.env.FIREBASE_PROJECT_ID ||
-        process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
-      // 🏢 ENTERPRISE: Use environment variable for bucket (same as firebase.ts)
-      const storageBucket =
-        process.env.FIREBASE_STORAGE_BUCKET ||
-        process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
-        `${projectId}.appspot.com`; // fallback only
-
-      if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-        try {
-          const serviceAccount = JSON.parse(
-            process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-          );
-          adminApp = initializeApp({
-            credential: cert(serviceAccount),
-            storageBucket,
-          });
-        } catch {
-          adminApp = initializeApp({
-            projectId,
-            storageBucket,
-          });
-        }
-      } else {
-        adminApp = initializeApp({
-          projectId,
-          storageBucket,
-        });
-      }
-    } else {
-      adminApp = getApps()[0];
-    }
-
-    const adminDb = getFirestore(adminApp);
-    const adminStorage = getStorage(adminApp);
+    const adminDb = getAdminFirestore();
+    const adminStorage = getAdminStorage();
 
     // 🏢 ENTERPRISE: Get bucket with explicit name from env variables
-    // Required because existing Firebase Admin app may have been initialized without storageBucket
     const storageBucket =
       process.env.FIREBASE_STORAGE_BUCKET ||
       process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;

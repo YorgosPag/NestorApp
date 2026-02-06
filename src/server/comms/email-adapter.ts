@@ -3,6 +3,7 @@
 import { isFirebaseAvailable } from '../../app/api/communications/webhooks/telegram/firebase/availability';
 import { getFirestoreHelpers } from '../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
 import { safeDbOperation } from '../../app/api/communications/webhooks/telegram/firebase/safe-op';
+import { COLLECTIONS } from '@/config/firestore-collections';
 
 interface EmailJob {
   id: string;
@@ -143,7 +144,7 @@ export class EmailAdapter {
 
       // Get job from Firestore
       // 🏢 ENTERPRISE: Use collection helper to get collection ref first
-      const communicationsRef = database.collection('communications');
+      const communicationsRef = database.collection(COLLECTIONS.COMMUNICATIONS);
       const jobDoc = await getDoc(doc(communicationsRef, jobId));
       if (!jobDoc.exists) {
         console.error(`❌ Email job ${jobId} not found`);

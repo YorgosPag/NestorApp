@@ -16,8 +16,9 @@
  */
 
 import { getApps, initializeApp, cert, type App, type ServiceAccount } from 'firebase-admin/app';
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, Timestamp, FieldPath, type Firestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
+import { getStorage, type Storage } from 'firebase-admin/storage';
 import { getCurrentRuntimeEnvironment, type RuntimeEnvironment } from '@/config/environment-security-config';
 
 // ============================================================================
@@ -94,6 +95,7 @@ export class FirebaseAdminInitError extends Error {
 
 let _firestore: Firestore | null = null;
 let _auth: Auth | null = null;
+let _storage: Storage | null = null;
 let _initAttempted = false;
 let _initError: FirebaseAdminInitError | null = null;
 let _credentialSource: CredentialSource = 'NONE';
@@ -115,17 +117,69 @@ function resolveProjectId(): string | null {
 }
 
 /**
+ * Sanitize environment variable JSON that may have been
+ * wrapped in quotes by dotenv/Vercel CLI.
+ *
+ * Problem: Vercel CLI writes `.env.local` with outer double quotes:
+ *   FIREBASE_SERVICE_ACCOUNT_KEY="{"type":"service_account",...}"
+ *
+ * dotenv reads this as `{"` because the second `"` (before `type`) closes
+ * the quoted value. This function strips those outer quotes defensively.
+ *
+ * @param raw - The raw environment variable value
+ * @returns Cleaned value suitable for JSON.parse()
+ */
+function sanitizeEnvJson(raw: string): string {
+  let value = raw.trim();
+
+  // Strip surrounding double quotes if the inner content starts with {
+  if (value.startsWith('"') && value.endsWith('"')) {
+    const inner = value.slice(1, -1);
+    if (inner.startsWith('{')) {
+      value = inner;
+    }
+  }
+
+  // Strip surrounding single quotes
+  if (value.startsWith("'") && value.endsWith("'")) {
+    const inner = value.slice(1, -1);
+    if (inner.startsWith('{')) {
+      value = inner;
+    }
+  }
+
+  return value;
+}
+
+/**
+ * Create a masked preview of a credential value for safe logging.
+ * Shows structure but replaces alphanumeric characters with asterisks.
+ *
+ * @param raw - The raw value to mask
+ * @param maxLen - Maximum preview length (default 20)
+ * @returns Masked preview string
+ */
+function maskedPreview(raw: string, maxLen = 20): string {
+  return raw.substring(0, maxLen).replace(/[a-zA-Z0-9]/g, '*') + '...';
+}
+
+/**
  * Parse a service account JSON string with validation.
  * Returns Firebase Admin SDK ServiceAccount type for type-safe cert() usage.
  * @throws FirebaseAdminInitError if JSON is invalid or missing required fields
  */
 function parseServiceAccount(raw: string, source: CredentialSource): { serviceAccount: ServiceAccount; projectId: string } {
+  // Sanitize potential outer quotes from dotenv/Vercel CLI
+  const sanitized = sanitizeEnvJson(raw);
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(sanitized);
   } catch (err) {
+    const preview = maskedPreview(sanitized);
     throw new FirebaseAdminInitError(
-      `Failed to parse service account JSON from ${source}`,
+      `Failed to parse service account JSON from ${source}. ` +
+      `Value preview: ${preview} (length: ${sanitized.length})`,
       source,
       getCurrentRuntimeEnvironment(),
       err instanceof Error ? err : undefined
@@ -153,6 +207,16 @@ function parseServiceAccount(raw: string, source: CredentialSource): { serviceAc
   let privateKey = raw_sa.private_key;
   if (typeof privateKey === 'string' && privateKey.includes('\\n')) {
     privateKey = privateKey.replace(/\\n/g, '\n');
+  }
+
+  // Validate private key structure (must have PEM markers)
+  if (!privateKey.includes('-----BEGIN') || !privateKey.includes('-----END')) {
+    throw new FirebaseAdminInitError(
+      `Service account from ${source} has malformed private_key ` +
+      `(missing BEGIN/END PEM markers). The key may be corrupted or truncated.`,
+      source,
+      getCurrentRuntimeEnvironment()
+    );
   }
 
   // Map snake_case (Google JSON) → camelCase (Firebase Admin SDK ServiceAccount)
@@ -197,15 +261,31 @@ function initializeWithCredentialChain(): App {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64) {
     try {
       console.log('[Firebase Admin] Trying B64 credential...');
-      const decoded = Buffer.from(
-        process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64,
-        'base64'
-      ).toString('utf-8');
+      const rawB64 = sanitizeEnvJson(process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64);
+      const decoded = Buffer.from(rawB64, 'base64').toString('utf-8');
+
+      // Validate that decoded output looks like JSON before parsing
+      if (!decoded.startsWith('{')) {
+        const preview = maskedPreview(decoded);
+        throw new FirebaseAdminInitError(
+          `B64 decoded value is not valid JSON (starts with "${decoded.charAt(0)}", expected "{"). ` +
+          `Preview: ${preview}. ` +
+          `Ensure FIREBASE_SERVICE_ACCOUNT_KEY_B64 is actually base64-encoded JSON.`,
+          'B64',
+          environment
+        );
+      }
+
       const { serviceAccount, projectId: saProjectId } = parseServiceAccount(decoded, 'B64');
+
+      const storageBucket = process.env.FIREBASE_STORAGE_BUCKET
+        || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        || `${saProjectId}.appspot.com`;
 
       const app = initializeApp({
         credential: cert(serviceAccount),
         projectId: saProjectId,
+        storageBucket,
       });
 
       _credentialSource = 'B64';
@@ -225,14 +305,23 @@ function initializeWithCredentialChain(): App {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
     try {
       console.log('[Firebase Admin] Trying JSON credential...');
+      const rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      const preview = maskedPreview(rawJson);
+      console.log(`[Firebase Admin] JSON value preview: ${preview} (length: ${rawJson.length})`);
+
       const { serviceAccount, projectId: saProjectId } = parseServiceAccount(
-        process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+        rawJson,
         'JSON'
       );
+
+      const storageBucket = process.env.FIREBASE_STORAGE_BUCKET
+        || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        || `${saProjectId}.appspot.com`;
 
       const app = initializeApp({
         credential: cert(serviceAccount),
         projectId: saProjectId,
+        storageBucket,
       });
 
       _credentialSource = 'JSON';
@@ -371,6 +460,33 @@ export function getAdminAuth(): Auth {
 }
 
 /**
+ * Get the Admin Storage instance (lazy singleton).
+ *
+ * First call initializes the SDK via credential chain.
+ * Subsequent calls return the cached instance.
+ *
+ * @returns Storage instance
+ * @throws FirebaseAdminInitError if SDK cannot be initialized
+ *
+ * @example
+ * ```typescript
+ * import { getAdminStorage } from '@/lib/firebaseAdmin';
+ *
+ * export async function POST(req: NextRequest) {
+ *   const bucket = getAdminStorage().bucket();
+ *   await bucket.file('path/to/file').save(buffer);
+ * }
+ * ```
+ */
+export function getAdminStorage(): Storage {
+  if (!_storage) {
+    ensureInitialized();
+    _storage = getStorage();
+  }
+  return _storage;
+}
+
+/**
  * Check if Firebase Admin SDK can be initialized (non-throwing).
  *
  * Use this to conditionally skip operations when Admin SDK is unavailable,
@@ -478,23 +594,11 @@ export function getAdminInitializationStatus(): { initialized: boolean; environm
 export function ensureAdminInitialized(): void {
   ensureInitialized();
 }
+// ADR-077: NO eager const exports here. All consumers use getAdminFirestore()/getAdminAuth()/getAdminStorage().
 
 // ============================================================================
-// BACKWARD COMPATIBILITY EXPORTS
+// RE-EXPORTS (Convenience — avoids direct firebase-admin/firestore imports)
 // ============================================================================
 
-/**
- * Legacy Firestore export for backward compatibility.
- * New code should use getAdminFirestore() instead.
- *
- * @deprecated Use getAdminFirestore() for better error handling
- */
-export const adminDb = getAdminFirestore();
-
-/**
- * Legacy Auth export for backward compatibility.
- * New code should use getAdminAuth() instead.
- *
- * @deprecated Use getAdminAuth() for better error handling
- */
-export const adminAuth = getAdminAuth();
+export { FieldValue, Timestamp, FieldPath };
+export type { Firestore, Auth, Storage };

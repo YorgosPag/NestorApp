@@ -197,8 +197,8 @@ async function checkExistingFileRecord(params: {
   fileUniqueId?: string;
 }): Promise<string | null> {
   try {
-    const { getFirestore } = await import('firebase-admin/firestore');
-    const firestore = getFirestore();
+    const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
+    const firestore = getAdminFirestore();
 
     // 🏢 ENTERPRISE: Query MUST include companyId for tenant isolation
     let query = firestore.collection(COLLECTIONS.FILES)
@@ -249,9 +249,9 @@ async function createIngestionFileRecord(params: {
   ext: string;
 }): Promise<ServerFileRecordResult | null> {
   try {
-    // Dynamic import for firebase-admin (server context)
-    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
-    const firestore = getFirestore();
+    // ADR-077: Centralized Firebase Admin import
+    const { getAdminFirestore, FieldValue } = await import('@/lib/firebaseAdmin');
+    const firestore = getAdminFirestore();
 
     // =========================================================================
     // 🏢 ENTERPRISE: USE SSoT CORE MODULE FOR SCHEMA CONSTRUCTION
@@ -383,8 +383,8 @@ async function uploadToFirebaseStorage(
   customMetadata?: Record<string, string>
 ): Promise<string | null> {
   try {
-    // Dynamic import to avoid bundling issues
-    const { getStorage } = await import('firebase-admin/storage');
+    // ADR-077: Centralized Firebase Admin import
+    const { getAdminStorage } = await import('@/lib/firebaseAdmin');
 
     // 🏢 ENTERPRISE: Get bucket name from environment (required for Firebase Admin)
     const storageBucket = process.env.FIREBASE_STORAGE_BUCKET ||
@@ -395,7 +395,7 @@ async function uploadToFirebaseStorage(
       return null;
     }
 
-    const bucket = getStorage().bucket(storageBucket);
+    const bucket = getAdminStorage().bucket(storageBucket);
 
     const file = bucket.file(storagePath);
 
@@ -739,8 +739,8 @@ async function downloadAndUploadMedia(
   // 8. 🏢 ENTERPRISE: Update FileRecord with size and URL (but keep PENDING!)
   // QUARANTINE GATE: We update metadata but do NOT change status to READY
   try {
-    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
-    const firestore = getFirestore();
+    const { getAdminFirestore, FieldValue } = await import('@/lib/firebaseAdmin');
+    const firestore = getAdminFirestore();
 
     await firestore.collection(COLLECTIONS.FILES).doc(fileRecordResult.fileRecordId).update({
       sizeBytes: buffer.length,

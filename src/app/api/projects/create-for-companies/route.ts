@@ -6,6 +6,7 @@
  * @module api/projects/create-for-companies
  * @version 2.0.0
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ * @rateLimit STANDARD (60 req/min) - CRUD
  *
  * 🔒 SECURITY:
  * - Global Role: super_admin (break-glass utility)
@@ -13,11 +14,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // 🏢 ENTERPRISE: Load project templates from environment or use fallbacks
 const getProjectTemplates = () => {
@@ -122,7 +124,7 @@ type CreateForCompaniesError = {
 
 type CreateForCompaniesResponse = CreateForCompaniesSuccess | CreateForCompaniesError;
 
-export async function POST(request: NextRequest) {
+export const POST = withStandardRateLimit(async (request: NextRequest) => {
   const handler = withAuth<CreateForCompaniesResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<CreateForCompaniesResponse>> => {
       console.log('🏗️ [Projects/CreateForCompanies] Starting bulk project creation...');
@@ -133,7 +135,7 @@ export async function POST(request: NextRequest) {
         // STEP 1: GET ALL ACTIVE COMPANIES (Admin SDK)
         // ============================================================================
 
-        const contactsSnapshot = await adminDb
+        const contactsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.CONTACTS)
           .where('type', '==', 'company')
           .where('status', '==', 'active')
@@ -183,7 +185,7 @@ export async function POST(request: NextRequest) {
           };
 
           try {
-            await adminDb
+            await getAdminFirestore()
               .collection(COLLECTIONS.PROJECTS)
               .doc(projectId)
               .set(project);
@@ -208,7 +210,7 @@ export async function POST(request: NextRequest) {
         // ============================================================================
 
         console.log('📊 Verification...');
-        const allProjectsSnapshot = await adminDb
+        const allProjectsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .get();
 
@@ -251,4 +253,4 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+});

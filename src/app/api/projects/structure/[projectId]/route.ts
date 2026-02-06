@@ -18,10 +18,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +56,10 @@ type StructureError = {
 
 type StructureResponse = StructureSuccess | StructureError;
 
-export async function GET(
+/**
+ * @rateLimit STANDARD (60 req/min) - Project structure με multi-level queries
+ */
+export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
   segmentData: { params: Promise<{ projectId: string }> }
 ) {
@@ -71,7 +75,7 @@ export async function GET(
         // STEP 1: VERIFY PROJECT OWNERSHIP (Tenant Isolation)
         // ============================================================================
 
-        const projectDoc = await adminDb
+        const projectDoc = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .doc(projectId)
           .get();
@@ -105,7 +109,7 @@ export async function GET(
         console.log(`🏢 Fetching buildings for projectId: ${projectId}`);
 
         // Try with string projectId first
-        let buildingsSnapshot = await adminDb
+        let buildingsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
           .where('projectId', '==', projectId)
           .where('companyId', '==', ctx.companyId)
@@ -114,7 +118,7 @@ export async function GET(
         // If no results, try with number projectId
         if (buildingsSnapshot.docs.length === 0) {
           console.log(`🔄 Trying numeric projectId: ${parseInt(projectId)}`);
-          buildingsSnapshot = await adminDb
+          buildingsSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.BUILDINGS)
             .where('projectId', '==', parseInt(projectId))
             .where('companyId', '==', ctx.companyId)
@@ -134,7 +138,7 @@ export async function GET(
 
           // 🏠 UNITS
           console.log(`🏠 Fetching units for buildingId: ${building.id}`);
-          const unitsSnapshot = await adminDb
+          const unitsSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.UNITS)
             .where('buildingId', '==', building.id)
             .where('companyId', '==', ctx.companyId)
@@ -147,7 +151,7 @@ export async function GET(
 
           // 📦 STORAGE - Query by buildingId (from migration 006)
           console.log(`📦 Fetching storage for buildingId: ${building.id}`);
-          const storageSnapshot = await adminDb
+          const storageSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.STORAGE)
             .where('buildingId', '==', building.id)
             .get();
@@ -166,7 +170,7 @@ export async function GET(
 
           // 🚗 PARKING - Query by buildingId
           console.log(`🚗 Fetching parking for buildingId: ${building.id}`);
-          const parkingSnapshot = await adminDb
+          const parkingSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.PARKING_SPACES)
             .where('buildingId', '==', building.id)
             .get();
@@ -228,4 +232,4 @@ export async function GET(
   );
 
   return handler(request);
-}
+});

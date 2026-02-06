@@ -6,6 +6,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: Audit logging for webhook events
 import { logWebhookEvent } from '@/lib/auth';
+import { withWebhookRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Environment configuration
 const SENDGRID_WEBHOOK_SECRET = process.env.SENDGRID_WEBHOOK_SECRET;
@@ -197,7 +198,11 @@ function logWebhookAttempt(
   }
 }
 
-export async function POST(request: NextRequest) {
+/**
+ * SendGrid event webhook handler
+ * @rateLimit WEBHOOK (30 req/min) - SendGrid event tracking
+ */
+async function postHandler(request: NextRequest) {
   const startTime = Date.now();
   const clientIP = getClientIP(request);
 
@@ -392,8 +397,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export const POST = withWebhookRateLimit(postHandler);
+
 // Health check endpoint
-export async function GET(request: NextRequest) {
+
+/**
+ * Health check endpoint for SendGrid webhook
+ * @rateLimit WEBHOOK (30 req/min) - Health check
+ */
+async function getHandler(request: NextRequest) {
   const clientIP = getClientIP(request);
   
   console.log('🔍 SendGrid webhook health check from:', clientIP);
@@ -416,3 +428,5 @@ export async function GET(request: NextRequest) {
     }
   });
 }
+
+export const GET = withWebhookRateLimit(getHandler);

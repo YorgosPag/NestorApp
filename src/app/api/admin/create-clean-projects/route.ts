@@ -25,42 +25,27 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDirectOperation, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-
-// Initialize Admin SDK if not already initialized
-let adminDb: FirebaseFirestore.Firestore;
-
-try {
-  if (getApps().length === 0) {
-    const app = initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    });
-    adminDb = getFirestore(app);
-  } else {
-    adminDb = getFirestore();
-  }
-} catch (error) {
-  console.error('Failed to initialize Admin SDK:', error);
-}
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /**
  * POST - Execute Clean Project Creation (withAuth protected)
  * Creates clean projects with proper structure using Firebase Admin SDK.
  *
  * @security withAuth + super_admin check + audit logging + admin:direct:operations permission
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
-export const POST = withAuth(
+export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleCreateCleanProjectsExecute(req, ctx);
   },
   { permissions: 'admin:direct:operations' }
-);
+));
 
 /**
  * Internal handler for POST (clean project creation).
@@ -85,9 +70,7 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
   }
 
   try {
-    if (!adminDb) {
-      throw new Error('Firebase Admin SDK not properly initialized');
-    }
+    const adminDb = getAdminFirestore();
 
     console.log('🏗️ CREATING CLEAN PROJECTS FOR DEVELOPMENT');
     console.log('⏰ Started at:', new Date().toISOString());
@@ -342,13 +325,14 @@ async function handleCreateCleanProjectsExecute(request: NextRequest, ctx: AuthC
  * Returns endpoint information and capabilities.
  *
  * @security withAuth + admin:direct:operations permission
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
-export const GET = withAuth(
+export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleCreateCleanProjectsInfo(req, ctx);
   },
   { permissions: 'admin:direct:operations' }
-);
+));
 
 /**
  * Internal handler for GET (system info).

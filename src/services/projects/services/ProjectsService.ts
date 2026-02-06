@@ -4,7 +4,7 @@ import type { Contact } from '@/types/contacts';
 import type { Building } from '@/types/building/contracts';
 import type { Property } from '@/types/property-viewer';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
-import { db } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // ✅ ENTERPRISE FIX: Use Firebase Admin methods from db instance, not direct imports
@@ -152,7 +152,7 @@ export class ProjectsService implements IProjectsService {
         return;
     }
     try {
-        const database = db();
+        const database = getAdminFirestore();
         if (!database) return;
         const projectDoc = await database.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
         if (projectDoc.exists) {

@@ -21,7 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isValidGlobalRole } from '@/lib/auth';
 import type { GlobalRole } from '@/lib/auth';
-import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
@@ -171,7 +171,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
     // ========================================================================
 
     // 🏢 ENTERPRISE: Check if super_admin already exists (prevent duplicate bootstrap)
-    const existingAdmins = await adminAuth.listUsers(1000);
+    const existingAdmins = await getAdminAuth().listUsers(1000);
     const superAdminExists = existingAdmins.users.some(user => {
       const claims = user.customClaims;
       return claims && claims.globalRole === 'super_admin';
@@ -200,10 +200,10 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
     try {
       // Try as UID first
       if (userIdentifier.length > 20) {
-        firebaseUser = await adminAuth.getUser(userIdentifier);
+        firebaseUser = await getAdminAuth().getUser(userIdentifier);
       } else {
         // Try as email
-        firebaseUser = await adminAuth.getUserByEmail(userIdentifier);
+        firebaseUser = await getAdminAuth().getUserByEmail(userIdentifier);
       }
       console.log(`✅ [BOOTSTRAP_ADMIN] User found: ${firebaseUser.email} (${firebaseUser.uid})`);
     } catch (error) {
@@ -226,7 +226,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
     // ========================================================================
 
     try {
-      await adminAuth.setCustomUserClaims(uid, {
+      await getAdminAuth().setCustomUserClaims(uid, {
         companyId,
         globalRole,
         mfaEnrolled: false,
@@ -250,7 +250,7 @@ async function handleBootstrapPost(request: NextRequest): Promise<NextResponse<B
 
     let firestoreDocCreated = false;
     try {
-      const userRef = adminDb.collection(COLLECTIONS.USERS).doc(uid);
+      const userRef = getAdminFirestore().collection(COLLECTIONS.USERS).doc(uid);
       const userDoc = await userRef.get();
 
       const userData = {

@@ -14,8 +14,9 @@
 
 import 'server-only';
 
-import { getApps } from 'firebase-admin/app';
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
+import type { Firestore } from 'firebase-admin/firestore';
+import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 
 import type {
   AuthContext,
@@ -114,15 +115,13 @@ export function createPermissionCache(): PermissionCache {
 // =============================================================================
 
 /**
- * Get Firestore instance.
- * Uses existing initialized app.
+ * Get Firestore instance (ADR-077: Centralized via @/lib/firebaseAdmin).
  */
 function getDb(): Firestore | null {
-  const apps = getApps();
-  if (apps.length === 0) {
+  if (!isFirebaseAdminAvailable()) {
     return null;
   }
-  return getFirestore(apps[0]);
+  return getAdminFirestore();
 }
 
 // =============================================================================
@@ -158,11 +157,11 @@ async function getProjectMembership(
   try {
     // Path: /companies/{companyId}/projects/{projectId}/members/{uid}
     const memberDoc = await db
-      .collection('companies')
+      .collection(COLLECTIONS.COMPANIES)
       .doc(ctx.companyId)
-      .collection('projects')
+      .collection(SUBCOLLECTIONS.COMPANY_PROJECTS)
       .doc(projectId)
-      .collection('members')
+      .collection(SUBCOLLECTIONS.PROJECT_MEMBERS)
       .doc(ctx.uid)
       .get();
 
@@ -214,11 +213,11 @@ async function getUnitGrant(
   try {
     // Path: /companies/{companyId}/units/{unitId}/grants/{uid}
     const grantDoc = await db
-      .collection('companies')
+      .collection(COLLECTIONS.COMPANIES)
       .doc(ctx.companyId)
-      .collection('units')
+      .collection(SUBCOLLECTIONS.COMPANY_UNITS)
       .doc(unitId)
-      .collection('grants')
+      .collection(SUBCOLLECTIONS.UNIT_GRANTS)
       .doc(ctx.uid)
       .get();
 

@@ -1,17 +1,18 @@
 import 'server-only';
 
-import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
-import { getAuth, DecodedIdToken } from 'firebase-admin/auth';
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import type { DecodedIdToken } from 'firebase-admin/auth';
 import type { NextRequest } from 'next/server';
 import {
   isApiAccessAllowed,
   validateEnvironmentForOperation,
   getCurrentRuntimeEnvironment,
-  type RuntimeEnvironment,
 } from '@/config/environment-security-config';
 import { getDevCompanyId } from '@/config/dev-environment';
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
+import {
+  getAdminFirestore,
+  getAdminAuth,
+} from '@/lib/firebaseAdmin';
 
 /**
  * ENTERPRISE: Centralized Admin Guards Module
@@ -143,78 +144,16 @@ export const SERVER_COLLECTIONS = {
 export type ServerCollectionKey = keyof typeof SERVER_COLLECTIONS;
 
 // ============================================================================
-// FIREBASE ADMIN INITIALIZATION
+// FIREBASE ADMIN — DELEGATED TO CANONICAL MODULE
+// ============================================================================
+// ADR-077: All Firebase Admin initialization is handled by src/lib/firebaseAdmin.ts
+// This module re-exports for backward compatibility of existing consumers.
+//
+// getAdminFirestore() and getAdminAuth() are imported from '@/lib/firebaseAdmin'
+// and re-exported below for any code that imports from this module.
 // ============================================================================
 
-let adminApp: App | null = null;
-let adminDb: Firestore | null = null;
-
-/**
- * Initialize Firebase Admin SDK (singleton pattern)
- * Returns null if initialization fails or in invalid environment
- */
-function initializeAdmin(): App | null {
-  // Skip client-side or test environment
-  if (typeof window !== 'undefined') {
-    return null;
-  }
-
-  // Return existing app if already initialized
-  if (getApps().length > 0) {
-    adminApp = getApps()[0];
-    return adminApp;
-  }
-
-  try {
-    const projectId =
-      process.env.FIREBASE_PROJECT_ID ||
-      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
-    if (!projectId) {
-      console.log('[ADMIN_GUARDS] No project ID found, skipping initialization');
-      return null;
-    }
-
-    // Initialize with service account if available
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      try {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-        adminApp = initializeApp({
-          credential: cert(serviceAccount),
-          projectId,
-        });
-        console.log('[ADMIN_GUARDS] Firebase Admin initialized with service account');
-      } catch (parseError) {
-        console.log('[ADMIN_GUARDS] Failed to parse service account, using default credentials');
-        adminApp = initializeApp({ projectId });
-      }
-    } else {
-      // Development fallback
-      adminApp = initializeApp({ projectId });
-      console.log('[ADMIN_GUARDS] Firebase Admin initialized with default credentials');
-    }
-
-    return adminApp;
-  } catch (error) {
-    console.error('[ADMIN_GUARDS] Firebase Admin initialization failed:', error);
-    return null;
-  }
-}
-
-/**
- * Get Firebase Admin Firestore instance
- * Use this instead of client SDK in admin routes
- */
-export function getAdminFirestore(): Firestore {
-  if (!adminDb) {
-    const app = initializeAdmin();
-    if (!app) {
-      throw new Error('[ADMIN_GUARDS] Firebase Admin not initialized');
-    }
-    adminDb = getFirestore(app);
-  }
-  return adminDb;
-}
+export { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 // ============================================================================
 // ENVIRONMENT GATING
@@ -266,16 +205,11 @@ function extractBearerToken(request: NextRequest): string | null {
 
 /**
  * Verify Firebase ID token and extract claims
+ * ADR-077: Uses canonical getAdminAuth() from firebaseAdmin.ts
  */
 async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
   try {
-    const app = initializeAdmin();
-    if (!app) {
-      console.log('[ADMIN_GUARDS] Cannot verify token - Admin SDK not initialized');
-      return null;
-    }
-
-    const auth = getAuth(app);
+    const auth = getAdminAuth();
     const decodedToken = await auth.verifyIdToken(token);
     return decodedToken;
   } catch (error) {
@@ -287,16 +221,11 @@ async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
 /**
  * Verify Firebase session cookie and extract claims.
  * Used for Server Component auth via __session cookie.
+ * ADR-077: Uses canonical getAdminAuth() from firebaseAdmin.ts
  */
 async function verifySessionCookieToken(sessionCookie: string): Promise<DecodedIdToken | null> {
   try {
-    const app = initializeAdmin();
-    if (!app) {
-      console.log('[ADMIN_GUARDS] Cannot verify session cookie - Admin SDK not initialized');
-      return null;
-    }
-
-    const auth = getAuth(app);
+    const auth = getAdminAuth();
     const decodedToken = await auth.verifySessionCookie(sessionCookie, false);
     return decodedToken;
   } catch (error) {

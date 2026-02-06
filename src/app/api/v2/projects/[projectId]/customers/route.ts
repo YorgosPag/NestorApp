@@ -3,6 +3,7 @@ import { withAuth, logAuditEvent, requireProjectInTenant, TenantIsolationError }
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { Pool } from 'pg';
 import { generateRequestId } from '@/services/enterprise-id.service';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // 🏢 ENTERPRISE API V2 - PostgreSQL Version
 // ============================================
@@ -93,8 +94,10 @@ interface ProjectCustomersResponse {
  * - Permission: projects:projects:view
  * - Tenant Isolation: Validates project belongs to user's company
  * - PostgreSQL-based query (100x faster than Firebase)
+ *
+ * @rateLimit STANDARD (60 req/min) - PostgreSQL single-query με JOIN optimization
  */
-export async function GET(
+export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
   context: { params: Promise<{ projectId: string }> }
 ) {
@@ -106,7 +109,7 @@ export async function GET(
   );
 
   return handler(request);
-}
+});
 
 async function handleGetCustomers(
   request: NextRequest,

@@ -12,18 +12,21 @@
  * - Permission: projects:projects:view
  * - Tenant isolation: Verifies project ownership before querying
  * - Multi-level tenant checks: Buildings, Units, Contacts
+ *
+ * @rateLimit STANDARD (60 req/min) - Customer list με multi-collection queries
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent, requireProjectInTenant, TenantIsolationError } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIRESTORE_LIMITS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
-export async function GET(
+export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
   segmentData: { params: Promise<{ projectId: string }> }
 ) {
@@ -32,7 +35,7 @@ export async function GET(
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
-        if (!adminDb) {
+        if (!getAdminFirestore()) {
           return NextResponse.json({
             success: false,
             error: 'Database connection not available',
@@ -72,7 +75,7 @@ export async function GET(
 
         console.log(`🏢 Fetching buildings for project`);
 
-        let buildingsSnapshot = await adminDb
+        let buildingsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
           .where('projectId', '==', projectId)
           .where('companyId', '==', ctx.companyId)
@@ -81,7 +84,7 @@ export async function GET(
         // If no results, try with number projectId
         if (buildingsSnapshot.docs.length === 0) {
           console.log(`🔄 Trying numeric projectId`);
-          buildingsSnapshot = await adminDb
+          buildingsSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.BUILDINGS)
             .where('projectId', '==', parseInt(projectId))
             .where('companyId', '==', ctx.companyId)
@@ -109,7 +112,7 @@ export async function GET(
         const allUnits = [];
 
         for (const buildingId of buildingIds) {
-          const unitsSnapshot = await adminDb
+          const unitsSnapshot = await getAdminFirestore()
             .collection(COLLECTIONS.UNITS)
             .where('buildingId', '==', buildingId)
             .where('companyId', '==', ctx.companyId)
@@ -176,7 +179,7 @@ export async function GET(
         // Use centralized Firestore IN limit constant
         const limitedCustomerIds = customerIds.slice(0, FIRESTORE_LIMITS.IN_QUERY_MAX_ITEMS);
 
-        const contactsSnapshot = await adminDb
+        const contactsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.CONTACTS)
           .where('__name__', 'in', limitedCustomerIds)
           .get();
@@ -254,4 +257,4 @@ export async function GET(
   );
 
   return handler(request);
-}
+});

@@ -8,6 +8,7 @@
  * @version 1.0.0
  * @enterprise Phase 3 - Data Architecture Separation
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added RBAC protection + tenant isolation
+ * @rateLimit HIGH (100 req/min) - List endpoint
  *
  * 🏢 ARCHITECTURE:
  * - Admin SDK (server-side, consistent latency)
@@ -21,13 +22,14 @@
  */
 
 import { NextRequest } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
+import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // TYPES - Project List Response
@@ -158,8 +160,8 @@ export const dynamic = 'force-dynamic';
 // MAIN HANDLER
 // ============================================================================
 
-export async function GET(request: NextRequest) {
-  const handler = withAuth<ApiSuccessResponse<ProjectListResponse>>(
+export const GET = withHighRateLimit(
+  withAuth<ApiSuccessResponse<ProjectListResponse>>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const startTime = Date.now();
 
@@ -204,12 +206,12 @@ export async function GET(request: NextRequest) {
       if (isSuperAdmin) {
         // 🏢 Super Admin: Fetch ALL projects across all companies
         console.log('👑 [Projects/List] Super Admin - Fetching ALL projects...');
-        projectsSnapshot = await adminDb
+        projectsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .get();
       } else {
         // 🔒 Regular user: Tenant-scoped (only their company)
-        projectsSnapshot = await adminDb
+        projectsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .where('companyId', '==', ctx.companyId)
           .get();
@@ -280,10 +282,8 @@ export async function GET(request: NextRequest) {
     {
       permissions: 'projects:projects:view'
     }
-  );
-
-  return handler(request);
-}
+  )
+);
 
 // ============================================================================
 // POST - Create Single Project (Admin SDK)
@@ -311,9 +311,10 @@ interface ProjectCreateResponse {
  * 🔒 SECURITY: Firestore rules block client-side writes (allow write: if false)
  *              This endpoint uses Admin SDK to bypass rules with proper auth
  * @permission projects:projects:create
+ * @rateLimit STANDARD (60 req/min) - CRUD
  */
-export async function POST(request: NextRequest) {
-  const handler = withAuth<ApiSuccessResponse<ProjectCreateResponse>>(
+export const POST = withHighRateLimit(
+  withAuth<ApiSuccessResponse<ProjectCreateResponse>>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         // 🏢 ENTERPRISE: Parse request body
@@ -338,7 +339,7 @@ export async function POST(request: NextRequest) {
         console.log(`🎯 [Projects] Creating new project for tenant ${ctx.companyId}...`);
 
         // 🏗️ CREATE: Use Admin SDK (bypasses Firestore rules)
-        const docRef = await adminDb.collection(COLLECTIONS.PROJECTS).add(cleanData);
+        const docRef = await getAdminFirestore().collection(COLLECTIONS.PROJECTS).add(cleanData);
 
         console.log(`✅ [Projects] Project created with ID: ${docRef.id}`);
 
@@ -373,7 +374,5 @@ export async function POST(request: NextRequest) {
       }
     },
     { permissions: 'projects:projects:create' }
-  );
-
-  return handler(request);
-}
+  )
+);

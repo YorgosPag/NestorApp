@@ -1,6 +1,6 @@
 // /home/user/studio/src/app/api/communications/webhooks/telegram/firebase/availability.ts
 
-import { isFirebaseAvailable as isAvailable } from '@/lib/firebase-admin';
+import { isFirebaseAdminAvailable as isAvailable } from '@/lib/firebaseAdmin';
 
 export function isFirebaseAvailable(): boolean {
     return isAvailable();

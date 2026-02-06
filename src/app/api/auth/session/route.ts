@@ -14,9 +14,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, ensureAdminInitialized } from '@/lib/firebaseAdmin';
+import { getAdminAuth } from '@/lib/firebaseAdmin';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { SESSION_COOKIE_CONFIG, getSessionCookieDurationMs } from '@/lib/auth/security-policy';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // TYPES
@@ -80,9 +81,12 @@ function buildClearCookieOptions(): {
 // HANDLERS
 // ============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse<SessionResponse>> {
+/**
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
+ */
+const postHandler = async (request: NextRequest): Promise<NextResponse<SessionResponse>> => {
   try {
-    ensureAdminInitialized();
+    const adminAuth = getAdminAuth();
 
     const body: SessionCreateRequest = await request.json();
     const { idToken } = body;
@@ -124,9 +128,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionRe
       { status: 401 }
     );
   }
-}
+};
 
-export async function DELETE(): Promise<NextResponse<SessionResponse>> {
+export const POST = withSensitiveRateLimit(postHandler);
+
+/**
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
+ */
+const deleteHandler = async (): Promise<NextResponse<SessionResponse>> => {
   const response = NextResponse.json({
     success: true,
     message: 'Session cookie cleared',
@@ -139,4 +148,6 @@ export async function DELETE(): Promise<NextResponse<SessionResponse>> {
   );
 
   return response;
-}
+};
+
+export const DELETE = withSensitiveRateLimit(deleteHandler);

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db as getAdminDb } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /** 🏢 ENTERPRISE: Discriminated union response types */
 interface CompanyItem {
@@ -36,16 +37,17 @@ type ListCompaniesResponse = ListCompaniesSuccessResponse | ListCompaniesErrorRe
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added RBAC + Tenant Isolation
  * @security Admin SDK + withAuth + Tenant Isolation
  * @permission contacts:contacts:view
+ * @rateLimit HIGH (100 req/min) - List
  */
 
-export async function GET(request: NextRequest) {
-  const handler = withAuth<ListCompaniesResponse>(
+export const GET = withHighRateLimit(
+  withAuth<ListCompaniesResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         console.log(`📋 Listing companies for companyId: ${ctx.companyId}`);
         console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
 
-        const adminDb = getAdminDb();
+        const adminDb = getAdminFirestore();
         if (!adminDb) {
           console.error('❌ Firebase Admin not initialized');
           return NextResponse.json({
@@ -94,7 +96,5 @@ export async function GET(request: NextRequest) {
       }
     },
     { permissions: 'crm:contacts:view' }
-  );
-
-  return handler(request);
-}
+  )
+);

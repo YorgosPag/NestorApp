@@ -6,6 +6,7 @@ import type { NextRequest } from 'next/server';
 import { handleBuildingInstantiation } from '@/server/admin/building-instantiation-handler';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /**
  * ENTERPRISE SEED ROUTE: Create Buildings from Templates
@@ -56,7 +57,11 @@ interface SeedResponse {
 // API ENDPOINT
 // ============================================================================
 
-export const POST = withAuth<SeedResponse>(
+/**
+ * @rateLimit STANDARD (60 req/min) - CRUD
+ */
+export const POST = withStandardRateLimit(
+  withAuth<SeedResponse>(
   async (request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
   const response = await handleBuildingInstantiation(request, {
     source: 'api/buildings/seed',
@@ -80,4 +85,5 @@ export const POST = withAuth<SeedResponse>(
     );
   },
   { requiredGlobalRoles: 'super_admin' }
+  )
 );

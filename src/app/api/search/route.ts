@@ -14,13 +14,14 @@
  */
 
 import { NextRequest } from 'next/server';
-import { db as getAdminDb } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { logAuditEvent } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { normalizeSearchText } from '@/lib/search/search';
+import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import {
   SEARCH_ENTITY_TYPES,
   SEARCH_AUDIENCE,
@@ -164,10 +165,12 @@ function transformToSearchResult(doc: SearchDocument): SearchResult {
  * - Tenant isolation via companyId
  * - Permission-based filtering
  * - Audit logging (privacy-conscious)
+ *
+ * @rateLimit HIGH (100 req/min) - Global search endpoint (high traffic expected)
  */
-export const GET = withAuth<ApiSuccessResponse<SearchResponseData>>(
+const handleGET = withAuth<ApiSuccessResponse<SearchResponseData>>(
   async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-    const adminDb = getAdminDb();
+    const adminDb = getAdminFirestore();
     if (!adminDb) {
       throw new Error('Database unavailable: Firebase Admin not initialized');
     }
@@ -303,3 +306,5 @@ export const GET = withAuth<ApiSuccessResponse<SearchResponseData>>(
     permissions: 'search:global:execute',
   }
 );
+
+export const GET = withHighRateLimit(handleGET);

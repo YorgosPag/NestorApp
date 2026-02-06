@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseRelationshipEngine } from '@/services/relationships/enterprise-relationship-engine';
 import type { EntityType } from '@/services/relationships/enterprise-relationship-engine.contracts';
@@ -141,7 +141,7 @@ async function validateEntityOwnership(
 
       case 'project':
         // Validate project belongs to user's company
-        const projectDoc = await adminDb
+        const projectDoc = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .doc(entityId)
           .get();

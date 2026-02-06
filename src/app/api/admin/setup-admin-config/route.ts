@@ -19,8 +19,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // =============================================================================
 // TYPES
@@ -51,8 +52,11 @@ interface SetupAdminConfigResponse {
 // MAIN HANDLER
 // =============================================================================
 
+/**
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
+ */
 export async function POST(request: NextRequest) {
-  const handler = withAuth<SetupAdminConfigResponse>(
+  const handler = withSensitiveRateLimit(withAuth<SetupAdminConfigResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       console.log(`🔧 [SetupAdminConfig] Request from user: ${ctx.uid}`);
 
@@ -76,7 +80,7 @@ export async function POST(request: NextRequest) {
         };
 
         // Save to Firestore
-        const docRef = adminDb.collection(COLLECTIONS.SYSTEM).doc('settings');
+        const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
 
         // Check if document exists
         const existingDoc = await docRef.get();
@@ -132,7 +136,7 @@ export async function POST(request: NextRequest) {
       // For now, we rely on authentication only (no permission check)
       // TODO: Add requiredGlobalRoles: ['super_admin'] after first setup
     }
-  );
+  ));
 
   return handler(request);
 }
@@ -141,13 +145,16 @@ export async function POST(request: NextRequest) {
 // GET - Check current admin config
 // =============================================================================
 
+/**
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
+ */
 export async function GET(request: NextRequest) {
-  const handler = withAuth<SetupAdminConfigResponse>(
+  const handler = withSensitiveRateLimit(withAuth<SetupAdminConfigResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       console.log(`🔍 [SetupAdminConfig] Check request from user: ${ctx.uid}`);
 
       try {
-        const docRef = adminDb.collection(COLLECTIONS.SYSTEM).doc('settings');
+        const docRef = getAdminFirestore().collection(COLLECTIONS.SYSTEM).doc('settings');
         const docSnap = await docRef.get();
 
         if (!docSnap.exists) {
@@ -193,7 +200,7 @@ export async function GET(request: NextRequest) {
     {
       // 🏢 ENTERPRISE: Any authenticated user can check config status
     }
-  );
+  ));
 
   return handler(request);
 }

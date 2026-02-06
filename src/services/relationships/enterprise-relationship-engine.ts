@@ -14,9 +14,10 @@
  * - Admin SDK uses: database.collection().add(), database.runTransaction(), etc.
  */
 
-import { db, safeDbOperation } from '@/lib/firebase-admin';
+import { getAdminFirestore, safeFirestoreOperation } from '@/lib/firebaseAdmin';
 import type { Firestore, Transaction, FieldValue } from 'firebase-admin/firestore';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
 import type {
   EntityType,
   RelationshipType,
@@ -83,7 +84,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       }]
     };
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Use Admin SDK runTransaction method
       return await database.runTransaction(async (_transaction: Transaction) => {
         try {
@@ -238,7 +239,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       }]
     };
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Use Admin SDK runTransaction method
       return await database.runTransaction(async (_transaction: Transaction) => {
         try {
@@ -358,7 +359,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     // 🏢 ENTERPRISE: Default fallback for empty children list
     const fallback: readonly TChild[] = [];
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 1️⃣ GET RELATIONSHIPS FROM ENTITY_RELATIONSHIPS TABLE
       // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().where().get()
       const relationshipsSnap = await database
@@ -381,7 +382,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
         if (parentType === 'company' && childType === 'project') {
           // 📊 FALLBACK: Read directly from projects collection with companyId
           const projectsSnap = await database
-            .collection('projects')
+            .collection(COLLECTIONS.PROJECTS)
             .where('companyId', '==', parentId)
             .get();
 
@@ -398,7 +399,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
         if (parentType === 'building' && childType === 'unit') {
           // 🏢 FALLBACK: Read directly from units collection with buildingId
           const unitsSnap = await database
-            .collection('units')
+            .collection(COLLECTIONS.UNITS)
             .where('buildingId', '==', parentId)
             .get();
 
@@ -432,7 +433,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     // 🏢 ENTERPRISE: Default fallback for when database is unavailable
     const fallback: TParent | null = null;
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().where().limit().get()
       const relationshipSnap = await database
         .collection(this.RELATIONSHIPS_COLLECTION)
@@ -467,7 +468,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       metadata: { totalDescendants: 0, depth: 0, lastModified: new Date() }
     };
 
-    return await safeDbOperation(async (_database: Firestore) => {
+    return await safeFirestoreOperation(async (_database: Firestore) => {
       // 1️⃣ GET ROOT ENTITY
       const rootEntity = await this.getEntityById(rootType, rootId);
       if (!rootEntity) {
@@ -501,7 +502,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       totalEntitiesChecked: 0
     };
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().get()
       const relationshipsSnap = await database
         .collection(this.RELATIONSHIPS_COLLECTION)
@@ -649,7 +650,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     // 🏢 ENTERPRISE: Default fallback for empty audit trail
     const fallback: readonly RelationshipAuditEntry[] = [];
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Admin SDK pattern - Build query with chained methods
       let queryRef = database
         .collection(this.AUDIT_COLLECTION)
@@ -766,7 +767,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     // 🏢 ENTERPRISE: Default fallback - assume entity doesn't exist when DB unavailable
     const fallback = false;
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().doc().get()
       const collectionName = this.getCollectionName(entityType);
       const entitySnap = await database
@@ -787,7 +788,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     // 🏢 ENTERPRISE: Default fallback - assume relationship doesn't exist when DB unavailable
     const fallback = false;
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().where().limit().get()
       const relationshipSnap = await database
         .collection(this.RELATIONSHIPS_COLLECTION)
@@ -824,7 +825,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     // 🏢 ENTERPRISE: Default fallback for entity not found
     const fallback: T | null = null;
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().doc().get()
       const collectionName = this.getCollectionName(entityType);
       const entitySnap = await database
@@ -859,7 +860,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     // 🏢 ENTERPRISE: Default fallback for empty result
     const fallback: readonly T[] = [];
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       const entities: T[] = [];
       const collectionName = this.getCollectionName(entityType);
 
@@ -971,7 +972,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     // 🏢 ENTERPRISE: Default fallback for empty relationships
     const fallback: readonly EntityRelationship[] = [];
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().where().get()
       const relationshipSnap = await database
         .collection(this.RELATIONSHIPS_COLLECTION)
@@ -1035,7 +1036,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
     // 🏢 ENTERPRISE: Default fallback for void operations
     const fallback: void = undefined;
 
-    await safeDbOperation(async (database: Firestore) => {
+    await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Admin SDK pattern - database.collection().add() with AdminFieldValue
       await database.collection(this.AUDIT_COLLECTION).add({
         ...entry,
@@ -1120,7 +1121,7 @@ export class EnterpriseRelationshipEngine implements IEnterpriseRelationshipEngi
       executionTime: 0
     };
 
-    return await safeDbOperation(async (database: Firestore) => {
+    return await safeFirestoreOperation(async (database: Firestore) => {
       // 🏢 ENTERPRISE: Admin SDK pattern - database.runTransaction()
       return await database.runTransaction(async (_transaction: Transaction) => {
         try {

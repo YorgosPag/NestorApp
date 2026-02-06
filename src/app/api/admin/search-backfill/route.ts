@@ -23,12 +23,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db as getAdminDb } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue, type Firestore as FirebaseFirestoreType, type Query, type DocumentData, type BulkWriter } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 // 🏢 ENTERPRISE: Import from centralized search types (ADR-029 - ZERO duplicates)
 import {
   SEARCH_ENTITY_TYPES,
@@ -404,7 +405,7 @@ async function resolveTenantId(
       // Not in cache - lookup user
       try {
         // Lookup user's company from their custom claims or user doc
-        const userDoc = await adminDb.collection('users').doc(createdBy).get();
+        const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(createdBy).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
           const userCompanyId = userData?.companyId as string | undefined;
@@ -438,7 +439,7 @@ async function resolveTenantId(
     } else {
       // Not in cache - lookup user
       try {
-        const userDoc = await adminDb.collection('users').doc(assignedTo).get();
+        const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(assignedTo).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
           const userCompanyId = userData?.companyId as string | undefined;
@@ -688,7 +689,7 @@ async function backfillEntityType(
   options: BackfillRequest,
   sharedBulkWriter?: BulkWriter
 ): Promise<BackfillStats> {
-  const adminDb = getAdminDb();
+  const adminDb = getAdminFirestore();
   if (!adminDb) {
     throw new Error('Firebase Admin not initialized');
   }
@@ -813,7 +814,7 @@ async function backfillAllTypesParallel(
   types: SearchEntityType[],
   options: BackfillRequest
 ): Promise<{ statsByType: Record<string, BackfillStats>; totalStats: BackfillStats }> {
-  const adminDb = getAdminDb();
+  const adminDb = getAdminFirestore();
   if (!adminDb) {
     throw new Error('Firebase Admin not initialized');
   }
@@ -866,8 +867,10 @@ async function backfillAllTypesParallel(
  *
  * Execute search index backfill.
  * Body: { dryRun?: boolean, type?: string, companyId?: string, limit?: number }
+ *
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
-export const POST = withAuth<BackfillApiResponse>(
+export const POST = withSensitiveRateLimit(withAuth<BackfillApiResponse>(
   async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<BackfillApiResponse>> => {
     const startTime = Date.now();
 
@@ -934,7 +937,7 @@ export const POST = withAuth<BackfillApiResponse>(
     }
   },
   { permissions: 'admin:migrations:execute' }
-);
+));
 
 /**
  * GET /api/admin/search-backfill
@@ -948,7 +951,7 @@ export const GET = withAuth<BackfillStatusApiResponse>(
       return createErrorResponse('Forbidden: Only super_admin can access search backfill', 403);
     }
 
-    const adminDb = getAdminDb();
+    const adminDb = getAdminFirestore();
     if (!adminDb) {
       return createErrorResponse('Firebase Admin not initialized', 500);
     }
@@ -1026,7 +1029,7 @@ export const PATCH = withAuth<MigrationApiResponse>(
 
     console.log(`🔐 [Contact Migration] Request from ${ctx.email} (${ctx.globalRole})`);
 
-    const adminDb = getAdminDb();
+    const adminDb = getAdminFirestore();
     if (!adminDb) {
       return createErrorResponse('Firebase Admin not initialized', 500);
     }
@@ -1088,7 +1091,7 @@ export const PATCH = withAuth<MigrationApiResponse>(
             resolvedCompanyId = userCompanyCache.get(createdBy) || null;
           } else {
             try {
-              const userDoc = await adminDb.collection('users').doc(createdBy).get();
+              const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(createdBy).get();
               if (userDoc.exists) {
                 const userData = userDoc.data();
                 resolvedCompanyId = (userData?.companyId as string) || null;

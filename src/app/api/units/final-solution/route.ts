@@ -14,11 +14,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Response types for type-safe withAuth
 type FinalSolutionSuccess = {
@@ -47,8 +48,11 @@ type FinalSolutionError = {
 
 type FinalSolutionResponse = FinalSolutionSuccess | FinalSolutionError;
 
+/**
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
+ */
 export async function POST(request: NextRequest) {
-  const handler = withAuth<FinalSolutionResponse>(
+  const handler = withSensitiveRateLimit(withAuth<FinalSolutionResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FinalSolutionResponse>> => {
       try {
         console.log('🎯 [Units/FinalSolution] Starting Admin SDK operations...');
@@ -59,7 +63,7 @@ export async function POST(request: NextRequest) {
         // ============================================================================
 
         console.log('🔍 Finding sold units without customers...');
-        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
+        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         // 🏢 ENTERPRISE: Explicit type annotation to avoid implicit any[]
         const soldUnitsWithoutCustomers: Array<{ id: string; name: string; currentSoldTo: string }> = [];
@@ -92,7 +96,7 @@ export async function POST(request: NextRequest) {
         // ============================================================================
 
         console.log('👥 Getting/creating contacts...');
-        const contactsSnapshot = await adminDb.collection(COLLECTIONS.CONTACTS).get();
+        const contactsSnapshot = await getAdminFirestore().collection(COLLECTIONS.CONTACTS).get();
 
         let availableContacts: Array<{ id: string; name: string }> = [];
 
@@ -139,7 +143,7 @@ export async function POST(request: NextRequest) {
           const contact = availableContacts[i % availableContacts.length];
 
           try {
-            await adminDb.collection(COLLECTIONS.UNITS).doc(unit.id).update({
+            await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unit.id).update({
               soldTo: contact.id
             });
 
@@ -188,7 +192,7 @@ export async function POST(request: NextRequest) {
       }
     },
     { requiredGlobalRoles: 'super_admin' }
-  );
+  ));
 
   return handler(request);
 }

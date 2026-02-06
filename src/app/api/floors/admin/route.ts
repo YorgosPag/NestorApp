@@ -13,10 +13,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /** Floor document from Firestore */
 interface AdminFloorDocument {
@@ -50,8 +51,11 @@ type AdminFloorsError = {
 
 type AdminFloorsResponse = AdminFloorsSuccess | AdminFloorsError;
 
+/**
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
+ */
 export async function GET(request: NextRequest) {
-  const handler = withAuth<AdminFloorsResponse>(
+  const handler = withSensitiveRateLimit(withAuth<AdminFloorsResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AdminFloorsResponse>> => {
       try {
         const { searchParams } = new URL(request.url);
@@ -80,7 +84,7 @@ export async function GET(request: NextRequest) {
 
         if (buildingId) {
           // Query floors by buildingId (Enterprise foreign key relationship)
-          const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS)
+          const floorsSnapshot = await getAdminFirestore().collection(COLLECTIONS.FLOORS)
             .where('buildingId', '==', buildingId)
             .get();
 
@@ -94,7 +98,7 @@ export async function GET(request: NextRequest) {
 
         } else if (projectId) {
           // Query floors by projectId
-          const floorsSnapshot = await adminDb.collection(COLLECTIONS.FLOORS)
+          const floorsSnapshot = await getAdminFirestore().collection(COLLECTIONS.FLOORS)
             .where('projectId', '==', projectId)
             .get();
 
@@ -161,7 +165,7 @@ export async function GET(request: NextRequest) {
       }
     },
     { requiredGlobalRoles: 'super_admin' }
-  );
+  ));
 
   return handler(request);
 }

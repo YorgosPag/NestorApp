@@ -14,10 +14,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // 🏢 ENTERPRISE INTERFACES - Proper TypeScript typing
 interface FloorDocument {
@@ -52,7 +53,11 @@ type FloorsListError = {
 
 type FloorsListResponse = FloorsListSuccess | FloorsListError;
 
-export const GET = async (request: NextRequest) => {
+/**
+ * @rateLimit STANDARD (60 req/min) - CRUD
+ */
+export const GET = withStandardRateLimit(
+  async (request: NextRequest) => {
   const handler = withAuth<FloorsListResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FloorsListResponse>> => {
       try {
@@ -68,7 +73,7 @@ export const GET = async (request: NextRequest) => {
         // TENANT-SCOPED QUERY (Admin SDK + Tenant Isolation)
         // ============================================================================
 
-        let floorsQuery = adminDb
+        let floorsQuery = getAdminFirestore()
           .collection(COLLECTIONS.FLOORS)
           .where('companyId', '==', ctx.companyId);
 
@@ -176,7 +181,8 @@ export const GET = async (request: NextRequest) => {
   );
 
   return handler(request);
-};
+  }
+);
 
 // =============================================================================
 // 🏢 ENTERPRISE: POST - Create new floor with enterprise ID
@@ -206,7 +212,11 @@ type FloorCreateError = {
 
 type FloorCreateResponse = FloorCreateSuccess | FloorCreateError;
 
-export const POST = async (request: NextRequest) => {
+/**
+ * @rateLimit STANDARD (60 req/min) - CRUD
+ */
+export const POST = withStandardRateLimit(
+  async (request: NextRequest) => {
   const handler = withAuth<FloorCreateResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<FloorCreateResponse>> => {
       try {
@@ -284,7 +294,7 @@ export const POST = async (request: NextRequest) => {
         // SAVE TO FIRESTORE
         // ============================================================================
 
-        await adminDb
+        await getAdminFirestore()
           .collection(COLLECTIONS.FLOORS)
           .doc(floorId)
           .set(floorDocument);
@@ -315,4 +325,5 @@ export const POST = async (request: NextRequest) => {
   );
 
   return handler(request);
-};
+  }
+);

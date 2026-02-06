@@ -3,7 +3,7 @@ import type { IProjectsService, IProjectsRepository, ProjectStructure } from '..
 import type { Project, ProjectCustomer, ProjectStats } from '@/types/project';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
-import { db } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 const getFirebaseAdmin = async () => {

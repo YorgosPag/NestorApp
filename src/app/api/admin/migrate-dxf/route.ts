@@ -24,6 +24,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { db, storage } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -282,13 +283,14 @@ class DxfMigrationAPI {
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: admin:migrations:execute
  * - Super_admin ONLY (explicit check below)
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
-export const GET = withAuth(
+export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleMigrateDxfPreview(req, ctx);
   },
   { permissions: 'admin:migrations:execute' }
-);
+));
 
 /**
  * POST /api/admin/migrate-dxf
@@ -296,13 +298,14 @@ export const GET = withAuth(
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: admin:migrations:execute
  * - Super_admin ONLY (explicit check below)
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
-export const POST = withAuth(
+export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleMigrateDxfExecute(req, ctx);
   },
   { permissions: 'admin:migrations:execute' }
-);
+));
 
 async function handleMigrateDxfPreview(
   request: NextRequest,

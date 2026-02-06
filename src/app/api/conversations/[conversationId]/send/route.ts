@@ -12,10 +12,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+// 🔒 RATE LIMITING: STANDARD category (60 req/min)
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Type alias for canonical response
 type SendMessageCanonicalResponse = ApiSuccessResponse<SendMessageResponse>;
@@ -130,7 +132,7 @@ async function storeOutboundMessage(
       updatedAt: now,
     };
 
-    await adminDb.collection(COLLECTIONS.MESSAGES).doc(messageDocId).set(messageData);
+    await getAdminFirestore().collection(COLLECTIONS.MESSAGES).doc(messageDocId).set(messageData);
 
     // Update conversation lastMessage - ENTERPRISE: Using constants
     // For attachment-only messages, show "[Attachment]" as preview
@@ -140,7 +142,7 @@ async function storeOutboundMessage(
         ? `📎 ${attachments.length} attachment${attachments.length > 1 ? 's' : ''}`
         : '';
 
-    await adminDb.collection(COLLECTIONS.CONVERSATIONS).doc(conversationId).update({
+    await getAdminFirestore().collection(COLLECTIONS.CONVERSATIONS).doc(conversationId).update({
       'lastMessage.content': previewText,
       'lastMessage.direction': MESSAGE_DIRECTION.OUTBOUND,
       'lastMessage.timestamp': FieldValue.serverTimestamp(),
@@ -175,21 +177,26 @@ export const dynamic = 'force-dynamic';
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: comm:conversations:update
  * - Ownership Validation: Verifies conversation belongs to user's company
+ *
+ * @rateLimit STANDARD (60 req/min) - Send message to conversation
  */
-export async function POST(
+export const POST = withStandardRateLimit(async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ conversationId: string }> }
+  context?: { params: Promise<{ conversationId: string }> }
 ) {
   const handler = withAuth<SendMessageCanonicalResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const { conversationId } = await params;
+      if (!context?.params) {
+        throw new ApiError(400, 'Missing route params');
+      }
+      const { conversationId } = await context.params;
       return handleSendMessage(req, ctx, conversationId);
     },
     { permissions: 'comm:conversations:update' }
   );
 
   return handler(request);
-}
+});
 
 async function handleSendMessage(request: NextRequest, ctx: AuthContext, conversationId: string): Promise<NextResponse<SendMessageCanonicalResponse>> {
   const startTime = Date.now();
@@ -225,7 +232,7 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
   }
 
   // CRITICAL: Ownership validation - verify conversation belongs to user's company
-  const convDoc = await adminDb
+  const convDoc = await getAdminFirestore()
     .collection(COLLECTIONS.CONVERSATIONS)
     .doc(conversationId)
     .get();
@@ -262,7 +269,7 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
   }
 
   // Look up the external identity to get the actual Telegram user ID
-  const identityDoc = await adminDb
+  const identityDoc = await getAdminFirestore()
     .collection(COLLECTIONS.EXTERNAL_IDENTITIES)
     .doc(externalParticipant.identityId)
     .get();

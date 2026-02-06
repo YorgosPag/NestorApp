@@ -79,8 +79,9 @@ export async function getFirestoreHelpers(): Promise<FirestoreHelpers | null> {
   }
 
   try {
-    const { getFirestore, Timestamp } = await import('firebase-admin/firestore');
-    const db = getFirestore();
+    const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
+    const { Timestamp } = await import('firebase-admin/firestore');
+    const db = getAdminFirestore();
 
     // Firebase admin uses different API - create wrappers
     const collection: CollectionFn = (path: string) => db.collection(path);

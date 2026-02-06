@@ -10,6 +10,7 @@
  * @version 2.0.0
  * @updated 2026-01-16 - AUTHZ PHASE 2: Added super_admin protection
  * @enterprise Protocol-compliant (ZERO hardcoded, ZERO any, ZERO duplicates)
+ * @rateLimit STANDARD (60 req/min) - Notification dispatch
  *
  * 🔒 SECURITY:
  * - Global Role: super_admin (break-glass utility)
@@ -19,6 +20,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import {
   NOTIFICATION_EVENT_TYPES,
@@ -27,7 +29,7 @@ import {
   getCurrentEnvironment,
 } from '@/config/notification-events';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 // ============================================================================
 // TYPES (Protocol: ZERO any)
@@ -91,7 +93,7 @@ function validateRequest(body: unknown): body is DispatchNotificationRequest {
  *
  * 🔒 SECURITY: Protected with super_admin role (AUTHZ Phase 2)
  */
-export async function POST(request: NextRequest) {
+const basePOST = async (request: NextRequest) => {
   const handler = withAuth<DispatchNotificationResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleDispatch(req, ctx);
@@ -100,7 +102,9 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const POST = withStandardRateLimit(basePOST);
 
 async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<NextResponse<DispatchNotificationResponse>> {
   try {
@@ -129,7 +133,7 @@ async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<N
     // Get contact name για notification title
     let contactName = 'Unknown Contact';
     try {
-      const conversationDoc = await adminDb
+      const conversationDoc = await getAdminFirestore()
         .collection(COLLECTIONS.CONVERSATIONS)
         .doc(body.conversationId)
         .get();

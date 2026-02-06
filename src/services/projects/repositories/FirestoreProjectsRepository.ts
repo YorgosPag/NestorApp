@@ -1,4 +1,4 @@
-import { db, safeDbOperation } from '@/lib/firebase-admin';
+import { getAdminFirestore, safeFirestoreOperation } from '@/lib/firebaseAdmin';
 // ✅ ENTERPRISE FIX: Use Firestore functions from db instance, not direct imports
 // Firebase Admin SDK Firestore functions are methods on the db instance
 import type { IProjectsRepository } from '../contracts';
@@ -26,7 +26,7 @@ const chunkArray = <T>(arr: T[], size: number): T[][] => {
 export class FirestoreProjectsRepository implements IProjectsRepository {
 
   async getProjectsByCompanyId(companyId: string): Promise<Project[]> {
-    return await safeDbOperation(async (database) => {
+    return await safeFirestoreOperation(async (database) => {
       const projectsCollection = database.collection(PROJECTS_COLLECTION);
       const snapshot = await projectsCollection.where('companyId', '==', companyId).get();
 
@@ -40,8 +40,8 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
   }
 
   async getProjectById(projectId: string): Promise<Project | null> {
-    return await safeDbOperation(async (database) => {
-      const docRef = database.collection('projects').doc(projectId);
+    return await safeFirestoreOperation(async (database) => {
+      const docRef = database.collection(PROJECTS_COLLECTION).doc(projectId);
       const docSnap = await docRef.get();
 
       if (!docSnap.exists) {
@@ -53,7 +53,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
   }
 
   async getBuildingsByProjectId(projectId: string): Promise<Building[]> {
-    return await safeDbOperation(async (database) => {
+    return await safeFirestoreOperation(async (database) => {
       // Using Firestore admin SDK methods correctly
       const buildingsCollection = database.collection(COLLECTIONS.BUILDINGS);
       const snapshot = await buildingsCollection.where('projectId', '==', projectId).get();
@@ -66,7 +66,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
   }
 
   async getUnitsByBuildingId(buildingId: string): Promise<Property[]> {
-    return await safeDbOperation(async (database) => {
+    return await safeFirestoreOperation(async (database) => {
       // Using Firestore admin SDK methods correctly
       const unitsCollection = database.collection(COLLECTIONS.UNITS);
       const snapshot = await unitsCollection.where('buildingId', '==', buildingId).get();
@@ -81,7 +81,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
   async getContactsByIds(ids: string[]): Promise<Contact[]> {
     if (ids.length === 0) return [];
 
-    return await safeDbOperation(async (database) => {
+    return await safeFirestoreOperation(async (database) => {
       const { FieldPath } = await import('firebase-admin/firestore');
 
       const allContacts: Contact[] = [];
@@ -141,7 +141,7 @@ export class FirestoreProjectsRepository implements IProjectsRepository {
       }
     }
 
-    return await safeDbOperation(async (database) => {
+    return await safeFirestoreOperation(async (database) => {
       const { FieldValue } = await import('firebase-admin/firestore');
 
       // 🏢 ENTERPRISE: Verify document exists before update

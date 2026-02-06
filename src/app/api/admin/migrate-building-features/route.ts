@@ -33,6 +33,7 @@ import { isBuildingFeatureKey, type BuildingFeatureKey } from '@/types/building/
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // LEGACY MAPPING - REMOVE AFTER MIGRATION - DO NOT IMPORT IN UI
@@ -244,13 +245,14 @@ function analyzeBuilding(building: BuildingDoc): MigrationPreview {
  * Shows what would be migrated without making changes.
  *
  * @security withAuth + super_admin check + existing permission: admin:migrations:execute
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
-export const GET = withAuth(
+export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleMigrateBuildingFeaturesPreview(req, ctx);
   },
   { permissions: 'admin:migrations:execute' }
-);
+));
 
 /**
  * Internal handler for GET (preview mode).
@@ -338,13 +340,14 @@ async function handleMigrateBuildingFeaturesPreview(request: NextRequest, ctx: A
  * Converts legacy Greek labels to BuildingFeatureKey in Firestore.
  *
  * @security withAuth + super_admin check + audit logging + existing permission: admin:migrations:execute
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
-export const POST = withAuth(
+export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleMigrateBuildingFeaturesExecute(req, ctx);
   },
   { permissions: 'admin:migrations:execute' }
-);
+));
 
 /**
  * Internal handler for POST (live migration).

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /**
  * 🏢 ENTERPRISE: Dynamic Sample Data Generator (MICROSOFT/GOOGLE CLASS)
@@ -159,16 +160,17 @@ type CreateSampleResponse = CreateSampleSuccessResponse | CreateSampleErrorRespo
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
  * @security Admin SDK + withAuth + requiredGlobalRoles: super_admin
  * @permission GLOBAL: super_admin only (break-glass utility)
+ * @rateLimit STANDARD (60 req/min) - CRUD
  */
 
-export async function POST(request: NextRequest) {
-  const handler = withAuth<CreateSampleResponse>(
+export const POST = withStandardRateLimit(
+  withAuth<CreateSampleResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         console.log('📇 Creating real contacts with proper random IDs...');
         console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole || 'none'}), Company ${ctx.companyId}`);
 
-    if (!adminDb) {
+    if (!getAdminFirestore()) {
       return NextResponse.json({
         success: false,
         error: 'Firebase Admin SDK not initialized'
@@ -196,7 +198,7 @@ export async function POST(request: NextRequest) {
 
     for (const oldId of oldContactIds) {
       try {
-        await adminDb.collection(COLLECTIONS.CONTACTS).doc(oldId).delete();
+        await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(oldId).delete();
         console.log(`🗑️ Deleted old contact: ${oldId}`);
       } catch (error) {
         console.log(`⚠️ Contact ${oldId} not found (already deleted)`);
@@ -275,7 +277,7 @@ export async function POST(request: NextRequest) {
         };
 
         // Δημιουργώ το contact με το ID που χρησιμοποιούν τα units
-        await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).set(contactData);
+        await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(contactId).set(contactData);
 
         createdContacts.push({
           id: contactId,
@@ -297,7 +299,7 @@ export async function POST(request: NextRequest) {
     console.log('🔗 Updating units with new contact IDs...');
 
     // Get all sold units that currently use old customer_xxx IDs
-    const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS)
+    const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS)
       .where('status', '==', 'sold')
       .get();
 
@@ -318,7 +320,7 @@ export async function POST(request: NextRequest) {
         const newContactId = oldToNewMapping[currentSoldTo];
 
         try {
-          await adminDb.collection(COLLECTIONS.UNITS).doc(unitDoc.id).update({
+          await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unitDoc.id).update({
             soldTo: newContactId
           });
 
@@ -352,7 +354,5 @@ export async function POST(request: NextRequest) {
       }
     },
     { requiredGlobalRoles: 'super_admin' }
-  );
-
-  return handler(request);
-}
+  )
+);

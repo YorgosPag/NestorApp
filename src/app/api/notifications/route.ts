@@ -6,6 +6,7 @@
  * @module api/notifications
  * @version 2.0.0
  * @updated 2026-01-16 - AUTHZ PHASE 2: Added RBAC protection
+ * @rateLimit STANDARD (60 req/min) - User notification list fetching
  *
  * 🔒 SECURITY:
  * - Permission: notifications:notifications:view
@@ -16,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { fetchNotifications } from '@/services/notificationService';
 import type { Notification } from '@/types/notification';
 
@@ -43,7 +45,7 @@ type NotificationsListError = {
 
 type NotificationsListResponse = NotificationsListSuccess | NotificationsListError;
 
-export async function GET(request: NextRequest) {
+const baseGET = async (request: NextRequest) => {
   const handler = withAuth<NotificationsListResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<NotificationsListResponse>> => {
       try {
@@ -94,4 +96,6 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const GET = withStandardRateLimit(baseGET);

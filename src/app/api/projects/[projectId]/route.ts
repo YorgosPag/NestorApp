@@ -34,7 +34,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -42,6 +42,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { ProjectAddress } from '@/types/project/addresses';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // =============================================================================
 // TYPES
@@ -103,16 +104,17 @@ export const dynamic = 'force-dynamic';
  * - Permission: projects:projects:update
  * - Tenant isolation: Only update projects in same company
  * - Validates project existence and ownership
+ * - Rate Limit: STANDARD (60 req/min)
  *
  * 🏢 ENTERPRISE: Supports both legacy and multi-address (ADR-167)
  * - Legacy: { address, city }
  * - New: { addresses: ProjectAddress[] }
  * - Auto-sync: Updates both formats automatically
  */
-export async function PATCH(
+async function handlePatch(
   request: NextRequest,
   segmentData: { params: Promise<{ projectId: string }> }
-) {
+): Promise<NextResponse> {
   const { projectId } = await segmentData.params;
 
   const handler = withAuth<ApiSuccessResponse<ProjectUpdateResponse>>(
@@ -124,6 +126,8 @@ export async function PATCH(
 
   return handler(request);
 }
+
+export const PATCH = withStandardRateLimit(handlePatch);
 
 async function handleUpdateProject(
   request: NextRequest,
@@ -142,7 +146,7 @@ async function handleUpdateProject(
   }
 
   // 2. Get project document and verify ownership (tenant isolation)
-  const projectRef = adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId);
+  const projectRef = getAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(projectId);
   const projectDoc = await projectRef.get();
 
   if (!projectDoc.exists) {
@@ -223,6 +227,7 @@ async function handleUpdateProject(
  * - Permission: projects:projects:delete
  * - Tenant isolation: Only delete projects in same company
  * - Validates project existence and ownership
+ * - Rate Limit: STANDARD (60 req/min)
  *
  * 🏢 ENTERPRISE: Soft delete by default
  * - Sets status: 'archived'
@@ -230,10 +235,10 @@ async function handleUpdateProject(
  * - Preserves data for audit/recovery
  * - Hard delete requires ?hard=true query param
  */
-export async function DELETE(
+async function handleDelete(
   request: NextRequest,
   segmentData: { params: Promise<{ projectId: string }> }
-) {
+): Promise<NextResponse> {
   const { projectId } = await segmentData.params;
 
   const handler = withAuth<ApiSuccessResponse<ProjectDeleteResponse>>(
@@ -245,6 +250,8 @@ export async function DELETE(
 
   return handler(request);
 }
+
+export const DELETE = withStandardRateLimit(handleDelete);
 
 async function handleDeleteProject(
   request: NextRequest,
@@ -262,7 +269,7 @@ async function handleDeleteProject(
   );
 
   // 1. Get project document and verify ownership (tenant isolation)
-  const projectRef = adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId);
+  const projectRef = getAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(projectId);
   const projectDoc = await projectRef.get();
 
   if (!projectDoc.exists) {

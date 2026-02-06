@@ -12,11 +12,13 @@
  */
 
 import { NextRequest } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🔒 RATE LIMITING: STANDARD category (60 req/min)
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
 
 // ============================================================================
@@ -54,8 +56,10 @@ export const dynamic = 'force-dynamic';
  * - Permission: comm:messages:send
  * - Ownership: Only edit own messages
  * - Time limit: 15 minutes after creation
+ *
+ * @rateLimit STANDARD (60 req/min) - Edit message text
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withStandardRateLimit(async function PATCH(request: NextRequest) {
   const handler = withAuth<EditMessageCanonicalResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleEditMessage(req, ctx);
@@ -64,7 +68,7 @@ export async function PATCH(request: NextRequest) {
   );
 
   return handler(request);
-}
+});
 
 async function handleEditMessage(
   request: NextRequest,
@@ -83,7 +87,7 @@ async function handleEditMessage(
   }
 
   // 2. Get message document
-  const messageRef = adminDb.collection(COLLECTIONS.MESSAGES).doc(messageId);
+  const messageRef = getAdminFirestore().collection(COLLECTIONS.MESSAGES).doc(messageId);
   const messageDoc = await messageRef.get();
 
   if (!messageDoc.exists) {

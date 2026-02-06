@@ -21,13 +21,15 @@
  * @enterprise Direct Firestore Notification (no email dependency)
  * @created 2026-01-25
  * @adr ADR-017 - Enterprise ID Generation
+ * @rateLimit STANDARD (60 req/min) - Error report submission
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { adminConfigService } from '@/services/adminConfigService';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Severity } from '@/types/notification';
@@ -132,7 +134,7 @@ function mapSeverity(severity: 'critical' | 'error' | 'warning'): Severity {
  * Creates a notification for the admin when a user reports an error.
  * Replaces email-based error reporting with direct Firestore writes.
  */
-export async function POST(request: NextRequest) {
+const basePOST = async (request: NextRequest) => {
   const handler = withAuth<ErrorReportResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleErrorReport(req, ctx);
@@ -144,7 +146,9 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const POST = withStandardRateLimit(basePOST);
 
 async function handleErrorReport(
   request: NextRequest,
@@ -232,7 +236,7 @@ async function handleErrorReport(
     };
 
     // Create notification in Firestore using Admin SDK
-    const docRef = await adminDb
+    const docRef = await getAdminFirestore()
       .collection(COLLECTIONS.NOTIFICATIONS)
       .add(notificationData);
 

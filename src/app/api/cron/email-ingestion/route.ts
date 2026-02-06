@@ -27,6 +27,7 @@ import {
   processEmailIngestionBatch,
   getEmailIngestionQueueHealth,
 } from '@/server/comms/workers/email-ingestion-worker';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 const logger = createModuleLogger('EMAIL_INGESTION_CRON');
 
@@ -65,8 +66,10 @@ function verifyCronAuthorization(request: NextRequest): boolean {
  *
  * Process pending emails from the queue.
  * Triggered by Vercel Cron every minute.
+ *
+ * @rateLimit SENSITIVE (20 req/min) - Cron job for email processing
  */
-export async function POST(request: NextRequest): Promise<Response> {
+async function handlePOST(request: NextRequest): Promise<Response> {
   const startTime = Date.now();
 
   // Verify authorization
@@ -128,12 +131,16 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 }
 
+export const POST = withSensitiveRateLimit(handlePOST);
+
 /**
  * GET /api/cron/email-ingestion
  *
  * Health check and queue statistics.
+ *
+ * @rateLimit SENSITIVE (20 req/min) - Health check and queue statistics
  */
-export async function GET(request: NextRequest): Promise<Response> {
+async function handleGET(request: NextRequest): Promise<Response> {
   // Verify authorization (optional for health check)
   const authorized = verifyCronAuthorization(request);
 
@@ -162,3 +169,5 @@ export async function GET(request: NextRequest): Promise<Response> {
     }, { status: 500 });
   }
 }
+
+export const GET = withSensitiveRateLimit(handleGET);

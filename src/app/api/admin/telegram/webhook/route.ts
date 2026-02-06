@@ -34,6 +34,7 @@ import { generateRequestId } from '@/services/enterprise-id.service';
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports (NEW auth system)
 import { withAuth, logSystemOperation, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withTelegramRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // CONFIGURATION
@@ -96,12 +97,15 @@ async function callTelegramApi<T>(method: string, params?: Record<string, unknow
  * Get current webhook configuration and status
  * @enterprise Use this to verify webhook is properly configured
  * @security withAuth + super_admin check + admin:system:configure permission
+ * @rateLimit TELEGRAM (15 req/min) - Get Telegram webhook configuration
  */
-export const GET = withAuth(
-  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    return handleGetWebhookInfo(req, ctx);
-  },
-  { permissions: 'admin:system:configure' }
+export const GET = withTelegramRateLimit(
+  withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      return handleGetWebhookInfo(req, ctx);
+    },
+    { permissions: 'admin:system:configure' }
+  )
 );
 
 /**
@@ -195,12 +199,15 @@ interface SetWebhookRequest {
  * Set or update webhook configuration
  * @enterprise Includes secret_token for request validation
  * @security withAuth + super_admin check + audit logging + admin:system:configure permission
+ * @rateLimit TELEGRAM (15 req/min) - Set Telegram webhook configuration
  */
-export const POST = withAuth(
-  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    return handleSetWebhook(req, ctx);
-  },
-  { permissions: 'admin:system:configure' }
+export const POST = withTelegramRateLimit(
+  withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      return handleSetWebhook(req, ctx);
+    },
+    { permissions: 'admin:system:configure' }
+  )
 );
 
 /**
@@ -363,12 +370,15 @@ function getDefaultWebhookUrl(): string | null {
 /**
  * Remove webhook (for debugging/testing)
  * @security withAuth + super_admin check + audit logging + admin:system:configure permission
+ * @rateLimit TELEGRAM (15 req/min) - Delete Telegram webhook
  */
-export const DELETE = withAuth(
-  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    return handleDeleteWebhook(req, ctx);
-  },
-  { permissions: 'admin:system:configure' }
+export const DELETE = withTelegramRateLimit(
+  withAuth(
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+      return handleDeleteWebhook(req, ctx);
+    },
+    { permissions: 'admin:system:configure' }
+  )
 );
 
 /**

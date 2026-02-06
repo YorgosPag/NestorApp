@@ -33,7 +33,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb, ensureAdminInitialized } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateFloorId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -191,10 +191,9 @@ async function handleSeedFloorsPreview(
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
-    ensureAdminInitialized();
 
     // Fetch existing floors (Admin SDK syntax)
-    const floorsRef = adminDb.collection(COLLECTIONS.FLOORS);
+    const floorsRef = getAdminFirestore().collection(COLLECTIONS.FLOORS);
     const snapshot = await floorsRef.get();
 
     const existingFloors = snapshot.docs.map(docSnap => ({
@@ -273,9 +272,8 @@ async function handleSeedFloorsExecute(
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
-    ensureAdminInitialized();
 
-    const floorsRef = adminDb.collection(COLLECTIONS.FLOORS);
+    const floorsRef = getAdminFirestore().collection(COLLECTIONS.FLOORS);
 
     // =======================================================================
     // STEP 1: Διαγραφή υπαρχόντων floors
@@ -286,7 +284,7 @@ async function handleSeedFloorsExecute(
     const deletedIds: string[] = [];
 
     for (const docSnapshot of existingSnapshot.docs) {
-      await adminDb.collection(COLLECTIONS.FLOORS).doc(docSnapshot.id).delete();
+      await getAdminFirestore().collection(COLLECTIONS.FLOORS).doc(docSnapshot.id).delete();
       deletedIds.push(docSnapshot.id);
       console.log(`  ✓ Διαγράφηκε: ${docSnapshot.id}`);
     }
@@ -330,7 +328,7 @@ async function handleSeedFloorsExecute(
       };
 
       // Use Admin SDK set with enterprise ID
-      await adminDb.collection(COLLECTIONS.FLOORS).doc(floorId).set(floorDoc);
+      await getAdminFirestore().collection(COLLECTIONS.FLOORS).doc(floorId).set(floorDoc);
 
       createdFloors.push({ id: floorId, number: template.number, name: template.name });
       console.log(`  ✓ Δημιουργήθηκε: ${floorId} (${template.name})`);
@@ -417,15 +415,14 @@ async function handleSeedFloorsDelete(
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
-    ensureAdminInitialized();
 
-    const floorsRef = adminDb.collection(COLLECTIONS.FLOORS);
+    const floorsRef = getAdminFirestore().collection(COLLECTIONS.FLOORS);
     const snapshot = await floorsRef.get();
 
     const deletedIds: string[] = [];
 
     for (const docSnapshot of snapshot.docs) {
-      await adminDb.collection(COLLECTIONS.FLOORS).doc(docSnapshot.id).delete();
+      await getAdminFirestore().collection(COLLECTIONS.FLOORS).doc(docSnapshot.id).delete();
       deletedIds.push(docSnapshot.id);
     }
 

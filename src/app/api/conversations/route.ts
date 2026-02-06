@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -19,6 +19,8 @@ import { generateRequestId } from '@/services/enterprise-id.service';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 // 🏢 ENTERPRISE: Canonical response format (SAP/Salesforce pattern)
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+// 🔒 RATE LIMITING: STANDARD category (60 req/min)
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Type alias for canonical response
 type ConversationsCanonicalResponse = ApiSuccessResponse<ConversationsListResponse>;
@@ -161,8 +163,10 @@ export const dynamic = 'force-dynamic';
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: comm:conversations:list
  * - Tenant Isolation: Filters by user's companyId
+ *
+ * @rateLimit STANDARD (60 req/min) - Conversations listing with filtering
  */
-export async function GET(request: NextRequest) {
+export const GET = withStandardRateLimit(async function GET(request: NextRequest) {
   const handler = withAuth<ConversationsCanonicalResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleListConversations(req, ctx);
@@ -171,7 +175,7 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+});
 
 async function handleListConversations(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ConversationsCanonicalResponse>> {
   const startTime = Date.now();
@@ -203,7 +207,7 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
   console.log('🔍 [Conversations/List] Cache miss - Fetching from Firestore...');
 
   // Build query with TENANT ISOLATION (AUTHZ Phase 2)
-  let query = adminDb.collection(COLLECTIONS.CONVERSATIONS)
+  let query = getAdminFirestore().collection(COLLECTIONS.CONVERSATIONS)
     .where('companyId', '==', ctx.companyId) // CRITICAL: Filter by user's company
     .orderBy('audit.updatedAt', 'desc');
 

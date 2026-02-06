@@ -32,10 +32,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb, ensureAdminInitialized } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateParkingId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // =============================================================================
 // 🏢 ENTERPRISE CONFIGURATION
@@ -199,13 +200,15 @@ const PARKING_TEMPLATES: ParkingSpotTemplate[] = [
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: admin:migrations:execute
  * - Super_admin ONLY (explicit check below)
+ *
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
-export const GET = withAuth(
+export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleSeedParkingPreview(req, ctx);
   },
   { permissions: 'admin:migrations:execute' }
-);
+));
 
 /**
  * POST /api/admin/seed-parking
@@ -213,13 +216,15 @@ export const GET = withAuth(
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: admin:migrations:execute
  * - Super_admin ONLY (explicit check below)
+ *
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
-export const POST = withAuth(
+export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleSeedParkingExecute(req, ctx);
   },
   { permissions: 'admin:migrations:execute' }
-);
+));
 
 /**
  * DELETE /api/admin/seed-parking
@@ -227,13 +232,15 @@ export const POST = withAuth(
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: admin:migrations:execute
  * - Super_admin ONLY (explicit check below)
+ *
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
-export const DELETE = withAuth(
+export const DELETE = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleSeedParkingDelete(req, ctx);
   },
   { permissions: 'admin:migrations:execute' }
-);
+));
 
 async function handleSeedParkingPreview(
   request: NextRequest,
@@ -262,10 +269,8 @@ async function handleSeedParkingPreview(
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
-    ensureAdminInitialized();
-
     // Fetch existing parking spots (Admin SDK syntax)
-    const parkingRef = adminDb.collection(COLLECTIONS.PARKING_SPACES);
+    const parkingRef = getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES);
     const snapshot = await parkingRef.get();
 
     const existingSpots = snapshot.docs.map(docSnap => ({
@@ -343,9 +348,7 @@ async function handleSeedParkingExecute(
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
-    ensureAdminInitialized();
-
-    const parkingRef = adminDb.collection(COLLECTIONS.PARKING_SPACES);
+    const parkingRef = getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES);
 
     // =======================================================================
     // STEP 1: Διαγραφή υπαρχόντων parking spots
@@ -356,7 +359,7 @@ async function handleSeedParkingExecute(
     const deletedIds: string[] = [];
 
     for (const docSnapshot of existingSnapshot.docs) {
-      await adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(docSnapshot.id).delete();
+      await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(docSnapshot.id).delete();
       deletedIds.push(docSnapshot.id);
       console.log(`  ✓ Διαγράφηκε: ${docSnapshot.id}`);
     }
@@ -394,7 +397,7 @@ async function handleSeedParkingExecute(
       };
 
       // Use Admin SDK set with enterprise ID
-      await adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(parkingId).set(parkingDoc);
+      await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(parkingId).set(parkingDoc);
 
       createdSpots.push({ id: parkingId, number: template.number });
       console.log(`  ✓ Δημιουργήθηκε: ${parkingId} (${template.number})`);
@@ -479,15 +482,13 @@ async function handleSeedParkingDelete(
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
-    ensureAdminInitialized();
-
-    const parkingRef = adminDb.collection(COLLECTIONS.PARKING_SPACES);
+    const parkingRef = getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES);
     const snapshot = await parkingRef.get();
 
     const deletedIds: string[] = [];
 
     for (const docSnapshot of snapshot.docs) {
-      await adminDb.collection(COLLECTIONS.PARKING_SPACES).doc(docSnapshot.id).delete();
+      await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(docSnapshot.id).delete();
       deletedIds.push(docSnapshot.id);
     }
 
@@ -618,13 +619,14 @@ interface MigrationBatchItem {
  * This endpoint now validates that IDs are correct (non-prefixed) and reports status.
  *
  * @enterprise ADR-029 - Data Consistency & Foreign Key Integrity
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
-export const PATCH = withAuth(
+export const PATCH = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleForeignKeyValidation(req, ctx);
   },
   { permissions: 'admin:migrations:execute' }
-);
+));
 
 async function handleForeignKeyValidation(
   request: NextRequest,
@@ -656,8 +658,6 @@ async function handleForeignKeyValidation(
 
   try {
     // 🏢 ENTERPRISE: Ensure Admin SDK is initialized
-    ensureAdminInitialized();
-
     const body = await request.json() as { dryRun?: boolean };
     const { dryRun = true } = body;
 
@@ -681,7 +681,7 @@ async function handleForeignKeyValidation(
     // ========================================================================
     console.log(`\n📊 PHASE 1: Validation (NO-OP)`);
 
-    const parkingRef = adminDb.collection(COLLECTIONS.PARKING_SPACES);
+    const parkingRef = getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES);
     const snapshot = await parkingRef.get();
     stats.total = snapshot.size;
 

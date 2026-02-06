@@ -148,7 +148,10 @@ export const COLLECTIONS = {
   SEARCH_DOCUMENTS: process.env.NEXT_PUBLIC_SEARCH_DOCUMENTS_COLLECTION || 'searchDocuments',
 
   // 📧 EMAIL INGESTION QUEUE (ADR-071: Enterprise Email Webhook Queue)
-  EMAIL_INGESTION_QUEUE: process.env.NEXT_PUBLIC_EMAIL_INGESTION_QUEUE_COLLECTION || 'email_ingestion_queue'
+  EMAIL_INGESTION_QUEUE: process.env.NEXT_PUBLIC_EMAIL_INGESTION_QUEUE_COLLECTION || 'email_ingestion_queue',
+
+  // 📋 SYSTEM AUDIT LOGS (Webhook/system-level audit events)
+  SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs'
 } as const;
 
 // ============================================================================
@@ -182,7 +185,17 @@ export const SUBCOLLECTIONS = {
   // User subcollections
   USER_PREFERENCES: process.env.NEXT_PUBLIC_USER_PREFERENCES_SUBCOL || 'preferences',
   USER_SESSIONS: process.env.NEXT_PUBLIC_USER_SESSIONS_SUBCOL || 'sessions',
-  USER_NOTIFICATIONS: process.env.NEXT_PUBLIC_USER_NOTIFICATIONS_SUBCOL || 'notifications'
+  USER_NOTIFICATIONS: process.env.NEXT_PUBLIC_USER_NOTIFICATIONS_SUBCOL || 'notifications',
+
+  // Company subcollections (RBAC paths: /companies/{id}/projects, /companies/{id}/units)
+  COMPANY_PROJECTS: process.env.NEXT_PUBLIC_COMPANY_PROJECTS_SUBCOL || 'projects',
+  COMPANY_UNITS: process.env.NEXT_PUBLIC_COMPANY_UNITS_SUBCOL || 'units',
+
+  // Project subcollections (RBAC: /companies/{id}/projects/{id}/members)
+  PROJECT_MEMBERS: process.env.NEXT_PUBLIC_PROJECT_MEMBERS_SUBCOL || 'members',
+
+  // Unit subcollections (RBAC: /companies/{id}/units/{id}/grants)
+  UNIT_GRANTS: process.env.NEXT_PUBLIC_UNIT_GRANTS_SUBCOL || 'grants'
 } as const;
 
 // ============================================================================

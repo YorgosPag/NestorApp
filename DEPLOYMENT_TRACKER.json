@@ -1,0 +1,425 @@
+{
+  "rateLimit": {
+    "deploymentStarted": "2026-02-06",
+    "lastUpdated": "2026-02-06T18:30:00Z",
+    "batches": {
+      "batch1": {
+        "name": "Buildings & Units Routes",
+        "status": "COMPLETED",
+        "completedAt": "2026-02-06",
+        "routes": [
+          {
+            "path": "src/app/api/buildings/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/buildings/[buildingId]/units/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/units/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/units/by-building/[buildingId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/units/filter/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/units/[unitId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          }
+        ],
+        "summary": {
+          "total": 6,
+          "high": 2,
+          "standard": 4,
+          "low": 0
+        }
+      },
+      "batch2": {
+        "name": "Storage & Parking Routes",
+        "status": "COMPLETED",
+        "completedAt": "2026-02-06",
+        "routes": [
+          {
+            "path": "src/app/api/storage/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "MULTIPLE_METHODS",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/storage/by-building/[buildingId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/storage/[storageId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/parking/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "MULTIPLE_METHODS",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/parking/by-building/[buildingId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/parking/[parkingId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          }
+        ],
+        "summary": {
+          "total": 6,
+          "high": 2,
+          "standard": 4,
+          "low": 0
+        }
+      },
+      "batch3": {
+        "name": "Files & Upload Routes",
+        "status": "COMPLETED",
+        "completedAt": "2026-02-06",
+        "routes": [
+          {
+            "path": "src/app/api/files/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "MULTIPLE_METHODS",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/files/[fileId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/files/by-entity/[entityType]/[entityId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/files/by-project/[projectId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/upload/route.ts",
+            "category": "LOW",
+            "limit": "20 req/min",
+            "pattern": "PLAIN_ASYNC",
+            "verified": true
+          }
+        ],
+        "summary": {
+          "total": 5,
+          "high": 1,
+          "standard": 3,
+          "low": 1
+        }
+      },
+      "batch4": {
+        "name": "Contacts Routes",
+        "status": "COMPLETED",
+        "completedAt": "2026-02-06",
+        "routes": [
+          {
+            "path": "src/app/api/contacts/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "MULTIPLE_METHODS",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/contacts/[contactId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/contacts/[contactId]/avatars/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/contacts/suggestions/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/individuals/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          }
+        ],
+        "summary": {
+          "total": 5,
+          "high": 2,
+          "standard": 3,
+          "low": 0
+        }
+      },
+      "batch5": {
+        "name": "Admin & Auth Routes",
+        "status": "COMPLETED",
+        "completedAt": "2026-02-06",
+        "routes": [
+          {
+            "path": "src/app/api/admin/permissions/test/route.ts",
+            "category": "LOW",
+            "limit": "20 req/min",
+            "pattern": "PLAIN_ASYNC",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/admin/permissions/[userId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/admin/users/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/auth/session/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "PLAIN_ASYNC",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/auth/verify/route.ts",
+            "category": "LOW",
+            "limit": "20 req/min",
+            "pattern": "PLAIN_ASYNC",
+            "verified": true
+          }
+        ],
+        "summary": {
+          "total": 5,
+          "high": 2,
+          "standard": 1,
+          "low": 2
+        }
+      },
+      "batch6": {
+        "name": "User & Search Routes",
+        "status": "COMPLETED",
+        "completedAt": "2026-02-06",
+        "routes": [
+          {
+            "path": "src/app/api/user/data/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/user/notifications/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/user/profile/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/contacts/search/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          }
+        ],
+        "summary": {
+          "total": 4,
+          "high": 1,
+          "standard": 3,
+          "low": 0
+        }
+      },
+      "batch7": {
+        "name": "Navigation & Sidebar Routes",
+        "status": "COMPLETED",
+        "completedAt": "2026-02-06",
+        "routes": [
+          {
+            "path": "src/app/api/navigation/companies/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/sidebar-items/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          }
+        ],
+        "summary": {
+          "total": 2,
+          "high": 2,
+          "standard": 0,
+          "low": 0
+        }
+      },
+      "batch8": {
+        "name": "Audit & System Routes",
+        "status": "COMPLETED",
+        "completedAt": "2026-02-06",
+        "routes": [
+          {
+            "path": "src/app/api/audit/bootstrap/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/audit/logs/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/audit/events/route.ts",
+            "category": "LOW",
+            "limit": "20 req/min",
+            "pattern": "MULTIPLE_METHODS",
+            "verified": true
+          }
+        ],
+        "summary": {
+          "total": 3,
+          "high": 1,
+          "standard": 1,
+          "low": 1
+        }
+      },
+      "batch9": {
+        "name": "Projects & Companies Routes",
+        "status": "COMPLETED",
+        "completedAt": "2026-02-06",
+        "routes": [
+          {
+            "path": "src/app/api/companies/route.ts",
+            "category": "HIGH",
+            "limit": "100 req/min",
+            "pattern": "WITH_AUTH",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/projects/by-company/[companyId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/projects/structure/[projectId]/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/projects/[projectId]/customers/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          },
+          {
+            "path": "src/app/api/v2/projects/[projectId]/customers/route.ts",
+            "category": "STANDARD",
+            "limit": "60 req/min",
+            "pattern": "DYNAMIC_ROUTE",
+            "verified": true
+          }
+        ],
+        "summary": {
+          "total": 5,
+          "high": 1,
+          "standard": 4,
+          "low": 0
+        }
+      }
+    },
+    "totalProgress": {
+      "batchesCompleted": 9,
+      "batchesRemaining": 0,
+      "totalRoutes": 41,
+      "routesCompleted": 41,
+      "routesRemaining": 0,
+      "categories": {
+        "high": 13,
+        "standard": 23,
+        "low": 5
+      },
+      "completionPercentage": 100
+    }
+  }
+}

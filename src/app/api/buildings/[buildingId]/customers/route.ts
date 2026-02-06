@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail, type Contact } from '@/types/contacts';
 import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
 import { withAuth, requireBuildingInTenant, logAuditEvent, TenantIsolationError } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /** Customer info for building */
 interface CustomerInfo {
@@ -27,6 +28,9 @@ interface BuildingCustomersResponse {
   error?: string;
 }
 
+/**
+ * @rateLimit STANDARD (60 req/min) - CRUD
+ */
 // Dynamic route handler wrapper
 export async function GET(
   request: NextRequest,
@@ -35,11 +39,11 @@ export async function GET(
   const { buildingId } = await segmentData.params;
 
   // Create authenticated handler
-  const handler = withAuth<BuildingCustomersResponse>(
+  const handler = withStandardRateLimit(withAuth<BuildingCustomersResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         // 🔐 ADMIN SDK: Verify Firestore connection
-        if (!adminDb) {
+        if (!getAdminFirestore()) {
           return NextResponse.json({
             success: true,
             customers: [],
@@ -72,7 +76,7 @@ export async function GET(
 
         // 🔒 TENANT ISOLATION: Query units with both companyId AND buildingId filters
         console.log(`🏠 Fetching units for buildingId: ${buildingId}`);
-        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS)
+        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS)
           .where('companyId', '==', ctx.companyId)
           .where('buildingId', '==', buildingId)
           .get();
@@ -128,7 +132,7 @@ export async function GET(
         }
 
         // Query contacts with tenant isolation
-        const contactsSnapshot = await adminDb.collection(COLLECTIONS.CONTACTS)
+        const contactsSnapshot = await getAdminFirestore().collection(COLLECTIONS.CONTACTS)
           .where('companyId', '==', ctx.companyId)
           .where('__name__', 'in', contactIdsToQuery)
           .get();
@@ -173,7 +177,7 @@ export async function GET(
       }
     },
     { permissions: 'buildings:buildings:view' }
-  );
+  ));
 
   return handler(request);
 }

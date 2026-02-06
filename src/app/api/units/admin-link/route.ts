@@ -13,11 +13,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Response types for type-safe withAuth
 type AdminLinkSuccess = {
@@ -43,14 +44,17 @@ type AdminLinkError = {
 
 type AdminLinkResponse = AdminLinkSuccess | AdminLinkError;
 
+/**
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
+ */
 export async function POST(request: NextRequest) {
-  const handler = withAuth<AdminLinkResponse>(
+  const handler = withSensitiveRateLimit(withAuth<AdminLinkResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AdminLinkResponse>> => {
       try {
         console.log('🔥 [Units/AdminLink] Starting Admin SDK operations...');
         console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole}), Company ${ctx.companyId}`);
 
-        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
+        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         // Debug: Show all sold units and their soldTo values
         const allSoldUnits = unitsSnapshot.docs
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Load real contact IDs from database
-        const contactsSnapshot = await adminDb
+        const contactsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.CONTACTS)
           .where('type', '==', 'individual')
           .limit(8)
@@ -117,7 +121,7 @@ export async function POST(request: NextRequest) {
             const emailDomain = process.env.NEXT_PUBLIC_TEST_EMAIL_DOMAIN || 'testcontacts.local';
             const phonePrefix = process.env.NEXT_PUBLIC_TEST_PHONE_PREFIX || '+30 21';
 
-            await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).set({
+            await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(contactId).set({
               firstName: contactName.split(' ')[0],
               lastName: contactName.split(' ')[1] || '',
               displayName: contactName,
@@ -144,7 +148,7 @@ export async function POST(request: NextRequest) {
           const contactName = sampleContactNames[i % sampleContactNames.length];
 
           try {
-            await adminDb.collection(COLLECTIONS.UNITS).doc(unit.id).update({
+            await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unit.id).update({
               soldTo: contactId
             });
 
@@ -187,7 +191,7 @@ export async function POST(request: NextRequest) {
       }
     },
     { requiredGlobalRoles: 'super_admin' }
-  );
+  ));
 
   return handler(request);
 }

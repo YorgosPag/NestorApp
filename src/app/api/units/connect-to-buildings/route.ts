@@ -13,11 +13,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS, BuildingIdUtils } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Response types for type-safe withAuth
 type ConnectUnitsSuccess = {
@@ -44,7 +45,11 @@ type ConnectUnitsError = {
 
 type ConnectUnitsResponse = ConnectUnitsSuccess | ConnectUnitsError;
 
-export async function POST(request: NextRequest) {
+/**
+ * @rateLimit HEAVY (10 req/min) - Resource-intensive operation
+ */
+export const POST = withHeavyRateLimit(
+  async (request: NextRequest) => {
   const handler = withAuth<ConnectUnitsResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ConnectUnitsResponse>> => {
       try {
@@ -56,7 +61,7 @@ export async function POST(request: NextRequest) {
         // ============================================================================
 
         console.log(`🏢 Getting buildings for project ${BUILDING_IDS.PROJECT_ID}...`);
-        const buildingsSnapshot = await adminDb
+        const buildingsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
           .where('projectId', '==', BUILDING_IDS.PROJECT_ID)
           .get();
@@ -81,7 +86,7 @@ export async function POST(request: NextRequest) {
         // ============================================================================
 
         console.log('🏠 Getting all units from database...');
-        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
+        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         const units = unitsSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -149,7 +154,7 @@ export async function POST(request: NextRequest) {
           if (targetBuilding) {
             console.log(`Connecting unit ${unit.id} to building ${targetBuilding.id}`);
 
-            await adminDb.collection(COLLECTIONS.UNITS).doc(unit.id).update({
+            await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unit.id).update({
               buildingId: targetBuilding.id,
               projectId: BUILDING_IDS.PROJECT_ID,
               updatedAt: new Date().toISOString()
@@ -195,4 +200,5 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+  }
+);

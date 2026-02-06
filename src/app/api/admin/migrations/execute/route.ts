@@ -25,6 +25,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { MigrationEngine } from '@/database/migrations/MigrationEngine';
 import { createProjectCompanyRelationshipsMigration } from '@/database/migrations/001_fix_project_company_relationships';
 import { createFloorsNormalizationMigration } from '@/database/migrations/002_normalize_floors_collection';
@@ -38,14 +39,15 @@ import { migration as storageBuildingMigration, dryRun as storageBuildingDryRun,
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: admin:migrations:execute
  * - Super_admin ONLY (explicit check below)
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
 export async function POST(request: NextRequest) {
-  const handler = withAuth(
+  const handler = withSensitiveRateLimit(withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       return handleMigrationExecution(req, ctx);
     },
     { permissions: 'admin:migrations:execute' }
-  );
+  ));
 
   return handler(request);
 }

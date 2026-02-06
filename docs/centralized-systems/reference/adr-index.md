@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 133 ADRs | Last Updated: 2026-02-05
+**📊 Stats**: 134 ADRs | Last Updated: 2026-02-06
 
 ---
 
@@ -110,6 +110,7 @@
 | **ADR-074** | AI Inbox UX Improvements - Link Visibility & Theme Colors | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-074-ai-inbox-ux-improvements.md) |
 | **ADR-075** | Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-075-grip-size-multipliers-centralization.md) |
 | **ADR-076** | RGB ↔ HEX Color Conversion Centralization | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-076-rgb-hex-color-conversion-centralization.md) |
+| **ADR-077** | Firebase Admin SDK — Unified Lazy Initialization | ✅ IMPLEMENTED | 2026-02-06 | Infrastructure | [📄](./adrs/ADR-077-firebase-admin-unified-lazy-init.md) |
 | **ADR-081** | Percentage Formatting Centralization (formatPercent) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-081-percentage-formatting-centralization-formatpercent.md) |
 | **ADR-082** | Enterprise Number Formatting System (AutoCAD-Grade) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-082-enterprise-number-formatting-system-autocad-grade.md) |
 | **ADR-083** | Line Dash Patterns Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering | [📄](./adrs/ADR-083-line-dash-patterns-centralization.md) |

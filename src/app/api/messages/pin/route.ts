@@ -12,11 +12,13 @@
  */
 
 import { NextRequest } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🔒 RATE LIMITING: STANDARD category (60 req/min)
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -55,8 +57,10 @@ export const dynamic = 'force-dynamic';
  * 🔒 SECURITY: Protected with RBAC
  * - Permission: comm:messages:view
  * - Tenant isolation validated
+ *
+ * @rateLimit STANDARD (60 req/min) - Pin/unpin message
  */
-export async function POST(request: NextRequest) {
+export const POST = withStandardRateLimit(async function POST(request: NextRequest) {
   const handler = withAuth<PinMessageCanonicalResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handlePinMessage(req, ctx);
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+});
 
 async function handlePinMessage(
   request: NextRequest,
@@ -84,7 +88,7 @@ async function handlePinMessage(
   }
 
   // 2. Get message document
-  const messageRef = adminDb.collection(COLLECTIONS.MESSAGES).doc(messageId);
+  const messageRef = getAdminFirestore().collection(COLLECTIONS.MESSAGES).doc(messageId);
   const messageDoc = await messageRef.get();
 
   if (!messageDoc.exists) {
@@ -104,7 +108,7 @@ async function handlePinMessage(
     throw new ApiError(400, 'Message has no conversation');
   }
 
-  const conversationRef = adminDb.collection(COLLECTIONS.CONVERSATIONS).doc(conversationId);
+  const conversationRef = getAdminFirestore().collection(COLLECTIONS.CONVERSATIONS).doc(conversationId);
 
   // 5. Pin or Unpin
   if (action === 'pin') {

@@ -38,6 +38,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /** Firestore Timestamp type */
 type FirestoreTimestamp = Timestamp | FieldValue | Date;
@@ -83,13 +84,14 @@ interface PureEnterpriseNavigationSchema {
  * DELETES ALL navigation documents + RECREATES with pure schema.
  *
  * @security withAuth + super_admin check + audit logging + admin:data:fix permission
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
-export const POST = withAuth(
+export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<RadicalCleanupResult>> => {
     return handleRadicalCleanupExecute(req, ctx);
   },
   { permissions: 'admin:data:fix' }
-);
+));
 
 /**
  * Internal handler for POST (execute radical cleanup).
@@ -317,8 +319,9 @@ async function handleRadicalCleanupExecute(request: NextRequest, ctx: AuthContex
  * Returns endpoint information and schema details.
  *
  * @security withAuth + admin:data:fix permission
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
-export const GET = withAuth(
+export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return NextResponse.json({
       endpoint: 'Radical Enterprise Cleanup - Navigation Companies',
@@ -344,4 +347,4 @@ export const GET = withAuth(
     });
   },
   { permissions: 'admin:data:fix' }
-);
+));

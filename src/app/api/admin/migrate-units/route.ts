@@ -33,6 +33,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // 🏢 ENTERPRISE: Enterprise building για τις νέες μονάδες
 const TARGET_ENTERPRISE_BUILDING = {
@@ -127,13 +128,14 @@ interface UnitData {
  * Read-only preview of units to be migrated.
  *
  * @security withAuth + super_admin check + admin:data:fix permission
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
-export const GET = withAuth(
+export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleMigrateUnitsPreview(req, ctx);
   },
   { permissions: 'admin:data:fix' }
-);
+));
 
 /**
  * Internal handler for GET (preview migration).
@@ -225,13 +227,14 @@ async function handleMigrateUnitsPreview(request: NextRequest, ctx: AuthContext)
  * DELETES legacy units + CREATES new enterprise units.
  *
  * @security withAuth + super_admin check + audit logging + admin:data:fix permission
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
-export const POST = withAuth(
+export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleMigrateUnitsExecute(req, ctx);
   },
   { permissions: 'admin:data:fix' }
-);
+));
 
 /**
  * Internal handler for POST (execute migration).

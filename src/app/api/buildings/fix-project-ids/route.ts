@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db as getAdminDb } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /** Response type for fix-project-ids API */
 interface FixProjectIdsResponse {
@@ -50,11 +51,15 @@ function getRequiredConfig(): {
   };
 }
 
-export const POST = withAuth<FixProjectIdsResponse>(
+/**
+ * @rateLimit HEAVY (10 req/min) - Resource-intensive operation
+ */
+export const POST = withHeavyRateLimit(
+  withAuth<FixProjectIdsResponse>(
   async (_request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
     try {
       // 🔐 ADMIN SDK: Get server-side Firestore instance
-      const adminDb = getAdminDb();
+      const adminDb = getAdminFirestore();
       if (!adminDb) {
         console.error('❌ Firebase Admin not initialized');
         return NextResponse.json({
@@ -124,4 +129,5 @@ export const POST = withAuth<FixProjectIdsResponse>(
     }
   },
   { requiredGlobalRoles: 'super_admin' }  // Centralized role check
+  )
 );

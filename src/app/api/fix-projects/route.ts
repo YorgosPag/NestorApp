@@ -28,41 +28,27 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-
-let adminDb: FirebaseFirestore.Firestore;
-
-try {
-  if (getApps().length === 0) {
-    const app = initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'nestor-pagonis'
-    });
-    adminDb = getFirestore(app);
-  } else {
-    adminDb = getFirestore();
-  }
-} catch (error) {
-  console.error('Failed to initialize Admin SDK:', error);
-}
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /**
  * POST - Execute Project CompanyId Fix (withAuth protected)
  * Updates all project companyIds using Admin SDK.
  *
  * @security withAuth + super_admin check + audit logging + admin:data:fix permission
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
-export const POST = withAuth(
+export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleFixProjectsExecute(req, ctx);
   },
   { permissions: 'admin:data:fix' }
-);
+));
 
 /**
  * Internal handler for POST (fix projects).
@@ -89,9 +75,7 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
   try {
     console.log('🔧 FIXING PROJECT COMPANY IDS...');
 
-    if (!adminDb) {
-      throw new Error('Firebase Admin SDK not initialized');
-    }
+    const adminDb = getAdminFirestore();
 
     // 🏢 ENTERPRISE: Database-driven company lookup (NO MORE HARDCODED IDs)
     const getCompanyIdByName = async (companyName: string): Promise<string | null> => {
@@ -237,13 +221,14 @@ async function handleFixProjectsExecute(request: NextRequest, ctx: AuthContext):
  * Returns endpoint information and requester details.
  *
  * @security withAuth + admin:data:fix permission
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
-export const GET = withAuth(
+export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleFixProjectsInfo(req, ctx);
   },
   { permissions: 'admin:data:fix' }
-);
+));
 
 /**
  * Internal handler for GET (system info).

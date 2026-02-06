@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { CompanyContact, ContactStatus } from '@/types/contacts';
+import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Admin SDK Companies Endpoint
@@ -187,8 +188,10 @@ interface CompaniesResponse {
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: crm:contacts:view
  * - Tenant Isolation: Filters projects by user's companyId
+ *
+ * @rateLimit HIGH (100 req/min) - List endpoint με enterprise caching
  */
-export async function GET(request: NextRequest) {
+export const GET = withHighRateLimit(async function GET(request: NextRequest) {
   const handler = withAuth<CompaniesResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<CompaniesResponse>> => {
       return handleGetCompanies(req, ctx);
@@ -197,7 +200,7 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+});
 
 async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promise<NextResponse<CompaniesResponse>> {
   console.log(`🏢 API: Loading companies for user ${ctx.email} (company: ${ctx.companyId}, role: ${ctx.globalRole})...`);
@@ -240,7 +243,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
       console.log(`👑 API: Admin mode (${ctx.globalRole}) - Loading from navigation_companies...`);
 
       // Step 1: Get navigation company IDs
-      const navigationSnapshot = await adminDb
+      const navigationSnapshot = await getAdminFirestore()
         .collection(COLLECTIONS.NAVIGATION)
         .get();
 
@@ -265,7 +268,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
       }
 
       // Step 2: Get company details from contacts
-      const companiesSnapshot = await adminDb
+      const companiesSnapshot = await getAdminFirestore()
         .collection(COLLECTIONS.CONTACTS)
         .where('type', '==', 'company')
         .where('status', '==', 'active')
@@ -308,7 +311,7 @@ async function handleGetCompanies(request: NextRequest, ctx: AuthContext): Promi
       }
 
       // Fetch only user's company
-      const companyDoc = await adminDb
+      const companyDoc = await getAdminFirestore()
         .collection(COLLECTIONS.CONTACTS)
         .doc(ctx.companyId)
         .get();

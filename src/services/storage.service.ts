@@ -1,6 +1,6 @@
 'use server';
 
-import { db } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { collection, doc, getDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { StorageUnit } from '@/types/storage';

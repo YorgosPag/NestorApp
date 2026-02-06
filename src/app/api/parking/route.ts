@@ -11,12 +11,14 @@
  *
  * @see local_4.log - Navigation architecture documentation
  * @see firestore-collections.ts - COLLECTIONS.PARKING_SPACES = 'parkingSpaces'
+ * @rateLimit STANDARD (60 req/min) - Parking spots retrieval
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 
@@ -83,7 +85,7 @@ interface ParkingAPIResponse {
  * - Permission: units:units:view
  * - Tenant Isolation: Filters by user's companyId through buildings
  */
-export async function GET(request: NextRequest) {
+const getHandler = async (request: NextRequest) => {
   const handler = withAuth<ParkingAPIResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ParkingAPIResponse>> => {
       return handleGetParking(req, ctx);
@@ -92,7 +94,9 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const GET = withStandardRateLimit(getHandler);
 
 async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ParkingAPIResponse>> {
   console.log(`🅿️ API: Loading parking spots for user ${ctx.email} (company: ${ctx.companyId})...`);
@@ -108,7 +112,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     console.log('🔍 API: Getting authorized buildings for user\'s company...');
 
     // Get all projects belonging to user's company
-    const projectsSnapshot = await adminDb
+    const projectsSnapshot = await getAdminFirestore()
       .collection(COLLECTIONS.PROJECTS)
       .where('companyId', '==', ctx.companyId)
       .get();
@@ -129,7 +133,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     }
 
     // Get all buildings from these projects
-    const buildingsSnapshot = await adminDb
+    const buildingsSnapshot = await getAdminFirestore()
       .collection(COLLECTIONS.BUILDINGS)
       .where('projectId', 'in', projectIds.slice(0, 10)) // Firestore 'in' limit is 10
       .get();
@@ -162,7 +166,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
 
     if (requestedBuildingId) {
       // Single building query (already validated as authorized)
-      snapshot = await adminDb
+      snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.PARKING_SPACES)
         .where('buildingId', '==', requestedBuildingId)
         .get();
@@ -170,7 +174,7 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     } else {
       // Multiple buildings query - get all and filter in-memory
       // (Firestore 'in' operator limited to 10 items)
-      snapshot = await adminDb
+      snapshot = await getAdminFirestore()
         .collection(COLLECTIONS.PARKING_SPACES)
         .get();
       console.log(`🔍 API: Querying all parking spots (will filter by ${authorizedBuildingIds.size} authorized buildings)`);

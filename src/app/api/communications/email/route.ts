@@ -6,6 +6,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getRequiredEmailFunctionUrl } from '@/config/admin-env';
 // Ensure Firebase Admin is initialized
 import '@/server/admin/admin-guards';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 interface EmailPayload {
   to: string;
@@ -29,8 +30,10 @@ interface EmailResponse {
 /**
  * Send email endpoint - requires authentication and comm:messages:send permission.
  * RFC v6 Authorization: Communications vertical slice.
+ * @rateLimit STANDARD (60 req/min) - CRUD
  */
-export const POST = withAuth<EmailResponse>(
+export const POST = withStandardRateLimit(
+  withAuth<EmailResponse>(
   async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
     try {
       const payload: EmailPayload = await request.json();
@@ -110,4 +113,5 @@ export const POST = withAuth<EmailResponse>(
   {
     permissions: 'comm:messages:send',
   }
+  )
 );

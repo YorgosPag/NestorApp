@@ -183,12 +183,12 @@ function Add-RateLimitImport {
     $wrapperName = Get-WrapperName -Category $Category
 
     # Check if import already exists
-    if ($Content -match "import\s+\{[^}]*$wrapperName[^}]*\}\s+from\s+['""]@/lib/middleware/with-rate-limit['""]") {
+    if ($Content -match "import\s+\{.*?$wrapperName.*?\}\s+from\s+[`"']@/lib/middleware/with-rate-limit[`"']") {
         return $Content
     }
 
     # Find existing imports
-    $importPattern = "import\s+\{[^}]+\}\s+from\s+['""]@/lib/"
+    $importPattern = 'import\s+\{.+?\}\s+from\s+[`"'']@/lib/'
     $lastImportMatch = [regex]::Matches($Content, $importPattern) | Select-Object -Last 1
 
     if ($lastImportMatch) {
@@ -245,7 +245,7 @@ function Transform-PlainAsync {
     $wrapperName = Get-WrapperName -Category $Category
 
     # Pattern: export async function METHOD(...)
-    $pattern = 'export\s+async\s+function\s+(GET|POST|PUT|DELETE|PATCH)\s*\(([^)]+)\)\s*(\{)'
+    $pattern = 'export\s+async\s+function\s+(GET|POST|PUT|DELETE|PATCH)\s*\(([^\)]+)\)\s*(\{)'
 
     $matches = [regex]::Matches($Content, $pattern)
     if ($matches.Count -eq 0) {

@@ -29,19 +29,21 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /**
  * POST - Execute Building ProjectId Fix (withAuth protected)
  * Updates a single building's projectId field.
  *
  * @security withAuth + super_admin check + audit logging + admin:data:fix permission
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
-export const POST = withAuth(
+export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleFixBuildingProjectExecute(req, ctx);
   },
   { permissions: 'admin:data:fix' }
-);
+));
 
 /**
  * Internal handler for POST (fix building projectId).

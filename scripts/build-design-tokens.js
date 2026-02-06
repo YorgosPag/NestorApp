@@ -319,7 +319,36 @@ function main() {
 
 // Run the generator
 if (require.main === module) {
-  main();
+  if (process.argv.includes('--watch')) {
+    // Initial build
+    main();
+
+    const DEBOUNCE_MS = 300;
+    let debounceTimer = null;
+    let isBuilding = false;
+
+    console.log('\n[Watch] Monitoring design-tokens.json for changes...');
+    console.log('[Watch] Press Ctrl+C to stop\n');
+
+    fs.watch(CONFIG.input.tokens, { persistent: true }, (_eventType, filename) => {
+      if (isBuilding) return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        isBuilding = true;
+        console.log(`[Watch] Change detected: ${filename || 'design-tokens.json'}`);
+        try {
+          main();
+          console.log('[Watch] Tokens rebuilt successfully\n');
+        } catch (error) {
+          console.error('[Watch] Rebuild failed:', error.message);
+        } finally {
+          isBuilding = false;
+        }
+      }, DEBOUNCE_MS);
+    });
+  } else {
+    main();
+  }
 }
 
 module.exports = { main, generateCSS, generateTypeScript, generateTailwindConfig };

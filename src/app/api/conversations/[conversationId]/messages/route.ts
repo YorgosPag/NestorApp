@@ -11,10 +11,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+// 🔒 RATE LIMITING: STANDARD category (60 req/min)
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Type alias for canonical response
 type MessagesCanonicalResponse = ApiSuccessResponse<MessagesListResponse>;
@@ -137,21 +139,26 @@ export const dynamic = 'force-dynamic';
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: comm:conversations:view
  * - Ownership Validation: Verifies conversation belongs to user's company
+ *
+ * @rateLimit STANDARD (60 req/min) - Messages listing within conversation
  */
-export async function GET(
+export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ conversationId: string }> }
+  context?: { params: Promise<{ conversationId: string }> }
 ) {
   const handler = withAuth<MessagesCanonicalResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const { conversationId } = await params;
+      if (!context?.params) {
+        throw new ApiError(400, 'Missing route params');
+      }
+      const { conversationId } = await context.params;
       return handleListMessages(req, ctx, conversationId);
     },
     { permissions: 'comm:conversations:view' }
   );
 
   return handler(request);
-}
+});
 
 async function handleListMessages(request: NextRequest, ctx: AuthContext, conversationId: string): Promise<NextResponse<MessagesCanonicalResponse>> {
   const startTime = Date.now();
@@ -186,7 +193,7 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
   console.log('🔍 [Messages/List] Cache miss - Fetching from Firestore...');
 
   // CRITICAL: Ownership validation - verify conversation belongs to user's company
-  const convDoc = await adminDb
+  const convDoc = await getAdminFirestore()
     .collection(COLLECTIONS.CONVERSATIONS)
     .doc(conversationId)
     .get();
@@ -207,7 +214,7 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
   }
 
   // Build query
-  const query = adminDb
+  const query = getAdminFirestore()
     .collection(COLLECTIONS.MESSAGES)
     .where('conversationId', '==', conversationId)
     .orderBy('createdAt', order);

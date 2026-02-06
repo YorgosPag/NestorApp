@@ -12,11 +12,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Response types for type-safe withAuth
 type UnitsListSuccess = {
@@ -33,7 +34,11 @@ type UnitsListError = {
 
 type UnitsListResponse = UnitsListSuccess | UnitsListError;
 
-export async function GET(request: NextRequest) {
+/**
+ * @rateLimit STANDARD (60 req/min) - CRUD
+ */
+export const GET = withStandardRateLimit(
+  async (request: NextRequest) => {
   const handler = withAuth<UnitsListResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<UnitsListResponse>> => {
       try {
@@ -50,7 +55,7 @@ export async function GET(request: NextRequest) {
         // TENANT-SCOPED QUERY (Admin SDK + Tenant Isolation)
         // ============================================================================
 
-        const unitsSnapshot = await adminDb
+        const unitsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.UNITS)
           .where('companyId', '==', ctx.companyId)
           .orderBy('name', 'asc')
@@ -107,7 +112,8 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+  }
+);
 
 // Response types for POST (utility)
 type LinkUnitsSuccess = {
@@ -129,7 +135,11 @@ type LinkUnitsError = {
 
 type LinkUnitsResponse = LinkUnitsSuccess | LinkUnitsError;
 
-export async function POST(request: NextRequest) {
+/**
+ * @rateLimit STANDARD (60 req/min) - CRUD
+ */
+export const POST = withStandardRateLimit(
+  async (request: NextRequest) => {
   const handler = withAuth<LinkUnitsResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<LinkUnitsResponse>> => {
       try {
@@ -141,7 +151,7 @@ export async function POST(request: NextRequest) {
         // ============================================================================
 
         console.log('👤 Getting contacts...');
-        const contactsSnapshot = await adminDb.collection(COLLECTIONS.CONTACTS).get();
+        const contactsSnapshot = await getAdminFirestore().collection(COLLECTIONS.CONTACTS).get();
 
         const contacts: Array<{ id: string; name: string }> = [];
         contactsSnapshot.forEach(doc => {
@@ -169,7 +179,7 @@ export async function POST(request: NextRequest) {
         // ============================================================================
 
         console.log('🏠 Getting sold units...');
-        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
+        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         const soldUnitsToLink: Array<{ id: string; buildingId?: unknown }> = [];
         unitsSnapshot.forEach(doc => {
@@ -213,7 +223,7 @@ export async function POST(request: NextRequest) {
 
         // Perform updates using Admin SDK
         for (const update of updates) {
-          await adminDb.collection(COLLECTIONS.UNITS).doc(update.unitId).update({
+          await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(update.unitId).update({
             soldTo: update.contactId
           });
 
@@ -247,4 +257,5 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+  }
+);

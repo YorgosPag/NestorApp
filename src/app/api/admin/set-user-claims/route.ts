@@ -20,10 +20,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, isValidGlobalRole, isValidPermission, PREDEFINED_ROLES, GLOBAL_ROLES } from '@/lib/auth';
 import type { AuthContext, PermissionCache, GlobalRole, PermissionId } from '@/lib/auth';
 import { logClaimsUpdated, extractRequestMetadata } from '@/lib/auth';
-import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { withSensitiveRateLimit, withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // LOGGER
@@ -75,17 +76,16 @@ interface SetUserClaimsResponse {
  * - Permission: users:users:manage
  * - Tenant Isolation: company_admin can only manage users in their company
  * - Super Admin Bypass: super_admin can manage any company
+ * - Rate Limit: SENSITIVE (20 req/min) - Admin operation
  */
-export async function POST(request: NextRequest) {
-  const handler = withAuth(
+export const POST = withSensitiveRateLimit(
+  withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<SetUserClaimsResponse>> => {
       return handleSetUserClaims(req, ctx);
     },
     { permissions: 'users:users:manage' }
-  );
-
-  return handler(request);
-}
+  )
+);
 
 async function handleSetUserClaims(
   request: NextRequest,
@@ -200,7 +200,7 @@ async function handleSetUserClaims(
     let previousClaims: Record<string, unknown> = {};
 
     try {
-      firebaseUser = await adminAuth.getUser(uid);
+      firebaseUser = await getAdminAuth().getUser(uid);
       logger.info('User found in Firebase Auth', {
         targetUid: uid,
         targetEmail: firebaseUser.email,
@@ -255,7 +255,7 @@ async function handleSetUserClaims(
     };
 
     try {
-      await adminAuth.setCustomUserClaims(uid, newClaims);
+      await getAdminAuth().setCustomUserClaims(uid, newClaims);
       logger.info('Custom claims set successfully', {
         targetUid: uid,
         permissionsCount: finalPermissions.length,
@@ -297,7 +297,7 @@ async function handleSetUserClaims(
     let firestoreSuccess = true;
 
     try {
-      const userRef = adminDb.collection(COLLECTIONS.USERS).doc(uid);
+      const userRef = getAdminFirestore().collection(COLLECTIONS.USERS).doc(uid);
       const userDoc = await userRef.get();
 
       const userData = {
@@ -384,13 +384,15 @@ async function handleSetUserClaims(
  * GET /api/admin/set-user-claims
  *
  * Health check endpoint
+ * Rate Limit: STANDARD (60 req/min) - Health check
  */
-export async function GET(): Promise<NextResponse> {
+async function handleGet(): Promise<NextResponse> {
   return NextResponse.json({
     service: 'Set User Claims Admin API',
     status: 'healthy',
     version: '2.0.0',
     security: 'AUTHZ Phase 2 - RBAC Protected',
+    rateLimit: 'SENSITIVE (20 req/min for POST), STANDARD (60 req/min for GET)',
     endpoints: {
       POST: {
         description: 'Set custom claims for a user (admin only)',
@@ -413,3 +415,5 @@ export async function GET(): Promise<NextResponse> {
     }
   });
 }
+
+export const GET = withStandardRateLimit(handleGet);

@@ -26,11 +26,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb, ensureAdminInitialized, getAdminInitializationStatus } from '@/lib/firebaseAdmin';
+import { getAdminFirestore, getAdminDiagnostics } from '@/lib/firebaseAdmin';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import type { CompanyContact } from '@/types/contacts';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // ============================================================================
 // TYPES - Enterprise Bootstrap Response
@@ -138,14 +139,16 @@ export const dynamic = 'force-dynamic';
  * - Permission: projects:projects:view
  * - Tenant Isolation: Filters companies and projects by user's companyId
  * - Single-tenant view (user sees only their company data)
+ *
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
 export async function GET(request: NextRequest) {
-  const handler = withAuth<ApiSuccessResponse<BootstrapResponse>>(
+  const handler = withSensitiveRateLimit(withAuth<ApiSuccessResponse<BootstrapResponse>>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleAuditBootstrap(req, ctx);
     },
     { permissions: 'projects:projects:view' }
-  );
+  ));
 
   return handler(request);
 }
@@ -158,20 +161,20 @@ async function handleAuditBootstrap(request: NextRequest, ctx: AuthContext): Pro
   // 0. VALIDATE FIREBASE ADMIN SDK - ENTERPRISE REQUIREMENT
   // ============================================================================
 
-  // 🏢 ENTERPRISE: Check if Admin SDK is initialized before any Firestore operations
+  // 🏢 ENTERPRISE: Lazy init — getAdminFirestore() throws if SDK unavailable
+  let adminDb: FirebaseFirestore.Firestore;
   try {
-    ensureAdminInitialized();
+    adminDb = getAdminFirestore();
   } catch (error) {
-    const status = getAdminInitializationStatus();
+    const diag = getAdminDiagnostics();
     console.error('❌ [Bootstrap] Firebase Admin SDK not initialized');
-    console.error('📍 [Bootstrap] Environment:', status.environment);
-    console.error('📋 [Bootstrap] Error:', status.error);
+    console.error('📍 [Bootstrap] Environment:', diag.environment);
+    console.error('📋 [Bootstrap] Error:', diag.error);
 
-    // Throw descriptive error that will be caught by withErrorHandling
     throw new Error(
       `Bootstrap failed: Firebase Admin SDK not initialized. ` +
-      `Environment: ${status.environment}. ` +
-      `Error: ${status.error}. ` +
+      `Environment: ${diag.environment}. ` +
+      `Error: ${diag.error}. ` +
       `Required: FIREBASE_SERVICE_ACCOUNT_KEY must be configured in Vercel environment variables.`
     );
   }

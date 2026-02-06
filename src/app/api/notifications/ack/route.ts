@@ -6,6 +6,7 @@
  * @module api/notifications/ack
  * @version 2.0.0
  * @updated 2026-01-16 - AUTHZ PHASE 2: Added RBAC protection + ownership validation
+ * @rateLimit STANDARD (60 req/min) - Notification acknowledgment
  *
  * 🔒 SECURITY:
  * - Permission: notifications:notifications:view
@@ -16,7 +17,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // Response types for type-safe withAuth
@@ -34,7 +36,7 @@ type AckError = {
 
 type AckResponse = AckSuccess | AckError;
 
-export async function POST(request: NextRequest) {
+const basePOST = async (request: NextRequest) => {
   const handler = withAuth<AckResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<AckResponse>> => {
       try {
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
         console.log(`🔔 [Notifications/Ack] User ${ctx.uid} marking ${ids.length} notifications as read...`);
 
         // CRITICAL: Ownership validation - fetch notifications to verify they belong to this user
-        const notificationsRef = adminDb.collection(COLLECTIONS.NOTIFICATIONS);
+        const notificationsRef = getAdminFirestore().collection(COLLECTIONS.NOTIFICATIONS);
         const notificationsSnapshot = await notificationsRef
           .where('__name__', 'in', ids.slice(0, 10)) // Firestore 'in' query limit is 10
           .get();
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
 
         // Mark only owned notifications as read
         if (ownedIds.length > 0) {
-          const batch = adminDb.batch();
+          const batch = getAdminFirestore().batch();
           ownedIds.forEach(id => {
             const docRef = notificationsRef.doc(id);
             batch.update(docRef, {
@@ -113,4 +115,6 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const POST = withStandardRateLimit(basePOST);

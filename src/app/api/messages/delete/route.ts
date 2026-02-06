@@ -12,11 +12,13 @@
  */
 
 import { NextRequest } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+// 🔒 RATE LIMITING: STANDARD category (60 req/min)
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
 
 // ============================================================================
@@ -59,8 +61,10 @@ export const dynamic = 'force-dynamic';
  * 🔒 SECURITY: Protected with RBAC
  * - Permission: comm:messages:delete
  * - Ownership Validation: Verifies messages belong to user's company
+ *
+ * @rateLimit STANDARD (60 req/min) - Delete messages (bulk)
  */
-export async function POST(request: NextRequest) {
+export const POST = withStandardRateLimit(async function POST(request: NextRequest) {
   const handler = withAuth<DeleteMessagesCanonicalResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleDeleteMessages(req, ctx);
@@ -69,7 +73,7 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+});
 
 async function handleDeleteMessages(
   request: NextRequest,
@@ -98,13 +102,13 @@ async function handleDeleteMessages(
   };
 
   // Process deletions
-  const batch = adminDb.batch();
+  const batch = getAdminFirestore().batch();
   const validDeletes: string[] = [];
 
   for (const messageId of body.messageIds) {
     try {
       // Fetch message to verify ownership
-      const messageDoc = await adminDb
+      const messageDoc = await getAdminFirestore()
         .collection(COLLECTIONS.MESSAGES)
         .doc(messageId)
         .get();

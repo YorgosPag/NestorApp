@@ -13,11 +13,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Response types for type-safe withAuth
 type ForceUpdateSuccess = {
@@ -47,8 +48,11 @@ type ForceUpdateError = {
 
 type ForceUpdateResponse = ForceUpdateSuccess | ForceUpdateError;
 
+/**
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
+ */
 export async function POST(request: NextRequest) {
-  const handler = withAuth<ForceUpdateResponse>(
+  const handler = withSensitiveRateLimit(withAuth<ForceUpdateResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ForceUpdateResponse>> => {
       try {
         console.log('💥 [Units/ForceUpdate] Starting Admin SDK operations...');
@@ -59,7 +63,7 @@ export async function POST(request: NextRequest) {
         // ============================================================================
 
         console.log('🔍 Finding sold units without customers...');
-        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
+        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         // 🏢 ENTERPRISE: Explicit type annotation to avoid implicit any[]
         const unitsToUpdate: Array<{ id: string; name: string; currentSoldTo: string }> = [];
@@ -96,7 +100,7 @@ export async function POST(request: NextRequest) {
         // ============================================================================
 
         console.log('🔍 Loading available contact IDs from database...');
-        const contactsSnapshot = await adminDb
+        const contactsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.CONTACTS)
           .where('type', '==', 'individual')
           .limit(8)
@@ -127,7 +131,7 @@ export async function POST(request: NextRequest) {
           try {
             console.log(`🔄 Updating unit ${unit.name} (${unit.id}) → ${contactId}`);
 
-            await adminDb.collection(COLLECTIONS.UNITS).doc(unit.id).update({
+            await getAdminFirestore().collection(COLLECTIONS.UNITS).doc(unit.id).update({
               soldTo: contactId
             });
 
@@ -176,7 +180,7 @@ export async function POST(request: NextRequest) {
       }
     },
     { requiredGlobalRoles: 'super_admin' }
-  );
+  ));
 
   return handler(request);
 }

@@ -26,26 +26,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-
-// Initialize Admin SDK if not already initialized
-let adminDb: FirebaseFirestore.Firestore;
-
-try {
-  if (getApps().length === 0) {
-    // For development, use project ID
-    const app = initializeApp({
-      projectId: 'nestor-pagonis'
-    });
-    adminDb = getFirestore(app);
-  } else {
-    adminDb = getFirestore();
-  }
-} catch (error) {
-  console.error('Failed to initialize Admin SDK:', error);
-}
 
 interface MigrationResult {
   success: boolean;
@@ -60,14 +43,15 @@ interface MigrationResult {
  * 🔒 SECURITY: Protected with RBAC (AUTHZ Phase 2)
  * - Permission: admin:migrations:execute
  * - Super_admin ONLY (explicit check below)
+ * @rateLimit SENSITIVE (20 req/min) - Admin operation
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  const handler = withAuth(
+  const handler = withSensitiveRateLimit(withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       return handleAdminSdkMigration(req, ctx);
     },
     { permissions: 'admin:migrations:execute' }
-  );
+  ));
 
   return handler(request);
 }
@@ -103,9 +87,7 @@ async function handleAdminSdkMigration(
   try {
     console.log('🏢 ENTERPRISE ADMIN MIGRATION STARTING...');
 
-    if (!adminDb) {
-      throw new Error('Firebase Admin SDK not properly initialized');
-    }
+    const adminDb = getAdminFirestore();
 
     // Step 1: Fetch all companies
     console.log('📋 Step 1: Fetching companies...');

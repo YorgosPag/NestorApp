@@ -12,7 +12,7 @@
 // Direct imports to avoid circular dependency with @/lib/auth barrel
 import type { AuthContext } from './types';
 import { logAuditEvent } from './audit';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**
@@ -83,12 +83,12 @@ export async function requireProjectInTenant(params: {
 }): Promise<TenantProject> {
   const { ctx, projectId, path } = params;
 
-  if (!adminDb) {
+  if (!getAdminFirestore()) {
     throw new Error('Firebase Admin not initialized');
   }
 
   // Fetch project document
-  const doc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
+  const doc = await getAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(projectId).get();
 
   if (!doc.exists) {
     // Audit the access denial
@@ -146,12 +146,12 @@ export async function requireBuildingInTenant(params: {
 }): Promise<TenantBuilding> {
   const { ctx, buildingId, path } = params;
 
-  if (!adminDb) {
+  if (!getAdminFirestore()) {
     throw new Error('Firebase Admin not initialized');
   }
 
   // Fetch building document
-  const doc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+  const doc = await getAdminFirestore().collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
 
   if (!doc.exists) {
     // Audit the access denial

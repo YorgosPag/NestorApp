@@ -126,3 +126,4 @@ tmpclaude-*
 firebase-service-account*
 google-credentials*
 gcp-key*
+.env*.local

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // 🏢 ENTERPRISE: Type-safe interface for contact assignments
 interface ContactAssignment {
@@ -33,10 +34,11 @@ type UpdateContactsResponse = UpdateContactsSuccessResponse | UpdateContactsErro
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection + tenant isolation
  * @security Admin SDK + withAuth + requiredGlobalRoles: super_admin + Tenant Isolation
  * @permission GLOBAL: super_admin only (bulk update utility)
+ * @rateLimit STANDARD (60 req/min) - CRUD
  */
 
-export async function POST(request: NextRequest) {
-  const handler = withAuth<UpdateContactsResponse>(
+export const POST = withStandardRateLimit(
+  withAuth<UpdateContactsResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       try {
         const { contactAssignments } = await req.json();
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
         console.log(`📝 Processing ${Object.keys(contactAssignments).length} contacts`);
         console.log(`🔒 Auth Context: User ${ctx.uid} (${ctx.globalRole || 'none'}), Company ${ctx.companyId}`);
 
-    if (!adminDb) {
+    if (!getAdminFirestore()) {
       return NextResponse.json({
         success: false,
         error: 'Firebase Admin SDK not initialized'
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
     for (const [contactId, assignment] of Object.entries(contactAssignments)) {
       try {
         // 🔒 TENANT ISOLATION: Verify contact belongs to user's company
-        const contactDoc = await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
+        const contactDoc = await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(contactId).get();
 
         if (!contactDoc.exists) {
           throw new Error('Contact not found');
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date()
         };
 
-        await adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId).update(updateData);
+        await getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(contactId).update(updateData);
         updatedContacts.push(contactId);
 
         console.log(`✅ Updated contact: ${contactId} → ${typedAssignment.role} (${typedAssignment.tags.join(', ')})`);
@@ -117,7 +119,5 @@ export async function POST(request: NextRequest) {
       }
     },
     { requiredGlobalRoles: 'super_admin' }
-  );
-
-  return handler(request);
-}
+  )
+);

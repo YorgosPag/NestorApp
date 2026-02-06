@@ -19,7 +19,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -27,6 +27,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { CacheHelpers } from '@/lib/cache/enterprise-api-cache';
 // 🏢 ENTERPRISE: Role bypass check for super_admin cross-tenant access
 import { isRoleBypass } from '@/lib/auth/roles';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,8 +53,9 @@ type ByCompanyResponse = ByCompanySuccess | ByCompanyError;
  * 🏗️ GET projects for authenticated user's company
  *
  * @security URL param [companyId] is IGNORED - uses ctx.companyId for security
+ * @rateLimit STANDARD (60 req/min) - Filtered projects list με caching
  */
-export async function GET(
+export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
   segmentData: { params: Promise<{ companyId: string }> }
 ) {
@@ -112,7 +114,7 @@ export async function GET(
         // 2. FETCH FROM FIRESTORE (Admin SDK + Tenant Isolation)
         // ============================================================================
 
-        const snapshot = await adminDb
+        const snapshot = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .where('companyId', '==', companyId)
           .get();
@@ -172,4 +174,4 @@ export async function GET(
   );
 
   return handler(request);
-}
+});

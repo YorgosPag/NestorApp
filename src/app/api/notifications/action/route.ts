@@ -6,6 +6,7 @@
  * @module api/notifications/action
  * @version 2.0.0
  * @updated 2026-01-16 - AUTHZ PHASE 2: Added RBAC protection + ownership validation
+ * @rateLimit STANDARD (60 req/min) - Notification action execution
  *
  * 🔒 SECURITY:
  * - Permission: notifications:notifications:view
@@ -16,7 +17,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // Response types for type-safe withAuth
@@ -33,7 +35,7 @@ type ActionError = {
 
 type ActionResponse = ActionSuccess | ActionError;
 
-export async function POST(request: NextRequest) {
+const basePOST = async (request: NextRequest) => {
   const handler = withAuth<ActionResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ActionResponse>> => {
       try {
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
         console.log(`🔔 [Notifications/Action] User ${ctx.uid} executing action ${actionId} on notification ${id}...`);
 
         // CRITICAL: Ownership validation - verify notification belongs to this user
-        const notificationRef = adminDb.collection(COLLECTIONS.NOTIFICATIONS).doc(id);
+        const notificationRef = getAdminFirestore().collection(COLLECTIONS.NOTIFICATIONS).doc(id);
         const notificationDoc = await notificationRef.get();
 
         if (!notificationDoc.exists) {
@@ -103,4 +105,6 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const POST = withStandardRateLimit(basePOST);

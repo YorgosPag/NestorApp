@@ -13,7 +13,7 @@
  * @enterprise ADR-026 - Server-Side Notification Orchestrator
  */
 
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
@@ -93,7 +93,7 @@ function generateDedupeKey(eventType: NotificationEventType, recipientId: string
  * Load user notification settings from Firestore
  */
 async function loadUserSettings(userId: string): Promise<UserNotificationSettings> {
-  const docRef = adminDb.collection(COLLECTIONS.USER_NOTIFICATION_SETTINGS).doc(userId);
+  const docRef = getAdminFirestore().collection(COLLECTIONS.USER_NOTIFICATION_SETTINGS).doc(userId);
   const doc = await docRef.get();
 
   if (!doc.exists) {
@@ -233,7 +233,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
 
   // 7. ATOMIC CREATE - Use dedupeKey as document ID
   // This ensures idempotency: create() fails if doc already exists
-  const docRef = adminDb.collection(COLLECTIONS.NOTIFICATIONS).doc(dedupeKey);
+  const docRef = getAdminFirestore().collection(COLLECTIONS.NOTIFICATIONS).doc(dedupeKey);
 
   try {
     await docRef.create(notificationData);

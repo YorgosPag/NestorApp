@@ -6,6 +6,7 @@
  * @module api/notifications/preferences
  * @version 2.0.0
  * @updated 2026-01-16 - AUTHZ PHASE 2: Added RBAC protection + real DB operations
+ * @rateLimit STANDARD (60 req/min) - User preferences management
  *
  * 🔒 SECURITY:
  * - Permission: notifications:notifications:view
@@ -16,7 +17,8 @@
 import { NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 
@@ -49,13 +51,13 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   }
 };
 
-export async function GET(request: NextRequest) {
+const baseGET = async (request: NextRequest) => {
   const handler = withAuth<ApiSuccessResponse<PreferencesGetData>>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       console.log(`🔔 [Notifications/Preferences] Fetching for user ${ctx.uid}...`);
 
       // Fetch user preferences from Firestore
-      const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(ctx.uid);
+      const docRef = getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(ctx.uid);
       const docSnapshot = await docRef.get();
 
       if (!docSnapshot.exists) {
@@ -81,9 +83,9 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
 
-export async function PUT(request: NextRequest) {
+const basePUT = async (request: NextRequest) => {
   const handler = withAuth<ApiSuccessResponse<PreferencesUpdateData>>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       const body = await req.json();
@@ -91,7 +93,7 @@ export async function PUT(request: NextRequest) {
       console.log(`🔔 [Notifications/Preferences] Updating for user ${ctx.uid}...`);
 
       // Update user preferences in Firestore
-      const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(ctx.uid);
+      const docRef = getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(ctx.uid);
       await docRef.set(
         {
           notificationPreferences: body,
@@ -112,4 +114,7 @@ export async function PUT(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const GET = withStandardRateLimit(baseGET);
+export const PUT = withStandardRateLimit(basePUT);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db as getAdminDb } from '@/lib/firebase-admin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
@@ -102,7 +102,7 @@ export async function GET(
     console.log(`🔍 Fetching contact document: ${contactId}`);
     console.log(`🔒 Auth Context: User ${ctx.uid}, Company ${ctx.companyId}`);
 
-    const adminDb = getAdminDb();
+    const adminDb = getAdminFirestore();
     if (!adminDb) {
       console.error('❌ Firebase Admin not initialized');
       return NextResponse.json({

@@ -908,15 +908,19 @@ if (!upstashUrl || !upstashToken) {
 
 ## 13. Migration Status
 
-### Completed Routes (3)
+### Completed Routes (7)
 
 | Route | Category | Status | Date |
 |-------|----------|--------|------|
 | `/api/admin/bootstrap-admin` | SENSITIVE | ✅ Done | 2026-02-06 |
 | `/api/enterprise-ids/migrate` | SENSITIVE | ✅ Done | 2026-02-06 |
 | `/api/download` | STANDARD | ✅ Done | 2026-02-06 |
+| `/api/communications/webhooks/telegram` | TELEGRAM | ✅ Done | 2026-02-06 |
+| `/api/admin/telegram/webhook` | TELEGRAM | ✅ Done | 2026-02-06 |
+| `/api/webhooks/sendgrid/inbound` | WEBHOOK | ✅ Done | 2026-02-06 |
+| `/api/webhooks/sendgrid` | WEBHOOK | ✅ Done | 2026-02-06 |
 
-### Pending Routes (91)
+### Pending Routes (87)
 
 **See**: `RATE_LIMITING_IMPLEMENTATION_PLAN.md` for full list
 
@@ -927,6 +931,7 @@ if (!upstashUrl || !upstashToken) {
 4. **HIGH (8 routes)**: List, search endpoints
 
 **Target**: 100% coverage (94/94 routes)
+**Progress**: 7.4% (7/94 routes completed)
 
 ---
 

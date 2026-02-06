@@ -7,12 +7,14 @@
  * @enterprise AutoCAD/SolidWorks-class API design
  * @author Enterprise Development Team
  * @date 2025-12-15
+ * @rateLimit STANDARD (60 req/min) - Relationship creation
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { EnterpriseRelationshipEngine } from '@/services/relationships/enterprise-relationship-engine';
 import type {
@@ -32,7 +34,7 @@ import type {
  * - Permission: projects:projects:update
  * - Only authenticated users can create relationships
  */
-export async function POST(request: NextRequest) {
+const postHandler = async (request: NextRequest) => {
   const handler = withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<RelationshipOperationResult>> => {
       return handleCreateRelationship(req, ctx);
@@ -41,7 +43,9 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const POST = withStandardRateLimit(postHandler);
 
 async function handleCreateRelationship(request: NextRequest, ctx: AuthContext): Promise<NextResponse<RelationshipOperationResult>> {
   console.log(`🔗 API: Create relationship request from user ${ctx.email} (company: ${ctx.companyId})`);
@@ -221,7 +225,7 @@ async function validateEntityOwnership(
 
       case 'project':
         // Validate project belongs to user's company
-        const projectDoc = await adminDb
+        const projectDoc = await getAdminFirestore()
           .collection(COLLECTIONS.PROJECTS)
           .doc(entityId)
           .get();

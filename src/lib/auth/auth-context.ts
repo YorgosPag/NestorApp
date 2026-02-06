@@ -18,8 +18,8 @@
 
 import 'server-only';
 
-import { getApps, App } from 'firebase-admin/app';
-import { getAuth, DecodedIdToken } from 'firebase-admin/auth';
+import { getAdminAuth, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
+import type { DecodedIdToken } from 'firebase-admin/auth';
 import type { NextRequest } from 'next/server';
 
 import type {
@@ -45,37 +45,8 @@ const BEARER_PREFIX = 'bearer';
 type UnauthReason = UnauthenticatedContext['reason'];
 
 // =============================================================================
-// FIREBASE ADMIN ACCESS (No duplicate initialization!)
+// FIREBASE ADMIN ACCESS (ADR-077: Centralized via @/lib/firebaseAdmin)
 // =============================================================================
-
-/**
- * Get existing Firebase Admin App instance.
- *
- * IMPORTANT: This module does NOT initialize Firebase Admin.
- * It relies on the centralized initialization in:
- * - src/server/admin/admin-guards.ts (for API routes)
- * - src/lib/firebase-admin.ts (for services)
- *
- * Call those modules first if Admin SDK is not initialized.
- *
- * @returns Firebase App instance or null
- */
-function getAdminApp(): App | null {
-  // Skip client-side
-  if (typeof window !== 'undefined') {
-    return null;
-  }
-
-  // Return existing app if already initialized by centralized modules
-  const apps = getApps();
-  if (apps.length > 0) {
-    return apps[0];
-  }
-
-  // No app initialized - caller should ensure centralized init was called
-  console.warn('[AUTH_CONTEXT] Firebase Admin not initialized. Ensure admin-guards.ts or firebase-admin.ts is imported first.');
-  return null;
-}
 
 // =============================================================================
 // TOKEN EXTRACTION
@@ -113,13 +84,12 @@ function extractBearerToken(request: NextRequest): string | null {
  */
 async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
   try {
-    const app = getAdminApp();
-    if (!app) {
-      console.log('[AUTH_CONTEXT] Cannot verify token - Admin SDK not initialized');
+    if (!isFirebaseAdminAvailable()) {
+      console.log('[AUTH_CONTEXT] Cannot verify token - Admin SDK not available');
       return null;
     }
 
-    const auth = getAuth(app);
+    const auth = getAdminAuth();
     return await auth.verifyIdToken(token);
   } catch (error) {
     console.log('[AUTH_CONTEXT] Token verification failed:', (error as Error).message);

@@ -6,6 +6,7 @@
  * @module api/notifications/seed
  * @version 2.0.0
  * @updated 2026-01-16 - AUTHZ PHASE 2: Added super_admin protection
+ * @rateLimit STANDARD (60 req/min) - Sample data seeding
  *
  * 🔒 SECURITY:
  * - Global Role: super_admin (break-glass utility)
@@ -15,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createSampleNotifications } from '@/services/notificationService';
 
 interface SeedRequestBody {
@@ -37,7 +39,7 @@ type SeedError = {
 
 type SeedResponse = SeedSuccess | SeedError;
 
-export async function POST(request: NextRequest) {
+const basePOST = async (request: NextRequest) => {
   const handler = withAuth<SeedResponse>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<SeedResponse>> => {
       try {
@@ -84,4 +86,6 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const POST = withStandardRateLimit(basePOST);

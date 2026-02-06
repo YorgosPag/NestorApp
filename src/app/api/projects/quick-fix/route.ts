@@ -6,6 +6,7 @@
  * @module api/projects/quick-fix
  * @version 2.0.0
  * @updated 2026-01-15 - AUTHZ PHASE 2: Added super_admin protection
+ * @rateLimit STANDARD (60 req/min) - CRUD
  *
  * 🔒 SECURITY:
  * - Global Role: super_admin (break-glass utility)
@@ -13,11 +14,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { EnterpriseConfigurationManager } from '@/core/configuration/enterprise-config-management';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // Response types for type-safe withAuth
 type QuickFixSuccess = {
@@ -44,7 +46,7 @@ type QuickFixResponse = QuickFixSuccess | QuickFixError;
  */
 async function getCompanyIdByName(companyName: string): Promise<string | null> {
   try {
-    const snapshot = await adminDb
+    const snapshot = await getAdminFirestore()
       .collection(COLLECTIONS.CONTACTS)
       .where('type', '==', 'company')
       .where('companyName', '==', companyName)
@@ -62,7 +64,7 @@ async function getCompanyIdByName(companyName: string): Promise<string | null> {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withStandardRateLimit(async (request: NextRequest) => {
   const handler = withAuth<QuickFixResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<QuickFixResponse>> => {
       console.log('🔧 [Projects/QuickFix] Starting quick fix operations...');
@@ -160,7 +162,7 @@ export async function POST(request: NextRequest) {
           try {
             if (fix.action === 'update') {
               // Update existing project (Admin SDK)
-              await adminDb
+              await getAdminFirestore()
                 .collection(COLLECTIONS.PROJECTS)
                 .doc(fix.projectId)
                 .update({
@@ -219,7 +221,7 @@ export async function POST(request: NextRequest) {
             ]
           };
 
-              await adminDb
+              await getAdminFirestore()
                 .collection(COLLECTIONS.PROJECTS)
                 .doc(fix.projectId)
                 .set(newProject);
@@ -268,4 +270,4 @@ export async function POST(request: NextRequest) {
   );
 
   return handler(request);
-}
+});

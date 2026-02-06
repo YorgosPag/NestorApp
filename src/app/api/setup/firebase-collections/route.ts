@@ -25,26 +25,28 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: AUTHZ Phase 2 Imports
 import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 
 /**
  * POST - Initialize Firebase Collections (withAuth protected)
  * Creates collections with test documents then removes them.
  *
  * @security withAuth + super_admin check + audit logging + admin:data:fix permission
+ * @rateLimit SENSITIVE (20 req/min) - Admin/Auth operation
  */
-export const POST = withAuth(
+export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleFirebaseCollectionsSetup(req, ctx);
   },
   { permissions: 'admin:data:fix' }
-);
+));
 
 /**
  * Internal handler for POST (initialize collections).
@@ -72,7 +74,7 @@ async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthCon
     console.log('🔧 Setting up Firebase collections...');
 
     // 1. Δημιουργία collection 'contact_relationships' (Admin SDK)
-    const testRelationshipRef = adminDb.collection(COLLECTIONS.RELATIONSHIPS).doc('setup-test-doc');
+    const testRelationshipRef = getAdminFirestore().collection(COLLECTIONS.RELATIONSHIPS).doc('setup-test-doc');
 
     const testRelationship = {
       sourceContactId: 'setup-test-source',

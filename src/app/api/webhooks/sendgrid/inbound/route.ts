@@ -24,6 +24,7 @@ import {
   isErrorReportingEnabled
 } from '@/services/adminConfigService';
 import type { Notification } from '@/types/notification';
+import { withWebhookRateLimit } from '@/lib/middleware/with-rate-limit';
 
 // =============================================================================
 // CONFIGURATION
@@ -232,7 +233,11 @@ function logInboundAttempt(
 // MAIN HANDLER
 // =============================================================================
 
-export async function POST(request: NextRequest) {
+/**
+ * SendGrid Inbound Parse webhook handler
+ * @rateLimit WEBHOOK (30 req/min) - SendGrid inbound email processing
+ */
+async function postHandler(request: NextRequest) {
   const startTime = Date.now();
   const clientIP = getClientIP(request);
 
@@ -443,11 +448,17 @@ ${errorReport.stackTrace ? `\n\`\`\`\n${errorReport.stackTrace.substring(0, 500)
   }
 }
 
+export const POST = withWebhookRateLimit(postHandler);
+
 // =============================================================================
 // HEALTH CHECK
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+/**
+ * Health check endpoint for SendGrid inbound webhook
+ * @rateLimit WEBHOOK (30 req/min) - Health check
+ */
+async function getHandler(request: NextRequest) {
   const clientIP = getClientIP(request);
 
   console.log('🔍 SendGrid inbound webhook health check from:', clientIP);
@@ -487,3 +498,5 @@ export async function GET(request: NextRequest) {
     }
   });
 }
+
+export const GET = withWebhookRateLimit(getHandler);

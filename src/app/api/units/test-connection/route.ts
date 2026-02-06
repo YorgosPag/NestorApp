@@ -10,12 +10,15 @@
  * 🔒 SECURITY:
  * - Global Role: super_admin (break-glass utility)
  * - Admin SDK for secure server-side operations
+ *
+ * @rateLimit STANDARD (60 req/min) - Unit connection diagnostic utility
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { BUILDING_IDS, BuildingIdUtils } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
@@ -45,7 +48,7 @@ type TestConnectionError = {
 
 type TestConnectionResponse = TestConnectionSuccess | TestConnectionError;
 
-export async function GET(request: NextRequest) {
+const getHandler = async (request: NextRequest) => {
   const handler = withAuth<TestConnectionResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<TestConnectionResponse>> => {
       try {
@@ -57,7 +60,7 @@ export async function GET(request: NextRequest) {
         // ============================================================================
 
         console.log(`🏢 Getting buildings for project ${BUILDING_IDS.PROJECT_ID}...`);
-        const buildingsSnapshot = await adminDb
+        const buildingsSnapshot = await getAdminFirestore()
           .collection(COLLECTIONS.BUILDINGS)
           .where('projectId', '==', BUILDING_IDS.PROJECT_ID)
           .get();
@@ -78,7 +81,7 @@ export async function GET(request: NextRequest) {
         // ============================================================================
 
         console.log('🏠 Getting sample units...');
-        const unitsSnapshot = await adminDb.collection(COLLECTIONS.UNITS).get();
+        const unitsSnapshot = await getAdminFirestore().collection(COLLECTIONS.UNITS).get();
 
         const allUnits = unitsSnapshot.docs.map(doc => {
           const data = doc.data();
@@ -136,4 +139,6 @@ export async function GET(request: NextRequest) {
   );
 
   return handler(request);
-}
+};
+
+export const GET = withStandardRateLimit(getHandler);
