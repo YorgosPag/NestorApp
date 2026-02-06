@@ -363,10 +363,39 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
 export const POST = withWebhookRateLimit(handleMailgunInbound);
 
 export async function GET(): Promise<Response> {
+  // Diagnostic: Check routing rules status
+  let routingDiagnostic: { rulesCount: number; hasIntegrations: boolean; hasSettings: boolean } = {
+    rulesCount: 0,
+    hasIntegrations: false,
+    hasSettings: false,
+  };
+
+  try {
+    const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
+    const { COLLECTIONS } = await import('@/config/firestore-collections');
+    const adminDb = getAdminFirestore();
+    const settingsDoc = await adminDb.collection(COLLECTIONS.SYSTEM).doc('settings').get();
+    routingDiagnostic.hasSettings = settingsDoc.exists;
+
+    if (settingsDoc.exists) {
+      const data = settingsDoc.data();
+      routingDiagnostic.hasIntegrations = Boolean(data?.integrations);
+      const rules = data?.integrations?.emailInboundRouting;
+      routingDiagnostic.rulesCount = Array.isArray(rules) ? rules.length : 0;
+    }
+  } catch (diagError) {
+    logger.warn('Diagnostic check failed', {
+      error: diagError instanceof Error ? diagError.message : 'Unknown',
+    });
+  }
+
   return NextResponse.json({
     status: 'ok',
     service: 'mailgun-inbound',
-    version: 'v2-queue', // ADR-071: Queue-based processing
+    version: 'v2-queue',
     hasSigningKey: Boolean(MAILGUN_WEBHOOK_SIGNING_KEY),
+    hasMailgunDomain: Boolean(process.env.MAILGUN_DOMAIN),
+    mailgunDomainValue: process.env.MAILGUN_DOMAIN || 'NOT_SET',
+    routing: routingDiagnostic,
   });
 }
