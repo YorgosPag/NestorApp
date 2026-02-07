@@ -31,6 +31,7 @@ import type {
 } from './types';
 import { isValidGlobalRole } from './types';
 import { getDevCompanyId } from '@/config/dev-environment';
+import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 
 // =============================================================================
 // CONSTANTS
@@ -73,6 +74,21 @@ function extractBearerToken(request: NextRequest): string | null {
 }
 
 // =============================================================================
+// SESSION COOKIE EXTRACTION
+// =============================================================================
+
+/**
+ * Extract Firebase session cookie (__session) from request cookies.
+ *
+ * @param request - NextRequest object
+ * @returns Session cookie value or null
+ */
+function extractSessionCookie(request: NextRequest): string | null {
+  const cookie = request.cookies.get(SESSION_COOKIE_CONFIG.NAME);
+  return cookie?.value ?? null;
+}
+
+// =============================================================================
 // TOKEN VERIFICATION
 // =============================================================================
 
@@ -93,6 +109,28 @@ async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
     return await auth.verifyIdToken(token);
   } catch (error) {
     console.log('[AUTH_CONTEXT] Token verification failed:', (error as Error).message);
+    return null;
+  }
+}
+
+/**
+ * Verify Firebase session cookie and return decoded token.
+ * Same pattern as admin-guards.ts verifySessionCookieToken().
+ *
+ * @param sessionCookie - Session cookie string
+ * @returns DecodedIdToken or null
+ */
+async function verifySessionCookie(sessionCookie: string): Promise<DecodedIdToken | null> {
+  try {
+    if (!isFirebaseAdminAvailable()) {
+      console.log('[AUTH_CONTEXT] Cannot verify session cookie - Admin SDK not available');
+      return null;
+    }
+
+    const auth = getAdminAuth();
+    return await auth.verifySessionCookie(sessionCookie, false);
+  } catch (error) {
+    console.log('[AUTH_CONTEXT] Session cookie verification failed:', (error as Error).message);
     return null;
   }
 }
@@ -165,38 +203,63 @@ function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
 export async function buildRequestContext(
   request: NextRequest
 ): Promise<RequestContext> {
-  // Step 1: Extract token
+  // Step 1: Try Bearer token from Authorization header (API clients)
   const token = extractBearerToken(request);
-  if (!token) {
-    // Development bypass: mirror requireAdminForPage() pattern (admin-guards.ts)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[AUTH_CONTEXT] Development mode: bypassing API auth (no token provided)');
-      return createDevContext();
+
+  if (token) {
+    // Verify ID token
+    const decodedToken = await verifyIdToken(token);
+    if (!decodedToken) {
+      return createUnauthenticatedContext('invalid_token');
     }
-    return createUnauthenticatedContext('missing_token');
+
+    // Extract RFC v6 claims
+    const claims = extractCustomClaims(decodedToken);
+    if (!claims) {
+      return createUnauthenticatedContext('missing_claims');
+    }
+
+    return {
+      uid: decodedToken.uid,
+      email: decodedToken.email || '',
+      companyId: claims.companyId,
+      globalRole: claims.globalRole,
+      mfaEnrolled: claims.mfaEnrolled ?? false,
+      isAuthenticated: true,
+    };
   }
 
-  // Step 2: Verify token
-  const decodedToken = await verifyIdToken(token);
-  if (!decodedToken) {
-    return createUnauthenticatedContext('invalid_token');
+  // Step 2: Try session cookie (__session) — browser clients use credentials: 'include'
+  const sessionCookie = extractSessionCookie(request);
+
+  if (sessionCookie) {
+    const decodedToken = await verifySessionCookie(sessionCookie);
+    if (!decodedToken) {
+      return createUnauthenticatedContext('invalid_token');
+    }
+
+    const claims = extractCustomClaims(decodedToken);
+    if (!claims) {
+      return createUnauthenticatedContext('missing_claims');
+    }
+
+    return {
+      uid: decodedToken.uid,
+      email: decodedToken.email || '',
+      companyId: claims.companyId,
+      globalRole: claims.globalRole,
+      mfaEnrolled: claims.mfaEnrolled ?? false,
+      isAuthenticated: true,
+    };
   }
 
-  // Step 3: Extract RFC v6 claims
-  const claims = extractCustomClaims(decodedToken);
-  if (!claims) {
-    return createUnauthenticatedContext('missing_claims');
+  // Step 3: No credentials found — development bypass or reject
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[AUTH_CONTEXT] Development mode: bypassing API auth (no token or cookie)');
+    return createDevContext();
   }
 
-  // Step 4: Build authenticated context
-  return {
-    uid: decodedToken.uid,
-    email: decodedToken.email || '',
-    companyId: claims.companyId,
-    globalRole: claims.globalRole,
-    mfaEnrolled: claims.mfaEnrolled ?? false,
-    isAuthenticated: true,
-  };
+  return createUnauthenticatedContext('missing_token');
 }
 
 /**
