@@ -37,6 +37,10 @@ import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormCompone
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { DIALOG_SIZES } from '@/styles/design-tokens';
 import type {
   ConstructionPhase,
   ConstructionTask,
@@ -56,8 +60,10 @@ interface ConstructionPhaseDialogProps {
   phase?: ConstructionPhase;
   // Task data (edit mode)
   task?: ConstructionTask;
-  // Phase ID for creating task under
+  // Phase ID for creating task under (default selection)
   phaseId?: string;
+  // Available phases for task creation phase selector
+  phases?: ConstructionPhase[];
   // CRUD handlers
   onSavePhase: (data: PhaseFormData) => Promise<boolean>;
   onUpdatePhase: (phaseId: string, updates: Record<string, unknown>) => Promise<boolean>;
@@ -115,6 +121,7 @@ export function ConstructionPhaseDialog({
   phase,
   task,
   phaseId,
+  phases = [],
   onSavePhase,
   onUpdatePhase,
   onDeletePhase,
@@ -123,6 +130,9 @@ export function ConstructionPhaseDialog({
   onDeleteTask,
 }: ConstructionPhaseDialogProps) {
   const { t } = useTranslation('building');
+  const spacingTokens = useSpacingTokens();
+  const typographyTokens = useTypography();
+  const colors = useSemanticColors();
 
   const isPhaseMode = mode === 'createPhase' || mode === 'editPhase';
   const isEditMode = mode === 'editPhase' || mode === 'editTask';
@@ -136,6 +146,7 @@ export function ConstructionPhaseDialog({
   const [plannedEndDate, setPlannedEndDate] = useState('');
   const [progress, setProgress] = useState(0);
   const [description, setDescription] = useState('');
+  const [selectedPhaseId, setSelectedPhaseId] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -161,6 +172,7 @@ export function ConstructionPhaseDialog({
       setPlannedEndDate(task.plannedEndDate);
       setProgress(task.progress);
       setDescription(task.description ?? '');
+      setSelectedPhaseId(task.phaseId);
     } else {
       // Create mode: reset form
       setName('');
@@ -170,9 +182,11 @@ export function ConstructionPhaseDialog({
       setPlannedEndDate('');
       setProgress(0);
       setDescription('');
+      // Default to passed phaseId or first available phase
+      setSelectedPhaseId(phaseId ?? phases[0]?.id ?? '');
     }
     setErrors({});
-  }, [open, mode, phase, task, isPhaseMode]);
+  }, [open, mode, phase, task, isPhaseMode, phaseId, phases]);
 
   // ─── Validation ──────────────────────────────────────────────────────
 
@@ -191,10 +205,14 @@ export function ConstructionPhaseDialog({
     if (plannedStartDate && plannedEndDate && plannedStartDate > plannedEndDate) {
       newErrors.plannedEndDate = t('tabs.timeline.gantt.validation.endAfterStart');
     }
+    // Validate phase selection for task creation/edit
+    if (!isPhaseMode && !selectedPhaseId) {
+      newErrors.selectedPhaseId = t('tabs.timeline.gantt.validation.phaseRequired');
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [name, plannedStartDate, plannedEndDate, t]);
+  }, [name, plannedStartDate, plannedEndDate, isPhaseMode, selectedPhaseId, t]);
 
   // ─── Save Handler ────────────────────────────────────────────────────
 
@@ -227,9 +245,8 @@ export function ConstructionPhaseDialog({
           description: description.trim(),
         });
       } else if (mode === 'createTask') {
-        const targetPhaseId = phaseId ?? '';
         success = await onSaveTask({
-          phaseId: targetPhaseId,
+          phaseId: selectedPhaseId,
           name: name.trim(),
           code: code.trim(),
           status: status as ConstructionTaskStatus,
@@ -258,7 +275,7 @@ export function ConstructionPhaseDialog({
     }
   }, [
     mode, name, code, status, plannedStartDate, plannedEndDate, progress, description,
-    phase, task, phaseId, validate, onSavePhase, onUpdatePhase, onSaveTask, onUpdateTask, onClose,
+    phase, task, selectedPhaseId, validate, onSavePhase, onUpdatePhase, onSaveTask, onUpdateTask, onClose,
   ]);
 
   // ─── Delete Handler ──────────────────────────────────────────────────
@@ -300,12 +317,39 @@ export function ConstructionPhaseDialog({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className={DIALOG_SIZES.md}>
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
 
         <FormGrid>
+          {/* Phase Selector — only for task modes */}
+          {!isPhaseMode && phases.length > 0 && (
+            <FormField
+              label={t('tabs.timeline.gantt.dialog.phase')}
+              htmlFor="construction-phase-select"
+              required
+            >
+              <FormInput>
+                <Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}>
+                  <SelectTrigger className={errors.selectedPhaseId ? 'border-destructive' : ''}>
+                    <SelectValue placeholder={t('tabs.timeline.gantt.dialog.selectPhase')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {phases.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.code} — {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.selectedPhaseId && (
+                  <p className={cn(typographyTokens.body.sm, colors.text.error, spacingTokens.margin.top.xs)}>{errors.selectedPhaseId}</p>
+                )}
+              </FormInput>
+            </FormField>
+          )}
+
           {/* Name */}
           <FormField
             label={t('tabs.timeline.gantt.dialog.name')}
@@ -324,7 +368,7 @@ export function ConstructionPhaseDialog({
                 className={errors.name ? 'border-destructive' : ''}
               />
               {errors.name && (
-                <p className="text-sm text-destructive mt-1">{errors.name}</p>
+                <p className={cn(typographyTokens.body.sm, colors.text.error, spacingTokens.margin.top.xs)}>{errors.name}</p>
               )}
             </FormInput>
           </FormField>
@@ -380,7 +424,7 @@ export function ConstructionPhaseDialog({
                 className={errors.plannedStartDate ? 'border-destructive' : ''}
               />
               {errors.plannedStartDate && (
-                <p className="text-sm text-destructive mt-1">{errors.plannedStartDate}</p>
+                <p className={cn(typographyTokens.body.sm, colors.text.error, spacingTokens.margin.top.xs)}>{errors.plannedStartDate}</p>
               )}
             </FormInput>
           </FormField>
@@ -400,7 +444,7 @@ export function ConstructionPhaseDialog({
                 className={errors.plannedEndDate ? 'border-destructive' : ''}
               />
               {errors.plannedEndDate && (
-                <p className="text-sm text-destructive mt-1">{errors.plannedEndDate}</p>
+                <p className={cn(typographyTokens.body.sm, colors.text.error, spacingTokens.margin.top.xs)}>{errors.plannedEndDate}</p>
               )}
             </FormInput>
           </FormField>
@@ -448,7 +492,7 @@ export function ConstructionPhaseDialog({
               />
             )}
           </div>
-          <div className="flex gap-2">
+          <div className={cn('flex', spacingTokens.gap.sm)}>
             <CancelButton onClick={onClose} disabled={saving || deleting} />
             <SaveButton loading={saving} onClick={handleSave} />
           </div>

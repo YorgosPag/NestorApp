@@ -2,6 +2,8 @@
   "title": "Filters",
   "propertiesTitle": "Property Filters",
   "aiInboxTitle": "AI Inbox Filters",
+  "operatorInboxTitle": "Operator Inbox Filters",
+  "intent": "Intent",
   "tasksTitle": "Task Filters",
   "searchFilters": "Search Filters",
   "showAdvanced": "Show advanced",
@@ -114,6 +116,15 @@
     "followUp": "Follow-up",
     "document": "Document",
     "other": "Other"
+  },
+  "intents": {
+    "appointment": "Appointment",
+    "invoice": "Invoice",
+    "defectReport": "Defect Report",
+    "unknown": "Unknown"
+  },
+  "pipelineStatus": {
+    "proposed": "Pending Review"
   },
   "fields": {
     "search": "Search",

@@ -168,6 +168,11 @@ export async function buildRequestContext(
   // Step 1: Extract token
   const token = extractBearerToken(request);
   if (!token) {
+    // Development bypass: mirror requireAdminForPage() pattern (admin-guards.ts)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[AUTH_CONTEXT] Development mode: bypassing API auth (no token provided)');
+      return createDevContext();
+    }
     return createUnauthenticatedContext('missing_token');
   }
 

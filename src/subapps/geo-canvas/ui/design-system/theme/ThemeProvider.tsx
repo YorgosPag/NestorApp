@@ -110,8 +110,35 @@ interface ExtendedAnimations {
   };
 }
 
+type ColorScale = Partial<Record<50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900, string>>;
+
+type ThemeColors = Omit<
+  typeof colors,
+  'background' | 'text' | 'border' | 'surface' | 'primary' | 'blue' | 'green' | 'orange' | 'red' | 'purple' | 'teal' | 'gray'
+> & {
+  background?: Record<string, string>;
+  text?: Record<string, string>;
+  border?: Record<string, string>;
+  surface?: Record<string, string>;
+  primary?: ColorScale;
+  blue?: ColorScale;
+  green?: ColorScale;
+  orange?: ColorScale;
+  red?: ColorScale;
+  purple?: ColorScale;
+  teal?: ColorScale;
+  gray?: ColorScale;
+  semantic?: ExtendedSemanticColors;
+  severity?: Record<'critical' | 'high' | 'medium' | 'low' | 'info', {
+    background?: string;
+    border?: string;
+    text?: string;
+    icon?: string;
+  }>;
+};
+
 // ✅ ENTERPRISE: Base theme colors with consistent structure
-const themeColors = {
+const themeColors: ThemeColors = {
   ...colors,
   primary: colors.blue,
   semantic: semanticColors || {
@@ -228,7 +255,7 @@ export interface ThemeContextValue {
 // DARK THEME COLORS
 // ============================================================================
 
-const darkColors = {
+const darkColors: ThemeColors = {
   ...themeColors,
 
   // Override specific colors για dark mode - using CSS variables
@@ -293,13 +320,13 @@ const darkColors = {
       icon: '#3b82f6'
     }
   }
-} as const;
+};
 
 // ============================================================================
 // HIGH CONTRAST COLORS
 // ============================================================================
 
-const highContrastColors = {
+const highContrastColors: ThemeColors = {
   ...themeColors,
 
   background: {
@@ -363,7 +390,7 @@ const highContrastColors = {
       icon: '#ffffff'
     }
   }
-} as const;
+};
 
 // ============================================================================
 // DENSITY VARIATIONS
@@ -397,11 +424,11 @@ const generateCSSVariables = (
   const isDark = mode === 'dark' || (mode === 'auto' && systemPrefersDark);
   const isHighContrast = colorScheme === 'high-contrast';
 
-  let currentThemeColors = themeColors;
+  let currentThemeColors: ThemeColors = themeColors;
   if (isDark && !isHighContrast) {
-    currentThemeColors = darkColors as unknown as typeof themeColors;
+    currentThemeColors = darkColors;
   } else if (isHighContrast) {
-    currentThemeColors = highContrastColors as unknown as typeof themeColors;
+    currentThemeColors = highContrastColors;
   }
 
   const densityConfig = densitySpacing[density];

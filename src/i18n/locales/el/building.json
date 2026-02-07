@@ -1039,13 +1039,16 @@
           "description": "Περιγραφή",
           "phaseNamePlaceholder": "π.χ. Εκσκαφή & Θεμελίωση",
           "taskNamePlaceholder": "π.χ. Σκυροδέτηση θεμελίωσης",
-          "descriptionPlaceholder": "Προαιρετική περιγραφή..."
+          "descriptionPlaceholder": "Προαιρετική περιγραφή...",
+          "phase": "Φάση",
+          "selectPhase": "Επιλέξτε φάση..."
         },
         "validation": {
           "nameRequired": "Το όνομα είναι υποχρεωτικό",
           "startDateRequired": "Η ημερομηνία έναρξης είναι υποχρεωτική",
           "endDateRequired": "Η ημερομηνία λήξης είναι υποχρεωτική",
-          "endAfterStart": "Η ημ. λήξης πρέπει να είναι μετά την ημ. έναρξης"
+          "endAfterStart": "Η ημ. λήξης πρέπει να είναι μετά την ημ. έναρξης",
+          "phaseRequired": "Η επιλογή φάσης είναι υποχρεωτική"
         }
       }
     },

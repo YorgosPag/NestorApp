@@ -17,6 +17,7 @@ interface DashboardStat {
     value: number;
     label: string;
   };
+  loading?: boolean;
 }
 
 interface UnifiedDashboardProps {
@@ -88,6 +89,8 @@ export function UnifiedDashboard({
             value={stat.value}
             icon={stat.icon}
             color={stat.color || 'blue'}
+            description={stat.description}
+            loading={stat.loading}
             onClick={onCardClick ? () => onCardClick(stat, index) : undefined}
           />
         ))}

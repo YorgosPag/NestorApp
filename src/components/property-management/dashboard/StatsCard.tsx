@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -15,9 +16,11 @@ interface StatsCardProps {
     icon: React.ElementType;
     color: string;
     onClick?: () => void;
+    loading?: boolean;
+    description?: string;
 }
 
-export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCardProps) {
+export function StatsCard({ title, value, icon: Icon, color, onClick, loading, description }: StatsCardProps) {
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
@@ -74,8 +77,20 @@ export function StatsCard({ title, value, icon: Icon, color, onClick }: StatsCar
             <CardContent className={`${spacing.padding.sm} min-w-0`}>
                 <div className="flex items-center justify-between min-w-0 max-w-full">
                     <div className="min-w-0 flex-1 mr-1 sm:mr-2 overflow-hidden">
-                        <p className={`text-xs font-medium ${colorClasses[colorKey]} truncate leading-tight`}>{title}</p>
-                        <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${valueColorClasses[colorKey]} truncate leading-tight`}>{value}</p>
+                        {loading ? (
+                            <>
+                                <Skeleton className="h-4 w-20 mb-1" />
+                                <Skeleton className="h-7 w-14" />
+                            </>
+                        ) : (
+                            <>
+                                <p className={`text-xs font-medium ${colorClasses[colorKey]} truncate leading-tight`}>{title}</p>
+                                <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${valueColorClasses[colorKey]} truncate leading-tight`}>{value}</p>
+                                {description && (
+                                    <p className={`text-xs ${colors.text.muted} truncate leading-tight mt-0.5`}>{description}</p>
+                                )}
+                            </>
+                        )}
                     </div>
                     <Icon className={`${iconSizes.lg} ${iconColorClasses[colorKey]} flex-shrink-0`} />
                 </div>

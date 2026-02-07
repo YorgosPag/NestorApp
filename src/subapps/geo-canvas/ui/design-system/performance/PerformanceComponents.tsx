@@ -235,7 +235,7 @@ export const VirtualizedTable = memo(<T,>({
   const renderRow = useCallback((item: T, index: number) => (
     <div
       className=""
-      style={getTableRowStyles(onRowClick)}
+      style={getTableRowStyles(Boolean(onRowClick))}
       onClick={() => onRowClick?.(item, index)}
     >
       {columns.map((column) => (
@@ -673,8 +673,8 @@ export const usePerformanceMonitor = (componentName: string) => {
 export const withPerformanceMonitoring = <P extends object>(
   Component: ComponentType<P>,
   componentName?: string
-): ComponentType<P> => {
-  const WrappedComponent = (props: P) => {
+) => {
+  const WrappedComponent: ComponentType<P> = (props: P) => {
     usePerformanceMonitor(componentName || Component.displayName || Component.name || 'Unknown');
     return <Component {...props} />;
   };
@@ -690,8 +690,8 @@ export const withPerformanceMonitoring = <P extends object>(
 export const createLazyComponent = <P extends object>(
   importFn: () => Promise<{ default: ComponentType<P> }>,
   fallback?: ReactNode
-) => {
-  const LazyComponent = lazy(importFn);
+): React.ComponentType<P> => {
+  const LazyComponent = lazy(importFn) as unknown as React.ComponentType<P>;
 
   const WrappedLazyComponent = (props: P) => (
     <LazyComponentWrapper fallback={fallback}>

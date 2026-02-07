@@ -10,7 +10,7 @@
  * @module PerformanceComponents.styles
  */
 
-import { performanceComponents } from '../../../../styles/design-tokens';
+import { performanceComponents } from '../../../../../styles/design-tokens';
 
 // ============================================================================
 // VIRTUALIZED TABLE STYLING UTILITIES
@@ -45,9 +45,9 @@ export const getVirtualListStyles = (totalHeight: number) => ({
 /**
  * Get table row styles με conditional styling
  */
-export const getTableRowStyles = (onRowClick?: () => void) => ({
+export const getTableRowStyles = (isClickable: boolean) => ({
   ...performanceComponents.virtualizedTable.row.base,
-  cursor: onRowClick ? 'pointer' : 'default'
+  cursor: isClickable ? 'pointer' : 'default'
 });
 
 /**
@@ -72,12 +72,12 @@ export const getVirtualizedTableClass = (className?: string) =>
  * Get container styles για VirtualizedImage
  */
 export const getVirtualizedImageContainerStyles = (
-  width: number,
-  height: number
+  width?: number,
+  height?: number
 ) => ({
   ...performanceComponents.virtualizedImage.container.base,
-  width,
-  height
+  ...(width !== undefined ? { width } : {}),
+  ...(height !== undefined ? { height } : {})
 });
 
 /**
@@ -183,33 +183,33 @@ export const getPerformanceMetricsContainerStyles = () => ({
 /**
  * Get section border styles με theme colors
  */
-export const getSectionBorderStyles = (borderColor: string) => ({
+export const getSectionBorderStyles = (borderColor?: string) => ({
   ...performanceComponents.performanceMetrics.section.border,
-  borderColor
+  ...(borderColor ? { borderColor } : {})
 });
 
 /**
  * Get section title styles με primary color
  */
-export const getSectionTitleStyles = (color: string) => ({
+export const getSectionTitleStyles = (color?: string) => ({
   ...performanceComponents.performanceMetrics.section.title,
-  color
+  ...(color ? { color } : {})
 });
 
 /**
  * Get metric label styles με secondary color
  */
-export const getMetricLabelStyles = (color: string) => ({
+export const getMetricLabelStyles = (color?: string) => ({
   ...performanceComponents.performanceMetrics.metric.label,
-  color
+  ...(color ? { color } : {})
 });
 
 /**
  * Get metric value styles με tertiary color για timestamps
  */
-export const getMetricTimestampStyles = (color: string) => ({
+export const getMetricTimestampStyles = (color?: string) => ({
   ...performanceComponents.performanceMetrics.metric.timestamp,
-  color
+  ...(color ? { color } : {})
 });
 
 /**
@@ -244,25 +244,25 @@ export const getAlertItemStyles = (
 /**
  * Get alert title styles με severity color
  */
-export const getAlertTitleStyles = (severityColor: string) => ({
+export const getAlertTitleStyles = (severityColor?: string) => ({
   ...performanceComponents.performanceMetrics.alerts.item.title,
-  color: severityColor
+  ...(severityColor ? { color: severityColor } : {})
 });
 
 /**
  * Get alert description styles με secondary color
  */
-export const getAlertDescriptionStyles = (color: string) => ({
+export const getAlertDescriptionStyles = (color?: string) => ({
   ...performanceComponents.performanceMetrics.alerts.item.description,
-  color
+  ...(color ? { color } : {})
 });
 
 /**
  * Get alert timestamp styles με tertiary color
  */
-export const getAlertTimestampStyles = (color: string) => ({
+export const getAlertTimestampStyles = (color?: string) => ({
   ...performanceComponents.performanceMetrics.alerts.item.timestamp,
-  color
+  ...(color ? { color } : {})
 });
 
 // ============================================================================
@@ -272,9 +272,9 @@ export const getAlertTimestampStyles = (color: string) => ({
 /**
  * Get dynamic header height styles
  */
-export const getDynamicHeaderStyles = (headerHeight: number) => ({
+export const getDynamicHeaderStyles = (headerHeight?: number) => ({
   ...performanceComponents.virtualizedTable.header.container,
-  height: headerHeight
+  ...(headerHeight !== undefined ? { height: headerHeight } : {})
 });
 
 /**

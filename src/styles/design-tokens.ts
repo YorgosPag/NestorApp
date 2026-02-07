@@ -2104,6 +2104,77 @@ interface PerformanceComponentsType {
       };
     };
   };
+  readonly virtualizedTable: {
+    readonly className: string;
+    readonly container: React.CSSProperties;
+    readonly header: {
+      readonly container: React.CSSProperties;
+    };
+    readonly virtualList: React.CSSProperties;
+    readonly row: {
+      readonly base: React.CSSProperties;
+      readonly even: React.CSSProperties;
+      readonly selected: React.CSSProperties;
+      readonly hover: React.CSSProperties;
+    };
+    readonly cell: {
+      readonly base: React.CSSProperties;
+    };
+    readonly mobile: React.CSSProperties;
+  };
+  readonly virtualizedImage: {
+    readonly container: {
+      readonly base: React.CSSProperties;
+    };
+    readonly image: {
+      readonly base: React.CSSProperties;
+    };
+    readonly placeholder: React.CSSProperties;
+  };
+  readonly metrics: {
+    readonly dashboard: {
+      readonly container: React.CSSProperties;
+    };
+    readonly card: {
+      readonly base: React.CSSProperties;
+      readonly title: React.CSSProperties;
+      readonly value: React.CSSProperties;
+    };
+  };
+  readonly loading: {
+    readonly container: React.CSSProperties;
+    readonly content: React.CSSProperties;
+    readonly spinner: {
+      readonly container: React.CSSProperties;
+      readonly element: React.CSSProperties;
+    };
+    readonly text: React.CSSProperties;
+  };
+  readonly performanceMetrics: {
+    readonly container: React.CSSProperties;
+    readonly section: {
+      readonly border: React.CSSProperties;
+      readonly title: React.CSSProperties;
+    };
+    readonly metric: {
+      readonly label: React.CSSProperties;
+      readonly timestamp: React.CSSProperties;
+    };
+    readonly alerts: {
+      readonly severity: {
+        readonly critical: string;
+        readonly high: string;
+        readonly medium: string;
+        readonly low: string;
+      };
+      readonly item: {
+        readonly base: React.CSSProperties;
+        readonly title: React.CSSProperties;
+        readonly description: React.CSSProperties;
+        readonly timestamp: React.CSSProperties;
+      };
+    };
+  };
 }
 
 export const performanceComponents: PerformanceComponentsType = {
@@ -2123,6 +2194,200 @@ export const performanceComponents: PerformanceComponentsType = {
         border: colors.border.primary,
         text: colors.text.primary,
         icon: semanticColors.status.warning
+      }
+    }
+  },
+  virtualizedTable: {
+    className: 'virtualizedTable',
+    container: {
+      display: layoutUtilities.display.flex,
+      flexDirection: 'column',
+      width: layoutUtilities.dimensions.full,
+      border: `1px solid ${colors.border.primary}`,
+      borderRadius: borderRadius.md,
+      overflow: 'hidden'
+    },
+    header: {
+      container: {
+        display: layoutUtilities.display.flex,
+        alignItems: 'center',
+        borderBottom: `1px solid ${colors.border.primary}`,
+        backgroundColor: colors.background.secondary,
+        fontWeight: typography.fontWeight.semibold
+      }
+    },
+    virtualList: {
+      position: layoutUtilities.positioning.relative,
+      width: layoutUtilities.dimensions.full
+    },
+    row: {
+      base: {
+        display: layoutUtilities.display.flex,
+        alignItems: 'center',
+        borderBottom: `1px solid ${colors.border.secondary}`,
+        transition: `background-color ${animation.duration.fast}`
+      },
+      even: {
+        backgroundColor: colors.background.secondary
+      },
+      selected: {
+        backgroundColor: colors.background.accent
+      },
+      hover: {
+        backgroundColor: colors.background.hover
+      }
+    },
+    cell: {
+      base: {
+        display: layoutUtilities.display.flex,
+        alignItems: 'center',
+        padding: `${spacing.sm} ${spacing.md}`
+      }
+    },
+    mobile: {
+      fontSize: typography.fontSize.sm
+    }
+  },
+  virtualizedImage: {
+    container: {
+      base: {
+        position: layoutUtilities.positioning.relative,
+        overflow: 'hidden',
+        borderRadius: borderRadius.sm,
+        backgroundColor: colors.background.secondary
+      }
+    },
+    image: {
+      base: {
+        width: layoutUtilities.dimensions.full,
+        height: layoutUtilities.dimensions.full,
+        objectFit: 'cover',
+        transition: `opacity ${animation.duration.fast}`
+      }
+    },
+    placeholder: {
+      position: layoutUtilities.positioning.absolute,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      display: layoutUtilities.display.flex,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background.secondary
+    }
+  },
+  metrics: {
+    dashboard: {
+      container: {
+        display: layoutUtilities.display.grid,
+        gap: spacing.md
+      }
+    },
+    card: {
+      base: {
+        backgroundColor: colors.background.primary,
+        border: `1px solid ${colors.border.primary}`,
+        borderRadius: borderRadius.md,
+        padding: spacing.md
+      },
+      title: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+        color: colors.text.secondary
+      },
+      value: {
+        fontSize: typography.fontSize.lg,
+        fontWeight: typography.fontWeight.semibold,
+        color: colors.text.primary
+      }
+    }
+  },
+  loading: {
+    container: {
+      display: layoutUtilities.display.flex,
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: layoutUtilities.dimensions.full,
+      height: layoutUtilities.dimensions.full
+    },
+    content: {
+      display: layoutUtilities.display.flex,
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: spacing.sm
+    },
+    spinner: {
+      container: {
+        display: layoutUtilities.display.flex,
+        alignItems: 'center',
+        justifyContent: 'center'
+      },
+      element: {
+        width: spacing.lg,
+        height: spacing.lg,
+        borderRadius: borderRadius.full,
+        border: `2px solid ${colors.border.tertiary}`,
+        borderTop: `2px solid ${colors.primary["500"]}`
+      }
+    },
+    text: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text.secondary
+    }
+  },
+  performanceMetrics: {
+    container: {
+      display: layoutUtilities.display.flex,
+      flexDirection: 'column',
+      gap: spacing.md
+    },
+    section: {
+      border: {
+        borderBottom: `1px solid ${colors.border.secondary}`,
+        paddingBottom: spacing.sm
+      },
+      title: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold
+      }
+    },
+    metric: {
+      label: {
+        fontSize: typography.fontSize.xs,
+        color: colors.text.secondary
+      },
+      timestamp: {
+        fontSize: typography.fontSize.xs,
+        color: colors.text.tertiary
+      }
+    },
+    alerts: {
+      severity: {
+        critical: semanticColors.status.error,
+        high: semanticColors.status.warning,
+        medium: semanticColors.status.info,
+        low: semanticColors.status.success
+      },
+      item: {
+        base: {
+          border: `1px solid ${colors.border.primary}`,
+          borderRadius: borderRadius.sm,
+          padding: spacing.sm,
+          backgroundColor: colors.background.secondary
+        },
+        title: {
+          fontSize: typography.fontSize.sm,
+          fontWeight: typography.fontWeight.semibold
+        },
+        description: {
+          fontSize: typography.fontSize.xs,
+          color: colors.text.secondary
+        },
+        timestamp: {
+          fontSize: typography.fontSize.xs,
+          color: colors.text.tertiary
+        }
       }
     }
   }
@@ -2477,6 +2742,125 @@ export const canvasUI = {
         flex: 1,
         marginLeft: hasSidebar ? `${sidebarWidth}px` : 0,
         transition: 'margin-left 200ms ease-in-out',
+      }),
+      dashboardSidebar: (isCollapsed: boolean, width: number, collapsedWidth: number): React.CSSProperties => ({
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: isCollapsed ? layoutUtilities.pixels(collapsedWidth) : layoutUtilities.pixels(width),
+        backgroundColor: colors.background.secondary,
+        borderRight: `1px solid ${colors.border.primary}`,
+        transition: `width ${animation.duration.normal} ${animation.easing.ease}`,
+        overflow: 'hidden',
+        zIndex: zIndex.docked,
+        display: 'flex',
+        flexDirection: 'column',
+      }),
+      sidebarToggleButton: (isCollapsed: boolean): React.CSSProperties => ({
+        position: 'absolute',
+        top: spacing.sm,
+        right: spacing.sm,
+        width: spacing.lg,
+        height: spacing.lg,
+        borderRadius: borderRadius.full,
+        border: `1px solid ${colors.border.secondary}`,
+        backgroundColor: colors.background.primary,
+        color: colors.text.primary,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        transition: transitions.all,
+        opacity: isCollapsed ? 1 : 0.9,
+      }),
+      sidebarContent: (isCollapsed: boolean): React.CSSProperties => ({
+        flex: 1,
+        padding: spacing.md,
+        overflowY: 'auto',
+        opacity: isCollapsed ? 0 : 1,
+        pointerEvents: isCollapsed ? 'none' : 'auto',
+        transition: `opacity ${animation.duration.fast} ${animation.easing.ease}`,
+      }),
+      dashboardHeader: (height: number, sidebarWidth: number, sidebarCollapsed: boolean): React.CSSProperties => ({
+        position: 'fixed',
+        top: 0,
+        left: sidebarCollapsed ? spacing['3xl'] : layoutUtilities.pixels(sidebarWidth),
+        right: 0,
+        height: layoutUtilities.pixels(height),
+        display: 'flex',
+        alignItems: 'center',
+        padding: `0 ${spacing.lg}`,
+        backgroundColor: colors.background.primary,
+        borderBottom: `1px solid ${colors.border.primary}`,
+        zIndex: zIndex.sticky,
+      }),
+      dashboardFooter: (height: number, sidebarWidth: number, sidebarCollapsed: boolean): React.CSSProperties => ({
+        position: 'fixed',
+        bottom: 0,
+        left: sidebarCollapsed ? spacing['3xl'] : layoutUtilities.pixels(sidebarWidth),
+        right: 0,
+        height: layoutUtilities.pixels(height),
+        display: 'flex',
+        alignItems: 'center',
+        padding: `0 ${spacing.lg}`,
+        backgroundColor: colors.background.primary,
+        borderTop: `1px solid ${colors.border.primary}`,
+        zIndex: zIndex.sticky,
+      }),
+      dashboardMainContent: (
+        sidebarWidth: number,
+        sidebarCollapsed: boolean,
+        headerHeight: number,
+        footerHeight: number
+      ): React.CSSProperties => ({
+        marginLeft: sidebarCollapsed ? spacing['3xl'] : layoutUtilities.pixels(sidebarWidth),
+        paddingTop: layoutUtilities.pixels(headerHeight),
+        paddingBottom: layoutUtilities.pixels(footerHeight),
+        minHeight: layoutUtilities.dimensions.screenHeight,
+        transition: `margin-left ${animation.duration.normal} ${animation.easing.ease}`,
+      }),
+      dashboardContentContainer: (fluid: boolean, centered: boolean): React.CSSProperties => ({
+        width: layoutUtilities.dimensions.full,
+        maxWidth: fluid ? layoutUtilities.dimensions.full : breakpoints.xl,
+        marginLeft: centered ? 'auto' : undefined,
+        marginRight: centered ? 'auto' : undefined,
+        padding: spacing.lg,
+      }),
+      dashboardLayout: (): React.CSSProperties => ({
+        position: 'relative',
+        minHeight: layoutUtilities.dimensions.screenHeight,
+        width: layoutUtilities.dimensions.full,
+        backgroundColor: colors.background.primary,
+        display: 'flex',
+        flexDirection: 'column',
+        overflowX: 'hidden',
+      }),
+      dashboardMobileOverlay: (show: boolean, prefersReducedMotion: boolean): React.CSSProperties => ({
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: colors.background.overlay,
+        opacity: show ? 1 : 0,
+        pointerEvents: show ? 'auto' : 'none',
+        transition: prefersReducedMotion
+          ? 'none'
+          : `opacity ${animation.duration.normal} ${animation.easing.ease}`,
+        zIndex: zIndex.overlay,
+      }),
+      mobileLayoutSpacing: (gap: number): React.CSSProperties => ({
+        marginBottom: `${gap * 4}px`,
+      }),
+      responsiveContainer: (size: 'sm' | 'md' | 'lg' | 'xl' | 'full'): React.CSSProperties => ({
+        width: layoutUtilities.dimensions.full,
+        maxWidth: size === 'full' ? layoutUtilities.dimensions.full : breakpoints[size],
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        padding: spacing.lg,
+      }),
+      responsiveSpacer: (spacingValue: number, direction: 'horizontal' | 'vertical'): React.CSSProperties => ({
+        width: direction === 'horizontal' ? `${spacingValue * 4}px` : layoutUtilities.dimensions.full,
+        height: direction === 'vertical' ? `${spacingValue * 4}px` : layoutUtilities.dimensions.full,
+        flexShrink: 0,
       }),
     }
   }

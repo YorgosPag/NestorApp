@@ -2,6 +2,8 @@
   "title": "Φίλτρα",
   "propertiesTitle": "Φίλτρα Ακινήτων",
   "aiInboxTitle": "Φίλτρα AI Inbox",
+  "operatorInboxTitle": "Φίλτρα Εισερχομένων Χειριστή",
+  "intent": "Πρόθεση",
   "tasksTitle": "Φίλτρα Εργασιών",
   "searchFilters": "Φίλτρα Αναζήτησης",
   "showAdvanced": "Εμφάνιση προχωρημένων",
@@ -114,6 +116,15 @@
     "followUp": "Παρακολούθηση",
     "document": "Έγγραφο",
     "other": "Άλλο"
+  },
+  "intents": {
+    "appointment": "Ραντεβού",
+    "invoice": "Τιμολόγιο",
+    "defectReport": "Αναφορά Βλάβης",
+    "unknown": "Άγνωστη"
+  },
+  "pipelineStatus": {
+    "proposed": "Σε Αναμονή"
   },
   "fields": {
     "search": "Αναζήτηση",

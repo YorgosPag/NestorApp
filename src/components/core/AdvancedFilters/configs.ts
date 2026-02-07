@@ -1361,6 +1361,96 @@ export const defaultAIInboxFilters: AIInboxFilterState = {
 };
 
 // ====================================================================
+// [ENTERPRISE] Operator Inbox Filters Configuration (UC-009)
+// For AI Pipeline Operator Inbox (/admin/operator-inbox)
+// ====================================================================
+export const operatorInboxFiltersConfig: FilterPanelConfig = {
+  title: 'filters.operatorInboxTitle',
+  searchPlaceholder: 'filters.placeholders.communicationsSearch',
+  i18nNamespace: 'filters',
+  rows: [
+    {
+      id: 'operator-inbox-basic',
+      fields: [
+        {
+          id: 'searchTerm',
+          type: 'search',
+          label: FL.search,
+          placeholder: 'filters.placeholders.communicationsSearch',
+          ariaLabel: 'Search Operator Inbox',
+          width: 2
+        },
+        {
+          id: 'intent',
+          type: 'select',
+          label: 'filters.intent',
+          placeholder: SP.status_placeholder,
+          ariaLabel: 'Operator Inbox intent filter',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.allStatuses' },
+            { value: 'appointment_request', label: 'filters.intents.appointment' },
+            { value: 'invoice', label: 'filters.intents.invoice' },
+            { value: 'defect_report', label: 'filters.intents.defectReport' },
+            { value: 'unknown', label: 'filters.intents.unknown' }
+          ]
+        },
+        {
+          id: 'status',
+          type: 'select',
+          label: FL.status,
+          placeholder: SP.status_placeholder,
+          ariaLabel: 'Operator Inbox status filter',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.allStatuses' },
+            { value: 'proposed', label: 'filters.pipelineStatus.proposed' },
+            { value: 'approved', label: 'filters.status.approved' },
+            { value: 'rejected', label: 'filters.status.rejected' }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'operator-inbox-date',
+      fields: [
+        {
+          id: 'dateFrom',
+          type: 'date',
+          label: 'filters.dateFrom',
+          ariaLabel: 'Operator Inbox from date filter',
+          width: 1
+        },
+        {
+          id: 'dateTo',
+          type: 'date',
+          label: 'filters.dateTo',
+          ariaLabel: 'Operator Inbox to date filter',
+          width: 1
+        }
+      ]
+    }
+  ]
+};
+
+export interface OperatorInboxFilterState {
+  [key: string]: unknown;
+  searchTerm: string;
+  intent: string;
+  status: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+export const defaultOperatorInboxFilters: OperatorInboxFilterState = {
+  searchTerm: '',
+  intent: 'all',
+  status: 'proposed',
+  dateFrom: '',
+  dateTo: ''
+};
+
+// ====================================================================
 // [ENTERPRISE] File Manager Filters Configuration
 // For central file manager (/files page)
 // ====================================================================

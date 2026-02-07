@@ -36,6 +36,12 @@ export interface GeoCanvasIntegrationOptions {
   /** Storage key για persistence */
   storageKey?: string;
 
+  /** Enable snapping */
+  enableSnapping?: boolean;
+
+  /** Snap tolerance (pixels) */
+  snapTolerance?: number;
+
   /** Event callbacks */
   callbacks?: {
     onPolygonCreated?: (polygon: UniversalPolygon) => void;
@@ -62,6 +68,10 @@ export class GeoCanvasPolygonManager {
     // Initialize drawers
     this.simpleDrawer = new SimplePolygonDrawer(options.canvas);
     this.controlPointDrawer = new ControlPointDrawer(options.canvas);
+
+    if (typeof options.enableSnapping === 'boolean' || typeof options.snapTolerance === 'number') {
+      this.simpleDrawer.setSnapping(Boolean(options.enableSnapping), options.snapTolerance);
+    }
 
     // Setup event handlers
     this.setupEventHandlers();
@@ -488,6 +498,8 @@ export class GeoCanvasPolygonManager {
   } {
     const byType: Record<PolygonType, number> = {
       'simple': 0,
+      'freehand': 0,
+      'point': 0,
       'georeferencing': 0,
       'alert-zone': 0,
       'real-estate': 0,
@@ -505,5 +517,12 @@ export class GeoCanvasPolygonManager {
       currentMode: this.currentMode,
       isDrawing: this.getDrawer(this.currentMode).getState().isDrawing
     };
+  }
+
+  /**
+   * Get current drawing polygon (if any)
+   */
+  getCurrentDrawing(): UniversalPolygon | null {
+    return this.getDrawer(this.currentMode).getState().currentPolygon;
   }
 }

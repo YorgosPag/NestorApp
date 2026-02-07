@@ -8,31 +8,6 @@
  */
 
 // ============================================================================
-// GEOJSON TYPE DEFINITIONS (Enterprise Local Types)
-// ============================================================================
-
-declare global {
-  namespace GeoJSON {
-    interface Geometry {
-      type: string;
-      coordinates?: number[] | number[][] | number[][][] | number[][][][];
-      geometries?: Geometry[];
-    }
-
-    interface Feature {
-      type: 'Feature';
-      geometry: Geometry | null;
-      properties: Record<string, unknown> | null;
-    }
-
-    interface FeatureCollection {
-      type: 'FeatureCollection';
-      features: Feature[];
-    }
-  }
-}
-
-// ============================================================================
 // CORE ADMINISTRATIVE TYPES
 // ============================================================================
 

@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle, Building2 } from 'lucide-react';
 import { ContactsService } from '@/services/contacts.service';
 import { UNIT_SALE_STATUS } from '@/constants/property-statuses-enterprise';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 // 🏢 ENTERPRISE: Centralized API client with automatic authentication
 import { apiClient } from '@/lib/api/enterprise-api-client';
 // 🏢 ENTERPRISE: i18n support
@@ -149,56 +151,37 @@ export function SoldUnitsPreview() {
   return (
     <div className="space-y-6">
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{t('units.total')}</p>
-                <p className="text-2xl font-bold">{units.length}</p>
-              </div>
-              <UnitIcon className={`${iconSizes.xl} ${unitColor}`} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{t('units.mainProjectUnits', { project: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project' })}</p>
-                <p className="text-2xl font-bold">{palaiologouUnits.length}</p>
-              </div>
-              <Badge variant="outline">{t('units.primary')}</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{t('units.soldNoCustomer')}</p>
-                <p className="text-2xl font-bold text-red-600">{soldUnitsWithoutCustomer.length}</p>
-              </div>
-              <Badge variant="destructive">❌</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{t('units.soldWithCustomer')}</p>
-                <p className="text-2xl font-bold text-green-600">{soldUnitsWithCustomer.length}</p>
-              </div>
-              <Badge variant="default">✅</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Summary Cards — 🏢 ENTERPRISE: Centralized UnifiedDashboard */}
+      <UnifiedDashboard
+        stats={[
+          {
+            title: t('units.total'),
+            value: units.length,
+            icon: UnitIcon,
+            color: 'blue',
+          },
+          {
+            title: t('units.mainProjectUnits', { project: process.env.NEXT_PUBLIC_PRIMARY_PROJECT_NAME || 'Main Project' }),
+            value: palaiologouUnits.length,
+            icon: Building2,
+            color: 'cyan',
+          },
+          {
+            title: t('units.soldNoCustomer'),
+            value: soldUnitsWithoutCustomer.length,
+            icon: AlertCircle,
+            color: 'red',
+          },
+          {
+            title: t('units.soldWithCustomer'),
+            value: soldUnitsWithCustomer.length,
+            icon: CheckCircle,
+            color: 'green',
+          },
+        ] satisfies DashboardStat[]}
+        columns={4}
+        className=""
+      />
 
       {/* Main Table */}
       <Card>

@@ -15,7 +15,7 @@ import type {
 } from '../../types';
 
 // Import existing DXF types
-import type { Point2D, SceneModel, AnySceneEntity } from '../../../dxf-viewer/types/scene';
+import type { SceneModel, AnySceneEntity } from '../../../dxf-viewer/types/scene';
 
 // ============================================================================
 // COORDINATE TRANSFORMATION ENGINE
@@ -176,7 +176,7 @@ export class DxfGeoTransformService {
     for (const entity of scene.entities) {
       // Apply filters
       if (!options.includeInvisible && !entity.visible) continue;
-      if (options.layerFilter && !options.layerFilter.includes(entity.layer)) continue;
+      if (options.layerFilter && (!entity.layer || !options.layerFilter.includes(entity.layer))) continue;
       if (options.entityTypeFilter && !options.entityTypeFilter.includes(entity.type)) continue;
 
       try {

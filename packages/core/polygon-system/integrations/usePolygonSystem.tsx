@@ -95,6 +95,8 @@ export function usePolygonSystem(options: UsePolygonSystemOptions = {}): UsePoly
     totalPolygons: 0,
     byType: {
       'simple': 0,
+      'freehand': 0,
+      'point': 0,
       'georeferencing': 0,
       'alert-zone': 0,
       'real-estate': 0,

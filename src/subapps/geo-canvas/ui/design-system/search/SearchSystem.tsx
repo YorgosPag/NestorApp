@@ -18,14 +18,7 @@ import {
 } from '@/components/ui/select';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTheme } from '../theme/ThemeProvider';
-import { layoutUtilities } from '@/styles/design-tokens';
 import {
-  searchSystemStyles,
-  getFilterStateStyle,
-  getSearchResultHoverHandlers,
-  getDynamicSuggestionStyle,
-  getDynamicInputStyle,
-  getDynamicResultItemStyle,
   // ✅ ENTERPRISE: Import className builders (NO MORE INLINE STYLES)
   searchSystemClasses,
   getSearchInputClassName,
@@ -649,7 +642,6 @@ const SearchResultItem: React.FC<SearchResultItemProps> = ({
     <div
       onClick={handleClick}
       className={cn(getResultItemClassName(!!onClick), 'search-result-item', className)}
-      {...(onClick ? getSearchResultHoverHandlers() : {})}
     >
       <div
         className={searchSystemClasses.results.itemTitle}
@@ -783,7 +775,8 @@ export const SearchSystem: React.FC<SearchSystemProps> = ({
 
   // Perform search
   const searchResults = useMemo(() => {
-    if (debouncedQuery.length < searchConfig.minQueryLength && activeFilters.length === 0) {
+    const minQueryLength = searchConfig.minQueryLength ?? 0;
+    if (debouncedQuery.length < minQueryLength && activeFilters.length === 0) {
       return [];
     }
 

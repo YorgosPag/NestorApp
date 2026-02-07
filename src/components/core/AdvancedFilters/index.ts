@@ -20,6 +20,7 @@ export {
   communicationsFiltersConfig,
   taskFiltersConfig,
   aiInboxFiltersConfig,
+  operatorInboxFiltersConfig,
   propertyFiltersConfig,
   fileFiltersConfig,
   defaultUnitFilters,
@@ -29,6 +30,7 @@ export {
   defaultCommunicationsFilters,
   defaultTaskFilters,
   defaultAIInboxFilters,
+  defaultOperatorInboxFilters,
   defaultPropertyFilters,
   defaultFileFilters
 } from './configs';
@@ -79,7 +81,7 @@ export {
 } from './types';
 
 // Communications Types (from configs.ts)
-export type { CommunicationsFilterState, TaskFilterState, FileFilterState, AIInboxFilterState } from './configs';
+export type { CommunicationsFilterState, TaskFilterState, FileFilterState, AIInboxFilterState, OperatorInboxFilterState } from './configs';
 
 // Storage Types
 export type {

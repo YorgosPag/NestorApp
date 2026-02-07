@@ -50,6 +50,10 @@ export type {
   OperatorApprovalResult,
 } from './operator-inbox-service';
 
+// UC Modules
+export { AppointmentModule } from './modules/uc-001-appointment';
+export { registerAllPipelineModules } from './modules/register-modules';
+
 // Channel adapters
 export { EmailChannelAdapter } from './channel-adapters/email-channel-adapter';
 export type {

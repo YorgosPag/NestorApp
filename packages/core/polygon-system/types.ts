@@ -28,6 +28,8 @@ export interface PolygonPoint {
  */
 export type PolygonType =
   | 'simple'         // Απλό σχέδιο
+  | 'freehand'       // Freehand drawing mode
+  | 'point'          // Point-based drawing mode
   | 'georeferencing' // Control points για georeferencing
   | 'alert-zone'     // Alert zone definitions
   | 'real-estate'    // Real estate monitoring zones (Phase 2.5.2)
@@ -81,6 +83,16 @@ export interface UniversalPolygon {
 
   /** Styling */
   style: PolygonStyle;
+
+  /** Additional drawing configuration */
+  config?: {
+    fillColor?: string;
+    strokeColor?: string;
+    strokeWidth?: number;
+    pointMode?: boolean;
+    radius?: number;
+    [key: string]: unknown;
+  };
 
   /** Metadata */
   metadata?: {
@@ -169,7 +181,7 @@ export interface PolygonDrawingState {
  *
  * WCAG AA compliant colors για accessibility
  */
-export const DEFAULT_POLYGON_STYLES: Record<PolygonType, PolygonStyle> = {
+const BASE_POLYGON_STYLES: Record<Exclude<PolygonType, 'freehand' | 'point'>, PolygonStyle> = {
   simple: {
     strokeColor: '#1e40af',    // Enhanced blue (WCAG AA)
     fillColor: '#3b82f6',
@@ -224,6 +236,12 @@ export const DEFAULT_POLYGON_STYLES: Record<PolygonType, PolygonStyle> = {
     pointRadius: 4,
     pointColor: '#6d28d9'
   }
+};
+
+export const DEFAULT_POLYGON_STYLES: Record<PolygonType, PolygonStyle> = {
+  ...BASE_POLYGON_STYLES,
+  freehand: BASE_POLYGON_STYLES.simple,
+  point: BASE_POLYGON_STYLES.annotation
 };
 
 /**

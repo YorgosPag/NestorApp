@@ -82,6 +82,18 @@ interface UseConstructionGanttReturn {
   reload: () => Promise<void>;
 }
 
+// ─── Status Colors ──────────────────────────────────────────────────────
+// Centralized CSS variable references for Gantt bar colors (from globals.css)
+// react-modern-gantt uses task.color for bar backgroundColor
+
+const GANTT_STATUS_COLORS: Record<GanttTaskStatus, string> = {
+  completed: 'hsl(var(--status-success))',
+  inProgress: 'hsl(var(--status-info))',
+  notStarted: 'hsl(var(--muted-foreground))',
+  delayed: 'hsl(var(--status-error))',
+  blocked: 'hsl(var(--status-warning))',
+};
+
 // ─── Status Mapping ──────────────────────────────────────────────────────
 // Maps ConstructionTaskStatus → GanttTaskStatus for color resolver
 
@@ -134,6 +146,16 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
 
     try {
       const data = await getConstructionData(buildingId);
+
+      // 🔍 DEBUG: Log loaded data to diagnose task visibility issue
+      console.log(`🔍 [useConstructionGantt] Loaded ${data.phases.length} phases, ${data.tasks.length} tasks`);
+      if (data.tasks.length > 0) {
+        console.log('🔍 [useConstructionGantt] Tasks:', data.tasks.map((t) => ({
+          id: t.id, name: t.name, phaseId: t.phaseId, status: t.status,
+        })));
+        console.log('🔍 [useConstructionGantt] Phase IDs:', data.phases.map((p) => p.id));
+      }
+
       setPhases(data.phases);
       setTasks(data.tasks);
     } catch (err) {
@@ -151,26 +173,41 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
   // ─── Convert to TaskGroup[] for react-modern-gantt ────────────────────
 
   const taskGroups = useMemo((): TaskGroup[] => {
+    // 🔍 DEBUG: Log matching
+    if (tasks.length > 0) {
+      console.log(`🔍 [taskGroups] Matching ${tasks.length} tasks against ${phases.length} phases`);
+    }
+
     return phases.map((phase) => {
       const phaseTasks = tasks
         .filter((task) => task.phaseId === phase.id)
         .sort((a, b) => a.order - b.order);
 
+      // 🔍 DEBUG: Log per-phase matching
+      if (tasks.length > 0) {
+        console.log(`🔍 [taskGroups] Phase "${phase.name}" (${phase.id}): ${phaseTasks.length} matched tasks`);
+      }
+
       let ganttTasks: Task[];
 
       if (phaseTasks.length > 0) {
         // Phase has real tasks → show them as bars
-        ganttTasks = phaseTasks.map((task) => ({
-          id: task.id,
-          name: task.name,
-          startDate: new Date(task.plannedStartDate),
-          endDate: new Date(task.plannedEndDate),
-          percent: task.progress,
-          dependencies: task.dependencies ?? [],
-          taskStatus: mapTaskStatusToGantt(task.status),
-        }));
+        ganttTasks = phaseTasks.map((task) => {
+          const ganttStatus = mapTaskStatusToGantt(task.status);
+          return {
+            id: task.id,
+            name: task.name,
+            startDate: new Date(task.plannedStartDate),
+            endDate: new Date(task.plannedEndDate),
+            percent: task.progress,
+            dependencies: task.dependencies ?? [],
+            taskStatus: ganttStatus,
+            color: GANTT_STATUS_COLORS[ganttStatus],
+          };
+        });
       } else {
         // Phase has no tasks → create synthetic bar from phase dates
+        const ganttStatus = mapPhaseStatusToGantt(phase.status);
         ganttTasks = [{
           id: `phase-bar-${phase.id}`,
           name: phase.name,
@@ -178,7 +215,8 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
           endDate: new Date(phase.plannedEndDate),
           percent: phase.progress,
           dependencies: [],
-          taskStatus: mapPhaseStatusToGantt(phase.status),
+          taskStatus: ganttStatus,
+          color: GANTT_STATUS_COLORS[ganttStatus],
         }];
       }
 

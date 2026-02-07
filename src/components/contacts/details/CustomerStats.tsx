@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Ruler, Euro } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { getUnitsByOwner } from '@/services/units.service';
-import type { Property } from '@/types/property-viewer';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -25,34 +23,7 @@ interface Stats {
   totalValue: number;
 }
 
-const StatCard = ({ icon: Icon, value, label, loading, colorClass }: { icon: React.ElementType, value: string | number, label: string, loading: boolean, colorClass: string }) => {
-    const iconSizes = useIconSizes();
-    return (
-    <Card className={colorClass}>
-        <CardContent className="p-4 flex items-center gap-4">
-            <div className={`p-2 rounded-lg ${colorClass.replace('bg-', 'bg-opacity-20 ')}`}>
-               <Icon className={iconSizes.lg} />
-            </div>
-            <div>
-                {loading ? (
-                    <>
-                        <Skeleton className="h-6 w-16 mb-1" />
-                        <Skeleton className="h-4 w-24" />
-                    </>
-                ) : (
-                    <>
-                        <div className="text-2xl font-bold">{value}</div>
-                        <div className="text-xs text-muted-foreground">{label}</div>
-                    </>
-                )}
-            </div>
-        </CardContent>
-    </Card>
-    );
-};
-
 export function CustomerStats({ contactId }: CustomerStatsProps) {
-  // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('contacts');
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,39 +57,42 @@ export function CustomerStats({ contactId }: CustomerStatsProps) {
   }, [contactId]);
 
   if (loading) {
-    return null; // Render nothing on server and initial client render to prevent hydration mismatch
+    return null;
   }
-  
+
   if (!stats) {
-    return null; // Don't render the component if there are no stats to show
+    return null;
   }
+
+  const dashboardStats: DashboardStat[] = [
+    {
+      title: t('stats.unitsCount'),
+      value: stats.unitsCount,
+      icon: UnitIcon,
+      color: 'blue',
+    },
+    {
+      title: t('stats.totalArea'),
+      value: `${formatNumber(stats.totalArea)} m²`,
+      icon: Ruler,
+      color: 'purple',
+    },
+    {
+      title: t('stats.totalValue'),
+      value: formatCurrency(stats.totalValue),
+      icon: Euro,
+      color: 'green',
+    },
+  ];
 
   return (
     <div>
-        <h4 className="text-sm font-semibold mb-2">{t('stats.title')}</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <StatCard
-                icon={UnitIcon}
-                value={stats.unitsCount}
-                label={t('stats.unitsCount')}
-                loading={false}
-                colorClass="bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300"
-            />
-             <StatCard
-                icon={Ruler}
-                value={`${formatNumber(stats.totalArea)} m²`}
-                label={t('stats.totalArea')}
-                loading={false}
-                colorClass="bg-purple-50 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300"
-            />
-             <StatCard
-                icon={Euro}
-                value={formatCurrency(stats.totalValue)}
-                label={t('stats.totalValue')}
-                loading={false}
-                colorClass="bg-green-50 text-green-800 dark:bg-green-950/50 dark:text-green-300"
-            />
-        </div>
+      <h4 className="text-sm font-semibold mb-2">{t('stats.title')}</h4>
+      <UnifiedDashboard
+        stats={dashboardStats}
+        columns={3}
+        className=""
+      />
     </div>
   );
 }

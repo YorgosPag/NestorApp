@@ -21,15 +21,6 @@ export interface ProjectFormData {
   companyName: string;
 }
 
-export interface StatCardProps {
-  icon: React.ElementType;
-  value: string | number;
-  label: string;
-  loading: boolean;
-  colorClass: string;
-  subtitle?: string;
-}
-
 export interface ProjectCustomersTableProps {
   projectId: string;
 }

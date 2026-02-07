@@ -7,10 +7,10 @@
  * @module services/spatial/SpatialQueryService
  */
 
+import { GreekAdminLevel } from '../../types/administrative-types';
 import type {
   SpatialQuery,
   AdminSearchResult,
-  GreekAdminLevel,
   BoundingBox
 } from '../../types/administrative-types';
 import { administrativeBoundaryService } from '../administrative-boundaries/AdministrativeBoundaryService';
@@ -18,6 +18,14 @@ import { administrativeBoundaryService } from '../administrative-boundaries/Admi
 // ============================================================================
 // SPATIAL UTILITIES
 // ============================================================================
+
+type FeatureCollectionLike = {
+  type: 'FeatureCollection';
+  features: Array<{
+    geometry: GeoJSON.Geometry | null;
+    properties: Record<string, unknown> | null;
+  }>;
+};
 
 /**
  * Point-in-polygon test using ray casting algorithm
@@ -64,7 +72,15 @@ function getBoundingBox(geometry: GeoJSON.Geometry): BoundingBox {
     }
   }
 
-  processCoordinates(geometry.coordinates);
+  if ('coordinates' in geometry && geometry.coordinates) {
+    processCoordinates(geometry.coordinates as GeoJSONCoordinates);
+  } else if (geometry.type === 'GeometryCollection' && geometry.geometries) {
+    geometry.geometries.forEach((childGeometry) => {
+      if ('coordinates' in childGeometry && childGeometry.coordinates) {
+        processCoordinates(childGeometry.coordinates as GeoJSONCoordinates);
+      }
+    });
+  }
 
   return {
     north: maxLat,
@@ -354,7 +370,7 @@ export class SpatialQueryService {
    * Convert GeoJSON FeatureCollection to AdminSearchResult[]
    */
   private convertGeoJSONToSearchResults(
-    collection: GeoJSON.FeatureCollection,
+    collection: FeatureCollectionLike,
     adminLevel: GreekAdminLevel
   ): AdminSearchResult[] {
     return collection.features.map((feature, index) => {

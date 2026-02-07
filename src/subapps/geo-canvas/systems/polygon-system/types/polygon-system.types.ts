@@ -94,6 +94,13 @@ export interface RoleBasedConfig {
 }
 
 /**
+ * Map reference interface
+ */
+export interface MapRef {
+  getMap?: () => unknown;
+}
+
+/**
  * Polygon system state
  */
 export interface PolygonSystemState {
@@ -108,7 +115,7 @@ export interface PolygonSystemState {
   currentTool: PolygonType | null;
   currentDrawing: {
     type: PolygonType;
-    config: {
+    config?: {
       fillColor?: string;
       strokeColor?: string;
       strokeWidth?: number;
@@ -123,7 +130,7 @@ export interface PolygonSystemState {
   completedPolygon: Array<[number, number]> | null;
 
   /** Map integration */
-  mapRef: React.RefObject<unknown> | null;
+  mapRef: React.RefObject<MapRef> | null;
   mapLoaded: boolean;
 
   /** Coordinate picking */
@@ -172,7 +179,7 @@ export interface PolygonSystemActions {
   handlePolygonClosure: () => void;
 
   /** Map integration */
-  setMapRef: (ref: React.RefObject<unknown>) => void;
+  setMapRef: (ref: React.RefObject<MapRef> | null) => void;
   setMapLoaded: (loaded: boolean) => void;
 
   /** Coordinate picking */

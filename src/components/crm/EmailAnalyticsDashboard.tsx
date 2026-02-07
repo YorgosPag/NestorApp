@@ -8,6 +8,8 @@ import { Mail, Eye, MousePointer, TrendingUp, Construction, ArrowLeft, Building2
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useRouter } from 'next/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 
 export function EmailAnalyticsDashboard() {
   const router = useRouter();
@@ -19,12 +21,43 @@ export function EmailAnalyticsDashboard() {
     router.push('/crm');
   };
 
+  const dashboardStats: DashboardStat[] = [
+    {
+      title: 'Σύνολο Emails',
+      value: 0,
+      description: 'Απεσταλμένα',
+      icon: Mail,
+      color: 'blue',
+    },
+    {
+      title: 'Ποσοστό Παράδοσης',
+      value: '0%',
+      description: '0/0 παραδόθηκαν',
+      icon: TrendingUp,
+      color: 'green',
+    },
+    {
+      title: 'Ποσοστό Ανοίγματος',
+      value: '0%',
+      description: '0 ανοίγματα',
+      icon: Eye,
+      color: 'cyan',
+    },
+    {
+      title: 'Ποσοστό Κλικ',
+      value: '0%',
+      description: '0 κλικ',
+      icon: MousePointer,
+      color: 'purple',
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header with Back Button */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <Button 
+          <Button
             onClick={handleBackToCRM}
             variant="outline"
             size="sm"
@@ -34,66 +67,18 @@ export function EmailAnalyticsDashboard() {
             Πίσω στο CRM
           </Button>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">📧 Email Analytics</h2>
-            <p className="text-gray-600">Αναλυτικά στοιχεία email marketing</p>
+            <h2 className="text-2xl font-bold">Email Analytics</h2>
+            <p className="text-muted-foreground">Αναλυτικά στοιχεία email marketing</p>
           </div>
         </div>
       </div>
 
-      {/* Placeholder Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Σύνολο Emails
-            </CardTitle>
-            <Mail className={`${iconSizes.sm} text-blue-600`} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-gray-500 mt-1">Απεσταλμένα</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Ποσοστό Παράδοσης
-            </CardTitle>
-            <TrendingUp className={`${iconSizes.sm} text-green-600`} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0%</div>
-            <p className="text-xs text-gray-500 mt-1">0/0 παραδόθηκαν</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Ποσοστό Ανοίγματος
-            </CardTitle>
-            <Eye className={`${iconSizes.sm} text-blue-600`} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0%</div>
-            <p className="text-xs text-gray-500 mt-1">0 ανοίγματα</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Ποσοστό Κλικ
-            </CardTitle>
-            <MousePointer className={`${iconSizes.sm} text-purple-600`} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0%</div>
-            <p className="text-xs text-gray-500 mt-1">0 κλικ</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Stats Cards — 🏢 ENTERPRISE: Centralized UnifiedDashboard */}
+      <UnifiedDashboard
+        stats={dashboardStats}
+        columns={4}
+        className=""
+      />
 
       {/* Coming Soon with Templates Preview */}
       <Card>
@@ -104,31 +89,31 @@ export function EmailAnalyticsDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            <Mail className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="text-center py-8 text-muted-foreground">
+            <Mail className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
+            <h3 className="text-lg font-medium mb-2">
               Analytics Dashboard Υπό Κατασκευή
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Σύντομα θα μπορείτε να δείτε:
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-              <div className="text-left space-y-2 text-sm text-gray-600">
-                <li>• Αναλυτικά στοιχεία email campaigns</li>
-                <li>• Ποσοστά ανοίγματος και κλικ</li>
-                <li>• Πρόσφατη δραστηριότητα emails</li>
-                <li>• Στατιστικά ανά ακίνητο</li>
-                <li>• Email performance tracking</li>
-              </div>
-              <div className="text-left space-y-2 text-sm text-gray-600">
-                <li className="flex items-center gap-2">• <ResidentialIcon className={iconSizes.sm} /> Residential template analytics</li>
-                <li className="flex items-center gap-2">• <Building2 className={iconSizes.sm} /> Commercial template analytics</li>
-                <li className="flex items-center gap-2">• <Star className={iconSizes.sm} /> Premium template analytics</li>
-                <li>• Template performance comparison</li>
-                <li>• A/B testing results</li>
-              </div>
+              <ul className="text-left space-y-2 text-sm text-muted-foreground">
+                <li>Αναλυτικά στοιχεία email campaigns</li>
+                <li>Ποσοστά ανοίγματος και κλικ</li>
+                <li>Πρόσφατη δραστηριότητα emails</li>
+                <li>Στατιστικά ανά ακίνητο</li>
+                <li>Email performance tracking</li>
+              </ul>
+              <ul className="text-left space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2"><ResidentialIcon className={iconSizes.sm} /> Residential template analytics</li>
+                <li className="flex items-center gap-2"><Building2 className={iconSizes.sm} /> Commercial template analytics</li>
+                <li className="flex items-center gap-2"><Star className={iconSizes.sm} /> Premium template analytics</li>
+                <li>Template performance comparison</li>
+                <li>A/B testing results</li>
+              </ul>
             </div>
-            <p className="text-xs text-gray-500 mt-6">
+            <p className="text-xs text-muted-foreground mt-6">
               Τα analytics θα ενεργοποιηθούν μόλις ρυθμιστεί το Mailgun webhook.<br/>
               Τώρα διαθέσιμα 3 email templates στο Share Modal!
             </p>

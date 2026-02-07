@@ -26,7 +26,8 @@ import MapTabContent from '../../building-management/tabs/MapTabContent';
 
 import { useProjectStats } from './hooks/useProjectStats';
 import { useAutosave } from './hooks/useAutosave';
-import { StatCard } from './parts/StatCard';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { ProjectCustomersTable } from './parts/ProjectCustomersTable';
 import { ProjectBuildingsCard } from './parts/ProjectBuildingsCard';
 import type { GeneralProjectTabProps, ProjectFormData } from './types';
@@ -153,35 +154,41 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         saveError={saveError}
       />
       
-      <div className={cn("grid grid-cols-1 md:grid-cols-4", spacing.gap.md, spacing.margin.top.lg, spacing.margin.bottom.sm)}>
-        <StatCard
-          icon={UnitIcon}
-          value={loadingStats ? '...' : stats?.totalUnits ?? 0}
-          label={t('generalTab.totalUnits')}
-          loading={loadingStats}
-          colorClass="bg-blue-600 text-white"
-        />
-        <StatCard
-          icon={CheckCircle}
-          value={loadingStats ? '...' : stats?.soldUnits ?? 0}
-          label={t('generalTab.soldUnits')}
-          loading={loadingStats}
-          colorClass="bg-green-600 text-white"
-        />
-        <StatCard
-          icon={Ruler}
-          value={loadingStats ? '...' : `${(stats?.totalSoldArea ?? 0).toLocaleString('el-GR')} m²`}
-          label={t('generalTab.totalSoldArea')}
-          loading={loadingStats}
-          colorClass="bg-purple-600 text-white"
-        />
-        <StatCard
-          icon={TrendingUp}
-          value={loadingStats ? '...' : `${salesPercentage.toFixed(1)}%`}
-          label={t('generalTab.salesPercentage')}
-          loading={loadingStats}
-          colorClass="bg-orange-600 text-white"
-          subtitle={loadingStats ? '' : t('generalTab.availableUnits', { count: availableUnits })}
+      <div className={cn(spacing.margin.top.lg, spacing.margin.bottom.sm)}>
+        <UnifiedDashboard
+          stats={[
+            {
+              title: t('generalTab.totalUnits'),
+              value: loadingStats ? '...' : stats?.totalUnits ?? 0,
+              icon: UnitIcon,
+              color: 'blue',
+              loading: loadingStats,
+            },
+            {
+              title: t('generalTab.soldUnits'),
+              value: loadingStats ? '...' : stats?.soldUnits ?? 0,
+              icon: CheckCircle,
+              color: 'green',
+              loading: loadingStats,
+            },
+            {
+              title: t('generalTab.totalSoldArea'),
+              value: loadingStats ? '...' : `${(stats?.totalSoldArea ?? 0).toLocaleString('el-GR')} m²`,
+              icon: Ruler,
+              color: 'purple',
+              loading: loadingStats,
+            },
+            {
+              title: t('generalTab.salesPercentage'),
+              value: loadingStats ? '...' : `${salesPercentage.toFixed(1)}%`,
+              icon: TrendingUp,
+              color: 'orange',
+              loading: loadingStats,
+              description: loadingStats ? '' : t('generalTab.availableUnits', { count: availableUnits }),
+            },
+          ] satisfies DashboardStat[]}
+          columns={4}
+          className=""
         />
       </div>
 

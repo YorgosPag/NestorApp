@@ -80,7 +80,7 @@ export interface StyleTheme {
 /**
  * 🎨 Fallback style configuration (WCAG AA compliant)
  */
-const FALLBACK_POLYGON_STYLES: Record<PolygonType, PolygonStyle> = {
+const BASE_FALLBACK_POLYGON_STYLES: Record<Exclude<PolygonType, 'freehand' | 'point'>, PolygonStyle> = {
   simple: {
     strokeColor: '#1e40af',    // Enhanced blue (WCAG AA)
     fillColor: '#3b82f6',
@@ -137,10 +137,16 @@ const FALLBACK_POLYGON_STYLES: Record<PolygonType, PolygonStyle> = {
   }
 };
 
+const FALLBACK_POLYGON_STYLES: Record<PolygonType, PolygonStyle> = {
+  ...BASE_FALLBACK_POLYGON_STYLES,
+  freehand: BASE_FALLBACK_POLYGON_STYLES.simple,
+  point: BASE_FALLBACK_POLYGON_STYLES.annotation
+};
+
 /**
  * 🌙 Dark theme polygon styles
  */
-const DARK_THEME_STYLES: Record<PolygonType, PolygonStyle> = {
+const BASE_DARK_THEME_STYLES: Record<Exclude<PolygonType, 'freehand' | 'point'>, PolygonStyle> = {
   simple: {
     strokeColor: '#60a5fa',
     fillColor: '#3b82f6',
@@ -197,10 +203,16 @@ const DARK_THEME_STYLES: Record<PolygonType, PolygonStyle> = {
   }
 };
 
+const DARK_THEME_STYLES: Record<PolygonType, PolygonStyle> = {
+  ...BASE_DARK_THEME_STYLES,
+  freehand: BASE_DARK_THEME_STYLES.simple,
+  point: BASE_DARK_THEME_STYLES.annotation
+};
+
 /**
  * ♿ High contrast theme (WCAG AAA compliant)
  */
-const HIGH_CONTRAST_STYLES: Record<PolygonType, PolygonStyle> = {
+const BASE_HIGH_CONTRAST_STYLES: Record<Exclude<PolygonType, 'freehand' | 'point'>, PolygonStyle> = {
   simple: {
     strokeColor: '#000000',
     fillColor: '#0066cc',
@@ -255,6 +267,12 @@ const HIGH_CONTRAST_STYLES: Record<PolygonType, PolygonStyle> = {
     pointRadius: 6,
     pointColor: '#6600cc'
   }
+};
+
+const HIGH_CONTRAST_STYLES: Record<PolygonType, PolygonStyle> = {
+  ...BASE_HIGH_CONTRAST_STYLES,
+  freehand: BASE_HIGH_CONTRAST_STYLES.simple,
+  point: BASE_HIGH_CONTRAST_STYLES.annotation
 };
 
 // ============================================================================

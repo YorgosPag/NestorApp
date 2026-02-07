@@ -325,6 +325,10 @@ export class AIPipelineWorker {
     error?: string;
     failedStep?: string;
   }> {
+    // Ensure all UC modules are registered (lazy, idempotent)
+    const { registerAllPipelineModules } = await import('@/services/ai-pipeline/modules/register-modules');
+    registerAllPipelineModules();
+
     const registry = getModuleRegistry();
     const auditService = getPipelineAuditService();
     const aiProvider = createAIAnalysisProvider();

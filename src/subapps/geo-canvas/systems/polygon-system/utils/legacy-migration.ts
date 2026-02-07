@@ -77,7 +77,9 @@ export function createPolygonFromLegacy(legacyData: LegacyPolygonData): Universa
     style: {
       fillColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.3),
       strokeColor: GEO_COLORS.POLYGON.COMPLETED,
-      strokeWidth: 3
+      strokeWidth: 3,
+      fillOpacity: 0.3,
+      strokeOpacity: 1
     }
   };
 }

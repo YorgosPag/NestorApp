@@ -158,6 +158,8 @@
     "title": "Operator Inbox",
     "description": "Review and approve AI pipeline proposals before execution.",
     "queueTitle": "Proposal Queue",
+    "queueDescription": "Review proposals by status, intent and confidence.",
+    "pending": "Pending",
     "refresh": "Refresh",
     "approve": "Approve",
     "reject": "Reject",
@@ -186,9 +188,16 @@
       "reason": "Reason"
     },
     "stats": {
+      "total": "Total",
       "proposed": "Pending Review",
       "approved": "Approved",
       "rejected": "Rejected"
+    },
+    "filters": {
+      "title": "Filters"
+    },
+    "accessibility": {
+      "toggleFilters": "Toggle filters"
     }
   }
 }

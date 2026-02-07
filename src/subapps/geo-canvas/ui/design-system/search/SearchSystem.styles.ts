@@ -28,41 +28,43 @@ import {
 // 🎯 ENTERPRISE TYPE DEFINITIONS
 // ============================================================================
 
+type StyleObject = CSSProperties & Record<string, CSSProperties | string | number>;
+
 interface SearchInputStylesType {
-  readonly container: CSSProperties;
-  readonly input: CSSProperties;
-  readonly suggestionsContainer: CSSProperties;
-  readonly suggestion: CSSProperties;
-  readonly noSuggestions: CSSProperties;
-  readonly icon: CSSProperties;
+  readonly container: StyleObject;
+  readonly input: StyleObject;
+  readonly suggestionsContainer: StyleObject;
+  readonly suggestion: StyleObject;
+  readonly noSuggestions: StyleObject;
+  readonly icon: StyleObject;
 }
 
 interface SearchFilterStylesType {
-  readonly container: CSSProperties;
-  readonly label: CSSProperties;
-  readonly input: CSSProperties;
-  readonly select: CSSProperties;
-  readonly checkbox: CSSProperties;
-  readonly rangeContainer: CSSProperties;
-  readonly rangeInput: CSSProperties;
-  readonly rangeLabel: CSSProperties;
-  readonly multiselectLabel: CSSProperties;
-  readonly header: CSSProperties;
-  readonly headerTitle: CSSProperties;
-  readonly clearButton: CSSProperties;
-  readonly filtersGrid: CSSProperties;
+  readonly container: StyleObject;
+  readonly label: StyleObject;
+  readonly input: StyleObject;
+  readonly select: StyleObject;
+  readonly checkbox: StyleObject;
+  readonly rangeContainer: StyleObject;
+  readonly rangeInput: StyleObject;
+  readonly rangeLabel: StyleObject;
+  readonly multiselectLabel: StyleObject;
+  readonly header: StyleObject;
+  readonly headerTitle: StyleObject;
+  readonly clearButton: StyleObject;
+  readonly filtersGrid: StyleObject;
 }
 
 interface SearchResultsStylesType {
-  readonly container: CSSProperties;
-  readonly item: CSSProperties;
-  readonly itemHover: CSSProperties;
-  readonly itemTitle: CSSProperties;
-  readonly itemDescription: CSSProperties;
-  readonly itemMeta: CSSProperties;
-  readonly itemCategory: CSSProperties;
-  readonly itemTags: CSSProperties;
-  readonly tag: CSSProperties;
+  readonly container: StyleObject;
+  readonly item: StyleObject;
+  readonly itemHover: StyleObject;
+  readonly itemTitle: StyleObject;
+  readonly itemDescription: StyleObject;
+  readonly itemMeta: StyleObject;
+  readonly itemCategory: StyleObject;
+  readonly itemTags: StyleObject;
+  readonly tag: StyleObject;
 }
 
 interface SearchSystemStylesType {
@@ -70,16 +72,16 @@ interface SearchSystemStylesType {
   readonly filters: SearchFilterStylesType;
   readonly results: SearchResultsStylesType;
   readonly layout: {
-    readonly main: CSSProperties;
-    readonly filtersSection: CSSProperties;
-    readonly resultsSection: CSSProperties;
-    readonly loadingState: CSSProperties;
-    readonly emptyState: CSSProperties;
-    readonly activeFiltersContainer: CSSProperties;
-    readonly activeFilterBadge: CSSProperties;
-    readonly activeFilterCloseButton: CSSProperties;
-    readonly resultCount: CSSProperties;
-    readonly searchInputSection: CSSProperties;
+    readonly main: StyleObject;
+    readonly filtersSection: StyleObject;
+    readonly resultsSection: StyleObject;
+    readonly loadingState: StyleObject;
+    readonly emptyState: StyleObject;
+    readonly activeFiltersContainer: StyleObject;
+    readonly activeFilterBadge: StyleObject;
+    readonly activeFilterCloseButton: StyleObject;
+    readonly resultCount: StyleObject;
+    readonly searchInputSection: StyleObject;
   };
 }
 
@@ -400,8 +402,8 @@ const searchLayoutStyles = {
   // 🎯 NEW: Active filter badge styling
   activeFilterBadge: {
     padding: `${spacing.xs} ${spacing.sm}`,
-    backgroundColor: colors.primary[100],
-    color: colors.primary[700],
+    backgroundColor: colors.blue["300"],
+    color: colors.blue["600"],
     fontSize: typography.fontSize.xs,
     borderRadius: borderRadius.sm,
     display: 'flex' as const,
@@ -413,7 +415,7 @@ const searchLayoutStyles = {
   activeFilterCloseButton: {
     background: 'none',
     border: 'none',
-    color: colors.primary[700],
+    color: colors.blue["600"],
     cursor: 'pointer' as const,
     padding: 0,
     fontSize: typography.fontSize.xs,
@@ -470,7 +472,7 @@ export const searchSystemStyles: SearchSystemStylesType = {
  * 🎯 FILTER STATE UTILITY
  * Generates dynamic styling for filter states (active/inactive)
  */
-export const getFilterStateStyle = (isActive: boolean): CSSProperties => ({
+export const getFilterStateStyle = (isActive: boolean): StyleObject => ({
   backgroundColor: isActive ? colors.primary[500] : 'transparent',
   color: isActive ? colors.text.inverse : colors.text.primary,
   border: `1px solid ${isActive ? colors.primary[500] : colors.border.primary}`
@@ -493,7 +495,7 @@ export const getSearchResultHoverHandlers = () => ({
  * 🎯 SUGGESTION HIGHLIGHT UTILITY
  * Generates highlighting για search suggestions
  */
-export const getSuggestionHighlightStyle = (isHighlighted: boolean): CSSProperties => ({
+export const getSuggestionHighlightStyle = (isHighlighted: boolean): StyleObject => ({
   backgroundColor: isHighlighted ? colors.primary[500] : 'transparent',
   color: isHighlighted ? colors.text.inverse : colors.text.primary
 });
@@ -502,7 +504,7 @@ export const getSuggestionHighlightStyle = (isHighlighted: boolean): CSSProperti
  * 🎯 DYNAMIC SUGGESTION STYLING UTILITY
  * Generates dynamic background for suggestion items
  */
-export const getDynamicSuggestionStyle = (isSelected: boolean): CSSProperties => ({
+export const getDynamicSuggestionStyle = (isSelected: boolean): StyleObject => ({
   ...searchSystemStyles.searchInput.suggestion,
   backgroundColor: isSelected ? colors.background.secondary : 'transparent'
 });
@@ -511,7 +513,7 @@ export const getDynamicSuggestionStyle = (isSelected: boolean): CSSProperties =>
  * 🎯 DYNAMIC INPUT STYLING UTILITY
  * Generates dynamic input styling με focus states
  */
-export const getDynamicInputStyle = (focused: boolean): CSSProperties => ({
+export const getDynamicInputStyle = (focused: boolean): StyleObject => ({
   ...searchSystemStyles.searchInput.input,
   borderColor: focused ? colors.primary[500] : colors.border.primary,
   boxShadow: focused ? `0 0 0 2px ${colors.primary[500]}20` : 'none'
@@ -521,7 +523,7 @@ export const getDynamicInputStyle = (focused: boolean): CSSProperties => ({
  * 🎯 DYNAMIC RESULT ITEM STYLING UTILITY
  * Generates dynamic result item styling με cursor states
  */
-export const getDynamicResultItemStyle = (hasClickHandler: boolean): CSSProperties => ({
+export const getDynamicResultItemStyle = (hasClickHandler: boolean): StyleObject => ({
   ...searchSystemStyles.results.item,
   cursor: hasClickHandler ? 'pointer' : 'default'
 });

@@ -16,7 +16,8 @@ import type {
   PolygonSystemState,
   PolygonSystemActions,
   PolygonSystemContext as PolygonSystemContextType,
-  RoleBasedConfig
+  RoleBasedConfig,
+  MapRef
 } from '../types/polygon-system.types';
 import { getRoleConfig } from '../utils/polygon-config';
 
@@ -42,15 +43,7 @@ interface DrawingConfig {
 }
 
 /** Completed polygon point */
-interface CompletedPolygonPoint {
-  lng: number;
-  lat: number;
-}
-
-/** Map reference interface */
-interface MapRef {
-  getMap?: () => unknown;
-}
+type CompletedPolygonPoint = [number, number];
 
 type PolygonSystemAction =
   | { type: 'SET_ROLE'; payload: UserRole }
@@ -337,12 +330,8 @@ export function PolygonSystemProvider({
 
   // Get current drawing state for live preview
   const getCurrentDrawing = useCallback(() => {
-    if (corePolygonSystem.manager) {
-      const drawingState = corePolygonSystem.manager.getDrawer(corePolygonSystem.manager.currentMode).getState();
-      return drawingState.currentPolygon;
-    }
-    return null;
-  }, [corePolygonSystem]);
+    return corePolygonSystem.manager?.getCurrentDrawing() || null;
+  }, [corePolygonSystem.manager]);
 
   const showNotification = useCallback((
     message: string,
@@ -383,7 +372,7 @@ export function PolygonSystemProvider({
     showNotification
   };
 
-  const contextValue: PolygonSystemContext = {
+  const contextValue: PolygonSystemContextType = {
     state,
     actions,
     config

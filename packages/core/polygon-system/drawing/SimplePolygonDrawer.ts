@@ -40,6 +40,16 @@ export class SimplePolygonDrawer {
   }
 
   /**
+   * Configure snapping behavior
+   */
+  setSnapping(enabled: boolean, tolerance?: number): void {
+    this.state.snapToGrid = enabled;
+    if (typeof tolerance === 'number') {
+      this.state.snapTolerance = tolerance;
+    }
+  }
+
+  /**
    * Set canvas για rendering
    */
   setCanvas(canvas: HTMLCanvasElement): void {

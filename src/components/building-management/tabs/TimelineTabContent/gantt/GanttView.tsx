@@ -40,7 +40,12 @@ import { getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTypography } from '@/hooks/useTypography';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { typography as designTypography } from '@/styles/design-tokens';
+import { Card, CardContent } from '@/components/ui/card';
+import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { Building } from '../../../BuildingsPageContent';
@@ -58,11 +63,11 @@ interface GanttViewProps {
 // ─── Gantt Bar Color Resolver ─────────────────────────────────────────────
 
 const STATUS_TO_CSS_COLOR: Record<GanttTaskStatus, string> = {
-  completed: 'hsl(var(--bg-success))',
-  inProgress: 'hsl(var(--bg-info))',
+  completed: 'hsl(var(--status-success))',
+  inProgress: 'hsl(var(--status-info))',
   notStarted: 'hsl(var(--muted-foreground))',
-  delayed: 'hsl(var(--destructive))',
-  blocked: 'hsl(var(--bg-warning))',
+  delayed: 'hsl(var(--status-error))',
+  blocked: 'hsl(var(--status-warning))',
 };
 
 // ─── View Mode Options ────────────────────────────────────────────────────
@@ -81,6 +86,8 @@ export function GanttView({ building }: GanttViewProps) {
   const { t } = useTranslation('building');
   const spacingTokens = useSpacingTokens();
   const iconSizes = useIconSizes();
+  const typography = useTypography();
+  const colors = useSemanticColors();
   const { resolvedTheme } = useTheme();
 
   const isDarkMode = resolvedTheme === 'dark';
@@ -122,31 +129,56 @@ export function GanttView({ building }: GanttViewProps) {
     };
   }, []);
 
-  // Summary cards data
-  const summaryCards = useMemo(() => [
+  // Timeline bounds — add padding so users can drag/extend tasks freely
+  const timelineBounds = useMemo(() => {
+    const now = new Date();
+    let earliest = now;
+    let latest = now;
+
+    for (const group of taskGroups) {
+      for (const task of group.tasks) {
+        const start = task.startDate instanceof Date ? task.startDate : new Date(task.startDate);
+        const end = task.endDate instanceof Date ? task.endDate : new Date(task.endDate);
+        if (start < earliest) earliest = start;
+        if (end > latest) latest = end;
+      }
+    }
+
+    // Pad: 3 months before earliest, 12 months after latest
+    const startDate = new Date(earliest);
+    startDate.setMonth(startDate.getMonth() - 3);
+
+    const endDate = new Date(latest);
+    endDate.setMonth(endDate.getMonth() + 12);
+
+    return { startDate, endDate };
+  }, [taskGroups]);
+
+  // Summary stats — 🏢 ENTERPRISE: Centralized UnifiedDashboard (Google-level SSoT)
+  const summaryStats = useMemo((): DashboardStat[] => [
     {
-      key: 'total',
-      label: t('tabs.timeline.gantt.summary.totalPhases'),
+      title: t('tabs.timeline.gantt.summary.totalPhases'),
       value: stats.totalPhases,
       icon: BarChart3,
+      color: 'blue',
     },
     {
-      key: 'completed',
-      label: t('tabs.timeline.gantt.summary.completedPhases'),
+      title: t('tabs.timeline.gantt.summary.completedPhases'),
       value: stats.completedPhases,
       icon: CheckCircle2,
+      color: 'green',
     },
     {
-      key: 'delayed',
-      label: t('tabs.timeline.gantt.summary.delayedPhases'),
+      title: t('tabs.timeline.gantt.summary.delayedPhases'),
       value: stats.delayedPhases,
       icon: AlertTriangle,
+      color: 'red',
     },
     {
-      key: 'progress',
-      label: t('tabs.timeline.gantt.summary.overallProgress'),
+      title: t('tabs.timeline.gantt.summary.overallProgress'),
       value: `${stats.overallProgress}%`,
       icon: Clock,
+      color: 'orange',
     },
   ], [stats, t]);
 
@@ -154,18 +186,18 @@ export function GanttView({ building }: GanttViewProps) {
 
   if (loading) {
     return (
-      <section className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <section className={cn('flex items-center justify-center', spacingTokens.padding.y['2xl'])}>
+        <Loader2 className={cn(iconSizes.xl, 'animate-spin', colors.text.muted)} />
       </section>
     );
   }
 
   return (
-    <section className={cn('flex flex-col', spacingTokens.gap.lg)} aria-label={t('tabs.timeline.gantt.title')}>
+    <section className={cn('flex flex-col', spacingTokens.gap.sm)} aria-label={t('tabs.timeline.gantt.title')}>
       {/* Toolbar: New Phase / New Task */}
-      <nav className="flex items-center gap-2" aria-label="Gantt actions">
+      <nav className={cn('flex items-center', spacingTokens.gap.sm)} aria-label="Gantt actions">
         <Button variant="default" size="sm" onClick={openCreatePhaseDialog}>
-          <FolderPlus className={cn(iconSizes.xs, 'mr-1.5')} />
+          <FolderPlus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
           {t('tabs.timeline.gantt.actions.newPhase')}
         </Button>
         {phases.length > 0 && (
@@ -174,43 +206,30 @@ export function GanttView({ building }: GanttViewProps) {
             size="sm"
             onClick={() => openCreateTaskDialog(phases[0].id)}
           >
-            <Plus className={cn(iconSizes.xs, 'mr-1.5')} />
+            <Plus className={cn(iconSizes.xs, spacingTokens.margin.right.xs)} />
             {t('tabs.timeline.gantt.actions.newTask')}
           </Button>
         )}
       </nav>
 
-      {/* Summary Cards */}
+      {/* Summary Cards — 🏢 ENTERPRISE: Centralized UnifiedDashboard */}
       {!isEmpty && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {summaryCards.map((card) => {
-            const IconComponent = card.icon;
-            return (
-              <Card key={card.key}>
-                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {card.label}
-                  </CardTitle>
-                  <IconComponent className={cn(iconSizes.sm, 'text-muted-foreground')} />
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold">{card.value}</p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <UnifiedDashboard
+          stats={summaryStats}
+          columns={4}
+          className=""
+        />
       )}
 
       {/* Empty State */}
       {isEmpty && (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium text-muted-foreground">
+          <CardContent className={cn('flex flex-col items-center justify-center text-center', spacingTokens.padding.y['2xl'])}>
+            <BarChart3 className={cn(iconSizes.xl2, colors.text.muted, spacingTokens.margin.bottom.md)} />
+            <p className={cn(typography.heading.md, colors.text.muted)}>
               {t('tabs.timeline.gantt.empty')}
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className={cn(typography.body.sm, colors.text.muted, spacingTokens.margin.top.xs)}>
               {t('tabs.timeline.gantt.emptyHint')}
             </p>
           </CardContent>
@@ -219,10 +238,12 @@ export function GanttView({ building }: GanttViewProps) {
 
       {/* Gantt Chart */}
       {!isEmpty && (
-        <Card>
-          <CardContent className="p-0 overflow-hidden">
+        <Card className="border-0 shadow-none">
+          <CardContent className={cn(spacingTokens.padding.none, 'overflow-hidden')}>
             <GanttChart
               tasks={taskGroups}
+              startDate={timelineBounds.startDate}
+              endDate={timelineBounds.endDate}
               title={t('tabs.timeline.gantt.title')}
               headerLabel={building.name ?? t('tabs.timeline.gantt.title')}
               viewMode={viewMode}
@@ -240,7 +261,7 @@ export function GanttView({ building }: GanttViewProps) {
               onTaskClick={handleTaskClick}
               onGroupClick={handleGroupClick}
               locale="el-GR"
-              fontSize="14px"
+              fontSize={designTypography.fontSize.sm}
               getTaskColor={getTaskBarColor}
             />
           </CardContent>
@@ -250,7 +271,7 @@ export function GanttView({ building }: GanttViewProps) {
       {/* Phase Status Legend */}
       {!isEmpty && (
         <Card>
-          <CardContent className={cn('flex flex-wrap items-center', spacingTokens.gap.sm, spacingTokens.padding.md)}>
+          <CardContent className={cn('flex flex-wrap items-center', spacingTokens.gap.sm, spacingTokens.padding.sm)}>
             <Badge variant="default" className={getStatusColor('active', 'bg')}>
               {t('tabs.timeline.gantt.status.completed')}
             </Badge>
@@ -278,6 +299,7 @@ export function GanttView({ building }: GanttViewProps) {
         phase={dialogState.phase}
         task={dialogState.task}
         phaseId={dialogState.phaseId}
+        phases={phases}
         onSavePhase={savePhase}
         onUpdatePhase={updatePhase}
         onDeletePhase={removePhase}

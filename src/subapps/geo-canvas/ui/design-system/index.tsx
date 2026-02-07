@@ -12,8 +12,11 @@ import React from 'react';
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
 
+/** Color scale type for design tokens */
+export type ColorScale = Record<string | number, string>;
+
 /** Color value type for design tokens */
-export type ColorValue = string | Record<string | number, string>;
+export type ColorValue = string | ColorScale | Record<string, ColorScale>;
 
 /** Component variant styles type */
 export type ComponentVariantStyles = Record<string, unknown>;
@@ -42,7 +45,6 @@ export {
 } from '@/styles/design-tokens';
 
 // Local placeholder types since centralized tokens don't export these
-export type ColorScale = Record<string | number, string>;
 export type SemanticColor = string;
 export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low' | 'info';
 export type FontSize = string;
@@ -170,7 +172,8 @@ export {
 // useBorderTokens system to eliminate duplicates and ensure consistency
 // across the entire application.
 
-import { colors, typography, spacing, shadows, borderRadius } from '@/styles/design-tokens';
+import { colors, typography, spacing, shadows, borderRadius, breakpoints } from '@/styles/design-tokens';
+import designTokens from '@/styles/design-tokens/generated/tokens';
 import { ThemeProvider } from './theme/ThemeProvider';
 
 /**
@@ -225,13 +228,13 @@ export class GeoAlertDesignSystem {
     const root = document.documentElement;
 
     // Base CSS variables που χρειάζονται πάντα
-    const baseCSSVariables = {
-      '--font-family-sans': this.tokens.typography.fontFamily.sans.join(', '),
-      '--font-family-mono': this.tokens.typography.fontFamily.mono.join(', '),
-      '--container-max-width': '1280px',
-      '--header-height': '64px',
-      '--sidebar-width': '256px',
-      '--sidebar-collapsed-width': '64px'
+    const baseCSSVariables: Record<string, string> = {
+      '--font-family-sans': designTokens.typography_fontFamily_sans,
+      '--font-family-mono': designTokens.typography_fontFamily_mono,
+      '--container-max-width': breakpoints.xl,
+      '--header-height': spacing['3xl'],
+      '--sidebar-width': `calc(${spacing['3xl']} + ${spacing['3xl']} + ${spacing['3xl']} + ${spacing['3xl']})`,
+      '--sidebar-collapsed-width': spacing['3xl']
     };
 
     Object.entries(baseCSSVariables).forEach(([property, value]) => {
@@ -248,17 +251,18 @@ export class GeoAlertDesignSystem {
    */
   public getColor(color: string, shade?: number): string {
     const colorPath = color.split('.');
-    let value: ColorValue = this.tokens.colors as ColorValue;
+    let value: unknown = this.tokens.colors;
 
     for (const path of colorPath) {
       if (typeof value === 'object' && value !== null) {
-        value = (value as Record<string, ColorValue>)[path];
+        value = (value as Record<string, unknown>)[path];
       }
       if (!value) return color; // Return original if not found
     }
 
     if (shade && typeof value === 'object' && value !== null) {
-      return (value as Record<number, string>)[shade] || color;
+      const shadedValue = (value as Record<string, unknown>)[String(shade)];
+      return typeof shadedValue === 'string' ? shadedValue : color;
     }
 
     return typeof value === 'string' ? value : color;
@@ -267,8 +271,45 @@ export class GeoAlertDesignSystem {
   /**
    * Get spacing value
    */
-  public getSpacing(size: number): string {
-    return this.tokens.spacing[size] || `${size * 4}px`;
+  public getSpacing(size: number | keyof typeof this.tokens.spacing): string {
+    if (typeof size === 'number') {
+      const numericKey = String(size);
+      const tokenValue = (this.tokens.spacing as Record<string, unknown>)[numericKey];
+      return typeof tokenValue === 'string' ? tokenValue : `${size * 4}px`;
+    }
+
+    const value = this.tokens.spacing[size];
+    return typeof value === 'string' ? value : this.tokens.spacing.md;
+  }
+
+  private collectSpacingValues(): string[] {
+    const values: string[] = [];
+
+    Object.values(this.tokens.spacing).forEach((value) => {
+      if (typeof value === 'string') {
+        values.push(value);
+        return;
+      }
+
+      if (value && typeof value === 'object') {
+        Object.values(value).forEach((nestedValue) => {
+          if (typeof nestedValue === 'string') {
+            values.push(nestedValue);
+            return;
+          }
+
+          if (nestedValue && typeof nestedValue === 'object') {
+            Object.values(nestedValue).forEach((deepValue) => {
+              if (typeof deepValue === 'string') {
+                values.push(deepValue);
+              }
+            });
+          }
+        });
+      }
+    });
+
+    return values;
   }
 
   /**
@@ -291,7 +332,27 @@ export class GeoAlertDesignSystem {
 
     // Spacing
     Object.entries(this.tokens.spacing).forEach(([size, value]) => {
-      variables[`--spacing-${size}`] = value;
+      if (typeof value === 'string') {
+        variables[`--spacing-${size}`] = value;
+        return;
+      }
+
+      if (value && typeof value === 'object') {
+        Object.entries(value).forEach(([subKey, subValue]) => {
+          if (typeof subValue === 'string') {
+            variables[`--spacing-${size}-${subKey}`] = subValue;
+            return;
+          }
+
+          if (subValue && typeof subValue === 'object') {
+            Object.entries(subValue).forEach(([deepKey, deepValue]) => {
+              if (typeof deepValue === 'string') {
+                variables[`--spacing-${size}-${subKey}-${deepKey}`] = deepValue;
+              }
+            });
+          }
+        });
+      }
     });
 
     // Shadows
@@ -351,7 +412,7 @@ export class GeoAlertDesignSystem {
    * Validate spacing consistency
    */
   public validateSpacing(value: string): boolean {
-    return Object.values(this.tokens.spacing).includes(value);
+    return this.collectSpacingValues().includes(value);
   }
 
   // ========================================================================

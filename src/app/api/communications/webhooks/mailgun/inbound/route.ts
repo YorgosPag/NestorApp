@@ -316,6 +316,28 @@ async function handleMailgunInbound(request: NextRequest): Promise<Response> {
             processed: result.processed,
             failed: result.failed,
           });
+
+          // 🤖 ADR-080: After email processing, run AI pipeline worker
+          // Email processing feeds items to ai_pipeline_queue via EmailChannelAdapter.
+          // Process them immediately so they reach PROPOSED state for Operator Inbox.
+          if (result.processed > 0) {
+            try {
+              const { processAIPipelineBatch } = await import(
+                '@/server/ai/workers/ai-pipeline-worker'
+              );
+              const pipelineResult = await processAIPipelineBatch();
+              logger.info('after(): AI pipeline batch completed', {
+                processed: pipelineResult.processed,
+                failed: pipelineResult.failed,
+                recovered: pipelineResult.recovered,
+              });
+            } catch (pipelineError) {
+              // Non-blocking: daily cron will retry pipeline items
+              logger.warn('after(): AI pipeline processing failed (cron will retry)', {
+                error: pipelineError instanceof Error ? pipelineError.message : String(pipelineError),
+              });
+            }
+          }
         } catch (afterError) {
           // Non-fatal: daily cron will retry failed items
           logger.warn('after(): Immediate processing failed (cron will retry)', {

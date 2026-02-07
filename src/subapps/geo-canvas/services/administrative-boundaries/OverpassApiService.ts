@@ -21,6 +21,9 @@ type GeoJSONCoordinates =
   | GeoJSONPosition[][]
   | GeoJSONPosition[][][];
 
+type FeaturePropertyValue = string | number | boolean | null | Record<string, string>;
+type FeatureProperties = Record<string, FeaturePropertyValue>;
+
 interface Geometry {
   type: 'Point' | 'LineString' | 'Polygon' | 'MultiPoint' | 'MultiLineString' | 'MultiPolygon' | 'GeometryCollection';
   // 🏢 ENTERPRISE: Proper GeoJSON coordinates type
@@ -30,7 +33,7 @@ interface Geometry {
 interface Feature {
   type: 'Feature';
   // 🏢 ENTERPRISE: Proper properties type
-  properties: Record<string, string | number | boolean | null> | null;
+  properties: FeatureProperties | null;
   geometry: Geometry | null;
 }
 
@@ -630,7 +633,7 @@ export class OverpassApiService {
       properties: {
         id: relation.id.toString(),
         name: relation.tags?.name || relation.tags?.['name:el'] || name,
-        nameEn: relation.tags?.['name:en'],
+        nameEn: relation.tags?.['name:en'] ?? null,
         adminLevel: parseInt(relation.tags?.admin_level || '0'),
         tags: relation.tags || {},
         source: 'OpenStreetMap',
@@ -655,7 +658,9 @@ export class OverpassApiService {
 
     for (const element of response.elements) {
       if (element.geometry && element.geometry.length > 0) {
-        const coordinates = element.geometry.map(point => [point.lon, point.lat]);
+        const coordinates: GeoJSONPosition[] = element.geometry.map(
+          (point) => [point.lon, point.lat] as GeoJSONPosition
+        );
 
         // Close polygon
         if (coordinates.length > 0) {
@@ -671,7 +676,7 @@ export class OverpassApiService {
           properties: {
             id: element.id.toString(),
             name: element.tags?.name || element.tags?.['name:el'] || 'Unknown',
-            nameEn: element.tags?.['name:en'],
+            nameEn: element.tags?.['name:en'] ?? null,
             adminLevel: parseInt(element.tags?.admin_level || '0'),
             tags: element.tags || {},
             source: 'OpenStreetMap',
@@ -782,7 +787,7 @@ export class OverpassApiService {
             east: Math.max(...lngs),
             west: Math.min(...lngs)
           };
-        } else if (element.type === 'node' && 'lat' in element && 'lon' in element) {
+        } else if (element.type === 'node' && typeof element.lat === 'number' && typeof element.lon === 'number') {
           // For point postal code locations
           bounds = {
             north: element.lat + 0.001,

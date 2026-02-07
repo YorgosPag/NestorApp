@@ -198,6 +198,10 @@ async function resumePipelineExecution(
     );
   }
 
+  // Ensure all UC modules are registered (lazy, idempotent)
+  const { registerAllPipelineModules } = await import('@/services/ai-pipeline/modules/register-modules');
+  registerAllPipelineModules();
+
   // Create fresh orchestrator (stateless, serverless-safe)
   const registry = getModuleRegistry();
   const auditService = getPipelineAuditService();

@@ -143,8 +143,9 @@ processQueueItem → EmailChannelAdapter.feedToPipeline() → ai_pipeline_queue
 - [x] Build Pipeline Worker (`src/server/ai/workers/ai-pipeline-worker.ts`)
 - [x] Build Pipeline Cron endpoint (`src/app/api/cron/ai-pipeline/route.ts`)
 - [x] Implement UC-009 (Operator Inbox) for human approval UI
-- [ ] Deploy Firestore indexes for pipelineState queries (operator inbox)
-- [ ] Implement first UC module (UC-002 Invoices — Phase 2)
+- [x] Deploy Firestore indexes for pipelineState queries (operator inbox)
+- [x] Implement first UC module (UC-001 Appointment Request — MVP)
+- [ ] Implement UC-002 Invoices module (Phase 2)
 - [ ] Add Telegram channel adapter
 
 ---
@@ -180,10 +181,58 @@ Pipeline stops at PROPOSED → Item in ai_pipeline_queue (pipelineState: 'propos
 
 ---
 
-## 9. Changelog
+## 9. UC-001 Appointment Module (MVP)
+
+**Status**: IMPLEMENTED (2026-02-07)
+
+First UC module — proves end-to-end pipeline flow with real data.
+
+### Files
+| File | Purpose |
+|------|---------|
+| `src/types/appointment.ts` | AppointmentDocument type + AppointmentStatus |
+| `src/services/ai-pipeline/modules/uc-001-appointment/appointment-module.ts` | IUCModule implementation (lookup, propose, execute, acknowledge) |
+| `src/services/ai-pipeline/modules/uc-001-appointment/index.ts` | Barrel export |
+| `src/services/ai-pipeline/modules/register-modules.ts` | Bootstrap: registers all UC modules (idempotent) |
+
+### Modified
+| File | Change |
+|------|--------|
+| `src/server/ai/workers/ai-pipeline-worker.ts` | +`registerAllPipelineModules()` before pipeline execution |
+| `src/services/ai-pipeline/operator-inbox-service.ts` | +`registerAllPipelineModules()` before resume execution |
+| `src/services/ai-pipeline/index.ts` | +exports for AppointmentModule and registerAllPipelineModules |
+
+### Data Flow
+```
+Email "Θέλω ραντεβού" → AI detects appointment_request intent
+→ IntentRouter routes to UC-001
+→ LOOKUP: Find contact by email, extract date/time from entities
+→ PROPOSE: "Αίτημα ραντεβού από X για Y" (autoApprovable: false)
+→ PROPOSED state → Operator Inbox review
+→ Operator approves → EXECUTE: Create appointment in Firestore
+→ ACKNOWLEDGE: Log (Phase 2: email confirmation)
+→ AUDITED
+```
+
+### MVP Scope
+- Contact lookup by email (server-side Admin SDK)
+- Date/time extraction from AI entities
+- Appointment record in Firestore `appointments` collection
+- Always requires human approval (never auto-approve)
+
+### Phase 2+
+- Calendar availability / conflict detection (PRE-001)
+- Smart matching scenarios (alternatives)
+- Lead creation for unknown senders
+- Email confirmation in acknowledge step
+
+---
+
+## 10. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |------------|--------|
 | 2026-02-07 | Phase 1 — Core Infrastructure implemented (types, schemas, config, 5 services, email adapter, integration bridge) |
 | 2026-02-07 | Pipeline Worker + Cron endpoint implemented |
 | 2026-02-07 | UC-009 Operator Inbox MVP — backend (queue queries, approval service, resume logic) + frontend (page, client, review card) |
+| 2026-02-07 | UC-001 Appointment Module MVP — first UC module, module registration bootstrap, end-to-end pipeline flow |

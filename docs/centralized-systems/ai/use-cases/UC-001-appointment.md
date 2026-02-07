@@ -2,7 +2,22 @@
 
 > **Parent ADR**: [ADR-169 - Modular AI Architecture](../../reference/adrs/ADR-169-modular-ai-architecture.md)
 > **Pipeline**: [pipeline.md](../pipeline.md)
+> **Implementation**: [ADR-080](../../reference/adrs/ADR-080-ai-pipeline-implementation.md) Section 9
 > **Prerequisites**: [PRE-001](../prerequisites.md#pre-001-enterprise-calendar-system), [PRE-002](../prerequisites.md#pre-002-leads-system)
+
+## Implementation Status
+
+| Feature | Status |
+|---------|--------|
+| AppointmentModule (IUCModule) | **IMPLEMENTED** (2026-02-07) |
+| Module registration bootstrap | **IMPLEMENTED** (2026-02-07) |
+| Contact lookup by email | **IMPLEMENTED** (MVP: scan, Phase 2: indexed) |
+| Date/time extraction from AI entities | **IMPLEMENTED** (2026-02-07) |
+| Appointment creation in Firestore | **IMPLEMENTED** (2026-02-07) |
+| Calendar availability / conflict detection | Phase 2 (PRE-001) |
+| Smart matching scenarios A/B/C | Phase 2 |
+| Lead creation for unknown senders | Phase 2 (PRE-002) |
+| Email confirmation (acknowledge step) | Phase 2 |
 
 ---
 

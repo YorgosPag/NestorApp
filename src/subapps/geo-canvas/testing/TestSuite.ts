@@ -860,7 +860,11 @@ export class GeoAlertTestSuite {
 
   private testViewportSynchronization(viewport: ViewportConfig): boolean {
     // Mock viewport sync test
-    return viewport.zoom > 0 && viewport.center.lat && viewport.center.lng;
+    return (
+      viewport.zoom > 0 &&
+      Number.isFinite(viewport.center.lat) &&
+      Number.isFinite(viewport.center.lng)
+    );
   }
 
   private async simulateDatabaseConnection(config: DatabaseConnectionConfig): Promise<boolean> {
