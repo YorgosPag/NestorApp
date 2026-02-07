@@ -38,6 +38,7 @@ import {
   getPipelineAuditService,
 } from '@/services/ai-pipeline';
 import type { PipelineQueueItem } from '@/types/ai-pipeline';
+import { PipelineState } from '@/types/ai-pipeline';
 import type { PipelineQueueStats } from '@/services/ai-pipeline';
 import { PIPELINE_QUEUE_CONFIG, PIPELINE_TIMEOUT_CONFIG } from '@/config/ai-pipeline-config';
 import { createAIAnalysisProvider } from '@/services/ai-analysis/providers/ai-provider-factory';
@@ -335,11 +336,22 @@ export class AIPipelineWorker {
 
     const orchestrator = new PipelineOrchestrator(registry, auditService, aiProvider);
 
+    // 🏢 ENTERPRISE: Reset context state to RECEIVED for retried items
+    // Without this, retried items have context.state = 'failed' from previous run,
+    // and the state machine rejects FAILED → ACKED transition (only FAILED → RECEIVED is valid).
+    // This ensures proper state transitions during retry execution.
+    if (item.context.state === PipelineState.FAILED) {
+      item.context.state = PipelineState.RECEIVED;
+      item.context.errors = []; // Clear previous run errors for clean retry
+    }
+
     logger.info('Executing pipeline for item', {
       queueId: item.id,
       requestId: item.requestId,
       channel: item.channel,
       companyId: item.companyId,
+      contextState: item.context.state,
+      retryCount: item.retryCount,
     });
 
     const result = await orchestrator.execute(item.context);

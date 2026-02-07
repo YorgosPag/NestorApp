@@ -145,9 +145,60 @@ async function handleGET(request: NextRequest): Promise<Response> {
     return executeBatchProcessing(trigger);
   }
 
-  // Unauthenticated → health check only (liveness probe)
+  // Unauthenticated → health check + diagnostic (liveness probe)
   try {
     const health = await getAIPipelineQueueHealth();
+
+    // 🏢 DIAGNOSTIC: Show failed item errors for debugging
+    const diagnostic: Record<string, unknown> = {};
+    try {
+      const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
+      const { COLLECTIONS } = await import('@/config/firestore-collections');
+      const adminDb = getAdminFirestore();
+
+      const failedSnapshot = await adminDb
+        .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
+        .where('status', '==', 'failed')
+        .orderBy('createdAt', 'desc')
+        .limit(10)
+        .get();
+
+      diagnostic.failedItems = failedSnapshot.docs.map(doc => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          pipelineState: d.pipelineState,
+          retryCount: d.retryCount,
+          channel: d.channel,
+          lastError: d.lastError,
+          retryHistory: d.retryHistory,
+          intakeSubject: d.context?.intake?.normalized?.subject,
+          intakeSender: d.context?.intake?.normalized?.sender?.email,
+          errors: d.context?.errors,
+          createdAt: d.createdAt,
+        };
+      });
+
+      // Also show recent completed items for comparison
+      const completedSnapshot = await adminDb
+        .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
+        .where('status', '==', 'completed')
+        .orderBy('createdAt', 'desc')
+        .limit(5)
+        .get();
+
+      diagnostic.recentCompleted = completedSnapshot.docs.map(doc => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          pipelineState: d.pipelineState,
+          intakeSubject: d.context?.intake?.normalized?.subject,
+          completedAt: d.completedAt,
+        };
+      });
+    } catch (diagError) {
+      diagnostic.error = diagError instanceof Error ? diagError.message : 'Diagnostic error';
+    }
 
     return NextResponse.json({
       ok: true,
@@ -159,6 +210,7 @@ async function handleGET(request: NextRequest): Promise<Response> {
         warnings: health.warnings,
         stats: health.stats,
       },
+      diagnostic,
     });
 
   } catch (error) {
