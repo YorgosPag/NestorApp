@@ -68,7 +68,7 @@
 | **ADR-031** | Enterprise Command Pattern (Undo/Redo) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-031-enterprise-command-pattern-undo-redo.md) |
 | **ADR-032** | Drawing State Machine | ✅ COMPLETED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-032-drawing-state-machine.md) |
 | **ADR-034** | EMPTY_SPATIAL_BOUNDS Consolidation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-034-empty-spatial-bounds-centralization.md) |
-| **ADR-034** | Gantt Chart - Construction Phase Tracking | ✅ APPROVED - Architecture Design | 2026-02-07 | UI Components / Construction Management | [📄](./adrs/ADR-034-gantt-chart-construction-tracking.md) |
+| **ADR-034** | Gantt Chart - Construction Phase Tracking | ✅ IMPLEMENTED - Phase 1+2+3 Complete | 2026-02-07 | UI Components / Construction Management | [📄](./adrs/ADR-034-gantt-chart-construction-tracking.md) |
 | **ADR-034** | Validation Bounds Centralization | ✅ IMPLEMENTED | 2026-02-01 | Data & State | [📄](./adrs/ADR-034-validation-bounds-centralization.md) |
 | **ADR-035** | Tool Overlay Mode Metadata | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-035-tool-overlay-mode-metadata.md) |
 | **ADR-036** | Enterprise Structured Logging | ✅ APPROVED | 2026-01-01 | Performance | [📄](./adrs/ADR-036-enterprise-structured-logging.md) |

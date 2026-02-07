@@ -30,11 +30,25 @@ export {
   markPipelineItemFailed,
   recoverStalePipelineItems,
   getPipelineQueueStats,
+  getProposedPipelineItems,
+  updateApprovalDecision,
+  getProposedItemStats,
 } from './pipeline-queue-service';
 export type {
   EnqueuePipelineParams,
   PipelineQueueStats,
+  ProposedItemsQuery,
+  ProposedItemStats,
 } from './pipeline-queue-service';
+
+// Operator Inbox service (UC-009)
+export {
+  processOperatorDecision,
+} from './operator-inbox-service';
+export type {
+  OperatorApprovalParams,
+  OperatorApprovalResult,
+} from './operator-inbox-service';
 
 // Channel adapters
 export { EmailChannelAdapter } from './channel-adapters/email-channel-adapter';

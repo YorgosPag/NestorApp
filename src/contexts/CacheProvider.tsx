@@ -52,7 +52,7 @@ export function CacheProvider({
   defaultTTL?: number;
   maxSize?: number;
 }) {
-  const [cache, setCache] = useState<Map<string, CacheEntry>>(new Map());
+  const [cache, setCache] = useState<Map<string, CacheEntry<unknown>>>(new Map());
   const statsRef = useRef({ hits: 0, misses: 0 });
   
   // Cleanup expired entries
@@ -75,8 +75,8 @@ export function CacheProvider({
     return () => clearInterval(interval);
   }, [cleanup]);
 
-  const get = useCallback<CacheContextType['get']>((key: string) => {
-    const entry = cache.get(key);
+  const get = useCallback(<T,>(key: string): CacheEntry<T> | null => {
+    const entry = cache.get(key) as CacheEntry<T> | undefined;
     
     if (!entry) {
       statsRef.current.misses++;
@@ -107,7 +107,7 @@ export function CacheProvider({
     const ttl = config.ttl ?? defaultTTL;
     const now = Date.now();
     
-    const entry: CacheEntry = {
+    const entry: CacheEntry<T> = {
       data,
       timestamp: now,
       expiresAt: now + ttl,
@@ -224,7 +224,7 @@ export function useCachedData<T>(
 
     try {
       // Check cache first
-      const cached = cache.get(key);
+      const cached = cache.get<T>(key);
       if (cached && (!cached.stale || useStale)) {
         setData(cached.data);
         setIsStale(cached.stale || false);
@@ -244,7 +244,7 @@ export function useCachedData<T>(
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
       // If we have stale data, keep it
-      const cached = cache.get(key);
+      const cached = cache.get<T>(key);
       if (cached) {
         setData(cached.data);
         setIsStale(true);
@@ -262,7 +262,7 @@ export function useCachedData<T>(
   // Return stale data immediately, then fetch fresh
   useEffect(() => {
     if (enabled) {
-      const cached = cache.get(key);
+      const cached = cache.get<T>(key);
       if (cached) {
         setData(cached.data);
         setIsStale(cached.stale || false);
@@ -299,7 +299,7 @@ export function useOptimisticUpdate<T>() {
     const { rollbackOnError = true } = config;
     
     // Store original data for rollback
-    const originalEntry = cache.get(key);
+    const originalEntry = cache.get<T>(key);
     
     // Apply optimistic update
     cache.set(key, optimisticData);

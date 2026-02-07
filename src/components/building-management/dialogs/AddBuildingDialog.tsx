@@ -42,7 +42,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { SaveButton, CancelButton } from '@/components/ui/form/ActionButtons';
-import { Building, MapPin, Settings } from 'lucide-react';
+import { Building as BuildingIcon, MapPin, Settings } from 'lucide-react';
 // ENTERPRISE: Centralized dialog sizing tokens (ADR-031)
 import { cn } from '@/lib/utils';
 import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-tokens';
@@ -202,6 +202,7 @@ export function AddBuildingDialog({
   // 🏢 ENTERPRISE: Populate form when editing (ADR-087)
   useEffect(() => {
     if (open && editBuilding) {
+      const features = editBuilding.features || [];
       setFormData({
         name: editBuilding.name || '',
         projectId: editBuilding.projectId || '',
@@ -217,11 +218,12 @@ export function AddBuildingDialog({
         totalValue: editBuilding.totalValue || '',
         startDate: editBuilding.startDate || '',
         completionDate: editBuilding.completionDate || '',
-        hasParking: editBuilding.features?.includes('parking') || false,
-        hasElevator: editBuilding.features?.includes('elevator') || false,
-        hasGarden: editBuilding.features?.includes('garden') || false,
-        hasPool: editBuilding.features?.includes('pool') || false,
-        accessibility: editBuilding.features?.includes('accessibility') || false,
+        // 🏢 ENTERPRISE: Map BuildingFeatureKey[] → form checkboxes
+        hasParking: features.includes('parkingSpaces'),
+        hasElevator: features.includes('elevator'),
+        hasGarden: false,
+        hasPool: false,
+        accessibility: false,
         energyClass: editBuilding.energyClass || '',
         type: editBuilding.type || '',
         priority: editBuilding.priority || '',
@@ -247,7 +249,7 @@ export function AddBuildingDialog({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building className={iconSizes.md} />
+            <BuildingIcon className={iconSizes.md} />
             {isEditMode ? t('dialog.editTitle') : t('dialog.addTitle')}
             {isEditMode && editBuilding?.name && ` - ${editBuilding.name}`}
           </DialogTitle>
@@ -260,7 +262,7 @@ export function AddBuildingDialog({
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="basic" className="flex items-center gap-1">
-                <Building className="h-3 w-3" />
+                <BuildingIcon className="h-3 w-3" />
                 {t('dialog.tabs.basic')}
               </TabsTrigger>
               <TabsTrigger value="details" className="flex items-center gap-1">

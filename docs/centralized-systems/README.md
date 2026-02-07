@@ -76,6 +76,7 @@
 - **[🔄 Universal Pipeline](ai/pipeline.md)** - 7-step pipeline + cross-cutting patterns
 - **[📁 Use Cases](ai/use-cases/)** - UC-001~UC-008 (ραντεβού, τιμολόγια, έγγραφα, ακίνητα, reports, dashboards)
 - **[🏗️ Pipeline Implementation (ADR-080)](reference/adrs/ADR-080-ai-pipeline-implementation.md)** - Phase 1 core infrastructure
+- **[📬 Operator Inbox (UC-009)](ai/use-cases/UC-009-internal-operator-workflow.md)** - Human approval UI for pipeline proposals (Levels 1-3)
 - **[📜 Module Contracts](ai/contracts.md)** - Zod schemas, versioning, thresholds
 - **[⚡ Reliability](ai/reliability.md)** - State machine, queue, DLQ, retries
 - **[📊 Observability](ai/observability.md)** - Correlation IDs, metrics, alerts

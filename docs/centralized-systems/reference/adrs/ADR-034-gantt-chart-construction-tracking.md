@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | APPROVED - Architecture Design |
+| **Status** | IMPLEMENTED - Phase 1+2+3 Complete |
 | **Date** | 2026-02-07 |
 | **Category** | UI Components / Construction Management |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
@@ -163,73 +163,41 @@ TimelineTabContent
 
 ---
 
-## 3. Data Model
+## 3. Data Model (IMPLEMENTED 2026-02-07)
 
 ### 3.1 Firestore Collection: `construction_phases`
 
 Φάσεις κατασκευής (top-level grouping) ανά κτίριο.
 
+**TypeScript SSoT**: `src/types/building/construction.ts`
+
 ```typescript
-interface ConstructionPhase {
-  // Identity
-  id: string;                              // Auto-generated
-  buildingId: string;                      // FK → buildings collection
-  projectId: string;                       // FK → projects collection (denormalized)
-
-  // Phase Info
-  name: string;                            // "Θεμελίωση", "Σκελετός", κλπ
-  code: string;                            // "PH-001", "PH-002"
-  order: number;                           // Display order (1, 2, 3...)
-  type: ConstructionPhaseType;             // Enum
-
-  // Timeline
-  plannedStartDate: Timestamp;             // Σχεδιασμένη αρχή
-  plannedEndDate: Timestamp;               // Σχεδιασμένο τέλος
-  actualStartDate?: Timestamp;             // Πραγματική αρχή
-  actualEndDate?: Timestamp;               // Πραγματικό τέλος
-
-  // Progress
-  progress: number;                        // 0-100%
-  status: PhaseStatus;                     // 'not_started' | 'in_progress' | 'completed' | 'delayed' | 'blocked'
-
-  // Metadata
-  color?: string;                          // CSS color for Gantt bar
-  description?: string;
-  notes?: string;
-
-  // Audit
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  createdBy?: string;                      // User ID
-}
-
-type ConstructionPhaseType =
-  | 'preparation'        // Προετοιμασία
-  | 'excavation'         // Εκσκαφή
-  | 'foundation'         // Θεμελίωση
-  | 'structure'          // Σκελετός
-  | 'masonry'            // Τοιχοποιία
-  | 'roofing'            // Στέγη
-  | 'plumbing'           // Υδραυλικά
-  | 'electrical'         // Ηλεκτρολογικά
-  | 'hvac'               // Θέρμανση/Κλιματισμός
-  | 'insulation'         // Μόνωση
-  | 'plastering'         // Σοβατίσματα
-  | 'flooring'           // Δάπεδα
-  | 'painting'           // Βαφές
-  | 'fixtures'           // Εξαρτήματα
-  | 'landscaping'        // Περιβάλλων χώρος
-  | 'inspection'         // Επιθεώρηση
-  | 'handover'           // Παράδοση
-  | 'custom';            // Προσαρμοσμένη
-
-type PhaseStatus =
-  | 'not_started'
-  | 'in_progress'
+export type ConstructionPhaseStatus =
+  | 'planning'
+  | 'inProgress'
   | 'completed'
   | 'delayed'
-  | 'blocked'
-  | 'on_hold';
+  | 'blocked';
+
+export interface ConstructionPhase {
+  id: string;
+  buildingId: string;
+  companyId: string;                       // Tenant isolation
+  name: string;                            // "Θεμελίωση", "Σκελετός", κλπ
+  code: string;                            // "PH-001", "PH-002" (auto-generated)
+  order: number;                           // Sort order within building
+  status: ConstructionPhaseStatus;
+  plannedStartDate: string;                // ISO 8601
+  plannedEndDate: string;                  // ISO 8601
+  actualStartDate?: string;
+  actualEndDate?: string;
+  progress: number;                        // 0-100
+  description?: string;
+  createdAt?: string;                      // FieldValue.serverTimestamp() → ISO
+  updatedAt?: string;
+  createdBy?: string;                      // User ID (ctx.uid)
+  updatedBy?: string;
+}
 ```
 
 ### 3.2 Firestore Collection: `construction_tasks`
@@ -237,84 +205,93 @@ type PhaseStatus =
 Εργασίες μέσα σε κάθε φάση.
 
 ```typescript
-interface ConstructionTask {
-  // Identity
-  id: string;                              // Auto-generated
-  phaseId: string;                         // FK → construction_phases
-  buildingId: string;                      // FK → buildings (denormalized)
-  projectId: string;                       // FK → projects (denormalized)
-
-  // Task Info
-  name: string;                            // "Σκυροδέτηση πλάκας Β1"
-  code: string;                            // "TSK-001-003"
-  order: number;                           // Order within phase
-
-  // Timeline
-  plannedStartDate: Timestamp;
-  plannedEndDate: Timestamp;
-  actualStartDate?: Timestamp;
-  actualEndDate?: Timestamp;
-  duration: number;                        // Ημέρες (planned)
-  actualDuration?: number;                 // Ημέρες (actual)
-
-  // Progress
-  progress: number;                        // 0-100%
-  status: TaskStatus;
-
-  // Dependencies
-  dependencies: TaskDependency[];          // Ποιες tasks πρέπει να ολοκληρωθούν πρώτα
-
-  // Assignment
-  assignedTo?: string;                     // Contact ID ή company name
-  assignedRole?: string;                   // 'contractor' | 'subcontractor' | 'engineer' | 'architect'
-
-  // Gantt Display
-  isMilestone: boolean;                    // true = diamond marker, false = bar
-  color?: string;                          // Override phase color
-
-  // Metadata
-  description?: string;
-  notes?: string;
-  attachments?: string[];                  // Document/photo IDs
-
-  // Audit
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  createdBy?: string;
-}
-
-type TaskStatus =
-  | 'not_started'
-  | 'in_progress'
+export type ConstructionTaskStatus =
+  | 'notStarted'
+  | 'inProgress'
   | 'completed'
   | 'delayed'
-  | 'blocked'
-  | 'on_hold'
-  | 'cancelled';
+  | 'blocked';
 
-interface TaskDependency {
-  taskId: string;                          // ID of the dependency task
-  type: DependencyType;                    // Τύπος εξάρτησης
+export interface ConstructionTask {
+  id: string;
+  phaseId: string;                         // FK → construction_phases
+  buildingId: string;                      // FK → buildings (denormalized)
+  companyId: string;                       // Tenant isolation
+  name: string;                            // "Σκυροδέτηση πλάκας Β1"
+  code: string;                            // "TSK-001" (auto-generated)
+  order: number;                           // Sort order within phase
+  status: ConstructionTaskStatus;
+  plannedStartDate: string;                // ISO 8601
+  plannedEndDate: string;                  // ISO 8601
+  actualStartDate?: string;
+  actualEndDate?: string;
+  progress: number;                        // 0-100
+  dependencies?: string[];                 // Array of task IDs (simple string[])
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
 }
-
-type DependencyType =
-  | 'finish_to_start'    // FS: Η task B αρχίζει αφού τελειώσει η A (πιο κοινό)
-  | 'start_to_start'     // SS: Η task B αρχίζει μαζί με την A
-  | 'finish_to_finish'   // FF: Η task B τελειώνει μαζί με την A
-  | 'start_to_finish';   // SF: Η task B τελειώνει όταν αρχίζει η A (σπάνιο)
 ```
 
-### 3.3 Firestore Collection Registration
-
-Προσθήκη στο `src/config/firestore-collections.ts`:
+### 3.3 API Payload Types
 
 ```typescript
-// Construction Tracking (ADR-034)
-CONSTRUCTION_PHASES: 'construction_phases',
-CONSTRUCTION_TASKS: 'construction_tasks',
+// Create payloads — minimal required fields, server auto-generates code/order
+export interface ConstructionPhaseCreatePayload {
+  name: string;
+  code?: string;
+  order?: number;
+  status?: ConstructionPhaseStatus;
+  plannedStartDate: string;
+  plannedEndDate: string;
+  description?: string;
+}
+
+export interface ConstructionTaskCreatePayload {
+  phaseId: string;
+  name: string;
+  code?: string;
+  order?: number;
+  status?: ConstructionTaskStatus;
+  plannedStartDate: string;
+  plannedEndDate: string;
+  dependencies?: string[];
+  description?: string;
+}
+
+// Update payloads — all fields optional, server validates allowed fields
+export interface ConstructionPhaseUpdatePayload {
+  name?: string; code?: string; order?: number;
+  status?: ConstructionPhaseStatus;
+  plannedStartDate?: string; plannedEndDate?: string;
+  actualStartDate?: string | null; actualEndDate?: string | null;
+  progress?: number; description?: string;
+}
+
+export interface ConstructionTaskUpdatePayload {
+  name?: string; code?: string; order?: number;
+  status?: ConstructionTaskStatus;
+  plannedStartDate?: string; plannedEndDate?: string;
+  actualStartDate?: string | null; actualEndDate?: string | null;
+  progress?: number; dependencies?: string[]; description?: string;
+}
 ```
 
-### 3.4 Composite Indexes (Firestore)
+### 3.4 Firestore Collection Registration
+
+Αρχείο: `src/config/firestore-collections.ts`
+
+```typescript
+// 🏗️ CONSTRUCTION PHASES & TASKS (ADR-034: Gantt Chart)
+CONSTRUCTION_PHASES: process.env.NEXT_PUBLIC_CONSTRUCTION_PHASES_COLLECTION || 'construction_phases',
+CONSTRUCTION_TASKS: process.env.NEXT_PUBLIC_CONSTRUCTION_TASKS_COLLECTION || 'construction_tasks',
+```
+
+### 3.5 Composite Indexes (Firestore)
+
+Απαιτούνται 2 composite indexes (auto-created on first query ή via `firebase deploy`):
 
 ```json
 {
@@ -332,42 +309,37 @@ CONSTRUCTION_TASKS: 'construction_tasks',
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "buildingId", "order": "ASCENDING" },
-        { "fieldPath": "plannedStartDate", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "construction_tasks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "phaseId", "order": "ASCENDING" },
         { "fieldPath": "order", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "construction_tasks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "buildingId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "plannedEndDate", "order": "ASCENDING" }
       ]
     }
   ]
 }
 ```
 
+### 3.6 Design Decision Notes
+
+| Αρχική πρόταση (ADR draft) | Τελική υλοποίηση | Λόγος |
+|----------------------------|-------------------|-------|
+| `projectId` field | Αφαιρέθηκε | Το building ανήκει ήδη σε project — δεν χρειάζεται denormalization |
+| `ConstructionPhaseType` enum | Αφαιρέθηκε | Free-text `name` field — πιο ευέλικτο |
+| `TaskDependency` complex type | `string[]` | Απλούστερο — αρκεί array task IDs |
+| `duration`, `actualDuration` | Αφαιρέθηκαν | Υπολογίζονται client-side από dates |
+| `assignedTo`, `assignedRole` | Αφαιρέθηκαν | Phase 4 feature (future) |
+| `isMilestone`, `color` | Αφαιρέθηκαν | Δεν υποστηρίζεται από react-modern-gantt |
+| `notes`, `attachments` | Αφαιρέθηκαν | Phase 4 feature (future) |
+| Timestamps as `Timestamp` | ISO 8601 strings | API transport-friendly, converted on read |
+| `on_hold`, `cancelled` statuses | Αφαιρέθηκαν | Simplified MVP status set |
+
 ---
 
-## 4. UI Architecture
+## 4. UI Architecture (IMPLEMENTED 2026-02-07)
 
-### 4.1 Component Tree
+### 4.1 Component Tree (Actual)
 
 ```
-TimelineTabContent (ENHANCED)
+TimelineTabContent (existing - manages milestones/gantt toggle)
 │
-├── TimelineViewToggle                          ← ΝΕΟ
-│   ├── Button: "Milestones" (List icon)
-│   └── Button: "Gantt" (GanttChart icon)
+├── ViewToggle [Ορόσημα | Gantt]  (existing toggle buttons)
 │
 ├── [view === 'milestones']
 │   ├── TimelineHeader              (existing)
@@ -377,282 +349,254 @@ TimelineTabContent (ENHANCED)
 │   └── CompletionForecastCard      (existing)
 │
 └── [view === 'gantt']
-    ├── GanttToolbar                            ← ΝΕΟ
-    │   ├── ZoomControls (Day/Week/Month/Quarter/Year)
-    │   ├── FilterDropdown (status, phase, assignee)
-    │   ├── TodayButton (scroll to today)
-    │   └── ExportButton (PDF/PNG export)
-    │
-    ├── GanttChart                              ← ΝΕΟ
-    │   ├── GanttHeader (date scale ruler)
-    │   ├── GanttTaskList (left panel - task names)
-    │   │   └── GanttTaskRow (per task/phase)
-    │   ├── GanttTimeline (right panel - bars)
-    │   │   ├── GanttPhaseBar (group bar)
-    │   │   ├── GanttTaskBar (individual bar)
-    │   │   ├── GanttMilestone (diamond marker)
-    │   │   ├── GanttDependencyArrow (connection lines)
-    │   │   └── GanttTodayLine (vertical red line)
-    │   └── GanttTooltip (hover info)
-    │
-    └── GanttSummaryCards                       ← ΝΕΟ
-        ├── OverallProgressCard (reuse existing)
-        ├── DelayedTasksCard
-        ├── UpcomingDeadlinesCard
-        └── CriticalPathSummary
+    └── GanttView                                ← MAIN COMPONENT
+        ├── Toolbar                              (New Phase / New Task buttons)
+        ├── SummaryCards                          (4 stat cards: total, completed, delayed, progress)
+        ├── GanttChart (react-modern-gantt)       (interactive Gantt visualization)
+        │   ├── editMode=true
+        │   ├── allowProgressEdit=true
+        │   ├── allowTaskResize=true
+        │   ├── allowTaskMove=true
+        │   ├── onTaskUpdate → handleTaskUpdate   (drag/resize → API update)
+        │   ├── onTaskClick → handleTaskClick     (click → edit dialog)
+        │   └── onGroupClick → handleGroupClick   (click phase → edit dialog)
+        ├── StatusLegend                          (5 status badges)
+        └── ConstructionPhaseDialog               (create/edit phase or task)
 ```
 
-### 4.2 File Structure
+### 4.2 File Structure (Actual)
 
 ```
-src/components/building-management/tabs/TimelineTabContent/
-├── index.tsx                          (existing - entry point)
-├── TimelineTabContent.tsx             (existing - ENHANCED with view toggle)
-├── TimelineViewToggle.tsx             ← ΝΕΟ
-│
-├── [Milestones View - existing]
-│   ├── TimelineHeader.tsx
-│   ├── TimelineMilestones.tsx
-│   ├── MilestoneItem.tsx
-│   ├── OverallProgressCard.tsx
-│   ├── CriticalPathCard.tsx
-│   ├── CompletionForecastCard.tsx
-│   └── utils.ts
-│
-└── gantt/                             ← ΝΕΟ DIRECTORY
-    ├── GanttView.tsx                  (main Gantt container)
-    ├── GanttToolbar.tsx               (zoom, filters, export)
-    ├── GanttChart.tsx                 (chart wrapper)
-    ├── GanttSummaryCards.tsx          (stats cards)
-    ├── gantt-utils.ts                 (helpers, transformers)
-    ├── gantt-mock-data.ts             (mock data for Phase 1)
-    └── types.ts                       (Gantt-specific types)
+src/types/building/
+└── construction.ts                    ← TypeScript types SSoT
+
+src/config/
+└── firestore-collections.ts          ← +2 collections (CONSTRUCTION_PHASES, CONSTRUCTION_TASKS)
+
+src/app/api/buildings/[buildingId]/
+└── construction-phases/
+    └── route.ts                       ← Full CRUD API (GET/POST/PATCH/DELETE)
+
+src/components/building-management/
+├── construction-services.ts           ← Client CRUD services (apiClient)
+├── hooks/
+│   └── useConstructionGantt.ts        ← Data hook (load, transform, CRUD, dialog state)
+├── dialogs/
+│   └── ConstructionPhaseDialog.tsx    ← Phase/Task create/edit dialog
+└── tabs/TimelineTabContent/
+    ├── TimelineTabContent.tsx         (existing - passes building to GanttView)
+    └── gantt/
+        ├── GanttView.tsx              ← Main Gantt container (REWRITTEN)
+        └── gantt-mock-data.ts         (retained: calculateGanttStats, GanttTaskStatus reused)
+
+src/i18n/locales/
+├── el/building.json                   ← +dialog/action/validation keys
+└── en/building.json                   ← +dialog/action/validation keys
 ```
 
-### 4.3 View Toggle Component
+### 4.3 View Modes (react-modern-gantt)
+
+Υποστηρίζονται 5 zoom levels μέσω `ViewMode` enum:
+
+| Level | Enum | Default |
+|-------|------|---------|
+| **Day** | `ViewMode.DAY` | |
+| **Week** | `ViewMode.WEEK` | |
+| **Month** | `ViewMode.MONTH` | **DEFAULT** |
+| **Quarter** | `ViewMode.QUARTER` | |
+| **Year** | `ViewMode.YEAR` | |
+
+### 4.4 Color Scheme (Actual — CSS Variables)
+
+Χρήση **CSS custom properties** για theme-aware Gantt bar colors:
 
 ```typescript
-// TimelineViewToggle.tsx
-type TimelineView = 'milestones' | 'gantt';
-
-interface TimelineViewToggleProps {
-  activeView: TimelineView;
-  onViewChange: (view: TimelineView) => void;
-}
+const STATUS_TO_CSS_COLOR: Record<GanttTaskStatus, string> = {
+  completed:  'hsl(var(--bg-success))',
+  inProgress: 'hsl(var(--bg-info))',
+  notStarted: 'hsl(var(--muted-foreground))',
+  delayed:    'hsl(var(--destructive))',
+  blocked:    'hsl(var(--bg-warning))',
+};
 ```
 
-Χρησιμοποιεί τα υπάρχοντα Radix UI Tabs ή toggle buttons.
-
-### 4.4 Gantt Zoom Levels
-
-| Level | Κλίμακα | Χρήση |
-|-------|---------|-------|
-| **Day** | 1 day = 30px | Λεπτομερής προβολή (1-2 εβδομάδες) |
-| **Week** | 1 week = 40px | Μηνιαία προβολή |
-| **Month** | 1 month = 60px | Default - 6-12 μήνες |
-| **Quarter** | 1 quarter = 80px | Ετήσια προβολή |
-| **Year** | 1 year = 100px | Multi-year overview |
-
-### 4.5 Color Scheme
-
-Χρήση **design tokens** και **semantic colors** (ADR-004):
-
-| Status | Color Token | Χρήση |
-|--------|-------------|-------|
-| `completed` | `colors.bg.success` / `--color-success` | Ολοκληρωμένες εργασίες |
-| `in_progress` | `colors.bg.info` / `--color-info` | Τρέχουσες εργασίες |
-| `not_started` | `colors.bg.muted` / `--color-muted` | Μελλοντικές εργασίες |
-| `delayed` | `colors.bg.error` / `--color-destructive` | Καθυστερημένες |
-| `blocked` | `colors.bg.warning` / `--color-warning` | Μπλοκαρισμένες |
-| `on_hold` | `colors.bg.muted` + dashed border | Σε αναμονή |
-| **Today line** | `--color-destructive` | Κόκκινη κάθετη γραμμή |
-| **Phase bar** | Slightly darker variant | Group bars |
+Dynamic color resolver via `getTaskColor` prop που διαβάζει `taskStatus` metadata από κάθε task.
 
 ---
 
-## 5. Integration Points
+## 5. Integration Points (IMPLEMENTED 2026-02-07)
 
-### 5.1 Existing Systems Used
+### 5.1 Centralized Systems Used
 
 | Σύστημα | Πώς χρησιμοποιείται | Αρχείο |
 |---------|---------------------|--------|
-| **Unified Tabs Factory** | Timeline tab config | `src/config/unified-tabs-factory.ts` |
-| **Building Tabs Config** | Tab registration | `src/config/building-tabs-config.ts` |
-| **Semantic Colors** | Theme-aware colors | `@/ui-adapters/react/useSemanticColors` |
-| **Design Tokens** | Spacing, borders | `src/styles/design-tokens.ts` |
-| **i18n System** | Μεταφράσεις EL/EN | `src/i18n/locales/{en,el}/building.json` |
-| **Firestore Collections** | Collection registry | `src/config/firestore-collections.ts` |
-| **ThemeProgressBar** | Progress visualization | `src/core/progress/ThemeProgressBar.tsx` |
-| **ChartContainer** | Chart wrapper (αν custom) | `src/components/ui/chart/` |
-| **Entity ID Generation** | Task/Phase IDs | Existing ID utils |
-| **Radix Select** | Dropdowns (ADR-001) | `@/components/ui/select` |
-| **Alert Engine** | Deadline notifications | `packages/core/alert-engine/` |
+| **apiClient** | HTTP CRUD calls (Bearer token auto-inject) | `src/lib/api/enterprise-api-client.ts` |
+| **withAuth** | API auth + tenant context | `src/lib/auth` |
+| **withStandardRateLimit** | API rate limiting | `src/lib/middleware/with-rate-limit.ts` |
+| **ApiError** | Typed error responses | `src/lib/api/ApiErrorHandler.ts` |
+| **getAdminFirestore** | Server-side Firestore writes | `src/lib/firebaseAdmin.ts` |
+| **requireBuildingInTenant** | Tenant isolation check | `src/lib/auth` |
+| **logAuditEvent** | Audit trail logging | `src/lib/auth` |
+| **COLLECTIONS** | Collection name registry | `src/config/firestore-collections.ts` |
+| **FieldValue.serverTimestamp** | Audit timestamps | `firebase-admin/firestore` |
+| **Design Tokens** | `useSpacingTokens()`, `useIconSizes()` | `src/hooks/` |
+| **i18n System** | `useTranslation('building')` | `src/i18n/locales/{en,el}/building.json` |
+| **Radix Select** | Status dropdown (ADR-001) | `@/components/ui/select` |
+| **FormGrid/FormField** | Dialog form layout | `@/components/ui/form` |
+| **SaveButton/CancelButton/DeleteButton** | Action buttons | `@/components/ui/form/ActionButtons` |
+| **getStatusColor** | Status badge colors | `@/lib/design-system` |
+| **cn()** | Class name utility | `@/lib/utils` |
+| **Card, Badge, Button** | UI primitives | `@/components/ui` |
 
-### 5.2 Data Flow
+### 5.2 Data Flow (Actual)
 
 ```
-Firestore
-  ├── construction_phases (query by buildingId)
-  └── construction_tasks (query by buildingId)
+Browser (GanttView)
          │
          ▼
-useConstructionGantt(buildingId)     ← Custom hook
+useConstructionGantt(buildingId)         ← Custom hook
          │
-         ├── phases: ConstructionPhase[]
-         ├── tasks: ConstructionTask[]
-         ├── ganttItems: GanttItem[]    (transformed for chart)
-         ├── stats: GanttStats          (summary metrics)
-         └── actions: {
-         │     addTask, updateTask, deleteTask,
-         │     addPhase, updatePhase, deletePhase,
-         │     updateProgress, reorderTasks
-         │   }
+         ├── Calls construction-services.ts (apiClient)
+         │         │
+         │         ▼
+         │   /api/buildings/[buildingId]/construction-phases
+         │         │
+         │         ├── withStandardRateLimit
+         │         ├── withAuth (Bearer token → AuthContext)
+         │         ├── requireBuildingInTenant (tenant isolation)
+         │         └── getAdminFirestore() → Firestore Admin SDK
+         │               ├── construction_phases (where buildingId == X, orderBy order)
+         │               └── construction_tasks   (where buildingId == X, orderBy order)
+         │
+         ├── Transforms → TaskGroup[] (react-modern-gantt format)
+         ├── Calculates stats (calculateGanttStats)
+         ├── Manages dialog state (open/close/mode)
          │
          ▼
 GanttView Component
          │
-         ├── GanttToolbar (zoom, filter controls)
-         ├── GanttChart (visualization)
-         └── GanttSummaryCards (metrics)
+         ├── Toolbar (Νέα Φάση, Νέα Εργασία buttons)
+         ├── Summary Cards (4 stat cards)
+         ├── GanttChart (react-modern-gantt)
+         │     ├── Drag/Resize → handleTaskUpdate → optimistic update + API PATCH
+         │     ├── Click Task → handleTaskClick → openEditTaskDialog
+         │     └── Click Phase → handleGroupClick → openEditPhaseDialog
+         ├── Status Legend (5 badges)
+         └── ConstructionPhaseDialog
+               ├── Create/Edit Phase → savePhase/updatePhase → API POST/PATCH
+               ├── Create/Edit Task → saveTask/updateTask → API POST/PATCH
+               └── Delete → removePhase/removeTask → API DELETE (query params)
 ```
 
-### 5.3 i18n Keys (νέα)
+### 5.3 API Endpoint Details
 
-Namespace: `building`
+**Endpoint**: `GET/POST/PATCH/DELETE /api/buildings/[buildingId]/construction-phases`
 
-```json
-{
-  "tabs": {
-    "timeline": {
-      "views": {
-        "milestones": "Ορόσημα",
-        "gantt": "Gantt"
-      },
-      "gantt": {
-        "title": "Διάγραμμα Gantt",
-        "toolbar": {
-          "zoom": "Κλίμακα",
-          "day": "Ημέρα",
-          "week": "Εβδομάδα",
-          "month": "Μήνας",
-          "quarter": "Τρίμηνο",
-          "year": "Έτος",
-          "today": "Σήμερα",
-          "export": "Εξαγωγή",
-          "filters": "Φίλτρα"
-        },
-        "status": {
-          "notStarted": "Δεν ξεκίνησε",
-          "inProgress": "Σε εξέλιξη",
-          "completed": "Ολοκληρώθηκε",
-          "delayed": "Καθυστερημένη",
-          "blocked": "Μπλοκαρισμένη",
-          "onHold": "Σε αναμονή"
-        },
-        "phases": {
-          "preparation": "Προετοιμασία",
-          "excavation": "Εκσκαφή",
-          "foundation": "Θεμελίωση",
-          "structure": "Σκελετός",
-          "masonry": "Τοιχοποιία",
-          "roofing": "Στέγη",
-          "plumbing": "Υδραυλικά",
-          "electrical": "Ηλεκτρολογικά",
-          "hvac": "Κλιματισμός",
-          "insulation": "Μόνωση",
-          "plastering": "Σοβατίσματα",
-          "flooring": "Δάπεδα",
-          "painting": "Βαφές",
-          "fixtures": "Εξαρτήματα",
-          "landscaping": "Περιβάλλων χώρος",
-          "inspection": "Επιθεώρηση",
-          "handover": "Παράδοση"
-        },
-        "summary": {
-          "totalTasks": "Σύνολο Εργασιών",
-          "completedTasks": "Ολοκληρωμένες",
-          "delayedTasks": "Καθυστερημένες",
-          "overallProgress": "Συνολική Πρόοδος",
-          "daysRemaining": "Υπολειπόμενες Ημέρες",
-          "criticalPath": "Κρίσιμη Διαδρομή",
-          "upcomingDeadlines": "Επερχόμενες Προθεσμίες"
-        },
-        "dependency": {
-          "finishToStart": "Τέλος → Αρχή",
-          "startToStart": "Αρχή → Αρχή",
-          "finishToFinish": "Τέλος → Τέλος",
-          "startToFinish": "Αρχή → Τέλος"
-        },
-        "empty": "Δεν υπάρχουν εργασίες. Προσθέστε φάσεις κατασκευής.",
-        "addPhase": "Προσθήκη Φάσης",
-        "addTask": "Προσθήκη Εργασίας"
-      }
-    }
-  }
-}
+| Method | Action | Body/Params | Response |
+|--------|--------|-------------|----------|
+| **GET** | Load phases + tasks | — | `{ success, phases[], tasks[], buildingId }` |
+| **POST** | Create phase or task | `{ type, name, plannedStartDate, plannedEndDate, ... }` | `{ success, id, type }` |
+| **PATCH** | Update phase or task | `{ type, id, updates: {...} }` | `{ success, id, type }` |
+| **DELETE** | Delete phase or task | Query params: `?type=phase&id=xxx` | `{ success, id, type, cascadedTasks? }` |
+
+**Cascade Delete**: Deleting a phase automatically deletes all its tasks (batch operation).
+
+**Auto-generated codes**: `PH-001`, `PH-002`, ... / `TSK-001`, `TSK-002`, ...
+
+### 5.4 i18n Keys (Implemented)
+
+Namespace: `building` → `tabs.timeline.gantt`
+
+```
+tabs.timeline.gantt.empty              → "Δεν υπάρχουν φάσεις κατασκευής."
+tabs.timeline.gantt.emptyHint          → "Ξεκινήστε προσθέτοντας μια νέα φάση."
+tabs.timeline.gantt.actions.newPhase   → "Νέα Φάση"
+tabs.timeline.gantt.actions.newTask    → "Νέα Εργασία"
+tabs.timeline.gantt.dialog.createPhase → "Νέα Κατασκευαστική Φάση"
+tabs.timeline.gantt.dialog.editPhase   → "Επεξεργασία Φάσης"
+tabs.timeline.gantt.dialog.createTask  → "Νέα Εργασία"
+tabs.timeline.gantt.dialog.editTask    → "Επεξεργασία Εργασίας"
+tabs.timeline.gantt.dialog.name        → "Όνομα"
+tabs.timeline.gantt.dialog.code        → "Κωδικός"
+tabs.timeline.gantt.dialog.status      → "Κατάσταση"
+tabs.timeline.gantt.dialog.startDate   → "Ημ. Έναρξης"
+tabs.timeline.gantt.dialog.endDate     → "Ημ. Λήξης"
+tabs.timeline.gantt.dialog.progress    → "Πρόοδος"
+tabs.timeline.gantt.dialog.description → "Περιγραφή"
+tabs.timeline.gantt.validation.*       → Validation messages
 ```
 
 ---
 
-## 6. Implementation Plan
+## 6. Implementation Record
 
-### Phase 1: Foundation (Mock Data + UI)
+### Phase 1: Foundation (Mock Data + UI) — COMPLETED (2026-02-07)
 
 **Στόχος**: Gantt visualization με mock data, ενσωμάτωση στο Timeline Tab.
 
-| Βήμα | Περιγραφή | Αρχεία |
-|------|-----------|--------|
-| 1.1 | Εγκατάσταση `react-modern-gantt` | `package.json` |
-| 1.2 | TypeScript interfaces (ConstructionPhase, ConstructionTask) | `src/types/construction/` |
-| 1.3 | Mock data (ρεαλιστικά construction phases) | `gantt/gantt-mock-data.ts` |
-| 1.4 | TimelineViewToggle component | `TimelineViewToggle.tsx` |
-| 1.5 | GanttView container | `gantt/GanttView.tsx` |
-| 1.6 | GanttChart visualization | `gantt/GanttChart.tsx` |
-| 1.7 | GanttToolbar (zoom levels) | `gantt/GanttToolbar.tsx` |
-| 1.8 | GanttSummaryCards | `gantt/GanttSummaryCards.tsx` |
-| 1.9 | i18n translations (EL/EN) | `src/i18n/locales/` |
-| 1.10 | Integration στο TimelineTabContent | `TimelineTabContent.tsx` |
+| Βήμα | Περιγραφή | Αρχεία | Status |
+|------|-----------|--------|--------|
+| 1.1 | Εγκατάσταση `react-modern-gantt` v0.6.1 (MIT) | `package.json` | **DONE** |
+| 1.2 | Mock data (8 φάσεις, 28 εργασίες) | `gantt/gantt-mock-data.ts` | **DONE** |
+| 1.3 | ViewToggle (Ορόσημα / Gantt) στο TimelineTabContent | `TimelineTabContent.tsx` | **DONE** |
+| 1.4 | GanttView container με summary cards + legend | `gantt/GanttView.tsx` | **DONE** |
+| 1.5 | i18n translations (EL/EN) — base keys | `building.json` | **DONE** |
 
-### Phase 2: Firestore Integration (Real Data)
+### Phase 2: Firestore Integration — COMPLETED (2026-02-07)
 
-**Στόχος**: Αντικατάσταση mock data με real Firestore data.
+**Στόχος**: Αντικατάσταση mock data με real Firestore CRUD.
 
-| Βήμα | Περιγραφή | Αρχεία |
-|------|-----------|--------|
-| 2.1 | Firestore collections registration | `firestore-collections.ts` |
-| 2.2 | Firestore rules (security) | `firestore.rules` |
-| 2.3 | Composite indexes deploy | `firestore.indexes.json` |
-| 2.4 | `useConstructionGantt` hook | `src/hooks/useConstructionGantt.ts` |
-| 2.5 | CRUD operations (add/edit/delete phases & tasks) | Hook methods |
-| 2.6 | Real-time listeners | Firestore `onSnapshot` |
-| 2.7 | Data migration (mock milestones → real tasks) | One-time script |
+| Βήμα | Περιγραφή | Αρχεία | Status |
+|------|-----------|--------|--------|
+| 2.1 | TypeScript types SSoT | `src/types/building/construction.ts` | **DONE** |
+| 2.2 | Firestore collections registration (+2) | `src/config/firestore-collections.ts` | **DONE** |
+| 2.3 | Full CRUD API endpoint (GET/POST/PATCH/DELETE) | `src/app/api/buildings/[buildingId]/construction-phases/route.ts` | **DONE** |
+| 2.4 | Client CRUD services (apiClient) | `src/components/building-management/construction-services.ts` | **DONE** |
+| 2.5 | `useConstructionGantt` data hook | `src/components/building-management/hooks/useConstructionGantt.ts` | **DONE** |
+| 2.6 | GanttView rewrite (Firestore data, loading/empty states) | `gantt/GanttView.tsx` | **DONE** |
 
-### Phase 3: Interactivity (Drag & Drop + Edit)
+### Phase 3: Interactivity (Edit + Drag & Drop) — COMPLETED (2026-02-07)
 
-**Στόχος**: Full interactivity - drag bars, edit tasks, manage dependencies.
+**Στόχος**: Full interactivity - drag bars, edit tasks, create/delete.
 
-| Βήμα | Περιγραφή |
-|------|-----------|
-| 3.1 | Drag & drop task bars (change dates) |
-| 3.2 | Resize bars (change duration) |
-| 3.3 | Click to edit task (inline/modal) |
-| 3.4 | Add/remove dependencies (drag arrows) |
-| 3.5 | Progress slider (update % on bar) |
-| 3.6 | Context menu (right-click actions) |
+| Βήμα | Περιγραφή | Αρχεία | Status |
+|------|-----------|--------|--------|
+| 3.1 | ConstructionPhaseDialog (create/edit phase & task) | `dialogs/ConstructionPhaseDialog.tsx` | **DONE** |
+| 3.2 | Enable `editMode`, `allowProgressEdit`, `allowTaskResize`, `allowTaskMove` | `GanttView.tsx` | **DONE** |
+| 3.3 | Drag & drop task bars → API date update (optimistic) | `useConstructionGantt.ts` | **DONE** |
+| 3.4 | Click task → edit dialog | `handleTaskClick` | **DONE** |
+| 3.5 | Click phase → edit dialog | `handleGroupClick` | **DONE** |
+| 3.6 | Progress slider (0-100%) in dialog | `ConstructionPhaseDialog.tsx` | **DONE** |
+| 3.7 | Cascade delete (phase → all tasks) | `route.ts DELETE` | **DONE** |
+| 3.8 | i18n: dialog/action/validation keys (EL/EN) | `building.json` | **DONE** |
 
-### Phase 4: Advanced Features
+### Phase 4: Advanced Features — PLANNED (Future)
 
 **Στόχος**: Enterprise-grade features.
 
-| Βήμα | Περιγραφή |
-|------|-----------|
-| 4.1 | Critical path calculation & highlighting |
-| 4.2 | Actual vs Planned overlay (dual bars) |
-| 4.3 | Resource allocation view |
-| 4.4 | PDF/PNG export |
-| 4.5 | Alert Engine integration (deadline notifications) |
-| 4.6 | AI integration (UC-017: auto-suggest delays, forecasting) |
-| 4.7 | Baseline snapshots (save planned dates for comparison) |
+| Βήμα | Περιγραφή | Status |
+|------|-----------|--------|
+| 4.1 | Critical path calculation & highlighting | PLANNED |
+| 4.2 | Actual vs Planned overlay (dual bars) | PLANNED |
+| 4.3 | Resource allocation (assignedTo, assignedRole) | PLANNED |
+| 4.4 | PDF/PNG export | PLANNED |
+| 4.5 | Alert Engine integration (deadline notifications) | PLANNED |
+| 4.6 | AI integration (UC-017: auto-suggest delays, forecasting) | PLANNED |
+| 4.7 | Baseline snapshots (save planned dates for comparison) | PLANNED |
+| 4.8 | Dependency arrows visualization | PLANNED |
+| 4.9 | Context menu (right-click actions) | PLANNED |
+
+### Implementation Summary
+
+| Metric | Value |
+|--------|-------|
+| **Ημερομηνία υλοποίησης** | 2026-02-07 |
+| **Νέα αρχεία** | 5 (types, API route, services, hook, dialog) |
+| **Τροποποιημένα αρχεία** | 4 (GanttView, firestore-collections, building.json el/en) |
+| **TypeScript errors** | 0 (verified with `npx tsc --noEmit`) |
+| **API Security** | withAuth + withStandardRateLimit + requireBuildingInTenant + logAuditEvent |
+| **Tenant Isolation** | companyId check on all operations |
+| **Cascade Delete** | Phase deletion removes all child tasks (batch) |
 
 ---
 
@@ -774,19 +718,34 @@ const MOCK_PHASES: ConstructionPhase[] = [
 
 ---
 
-## Appendix A: Related Files
+## Appendix A: Related Files (Actual Implementation)
 
-| Αρχείο | Ρόλος | Αλλαγή |
-|--------|-------|--------|
-| `src/components/building-management/tabs/TimelineTabContent.tsx` | Timeline container | ENHANCE (add view toggle) |
-| `src/components/building-management/tabs/TimelineTabContent/` | Timeline directory | ADD gantt/ subdirectory |
-| `src/config/building-tabs-config.ts` | Tab configuration | NO CHANGE (tab exists) |
-| `src/config/firestore-collections.ts` | Collection registry | ADD 2 collections |
-| `src/i18n/locales/el/building.json` | Greek translations | ADD gantt keys |
-| `src/i18n/locales/en/building.json` | English translations | ADD gantt keys |
-| `src/types/construction/` | TypeScript types | NEW directory |
-| `firestore.indexes.json` | Composite indexes | ADD 4 indexes |
-| `package.json` | Dependencies | ADD `react-modern-gantt` (MIT) |
+### New Files Created (2026-02-07)
+
+| Αρχείο | Ρόλος | Lines |
+|--------|-------|-------|
+| `src/types/building/construction.ts` | TypeScript types SSoT | ~127 |
+| `src/app/api/buildings/[buildingId]/construction-phases/route.ts` | Full CRUD API endpoint | ~447 |
+| `src/components/building-management/construction-services.ts` | Client CRUD services | ~201 |
+| `src/components/building-management/hooks/useConstructionGantt.ts` | Data hook + dialog state | ~350+ |
+| `src/components/building-management/dialogs/ConstructionPhaseDialog.tsx` | Phase/Task create/edit dialog | ~400+ |
+
+### Modified Files
+
+| Αρχείο | Αλλαγή |
+|--------|--------|
+| `src/components/building-management/tabs/TimelineTabContent/gantt/GanttView.tsx` | REWRITTEN (mock → Firestore, editing enabled) |
+| `src/config/firestore-collections.ts` | +2 collections (CONSTRUCTION_PHASES, CONSTRUCTION_TASKS) |
+| `src/i18n/locales/el/building.json` | +dialog/action/validation keys |
+| `src/i18n/locales/en/building.json` | +dialog/action/validation keys |
+
+### Existing Files (No Changes Needed)
+
+| Αρχείο | Λόγος |
+|--------|-------|
+| `src/components/building-management/tabs/TimelineTabContent.tsx` | Already passes `building` prop to lazy-loaded GanttView |
+| `gantt/gantt-mock-data.ts` | Retained — `calculateGanttStats()` and `GanttTaskStatus` reused by hook |
+| `package.json` | `react-modern-gantt` v0.6.1 already installed (Phase 1) |
 
 ## Appendix B: Technology Sources
 

@@ -495,7 +495,7 @@ export function useRealTimeNotifications() {
   const [notifications, setNotifications] = useState<WebSocketMessage<NotificationPayload>[]>([]);
   const cache = useCache();
 
-  useWebSocketEvent('notification', (message) => {
+  useWebSocketEvent<NotificationPayload>('notification', (message) => {
     setNotifications(prev => [message, ...prev.slice(0, 49)]); // Keep last 50
     
     // Cache notification

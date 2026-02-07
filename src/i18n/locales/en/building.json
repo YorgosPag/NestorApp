@@ -1018,7 +1018,35 @@
           "delayedPhases": "Delayed",
           "overallProgress": "Overall Progress"
         },
-        "empty": "No construction tasks available."
+        "empty": "No construction tasks available.",
+        "emptyHint": "Click «New Phase» to create the first construction phase.",
+        "actions": {
+          "newPhase": "New Phase",
+          "newTask": "New Task",
+          "loadSamples": "Load Samples"
+        },
+        "dialog": {
+          "createPhase": "Create Phase",
+          "editPhase": "Edit Phase",
+          "createTask": "Create Task",
+          "editTask": "Edit Task",
+          "name": "Name",
+          "code": "Code",
+          "status": "Status",
+          "startDate": "Start Date",
+          "endDate": "End Date",
+          "progress": "Progress",
+          "description": "Description",
+          "phaseNamePlaceholder": "e.g. Excavation & Foundation",
+          "taskNamePlaceholder": "e.g. Foundation concrete pour",
+          "descriptionPlaceholder": "Optional description..."
+        },
+        "validation": {
+          "nameRequired": "Name is required",
+          "startDateRequired": "Start date is required",
+          "endDateRequired": "End date is required",
+          "endAfterStart": "End date must be after start date"
+        }
       }
     },
     "map": {

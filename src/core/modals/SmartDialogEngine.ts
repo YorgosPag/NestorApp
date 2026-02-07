@@ -27,11 +27,8 @@ import {
   getSelectPlaceholder,
   MODAL_SELECT_ITEM_PATTERNS,
   getSelectItemPattern,
-  MODAL_SELECT_COMPANY_FIELD_LABELS,
   getCompanyFieldLabels,
-  MODAL_SELECT_SERVICE_FIELD_LABELS,
   getServiceFieldLabels,
-  MODAL_SELECT_CONTACT_TYPE_LABELS,
   getContactTypeLabels,
   MODAL_SELECT_PROJECT_STATUS_LABELS,
   getProjectStatusLabels
@@ -420,7 +417,7 @@ export class SmartDialogEngine {
       encoding: dropdownPlaceholders.SELECT_ENCODING
     };
 
-    return fieldPlaceholderMappings[fieldName] || placeholders.GENERAL;
+    return fieldPlaceholderMappings[fieldName] || placeholders.default;
   }
 
   /**

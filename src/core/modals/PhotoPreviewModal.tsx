@@ -12,6 +12,8 @@ import { getContactDisplayName } from '@/types/contacts';
 import { TRANSITION_PRESETS } from '@/components/ui/effects';
 import { BadgeFactory } from '@/core/badges/BadgeFactory';
 import { FileNamingService } from '@/services/FileNamingService';
+import { mapContactToFormData } from '@/utils/contactForm/contactMapper';
+import { photoPreviewLayout } from '@/styles/design-tokens';
 import {
   PHOTO_COLORS,
   PHOTO_BORDERS,
@@ -246,12 +248,13 @@ export function PhotoPreviewModal({
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0, aspectRatio: 1 });
 
   // ♿ Focus trap για accessibility με keyboard navigation
-  const focusTrapRef = useFocusTrap(open, {
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(open, {
     autoFocus: true,
     restoreFocus: true,
     escapeDeactivates: true,
     onEscape: () => onOpenChange(false)
   });
+  const imageRef = useRef<HTMLImageElement | null>(null);
 
   // Gallery logic - πάντα χρησιμοποιούμε το current gallery photo αν είμαστε σε gallery mode
   const isGalleryMode = galleryPhotos && galleryPhotos.length > 0;
@@ -281,6 +284,20 @@ export function PhotoPreviewModal({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image) return;
+
+    const translateX = Number.isFinite(panOffset.x) ? panOffset.x : 0;
+    const translateY = Number.isFinite(panOffset.y) ? panOffset.y : 0;
+    const scale = Number.isFinite(zoom) ? zoom : 1;
+    const rotate = Number.isFinite(rotation) ? rotation : 0;
+
+    image.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale}) rotate(${rotate}deg)`;
+    image.style.transformOrigin = 'center center';
+    image.style.touchAction = isMobile ? 'none' : 'auto';
+  }, [isMobile, panOffset.x, panOffset.y, zoom, rotation, currentPhoto]);
 
   // Keyboard navigation με refs (χωρίς dependency issues)
   useEffect(() => {
@@ -378,16 +395,7 @@ export function PhotoPreviewModal({
 
       if (contact) {
         try {
-          // Convert Contact to ContactFormData format for FileNamingService
-          const contactFormData = {
-            type: contact.type,
-            firstName: contact.firstName,
-            lastName: contact.lastName,
-            companyName: contact.companyName,
-            serviceName: contact.serviceName || contact.name,
-            tradeName: contact.tradeName,
-            legalName: contact.legalName
-          };
+          const { formData: contactFormData } = mapContactToFormData(contact);
 
           // Determine purpose based on photoType
           let purpose: 'logo' | 'photo' | 'representative' = 'photo';
@@ -588,30 +596,13 @@ export function PhotoPreviewModal({
       <DialogContent
         ref={focusTrapRef}
         className={`${isMobile
-          ? 'fixed inset-x-0 top-0 max-w-none w-screen rounded-none border-0'
-          : 'fixed inset-0 max-w-none w-screen h-screen rounded-none border-0'
+          ? photoPreviewLayout.dialog.mobile
+          : photoPreviewLayout.dialog.desktop
         } flex flex-col ${className} [&>button]:hidden`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="photo-preview-title"
         aria-describedby="photo-preview-description"
-        style={isMobile ? {
-          margin: 0,
-          transform: 'none',
-          top: 'env(safe-area-inset-top)',
-          bottom: 'env(safe-area-inset-bottom)',
-          height: 'calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
-          paddingBottom: 'max(env(safe-area-inset-bottom), 80px)' // Ελάχιστο 80px για mobile nav bars
-        } : {
-          margin: 0,
-          transform: 'none',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: '100vw',
-          height: '100vh'
-        }}
       >
         <DialogHeader className="flex flex-col space-y-3 pb-2">
           {/* Πρώτη σειρά: Τίτλος και Badge */}
@@ -795,12 +786,8 @@ export function PhotoPreviewModal({
                 ? t('photoPreview.alt.gallery', { title, current: currentIndex + 1, total: totalPhotos })
                 : t('photoPreview.alt.single', { title })
               }
-              className={`max-w-full max-h-full object-contain ${TRANSITION_PRESETS.FAST_TRANSFORM}`}
-              style={{
-                transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom}) rotate(${rotation}deg)`,
-                transformOrigin: 'center',
-                touchAction: isMobile ? 'none' : 'auto' // Disable default touch behaviors για custom pinch
-              }}
+              ref={imageRef}
+              className={`${photoPreviewLayout.image.base} ${TRANSITION_PRESETS.STANDARD_TRANSFORM}`}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}

@@ -153,5 +153,42 @@
       "title": "Notice",
       "body": "The refreshToken() affects only YOUR (super_admin) session. The affected user must logout/login separately to load the new claims."
     }
+  },
+  "operatorInbox": {
+    "title": "Operator Inbox",
+    "description": "Review and approve AI pipeline proposals before execution.",
+    "queueTitle": "Proposal Queue",
+    "refresh": "Refresh",
+    "approve": "Approve",
+    "reject": "Reject",
+    "confirmApprove": "Are you sure you want to approve this proposal? The suggested actions will be executed.",
+    "confirmReject": "Are you sure you want to reject this proposal? The message will not be processed automatically.",
+    "approveSuccess": "Proposal approved and execution started.",
+    "rejectSuccess": "Proposal rejected.",
+    "approveFailed": "Failed to approve proposal.",
+    "rejectFailed": "Failed to reject proposal.",
+    "empty": {
+      "title": "No proposals awaiting review",
+      "description": "All pipeline items have been processed or auto-approved."
+    },
+    "sections": {
+      "originalMessage": "Original Message",
+      "aiUnderstanding": "AI Understanding",
+      "proposal": "Proposed Actions"
+    },
+    "fields": {
+      "sender": "Sender",
+      "channel": "Channel",
+      "intent": "Detected Intent",
+      "confidence": "AI Confidence",
+      "urgency": "Urgency",
+      "summary": "Summary",
+      "reason": "Reason"
+    },
+    "stats": {
+      "proposed": "Pending Review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    }
   }
 }

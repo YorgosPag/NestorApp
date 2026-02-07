@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import { layoutUtilities, componentSizes, canvasUtilities } from '@/styles/design-tokens';
+import { componentSizes, canvasUtilities } from '@/styles/design-tokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 interface MobileDetailsSlideInProps {
   isOpen: boolean;
@@ -44,17 +45,13 @@ export function MobileDetailsSlideIn({
   if (!isOpen) return null;
 
   return (
-    <div className={`md:hidden fixed inset-0 z-50 ${colors.bg.primary} flex flex-col animate-in slide-in-from-right duration-300`}>
+    <div className={cn('md:hidden fixed inset-0 z-50 flex flex-col animate-in slide-in-from-right duration-300', colors.bg.primary)}>
       {/* 📱 MINIMAL Mobile header - FIXED HEIGHT (existing pattern) */}
-      <div
-        className={`flex items-center gap-2 px-2 border-b ${colors.bg.primary}`}
-        style={canvasUtilities.geoInteractive.mobileSlideHeader()}
-      >
+      <div className={cn(canvasUtilities.geoInteractive.mobileSlideHeaderClass, colors.bg.primary)}>
         {/* Close Button (existing pattern) */}
         <button
           onClick={onClose}
-          className="p-1 rounded-md"
-          className={componentSizes.icon.xl}
+          className={cn('p-1 rounded-md', componentSizes.icon.xl)}
         >
           <X className={iconSizes.sm} />
         </button>
@@ -73,10 +70,7 @@ export function MobileDetailsSlideIn({
       </div>
 
       {/* 📱 Content - FULL REMAINING HEIGHT (existing pattern) */}
-      <div
-        className={`overflow-y-auto ${colors.bg.primary}`}
-        style={canvasUtilities.geoInteractive.mobileSlideContent()}
-      >
+      <div className={cn(canvasUtilities.geoInteractive.mobileSlideContentClass, colors.bg.primary)}>
         {children}
       </div>
     </div>

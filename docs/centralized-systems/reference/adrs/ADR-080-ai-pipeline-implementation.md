@@ -139,16 +139,51 @@ processQueueItem → EmailChannelAdapter.feedToPipeline() → ai_pipeline_queue
 
 ## 7. Next Steps
 
-- [ ] Deploy Firestore indexes for `ai_pipeline_queue` and `ai_pipeline_audit`
-- [ ] Implement first UC module (UC-001 Appointments or UC-002 Invoices)
-- [ ] Build Pipeline Worker (same pattern as email-ingestion-worker.ts)
-- [ ] Implement UC-009 (Operator Inbox) for human approval UI
+- [x] Deploy Firestore indexes for `ai_pipeline_queue` and `ai_pipeline_audit`
+- [x] Build Pipeline Worker (`src/server/ai/workers/ai-pipeline-worker.ts`)
+- [x] Build Pipeline Cron endpoint (`src/app/api/cron/ai-pipeline/route.ts`)
+- [x] Implement UC-009 (Operator Inbox) for human approval UI
+- [ ] Deploy Firestore indexes for pipelineState queries (operator inbox)
+- [ ] Implement first UC module (UC-002 Invoices — Phase 2)
 - [ ] Add Telegram channel adapter
 
 ---
 
-## 8. Changelog
+## 8. UC-009 Operator Inbox (Phase 1 MVP)
+
+**Status**: IMPLEMENTED (2026-02-07)
+
+Human review interface for pipeline proposals awaiting approval.
+
+### Backend
+| File | Purpose |
+|------|---------|
+| `src/services/ai-pipeline/pipeline-queue-service.ts` | +3 functions: `getProposedPipelineItems()`, `updateApprovalDecision()`, `getProposedItemStats()` |
+| `src/services/ai-pipeline/pipeline-orchestrator.ts` | +`resumeFromApproval()` method — resumes EXECUTE + ACKNOWLEDGE after human approval |
+| `src/services/ai-pipeline/operator-inbox-service.ts` | Service: orchestrates approval → resume pipeline → mark completed/failed |
+| `src/app/api/admin/operator-inbox/route.ts` | API: GET (list + stats), POST (approve/reject) with `withAuth` |
+
+### Frontend
+| File | Purpose |
+|------|---------|
+| `src/app/admin/operator-inbox/page.tsx` | Server Component with `requireAdminForPage` |
+| `src/app/admin/operator-inbox/OperatorInboxClient.tsx` | Client Component: accordion list, dashboard stats, approve/reject |
+| `src/components/admin/operator-inbox/ProposalReviewCard.tsx` | Proposal detail card with action buttons |
+
+### Data Flow
+```
+Pipeline stops at PROPOSED → Item in ai_pipeline_queue (pipelineState: 'proposed')
+→ Operator sees in Inbox → Approve/Reject
+→ If approved: resumeFromApproval() → EXECUTE → ACKNOWLEDGE → AUDITED
+→ If rejected: state → REJECTED, audit recorded
+```
+
+---
+
+## 9. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |------------|--------|
 | 2026-02-07 | Phase 1 — Core Infrastructure implemented (types, schemas, config, 5 services, email adapter, integration bridge) |
+| 2026-02-07 | Pipeline Worker + Cron endpoint implemented |
+| 2026-02-07 | UC-009 Operator Inbox MVP — backend (queue queries, approval service, resume logic) + frontend (page, client, review card) |

@@ -283,7 +283,7 @@ export class CanvasRegistry implements ICanvasRegistry {
         this.updateMetrics('canvasCount');
         break;
       case 'render:completed':
-        if (data?.renderTime) {
+        if (this.hasRenderTime(data)) {
           this.updateRenderMetrics(data.renderTime);
         }
         break;
@@ -364,10 +364,23 @@ export class CanvasRegistry implements ICanvasRegistry {
    * Estimate memory usage (simplified)
    */
   private estimateMemoryUsage(): number {
-    if (typeof performance !== 'undefined' && performance.memory) {
-      return performance.memory.usedJSHeapSize;
+    if (typeof performance !== 'undefined') {
+      const memory = (performance as Performance & {
+        memory?: { usedJSHeapSize: number };
+      }).memory;
+      if (memory) {
+        return memory.usedJSHeapSize;
+      }
     }
     return 0;
+  }
+
+  private hasRenderTime(value: CanvasEventData): value is { renderTime: number } {
+    if (typeof value !== 'object' || value === null) {
+      return false;
+    }
+    const record = value as Record<string, unknown>;
+    return typeof record.renderTime === 'number';
   }
 
   /**

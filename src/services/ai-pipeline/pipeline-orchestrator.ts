@@ -472,6 +472,119 @@ export class PipelineOrchestrator {
     };
   }
 
+  // ==========================================================================
+  // OPERATOR INBOX: RESUME FROM HUMAN APPROVAL
+  // ==========================================================================
+
+  /**
+   * Resume pipeline execution after human approval (UC-009 Operator Inbox)
+   *
+   * Called when an operator approves/modifies a PROPOSED pipeline item.
+   * Runs the remaining steps: EXECUTE (Step 6) + ACKNOWLEDGE (Step 7).
+   *
+   * @param ctx - Pipeline context with state APPROVED and approval decision set
+   * @returns Pipeline execution result
+   */
+  async resumeFromApproval(ctx: PipelineContext): Promise<PipelineExecutionResult> {
+    // Validate: must be in APPROVED state
+    if (ctx.state !== PipelineState.APPROVED) {
+      return {
+        success: false,
+        requestId: ctx.requestId,
+        finalState: ctx.state,
+        context: ctx,
+        error: `Cannot resume from state '${ctx.state}'. Expected: 'approved'`,
+      };
+    }
+
+    try {
+      // If operator provided modified actions, transition APPROVED → MODIFIED
+      if (ctx.approval?.modifiedActions && ctx.approval.modifiedActions.length > 0) {
+        ctx = this.transitionState(ctx, PipelineState.MODIFIED);
+      }
+
+      // Resolve UC module from understanding intent
+      const module = ctx.understanding
+        ? this.registry.getModuleForIntent(ctx.understanding.intent)
+        : null;
+
+      if (!module) {
+        // No module available — record audit as approved (manual execution needed)
+        const auditId = await this.auditService.record(ctx, 'approved');
+        return {
+          success: true,
+          requestId: ctx.requestId,
+          finalState: ctx.state,
+          context: ctx,
+          auditId,
+        };
+      }
+
+      // ── Step 6: EXECUTE ──
+      const executeStart = Date.now();
+      ctx = await this.stepExecute(ctx, module);
+      ctx.stepDurations['execute'] = Date.now() - executeStart;
+
+      if (!ctx.executionResult?.success) {
+        ctx = this.transitionState(ctx, PipelineState.FAILED);
+        const auditId = await this.auditService.record(ctx, 'failed', module.moduleId);
+        return {
+          success: false,
+          requestId: ctx.requestId,
+          finalState: ctx.state,
+          context: ctx,
+          auditId,
+          error: ctx.executionResult?.error,
+        };
+      }
+
+      // ── Step 7: ACKNOWLEDGE ──
+      const ackStart = Date.now();
+      ctx = await this.stepAcknowledge(ctx, module);
+      ctx.stepDurations['acknowledge'] = Date.now() - ackStart;
+
+      // ── Audit ──
+      ctx = this.transitionState(ctx, PipelineState.AUDITED);
+      const decision: AuditDecision = ctx.approval?.decision === 'modified'
+        ? 'modified'
+        : 'approved';
+      const auditId = await this.auditService.record(ctx, decision, module.moduleId);
+
+      return {
+        success: true,
+        requestId: ctx.requestId,
+        finalState: ctx.state,
+        context: ctx,
+        auditId,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      ctx.errors.push({
+        step: 'resume_from_approval',
+        error: errorMessage,
+        timestamp: new Date().toISOString(),
+        retryable: false,
+      });
+
+      ctx = this.transitionState(ctx, PipelineState.FAILED);
+      const auditId = await this.auditService.record(ctx, 'failed');
+
+      return {
+        success: false,
+        requestId: ctx.requestId,
+        finalState: ctx.state,
+        context: ctx,
+        auditId,
+        error: errorMessage,
+      };
+    }
+  }
+
+  // ==========================================================================
+  // HELPERS
+  // ==========================================================================
+
   /**
    * Create a timeout promise for pipeline execution limits
    */

@@ -1632,6 +1632,16 @@ export const photoPreviewComponents = {
   }
 } as const;
 
+export const photoPreviewLayout = {
+  dialog: {
+    mobile: 'fixed inset-x-0 top-[env(safe-area-inset-top)] bottom-[env(safe-area-inset-bottom)] max-w-none w-screen rounded-none border-0 h-[calc(100vh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] pb-[max(env(safe-area-inset-bottom),5rem)]',
+    desktop: 'fixed inset-0 max-w-none w-screen h-screen rounded-none border-0'
+  },
+  image: {
+    base: 'max-w-full max-h-full object-contain'
+  }
+} as const;
+
 /**
  * 🏢 ENTERPRISE PORTAL COMPONENTS - MAIN EXPORT
  * Export extended portal components as main portalComponents για backward compatibility
@@ -1773,6 +1783,7 @@ export const canvasUtilities = {
       top: 0,
       zIndex: zIndex.docked // Enterprise: centralized z-index
     }),
+    mobileSlideHeaderClass: 'flex items-center gap-2 px-2 py-2 border-b bg-card min-h-12 sticky top-0 z-10',
     mobileSlideContent: (): React.CSSProperties => ({
       flex: '1 1 auto',
       overflowY: 'auto',
@@ -1782,6 +1793,7 @@ export const canvasUtilities = {
       display: 'flex',
       flexDirection: 'column'
     }),
+    mobileSlideContentClass: 'flex-1 overflow-y-auto bg-card p-4 h-full flex flex-col',
     canvasFullDisplay: (): React.CSSProperties => ({
       width: '100%',
       height: '100%',

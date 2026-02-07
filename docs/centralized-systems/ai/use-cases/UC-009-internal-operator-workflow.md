@@ -2,7 +2,20 @@
 
 > **Parent ADR**: [ADR-169 - Modular AI Architecture](../../reference/adrs/ADR-169-modular-ai-architecture.md)
 > **Pipeline**: [pipeline.md](../pipeline.md)
+> **Implementation**: [ADR-080](../../reference/adrs/ADR-080-ai-pipeline-implementation.md) Section 8
 > **Σχετικά UCs**: Όλα — ο operator διαχειρίζεται τα αποτελέσματα κάθε UC
+
+## Implementation Status
+
+| Level | Feature | Status |
+|-------|---------|--------|
+| 1 | Inbox Triage (list PROPOSED items) | **IMPLEMENTED** (2026-02-07) |
+| 2 | Preview & Detail (original msg + AI understanding + proposal) | **IMPLEMENTED** (2026-02-07) |
+| 3 | Approve / Reject actions | **IMPLEMENTED** (2026-02-07) |
+| 4 | Override / Take Over | Phase 2 |
+| 5 | Force Re-run | Phase 2 |
+| 6 | Bulk Actions | Phase 2 |
+| 7 | Structured Feedback | Phase 3 |
 
 ---
 

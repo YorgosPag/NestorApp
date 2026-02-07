@@ -38,7 +38,7 @@ export type AuthenticatedHandler<T = unknown> = (
   request: NextRequest,
   context: AuthContext,
   cache: PermissionCache
-) => Promise<NextResponse<T>>;
+) => Promise<NextResponse<T | ErrorResponse>>;
 
 /**
  * WithAuth options.

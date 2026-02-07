@@ -102,7 +102,7 @@ export interface FocusTrapOptions {
   onEscape?: () => void;
 }
 
-export function useFocusTrap(
+export function useFocusTrap<T extends HTMLElement = HTMLElement>(
   isActive: boolean,
   options: FocusTrapOptions = {}
 ) {
@@ -113,7 +113,7 @@ export function useFocusTrap(
     onEscape
   } = options;
 
-  const containerRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<T>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
   // Store previously focused element
