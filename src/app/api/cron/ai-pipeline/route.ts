@@ -95,6 +95,45 @@ async function executeBatchProcessing(trigger: CronTrigger): Promise<Response> {
       elapsedMs: elapsed,
     });
 
+    // 🏢 DIAGNOSTIC: Show failed item errors after batch processing
+    let diagnostic: Record<string, unknown> | undefined;
+    if (result.failed > 0 || result.queueStats.failed > 0) {
+      try {
+        const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
+        const { COLLECTIONS } = await import('@/config/firestore-collections');
+        const adminDb = getAdminFirestore();
+
+        const failedSnapshot = await adminDb
+          .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
+          .where('status', '==', 'failed')
+          .orderBy('createdAt', 'desc')
+          .limit(10)
+          .get();
+
+        diagnostic = {
+          failedItems: failedSnapshot.docs.map(doc => {
+            const d = doc.data();
+            return {
+              id: doc.id,
+              pipelineState: d.pipelineState,
+              retryCount: d.retryCount,
+              channel: d.channel,
+              lastError: d.lastError,
+              retryHistory: d.retryHistory,
+              intakeSubject: d.context?.intake?.normalized?.subject,
+              intakeSender: d.context?.intake?.normalized?.sender?.email,
+              errors: d.context?.errors,
+              createdAt: d.createdAt,
+            };
+          }),
+        };
+      } catch (diagError) {
+        diagnostic = {
+          error: diagError instanceof Error ? diagError.message : 'Diagnostic error',
+        };
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       trigger,
@@ -102,6 +141,7 @@ async function executeBatchProcessing(trigger: CronTrigger): Promise<Response> {
       failed: result.failed,
       recovered: result.recovered,
       queue: result.queueStats,
+      diagnostic,
       elapsedMs: elapsed,
     });
 
