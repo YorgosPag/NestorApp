@@ -11,6 +11,9 @@ import { ProjectListCard } from '@/domain';
 import { CompactToolbar, projectsConfig } from '@/components/core/CompactToolbar';
 import { Briefcase } from 'lucide-react';
 import { EntityListColumn } from '@/core/containers';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -33,6 +36,8 @@ export function ProjectsList({
 }: ProjectsListProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
   // 🏢 ENTERPRISE: Using string IDs for Firebase compatibility
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showToolbar, setShowToolbar] = useState(false);
@@ -119,7 +124,7 @@ export function ProjectsList({
       </div>
 
       <ScrollArea className="flex-1 overflow-y-auto w-full">
-        <div className="p-2 space-y-2 min-h-0 w-full">
+        <div className={cn(spacing.padding.sm, spacing.spaceBetween.sm, "min-h-0 w-full")}>
           {displayProjects.map((project: Project) => (
             <div key={project.id} className="shrink-0 w-full">
               <ProjectListCard

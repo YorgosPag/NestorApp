@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { FormField } from './FormField';
 import { useTypography } from '@/hooks/useTypography';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n';
 
 export interface AllowedDataInput {
@@ -45,6 +47,8 @@ const CalculationFormula = ({ text, className }: { text: string; className?: str
 export function AllowedBuildingDataTab({ allowedDataInput, calculatedData, onInputChange, isEditing }: AllowedBuildingDataTabProps) {
     const { t } = useTranslation('properties');
     const typography = useTypography();
+    // 🏢 ENTERPRISE: Centralized spacing tokens
+    const spacing = useSpacingTokens();
     const formRef = useRef<HTMLDivElement>(null);
     
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,7 +98,7 @@ export function AllowedBuildingDataTab({ allowedDataInput, calculatedData, onInp
                     <FormField label={t('projects.buildingData.fields.maxAllowedHeight')} id="maxAllowedHeight" value={allowedDataInput.maxAllowedHeight} unit="m" labelClassName="text-indigo-500" onChange={handleChange} onEnterPress={handleEnterNavigation} labelPosition='left' inputClassName="w-40" unitPosition="left" readOnly={!isEditing} />
                 </div>
                 {/* Right Column - Formulas */}
-                <div className="space-y-3 border-l pl-4">
+                <div className={cn("space-y-3 border-l", spacing.padding.left.md)}>
                      <CalculationFormula text={t('projects.buildingData.formulas.construction')} />
                      <CalculationFormula text="" />
                      <CalculationFormula text={t('projects.buildingData.formulas.plotCoverage')} className="text-blue-600 dark:text-blue-500" />

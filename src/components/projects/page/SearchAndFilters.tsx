@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { FilterSelect } from '../FilterSelect';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 // 🏢 ENTERPRISE: i18n support
@@ -37,6 +40,8 @@ export function SearchAndFilters({
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
   const hasActiveFilters =
     filterCompany !== 'all' ||
     filterStatus !== 'all' ||
@@ -60,7 +65,7 @@ export function SearchAndFilters({
             debounceMs={300}
           />
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className={cn("flex items-center flex-wrap", spacing.gap.sm)}>
           <Filter className={`${iconSizes.sm} text-muted-foreground`} />
           <FilterSelect
             value={filterCompany}

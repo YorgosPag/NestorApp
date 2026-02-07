@@ -11,6 +11,7 @@ import { useProjectStructure } from '../../structure-tab/hooks/useProjectStructu
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTypography } from '@/hooks/useTypography';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -55,6 +56,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
   const typography = useTypography();
+  const spacing = useSpacingTokens();
 
   // 🏢 ENTERPRISE: Lazy loading state
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -90,13 +92,13 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
   // 🏢 ENTERPRISE: Collapsed state (no data fetch yet)
   if (!isExpanded) {
     return (
-      <Card className="mt-6">
+      <Card className={spacing.margin.top.lg}>
         <CardHeader
-          className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
+          className={cn(spacing.padding.sm, "cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg")}
           onClick={handleToggleExpand}
         >
           <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
-            <span className="flex items-center gap-2">
+            <span className={cn("flex items-center", spacing.gap.sm)}>
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
               {t('buildings.cardTitle')}
             </span>
@@ -113,21 +115,21 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
   // 🏢 ENTERPRISE: Loading state
   if (loading) {
     return (
-      <Card className="mt-6">
+      <Card className={spacing.margin.top.lg}>
         <CardHeader
-          className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
+          className={cn(spacing.padding.sm, "cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg")}
           onClick={handleToggleExpand}
         >
           <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
-            <span className="flex items-center gap-2">
+            <span className={cn("flex items-center", spacing.gap.sm)}>
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
               {t('buildings.cardTitle')}
             </span>
             <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <section className="flex items-center justify-center gap-2 py-8" aria-busy="true">
+        <CardContent className={spacing.padding.sm}>
+          <section className={cn("flex items-center justify-center", spacing.gap.sm, spacing.padding.y.xl)} aria-busy="true">
             <Loader2 className={cn(iconSizes.md, 'animate-spin', colors.text.muted)} />
             <span className={colors.text.muted}>{t('buildings.loading')}</span>
           </section>
@@ -139,21 +141,21 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
   // 🏢 ENTERPRISE: Error state with retry
   if (error) {
     return (
-      <Card className="mt-6">
+      <Card className={spacing.margin.top.lg}>
         <CardHeader
-          className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
+          className={cn(spacing.padding.sm, "cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg")}
           onClick={handleToggleExpand}
         >
           <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
-            <span className="flex items-center gap-2">
+            <span className={cn("flex items-center", spacing.gap.sm)}>
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
               {t('buildings.cardTitle')}
             </span>
             <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <section className="flex flex-col items-center justify-center gap-3 py-8" aria-live="polite">
+        <CardContent className={spacing.padding.sm}>
+          <section className={cn("flex flex-col items-center justify-center gap-3", spacing.padding.y.xl)} aria-live="polite">
             <AlertCircle className={cn(iconSizes.lg, 'text-destructive')} />
             <span className="text-destructive text-sm">{t('buildings.errorPrefix')} {error}</span>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
@@ -168,30 +170,30 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
   // 🏢 ENTERPRISE: Empty state
   if (buildings.length === 0) {
     return (
-      <Card className="mt-6">
+      <Card className={spacing.margin.top.lg}>
         <CardHeader
-          className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
+          className={cn(spacing.padding.sm, "cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg")}
           onClick={handleToggleExpand}
         >
           <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
-            <span className="flex items-center gap-2">
+            <span className={cn("flex items-center", spacing.gap.sm)}>
               <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
               {t('buildings.cardTitle')}
             </span>
             <ChevronDown className={cn(iconSizes.md, colors.text.muted)} />
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <section className="text-center py-8" aria-label={t('buildings.emptyListAriaLabel')}>
-            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xl3, 'mx-auto mb-4', NAVIGATION_ENTITIES.building.color)} />
+        <CardContent className={spacing.padding.sm}>
+          <section className={cn("text-center", spacing.padding.y.xl)} aria-label={t('buildings.emptyListAriaLabel')}>
+            <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.xl3, 'mx-auto', spacing.margin.bottom.md, NAVIGATION_ENTITIES.building.color)} />
             <p className={cn('text-sm font-medium', colors.text.foreground)}>
               {t('buildings.emptyTitle')}
             </p>
-            <p className={cn('text-sm mt-1 mb-4', colors.text.muted)}>
+            <p className={cn('text-sm mt-1', spacing.margin.bottom.md, colors.text.muted)}>
               {t('buildings.emptyDescription')}
             </p>
             <Button variant="outline" size="sm" onClick={handleAddBuilding}>
-              <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color, 'mr-2')} />
+              <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color, spacing.margin.right.sm)} />
               {t('buildings.emptyAction')}
             </Button>
           </section>
@@ -202,13 +204,13 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
 
   // 🏢 ENTERPRISE: Buildings list (expanded)
   return (
-    <Card className="mt-6">
+    <Card className={spacing.margin.top.lg}>
       <CardHeader
         className="cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
         onClick={handleToggleExpand}
       >
         <CardTitle className={cn('flex items-center justify-between', typography.card.titleCompact)}>
-          <span className="flex items-center gap-2">
+          <span className={cn("flex items-center", spacing.gap.sm)}>
             <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.md, NAVIGATION_ENTITIES.building.color)} />
             {t('buildings.cardTitle')}
           </span>
@@ -220,7 +222,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
-        <header className="grid grid-cols-[2fr_1fr_1fr_auto] gap-3 pb-2 mb-3 border-b border-border text-sm font-medium text-muted-foreground">
+        <header className={cn("grid grid-cols-[2fr_1fr_1fr_auto] gap-3 mb-3 border-b border-border text-sm font-medium text-muted-foreground", spacing.padding.bottom.sm)}>
           <span>{t('buildings.buildingName')}</span>
           <span className="text-right">{t('buildings.unitsHeader')}</span>
           <span className="text-right">{t('buildings.areaHeader')}</span>
@@ -228,7 +230,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
         </header>
 
         {/* Buildings List */}
-        <section className="space-y-2" aria-label={t('buildings.listAriaLabel')}>
+        <section className={spacing.spaceBetween.sm} aria-label={t('buildings.listAriaLabel')}>
           {buildings.map((building) => (
             <article
               key={building.id}
@@ -238,7 +240,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
               )}
               onClick={() => handleViewBuilding(building.id)}
             >
-              <div className="flex items-center gap-2">
+              <div className={cn("flex items-center", spacing.gap.sm)}>
                 <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color)} />
                 <span className="font-medium">{building.name}</span>
               </div>

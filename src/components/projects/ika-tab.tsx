@@ -10,10 +10,15 @@ import { StampsCalculationTabContent } from './ika/StampsCalculationTabContent';
 import { ApdPaymentsTabContent } from './ika/ApdPaymentsTabContent';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 export function IkaTab() {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
 
   const ikaTabs = [
     {
@@ -49,7 +54,7 @@ export function IkaTab() {
       theme="default"
     >
       {ikaTabs.map((tab) => (
-        <TabsContent key={tab.id} value={tab.id} className="mt-8 overflow-x-auto">
+        <TabsContent key={tab.id} value={tab.id} className={cn(spacing.margin.top.xl, "overflow-x-auto")}>
           {tab.content}
         </TabsContent>
       ))}

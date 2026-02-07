@@ -11,6 +11,8 @@ import { ConfigurationAPI } from '@/core/configuration';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTypography } from '@/hooks/useTypography';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -66,6 +68,8 @@ export function ContributorsTab() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const typography = useTypography();
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
   const { contributors, isLoading, error } = useContributors();
 
   if (error) {
@@ -91,7 +95,7 @@ export function ContributorsTab() {
               <CardDescription>{t('contributorsTab.description')}</CardDescription>
             </div>
             <Button>
-              <Plus className={`mr-2 ${iconSizes.sm}`} />
+              <Plus className={cn(spacing.margin.right.sm, iconSizes.sm)} />
               {t('contributorsTab.addContributor')}
             </Button>
           </div>
@@ -120,7 +124,7 @@ export function ContributorsTab() {
                       <a href={`mailto:${contributor.email}`} className={`text-primary ${INTERACTIVE_PATTERNS.BUTTON_LINK_HOVER}`}>{contributor.email}</a>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className={cn("flex items-center justify-end", spacing.gap.sm)}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className={`${iconSizes.xl} p-0`}>

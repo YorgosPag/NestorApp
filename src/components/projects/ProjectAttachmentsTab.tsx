@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Folder, Eye } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { ProjectFormData } from './general-tab/types';
@@ -22,6 +25,8 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const typography = useTypography();
+    // 🏢 ENTERPRISE: Centralized spacing tokens
+    const spacing = useSpacingTokens();
     const handleFileSelect = (field: string) => {
         // This would open a file dialog in a real application
         console.log(`Selecting file for ${field}`);
@@ -29,8 +34,8 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
 
     return (
         <Card>
-            <CardHeader className="pb-4">
-                <div className="flex items-center gap-2">
+            <CardHeader className={spacing.padding.bottom.md}>
+                <div className={cn("flex items-center", spacing.gap.sm)}>
                     <Folder className={`${iconSizes.md} text-primary`} />
                     <CardTitle className={typography.card.titleCompact}>{t('attachmentsTab.title')}</CardTitle>
                 </div>
@@ -38,10 +43,10 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                     {t('attachmentsTab.description')}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="space-y-2">
+            <CardContent className={spacing.spaceBetween.md}>
+                <div className={spacing.spaceBetween.sm}>
                     <Label htmlFor="mapPath" className="text-sm font-medium">{t('attachmentsTab.projectMap')}</Label>
-                    <div className="flex items-center gap-2">
+                    <div className={cn("flex items-center", spacing.gap.sm)}>
                         <Input
                             id="mapPath"
                             readOnly
@@ -57,9 +62,9 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                     </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className={spacing.spaceBetween.sm}>
                     <Label htmlFor="floorPlanPath" className="text-sm font-medium">{t('attachmentsTab.generalFloorPlan')}</Label>
-                    <div className="flex items-center gap-2">
+                    <div className={cn("flex items-center", spacing.gap.sm)}>
                         <Input
                             id="floorPlanPath"
                             readOnly
@@ -75,9 +80,9 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                     </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className={spacing.spaceBetween.sm}>
                     <Label htmlFor="percentagesPath" className="text-sm font-medium">{t('attachmentsTab.percentagesTable')}</Label>
-                    <div className="flex items-center gap-2">
+                    <div className={cn("flex items-center", spacing.gap.sm)}>
                         <Input
                             id="percentagesPath"
                             readOnly

@@ -3,6 +3,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormField } from '../FormField';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 interface FinancialLeftColumnProps {
     financialData: {
@@ -20,9 +22,11 @@ interface FinancialLeftColumnProps {
 
 export function FinancialLeftColumn({ financialData, calculatedData, onChange, onEnterPress }: FinancialLeftColumnProps) {
     const { t } = useTranslation('forms');
-    
+    // 🏢 ENTERPRISE: Centralized spacing tokens
+    const spacing = useSpacingTokens();
+
     return (
-        <div className="space-y-4">
+        <div className={spacing.spaceBetween.md}>
             <FormField
                 id="salePricePerSqm"
                 label={t('labels.salePricePerSqm')}

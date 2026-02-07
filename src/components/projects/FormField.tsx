@@ -8,6 +8,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Info } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 interface FormFieldProps {
   id: string;
@@ -44,6 +46,8 @@ export function FormField({
 }: FormFieldProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
   const formatValue = (val: number | string) => {
     if (typeof val === 'number') {
         if (isPercentage) {
@@ -69,7 +73,7 @@ export function FormField({
     <TooltipProvider>
         <div className={cn(
             "flex",
-            labelPosition === 'top' ? "flex-col space-y-2" : "flex-row items-center justify-between gap-4"
+            labelPosition === 'top' ? cn("flex-col", spacing.spaceBetween.sm) : cn("flex-row items-center justify-between", spacing.gap.md)
         )}>
         <Label htmlFor={id} className={cn("text-sm font-medium", labelClassName)}>
             {label}

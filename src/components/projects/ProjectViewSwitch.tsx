@@ -10,6 +10,9 @@ import { MobileDetailsSlideIn } from '@/core/layouts';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Grid view imports - Using proper GridCard (PR: Enterprise Grid System)
@@ -36,6 +39,8 @@ export function ProjectViewSwitch({
   projects, selectedProject, onSelectProject, companies, viewMode = 'list', onEditProject, initialTab }: ProjectViewSwitchProps) {
   // 🏢 ENTERPRISE: Hooks must be called inside component body
   const iconSizes = useIconSizes();
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('projects');
   const colors = useSemanticColors();
@@ -66,7 +71,7 @@ export function ProjectViewSwitch({
         {/* 🖥️ DESKTOP & MOBILE: Grid layout */}
         <ScrollArea className="flex-1 w-full">
           <section
-            className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2"
+            className={cn(spacing.padding.sm, "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", spacing.gap.sm)}
             aria-label={t('grid.ariaLabel')}
           >
             {projects.map((project: Project) => (
@@ -91,14 +96,14 @@ export function ProjectViewSwitch({
             <>
               <button
                 onClick={() => selectedProject && onEditProject?.(selectedProject)}
-                className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                className={cn(spacing.padding.sm, "rounded-md border border-border", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
                 aria-label={t('viewSwitch.editLabel')}
               >
                 <Edit className={iconSizes.sm} />
               </button>
               <button
                 onClick={() => {/* TODO: Delete project handler */}}
-                className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+                className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
                 aria-label={t('viewSwitch.deleteLabel')}
               >
                 <Trash2 className={iconSizes.sm} />
@@ -122,7 +127,7 @@ export function ProjectViewSwitch({
   return (
     <>
       {/* 🖥️ DESKTOP: Standard split layout */}
-      <div className="hidden md:flex flex-1 gap-2 min-h-0">
+      <div className={cn("hidden md:flex flex-1 min-h-0", spacing.gap.sm)}>
         <ProjectsList
             projects={projects}
             selectedProject={selectedProject}
@@ -157,14 +162,14 @@ export function ProjectViewSwitch({
           <>
             <button
               onClick={() => selectedProject && onEditProject?.(selectedProject)}
-              className={`p-2 rounded-md border ${colors.bg.primary} border-border ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+              className={cn(spacing.padding.sm, "rounded-md border border-border", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
               aria-label={t('viewSwitch.editLabel')}
             >
               <Edit className={iconSizes.sm} />
             </button>
             <button
               onClick={() => {/* TODO: Delete project handler */}}
-              className={`p-2 rounded-md border ${colors.bg.primary} border-border text-destructive ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}
+              className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
               aria-label={t('viewSwitch.deleteLabel')}
             >
               <Trash2 className={iconSizes.sm} />

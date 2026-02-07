@@ -2315,7 +2315,7 @@ service cloud.firestore {
     // 🔒 ENTERPRISE: Only allows updating delivery state fields
     function isValidNotificationUpdate(newData, existingData) {
       // List of fields that users are allowed to modify
-      let allowedFields = ['delivery', 'seenAt', 'actedAt', 'actionId'];
+      let allowedFields = ['delivery', 'seenAt', 'actedAt', 'actionId', 'dismissedAt'];
 
       // Get the fields that changed
       let changedKeys = newData.diff(existingData).affectedKeys();
@@ -2324,7 +2324,7 @@ service cloud.firestore {
       return changedKeys.hasOnly(allowedFields)
              // Ensure delivery state is valid if being updated
              && (!changedKeys.hasAny(['delivery'])
-                 || newData.delivery.state in ['queued', 'sent', 'delivered', 'seen', 'acted', 'failed', 'expired'])
+                 || newData.delivery.state in ['queued', 'sent', 'delivered', 'seen', 'acted', 'dismissed', 'failed', 'expired'])
              // Ensure userId is never changed
              && newData.userId == existingData.userId
              // Ensure title is never changed

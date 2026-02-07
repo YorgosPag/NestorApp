@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { FormField } from '../FormField';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -22,9 +24,11 @@ interface FinancialRightColumnProps {
 export function FinancialRightColumn({ financialData, calculatedData, onChange, onEnterPress }: FinancialRightColumnProps) {
     // 🏢 ENTERPRISE: i18n hook
     const { t } = useTranslation('projects');
+    // 🏢 ENTERPRISE: Centralized spacing tokens
+    const spacing = useSpacingTokens();
 
     return (
-        <div className="space-y-4">
+        <div className={spacing.spaceBetween.md}>
             <FormField
                 id="grossOutsideStairwell"
                 label={t('financial.grossExcludingStaircase')}

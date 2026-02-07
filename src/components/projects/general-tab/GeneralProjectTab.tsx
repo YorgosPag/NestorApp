@@ -8,6 +8,9 @@ import { ThemeProgressBar } from '@/core/progress/ThemeProgressBar';
 import { CheckCircle, Ruler, TrendingUp } from 'lucide-react';
 import { getThemeVariant } from '@/components/ui/theme/ThemeComponents';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -37,6 +40,8 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
   const router = useRouter();
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
   const [isEditing, setIsEditing] = useState(false);
   const [projectData, setProjectData] = useState<ProjectFormData>({
     name: project.name,
@@ -144,7 +149,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         saveError={saveError}
       />
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 my-6">
+      <div className={cn("grid grid-cols-1 md:grid-cols-4", spacing.gap.md, spacing.margin.top.lg, spacing.margin.bottom.sm)}>
         <StatCard
           icon={UnitIcon}
           value={loadingStats ? '...' : stats?.totalUnits ?? 0}
@@ -177,9 +182,9 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       </div>
 
       {!loadingStats && stats && (
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="space-y-2">
+        <Card className={spacing.margin.bottom.sm}>
+          <CardContent className={spacing.padding.sm}>
+            <div className={spacing.spaceBetween.sm}>
               <div className="flex justify-between text-sm">
                 <span>{t('generalTab.salesProgress')}</span>
                 <span>{t('generalTab.unitsProgress', { sold: stats.soldUnits, total: stats.totalUnits })}</span>
@@ -201,7 +206,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
       )}
 
       <Tabs defaultValue="basic-info" className="w-full">
-        <TabsList className="flex flex-wrap gap-2 w-full h-auto min-h-fit">
+        <TabsList className={cn("flex flex-wrap w-full h-auto min-h-fit", spacing.gap.sm)}>
           <TabsTrigger value="basic-info" className={themeConfig.tabTrigger}>{t('generalTab.tabs.basicInfo')}</TabsTrigger>
           <TabsTrigger value="structure" className={themeConfig.tabTrigger}>{t('generalTab.tabs.structure')}</TabsTrigger>
           <TabsTrigger value="location" className={themeConfig.tabTrigger}>{t('generalTab.tabs.location')}</TabsTrigger>
@@ -209,7 +214,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
           <TabsTrigger value="attachments" className={themeConfig.tabTrigger}>{t('generalTab.tabs.attachments')}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="basic-info" className="pt-4">
+        <TabsContent value="basic-info" className={spacing.padding.top.md}>
           <BasicProjectInfoTab
             data={projectData}
             setData={setProjectData}
@@ -220,11 +225,11 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
           <ProjectCustomersTable projectId={project.id} />
         </TabsContent>
         
-        <TabsContent value="structure" className="pt-4">
+        <TabsContent value="structure" className={spacing.padding.top.md}>
           <ProjectStructureTab projectId={project.id} />
         </TabsContent>
         
-        <TabsContent value="location" className="pt-4">
+        <TabsContent value="location" className={spacing.padding.top.md}>
           <MapTabContent building={{ 
             name: project.name, 
             address: project.address || '', 
@@ -232,7 +237,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
           }} />
         </TabsContent>
         
-        <TabsContent value="permits" className="pt-4">
+        <TabsContent value="permits" className={spacing.padding.top.md}>
           <PermitsAndStatusTab 
             data={projectData}
             setData={setProjectData}
@@ -240,7 +245,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
           />
         </TabsContent>
         
-        <TabsContent value="attachments" className="pt-4">
+        <TabsContent value="attachments" className={spacing.padding.top.md}>
           <ProjectAttachmentsTab 
             data={projectData}
             setData={setProjectData}

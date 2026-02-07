@@ -42,6 +42,10 @@ import {
 import { updateProjectClient } from '@/services/projects-client.service';
 import toast from 'react-hot-toast';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { useTypography } from '@/hooks/useTypography';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { cn } from '@/lib/utils';
 
 // =============================================================================
 // TYPES
@@ -58,6 +62,9 @@ interface ProjectLocationsTabProps {
 
 export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps) {
   const iconSizes = useIconSizes();
+  const typography = useTypography();
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
 
   // 🏢 ENTERPRISE: State management
   const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(
@@ -295,21 +302,21 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const primary = getPrimaryAddress(localAddresses);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className={spacing.spaceBetween.lg}>
       {/* Header Section */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold flex items-center gap-2">
+          <h2 className={cn(typography.heading.lg, "flex items-center", spacing.gap.sm)}>
             <MapPin className={iconSizes.lg} />
             Τοποθεσίες & Διευθύνσεις
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className={cn("text-sm text-muted-foreground", spacing.margin.top.xs)}>
             Διαχείριση όλων των διευθύνσεων του έργου
           </p>
         </div>
         {!isAddFormOpen && (
           <Button onClick={() => setIsAddFormOpen(true)} variant="default">
-            <Plus className={`${iconSizes.sm} mr-2`} />
+            <Plus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
             Νέα Διεύθυνση
           </Button>
         )}
@@ -330,9 +337,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
       {/* 🏢 ENTERPRISE: Inline Add Form (Procore Pattern) */}
       {isAddFormOpen && (
-        <div className="border-2 border-primary rounded-lg p-6 bg-card space-y-4">
+        <div className={cn("border-2 border-primary rounded-lg bg-card", spacing.padding.sm, spacing.spaceBetween.md)}>
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
+            <h3 className={cn(typography.heading.md, "flex items-center", spacing.gap.sm)}>
               <Plus className={iconSizes.md} />
               Προσθήκη Νέας Διεύθυνσης
             </h3>
@@ -343,7 +350,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
           <AddressFormSection onChange={setTempAddress} />
 
-          <div className="flex gap-3 justify-end pt-4 border-t">
+          <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
             <Button variant="outline" onClick={handleCancelAdd} disabled={isSaving}>
               Ακύρωση
             </Button>
@@ -356,21 +363,21 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
       {/* Addresses List */}
       {localAddresses.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed rounded-lg">
-          <MapPin className={`${iconSizes.xl} mx-auto mb-4 text-muted-foreground`} />
-          <h3 className="text-lg font-semibold mb-2">Δεν υπάρχουν διευθύνσεις</h3>
-          <p className="text-sm text-muted-foreground mb-4">
+        <div className={cn("text-center border-2 border-dashed rounded-lg", spacing.padding.y["2xl"])}>
+          <MapPin className={cn(iconSizes.xl, "mx-auto text-muted-foreground", spacing.margin.bottom.md)} />
+          <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>Δεν υπάρχουν διευθύνσεις</h3>
+          <p className={cn("text-sm text-muted-foreground", spacing.margin.bottom.md)}>
             Προσθέστε τουλάχιστον μία διεύθυνση για το έργο
           </p>
           <Button onClick={() => setIsAddFormOpen(true)}>
-            <Plus className={`${iconSizes.sm} mr-2`} />
+            <Plus className={cn(iconSizes.sm, spacing.margin.right.sm)} />
             Προσθήκη Πρώτης Διεύθυνσης
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className={spacing.spaceBetween.md}>
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">
+            <h3 className={typography.heading.md}>
               Διευθύνσεις Έργου ({localAddresses.length})
             </h3>
           </div>
@@ -379,14 +386,14 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             <div
               key={address.id}
               id={`address-card-${address.id}`}
-              className="relative border rounded-lg p-6 hover:shadow-md transition-shadow"
+              className={cn("relative border rounded-lg hover:shadow-md transition-shadow", spacing.padding.sm)}
             >
               {/* 🏢 ENTERPRISE: Inline Edit Mode or Display Mode */}
               {editingIndex === index ? (
                 // EDIT MODE: Inline form
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold flex items-center gap-2">
+                <div className={spacing.spaceBetween.md}>
+                  <div className={cn("flex items-center justify-between", spacing.margin.bottom.md)}>
+                    <h4 className={cn(typography.heading.md, "flex items-center", spacing.gap.sm)}>
                       <Pencil className={iconSizes.md} />
                       Επεξεργασία Διεύθυνσης
                     </h4>
@@ -400,7 +407,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                     initialValues={address}
                   />
 
-                  <div className="flex gap-3 justify-end pt-4 border-t">
+                  <div className={cn("flex gap-3 justify-end border-t", spacing.padding.top.md)}>
                     <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
                       Ακύρωση
                     </Button>
@@ -415,7 +422,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                   <AddressCard address={address} />
 
                   {/* Action Buttons */}
-                  <div className="absolute top-4 right-4 flex gap-2">
+                  <div className={cn("absolute top-4 right-4 flex", spacing.gap.sm)}>
                     {/* Primary Badge or Set Primary Button */}
                     {address.isPrimary ? (
                       <Badge variant="default" className="flex items-center gap-1">
@@ -455,10 +462,10 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                   </div>
 
                   {/* Metadata */}
-                  <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">
+                  <div className={cn("border-t text-xs text-muted-foreground", spacing.margin.top.md, spacing.padding.top.md)}>
                     <span>ID: {address.id.slice(0, 8)}...</span>
                     {address.sortOrder !== undefined && (
-                      <span className="ml-4">Σειρά: {address.sortOrder}</span>
+                      <span className={spacing.margin.left.md}>Σειρά: {address.sortOrder}</span>
                     )}
                   </div>
                 </>

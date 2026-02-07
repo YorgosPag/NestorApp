@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Briefcase } from "lucide-react";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: Centralized entity icons/colors (ZERO hardcoded values)
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
@@ -26,14 +28,16 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const typography = useTypography();
+    // 🏢 ENTERPRISE: Centralized spacing tokens
+    const spacing = useSpacingTokens();
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setData((prev: ProjectFormData) => ({...prev, [e.target.name]: e.target.value}));
     };
 
     return (
         <Card>
-            <CardHeader className="pb-4">
-                <div className="flex items-center gap-2">
+            <CardHeader className={spacing.padding.sm}>
+                <div className={cn("flex items-center", spacing.gap.sm)}>
                     <Briefcase className={`${iconSizes.md} text-primary`} />
                     <CardTitle className={typography.card.titleCompact}>{t('basicInfo.title')}</CardTitle>
                 </div>
@@ -41,18 +45,18 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
                     {t('basicInfo.description')}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="space-y-2">
+            <CardContent className={cn(spacing.padding.sm, spacing.spaceBetween.md)}>
+                <div className={cn("grid grid-cols-1 lg:grid-cols-2", spacing.gap.md)}>
+                    <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="name" className="text-sm font-medium">{t('basicInfo.projectTitle')}</Label>
                         <Input id="name" name="name" value={data.name} onChange={handleChange} disabled={!isEditing} className="h-10" />
                     </div>
-                    <div className="space-y-2">
+                    <div className={spacing.spaceBetween.sm}>
                         <Label htmlFor="licenseTitle" className="text-sm font-medium">{t('basicInfo.licenseTitle')}</Label>
                         <Input id="licenseTitle" name="licenseTitle" value={data.licenseTitle} onChange={handleChange} disabled={!isEditing} className="h-10" />
                     </div>
                 </div>
-                <div className="space-y-2">
+                <div className={spacing.spaceBetween.sm}>
                     <Label htmlFor="companyName" className="text-sm font-medium">{t('basicInfo.company')}</Label>
                      <div className="relative">
                         {/* 🏢 ENTERPRISE: Using centralized company icon/color */}
@@ -66,7 +70,7 @@ export function BasicProjectInfoTab({ data, setData, isEditing }: BasicProjectIn
                         />
                     </div>
                 </div>
-                <div className="space-y-2">
+                <div className={spacing.spaceBetween.sm}>
                     <Label htmlFor="description" className="text-sm font-medium">{t('basicInfo.projectDescription')}</Label>
                     <Textarea
                         id="description"

@@ -11,6 +11,9 @@ import { ActualBuildingDataTab, type ActualData, type CalculatedActualData } fro
 import { OtherDataTab } from './OtherDataTab';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 
 interface BuildingDataTabsProps {
   isEditing: boolean;
@@ -37,6 +40,8 @@ export function BuildingDataTabs({
 }: BuildingDataTabsProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
 
   const buildingTabs = [
     {
@@ -92,7 +97,7 @@ export function BuildingDataTabs({
       theme="default"
     >
       {buildingTabs.map((tab) => (
-        <TabsContent key={tab.id} value={tab.id} className="mt-8 overflow-x-auto">
+        <TabsContent key={tab.id} value={tab.id} className={cn(spacing.margin.top.xl, "overflow-x-auto")}>
           {tab.content}
         </TabsContent>
       ))}

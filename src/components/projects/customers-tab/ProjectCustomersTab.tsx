@@ -13,12 +13,17 @@ import type { ProjectCustomersTabProps } from './types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized typography tokens
 import { useTypography } from '@/hooks/useTypography';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { cn } from '@/lib/utils';
 
 export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   // 🏢 ENTERPRISE: Centralized typography tokens
   const typography = useTypography();
+  // 🏢 ENTERPRISE: Centralized spacing tokens
+  const spacing = useSpacingTokens();
   const { customers, loading, error } = useProjectCustomers(projectId);
 
   if (loading) {
@@ -41,7 +46,7 @@ export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
-        <header className="grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 pb-2 mb-4 border-b border-border text-sm font-medium text-muted-foreground">
+        <header className={cn("grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 border-b border-border text-sm font-medium text-muted-foreground", spacing.padding.bottom.sm, spacing.margin.bottom.md)}>
           <span>{t('customers.table.name')}</span>
           <span>{t('customers.table.phone')}</span>
           <span>{t('customers.table.email')}</span>
@@ -50,7 +55,7 @@ export function ProjectCustomersTab({ projectId }: ProjectCustomersTabProps) {
         </header>
 
         {/* Table Content */}
-        <section className="space-y-1" aria-label={t('customers.listAriaLabel')}>
+        <section className={spacing.spaceBetween.xs} aria-label={t('customers.listAriaLabel')}>
           {customers.map((customer) => (
             <CustomerInfoCompact
               key={customer.contactId}

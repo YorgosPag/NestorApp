@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Trash2, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw, Eye, CheckCheck } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw, Eye, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { useNotificationCenter } from '@/stores/notificationCenter';
@@ -14,11 +14,10 @@ import { useTranslation } from '@/i18n';
 import type { Notification, Severity, UserPreferences } from '@/types/notification';
 import { NotificationClient } from '@/api/notificationClient';
 import { markNotificationsAsRead, dismissNotification } from '@/services/notificationService';
-import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 type DrawerState = { isOpen: boolean; open: () => void; close: () => void; };
@@ -302,39 +301,32 @@ export function NotificationDrawer() {
         <header className="flex items-center justify-between p-4 border-b">
           <h2 id="notif-title" className="text-lg font-semibold">{t('notifications.title', { defaultValue: 'Notifications' })}</h2>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void markRead()}
-              className={`text-sm px-3 py-1.5 rounded-md ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-            >
+            <Button variant="ghost" size="sm" onClick={() => void markRead()}>
               {t('notifications.markAllRead', { defaultValue: 'Mark all read' })}
-            </button>
-            <button
+            </Button>
+            <Button
               ref={closeButtonRef}
-              type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={close}
-              className={`p-1.5 rounded-md ${HOVER_BACKGROUND_EFFECTS.ACCENT} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
               aria-label={t('buttons.close', { defaultValue: 'Close' })}
             >
               <X className={iconSizes.md} />
-            </button>
+            </Button>
           </div>
         </header>
 
-        <ScrollArea type="always" className="flex-1 overflow-hidden">
+        {/* Scrollable content — plain div avoids Radix ScrollArea display:table overflow bug */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {/* ✅ ENTERPRISE: Error state UI με Retry */}
           {storeError ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-4">
               <AlertCircle className={`${iconSizes.xl} text-red-500`} />
               <p className="text-sm text-center">{storeError}</p>
-              <button
-                type="button"
-                onClick={handleRetry}
-                className={`flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-              >
+              <Button variant="default" size="sm" onClick={handleRetry}>
                 <RefreshCw className={iconSizes.sm} />
                 {t('notifications.retry', { defaultValue: 'Retry' })}
-              </button>
+              </Button>
             </div>
           ) : status === 'loading' ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -351,45 +343,64 @@ export function NotificationDrawer() {
                 const colorClass = colorMap[n.severity];
                 const isUnread = n.delivery.state !== 'seen' && n.delivery.state !== 'acted';
 
-                // i18n: use titleKey if available, otherwise fall back to raw title
-                const displayTitle = n.titleKey
-                  ? t(n.titleKey, { ...n.titleParams, defaultValue: n.title })
-                  : n.title;
+                // i18n: resolve display title with robust sender extraction
+                const resolveDisplayTitle = (): string => {
+                  if (n.titleKey) {
+                    const params: Record<string, string> = { ...n.titleParams };
+                    // Fallback chain for missing sender: titleParams → raw title regex → source email → default
+                    if (!params.sender) {
+                      const fromMatch = n.title?.match(/from (.+)$/i);
+                      if (fromMatch) {
+                        params.sender = fromMatch[1];
+                      } else {
+                        params.sender = t('notifications.unknownSender', { defaultValue: 'Άγνωστος' });
+                      }
+                    }
+                    return t(n.titleKey, { ...params, defaultValue: n.title ?? '' });
+                  }
+                  if (n.title) {
+                    const emailFromMatch = n.title.match(/^New (?:Email|message) from (.+)$/i);
+                    if (emailFromMatch) {
+                      return t('notifications.email.newFrom', { sender: emailFromMatch[1], defaultValue: n.title });
+                    }
+                  }
+                  return n.title ?? '';
+                };
+                const displayTitle = resolveDisplayTitle();
 
                 // Derive navigation URL: actions → source.feature → title-based detection
                 const actionUrl = n.actions?.[0]?.url
                   ?? (n.source?.feature === 'ai-inbox' ? '/admin/ai-inbox' : undefined)
                   ?? (n.title?.toLowerCase().includes('message') ? '/admin/ai-inbox' : undefined);
 
-                // Card states: selected > unread > default (like project management cards)
+                // Card states — matches project management ListCard styling
                 const isSelected = selectedId === n.id;
                 const cardStateClass = isSelected
-                  ? `${getStatusBorder('info')} shadow-lg ring-2 ring-blue-200 dark:ring-blue-800 bg-blue-950/40 dark:bg-blue-950/50`
+                  ? `${getStatusBorder('info')} bg-[hsl(var(--bg-info))] shadow-sm`
                   : isUnread
-                    ? `${getStatusBorder('info')} shadow-md ring-1 ring-blue-500/30 dark:ring-blue-400/30 bg-blue-950/20 dark:bg-blue-950/30`
-                    : 'border-border';
+                    ? `${getStatusBorder('info')} bg-card shadow-sm`
+                    : 'border-border bg-card';
 
                 return (
                   <Card
                     key={n.id}
                     onClick={() => setSelectedId(prev => prev === n.id ? null : n.id)}
                     className={[
-                      'p-3 cursor-pointer relative overflow-hidden',
-                      'transition-all duration-200',
-                      'hover:border-blue-500/60 hover:shadow-md dark:hover:border-blue-400/60',
+                      'p-3 cursor-pointer relative',
+                      'transition-colors duration-150 hover:bg-accent/50',
                       cardStateClass,
                     ].join(' ')}
                   >
-                    {/* Header row: severity icon + content + dismiss X */}
-                    <div className="flex items-start gap-2">
+                    {/* Header: severity icon + content + dismiss X */}
+                    <div className="flex items-start gap-2 min-w-0">
                       <Icon className={`${iconSizes.md} mt-0.5 flex-shrink-0 ${colorClass}`} />
 
-                      <div className="min-w-0 flex-1">
-                        <span className={`text-sm leading-tight ${isUnread ? 'font-semibold text-foreground' : 'font-medium text-foreground/80'}`}>
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <span className={`text-sm leading-tight block truncate ${isUnread ? 'font-semibold text-foreground' : 'font-medium text-foreground/80'}`}>
                           {displayTitle}
                         </span>
                         {n.body && (
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words mt-1">
+                          <p className="text-sm text-muted-foreground break-words mt-1 line-clamp-3">
                             {n.body}
                           </p>
                         )}
@@ -398,53 +409,44 @@ export function NotificationDrawer() {
                         </time>
                       </div>
 
-                      {/* Dismiss X — always visible, prominent */}
-                      <button
-                        type="button"
+                      {/* Dismiss X — removes notification from panel */}
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="flex-shrink-0 text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
                         onClick={(e) => { e.stopPropagation(); void handleDismiss(n.id); }}
-                        className={`p-1 rounded-md flex-shrink-0 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                         aria-label={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
                         title={t('notifications.dismiss', { defaultValue: 'Dismiss' })}
                       >
                         <X className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </div>
 
-                    {/* Action buttons row */}
-                    <nav className="flex items-center gap-2 mt-2.5 pt-2 border-t border-border/40">
-                      {/* Προβολή (View) */}
+                    {/* Action buttons */}
+                    <nav className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-border/40">
+                      {/* Προβολή (View) — navigates to relevant page */}
                       {actionUrl && (
-                        <button
-                          type="button"
+                        <Button
+                          variant="default"
+                          size="xs"
                           onClick={(e) => { e.stopPropagation(); void handleAction(n.id, n.actions?.[0]?.id ?? 'view', actionUrl); }}
-                          className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium bg-primary text-primary-foreground hover:bg-primary/90 ${TRANSITION_PRESETS.STANDARD_COLORS}`}
                         >
                           <Eye className="h-3.5 w-3.5" />
                           {t('notifications.actions.view_email', { defaultValue: 'Προβολή' })}
-                        </button>
+                        </Button>
                       )}
 
-                      {/* Διαβάστηκε (Mark as Read) — only for unread */}
-                      {isUnread && (
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); void markRead([n.id]); }}
-                          className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium border border-border hover:bg-accent ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                        >
-                          <CheckCheck className="h-3.5 w-3.5" />
-                          {t('notifications.markRead', { defaultValue: 'Διαβάστηκε' })}
-                        </button>
-                      )}
-
-                      {/* Διαγραφή (Delete/Dismiss) — always visible */}
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); void handleDismiss(n.id); }}
-                        className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium ml-auto text-red-500 border border-red-500/30 hover:bg-red-500/10 ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                      {/* Προβλήθηκε (Mark as Read) — always visible */}
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        disabled={!isUnread}
+                        className="border-emerald-500/50 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-400/50"
+                        onClick={(e) => { e.stopPropagation(); void markRead([n.id]); }}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        {t('notifications.dismiss', { defaultValue: 'Διαγραφή' })}
-                      </button>
+                        <CheckCheck className="h-3.5 w-3.5" />
+                        {t('notifications.markRead', { defaultValue: 'Προβλήθηκε' })}
+                      </Button>
                     </nav>
                   </Card>
                 );
@@ -455,16 +457,12 @@ export function NotificationDrawer() {
           {/* ✅ ENTERPRISE: Load More με cursor pagination */}
           {cursor && status === 'ready' && notificationsList.length > 0 && (
             <div className="p-2 pt-0">
-              <button
-                type="button"
-                onClick={handleLoadMore}
-                className={`w-full py-2 px-4 bg-accent rounded-md text-sm font-medium ${HOVER_BACKGROUND_EFFECTS.ACCENT_DARKER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-              >
+              <Button variant="secondary" size="sm" className="w-full" onClick={handleLoadMore}>
                 {t('notifications.loadMore', { defaultValue: 'Load More' })}
-              </button>
+              </Button>
             </div>
           )}
-        </ScrollArea>
+        </div>
       </aside>
     </>
   );

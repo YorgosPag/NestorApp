@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Edit, Save, X, CheckCircle, Copy } from 'lucide-react';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
+import { cn } from '@/lib/utils';
+// 🏢 ENTERPRISE: Centralized spacing tokens
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import {
   Tooltip,
   TooltipContent,
@@ -47,6 +50,8 @@ export function GeneralProjectHeader({
     const { t } = useTranslation('projects');
     const iconSizes = useIconSizes();
     const colors = useSemanticColors();
+    // 🏢 ENTERPRISE: Centralized spacing tokens
+    const spacing = useSpacingTokens();
     const [copied, setCopied] = React.useState(false);
 
     const handleCancel = () => {
@@ -70,8 +75,8 @@ export function GeneralProjectHeader({
     const displayCode = projectCode || (projectId ? `ID: ${projectId.substring(0, 8)}...` : 'ID: ---');
 
     return (
-        <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
+        <div className={cn("flex items-center justify-between", spacing.margin.bottom.md)}>
+            <div className={cn("flex items-center", spacing.gap.sm)}>
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -86,9 +91,9 @@ export function GeneralProjectHeader({
                             </div>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="max-w-xs">
-                            <div className="space-y-1">
+                            <div className={spacing.spaceBetween.xs}>
                                 <p className="font-medium text-xs">{t('projectHeader.technicalIdLabel')}</p>
-                                <div className="flex items-center gap-2">
+                                <div className={cn("flex items-center", spacing.gap.sm)}>
                                     <code className="text-xs bg-muted px-1 py-0.5 rounded">
                                         {projectId || 'N/A'}
                                     </code>
@@ -107,7 +112,7 @@ export function GeneralProjectHeader({
                 />
                 
                 {isEditing && (
-                <div className="flex items-center gap-2 text-xs">
+                <div className={cn("flex items-center text-xs", spacing.gap.sm)}>
                     {autoSaving ? (
                     <>
                         <AnimatedSpinner size="small" />
@@ -125,16 +130,16 @@ export function GeneralProjectHeader({
                 )}
             </div>
       
-            <div className="flex items-center gap-2">
+            <div className={cn("flex items-center", spacing.gap.sm)}>
                 {!isEditing ? (
                 <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                    <Edit className={`${iconSizes.sm} mr-2`} />
+                    <Edit className={cn(iconSizes.sm, spacing.margin.right.sm)} />
                     {t('projectHeader.edit')}
                 </Button>
                 ) : (
                 <>
                     <Button variant="outline" size="sm" onClick={handleCancel} disabled={isSaving}>
-                        <X className={`${iconSizes.sm} mr-2`} />
+                        <X className={cn(iconSizes.sm, spacing.margin.right.sm)} />
                         {t('projectHeader.cancel')}
                     </Button>
                     <Button size="sm" onClick={handleSave} disabled={isSaving}>
@@ -145,7 +150,7 @@ export function GeneralProjectHeader({
                             </>
                         ) : (
                             <>
-                                <Save className={`${iconSizes.sm} mr-2`} />
+                                <Save className={cn(iconSizes.sm, spacing.margin.right.sm)} />
                                 {t('projectHeader.save')}
                             </>
                         )}
