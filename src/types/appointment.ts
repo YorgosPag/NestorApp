@@ -62,21 +62,21 @@ export interface AppointmentDocument {
   /** Requester (sender) info */
   requester: {
     /** Sender email address */
-    email?: string;
+    email?: string | null;
     /** Sender display name */
-    name?: string;
+    name?: string | null;
     /** Firestore contact ID (null if unknown sender) */
-    contactId?: string;
+    contactId?: string | null;
     /** Whether the sender was found in the contacts collection */
     isKnownContact: boolean;
   };
 
   /** Appointment details */
   appointment: {
-    /** Requested date — ISO format YYYY-MM-DD (extracted by AI, may be undefined) */
-    requestedDate?: string;
-    /** Requested time — HH:mm format (extracted by AI, may be undefined) */
-    requestedTime?: string;
+    /** Requested date — ISO format YYYY-MM-DD (extracted by AI, may be null) */
+    requestedDate?: string | null;
+    /** Requested time — HH:mm format (extracted by AI, may be null) */
+    requestedTime?: string | null;
     /** Confirmed date — set after operator approval */
     confirmedDate?: string;
     /** Confirmed time — set after operator approval */
@@ -101,6 +101,6 @@ export interface AppointmentDocument {
   updatedAt: string;
 
   /** Approval metadata */
-  approvedBy?: string;
-  approvedAt?: string;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
 }

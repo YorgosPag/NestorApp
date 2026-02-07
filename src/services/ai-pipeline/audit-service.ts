@@ -50,7 +50,7 @@ export class PipelineAuditService {
       actionType: ctx.understanding?.intent ?? PipelineIntentType.UNKNOWN,
       useCase: moduleId ?? 'unrouted',
       companyId: ctx.companyId,
-      projectId: ctx.understanding?.entities.projectId,
+      projectId: ctx.understanding?.entities.projectId ?? null,
       initiatedBy: ctx.intake.normalized.sender.email
         ?? ctx.intake.normalized.sender.name
         ?? 'unknown',
@@ -59,13 +59,13 @@ export class PipelineAuditService {
       aiModel: 'pipeline-v1', // Updated per provider in production
       decision,
       details: {
-        intent: ctx.understanding?.intent,
-        senderType: ctx.understanding?.senderType,
-        threatLevel: ctx.understanding?.threatLevel,
-        proposalSummary: ctx.proposal?.summary,
-        executionSuccess: ctx.executionResult?.success,
-        sideEffects: ctx.executionResult?.sideEffects,
-        errors: ctx.errors.length > 0 ? ctx.errors : undefined,
+        intent: ctx.understanding?.intent ?? null,
+        senderType: ctx.understanding?.senderType ?? null,
+        threatLevel: ctx.understanding?.threatLevel ?? null,
+        proposalSummary: ctx.proposal?.summary ?? null,
+        executionSuccess: ctx.executionResult?.success ?? null,
+        sideEffects: ctx.executionResult?.sideEffects ?? null,
+        errors: ctx.errors.length > 0 ? ctx.errors : null,
       },
       durationMs: Date.now() - new Date(ctx.startedAt).getTime(),
       pipelineState: ctx.state,

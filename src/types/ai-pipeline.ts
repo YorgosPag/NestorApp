@@ -519,7 +519,7 @@ export interface PipelineAuditEntry {
   actionType: string;
   useCase: string;
   companyId: string;
-  projectId?: string;
+  projectId?: string | null;
   initiatedBy: string;
   handledBy: string;
   aiConfidence: number;

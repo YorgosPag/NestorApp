@@ -286,22 +286,22 @@ export class AppointmentModule implements IUCModule {
           messageId: ctx.intake.id,
         },
         requester: {
-          email: params.senderEmail as string | undefined,
-          name: params.senderName as string | undefined,
-          contactId: params.contactId as string | undefined,
+          email: (params.senderEmail as string) ?? null,
+          name: (params.senderName as string) ?? null,
+          contactId: (params.contactId as string) ?? null,
           isKnownContact: (params.isKnownContact as boolean) ?? false,
         },
         appointment: {
-          requestedDate: params.requestedDate as string | undefined,
-          requestedTime: params.requestedTime as string | undefined,
+          requestedDate: (params.requestedDate as string) ?? null,
+          requestedTime: (params.requestedTime as string) ?? null,
           description: (params.description as string) || 'Αίτημα ραντεβού',
         },
         assignedRole: 'salesManager',
         status: 'approved' as AppointmentStatus,
         createdAt: now,
         updatedAt: now,
-        approvedBy: ctx.approval?.approvedBy,
-        approvedAt: ctx.approval?.decidedAt,
+        approvedBy: ctx.approval?.approvedBy ?? null,
+        approvedAt: ctx.approval?.decidedAt ?? null,
       };
 
       const adminDb = getAdminFirestore();
