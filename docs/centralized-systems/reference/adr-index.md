@@ -169,6 +169,7 @@
 | **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | 2026-02-02 | Entity Systems | [📄](./adrs/ADR-167-enterprise-project-address-system.md) |
 | **ADR-168** | Multi-Agent Development Environment | ✅ IMPLEMENTED | 2026-02-05 | Infrastructure | [📄](./adrs/ADR-168-multi-agent-development-environment.md) |
+| **ADR-169** | Modular AI Architecture - Enterprise Automation Platform | 📝 DRAFT | 2026-02-07 | AI Architecture | [📄](./adrs/ADR-169-modular-ai-architecture.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
@@ -369,6 +370,7 @@
 | **ADR-073** | Firestore Composite Index Strategy | ✅ IMPLEMENTED | [View](./adrs/ADR-073-firestore-indexes-strategy.md) |
 | **ADR-078** | Server-Side Unit Creation via Admin SDK | ✅ IMPLEMENTED | [View](./adrs/ADR-078-server-side-unit-creation.md) |
 | **ADR-079** | AI Inbox Real-Time Updates via Firestore onSnapshot | ✅ IMPLEMENTED | [View](./adrs/ADR-079-ai-inbox-realtime-updates.md) |
+| **ADR-169** | Modular AI Architecture - Enterprise Automation Platform | 📝 DRAFT | [View](./adrs/ADR-169-modular-ai-architecture.md) |
 
 ---
 

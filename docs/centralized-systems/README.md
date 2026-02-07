@@ -6,7 +6,7 @@
 
 **📊 Quick Stats**: 31 Enterprise Systems | 20,380+ Lines | Fortune 500 Quality
 
-> **🆕 Latest**: ADR-GEOMETRY Domain Consolidation - 26 ADRs → 1 (2026-02-01)
+> **🆕 Latest**: ADR-169 AI Architecture Suite - Document split (umbrella + 16 specs) (2026-02-07)
 
 ---
 
@@ -69,7 +69,18 @@
 - **[🚨 Alert Engine](data-systems/alert-engine.md)** - Real-time monitoring & notifications
 - **[🌍 Polygon System](data-systems/polygon-system.md)** - Geographic drawing engine
 - **[🏗️ State Management](data-systems/state-management.md)** - Context providers & stores
-- **[📧 Email/AI Ingestion](data-systems/email-ai-ingestion.md)** - Email webhooks & AI analysis ✨ **NEW**
+- **[📧 Email/AI Ingestion](data-systems/email-ai-ingestion.md)** - Email webhooks & AI analysis
+
+### 🤖 **AI ARCHITECTURE** ✨ **NEW**
+- **[📋 AI Suite Overview](ai/README.md)** - Enterprise AI automation platform (ADR-169)
+- **[🔄 Universal Pipeline](ai/pipeline.md)** - 7-step pipeline + cross-cutting patterns
+- **[📁 Use Cases](ai/use-cases/)** - UC-001~UC-008 (ραντεβού, τιμολόγια, έγγραφα, ακίνητα, reports, dashboards)
+- **[📜 Module Contracts](ai/contracts.md)** - Zod schemas, versioning, thresholds
+- **[⚡ Reliability](ai/reliability.md)** - State machine, queue, DLQ, retries
+- **[📊 Observability](ai/observability.md)** - Correlation IDs, metrics, alerts
+- **[🔒 Security](ai/security.md)** - Prompt injection, tenant isolation, attachment safety
+- **[🏛️ Governance](ai/governance.md)** - Prompt/model registry, drift monitoring, runbooks
+- **[📋 Prerequisites](ai/prerequisites.md)** - PRE-001~PRE-005 (calendar, leads, procurement)
 
 ### 🖼️ **UI SYSTEMS**
 - **[📋 Overview](ui-systems/index.md)** - User interface systems architecture
