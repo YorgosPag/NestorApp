@@ -40,6 +40,21 @@ export type BlockSideDirection =
   | 'internal';  // Εσωτερική (χωρίς πρόσοψη)
 
 /**
+ * Runtime list of block side directions (SSoT for validation)
+ */
+export const BLOCK_SIDE_DIRECTIONS = [
+  'north',
+  'south',
+  'east',
+  'west',
+  'northeast',
+  'northwest',
+  'southeast',
+  'southwest',
+  'corner',
+  'internal'
+] as const;
+/**
  * Address type taxonomy for construction projects
  */
 export type ProjectAddressType =
@@ -155,3 +170,5 @@ export type PartialProjectAddress = Partial<ProjectAddress> & {
  * Address update payload (excludes id)
  */
 export type ProjectAddressUpdate = Partial<Omit<ProjectAddress, 'id'>>;
+
+

@@ -30,7 +30,6 @@ import {
   setDoc,
   getDoc,
   collection,
-  batch,
   writeBatch,
   Timestamp,
   FirestoreError
@@ -43,7 +42,8 @@ import {
   SystemConfiguration,
   ProjectTemplateConfiguration,
   EnterpriseConfigurationManager,
-  ConfigurationAPI
+  ConfigurationAPI,
+  DEFAULT_SYSTEM_CONFIG
 } from './enterprise-config-management';
 
 // ============================================================================
@@ -125,7 +125,7 @@ export interface MigrationResult {
 /**
  * Migration Progress για real-time tracking
  */
-interface MigrationProgress {
+export interface MigrationProgress {
   readonly phase: 'preparing' | 'backing_up' | 'migrating' | 'validating' | 'completed';
   readonly percentage: number;
   readonly currentItem: string;
@@ -450,31 +450,23 @@ export class HardcodedValuesMigrationEngine {
     error?: string;
   }> {
     try {
+      const environment =
+        (process.env.NODE_ENV as SystemConfiguration['app']['environment'] | undefined) ??
+        DEFAULT_SYSTEM_CONFIG.app.environment;
       const systemConfig: SystemConfiguration = {
+        ...DEFAULT_SYSTEM_CONFIG,
         app: {
-          name: 'Nestor Enterprise',
-          version: '1.0.0',
-          environment: process.env.NODE_ENV as 'development' | 'staging' | 'production' || 'development',
-          baseUrl: process.env.NODE_ENV === 'production'
+          ...DEFAULT_SYSTEM_CONFIG.app,
+          environment,
+          baseUrl: environment === 'production'
             ? DETECTED_SYSTEM_DATA.productionUrl
             : DETECTED_SYSTEM_DATA.developmentUrl,
-          apiUrl: process.env.NODE_ENV === 'production'
+          apiUrl: environment === 'production'
             ? `${DETECTED_SYSTEM_DATA.productionUrl}/api`
             : `${DETECTED_SYSTEM_DATA.developmentUrl}/api`
         },
-        security: {
-          sessionTimeoutMinutes: 480,
-          maxLoginAttempts: 5,
-          passwordExpiryDays: 90,
-          enableTwoFactor: false
-        },
-        features: {
-          enableNotifications: true,
-          enableFileUpload: true,
-          enableReporting: true,
-          maxFileUploadMB: 50
-        },
         integrations: {
+          ...DEFAULT_SYSTEM_CONFIG.integrations,
           webhooks: {
             telegram: DETECTED_SYSTEM_DATA.integrations.telegram.webhookUrl,
             slack: DETECTED_SYSTEM_DATA.integrations.slack.webhookUrl,
@@ -482,7 +474,7 @@ export class HardcodedValuesMigrationEngine {
           },
           apis: {
             maps: DETECTED_SYSTEM_DATA.apiEndpoints.overpassApi[0],
-            weather: '',
+            weather: DEFAULT_SYSTEM_CONFIG.integrations.apis.weather,
             notifications: DETECTED_SYSTEM_DATA.apiEndpoints.notifications
           }
         }

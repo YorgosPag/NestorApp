@@ -1454,6 +1454,8 @@
   "dialog": {
     "addTitle": "Add New Building",
     "addDescription": "Create a new building by filling in the details below.",
+    "editTitle": "Edit Building",
+    "editDescription": "Modify the building details.",
     "tabs": {
       "basic": "Basic Info",
       "details": "Details",
@@ -1500,7 +1502,9 @@
     },
     "messages": {
       "success": "Building created successfully!",
-      "error": "Error creating building. Please try again."
+      "updateSuccess": "Building updated successfully!",
+      "error": "Error creating building. Please try again.",
+      "updateError": "Error updating building. Please try again."
     }
   },
   "address": {

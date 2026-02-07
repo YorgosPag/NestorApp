@@ -19,6 +19,9 @@ import type {
   GeoPoint
 } from '../database/types';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 // ============================================================================
 // CONVERSION FUNCTIONS: Universal System → Database
 // ============================================================================
@@ -50,9 +53,9 @@ export function universalPolygonToRecord(
 
   return {
     projectId,
-    polygonType: polygon.type,
-    name: `Polygon ${polygon.id}`,
-    description: polygon.metadata?.description,
+    polygonType: polygon.polygonType,
+    name: polygon.name,
+    description: polygon.description,
     geometry,
     strokeColor: polygon.style.strokeColor,
     fillColor: polygon.style.fillColor,
@@ -131,7 +134,9 @@ export function recordToUniversalPolygon(
 
   return {
     id: record.id,
-    type: record.polygonType,
+    name: record.name,
+    description: record.description,
+    polygonType: record.polygonType,
     points: polygonPoints,
     isClosed: record.isClosed,
     style,
@@ -281,17 +286,9 @@ export function transformUniversalPolygonToGeo(
     ...polygon,
     points: transformedPoints,
     metadata: {
-      createdAt: polygon.metadata?.createdAt || new Date(),
-      modifiedAt: new Date(),
-      createdBy: polygon.metadata?.createdBy,
-      description: polygon.metadata?.description,
-      area: polygon.metadata?.area,
-      perimeter: polygon.metadata?.perimeter,
-      properties: {
-        ...polygon.metadata?.properties,
-        transformed: true,
-        transformMatrix
-      }
+      ...(isRecord(polygon.metadata) ? polygon.metadata : {}),
+      transformed: true,
+      transformMatrix
     }
   };
 }
@@ -316,7 +313,7 @@ export function validatePolygonForStorage(polygon: UniversalPolygon): {
     errors.push('Polygon ID is required');
   }
 
-  if (!polygon.type) {
+  if (!polygon.polygonType) {
     errors.push('Polygon type is required');
   }
 

@@ -71,6 +71,7 @@ interface UseCompanyConfigResult {
   readonly error: string | null;
   readonly lastUpdated: Date | null;
   readonly reload: () => Promise<void>;
+  readonly loadCompanyConfig: () => Promise<void>;
   readonly updateCompany: (updates: Partial<CompanyConfiguration>) => Promise<void>;
 }
 
@@ -83,6 +84,7 @@ interface UseSystemConfigResult {
   readonly error: string | null;
   readonly lastUpdated: Date | null;
   readonly reload: () => Promise<void>;
+  readonly loadSystemConfig: () => Promise<void>;
   readonly updateSystem: (updates: Partial<SystemConfiguration>) => Promise<void>;
 }
 
@@ -273,6 +275,7 @@ export function useCompanyConfig(
     error: state.error,
     lastUpdated: state.lastUpdated,
     reload: loadCompanyConfig,
+    loadCompanyConfig,
     updateCompany
   };
 }
@@ -391,6 +394,7 @@ export function useSystemConfig(
     error: state.error,
     lastUpdated: state.lastUpdated,
     reload: loadSystemConfig,
+    loadSystemConfig,
     updateSystem
   };
 }

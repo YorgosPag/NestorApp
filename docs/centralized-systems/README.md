@@ -75,6 +75,7 @@
 - **[📋 AI Suite Overview](ai/README.md)** - Enterprise AI automation platform (ADR-169)
 - **[🔄 Universal Pipeline](ai/pipeline.md)** - 7-step pipeline + cross-cutting patterns
 - **[📁 Use Cases](ai/use-cases/)** - UC-001~UC-008 (ραντεβού, τιμολόγια, έγγραφα, ακίνητα, reports, dashboards)
+- **[🏗️ Pipeline Implementation (ADR-080)](reference/adrs/ADR-080-ai-pipeline-implementation.md)** - Phase 1 core infrastructure
 - **[📜 Module Contracts](ai/contracts.md)** - Zod schemas, versioning, thresholds
 - **[⚡ Reliability](ai/reliability.md)** - State machine, queue, DLQ, retries
 - **[📊 Observability](ai/observability.md)** - Correlation IDs, metrics, alerts

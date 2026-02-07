@@ -10,6 +10,7 @@
 
 // Import related types
 import type { ContactRelationship } from '../interfaces/relationship';
+import type { RelationshipType } from '../core/relationship-types';
 import { RELATIONSHIP_TYPE_PRIORITY_SCORES } from '../core/relationship-types';
 import { COLOR_BRIDGE } from '../../../../design-system/color-bridge';
 
@@ -36,7 +37,7 @@ export function getRelationshipPriorityScore(relationship: ContactRelationship):
  * 🏷️ Generate relationship display label
  */
 export function getRelationshipDisplayLabel(relationship: ContactRelationship): string {
-  const baseLabels = {
+  const baseLabels: Record<RelationshipType, string> = {
     'employee': 'Εργαζόμενος',
     'manager': 'Προϊστάμενος',
     'director': 'Διευθυντής',
@@ -91,7 +92,7 @@ export function getRelationshipDisplayLabel(relationship: ContactRelationship): 
  */
 export function getRelationshipBadgeColor(relationship: ContactRelationship): string {
   // Fallback implementation that now uses hardcoded values (for backward compatibility)
-  const colorMap = {
+  const colorMap: Partial<Record<RelationshipType, string>> = {
     // ✅ ENTERPRISE: Semantic color mapping
     'employee': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,           // Blue -> Info semantic
     'manager': `${COLOR_BRIDGE.bg.info} ${COLOR_BRIDGE.text.info}`,            // Purple -> Info semantic

@@ -3,7 +3,7 @@
  * Tests για migrateLegacyAddress, createProjectAddress, resolveBuildingAddresses, resolveBuildingPrimaryAddress
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
+/* global describe, it, expect, jest */
 import {
   getPrimaryAddress,
   formatAddressLine,

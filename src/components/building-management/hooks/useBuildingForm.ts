@@ -20,8 +20,9 @@
 
 import { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { createBuilding } from '../building-services';
+import { createBuilding, updateBuilding } from '../building-services';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { Building } from '@/types/building/contracts';
 import type {
   BuildingType,
   BuildingPriority,
@@ -96,6 +97,8 @@ interface UseBuildingFormProps {
   onOpenChange: (open: boolean) => void;
   companyId: string;
   companyName?: string;
+  /** 🏢 ENTERPRISE: Building to edit (null for new building) — ADR-087 */
+  editBuilding?: Building | null;
 }
 
 // =============================================================================
@@ -107,8 +110,12 @@ export function useBuildingForm({
   onOpenChange,
   companyId,
   companyName,
+  editBuilding,
 }: UseBuildingFormProps) {
   const { t } = useTranslation('building');
+
+  // 🏢 ENTERPRISE: Edit mode detection (ADR-087)
+  const isEditMode = !!editBuilding;
 
   const [formData, setFormData] = useState<BuildingFormData>(INITIAL_FORM_DATA);
   const [loading, setLoading] = useState(false);
@@ -171,39 +178,68 @@ export function useBuildingForm({
 
       setLoading(true);
       try {
-        const result = await createBuilding({
-          name: formData.name,
-          description: formData.description || undefined,
-          address: formData.address,
-          city: formData.city || undefined,
-          totalArea: formData.totalArea !== '' ? formData.totalArea : undefined,
-          builtArea: formData.builtArea !== '' ? formData.builtArea : undefined,
-          floors: formData.floors !== '' ? formData.floors : undefined,
-          units: formData.units !== '' ? formData.units : undefined,
-          totalValue: formData.totalValue !== '' ? formData.totalValue : undefined,
-          startDate: formData.startDate || undefined,
-          completionDate: formData.completionDate || undefined,
-          status: formData.status,
-          projectId: formData.projectId || null,
-          companyId: companyId,
-          company: companyName,
-        });
+        // 🏢 ENTERPRISE: Use update for edit mode, create for new (ADR-087)
+        if (isEditMode && editBuilding?.id) {
+          const result = await updateBuilding(editBuilding.id, {
+            name: formData.name,
+            description: formData.description || undefined,
+            address: formData.address,
+            city: formData.city || undefined,
+            totalArea: formData.totalArea !== '' ? formData.totalArea : undefined,
+            builtArea: formData.builtArea !== '' ? formData.builtArea : undefined,
+            floors: formData.floors !== '' ? formData.floors : undefined,
+            units: formData.units !== '' ? formData.units : undefined,
+            totalValue: formData.totalValue !== '' ? formData.totalValue : undefined,
+            startDate: formData.startDate || undefined,
+            completionDate: formData.completionDate || undefined,
+            status: formData.status,
+            projectId: formData.projectId || null,
+          });
 
-        if (result.success) {
-          toast.success(t('dialog.messages.success'));
-          setFormData(INITIAL_FORM_DATA);
-          onBuildingAdded?.();
-          onOpenChange(false);
+          if (result.success) {
+            toast.success(t('dialog.messages.updateSuccess'));
+            setFormData(INITIAL_FORM_DATA);
+            onBuildingAdded?.();
+            onOpenChange(false);
+          } else {
+            toast.error(result.error || t('dialog.messages.updateError'));
+          }
         } else {
-          toast.error(result.error || t('dialog.messages.error'));
+          // Create new building
+          const result = await createBuilding({
+            name: formData.name,
+            description: formData.description || undefined,
+            address: formData.address,
+            city: formData.city || undefined,
+            totalArea: formData.totalArea !== '' ? formData.totalArea : undefined,
+            builtArea: formData.builtArea !== '' ? formData.builtArea : undefined,
+            floors: formData.floors !== '' ? formData.floors : undefined,
+            units: formData.units !== '' ? formData.units : undefined,
+            totalValue: formData.totalValue !== '' ? formData.totalValue : undefined,
+            startDate: formData.startDate || undefined,
+            completionDate: formData.completionDate || undefined,
+            status: formData.status,
+            projectId: formData.projectId || null,
+            companyId: companyId,
+            company: companyName,
+          });
+
+          if (result.success) {
+            toast.success(t('dialog.messages.success'));
+            setFormData(INITIAL_FORM_DATA);
+            onBuildingAdded?.();
+            onOpenChange(false);
+          } else {
+            toast.error(result.error || t('dialog.messages.error'));
+          }
         }
       } catch {
-        toast.error(t('dialog.messages.error'));
+        toast.error(isEditMode ? t('dialog.messages.updateError') : t('dialog.messages.error'));
       } finally {
         setLoading(false);
       }
     },
-    [formData, validate, t, onBuildingAdded, onOpenChange, companyId, companyName]
+    [formData, validate, t, onBuildingAdded, onOpenChange, companyId, companyName, isEditMode, editBuilding]
   );
 
   // ==========================================================================

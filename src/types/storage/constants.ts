@@ -15,19 +15,28 @@ export const defaultStorageUnit: Partial<StorageUnit> = {
   notes: ''
 };
 
+const BASE_STORAGE_FEATURES = [
+  'storage.features.electricity',
+  'storage.features.naturalLight',
+  'storage.features.artificialLight',
+  'storage.features.airChamber',
+  'storage.features.security',
+  'storage.features.elevatorAccess',
+  'storage.features.plumbing',
+  'storage.features.airConditioning',
+  'storage.features.alarm'
+] as const;
+
 // Common storage features by type (i18n keys)
 export const commonStorageFeatures: Record<StorageType, string[]> = {
-  storage: [
-    'storage.features.electricity',
-    'storage.features.naturalLight',
-    'storage.features.artificialLight',
-    'storage.features.airChamber',
-    'storage.features.security',
-    'storage.features.elevatorAccess',
-    'storage.features.plumbing',
-    'storage.features.airConditioning',
-    'storage.features.alarm'
-  ],
+  storage: [...BASE_STORAGE_FEATURES],
+  large: [...BASE_STORAGE_FEATURES],
+  small: [...BASE_STORAGE_FEATURES],
+  basement: [...BASE_STORAGE_FEATURES],
+  ground: [...BASE_STORAGE_FEATURES],
+  special: [...BASE_STORAGE_FEATURES],
+  garage: [...BASE_STORAGE_FEATURES],
+  warehouse: [...BASE_STORAGE_FEATURES],
   parking: [
     'storage.features.evCharger',
     'storage.features.enclosed',
@@ -40,15 +49,24 @@ export const commonStorageFeatures: Record<StorageType, string[]> = {
 // Status labels (i18n keys)
 export const statusLabels: Record<StorageStatus, string> = {
   available: 'storage.status.available',
+  occupied: 'storage.status.occupied',
   sold: 'storage.status.sold',
   reserved: 'storage.status.reserved',
-  maintenance: 'storage.status.maintenance'
+  maintenance: 'storage.status.maintenance',
+  unavailable: 'storage.status.unavailable'
 };
 
 // Type labels (i18n keys)
 export const typeLabels: Record<StorageType, string> = {
   storage: 'storage.types.storage',
-  parking: 'storage.types.parking'
+  parking: 'storage.types.parking',
+  large: 'storage.types.large',
+  small: 'storage.types.small',
+  basement: 'storage.types.basement',
+  ground: 'storage.types.ground',
+  special: 'storage.types.special',
+  garage: 'storage.types.garage',
+  warehouse: 'storage.types.warehouse'
 };
 
 // Standard floor names (i18n keys)

@@ -22,6 +22,7 @@ import type {
   BlockSideDirection,
   ProjectAddressType
 } from './addresses';
+import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 
 // =============================================================================
 // PRIMARY ADDRESS EXTRACTION
@@ -35,7 +36,7 @@ import type {
  * @returns Primary address or undefined
  */
 export function getPrimaryAddress(
-  addresses: ProjectAddress[]
+  addresses?: ProjectAddress[]
 ): ProjectAddress | undefined {
   if (!addresses || addresses.length === 0) {
     return undefined;
@@ -163,7 +164,7 @@ export function createProjectAddress(
     city: data.city,
     postalCode: data.postalCode || '',
     region: data.region,
-    country: data.country || 'Greece',
+    country: data.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
     type: data.type || 'site',
     isPrimary: data.isPrimary ?? false,
     label: data.label,
@@ -189,11 +190,20 @@ export function createProjectAddress(
  * @param legacyCity - Old "city" string field
  * @returns ProjectAddress array (single primary address)
  */
+export function migrateLegacyAddress(legacy: { address?: string; city?: string }): ProjectAddress[];
+export function migrateLegacyAddress(legacyAddress: string, legacyCity: string): ProjectAddress[];
 export function migrateLegacyAddress(
-  legacyAddress: string,
-  legacyCity: string
+  legacyAddressOrData: string | { address?: string; city?: string },
+  legacyCity?: string
 ): ProjectAddress[] {
-  if (!legacyAddress || !legacyCity) {
+  const legacyAddress = typeof legacyAddressOrData === 'string'
+    ? legacyAddressOrData
+    : legacyAddressOrData.address || '';
+  const city = typeof legacyAddressOrData === 'string'
+    ? legacyCity || ''
+    : legacyAddressOrData.city || '';
+
+  if (!legacyAddress || !city) {
     return [];
   }
 
@@ -206,11 +216,12 @@ export function migrateLegacyAddress(
 
   return [
     createProjectAddress({
+      id: `proj_${crypto.randomUUID()}`,
       street,
       number,
-      city: legacyCity,
+      city,
       postalCode: '', // Unknown in legacy
-      country: 'Greece',
+      country: GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
       type: 'site',
       isPrimary: true,
       sortOrder: 0
@@ -289,6 +300,82 @@ export function resolveBuildingAddress(
   }
 
   return baseAddress;
+}
+
+/**
+ * Resolve building addresses from references
+ * Enterprise pattern: Bulk resolution with graceful fallback
+ *
+ * @param refs - Building address references
+ * @param projectAddresses - Parent project addresses
+ * @returns Resolved addresses (or project addresses if no refs)
+ */
+export function resolveBuildingAddresses(
+  refs: BuildingAddressReference[] | undefined,
+  projectAddresses: ProjectAddress[]
+): ProjectAddress[] {
+  if (!refs || refs.length === 0) {
+    return projectAddresses;
+  }
+
+  return refs
+    .map(ref => resolveBuildingAddress(ref, projectAddresses))
+    .filter((address): address is ProjectAddress => Boolean(address));
+}
+
+/**
+ * Resolve primary building address from references
+ * Enterprise pattern: Primary address selection with fallback
+ *
+ * @param refs - Building address references
+ * @param projectAddresses - Parent project addresses
+ * @returns Primary resolved address or undefined
+ */
+export function getBuildingPrimaryAddress(
+  refs: BuildingAddressReference[] | undefined,
+  projectAddresses: ProjectAddress[]
+): ProjectAddress | undefined {
+  const resolved = resolveBuildingAddresses(refs, projectAddresses);
+  return getPrimaryAddress(resolved);
+}
+
+/**
+ * Resolve primary building address with legacy compatibility
+ * Enterprise pattern: Support direct primary address IDs + reference overrides
+ *
+ * @param primaryProjectAddressId - Explicit primary project address ID
+ * @param refs - Building address references
+ * @param projectAddresses - Parent project addresses
+ * @returns Resolved primary address or undefined
+ */
+export function resolveBuildingPrimaryAddress(
+  primaryProjectAddressId: string | undefined,
+  refs: BuildingAddressReference[] | undefined,
+  projectAddresses: ProjectAddress[]
+): ProjectAddress | undefined {
+  if (!projectAddresses || projectAddresses.length === 0) {
+    return undefined;
+  }
+
+  if (primaryProjectAddressId) {
+    const match = projectAddresses.find(addr => addr.id === primaryProjectAddressId);
+    if (!match) {
+      console.warn(`Primary project address not found: ${primaryProjectAddressId}`);
+      return getPrimaryAddress(projectAddresses);
+    }
+
+    if (refs && refs.length > 0) {
+      const ref = refs.find(item => item.projectAddressId === primaryProjectAddressId);
+      if (ref) {
+        return resolveBuildingAddress(ref, projectAddresses) || match;
+      }
+    }
+
+    return match;
+  }
+
+  const resolved = resolveBuildingAddresses(refs, projectAddresses);
+  return getPrimaryAddress(resolved) || getPrimaryAddress(projectAddresses);
 }
 
 // =============================================================================
@@ -409,7 +496,7 @@ export function formatAddressForGeocoding(address: ProjectAddress): string {
     address.number,
     address.city,
     address.postalCode,
-    address.country || 'Greece'
+    address.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY
   ].filter(Boolean);
 
   return parts.join(', ');

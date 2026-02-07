@@ -74,9 +74,9 @@ export interface HeaderFiltersProps {
 }
 
 export interface HeaderViewToggleProps {
-  currentView: ViewMode;
-  onViewChange: (view: ViewMode) => void;
-  availableViews?: ViewMode[];
+  viewMode: ViewMode;
+  onViewModeChange: (view: ViewMode) => void;
+  viewModes?: ViewMode[];
   className?: string;
   disabled?: boolean;
 }
@@ -159,6 +159,7 @@ export interface HeaderTheme {
     title: Record<string, string>;
     search: Record<string, string>;
     filters: Record<string, string>;
+    viewToggle: Record<string, string>;
     actions: Record<string, string>;
   };
 }

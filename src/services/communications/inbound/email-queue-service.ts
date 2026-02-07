@@ -670,6 +670,32 @@ export async function processQueueItem(item: EmailIngestionQueueItem): Promise<{
         elapsedMs: elapsed,
       });
 
+      // 🤖 ADR-080: Feed to Universal AI Pipeline for deeper processing
+      if (result.communicationId && item.routingResolution.companyId) {
+        try {
+          const { EmailChannelAdapter } = await import('@/services/ai-pipeline/channel-adapters/email-channel-adapter');
+          const pipelineResult = await EmailChannelAdapter.feedToPipeline({
+            queueItem: item,
+            communicationId: result.communicationId,
+            companyId: item.routingResolution.companyId,
+          });
+
+          if (pipelineResult.enqueued) {
+            logger.info('Email fed to AI pipeline', {
+              queueId: item.id,
+              pipelineQueueId: pipelineResult.pipelineQueueId,
+              requestId: pipelineResult.requestId,
+            });
+          }
+        } catch (pipelineError) {
+          // Pipeline enqueue failure is non-blocking — email was already processed
+          logger.warn('Failed to enqueue to AI pipeline (non-blocking)', {
+            queueId: item.id,
+            error: pipelineError instanceof Error ? pipelineError.message : String(pipelineError),
+          });
+        }
+      }
+
       return {
         success: true,
         communicationId: result.communicationId,

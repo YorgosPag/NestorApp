@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 138 ADRs | Last Updated: 2026-02-07
+**📊 Stats**: 139 ADRs | Last Updated: 2026-02-07
 
 ---
 
@@ -170,6 +170,7 @@
 | **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | 2026-02-02 | Entity Systems | [📄](./adrs/ADR-167-enterprise-project-address-system.md) |
 | **ADR-168** | Multi-Agent Development Environment | ✅ IMPLEMENTED | 2026-02-05 | Infrastructure | [📄](./adrs/ADR-168-multi-agent-development-environment.md) |
+| **ADR-080** | Universal AI Pipeline — Phase 1 Implementation | ✅ IMPLEMENTED | 2026-02-07 | AI Architecture / Pipeline Infrastructure | [📄](./adrs/ADR-080-ai-pipeline-implementation.md) |
 | **ADR-169** | Modular AI Architecture - Enterprise Automation Platform | ✅ DRAFT - Requirements Gathering | 2026-02-07 | AI Architecture / Enterprise Automation | [📄](./adrs/ADR-169-modular-ai-architecture.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
@@ -367,6 +368,7 @@
 | **ADR-059** | Separate /api/audit/bootstrap from /api/projects/list | ✅ ✅ Active | [View](./adrs/ADR-059-separate-audit-bootstrap-from-projects-list.md) |
 | **ADR-060** | Migrate BuildingFloorplanService to Enterprise Storage Architecture | ✅ ✅ Active | [View](./adrs/ADR-060-building-floorplan-enterprise-storage.md) |
 | **ADR-070** | Email & AI Ingestion System | ✅ ✅ FULLY OPERATIONAL (OpenAI Active) | [View](./adrs/ADR-070-email-ai-ingestion-system.md) |
+| **ADR-080** | Universal AI Pipeline — Phase 1 Implementation | ✅ IMPLEMENTED | [View](./adrs/ADR-080-ai-pipeline-implementation.md) |
 
 ---
 
@@ -416,7 +418,7 @@
 
 ```
 034, 065, 066, 067, 068, 070, 071, 072, 073, 074,
-077, 078, 079, 080, 089, 090, 100, 103, 121, 131,
+077, 078, 079, 089, 090, 100, 103, 121, 131,
 132, 134, 145, 156, 161, 164
 ```
 

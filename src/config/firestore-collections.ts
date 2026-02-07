@@ -150,6 +150,10 @@ export const COLLECTIONS = {
   // 📧 EMAIL INGESTION QUEUE (ADR-071: Enterprise Email Webhook Queue)
   EMAIL_INGESTION_QUEUE: process.env.NEXT_PUBLIC_EMAIL_INGESTION_QUEUE_COLLECTION || 'email_ingestion_queue',
 
+  // 🤖 AI PIPELINE (ADR-080: Universal AI Pipeline)
+  AI_PIPELINE_QUEUE: process.env.NEXT_PUBLIC_AI_PIPELINE_QUEUE_COLLECTION || 'ai_pipeline_queue',
+  AI_PIPELINE_AUDIT: process.env.NEXT_PUBLIC_AI_PIPELINE_AUDIT_COLLECTION || 'ai_pipeline_audit',
+
   // 📋 SYSTEM AUDIT LOGS (Webhook/system-level audit events)
   SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs'
 } as const;

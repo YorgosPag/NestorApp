@@ -58,7 +58,7 @@ import { getProjectsList, type ProjectListItem } from '../building-services';
 // ENTERPRISE: Companies service for dropdown (same pattern as AddProjectDialog)
 import { getAllActiveCompanies } from '@/services/companies.service';
 import type { CompanyContact } from '@/types/contacts';
-import type { BuildingType, BuildingPriority, EnergyClass } from '@/types/building/contracts';
+import type { Building, BuildingType, BuildingPriority, EnergyClass } from '@/types/building/contracts';
 
 // =============================================================================
 // TYPES
@@ -70,6 +70,8 @@ interface AddBuildingDialogProps {
   onBuildingAdded?: () => void;
   companyId: string;
   companyName?: string;
+  /** 🏢 ENTERPRISE: Building to edit (null for new building) — ADR-087 */
+  editBuilding?: Building | null;
 }
 
 // =============================================================================
@@ -113,6 +115,7 @@ export function AddBuildingDialog({
   onBuildingAdded,
   companyId,
   companyName,
+  editBuilding,
 }: AddBuildingDialogProps) {
   // ENTERPRISE: i18n hook for translations
   const { t } = useTranslation('building');
@@ -120,9 +123,13 @@ export function AddBuildingDialog({
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
 
+  // 🏢 ENTERPRISE: Edit mode detection (ADR-087)
+  const isEditMode = !!editBuilding;
+
   // ENTERPRISE: Form state management
   const {
     formData,
+    setFormData,
     loading,
     errors,
     handleSubmit,
@@ -130,7 +137,8 @@ export function AddBuildingDialog({
     handleSelectChange,
     handleCheckboxChange,
     handleNumberChange,
-  } = useBuildingForm({ onBuildingAdded, onOpenChange, companyId, companyName });
+    resetForm,
+  } = useBuildingForm({ onBuildingAdded, onOpenChange, companyId, companyName, editBuilding });
 
   // ENTERPRISE: Projects for dropdown (with company info for filtering)
   const [allProjects, setAllProjects] = useState<ProjectListItem[]>([]);
@@ -191,6 +199,42 @@ export function AddBuildingDialog({
     }
   }, [open]);
 
+  // 🏢 ENTERPRISE: Populate form when editing (ADR-087)
+  useEffect(() => {
+    if (open && editBuilding) {
+      setFormData({
+        name: editBuilding.name || '',
+        projectId: editBuilding.projectId || '',
+        status: (editBuilding.status as BuildingStatus) || 'planning',
+        category: (editBuilding.category as BuildingCategory) || '',
+        description: editBuilding.description || '',
+        address: editBuilding.address || '',
+        city: editBuilding.city || '',
+        totalArea: editBuilding.totalArea || '',
+        builtArea: editBuilding.builtArea || '',
+        floors: editBuilding.floors || '',
+        units: editBuilding.units || '',
+        totalValue: editBuilding.totalValue || '',
+        startDate: editBuilding.startDate || '',
+        completionDate: editBuilding.completionDate || '',
+        hasParking: editBuilding.features?.includes('parking') || false,
+        hasElevator: editBuilding.features?.includes('elevator') || false,
+        hasGarden: editBuilding.features?.includes('garden') || false,
+        hasPool: editBuilding.features?.includes('pool') || false,
+        accessibility: editBuilding.features?.includes('accessibility') || false,
+        energyClass: editBuilding.energyClass || '',
+        type: editBuilding.type || '',
+        priority: editBuilding.priority || '',
+      });
+      // Auto-select company filter if building has a companyId
+      if (editBuilding.companyId) {
+        setSelectedCompanyFilter(editBuilding.companyId);
+      }
+    } else if (open && !editBuilding) {
+      resetForm();
+    }
+  }, [open, editBuilding, setFormData, resetForm]);
+
   // ENTERPRISE: Filter projects by selected company
   const filteredProjects = selectedCompanyFilter
     ? allProjects.filter(p => p.companyId === selectedCompanyFilter)
@@ -204,9 +248,12 @@ export function AddBuildingDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building className={iconSizes.md} />
-            {t('dialog.addTitle')}
+            {isEditMode ? t('dialog.editTitle') : t('dialog.addTitle')}
+            {isEditMode && editBuilding?.name && ` - ${editBuilding.name}`}
           </DialogTitle>
-          <DialogDescription>{t('dialog.addDescription')}</DialogDescription>
+          <DialogDescription>
+            {isEditMode ? t('dialog.editDescription') : t('dialog.addDescription')}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>

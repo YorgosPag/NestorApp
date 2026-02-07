@@ -220,7 +220,7 @@ export interface LayerTemplate {
 
 // Utility Types
 export type LayerElementType = AnyLayerElement['type'];
-export type LayerCategory = NonNullable<Layer['metadata']>['category'];
+export type LayerCategory = Exclude<NonNullable<Layer['metadata']>['category'], undefined>;
 
 // ============================================================================
 // 🏢 ENTERPRISE LAYER STYLES

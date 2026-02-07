@@ -70,6 +70,16 @@ export function BuildingsPageContent() {
 
   // [ENTERPRISE] Add Building Dialog state
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+  // 🏢 ENTERPRISE: Edit building state (ADR-087)
+  const [editingBuilding, setEditingBuilding] = React.useState<typeof selectedBuilding>(null);
+
+  // 🏢 ENTERPRISE: Handler για επεξεργασία κτιρίου (ADR-087)
+  const handleEditBuilding = React.useCallback(() => {
+    if (!selectedBuilding) return;
+    console.log('🎯 [EditBuilding] Opening edit dialog for:', selectedBuilding.name);
+    setEditingBuilding(selectedBuilding);
+    setIsAddDialogOpen(true);
+  }, [selectedBuilding]);
 
   // [ENTERPRISE] Sync selectedBuilding with NavigationContext for breadcrumb display
   React.useEffect(() => {
@@ -255,7 +265,7 @@ export function BuildingsPageContent() {
                   selectedBuilding={selectedBuilding!}
                   onSelectBuilding={setSelectedBuilding}
                 />
-                <BuildingDetails building={selectedBuilding!} />
+                <BuildingDetails building={selectedBuilding!} onEdit={handleEditBuilding} />
               </section>
 
               {/* [MOBILE] Show only BuildingsList when no building is selected */}
@@ -299,7 +309,7 @@ export function BuildingsPageContent() {
                   </>
                 }
               >
-                {selectedBuilding && <BuildingDetails building={selectedBuilding} />}
+                {selectedBuilding && <BuildingDetails building={selectedBuilding} onEdit={handleEditBuilding} />}
               </MobileDetailsSlideIn>
             </>
           ) : (
@@ -312,15 +322,19 @@ export function BuildingsPageContent() {
           )}
         </ListContainer>
 
-        {/* [ENTERPRISE] Add Building Dialog */}
+        {/* [ENTERPRISE] Add/Edit Building Dialog (ADR-087) */}
         <AddBuildingDialog
           open={isAddDialogOpen}
-          onOpenChange={setIsAddDialogOpen}
+          onOpenChange={(open) => {
+            setIsAddDialogOpen(open);
+            if (!open) setEditingBuilding(null);
+          }}
           onBuildingAdded={() => {
             // Refresh will happen automatically via useFirestoreBuildings
           }}
-          companyId={companies[0]?.id || ''}
-          companyName={companies[0]?.companyName}
+          companyId={editingBuilding?.companyId || companies[0]?.id || ''}
+          companyName={editingBuilding?.company || companies[0]?.companyName}
+          editBuilding={editingBuilding}
         />
       </PageContainer>
     </TooltipProvider>

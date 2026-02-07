@@ -3,7 +3,7 @@
  * Tests για Zod invariants: exactly-one primary, unique IDs, no duplicates
  */
 
-import { describe, it, expect } from '@jest/globals';
+/* global describe, it, expect */
 import {
   projectAddressSchema,
   projectAddressCreateSchema,

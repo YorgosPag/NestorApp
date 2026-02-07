@@ -1,13 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { BuildingBadge } from '@/core/badges';
 import { Eye, Edit } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
-import { EntityDetailsHeader } from '@/core/entity-headers';
-import { cn } from '@/lib/utils';
+import { EntityDetailsHeader, type EntityHeaderAction } from '@/core/entity-headers';
 import type { Building } from '../BuildingsPageContent';
 // 🏢 ENTERPRISE: Status display uses centralized BuildingBadge component (no hardcoded functions)
 import { GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
@@ -26,7 +23,7 @@ export function BuildingDetailsHeader({ building, onEdit }: BuildingDetailsHeade
     const { t, isNamespaceReady } = useTranslation('building');
 
     // 🏢 ENTERPRISE: Build actions array dynamically (ADR-087)
-    const actions = [
+    const actions: EntityHeaderAction[] = [
         {
             // 🏢 ENTERPRISE: Fallback when namespace not ready
             label: isNamespaceReady ? t('details.viewBuilding') : 'View Building',
