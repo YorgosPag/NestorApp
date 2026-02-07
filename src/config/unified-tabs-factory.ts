@@ -17,6 +17,9 @@
  */
 
 import type { LucideIcon } from 'lucide-react';
+import type { ContactType } from '@/types/contacts';
+
+export type { ContactType };
 
 // 🏢 ENTERPRISE: Import centralized tab labels - ZERO HARDCODED VALUES
 import {
@@ -41,7 +44,7 @@ export type TabEntityType = 'units' | 'storage' | 'building' | 'contact' | 'proj
 /**
  * Supported contact types για conditional tabs
  */
-export type ContactType = 'person' | 'company' | 'service';
+// ContactType is centralized in src/types/contacts/contracts.ts
 
 /**
  * ✅ ENTERPRISE: Unified tab configuration interface
@@ -73,7 +76,7 @@ export interface UnifiedTabConfig {
   component: string;
 
   /** Custom props για το component */
-  componentProps?: Record<string, any>;
+  componentProps?: Record<string, unknown>;
 
   /** Permissions required για την καρτέλα */
   requiredPermissions?: string[];
@@ -149,19 +152,19 @@ export function createTabsConfig(
 function getLabelsForEntity(entityType: TabEntityType): Record<string, string> {
   switch (entityType) {
     case 'units':
-      return getUnitsTabLabels();
+      return getUnitsTabLabels() as unknown as Record<string, string>;
     case 'storage':
-      return getStorageTabLabels();
+      return getStorageTabLabels() as unknown as Record<string, string>;
     case 'building':
-      return getBuildingTabLabels();
+      return getBuildingTabLabels() as unknown as Record<string, string>;
     case 'contact':
-      return getContactTabLabels();
+      return getContactTabLabels() as unknown as Record<string, string>;
     case 'project':
-      return getProjectTabLabels();
+      return getProjectTabLabels() as unknown as Record<string, string>;
     case 'crm-dashboard':
-      return getCRMDashboardTabLabels();
+      return getCRMDashboardTabLabels() as unknown as Record<string, string>;
     case 'parking':
-      return getParkingTabLabels();
+      return getParkingTabLabels() as unknown as Record<string, string>;
     default:
       // ✅ ENTERPRISE: Type-safe default (should never happen due to TypeScript)
       throw new Error(`Unknown entity type: ${entityType}`);

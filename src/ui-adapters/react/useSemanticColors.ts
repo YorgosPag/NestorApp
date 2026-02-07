@@ -34,6 +34,8 @@ export interface UseSemanticColorsReturn {
   readonly getGradient: (type: keyof typeof COLOR_BRIDGE.gradients) => string;
 }
 
+export type SemanticColors = UseSemanticColorsReturn;
+
 /**
  * 🌉 BRIDGE-BASED Semantic Colors Hook
  *

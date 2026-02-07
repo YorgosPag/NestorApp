@@ -605,6 +605,7 @@
   },
   "details": {
     "viewBuilding": "Προβολή Κτιρίου",
+    "editBuilding": "Επεξεργασία",
     "percentComplete": "{percent}% ολοκληρωμένο"
   },
   "pages": {
@@ -947,6 +948,77 @@
         "finalWorks": "Τελικές Εργασίες",
         "dependsOnPrevious": "Εξαρτάται από προηγούμενο",
         "waiting": "Αναμονή"
+      },
+      "views": {
+        "milestones": "Ορόσημα",
+        "gantt": "Gantt"
+      },
+      "gantt": {
+        "title": "Διάγραμμα Gantt",
+        "toolbar": {
+          "zoom": "Κλίμακα",
+          "day": "Ημέρα",
+          "week": "Εβδομάδα",
+          "month": "Μήνας",
+          "quarter": "Τρίμηνο",
+          "year": "Έτος",
+          "today": "Σήμερα"
+        },
+        "status": {
+          "notStarted": "Δεν ξεκίνησε",
+          "inProgress": "Σε εξέλιξη",
+          "completed": "Ολοκληρώθηκε",
+          "delayed": "Καθυστερημένη",
+          "blocked": "Μπλοκαρισμένη",
+          "onHold": "Σε αναμονή"
+        },
+        "phases": {
+          "excavationFoundation": "Εκσκαφή & Θεμελίωση",
+          "structure": "Σκελετός (Φέρων Οργανισμός)",
+          "masonryRoofing": "Τοιχοποιία & Στέγη",
+          "mecInstallations": "Η/Μ Εγκαταστάσεις",
+          "insulationPlastering": "Μόνωση & Σοβατίσματα",
+          "flooringPainting": "Δάπεδα & Βαφές",
+          "fixturesFinishes": "Εξαρτήματα & Τελειώματα",
+          "landscapingHandover": "Περιβάλλων Χώρος & Παράδοση"
+        },
+        "tasks": {
+          "excavation": "Εκσκαφή θεμελίων",
+          "reinforcement": "Σιδεράρμαση θεμελίωσης",
+          "concretePour": "Σκυροδέτηση θεμελίωσης",
+          "basementWalls": "Τοιχία υπογείου",
+          "columns": "Υποστυλώματα",
+          "beamsSlabs": "Δοκάρια & πλάκες ορόφων",
+          "staircase": "Κλιμακοστάσιο",
+          "externalWalls": "Εξωτερική τοιχοποιία",
+          "internalWalls": "Εσωτερική τοιχοποιία",
+          "roofStructure": "Κατασκευή στέγης",
+          "plumbing": "Υδραυλικές εγκαταστάσεις",
+          "electrical": "Ηλεκτρολογικές εγκαταστάσεις",
+          "hvac": "Θέρμανση/Κλιματισμός",
+          "elevator": "Εγκατάσταση ανελκυστήρα",
+          "thermalInsulation": "Θερμομόνωση",
+          "waterproofing": "Στεγανοποίηση",
+          "internalPlastering": "Εσωτερικά σοβατίσματα",
+          "externalPlastering": "Εξωτερικά σοβατίσματα",
+          "tiling": "Πλακάκια δαπέδων",
+          "woodenFloors": "Ξύλινα δάπεδα",
+          "internalPainting": "Εσωτερικές βαφές",
+          "externalPainting": "Εξωτερικές βαφές",
+          "doorsFitting": "Τοποθέτηση κουφωμάτων",
+          "kitchenBathroom": "Κουζίνα & μπάνιο",
+          "lighting": "Φωτισμός",
+          "landscaping": "Διαμόρφωση περιβάλλοντος χώρου",
+          "finalInspection": "Τελική επιθεώρηση",
+          "handover": "Παράδοση"
+        },
+        "summary": {
+          "totalPhases": "Σύνολο Φάσεων",
+          "completedPhases": "Ολοκληρωμένες",
+          "delayedPhases": "Καθυστερημένες",
+          "overallProgress": "Συνολική Πρόοδος"
+        },
+        "empty": "Δεν υπάρχουν εργασίες κατασκευής."
       }
     },
     "map": {

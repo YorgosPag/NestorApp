@@ -1,5 +1,6 @@
 import type { Contact } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { initialFormData } from '@/types/ContactFormTypes';
 import { mapIndividualContactToFormData } from './fieldMappers/individualMapper';
 import { mapCompanyContactToFormData } from './fieldMappers/companyMapper';
 import { mapServiceContactToFormData } from './fieldMappers/serviceMapper';
@@ -9,7 +10,7 @@ import { mapServiceContactToFormData } from './fieldMappers/serviceMapper';
 // ============================================================================
 
 /** Generic object type for safe field access */
-export type SafeFieldSource = Record<string, unknown>;
+export type SafeFieldSource = object;
 
 /** Generic field value type */
 export type SafeFieldValue = unknown;
@@ -83,92 +84,9 @@ export function mapContactToFormData(contact: Contact): ContactMappingResult {
     // Return empty form data with error
     return {
       formData: {
+        ...initialFormData,
         type: contact.type,
-        firstName: '',
-        lastName: '',
-        companyName: '',
-        serviceName: '',
-        email: '',
-        phone: '',
-        notes: '',
-
-        // Initialize all other required fields
-        fatherName: '',
-        motherName: '',
-        birthDate: '',
-        birthCountry: '',
-        gender: '',
-        amka: '',
-        documentType: '',
-        documentIssuer: '',
-        documentNumber: '',
-        documentIssueDate: '',
-        documentExpiryDate: '',
-        vatNumber: '',
-        taxOffice: '',
-        profession: '',
-        specialty: '',
-        employer: '',
-        position: '',
-        workAddress: '',
-        workWebsite: '',
-        socialMedia: {
-          facebook: '',
-          instagram: '',
-          linkedin: '',
-          twitter: ''
-        },
-        websites: [],
-        companyVatNumber: '',
-        serviceType: 'other',
-        gemiNumber: '',
-        serviceVatNumber: '',
-        serviceTaxOffice: '',
-        serviceTitle: '',
-        tradeName: '',
-        legalForm: '',
-        gemiStatus: '',
-        gemiStatusDate: '',
-        chamber: '',
-        isBranch: false,
-        registrationMethod: '',
-        registrationDate: '',
-        lastUpdateDate: '',
-        gemiDepartment: '',
-        prefecture: '',
-        municipality: '',
-        activityCodeKAD: '',
-        activityDescription: '',
-        activityType: 'main',
-        activityValidFrom: '',
-        activityValidTo: '',
-        capitalAmount: '',
-        currency: '',
-        extraordinaryCapital: '',
-        serviceCode: '',
-        parentMinistry: '',
-        serviceCategory: '',
-        officialWebsite: '',
-        serviceAddress: {
-          street: '',
-          number: '',
-          postalCode: '',
-          city: ''
-        },
-        representatives: [],
-        shareholders: [],
-        branches: [],
-        documents: {
-          announcementDocs: [],
-          registrationDocs: []
-        },
-        decisions: [],
-        announcements: [],
-        logoFile: null,
-        logoPreview: '',
-        photoFile: null,
-        photoPreview: '',
-        multiplePhotos: []
+        id: contact.id
       },
       warnings: [`Mapping failed: ${error}`]
     };
@@ -221,6 +139,13 @@ export function validateContactForMapping(contact: Contact): string[] {
   return warnings;
 }
 
+function toRecord(value: SafeFieldSource | null | undefined): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
 /**
  * Get safe field value with fallback
  *
@@ -231,7 +156,8 @@ export function validateContactForMapping(contact: Contact): string[] {
  */
 export function getSafeFieldValue<T = SafeFieldValue>(obj: SafeFieldSource | null | undefined, field: string, fallback: T = '' as T): T {
   try {
-    const value = obj?.[field];
+    const record = toRecord(obj);
+    const value = record?.[field];
     return (value !== undefined && value !== null ? value : fallback) as T;
   } catch (error) {
     console.warn(`⚠️ MAPPER: Failed to extract field ${field}:`, error);
@@ -256,7 +182,11 @@ export function getSafeNestedValue<T = SafeFieldValue>(obj: SafeFieldSource | nu
       if (current === null || current === undefined) {
         return fallback;
       }
-      current = (current as SafeFieldSource)[key];
+      const record = toRecord(current as SafeFieldSource);
+      if (!record) {
+        return fallback;
+      }
+      current = record[key];
     }
 
     return (current !== undefined && current !== null ? current : fallback) as T;
@@ -276,7 +206,8 @@ export function getSafeNestedValue<T = SafeFieldValue>(obj: SafeFieldSource | nu
  */
 export function getSafeArrayValue<T = unknown>(obj: SafeFieldSource | null | undefined, field: string, fallback: T[] = []): T[] {
   try {
-    const value = obj?.[field];
+    const record = toRecord(obj);
+    const value = record?.[field];
     return Array.isArray(value) ? value : fallback;
   } catch (error) {
     console.warn(`⚠️ MAPPER: Failed to extract array field ${field}:`, error);

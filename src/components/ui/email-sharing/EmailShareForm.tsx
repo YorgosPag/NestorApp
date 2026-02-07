@@ -2,26 +2,16 @@
 
 import React from 'react';
 
-/** Share data for email sharing */
-interface ShareData {
-  title?: string;
-  url?: string;
-  description?: string;
-  [key: string]: unknown;
-}
+import type { EmailShareData, ShareData } from './types';
 
-/** Email share submission data */
-interface EmailShareSubmitData {
-  recipients: string[];
-  subject: string;
-  message: string;
-  shareData: ShareData;
-}
+export type { EmailShareData, ShareData };
 
 // Temporary simplified version to fix file reading errors
 export interface EmailShareFormProps {
   shareData: ShareData;
-  onEmailShare: (data: EmailShareSubmitData) => void;
+  onEmailShare: (data: EmailShareData) => Promise<void> | void;
+  onBack?: () => void;
+  loading?: boolean;
 }
 
 export const EmailShareForm: React.FC<EmailShareFormProps> = ({

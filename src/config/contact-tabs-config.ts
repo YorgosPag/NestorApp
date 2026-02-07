@@ -30,7 +30,6 @@ import {
 } from './unified-tabs-factory';
 
 // 🏢 BACKWARD COMPATIBILITY: Legacy imports (DEPRECATED but maintained)
-import type { ContactType as LegacyContactType } from '@/types/ContactFormTypes';
 
 // ============================================================================
 // BACKWARD COMPATIBLE TYPE EXPORTS

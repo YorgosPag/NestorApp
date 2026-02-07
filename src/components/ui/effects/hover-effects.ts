@@ -250,6 +250,8 @@ export const HOVER_TEXT_EFFECTS = {
 
   /** ✅ ENTERPRISE FIX: Primary color with underline for links */
   PRIMARY_WITH_UNDERLINE: 'text-primary hover:text-primary/80 hover:underline',
+  /** Blue with underline hover */
+  BLUE_WITH_UNDERLINE: 'text-blue-600 hover:text-blue-700 hover:underline',
 } as const;
 
 /**
@@ -317,6 +319,9 @@ export const INTERACTIVE_PATTERNS = {
 
   /** Fade in/out effect για icons */
   FADE_IN_OUT: 'transition-opacity duration-200',
+
+  /** Fade in on hover */
+  FADE_IN: HOVER_COLOR_EFFECTS.FADE_IN,
 
   /** Enhanced card hover με shadow upgrade */
   CARD_ENHANCED: 'hover:shadow-xl',

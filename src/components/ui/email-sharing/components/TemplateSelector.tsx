@@ -111,7 +111,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         disabled={disabled}
         className={designSystem.cn(
           // Base styles
-          'p-3 ${radius.lg} border text-center',
+          'p-3 border text-center',
+          radius.lg,
           TRANSITION_PRESETS.STANDARD_ALL,
           `focus:outline-none focus:ring-2 ${colors.ring.info} focus:ring-offset-2`,
 
@@ -161,7 +162,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         {/* Selected Indicator */}
         {isSelected && (
           <aside className={`absolute top-2 right-2 ${iconSizes.xs} ${colors.bg.info} ${radius.full} flex items-center justify-center`} role="status" aria-label={t('email.selected')}>
-            <div className={`w-1.5 h-1.5 ${designSystem.getBackgroundColor('primary')} ${radius.full}`} />
+            <div className={`w-1.5 h-1.5 ${colors.bg.info} ${radius.full}`} />
           </aside>
         )}
       </button>
@@ -251,7 +252,8 @@ export const CompactTemplateSelector: React.FC<TemplateSelectorProps & {
               onClick={() => !disabled && onTemplateChange(template.id)}
               disabled={disabled}
               className={designSystem.cn(
-                'px-3 py-1.5 text-xs ${radius.md} border',
+                'px-3 py-1.5 text-xs border',
+                radius.md,
                 TRANSITION_PRESETS.STANDARD_COLORS,
                 'flex items-center gap-1.5',
                 isSelected

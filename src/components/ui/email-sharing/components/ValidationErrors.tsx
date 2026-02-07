@@ -222,7 +222,7 @@ export const SuccessMessage: React.FC<{
         `${colors.text.success}`
       )}>
         <figure className={`${iconSizes.md} rounded-full ${colors.bg.success} flex items-center justify-center flex-shrink-0`} role="img" aria-label={t('validation.successIcon')}>
-          <div className={`${iconSizes.xs} ${designSystem.getBackgroundColor('primary')} rounded-full`} />
+          <div className={`${iconSizes.xs} ${colors.bg.success} rounded-full`} />
         </figure>
         {message}
       </p>

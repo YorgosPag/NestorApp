@@ -116,7 +116,7 @@ AI_TIER_VISION=gpt-4o
 
 | UC | Περιγραφή | Status |
 |----|-----------|--------|
-| UC-009 | Internal Operator Workflow (Inbox triage, preview/diff, approve, override, bulk, feedback) | BACKLOG |
+| UC-009 | Internal Operator Workflow (Inbox triage, preview/diff, approve, override, bulk, feedback) | ✅ Documented |
 | UC-010 | Ερώτηση Κατάστασης (Status Inquiry) | ✅ Documented |
 | UC-011 | Αναφορά Ελαττώματος / Παράπονο (Defect Reporting) | ✅ Documented |
 | UC-012 | Υποβολή Εγγράφων — Document Submission (αρχειοθέτηση, checklist tracking) | BACKLOG |
@@ -130,6 +130,15 @@ AI_TIER_VISION=gpt-4o
 | UC-020 | Εσωτερικό Handoff — Ανάθεση/μεταφορά μεταξύ ρόλων (secretary→accountant, κ.λπ.) | BACKLOG |
 | UC-021 | Πολυεπίπεδη Έγκριση — Approval chains (>10K€ → procurementManager + owner) | BACKLOG |
 | UC-022 | Cross-Project Overview — Ενοποιημένη εικόνα ανοιχτών θεμάτων σε όλα τα έργα ανά ρόλο | BACKLOG |
+| UC-023 | Παράδοση Ακινήτου — Property Handover (7 στάδια, προετοιμασία → κλειδιά → εγγύηση) | ✅ Documented |
+| UC-024 | Εργατική Συμμόρφωση — Labor & Social Security Compliance (ΕΦΚΑ, ένσημα, ΕΡΓΑΝΗ II, παρουσιολόγιο) | ✅ Documented |
+| UC-025 | Κοστολόγηση Έργου — Project Costing & Budget Tracking (budget vs actual, predictions, alerts) | ✅ Documented |
+| UC-026 | Ταμειακές Ροές — Cash Flow Forecasting (εισροές/εκροές, forecast 3-6 μηνών, what-if) | ✅ Documented |
+| UC-027 | Ασφάλεια Εργοταξίου — Site Safety & Incidents (ατυχήματα, ΜΑΠ, Τεχνικός Ασφαλείας, patterns) | ✅ Documented |
+| UC-028 | Πιστοποιήσεις — Certifications & Licenses (εργαζομένων + υπεργολάβων, auto-block σε λήξη) | ✅ Documented |
+| UC-029 | Βάση Γνώσης — Institutional Knowledge Base (AI Q&A, ιστορικά, best practices, πηγές) | ✅ Documented |
+| UC-030 | Μικροέξοδα Εργοταξίου — Petty Cash Management (ταμείο, limits, approvals, VISION αποδείξεων) | ✅ Documented |
+| UC-031 | Πρόγραμμα Πληρωμών Αγοραστή — Payment Plan Management (CLP milestones, multi-method, mortgage tracking, checks, alerts) | ✅ Documented |
 
 ---
 
@@ -142,7 +151,7 @@ AI_TIER_VISION=gpt-4o
 |---------|-------------|
 | **[Pipeline](../../ai/pipeline.md)** | Universal Pipeline (7 βήματα) + Cross-Cutting Patterns (company detection, routing, escalation, audit, γλώσσα, διευκρινίσεις) |
 
-### Use Cases (8 σενάρια)
+### Use Cases (25 σενάρια)
 | UC | Σενάριο | Link |
 |----|---------|------|
 | UC-001 | Αίτημα Ραντεβού Πελάτη | [UC-001](../../ai/use-cases/UC-001-appointment.md) |
@@ -153,6 +162,23 @@ AI_TIER_VISION=gpt-4o
 | UC-006 | Εντολή Αποστολής (Outbound) | [UC-006](../../ai/use-cases/UC-006-outbound-send.md) |
 | UC-007 | Αναφορές On-Demand | [UC-007](../../ai/use-cases/UC-007-reports.md) |
 | UC-008 | AI-Powered Dashboards | [UC-008](../../ai/use-cases/UC-008-dashboards.md) |
+| UC-009 | Internal Operator Workflow | [UC-009](../../ai/use-cases/UC-009-internal-operator-workflow.md) |
+| UC-010 | Ερώτηση Κατάστασης | [UC-010](../../ai/use-cases/UC-010-status-inquiry.md) |
+| UC-011 | Αναφορά Ελαττώματος | [UC-011](../../ai/use-cases/UC-011-defect-reporting.md) |
+| UC-014 | Πώληση Ακινήτου (9 στάδια) | [UC-014](../../ai/use-cases/UC-014-property-sale-process.md) |
+| UC-015 | Αδειοδότηση (7 στάδια) | [UC-015](../../ai/use-cases/UC-015-building-permit-process.md) |
+| UC-016 | Προμήθεια (10 στάδια) | [UC-016](../../ai/use-cases/UC-016-procurement-process.md) |
+| UC-018 | Ημερήσιο Briefing (8 ρόλοι) | [UC-018](../../ai/use-cases/UC-018-daily-briefing.md) |
+| UC-019 | Υπενθυμίσεις & Follow-up | [UC-019](../../ai/use-cases/UC-019-reminders-followup.md) |
+| UC-023 | Παράδοση Ακινήτου (6 στάδια) | [UC-023](../../ai/use-cases/UC-023-property-handover.md) |
+| UC-024 | Εργατική Συμμόρφωση (ΕΦΚΑ/ΕΡΓΑΝΗ) | [UC-024](../../ai/use-cases/UC-024-labor-compliance.md) |
+| UC-025 | Κοστολόγηση Έργου | [UC-025](../../ai/use-cases/UC-025-project-costing.md) |
+| UC-026 | Ταμειακές Ροές (Cash Flow) | [UC-026](../../ai/use-cases/UC-026-cash-flow.md) |
+| UC-027 | Ασφάλεια Εργοταξίου | [UC-027](../../ai/use-cases/UC-027-site-safety.md) |
+| UC-028 | Πιστοποιήσεις & Άδειες | [UC-028](../../ai/use-cases/UC-028-certifications.md) |
+| UC-029 | Βάση Γνώσης Εταιρείας | [UC-029](../../ai/use-cases/UC-029-knowledge-base.md) |
+| UC-030 | Μικροέξοδα Εργοταξίου (Petty Cash) | [UC-030](../../ai/use-cases/UC-030-petty-cash.md) |
+| UC-031 | Πρόγραμμα Πληρωμών Αγοραστή (Payment Plans) | [UC-031](../../ai/use-cases/UC-031-payment-plan-management.md) |
 
 ### Specifications
 | Spec | Περιεχόμενο | Link |

@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 136 ADRs | Last Updated: 2026-02-06
+**📊 Stats**: 138 ADRs | Last Updated: 2026-02-07
 
 ---
 
@@ -25,10 +25,10 @@
 | 🔧 **Tools & Keyboard** | 8 | [View](#tools-keyboard) |
 | 🔍 **Filters & Search** | 1 | [View](#filters-search) |
 | 🔒 **Security & Auth** | 7 | [View](#security-auth) |
-| 🔧 **Backend Systems** | 7 | [View](#backend-systems) |
+| 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 8 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 12 | [View](#uncategorized) |
 
 ---
 
@@ -68,6 +68,7 @@
 | **ADR-031** | Enterprise Command Pattern (Undo/Redo) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-031-enterprise-command-pattern-undo-redo.md) |
 | **ADR-032** | Drawing State Machine | ✅ COMPLETED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-032-drawing-state-machine.md) |
 | **ADR-034** | EMPTY_SPATIAL_BOUNDS Consolidation | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-034-empty-spatial-bounds-centralization.md) |
+| **ADR-034** | Gantt Chart - Construction Phase Tracking | ✅ APPROVED - Architecture Design | 2026-02-07 | UI Components / Construction Management | [📄](./adrs/ADR-034-gantt-chart-construction-tracking.md) |
 | **ADR-034** | Validation Bounds Centralization | ✅ IMPLEMENTED | 2026-02-01 | Data & State | [📄](./adrs/ADR-034-validation-bounds-centralization.md) |
 | **ADR-035** | Tool Overlay Mode Metadata | ✅ APPROVED | 2026-01-01 | Tools & Keyboard | [📄](./adrs/ADR-035-tool-overlay-mode-metadata.md) |
 | **ADR-036** | Enterprise Structured Logging | ✅ APPROVED | 2026-01-01 | Performance | [📄](./adrs/ADR-036-enterprise-structured-logging.md) |
@@ -103,16 +104,16 @@
 | **ADR-067** | FillText Offset Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-067-filltext-offset-centralization.md) |
 | **ADR-068** | API Rate Limiting System | ✅ APPROVED | 2026-02-06 | Security & Auth | [📄](./adrs/ADR-068-api-rate-limiting-system.md) |
 | **ADR-069** | Number Formatting Centralization (formatDistance/formatAngle) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-069-number-formatting-centralization-formatdistance-fo.md) |
-| **ADR-070** | Email & AI Ingestion System | ✅ FULLY OPERATIONAL | 2026-02-06 | Backend Systems | [📄](./adrs/ADR-070-email-ai-ingestion-system.md) |
-| **ADR-071** | Enterprise Email Webhook Queue System | ✅ IMPLEMENTED | 2026-02-06 | Backend Systems | [📄](./adrs/ADR-071-enterprise-email-webhook-queue.md) |
+| **ADR-070** | Email & AI Ingestion System | ✅ ✅ FULLY OPERATIONAL (OpenAI Active) | 2026-02-05 | Backend Systems | [📄](./adrs/ADR-070-email-ai-ingestion-system.md) |
+| **ADR-071** | Enterprise Email Webhook Queue System | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-071-enterprise-email-webhook-queue.md) |
 | **ADR-072** | AI Inbox HTML Rendering with Enterprise Sanitization | ✅ IMPLEMENTED | 2026-02-05 | Security & Auth | [📄](./adrs/ADR-072-ai-inbox-html-rendering.md) |
-| **ADR-073** | Firestore Composite Index Strategy | ✅ IMPLEMENTED | 2026-02-06 | Backend Systems | [📄](./adrs/ADR-073-firestore-indexes-strategy.md) |
+| **ADR-073** | Firestore Composite Index Strategy | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-073-firestore-indexes-strategy.md) |
 | **ADR-074** | AI Inbox UX Improvements - Link Visibility & Theme Colors | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-074-ai-inbox-ux-improvements.md) |
 | **ADR-075** | Grip Size Multipliers Centralization | ✅ APPROVED | 2026-01-01 | Drawing System | [📄](./adrs/ADR-075-grip-size-multipliers-centralization.md) |
 | **ADR-076** | RGB ↔ HEX Color Conversion Centralization | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-076-rgb-hex-color-conversion-centralization.md) |
-| **ADR-077** | Firebase Admin SDK — Unified Lazy Initialization | ✅ IMPLEMENTED | 2026-02-06 | Infrastructure | [📄](./adrs/ADR-077-firebase-admin-unified-lazy-init.md) |
-| **ADR-078** | Server-Side Unit Creation via Admin SDK | ✅ IMPLEMENTED | 2026-02-06 | Backend Systems | [📄](./adrs/ADR-078-server-side-unit-creation.md) |
-| **ADR-079** | AI Inbox Real-Time Updates via Firestore onSnapshot | ✅ IMPLEMENTED | 2026-02-06 | Backend Systems | [📄](./adrs/ADR-079-ai-inbox-realtime-updates.md) |
+| **ADR-077** | Firebase Admin SDK — Unified Lazy Initialization | ✅ IMPLEMENTED | 2026-02-06 | Infrastructure & SDK | [📄](./adrs/ADR-077-firebase-admin-unified-lazy-init.md) |
+| **ADR-078** | Server-Side Unit Creation via Admin SDK | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-078-server-side-unit-creation.md) |
+| **ADR-079** | AI Inbox Real-Time Updates via Firestore onSnapshot | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-079-ai-inbox-realtime-updates.md) |
 | **ADR-081** | Percentage Formatting Centralization (formatPercent) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-081-percentage-formatting-centralization-formatpercent.md) |
 | **ADR-082** | Enterprise Number Formatting System (AutoCAD-Grade) | ✅ APPROVED | 2026-01-01 | Data & State | [📄](./adrs/ADR-082-enterprise-number-formatting-system-autocad-grade.md) |
 | **ADR-083** | Line Dash Patterns Centralization | ✅ APPROVED | 2026-01-31 | Canvas & Rendering | [📄](./adrs/ADR-083-line-dash-patterns-centralization.md) |
@@ -169,7 +170,7 @@
 | **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-167** | Enterprise Project Address System | ✅ ✅ APPROVED | 2026-02-02 | Entity Systems | [📄](./adrs/ADR-167-enterprise-project-address-system.md) |
 | **ADR-168** | Multi-Agent Development Environment | ✅ IMPLEMENTED | 2026-02-05 | Infrastructure | [📄](./adrs/ADR-168-multi-agent-development-environment.md) |
-| **ADR-169** | Modular AI Architecture - Enterprise Automation Platform | 📝 DRAFT | 2026-02-07 | AI Architecture | [📄](./adrs/ADR-169-modular-ai-architecture.md) |
+| **ADR-169** | Modular AI Architecture - Enterprise Automation Platform | ✅ DRAFT - Requirements Gathering | 2026-02-07 | AI Architecture / Enterprise Automation | [📄](./adrs/ADR-169-modular-ai-architecture.md) |
 | **ADR-018.1** | Photos Tab Base Template | ✅ APPROVED | 2026-01-01 | Entity Systems | [📄](./adrs/ADR-018-1-photos-tab-base-template.md) |
 | **ADR-020.1** | Conditional App Shell Layout | ✅ APPROVED | 2026-01-01 | Security & Auth | [📄](./adrs/ADR-020-1-conditional-app-shell-layout.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
@@ -365,12 +366,7 @@
 |-----|----------|--------|------|
 | **ADR-059** | Separate /api/audit/bootstrap from /api/projects/list | ✅ ✅ Active | [View](./adrs/ADR-059-separate-audit-bootstrap-from-projects-list.md) |
 | **ADR-060** | Migrate BuildingFloorplanService to Enterprise Storage Architecture | ✅ ✅ Active | [View](./adrs/ADR-060-building-floorplan-enterprise-storage.md) |
-| **ADR-070** | Email & AI Ingestion System | ✅ FULLY OPERATIONAL | [View](./adrs/ADR-070-email-ai-ingestion-system.md) |
-| **ADR-071** | Enterprise Email Webhook Queue System | ✅ IMPLEMENTED | [View](./adrs/ADR-071-enterprise-email-webhook-queue.md) |
-| **ADR-073** | Firestore Composite Index Strategy | ✅ IMPLEMENTED | [View](./adrs/ADR-073-firestore-indexes-strategy.md) |
-| **ADR-078** | Server-Side Unit Creation via Admin SDK | ✅ IMPLEMENTED | [View](./adrs/ADR-078-server-side-unit-creation.md) |
-| **ADR-079** | AI Inbox Real-Time Updates via Firestore onSnapshot | ✅ IMPLEMENTED | [View](./adrs/ADR-079-ai-inbox-realtime-updates.md) |
-| **ADR-169** | Modular AI Architecture - Enterprise Automation Platform | 📝 DRAFT | [View](./adrs/ADR-169-modular-ai-architecture.md) |
+| **ADR-070** | Email & AI Ingestion System | ✅ ✅ FULLY OPERATIONAL (OpenAI Active) | [View](./adrs/ADR-070-email-ai-ingestion-system.md) |
 
 ---
 
@@ -403,7 +399,11 @@
 | **ADR-065** | Inline ID Generation Centralization | ✅ APPROVED | [View](./adrs/ADR-065-inline-id-generation-centralization.md) |
 | **ADR-066** | Rendering Z-Index Centralization | ✅ APPROVED | [View](./adrs/ADR-066-rendering-zindex-centralization.md) |
 | **ADR-067** | FillText Offset Centralization | ✅ APPROVED | [View](./adrs/ADR-067-filltext-offset-centralization.md) |
+| **ADR-071** | Enterprise Email Webhook Queue System | ✅ APPROVED | [View](./adrs/ADR-071-enterprise-email-webhook-queue.md) |
+| **ADR-073** | Firestore Composite Index Strategy | ✅ APPROVED | [View](./adrs/ADR-073-firestore-indexes-strategy.md) |
 | **ADR-074** | AI Inbox UX Improvements - Link Visibility & Theme Colors | ✅ APPROVED | [View](./adrs/ADR-074-ai-inbox-ux-improvements.md) |
+| **ADR-078** | Server-Side Unit Creation via Admin SDK | ✅ APPROVED | [View](./adrs/ADR-078-server-side-unit-creation.md) |
+| **ADR-079** | AI Inbox Real-Time Updates via Firestore onSnapshot | ✅ APPROVED | [View](./adrs/ADR-079-ai-inbox-realtime-updates.md) |
 | **ADR-165** | Entity Validation Centralization | ✅ APPROVED | [View](./adrs/ADR-165-entity-validation-centralization.md) |
 | **ADR-166** | GAP_TOLERANCE, ARC_TESSELLATION & Ghost Colors Centralization | ✅ APPROVED | [View](./adrs/ADR-166-gap-tolerance-arc-ghost-centralization.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
@@ -416,7 +416,7 @@
 
 ```
 034, 065, 066, 067, 068, 070, 071, 072, 073, 074,
-077, 079, 080, 089, 090, 100, 103, 121, 131,
+077, 078, 079, 080, 089, 090, 100, 103, 121, 131,
 132, 134, 145, 156, 161, 164
 ```
 

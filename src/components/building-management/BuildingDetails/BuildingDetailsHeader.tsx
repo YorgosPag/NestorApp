@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { BuildingBadge } from '@/core/badges';
-import { Eye } from 'lucide-react';
+import { Eye, Edit } from 'lucide-react';
 // 🏢 ENTERPRISE: Using centralized entity config for Building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { EntityDetailsHeader } from '@/core/entity-headers';
@@ -17,11 +17,34 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 interface BuildingDetailsHeaderProps {
     building: Building;
+    /** 🏢 ENTERPRISE: Callback for edit button (ADR-087) */
+    onEdit?: () => void;
 }
 
-export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) {
+export function BuildingDetailsHeader({ building, onEdit }: BuildingDetailsHeaderProps) {
     // 🏢 ENTERPRISE: i18n hook for translations with namespace readiness check
     const { t, isNamespaceReady } = useTranslation('building');
+
+    // 🏢 ENTERPRISE: Build actions array dynamically (ADR-087)
+    const actions = [
+        {
+            // 🏢 ENTERPRISE: Fallback when namespace not ready
+            label: isNamespaceReady ? t('details.viewBuilding') : 'View Building',
+            onClick: () => console.log('Show building details'),
+            icon: Eye,
+            className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
+        }
+    ];
+
+    // 🏢 ENTERPRISE: Add edit action if callback provided (ADR-087)
+    if (onEdit) {
+        actions.unshift({
+            label: isNamespaceReady ? t('details.editBuilding') : 'Edit',
+            onClick: onEdit,
+            icon: Edit,
+            className: `bg-gradient-to-r from-amber-500 to-orange-600 ${GRADIENT_HOVER_EFFECTS.BLUE_PURPLE_DEEPER}`
+        });
+    }
 
     return (
         <>
@@ -30,15 +53,7 @@ export function BuildingDetailsHeader({ building }: BuildingDetailsHeaderProps) 
                 <EntityDetailsHeader
                     icon={NAVIGATION_ENTITIES.building.icon}
                     title={building.name}
-                    actions={[
-                        {
-                            // 🏢 ENTERPRISE: Fallback when namespace not ready
-                            label: isNamespaceReady ? t('details.viewBuilding') : 'View Building',
-                            onClick: () => console.log('Show building details'),
-                            icon: Eye,
-                            className: GRADIENT_HOVER_EFFECTS.PRIMARY_BUTTON
-                        }
-                    ]}
+                    actions={actions}
                     variant="detailed"
                 />
             </div>

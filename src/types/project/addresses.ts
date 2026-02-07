@@ -52,6 +52,20 @@ export type ProjectAddressType =
   | 'correspondence' // Αλληλογραφία
   | 'other';         // Άλλο
 
+/**
+ * Runtime list of address types (SSoT for validation)
+ */
+export const PROJECT_ADDRESS_TYPES = [
+  'site',
+  'entrance',
+  'delivery',
+  'legal',
+  'postal',
+  'billing',
+  'correspondence',
+  'other'
+] as const;
+
 // =============================================================================
 // MAIN INTERFACES
 // =============================================================================

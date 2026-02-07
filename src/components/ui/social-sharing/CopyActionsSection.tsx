@@ -89,10 +89,6 @@ export const CopyActionsSection: React.FC<CopyActionsProps> = ({
   const finalConfig = {
     showUrlCopy: true,
     showTextCopy: true,
-    labels: {
-      url: t('copy.copyLink'),
-      text: t('copy.copyText')
-    },
     successTimeout: 2000,
     layout: 'horizontal' as const,
     ...config,

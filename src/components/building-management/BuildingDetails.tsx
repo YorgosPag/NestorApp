@@ -13,16 +13,18 @@ import { DetailsContainer } from '@/core/containers';
 
 interface BuildingDetailsProps {
   building: Building | null;
+  /** 🏢 ENTERPRISE: Callback for edit button (ADR-087) */
+  onEdit?: () => void;
 }
 
-export function BuildingDetails({ building }: BuildingDetailsProps) {
+export function BuildingDetails({ building, onEdit }: BuildingDetailsProps) {
   // [ENTERPRISE] Centralized messages system
   const emptyStateMessages = useEmptyStateMessages();
 
   return (
     <DetailsContainer
       selectedItem={building}
-      header={<BuildingDetailsHeader building={building!} />}
+      header={<BuildingDetailsHeader building={building!} onEdit={onEdit} />}
       tabsRenderer={<BuildingTabs building={building!} />}
       emptyStateProps={{
         icon: NAVIGATION_ENTITIES.building.icon,

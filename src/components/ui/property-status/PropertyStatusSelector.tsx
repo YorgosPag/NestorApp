@@ -158,6 +158,7 @@ export function PropertyStatusSelector({
   const [isValidating, setIsValidating] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [showReasonField, setShowReasonField] = useState(false);
+  const badgeSize: 'default' | 'sm' | 'lg' = size === 'md' ? 'default' : size;
 
   // ========================================================================
   // COMPUTED VALUES
@@ -331,7 +332,7 @@ export function PropertyStatusSelector({
         <Label className="text-sm font-medium">{t('statusSelector.currentStatus')}</Label>
         <UnifiedPropertyStatusBadge
           status={currentStatus}
-          size={size}
+          size={badgeSize}
           showIcon
         />
       </div>

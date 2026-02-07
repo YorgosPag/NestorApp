@@ -56,6 +56,8 @@ export interface UseLayoutClassesReturn {
   readonly flexGap1: string;
   /** "flex gap-4" */
   readonly flexGap4: string;
+  /** "flex gap-3" */
+  readonly flexGap3: string;
   /** "flex gap-2 mt-2" */
   readonly flexGap2Mt2: string;
 
@@ -270,6 +272,7 @@ export function useLayoutClasses(): UseLayoutClassesReturn {
     flexGap2: "flex gap-2",                            // Απλό flex
     flexGap1: "flex gap-1",                            // Μικρό gap
     flexGap4: "flex gap-4",                            // Μεγάλο gap
+    flexGap3: "flex gap-3",                            // Medium gap
     flexGap2Mt2: "flex gap-2 mt-2",                    // Με margin-top
 
     // 📐 GRID PATTERNS - Αντικαθιστά grid διπλότυπα

@@ -18,7 +18,7 @@
 | Βήμα | Περιγραφή | Module |
 |------|-----------|--------|
 | **1. Intake** | Λήψη μηνύματος (email, Telegram, κ.λπ.) | `IntakeModule` |
-| **2. Understand** | AI αναλύει intent, entities, urgency | `UnderstandingModule` |
+| **2. Understand** | AI αναλύει intent, entities, urgency + sender classification + threat detection | `UnderstandingModule` |
 | **3. Lookup** | Αναζήτηση σχετικών δεδομένων στο σύστημα | `LookupModule` |
 | **4. Propose** | AI προτείνει ενέργεια στον υπεύθυνο | `ProposalModule` |
 | **5. Approve** | Ο υπεύθυνος εγκρίνει/τροποποιεί/απορρίπτει | `ApprovalModule` |
@@ -30,6 +30,36 @@
 ---
 
 ## Cross-Cutting Patterns
+
+### Sender Classification & Threat Filtering
+
+Πριν από κάθε άλλη ανάλυση, η AI ταξινομεί τον αποστολέα και ελέγχει για απειλές. Η ταξινόμηση γίνεται στο **UnderstandingModule** και καθορίζει τη ροή:
+
+```
+Εισερχόμενο μήνυμα
+  │
+  ├── Spam / Phishing ──────→ QUARANTINE (δεν φτάνει στον operator)
+  │                           Βλ. security.md → Spam & Phishing Detection
+  │
+  ├── Cold outreach ────────→ LOW PRIORITY queue
+  │   (πώληση προϊόντων,       (operator βλέπει αν θέλει)
+  │    marketing, newsletter)
+  │
+  ├── Γνωστός αποστολέας ──→ Κανονική ροή (UC-001~UC-023)
+  │   (υπάρχει σε contacts)
+  │
+  └── Άγνωστος αλλά ───────→ NEW SENDER queue
+      legitimate               ├── Πιθανός πελάτης → UC-005 (αναζήτηση) / UC-001 (ραντεβού)
+      (ρωτάει κάτι σχετικό)   ├── Πιθανός προμηθευτής → Αρχειοθέτηση "potential supplier"
+                               └── Αδιευκρίνιστο → Operator αξιολογεί
+```
+
+**Sender Classification πεδία** (προστίθεται στο UnderstandingResult):
+- `senderType`: `known_contact` | `unknown_legitimate` | `cold_outreach` | `spam` | `phishing`
+- `threatLevel`: `clean` | `low` | `medium` | `high`
+- `threatReason`: string (αν threatLevel > clean)
+
+---
 
 ### Company Detection - Multi-Signal
 

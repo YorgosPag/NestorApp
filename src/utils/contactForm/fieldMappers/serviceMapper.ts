@@ -1,5 +1,6 @@
-import type { Contact } from '@/types/contacts';
+import type { Contact, SocialMediaInfo } from '@/types/contacts';
 import type { ContactFormData } from '@/types/ContactFormTypes';
+import { initialFormData } from '@/types/ContactFormTypes';
 import { getSafeFieldValue, getSafeArrayValue, getSafeNestedValue } from '../contactMapper';
 
 // ============================================================================
@@ -19,6 +20,9 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
 
   // Cast for service-specific field access using type-safe approach
   const serviceContact = contact as unknown as Record<string, unknown>;
+  const socialMediaFallback = ('socialMedia' in contact && Array.isArray(contact.socialMedia))
+    ? (contact.socialMedia as SocialMediaInfo[])
+    : [];
 
   // 🔍 QUICK FIX: Find email/phone/website from any possible location
   const contactRecord = contact as unknown as Record<string, unknown>;
@@ -50,39 +54,31 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
   });
 
   const formData: ContactFormData = {
-    // Basic info
+    ...initialFormData,
     type: 'service',
     id: contact.id,
 
-    // 🏛️ Service Στοιχεία
     serviceName: getSafeFieldValue(serviceContact, 'serviceName'),
     name: getSafeFieldValue(serviceContact, 'serviceName'),
     serviceType: getSafeFieldValue(serviceContact, 'serviceType', 'other'),
-
-    // Βασικά Στοιχεία Δημόσιας Υπηρεσίας (Service Config)
     shortName: getSafeFieldValue(serviceContact, 'shortName'),
     category: getSafeFieldValue(serviceContact, 'category'),
     supervisionMinistry: getSafeFieldValue(serviceContact, 'supervisionMinistry'),
-
-    // Διοικητικά Στοιχεία (Service Config)
     legalStatus: getSafeFieldValue(serviceContact, 'legalStatus'),
     establishmentLaw: getSafeFieldValue(serviceContact, 'establishmentLaw'),
     headTitle: getSafeFieldValue(serviceContact, 'headTitle'),
     headName: getSafeFieldValue(serviceContact, 'headName'),
 
-    // 📞 Επικοινωνία - QUICK FIX: Direct field access
     email: foundEmail,
     phone: foundPhone,
 
-    // 📷 Photos & Logo
     photoFile: null,
     photoPreview: getSafeFieldValue(serviceContact, 'photoURL'),
-    photoURL: getSafeFieldValue(serviceContact, 'photoURL'), // Added for tab display
+    photoURL: getSafeFieldValue(serviceContact, 'photoURL'),
     logoFile: null,
     logoPreview: getSafeFieldValue(serviceContact, 'logoURL'),
-    logoURL: getSafeFieldValue(serviceContact, 'logoURL'), // Added for tab display
+    logoURL: getSafeFieldValue(serviceContact, 'logoURL'),
 
-    // 🏛️ ΓΕΜΗ Στοιχεία (από ΓΕΜΗ API data)
     gemiNumber: getSafeFieldValue(serviceContact, 'gemiNumber'),
     serviceVatNumber: getSafeFieldValue(serviceContact, 'serviceVatNumber'),
     serviceTaxOffice: getSafeFieldValue(serviceContact, 'serviceTaxOffice'),
@@ -94,8 +90,6 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     chamber: getSafeFieldValue(serviceContact, 'chamber'),
     isBranch: getSafeFieldValue(serviceContact, 'isBranch', false),
     registrationMethod: getSafeFieldValue(serviceContact, 'registrationMethod'),
-
-    // Πρόσθετα ΓΕΜΗ στοιχεία
     registrationDate: getSafeFieldValue(serviceContact, 'registrationDate'),
     lastUpdateDate: getSafeFieldValue(serviceContact, 'lastUpdateDate'),
     gemiDepartment: getSafeFieldValue(serviceContact, 'gemiDepartment'),
@@ -106,19 +100,14 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     activityType: getSafeFieldValue(serviceContact, 'activityType', 'main'),
     activityValidFrom: getSafeFieldValue(serviceContact, 'activityValidFrom'),
     activityValidTo: getSafeFieldValue(serviceContact, 'activityValidTo'),
-
-    // Κεφάλαιο
     capitalAmount: getSafeFieldValue(serviceContact, 'capitalAmount'),
     currency: getSafeFieldValue(serviceContact, 'currency'),
     extraordinaryCapital: getSafeFieldValue(serviceContact, 'extraordinaryCapital'),
-
-    // Στοιχεία Φορέα
     serviceCode: getSafeFieldValue(serviceContact, 'serviceCode'),
     parentMinistry: getSafeFieldValue(serviceContact, 'parentMinistry'),
     serviceCategory: getSafeFieldValue(serviceContact, 'serviceCategory'),
     officialWebsite: getSafeFieldValue(serviceContact, 'officialWebsite'),
 
-    // Επικοινωνία Υπηρεσίας - ENTERPRISE Arrays Structure
     street: contact.addresses?.[0]?.street || '',
     streetNumber: contact.addresses?.[0]?.number || '',
     city: contact.addresses?.[0]?.city || '',
@@ -126,13 +115,11 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     fax: getSafeFieldValue(serviceContact, 'fax'),
     website: contact.websites?.[0]?.url || foundWebsite,
 
-    // Υπηρεσίες Φορέα (Services Section)
     mainResponsibilities: getSafeFieldValue(serviceContact, 'mainResponsibilities'),
     citizenServices: getSafeFieldValue(serviceContact, 'citizenServices'),
     onlineServices: getSafeFieldValue(serviceContact, 'onlineServices'),
     serviceHours: getSafeFieldValue(serviceContact, 'serviceHours'),
 
-    // Διεύθυνση Έδρας
     serviceAddress: {
       street: getSafeNestedValue(serviceContact, 'serviceAddress.street'),
       number: getSafeNestedValue(serviceContact, 'serviceAddress.number'),
@@ -140,7 +127,6 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
       city: getSafeNestedValue(serviceContact, 'serviceAddress.city')
     },
 
-    // Arrays (ΓΕΜΗ data)
     representatives: getSafeArrayValue(serviceContact, 'representatives'),
     shareholders: getSafeArrayValue(serviceContact, 'shareholders'),
     branches: getSafeArrayValue(serviceContact, 'branches'),
@@ -151,52 +137,24 @@ export function mapServiceContactToFormData(contact: Contact): ContactFormData {
     decisions: getSafeArrayValue(serviceContact, 'decisions'),
     announcements: getSafeArrayValue(serviceContact, 'announcements'),
 
-    // 📝 Notes
     notes: getSafeFieldValue(contact, 'notes'),
 
-    // Individual fields (empty for service)
-    firstName: '',
-    lastName: '',
-    fatherName: '',
-    motherName: '',
-    birthDate: '',
-    birthCountry: '',
-    gender: '',
-    amka: '',
-    documentType: '',
-    documentIssuer: '',
-    documentNumber: '',
-    documentIssueDate: '',
-    documentExpiryDate: '',
-    vatNumber: '',
-    taxOffice: '',
-    profession: '',
-    specialty: '',
-    employer: '',
-    position: '',
-    workAddress: '',
-    workWebsite: '',
-    socialMedia: {
-      facebook: '',
-      instagram: '',
-      linkedin: '',
-      twitter: ''
-    },
+    phones: contact.phones ?? [],
+    emails: contact.emails ?? [],
     websites: contact.websites ?? [],
-    // 🔧 FIX: Convert existing logoURL to multiplePhotos format for services
-    multiplePhotos: getSafeFieldValue(serviceContact, 'logoURL') ?
-      [{
-        file: null,
-        preview: undefined,
-        uploadUrl: getSafeFieldValue(serviceContact, 'logoURL'),
-        isUploading: false,
-        uploadProgress: 0,
-        error: undefined
-      }] : [],
+    socialMediaArray: contact.socialMediaArray ?? socialMediaFallback,
 
-    // Company fields (empty for service)
-    companyName: '',
-    companyVatNumber: ''
+    multiplePhotos: getSafeFieldValue(serviceContact, 'logoURL') ?
+      [
+        {
+          file: null,
+          preview: undefined,
+          uploadUrl: getSafeFieldValue(serviceContact, 'logoURL'),
+          isUploading: false,
+          uploadProgress: 0,
+          error: undefined
+        }
+      ] : []
   };
 
   // 🔍 DEBUG: Final formData values for clickable fields

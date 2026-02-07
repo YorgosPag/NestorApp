@@ -2,7 +2,7 @@
 
 > **Parent ADR**: [ADR-169 - Modular AI Architecture](../../reference/adrs/ADR-169-modular-ai-architecture.md)
 > **Pipeline**: [pipeline.md](../pipeline.md)
-> **Σχετικά UCs**: [UC-001](./UC-001-appointment.md) (ραντεβού), [UC-005](./UC-005-property-search.md) (αναζήτηση), [UC-010](./UC-010-status-inquiry.md) (status)
+> **Σχετικά UCs**: [UC-001](./UC-001-appointment.md) (ραντεβού), [UC-005](./UC-005-property-search.md) (αναζήτηση), [UC-010](./UC-010-status-inquiry.md) (status), [UC-023](./UC-023-property-handover.md) (παράδοση), [UC-031](./UC-031-payment-plan-management.md) (πρόγραμμα πληρωμών)
 
 ---
 
@@ -140,23 +140,36 @@ LEAD → ΕΠΙΣΚΕΨΗ → ΚΡΑΤΗΣΗ → ΕΓΓΡΑΦΑ → ΔΑΝΕΙΟ
 
 ### Στάδιο 8: Πληρωμές
 
+> **📋 ΠΛΗΡΗΣ ΤΕΚΜΗΡΙΩΣΗ**: [UC-031 — Payment Plan Management](./UC-031-payment-plan-management.md)
+>
+> Το UC-031 εμβαθύνει σε αυτό το στάδιο και παρέχει πλήρη κάλυψη:
+> - 6 μέθοδοι πληρωμής (τραπεζική μεταφορά, δάνειο, επιταγές, συναλλαγματικές, μετρητά, escrow)
+> - Construction-Linked Payments (CLP) — δόσεις συνδεδεμένες με milestones κατασκευής
+> - Multi-method payments (μία δόση, πολλές μέθοδοι)
+> - Mortgage tracking (αίτηση → εκτίμηση → έγκριση → εκταμιεύσεις)
+> - Bounced check handling
+> - Gantt timeline dashboard
+> - ΦΠΑ/ΦΜΑ config-driven
+
 | Πεδίο | Λεπτομέρεια |
 |-------|-------------|
 | **Κατάσταση** | `payments_in_progress` → `payments_complete` |
-| **Ενέργειες AI** | Tracking δόσεων, alerts για καθυστερήσεις |
+| **Ενέργειες AI** | Tracking δόσεων, alerts για καθυστερήσεις, forecast UC-026 |
 
 **Τύποι πληρωμών**:
 
 | Πληρωμή | Πότε | Tracking |
 |---------|------|---------|
 | Προκαταβολή | Στην κράτηση | ☐ Εισπράχθηκε |
-| Δόσεις κατασκευής | Ανά φάση κατασκευής | ☐ Ημερομηνία → ποσό → εισπράχθηκε |
-| Υπόλοιπο | Στην παράδοση | ☐ Εισπράχθηκε |
+| Δόσεις κατασκευής | Ανά φάση κατασκευής (CLP milestones) | ☐ Ημερομηνία → ποσό → εισπράχθηκε |
+| Υπόλοιπο | Στην παράδοση / μεταγραφή | ☐ Εισπράχθηκε |
 
 **Alerts**:
 - Δόση >7 μέρες overdue → ειδοποίηση accountant
 - Δόση >30 μέρες overdue → ειδοποίηση owner + salesManager
-- Εξόφληση → αυτόματη ειδοποίηση "Ο αγοραστής ολοκλήρωσε τις πληρωμές — έτοιμος για παράδοση"
+- Δόση >90 μέρες overdue → escalation → νομική ενέργεια
+- Ακάλυπτη επιταγή → 🔴 CRITICAL alert
+- Εξόφληση → αυτόματη ειδοποίηση "Ο αγοραστής ολοκλήρωσε τις πληρωμές — έτοιμος για παράδοση" → trigger UC-023
 
 ---
 

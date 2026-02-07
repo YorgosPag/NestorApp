@@ -83,11 +83,11 @@ export function requiresSpecialDeletion(key: string, value: ContactDataValue): b
  * @param obj - Object to clean
  * @returns Cleaned object
  */
-export function cleanUndefinedValues<T extends ContactDataRecord>(obj: T): T {
+export function cleanUndefinedValues<T extends object>(obj: T): T {
   const cleaned: ContactDataRecord = {};
 
   Object.keys(obj).forEach(key => {
-    const value = obj[key];
+    const value = (obj as Record<string, ContactDataValue>)[key];
 
     // 🚨🚨🚨 ΜΕΓΑΛΗ ΠΡΟΣΟΧΗ - ΜΗ ΑΓΓΙΖΕΙΣ ΑΥΤΗ ΤΗ ΓΡΑΜΜΗ! 🚨🚨🚨
     // 🔥 CRITICAL FIX: Preserve empty strings για photoURL deletion

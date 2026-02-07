@@ -605,6 +605,7 @@
   },
   "details": {
     "viewBuilding": "View Building",
+    "editBuilding": "Edit",
     "percentComplete": "{percent}% complete"
   },
   "pages": {
@@ -947,6 +948,77 @@
         "finalWorks": "Final Works",
         "dependsOnPrevious": "Depends on previous",
         "waiting": "Waiting"
+      },
+      "views": {
+        "milestones": "Milestones",
+        "gantt": "Gantt"
+      },
+      "gantt": {
+        "title": "Gantt Chart",
+        "toolbar": {
+          "zoom": "Zoom",
+          "day": "Day",
+          "week": "Week",
+          "month": "Month",
+          "quarter": "Quarter",
+          "year": "Year",
+          "today": "Today"
+        },
+        "status": {
+          "notStarted": "Not Started",
+          "inProgress": "In Progress",
+          "completed": "Completed",
+          "delayed": "Delayed",
+          "blocked": "Blocked",
+          "onHold": "On Hold"
+        },
+        "phases": {
+          "excavationFoundation": "Excavation & Foundation",
+          "structure": "Structure (Load-Bearing Frame)",
+          "masonryRoofing": "Masonry & Roofing",
+          "mecInstallations": "M&E Installations",
+          "insulationPlastering": "Insulation & Plastering",
+          "flooringPainting": "Flooring & Painting",
+          "fixturesFinishes": "Fixtures & Finishes",
+          "landscapingHandover": "Landscaping & Handover"
+        },
+        "tasks": {
+          "excavation": "Foundation excavation",
+          "reinforcement": "Foundation reinforcement",
+          "concretePour": "Foundation concrete pour",
+          "basementWalls": "Basement walls",
+          "columns": "Columns",
+          "beamsSlabs": "Beams & floor slabs",
+          "staircase": "Staircase",
+          "externalWalls": "External masonry",
+          "internalWalls": "Internal masonry",
+          "roofStructure": "Roof construction",
+          "plumbing": "Plumbing installations",
+          "electrical": "Electrical installations",
+          "hvac": "Heating/Air conditioning",
+          "elevator": "Elevator installation",
+          "thermalInsulation": "Thermal insulation",
+          "waterproofing": "Waterproofing",
+          "internalPlastering": "Internal plastering",
+          "externalPlastering": "External plastering",
+          "tiling": "Floor tiling",
+          "woodenFloors": "Wooden floors",
+          "internalPainting": "Internal painting",
+          "externalPainting": "External painting",
+          "doorsFitting": "Doors & windows fitting",
+          "kitchenBathroom": "Kitchen & bathroom",
+          "lighting": "Lighting",
+          "landscaping": "Landscaping",
+          "finalInspection": "Final inspection",
+          "handover": "Handover"
+        },
+        "summary": {
+          "totalPhases": "Total Phases",
+          "completedPhases": "Completed",
+          "delayedPhases": "Delayed",
+          "overallProgress": "Overall Progress"
+        },
+        "empty": "No construction tasks available."
       }
     },
     "map": {
