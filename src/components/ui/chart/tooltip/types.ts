@@ -4,9 +4,9 @@ import type { ChartConfig } from "../ChartContext";
 
 // 🏢 ENTERPRISE: Proper type definition for chart tooltip payload items
 export interface TooltipPayloadItem {
-  value: number | string;
-  name: string;
-  dataKey: string;
+  value?: number | string;
+  name?: string;
+  dataKey?: string;
   payload?: Record<string, unknown>;
   color?: string;
   fill?: string;
@@ -28,8 +28,9 @@ export interface ChartTooltipLabelProps {
 export interface ChartTooltipItemProps {
   item: TooltipPayloadItem;
   index: number;
+  payload?: TooltipPayload;
   formatter?: (
-    value: number,
+    value: number | string,
     name: string,
     item: TooltipPayloadItem,
     index: number,
@@ -52,7 +53,7 @@ export type ChartTooltipContentProps = React.ComponentProps<"div"> & {
   labelFormatter?: (value: React.ReactNode, payload: TooltipPayload) => React.ReactNode;
   labelClassName?: string;
   formatter?: (
-    value: number,
+    value: number | string,
     name: string,
     item: TooltipPayloadItem,
     index: number,

@@ -1049,6 +1049,125 @@
           "endDateRequired": "Η ημερομηνία λήξης είναι υποχρεωτική",
           "endAfterStart": "Η ημ. λήξης πρέπει να είναι μετά την ημ. έναρξης",
           "phaseRequired": "Η επιλογή φάσης είναι υποχρεωτική"
+        },
+        "templates": {
+          "phases": {
+            "sitePreparation": "Προετοιμασία Οικοπέδου",
+            "foundation": "Θεμελίωση / Εκσκαφές",
+            "structuralFrame": "Φέρων Οργανισμός (Σκελετός)",
+            "roofing": "Στέγη / Επικάλυψη",
+            "externalWalls": "Εξωτερική Τοιχοποιία",
+            "plumbing": "Υδραυλικά",
+            "electrical": "Ηλεκτρολογικά",
+            "hvac": "Θέρμανση / Κλιματισμός",
+            "insulation": "Μόνωση (Θερμική / Υγρασίας)",
+            "plastering": "Σοβάτισμα / Επιχρίσματα",
+            "flooring": "Δάπεδα / Πλακίδια",
+            "painting": "Βαφές",
+            "joinery": "Κουφώματα / Εξαρτήματα",
+            "landscaping": "Διαμόρφωση Περιβάλλοντος",
+            "inspection": "Τελικός Έλεγχος / Παράδοση"
+          },
+          "tasks": {
+            "sitePreparation": {
+              "siteSurvey": "Τοπογραφική Αποτύπωση",
+              "soilTesting": "Γεωτεχνική Έρευνα",
+              "demolition": "Κατεδαφίσεις",
+              "siteClearing": "Καθαρισμός Οικοπέδου"
+            },
+            "foundation": {
+              "excavation": "Εκσκαφή Θεμελίων",
+              "reinforcement": "Τοποθέτηση Οπλισμού",
+              "concreting": "Σκυροδέτηση Θεμελίων",
+              "waterproofing": "Στεγανοποίηση Θεμελίων",
+              "backfill": "Επιχώσεις"
+            },
+            "structuralFrame": {
+              "columnConstruction": "Κατασκευή Υποστυλωμάτων",
+              "beamConstruction": "Κατασκευή Δοκών",
+              "slabPouring": "Σκυροδέτηση Πλακών",
+              "structuralCuring": "Ωρίμανση Σκυροδέματος"
+            },
+            "roofing": {
+              "roofFraming": "Σκελετός Στέγης",
+              "roofInsulation": "Μόνωση Στέγης",
+              "roofWaterproofing": "Στεγανοποίηση Στέγης",
+              "roofTiling": "Κεραμίδια / Επικάλυψη",
+              "gutters": "Υδρορροές"
+            },
+            "externalWalls": {
+              "brickwork": "Κτίσιμο Τοιχοποιίας",
+              "externalInsulation": "Εξωτερική Μόνωση",
+              "externalRendering": "Εξωτερικά Επιχρίσματα",
+              "facadeCladding": "Επένδυση Πρόσοψης"
+            },
+            "plumbing": {
+              "waterSupply": "Ύδρευση",
+              "drainage": "Αποχέτευση",
+              "hotWater": "Ζεστό Νερό / Μπόιλερ",
+              "fixtureInstallation": "Εγκατάσταση Ειδών Υγιεινής"
+            },
+            "electrical": {
+              "mainPanel": "Γενικός Πίνακας",
+              "wiring": "Καλωδίωση",
+              "switchesSockets": "Διακόπτες & Πρίζες",
+              "lighting": "Φωτισμός",
+              "grounding": "Γείωση"
+            },
+            "hvac": {
+              "ductwork": "Αεραγωγοί",
+              "unitInstallation": "Εγκατάσταση Μονάδων",
+              "piping": "Σωληνώσεις",
+              "commissioning": "Θέση σε Λειτουργία"
+            },
+            "insulation": {
+              "thermalInsulation": "Θερμομόνωση",
+              "soundInsulation": "Ηχομόνωση",
+              "moistureBarrier": "Φράγμα Υγρασίας"
+            },
+            "plastering": {
+              "internalPlastering": "Εσωτερικά Σοβατίσματα",
+              "externalPlastering": "Εξωτερικά Σοβατίσματα",
+              "decorativePlaster": "Διακοσμητικός Σοβάς"
+            },
+            "flooring": {
+              "screed": "Τσιμεντοκονία (Σκληρό Δάπεδο)",
+              "tileInstallation": "Τοποθέτηση Πλακιδίων",
+              "marbleInstallation": "Τοποθέτηση Μαρμάρων",
+              "woodFlooring": "Ξύλινο Δάπεδο"
+            },
+            "painting": {
+              "priming": "Αστάρωμα",
+              "internalPainting": "Εσωτερικές Βαφές",
+              "externalPainting": "Εξωτερικές Βαφές",
+              "specialFinishes": "Ειδικά Φινιρίσματα"
+            },
+            "joinery": {
+              "windowInstallation": "Τοποθέτηση Παραθύρων",
+              "doorInstallation": "Τοποθέτηση Θυρών",
+              "kitchenCabinets": "Ντουλάπια Κουζίνας",
+              "wardrobes": "Ντουλάπες"
+            },
+            "landscaping": {
+              "outdoorPaving": "Εξωτερικές Πλακοστρώσεις",
+              "fencing": "Περίφραξη",
+              "gardenPlanting": "Φύτευση Κήπου",
+              "irrigationSystem": "Σύστημα Άρδευσης"
+            },
+            "inspection": {
+              "mechanicalInspection": "Μηχανολογικός Έλεγχος",
+              "electricalInspection": "Ηλεκτρολογικός Έλεγχος",
+              "fireInspection": "Πυροσβεστικός Έλεγχος",
+              "finalHandover": "Τελική Παράδοση"
+            }
+          },
+          "combobox": {
+            "searchPhase": "Αναζήτηση ή πληκτρολογήστε νέα φάση...",
+            "searchTask": "Αναζήτηση ή πληκτρολογήστε νέα εργασία...",
+            "predefined": "Προκαθορισμένες",
+            "custom": "Χρήση: «{value}»",
+            "noResults": "Δεν βρέθηκαν αποτελέσματα"
+          }
         }
       }
     },

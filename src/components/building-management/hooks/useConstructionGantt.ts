@@ -119,6 +119,34 @@ function mapPhaseStatusToGantt(status: ConstructionPhaseStatus): GanttTaskStatus
   }
 }
 
+/**
+ * Parses a date string (e.g. "2026-02-01") as LOCAL midnight.
+ *
+ * JavaScript's `new Date("2026-02-01")` interprets date-only strings as UTC,
+ * which creates a timezone offset (e.g. UTC+2 in Greece → bar appears 2h early).
+ * Adding T00:00:00 forces local timezone interpretation per ECMA-262.
+ */
+function parseLocalDate(dateStr: string): Date {
+  // If already has time component, use as-is
+  if (dateStr.includes('T')) return new Date(dateStr);
+  // Add local midnight time to prevent UTC interpretation
+  return new Date(`${dateStr}T00:00:00`);
+}
+
+/**
+ * Extracts a LOCAL date string (YYYY-MM-DD) from a Date object.
+ *
+ * CRITICAL: Do NOT use `toISOString().split('T')[0]` — that converts to UTC first,
+ * which in Greece (UTC+2) can shift the date by -1 day for evening times.
+ * This function uses local date methods for correct snap-to-day behavior.
+ */
+function toLocalDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────
 
 export function useConstructionGantt(buildingId: string): UseConstructionGanttReturn {
@@ -197,8 +225,8 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
           return {
             id: task.id,
             name: task.name,
-            startDate: new Date(task.plannedStartDate),
-            endDate: new Date(task.plannedEndDate),
+            startDate: parseLocalDate(task.plannedStartDate),
+            endDate: parseLocalDate(task.plannedEndDate),
             percent: task.progress,
             dependencies: task.dependencies ?? [],
             taskStatus: ganttStatus,
@@ -211,8 +239,8 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
         ganttTasks = [{
           id: `phase-bar-${phase.id}`,
           name: phase.name,
-          startDate: new Date(phase.plannedStartDate),
-          endDate: new Date(phase.plannedEndDate),
+          startDate: parseLocalDate(phase.plannedStartDate),
+          endDate: parseLocalDate(phase.plannedEndDate),
           percent: phase.progress,
           dependencies: [],
           taskStatus: ganttStatus,
@@ -260,11 +288,12 @@ export function useConstructionGantt(buildingId: string): UseConstructionGanttRe
   const handleTaskUpdate = useCallback(
     async (groupId: string, updatedTask: Task) => {
       // Drag/resize callback from react-modern-gantt
+      // Use local timezone conversion to snap to day boundaries correctly
       const startDate = updatedTask.startDate instanceof Date
-        ? updatedTask.startDate.toISOString().split('T')[0]
+        ? toLocalDateString(updatedTask.startDate)
         : String(updatedTask.startDate);
       const endDate = updatedTask.endDate instanceof Date
-        ? updatedTask.endDate.toISOString().split('T')[0]
+        ? toLocalDateString(updatedTask.endDate)
         : String(updatedTask.endDate);
 
       // Synthetic phase bars → update the phase, not a task

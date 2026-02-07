@@ -119,6 +119,74 @@ export function GanttView({ building }: GanttViewProps) {
     phases,
   } = useConstructionGantt(String(building.id));
 
+  // ─── Snap-to-Grid: Round dates to view-mode unit boundaries after drag ───
+
+  const handleTaskUpdateWithSnap = useCallback(
+    (groupId: string, updatedTask: Task) => {
+      // DAY view: library already snaps, pass through
+      if (viewMode === ViewMode.DAY) {
+        handleTaskUpdate(groupId, updatedTask);
+        return;
+      }
+
+      // For other views: snap start/end dates to the appropriate boundary
+      const snapDate = (date: Date | string, snapTo: 'start' | 'end'): Date => {
+        const d = date instanceof Date ? new Date(date) : new Date(date);
+
+        switch (viewMode) {
+          case ViewMode.WEEK: {
+            // Snap to Monday (start) or Sunday (end)
+            const day = d.getDay();
+            const diffToMonday = day === 0 ? -6 : 1 - day;
+            if (snapTo === 'start') {
+              d.setDate(d.getDate() + diffToMonday);
+            } else {
+              d.setDate(d.getDate() + diffToMonday + 6);
+            }
+            break;
+          }
+          case ViewMode.MONTH:
+            if (snapTo === 'start') {
+              d.setDate(1);
+            } else {
+              d.setMonth(d.getMonth() + 1, 0); // last day of month
+            }
+            break;
+          case ViewMode.QUARTER: {
+            const qMonth = Math.floor(d.getMonth() / 3) * 3;
+            if (snapTo === 'start') {
+              d.setMonth(qMonth, 1);
+            } else {
+              d.setMonth(qMonth + 3, 0); // last day of quarter
+            }
+            break;
+          }
+          case ViewMode.YEAR:
+            if (snapTo === 'start') {
+              d.setMonth(0, 1);
+            } else {
+              d.setMonth(11, 31);
+            }
+            break;
+          default:
+            break;
+        }
+
+        d.setHours(0, 0, 0, 0);
+        return d;
+      };
+
+      const snappedTask = {
+        ...updatedTask,
+        startDate: snapDate(updatedTask.startDate, 'start'),
+        endDate: snapDate(updatedTask.endDate, 'end'),
+      };
+
+      handleTaskUpdate(groupId, snappedTask);
+    },
+    [viewMode, handleTaskUpdate]
+  );
+
   // Dynamic color resolver for Gantt bars — reads taskStatus metadata
   const getTaskBarColor = useCallback(({ task }: TaskColorProps) => {
     const status = (task as Task & { taskStatus?: GanttTaskStatus }).taskStatus ?? 'notStarted';
@@ -129,7 +197,7 @@ export function GanttView({ building }: GanttViewProps) {
     };
   }, []);
 
-  // Timeline bounds — add padding so users can drag/extend tasks freely
+  // Timeline bounds — aligned to month boundaries for correct bar positioning
   const timelineBounds = useMemo(() => {
     const now = new Date();
     let earliest = now;
@@ -145,11 +213,17 @@ export function GanttView({ building }: GanttViewProps) {
     }
 
     // Pad: 3 months before earliest, 12 months after latest
+    // CRITICAL: Align to 1st of month — the library renders header columns
+    // from the 1st of each month, so the startDate must match for correct alignment
     const startDate = new Date(earliest);
     startDate.setMonth(startDate.getMonth() - 3);
+    startDate.setDate(1);
+    startDate.setHours(0, 0, 0, 0);
 
     const endDate = new Date(latest);
-    endDate.setMonth(endDate.getMonth() + 12);
+    endDate.setMonth(endDate.getMonth() + 13);
+    endDate.setDate(0); // last day of the +12 month
+    endDate.setHours(23, 59, 59, 999);
 
     return { startDate, endDate };
   }, [taskGroups]);
@@ -239,7 +313,7 @@ export function GanttView({ building }: GanttViewProps) {
       {/* Gantt Chart */}
       {!isEmpty && (
         <Card className="border-0 shadow-none">
-          <CardContent className={cn(spacingTokens.padding.none, 'overflow-hidden')}>
+          <CardContent className={spacingTokens.padding.none}>
             <GanttChart
               tasks={taskGroups}
               startDate={timelineBounds.startDate}
@@ -257,7 +331,7 @@ export function GanttView({ building }: GanttViewProps) {
               allowProgressEdit
               allowTaskResize
               allowTaskMove
-              onTaskUpdate={handleTaskUpdate}
+              onTaskUpdate={handleTaskUpdateWithSnap}
               onTaskClick={handleTaskClick}
               onGroupClick={handleGroupClick}
               locale="el-GR"

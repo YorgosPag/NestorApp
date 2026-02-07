@@ -1049,6 +1049,125 @@
           "endDateRequired": "End date is required",
           "endAfterStart": "End date must be after start date",
           "phaseRequired": "Phase selection is required"
+        },
+        "templates": {
+          "phases": {
+            "sitePreparation": "Site Preparation",
+            "foundation": "Foundation / Excavation",
+            "structuralFrame": "Structural Frame",
+            "roofing": "Roofing",
+            "externalWalls": "External Walls / Masonry",
+            "plumbing": "Plumbing",
+            "electrical": "Electrical",
+            "hvac": "HVAC",
+            "insulation": "Insulation",
+            "plastering": "Plastering / Rendering",
+            "flooring": "Flooring / Tiling",
+            "painting": "Painting",
+            "joinery": "Joinery / Fixtures",
+            "landscaping": "Landscaping",
+            "inspection": "Final Inspection / Handover"
+          },
+          "tasks": {
+            "sitePreparation": {
+              "siteSurvey": "Site Survey",
+              "soilTesting": "Soil / Geotechnical Testing",
+              "demolition": "Demolition",
+              "siteClearing": "Site Clearing"
+            },
+            "foundation": {
+              "excavation": "Foundation Excavation",
+              "reinforcement": "Reinforcement Placement",
+              "concreting": "Foundation Concreting",
+              "waterproofing": "Foundation Waterproofing",
+              "backfill": "Backfill"
+            },
+            "structuralFrame": {
+              "columnConstruction": "Column Construction",
+              "beamConstruction": "Beam Construction",
+              "slabPouring": "Slab Pouring",
+              "structuralCuring": "Concrete Curing"
+            },
+            "roofing": {
+              "roofFraming": "Roof Framing",
+              "roofInsulation": "Roof Insulation",
+              "roofWaterproofing": "Roof Waterproofing",
+              "roofTiling": "Roof Tiling / Covering",
+              "gutters": "Gutters & Downpipes"
+            },
+            "externalWalls": {
+              "brickwork": "Brickwork / Masonry",
+              "externalInsulation": "External Insulation",
+              "externalRendering": "External Rendering",
+              "facadeCladding": "Facade Cladding"
+            },
+            "plumbing": {
+              "waterSupply": "Water Supply",
+              "drainage": "Drainage",
+              "hotWater": "Hot Water / Boiler",
+              "fixtureInstallation": "Sanitary Fixture Installation"
+            },
+            "electrical": {
+              "mainPanel": "Main Panel",
+              "wiring": "Wiring",
+              "switchesSockets": "Switches & Sockets",
+              "lighting": "Lighting",
+              "grounding": "Grounding"
+            },
+            "hvac": {
+              "ductwork": "Ductwork",
+              "unitInstallation": "Unit Installation",
+              "piping": "Piping",
+              "commissioning": "Commissioning"
+            },
+            "insulation": {
+              "thermalInsulation": "Thermal Insulation",
+              "soundInsulation": "Sound Insulation",
+              "moistureBarrier": "Moisture Barrier"
+            },
+            "plastering": {
+              "internalPlastering": "Internal Plastering",
+              "externalPlastering": "External Plastering",
+              "decorativePlaster": "Decorative Plaster"
+            },
+            "flooring": {
+              "screed": "Screed",
+              "tileInstallation": "Tile Installation",
+              "marbleInstallation": "Marble Installation",
+              "woodFlooring": "Wood Flooring"
+            },
+            "painting": {
+              "priming": "Priming",
+              "internalPainting": "Internal Painting",
+              "externalPainting": "External Painting",
+              "specialFinishes": "Special Finishes"
+            },
+            "joinery": {
+              "windowInstallation": "Window Installation",
+              "doorInstallation": "Door Installation",
+              "kitchenCabinets": "Kitchen Cabinets",
+              "wardrobes": "Wardrobes"
+            },
+            "landscaping": {
+              "outdoorPaving": "Outdoor Paving",
+              "fencing": "Fencing",
+              "gardenPlanting": "Garden Planting",
+              "irrigationSystem": "Irrigation System"
+            },
+            "inspection": {
+              "mechanicalInspection": "Mechanical Inspection",
+              "electricalInspection": "Electrical Inspection",
+              "fireInspection": "Fire Safety Inspection",
+              "finalHandover": "Final Handover"
+            }
+          },
+          "combobox": {
+            "searchPhase": "Search or type a new phase...",
+            "searchTask": "Search or type a new task...",
+            "predefined": "Predefined",
+            "custom": "Use: \"{value}\"",
+            "noResults": "No results found"
+          }
         }
       }
     },

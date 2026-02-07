@@ -2,25 +2,17 @@
 import * as React from "react";
 import { useChart } from "../../ChartContext";
 import { resolveItemConfig } from "../utils/payloadConfig";
-
-/** Tooltip payload item interface */
-interface TooltipPayloadItem {
-  dataKey?: string;
-  name?: string;
-  value?: unknown;
-  color?: string;
-  [key: string]: unknown;
-}
+import type { TooltipPayloadItem, TooltipPayload } from "../types";
 
 export function useTooltipLabel({
   hideLabel, payload, labelKey, label,
   labelFormatter, labelClassName,
 }: {
   hideLabel?: boolean;
-  payload?: TooltipPayloadItem[];
+  payload?: TooltipPayload;
   labelKey?: string;
   label?: string;
-  labelFormatter?: (value: React.ReactNode, payload: TooltipPayloadItem[]) => React.ReactNode;
+  labelFormatter?: (value: React.ReactNode, payload: TooltipPayload) => React.ReactNode;
   labelClassName?: string;
 }) {
   const { config } = useChart();

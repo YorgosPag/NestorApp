@@ -929,6 +929,65 @@ html body [data-enterprise-contact-dropdown="true"]::-webkit-scrollbar-thumb:hov
 }
 
 /* =============================================================
+   ENTERPRISE GANTT CHART - SCROLLBAR & GRID EXCEPTIONS (ADR-034)
+
+   Override nuclear scrollbar hiding for react-modern-gantt
+   Enable horizontal scrolling + visible grid lines
+   ============================================================= */
+
+/* 🏢 ENTERPRISE: Gantt timeline horizontal scrollbar */
+.rmg-gantt-chart {
+  overflow: visible !important;
+}
+
+.rmg-timeline-container {
+  overflow-x: auto !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #94a3b8 transparent !important;
+  -ms-overflow-style: auto !important;
+}
+
+.rmg-timeline-container::-webkit-scrollbar {
+  display: block !important;
+  height: 8px !important;
+  background: transparent !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.rmg-timeline-container::-webkit-scrollbar-track {
+  display: block !important;
+  background: rgba(0,0,0,0.05) !important;
+  border-radius: 4px !important;
+  visibility: visible !important;
+}
+
+.rmg-timeline-container::-webkit-scrollbar-thumb {
+  display: block !important;
+  background: #94a3b8 !important;
+  border-radius: 4px !important;
+  visibility: visible !important;
+}
+
+.rmg-timeline-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b !important;
+}
+
+/* 🏢 ENTERPRISE: Gantt visual grid lines for MONTH/WEEK/QUARTER/YEAR views */
+.rmg-timeline-grid[data-view-mode="month"],
+.rmg-timeline-grid[data-view-mode="week"],
+.rmg-timeline-grid[data-view-mode="quarter"],
+.rmg-timeline-grid[data-view-mode="year"] {
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent,
+    transparent calc(var(--gantt-unit-width, 150px) - 1px),
+    var(--rmg-border-color, hsl(var(--border))) calc(var(--gantt-unit-width, 150px) - 1px),
+    var(--rmg-border-color, hsl(var(--border))) var(--gantt-unit-width, 150px)
+  );
+}
+
+/* =============================================================
    ENTERPRISE NAVIGATION SCROLLBAR - EXCEPTION RULES
 
    Allow visible scrolling for navigation column lists

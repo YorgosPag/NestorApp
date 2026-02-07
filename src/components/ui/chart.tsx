@@ -32,9 +32,9 @@ const Chart = React.forwardRef<
         id={chartId}
         ref={ref}
         className={className}
+        config={config}
         {...props}
       >
-        <ChartStyle id={chartId} config={config} />
         {children}
       </ChartContainer>
     </ChartContext.Provider>

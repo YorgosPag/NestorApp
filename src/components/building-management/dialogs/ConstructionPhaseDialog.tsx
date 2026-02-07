@@ -14,7 +14,7 @@
  * - Design tokens
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import {
   Select,
@@ -32,15 +32,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { SaveButton, CancelButton, DeleteButton } from '@/components/ui/form/ActionButtons';
 import { FormGrid, FormField, FormInput } from '@/components/ui/form/FormComponents';
 import { Textarea } from '@/components/ui/textarea';
+import { ChevronDown, Search, Check, PenLine } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { DIALOG_SIZES } from '@/styles/design-tokens';
+import {
+  CONSTRUCTION_PHASES,
+  getPredefinedTasksForPhase,
+  findPhaseKeyByTranslatedName,
+} from '@/config/construction-templates';
+import type { PredefinedPhase, PredefinedTask } from '@/config/construction-templates';
 import type {
   ConstructionPhase,
   ConstructionTask,
@@ -131,6 +141,7 @@ export function ConstructionPhaseDialog({
 }: ConstructionPhaseDialogProps) {
   const { t } = useTranslation('building');
   const spacingTokens = useSpacingTokens();
+  const iconSizes = useIconSizes();
   const typographyTokens = useTypography();
   const colors = useSemanticColors();
 
@@ -150,6 +161,136 @@ export function ConstructionPhaseDialog({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // ─── Combobox State ────────────────────────────────────────────────────
+
+  const [namePopoverOpen, setNamePopoverOpen] = useState(false);
+  const [nameSearchQuery, setNameSearchQuery] = useState('');
+  const comboboxInputRef = useRef<HTMLInputElement>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  // ─── Combobox: Filtered Predefined Options ──────────────────────────
+
+  const filteredOptions = useMemo(() => {
+    const query = nameSearchQuery.trim().toLowerCase();
+
+    if (isPhaseMode) {
+      // Phase mode: show predefined phases
+      const allPhases = CONSTRUCTION_PHASES.map((p) => ({
+        key: p.key,
+        code: p.code,
+        label: t(`tabs.timeline.gantt.templates.phases.${p.key}`),
+      }));
+      if (!query) return allPhases;
+      return allPhases.filter(
+        (p) => p.label.toLowerCase().includes(query) || p.code.toLowerCase().includes(query)
+      );
+    }
+
+    // Task mode: show predefined tasks for the selected phase (or all)
+    const selectedPhase = phases.find((p) => p.id === selectedPhaseId);
+    const phaseKey = selectedPhase
+      ? findPhaseKeyByTranslatedName(selectedPhase.name, t)
+      : undefined;
+
+    const taskSources = phaseKey
+      ? getPredefinedTasksForPhase(phaseKey)
+      : CONSTRUCTION_PHASES.flatMap((p) => p.tasks);
+
+    // Need the parent phase key to build i18n path for tasks
+    const allTasks = taskSources.map((task) => {
+      // Find which phase this task belongs to
+      const parentPhase = CONSTRUCTION_PHASES.find((p) =>
+        p.tasks.some((pt) => pt.key === task.key && pt.code === task.code)
+      );
+      const parentKey = parentPhase?.key ?? '';
+      return {
+        key: task.key,
+        code: task.code,
+        label: t(`tabs.timeline.gantt.templates.tasks.${parentKey}.${task.key}`),
+      };
+    });
+
+    if (!query) return allTasks;
+    return allTasks.filter(
+      (task) => task.label.toLowerCase().includes(query) || task.code.toLowerCase().includes(query)
+    );
+  }, [isPhaseMode, nameSearchQuery, selectedPhaseId, phases, t]);
+
+  // ─── Combobox: Select Predefined Option ─────────────────────────────
+
+  const handleSelectPredefined = useCallback((option: { key: string; code: string; label: string }) => {
+    setName(option.label);
+    setCode(option.code);
+    setNamePopoverOpen(false);
+    setNameSearchQuery('');
+    setHighlightedIndex(-1);
+  }, []);
+
+  // ─── Combobox: Use Custom Text ──────────────────────────────────────
+
+  const handleUseCustomText = useCallback(() => {
+    const trimmed = nameSearchQuery.trim();
+    if (trimmed) {
+      setName(trimmed);
+      setNamePopoverOpen(false);
+      setNameSearchQuery('');
+      setHighlightedIndex(-1);
+    }
+  }, [nameSearchQuery]);
+
+  // ─── Combobox: Keyboard Navigation ──────────────────────────────────
+
+  const handleComboboxKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // +1 for the "custom" option at the end
+    const totalItems = filteredOptions.length + (nameSearchQuery.trim() ? 1 : 0);
+    if (totalItems === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => {
+        const next = prev < totalItems - 1 ? prev + 1 : 0;
+        setTimeout(() => {
+          resultsRef.current?.querySelector(`[data-option-index="${next}"]`)
+            ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }, 0);
+        return next;
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => {
+        const next = prev > 0 ? prev - 1 : totalItems - 1;
+        setTimeout(() => {
+          resultsRef.current?.querySelector(`[data-option-index="${next}"]`)
+            ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }, 0);
+        return next;
+      });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+        handleSelectPredefined(filteredOptions[highlightedIndex]);
+      } else if (highlightedIndex === filteredOptions.length && nameSearchQuery.trim()) {
+        handleUseCustomText();
+      } else if (nameSearchQuery.trim()) {
+        handleUseCustomText();
+      }
+    } else if (e.key === 'Escape') {
+      setNamePopoverOpen(false);
+    }
+  }, [filteredOptions, highlightedIndex, nameSearchQuery, handleSelectPredefined, handleUseCustomText]);
+
+  // ─── Combobox: Open Handler ─────────────────────────────────────────
+
+  const handleComboboxOpen = useCallback((isOpen: boolean) => {
+    setNamePopoverOpen(isOpen);
+    if (isOpen) {
+      setNameSearchQuery('');
+      setHighlightedIndex(-1);
+      requestAnimationFrame(() => comboboxInputRef.current?.focus());
+    }
+  }, []);
 
   // ─── Initialize Form ─────────────────────────────────────────────────
 
@@ -186,6 +327,10 @@ export function ConstructionPhaseDialog({
       setSelectedPhaseId(phaseId ?? phases[0]?.id ?? '');
     }
     setErrors({});
+    // Reset combobox state
+    setNamePopoverOpen(false);
+    setNameSearchQuery('');
+    setHighlightedIndex(-1);
   }, [open, mode, phase, task, isPhaseMode, phaseId, phases]);
 
   // ─── Validation ──────────────────────────────────────────────────────
@@ -350,23 +495,173 @@ export function ConstructionPhaseDialog({
             </FormField>
           )}
 
-          {/* Name */}
+          {/* Name — Combobox with predefined options + custom entry */}
           <FormField
             label={t('tabs.timeline.gantt.dialog.name')}
             htmlFor="construction-name"
             required
           >
             <FormInput>
-              <Input
-                id="construction-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={isPhaseMode
-                  ? t('tabs.timeline.gantt.dialog.phaseNamePlaceholder')
-                  : t('tabs.timeline.gantt.dialog.taskNamePlaceholder')
-                }
-                className={errors.name ? 'border-destructive' : ''}
-              />
+              <Popover open={namePopoverOpen} onOpenChange={handleComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    role="combobox"
+                    aria-expanded={namePopoverOpen}
+                    className={cn(
+                      'w-full justify-between h-10 px-3 py-2',
+                      typographyTokens.body.sm,
+                      errors.name ? 'border-destructive' : 'border-input',
+                      INTERACTIVE_PATTERNS.ACCENT_HOVER,
+                      'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
+                    )}
+                  >
+                    <span className={name ? 'text-foreground truncate' : colors.text.muted}>
+                      {name || (isPhaseMode
+                        ? t('tabs.timeline.gantt.dialog.phaseNamePlaceholder')
+                        : t('tabs.timeline.gantt.dialog.taskNamePlaceholder')
+                      )}
+                    </span>
+                    <ChevronDown className={cn(
+                      iconSizes.sm,
+                      TRANSITION_PRESETS.STANDARD_TRANSFORM,
+                      namePopoverOpen ? 'rotate-180' : ''
+                    )} />
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] p-0"
+                  align="start"
+                  sideOffset={4}
+                  onKeyDown={handleComboboxKeyDown}
+                >
+                  {/* Search Input */}
+                  <section className={cn('border-b border-border', spacingTokens.padding.sm)}>
+                    <div className="relative">
+                      <Search className={cn('absolute left-2 top-2.5', iconSizes.sm, colors.text.muted)} />
+                      <Input
+                        ref={comboboxInputRef}
+                        value={nameSearchQuery}
+                        onChange={(e) => {
+                          setNameSearchQuery(e.target.value);
+                          setHighlightedIndex(-1);
+                        }}
+                        placeholder={isPhaseMode
+                          ? t('tabs.timeline.gantt.templates.combobox.searchPhase')
+                          : t('tabs.timeline.gantt.templates.combobox.searchTask')
+                        }
+                        className="pl-8"
+                      />
+                    </div>
+                  </section>
+
+                  {/* Results — onWheel fixes scroll inside Dialog modal */}
+                  <div
+                    ref={resultsRef}
+                    className="max-h-[250px] overflow-y-auto"
+                    role="listbox"
+                    onWheel={(e) => {
+                      const el = e.currentTarget;
+                      const hasScroll = el.scrollHeight > el.clientHeight;
+                      if (hasScroll) {
+                        e.stopPropagation();
+                        el.scrollTop += e.deltaY;
+                      }
+                    }}
+                  >
+                    {/* Predefined Section Header */}
+                    {filteredOptions.length > 0 && (
+                      <p className={cn(
+                        typographyTokens.label.sm,
+                        colors.text.muted,
+                        spacingTokens.padding.x.sm,
+                        spacingTokens.padding.y.xs,
+                        'border-b border-border bg-muted/30'
+                      )}>
+                        {t('tabs.timeline.gantt.templates.combobox.predefined')}
+                      </p>
+                    )}
+
+                    {/* Predefined Options */}
+                    {filteredOptions.map((option, index) => {
+                      const isSelected = name === option.label;
+                      const isHighlighted = index === highlightedIndex;
+                      return (
+                        <div
+                          key={`${option.code}-${option.key}`}
+                          data-option-index={index}
+                          role="option"
+                          aria-selected={isHighlighted}
+                          className={cn(
+                            'flex items-center justify-between cursor-pointer',
+                            spacingTokens.padding.x.sm,
+                            spacingTokens.padding.y.xs,
+                            'border-b border-border last:border-b-0',
+                            TRANSITION_PRESETS.STANDARD_COLORS,
+                            isHighlighted
+                              ? 'bg-accent text-accent-foreground'
+                              : INTERACTIVE_PATTERNS.ACCENT_HOVER
+                          )}
+                          onClick={() => handleSelectPredefined(option)}
+                          onMouseEnter={() => setHighlightedIndex(index)}
+                        >
+                          <span className={cn('flex items-center', spacingTokens.gap.sm)}>
+                            <span className={cn(typographyTokens.body.sm, colors.text.muted)}>
+                              {option.code}
+                            </span>
+                            <span className={typographyTokens.body.sm}>
+                              {option.label}
+                            </span>
+                          </span>
+                          {isSelected && (
+                            <Check className={cn(iconSizes.sm, 'text-primary')} />
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Custom Entry Option */}
+                    {nameSearchQuery.trim() && (
+                      <div
+                        data-option-index={filteredOptions.length}
+                        role="option"
+                        aria-selected={highlightedIndex === filteredOptions.length}
+                        className={cn(
+                          'flex items-center cursor-pointer',
+                          spacingTokens.padding.x.sm,
+                          spacingTokens.padding.y.xs,
+                          'border-t border-border',
+                          TRANSITION_PRESETS.STANDARD_COLORS,
+                          highlightedIndex === filteredOptions.length
+                            ? 'bg-accent text-accent-foreground'
+                            : INTERACTIVE_PATTERNS.ACCENT_HOVER
+                        )}
+                        onClick={handleUseCustomText}
+                        onMouseEnter={() => setHighlightedIndex(filteredOptions.length)}
+                      >
+                        <PenLine className={cn(iconSizes.sm, colors.text.muted, spacingTokens.margin.right.sm)} />
+                        <span className={typographyTokens.body.sm}>
+                          {t('tabs.timeline.gantt.templates.combobox.custom', { value: nameSearchQuery.trim() })}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* No Results */}
+                    {filteredOptions.length === 0 && !nameSearchQuery.trim() && (
+                      <p className={cn(
+                        typographyTokens.body.sm,
+                        colors.text.muted,
+                        'text-center',
+                        spacingTokens.padding.md
+                      )}>
+                        {t('tabs.timeline.gantt.templates.combobox.noResults')}
+                      </p>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
               {errors.name && (
                 <p className={cn(typographyTokens.body.sm, colors.text.error, spacingTokens.margin.top.xs)}>{errors.name}</p>
               )}

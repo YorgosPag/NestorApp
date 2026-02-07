@@ -8,12 +8,14 @@ import { Indicator } from "./Indicator";
 import type { ChartTooltipItemProps } from "../types";
 
 export const ChartTooltipItem = React.memo(function ChartTooltipItemBase({
-  item, index, formatter, hideIndicator, indicator, nameKey, color, nestLabel,
+  item, index, payload, formatter, hideIndicator, indicator, nameKey, color, nestLabel,
 }: ChartTooltipItemProps) {
   const { config } = useChart();
   const key = `${nameKey || item.name || item.dataKey || "value"}`;
   const itemConfig = resolveItemConfig(config, item, key);
-  const indicatorColor = color || item.payload?.fill || item.color;
+  const payloadFill = typeof item.payload?.fill === "string" ? item.payload.fill : undefined;
+  const indicatorColor = color || payloadFill || item.color;
+  const payloadForFormatter = payload ?? [];
 
   return (
     <div
@@ -23,7 +25,7 @@ export const ChartTooltipItem = React.memo(function ChartTooltipItemBase({
       )}
     >
       {formatter && item?.value !== undefined && item.name !== undefined ? (
-        formatter(item.value, item.name, item, index, item.payload)
+        formatter(item.value, String(item.name), item, index, payloadForFormatter)
       ) : (
         <>
           <Indicator
