@@ -273,9 +273,9 @@ export interface Proposal {
  */
 export interface ApprovalDecision {
   decision: 'approved' | 'rejected' | 'modified';
-  approvedBy?: string;
-  modifiedActions?: PipelineAction[];
-  reason?: string;
+  approvedBy?: string | null;
+  modifiedActions?: PipelineAction[] | null;
+  reason?: string | null;
   decidedAt: string;
 }
 

@@ -20,7 +20,7 @@
  * @see UC-009 (Internal Operator Workflow)
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -165,6 +165,66 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  // ── Smart polling: auto-refresh every 15 seconds ──
+  const previousItemIdsRef = useRef<Set<string>>(new Set());
+  const isInitialLoadRef = useRef(true);
+
+  useEffect(() => {
+    const POLL_INTERVAL_MS = 15_000;
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch('/api/admin/operator-inbox', {
+          credentials: 'include',
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json() as OperatorInboxApiResponse;
+        if (!data.success) return;
+
+        const newItems = data.items ?? [];
+        const newStats = data.stats ?? { proposed: 0, approved: 0, rejected: 0 };
+
+        // Detect new items (skip initial load)
+        if (!isInitialLoadRef.current) {
+          const currentIds = new Set(newItems.map(item => item.id));
+          const addedIds = [...currentIds].filter(id => !previousItemIdsRef.current.has(id));
+
+          if (addedIds.length > 0) {
+            toast.success(
+              addedIds.length === 1
+                ? '📩 Νέο αίτημα στο Operator Inbox!'
+                : `📩 ${addedIds.length} νέα αιτήματα στο Operator Inbox!`,
+              { duration: 5000 }
+            );
+          }
+        }
+
+        // Update refs
+        isInitialLoadRef.current = false;
+        previousItemIdsRef.current = new Set(newItems.map(item => item.id));
+
+        // Update state
+        setItems(newItems);
+        setStats(newStats);
+        setError(null);
+      } catch {
+        // Silent fail for background polling — main fetchData handles errors
+      }
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Initialize previousItemIdsRef when first data loads
+  useEffect(() => {
+    if (items.length > 0 && isInitialLoadRef.current) {
+      previousItemIdsRef.current = new Set(items.map(item => item.id));
+      isInitialLoadRef.current = false;
+    }
+  }, [items]);
 
   // ── Approve handler ──
   const handleApprove = useCallback(async (queueId: string) => {

@@ -101,9 +101,9 @@ export async function processOperatorDecision(
       decision: params.modifiedActions && params.modifiedActions.length > 0
         ? 'modified'
         : params.decision,
-      approvedBy: params.approvedBy,
-      reason: params.reason,
-      modifiedActions: params.modifiedActions,
+      approvedBy: params.approvedBy ?? null,
+      reason: params.reason ?? null,
+      modifiedActions: params.modifiedActions ?? null,
       decidedAt: new Date().toISOString(),
     };
 

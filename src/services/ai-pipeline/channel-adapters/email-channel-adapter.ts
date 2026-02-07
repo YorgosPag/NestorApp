@@ -111,7 +111,7 @@ export class EmailChannelAdapter {
       filename: att.filename,
       contentType: att.contentType,
       sizeBytes: att.sizeBytes,
-      storageUrl: att.mode === 'deferred' ? att.storageUrl : undefined,
+      ...(att.mode === 'deferred' && att.storageUrl ? { storageUrl: att.storageUrl } : {}),
     }));
 
     return {

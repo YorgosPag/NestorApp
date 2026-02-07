@@ -228,7 +228,58 @@ Email "Θέλω ραντεβού" → AI detects appointment_request intent
 
 ---
 
-## 10. Changelog
+## 10. Production Deployment & Fixes (2026-02-08)
+
+**Status**: OPERATIONAL IN PRODUCTION
+
+Πρώτο end-to-end test στο production (nestor-app.vercel.app) αποκάλυψε 4 κρίσιμα ζητήματα που διορθώθηκαν σε μία session:
+
+### Fix 1: State Machine Retry Bug (`a27b8c1e`)
+- **Πρόβλημα**: Τα failed items προσπαθούσαν retry αλλά αποτύγχαναν πάντα
+- **Αιτία**: Ο worker δοκίμαζε μετάβαση `FAILED → ACKED` η οποία δεν είναι valid — μόνο `FAILED → RECEIVED` ή `FAILED → DLQ` επιτρέπονται
+- **Λύση**: Reset `context.state = PipelineState.RECEIVED` και `context.errors = []` πριν από κάθε retry execution στο `ai-pipeline-worker.ts`
+- **Μάθημα**: Τα retried items πρέπει να ξεκινούν clean — η state machine δεν κάνει implicit reset
+
+### Fix 2: API Auth — Session Cookie Fallback (`a61b46b1`)
+- **Πρόβλημα**: Operator Inbox API επέστρεφε HTTP 401 στο production
+- **Αιτία**: `buildRequestContext()` (auth-context.ts) ψάχνε μόνο Bearer token, αλλά ο browser client στέλνει `credentials: 'include'` (cookies). Στο development υπήρχε bypass
+- **Λύση**: Προσθήκη session cookie fallback — αν δεν υπάρχει Bearer token, ελέγχει το `__session` cookie μέσω `auth.verifySessionCookie()`
+- **Μάθημα**: API routes πρέπει να υποστηρίζουν ΚΑΙ Bearer token (API clients) ΚΑΙ session cookie (browser clients)
+
+### Fix 3: Firebase IAM Permission
+- **Πρόβλημα**: Session cookie sync αποτύγχανε στο Vercel
+- **Αιτία**: Missing `serviceusage.serviceUsageConsumer` role στο Firebase service account
+- **Λύση**: Προσθήκη ρόλου στο Google Cloud Console → IAM
+- **Μάθημα**: Vercel serverless χρειάζεται explicit Service Usage Consumer permission
+
+### Fix 4: Firestore undefined Values (`5c6d6359`)
+- **Πρόβλημα**: Και τα 3 test emails αποτύγχαναν με `Cannot use "undefined" as a Firestore value (found in field "projectId")`
+- **Αιτία**: `audit-service.ts` έγραφε `projectId: ctx.understanding?.entities.projectId` — αν δεν υπάρχει project στο email, η τιμή γίνεται `undefined`
+- **Λύση**: Αντικατάσταση `undefined` → `null` σε όλα τα optional Firestore fields (audit entry + appointment document)
+- **Μάθημα**: Firestore δέχεται `null` αλλά ΟΧΙ `undefined`. Κάθε optional field πρέπει `?? null`
+
+### Diagnostic Endpoint
+- Προστέθηκε diagnostic section στο `/api/cron/ai-pipeline` response
+- Όταν `failed > 0`, δείχνει: id, pipelineState, retryCount, lastError, retryHistory, intakeSubject, intakeSender
+- Κρίσιμο εργαλείο για debugging production — χωρίς αλλαγές κώδικα βλέπουμε τι αποτυγχάνει
+
+### Composite Index
+- Προστέθηκε: `ai_pipeline_queue (status ASC, createdAt DESC)` — απαραίτητο για diagnostic queries
+
+### End-to-End Αποτέλεσμα
+```
+Mailgun webhook ✅
+→ email_ingestion_queue ✅ (10 completed)
+→ AI analysis (OpenAI gpt-4o-mini) ✅
+→ ai_pipeline_queue ✅
+→ Pipeline orchestrator ✅
+→ Operator Inbox (production) ✅
+→ Operator approve/reject ✅
+```
+
+---
+
+## 11. Changelog
 
 | Ημερομηνία | Αλλαγή |
 |------------|--------|
@@ -236,3 +287,10 @@ Email "Θέλω ραντεβού" → AI detects appointment_request intent
 | 2026-02-07 | Pipeline Worker + Cron endpoint implemented |
 | 2026-02-07 | UC-009 Operator Inbox MVP — backend (queue queries, approval service, resume logic) + frontend (page, client, review card) |
 | 2026-02-07 | UC-001 Appointment Module MVP — first UC module, module registration bootstrap, end-to-end pipeline flow |
+| 2026-02-08 | Production deployment fixes: state machine retry bug, session cookie auth, IAM permission, Firestore undefined values |
+| 2026-02-08 | Diagnostic endpoint added to cron route for production debugging |
+| 2026-02-08 | First successful end-to-end test: email → AI → Operator Inbox (production) |
+| 2026-02-08 | Fix: ApprovalDecision undefined fields (reason, modifiedActions, approvedBy) → null for Firestore |
+| 2026-02-08 | Fix: email-channel-adapter storageUrl undefined → conditional spread |
+| 2026-02-08 | Email rendering centralization: SafeHTMLContent + EmailContentWithSignature → shared component |
+| 2026-02-08 | Operator Inbox: smart polling (15s auto-refresh) + toast notifications for new items |

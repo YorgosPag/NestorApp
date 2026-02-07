@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { CheckCircle, XCircle, Loader2, Mail, MessageSquare, Globe, Bot } from 'lucide-react';
+import { EmailContentWithSignature } from '@/components/shared/email/EmailContentRenderer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTypography } from '@/hooks/useTypography';
@@ -136,9 +137,9 @@ export function ProposalReviewCard({
             </p>
           )}
           {intake?.normalized?.contentText && (
-            <p className={`${typography.body.sm} ${spacing.margin.top.xs} text-muted-foreground line-clamp-4`}>
-              {intake.normalized.contentText}
-            </p>
+            <div className={`${typography.body.sm} ${spacing.margin.top.xs} text-muted-foreground`}>
+              <EmailContentWithSignature content={intake.normalized.contentText} />
+            </div>
           )}
         </CardContent>
       </Card>
