@@ -14,6 +14,9 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import type { StorageModel } from '../types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -26,6 +29,9 @@ export const StorageNode = ({ storage }: StorageNodeProps) => {
   const { t } = useTranslation('projects');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
+  const typography = useTypography();
+  const iconSizes = useIconSizes();
 
   // Status badge color
   const statusColors: Record<string, string> = {
@@ -55,21 +61,20 @@ export const StorageNode = ({ storage }: StorageNodeProps) => {
       )}
     >
       <NAVIGATION_ENTITIES.storage.icon
-        size={16}
-        className={NAVIGATION_ENTITIES.storage.color}
+        className={cn(iconSizes.sm, NAVIGATION_ENTITIES.storage.color)}
       />
       <div className="flex-1 min-w-0">
-        <div className={`text-sm font-medium ${colors.text.foreground} truncate`}>
+        <div className={cn(typography.label.sm, colors.text.foreground, "truncate")}>
           {storage.name}
         </div>
-        <div className={`text-xs ${colors.text.muted}`}>
+        <div className={cn(typography.body.xs, colors.text.muted)}>
           {storage.type && <span className="capitalize">{storage.type}</span>}
           {storage.floor && <span> • {t('structure.floor', 'Όροφος')}: {storage.floor}</span>}
           {storage.area && <span> • {storage.area} m²</span>}
         </div>
       </div>
       {storage.status && (
-        <span className={`text-xs font-medium ${statusColors[storage.status] || colors.text.muted}`}>
+        <span className={cn(typography.label.xs, statusColors[storage.status] || colors.text.muted)}>
           {statusLabels[storage.status] || storage.status}
         </span>
       )}

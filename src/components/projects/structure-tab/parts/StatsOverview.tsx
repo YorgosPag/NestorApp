@@ -14,6 +14,8 @@
 import React from 'react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-entities';
 import { cn } from '@/lib/utils';
 import type { ProjectTotals } from '../utils/selectors';
@@ -40,6 +42,8 @@ export function StatsOverview({
   const { t } = useTranslation('projects');
   const colors = useSemanticColors();
   const { quick } = useBorderTokens();
+  const spacing = useSpacingTokens();
+  const typography = useTypography();
 
   // Stats card component
   const StatCard = ({
@@ -57,20 +61,20 @@ export function StatsOverview({
     subValue?: string;
     valueColor: string;
   }) => (
-    <div className={cn(colors.bg.primary, 'p-4', quick.card)}>
-      <div className="flex items-center gap-2 mb-2">
+    <div className={cn(colors.bg.primary, spacing.padding.md, quick.card)}>
+      <div className={cn("flex items-center", spacing.gap.sm, spacing.margin.bottom.sm)}>
         <Icon size={18} className={iconColor} />
-        <span className={`text-sm ${colors.text.muted}`}>{label}</span>
+        <span className={cn(typography.body.sm, colors.text.muted)}>{label}</span>
       </div>
-      <div className={`text-2xl font-bold ${valueColor}`}>{value}</div>
+      <div className={cn(typography.heading.lg, valueColor)}>{value}</div>
       {subValue && (
-        <div className={`text-xs ${colors.text.muted} mt-1`}>{subValue}</div>
+        <div className={cn(typography.body.xs, colors.text.muted, spacing.margin.top.xs)}>{subValue}</div>
       )}
     </div>
   );
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className={cn("grid grid-cols-2 md:grid-cols-4", spacing.gap.md)}>
       {/* Units */}
       <StatCard
         icon={NAVIGATION_ENTITIES.unit.icon}
@@ -102,16 +106,16 @@ export function StatsOverview({
       />
 
       {/* Total / Sales % */}
-      <div className={cn(colors.bg.primary, 'p-4', quick.card)}>
-        <div className="flex items-center gap-2 mb-2">
-          <span className={`text-sm ${colors.text.muted}`}>
+      <div className={cn(colors.bg.primary, spacing.padding.md, quick.card)}>
+        <div className={cn("flex items-center", spacing.gap.sm, spacing.margin.bottom.sm)}>
+          <span className={cn(typography.body.sm, colors.text.muted)}>
             {t('structure.stats.salesPct', '% Πωλήσεων')}
           </span>
         </div>
-        <div className="text-2xl font-bold text-orange-600">
+        <div className={cn(typography.heading.lg, colors.text.warning)}>
           {soldPct.toFixed(1)}%
         </div>
-        <div className={`text-xs ${colors.text.muted} mt-1`}>
+        <div className={cn(typography.body.xs, colors.text.muted, spacing.margin.top.xs)}>
           {t('structure.stats.totalSpaces', 'Σύνολο')}: {totalSpaces} • {totalArea.toFixed(0)} m²
         </div>
       </div>

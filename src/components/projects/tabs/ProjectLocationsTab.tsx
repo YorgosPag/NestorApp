@@ -45,6 +45,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 
 // =============================================================================
@@ -65,6 +66,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const typography = useTypography();
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
+  const colors = useSemanticColors();
 
   // 🏢 ENTERPRISE: State management
   const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(
@@ -310,7 +312,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             <MapPin className={iconSizes.lg} />
             Τοποθεσίες & Διευθύνσεις
           </h2>
-          <p className={cn("text-sm text-muted-foreground", spacing.margin.top.xs)}>
+          <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.top.xs)}>
             Διαχείριση όλων των διευθύνσεων του έργου
           </p>
         </div>
@@ -364,9 +366,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       {/* Addresses List */}
       {localAddresses.length === 0 ? (
         <div className={cn("text-center border-2 border-dashed rounded-lg", spacing.padding.y["2xl"])}>
-          <MapPin className={cn(iconSizes.xl, "mx-auto text-muted-foreground", spacing.margin.bottom.md)} />
+          <MapPin className={cn(iconSizes.xl, "mx-auto", colors.text.muted, spacing.margin.bottom.md)} />
           <h3 className={cn(typography.heading.md, spacing.margin.bottom.sm)}>Δεν υπάρχουν διευθύνσεις</h3>
-          <p className={cn("text-sm text-muted-foreground", spacing.margin.bottom.md)}>
+          <p className={cn(typography.body.sm, colors.text.muted, spacing.margin.bottom.md)}>
             Προσθέστε τουλάχιστον μία διεύθυνση για το έργο
           </p>
           <Button onClick={() => setIsAddFormOpen(true)}>
@@ -462,7 +464,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                   </div>
 
                   {/* Metadata */}
-                  <div className={cn("border-t text-xs text-muted-foreground", spacing.margin.top.md, spacing.padding.top.md)}>
+                  <div className={cn("border-t", typography.body.xs, colors.text.muted, spacing.margin.top.md, spacing.padding.top.md)}>
                     <span>ID: {address.id.slice(0, 8)}...</span>
                     {address.sortOrder !== undefined && (
                       <span className={spacing.margin.left.md}>Σειρά: {address.sortOrder}</span>

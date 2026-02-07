@@ -7,6 +7,7 @@ import { Map, Plus, Edit } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { canvasUtilities } from '@/styles/design-tokens';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
@@ -45,6 +46,7 @@ export function FloorplanViewerTab({
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -236,13 +238,13 @@ export function FloorplanViewerTab({
 
   return (
     <Card className="w-full h-full">
-      <CardHeader className="pb-3">
+      <CardHeader className={spacing.padding.bottom.sm}>
         <div className="flex justify-between items-center">
           <CardTitle className={cn('flex items-center gap-2', typography.card.titleCompact)}>
             <Map className={iconSizes.md} />
             {translatedTitle}
           </CardTitle>
-          <div className="flex gap-2">
+          <div className={cn("flex", spacing.gap.sm)}>
             <Button
               variant="outline"
               size="sm"
@@ -266,7 +268,7 @@ export function FloorplanViewerTab({
         </div>
       </CardHeader>
       
-      <CardContent className="p-2 flex-1 min-h-[500px]">
+      <CardContent className={cn(spacing.padding.sm, "flex-1 min-h-[500px]")}>
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <AnimatedSpinner size="large" />
@@ -292,9 +294,9 @@ export function FloorplanViewerTab({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 text-center">
-            <Map className={`${iconSizes.xl} ${colors.text.muted} mb-4`} />
-            <h3 className={`text-lg font-semibold ${colors.text.muted} mb-2`}>{t('tabs.floorplan.noFloorplan.title')}</h3>
-            <p className={`${colors.text.muted} mb-4`}>{t('tabs.floorplan.noFloorplan.description')}</p>
+            <Map className={cn(iconSizes.xl, colors.text.muted, spacing.margin.bottom.md)} />
+            <h3 className={cn(typography.heading.md, colors.text.muted, spacing.margin.bottom.sm)}>{t('tabs.floorplan.noFloorplan.title')}</h3>
+            <p className={cn(colors.text.muted, spacing.margin.bottom.md)}>{t('tabs.floorplan.noFloorplan.description')}</p>
           </div>
         )}
       </CardContent>

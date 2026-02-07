@@ -116,9 +116,20 @@ AI_TIER_VISION=gpt-4o
 
 | UC | Περιγραφή | Status |
 |----|-----------|--------|
-| UC-009 | — | PENDING |
-| UC-010 | — | PENDING |
-| UC-011 | — | PENDING |
+| UC-009 | Internal Operator Workflow (Inbox triage, preview/diff, approve, override, bulk, feedback) | BACKLOG |
+| UC-010 | Ερώτηση Κατάστασης (Status Inquiry) | ✅ Documented |
+| UC-011 | Αναφορά Ελαττώματος / Παράπονο (Defect Reporting) | ✅ Documented |
+| UC-012 | Υποβολή Εγγράφων — Document Submission (αρχειοθέτηση, checklist tracking) | BACKLOG |
+| UC-013 | Τράπεζα / Δημόσιο — External Entity Communication (δάνεια, άδειες, deadlines) | BACKLOG |
+| UC-014 | Πώληση Ακινήτου — Property Sale Process (9 στάδια, lead → παράδοση κλειδιών) | ✅ Documented |
+| UC-015 | Αδειοδότηση — Building Permit Process (7 στάδια, μελέτες → περαίωση) | ✅ Documented |
+| UC-016 | Προμήθεια — Procurement Process (10 στάδια, ανάγκη → προσφορές → συμφωνία → πληρωμή) | ✅ Documented |
+| UC-017 | Φάσεις Κατασκευής — Construction Phase Tracking (Gantt chart, progress %, timeline) | BACKLOG |
+| UC-018 | Ημερήσιο Briefing — Daily Briefing ανά ρόλο (8 ρόλοι, urgent/σήμερα/εκκρεμότητες/KPIs) | ✅ Documented |
+| UC-019 | Υπενθυμίσεις & Follow-up — Αυτόματες + χειροκίνητες, κλιμάκωση, smart cancel | ✅ Documented |
+| UC-020 | Εσωτερικό Handoff — Ανάθεση/μεταφορά μεταξύ ρόλων (secretary→accountant, κ.λπ.) | BACKLOG |
+| UC-021 | Πολυεπίπεδη Έγκριση — Approval chains (>10K€ → procurementManager + owner) | BACKLOG |
+| UC-022 | Cross-Project Overview — Ενοποιημένη εικόνα ανοιχτών θεμάτων σε όλα τα έργα ανά ρόλο | BACKLOG |
 
 ---
 

@@ -56,26 +56,26 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
             <CardContent className={spacing.spaceBetween.md}>
                 <div className={cn("grid grid-cols-1 md:grid-cols-4", spacing.gap.md)}>
                     <div className={spacing.spaceBetween.sm}>
-                        <Label htmlFor="buildingBlock" className="text-sm font-medium">{t('permitsTab.buildingBlock')}</Label>
+                        <Label htmlFor="buildingBlock" className={typography.label.sm}>{t('permitsTab.buildingBlock')}</Label>
                         <Input id="buildingBlock" name="buildingBlock" value={data.buildingBlock} onChange={handleChange} disabled={!isEditing} className="h-10" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
-                        <Label htmlFor="protocolNumber" className="text-sm font-medium">{t('permitsTab.protocolNumber')}</Label>
+                        <Label htmlFor="protocolNumber" className={typography.label.sm}>{t('permitsTab.protocolNumber')}</Label>
                         <Input id="protocolNumber" name="protocolNumber" value={data.protocolNumber} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.protocolPlaceholder')} className="h-10" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
-                        <Label htmlFor="licenseNumber" className="text-sm font-medium">{t('permitsTab.licenseNumber')}</Label>
+                        <Label htmlFor="licenseNumber" className={typography.label.sm}>{t('permitsTab.licenseNumber')}</Label>
                         <Input id="licenseNumber" name="licenseNumber" value={data.licenseNumber} onChange={handleChange} disabled={!isEditing} className="h-10 text-primary font-medium" />
                     </div>
                     <div className={spacing.spaceBetween.sm}>
-                        <Label htmlFor="issuingAuthority" className="text-sm font-medium">{t('permitsTab.issuingAuthority')}</Label>
+                        <Label htmlFor="issuingAuthority" className={typography.label.sm}>{t('permitsTab.issuingAuthority')}</Label>
                         <Input id="issuingAuthority" name="issuingAuthority" value={data.issuingAuthority} onChange={handleChange} disabled={!isEditing} placeholder={t('permits.authorityPlaceholder')} className="h-10" />
                     </div>
                 </div>
 
                 <div className={cn("grid grid-cols-1 md:grid-cols-3 items-end", spacing.gap.md)}>
                     <div className={spacing.spaceBetween.sm}>
-                        <Label className="text-sm font-medium">{t('permitsTab.projectStatus')}</Label>
+                        <Label className={typography.label.sm}>{t('permitsTab.projectStatus')}</Label>
                         <Select value={data.status} onValueChange={(value) => handleSelectChange(value as ProjectFormData['status'])} disabled={!isEditing}>
                             <SelectTrigger>
                                 <SelectValue />
@@ -88,10 +88,10 @@ export function PermitsAndStatusTab({ data, setData, isEditing }: PermitsAndStat
                         </Select>
                     </div>
                     <div className={spacing.spaceBetween.sm}>
-                        <Label className="text-sm font-medium">{t('permitsTab.options')}</Label>
+                        <Label className={typography.label.sm}>{t('permitsTab.options')}</Label>
                         <div className="flex items-center space-x-2 h-10">
                             <Checkbox id="show-on-web" checked={data.showOnWeb} onCheckedChange={handleCheckboxChange} disabled={!isEditing} />
-                            <Label htmlFor="show-on-web" className="text-sm">{t('permitsTab.showOnWeb')}</Label>
+                            <Label htmlFor="show-on-web" className={typography.body.sm}>{t('permitsTab.showOnWeb')}</Label>
                         </div>
                     </div>
                     <div className="flex justify-start">

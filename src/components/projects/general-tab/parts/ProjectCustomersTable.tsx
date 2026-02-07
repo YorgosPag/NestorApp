@@ -188,7 +188,7 @@ export function ProjectCustomersTable({ projectId, defaultExpanded = false }: Ex
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
-        <header className={cn("grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 border-b border-border text-sm font-medium text-muted-foreground", spacing.padding.bottom.sm, spacing.margin.bottom.md)}>
+        <header className={cn("grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 border-b border-border", typography.label.sm, colors.text.muted, spacing.padding.bottom.sm, spacing.margin.bottom.md)}>
           <span>{t('customers.table.name')}</span>
           <span>{t('customers.table.phone')}</span>
           <span>{t('customers.table.email')}</span>

@@ -26,6 +26,9 @@ import { ParkingNode } from './ParkingNode';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import type { BuildingModel, StorageModel, ParkingModel, UnitModel } from '../types';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -48,6 +51,9 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
   const [activeTab, setActiveTab] = useState<SpaceTab>('units');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
+  const typography = useTypography();
+  const iconSizes = useIconSizes();
 
   // ==========================================================================
   // COMPUTED VALUES
@@ -112,13 +118,13 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
         }
         <NAVIGATION_ENTITIES.building.icon className={cn(NAVIGATION_ENTITIES.building.color)} size={20} />
         <div className="flex-1">
-          <div className={`font-semibold ${colors.text.foreground}`}>{building.name}</div>
-          <div className={`text-sm ${colors.text.muted}`}>
+          <div className={cn(typography.heading.sm, colors.text.foreground)}>{building.name}</div>
+          <div className={cn(typography.body.sm, colors.text.muted)}>
             {totalUnits} {t('structure.units', 'μονάδες')} • {totalStorages} {t('structure.storages', 'αποθήκες')} • {totalParkingSpots} {t('structure.parkingSpots', 'θέσεις')}
           </div>
         </div>
-        <div className="text-right text-sm">
-          <div className={`font-semibold ${colors.text.success}`}>
+        <div className={cn("text-right", typography.body.sm)}>
+          <div className={cn(typography.heading.sm, colors.text.success)}>
             {totalUnits > 0 ? ((soldUnits / totalUnits) * 100).toFixed(1) : 0}% {t('structure.salesPercentage', 'πωλήσεις')}
           </div>
           <div className={colors.text.muted}>
@@ -129,9 +135,9 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
 
       {/* 🏢 ENTERPRISE: Expandable content with tabs */}
       {isExpanded && (
-        <div className="ml-6 mt-3">
+        <div className={cn(spacing.margin.left.lg, spacing.margin.top.sm)}>
           {/* Tab triggers */}
-          <nav className="flex gap-2 mb-3" role="tablist">
+          <nav className={cn("flex", spacing.gap.sm, spacing.margin.bottom.sm)} role="tablist">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -145,7 +151,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
                     setActiveTab(tab.id);
                   }}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                    'flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors', typography.label.sm,
                     isActive
                       ? `${colors.bg.accent} ${colors.text.foreground}`
                       : `${colors.text.muted} hover:${colors.bg.muted}`
@@ -154,7 +160,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
                   <Icon size={16} className={tab.iconColor} />
                   <span>{tab.label}</span>
                   <span className={cn(
-                    'px-1.5 py-0.5 rounded text-xs',
+                    'px-1.5 py-0.5 rounded', typography.body.xs,
                     isActive ? colors.bg.primary : colors.bg.muted
                   )}>
                     {tab.count}
@@ -165,10 +171,10 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
           </nav>
 
           {/* Tab content */}
-          <div className="space-y-2">
+          <div className={spacing.spaceBetween.sm}>
             {activeTab === 'units' && (
               units.length === 0 ? (
-                <p className={`text-sm ${colors.text.muted} py-4 text-center`}>
+                <p className={cn(typography.body.sm, colors.text.muted, spacing.padding.y.md, "text-center")}>
                   {t('structure.noUnits', 'Δεν υπάρχουν μονάδες')}
                 </p>
               ) : (
@@ -178,7 +184,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
 
             {activeTab === 'storage' && (
               storages.length === 0 ? (
-                <p className={`text-sm ${colors.text.muted} py-4 text-center`}>
+                <p className={cn(typography.body.sm, colors.text.muted, spacing.padding.y.md, "text-center")}>
                   {t('structure.noStorages', 'Δεν υπάρχουν αποθήκες')}
                 </p>
               ) : (
@@ -188,7 +194,7 @@ export const BuildingNode = ({ building }: { building: BuildingModel }) => {
 
             {activeTab === 'parking' && (
               parkingSpots.length === 0 ? (
-                <p className={`text-sm ${colors.text.muted} py-4 text-center`}>
+                <p className={cn(typography.body.sm, colors.text.muted, spacing.padding.y.md, "text-center")}>
                   {t('structure.noParkingSpots', 'Δεν υπάρχουν θέσεις στάθμευσης')}
                 </p>
               ) : (

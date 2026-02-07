@@ -22,6 +22,9 @@ import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { DEFAULT_PHOTO_ACCEPT } from '@/config/file-upload-config';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 import type { Project } from '@/types/project';
 
 // =============================================================================
@@ -49,6 +52,8 @@ interface PhotosTabProps {
  */
 export function PhotosTab({ project, data }: PhotosTabProps) {
   const { user } = useAuth();
+  const spacing = useSpacingTokens();
+  const colors = useSemanticColors();
 
   // Resolve project from props
   const resolvedProject = project || data;
@@ -60,7 +65,7 @@ export function PhotosTab({ project, data }: PhotosTabProps) {
   // If no project, companyId, or userId, show placeholder
   if (!resolvedProject?.id || !companyId || !currentUserId) {
     return (
-      <div className="p-6 text-center text-muted-foreground">
+      <div className={cn(spacing.padding.lg, "text-center", colors.text.muted)}>
         <p>Επιλέξτε ένα έργο για να δείτε τις φωτογραφίες.</p>
       </div>
     );

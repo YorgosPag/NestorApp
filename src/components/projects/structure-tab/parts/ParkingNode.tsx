@@ -14,6 +14,9 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { cn } from '@/lib/utils';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import type { ParkingModel } from '../types';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -26,6 +29,9 @@ export const ParkingNode = ({ parking }: ParkingNodeProps) => {
   const { t } = useTranslation('projects');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
+  const typography = useTypography();
+  const iconSizes = useIconSizes();
 
   // Status badge color
   const statusColors: Record<string, string> = {
@@ -60,21 +66,20 @@ export const ParkingNode = ({ parking }: ParkingNodeProps) => {
       )}
     >
       <NAVIGATION_ENTITIES.parking.icon
-        size={16}
-        className={NAVIGATION_ENTITIES.parking.color}
+        className={cn(iconSizes.sm, NAVIGATION_ENTITIES.parking.color)}
       />
       <div className="flex-1 min-w-0">
-        <div className={`text-sm font-medium ${colors.text.foreground} truncate`}>
+        <div className={cn(typography.label.sm, colors.text.foreground, "truncate")}>
           {t('structure.parkingSpot', 'Θέση')} {parking.code}
         </div>
-        <div className={`text-xs ${colors.text.muted}`}>
+        <div className={cn(typography.body.xs, colors.text.muted)}>
           {parking.type && <span>{typeLabels[parking.type] || parking.type}</span>}
           {parking.level && <span> • {t('structure.level', 'Επίπεδο')}: {parking.level}</span>}
           {parking.area && <span> • {parking.area} m²</span>}
         </div>
       </div>
       {parking.status && (
-        <span className={`text-xs font-medium ${statusColors[parking.status] || colors.text.muted}`}>
+        <span className={cn(typography.label.xs, statusColors[parking.status] || colors.text.muted)}>
           {statusLabels[parking.status] || parking.status}
         </span>
       )}

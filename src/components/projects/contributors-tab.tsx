@@ -11,6 +11,7 @@ import { ConfigurationAPI } from '@/core/configuration';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useTypography } from '@/hooks/useTypography';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,7 @@ export function ContributorsTab() {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const typography = useTypography();
+  const colors = useSemanticColors();
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   const { contributors, isLoading, error } = useContributors();
@@ -128,7 +130,7 @@ export function ContributorsTab() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className={`${iconSizes.xl} p-0`}>
-                              <Pencil className={`${iconSizes.sm} text-blue-600`} />
+                              <Pencil className={cn(iconSizes.sm, colors.text.info)} />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{t('contributorsTab.edit')}</TooltipContent>
@@ -136,7 +138,7 @@ export function ContributorsTab() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                              <Button variant="ghost" size="icon" className={`${iconSizes.xl} p-0`}>
-                              <Trash2 className={`${iconSizes.sm} text-red-600`} />
+                              <Trash2 className={cn(iconSizes.sm, colors.text.error)} />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>{t('contributorsTab.delete')}</TooltipContent>

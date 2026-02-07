@@ -222,7 +222,7 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
       </CardHeader>
       <CardContent>
         {/* Table Headers */}
-        <header className={cn("grid grid-cols-[2fr_1fr_1fr_auto] gap-3 mb-3 border-b border-border text-sm font-medium text-muted-foreground", spacing.padding.bottom.sm)}>
+        <header className={cn("grid grid-cols-[2fr_1fr_1fr_auto] gap-3 border-b border-border", typography.label.sm, colors.text.muted, spacing.padding.bottom.sm)}>
           <span>{t('buildings.buildingName')}</span>
           <span className="text-right">{t('buildings.unitsHeader')}</span>
           <span className="text-right">{t('buildings.areaHeader')}</span>
@@ -244,14 +244,14 @@ export function ProjectBuildingsCard({ projectId, defaultExpanded = false }: Pro
                 <NAVIGATION_ENTITIES.building.icon className={cn(iconSizes.sm, NAVIGATION_ENTITIES.building.color)} />
                 <span className="font-medium">{building.name}</span>
               </div>
-              <div className="text-right text-sm">
+              <div className={cn("text-right", typography.body.sm)}>
                 <span className="font-medium">{building.unitsCount}</span>
                 <span className={cn('ml-1', colors.text.muted)}>{t('buildings.unitsLabel')}</span>
-                <div className={cn('text-xs', colors.text.muted)}>
+                <div className={cn(typography.body.xs, colors.text.muted)}>
                   {building.soldUnits} {t('buildings.soldLabel')}
                 </div>
               </div>
-              <div className={cn('text-right text-sm', colors.text.muted)}>
+              <div className={cn("text-right", typography.body.sm, colors.text.muted)}>
                 {building.totalArea.toLocaleString('el-GR', { maximumFractionDigits: 1 })} {t('buildings.areaLabel')}
               </div>
               <div className="text-right">

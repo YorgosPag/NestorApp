@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useTypography } from '@/hooks/useTypography';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import type { StatCardProps } from "../types";
@@ -13,6 +14,7 @@ import type { StatCardProps } from "../types";
 export function StatCard({ icon: Icon, value, label, loading, colorClass, subtitle }: StatCardProps) {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
+  const typography = useTypography();
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
   return (
@@ -29,9 +31,9 @@ export function StatCard({ icon: Icon, value, label, loading, colorClass, subtit
             </>
           ) : (
             <>
-              <div className="text-2xl font-bold">{value}</div>
-              <div className="text-xs">{label}</div>
-              {subtitle && <div className="text-xs opacity-75">{subtitle}</div>}
+              <div className={typography.heading.lg}>{value}</div>
+              <div className={typography.body.xs}>{label}</div>
+              {subtitle && <div className={cn(typography.body.xs, "opacity-75")}>{subtitle}</div>}
             </>
           )}
         </div>

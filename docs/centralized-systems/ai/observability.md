@@ -58,3 +58,15 @@
 Τα metrics τροφοδοτούν το [UC-008 - AI-Powered Dashboards](./use-cases/UC-008-dashboards.md):
 - **AI Activity Dashboard**: Αιτήματα, αυτόματες ενέργειες, χρόνοι απόκρισης, accuracy
 - **Executive Dashboard**: Top KPIs από κάθε κατηγορία
+
+---
+
+## Ops Dashboards (BACKLOG)
+
+> **Status**: BACKLOG — Καταγραφή απαιτήσεων για μελλοντική υλοποίηση
+
+- **Cost per Company/Use-Case**: Κόστος AI tokens ανά εταιρεία και σενάριο (ιδίως Vision tier)
+- **Budget Guardrails**: Αυτόματο fallback σε approval-only ή FAST tier αν ξεπεραστεί budget threshold
+- **SLA Tracking**: Χρόνος από intake → execution ανά use case, με alerts για παραβίαση SLA
+- **DLQ Management UI**: Requeue, drain, export CSV, assign incident owner
+- **Incident Mode**: "Vendor down" dashboard — queue depth, auto-degrade status, manual fallback options

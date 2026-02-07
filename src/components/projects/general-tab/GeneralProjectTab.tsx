@@ -11,6 +11,8 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
 // 🏢 ENTERPRISE: Centralized Unit Icon
 const UnitIcon = NAVIGATION_ENTITIES.unit.icon;
@@ -42,6 +44,8 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
   const { t } = useTranslation('projects');
   // 🏢 ENTERPRISE: Centralized spacing tokens
   const spacing = useSpacingTokens();
+  const typography = useTypography();
+  const colors = useSemanticColors();
   const [isEditing, setIsEditing] = useState(false);
   const [projectData, setProjectData] = useState<ProjectFormData>({
     name: project.name,
@@ -185,7 +189,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
         <Card className={spacing.margin.bottom.sm}>
           <CardContent className={spacing.padding.sm}>
             <div className={spacing.spaceBetween.sm}>
-              <div className="flex justify-between text-sm">
+              <div className={cn("flex justify-between", typography.body.sm)}>
                 <span>{t('generalTab.salesProgress')}</span>
                 <span>{t('generalTab.unitsProgress', { sold: stats.soldUnits, total: stats.totalUnits })}</span>
               </div>
@@ -195,7 +199,7 @@ export function GeneralProjectTab({ project }: GeneralProjectTabProps) {
                 size="md"
                 showPercentage={false}
               />
-              <div className="flex justify-between text-xs text-muted-foreground">
+              <div className={cn("flex justify-between", typography.body.xs, colors.text.muted)}>
                 <span>0%</span>
                 <span>{t('generalTab.percentageComplete', { percentage: salesPercentage.toFixed(1) })}</span>
                 <span>100%</span>

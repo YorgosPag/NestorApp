@@ -84,3 +84,15 @@ Mapping FAST/QUALITY/VISION → model IDs σε config:
 | **Vendor outage (Mailgun/OpenAI)** | 1. Alerts fire. 2. Queue αποθηκεύει αιτήματα. 3. Μόλις επανέλθει vendor → auto-retry. 4. Αν >2h → ειδοποίηση πελατών. |
 | **Cost spike** | 1. Alert fire. 2. Έλεγχος αν είναι legitimate traffic ή abuse. 3. Αν abuse → rate limit. 4. Αν legitimate → αύξηση threshold ή αλλαγή σε FAST tier. |
 | **Drift → approval-only** | 1. Alert fire. 2. Όλα αιτήματα σε manual approval. 3. Έλεγχος golden test set. 4. Fix prompt/model. 5. Regression test. 6. Restore auto-approval. |
+
+---
+
+## Human-in-the-Loop UX Requirements (BACKLOG)
+
+> **Status**: BACKLOG — Καταγραφή απαιτήσεων για μελλοντική υλοποίηση (βλ. UC-009)
+
+- **Preview & Diff**: Πριν κάθε approval, ο operator βλέπει ακριβώς τι θα σταλεί/δημιουργηθεί (email text, recipients, attachments) + diff από template
+- **Safe Override**: One-click "Take over" — pause automation, χειροκίνητη ολοκλήρωση, resume pipeline με πλήρες audit
+- **Policy Waivers**: Ελεγχόμενη παράκαμψη policy (reason + approver + expiry) αντί ad-hoc εξαιρέσεων
+- **Structured Feedback**: UI για "Correct intent/entities" που τροφοδοτεί metrics, test set updates, prompt change requests
+- **Operator Playbooks**: In-product οδηγοί ανά use case — τι ελέγχω, πότε εγκρίνω, πότε κλιμακώνω

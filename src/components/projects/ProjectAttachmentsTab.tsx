@@ -45,7 +45,7 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
             </CardHeader>
             <CardContent className={spacing.spaceBetween.md}>
                 <div className={spacing.spaceBetween.sm}>
-                    <Label htmlFor="mapPath" className="text-sm font-medium">{t('attachmentsTab.projectMap')}</Label>
+                    <Label htmlFor="mapPath" className={typography.label.sm}>{t('attachmentsTab.projectMap')}</Label>
                     <div className={cn("flex items-center", spacing.gap.sm)}>
                         <Input
                             id="mapPath"
@@ -63,7 +63,7 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                 </div>
 
                 <div className={spacing.spaceBetween.sm}>
-                    <Label htmlFor="floorPlanPath" className="text-sm font-medium">{t('attachmentsTab.generalFloorPlan')}</Label>
+                    <Label htmlFor="floorPlanPath" className={typography.label.sm}>{t('attachmentsTab.generalFloorPlan')}</Label>
                     <div className={cn("flex items-center", spacing.gap.sm)}>
                         <Input
                             id="floorPlanPath"
@@ -81,7 +81,7 @@ export function ProjectAttachmentsTab({ data, setData }: ProjectAttachmentsTabPr
                 </div>
 
                 <div className={spacing.spaceBetween.sm}>
-                    <Label htmlFor="percentagesPath" className="text-sm font-medium">{t('attachmentsTab.percentagesTable')}</Label>
+                    <Label htmlFor="percentagesPath" className={typography.label.sm}>{t('attachmentsTab.percentagesTable')}</Label>
                     <div className={cn("flex items-center", spacing.gap.sm)}>
                         <Input
                             id="percentagesPath"

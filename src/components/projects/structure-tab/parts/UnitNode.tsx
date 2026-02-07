@@ -12,6 +12,9 @@ import { HOVER_SHADOWS } from '@/components/ui/effects';
 
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -24,22 +27,24 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
   const { t } = useTranslation('projects');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
+  const spacing = useSpacingTokens();
+  const typography = useTypography();
   const showCustomerInfo = unit.status === 'sold' || unit.status === 'reserved' || unit.status === 'rented';
 
   return (
-    <div className={`border-l-2 ${quick.table} pl-4`}>
-      <div className={`p-4 ${colors.bg.primary} ${quick.card} ${HOVER_SHADOWS.MEDIUM} transition-all`}>
-        <div className="flex items-start justify-between mb-3">
+    <div className={cn("border-l-2", quick.table, spacing.padding.left.md)}>
+      <div className={cn(spacing.padding.md, colors.bg.primary, quick.card, HOVER_SHADOWS.MEDIUM, "transition-all")}>
+        <div className={cn("flex items-start justify-between", spacing.margin.bottom.sm)}>
           <div className="flex items-center gap-3">
             <UnitIcon size={18} className={`${unitColor} mt-1`} />
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className={`font-semibold ${colors.text.foreground}`}>{unit.name}</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(unit.status)}`}>
+                <span className={cn(typography.heading.sm, colors.text.foreground)}>{unit.name}</span>
+                <span className={cn("px-2 py-1 rounded-full", typography.label.xs, getStatusColor(unit.status))}>
                   {getStatusLabel(unit.status)}
                 </span>
               </div>
-              <div className={`flex items-center gap-4 text-sm ${colors.text.muted}`}>
+              <div className={cn("flex items-center gap-4", typography.body.sm, colors.text.muted)}>
                 <span className="flex items-center gap-1">
                   <UnitIcon size={14} className={unitColor} />
                   {unit.area} m²
@@ -56,10 +61,10 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
         </div>
 
         {showCustomerInfo && (
-          <div className={`mt-3 pt-3 border-t ${quick.table}`}>
+          <div className={cn(spacing.margin.top.sm, spacing.padding.top.sm, "border-t", quick.table)}>
             {unit.customerName ? (
-              <div className={`${colors.bg.success} p-3 ${quick.card}`}>
-                <div className="flex items-center gap-2 mb-2">
+              <div className={cn(colors.bg.success, "p-3", quick.card)}>
+                <div className={cn("flex items-center", spacing.gap.sm, spacing.margin.bottom.sm)}>
                   <User size={16} className={`${colors.text.success}`} />
                   <span className={`font-medium ${colors.text.success}`}>{t('structure.customer')}</span>
                 </div>
@@ -68,15 +73,15 @@ export const UnitNode = ({ unit }: { unit: UnitModel }) => {
                     {unit.customerName}
                   </div>
                   {unit.soldTo && (
-                    <div className={`text-sm ${colors.text.muted} mt-1`}>
+                    <div className={cn(typography.body.sm, colors.text.muted, spacing.margin.top.xs)}>
                       ID: {unit.soldTo}
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className={`${colors.bg.warning} p-3 ${quick.card}`}>
-                <div className="flex items-center gap-2">
+              <div className={cn(colors.bg.warning, "p-3", quick.card)}>
+                <div className={cn("flex items-center", spacing.gap.sm)}>
                   <User size={16} className={`${colors.text.warning}`} />
                   <span className={`${colors.text.warning}`}>
                     {unit.soldTo

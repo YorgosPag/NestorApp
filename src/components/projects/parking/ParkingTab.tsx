@@ -7,6 +7,8 @@ import { ParkingSpotTable } from './ParkingSpotTable';
 import { OverflowContainer } from './OverflowContainer';
 import { useParkingData } from '@/hooks/useParkingData';
 import { useTypography } from '@/hooks/useTypography';
+import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -14,6 +16,7 @@ export function ParkingTab() {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation('projects');
   const typography = useTypography();
+  const spacing = useSpacingTokens();
   const {
     parkingSpots,
     selectedSpots,
@@ -33,12 +36,12 @@ export function ParkingTab() {
   } = useParkingData();
 
   return (
-    <div className="space-y-6 min-w-0">
+    <div className={cn(spacing.spaceBetween.lg, "min-w-0")}>
       <Card className="min-w-0">
         <CardHeader>
           <CardTitle className={typography.card.titleCompact}>{t('parkingManagement.title')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6 w-full max-w-full overflow-x-auto">
+        <CardContent className={cn(spacing.spaceBetween.lg, "w-full max-w-full overflow-x-auto")}>
           <ParkingTableToolbar
             filters={filters}
             onFiltersChange={handleFiltersChange}

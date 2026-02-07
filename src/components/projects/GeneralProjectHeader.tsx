@@ -11,6 +11,7 @@ import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useTypography } from '@/hooks/useTypography';
 import {
   Tooltip,
   TooltipContent,
@@ -52,6 +53,7 @@ export function GeneralProjectHeader({
     const colors = useSemanticColors();
     // 🏢 ENTERPRISE: Centralized spacing tokens
     const spacing = useSpacingTokens();
+    const typography = useTypography();
     const [copied, setCopied] = React.useState(false);
 
     const handleCancel = () => {
@@ -92,14 +94,14 @@ export function GeneralProjectHeader({
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="max-w-xs">
                             <div className={spacing.spaceBetween.xs}>
-                                <p className="font-medium text-xs">{t('projectHeader.technicalIdLabel')}</p>
+                                <p className={typography.label.xs}>{t('projectHeader.technicalIdLabel')}</p>
                                 <div className={cn("flex items-center", spacing.gap.sm)}>
                                     <code className="text-xs bg-muted px-1 py-0.5 rounded">
                                         {projectId || 'N/A'}
                                     </code>
-                                    <Copy className={`w-3 h-3 ${copied ? 'text-green-500' : ''}`} />
+                                    <Copy className={cn(iconSizes.xs, copied ? colors.text.success : '')} />
                                 </div>
-                                {copied && <p className="text-xs text-green-500">{t('projectHeader.copied')}</p>}
+                                {copied && <p className={cn(typography.body.xs, colors.text.success)}>{t('projectHeader.copied')}</p>}
                             </div>
                         </TooltipContent>
                     </Tooltip>
@@ -112,7 +114,7 @@ export function GeneralProjectHeader({
                 />
                 
                 {isEditing && (
-                <div className={cn("flex items-center text-xs", spacing.gap.sm)}>
+                <div className={cn("flex items-center", typography.body.xs, spacing.gap.sm)}>
                     {autoSaving ? (
                     <>
                         <AnimatedSpinner size="small" />
@@ -156,7 +158,7 @@ export function GeneralProjectHeader({
                         )}
                     </Button>
                     {saveError && (
-                        <span className={`text-xs ${colors.text.error}`}>
+                        <span className={cn(typography.body.xs, colors.text.error)}>
                             {saveError}
                         </span>
                     )}

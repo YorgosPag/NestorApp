@@ -6,6 +6,8 @@ import { useProjectStructure } from './hooks/useProjectStructure';
 import { getTotals } from './utils/selectors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
+import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { cn } from '@/lib/utils';
 
 import { LoadingSkeleton } from './parts/LoadingSkeleton';
 import { EmptyState } from './parts/EmptyState';
@@ -16,6 +18,7 @@ import { BuildingNode } from './parts/BuildingNode';
 export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
   const { structure, loading, error } = useProjectStructure(projectId);
   const spacing = useSpacingTokens();
+  const colors = useSemanticColors();
 
   if (loading) {
     return <LoadingSkeleton />;
@@ -23,7 +26,7 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
 
   if (error) {
     return (
-      <div className="p-4 text-center text-destructive">{error}</div>
+      <div className={cn(spacing.padding.md, "text-center", colors.text.error)}>{error}</div>
     );
   }
 
@@ -45,7 +48,7 @@ export function ProjectStructureTab({ projectId }: ProjectStructureTabProps) {
       />
 
       {/* 🏢 ENTERPRISE: Buildings list - minimal design */}
-      <div className="space-y-4">
+      <div className={spacing.spaceBetween.md}>
         {structure.buildings.map(building => (
           <BuildingNode key={building.id} building={building} />
         ))}
