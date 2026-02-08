@@ -63,6 +63,7 @@ import { ProposalReviewCard } from '@/components/admin/operator-inbox/ProposalRe
 import type {
   PipelineQueueItem,
   PipelineIntentTypeValue,
+  PipelineAction,
 } from '@/types/ai-pipeline';
 import type { ProposedItemStats } from '@/services/ai-pipeline/pipeline-queue-service';
 
@@ -227,14 +228,21 @@ export default function OperatorInboxClient({ adminContext }: OperatorInboxClien
   }, [items]);
 
   // ── Approve handler ──
-  const handleApprove = useCallback(async (queueId: string) => {
+  const handleApprove = useCallback(async (queueId: string, modifiedActions?: PipelineAction[]) => {
     setProcessingId(queueId);
     try {
+      const body: { queueId: string; decision: 'approved'; modifiedActions?: PipelineAction[] } = {
+        queueId,
+        decision: 'approved',
+      };
+      if (modifiedActions) {
+        body.modifiedActions = modifiedActions;
+      }
       const response = await fetch('/api/admin/operator-inbox', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ queueId, decision: 'approved' }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json() as { success: boolean; error?: string };

@@ -13,12 +13,13 @@
  * @see UC-009 (Internal Operator Workflow)
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { CheckCircle, XCircle, Loader2, Mail, MessageSquare, Globe, Bot } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Mail, MessageSquare, Globe, Bot, RotateCcw, Pencil } from 'lucide-react';
 import { EmailContentWithSignature } from '@/components/shared/email/EmailContentRenderer';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -37,7 +38,7 @@ import type {
 interface ProposalReviewCardProps {
   queueId: string;
   context: PipelineContext;
-  onApprove: (queueId: string) => Promise<void>;
+  onApprove: (queueId: string, modifiedActions?: PipelineAction[]) => Promise<void>;
   onReject: (queueId: string, reason: string) => Promise<void>;
   isProcessing: boolean;
 }
@@ -101,9 +102,12 @@ interface ProposalActionRendererProps {
   spacing: ReturnType<typeof useSpacingTokens>;
   typography: ReturnType<typeof useTypography>;
   t: (key: string) => string;
+  editedDraftReply: string | null;
+  onDraftReplyChange: (value: string) => void;
+  onDraftReplyReset: () => void;
 }
 
-function ProposalActionRenderer({ action, spacing, typography, t }: ProposalActionRendererProps) {
+function ProposalActionRenderer({ action, spacing, typography, t, editedDraftReply, onDraftReplyChange, onDraftReplyReset }: ProposalActionRendererProps) {
   const params = action.params;
 
   // ── reply_property_list — UC-003 Property Search ──
@@ -154,16 +158,40 @@ function ProposalActionRenderer({ action, spacing, typography, t }: ProposalActi
           </ul>
         )}
 
-        {/* Draft reply email */}
+        {/* Draft reply email — editable */}
         {draftReply && (
           <Card className={spacing.margin.top.sm}>
             <CardContent className={spacing.padding.md}>
-              <h5 className={`${typography.label.sm} ${spacing.margin.bottom.xs}`}>
-                {t('operatorInbox.sections.draftReply')}
-              </h5>
-              <div className={`${typography.body.sm} whitespace-pre-line text-muted-foreground`}>
-                {draftReply}
+              <div className={`${spacing.gap.xs} flex items-center justify-between ${spacing.margin.bottom.xs}`}>
+                <div className={`${spacing.gap.xs} flex items-center`}>
+                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  <h5 className={typography.label.sm}>
+                    {t('operatorInbox.sections.draftReply')}
+                  </h5>
+                  {editedDraftReply !== null && (
+                    <Badge variant="outline" className="text-xs">
+                      {t('operatorInbox.draftEdited')}
+                    </Badge>
+                  )}
+                </div>
+                {editedDraftReply !== null && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onDraftReplyReset}
+                    className="h-7 px-2 text-xs"
+                  >
+                    <RotateCcw className="mr-1 h-3 w-3" />
+                    {t('operatorInbox.resetDraft')}
+                  </Button>
+                )}
               </div>
+              <Textarea
+                value={editedDraftReply ?? draftReply}
+                onChange={(e) => onDraftReplyChange(e.target.value)}
+                rows={6}
+                className="text-sm"
+              />
             </CardContent>
           </Card>
         )}
@@ -226,23 +254,45 @@ function ProposalActionRenderer({ action, spacing, typography, t }: ProposalActi
           </Card>
         )}
 
-        {/* Draft reply email */}
+        {/* Draft reply email — editable */}
         {draftReply && (
           <Card className={spacing.margin.top.sm}>
             <CardContent className={spacing.padding.md}>
-              <div className={`${spacing.gap.xs} flex items-center ${spacing.margin.bottom.xs}`}>
-                <h5 className={typography.label.sm}>
-                  {t('operatorInbox.sections.draftReply')}
-                </h5>
-                {aiGenerated && (
-                  <Badge variant="secondary" className="text-xs">
-                    AI
-                  </Badge>
+              <div className={`${spacing.gap.xs} flex items-center justify-between ${spacing.margin.bottom.xs}`}>
+                <div className={`${spacing.gap.xs} flex items-center`}>
+                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  <h5 className={typography.label.sm}>
+                    {t('operatorInbox.sections.draftReply')}
+                  </h5>
+                  {aiGenerated && (
+                    <Badge variant="secondary" className="text-xs">
+                      AI
+                    </Badge>
+                  )}
+                  {editedDraftReply !== null && (
+                    <Badge variant="outline" className="text-xs">
+                      {t('operatorInbox.draftEdited')}
+                    </Badge>
+                  )}
+                </div>
+                {editedDraftReply !== null && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onDraftReplyReset}
+                    className="h-7 px-2 text-xs"
+                  >
+                    <RotateCcw className="mr-1 h-3 w-3" />
+                    {t('operatorInbox.resetDraft')}
+                  </Button>
                 )}
               </div>
-              <div className={`${typography.body.sm} whitespace-pre-line text-muted-foreground`}>
-                {draftReply}
-              </div>
+              <Textarea
+                value={editedDraftReply ?? draftReply}
+                onChange={(e) => onDraftReplyChange(e.target.value)}
+                rows={6}
+                className="text-sm"
+              />
             </CardContent>
           </Card>
         )}
@@ -291,10 +341,21 @@ export function ProposalReviewCard({
   const [rejectReason, setRejectReason] = useState('');
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [editedDraftReply, setEditedDraftReply] = useState<string | null>(null);
 
   const intake = context.intake;
   const understanding = context.understanding;
   const proposal = context.proposal;
+
+  const isDraftModified = editedDraftReply !== null;
+
+  const handleDraftReplyChange = useCallback((value: string) => {
+    setEditedDraftReply(value);
+  }, []);
+
+  const handleDraftReplyReset = useCallback(() => {
+    setEditedDraftReply(null);
+  }, []);
 
   const sender = intake?.normalized?.sender;
   const ChannelIcon = getChannelIcon(intake?.channel ?? 'email');
@@ -391,6 +452,9 @@ export function ProposalReviewCard({
                     spacing={spacing}
                     typography={typography}
                     t={t}
+                    editedDraftReply={editedDraftReply}
+                    onDraftReplyChange={handleDraftReplyChange}
+                    onDraftReplyReset={handleDraftReplyReset}
                   />
                 ))}
               </div>
@@ -430,10 +494,26 @@ export function ProposalReviewCard({
         open={showApproveDialog}
         onOpenChange={setShowApproveDialog}
         title={t('operatorInbox.approve')}
-        description={t('operatorInbox.confirmApprove')}
+        description={isDraftModified
+          ? t('operatorInbox.confirmApproveModified')
+          : t('operatorInbox.confirmApprove')
+        }
         confirmText={t('operatorInbox.approve')}
         onConfirm={async () => {
-          await onApprove(queueId);
+          if (isDraftModified) {
+            const modifiedActions = (proposal?.suggestedActions ?? []).map(action => ({
+              ...action,
+              params: {
+                ...action.params,
+                ...(action.params.draftReply !== undefined
+                  ? { draftReply: editedDraftReply }
+                  : {}),
+              },
+            }));
+            await onApprove(queueId, modifiedActions);
+          } else {
+            await onApprove(queueId);
+          }
           setShowApproveDialog(false);
         }}
       />

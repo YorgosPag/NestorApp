@@ -169,6 +169,9 @@
     "rejectSuccess": "Proposal rejected.",
     "approveFailed": "Failed to approve proposal.",
     "rejectFailed": "Failed to reject proposal.",
+    "draftEdited": "Modified",
+    "confirmApproveModified": "The reply has been modified. Your version will be sent instead of the original AI draft.",
+    "resetDraft": "Reset",
     "empty": {
       "title": "No proposals awaiting review",
       "description": "All pipeline items have been processed or auto-approved."
