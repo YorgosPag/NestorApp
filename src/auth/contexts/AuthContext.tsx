@@ -408,39 +408,34 @@ async function syncUserProfileToFirestore(
 }
 
 /**
- * Ensure dev-admin user document exists in Firestore (development mode only).
- * Prevents "user not found" errors when looking up dev-admin UIDs.
+ * Ensure dev-admin user document exists in Firestore.
+ * Uses server-side API endpoint (Admin SDK) to bypass Firestore rules.
+ * In dev mode, there's no real Firebase Auth session, so client-side
+ * Firestore writes fail with "Missing or insufficient permissions".
  */
 async function ensureDevUserProfile(): Promise<void> {
   if (process.env.NODE_ENV !== 'development') return;
 
-  const devUid = 'dev-admin';
-  const devDocRef = doc(db, COLLECTIONS.USERS, devUid);
-
   try {
-    const devSnapshot = await getDoc(devDocRef);
-    if (!devSnapshot.exists()) {
-      console.log('[ENTERPRISE] [AuthContext] Creating dev-admin user profile');
-      const now = new Date();
-      const devProfile: UserProfileDocument = {
-        uid: devUid,
+    const response = await fetch('/api/admin/ensure-user-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid: 'dev-admin',
         email: 'dev@localhost',
         displayName: 'Dev Admin',
         givenName: 'Dev',
         familyName: 'Admin',
-        photoURL: null,
-        companyId: null,
         globalRole: 'admin',
-        status: 'active',
-        emailVerified: true,
-        loginCount: 0,
-        lastLoginAt: now,
-        createdAt: now,
-        updatedAt: now,
         authProvider: 'development-bypass',
-      };
-      await setDoc(devDocRef, devProfile);
-      console.log('[ENTERPRISE] [AuthContext] Dev-admin user profile created');
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.created) {
+        console.log('[ENTERPRISE] [AuthContext] Dev-admin user profile created via Admin SDK');
+      }
     }
   } catch (devError) {
     console.warn('[AuthContext] Failed to create dev-admin profile (non-blocking):', devError);
