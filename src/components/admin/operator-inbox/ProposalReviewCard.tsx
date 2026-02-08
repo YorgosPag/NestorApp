@@ -178,6 +178,7 @@ function ProposalActionRenderer({ action, spacing, typography, t }: ProposalActi
     const requestedTime = params.requestedTime as string | null;
     const description = params.description as string | undefined;
     const draftReply = params.draftReply as string | undefined;
+    const aiGenerated = params.aiGenerated as boolean | undefined;
     const operatorBriefing = params.operatorBriefing as string | undefined;
     const hasTimeConflict = params.hasTimeConflict as boolean | undefined;
 
@@ -229,9 +230,16 @@ function ProposalActionRenderer({ action, spacing, typography, t }: ProposalActi
         {draftReply && (
           <Card className={spacing.margin.top.sm}>
             <CardContent className={spacing.padding.md}>
-              <h5 className={`${typography.label.sm} ${spacing.margin.bottom.xs}`}>
-                {t('operatorInbox.sections.draftReply')}
-              </h5>
+              <div className={`${spacing.gap.xs} flex items-center ${spacing.margin.bottom.xs}`}>
+                <h5 className={typography.label.sm}>
+                  {t('operatorInbox.sections.draftReply')}
+                </h5>
+                {aiGenerated && (
+                  <Badge variant="secondary" className="text-xs">
+                    AI
+                  </Badge>
+                )}
+              </div>
               <div className={`${typography.body.sm} whitespace-pre-line text-muted-foreground`}>
                 {draftReply}
               </div>

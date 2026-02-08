@@ -102,6 +102,24 @@ export const PIPELINE_THREAT_CONFIG = {
 } as const;
 
 // ============================================================================
+// AI REPLY GENERATION
+// ============================================================================
+
+export const PIPELINE_REPLY_CONFIG = {
+  /** Timeout for AI reply generation (faster than analysis — quick fallback) */
+  TIMEOUT_MS: 15_000,
+
+  /** Max retries for reply generation (1 = one retry after first failure) */
+  MAX_RETRIES: 1,
+
+  /** Max characters from original message to include in AI prompt */
+  MAX_ORIGINAL_MESSAGE_CHARS: 1_000,
+
+  /** Max reply length in characters (safety guard) */
+  MAX_REPLY_CHARS: 2_000,
+} as const;
+
+// ============================================================================
 // AGGREGATE CONFIG (convenience export)
 // ============================================================================
 
@@ -111,4 +129,5 @@ export const AI_PIPELINE_CONFIG = {
   confidence: PIPELINE_CONFIDENCE_CONFIG,
   protocol: PIPELINE_PROTOCOL_CONFIG,
   threat: PIPELINE_THREAT_CONFIG,
+  reply: PIPELINE_REPLY_CONFIG,
 } as const;

@@ -19,6 +19,7 @@
 | Shared utilities centralization | **IMPLEMENTED** (2026-02-08) — `contact-lookup.ts`, `mailgun-sender.ts` |
 | Calendar availability check | **IMPLEMENTED** (2026-02-08) — `availability-check.ts` (ADR-103) |
 | AI Operator Briefing (conflict detection) | **IMPLEMENTED** (2026-02-08) — operatorBriefing in proposal (ADR-103) |
+| AI-generated dynamic replies | **IMPLEMENTED** (2026-02-09) — `ai-reply-generator.ts`, replaces static template |
 | Smart matching scenarios A/B/C | Phase 2 |
 | Lead creation for unknown senders | Phase 2 (PRE-002) |
 

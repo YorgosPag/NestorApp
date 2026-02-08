@@ -194,7 +194,8 @@
       "requestedDate": "Ημ/νία Ραντεβού",
       "requestedTime": "Ώρα Ραντεβού",
       "description": "Περιγραφή",
-      "notSpecified": "Δεν ορίστηκε"
+      "notSpecified": "Δεν ορίστηκε",
+      "aiGenerated": "Δημιουργήθηκε με AI"
     },
     "actions": {
       "replyPropertyList": "Απάντηση αναζήτησης ακινήτου",

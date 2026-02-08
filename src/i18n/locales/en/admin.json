@@ -194,7 +194,8 @@
       "requestedDate": "Appointment Date",
       "requestedTime": "Appointment Time",
       "description": "Description",
-      "notSpecified": "Not specified"
+      "notSpecified": "Not specified",
+      "aiGenerated": "AI Generated"
     },
     "actions": {
       "replyPropertyList": "Property search reply",

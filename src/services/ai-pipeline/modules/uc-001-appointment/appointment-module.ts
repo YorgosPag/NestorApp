@@ -26,6 +26,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { findContactByEmail, type ContactMatch } from '../../shared/contact-lookup';
 import { sendReplyViaMailgun, type MailgunSendResult } from '../../shared/mailgun-sender';
 import { checkAvailability, type AvailabilityResult } from '../../shared/availability-check';
+import { generateAIReply } from '../../shared/ai-reply-generator';
 import {
   PipelineIntentType,
   PipelineChannel,
@@ -262,17 +263,36 @@ export class AppointmentModule implements IUCModule {
 
     const summary = `Αίτημα ραντεβού από ${senderDisplay} για ${dateDisplay} ${timeDisplay}`;
 
-    // Build draft confirmation email for operator preview
-    const draftReply = buildAppointmentReply({
-      senderName: senderDisplay,
-      requestedDate: lookup?.requestedDate ?? null,
-      requestedTime: lookup?.requestedTime ?? null,
-      description,
-    });
+    // Generate dynamic AI reply (falls back to static template on failure)
+    const aiReplyResult = await generateAIReply(
+      {
+        useCase: 'appointment',
+        senderName: senderDisplay,
+        isKnownContact: lookup?.isKnownContact ?? false,
+        originalMessage: ctx.intake.normalized.contentText?.slice(0, 1000) ?? '',
+        originalSubject: lookup?.originalSubject ?? '',
+        moduleContext: {
+          requestedDate: lookup?.requestedDate ?? null,
+          requestedTime: lookup?.requestedTime ?? null,
+          description: description || null,
+        },
+      },
+      () => buildAppointmentReply({
+        senderName: senderDisplay,
+        requestedDate: lookup?.requestedDate ?? null,
+        requestedTime: lookup?.requestedTime ?? null,
+        description,
+      }),
+      ctx.requestId,
+    );
+
+    const draftReply = aiReplyResult.replyText;
 
     logger.info('UC-001 PROPOSE: Generating proposal', {
       requestId: ctx.requestId,
       summary,
+      aiGenerated: aiReplyResult.aiGenerated,
+      aiDurationMs: aiReplyResult.durationMs,
     });
 
     return {
@@ -290,6 +310,7 @@ export class AppointmentModule implements IUCModule {
             description: description || summary,
             companyId: ctx.companyId,
             draftReply,
+            aiGenerated: aiReplyResult.aiGenerated,
             operatorBriefing: lookup?.availability?.operatorBriefing ?? null,
             hasTimeConflict: lookup?.availability?.hasTimeConflict ?? false,
           },
