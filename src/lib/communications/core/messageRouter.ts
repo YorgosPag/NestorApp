@@ -12,7 +12,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 // ============================================================================
 
 /** Webhook data from external providers */
-interface WebhookData {
+export interface WebhookData {
   from?: string;
   to?: string;
   content?: string;
@@ -45,6 +45,8 @@ interface MessageRecordInput {
 interface MessageStatusUpdate {
   status: string;
   externalId?: string | null;
+  entityType?: string;
+  entityId?: string | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -77,7 +79,7 @@ interface BulkSendResult extends SendResult {
 
 // --- Types ---
 
-interface InboundParsed {
+export interface InboundParsed {
   from: string;
   to: string;
   content: string;
@@ -129,7 +131,10 @@ class MessageRouter {
         throw new Error(`Channel ${messageData.channel} is not enabled or configured`);
       }
 
-      const record = await this.createMessageRecord(messageData, MESSAGE_DIRECTIONS.OUTBOUND as 'outbound');
+      const record = await this.createMessageRecord(
+        { ...messageData, content: messageData.content ?? '' },
+        MESSAGE_DIRECTIONS.OUTBOUND as 'outbound'
+      );
       messageRecordId = record.id;
       
       const provider = this.providers.get(messageData.channel);

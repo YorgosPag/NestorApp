@@ -86,6 +86,14 @@ interface ColorPickerTarget {
   currentColor: string;
 }
 
+interface HoverTooltipData {
+  name: string;
+  startDate: string;
+  endDate: string;
+  duration: number;
+  progress: number;
+}
+
 // ─── Gantt Bar Color Resolver ─────────────────────────────────────────────
 
 const STATUS_TO_CSS_COLOR: Record<GanttTaskStatus, string> = {
@@ -154,6 +162,11 @@ export function GanttView({ building }: GanttViewProps) {
   const [colorPickerTarget, setColorPickerTarget] = useState<ColorPickerTarget | null>(null);
   const [pendingColor, setPendingColor] = useState('#3b82f6');
   const contextMenuRef = useRef<HTMLElement>(null);
+
+  // Custom hover tooltip state — portal-based to escape overflow containers
+  const [tooltipData, setTooltipData] = useState<HoverTooltipData | null>(null);
+  const tooltipElRef = useRef<HTMLDivElement>(null);
+  const hoveredTaskRef = useRef('');
 
   // Close context menu on outside click, Escape key, or scroll
   useEffect(() => {
@@ -331,6 +344,70 @@ export function GanttView({ building }: GanttViewProps) {
     setColorPickerTarget(null);
   }, [colorPickerTarget, pendingColor, updateBarColor]);
 
+  // ─── Custom Hover Tooltip (portal-based) ──────────────────────────────
+  // The library tooltip renders INSIDE .rmg-timeline-container (overflow-x: auto)
+  // which clips it behind the header. This custom tooltip uses createPortal to
+  // document.body, escaping all overflow containers.
+
+  const handleGanttPointerMove = useCallback((e: React.PointerEvent) => {
+    const target = e.target as HTMLElement;
+    const taskItem = target.closest('.rmg-task-item') as HTMLElement | null;
+
+    // Update position via ref (no re-render needed for position changes)
+    if (tooltipElRef.current && taskItem) {
+      const x = Math.min(e.clientX + 16, window.innerWidth - 220);
+      const y = Math.max(8, e.clientY - 110);
+      tooltipElRef.current.style.left = `${x}px`;
+      tooltipElRef.current.style.top = `${y}px`;
+    }
+
+    if (!taskItem) {
+      if (hoveredTaskRef.current) {
+        hoveredTaskRef.current = '';
+        setTooltipData(null);
+      }
+      return;
+    }
+
+    // Match by task name — only update state when task changes
+    const taskNameEl = taskItem.querySelector('.rmg-task-item-name');
+    const taskName = taskNameEl?.textContent?.trim() ?? '';
+
+    if (taskName === hoveredTaskRef.current) return;
+    hoveredTaskRef.current = taskName;
+
+    for (const group of taskGroups) {
+      const matched = group.tasks.find((tsk) => tsk.name === taskName);
+      if (matched) {
+        const start = matched.startDate instanceof Date
+          ? matched.startDate : new Date(matched.startDate);
+        const end = matched.endDate instanceof Date
+          ? matched.endDate : new Date(matched.endDate);
+        const durationDays = Math.ceil(
+          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const taskProgress = (matched as Task & { progress?: number }).progress ?? 0;
+
+        setTooltipData({
+          name: matched.name,
+          startDate: start.toLocaleDateString('el-GR'),
+          endDate: end.toLocaleDateString('el-GR'),
+          duration: durationDays,
+          progress: taskProgress,
+        });
+        return;
+      }
+    }
+
+    hoveredTaskRef.current = '';
+    setTooltipData(null);
+  }, [taskGroups]);
+
+  const handleGanttPointerLeave = useCallback(() => {
+    hoveredTaskRef.current = '';
+    setTooltipData(null);
+  }, []);
+
   // Timeline bounds — aligned to month boundaries for correct bar positioning
   const timelineBounds = useMemo(() => {
     const now = new Date();
@@ -444,9 +521,14 @@ export function GanttView({ building }: GanttViewProps) {
         </Card>
       )}
 
-      {/* Gantt Chart — with right-click context menu via portal */}
+      {/* Gantt Chart — with right-click context menu + hover tooltip via portals */}
       {!isEmpty && (
-        <Card className="border-0 shadow-none" onContextMenu={handleContextMenu}>
+        <Card
+          className="border-0 shadow-none"
+          onContextMenu={handleContextMenu}
+          onPointerMove={handleGanttPointerMove}
+          onPointerLeave={handleGanttPointerLeave}
+        >
           <CardContent className={spacingTokens.padding.none} onMouseDownCapture={handleGanttMouseDown}>
             <GanttChart
               tasks={taskGroups}
@@ -537,6 +619,36 @@ export function GanttView({ building }: GanttViewProps) {
             {t('tabs.timeline.gantt.contextMenu.delete')}
           </button>
         </nav>,
+        document.body
+      )}
+
+      {/* Custom Hover Tooltip — portal to document.body, escapes all overflow */}
+      {tooltipData && createPortal(
+        <aside
+          ref={tooltipElRef}
+          className="fixed z-[99999] min-w-48 rounded border bg-popover p-2 text-popover-foreground text-xs shadow-lg pointer-events-none"
+          style={{ left: 0, top: 0 }}
+        >
+          <p className="font-bold mb-1">{tooltipData.name}</p>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
+            <dt className="text-muted-foreground font-semibold">
+              {t('tabs.timeline.gantt.tooltip.start')}:
+            </dt>
+            <dd>{tooltipData.startDate}</dd>
+            <dt className="text-muted-foreground font-semibold">
+              {t('tabs.timeline.gantt.tooltip.end')}:
+            </dt>
+            <dd>{tooltipData.endDate}</dd>
+            <dt className="text-muted-foreground font-semibold">
+              {t('tabs.timeline.gantt.tooltip.duration')}:
+            </dt>
+            <dd>{tooltipData.duration} {t('tabs.timeline.gantt.tooltip.days')}</dd>
+            <dt className="text-muted-foreground font-semibold">
+              {t('tabs.timeline.gantt.tooltip.progress')}:
+            </dt>
+            <dd>{tooltipData.progress}%</dd>
+          </dl>
+        </aside>,
         document.body
       )}
 

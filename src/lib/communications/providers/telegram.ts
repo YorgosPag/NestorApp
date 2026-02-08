@@ -2,6 +2,7 @@
 
 import { COMMUNICATION_CHANNELS } from '../../config/communications.config';
 import type { BaseMessageInput, SendResult } from '@/types/communications';
+import type { WebhookData, InboundParsed } from '../core/messageRouter';
 
 // ============================================================================
 // ENTERPRISE TYPES
@@ -81,6 +82,26 @@ class TelegramProvider {
     }
   }
 
+  private getBotId(): string {
+    if (!this.config.botToken) {
+      return '';
+    }
+    return this.config.botToken.split(':')[0];
+  }
+
+  private getInlineKeyboard(metadata: Record<string, unknown>): unknown[][] | undefined {
+    const inlineKeyboard = metadata.inline_keyboard;
+    if (!Array.isArray(inlineKeyboard)) {
+      return undefined;
+    }
+
+    if (!inlineKeyboard.every(row => Array.isArray(row))) {
+      return undefined;
+    }
+
+    return inlineKeyboard as unknown[][];
+  }
+
   /**
    * Αποστολή μηνύματος μέσω Telegram
    */
@@ -104,7 +125,7 @@ class TelegramProvider {
           payload = {
             chat_id: to,
             text: content,
-            parse_mode: metadata.parse_mode || 'HTML'
+            parse_mode: typeof metadata.parse_mode === 'string' ? metadata.parse_mode : 'HTML'
           };
           break;
 
@@ -112,16 +133,17 @@ class TelegramProvider {
           apiMethod = 'sendPhoto';
           payload = {
             chat_id: to,
-            photo: metadata.photo_url || content,
-            caption: metadata.caption || ''
+            photo: typeof metadata.photo_url === 'string' ? metadata.photo_url : content,
+            caption: typeof metadata.caption === 'string' ? metadata.caption : ''
           };
           break;
       }
 
       // Προσθήκη inline keyboard αν υπάρχει
-      if (metadata.inline_keyboard) {
+      const inlineKeyboard = this.getInlineKeyboard(metadata);
+      if (inlineKeyboard) {
         payload.reply_markup = {
-          inline_keyboard: metadata.inline_keyboard
+          inline_keyboard: inlineKeyboard
         };
       }
 
@@ -158,14 +180,14 @@ class TelegramProvider {
   /**
    * Parse εισερχόμενου μηνύματος από Telegram webhook
    */
-  async parseIncomingMessage(webhookData: TelegramWebhookData) {
+  async parseIncomingMessage(webhookData: WebhookData): Promise<InboundParsed> {
     try {
-      const { message, callback_query } = webhookData;
+      const { message, callback_query } = webhookData as TelegramWebhookData;
 
       if (message) {
         return {
           from: message.from.id.toString(),
-          to: this.config.botToken.split(':')[0], // Bot ID
+          to: this.getBotId(), // Bot ID
           content: message.text || message.caption || '[Media Message]',
           externalId: message.message_id.toString(),
           metadata: {
@@ -187,7 +209,7 @@ class TelegramProvider {
       if (callback_query) {
         return {
           from: callback_query.from.id.toString(),
-          to: this.config.botToken.split(':')[0],
+          to: this.getBotId(),
           content: `[Button Pressed: ${callback_query.data}]`,
           externalId: callback_query.id,
           metadata: {

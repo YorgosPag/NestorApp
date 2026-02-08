@@ -78,7 +78,7 @@ export function mapCompanyContactToFormData(contact: Contact): ContactFormData {
 
     gemiNumber: getContactValue(companyContact, 'gemiNumber') || getContactValue(companyContact, 'registrationNumber'),
     tradeName: getContactValue(companyContact, 'tradeName'),
-    legalForm: getContactValue(companyContact, 'legalForm'),
+    legalForm: (getContactValue(companyContact, 'legalForm') as CompanyContact['legalForm']) || '',
     gemiStatus: getContactValue(companyContact, 'gemiStatus'),
     gemiStatusDate: getContactValue(companyContact, 'gemiStatusDate'),
     chamber: getContactValue(companyContact, 'chamber'),

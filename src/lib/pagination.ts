@@ -9,7 +9,7 @@
 //
 // =============================================================================
 
-import { Query, QuerySnapshot, DocumentSnapshot, limit, startAfter } from 'firebase/firestore';
+import { Query, QuerySnapshot, DocumentSnapshot, limit, startAfter, query, getDocs } from 'firebase/firestore';
 
 // =============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
@@ -72,14 +72,10 @@ export function applyPagination(
     PAGINATION_DEFAULTS.MAX_PAGE_SIZE
   );
 
-  let paginatedQuery = baseQuery;
+  let paginatedQuery = query(baseQuery, limit(pageSize));
 
-  // Add limit
-  paginatedQuery = limit(paginatedQuery, pageSize);
-
-  // Add cursor for next pages
   if (options.startAfter) {
-    paginatedQuery = startAfter(paginatedQuery, options.startAfter);
+    paginatedQuery = query(paginatedQuery, startAfter(options.startAfter));
   }
 
   return paginatedQuery;
@@ -112,7 +108,7 @@ export function processPaginationResult<T>(
 /**
  * Create pagination state manager
  */
-export function createPaginationState(): PaginationState {
+export function createPaginationState<T>(): PaginationState<T> {
   return {
     currentPage: 0,
     hasNext: true,
@@ -125,10 +121,10 @@ export function createPaginationState(): PaginationState {
  * Update pagination state with new results
  */
 export function updatePaginationState<T>(
-  state: PaginationState,
+  state: PaginationState<T>,
   result: PaginatedResult<T>,
   append: boolean = true
-): PaginationState {
+): PaginationState<T> {
   return {
     ...state,
     currentPage: state.currentPage + 1,
@@ -161,7 +157,7 @@ export class InfiniteScrollPagination<T> {
     this.query = query;
     this.mapper = mapper;
     this.pageSize = pageSize;
-    this.state = createPaginationState();
+    this.state = createPaginationState<T>();
   }
 
   async loadNext(): Promise<PaginatedResult<T>> {
@@ -182,7 +178,7 @@ export class InfiniteScrollPagination<T> {
         startAfter: this.state.lastCursor
       });
 
-      const snapshot = await paginatedQuery.get();
+      const snapshot = await getDocs(paginatedQuery);
       const result = processPaginationResult(snapshot, this.pageSize, this.mapper);
 
       this.state = updatePaginationState(this.state, result, true);
@@ -199,12 +195,12 @@ export class InfiniteScrollPagination<T> {
     return this.state.allItems;
   }
 
-  getState(): PaginationState {
+  getState(): PaginationState<T> {
     return { ...this.state };
   }
 
   reset(): void {
-    this.state = createPaginationState();
+    this.state = createPaginationState<T>();
   }
 }
 
@@ -235,7 +231,7 @@ export class PageBasedPagination<T> {
       startAfter: startCursor
     });
 
-    const snapshot = await paginatedQuery.get();
+    const snapshot = await getDocs(paginatedQuery);
     const result = processPaginationResult(snapshot, this.pageSize, this.mapper);
 
     // Cache cursor for next page

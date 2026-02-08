@@ -169,19 +169,29 @@ export const sendBulkMessages = (messages: BaseMessageInput[]) =>
 
 export const sendCampaignToLeads = async (leads: LeadData[], campaignData: CampaignData) => {
   try {
-    const messages: BaseMessageInput[] = leads.map(lead => ({
-      ...campaignData,
-      to: campaignData.channel === MESSAGE_TYPES.EMAIL ? lead.email : lead.phone,
-      variables: {
-        ...campaignData.variables,
-        leadName: lead.fullName,
-        leadEmail: lead.email,
-        leadPhone: lead.phone
-      },
-      entityType: 'lead',
-      entityId: lead.id,
-      metadata: { ...campaignData.metadata, campaignType: 'bulk', automatedMessage: true }
-    }));
+    const messages: BaseMessageInput[] = leads
+      .map(lead => {
+        const to = campaignData.channel === MESSAGE_TYPES.EMAIL ? lead.email : lead.phone;
+        if (!to) {
+          return null;
+        }
+
+        return {
+          ...campaignData,
+          to,
+          variables: {
+            ...campaignData.variables,
+            leadName: lead.fullName || '',
+            leadEmail: lead.email || '',
+            leadPhone: lead.phone || ''
+          },
+          entityType: 'lead',
+          entityId: lead.id,
+          metadata: { ...campaignData.metadata, campaignType: 'bulk', automatedMessage: true }
+        };
+      })
+      .filter((message): message is BaseMessageInput => Boolean(message));
+
     return await sendBulkMessages(messages);
   } catch (error) {
     console.error('Error sending campaign:', error);

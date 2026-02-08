@@ -7,7 +7,8 @@
 
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Contact, Project } from '@/types';
+import type { Contact } from '@/types/contacts';
+import type { Project } from '@/types/project';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 /**

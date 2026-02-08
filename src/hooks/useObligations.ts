@@ -132,15 +132,6 @@ export function useObligation(id: string) {
 }
 
 // 🏢 ENTERPRISE: Obligation Template type
-export interface ObligationTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  category: string;
-  defaultValues?: Partial<ObligationDocument>;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
 
 /**
  * 📋 Hook for fetching obligation templates
@@ -219,3 +210,6 @@ export function useObligationStats() {
     error
   };
 }
+
+
+

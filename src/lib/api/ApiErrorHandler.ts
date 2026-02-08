@@ -16,7 +16,7 @@
 
 
 import { NextRequest, NextResponse } from 'next/server';
-import { errorTracker, type ErrorSeverity, type ErrorCategory } from '@/services/ErrorTracker';
+import { errorTracker, type ErrorSeverity, type ErrorCategory, type ErrorContext } from '@/services/ErrorTracker';
 import { getErrorConfig } from '@/config/error-reporting';
 import { generateRequestId } from '@/services/enterprise-id.service';
 
@@ -63,7 +63,7 @@ export interface ApiErrorResponse {
   errorId?: string;
   timestamp: string;
   requestId?: string;
-  details?: unknown;
+  details?: Record<string, unknown>;
   context?: Record<string, unknown>;
 }
 
@@ -353,7 +353,7 @@ export class ApiErrorHandler {
                 component: 'ApiErrorHandler',
                 action: `${request.method} ${context.path}`,
                 ...context
-              }
+              } as unknown as Partial<ErrorContext>
             );
           }
         } catch (trackerError) {
@@ -574,7 +574,7 @@ export class ApiErrorHandler {
     return process.env.NODE_ENV === 'development';
   }
 
-  private sanitizeErrorDetails(error: unknown): Record<string, unknown> | unknown {
+  private sanitizeErrorDetails(error: unknown): Record<string, unknown> {
     if (error instanceof Error) {
       return {
         name: error.name,
@@ -584,7 +584,11 @@ export class ApiErrorHandler {
       };
     }
 
-    return error;
+    if (error !== null && typeof error === 'object') {
+      return error as Record<string, unknown>;
+    }
+
+    return { value: error };
   }
 
   private logError(
@@ -681,29 +685,24 @@ type Constructor<T = object> = new (...args: unknown[]) => T;
 
 export function ApiErrorHandling(baseContext?: Partial<ApiErrorContext>) {
   return function <T extends Constructor>(constructor: T): T {
-    return class extends constructor {
-      constructor(...args: unknown[]) {
-        super(...args);
-
-        // Auto-wrap όλες τις methods
-        const self = this as Record<string, unknown>;
-        Object.getOwnPropertyNames(constructor.prototype).forEach(methodName => {
-          if (methodName !== 'constructor' && typeof self[methodName] === 'function') {
-            const originalMethod = self[methodName] as (...args: unknown[]) => Promise<unknown>;
-            self[methodName] = async function(request: NextRequest, ...methodArgs: unknown[]) {
-              try {
-                return await originalMethod.apply(this, [request, ...methodArgs]);
-              } catch (error) {
-                return await apiErrorHandler.handleError(error, request, {
-                  operation: methodName,
-                  ...baseContext
-                });
-              }
-            };
+    const prototype = constructor.prototype as Record<string, unknown>;
+    Object.getOwnPropertyNames(constructor.prototype).forEach(methodName => {
+      if (methodName !== 'constructor' && typeof prototype[methodName] === 'function') {
+        const originalMethod = prototype[methodName] as (...args: unknown[]) => Promise<unknown>;
+        prototype[methodName] = async function(request: NextRequest, ...methodArgs: unknown[]) {
+          try {
+            return await originalMethod.apply(this, [request, ...methodArgs]);
+          } catch (error) {
+            return await apiErrorHandler.handleError(error, request, {
+              operation: methodName,
+              ...baseContext
+            });
           }
-        });
+        };
       }
-    } as T;
+    });
+
+    return constructor;
   };
 }
 
@@ -732,3 +731,4 @@ export function isApiSuccessResponse<T>(response: unknown): response is ApiSucce
 }
 
 export default ApiErrorHandler;
+

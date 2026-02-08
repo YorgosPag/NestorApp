@@ -101,17 +101,17 @@ const completeUnitDoc: UnitDoc = {
   unitAmenities: ['garden', 'pool'],
   linkedSpaces: [
     {
-      spaceType: 'parking',
+      spaceType: 'parking' as const,
       spaceId: 'parking-001',
       quantity: 1,
-      inclusion: 'included',
+      inclusion: 'included' as const,
       metadata: { level: 'B1', number: '15' }
     },
     {
       spaceType: 'storage',
       spaceId: 'storage-001',
       quantity: 1,
-      inclusion: 'included',
+      inclusion: 'included' as const,
       metadata: { level: 'B1', size: '5sqm' }
     }
   ],
@@ -375,7 +375,7 @@ describe('validateUnitCompleteness', () => {
   });
 
   test('should return 33.33% for unit with only photos', () => {
-    const unitDoc = {
+    const unitDoc: UnitDoc = {
       ...minimalUnitDoc,
       unitCoverage: {
         hasPhotos: true,
@@ -394,7 +394,7 @@ describe('validateUnitCompleteness', () => {
   });
 
   test('should return 66.67% for unit with photos and floorplans', () => {
-    const unitDoc = {
+    const unitDoc: UnitDoc = {
       ...minimalUnitDoc,
       unitCoverage: {
         hasPhotos: true,
@@ -425,7 +425,7 @@ describe('validateUnitCompleteness', () => {
     ];
     
     testCases.forEach(({ photos, floorplans, documents, expected }) => {
-      const unitDoc = {
+      const unitDoc: UnitDoc = {
         ...minimalUnitDoc,
         unitCoverage: {
           hasPhotos: photos,
@@ -519,7 +519,7 @@ describe('prepareUnitForFirestore', () => {
   });
 
   test('should handle zero values correctly', () => {
-    const unitDoc = {
+    const unitDoc: UnitDoc = {
       ...minimalUnitDoc,
       price: 0,
       area: 0,
@@ -569,7 +569,7 @@ describe('getUnitDisplaySummary', () => {
   });
 
   test('should use unit ID as fallback title', () => {
-    const unitDoc = { ...minimalUnitDoc, name: '' };
+    const unitDoc: UnitDoc = { ...minimalUnitDoc, name: '' };
     const unit = normalizeUnit(unitDoc, backfillDefaults);
     unit.name = ''; // Override after normalization
     const summary = getUnitDisplaySummary(unit);
@@ -588,9 +588,9 @@ describe('getUnitDisplaySummary', () => {
   });
 
   test('should handle single view correctly with i18n', () => {
-    const unitDoc = {
+    const unitDoc: UnitDoc = {
       ...minimalUnitDoc,
-      views: [{ type: 'sea', quality: 'full' }]
+      views: [{ type: 'sea' as const, quality: 'full' as const }]
     };
 
     const unit = normalizeUnit(unitDoc);
@@ -600,12 +600,12 @@ describe('getUnitDisplaySummary', () => {
   });
 
   test('should handle multiple parking spaces with i18n', () => {
-    const unitDoc = {
+    const unitDoc: UnitDoc = {
       ...minimalUnitDoc,
       linkedSpaces: [
-        { spaceType: 'parking', spaceId: 'p1', quantity: 1, inclusion: 'included', metadata: {} },
-        { spaceType: 'parking', spaceId: 'p2', quantity: 1, inclusion: 'included', metadata: {} },
-        { spaceType: 'parking', spaceId: 'p3', quantity: 1, inclusion: 'included', metadata: {} }
+        { spaceType: 'parking' as const, spaceId: 'p1', quantity: 1, inclusion: 'included' as const, metadata: {} },
+        { spaceType: 'parking' as const, spaceId: 'p2', quantity: 1, inclusion: 'included' as const, metadata: {} },
+        { spaceType: 'parking' as const, spaceId: 'p3', quantity: 1, inclusion: 'included' as const, metadata: {} }
       ]
     };
 
@@ -623,9 +623,9 @@ describe('getUnitDisplaySummary', () => {
   });
 
   test('should not include Ready badge for non-ready units', () => {
-    const unitDoc = {
+    const unitDoc: UnitDoc = {
       ...completeUnitDoc,
-      operationalStatus: 'under-construction'
+      operationalStatus: 'under-construction' as const
     };
 
     const unit = normalizeUnit(unitDoc);
@@ -651,14 +651,14 @@ describe('getUnitDisplaySummary', () => {
 
 describe('Performance tests', () => {
   test('should handle large arrays efficiently', () => {
-    const largeDoc = {
+    const largeDoc: UnitDoc = {
       ...completeUnitDoc,
       interiorFeatures: Array(100).fill('fireplace'),
       linkedSpaces: Array(50).fill(null).map((_, i) => ({
-        spaceType: 'parking' as const,
+        spaceType: 'parking' as const as const,
         spaceId: `space-${i}`,
         quantity: 1,
-        inclusion: 'included',
+        inclusion: 'included' as const,
         metadata: { index: i }
       }))
     };
@@ -673,13 +673,13 @@ describe('Performance tests', () => {
   });
 
   test('should handle deeply nested structures', () => {
-    const deepDoc = {
+    const deepDoc: UnitDoc = {
       ...completeUnitDoc,
       linkedSpaces: [{
-        spaceType: 'parking' as const,
+        spaceType: 'parking' as const as const,
         spaceId: 'deep-1',
         quantity: 1,
-        inclusion: 'included',
+        inclusion: 'included' as const,
         metadata: { level5: 'deep value' }
       }]
     };
@@ -729,6 +729,8 @@ describe('Type safety tests', () => {
     expect(typeof unit.price).toBe('string');
   });
 });
+
+
 
 
 

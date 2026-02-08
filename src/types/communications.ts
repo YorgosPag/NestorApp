@@ -182,11 +182,11 @@ export interface SendResult {
 }
 
 export interface TemplateSendInput {
-  templateType?: string | null;
+  templateType: string;
   channel: Channel;
   to: string;
   content?: string | null;
-  variables?: Record<string, unknown>;
+  variables?: Record<string, string>;
   entityType?: 'lead' | 'contact' | 'unit';
   entityId?: string;
   metadata?: Record<string, unknown>;

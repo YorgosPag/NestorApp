@@ -65,7 +65,8 @@ export interface WithAuthOptions {
  */
 interface ErrorResponse {
   error: string;
-  code: string;
+  code?: string;
+  errorCode?: string;
   details?: Record<string, unknown>;
 }
 

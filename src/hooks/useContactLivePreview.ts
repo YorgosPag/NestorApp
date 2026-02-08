@@ -60,8 +60,7 @@ export function useContactLivePreview({
         serviceName: formData.serviceName,
 
         // 🏢 ΓΕΜΗ & Company Information
-        vatNumber: formData.vatNumber,
-        afm: formData.afm,
+        vatNumber: formData.vatNumber || formData.afm || editContact?.vatNumber || '',
         gemiNumber: formData.gemiNumber,
         legalForm: formData.legalForm || undefined,
         gemiStatus: formData.gemiStatus,
@@ -97,7 +96,6 @@ export function useContactLivePreview({
     formData.companyName,
     formData.serviceName,
     formData.vatNumber,
-    formData.afm,
     formData.gemiNumber,
     formData.legalForm,
     formData.gemiStatus,

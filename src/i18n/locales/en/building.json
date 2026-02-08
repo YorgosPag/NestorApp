@@ -1034,6 +1034,13 @@
           "colorPickerTitle": "Choose Bar Color",
           "delete": "Delete"
         },
+        "tooltip": {
+          "start": "Start",
+          "end": "End",
+          "duration": "Duration",
+          "progress": "Progress",
+          "days": "days"
+        },
         "dialog": {
           "createPhase": "Create Phase",
           "editPhase": "Edit Phase",

@@ -1034,6 +1034,13 @@
           "colorPickerTitle": "Επιλογή Χρώματος Μπάρας",
           "delete": "Διαγραφή"
         },
+        "tooltip": {
+          "start": "Έναρξη",
+          "end": "Λήξη",
+          "duration": "Διάρκεια",
+          "progress": "Πρόοδος",
+          "days": "ημέρες"
+        },
         "dialog": {
           "createPhase": "Δημιουργία Φάσης",
           "editPhase": "Επεξεργασία Φάσης",

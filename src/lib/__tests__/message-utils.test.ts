@@ -227,7 +227,7 @@ describe('message-utils', () => {
     it('should detect attachments', () => {
       const withAttachments: MessageContent = {
         text: 'Message',
-        attachments: [{ url: 'file.pdf', type: 'pdf', name: 'file.pdf' }],
+        attachments: [{ url: 'file.pdf', type: 'document', filename: 'file.pdf' }],
       };
 
       const withoutAttachments: MessageContent = {

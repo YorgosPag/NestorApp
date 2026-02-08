@@ -409,7 +409,7 @@ export class AuthorizedQueryService {
       const documents = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as T[];
+      })) as unknown as T[];
 
       return {
         documents: Object.freeze(documents),
@@ -500,7 +500,7 @@ export class AuthorizedQueryService {
         timeToExpiry: cacheDuration - age,
         cacheKey
       }
-    };
+    } as AuthorizedQueryResult<T>;
   }
 
   /**

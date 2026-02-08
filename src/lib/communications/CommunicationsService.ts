@@ -4,7 +4,20 @@ import messageRouter from './core/messageRouter';
 import TelegramProvider from './providers/telegram';
 import { MESSAGE_TYPES, MESSAGE_TEMPLATES, isChannelEnabled, COMMUNICATION_CHANNELS } from '../config/communications.config';
 import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, serverTimestamp, writeBatch, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+  doc,
+  getDoc,
+  serverTimestamp,
+  writeBatch,
+  updateDoc,
+  type QueryConstraint
+} from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { BaseMessageInput, SendResult, Channel } from '@/types/communications';
 import { companySettingsService } from '@/services/company/EnterpriseCompanySettingsService';
@@ -17,11 +30,14 @@ import { companySettingsService } from '@/services/company/EnterpriseCompanySett
 interface TemplateMessageInput {
   templateType: string;
   channel: Channel;
-  variables: Record<string, string>;
+  variables?: Record<string, string>;
   to: string;
   from?: string;
   subject?: string;
   metadata?: Record<string, unknown>;
+  entityType?: 'lead' | 'contact' | 'unit';
+  entityId?: string;
+  threadId?: string | null;
 }
 
 /** Options for fetching lead communications */
@@ -201,7 +217,7 @@ class CommunicationsService {
       throw new Error(`Template ${templateType} not found for channel ${channel}`);
     }
 
-    const content = this.replaceTemplateVariables(template, variables);
+    const content = this.replaceTemplateVariables(template, variables ?? {});
 
     return this.sendMessage({
       ...otherData,
@@ -228,7 +244,7 @@ class CommunicationsService {
         endDate = null
       } = options;
 
-      const qConstraints = [
+      const qConstraints: QueryConstraint[] = [
         where('entityType', '==', 'lead'),
         where('entityId', '==', leadId),
         orderBy('createdAt', 'desc'),
@@ -263,7 +279,7 @@ class CommunicationsService {
         unreadOnly = false
       } = options;
 
-      const qConstraints = [
+      const qConstraints: QueryConstraint[] = [
         orderBy('createdAt', 'desc'),
         limit(queryLimit)
       ];
