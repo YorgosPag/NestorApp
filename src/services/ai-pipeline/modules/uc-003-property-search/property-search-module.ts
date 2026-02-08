@@ -8,8 +8,8 @@
  * Pipeline steps implemented:
  *   Step 3 LOOKUP  → Parse criteria from email, query available units in Firestore
  *   Step 4 PROPOSE → Build unit list + draft reply email for operator approval
- *   Step 6 EXECUTE → Log action (Phase 2: send email via Mailgun)
- *   Step 7 ACKNOWLEDGE → Log confirmation (Phase 2: track delivery)
+ *   Step 6 EXECUTE → Send reply email via Mailgun + record audit trail
+ *   Step 7 ACKNOWLEDGE → Confirm delivery status
  *
  * @module services/ai-pipeline/modules/uc-003-property-search
  * @see ADR-080 (Pipeline Implementation)
@@ -328,6 +328,88 @@ function buildDraftReply(
 }
 
 // ============================================================================
+// MAILGUN EMAIL SENDING
+// ============================================================================
+
+interface MailgunSendResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}
+
+/**
+ * Send a reply email via Mailgun API.
+ *
+ * Uses server-side env vars (MAILGUN_API_KEY, MAILGUN_DOMAIN).
+ * Reuses same config pattern as EmailAdapter (server/comms/email-adapter.ts)
+ * but without client-side Firebase dependencies.
+ */
+async function sendReplyViaMailgun(params: {
+  to: string;
+  subject: string;
+  textBody: string;
+}): Promise<MailgunSendResult> {
+  const apiKey = process.env.MAILGUN_API_KEY?.trim();
+  const domain = process.env.MAILGUN_DOMAIN?.trim();
+
+  if (!apiKey || !domain) {
+    return {
+      success: false,
+      error: 'Mailgun not configured: missing MAILGUN_API_KEY or MAILGUN_DOMAIN',
+    };
+  }
+
+  // Derive "from" address: noreply@baseDomain (strip mg. prefix)
+  const fromEmail = process.env.MAILGUN_FROM_EMAIL?.trim()
+    ?? `noreply@${domain.startsWith('mg.') ? domain.slice(3) : domain}`;
+
+  const region = process.env.MAILGUN_REGION === 'eu'
+    ? 'api.eu.mailgun.net'
+    : 'api.mailgun.net';
+  const url = `https://${region}/v3/${domain}/messages`;
+
+  try {
+    const formData = new FormData();
+    formData.append('from', fromEmail);
+    formData.append('to', params.to);
+    formData.append('subject', params.subject);
+    formData.append('text', params.textBody);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('UC-003 MAILGUN: API error', {
+        status: response.status,
+        body: errorText.slice(0, 500),
+      });
+      return {
+        success: false,
+        error: `Mailgun API ${response.status}: ${errorText.slice(0, 200)}`,
+      };
+    }
+
+    const result = await response.json() as { id?: string; message?: string };
+
+    logger.info('UC-003 MAILGUN: Email sent', { messageId: result.id });
+    return {
+      success: true,
+      messageId: result.id ?? undefined,
+    };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.error('UC-003 MAILGUN: Send failed', { error: msg });
+    return { success: false, error: msg };
+  }
+}
+
+// ============================================================================
 // UC-003 MODULE
 // ============================================================================
 
@@ -495,23 +577,36 @@ export class PropertySearchModule implements IUCModule {
       }
 
       const params = replyAction.params;
+      const senderEmail = (params.senderEmail as string) ?? '';
+      const draftReply = (params.draftReply as string) ?? '';
+      const originalSubject = ctx.intake.normalized.subject ?? 'Αναζήτηση Ακινήτου';
 
-      // MVP: Log the approved action — Phase 2 will send via Mailgun
-      logger.info('UC-003 EXECUTE: Property search response approved', {
+      logger.info('UC-003 EXECUTE: Sending reply email via Mailgun', {
         requestId: ctx.requestId,
-        senderEmail: params.senderEmail,
+        senderEmail,
         matchingUnits: params.matchingUnitsCount,
         approvedBy: ctx.approval?.approvedBy ?? null,
       });
 
-      // Record the lead inquiry in the audit trail
+      // ── Send reply email via Mailgun ──
+      let mailgunResult: MailgunSendResult = { success: false, error: 'No recipient' };
+
+      if (senderEmail && draftReply) {
+        mailgunResult = await sendReplyViaMailgun({
+          to: senderEmail,
+          subject: `Re: ${originalSubject}`,
+          textBody: draftReply,
+        });
+      }
+
+      // ── Record in audit trail ──
       const adminDb = getAdminFirestore();
       const leadInquiry = {
         type: 'property_search_inquiry',
         companyId: ctx.companyId,
         pipelineRequestId: ctx.requestId,
         sender: {
-          email: (params.senderEmail as string) ?? null,
+          email: senderEmail ?? null,
           name: (params.senderName as string) ?? null,
           contactId: (params.contactId as string) ?? null,
           isKnownContact: (params.isKnownContact as boolean) ?? false,
@@ -519,7 +614,9 @@ export class PropertySearchModule implements IUCModule {
         searchCriteria: (params.criteriaSummary as string) ?? null,
         matchingUnitsCount: (params.matchingUnitsCount as number) ?? 0,
         totalAvailable: (params.totalAvailable as number) ?? 0,
-        status: 'approved_pending_send',
+        status: mailgunResult.success ? 'sent' : 'send_failed',
+        mailgunMessageId: mailgunResult.messageId ?? null,
+        mailgunError: mailgunResult.error ?? null,
         approvedBy: ctx.approval?.approvedBy ?? null,
         approvedAt: ctx.approval?.decidedAt ?? null,
         createdAt: new Date().toISOString(),
@@ -529,11 +626,22 @@ export class PropertySearchModule implements IUCModule {
         .collection(COLLECTIONS.AI_PIPELINE_AUDIT)
         .add(leadInquiry);
 
+      if (!mailgunResult.success) {
+        logger.warn('UC-003 EXECUTE: Email send failed, recorded in audit', {
+          requestId: ctx.requestId,
+          auditId: docRef.id,
+          error: mailgunResult.error,
+        });
+      }
+
       return {
         success: true,
         sideEffects: [
           `lead_inquiry_recorded:${docRef.id}`,
           `matching_units:${params.matchingUnitsCount ?? 0}`,
+          mailgunResult.success
+            ? `email_sent:${mailgunResult.messageId ?? 'unknown'}`
+            : `email_failed:${mailgunResult.error ?? 'unknown'}`,
         ],
       };
     } catch (error) {
@@ -555,18 +663,22 @@ export class PropertySearchModule implements IUCModule {
   // ── Step 7: ACKNOWLEDGE ─────────────────────────────────────────────────
 
   async acknowledge(ctx: PipelineContext): Promise<AcknowledgmentResult> {
-    // MVP: Log that reply email would be sent
-    // Phase 2: Send real email via Mailgun with the approved draft
     const channel = (ctx.intake.channel ?? PipelineChannel.EMAIL) as PipelineChannelValue;
 
-    logger.info('UC-003 ACKNOWLEDGE: Response pending (Phase 2: email sending)', {
+    // Check if email was sent successfully in EXECUTE step
+    const emailSent = ctx.executionResult?.sideEffects?.some(
+      (se: string) => se.startsWith('email_sent:')
+    ) ?? false;
+
+    logger.info('UC-003 ACKNOWLEDGE: Reply delivery status', {
       requestId: ctx.requestId,
       channel,
+      emailSent,
       senderEmail: ctx.intake.normalized.sender.email,
     });
 
     return {
-      sent: false,
+      sent: emailSent,
       channel,
     };
   }
