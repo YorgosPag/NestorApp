@@ -44,6 +44,32 @@ interface EnsureUserProfileRequest {
  * Creates a user profile document if it doesn't exist.
  * Uses Admin SDK to bypass Firestore rules.
  */
+/**
+ * GET /api/admin/ensure-user-profile?uid=xxx
+ *
+ * Reads a user profile document. Used for diagnostics.
+ */
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  try {
+    const uid = request.nextUrl.searchParams.get('uid');
+    if (!uid) {
+      return NextResponse.json({ success: false, error: 'uid query param required' }, { status: 400 });
+    }
+
+    const adminDb = getAdminFirestore();
+    const userSnapshot = await adminDb.collection(COLLECTIONS.USERS).doc(uid).get();
+
+    if (!userSnapshot.exists) {
+      return NextResponse.json({ success: false, error: 'Document not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: userSnapshot.data() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json() as EnsureUserProfileRequest;
