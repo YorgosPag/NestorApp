@@ -115,6 +115,33 @@ const TASK_TIMEFRAME_LABELS = {
   week: 'filters.timeframe.week'
 } as const;
 
+// 🏢 ENTERPRISE: CRM Dashboard stage labels (i18n keys) — Salesforce/HubSpot pattern
+const CRM_STAGE_LABELS = {
+  initial_contact: 'filters.crmStages.initial_contact',
+  qualification: 'filters.crmStages.qualification',
+  viewing: 'filters.crmStages.viewing',
+  proposal: 'filters.crmStages.proposal',
+  negotiation: 'filters.crmStages.negotiation',
+  contract: 'filters.crmStages.contract',
+  closed_won: 'filters.crmStages.closed_won',
+  closed_lost: 'filters.crmStages.closed_lost'
+} as const;
+
+// 🏢 ENTERPRISE: CRM Dashboard status labels (i18n keys)
+const CRM_STATUS_LABELS = {
+  active: 'filters.crmStatus.active',
+  inactive: 'filters.crmStatus.inactive',
+  pending: 'filters.crmStatus.pending'
+} as const;
+
+// 🏢 ENTERPRISE: CRM Dashboard period labels (i18n keys)
+const CRM_PERIOD_LABELS = {
+  day: 'filters.crmPeriod.day',
+  week: 'filters.crmPeriod.week',
+  month: 'filters.crmPeriod.month',
+  year: 'filters.crmPeriod.year'
+} as const;
+
 // 🏢 ENTERPRISE: Centralized filter labels - i18n translation keys
 const FL = PROPERTY_FILTER_LABELS;
 const SP = {
@@ -1272,6 +1299,92 @@ export const defaultTaskFilters: TaskFilterState = {
   priority: 'all',
   type: 'all',
   timeframe: 'all'
+};
+
+// ====================================================================
+// [ENTERPRISE] CRM Dashboard Filters Configuration — Salesforce/HubSpot Pattern
+// Global filters: Search + Pipeline Stage + Status + Period
+// ====================================================================
+
+export interface CrmDashboardFilterState {
+  [key: string]: unknown;
+  searchTerm: string;
+  stage: string;
+  status: string;
+  period: string;
+}
+
+export const defaultCrmDashboardFilters: CrmDashboardFilterState = {
+  searchTerm: '',
+  stage: 'all',
+  status: 'all',
+  period: 'all'
+};
+
+export const crmDashboardFiltersConfig: FilterPanelConfig = {
+  title: 'filters.title',
+  searchPlaceholder: SP.general,
+  i18nNamespace: 'filters',
+  rows: [
+    {
+      id: 'crm-dashboard-global',
+      fields: [
+        {
+          id: 'searchTerm',
+          type: 'search',
+          label: FL.search,
+          placeholder: SP.general,
+          ariaLabel: 'Search CRM Dashboard',
+          width: 2
+        },
+        {
+          id: 'stage',
+          type: 'select',
+          label: FL.stage,
+          placeholder: 'filters.crmStages.all',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.crmStages.all' },
+            { value: 'initial_contact', label: CRM_STAGE_LABELS.initial_contact },
+            { value: 'qualification', label: CRM_STAGE_LABELS.qualification },
+            { value: 'viewing', label: CRM_STAGE_LABELS.viewing },
+            { value: 'proposal', label: CRM_STAGE_LABELS.proposal },
+            { value: 'negotiation', label: CRM_STAGE_LABELS.negotiation },
+            { value: 'contract', label: CRM_STAGE_LABELS.contract },
+            { value: 'closed_won', label: CRM_STAGE_LABELS.closed_won },
+            { value: 'closed_lost', label: CRM_STAGE_LABELS.closed_lost }
+          ]
+        },
+        {
+          id: 'status',
+          type: 'select',
+          label: FL.status,
+          placeholder: 'filters.crmStatus.all',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.crmStatus.all' },
+            { value: 'active', label: CRM_STATUS_LABELS.active },
+            { value: 'inactive', label: CRM_STATUS_LABELS.inactive },
+            { value: 'pending', label: CRM_STATUS_LABELS.pending }
+          ]
+        },
+        {
+          id: 'period',
+          type: 'select',
+          label: FL.period,
+          placeholder: 'filters.crmPeriod.all',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.crmPeriod.all' },
+            { value: 'day', label: CRM_PERIOD_LABELS.day },
+            { value: 'week', label: CRM_PERIOD_LABELS.week },
+            { value: 'month', label: CRM_PERIOD_LABELS.month },
+            { value: 'year', label: CRM_PERIOD_LABELS.year }
+          ]
+        }
+      ]
+    }
+  ]
 };
 
 // ====================================================================

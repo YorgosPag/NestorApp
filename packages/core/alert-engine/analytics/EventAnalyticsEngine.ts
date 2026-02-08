@@ -305,7 +305,7 @@ export class EventAnalyticsEngine {
     const cacheKey = `eventMetrics_${timeRange.start.getTime()}_${timeRange.end.getTime()}`;
 
     if (this.isCacheValid(cacheKey)) {
-      return this.analyticsCache.get(cacheKey);
+      return this.analyticsCache.get(cacheKey) as EventMetrics;
     }
 
     const filteredEvents = this.filterEventsByTimeRange(this.events, timeRange);
@@ -328,7 +328,7 @@ export class EventAnalyticsEngine {
     const cacheKey = `alertMetrics_${timeRange.start.getTime()}_${timeRange.end.getTime()}`;
 
     if (this.isCacheValid(cacheKey)) {
-      return this.analyticsCache.get(cacheKey);
+      return this.analyticsCache.get(cacheKey) as AlertMetrics;
     }
 
     const filteredAlerts = this.filterAlertsByTimeRange(this.alerts, timeRange);
@@ -351,7 +351,7 @@ export class EventAnalyticsEngine {
     const cacheKey = `ruleMetrics_${timeRange.start.getTime()}_${timeRange.end.getTime()}`;
 
     if (this.isCacheValid(cacheKey)) {
-      return this.analyticsCache.get(cacheKey);
+      return this.analyticsCache.get(cacheKey) as RuleMetrics;
     }
 
     const filteredExecutions = this.filterRuleExecutionsByTimeRange(this.ruleExecutions, timeRange);
@@ -374,7 +374,7 @@ export class EventAnalyticsEngine {
     const cacheKey = `notificationMetrics_${timeRange.start.getTime()}_${timeRange.end.getTime()}`;
 
     if (this.isCacheValid(cacheKey)) {
-      return this.analyticsCache.get(cacheKey);
+      return this.analyticsCache.get(cacheKey) as NotificationMetrics;
     }
 
     const filteredNotifications = this.filterNotificationsByTimeRange(this.notifications, timeRange);

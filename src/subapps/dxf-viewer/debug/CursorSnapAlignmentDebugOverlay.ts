@@ -140,7 +140,9 @@ class CursorSnapAlignmentDebugger {
     let logCounter = 0;
     const trackSnap = () => {
       // Get snap results from window (set by LayerCanvas)
-      const snapResults = (window as any).__debugSnapResults || [];
+      const snapResults = Array.isArray(window.__debugSnapResults)
+        ? window.__debugSnapResults
+        : [];
       if (snapResults.length > 0) {
         const primarySnap = snapResults[0];
 
@@ -191,7 +193,7 @@ class CursorSnapAlignmentDebugger {
       const report = this.generateMeasurementReport();
 
       // Show in copyable toast
-      const showCopyableNotification = (window as any).showCopyableNotification;
+      const showCopyableNotification = window.showCopyableNotification;
       if (showCopyableNotification) {
         console.log('✅ Showing toast with report');
         showCopyableNotification(report, 'info');
@@ -493,5 +495,5 @@ export const cursorSnapAlignmentDebug = new CursorSnapAlignmentDebugger();
 
 // Global window access (for console debugging)
 if (typeof window !== 'undefined') {
-  (window as any).__cursorSnapAlignmentDebug = cursorSnapAlignmentDebug;
+  window.__cursorSnapAlignmentDebug = cursorSnapAlignmentDebug as unknown as Record<string, unknown>;
 }

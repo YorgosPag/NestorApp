@@ -16,6 +16,11 @@ type MockFunction = {
   mockClear: () => void;
 };
 
+type VisualBaselineOptions = {
+  threshold?: number;
+  maxMismatchPixels?: number;
+};
+
 function requireJest(): JestMockFactory {
   const current = (globalThis as { jest?: JestMockFactory }).jest;
   if (!current) {
@@ -419,7 +424,7 @@ function validateVisualMatch(
 declare global {
   namespace jest {
     interface Matchers<R> {
-      toMatchVisualBaseline(baselinePath: string, options?: any): R;
+      toMatchVisualBaseline(baselinePath: string, options?: VisualBaselineOptions): R;
       toBeWithinVisualThreshold(expected: number, threshold?: number): R;
     }
   }
@@ -427,7 +432,7 @@ declare global {
 
 // Extend Jest με visual regression matchers
 const visualMatchers = {
-  toMatchVisualBaseline(received: Buffer, baselinePath: string, options: any = {}) {
+  toMatchVisualBaseline(received: Buffer, baselinePath: string, options: VisualBaselineOptions = {}) {
     const pass = received instanceof Buffer && baselinePath.includes('.png');
 
     if (pass) {
@@ -461,8 +466,11 @@ const visualMatchers = {
 };
 
 // Apply matchers
-if (typeof expect !== 'undefined' && (expect as any).extend) {
-  (expect as any).extend(visualMatchers); // ✅ ENTERPRISE FIX: Jest expect.extend type assertion
+if (typeof expect !== 'undefined') {
+  const expectWithExtend = expect as unknown as { extend?: (matchers: typeof visualMatchers) => void };
+  if (typeof expectWithExtend.extend === 'function') {
+    expectWithExtend.extend(visualMatchers);
+  }
 }
 
 // Export all utilities για test files

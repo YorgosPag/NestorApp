@@ -208,8 +208,7 @@ export interface VerifyTwoFactorResult {
   /** Verification result */
   result: VerificationResult;
   /** User credential (if successful) */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  userCredential?: any; // Firebase UserCredential type
+  userCredential?: unknown; // Firebase UserCredential type
   /** Error message if failed */
   error?: string;
   /** Remaining attempts (if rate limited) */

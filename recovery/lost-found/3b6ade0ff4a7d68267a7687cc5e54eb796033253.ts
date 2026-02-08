@@ -26,6 +26,8 @@ import {
   type PointerSnapshot
 } from '../../rendering/core/CoordinateTransforms';
 import type { VertexMovement } from '../../core/commands';
+import type { ICommand } from '../../core/commands/interfaces';
+import type { Overlay } from '../../overlays/types';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -141,18 +143,15 @@ export interface UseCanvasMouseProps {
    */
   universalSelectionRef: React.MutableRefObject<{
     isSelected: (id: string) => boolean;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getIdsByType: (type: any) => string[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    clearByType: (type: any) => void;
+    getIdsByType: (type: string) => string[];
+    clearByType: (type: string) => void;
     clearAll: () => void;
   }>;
   /** Overlay store ref for getting overlay data
    * Note: Uses generic Record type to be compatible with command interfaces
    */
   overlayStoreRef: React.MutableRefObject<{
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    overlays: Record<string, any>;
+    overlays: Record<string, Overlay>;
     addVertex: (overlayId: string, insertIndex: number, vertex: [number, number]) => Promise<void>;
     updateVertex: (overlayId: string, vertexIndex: number, vertex: [number, number]) => Promise<void>;
     update?: (id: string, patch: { polygon: Array<[number, number]> }) => Promise<void>;
@@ -160,8 +159,7 @@ export interface UseCanvasMouseProps {
   /** Command execution function
    * Note: Uses broader type to be compatible with ICommand pattern
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  executeCommand: (command: any) => void;
+  executeCommand: (command: ICommand) => void;
   /** Movement detection threshold */
   movementDetectionThreshold: number;
 
@@ -546,9 +544,7 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
 
         // Execute through command history
         const { MoveMultipleOverlayVerticesCommand } = await import('../../core/commands');
-        // 🏢 ENTERPRISE: Type assertion - overlayStore from useOverlayStore has all required methods
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore as any);
+        const command = new MoveMultipleOverlayVerticesCommand(movements, overlayStore);
         executeCommand(command);
       }
 
@@ -612,12 +608,14 @@ export function useCanvasMouse(props: UseCanvasMouseProps): UseCanvasMouseReturn
 
         if (hasMovement && overlayStore.update) {
           const { MoveOverlayCommand } = await import('../../core/commands');
-          // 🏢 ENTERPRISE: Type assertion - overlayStore from useOverlayStore has all required methods
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const overlayStoreWithUpdate: {
+            overlays: Record<string, Overlay>;
+            update: (id: string, patch: { polygon: Array<[number, number]> }) => Promise<void>;
+          } = overlayStore;
           const command = new MoveOverlayCommand(
             draggingOverlayBody.overlayId,
             delta,
-            overlayStore as any,
+            overlayStoreWithUpdate,
             true // isDragging = true
           );
           executeCommand(command);

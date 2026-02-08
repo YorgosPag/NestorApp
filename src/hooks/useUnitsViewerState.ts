@@ -279,10 +279,12 @@ export function useUnitsViewerState() {
 
   // 🏢 ENTERPRISE: Flexible filter handler compatible with AdvancedFiltersPanel
   const handleFiltersChange = (newFilters: Partial<FilterState> | Record<string, unknown>) => {
+    const hasAreaRange = typeof newFilters === 'object' && newFilters !== null && 'areaRange' in newFilters;
+    const areaRange = hasAreaRange ? (newFilters as Record<string, unknown>).areaRange : undefined;
     console.log('🚀 FILTERS CHANGE DEBUG:', {
       newFilters,
-      areaRange: (newFilters as any)?.areaRange,
-      hasAreaRange: 'areaRange' in (newFilters as any)
+      areaRange,
+      hasAreaRange
     });
 
     if (setFilters) {
@@ -353,3 +355,5 @@ export function useUnitsViewerState() {
     forceDataRefresh,
   };
 }
+
+

@@ -183,6 +183,6 @@ export const rulerDebugOverlay = new RulerDebugOverlay();
  * 🎯 ATTACH TO WINDOW (for debugging from console)
  */
 if (typeof window !== 'undefined') {
-  (window as any).rulerDebugOverlay = rulerDebugOverlay;
+  window.rulerDebugOverlay = rulerDebugOverlay as unknown as Record<string, unknown>;
   console.log('🛠️ Ruler Debug Overlay attached to window.rulerDebugOverlay');
 }

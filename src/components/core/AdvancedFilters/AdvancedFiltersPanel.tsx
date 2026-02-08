@@ -25,13 +25,16 @@ interface AdvancedFiltersPanelProps<T extends GenericFilterState> {
   filters: T;
   onFiltersChange: (filters: T) => void;
   defaultOpen?: boolean; // Control if panel is open by default
+  /** Default filter values for proper reset (supports string-based defaults like 'all') */
+  defaultFilters?: T;
 }
 
 export function AdvancedFiltersPanel<T extends GenericFilterState>({
   config,
   filters,
   onFiltersChange,
-  defaultOpen = false
+  defaultOpen = false,
+  defaultFilters
 }: AdvancedFiltersPanelProps<T>) {
   // 🏢 ENTERPRISE: i18n hook with configurable namespace (PR1.2)
   const currentNamespace = config.i18nNamespace || 'building';
@@ -63,7 +66,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
     handleSelectChange,
     clearAllFilters,
     hasActiveFilters
-  } = useGenericFilters(filters, onFiltersChange);
+  } = useGenericFilters(filters, onFiltersChange, defaultFilters);
 
   const getFieldValue = (fieldId: string): FilterFieldValue => {
     if (fieldId.includes('Range')) {

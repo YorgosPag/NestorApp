@@ -931,11 +931,15 @@ export class DatabaseAnalytics {
     let qualityScore = 100;
     let issues = 0;
 
-    data.forEach(record => {
+    data.forEach(item => {
+      const record = item as Record<string, unknown>;
       // Check για missing critical fields
-      if (!record.name || record.name.trim() === '') issues++;
-      if (record.rms_error && record.rms_error > 5.0) issues++; // Poor accuracy
-      if (record.control_point_count && record.control_point_count < 3) issues++; // Insufficient points
+      const name = record.name as string | undefined;
+      if (!name || name.trim() === '') issues++;
+      const rmsError = record.rms_error as number | undefined;
+      if (rmsError && rmsError > 5.0) issues++; // Poor accuracy
+      const cpCount = record.control_point_count as number | undefined;
+      if (cpCount && cpCount < 3) issues++; // Insufficient points
     });
 
     const qualityPenalty = (issues / data.length) * 50;
@@ -948,8 +952,8 @@ export class DatabaseAnalytics {
     let totalFields = 0;
     let filledFields = 0;
 
-    data.forEach(record => {
-      Object.values(record).forEach(value => {
+    data.forEach(item => {
+      Object.values(item as Record<string, unknown>).forEach(value => {
         totalFields++;
         if (value !== null && value !== undefined && value !== '') {
           filledFields++;
@@ -969,8 +973,14 @@ export class DatabaseAnalytics {
     }
 
     // Analyze the data and generate context-specific recommendations
-    const projectsWithPoorAccuracy = data.filter(d => d.rms_error && d.rms_error > 2.0).length;
-    const projectsWithFewPoints = data.filter(d => d.control_point_count && d.control_point_count < 4).length;
+    const projectsWithPoorAccuracy = data.filter(item => {
+      const d = item as Record<string, unknown>;
+      return d.rms_error && (d.rms_error as number) > 2.0;
+    }).length;
+    const projectsWithFewPoints = data.filter(item => {
+      const d = item as Record<string, unknown>;
+      return d.control_point_count && (d.control_point_count as number) < 4;
+    }).length;
 
     if (projectsWithPoorAccuracy > 0) {
       recommendations.push(`${projectsWithPoorAccuracy} projects have poor accuracy (>2.0m RMS) - consider adding more control points`);

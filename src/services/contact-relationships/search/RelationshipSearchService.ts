@@ -82,7 +82,7 @@ export interface AdvancedSearchFilters {
 
   // Custom filters
   tags?: string[];
-  customFields?: Record<string, any>;
+  customFields?: Record<string, unknown>;
 }
 
 // ============================================================================

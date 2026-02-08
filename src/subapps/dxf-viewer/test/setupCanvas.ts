@@ -10,6 +10,8 @@ import { UI_COLORS } from '../config/color-config';
 // 🏢 ADR-XXX: Centralized viewport defaults
 import { VIEWPORT_DEFAULTS } from '../config/transform-config';
 
+type CanvasMimeType = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/avif' | 'image/gif';
+
 // 🎯 DETERMINISTIC FONT SETUP
 // Load fixed fonts για consistent text rendering
 try {
@@ -103,16 +105,17 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'toDataURL', {
  * Helper method για direct PNG buffer access
  */
 Object.defineProperty(HTMLCanvasElement.prototype, 'toBuffer', {
-  value: function(this: HTMLCanvasElement, mimeType: string = 'image/png') {
+  value: function(this: HTMLCanvasElement, mimeType: CanvasMimeType = 'image/png') {
     if (this.__napiCanvas) {
-      return this.__napiCanvas.toBuffer(mimeType as any);
+      // @napi-rs/canvas toBuffer accepts specific mime types
+      return this.__napiCanvas.toBuffer(mimeType as 'image/png');
     }
 
     // Fallback
     const width = this.width || VIEWPORT_DEFAULTS.WIDTH;
     const height = this.height || VIEWPORT_DEFAULTS.HEIGHT;
     const fallbackCanvas = createCanvas(width, height);
-    return fallbackCanvas.toBuffer(mimeType as any);
+    return fallbackCanvas.toBuffer(mimeType as 'image/png');
   },
   writable: true
 });

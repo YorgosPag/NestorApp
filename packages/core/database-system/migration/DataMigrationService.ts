@@ -407,8 +407,8 @@ export class DataMigrationService {
               conflicts.push({
                 id: memoryPoint.id,
                 type: 'control_point',
-                memoryVersion: memoryPoint,
-                databaseVersion: dbPoint,
+                memoryVersion: memoryPoint as unknown as Record<string, unknown>,
+                databaseVersion: dbPoint as unknown as Record<string, unknown>,
                 conflicts: pointConflicts
               });
             }

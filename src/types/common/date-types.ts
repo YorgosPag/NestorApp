@@ -22,7 +22,8 @@ export type FlexibleDateInput =
   | Date                    // Native Date object
   | string                  // ISO 8601 string "2024-12-11T10:00:00Z"
   | number                  // Unix timestamp (ms ή seconds)
-  | FirebaseTimestamp       // Firebase Firestore timestamp
+  | FirebaseTimestamp       // Firebase Firestore timestamp (full: seconds + nanoseconds)
+  | { toDate: () => Date }  // Firestore Timestamp (toDate-only pattern — FirestoreishTimestamp compat)
   | null                    // Explicit null
   | undefined;              // Optional/missing dates
 

@@ -37,9 +37,10 @@ export function ContactBasicInfoTab({
   } = additionalData || {};
 
   // Get basic info section (always first)
-  const basicInfoSection = sections.find(section =>
-    section.id === 'basicInfo' || section.id === 'basic'
-  );
+  const basicInfoSection = sections.find(section => {
+    const s = section as { id?: string };
+    return s.id === 'basicInfo' || s.id === 'basic';
+  });
 
   if (!basicInfoSection) {
     return (

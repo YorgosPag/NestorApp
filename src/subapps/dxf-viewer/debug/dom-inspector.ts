@@ -194,8 +194,8 @@ export function showDetailedDOMInfo(): void {
 }
 
 // Export στο window για εύκολη πρόσβαση
-(window as any).inspectDOMElements = inspectDOMElements;
-(window as any).findFloatingPanelAdvanced = findFloatingPanelAdvanced;
-(window as any).showDetailedDOMInfo = showDetailedDOMInfo;
+window.inspectDOMElements = inspectDOMElements;
+window.findFloatingPanelAdvanced = findFloatingPanelAdvanced;
+window.showDetailedDOMInfo = showDetailedDOMInfo;
 
 export default { inspectDOMElements, findFloatingPanelAdvanced, showDetailedDOMInfo };

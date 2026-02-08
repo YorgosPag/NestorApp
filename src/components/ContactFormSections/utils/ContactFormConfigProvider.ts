@@ -13,14 +13,21 @@ import type { ContactType } from '@/types/contacts';
 // TYPES & INTERFACES
 // ============================================================================
 
-// 🏢 ENTERPRISE: Form tab renderer component type (flexible to support all renderers)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type FormTabRendererComponent = React.ComponentType<any>;
+// 🏢 ENTERPRISE: Dynamic renderer dispatch — each renderer has its own props interface.
+// Common base props: sections, formData, onChange, onSelectChange, disabled.
+// Renderers are stored generically and typed at call site.
+interface FormTabRendererBaseProps {
+  sections: unknown[];
+  formData?: unknown;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onSelectChange?: (name: string, value: string) => void;
+  disabled?: boolean;
+}
+type FormTabRendererComponent = React.ComponentType<FormTabRendererBaseProps>;
 
 export interface ContactFormConfig {
   // 🏢 ENTERPRISE: Generic sections array - each renderer has its own section type
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getSections: () => any[];
+  getSections: () => unknown[];
   renderer: FormTabRendererComponent;
   name: string;
 }
@@ -53,21 +60,21 @@ export function getContactFormConfig(contactType: ContactType): ContactFormConfi
     case 'individual':
       return {
         getSections: getIndividualSortedSections,
-        renderer: IndividualFormTabRenderer,
+        renderer: IndividualFormTabRenderer as unknown as FormTabRendererComponent,
         name: 'Φυσικό Πρόσωπο'
       };
 
     case 'company':
       return {
         getSections: getSortedSections, // ΓΕΜΙ config
-        renderer: GenericFormTabRenderer,
+        renderer: GenericFormTabRenderer as unknown as FormTabRendererComponent,
         name: 'Εταιρεία'
       };
 
     case 'service':
       return {
         getSections: getServiceSortedSections,
-        renderer: ServiceFormTabRenderer,
+        renderer: ServiceFormTabRenderer as unknown as FormTabRendererComponent,
         name: 'Δημόσια Υπηρεσία'
       };
 

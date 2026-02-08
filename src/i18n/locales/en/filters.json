@@ -133,6 +133,30 @@
   "pipelineStatus": {
     "proposed": "Pending Review"
   },
+  "crmStages": {
+    "all": "All stages",
+    "initial_contact": "Initial Contact",
+    "qualification": "Qualification",
+    "viewing": "Viewing",
+    "proposal": "Proposal",
+    "negotiation": "Negotiation",
+    "contract": "Contract",
+    "closed_won": "Closed (Won)",
+    "closed_lost": "Closed (Lost)"
+  },
+  "crmStatus": {
+    "all": "All statuses",
+    "active": "Active",
+    "inactive": "Inactive",
+    "pending": "Pending"
+  },
+  "crmPeriod": {
+    "all": "All periods",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month",
+    "year": "Year"
+  },
   "fields": {
     "search": "Search",
     "priceRange": "Price Range",
@@ -163,7 +187,9 @@
     "yearRange": "Year Range",
     "progressRange": "Progress Range",
     "startYearRange": "Start Year Range",
-    "timeframe": "Timeframe"
+    "timeframe": "Timeframe",
+    "stage": "Stage",
+    "period": "Period"
   },
   "placeholders": {
     "general": "Search...",

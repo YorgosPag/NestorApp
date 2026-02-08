@@ -27,6 +27,7 @@ import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from '
 import { Source, Layer } from 'react-map-gl/maplibre';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { LngLatBounds } from 'maplibre-gl';
+import type * as GeoJSON from 'geojson';
 
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
@@ -77,6 +78,14 @@ export interface AddressMapProps {
   /** Additional CSS classes */
   className?: string;
 }
+
+type AddressFeatureProperties = {
+  id?: string;
+  street?: string;
+  city?: string;
+  isPrimary?: boolean;
+  label: string;
+};
 
 // =============================================================================
 // COMPONENT
@@ -246,7 +255,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
    */
   const markersGeoJSON = useMemo(() => {
     const features = addresses
-      .map(address => {
+      .map((address): GeoJSON.Feature<GeoJSON.Point, AddressFeatureProperties> | null => {
         const geocoded = geocodedAddresses.get(address.id);
         if (!geocoded) return null;
 
@@ -268,11 +277,11 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
           }
         };
       })
-      .filter(Boolean);
+      .filter((feature): feature is GeoJSON.Feature<GeoJSON.Point, AddressFeatureProperties> => feature !== null);
 
     return {
       type: 'FeatureCollection' as const,
-      features: features as any[]
+      features
     };
   }, [addresses, geocodedAddresses, t]);
 
@@ -451,3 +460,4 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 AddressMap.displayName = 'AddressMap';
 
 export default AddressMap;
+

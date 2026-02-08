@@ -52,7 +52,7 @@ export class EnterpriseContactSaver {
   static convertToEnterpriseStructure(formData: Partial<ContactFormData>): EnterpriseContactData {
     console.log('🏢 ENTERPRISE SAVER: Converting form data to arrays structure');
 
-    const enterpriseData = { ...formData };
+    const enterpriseData: EnterpriseContactData = { ...formData } as EnterpriseContactData;
 
     // ========================================================================
     // ADDRESS CONVERSION: flat fields → addresses[]
@@ -74,7 +74,7 @@ export class EnterpriseContactSaver {
         label: 'contacts.address.primary'
       };
 
-      (enterpriseData as any).addresses = [primaryAddress];
+      enterpriseData.addresses = [primaryAddress];
       console.log('🏠 ENTERPRISE SAVER: Created primary address:', primaryAddress);
     }
 
@@ -121,7 +121,7 @@ export class EnterpriseContactSaver {
     // ========================================================================
 
     if (formData.socialMediaArray && Array.isArray(formData.socialMediaArray) && formData.socialMediaArray.length > 0) {
-      (enterpriseData as any).socialMedia = formData.socialMediaArray;
+      enterpriseData.socialMedia = formData.socialMediaArray;
       console.log('🌐 ENTERPRISE SAVER: Using dynamic social media array:', formData.socialMediaArray.length, 'items');
     }
 

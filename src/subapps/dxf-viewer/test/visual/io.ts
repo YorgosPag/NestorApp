@@ -68,7 +68,7 @@ export interface VisualTestResult {
   timestamp: string;
   duration: number;
   artifacts: ArtifactPaths;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export function writeArtifacts(

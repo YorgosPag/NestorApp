@@ -85,7 +85,7 @@ function testReversibility(): boolean {
  * Export για χρηση σε browser console
  */
 if (typeof window !== 'undefined') {
-  (window as any).testCoordinateReversibility = testReversibility;
+  window.testCoordinateReversibility = testReversibility;
 }
 
 export { testReversibility };

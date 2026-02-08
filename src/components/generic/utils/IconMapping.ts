@@ -176,12 +176,12 @@ export type IconName = keyof typeof ICON_MAPPING;
  * 🏢 ENTERPRISE: Get icon component by name with type safety
  * Returns LucideIcon component or custom icon (like CraneIcon) for the given icon name
  */
-export function getIconComponent(iconName: string): LucideIcon | React.FC<any> {
+export function getIconComponent(iconName: string): LucideIcon | React.ComponentType<{ className?: string }> {
   // Direct lookup in mapping
   const iconComponent = ICON_MAPPING[iconName as IconName];
   if (iconComponent) {
     // 🏢 ENTERPRISE: Type assertion to handle both Lucide icons and custom icons
-    return iconComponent as LucideIcon | React.FC<any>;
+    return iconComponent as LucideIcon | React.ComponentType<{ className?: string }>;
   }
 
   // Fallback για unrecognized icons

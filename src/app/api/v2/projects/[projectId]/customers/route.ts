@@ -99,11 +99,11 @@ interface ProjectCustomersResponse {
  */
 export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
-  context: { params: Promise<{ projectId: string }> }
+  context?: { params: Promise<{ projectId: string }> }
 ) {
   const handler = withAuth<ProjectCustomersResponse | { success: boolean; error: string }>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      return handleGetCustomers(req, ctx, context.params);
+      return handleGetCustomers(req, ctx, context!.params);
     },
     { permissions: 'projects:projects:view' }
   );

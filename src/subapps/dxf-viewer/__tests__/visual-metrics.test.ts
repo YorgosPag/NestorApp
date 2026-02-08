@@ -14,7 +14,7 @@ interface VisualMetric {
   name: string;
   value: number;
   tags: Record<string, string>;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -24,7 +24,7 @@ function logMetric(
   name: string,
   value: number,
   tags: Record<string, string> = {},
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): void {
   const metric: VisualMetric = {
     timestamp: Date.now(),

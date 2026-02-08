@@ -16,7 +16,7 @@ import { ContactRelationship } from '@/types/contacts/relationships';
 // CACHE TYPES
 // ============================================================================
 
-export interface CacheEntry<T = any> {
+export interface CacheEntry<T = unknown> {
   data: T;
   timestamp: number;
   ttl: number;
@@ -50,7 +50,7 @@ type CacheStrategy = 'LRU' | 'LFU' | 'TTL' | 'FIFO';
 interface CacheKey {
   type: 'contact' | 'organization' | 'department' | 'search';
   id: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -72,7 +72,7 @@ interface CacheKey {
  * - Multi-key cache patterns
  */
 export class RelationshipCacheAdapter {
-  private static cache = new Map<string, CacheEntry<any>>();
+  private static cache = new Map<string, CacheEntry<unknown>>();
   private static config: CacheConfig = {
     defaultTTL: 5 * 60 * 1000, // 5 minutes
     maxEntries: 1000,
@@ -247,7 +247,7 @@ export class RelationshipCacheAdapter {
   static cacheOrganizationRelationships(
     organizationId: string,
     relationships: ContactRelationship[],
-    filters?: Record<string, any>
+    filters?: Record<string, unknown>
   ): void {
     const key: CacheKey = {
       type: 'organization',
@@ -263,7 +263,7 @@ export class RelationshipCacheAdapter {
    */
   static getCachedOrganizationRelationships(
     organizationId: string,
-    filters?: Record<string, any>
+    filters?: Record<string, unknown>
   ): ContactRelationship[] | null {
     const key: CacheKey = {
       type: 'organization',
@@ -293,11 +293,12 @@ export class RelationshipCacheAdapter {
   /**
    * 🔍 Cache Search Results
    */
-  static cacheSearchResults(searchParams: Record<string, any>, results: ContactRelationship[]): void {
+  static cacheSearchResults(searchParams: Record<string, unknown> | object, results: ContactRelationship[]): void {
+    const params = searchParams as Record<string, unknown>;
     const key: CacheKey = {
       type: 'search',
-      id: this.hashParams(searchParams),
-      params: searchParams
+      id: this.hashParams(params),
+      params
     };
 
     // Shorter TTL για search results
@@ -307,11 +308,12 @@ export class RelationshipCacheAdapter {
   /**
    * 🔍 Get Cached Search Results
    */
-  static getCachedSearchResults(searchParams: Record<string, any>): ContactRelationship[] | null {
+  static getCachedSearchResults(searchParams: Record<string, unknown> | object): ContactRelationship[] | null {
+    const params = searchParams as Record<string, unknown>;
     const key: CacheKey = {
       type: 'search',
-      id: this.hashParams(searchParams),
-      params: searchParams
+      id: this.hashParams(params),
+      params
     };
 
     return this.get<ContactRelationship[]>(key);
@@ -507,7 +509,7 @@ export class RelationshipCacheAdapter {
   /**
    * #️⃣ Hash Parameters
    */
-  private static hashParams(params: Record<string, any>): string {
+  private static hashParams(params: Record<string, unknown>): string {
     const sortedKeys = Object.keys(params).sort();
     const paramString = sortedKeys
       .map(key => `${key}=${JSON.stringify(params[key])}`)

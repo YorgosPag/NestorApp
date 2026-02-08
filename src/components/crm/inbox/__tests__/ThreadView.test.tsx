@@ -31,7 +31,7 @@ beforeAll(() => {
 // Mock hooks
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
-    t: (key: string, params?: Record<string, any>) => {
+    t: (key: string, params?: Record<string, unknown>) => {
       // Mock translation function
       if (key === 'inbox.thread.selectConversation') return 'Select a conversation';
       if (key === 'inbox.loading') return 'Loading...';

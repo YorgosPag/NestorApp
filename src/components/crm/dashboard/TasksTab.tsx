@@ -26,7 +26,6 @@ import { Button } from '@/components/ui/button';
 import CreateTaskModal from './dialogs/CreateTaskModal';
 import type { CrmTask, Opportunity, FirestoreishTimestamp } from '@/types/crm';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
@@ -106,7 +105,6 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
   // 🏢 ENTERPRISE: Use externally provided filters or defaults
   const filters = externalFilters ?? defaultTaskFilters;
   const iconSizes = useIconSizes();
-  const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   const { t } = useTranslation('crm');
   // 🏢 ENTERPRISE: Auth context for race condition prevention
@@ -272,10 +270,10 @@ export function TasksTab({ filters: externalFilters, onTaskCreated }: TasksTabPr
                     {task.description && <div className={`${colors.text.primary} ${sp.margin.top.sm}`}><SafeHTMLContent html={task.description} /></div>}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 ml-4">
-                  {task.status !== 'completed' && <Button size="sm" variant="ghost" className={colors.text.success} onClick={() => handleCompleteTask(task.id, task.title)} aria-label={t('tasks.actions.complete')}><CheckCircle className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.complete')}</Button>}
-                  <Button size="sm" variant="ghost" aria-label={t('tasks.actions.edit')}><Edit3 className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.edit')}</Button>
-                  <Button size="sm" variant="ghost" className={colors.text.error} onClick={() => handleDeleteTask(task.id, task.title)} aria-label={t('tasks.actions.delete')}><Trash2 className={`${iconSizes.sm} mr-1`} />{t('tasks.actions.delete')}</Button>
+                <div className={`flex items-center ${sp.gap.sm} ${sp.margin.left.md}`}>
+                  {task.status !== 'completed' && <Button size="sm" variant="ghost" className={colors.text.success} onClick={() => handleCompleteTask(task.id, task.title)} aria-label={t('tasks.actions.complete')}><CheckCircle className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.complete')}</Button>}
+                  <Button size="sm" variant="ghost" aria-label={t('tasks.actions.edit')}><Edit3 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.edit')}</Button>
+                  <Button size="sm" variant="ghost" className={colors.text.error} onClick={() => handleDeleteTask(task.id, task.title)} aria-label={t('tasks.actions.delete')}><Trash2 className={`${iconSizes.sm} ${sp.margin.right.xs}`} />{t('tasks.actions.delete')}</Button>
                 </div>
               </div>
             </article>

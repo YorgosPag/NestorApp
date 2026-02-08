@@ -72,8 +72,8 @@ describe('message-utils', () => {
 
     it('should handle empty input', () => {
       expect(sanitizeHTML('')).toBe('');
-      expect(sanitizeHTML(null as any)).toBe('');
-      expect(sanitizeHTML(undefined as any)).toBe('');
+      expect(sanitizeHTML(null)).toBe('');
+      expect(sanitizeHTML(undefined)).toBe('');
     });
   });
 
@@ -163,7 +163,7 @@ describe('message-utils', () => {
       const emptyContent: MessageContent = { text: '' };
       expect(formatMessageHTML(emptyContent)).toBe('');
 
-      const nullContent = null as any;
+      const nullContent = null;
       expect(formatMessageHTML(nullContent)).toBe('');
     });
   });
@@ -193,7 +193,7 @@ describe('message-utils', () => {
 
     it('should handle empty input', () => {
       expect(stripHTMLTags('')).toBe('');
-      expect(stripHTMLTags(null as any)).toBe('');
+      expect(stripHTMLTags(null)).toBe('');
     });
   });
 

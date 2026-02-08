@@ -47,7 +47,7 @@ export function ContactCommunicationTab({
 
   const handleWebsitesChange = React.useCallback((websites: WebsiteInfo[]) => {
     if (setFormData && formData) {
-      setFormData({ ...formData, websites: websites as any });
+      setFormData({ ...formData, websites });
     }
   }, [setFormData, formData]);
 
@@ -67,7 +67,7 @@ export function ContactCommunicationTab({
         disabled={disabled}
         onPhonesChange={handlePhonesChange}
         onEmailsChange={handleEmailsChange}
-        onWebsitesChange={handleWebsitesChange as (websites: WebsiteInfo[]) => void}
+        onWebsitesChange={handleWebsitesChange}
         onSocialMediaChange={handleSocialMediaChange}
       />
     </div>

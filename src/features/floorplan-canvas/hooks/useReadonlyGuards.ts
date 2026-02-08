@@ -14,7 +14,7 @@ export function useReadonlyGuards(isReadOnly: boolean) {
     return isReadOnly;
   }, [isReadOnly]);
 
-  const withReadOnlyCheck = useCallback(<T extends any[]>(
+  const withReadOnlyCheck = useCallback(<T extends unknown[]>(
     callback: (...args: T) => void,
     actionName: string = 'action'
   ) => {

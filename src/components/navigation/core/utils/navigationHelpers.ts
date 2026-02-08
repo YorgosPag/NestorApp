@@ -11,7 +11,7 @@ import type { NavigationState, NavigationLevel } from '../types';
 export function buildNavigationUrl(
   type: 'properties' | 'projects' | 'buildings' | 'floorplan',
   state: NavigationState,
-  additionalFilters?: Record<string, any>
+  additionalFilters?: Record<string, unknown>
 ): string {
   const baseFilters = {
     company: state.selectedCompany?.companyName,

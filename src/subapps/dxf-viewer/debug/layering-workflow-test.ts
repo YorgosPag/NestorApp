@@ -22,6 +22,10 @@ interface WorkflowStep {
   run: () => Promise<void>;
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
 /**
  * Utility: sleep με promise
  */
@@ -48,16 +52,16 @@ async function withRetries<T>(
   retries = 3,
   delay = 300
 ): Promise<T> {
-  let lastErr;
+  let lastErr: unknown;
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
-    } catch (err: any) {
+    } catch (err: unknown) {
       lastErr = err;
       await sleep(delay * (i + 1));
     }
   }
-  throw lastErr;
+  throw lastErr ?? new Error('Unknown error');
 }
 
 /**
@@ -71,13 +75,13 @@ async function runStep(step: WorkflowStep): Promise<StepResult> {
     const duration = performance.now() - start;
     console.log(`✅ PASS: ${step.name} (${duration.toFixed(1)} ms)`);
     return { step: step.name, status: "success", durationMs: duration };
-  } catch (err: any) {
+  } catch (err: unknown) {
     const duration = performance.now() - start;
     console.error(`❌ FAIL: ${step.name}`, err);
     return {
       step: step.name,
       status: "failed",
-      error: err.message,
+      error: getErrorMessage(err),
       durationMs: duration,
     };
   }
@@ -594,7 +598,11 @@ export async function runLayeringWorkflowTest(): Promise<WorkflowResult> {
 /**
  * Legacy compatibility - για backward compatibility με existing code
  */
-export async function runLayeringWorkflowTestAdvanced(): Promise<any> {
+export async function runLayeringWorkflowTestAdvanced(): Promise<{
+  success: boolean;
+  message: string;
+  details: WorkflowResult;
+}> {
   const result = await runLayeringWorkflowTest();
   return {
     success: result.success,
@@ -604,7 +612,7 @@ export async function runLayeringWorkflowTestAdvanced(): Promise<any> {
 }
 
 // Ενσωμάτωση στο window για debugging
-(window as any).runLayeringWorkflowTest = runLayeringWorkflowTest;
-(window as any).runLayeringWorkflowTestAdvanced = runLayeringWorkflowTestAdvanced;
+window.runLayeringWorkflowTest = runLayeringWorkflowTest;
+window.runLayeringWorkflowTestAdvanced = runLayeringWorkflowTestAdvanced;
 
 export default runLayeringWorkflowTest;

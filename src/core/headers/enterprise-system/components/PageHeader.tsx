@@ -78,7 +78,7 @@ interface HeaderActionsProps {
   addButton?: {
     label: string;
     onClick: () => void;
-    icon?: React.ComponentType<any>;
+    icon?: React.ComponentType<{ className?: string }>;
   };
   customActions?: React.ReactNode[];
 }

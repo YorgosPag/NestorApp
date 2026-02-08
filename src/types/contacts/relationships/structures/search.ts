@@ -67,7 +67,7 @@ export interface RelationshipSearchCriteria {
   textSearch?: string;
 
   /** 📋 Custom field filters */
-  customFieldFilters?: Record<string, any>;
+  customFieldFilters?: Record<string, unknown>;
 
   /** 📄 Pagination */
   limit?: number;

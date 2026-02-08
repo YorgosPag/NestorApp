@@ -162,6 +162,7 @@ export default function CrmTasksPage() {
         config={taskFiltersConfig}
         filters={filters}
         onFiltersChange={setFilters}
+        defaultFilters={defaultTaskFilters}
       />
 
       {/* 🏢 ENTERPRISE: Task list with centralized ListContainer */}

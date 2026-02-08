@@ -56,6 +56,11 @@ interface AutoFixResult {
   };
 }
 
+type ProjectRecord = {
+  id: string;
+  companyId?: string | null;
+} & Record<string, unknown>;
+
 /**
  * POST - Execute Auto-Fix (withAuth protected)
  * Detects and adds missing companies to navigation.
@@ -129,7 +134,7 @@ async function handleAutoFixExecute(request: NextRequest, ctx: AuthContext): Pro
     const projectsSnapshot = await getDocs(collection(db, COLLECTIONS.PROJECTS));
 
     // Group projects by companyId
-    const projectsByCompany: Record<string, any[]> = {};
+    const projectsByCompany: Record<string, ProjectRecord[]> = {};
     projectsSnapshot.docs.forEach(doc => {
       const project = doc.data();
       const companyId = project.companyId;

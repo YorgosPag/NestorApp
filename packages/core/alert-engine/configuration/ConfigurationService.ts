@@ -472,16 +472,16 @@ export class ConfigurationService {
 
     // Compare global settings
     this.compareObjects(
-      oldConfig.globalSettings,
-      newConfig.globalSettings,
+      oldConfig.globalSettings as unknown as Record<string, unknown>,
+      newConfig.globalSettings as unknown as Record<string, unknown>,
       'globalSettings',
       modified
     );
 
     // Compare notification config
     this.compareObjects(
-      oldConfig.notificationConfig,
-      newConfig.notificationConfig,
+      oldConfig.notificationConfig as unknown as Record<string, unknown>,
+      newConfig.notificationConfig as unknown as Record<string, unknown>,
       'notificationConfig',
       modified
     );

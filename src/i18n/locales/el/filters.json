@@ -133,6 +133,30 @@
   "pipelineStatus": {
     "proposed": "Σε Αναμονή"
   },
+  "crmStages": {
+    "all": "Όλα τα στάδια",
+    "initial_contact": "Αρχική Επαφή",
+    "qualification": "Αξιολόγηση",
+    "viewing": "Ξενάγηση",
+    "proposal": "Πρόταση",
+    "negotiation": "Διαπραγμάτευση",
+    "contract": "Συμβόλαιο",
+    "closed_won": "Κλειστό (Επιτυχία)",
+    "closed_lost": "Κλειστό (Αποτυχία)"
+  },
+  "crmStatus": {
+    "all": "Όλες οι καταστάσεις",
+    "active": "Ενεργό",
+    "inactive": "Ανενεργό",
+    "pending": "Εκκρεμές"
+  },
+  "crmPeriod": {
+    "all": "Όλες οι περίοδοι",
+    "day": "Ημέρα",
+    "week": "Εβδομάδα",
+    "month": "Μήνας",
+    "year": "Έτος"
+  },
   "fields": {
     "search": "Αναζήτηση",
     "priceRange": "Εύρος Τιμής",
@@ -163,7 +187,9 @@
     "yearRange": "Εύρος Ετών",
     "progressRange": "Εύρος Προόδου",
     "startYearRange": "Εύρος Έτους Έναρξης",
-    "timeframe": "Χρονικό Πλαίσιο"
+    "timeframe": "Χρονικό Πλαίσιο",
+    "stage": "Στάδιο",
+    "period": "Περίοδος"
   },
   "placeholders": {
     "general": "Αναζήτηση...",

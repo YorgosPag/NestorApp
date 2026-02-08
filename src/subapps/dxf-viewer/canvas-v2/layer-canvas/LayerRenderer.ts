@@ -357,20 +357,18 @@ export class LayerRenderer {
     if (options.showSnapIndicators && snapSettings.enabled && options.snapResults.length) {
       // Expose snap results AND viewport for debug overlay
       if (typeof window !== 'undefined') {
-        // 🏢 ENTERPRISE: Using type assertion for window globals (debugging only)
-        const win = window as Window & { __debugSnapResults?: unknown[]; __debugViewport?: Viewport };
-        win.__debugSnapResults = options.snapResults;
-        win.__debugViewport = viewport;
+        // 🏢 ENTERPRISE: Uses global Window type from window.d.ts (__debugSnapResults)
+        // __debugViewport is local debug property (not in window.d.ts)
+        window.__debugSnapResults = options.snapResults as unknown as typeof window.__debugSnapResults;
+        (window as Window & { __debugViewport?: Viewport }).__debugViewport = viewport;
       }
       // ✅ FIX: Pass actual transform to snapRenderer for correct alignment
       this.snapRenderer.render(options.snapResults, viewport, snapSettings, transform);
     } else {
       // Clear snap results when no snaps active
       if (typeof window !== 'undefined') {
-        // 🏢 ENTERPRISE: Using type assertion for window globals (debugging only)
-        const win = window as Window & { __debugSnapResults?: unknown[]; __debugViewport?: Viewport };
-        win.__debugSnapResults = [];
-        win.__debugViewport = viewport; // Still expose viewport for cursor tracking
+        window.__debugSnapResults = [];
+        (window as Window & { __debugViewport?: Viewport }).__debugViewport = viewport;
       }
     }
 

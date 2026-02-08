@@ -45,6 +45,21 @@ interface WorkflowStep {
   run: () => Promise<void>;
 }
 
+interface GridPanelSettings {
+  enabled: boolean;
+  visible: boolean;
+  style: string;
+  majorGridColor: string;
+  minorGridColor: string;
+  majorGridWeight: number;
+  minorGridWeight: number;
+  size: number;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
 /**
  * Utility: sleep με promise
  */
@@ -71,16 +86,16 @@ async function withRetries<T>(
   retries = 3,
   delay = 300
 ): Promise<T> {
-  let lastErr;
+  let lastErr: unknown;
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
-    } catch (err: any) {
+    } catch (err: unknown) {
       lastErr = err;
       await sleep(delay * (i + 1));
     }
   }
-  throw lastErr;
+  throw lastErr ?? new Error('Unknown error');
 }
 
 /**
@@ -98,7 +113,7 @@ async function checkGridStructuralIntegrity(): Promise<void> {
   };
 
   // Check 1: Grid Context exists
-  const gridSettings = (window as any).__GRID_SETTINGS__;
+  const gridSettings = window.__GRID_SETTINGS__;
   if (gridSettings) {
     checks.contextExists = true;
     console.log('✅ Grid context found');
@@ -110,15 +125,15 @@ async function checkGridStructuralIntegrity(): Promise<void> {
     }
 
     // Check 3: Major/Minor configuration (CAD standard)
-    if (gridSettings.visual.majorGridColor && gridSettings.visual.minorGridColor) {
+    if (gridSettings.visual?.majorGridColor && gridSettings.visual?.minorGridColor) {
       checks.majorMinorConfigured = true;
       console.log('✅ Major/Minor grid configuration found (CAD standard)');
     }
 
     // Check 4: Style configuration
-    if (gridSettings.visual.style) {
+    if (gridSettings.visual?.style) {
       checks.styleConfigured = true;
-      console.log(`✅ Grid style configured: ${gridSettings.visual.style}`);
+      console.log(`✅ Grid style configured: ${gridSettings.visual?.style}`);
     }
   } else {
     console.warn('⚠️ Grid settings not exposed in window');
@@ -210,7 +225,7 @@ async function checkGridRendering(): Promise<boolean> {
 /**
  * 🔍 STEP 4: Έλεγχος Grid Panel Settings
  */
-async function checkGridPanelSettings(): Promise<any> {
+async function checkGridPanelSettings(): Promise<GridPanelSettings> {
   console.log('⚙️ STEP 4: Checking Grid Panel Settings...');
 
   await withRetries(async () => {
@@ -322,17 +337,17 @@ export async function runGridWorkflowTest(): Promise<GridTestResult> {
       });
 
       console.log(`✅ ${name} - SUCCESS (${durationMs}ms)`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const durationMs = Math.round(performance.now() - startTime);
 
       steps.push({
         step: name,
         status: 'failed',
-        error: err.message,
+        error: getErrorMessage(err),
         durationMs
       });
 
-      console.error(`❌ ${name} - FAILED (${durationMs}ms):`, err.message);
+      console.error(`❌ ${name} - FAILED (${durationMs}ms):`, getErrorMessage(err));
     }
   }
 

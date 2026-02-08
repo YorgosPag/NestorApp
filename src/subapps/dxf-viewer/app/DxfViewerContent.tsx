@@ -41,12 +41,8 @@ interface WorkflowTestResult {
   reportTime: string;
 }
 
-declare global {
-  interface Window {
-    showCopyableNotification?: (message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
-    runLayeringWorkflowTest?: () => Promise<WorkflowTestResult>;
-  }
-}
+// Window augmentation for runLayeringWorkflowTest is in src/types/window.d.ts
+// WorkflowTestResult is used locally for type narrowing of the Promise<unknown> return
 
 // Hooks
 import { useDxfViewerState } from '../hooks/useDxfViewerState';
@@ -460,8 +456,9 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
 
         // Direct call to window function
         if (window.runLayeringWorkflowTest) {
-          window.runLayeringWorkflowTest().then((result) => {
-            const successSteps = result.steps.filter((s) => s.status === 'success').length;
+          window.runLayeringWorkflowTest().then((rawResult: unknown) => {
+            const result = rawResult as WorkflowTestResult;
+            const successSteps = result.steps.filter((s: WorkflowStepResult) => s.status === 'success').length;
             const totalSteps = result.steps.length;
             const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;
             showCopyableNotification(summary, result.success ? 'success' : 'error');

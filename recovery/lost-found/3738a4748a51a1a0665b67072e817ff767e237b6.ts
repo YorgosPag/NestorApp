@@ -53,6 +53,14 @@ interface ArcPreviewEntity {
   // 'radial': Draw radii from center (arc-cse/arc-sce: center → start, center → end)
   constructionLineMode?: 'polyline' | 'radial';
 }
+
+interface AngleMeasurementEntity {
+  type: 'angle-measurement';
+  vertex: Point2D;
+  point1: Point2D;
+  point2: Point2D;
+  angle: number;
+}
 // 🏢 ENTERPRISE: Centralized CAD colors & coordinate transforms
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-040: Centralized coordinate transforms - worldToScreen() Single Source of Truth
@@ -349,7 +357,7 @@ export class PreviewRenderer {
         this.renderRectangle(ctx, entity, transform, opts);
         break;
       case 'angle-measurement':
-        this.renderAngleMeasurement(ctx, entity as any, transform, opts);
+        this.renderAngleMeasurement(ctx, entity as AngleMeasurementEntity, transform, opts);
         break;
       case 'point':
         this.renderPoint(ctx, entity as PreviewPoint, transform, opts);

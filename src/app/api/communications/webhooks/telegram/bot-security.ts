@@ -61,7 +61,7 @@ export function containsForbiddenKeywords(
   return { forbidden: false };
 }
 
-export function isTooGeneric(searchCriteria: Record<string, any>): boolean {
+export function isTooGeneric(searchCriteria: Record<string, unknown>): boolean {
     const criteriaCount = Object.keys(searchCriteria).length;
     return criteriaCount < SECURITY_RULES.REQUIRE_MIN_CRITERIA;
 }

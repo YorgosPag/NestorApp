@@ -262,6 +262,7 @@ export function useGenericFilters<T extends GenericFilterState>(
 
   const { hasActiveFilters, activeFilterCount } = useMemo(() => {
     const filtersRecord = filters as Record<string, unknown>;
+    const defaultsRecord = defaultFilters as Record<string, unknown> | undefined;
     let count = 0;
     let hasActive = false;
 
@@ -269,44 +270,43 @@ export function useGenericFilters<T extends GenericFilterState>(
       const value = filtersRecord[key];
       let isActive = false;
 
-      if (key === 'searchTerm') {
-        isActive = typeof value === 'string' && value !== '';
-      } else if (Array.isArray(value)) {
-        isActive = value.length > 0;
-      } else if (key === 'ranges') {
-        const rangesValue = value as Record<string, NumericRange> | undefined;
-        if (rangesValue) {
-          isActive = Object.keys(rangesValue).some(rangeKey => {
-            const range = rangesValue[rangeKey];
-            return hasActiveNumericRange(range);
-          });
-        }
-      } else if (typeof value === 'object' && value !== null) {
-        // Check for range objects or date ranges
-        const objValue = value as Record<string, unknown>;
-
-        // Check numeric range (min/max)
-        if ('min' in objValue || 'max' in objValue) {
-          isActive = hasActiveNumericRange(objValue as NumericRange);
-        }
-        // Check date range (from/to)
-        else if ('from' in objValue || 'to' in objValue) {
-          isActive = hasActiveDateRange(objValue as DateFromToRange);
-        }
-        // Check date range (start/end)
-        else if ('start' in objValue || 'end' in objValue) {
-          isActive = objValue.start !== undefined || objValue.end !== undefined;
-        }
-        // Generic object check
-        else {
-          isActive = Object.values(objValue).some(
-            subValue => subValue !== undefined && subValue !== null && subValue !== ''
-          );
-        }
-      } else if (typeof value === 'boolean') {
-        isActive = value === true;
+      // 🏢 ENTERPRISE: If defaults provided, compare against them (handles 'all' defaults)
+      if (defaultsRecord) {
+        const defaultValue = defaultsRecord[key];
+        // Deep comparison: serialize both values to handle objects/arrays
+        isActive = JSON.stringify(value) !== JSON.stringify(defaultValue);
       } else {
-        isActive = value !== undefined && value !== null && value !== '';
+        // Fallback: generic active detection (backward compatible)
+        if (key === 'searchTerm') {
+          isActive = typeof value === 'string' && value !== '';
+        } else if (Array.isArray(value)) {
+          isActive = value.length > 0;
+        } else if (key === 'ranges') {
+          const rangesValue = value as Record<string, NumericRange> | undefined;
+          if (rangesValue) {
+            isActive = Object.keys(rangesValue).some(rangeKey => {
+              const range = rangesValue[rangeKey];
+              return hasActiveNumericRange(range);
+            });
+          }
+        } else if (typeof value === 'object' && value !== null) {
+          const objValue = value as Record<string, unknown>;
+          if ('min' in objValue || 'max' in objValue) {
+            isActive = hasActiveNumericRange(objValue as NumericRange);
+          } else if ('from' in objValue || 'to' in objValue) {
+            isActive = hasActiveDateRange(objValue as DateFromToRange);
+          } else if ('start' in objValue || 'end' in objValue) {
+            isActive = objValue.start !== undefined || objValue.end !== undefined;
+          } else {
+            isActive = Object.values(objValue).some(
+              subValue => subValue !== undefined && subValue !== null && subValue !== ''
+            );
+          }
+        } else if (typeof value === 'boolean') {
+          isActive = value === true;
+        } else {
+          isActive = value !== undefined && value !== null && value !== '';
+        }
       }
 
       if (isActive) {
@@ -316,7 +316,7 @@ export function useGenericFilters<T extends GenericFilterState>(
     });
 
     return { hasActiveFilters: hasActive, activeFilterCount: count };
-  }, [filters]);
+  }, [filters, defaultFilters]);
 
   return {
     // Original methods

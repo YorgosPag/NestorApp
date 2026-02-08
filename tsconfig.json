@@ -29,6 +29,7 @@
     "src/ai/**",
     "src/ai.back/**",
     "DxfViewerApp.tsx",
-    "recovery/**"
+    "recovery/**",
+    "migrate-*.ts"
   ]
 }

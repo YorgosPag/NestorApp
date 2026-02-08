@@ -5,14 +5,15 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import type { PixelmatchFn, PNGCombined } from '../test/visual/types';
 
 // Conditional imports to avoid missing module errors
-let pixelmatch: any;
-let PNG: any;
+let pixelmatch: PixelmatchFn | null = null;
+let PNG: PNGCombined | null = null;
 
 try {
-  pixelmatch = require('pixelmatch');
-  PNG = require('pngjs').PNG;
+  pixelmatch = require('pixelmatch') as PixelmatchFn;
+  PNG = require('pngjs').PNG as PNGCombined;
 } catch (error) {
   console.warn('⚠️ Visual testing dependencies not installed yet');
 }

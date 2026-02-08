@@ -5,7 +5,7 @@ import { generateMessageId, generateTemplateId } from '@/services/enterprise-id.
 // Email Integration Service
 export interface EmailProvider {
   type: 'smtp' | 'outlook' | 'gmail' | 'mailgun' | 'ses';
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   isActive: boolean;
 }
 
@@ -29,7 +29,7 @@ export interface EmailMessage {
   textContent?: string;
   attachments?: EmailAttachment[];
   templateId?: string;
-  templateVariables?: Record<string, any>;
+  templateVariables?: Record<string, unknown>;
   priority?: 'low' | 'normal' | 'high';
   scheduledAt?: Date;
 }

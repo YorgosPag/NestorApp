@@ -57,10 +57,10 @@ type ByCompanyResponse = ByCompanySuccess | ByCompanyError;
  */
 export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
-  segmentData: { params: Promise<{ companyId: string }> }
+  segmentData?: { params: Promise<{ companyId: string }> }
 ) {
   // Extract URL param (for logging only - NOT used for query)
-  const { companyId: urlCompanyId } = await segmentData.params;
+  const { companyId: urlCompanyId } = await segmentData!.params;
 
   const handler = withAuth<ByCompanyResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ByCompanyResponse>> => {

@@ -35,7 +35,7 @@ export interface PropertyShareData {
 export interface LeadShareData {
   leadId: string;
   propertyId?: string;
-  searchCriteria?: Record<string, any>;
+  searchCriteria?: Record<string, unknown>;
   customMessage?: string;
 }
 

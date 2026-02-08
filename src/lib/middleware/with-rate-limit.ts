@@ -45,13 +45,17 @@ const logger = createModuleLogger('RATE_LIMIT_WRAPPER');
  * - { params?: Record<string, string> } (legacy sync params - optional)
  * - { params: Promise<Record<string, string>> } (Next.js 15+ async params - required)
  *
- * Using `any` for context to support all Next.js route patterns (forwarding only, not inspecting).
+ * Using a permissive context union to support all Next.js route patterns (forwarding only, not inspecting).
  * This is acceptable as we don't access the context in the rate limit middleware.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ApiHandler = (
+// 🏢 ENTERPRISE: Generic handler type — preserves route-specific context types.
+// The middleware forwards context transparently without inspection.
+// Context is optional to support both parametric routes (with params) and
+// parameter-less routes. Handlers that need context should use non-null assertion
+// or guard, since Next.js always provides params for dynamic routes.
+type ApiHandler<C = unknown> = (
   request: NextRequest,
-  context?: any
+  context?: C
 ) => Promise<Response> | Response;
 
 /**
@@ -172,10 +176,10 @@ function extractSecureIdentifier(request: NextRequest): string {
  * });
  * ```
  */
-export function withRateLimit(
-  handler: ApiHandler,
+export function withRateLimit<C = unknown>(
+  handler: ApiHandler<C>,
   options: WithRateLimitOptions = {}
-): ApiHandler {
+): ApiHandler<C> {
   return async (request: NextRequest, context) => {
     // 🔥 ENVIRONMENT-AWARE: Skip rate limiting if disabled in security policy
     const policy = getCurrentSecurityPolicy();
@@ -253,7 +257,7 @@ export function withRateLimit(
  * Rate limiter for high-frequency endpoints (lists, search).
  * Limit: 100 requests/minute
  */
-export function withHighRateLimit(handler: ApiHandler): ApiHandler {
+export function withHighRateLimit<C = unknown>(handler: ApiHandler<C>): ApiHandler<C> {
   return withRateLimit(handler, { category: 'HIGH' });
 }
 
@@ -261,7 +265,7 @@ export function withHighRateLimit(handler: ApiHandler): ApiHandler {
  * Rate limiter for standard CRUD endpoints.
  * Limit: 60 requests/minute
  */
-export function withStandardRateLimit(handler: ApiHandler): ApiHandler {
+export function withStandardRateLimit<C = unknown>(handler: ApiHandler<C>): ApiHandler<C> {
   return withRateLimit(handler, { category: 'STANDARD' });
 }
 
@@ -269,7 +273,7 @@ export function withStandardRateLimit(handler: ApiHandler): ApiHandler {
  * Rate limiter for sensitive operations (admin, financial).
  * Limit: 20 requests/minute
  */
-export function withSensitiveRateLimit(handler: ApiHandler): ApiHandler {
+export function withSensitiveRateLimit<C = unknown>(handler: ApiHandler<C>): ApiHandler<C> {
   return withRateLimit(handler, { category: 'SENSITIVE' });
 }
 
@@ -277,7 +281,7 @@ export function withSensitiveRateLimit(handler: ApiHandler): ApiHandler {
  * Rate limiter for heavy operations (reports, exports).
  * Limit: 10 requests/minute
  */
-export function withHeavyRateLimit(handler: ApiHandler): ApiHandler {
+export function withHeavyRateLimit<C = unknown>(handler: ApiHandler<C>): ApiHandler<C> {
   return withRateLimit(handler, { category: 'HEAVY' });
 }
 
@@ -285,7 +289,7 @@ export function withHeavyRateLimit(handler: ApiHandler): ApiHandler {
  * Rate limiter for webhook endpoints.
  * Limit: 30 requests/minute
  */
-export function withWebhookRateLimit(handler: ApiHandler): ApiHandler {
+export function withWebhookRateLimit<C = unknown>(handler: ApiHandler<C>): ApiHandler<C> {
   return withRateLimit(handler, { category: 'WEBHOOK' });
 }
 
@@ -293,7 +297,7 @@ export function withWebhookRateLimit(handler: ApiHandler): ApiHandler {
  * Rate limiter for Telegram bot endpoints.
  * Limit: 15 requests/minute
  */
-export function withTelegramRateLimit(handler: ApiHandler): ApiHandler {
+export function withTelegramRateLimit<C = unknown>(handler: ApiHandler<C>): ApiHandler<C> {
   return withRateLimit(handler, { category: 'TELEGRAM' });
 }
 

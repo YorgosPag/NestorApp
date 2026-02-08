@@ -3,10 +3,11 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getContactDisplayName, getPrimaryPhone } from '@/types/contacts';
+import type { Contact } from '@/types/contacts';
 import { COLLECTIONS } from '@/config/firestore-collections';
 
 // 🏢 ENTERPRISE: Firestore contact data type (includes legacy fields for backward compatibility)
-type FirestoreContactData = Record<string, any> & {
+type FirestoreContactData = Contact & Record<string, unknown> & {
   id: string;
   companyId?: string;
 };
@@ -148,10 +149,8 @@ export async function GET(
     // ========================================================================
 
     // Extract primary contact information using centralized helpers
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const displayName = getContactDisplayName(contactData as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const primaryPhone = getPrimaryPhone(contactData as any);
+    const displayName = getContactDisplayName(contactData);
+    const primaryPhone = getPrimaryPhone(contactData) ?? null;
 
     // Extract primary email using enterprise logic
     let primaryEmail: string | null = null;
@@ -172,13 +171,17 @@ export async function GET(
     // Extract other contact information
     const status = contactData.status || 'active';
     const profession = contactData.profession || null;
-    const city = contactData.city || contactData.serviceAddress?.city || null;
+    const serviceAddress = contactData.serviceAddress;
+    const serviceAddressCity = typeof serviceAddress === 'object' && serviceAddress !== null && 'city' in serviceAddress
+      ? (serviceAddress as { city?: string }).city
+      : undefined;
+    const city = (typeof contactData.city === 'string' ? contactData.city : undefined) || serviceAddressCity || null;
 
     // Extract avatar/photo
     let avatarUrl: string | null = null;
     if (contactData.photoURL) {
       avatarUrl = contactData.photoURL;
-    } else if (contactData.avatarUrl) {
+    } else if (typeof contactData.avatarUrl === 'string') {
       avatarUrl = contactData.avatarUrl;
     } else if (contactData.multiplePhotoURLs && Array.isArray(contactData.multiplePhotoURLs) && contactData.multiplePhotoURLs.length > 0) {
       avatarUrl = contactData.multiplePhotoURLs[0];

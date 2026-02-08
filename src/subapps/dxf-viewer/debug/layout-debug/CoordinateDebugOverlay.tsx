@@ -30,7 +30,7 @@ if (!window.globalCoordinateCopy) {
     const uniqueId = generateTempId().substring(0, 8); // Short ID for logging
 
     // Get fresh mouse position
-    const mouseEvent = (window as any).lastMouseEvent;
+    const mouseEvent = window.lastMouseEvent;
     if (!mouseEvent) {
       return;
     }
@@ -49,7 +49,7 @@ if (!window.globalCoordinateCopy) {
     const canvasY = Math.round(screenY - rect.top);
 
     // ✅ GET TRANSFORM: Use window.dxfTransform (updated by Context)
-    const transform = (window as any).dxfTransform || { scale: 1, offsetX: 0, offsetY: 0 };
+    const transform = window.dxfTransform || { scale: 1, offsetX: 0, offsetY: 0 };
 
     // ✅ VIEWPORT: Use CANVAS viewport (EXACTLY as live panel component - line 217!)
     const canvasViewport = { width: rect.width, height: rect.height };
@@ -136,8 +136,8 @@ export default function CoordinateDebugOverlay({ className = '' }: CoordinateDeb
     // ✅ ENHANCED GLOBAL MOUSE TRACKING
     const enhancedMouseMove = (e: MouseEvent) => {
       // Αποθηκεύω το event με timestamp
-      (window as any).lastMouseEvent = e;
-      (window as any).lastMouseUpdate = Date.now();
+      window.lastMouseEvent = e;
+      window.lastMouseUpdate = Date.now();
     };
 
     // ⚡ SIMPLE HANDLER - Καλεί την εξωτερική global function

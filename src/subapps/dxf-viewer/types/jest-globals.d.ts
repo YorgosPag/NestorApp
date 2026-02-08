@@ -16,18 +16,18 @@ declare global {
 
   var describe: DescribeFunction;
   var test: TestFunction;
-  var expect: (actual: any) => any;
+  var expect: (actual: unknown) => jest.Matchers<unknown>;
   var beforeAll: (fn: () => void | Promise<void>) => void;
   var afterAll: (fn: () => void | Promise<void>) => void;
   var beforeEach: (fn: () => void | Promise<void>) => void;
   var afterEach: (fn: () => void | Promise<void>) => void;
   var it: TestFunction;
-  var jest: any;
+  var jest: Record<string, unknown>;
 
   namespace jest {
     interface Matchers<R> {
-      toBe(expected: any): R;
-      toEqual(expected: any): R;
+      toBe(expected: unknown): R;
+      toEqual(expected: unknown): R;
       toBeTruthy(): R;
       toBeFalsy(): R;
       toBeUndefined(): R;
@@ -37,7 +37,7 @@ declare global {
       toBeLessThan(expected: number): R;
       toBeGreaterThanOrEqual(expected: number): R;
       toBeLessThanOrEqual(expected: number): R;
-      toContain(expected: any): R;
+      toContain(expected: unknown): R;
       toMatch(expected: string | RegExp): R;
       toThrow(expected?: string | RegExp | Error): R;
     }

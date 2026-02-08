@@ -267,7 +267,7 @@ describe('DxfSettingsStore', () => {
 
       expect(setItemSpy).toHaveBeenCalledWith(
         'dxf-settings-v2',
-        (expect as any).stringContaining('"lineWidth":3') // ✅ ENTERPRISE FIX: Jest expect.stringContaining needs any cast
+        expect.stringContaining('"lineWidth":3')
       );
 
       setItemSpy.mockRestore();

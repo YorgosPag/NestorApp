@@ -44,7 +44,7 @@ export interface CRMDashboardTabConfig {
   component: string;
 
   /** Custom props για το component */
-  componentProps?: Record<string, any>;
+  componentProps?: Record<string, unknown>;
 
   /** Permissions required για την καρτέλα */
   requiredPermissions?: string[];

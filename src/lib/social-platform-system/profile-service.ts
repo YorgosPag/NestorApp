@@ -458,7 +458,11 @@ export class ProfileService {
     supportsProfiles: boolean;
     templatePattern: string;
   }> {
-    const stats: Record<string, any> = {};
+    const stats = {} as Record<SocialPlatformType, {
+      name: string;
+      supportsProfiles: boolean;
+      templatePattern: string;
+    }>;
 
     const profilePlatforms = getProfilePlatforms();
 

@@ -106,7 +106,7 @@ export default defineConfig([
       "design-system/enforce-semantic-colors": "off",
       // 🏢 ENTERPRISE: Disable strict rules for non-user-facing code
       "@typescript-eslint/no-unused-vars": "off",
-      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-var-requires": "off",
       "@typescript-eslint/no-require-imports": "off",  // Allow require() in server code
       "@typescript-eslint/no-unsafe-function-type": "off", // Allow Function type in internal code

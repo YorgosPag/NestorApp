@@ -242,6 +242,8 @@ function calculateMedian(values: number[]): number {
 
 // ===== TYPES =====
 
+type CanvasBoundsCacheStats = ReturnType<typeof canvasBoundsService.getCacheStats>;
+
 export interface BenchmarkResult {
   name: string;
   iterations: number;
@@ -252,7 +254,7 @@ export interface BenchmarkResult {
   medianTime: number;
   layoutReflows: number;
   cacheHitRate?: number;
-  cacheStats?: any;
+  cacheStats?: CanvasBoundsCacheStats;
 }
 
 export interface ComparativeResult {
@@ -275,7 +277,15 @@ export interface HeavyLoadResult {
 // ===== EXPORTS FOR CONSOLE USAGE =====
 
 if (typeof window !== 'undefined') {
-  (window as any).canvasBenchmark = {
+  const windowWithBenchmark = window as Window & {
+    canvasBenchmark?: {
+      runComparative: () => ComparativeResult;
+      runHeavyLoad: () => HeavyLoadResult;
+      runQuick: () => ComparativeResult;
+    };
+  };
+
+  windowWithBenchmark.canvasBenchmark = {
     runComparative: () => runComparativeBenchmark(1000),
     runHeavyLoad: () => benchmarkHeavyLoad(),
     runQuick: () => runComparativeBenchmark(100)

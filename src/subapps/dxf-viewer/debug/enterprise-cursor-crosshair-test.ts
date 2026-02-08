@@ -436,8 +436,8 @@ export function startEnterpriseInteractiveTest() {
 
 // Expose στο window για browser console
 if (typeof window !== 'undefined') {
-  (window as any).runEnterpriseMouseCrosshairTests = runEnterpriseMouseCrosshairTests;
-  (window as any).startEnterpriseInteractiveTest = startEnterpriseInteractiveTest;
+  window.runEnterpriseMouseCrosshairTests = async () => runEnterpriseMouseCrosshairTests();
+  window.startEnterpriseInteractiveTest = async () => startEnterpriseInteractiveTest();
 }
 
 export default {

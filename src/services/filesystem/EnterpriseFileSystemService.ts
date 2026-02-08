@@ -86,7 +86,7 @@ export interface FileSystemConfiguration {
   uploadSettings: FileUploadSettings;
   securitySettings: FileSecuritySettings;
   validationMessages: Record<string, string>;
-  customSettings: Record<string, any>;
+  customSettings: Record<string, unknown>;
 }
 
 /**

@@ -161,7 +161,7 @@ export function ContactDetails({ contact, onEditContact, onDeleteContact, onCont
   return (
     <>
       <DetailsContainer
-        selectedItem={contact as any}
+        selectedItem={contact ?? null}
         header={
           <ContactDetailsHeader
             contact={contact!}

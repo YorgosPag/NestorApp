@@ -101,10 +101,12 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
 
       if (typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt) {
         // Firestore Timestamp {seconds: number, nanoseconds: number}
-        date = new Date((createdAt as any).seconds * 1000);
+        const timestamp = createdAt as { seconds: number };
+        date = new Date(timestamp.seconds * 1000);
       } else if (typeof createdAt === 'object' && createdAt !== null && 'toDate' in createdAt) {
         // Firestore Timestamp with toDate() method
-        date = (createdAt as any).toDate();
+        const timestamp = createdAt as { toDate: () => Date };
+        date = timestamp.toDate();
       } else {
         // Regular Date string/object
         date = new Date(createdAt);
@@ -182,7 +184,7 @@ export const RecentRelationshipsSection: React.FC<RecentRelationshipsSectionProp
           </div>
         </div>
         <div className={`text-xs ${colors.text.muted}`}>
-          {formatCreatedDate(relationship.createdAt as any)}
+          {formatCreatedDate(relationship.createdAt)}
         </div>
       </div>
     );

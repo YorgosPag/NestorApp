@@ -15,12 +15,19 @@ import { COLLECTIONS } from './src/config/firestore-collections';
 interface LegacyDxfData {
   id: string;
   fileName?: string;
-  scene?: any; // The problematic massive scene object
-  lastModified?: any;
+  scene?: LegacyScene; // The problematic massive scene object
+  lastModified?: unknown;
   version?: number;
   checksum?: string;
   storageUrl?: string;
-  [key: string]: any;
+  [key: string]: unknown;
+}
+
+interface LegacyScene {
+  entities?: unknown[];
+  layers?: Record<string, unknown>;
+  bounds?: unknown;
+  units?: unknown;
 }
 
 interface FileInfo {
@@ -29,6 +36,24 @@ interface FileInfo {
   sizeBytes: number;
   sizeKB: number;
   entityCount: number;
+}
+
+interface ProperFileInfo {
+  id: string;
+  fileName: string;
+  storageUrl: string;
+}
+
+interface MigrationAnalysis {
+  totalDocs: number;
+  legacyFiles: FileInfo[];
+  properFiles: ProperFileInfo[];
+  problemFiles: FileInfo[];
+  totalLegacySize: number;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
 }
 
 class DxfMigrationTool {
@@ -41,17 +66,17 @@ class DxfMigrationTool {
   /**
    * 🔍 STEP 1: Analyze existing DXF data
    */
-  async analyzeLegacyData() {
+  async analyzeLegacyData(): Promise<MigrationAnalysis> {
     console.log('🔍 Analyzing DXF data in Firestore...');
     console.log(`Collection: ${COLLECTIONS.CAD_FILES}`);
 
     const cadFilesRef = collection(db, COLLECTIONS.CAD_FILES);
     const snapshot = await getDocs(cadFilesRef);
 
-    const analysis = {
+    const analysis: MigrationAnalysis = {
       totalDocs: snapshot.docs.length,
       legacyFiles: [] as FileInfo[],
-      properFiles: [] as any[],
+      properFiles: [] as ProperFileInfo[],
       problemFiles: [] as FileInfo[],
       totalLegacySize: 0
     };
@@ -70,12 +95,16 @@ class DxfMigrationTool {
         const sceneSize = JSON.stringify(data.scene).length;
         analysis.totalLegacySize += sceneSize;
 
+        const entityCount = Array.isArray(data.scene.entities)
+          ? data.scene.entities.length
+          : 0;
+
         const fileInfo: FileInfo = {
           id: docId,
           fileName,
           sizeBytes: sceneSize,
           sizeKB: Math.round(sceneSize / 1024),
-          entityCount: data.scene.entities?.length || 0
+          entityCount
         };
 
         analysis.legacyFiles.push(fileInfo);
@@ -130,7 +159,7 @@ class DxfMigrationTool {
   /**
    * 🚀 STEP 2: Migrate legacy files to Storage
    */
-  async migrateLegacyFiles(analysisData: any) {
+  async migrateLegacyFiles(analysisData: MigrationAnalysis) {
     if (analysisData.legacyFiles.length === 0) {
       console.log('✅ No legacy files to migrate!');
       return { migratedCount: 0 };
@@ -211,8 +240,8 @@ class DxfMigrationTool {
         console.log(`   ✅ ${this.dryRun ? 'Would migrate' : 'Migrated'}: ${fileInfo.fileName}`);
         migratedCount++;
 
-      } catch (error: any) {
-        const errorMsg = `Failed to migrate ${fileInfo.fileName}: ${error.message}`;
+      } catch (error: unknown) {
+        const errorMsg = `Failed to migrate ${fileInfo.fileName}: ${getErrorMessage(error)}`;
         console.error(`   ❌ ${errorMsg}`);
         errors.push(errorMsg);
         failedCount++;
@@ -220,7 +249,7 @@ class DxfMigrationTool {
     }
 
     // 📊 Migration Summary
-    console.log(`\\n📊 Migration Summary:`);
+    console.log(`\n📊 Migration Summary:`);
     console.log(`   ${this.dryRun ? 'Would migrate' : 'Migrated'}: ${migratedCount}`);
     console.log(`   Failed: ${failedCount}`);
     if (migratedCount + failedCount > 0) {
@@ -228,7 +257,7 @@ class DxfMigrationTool {
     }
 
     if (errors.length > 0) {
-      console.log(`\\n🚨 Errors:`);
+      console.log(`\n❌ Errors:`);
       errors.forEach(error => console.log(`   - ${error}`));
     }
 
@@ -238,10 +267,15 @@ class DxfMigrationTool {
   /**
    * Generate simple checksum
    */
-  generateChecksum(scene: any): string {
+  generateChecksum(scene: LegacyScene): string {
+    const entityCount = Array.isArray(scene.entities) ? scene.entities.length : 0;
+    const layerCount = scene.layers && typeof scene.layers === 'object'
+      ? Object.keys(scene.layers).length
+      : 0;
+
     const data = {
-      entityCount: scene.entities?.length || 0,
-      layerCount: Object.keys(scene.layers || {}).length,
+      entityCount,
+      layerCount,
       bounds: scene.bounds,
       units: scene.units
     };
@@ -249,12 +283,12 @@ class DxfMigrationTool {
   }
 
   /**
-   * 🏃 Run complete migration
+   * 🚀 Run complete migration
    */
   async runMigration() {
-    console.log('🏢 DXF Legacy Data Migration Tool (TypeScript)');
+    console.log('🚀 DXF Legacy Data Migration Tool (TypeScript)');
     console.log('===============================================');
-    console.log(`Mode: ${this.dryRun ? '🧪 DRY RUN' : '🚀 LIVE MIGRATION'}`);
+    console.log(`Mode: ${this.dryRun ? '🟡 DRY RUN' : '🔴 LIVE MIGRATION'}`);
 
     try {
       // Step 1: Analyze
@@ -265,25 +299,27 @@ class DxfMigrationTool {
         const migration = await this.migrateLegacyFiles(analysis);
 
         if (migration.migratedCount > 0 && !this.dryRun) {
-          console.log(`\\n🎉 Migration completed successfully!`);
-          console.log(`\\n💡 Benefits achieved:`);
+          console.log(`\n✅ Migration completed successfully!`);
+          console.log(`\n📈 Benefits achieved:`);
           console.log(`   - ${analysis.legacyFiles.length} files moved to Firebase Storage`);
           console.log(`   - ${Math.round(analysis.totalLegacySize / 1024)}KB freed from Firestore`);
           console.log(`   - 99%+ faster read performance`);
           console.log(`   - 93%+ cost reduction`);
           console.log(`   - No more document size limits!`);
         } else if (this.dryRun) {
-          console.log(`\\n🧪 DRY RUN completed - ready for live migration!`);
+          console.log(`\n🟡 DRY RUN completed - ready for live migration!`);
         }
       } else {
-        console.log(`\\n✅ All DXF files are already using proper Storage format!`);
+        console.log(`\n✅ All DXF files are already using proper Storage format!`);
       }
 
-      console.log(`\\n🏆 Migration tool completed successfully!`);
+      console.log(`\n✅ Migration tool completed successfully!`);
 
-    } catch (error: any) {
-      console.error(`\\n❌ Migration failed: ${error.message}`);
-      console.error('Stack:', error.stack);
+    } catch (error: unknown) {
+      console.error(`\n❌ Migration failed: ${getErrorMessage(error)}`);
+      if (error instanceof Error) {
+        console.error('Stack:', error.stack);
+      }
       throw error;
     }
   }
@@ -306,8 +342,8 @@ if (require.main === module) {
       console.log('\\n💡 To run LIVE MIGRATION:');
       console.log('   runDxfMigration(false)');
     })
-    .catch((error) => {
-      console.error('\\n❌ Migration failed:', error);
+    .catch((error: unknown) => {
+      console.error('\\n❌ Migration failed:', getErrorMessage(error));
     });
 }
 

@@ -32,7 +32,9 @@ export {
   defaultAIInboxFilters,
   defaultOperatorInboxFilters,
   defaultPropertyFilters,
-  defaultFileFilters
+  defaultFileFilters,
+  crmDashboardFiltersConfig,
+  defaultCrmDashboardFilters
 } from './configs';
 
 // Storage Configurations
@@ -81,7 +83,7 @@ export {
 } from './types';
 
 // Communications Types (from configs.ts)
-export type { CommunicationsFilterState, TaskFilterState, FileFilterState, AIInboxFilterState, OperatorInboxFilterState } from './configs';
+export type { CommunicationsFilterState, TaskFilterState, FileFilterState, AIInboxFilterState, OperatorInboxFilterState, CrmDashboardFilterState } from './configs';
 
 // Storage Types
 export type {

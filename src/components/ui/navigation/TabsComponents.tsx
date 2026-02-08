@@ -22,7 +22,7 @@ export const TABS_STYLES = {
 export interface TabDefinition {
   id: string;
   label: string;
-  icon: LucideIcon | React.FC<any>; // 🏢 ENTERPRISE: Allow custom icons (like CraneIcon) alongside Lucide icons
+  icon: LucideIcon | React.ComponentType<{ className?: string }>; // 🏢 ENTERPRISE: Allow custom icons (like CraneIcon) alongside Lucide icons
   content: React.ReactNode;
   disabled?: boolean;
   /** 🏢 ENTERPRISE: Custom icon color (e.g., 'text-orange-600') for entity consistency */

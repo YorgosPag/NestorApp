@@ -8,14 +8,15 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import type { PixelmatchFn, PNGCombined } from '../test/visual/types';
 
 // Conditional imports to avoid missing module errors during development
-let pixelmatch: any;
-let PNG: any;
+let pixelmatch: PixelmatchFn | null = null;
+let PNG: PNGCombined | null = null;
 
 try {
-  pixelmatch = require('pixelmatch');
-  PNG = require('pngjs').PNG;
+  pixelmatch = require('pixelmatch') as PixelmatchFn;
+  PNG = require('pngjs').PNG as PNGCombined;
 } catch (error) {
   // Modules not installed yet - tests will be skipped
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -30,6 +31,7 @@ import {
 import { VIEWPORT_DEFAULTS } from '../config/transform-config';
 import {
   writeArtifacts,
+  getArtifactPaths,
   hasBaseline,
   createBaseline,
   loadBaseline,
@@ -77,8 +79,9 @@ const ENTERPRISE_TEST_CASES: TestCase[] = [
  */
 function canvasToPngBuffer(canvas: HTMLCanvasElement): Buffer {
   // Use πραγματικό canvas backend αν διαθέσιμο
-  if (typeof (canvas as any).toBuffer === 'function') {
-    return (canvas as any).toBuffer('image/png');
+  const bufferCanvas = canvas as HTMLCanvasElement & { toBuffer?: (mimeType: string) => Buffer };
+  if (typeof bufferCanvas.toBuffer === 'function') {
+    return bufferCanvas.toBuffer('image/png');
   }
 
   // Fallback για cases χωρίς napi backend
@@ -103,6 +106,10 @@ function performVisualComparison(
   diffBuffer: Buffer;
   details: string;
 } {
+  if (!PNG || !pixelmatch) {
+    throw new Error('Visual regression dependencies not installed (pngjs, pixelmatch)');
+  }
+
   const baselinePng = PNG.sync.read(baselineBuffer);
   const actualPng = PNG.sync.read(actualBuffer);
 
@@ -128,9 +135,6 @@ function performVisualComparison(
       threshold: 0.05,        // More sensitive για enterprise quality
       includeAA: true,        // Include anti-aliasing differences
       alpha: 0.2,            // Alpha channel sensitivity
-      aaColor: [255, 255, 0], // Yellow για AA differences
-      diffColor: [255, 0, 255], // Magenta για pixel differences
-      diffColorAlt: [0, 255, 255] // Cyan για alternative differences
     }
   );
 
@@ -270,7 +274,7 @@ describe('🎨 Enterprise Visual Regression Testing', () => {
         dimensions: { width: testCase.width, height: testCase.height },
         timestamp: new Date().toISOString(),
         duration: Date.now() - testStartTime,
-        artifacts: {} as any, // Will be filled by writeArtifacts
+        artifacts: getArtifactPaths(testCase.name), // Will be filled by writeArtifacts
         metadata: {
           overlayType: testCase.overlayType,
           seed: testCase.seed,
@@ -353,6 +357,10 @@ describe('🎨 Enterprise Visual Regression Testing', () => {
     const baselineBuffer = loadBaseline(testCase.name);
 
     // Simple comparison για coordinate test
+    if (!PNG || !pixelmatch) {
+      throw new Error('Visual regression dependencies not installed (pngjs, pixelmatch)');
+    }
+
     const baselinePng = PNG.sync.read(baselineBuffer);
     const actualPng = PNG.sync.read(actualBuffer);
     const diff = new PNG({ width: baselinePng.width, height: baselinePng.height });
@@ -377,3 +385,4 @@ describe('🎨 Enterprise Visual Regression Testing', () => {
     });
   }
 });
+

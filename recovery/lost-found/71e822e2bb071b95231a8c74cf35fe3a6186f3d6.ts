@@ -167,7 +167,7 @@ export class DxfRenderer {
   /**
    * ✅ HELPER: Map DxfEntityUnion geometry σε EntityModel format
    */
-  private mapEntityGeometry(entity: DxfEntityUnion): Record<string, any> { // ✅ ENTERPRISE FIX: Return flexible object for geometry properties
+  private mapEntityGeometry(entity: DxfEntityUnion): Record<string, unknown> { // ✅ ENTERPRISE FIX: Return flexible object for geometry properties
     switch (entity.type) {
       case 'line':
         return {

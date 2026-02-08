@@ -28,9 +28,9 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
 export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
-  segmentData: { params: Promise<{ projectId: string }> }
+  segmentData?: { params: Promise<{ projectId: string }> }
 ) {
-  const { projectId } = await segmentData.params;
+  const { projectId } = await segmentData!.params;
 
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {

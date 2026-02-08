@@ -170,7 +170,7 @@ export const DEFAULT_MESSAGE_CONFIG: SanitizationConfig = {
  * ```
  */
 export function sanitizeHTML(
-  html: string,
+  html: unknown,
   config: SanitizationConfig = DEFAULT_MESSAGE_CONFIG
 ): string {
   // Input validation
@@ -217,7 +217,7 @@ export function sanitizeHTML(
  * // Returns: '<span style="color:red">Important</span>' (style preserved)
  * ```
  */
-export function sanitizeEmailHTML(html: string): string {
+export function sanitizeEmailHTML(html: unknown): string {
   // Input validation
   if (!html || typeof html !== 'string') {
     return '';
@@ -279,7 +279,7 @@ export function sanitizeEmailHTML(html: string): string {
  * // Returns: '<b>Hello</b><br>World ' (XSS removed, line breaks converted)
  * ```
  */
-export function formatMessageHTML(content: MessageContent): string {
+export function formatMessageHTML(content: MessageContent | null | undefined): string {
   if (!content || !content.text) {
     return '';
   }
@@ -328,7 +328,7 @@ export function hasHTMLFormatting(text: string): boolean {
  * stripHTMLTags('<b>Hello</b> World') // 'Hello World'
  * ```
  */
-export function stripHTMLTags(html: string): string {
+export function stripHTMLTags(html: unknown): string {
   if (!html || typeof html !== 'string') {
     return '';
   }

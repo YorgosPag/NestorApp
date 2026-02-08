@@ -399,5 +399,5 @@ export const originMarkersDebug = new OriginMarkersDebugOverlay();
 
 // Expose στο window για console debugging
 if (typeof window !== 'undefined') {
-  (window as any).originMarkersDebug = originMarkersDebug;
+  window.originMarkersDebug = originMarkersDebug as unknown as Record<string, unknown>;
 }

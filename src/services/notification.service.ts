@@ -204,7 +204,7 @@ export class NotificationService {
   /**
    * Show success notification by code
    */
-  showSuccessByCode(successCode: keyof typeof SUCCESS_MESSAGE_MAPPING, variables?: Record<string, any>, options?: NotificationOptions) {
+  showSuccessByCode(successCode: keyof typeof SUCCESS_MESSAGE_MAPPING, variables?: Record<string, unknown>, options?: NotificationOptions) {
     const i18nKey = SUCCESS_MESSAGE_MAPPING[successCode];
     
     if (!i18nKey) {

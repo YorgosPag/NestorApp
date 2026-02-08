@@ -1,5 +1,7 @@
-
-'use server';
+// 🏢 ENTERPRISE: Client-side Firestore operations for Opportunities
+// NOTE: This file uses Firebase Client SDK (firebase/firestore), NOT firebase-admin.
+// Therefore 'use server' is incorrect — all consumers are 'use client' components.
+// Future: Consolidate with opportunities-client.service.ts (single source of truth)
 
 import { db } from '@/lib/firebase';
 import { 

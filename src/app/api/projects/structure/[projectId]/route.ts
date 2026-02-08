@@ -61,9 +61,9 @@ type StructureResponse = StructureSuccess | StructureError;
  */
 export const GET = withStandardRateLimit(async function GET(
   request: NextRequest,
-  segmentData: { params: Promise<{ projectId: string }> }
+  segmentData?: { params: Promise<{ projectId: string }> }
 ) {
-  const { projectId } = await segmentData.params;
+  const { projectId } = await segmentData!.params;
 
   const handler = withAuth<StructureResponse>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<StructureResponse>> => {

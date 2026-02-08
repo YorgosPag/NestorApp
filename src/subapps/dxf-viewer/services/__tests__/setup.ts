@@ -22,7 +22,7 @@ const afterEach = globalThis.afterEach || ((fn: () => void) => {});
 
 // ═══ MOCK PERFORMANCE API ═══
 if (typeof performance === 'undefined') {
-  global.performance = {
+  const performanceShim = {
     now: () => Date.now(),
     mark: () => {},
     measure: () => {},
@@ -31,7 +31,8 @@ if (typeof performance === 'undefined') {
     getEntries: () => [],
     getEntriesByName: () => [],
     getEntriesByType: () => []
-  } as any;
+  } as unknown as Performance;
+  globalThis.performance = performanceShim;
 }
 
 // ═══ MOCK CONSOLE (optional - για cleaner test output) ═══

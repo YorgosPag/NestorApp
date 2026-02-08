@@ -122,9 +122,9 @@ interface ProjectGetResponse {
 
 async function handleGet(
   request: NextRequest,
-  segmentData: { params: Promise<{ projectId: string }> }
+  segmentData?: { params: Promise<{ projectId: string }> }
 ): Promise<NextResponse> {
-  const { projectId } = await segmentData.params;
+  const { projectId } = await segmentData!.params;
 
   const handler = withAuth<ApiSuccessResponse<ProjectGetResponse>>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
@@ -188,9 +188,9 @@ export const GET = withStandardRateLimit(handleGet);
  */
 async function handlePatch(
   request: NextRequest,
-  segmentData: { params: Promise<{ projectId: string }> }
+  segmentData?: { params: Promise<{ projectId: string }> }
 ): Promise<NextResponse> {
-  const { projectId } = await segmentData.params;
+  const { projectId } = await segmentData!.params;
 
   const handler = withAuth<ApiSuccessResponse<ProjectUpdateResponse>>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
@@ -316,9 +316,9 @@ async function handleUpdateProject(
  */
 async function handleDelete(
   request: NextRequest,
-  segmentData: { params: Promise<{ projectId: string }> }
+  segmentData?: { params: Promise<{ projectId: string }> }
 ): Promise<NextResponse> {
-  const { projectId } = await segmentData.params;
+  const { projectId } = await segmentData!.params;
 
   const handler = withAuth<ApiSuccessResponse<ProjectDeleteResponse>>(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {

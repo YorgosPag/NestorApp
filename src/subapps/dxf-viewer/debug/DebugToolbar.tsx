@@ -65,10 +65,8 @@ interface DOMInspectionResult {
   overlayContainers: Array<{ selector: string; found: boolean; element?: HTMLElement }>;
 }
 
-/** Window with layering test function (using intersection type to avoid index signature conflict) */
-type WindowWithLayeringTest = Window & {
-  runLayeringWorkflowTest?: () => Promise<LayeringWorkflowResult>;
-};
+// Window.runLayeringWorkflowTest is declared globally in src/types/window.d.ts
+// Result is typed as Promise<unknown> — cast inside .then() for type safety
 
 interface DebugToolbarProps {
   showCopyableNotification: (message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
@@ -125,10 +123,10 @@ export const DebugToolbar: React.FC<DebugToolbarProps> = ({
         event.preventDefault();
         event.stopPropagation();
 
-        // Direct call to window function
-        const windowWithTest = window as WindowWithLayeringTest;
-        if (windowWithTest.runLayeringWorkflowTest) {
-          windowWithTest.runLayeringWorkflowTest().then((result: LayeringWorkflowResult) => {
+        // Direct call to global window function (typed as Promise<unknown> in window.d.ts)
+        if (window.runLayeringWorkflowTest) {
+          window.runLayeringWorkflowTest().then((rawResult: unknown) => {
+            const result = rawResult as LayeringWorkflowResult;
             const successSteps = result.steps.filter((s: WorkflowTestStep) => s.status === 'success').length;
             const totalSteps = result.steps.length;
             const summary = `Workflow: ${result.success ? '✅ SUCCESS' : '❌ FAILED'}\nSteps: ${successSteps}/${totalSteps}\nLayer Displayed: ${result.layerDisplayed ? '✅ YES' : '❌ NO'}`;

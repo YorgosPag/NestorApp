@@ -340,7 +340,7 @@ describe('Override Engine', () => {
 
     it('should handle circular references gracefully', () => {
       const base = DEFAULT_DXF_SETTINGS;
-      const override: Record<string, any> = { line: {} };
+      const override: Record<string, unknown> = { line: {} };
       (override.line as unknown as { circular?: unknown }).circular = override; // Create circular reference
 
       // Should not throw or infinite loop

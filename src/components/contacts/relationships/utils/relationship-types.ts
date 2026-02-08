@@ -23,7 +23,7 @@ import { hardcodedColorValues } from '@/design-system/tokens/colors';
  * Defines the structure for relationship type configurations
  */
 export interface RelationshipTypeConfig {
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   color: string;
   allowedFor: ContactType[];
