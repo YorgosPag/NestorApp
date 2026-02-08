@@ -6,6 +6,7 @@ import {
   doc,
   onSnapshot,
   updateDoc,
+  setDoc,
   deleteDoc,
   query,
   where,
@@ -260,7 +261,8 @@ export class LayerSyncManager {
     const eventsCollection = collection(db, COLLECTIONS.LAYER_EVENTS);
     try {
       // Fire and forget - δεν θέλουμε να μπλοκάρει η εφαρμογή
-      doc(eventsCollection).set(fullEvent);
+      const eventDoc = doc(eventsCollection);
+      await setDoc(eventDoc, fullEvent);
     } catch (error) {
       // Warning logging removed
     }

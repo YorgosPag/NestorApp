@@ -92,6 +92,8 @@ interface HoverTooltipData {
   endDate: string;
   duration: number;
   progress: number;
+  x: number;
+  y: number;
 }
 
 // ─── Gantt Bar Color Resolver ─────────────────────────────────────────────
