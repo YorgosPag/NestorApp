@@ -129,8 +129,8 @@ const accuracyStyles: AccuracyStylesType = {
    * Accuracy zone styling
    * Replaces: canvasUtilities.geoInteractive.accuracyZone()
    */
-  zone: (size: number, color: string, level: 'excellent' | 'good' | 'poor'): CSSProperties => {
-    const opacity = level === 'excellent' ? 0.3 : level === 'good' ? 0.2 : 0.1;
+  zone: (size: number, color: string, level: 'excellent' | 'good' | 'fair' | 'poor'): CSSProperties => {
+    const opacity = level === 'excellent' ? 0.3 : level === 'good' ? 0.25 : level === 'fair' ? 0.2 : 0.1;
     return {
       width: `${size}px`,
       height: `${size}px`,
@@ -390,10 +390,11 @@ export const getControlPointStateStyle = (
  * 🎯 ACCURACY LEVEL COLOR UTILITY
  * Determines color based on accuracy level
  */
-export const getAccuracyLevelColor = (level: 'excellent' | 'good' | 'poor'): string => {
+export const getAccuracyLevelColor = (level: 'excellent' | 'good' | 'fair' | 'poor'): string => {
   switch (level) {
     case 'excellent': return colors.green[500];
     case 'good': return colors.orange[500]; // Using orange instead of yellow for better visibility
+    case 'fair': return colors.yellow[500];
     case 'poor': return colors.red[500];
     default: return colors.gray[500];
   }

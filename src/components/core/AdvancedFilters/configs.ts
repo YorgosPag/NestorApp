@@ -107,6 +107,14 @@ const TASK_TYPE_LABELS = {
   other: 'filters.taskTypes.other'
 } as const;
 
+// 🏢 ENTERPRISE: Task timeframe labels (i18n keys)
+const TASK_TIMEFRAME_LABELS = {
+  overdue: 'filters.timeframe.overdue',
+  today: 'filters.timeframe.today',
+  tomorrow: 'filters.timeframe.tomorrow',
+  week: 'filters.timeframe.week'
+} as const;
+
 // 🏢 ENTERPRISE: Centralized filter labels - i18n translation keys
 const FL = PROPERTY_FILTER_LABELS;
 const SP = {
@@ -1227,23 +1235,20 @@ export const taskFiltersConfig: FilterPanelConfig = {
             { value: 'document', label: TASK_TYPE_LABELS.document },
             { value: 'other', label: TASK_TYPE_LABELS.other }
           ]
-        }
-      ]
-    },
-    {
-      id: 'tasks-date',
-      fields: [
-        {
-          id: 'dateFrom',
-          type: 'date',
-          label: 'filters.dateFrom',
-          width: 1
         },
         {
-          id: 'dateTo',
-          type: 'date',
-          label: 'filters.dateTo',
-          width: 1
+          id: 'timeframe',
+          type: 'select',
+          label: FL.timeframe,
+          placeholder: 'filters.timeframe.all',
+          width: 1,
+          options: [
+            { value: 'all', label: 'filters.timeframe.all' },
+            { value: 'overdue', label: TASK_TIMEFRAME_LABELS.overdue },
+            { value: 'today', label: TASK_TIMEFRAME_LABELS.today },
+            { value: 'tomorrow', label: TASK_TIMEFRAME_LABELS.tomorrow },
+            { value: 'week', label: TASK_TIMEFRAME_LABELS.week }
+          ]
         }
       ]
     }
@@ -1257,8 +1262,7 @@ export interface TaskFilterState {
   status: string;
   priority: string;
   type: string;
-  dateFrom: string;
-  dateTo: string;
+  timeframe: string;
 }
 
 // Default Task Filters
@@ -1267,8 +1271,7 @@ export const defaultTaskFilters: TaskFilterState = {
   status: 'all',
   priority: 'all',
   type: 'all',
-  dateFrom: '',
-  dateTo: ''
+  timeframe: 'all'
 };
 
 // ====================================================================

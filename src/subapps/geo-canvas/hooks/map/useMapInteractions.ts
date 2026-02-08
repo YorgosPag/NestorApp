@@ -15,6 +15,7 @@
  */
 
 import { useCallback } from 'react';
+import type { Map as MaplibreMap } from 'maplibre-gl';
 import { mapStyleManager, type MapStyleType } from '../../services/map/MapStyleManager';
 import type { GeoCoordinate } from '../../types';
 import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
@@ -38,14 +39,10 @@ export interface MapEvent {
 /**
  * MapLibre map instance interface
  */
-export interface MapInstance {
-  getMap?: () => MapInstance;
-  getCenter?: () => { lng: number; lat: number };
-  getZoom?: () => number;
-  setZoom?: (zoom: number) => void;
-  flyTo?: (options: { center: [number, number]; zoom?: number }) => void;
+export type MapInstance = MaplibreMap & {
+  getMap?: () => MaplibreMap;
   _polygonSystem?: PolygonSystemRef;
-}
+};
 
 /**
  * Polygon system reference attached to map

@@ -497,6 +497,92 @@
         "longBreak": "Extended break",
         "lateArrival": "Late arrival"
       }
+    },
+    "stampsTab": {
+      "title": "Stamps Calculation",
+      "description": "Monthly stamps & insurance contribution calculation",
+      "noProjectId": "Project ID not found",
+      "noWorkers": "No workers in this project",
+      "noWorkersHint": "Add workers from the «Workers» tab",
+      "saveRecords": "Save Records",
+      "saving": "Saving...",
+      "saved": "Records saved successfully",
+      "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "dashboard": {
+        "totalStamps": "Total Stamps",
+        "employerContribution": "Employer Contribution",
+        "employeeContribution": "Employee Contribution",
+        "totalContribution": "Total Contribution"
+      },
+      "columns": {
+        "worker": "Worker",
+        "insuranceClass": "Ins. Class",
+        "imputedWage": "Imputed (€/day)",
+        "daysWorked": "Days",
+        "stamps": "Stamps",
+        "employerContrib": "Employer",
+        "employeeContrib": "Employee",
+        "total": "Total",
+        "actions": "Actions"
+      },
+      "issues": {
+        "missingClass": "Insurance class not assigned",
+        "noDays": "No working days found",
+        "noConfig": "Insurance configuration not found"
+      },
+      "dialog": {
+        "title": "Set Insurance Class",
+        "selectClass": "Select Class",
+        "dailyWageOverride": "Imputed Daily Wage (optional)",
+        "notes": "Notes",
+        "save": "Save",
+        "classLabel": "Class {{number}} — €{{wage}}/day"
+      },
+      "noInsuranceClass": "No class",
+      "totalsRow": "TOTALS"
+    },
+    "apdTab": {
+      "title": "APD & Payments",
+      "description": "Periodic Declaration Tracking",
+      "noProjectId": "Project ID not found",
+      "noRecords": "No employment records found",
+      "noRecordsHint": "Calculate stamps first from the «Stamps Calculation» tab",
+      "columns": {
+        "period": "Period",
+        "status": "Status",
+        "workers": "Workers",
+        "contribution": "Contribution (€)",
+        "deadline": "Deadline",
+        "referenceNumber": "Reference No.",
+        "actions": "Actions"
+      },
+      "status": {
+        "pending": "Pending",
+        "submitted": "Submitted",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "corrected": "Corrected"
+      },
+      "actions": {
+        "markSubmitted": "Mark as Submitted",
+        "addReference": "Reference No.",
+        "viewDetails": "Details"
+      },
+      "deadlineWarning": "Deadline approaching!",
+      "deadlinePassed": "Deadline has passed!"
     }
   },
   "parking": {

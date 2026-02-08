@@ -117,6 +117,13 @@
     "document": "Έγγραφο",
     "other": "Άλλο"
   },
+  "timeframe": {
+    "all": "Όλες οι ημερομηνίες",
+    "overdue": "Εκπρόθεσμες",
+    "today": "Σήμερα",
+    "tomorrow": "Αύριο",
+    "week": "Αυτή την εβδομάδα"
+  },
   "intents": {
     "appointment": "Ραντεβού",
     "invoice": "Τιμολόγιο",
@@ -155,7 +162,8 @@
     "totalArea": "Συνολικό Εμβαδόν",
     "yearRange": "Εύρος Ετών",
     "progressRange": "Εύρος Προόδου",
-    "startYearRange": "Εύρος Έτους Έναρξης"
+    "startYearRange": "Εύρος Έτους Έναρξης",
+    "timeframe": "Χρονικό Πλαίσιο"
   },
   "placeholders": {
     "general": "Αναζήτηση...",

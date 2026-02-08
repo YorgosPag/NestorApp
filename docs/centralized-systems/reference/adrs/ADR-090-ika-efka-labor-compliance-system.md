@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | IMPLEMENTED - Phase 1 + Phase 2 Complete |
+| **Status** | IMPLEMENTED - Phase 1 + Phase 2 + Phase 3 Complete |
 | **Date** | 2026-02-08 |
 | **Category** | Backend Systems / Labor Compliance |
 | **Canonical Location** | `src/components/projects/ika/` |
@@ -27,7 +27,7 @@ Greek labor law requires construction projects to maintain proper worker registr
 | Workers (Εργατοτεχνίτες) | Workers | Phase 1 | IMPLEMENTED |
 | EFKA Declaration (Αναγγελία Έργου) | EFKA Declaration | Phase 1 | IMPLEMENTED |
 | Attendance (Παρουσιολόγιο) | Timesheet | Phase 2 | IMPLEMENTED |
-| Stamps & APD (Ένσημα & ΑΠΔ) | Stamps Calculation + APD Payments | Phase 3 | Planned |
+| Stamps & APD (Ένσημα & ΑΠΔ) | Stamps Calculation + APD Payments | Phase 3 | IMPLEMENTED |
 | ERGANI II (Ψηφιακή Κάρτα) | — | Phase 4 | Planned |
 
 ### 2.2 Data Model — No New Worker Registry
@@ -73,13 +73,16 @@ src/components/projects/ika/
 ├── WorkersTabContent.tsx                 # Workers management tab
 ├── EfkaDeclarationTabContent.tsx         # EFKA declaration form
 ├── TimesheetTabContent.tsx               # Phase 2: Enterprise attendance UI
-├── StampsCalculationTabContent.tsx       # Phase 3 placeholder
-├── ApdPaymentsTabContent.tsx             # Phase 3 placeholder
+├── StampsCalculationTabContent.tsx       # Phase 3: Enterprise stamps calculator
+├── ApdPaymentsTabContent.tsx             # Phase 3: APD tracking & management
 ├── hooks/
 │   ├── useProjectWorkers.ts              # Fetch workers via contact_links
 │   ├── useEfkaDeclaration.ts             # Read/write EFKA declaration
 │   ├── useAttendanceEvents.ts            # Phase 2: Query + create immutable events
-│   └── useAttendanceSummary.ts           # Phase 2: Computed summaries & anomalies
+│   ├── useAttendanceSummary.ts           # Phase 2: Computed summaries & anomalies
+│   ├── useLaborComplianceConfig.ts       # Phase 3: Insurance classes + contribution rates
+│   ├── useStampsCalculation.ts           # Phase 3: Pure computation (stamps → contributions)
+│   └── useEmploymentRecords.ts           # Phase 3: CRUD employment records (Firestore)
 └── components/
     ├── WorkerCard.tsx                     # Individual worker display
     ├── WorkerAssignmentDialog.tsx         # Assign contact to project
@@ -91,7 +94,12 @@ src/components/projects/ika/
     ├── AttendanceEventRow.tsx             # Phase 2: Single event in timeline
     ├── DailyTimeline.tsx                  # Phase 2: Workers table with events
     ├── CrewGroupFilter.tsx                # Phase 2: Filter by crew (company)
-    └── AttendanceRecordDialog.tsx         # Phase 2: Manual event entry
+    ├── AttendanceRecordDialog.tsx         # Phase 2: Manual event entry
+    ├── MonthYearSelector.tsx              # Phase 3: Month/year navigation (Radix Select)
+    ├── StampsSummaryDashboard.tsx         # Phase 3: 4 summary cards (stamps/contributions)
+    ├── WorkerStampsTable.tsx              # Phase 3: Per-worker stamps table with totals
+    ├── InsuranceClassBadge.tsx            # Phase 3: Insurance class badge
+    └── EmploymentRecordDialog.tsx         # Phase 3: Edit insurance class dialog
 ```
 
 ## 4. Key Interfaces
@@ -220,27 +228,138 @@ The `useAttendanceSummary` hook automatically detects:
 
 All text is from `useTranslation('projects')` → `ika.timesheetTab.*` (~50 keys in el + en).
 
-## 8. Security
+## 8. Phase 3: Stamps & APD System (IMPLEMENTED)
+
+### 8.1 Architecture — Config-Driven Computation
+
+Stamps calculation is **pure computation** derived from attendance data + insurance class configuration. No stamps data is stored — it is computed on-the-fly via `useMemo`.
+
+Employment records (the output of computation) are persisted to `employment_records` for APD tracking.
+
+**Legal basis**: ΕΦΚΑ Εγκύκλιος 39/2024 & 11/2025, ΚΠΚ 781 (Οικοδομοτεχνικά).
+
+### 8.2 EFKA Contribution Rates (ΚΠΚ 781 — Construction, 01/01/2025)
+
+| Category | Employer (%) | Employee (%) | Total (%) |
+|----------|-------------|-------------|-----------|
+| Κύρια σύνταξη (Main Pension) | 13.33 | 6.67 | 20.00 |
+| Υγεία (Health) | 4.55 | 2.55 | 7.10 |
+| Επικουρική (Supplementary/ΕΤΕΑΕΠ) | 3.25 | 3.25 | 6.50 |
+| Ανεργία (Unemployment/ΔΥΠΑ) | 2.43 | 2.00 | 4.43 |
+| ΙΕΚ / Πρόσθετες (IEK/Additional) | 0.837 | 2.32 | 3.157 |
+| Εφάπαξ (Once Payment) | — | 4.00 | 4.00 |
+| **ΣΥΝΟΛΟ ΚΠΚ 781** | **24.397** | **20.790** | **45.187** |
+
+Rates are stored as `DEFAULT_CONTRIBUTION_RATES` in `contracts.ts` and can be overridden via `system/settings.laborCompliance` Firestore document.
+
+### 8.3 Insurance Classes (Config-Driven)
+
+28 insurance classes with imputed daily wages (τεκμαρτά ημερομίσθια). Stored in `DEFAULT_INSURANCE_CLASSES` with annual updates via config.
+
+**Calculation formula**:
+```
+1 ένσημο = 1 ημέρα εργασίας (from attendance_events)
+
+Εισφορά Εργοδότη = ένσημα × τεκμαρτό_ημερομίσθιο × (employerRate / 100)
+Εισφορά Εργαζομένου = ένσημα × τεκμαρτό_ημερομίσθιο × (employeeRate / 100)
+Συνολική Εισφορά = Εργοδότη + Εργαζομένου
+```
+
+### 8.4 Data Flow
+
+```
+attendance_events (Phase 2, immutable)
+  │
+  ├─ useAttendanceEvents(projectId, month range)
+  │    → Count unique working days per worker
+  │
+  └─ useLaborComplianceConfig()
+       → Read: system/settings.laborCompliance (Firestore)
+       → Fallback: DEFAULT_LABOR_COMPLIANCE_CONFIG
+       │
+       └─ useStampsCalculation(workers, attendanceDays, config)
+            → Pure computation (useMemo, NO Firestore)
+            → Maps: worker.insuranceClassId → InsuranceClass
+            → Computes: stamps, contributions per worker
+            → Returns: StampsMonthSummary
+            │
+            ├─ StampsCalculationTabContent (main UI)
+            │   ├─ MonthYearSelector (Radix Select)
+            │   ├─ StampsSummaryDashboard (4 cards)
+            │   ├─ WorkerStampsTable (per-worker detail)
+            │   └─ EmploymentRecordDialog (assign class)
+            │
+            └─ useEmploymentRecords(projectId, month, year)
+                 → Batch save to employment_records (Firestore)
+                 → Used by ApdPaymentsTabContent
+```
+
+### 8.5 Computed Types
+
+| Type | Purpose |
+|------|---------|
+| `StampsMonthSummary` | Monthly project totals: stamps, employer/employee/total contributions, issues |
+| `WorkerStampsSummary` | Per-worker: insurance class, imputed wage, days worked, contributions, issues |
+| `ApdPeriod` | APD submission tracking: status, deadline, reference number |
+| `ContributionRates` | Rate structure: mainPension, health, supplementary, unemployment, iek, oncePayment |
+| `InsuranceClass` | Class definition: number, min/max daily wage, imputed wage, year |
+| `LaborComplianceConfig` | Top-level config: insurance classes + contribution rates |
+
+### 8.6 UI Architecture
+
+```
+StampsCalculationTabContent (main orchestrator)
+├── MonthYearSelector        — 2 Radix Selects (month + year) + prev/next buttons
+├── StampsSummaryDashboard   — 4 summary cards (Ένσημα / Εργοδ. / Εργαζ. / Σύνολο)
+├── WorkerStampsTable        — Per-worker table with 8 columns + totals row
+│   └── InsuranceClassBadge  — Badge: "Κλ. 10 — €39.08" or "Χωρίς κλάση"
+└── EmploymentRecordDialog   — Assign insurance class (Radix Select, 28 classes)
+
+ApdPaymentsTabContent (APD tracking)
+└── Table                    — Monthly periods: status (Badge), contribution, actions
+    └── Button               — "Σημείωση Υποβολής" (mark as submitted)
+```
+
+### 8.7 Hooks
+
+| Hook | Type | Purpose |
+|------|------|---------|
+| `useLaborComplianceConfig` | Firestore read | Insurance classes + contribution rates from `system/settings` |
+| `useStampsCalculation` | Pure computation | Derives StampsMonthSummary from workers + attendance + config |
+| `useEmploymentRecords` | Firestore CRUD | Batch save/update employment records, APD status tracking |
+
+### 8.8 Employment Records Collection
+
+**Collection**: `employment_records` (registered in `COLLECTIONS`)
+
+**Document fields**: `projectId`, `contactId`, `workerName`, `companyName`, `month`, `year`, `insuranceClassNumber`, `imputedDailyWage`, `totalDaysWorked`, `stampsCount`, `employerContribution`, `employeeContribution`, `totalContribution`, `apdStatus`, `apdReferenceNumber`, `notes`, `createdAt`, `updatedAt`
+
+**Composite index**: `projectId` (ASC) + `year` (ASC) + `month` (ASC)
+
+**APD Status Flow**: `pending` → `submitted` → `accepted` | `rejected` → `corrected`
+
+### 8.9 i18n
+
+All text from `useTranslation('projects')`:
+- `ika.stampsTab.*` (~30 keys): dashboard, columns, issues, dialog, months
+- `ika.apdTab.*` (~20 keys): title, columns, status, actions
+
+## 9. Security
 
 - `contact_links`: Authenticated read, validated create, creator-only update/delete
 - `attendance_events`: Authenticated read, validated create, **NO update, NO delete** (immutable)
+- `employment_records`: Authenticated read, validated create (required fields + enum), authenticated update (projectId/contactId immutable), **NO delete** (legal documents)
 - EFKA declaration data: Protected by project-level tenant isolation rules
 - Workers list: Read-only unless user has project access
 
-## 9. Future Phases
-
-### Phase 3: Stamps & APD (Ένσημα & ΑΠΔ)
-- Insurance class configuration (config-driven from `system/settings.laborCompliance`)
-- Monthly employment record calculation from attendance data
-- APD generation, deadlines, penalty tracking
-- `employment_records` collection
+## 10. Future Phases
 
 ### Phase 4: ERGANI II
 - Digital work card integration
 - Cross-checks: Attendance ↔ ERGANI ↔ APD
 - `digital_work_cards` collection
 
-## 10. Consequences
+## 11. Consequences
 
 ### Positive
 - No new worker registry — reuses existing contacts/relationships system
@@ -248,6 +367,9 @@ All text is from `useTranslation('projects')` → `ika.timesheetTab.*` (~50 keys
 - Immutable attendance events — legal compliance for ΣΕΠΕ / accident documentation
 - Crew grouping from existing company relationships — no separate crew collection
 - Pure computation summaries (useMemo) — no derived data in Firestore
+- Config-driven insurance classes — annual rate updates without code changes
+- Batch save for employment records — atomic writes for all workers in a month
+- APD status preserved on re-save — doesn't overwrite submitted/accepted records
 - Enterprise patterns throughout — all 5 design token hooks, i18n, proper TypeScript, Radix Select
 
 ### Negative
@@ -255,7 +377,8 @@ All text is from `useTranslation('projects')` → `ika.timesheetTab.*` (~50 keys
 - Worker search currently client-side filtered (scales to ~1000 contacts)
 - EFKA status transitions not yet enforced server-side
 - Attendance summary computation is client-side (acceptable for <100 workers/project)
+- Stamps computation uses simplified attendance day count (single-day query per worker)
 
 ### Risks
-- Insurance class rates change annually — needs config-driven approach (Phase 3)
+- Insurance class rates change annually — mitigated by config-driven approach (Phase 3 ✅)
 - Real-time geofence/QR integration requires mobile app (Phase 2 implements manual fallback)

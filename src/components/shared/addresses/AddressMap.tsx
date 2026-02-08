@@ -27,9 +27,9 @@ import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from '
 import { Source, Layer } from 'react-map-gl/maplibre';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { LngLatBounds } from 'maplibre-gl';
-import type { Map as MaplibreMap } from 'maplibre-gl';
 
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
+import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import { AddressMarker } from './AddressMarker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -108,7 +108,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   const [mapReady, setMapReady] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
 
-  const mapRef = useRef<MaplibreMap | null>(null);
+  const mapRef = useRef<MapInstance | null>(null);
   const addressResolver = useRef(new AddressResolver({
     useCache: true,
     fallbackToArea: true,
@@ -284,7 +284,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
    * Handle map ready event
    * Enterprise pattern: Load custom marker icon into map sprite
    */
-  const handleMapReady = useCallback((map: MaplibreMap) => {
+  const handleMapReady = useCallback((map: MapInstance) => {
     console.log('🗺️ Map ready!', { map });
     mapRef.current = map;
     setMapReady(true);

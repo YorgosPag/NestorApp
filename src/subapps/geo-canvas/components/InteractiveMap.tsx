@@ -16,12 +16,11 @@
  */
 
 import React, { memo } from 'react';
-import type { GeoCoordinate, GeoControlPoint } from '../types';
-import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
+import type { GeoCoordinate } from '../types';
+import type { PolygonType, UniversalPolygon } from '@geo-alert/core/polygon-system/types';
 import { InteractiveMapContainer } from './InteractiveMapContainer';
 // 🏢 ENTERPRISE: Import proper types for type safety
-import type { TransformState } from '../hooks/map/useMapInteractions';
-import type { Map as MaplibreMap } from 'maplibre-gl';
+import type { TransformState, MapInstance } from '../hooks/map/useMapInteractions';
 
 // ============================================================================
 // 🎯 ENTERPRISE INTERFACE
@@ -35,7 +34,7 @@ export interface InteractiveMapProps {
   transformState: TransformState;
   className?: string;
   onPolygonComplete?: () => void;
-  onMapReady?: (map: MaplibreMap) => void;
+  onMapReady?: (map: MapInstance) => void;
   /** 🗺️ ENTERPRISE: Children elements (markers, layers) to render inside the map */
   children?: React.ReactNode;
   /** Hide GeoStatusBar (for non-DXF contexts like AddressMap) */

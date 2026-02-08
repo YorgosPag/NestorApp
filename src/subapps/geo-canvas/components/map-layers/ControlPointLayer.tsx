@@ -83,18 +83,19 @@ export const ControlPointLayer: React.FC<ControlPointLayerProps> = memo(({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
-                  className={`rounded-full border transition-all relative z-50 ${
-                    mapControlPointTokens.getControlPointStyle(
+                  className="rounded-full border transition-all relative z-50"
+                  style={{
+                    ...mapControlPointTokens.getControlPointStyle(
                       selectedPointId === cp.id, // isActive
                       shouldHighlightFirst,       // shouldHighlight
                       isPolygonComplete           // isCompleted
-                    ).classes
-                  }`}
-                  style={interactiveMapStyles.controlPoints.interaction(
-                    selectedPointId === cp.id,
-                    shouldHighlightFirst,
-                    isPolygonComplete
-                  )}
+                    ),
+                    ...interactiveMapStyles.controlPoints.interaction(
+                      selectedPointId === cp.id,
+                      shouldHighlightFirst,
+                      isPolygonComplete
+                    )
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();

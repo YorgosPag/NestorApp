@@ -37,7 +37,7 @@ type LocalPolygonType = PolygonType | 'complex';
 // Enterprise Services & Hooks
 import { elevationService } from '../services/map/ElevationService';
 import { getAllMapStyleUrls, type MapStyleType } from '../services/map/MapStyleManager';
-import { useMapInteractions, type TransformState, type DrawingData, type MapInstance } from '../hooks/map/useMapInteractions';
+import { useMapInteractions, type TransformState, type DrawingData, type MapInstance, type GeoPolygon } from '../hooks/map/useMapInteractions';
 import { useMapState } from '../hooks/map/useMapState';
 // 🏢 ENTERPRISE: Import maplibre types for proper map reference typing
 import type { Map as MaplibreMap } from 'maplibre-gl';
@@ -368,6 +368,22 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   // ========================================================================
 
   const mapStyleUrls = getAllMapStyleUrls();
+  const geoPolygons = React.useMemo<GeoPolygon[]>(() => {
+    return polygons
+      .map((polygon) => {
+        const points = polygon.points
+          .filter((point) => typeof point.x === 'number' && typeof point.y === 'number')
+          .map((point) => ({ lng: point.x, lat: point.y }));
+
+        if (points.length === 0) return null;
+
+        return {
+          id: polygon.id,
+          points
+        };
+      })
+      .filter((polygon): polygon is GeoPolygon => Boolean(polygon));
+  }, [polygons]);
 
   // ========================================================================
   // 🎯 PRESENTATION LAYER DELEGATION
@@ -390,7 +406,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
           onMapReady,
           enablePolygonDrawing,
           setMapRef,
-          polygons,
+          geoPolygons,
           stats,
           startDrawing,
           finishDrawing,

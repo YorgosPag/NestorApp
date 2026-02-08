@@ -18,6 +18,7 @@
 import React, { memo } from 'react';
 import { Map } from 'react-map-gl/maplibre';
 import type { MapLayerMouseEvent } from 'react-map-gl/maplibre';
+import type { StyleSpecification, ImmutableLike } from 'maplibre-gl';
 import type { FloorPlanControlPoint } from '../floor-plan-system/types/control-points';
 import type { UniversalPolygon } from '@geo-alert/core/polygon-system/types';
 import type { ViewState } from '../hooks/map/useMapState';
@@ -47,7 +48,7 @@ import { interactiveMapStyles } from './InteractiveMap.styles';
 
 export interface InteractiveMapPresentationProps {
   // Map Configuration
-  mapStyle: string | object;
+  mapStyle: string | StyleSpecification | ImmutableLike<StyleSpecification>;
   viewState: ViewState;
   onViewStateChange: (viewState: ViewState) => void;
   onLoad: (event: { target: MapInstance }) => void;

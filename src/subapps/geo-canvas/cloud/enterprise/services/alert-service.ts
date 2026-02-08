@@ -430,6 +430,32 @@ export class AlertService {
       const report = await this.alertEngine.generateQuickReport();
       let alerts = report.alerts?.active || [];
 
+      const normalizeAlertType = (type?: string): ActiveAlert['type'] => {
+        switch (type) {
+          case 'performance':
+          case 'security':
+          case 'cost':
+          case 'availability':
+          case 'resource':
+            return type;
+          default:
+            return 'availability';
+        }
+      };
+
+      const normalizeAlertSeverity = (level?: AlertSeverity): ActiveAlert['severity'] => {
+        switch (level) {
+          case 'low':
+          case 'medium':
+          case 'high':
+          case 'critical':
+            return level;
+          default:
+            return 'low';
+        }
+      };
+
+
       // Apply filters
       if (filterType) {
         alerts = alerts.filter((alert: AlertData) => alert.type === filterType);
@@ -442,8 +468,8 @@ export class AlertService {
       // Convert to ActiveAlert format
       return alerts.map((alert: AlertData) => ({
         id: alert.id ?? '',
-        type: alert.type || 'infrastructure',
-        severity: alert.severity || 'medium',
+        type: normalizeAlertType(alert.type),
+        severity: normalizeAlertSeverity(alert.severity),
         title: alert.title || alert.message || '',
         description: alert.description || alert.message || '',
         source: alert.source || 'cloud-infrastructure',
@@ -584,3 +610,4 @@ export class AlertService {
     return this.alertEngine.isSystemInitialized;
   }
 }
+

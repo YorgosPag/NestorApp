@@ -124,7 +124,7 @@ export class InfrastructureManager {
 
           // Alert on provider initialization failure
           await this.alertEngine.createAlert(
-            'infrastructure-error',
+            'availability',
             `Provider initialization failed`,
             `Failed to initialize ${providerConfig.name}: ${errorMessage}`,
             'high',
@@ -469,7 +469,7 @@ export class InfrastructureManager {
       // Check for critical overall health
       if (status.overall.health === 'critical') {
         await this.alertEngine.createAlert(
-          'infrastructure-critical',
+          'availability',
           'Infrastructure Critical Health',
           `Infrastructure health is critical με availability ${status.overall.availability.toFixed(1)}%`,
           'critical',
@@ -480,7 +480,7 @@ export class InfrastructureManager {
       // Check for low availability
       if (status.overall.availability < 95) {
         await this.alertEngine.createAlert(
-          'infrastructure-availability',
+          'availability',
           'Low Infrastructure Availability',
           `Infrastructure availability is ${status.overall.availability.toFixed(1)}% (below 95% threshold)`,
           status.overall.availability < 90 ? 'high' : 'medium',
@@ -492,7 +492,7 @@ export class InfrastructureManager {
       const failedComponents = status.components.filter(c => c.status === 'offline' || c.health === 'critical');
       for (const component of failedComponents) {
         await this.alertEngine.createAlert(
-          'component-failure',
+          'resource',
           `Component ${component.name} Failed`,
           `Component ${component.name} (${component.type}) is ${component.status} με health ${component.health}`,
           'high',
@@ -865,3 +865,4 @@ export class InfrastructureManager {
     return this.config;
   }
 }
+

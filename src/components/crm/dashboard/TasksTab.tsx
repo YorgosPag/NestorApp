@@ -99,7 +99,11 @@ const createFormatDueDate = (t: (key: string) => string) => (dueDate?: Firestore
     return format(date, 'dd/MM/yyyy HH:mm', { locale: el });
 };
 
-export function TasksTab() {
+interface TasksTabProps {
+  onTaskCreated?: () => void;
+}
+
+export function TasksTab({ onTaskCreated }: TasksTabProps) {
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
@@ -368,7 +372,7 @@ export function TasksTab() {
           )}
         </div>
       </div>
-      <CreateTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onTaskCreated={fetchData} />
+      <CreateTaskModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onTaskCreated={() => { fetchData(); onTaskCreated?.(); }} />
     </div>
   );
 }

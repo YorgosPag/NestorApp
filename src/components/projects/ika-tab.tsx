@@ -68,13 +68,13 @@ export function IkaTab({ project, data }: IkaTabProps) {
       id: 'stamps-calculation',
       label: t('ika.stampsCalculation'),
       icon: Calculator,
-      content: <StampsCalculationTabContent />,
+      content: <StampsCalculationTabContent projectId={projectId} />,
     },
     {
       id: 'apd-payments',
       label: t('ika.apdPayments'),
       icon: CreditCard,
-      content: <ApdPaymentsTabContent />,
+      content: <ApdPaymentsTabContent projectId={projectId} />,
     },
   ];
 

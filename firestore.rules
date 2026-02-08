@@ -197,6 +197,44 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 💰 EMPLOYMENT_RECORDS COLLECTION — Monthly employment records (Phase 3)
+    // =========================================================================
+    // Monthly employment records per worker per project.
+    // Contains stamps count, insurance class, and contribution calculations.
+    // Used by: StampsCalculationTabContent, ApdPaymentsTabContent
+    // =========================================================================
+    match /employment_records/{recordId} {
+
+      // 📖 READ: Any authenticated user
+      allow read: if isAuthenticated();
+
+      // ✍️ CREATE: Authenticated user with required fields
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll([
+                         'projectId', 'contactId', 'month', 'year',
+                         'totalDaysWorked', 'insuranceClassNumber', 'stampsCount',
+                         'employerContribution', 'employeeContribution', 'totalContribution',
+                         'apdStatus', 'createdAt', 'updatedAt'
+                       ])
+                    && request.resource.data.projectId is string
+                    && request.resource.data.contactId is string
+                    && request.resource.data.month is number
+                    && request.resource.data.year is number
+                    && request.resource.data.apdStatus in [
+                         'pending', 'submitted', 'accepted', 'rejected', 'corrected'
+                       ];
+
+      // ✏️ UPDATE: Authenticated user (for APD status changes, corrections)
+      allow update: if isAuthenticated()
+                    && request.resource.data.projectId == resource.data.projectId
+                    && request.resource.data.contactId == resource.data.contactId;
+
+      // 🚫 DELETE: FORBIDDEN — employment records are legal documents
+      allow delete: if false;
+    }
+
+    // =========================================================================
     // 🎨 CAD_FILES COLLECTION - ENTERPRISE DXF STORAGE (Firebase Storage + Metadata)
     // =========================================================================
     // Internal storage for DXF scene metadata (actual scene data in Firebase Storage)

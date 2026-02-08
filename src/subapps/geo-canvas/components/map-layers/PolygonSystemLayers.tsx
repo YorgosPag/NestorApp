@@ -24,25 +24,14 @@ import { interactiveMapStyles } from '../InteractiveMap.styles';
 // ============================================================================
 
 // 🏢 ENTERPRISE: GeoJSON Feature Collection type
-interface GeoJSONFeatureCollection {
-  type: 'FeatureCollection';
-  features: GeoJSONFeature[];
-}
-
-interface GeoJSONFeature {
-  type: 'Feature';
-  geometry: {
-    type: string;
-    coordinates: number[][] | number[][][] | number[][][][];
-  };
-  properties?: Record<string, unknown>;
-}
+type GeoJSONFeatureCollection = GeoJSON.FeatureCollection;
+type GeoJSONFeature = GeoJSON.Feature;
 
 export interface PolygonSystemLayersProps {
   /** Polygons από centralized system */
   polygons: UniversalPolygon[];
   /** Function to export polygons as GeoJSON */
-  exportAsGeoJSON: () => GeoJSONFeatureCollection | null;
+  exportAsGeoJSON: () => GeoJSON.FeatureCollection | null;
   /** Whether polygon drawing is enabled */
   enablePolygonDrawing?: boolean;
 }
@@ -108,7 +97,7 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
   }
 
   // ✅ PERFORMANCE: Memoized GeoJSON data from centralized system
-  const geojsonData = useMemo(() => {
+  const geojsonData = useMemo<GeoJSON.FeatureCollection | null>(() => {
     try {
       return exportAsGeoJSON();
     } catch (error) {
@@ -125,7 +114,9 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
   // ✅ PERFORMANCE: Memoized polygon rendering data
   const polygonRenderData = useMemo(() => {
     return geojsonData.features.map((feature: GeoJSONFeature, index: number) => {
-      const polygon = polygons.find(p => p.id === feature.properties?.id);
+      const properties = feature.properties as Record<string, unknown> | null;
+      const featureId = typeof properties?.id === 'string' ? properties.id : undefined;
+      const polygon = polygons.find(p => p.id === featureId);
       if (!polygon) return null;
 
       const sourceId = `polygon-${polygon.id}`;
@@ -163,7 +154,7 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
           }
 
           const circleCoordinates = calculateCircleCoordinates(point, pointRadius);
-          const circleFeature = {
+          const circleFeature: GeoJSON.Feature<GeoJSON.Polygon> = {
             type: 'Feature' as const,
             geometry: {
               type: 'Polygon' as const,
@@ -336,3 +327,4 @@ PolygonSystemLayers.displayName = 'PolygonSystemLayers';
  * 🗺️ Standards Compliance - Proper GeoJSON & MapLibre patterns
  * 🏗️ Maintainability - Clean separation από parent logic
  */
+

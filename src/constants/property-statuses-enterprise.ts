@@ -143,6 +143,7 @@ export const PROPERTY_FILTER_LABELS = {
   year_range: 'filters.fields.yearRange',
   progress_range: 'filters.fields.progressRange',
   start_year_range: 'filters.fields.startYearRange',
+  timeframe: 'filters.fields.timeframe',
   // Checkbox labels
   has_parking: 'filters.checkboxes.hasParking',
   has_elevator: 'filters.checkboxes.hasElevator',

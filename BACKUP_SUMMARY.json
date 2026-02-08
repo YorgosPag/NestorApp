@@ -1,106 +1,61 @@
 {
-  "backupId": "backup-2026-02-07-gantt-edit-email-mappers",
-  "timestamp": "2026-02-07T16:45:00+02:00",
-  "category": "FEATURE",
-  "shortDescription": "Gantt chart (ADR-034), building edit button, email types refactor, contact mapper cleanup & 10 AI use cases",
-  "problem": "Building timeline had only milestones view (no Gantt). BuildingDetailsHeader lacked edit button. Email sharing types were inline/duplicated. Contact form mappers had excessive complexity. 10 AI use cases were undocumented.",
-  "cause": "Incremental feature development — Gantt chart needed for construction tracking (ADR-034), edit button for building management (ADR-087), email sharing needed proper type extraction, contact mappers accumulated tech debt, AI architecture docs expanding.",
+  "backupId": "backup-2026-02-08-milestone-export-geocanvas-fix",
+  "timestamp": "2026-02-08T15:00:00+02:00",
+  "category": "FIX",
+  "shortDescription": "GeoCanvas JSX fix, geo-canvas cleanup & milestone export company/project context",
+  "problem": "1. Vercel build failed: JSX namespace error in GeoCanvasContent.tsx (result: instead of result={}). 2. Milestone export PDF/Excel missing company and project identification.",
+  "cause": "1. Incorrect JSX prop syntax (object literal colon instead of JSX equals). 2. Export options did not include companyName/projectName fields.",
   "filesChanged": [
-    "src/components/building-management/BuildingDetails.tsx",
-    "src/components/building-management/BuildingDetails/BuildingDetailsHeader.tsx",
-    "src/components/building-management/tabs/TimelineTabContent.tsx",
-    "src/components/building-management/tabs/TimelineTabContent/TimelineViewToggle.tsx",
-    "src/components/building-management/tabs/TimelineTabContent/gantt/GanttView.tsx",
-    "src/components/building-management/tabs/TimelineTabContent/gantt/gantt-mock-data.ts",
-    "src/components/ui/effects/hover-effects.ts",
-    "src/components/ui/email-sharing/EmailShareForm.tsx",
-    "src/components/ui/email-sharing/components/TemplateSelector.tsx",
-    "src/components/ui/email-sharing/components/ValidationErrors.tsx",
-    "src/components/ui/property-status/PropertyStatusSelector.tsx",
-    "src/components/ui/social-sharing/CopyActionsSection.tsx",
-    "src/config/contact-tabs-config.ts",
-    "src/config/unified-tabs-factory.ts",
-    "src/hooks/useLayoutClasses.ts",
-    "src/i18n/locales/el/building.json",
-    "src/i18n/locales/en/building.json",
-    "src/types/project/addresses.ts",
-    "src/ui-adapters/react/useSemanticColors.ts",
-    "src/utils/contactForm/contactMapper.ts",
-    "src/utils/contactForm/fieldMappers/companyMapper.ts",
-    "src/utils/contactForm/fieldMappers/serviceMapper.ts",
-    "src/utils/contactForm/utils/data-cleaning.ts",
-    "docs/centralized-systems/ai/pipeline.md",
-    "docs/centralized-systems/ai/security.md",
-    "docs/centralized-systems/ai/use-cases/UC-009-internal-operator-workflow.md",
-    "docs/centralized-systems/ai/use-cases/UC-014-property-sale-process.md",
-    "docs/centralized-systems/ai/use-cases/UC-023-property-handover.md",
-    "docs/centralized-systems/ai/use-cases/UC-024-labor-compliance.md",
-    "docs/centralized-systems/ai/use-cases/UC-025-project-costing.md",
-    "docs/centralized-systems/ai/use-cases/UC-026-cash-flow.md",
-    "docs/centralized-systems/ai/use-cases/UC-027-site-safety.md",
-    "docs/centralized-systems/ai/use-cases/UC-028-certifications.md",
-    "docs/centralized-systems/ai/use-cases/UC-029-knowledge-base.md",
-    "docs/centralized-systems/ai/use-cases/UC-030-petty-cash.md",
-    "docs/centralized-systems/ai/use-cases/UC-031-payment-plan-management.md",
     "docs/centralized-systems/reference/adr-index.md",
-    "docs/centralized-systems/reference/adrs/ADR-034-gantt-chart-construction-tracking.md",
-    "docs/centralized-systems/reference/adrs/ADR-169-modular-ai-architecture.md",
-    "reports/type-errors-audit-2026-02-07.md",
-    "package.json",
-    "pnpm-lock.yaml",
-    "CLAUDE.md",
-    "BACKUP_SUMMARY.json"
+    "src/subapps/geo-canvas/app/GeoCanvasContent.tsx",
+    "src/subapps/geo-canvas/components/InteractiveMapContainer.tsx",
+    "src/subapps/geo-canvas/components/InteractiveMapPresentation.tsx",
+    "src/subapps/geo-canvas/components/map-layers/AccuracyVisualizationLayer.tsx",
+    "src/subapps/geo-canvas/components/map-layers/ControlPointLayer.tsx",
+    "src/subapps/geo-canvas/components/map-layers/PolygonLinesLayer.tsx",
+    "src/subapps/geo-canvas/components/map-layers/TransformationPreviewLayer.tsx",
+    "src/subapps/geo-canvas/components/map-overlays/GeoAccuracyLegend.tsx",
+    "src/subapps/geo-canvas/components/map-overlays/GeoStatusBar.tsx",
+    "src/subapps/geo-canvas/hooks/useAdministrativeBoundaries.ts",
+    "src/subapps/geo-canvas/services/administrative-boundaries/AdministrativeBoundaryService.ts"
   ],
   "solution": {
-    "gantt_chart_adr034": "Lazy-loaded GanttView component with TimelineViewToggle (milestones/gantt), mock data for construction phases, Suspense fallback spinner",
-    "building_edit_adr087": "BuildingDetails + BuildingDetailsHeader: onEdit prop, dynamic actions array with Edit button (amber gradient)",
-    "email_sharing_refactor": "Extract EmailShareData/ShareData types, fix TemplateSelector radius/color bugs, add onBack/loading props",
-    "contact_mapper_cleanup": "Reduce complexity in contactMapper, companyMapper, serviceMapper — cleaner field mapping",
-    "ui_tokens": "hover-effects: BLUE_WITH_UNDERLINE, FADE_IN. useSemanticColors, useLayoutClasses minor fixes",
-    "i18n_building": "72 new translations (el/en) for timeline, gantt, edit actions",
-    "ai_docs": "10 new use cases (UC-009, UC-023→UC-031) + ADR-034 Gantt spec (816 lines) + pipeline/security updates"
+    "geocanvas_jsx_fix": "Fixed JSX syntax: result: boundaryResult → result={boundaryResult} in 2 locations (FloorPlanCanvasLayer, FloorPlanUploadModal)",
+    "milestone_export_context": "Added companyName/projectName to MilestoneExportOptions. PDF header shows Εταιρεία/Έργο/Κτίριο hierarchy. Excel summary sheet includes company/project rows. TimelineTabContent resolves names via useNavigation() context.",
+    "geocanvas_cleanup": "Admin boundaries hook major cleanup (826 lines removed), component refinements across map layers and overlays"
   },
   "testing": {
-    "typescript": "Pre-commit checks passed",
-    "manual": "44 files committed and pushed to Vercel",
-    "deployment": "Vercel auto-deployment triggered via git push origin feat/adr-169-ai-architecture-suite",
-    "visualCheck": "Building timeline toggle, email form, contact forms to verify on localhost"
+    "typescript": "TypeScript compilation passed (zero errors in modified files). Pre-commit checks passed.",
+    "deployment": "Vercel auto-deployment triggered via git push origin main"
   },
   "notes": [
-    "📊 GANTT CHART (ADR-034): Lazy-loaded with Suspense, TimelineViewToggle toggle between milestones/gantt",
-    "✏️ BUILDING EDIT (ADR-087): Edit button in header with onEdit callback, dynamic actions array",
-    "📧 EMAIL TYPES: Extracted EmailShareData/ShareData types, fixed TemplateSelector radius/designSystem bugs",
-    "🧹 CONTACT MAPPERS: contactMapper, companyMapper, serviceMapper simplified and cleaned up",
-    "🎨 UI TOKENS: hover-effects expanded (BLUE_WITH_UNDERLINE, FADE_IN), semantic colors + layout fixes",
-    "🌐 i18n: 72 new building translations (el + en) for gantt, timeline, edit",
-    "📄 AI DOCS: 10 new use cases (UC-009, UC-023→UC-031), ADR-034 Gantt spec, pipeline + security updates",
-    "📋 TYPE AUDIT: reports/type-errors-audit-2026-02-07.md — full type errors report",
-    "🏷️ Safety checkpoint: safety/gantt-edit-email-mappers-2026-02-07"
+    "🔧 GeoCanvas JSX fix: result: → result={} (2 locations in GeoCanvasContent.tsx)",
+    "📊 Milestone export: PDF/Excel now show company + project names in headers",
+    "🗺️ Geo-canvas: Major admin boundaries cleanup (826 lines removed)",
+    "🏷️ Safety checkpoint: safety/milestone-export-geocanvas-fix-2026-02-08"
   ],
   "contributors": {
     "user": "Γιώργος Παγώνης",
     "assistant": "Claude Opus 4.6 (Anthropic)",
-    "sessionDate": "2026-02-07"
+    "sessionDate": "2026-02-08"
   },
   "relatedBackups": [
-    "backup-2026-02-07-universal-centralization",
-    "backup-2026-02-07-spacing-centralization",
-    "backup-2026-02-06-notifications-cards-email"
+    "backup-2026-02-07-gantt-edit-email-mappers"
   ],
   "commits": [
     {
-      "hash": "e5dbf896",
-      "message": "feat: Gantt chart (ADR-034), building edit button, email types refactor, contact mapper cleanup & 10 AI use cases",
-      "files": 44,
-      "insertions": 4827,
-      "deletions": 401
+      "hash": "39b1dc02",
+      "message": "fix: GeoCanvas JSX syntax fix, geo-canvas cleanup & milestone export company/project context",
+      "files": 12,
+      "insertions": 39,
+      "deletions": 857
     }
   ],
   "statistics": {
-    "filesChanged": 44,
-    "insertions": 4827,
-    "deletions": 401,
-    "newFiles": 15,
+    "filesChanged": 12,
+    "insertions": 39,
+    "deletions": 857,
+    "newFiles": 0,
     "commitsInBackup": 1
   }
 }

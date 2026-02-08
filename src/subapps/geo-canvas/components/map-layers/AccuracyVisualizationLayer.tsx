@@ -19,7 +19,7 @@ import { Marker } from 'react-map-gl/maplibre';
 import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { GEO_COLORS } from '../../config/color-config';
-import { interactiveMapStyles, getAccuracyLevelColor } from '../InteractiveMap.styles';
+import { interactiveMapStyles } from '../InteractiveMap.styles';
 import { getDynamicTextClass } from '@/components/ui/utils/dynamic-styles';
 
 // ============================================================================
@@ -112,12 +112,14 @@ export const AccuracyVisualizationLayer: React.FC<AccuracyVisualizationLayerProp
 
   // ✅ PERFORMANCE: Memoized accuracy calculations
   const accuracyData = useMemo(() => {
-    return controlPoints.map(cp => ({
-      controlPoint: cp,
-      accuracyInfo: getAccuracyLevel(cp.accuracy),
-      radius: calculateAccuracyCircleRadius(cp.accuracy, zoomLevel),
-      size: Math.max(cp.accuracy * 4, 16)
-    }));
+    return controlPoints
+      .filter((cp): cp is FloorPlanControlPoint & { accuracy: number } => typeof cp.accuracy === 'number')
+      .map(cp => ({
+        controlPoint: cp,
+        accuracyInfo: getAccuracyLevel(cp.accuracy),
+        radius: calculateAccuracyCircleRadius(cp.accuracy, zoomLevel),
+        size: Math.max(cp.accuracy * 4, 16)
+      }));
   }, [controlPoints, zoomLevel]);
 
   // ========================================================================

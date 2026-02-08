@@ -49,14 +49,14 @@ import { Globe, AlertCircle, Construction, CheckCircle, RefreshCcw } from 'lucid
 import type { GeoCanvasAppProps } from '../types';
 import type { GeoCoordinate, DxfCoordinate } from '../types';
 import { generateLayerId } from '@/services/enterprise-id.service';
-import type { Map as MaplibreMap } from 'maplibre-gl';
+import type { MapInstance } from '../hooks/map/useMapInteractions';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
 
 /** MapLibre GL JS map instance type */
-type MapLibreMapInstance = MaplibreMap | null;
+type MapLibreMapInstance = MapInstance | null;
 
 /** Boundary layer style type */
 interface BoundaryLayerStyle {
@@ -130,6 +130,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
       result: AdminBoundaryResult;
     };
   }>>([]);
+  const [selectedBoundaryResult, setSelectedBoundaryResult] = useState<AdminBoundaryResult | null>(null);
 
   // **📊 ANALYTICS INTEGRATION**
   const analytics = useAnalytics();
@@ -271,6 +272,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const handleAdminBoundarySelected = useCallback((boundary: GeoJSON.Feature | GeoJSON.FeatureCollection, result: Record<string, unknown>) => {
     const boundaryResult = result as AdminBoundaryResult;
     console.log('??? Administrative boundary selected:', { boundary, result: boundaryResult });
+    setSelectedBoundaryResult(boundaryResult);
 
     // Determine boundary type και default style
     let type: 'region' | 'municipality' | 'municipal_unit' | 'community';
@@ -825,7 +827,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {floorPlanUpload.result && floorPlanUpload.result.success && (
                     <FloorPlanCanvasLayer
                       map={mapRef.current}
-                      result={boundaryResult}
+                      floorPlan={floorPlanUpload.result}
                       visible={floorPlanVisible}
                       style={{ opacity: floorPlanOpacity }}
                       zIndex={100}
@@ -1074,7 +1076,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         isOpen={floorPlanUpload.isModalOpen}
         onClose={floorPlanUpload.closeModal}
         onFileSelect={handleFloorPlanFileSelect}
-        result={boundaryResult}
+        parserResult={floorPlanUpload.result}
         selectedFile={floorPlanUpload.file}
         isParsing={floorPlanUpload.isParsing}
       />
