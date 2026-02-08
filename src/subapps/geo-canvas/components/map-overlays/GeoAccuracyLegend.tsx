@@ -95,7 +95,11 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
   const accuracyStats = React.useMemo(() => {
     if (!controlPoints || controlPoints.length === 0) return null;
 
-    const accuracyValues = controlPoints.map(cp => cp.accuracy);
+    const accuracyValues = controlPoints
+      .map(cp => cp.accuracy)
+      .filter((value): value is number => typeof value === 'number');
+    if (accuracyValues.length === 0) return null;
+
     const avgAccuracy = accuracyValues.reduce((sum, acc) => sum + acc, 0) / accuracyValues.length;
     const bestAccuracy = Math.min(...accuracyValues);
     const worstAccuracy = Math.max(...accuracyValues);

@@ -382,9 +382,16 @@ export class SpatialQueryService {
     collection: FeatureCollectionLike,
     adminLevel: GreekAdminLevel
   ): AdminSearchResult[] {
+    const getStringProp = (props: Record<string, unknown>, key: string): string | undefined => {
+      const value = props[key];
+      return typeof value === 'string' ? value : undefined;
+    };
+
     return collection.features.map((feature, index) => {
-      const props = feature.properties || {};
-      const name = props.name || props.postal_code || `Unknown ${adminLevel}`;
+      const props = (feature.properties ?? {}) as Record<string, unknown>;
+      const name = getStringProp(props, 'name')
+        ?? getStringProp(props, 'postal_code')
+        ?? `Unknown ${adminLevel}`;
 
       // Calculate bounds
       let bounds: BoundingBox | undefined;
@@ -397,13 +404,13 @@ export class SpatialQueryService {
       }
 
       return {
-        id: props.id || `spatial-${adminLevel}-${index}`,
+        id: getStringProp(props, 'id') ?? `spatial-${adminLevel}-${index}`,
         name,
-        nameEn: props.nameEn,
+        nameEn: getStringProp(props, 'nameEn'),
         adminLevel,
         hierarchy: {
           country: 'Ελλάδα',
-          region: props.region || 'Unknown'
+          region: getStringProp(props, 'region') ?? 'Unknown'
         },
         geometry: feature.geometry,
         bounds,
