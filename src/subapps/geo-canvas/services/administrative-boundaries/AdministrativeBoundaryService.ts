@@ -12,6 +12,16 @@ type Geometry = GeoJSON.Geometry;
 type Feature = GeoJSON.Feature;
 type FeatureCollection = GeoJSON.FeatureCollection;
 
+/** Categories for search suggestions */
+interface SuggestionCategories {
+  history: string[];
+  municipalities: string[];
+  regions: string[];
+  postalCodes: string[];
+  contextual: string[];
+}
+
+
 import { overpassApiService } from './OverpassApiService';
 import { adminBoundariesAnalytics } from '../performance/AdminBoundariesPerformanceAnalytics';
 import { adminBoundariesCache } from '../cache/AdminBoundariesCacheManager';

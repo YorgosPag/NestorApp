@@ -21,7 +21,7 @@ import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Globe, Target, MapPin, Map, BarChart3, Recycle, FlaskConical, Zap, Languages } from 'lucide-react';
-import type { GeoControlPoint } from '../../types';
+import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -35,7 +35,7 @@ export interface GeoStatusBarProps {
   isCalibrated: boolean;
 
   /** Control points for statistics */
-  controlPoints: GeoControlPoint[];
+  controlPoints: FloorPlanControlPoint[];
 
   /** Polygon drawing enabled state */
   enablePolygonDrawing?: boolean;

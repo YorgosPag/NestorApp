@@ -23,7 +23,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
-import type { GeoControlPoint } from '../../types';
+import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
 import { GEO_COLORS } from '../../config/color-config';
 
 // ============================================================================
@@ -32,7 +32,7 @@ import { GEO_COLORS } from '../../config/color-config';
 
 export interface GeoAccuracyLegendProps {
   /** Control points for accuracy calculation */
-  controlPoints: GeoControlPoint[];
+  controlPoints: FloorPlanControlPoint[];
 
   /** Whether accuracy circles are visible */
   showAccuracyCircles: boolean;

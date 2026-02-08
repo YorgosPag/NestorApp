@@ -825,7 +825,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
                 {floorPlanUpload.result && floorPlanUpload.result.success && (
                     <FloorPlanCanvasLayer
                       map={mapRef.current}
-        result: boundaryResult
+                      result={boundaryResult}
                       visible={floorPlanVisible}
                       style={{ opacity: floorPlanOpacity }}
                       zIndex={100}
@@ -1074,7 +1074,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         isOpen={floorPlanUpload.isModalOpen}
         onClose={floorPlanUpload.closeModal}
         onFileSelect={handleFloorPlanFileSelect}
-        result: boundaryResult
+        result={boundaryResult}
         selectedFile={floorPlanUpload.file}
         isParsing={floorPlanUpload.isParsing}
       />

@@ -19,7 +19,7 @@ import * as React from 'react';
 const { useRef, useEffect, useState, useCallback } = React;
 import type { Map as MaplibreMapType } from 'maplibre-gl';
 import type { GeoCoordinate } from '../types';
-import type { FloorPlanControlPoint } from '../floor-plan-system/types';
+import type { FloorPlanControlPoint } from '../floor-plan-system/types/control-points';
 import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
@@ -37,7 +37,7 @@ type LocalPolygonType = PolygonType | 'complex';
 // Enterprise Services & Hooks
 import { elevationService } from '../services/map/ElevationService';
 import { getAllMapStyleUrls, type MapStyleType } from '../services/map/MapStyleManager';
-import { useMapInteractions, type TransformState, type DrawingData } from '../hooks/map/useMapInteractions';
+import { useMapInteractions, type TransformState, type DrawingData, type MapInstance } from '../hooks/map/useMapInteractions';
 import { useMapState } from '../hooks/map/useMapState';
 // 🏢 ENTERPRISE: Import maplibre types for proper map reference typing
 import type { Map as MaplibreMap } from 'maplibre-gl';
@@ -71,7 +71,7 @@ export interface InteractiveMapContainerProps {
   transformState: TransformState;
   className?: string;
   onPolygonComplete?: () => void;
-  onMapReady?: (map: MaplibreMap) => void;
+  onMapReady?: (map: MapInstance) => void;
   searchMarker?: {
     lat: number;
     lng: number;
@@ -375,7 +375,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
 
   const currentDrawingPreview = (() => {
     const drawing = getCurrentDrawing();
-    return drawing ? { points: drawing.points, config: drawing.config } : null;
+    return drawing ? { points: drawing.points.map((point) => ({ x: point.x, y: point.y })), config: drawing.config } : null;
   })();
  
 

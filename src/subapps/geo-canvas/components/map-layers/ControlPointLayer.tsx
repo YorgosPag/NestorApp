@@ -16,7 +16,7 @@
 
 import React, { memo } from 'react';
 import { Marker } from 'react-map-gl/maplibre';
-import type { FloorPlanControlPoint } from '../../floor-plan-system/types';
+import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
 import { mapControlPointTokens } from '@/styles/design-tokens';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';

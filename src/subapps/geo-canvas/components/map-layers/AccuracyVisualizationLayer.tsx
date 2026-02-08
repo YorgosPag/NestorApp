@@ -16,7 +16,7 @@
 
 import React, { memo, useMemo } from 'react';
 import { Marker } from 'react-map-gl/maplibre';
-import type { FloorPlanControlPoint } from '../../floor-plan-system/types';
+import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { GEO_COLORS } from '../../config/color-config';
 import { interactiveMapStyles, getAccuracyLevelColor } from '../InteractiveMap.styles';

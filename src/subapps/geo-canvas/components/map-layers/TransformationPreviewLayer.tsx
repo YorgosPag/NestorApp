@@ -17,6 +17,7 @@
 import React, { memo } from 'react';
 import { Source, Layer } from 'react-map-gl/maplibre';
 import { GEO_COLORS } from '../../config/color-config';
+import type { TransformState } from '../hooks/map/useMapInteractions';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -28,18 +29,6 @@ import { GEO_COLORS } from '../../config/color-config';
  *
  * Represents DXF-to-Geographic calibration transformation state
  */
-export interface CalibrationTransformState {
-  isCalibrated: boolean;
-  controlPoints: Array<{
-    id: string;
-    dxf: { x: number; y: number };
-    geo: { lng: number; lat: number };
-    accuracy: number;
-  }>;
-  // Additional transformation matrix data would go here
-  transformMatrix?: number[][];
-  calibrationAccuracy?: number;
-}
 
 export interface DxfEntity {
   id: string;
@@ -56,7 +45,7 @@ export interface TransformationPreviewLayerProps {
   /** Whether to show transformation preview */
   showTransformationPreview?: boolean;
   /** Transform state with calibration data */
-  transformState: CalibrationTransformState;
+  transformState: TransformState;
   /** Whether map is loaded */
   mapLoaded?: boolean;
   /** DXF entities to transform and display (future feature) */
@@ -98,14 +87,14 @@ export const TransformationPreviewLayer: React.FC<TransformationPreviewLayerProp
   // Example future implementation:
   /*
   const transformedGeoJSON = useMemo(() => {
-    if (!dxfEntities.length || !transformState.transformMatrix) return null;
+    if (!dxfEntities.length || !transformState.matrix) return null;
 
     return {
       type: 'FeatureCollection' as const,
       features: dxfEntities.map(entity => {
         const transformedCoords = applyTransformMatrix(
           entity.coordinates,
-          transformState.transformMatrix
+          transformState.matrix
         );
 
         return {
@@ -122,7 +111,7 @@ export const TransformationPreviewLayer: React.FC<TransformationPreviewLayerProp
         };
       })
     };
-  }, [dxfEntities, transformState.transformMatrix]);
+  }, [dxfEntities, transformState.matrix]);
 
   if (transformedGeoJSON) {
     return (
@@ -153,7 +142,7 @@ export const TransformationPreviewLayer: React.FC<TransformationPreviewLayerProp
   console.log('🎯 Transform State:', {
     isCalibrated: transformState.isCalibrated,
     controlPointsCount: transformState.controlPoints.length,
-    hasTransformMatrix: !!transformState.transformMatrix
+    hasTransformMatrix: !!transformState.matrix
   });
 
   return null;
@@ -196,3 +185,4 @@ export default TransformationPreviewLayer;
  * ⚡ Performance optimization για large DXF files
  * 🔧 Interactive editing του transformed content
  */
+
