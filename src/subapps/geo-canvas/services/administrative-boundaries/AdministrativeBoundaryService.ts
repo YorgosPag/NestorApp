@@ -11,6 +11,7 @@
 type Geometry = GeoJSON.Geometry;
 type Feature = GeoJSON.Feature;
 type FeatureCollection = GeoJSON.FeatureCollection;
+type Position = GeoJSON.Position;
 
 /** Categories for search suggestions */
 interface SuggestionCategories {
@@ -926,12 +927,12 @@ export class AdministrativeBoundaryService {
     return undefined;
   }
 
-  private getPolygonRings(geometry: Geometry): number[][][] | null {
+  private getPolygonRings(geometry: Geometry): Position[][] | null {
     if (geometry.type !== 'Polygon') return null;
     const coordinates = geometry.coordinates;
     if (!Array.isArray(coordinates) || coordinates.length === 0) return null;
     if (!Array.isArray(coordinates[0])) return null;
-    return coordinates as number[][][];
+    return coordinates as Position[][];
   }
 
   /**
@@ -944,8 +945,8 @@ export class AdministrativeBoundaryService {
     const coordinates = rings[0]; // First ring
     if (coordinates.length === 0) return null;
 
-    const lngs = coordinates.map((coord: number[]) => coord[0]);
-    const lats = coordinates.map((coord: number[]) => coord[1]);
+    const lngs = coordinates.map((coord) => coord[0]);
+    const lats = coordinates.map((coord) => coord[1]);
 
     const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
     const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
@@ -957,26 +958,30 @@ export class AdministrativeBoundaryService {
    * Simplify boundary geometry για performance
    */
   simplifyBoundary(geometry: Geometry, tolerance = 0.001): Geometry {
-    // Simple Douglas-Peucker-style simplification
-    const rings = this.getPolygonRings(geometry);
-    if (rings) {
-      const simplified = rings.map(ring =>
-        this.simplifyRing(ring, tolerance)
-      );
-
-      return {
-        ...geometry,
-        coordinates: simplified
-      };
+    if (geometry.type !== 'Polygon') {
+      return geometry;
     }
 
-    return geometry;
+    // Simple Douglas-Peucker-style simplification
+    const rings = this.getPolygonRings(geometry);
+    if (!rings) {
+      return geometry;
+    }
+
+    const simplified = rings.map(ring =>
+      this.simplifyRing(ring, tolerance)
+    );
+
+    return {
+      ...geometry,
+      coordinates: simplified
+    } as GeoJSON.Polygon;
   }
 
   /**
    * Simplify coordinate ring
    */
-  private simplifyRing(ring: number[][], tolerance: number): number[][] {
+  private simplifyRing(ring: Position[], tolerance: number): Position[] {
     if (ring.length <= 2) return ring;
 
     const simplified = [ring[0]]; // Always keep first point
@@ -1003,9 +1008,9 @@ export class AdministrativeBoundaryService {
    * Calculate distance από point to line
    */
   private pointToLineDistance(
-    point: number[],
-    lineStart: number[],
-    lineEnd: number[]
+    point: Position,
+    lineStart: Position,
+    lineEnd: Position
   ): number {
     const [x, y] = point;
     const [x1, y1] = lineStart;

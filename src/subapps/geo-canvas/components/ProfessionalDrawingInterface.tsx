@@ -14,6 +14,7 @@ import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { GEO_COLORS } from '../config/color-config';
 import { FloorPlanUploadModal } from '../floor-plan-system/components/FloorPlanUploadModal';
 import { PropertyStatusManager } from './PropertyStatusManager';
+import { generateLayerId } from '@/services/enterprise-id.service';
 // TODO: Implement real estate monitoring integration
 // import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
 // import type { RealEstatePolygon } from '@geo-alert/core';
@@ -32,7 +33,7 @@ type RealEstatePolygon = {
   };
 };
 import type { ParserResult } from '../floor-plan-system/types';
-import type { PropertyStatus } from '@/constants/property-statuses-enterprise';
+import type { EnhancedPropertyStatus as PropertyStatus } from '@/constants/property-statuses-enterprise';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS, HOVER_SHADOWS, TRANSITION_PRESETS } from '@/components/ui/effects';
 
 interface ProfessionalDrawingInterfaceProps {
@@ -73,7 +74,6 @@ export function ProfessionalDrawingInterface({
   const [selectedTool, setSelectedTool] = useState<'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard' | null>(null);
   // ✅ ENTERPRISE: Combine local and centralized drawing state
   const [isDrawing, setIsDrawing] = useState(false);
-  const actualIsDrawing = isDrawing || systemIsDrawing;
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parserResult, setParserResult] = useState<ParserResult | null>(null);
@@ -121,6 +121,7 @@ export function ProfessionalDrawingInterface({
     isDrawing: systemIsDrawing,
     currentRole
   } = useCentralizedPolygonSystem();
+  const actualIsDrawing = isDrawing || systemIsDrawing;
 
   // 🏠 Phase 2.5: Property Status Management Handlers
   const handlePropertyStatusChange = useCallback((status: PropertyStatus) => {
@@ -139,9 +140,13 @@ export function ProfessionalDrawingInterface({
   const handleBatchRealEstateMonitoring = useCallback((polygons: Array<Partial<RealEstatePolygon>>) => {
     console.log('🏢 Professional: Setting up batch real estate monitoring for', polygons.length, 'polygons');
 
-    polygons.forEach((polygon, index) => {
+    polygons.forEach((polygon) => {
+      const polygonId = typeof polygon.id === 'string' ? polygon.id : generateLayerId();
       const realEstatePolygon: RealEstatePolygon = {
-        ...polygon,
+        id: polygonId,
+        polygon: Array.isArray(polygon.polygon) ? polygon.polygon : [],
+        settings: polygon.settings ?? {},
+        createdAt: typeof polygon.createdAt === 'string' ? polygon.createdAt : new Date().toISOString(),
         type: 'real-estate',
         alertSettings: {
           enabled: true,
@@ -225,19 +230,15 @@ export function ProfessionalDrawingInterface({
     // For now, mock the parsing
     setTimeout(() => {
       const mockResult: ParserResult = {
-        type: 'raster',
+        success: true,
+        format: 'PNG',
         bounds: {
           minX: 0,
           minY: 0,
           maxX: 1000,
           maxY: 1000
         },
-        imageUrl: URL.createObjectURL(file),
-        metadata: {
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type
-        }
+        imageUrl: URL.createObjectURL(file)
       };
 
       setParserResult(mockResult);
@@ -466,11 +467,11 @@ export function ProfessionalDrawingInterface({
         {parserResult && (
           <div className={`mb-4 p-3 ${colors.bg.success} ${quick.card} ${getStatusBorder('success')}`}>
             <p className={`text-sm ${colors.text.success}`}>
-              <span className="font-medium">Κάτοψη:</span> {parserResult.metadata?.fileName || 'Uploaded'} ✅
+              <span className="font-medium">Κάτοψη:</span> {selectedFile?.name || 'Uploaded'} ✅
             </p>
-            {parserResult.metadata?.fileSize && (
+            {selectedFile && (
               <p className={`text-xs ${colors.text.success}`}>
-                Μέγεθος: {(parserResult.metadata.fileSize / 1024 / 1024).toFixed(2)} MB
+                Μέγεθος: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
             )}
           </div>
@@ -644,3 +645,4 @@ export function ProfessionalDrawingInterface({
     </>
   );
 }
+

@@ -115,7 +115,7 @@ export interface UniversalPolygon {
     perimeter?: number;
 
     /** Custom properties */
-    properties?: Record<string, any>;
+    properties?: Record<string, unknown>;
   };
 }
 

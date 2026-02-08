@@ -95,7 +95,7 @@ export function calculateAffineTransformation(
     }
 
     // Solve: A^T * A * x = A^T * b (normal equations)
-    const AtA = multiplyMatrixTranspose(A, A);
+    const AtA = multiplyMatrixTranspose(A);
     const Atb = multiplyMatrixVectorTranspose(A, b);
     const solution = solveLinearSystem(AtA, Atb);
 

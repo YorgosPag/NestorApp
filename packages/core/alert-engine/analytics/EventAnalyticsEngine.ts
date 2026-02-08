@@ -125,7 +125,7 @@ export interface FailureReason {
 export interface TimeSeriesPoint {
   timestamp: Date;
   value: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PeakPeriod {
@@ -250,7 +250,7 @@ export class EventAnalyticsEngine {
   private notifications: NotificationMessage[] = [];
 
   // Analytics cache
-  private analyticsCache: Map<string, any> = new Map();
+  private analyticsCache: Map<string, unknown> = new Map();
   private lastCacheUpdate: Date = new Date();
   private cacheExpiryMinutes: number = 15;
 
@@ -492,17 +492,48 @@ export class EventAnalyticsEngine {
     // Mock alerts
     for (let i = 0; i < 20; i++) {
       const timestamp = new Date(last24Hours.getTime() + Math.random() * 24 * 60 * 60 * 1000);
+      const alertTypes: Array<Alert['type']> = [
+        'accuracy_degradation',
+        'spatial_conflict',
+        'data_quality_issue'
+      ];
+      const severities: AlertSeverity[] = ['low', 'medium', 'high', 'critical'];
+      const statuses: AlertStatus[] = ['new', 'acknowledged', 'investigating', 'resolved', 'false_positive'];
+      const selectedType = alertTypes[Math.floor(Math.random() * alertTypes.length)];
+      const selectedSeverity = severities[Math.floor(Math.random() * severities.length)];
+      const selectedStatus = statuses[Math.floor(Math.random() * statuses.length)];
+      const ruleId = `rule_${Math.floor(Math.random() * 5) + 1}`;
+
       this.alerts.push({
         id: `alert_${i}`,
-        type: (['accuracy_degradation', 'spatial_conflict', 'data_quality'][Math.floor(Math.random() * 3)] as any),
+        type: selectedType,
         title: `Mock Alert ${i}`,
-        // description: `Mock alert description ${i}`, // Property not in Alert type
-        severity: ['low', 'medium', 'high', 'critical'][Math.floor(Math.random() * 4)] as AlertSeverity,
-        status: ['active', 'acknowledged', 'resolved'][Math.floor(Math.random() * 3)] as AlertStatus,
-        // timestamp, // Property not in Alert type
+        message: `Mock alert message ${i}`,
+        details: { source: 'mock' },
+        severity: selectedSeverity,
+        status: selectedStatus,
+        detectedAt: timestamp,
         projectId: `project_${Math.floor(Math.random() * 3) + 1}`,
-        // metadata: {} // Property not in Alert type
-      } as any); // Type assertion to fix missing properties
+        triggeredByRule: ruleId,
+        ruleEvaluation: {
+          ruleId,
+          triggered: true,
+          confidence: 1,
+          conditionResults: [],
+          actionsExecuted: [],
+          executionTime: 0,
+          evaluatedAt: timestamp,
+          context: {
+            ruleId,
+            triggeredAt: timestamp,
+            data: { source: 'mock' },
+            executionStart: timestamp.getTime()
+          }
+        },
+        actionsTaken: [],
+        createdBy: 'analytics_engine',
+        tags: ['mock']
+      });
     }
   }
 
@@ -551,13 +582,13 @@ export class EventAnalyticsEngine {
 
   private filterAlertsByTimeRange(alerts: Alert[], timeRange: AnalyticsTimeRange): Alert[] {
     return alerts.filter(alert =>
-      (alert as any).timestamp >= timeRange.start && (alert as any).timestamp <= timeRange.end
+      alert.detectedAt >= timeRange.start && alert.detectedAt <= timeRange.end
     );
   }
 
   private filterRuleExecutionsByTimeRange(executions: RuleEvaluationResult[], timeRange: AnalyticsTimeRange): RuleEvaluationResult[] {
     return executions.filter(execution =>
-      (execution as any).timestamp >= timeRange.start && (execution as any).timestamp <= timeRange.end
+      execution.evaluatedAt >= timeRange.start && execution.evaluatedAt <= timeRange.end
     );
   }
 
@@ -714,7 +745,7 @@ export class EventAnalyticsEngine {
 
   private calculateRuleSuccessRate(executions: RuleEvaluationResult[]): number {
     if (executions.length === 0) return 0;
-    const successful = executions.filter(e => (e as any).success).length;
+    const successful = executions.filter(e => e.actionsExecuted.every(action => action.success)).length;
     return (successful / executions.length) * 100;
   }
 
@@ -734,7 +765,7 @@ export class EventAnalyticsEngine {
 
   private calculateDeliverySuccessRate(notifications: NotificationMessage[]): number {
     if (notifications.length === 0) return 0;
-    const successful = notifications.filter(n => (n.status as any) === 'sent').length;
+    const successful = notifications.filter(n => n.status === 'delivered').length;
     return (successful / notifications.length) * 100;
   }
 

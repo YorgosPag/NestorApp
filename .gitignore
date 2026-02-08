@@ -118,6 +118,9 @@ reports/metrics/**
 # Claude CLI temporary files
 tmpclaude-*
 
+# npm cache (generated locally, not project code)
+.npm-cache/
+
 # 🔒 SECURITY: Service Account Keys (NEVER commit these)
 *service-account*
 *.pem

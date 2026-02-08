@@ -6,7 +6,7 @@
  * και προλαμβάνει memory leaks σε real-time.
  */
 
-import { performance, PerformanceObserver } from 'perf_hooks';
+import { performance, PerformanceObserver, type EntryType } from 'perf_hooks';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -240,9 +240,9 @@ export class GeoAlertMemoryLeakDetector {
 
       // Observe memory-related performance entries
       // 🏢 ENTERPRISE: Type assertion for entryTypes (navigation is valid at runtime)
-      const entryTypes: PerformanceObserverInit['entryTypes'] = ['measure', 'resource'];
+      const entryTypes: readonly EntryType[] = ['measure', 'resource'];
       this.performanceObserver.observe({
-        entryTypes: entryTypes ?? []
+        entryTypes
       });
     } catch (error) {
       console.warn('PerformanceObserver not available:', error);
@@ -1126,5 +1126,7 @@ export const takeMemorySnapshot = () => geoAlertMemoryLeakDetector.takeSnapshot(
  * Default export για convenience
  */
 export default geoAlertMemoryLeakDetector;
+
+
 
 

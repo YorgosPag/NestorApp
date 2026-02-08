@@ -107,7 +107,8 @@ export function useAdministrativeBoundaries(
         searchHistoryService.addToHistory(
           trimmed,
           'administrative',
-          limitedResults[0] ?? null
+          limitedResults,
+          limitedResults[0]
         );
       }
     } catch (err) {

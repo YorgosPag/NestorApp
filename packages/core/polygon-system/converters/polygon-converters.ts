@@ -10,9 +10,41 @@ import type {
   UniversalPolygon,
   PolygonPoint,
   PolygonExportOptions,
-  PolygonImportResult
+  PolygonImportResult,
+  PolygonStyle,
+  PolygonType
 } from '../types';
+import { DEFAULT_POLYGON_STYLES } from '../types';
 import type * as GeoJSON from 'geojson';
+ 
+type GeoProperties = Record<string, unknown>;
+type ImportMetadata = NonNullable<UniversalPolygon['metadata']> & {
+  type?: PolygonType;
+  isClosed?: boolean;
+};
+
+const isPolygonType = (value: unknown): value is PolygonType => {
+  if (typeof value !== 'string') return false;
+  return value in DEFAULT_POLYGON_STYLES;
+};
+
+const isPolygonStyle = (value: unknown): value is PolygonStyle => {
+  if (!value || typeof value !== 'object') return false;
+  const style = value as Record<string, unknown>;
+  return (
+    typeof style.strokeColor === 'string' &&
+    typeof style.fillColor === 'string' &&
+    typeof style.strokeWidth === 'number' &&
+    typeof style.fillOpacity === 'number' &&
+    typeof style.strokeOpacity === 'number'
+  );
+};
+
+const asStringArray = (value: unknown): string[] | null => {
+  if (!Array.isArray(value)) return null;
+  if (!value.every(item => typeof item === 'string')) return null;
+  return value;
+};
 
 /**
  * Convert UniversalPolygon to GeoJSON Feature
@@ -45,7 +77,7 @@ export function polygonToGeoJSON(
   }
 
   // Build GeoJSON properties
-  const geoProperties: Record<string, any> = {
+  const geoProperties: GeoProperties = {
     id: polygon.id,
     type: polygon.type,
     isClosed: polygon.isClosed
@@ -66,7 +98,7 @@ export function polygonToGeoJSON(
 
     // Add specific properties if requested
     if (properties.length > 0 && polygon.metadata.properties) {
-      const filteredProps: Record<string, any> = {};
+      const filteredProps: GeoProperties = {};
       for (const prop of properties) {
         if (polygon.metadata.properties[prop] !== undefined) {
           filteredProps[prop] = polygon.metadata.properties[prop];
@@ -105,6 +137,7 @@ export function polygonToGeoJSON(
  */
 export function geoJSONToPolygon(feature: GeoJSON.Feature): UniversalPolygon {
   const { geometry, properties } = feature;
+  const safeProperties = (properties ?? {}) as GeoProperties;
 
   if (!geometry || (geometry.type !== 'Polygon' && geometry.type !== 'LineString')) {
     throw new Error('❌ Unsupported geometry type. Expected Polygon or LineString.');
@@ -119,17 +152,21 @@ export function geoJSONToPolygon(feature: GeoJSON.Feature): UniversalPolygon {
   }
 
   // Convert to PolygonPoints
+  const pointLabels = asStringArray(safeProperties.pointLabels);
   const points: PolygonPoint[] = coordinates.map((coord, index) => ({
     x: coord[0],
     y: coord[1],
     id: `point_${index}`,
-    label: properties?.pointLabels?.[index] || `Point ${index + 1}`
+    label: pointLabels?.[index] || `Point ${index + 1}`
   }));
 
   // Extract properties
-  const polygonId = properties?.id || `imported_${Date.now()}`;
-  const polygonType = properties?.type || 'simple';
-  const isClosed = geometry.type === 'Polygon' || properties?.isClosed || false;
+  const polygonId = typeof safeProperties.id === 'string'
+    ? safeProperties.id
+    : `imported_${Date.now()}`;
+  const polygonType = isPolygonType(safeProperties.type) ? safeProperties.type : 'simple';
+  const isClosed = geometry.type === 'Polygon' || Boolean(safeProperties.isClosed);
+  const style = isPolygonStyle(safeProperties.style) ? safeProperties.style : undefined;
 
   // Build UniversalPolygon
   const polygon: UniversalPolygon = {
@@ -137,7 +174,7 @@ export function geoJSONToPolygon(feature: GeoJSON.Feature): UniversalPolygon {
     type: polygonType,
     points,
     isClosed,
-    style: properties?.style || {
+    style: style ?? {
       strokeColor: '#3b82f6',
       fillColor: '#3b82f6',
       strokeWidth: 2,
@@ -147,7 +184,7 @@ export function geoJSONToPolygon(feature: GeoJSON.Feature): UniversalPolygon {
     metadata: {
       createdAt: new Date(),
       modifiedAt: new Date(),
-      ...properties?.metadata
+      ...(safeProperties.metadata as Record<string, unknown> | undefined)
     }
   };
 
@@ -273,7 +310,7 @@ export function importPolygonsFromCSV(csvData: string): PolygonImportResult {
     }
 
     const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
-    const polygonMap = new Map<string, { points: PolygonPoint[]; metadata: any }>();
+    const polygonMap = new Map<string, { points: PolygonPoint[]; metadata: ImportMetadata }>();
 
     // Parse data rows
     for (let i = 1; i < lines.length; i++) {
@@ -304,7 +341,7 @@ export function importPolygonsFromCSV(csvData: string): PolygonImportResult {
           polygonMap.set(polygonId, {
             points: [],
             metadata: {
-              type,
+              type: type as PolygonType,
               isClosed,
               createdAt: new Date(),
               modifiedAt: new Date()
@@ -338,7 +375,7 @@ export function importPolygonsFromCSV(csvData: string): PolygonImportResult {
             const bIndex = parseInt(b.id!.split('_')[1]);
             return aIndex - bIndex;
           }),
-          isClosed: data.metadata.isClosed,
+          isClosed: data.metadata.isClosed ?? false,
           style: {
             strokeColor: '#3b82f6',
             fillColor: '#3b82f6',

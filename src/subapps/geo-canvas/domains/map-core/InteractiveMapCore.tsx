@@ -13,7 +13,8 @@
 
 import React from 'react';
 import type { CSSProperties } from 'react';
-import { InteractiveMap } from '../../../components/InteractiveMap';
+import { InteractiveMap } from '../../components/InteractiveMap';
+import type { TransformState } from '../../hooks/map/useMapInteractions';
 
 // ============================================================================
 // 🎨 LOCAL MAP STYLES - ENTERPRISE PATTERN
@@ -79,6 +80,9 @@ interface MapCoreProps {
   onMapLoad?: () => void;
   onMapError?: (error: Error) => void;
   onViewChange?: (view: { center: [number, number]; zoom: number }) => void;
+
+  /** Transform state (required by InteractiveMap) */
+  transformState: TransformState;
 }
 
 interface MapCoreState {
@@ -99,6 +103,7 @@ export const InteractiveMapCore: React.FC<MapCoreProps> = ({
   provider,
   initialView,
   config,
+  transformState,
   onMapLoad,
   onMapError,
   onViewChange
@@ -179,17 +184,11 @@ export const InteractiveMapCore: React.FC<MapCoreProps> = ({
       )}
 
       <InteractiveMap
-        provider={provider}
-        initialCenter={initialView.center}
-        initialZoom={initialView.zoom}
-        enableInteraction={config.enableInteraction}
-        showControls={config.showControls}
-        enableGeolocation={config.enableGeolocation}
-        maxZoom={config.maxZoom}
-        minZoom={config.minZoom}
-        onLoad={handleMapLoad}
-        onError={handleMapError}
-        onViewChange={handleViewChange}
+        transformState={transformState}
+        showMapControls={config.showControls}
+        showStatusBar={false}
+        onMapReady={() => handleMapLoad()}
+        className="h-full w-full"
       />
     </div>
   );

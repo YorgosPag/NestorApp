@@ -15,9 +15,20 @@ import React, { createContext, useContext, useEffect, useRef } from 'react';
 // ============================================================================
 
 interface AlertEngineContextValue {
-  alertDetector: any | null; // AlertDetectionSystem - disabled (module not found)
-  notificationEngine: any | null; // NotificationDispatchEngine - disabled (module not found)
+  alertDetector: AlertDetectorLike | null; // AlertDetectionSystem - disabled (module not found)
+  notificationEngine: NotificationEngineLike | null; // NotificationDispatchEngine - disabled (module not found)
   isInitialized: boolean;
+}
+
+type AlertPayload = Record<string, unknown>;
+
+interface AlertDetectorLike {
+  onAlert?: (handler: (alert: AlertPayload) => void) => void;
+}
+
+interface NotificationEngineLike {
+  startDispatch: () => void;
+  stopDispatch: () => void;
 }
 
 interface AlertEngineProviderProps {
@@ -27,7 +38,7 @@ interface AlertEngineProviderProps {
     enableNotifications?: boolean;
     integrationMode?: 'ui-only' | 'full-stack' | 'external-only';
   };
-  onAlertTriggered?: (alert: any) => void; // Alert - disabled (module not found)
+  onAlertTriggered?: (alert: AlertPayload) => void; // Alert - disabled (module not found)
   onNotificationSent?: (notificationId: string, channels: string[]) => void;
 }
 
@@ -51,8 +62,8 @@ export function AlertEngineProvider({
   onAlertTriggered,
   onNotificationSent
 }: AlertEngineProviderProps) {
-  const alertDetectorRef = useRef<any | null>(null); // AlertDetectionSystem - disabled (module not found)
-  const notificationEngineRef = useRef<any | null>(null); // NotificationDispatchEngine - disabled (module not found)
+  const alertDetectorRef = useRef<AlertDetectorLike | null>(null); // AlertDetectionSystem - disabled (module not found)
+  const notificationEngineRef = useRef<NotificationEngineLike | null>(null); // NotificationDispatchEngine - disabled (module not found)
   const [isInitialized, setIsInitialized] = React.useState(false);
 
   const {
@@ -85,21 +96,12 @@ export function AlertEngineProvider({
       }
     }
 
-    // Initialize Notification Engine
-    if (enableNotifications && !notificationEngineRef.current) {
-      try {
-        // notificationEngineRef.current = new NotificationDispatchEngine(); // Module not found - disabled
-        notificationEngineRef.current.startDispatch();
-        console.log('✅ Notification engine initialized');
-
-        // Connect notification callbacks
-        if (onNotificationSent) {
-          // Custom callback integration would be implemented here
-        }
-      } catch (error) {
-        console.error('❌ Failed to initialize notification engine:', error);
-      }
-    }
+    // Initialize Notification Engine (disabled — module not resolved)
+    // TODO: Re-enable when NotificationDispatchEngine is available
+    // if (enableNotifications && !notificationEngineRef.current) {
+    //   notificationEngineRef.current = new NotificationDispatchEngine();
+    //   notificationEngineRef.current.startDispatch();
+    // }
 
     setIsInitialized(true);
 
@@ -222,7 +224,7 @@ export function sendUINotification(
  * Helper για integration με External Notifications (Email, SMS, etc.)
  */
 export async function sendExternalAlert(
-  alert: any, // Alert - disabled (module not found)
+  alert: AlertPayload, // Alert - disabled (module not found)
   recipients: string[],
   channels: Array<'email' | 'sms' | 'webhook' | 'slack'>
 ): Promise<void> {

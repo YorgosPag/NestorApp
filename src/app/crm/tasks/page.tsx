@@ -2,7 +2,7 @@
 // 🏢 ENTERPRISE: Refactored to use centralized systems (2026-02-08)
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Clock,
   Plus,
@@ -23,6 +23,10 @@ import { PageContainer, ListContainer } from '@/core/containers';
 import { PageHeader } from '@/core/headers';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+// 🏢 ENTERPRISE: Centralized AdvancedFiltersPanel (same as Contacts/Projects/Buildings)
+import { AdvancedFiltersPanel } from '@/components/core/AdvancedFilters/AdvancedFiltersPanel';
+import { taskFiltersConfig, defaultTaskFilters } from '@/components/core/AdvancedFilters/configs';
+import type { TaskFilterState } from '@/components/core/AdvancedFilters/configs';
 
 // 🏢 ENTERPRISE: Task statistics interface
 interface TaskStats {
@@ -43,6 +47,12 @@ export default function CrmTasksPage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [stats, setStats] = useState<TaskStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  // 🏢 ENTERPRISE: Dashboard toggle (same pattern as Contacts/Projects)
+  const [showDashboard, setShowDashboard] = useState(false);
+  // 🏢 ENTERPRISE: Centralized filter state (replaces inline TasksTab filters)
+  const [filters, setFilters] = useState<TaskFilterState>(defaultTaskFilters);
+  // 🏢 ENTERPRISE: Active card filter tracking (same pattern as Contacts/Projects)
+  const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
 
   const fetchStats = async () => {
     if (!isAuthenticated) return;
@@ -77,11 +87,45 @@ export default function CrmTasksPage() {
     { title: t('tasks.stats.thisWeek'), value: loadingStats ? '...' : stats?.dueThisWeek ?? 0, icon: TrendingUp, color: 'indigo', description: t('tasks.stats.thisWeekDesc') }
   ]), [stats, loadingStats, t]);
 
+  // 🏢 ENTERPRISE: Card click → filter tasks (same pattern as Contacts/Projects)
+  // Cards: 0=Total, 1=Pending, 2=Overdue, 3=Completed, 4=Today, 5=ThisWeek
+  const handleCardClick = useCallback((_stat: DashboardStat, index: number) => {
+    if (activeCardIndex === index) {
+      // Toggle off: clicking the same card resets filters
+      setActiveCardIndex(null);
+      setFilters(defaultTaskFilters);
+      return;
+    }
+
+    setActiveCardIndex(index);
+
+    switch (index) {
+      case 0: // Σύνολο — show all
+        setFilters(defaultTaskFilters);
+        break;
+      case 1: // Εκκρεμείς — status=pending
+        setFilters({ ...defaultTaskFilters, status: 'pending' });
+        break;
+      case 2: // Εκπρόθεσμες — timeframe=overdue
+        setFilters({ ...defaultTaskFilters, timeframe: 'overdue' });
+        break;
+      case 3: // Ολοκληρωμένες — status=completed
+        setFilters({ ...defaultTaskFilters, status: 'completed' });
+        break;
+      case 4: // Σήμερα — timeframe=today
+        setFilters({ ...defaultTaskFilters, timeframe: 'today' });
+        break;
+      case 5: // Αυτή την Εβδομάδα — timeframe=week
+        setFilters({ ...defaultTaskFilters, timeframe: 'week' });
+        break;
+    }
+  }, [activeCardIndex]);
+
   return (
     <PageContainer ariaLabel={t('tasks.title')}>
       <Toaster position="top-right" />
 
-      {/* 🏢 ENTERPRISE: Centralized PageHeader */}
+      {/* 🏢 ENTERPRISE: Centralized PageHeader with dashboard toggle */}
       <PageHeader
         variant="sticky-rounded"
         layout="single-row"
@@ -91,6 +135,8 @@ export default function CrmTasksPage() {
           subtitle: t('tasks.description')
         }}
         actions={{
+          showDashboard,
+          onDashboardToggle: () => setShowDashboard(!showDashboard),
           addButton: {
             label: t('tasks.newTask'),
             onClick: () => setShowCreateModal(true),
@@ -99,19 +145,29 @@ export default function CrmTasksPage() {
         }}
       />
 
-      {/* 🏢 ENTERPRISE: Centralized UnifiedDashboard */}
-      <section className={layout.widthFull} aria-label={t('tasks.stats.total')}>
-        <UnifiedDashboard
-          stats={dashboardStats}
-          columns={6}
-          className={`${layout.dashboardPadding} overflow-hidden`}
-        />
-      </section>
+      {/* 🏢 ENTERPRISE: Collapsible dashboard (same pattern as Contacts/Projects) */}
+      {showDashboard && (
+        <section className="w-full overflow-hidden" aria-label={t('tasks.stats.total')}>
+          <UnifiedDashboard
+            stats={dashboardStats}
+            columns={6}
+            onCardClick={handleCardClick}
+            className={`${layout.dashboardPadding} overflow-hidden`}
+          />
+        </section>
+      )}
+
+      {/* 🏢 ENTERPRISE: Centralized AdvancedFiltersPanel (replaces inline TasksTab filters) */}
+      <AdvancedFiltersPanel
+        config={taskFiltersConfig}
+        filters={filters}
+        onFiltersChange={setFilters}
+      />
 
       {/* 🏢 ENTERPRISE: Task list with centralized ListContainer */}
       <ListContainer>
         <section className={`${layout.flexColGap4} flex-1 min-h-0`}>
-          <TasksTab onTaskCreated={handleTaskCreated} />
+          <TasksTab filters={filters} onTaskCreated={handleTaskCreated} />
         </section>
       </ListContainer>
 

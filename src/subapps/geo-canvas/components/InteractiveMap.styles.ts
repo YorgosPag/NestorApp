@@ -45,7 +45,7 @@ interface ControlPointStylesType {
 
 interface AccuracyStylesType {
   readonly circle: (radius: number, color: string, opacity: number) => CSSProperties;
-  readonly zone: (size: number, color: string, level: 'excellent' | 'good' | 'poor') => CSSProperties;
+  readonly zone: (size: number, color: string, level: 'excellent' | 'good' | 'fair' | 'poor') => CSSProperties;
   readonly zoneIcon: () => CSSProperties;
 }
 

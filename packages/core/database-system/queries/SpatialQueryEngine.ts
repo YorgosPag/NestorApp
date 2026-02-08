@@ -139,8 +139,8 @@ export interface GridCell {
 /** Row type for proximity search results */
 interface ProximityRow {
   id: string;
-  name: string;
-  entity_type: string;
+  dxf_entity_type: string;
+  dxf_layer: string;
   geometry: string; // JSON string
   distance_meters: string; // Numeric as string from DB
 }
@@ -159,8 +159,11 @@ interface NearbyControlPointRow {
 /** Row type for bounding box search */
 interface BoundingBoxRow {
   id: string;
-  name: string;
-  entity_type: string;
+  dxf_entity_type: string;
+  dxf_layer: string;
+  dxf_color: string | null;
+  length_meters: string | null;
+  area_square_meters: string | null;
   geometry: string;
 }
 
@@ -286,6 +289,34 @@ interface GridAnalysisRow {
   cell_geometry: string;
 }
 
+export interface ProximitySearchResult {
+  id: string;
+  dxf_entity_type: string;
+  dxf_layer: string;
+  geometry: GeoJSON.Geometry;
+  distance_meters: number;
+}
+
+export interface NearbyControlPointResult {
+  id: string;
+  name: string;
+  description?: string;
+  accuracy_meters: number;
+  lng: number;
+  lat: number;
+  distance_meters: number;
+}
+
+export interface BoundingBoxSearchResult {
+  id: string;
+  dxf_entity_type: string;
+  dxf_layer: string;
+  dxf_color: string | null;
+  length_meters: number | null;
+  area_square_meters: number | null;
+  geometry: GeoJSON.Geometry;
+}
+
 // ============================================================================
 // SPATIAL QUERY ENGINE CLASS
 // ============================================================================
@@ -304,7 +335,7 @@ export class SpatialQueryEngine {
   /**
    * Find entities within radius of a point
    */
-  async proximitySearch(params: ProximitySearchParams): Promise<any[]> {
+  async proximitySearch(params: ProximitySearchParams): Promise<ProximitySearchResult[]> {
     let sql = `
       SELECT
         se.id,
@@ -352,7 +383,9 @@ export class SpatialQueryEngine {
 
     const result = await this.dbManager.query(sql, queryParams);
     return (result.rows as ProximityRow[]).map(row => ({
-      ...row,
+      id: row.id,
+      dxf_entity_type: row.dxf_entity_type,
+      dxf_layer: row.dxf_layer,
       geometry: JSON.parse(row.geometry),
       distance_meters: parseFloat(row.distance_meters)
     }));
@@ -365,7 +398,7 @@ export class SpatialQueryEngine {
     centerPoint: { lng: number; lat: number },
     radiusMeters: number,
     projectId?: string
-  ): Promise<any[]> {
+  ): Promise<NearbyControlPointResult[]> {
     let sql = `
       SELECT
         cp.id,
@@ -398,7 +431,10 @@ export class SpatialQueryEngine {
 
     const result = await this.dbManager.query(sql, queryParams);
     return (result.rows as NearbyControlPointRow[]).map(row => ({
-      ...row,
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      accuracy_meters: row.accuracy_meters,
       distance_meters: parseFloat(row.distance_meters),
       lng: parseFloat(row.lng),
       lat: parseFloat(row.lat)
@@ -412,7 +448,7 @@ export class SpatialQueryEngine {
   /**
    * Find entities within bounding box
    */
-  async boundingBoxSearch(params: BoundingBoxParams): Promise<any[]> {
+  async boundingBoxSearch(params: BoundingBoxParams): Promise<BoundingBoxSearchResult[]> {
     let sql = `
       SELECT
         se.id,
@@ -459,7 +495,12 @@ export class SpatialQueryEngine {
 
     const result = await this.dbManager.query(sql, queryParams);
     return (result.rows as BoundingBoxRow[]).map(row => ({
-      ...row,
+      id: row.id,
+      dxf_entity_type: row.dxf_entity_type,
+      dxf_layer: row.dxf_layer,
+      dxf_color: row.dxf_color,
+      length_meters: row.length_meters ? parseFloat(row.length_meters) : null,
+      area_square_meters: row.area_square_meters ? parseFloat(row.area_square_meters) : null,
       geometry: JSON.parse(row.geometry)
     }));
   }

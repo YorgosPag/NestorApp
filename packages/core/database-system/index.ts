@@ -78,7 +78,10 @@ export type {
   SpatialCluster,
   ConvexHullResult,
   GridAnalysisParams,
-  GridCell
+  GridCell,
+  ProximitySearchResult,
+  NearbyControlPointResult,
+  BoundingBoxSearchResult
 } from './queries/SpatialQueryEngine';
 
 // ============================================================================
@@ -97,6 +100,8 @@ export type {
 } from './analytics/DatabaseAnalytics';
 // 🏢 ENTERPRISE: Import only types used locally
 import type { CustomReportResult } from './analytics/DatabaseAnalytics';
+// ?? ENTERPRISE: Import only types used locally
+import type { ProximitySearchResult, NearbyControlPointResult } from './queries/SpatialQueryEngine';
 
 // ============================================================================
 // DATA MIGRATION και SYNCHRONIZATION
@@ -246,8 +251,8 @@ export class GeoAlertDatabaseService {
     radiusMeters: number,
     projectId?: string
   ): Promise<{
-    controlPoints: any[];
-    spatialEntities: any[];
+    controlPoints: NearbyControlPointResult[];
+    spatialEntities: ProximitySearchResult[];
     totalFound: number;
   }> {
     const [controlPoints, spatialEntities] = await Promise.all([
@@ -308,13 +313,15 @@ export default geoAlertDatabase;
 // UTILITY FUNCTIONS
 // ============================================================================
 
+type DatabaseSystemHealth = Awaited<ReturnType<GeoAlertDatabaseService['getSystemHealth']>>;
+
 /**
  * Initialize database services με error handling
  */
 export async function initializeDatabaseServices(): Promise<{
   success: boolean;
   error?: string;
-  healthStatus?: any;
+  healthStatus?: DatabaseSystemHealth;
 }> {
   try {
     await geoAlertDatabase.initialize();

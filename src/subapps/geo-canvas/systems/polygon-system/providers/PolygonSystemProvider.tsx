@@ -11,6 +11,7 @@
 import React, { createContext, useReducer, useRef, useCallback, useEffect } from 'react';
 import { usePolygonSystem } from '@geo-alert/core';
 import type { PolygonType, UniversalPolygon } from '@geo-alert/core';
+import type { Map as MaplibreMap } from 'maplibre-gl';
 import type {
   UserRole,
   PolygonSystemState,
@@ -211,7 +212,7 @@ export function PolygonSystemProvider({
   // Manual initialization when we have both canvas and map
   useEffect(() => {
     if (dummyCanvasRef.current && state.mapRef?.current && !corePolygonSystem.manager) {
-      const map = state.mapRef.current.getMap?.();
+      const map = state.mapRef.current.getMap?.() as MaplibreMap | undefined;
       if (map && corePolygonSystem.initialize) {
         corePolygonSystem.initialize(dummyCanvasRef.current, map);
       }

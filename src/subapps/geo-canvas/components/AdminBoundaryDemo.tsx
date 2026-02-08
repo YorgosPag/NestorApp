@@ -270,9 +270,9 @@ export function AdminBoundaryDemo() {
             <h4 className="font-medium text-blue-800 mb-2">Cache Statistics</h4>
             <div className="text-sm text-blue-700 space-y-1">
               <div>Total Entries: {cacheStats.totalEntries}</div>
-              <div>Valid Entries: {cacheStats.validEntries}</div>
-              <div>Search Cache: {cacheStats.searchCacheEntries}</div>
-              <div>Cache Expiry: {cacheStats.cacheExpiryHours}h</div>
+              <div>Hit Rate: {cacheStats.hitRate.toFixed(1)}%</div>
+              <div>Evictions: {cacheStats.evictionCount}</div>
+              <div>Memory Used: {cacheStats.memoryUsage.used.toFixed(1)} MB</div>
             </div>
           </div>
         </div>
@@ -298,3 +298,5 @@ export function AdminBoundaryDemo() {
 }
 
 export default AdminBoundaryDemo;
+
+

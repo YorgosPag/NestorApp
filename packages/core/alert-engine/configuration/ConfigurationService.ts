@@ -95,7 +95,7 @@ export interface ConfigurationError {
   message: string;
   path: string;
   severity: 'error' | 'warning';
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface ConfigurationWarning {
@@ -129,8 +129,8 @@ export interface ConfigurationDiff {
 export interface ConfigurationChange {
   path: string;
   type: 'add' | 'modify' | 'remove';
-  oldValue?: any;
-  newValue?: any;
+  oldValue?: unknown;
+  newValue?: unknown;
   impact: 'low' | 'medium' | 'high';
   description: string;
 }
@@ -154,7 +154,7 @@ export class ConfigurationService {
   private currentConfiguration: SystemConfiguration | null = null;
   private configurationHistory: SystemConfiguration[] = [];
   private backups: ConfigurationBackup[] = [];
-  private validationRules: Map<string, (config: any) => ConfigurationValidationResult> = new Map();
+  private validationRules: Map<string, (config: unknown) => ConfigurationValidationResult> = new Map();
 
   // Service dependencies
   private rulesEngine: RulesEngine;
@@ -578,15 +578,57 @@ export class ConfigurationService {
 
   private initializeValidationRules(): void {
     // Initialize custom validation rules
-    this.validationRules.set('rules', (rules: any) => {
+    this.validationRules.set('rules', (rules: unknown) => {
+      if (!Array.isArray(rules)) {
+        return {
+          isValid: false,
+          errors: [{
+            code: 'INVALID_RULES',
+            message: 'Rules must be an array',
+            path: 'rules',
+            severity: 'error',
+            details: { receivedType: typeof rules }
+          }],
+          warnings: [],
+          recommendations: []
+        };
+      }
       const result = this.validateRules(rules as Rule[]);
       return { isValid: result.errors.length === 0, errors: result.errors, warnings: result.warnings, recommendations: [] };
     });
-    this.validationRules.set('globalSettings', (settings: any) => {
+    this.validationRules.set('globalSettings', (settings: unknown) => {
+      if (!settings || typeof settings !== 'object') {
+        return {
+          isValid: false,
+          errors: [{
+            code: 'INVALID_GLOBAL_SETTINGS',
+            message: 'Global settings must be an object',
+            path: 'globalSettings',
+            severity: 'error',
+            details: { receivedType: typeof settings }
+          }],
+          warnings: [],
+          recommendations: []
+        };
+      }
       const result = this.validateGlobalSettings(settings as GlobalSettings);
       return { isValid: result.errors.length === 0, errors: result.errors, warnings: result.warnings, recommendations: [] };
     });
-    this.validationRules.set('notificationConfig', (config: any) => {
+    this.validationRules.set('notificationConfig', (config: unknown) => {
+      if (!config || typeof config !== 'object') {
+        return {
+          isValid: false,
+          errors: [{
+            code: 'INVALID_NOTIFICATION_CONFIG',
+            message: 'Notification config must be an object',
+            path: 'notificationConfig',
+            severity: 'error',
+            details: { receivedType: typeof config }
+          }],
+          warnings: [],
+          recommendations: []
+        };
+      }
       const result = this.validateNotificationConfig(config as NotificationConfig);
       return { isValid: result.errors.length === 0, errors: result.errors, warnings: result.warnings, recommendations: [] };
     });
@@ -753,8 +795,8 @@ export class ConfigurationService {
   }
 
   private compareObjects(
-    oldObj: any,
-    newObj: any,
+    oldObj: Record<string, unknown>,
+    newObj: Record<string, unknown>,
     path: string,
     modified: ConfigurationChange[]
   ): void {
@@ -813,22 +855,26 @@ export class ConfigurationService {
 
   public async importConfiguration(data: string, format: 'json' | 'yaml' = 'json'): Promise<SystemConfiguration> {
     try {
-      let configData: any;
+      let configData: unknown;
 
       if (format === 'json') {
-        configData = JSON.parse(data);
+        const parsed = JSON.parse(data) as unknown;
+        if (!parsed || typeof parsed !== 'object') {
+          throw new Error('Invalid configuration format');
+        }
+        configData = parsed;
       } else {
         // Mock YAML import
         throw new Error('YAML import not yet implemented');
       }
 
       // Validate imported configuration
-      const validation = await this.validateConfiguration(configData);
+      const validation = await this.validateConfiguration(configData as Partial<SystemConfiguration>);
       if (!validation.isValid) {
         throw new Error(`Invalid configuration: ${validation.errors.map(e => e.message).join(', ')}`);
       }
 
-      return await this.saveConfiguration(configData, {
+      return await this.saveConfiguration(configData as Partial<SystemConfiguration>, {
         description: 'Imported configuration',
         author: 'system'
       });

@@ -17,6 +17,7 @@ import {
   GeoCanvasPolygonManager,
   type GeoCanvasIntegrationOptions
 } from './geo-canvas-integration';
+import type { Map as MaplibreMap } from 'maplibre-gl';
 import type * as GeoJSON from 'geojson';
 
 /**
@@ -47,7 +48,7 @@ export interface UsePolygonSystemReturn {
   };
 
   // Actions
-  initialize: (canvas: HTMLCanvasElement, map?: any) => void;
+  initialize: (canvas: HTMLCanvasElement, map?: MaplibreMap) => void;
   startDrawing: (type?: PolygonType, style?: Partial<PolygonStyle>) => void;
   addPoint: (x: number, y: number, geoCoords?: { lng: number; lat: number }) => PolygonPoint | null;
   finishDrawing: () => UniversalPolygon | null;
@@ -107,7 +108,7 @@ export function usePolygonSystem(options: UsePolygonSystemOptions = {}): UsePoly
 
   // Refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<MaplibreMap | null>(null);
 
   /**
    * Update state from manager
@@ -134,9 +135,9 @@ export function usePolygonSystem(options: UsePolygonSystemOptions = {}): UsePoly
   /**
    * Initialize polygon manager
    */
-  const initialize = useCallback((canvas: HTMLCanvasElement, map?: any) => {
+  const initialize = useCallback((canvas: HTMLCanvasElement, map?: MaplibreMap) => {
     canvasRef.current = canvas;
-    mapRef.current = map;
+    mapRef.current = map ?? null;
 
     const integrationOptions: GeoCanvasIntegrationOptions = {
       canvas,
@@ -366,7 +367,7 @@ export function usePolygonSystem(options: UsePolygonSystemOptions = {}): UsePoly
   // Auto-initialize on mount if canvas is available
   useEffect(() => {
     if (autoInit && canvasRef.current && !manager) {
-      initialize(canvasRef.current, mapRef.current);
+      initialize(canvasRef.current, mapRef.current ?? undefined);
     }
   }, [autoInit, manager, initialize]);
 

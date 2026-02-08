@@ -14,6 +14,7 @@ import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOV
 import {
   geoAlertEngine
 } from '@geo-alert/core';
+import type { Alert, RuleContext, RuleEvaluationResult } from '@geo-alert/core/alert-engine';
 
 // Use existing unified system types
 import type {
@@ -71,25 +72,44 @@ export function AlertManagementPanel({
   }, [openNotifications]);
 
   const handleTestAlert = useCallback(() => {
+    const now = new Date();
+    const testUserId = process.env.NEXT_PUBLIC_TEST_USER_ID || 'test-user';
+    const ruleContext: RuleContext = {
+      ruleId: 'manual-test',
+      triggeredAt: now,
+      data: {},
+      executionStart: performance.now()
+    };
+    const ruleEvaluation: RuleEvaluationResult = {
+      ruleId: ruleContext.ruleId,
+      triggered: true,
+      confidence: 1,
+      conditionResults: [],
+      actionsExecuted: [],
+      executionTime: 0,
+      evaluatedAt: now,
+      context: ruleContext
+    };
+
     // Test the integration bridge
-    const testAlert = {
+    const testAlert: Alert = {
       id: `test-${Date.now()}`,
-      type: 'spatial-intersection',
+      type: 'data_quality_issue',
       severity: 'info',
+      status: 'new',
       title: 'Test Spatial Alert',
       message: 'This is a test alert from the Alert Management Panel',
-      timestamp: new Date(),
-      coordinates: { lat: 37.7749, lng: -122.4194 },
-      polygon: null,
-      tenantId: 'geo-alert',
-      userId: process.env.NEXT_PUBLIC_TEST_USER_ID || 'test-user',
-      actions: [
-        {
-          id: 'view-map',
-          label: 'View on Map',
-          url: '/geo/canvas'
-        }
-      ]
+      details: {},
+      location: { lat: 37.7749, lng: -122.4194 },
+      detectedAt: now,
+      triggeredByRule: ruleContext.ruleId,
+      ruleEvaluation,
+      actionsTaken: [],
+      createdBy: testUserId,
+      tags: ['test'],
+      projectId: 'geo-alert',
+      entityType: 'geo-canvas',
+      entityId: 'geo-canvas'
     };
 
     sendSpatialAlert(testAlert);

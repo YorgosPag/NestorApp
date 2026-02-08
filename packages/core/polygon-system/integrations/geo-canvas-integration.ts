@@ -12,6 +12,7 @@ import type {
   PolygonType,
   PolygonStyle
 } from '../types';
+import type { Map as MaplibreMap } from 'maplibre-gl';
 import { SimplePolygonDrawer } from '../drawing/SimplePolygonDrawer';
 import { ControlPointDrawer } from '../drawing/ControlPointDrawer';
 import { polygonToGeoJSON, polygonsToGeoJSONCollection } from '../converters/polygon-converters';
@@ -25,7 +26,7 @@ export interface GeoCanvasIntegrationOptions {
   canvas?: HTMLCanvasElement;
 
   /** Map instance για geo features */
-  map?: any; // MapLibre GL JS map instance
+  map?: MaplibreMap; // MapLibre GL JS map instance
 
   /** Default drawing mode */
   defaultMode?: PolygonType;

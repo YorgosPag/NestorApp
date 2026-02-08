@@ -49,6 +49,8 @@ interface MemoryControlPoint {
   isActive: boolean;
 }
 
+type MemoryProject = Record<string, unknown>;
+
 // ============================================================================
 // MIGRATION DATA TYPES
 // ============================================================================
@@ -102,7 +104,7 @@ export interface MigrationError {
   message: string;
   itemId?: string;
   itemType?: string;
-  details?: any;
+  details?: Record<string, unknown>;
   timestamp: Date;
   canRetry: boolean;
 }
@@ -130,18 +132,18 @@ export interface MigrationResult {
     spatialEntitiesProcessed: number;
   };
   rollbackAvailable: boolean;
-  rollbackData?: any;
+  rollbackData?: unknown;
 }
 
 export interface ConflictItem {
   id: string;
   type: 'project' | 'control_point';
-  memoryVersion: any;
-  databaseVersion: any;
+  memoryVersion: Record<string, unknown>;
+  databaseVersion: Record<string, unknown>;
   conflicts: Array<{
     field: string;
-    memoryValue: any;
-    databaseValue: any;
+    memoryValue: unknown;
+    databaseValue: unknown;
     recommendation: 'memory' | 'database' | 'merge';
   }>;
 }
@@ -176,7 +178,7 @@ export class DataMigrationService {
    */
   async migrateMemoryToDatabase(
     memoryData: {
-      projects?: any[];
+      projects?: MemoryProject[];
       controlPoints?: MemoryControlPoint[];
     },
     options: MigrationOptions
@@ -372,7 +374,7 @@ export class DataMigrationService {
    */
   async checkSyncStatus(
     memoryData: {
-      projects?: any[];
+      projects?: MemoryProject[];
       controlPoints?: MemoryControlPoint[];
     }
   ): Promise<SyncStatus> {
@@ -438,7 +440,7 @@ export class DataMigrationService {
    */
   async synchronizeData(
     memoryData: {
-      projects?: any[];
+      projects?: MemoryProject[];
       controlPoints?: MemoryControlPoint[];
     },
     conflictResolutions: Array<{
@@ -461,7 +463,7 @@ export class DataMigrationService {
    */
   private async validateMemoryData(
     memoryData: {
-      projects?: any[];
+      projects?: MemoryProject[];
       controlPoints?: MemoryControlPoint[];
     },
     options: MigrationOptions
@@ -661,8 +663,8 @@ export class DataMigrationService {
   private detectControlPointConflicts(
     memoryPoint: MemoryControlPoint,
     dbPoint: GeoControlPoint
-  ): Array<{ field: string; memoryValue: any; databaseValue: any; recommendation: 'memory' | 'database' | 'merge' }> {
-    const conflicts = [];
+  ): Array<{ field: string; memoryValue: unknown; databaseValue: unknown; recommendation: 'memory' | 'database' | 'merge' }> {
+    const conflicts: Array<{ field: string; memoryValue: unknown; databaseValue: unknown; recommendation: 'memory' | 'database' | 'merge' }> = [];
 
     // Check accuracy differences
     if (Math.abs(memoryPoint.accuracy - dbPoint.accuracyMeters) > 0.1) {

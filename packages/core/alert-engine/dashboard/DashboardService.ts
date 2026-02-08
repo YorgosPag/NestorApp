@@ -112,7 +112,7 @@ export interface RealTimeEvent {
     notificationId?: string;
     userId?: string;
     projectId?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 

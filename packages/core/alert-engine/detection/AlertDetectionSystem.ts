@@ -32,7 +32,7 @@ export interface Alert {
   // Alert content
   title: string;
   message: string;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 
   // Context
   projectId?: string;
@@ -81,7 +81,7 @@ export type AlertStatus = 'new' | 'acknowledged' | 'investigating' | 'resolved' 
 export interface AlertAction {
   type: 'notification_sent' | 'email_sent' | 'workflow_triggered' | 'record_updated' | 'escalated';
   timestamp: Date;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   success: boolean;
   error?: string;
 }
@@ -106,7 +106,7 @@ export interface AlertTemplate {
   // Thresholds και parameters
   parameters: Record<string, {
     type: 'number' | 'string' | 'boolean';
-    defaultValue: any;
+    defaultValue: unknown;
     description: string;
     min?: number;
     max?: number;
@@ -730,9 +730,10 @@ export class AlertDetectionSystem {
     return alert;
   }
 
-  private renderTemplate(template: string, data: Record<string, any>): string {
+  private renderTemplate(template: string, data: Record<string, unknown>): string {
     return template.replace(/\${(\w+)}/g, (match, key) => {
-      return data[key]?.toString() || match;
+      const value = data[key];
+      return value !== undefined ? String(value) : match;
     });
   }
 

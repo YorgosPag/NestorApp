@@ -49,7 +49,8 @@ export interface UseGenericFiltersReturn<T extends GenericFilterState> {
 
 export function useGenericFilters<T extends GenericFilterState>(
   filters: T,
-  onFiltersChange: (filters: T) => void
+  onFiltersChange: (filters: T) => void,
+  defaultFilters?: T
 ): UseGenericFiltersReturn<T> {
   const handleFilterChange = useCallback(<K extends keyof T>(
     key: K,
@@ -162,6 +163,13 @@ export function useGenericFilters<T extends GenericFilterState>(
   }, [filters, onFiltersChange]);
 
   const clearAllFilters = useCallback(() => {
+    // 🏢 ENTERPRISE: If defaultFilters provided, reset to those (supports string-based defaults like 'all')
+    if (defaultFilters) {
+      onFiltersChange({ ...defaultFilters });
+      return;
+    }
+
+    // Fallback: generic reset for backward compatibility (array-based filter states)
     const filtersRecord = filters as Record<string, unknown>;
     const clearedFilters = Object.keys(filters).reduce<Record<string, unknown>>((acc, key) => {
       if (key === 'searchTerm') {
@@ -181,7 +189,7 @@ export function useGenericFilters<T extends GenericFilterState>(
     }, {});
 
     onFiltersChange(clearedFilters as T);
-  }, [filters, onFiltersChange]);
+  }, [filters, onFiltersChange, defaultFilters]);
 
   // ============================================================================
   // ADR-051: NEW ENTERPRISE METHODS

@@ -33,6 +33,10 @@ export interface ParserResult {
   /** Detected format */
   format: FloorPlanFormat;
 
+  /** Raster image URL (for image/PDF formats) */
+  imageUrl?: string;
+
+
   /** GeoJSON data (για vector formats) */
   geoJSON?: GeoJSONFeatureCollection;
 
@@ -52,6 +56,15 @@ export interface ParserResult {
 
   /** Thumbnail preview (data URL) */
   thumbnail?: string;
+
+  /** Image metadata (for raster formats) */
+  metadata?: {
+    width: number;
+    height: number;
+    aspectRatio: number;
+    hasAlpha: boolean;
+  };
+
 
   /** Parse errors */
   errors?: string[];
@@ -94,6 +107,10 @@ export interface ImageMetadata {
   width: number;
   height: number;
   format: FloorPlanFormat;
+
+  /** Raster image URL (for image/PDF formats) */
+  imageUrl?: string;
+
   mimeType: string;
   size: number;
   aspectRatio: number;
@@ -276,3 +293,5 @@ export interface CoordinateTransformer {
   /** Get transformation quality */
   getQuality: () => TransformationResult;
 }
+
+

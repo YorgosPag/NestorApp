@@ -14,33 +14,11 @@ import { adminBoundariesCache } from '../cache/AdminBoundariesCacheManager';
 // ============================================================================
 
 // 🏢 ENTERPRISE: GeoJSON coordinate types per specification
-type GeoJSONPosition = [number, number] | [number, number, number];
-type GeoJSONCoordinates =
-  | GeoJSONPosition
-  | GeoJSONPosition[]
-  | GeoJSONPosition[][]
-  | GeoJSONPosition[][][];
-
-type FeaturePropertyValue = string | number | boolean | null | Record<string, string>;
-type FeatureProperties = Record<string, FeaturePropertyValue>;
-
-interface Geometry {
-  type: 'Point' | 'LineString' | 'Polygon' | 'MultiPoint' | 'MultiLineString' | 'MultiPolygon' | 'GeometryCollection';
-  // 🏢 ENTERPRISE: Proper GeoJSON coordinates type
-  coordinates?: GeoJSONCoordinates;
-}
-
-interface Feature {
-  type: 'Feature';
-  // 🏢 ENTERPRISE: Proper properties type
-  properties: FeatureProperties | null;
-  geometry: Geometry | null;
-}
-
-interface FeatureCollection {
-  type: 'FeatureCollection';
-  features: Feature[];
-}
+type GeoJSONPosition = GeoJSON.Position;
+type GeoJSONCoordinates = GeoJSON.Position | GeoJSON.Position[] | GeoJSON.Position[][] | GeoJSON.Position[][][];
+type Geometry = GeoJSON.Geometry;
+type Feature = GeoJSON.Feature;
+type FeatureCollection = GeoJSON.FeatureCollection;
 
 // ✅ ENTERPRISE FIX: Import GreekAdminLevel as value
 import { GreekAdminLevel } from '../../types/administrative-types';
@@ -997,3 +975,4 @@ export class OverpassApiService {
 export const overpassApiService = new OverpassApiService();
 
 export default overpassApiService;
+

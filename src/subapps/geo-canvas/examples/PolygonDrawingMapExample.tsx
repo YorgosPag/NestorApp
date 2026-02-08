@@ -15,6 +15,7 @@ import type { CSSProperties } from 'react';
 import { InteractiveMap } from '../components/InteractiveMap';
 import type { UniversalPolygon, PolygonType } from '@geo-alert/core';
 import type { GeoCoordinate } from '../types';
+import type { MapInstance } from '../hooks/map/useMapInteractions';
 import { layoutUtilities } from '@/styles/design-tokens';
 
 // ============================================================================
@@ -430,7 +431,7 @@ export function PolygonDrawingMapExample(): JSX.Element {
   }, []);
 
   // Handle map ready
-  const handleMapReady = useCallback((map: any) => {
+  const handleMapReady = useCallback((map: MapInstance) => {
     console.log('Map ready:', map);
   }, []);
 
@@ -458,9 +459,9 @@ Universal Polygon System - Map Integration
       <section style={mapComponents.mapContainer.base}>
         <InteractiveMap
           // Map Configuration
-          enableDrawing={enableDrawing}
-          drawingMode={currentMode}
-          enableCoordinatePicking={isPickingCoordinates}
+          enablePolygonDrawing={enableDrawing}
+          defaultPolygonMode={currentMode}
+          isPickingCoordinates={isPickingCoordinates}
           transformState={mockTransformState}
 
           // Event Handlers
@@ -469,12 +470,7 @@ Universal Polygon System - Map Integration
           onPolygonModified={handlePolygonModified}
           onPolygonDeleted={handlePolygonDeleted}
           onMapReady={handleMapReady}
-
-          // Existing polygons to display
-          existingPolygons={polygons}
-
-          // Styling από centralized tokens
-          style={mapComponents.mapContainer.interactiveMap}
+          className="flex-1"
         />
 
         {/* Polygon Sidebar */}
@@ -515,3 +511,7 @@ export default PolygonDrawingMapExample;
  * Result: Enterprise-class, maintainable, accessible map interface
  * Compliance: 100% κανόνες CLAUDE.md + Corporate standards
  */
+
+
+
+

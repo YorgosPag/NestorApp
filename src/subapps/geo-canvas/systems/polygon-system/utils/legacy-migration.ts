@@ -64,15 +64,19 @@ export function createPolygonFromLegacy(legacyData: LegacyPolygonData): Universa
 
   return {
     id: `legacy_${Date.now()}`,
-    name: 'Legacy Polygon',
-    polygonType: 'simple',
+    type: 'simple',
     points,
     isClosed: legacyData.isComplete,
     metadata: {
-      source: 'legacy-migration',
-      originalControlPoints: legacyData.controlPoints,
-      migratedAt: new Date().toISOString(),
-      isComplete: legacyData.isComplete
+      createdAt: new Date(),
+      modifiedAt: new Date(),
+      description: 'Legacy polygon migration',
+      properties: {
+        source: 'legacy-migration',
+        originalControlPoints: legacyData.controlPoints,
+        migratedAt: new Date().toISOString(),
+        isComplete: legacyData.isComplete
+      }
     },
     style: {
       fillColor: GEO_COLORS.withOpacity(GEO_COLORS.POLYGON.COMPLETED, 0.3),

@@ -78,7 +78,7 @@ export interface RuleCondition {
 
   // For comparison conditions
   field?: string;
-  value?: any;
+  value?: unknown;
 
   // For spatial conditions
   geometry?: GeoJSON.Geometry;
@@ -113,7 +113,7 @@ export interface StatisticalAggregation {
 // Actions to execute when rule triggers
 export interface RuleAction {
   type: ActionType;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   retryPolicy?: RetryPolicy;
 }
 
@@ -142,7 +142,7 @@ export interface RuleContext {
   entityType?: string;
 
   // Data context για rule evaluation
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 
   // Previous evaluation results (για temporal rules)
   previousResults?: RuleEvaluationResult[];
@@ -174,13 +174,13 @@ export interface ConditionResult {
   conditionPath: string; // Path in condition tree
   result: boolean;
   confidence: number;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface ActionResult {
   actionType: ActionType;
   success: boolean;
-  result?: any;
+  result?: unknown;
   error?: string;
   executionTime: number;
 }
@@ -604,7 +604,7 @@ export class RulesEngine {
     return results;
   }
 
-  private async executeAction(action: RuleAction, context: RuleContext): Promise<any> {
+  private async executeAction(action: RuleAction, context: RuleContext): Promise<unknown> {
     switch (action.type) {
       case 'create_alert':
         return this.createAlert(action.parameters, context);
@@ -621,17 +621,17 @@ export class RulesEngine {
     }
   }
 
-  private async createAlert(parameters: any, context: RuleContext): Promise<any> {
+  private async createAlert(parameters: Record<string, unknown>, context: RuleContext): Promise<unknown> {
     console.log(`🚨 ALERT CREATED: ${parameters.message || 'Rule triggered'}`);
     return { alertId: `alert_${Date.now()}`, message: parameters.message };
   }
 
-  private async sendEmail(parameters: any, context: RuleContext): Promise<any> {
+  private async sendEmail(parameters: Record<string, unknown>, context: RuleContext): Promise<unknown> {
     console.log(`📧 EMAIL SENT: ${parameters.subject || 'Alert Notification'} → ${parameters.to || 'admin@example.com'}`);
     return { emailId: `email_${Date.now()}`, status: 'sent' };
   }
 
-  private async logEvent(parameters: any, context: RuleContext): Promise<any> {
+  private async logEvent(parameters: Record<string, unknown>, context: RuleContext): Promise<unknown> {
     console.log(`📝 EVENT LOGGED: ${parameters.message || 'Rule event'}`);
     return { logId: `log_${Date.now()}`, timestamp: new Date() };
   }
@@ -651,13 +651,13 @@ export class RulesEngine {
     };
   }
 
-  private getFieldValue(fieldPath: string, context: RuleContext): any {
+  private getFieldValue(fieldPath: string, context: RuleContext): unknown {
     const parts = fieldPath.split('.');
-    let value = context.data;
+    let value: unknown = context.data;
 
     for (const part of parts) {
       if (value && typeof value === 'object' && part in value) {
-        value = value[part];
+        value = (value as Record<string, unknown>)[part];
       } else {
         return undefined;
       }

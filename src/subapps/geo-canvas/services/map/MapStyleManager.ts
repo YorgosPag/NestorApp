@@ -15,17 +15,19 @@
  */
 
 import { GEOGRAPHIC_CONFIG } from '../../../../config/geographic-config';
+import type { StyleSpecification } from 'maplibre-gl';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
 // ============================================================================
 
 export type MapStyleType = 'osm' | 'satellite' | 'terrain' | 'dark' | 'greece' | 'watercolor' | 'toner';
+export type MapStyleUrl = string | StyleSpecification;
 
 export interface MapStyleDefinition {
   name: string;
   icon: string;
-  url: string | object;
+  url: MapStyleUrl;
   category: 'basic' | 'satellite' | 'artistic' | 'custom';
   maxZoom?: number;
   attribution?: string;
@@ -45,8 +47,8 @@ export interface MapStyleConfig {
 /**
  * Custom Greece-focused map style
  */
-const createGreeceCustomStyle = () => ({
-  version: 8,
+const createGreeceCustomStyle = (): StyleSpecification => ({
+  version: 8 as const,
   name: "Greece Focused",
   sources: {
     'osm': {
@@ -77,8 +79,8 @@ const createGreeceCustomStyle = () => ({
 /**
  * Terrain style definition
  */
-const createTerrainStyle = () => ({
-  version: 8,
+const createTerrainStyle = (): StyleSpecification => ({
+  version: 8 as const,
   name: "Terrain Style",
   sources: {
     'terrain-tiles': {
@@ -101,8 +103,8 @@ const createTerrainStyle = () => ({
 /**
  * Watercolor style definition
  */
-const createWatercolorStyle = () => ({
-  version: 8,
+const createWatercolorStyle = (): StyleSpecification => ({
+  version: 8 as const,
   name: "Watercolor Style",
   sources: {
     'watercolor-tiles': {
@@ -125,8 +127,8 @@ const createWatercolorStyle = () => ({
 /**
  * Toner style definition
  */
-const createTonerStyle = () => ({
-  version: 8,
+const createTonerStyle = (): StyleSpecification => ({
+  version: 8 as const,
   name: "Toner Style",
   sources: {
     'toner-tiles': {
@@ -256,7 +258,7 @@ export class MapStyleManager {
   /**
    * Get style URL/object για MapLibre
    */
-  getStyleUrl(styleType: MapStyleType): string | object {
+  getStyleUrl(styleType: MapStyleType): MapStyleUrl {
     return this.styleDefinitions[styleType].url;
   }
 
@@ -324,17 +326,17 @@ export class MapStyleManager {
     attribution?: string;
     maxzoom?: number;
     tileSize?: number;
-  }): object {
+  }): StyleSpecification {
     return {
-      version: 8,
+      version: 8 as const,
       name: config.name,
       sources: {
         'custom-tiles': {
           type: 'raster' as const,
           tiles: config.tiles,
-          tileSize: config.tileSize || 256,
-          maxzoom: config.maxzoom || 18,
-          attribution: config.attribution || ''
+          tileSize: config.tileSize ?? 256,
+          maxzoom: config.maxzoom ?? 18,
+          attribution: config.attribution ?? ''
         }
       },
       layers: [
@@ -350,14 +352,14 @@ export class MapStyleManager {
   /**
    * Get style URLs για all styles (για external usage)
    */
-  getStyleUrls(): Record<MapStyleType, string | object> {
-    const urls: Record<string, string | object> = {};
+  getStyleUrls(): Record<MapStyleType, MapStyleUrl> {
+    const urls = {} as Record<MapStyleType, MapStyleUrl>;
 
     Object.entries(this.styleDefinitions).forEach(([type, definition]) => {
-      urls[type] = definition.url;
+      urls[type as MapStyleType] = definition.url;
     });
 
-    return urls as Record<MapStyleType, string | object>;
+    return urls;
   }
 }
 
@@ -383,13 +385,13 @@ export const getMapStyle = (styleType: MapStyleType): MapStyleDefinition =>
 /**
  * Get style URL
  */
-export const getMapStyleUrl = (styleType: MapStyleType): string | object =>
+export const getMapStyleUrl = (styleType: MapStyleType): MapStyleUrl =>
   mapStyleManager.getStyleUrl(styleType);
 
 /**
  * Get all style URLs
  */
-export const getAllMapStyleUrls = (): Record<MapStyleType, string | object> =>
+export const getAllMapStyleUrls = (): Record<MapStyleType, MapStyleUrl> =>
   mapStyleManager.getStyleUrls();
 
 /**

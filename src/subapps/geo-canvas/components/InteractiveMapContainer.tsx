@@ -167,6 +167,13 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     isDrawing: systemIsDrawing,
     isPolygonComplete: systemIsPolygonComplete
   } = useCentralizedPolygonSystem();
+  const startDrawingForMap = useCallback(() => {
+    if (!enablePolygonDrawing) return;
+    const resolvedMode: PolygonType = defaultPolygonMode && defaultPolygonMode !== 'complex'
+      ? defaultPolygonMode
+      : 'simple';
+    startDrawing(resolvedMode);
+  }, [enablePolygonDrawing, startDrawing, defaultPolygonMode]);
 
   // ========================================================================
   // 🎯 BUSINESS LOGIC: DRAWING STATE MANAGEMENT
@@ -408,7 +415,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
           setMapRef,
           geoPolygons,
           stats,
-          startDrawing,
+          startDrawingForMap,
           finishDrawing,
           cancelDrawing,
           systemIsDrawing

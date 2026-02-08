@@ -23,6 +23,7 @@ export {
 
 // Import for internal use
 import { ConfigurationService } from './ConfigurationService';
+import type { SystemConfiguration } from './ConfigurationService';
 
 export type {
   SystemConfiguration,
@@ -52,7 +53,7 @@ export const initializeConfiguration = async () => {
 /**
  * Quick configuration validation
  */
-export const validateConfiguration = async (config: any) => {
+export const validateConfiguration = async (config: Partial<SystemConfiguration>) => {
   const service = ConfigurationService.getInstance();
   return await service.validateConfiguration(config);
 };

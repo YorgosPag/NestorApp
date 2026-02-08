@@ -1264,7 +1264,7 @@ export class GeoAlertDockerOrchestrator {
         failedStatus.events.push({
           type: 'Warning',
           reason: 'DeploymentFailed',
-          message: error.toString(),
+          message: error instanceof Error ? error.message : String(error),
           timestamp: Date.now(),
           source: 'orchestrator',
           count: 1

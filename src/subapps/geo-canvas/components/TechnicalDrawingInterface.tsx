@@ -20,14 +20,10 @@ import type { RealEstatePolygon } from '@geo-alert/core';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { GEO_COLORS } from '../config/color-config';
+import type { UniversalPolygon } from '@geo-alert/core/polygon-system/types';
 
 // 🏢 ENTERPRISE: Type-safe polygon props
-interface BasePolygonData {
-  id?: string;
-  points: Array<[number, number]>;
-  type?: string;
-  [key: string]: unknown;
-}
+type BasePolygonData = UniversalPolygon;
 
 interface TechnicalDrawingInterfaceProps {
   mapRef: React.RefObject<{ getCenter?: () => { lng: number; lat: number } } | null>;
@@ -104,6 +100,12 @@ export function TechnicalDrawingInterface({
 
   // Advanced automated alert creation
   const handleAutomatedAlertCreation = useCallback((polygon: BasePolygonData) => {
+    const priority = alertConfiguration.sensitivity === 'high'
+      ? 4
+      : alertConfiguration.sensitivity === 'medium'
+        ? 3
+        : 2;
+
     const technicalRealEstatePolygon: RealEstatePolygon = {
       ...polygon,
       type: 'real-estate',
@@ -112,15 +114,7 @@ export function TechnicalDrawingInterface({
         priceRange: { min: 50000, max: 2000000 }, // Technical range - wide spectrum
         propertyTypes: ['apartment', 'house', 'land', 'commercial', 'industrial'],
         includeExclude: 'include',
-        // Technical-specific advanced settings
-        advancedSettings: {
-          sensitivity: alertConfiguration.sensitivity,
-          alertThreshold: alertConfiguration.alertThreshold,
-          monitoringInterval: alertConfiguration.monitoringInterval,
-          enabledPlatforms: alertConfiguration.enabledPlatforms,
-          technicalMode: true,
-          precision: 'millimeter-level'
-        }
+        priority
       }
     };
 
@@ -293,7 +287,7 @@ export function TechnicalDrawingInterface({
         <div className="flex gap-2 mb-4">
           <button
             onClick={handleComplete}
-            className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.accent} text-white py-3 px-4 ${quick.card} transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_DARKER}`}
+            className={`flex-1 flex items-center justify-center gap-2 ${colors.bg.accent} text-white py-3 px-4 ${quick.card} transition-colors ${HOVER_BACKGROUND_EFFECTS.PURPLE_BUTTON}`}
           >
             <Ruler className={iconSizes.md} />
             <span className="font-medium">{t('drawingInterfaces.technical.actions.complete')}</span>
@@ -522,7 +516,7 @@ export function TechnicalDrawingInterface({
                 startPeriodicCheck(alertConfiguration.monitoringInterval);
                 console.log('🚨 Technical: Automated monitoring started');
               }}
-              className={`flex items-center justify-center gap-2 ${colors.bg.success} text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GREEN_DARKER}`}
+              className={`flex items-center justify-center gap-2 ${colors.bg.success} text-white py-2 px-4 rounded-lg transition-colors ${HOVER_BACKGROUND_EFFECTS.GREEN_BUTTON}`}
             >
               <Monitor className={iconSizes.sm} />
               <span className="text-sm font-medium">{t('hardcodedTexts.actions.startMonitoring')}</span>
@@ -563,3 +557,4 @@ export function TechnicalDrawingInterface({
     </div>
   );
 }
+

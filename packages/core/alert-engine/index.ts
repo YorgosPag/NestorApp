@@ -344,7 +344,7 @@ export class GeoAlertEngine {
     description: string,
     severity: 'low' | 'medium' | 'high' | 'critical' = 'medium',
     projectId?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ) {
     const alertId = `alert_${Date.now()}`;
     const now = new Date();
@@ -417,7 +417,7 @@ export class GeoAlertEngine {
   /**
    * Generate instant analytics report
    */
-  public async generateQuickReport(): Promise<any> {
+  public async generateQuickReport(): Promise<unknown> {
     const now = new Date();
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 

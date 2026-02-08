@@ -12,6 +12,7 @@ import { dxfGeoTransformService } from '../services/geo-transform/DxfGeoTransfor
 import type { DxfCoordinate, GeoCoordinate, SpatialEntity } from '../types';
 // 🏭 SMART ACTION FACTORY - ZERO DUPLICATES
 import { createSmartActionGroup } from '@/core/actions/SmartActionFactory';
+import type { SmartActionConfig } from '@/core/actions/SmartActionFactory';
 
 // Import DXF scene types
 import type { SceneModel, AnySceneEntity } from '../../dxf-viewer/types/scene';
@@ -431,13 +432,13 @@ export function TransformationPreview({
   // ========================================================================
 
   const renderActionButtons = () => {
-    const actions = [
+    const actions: SmartActionConfig[] = [
       {
         action: 'refresh' as const,
         variant: 'primary' as const,
         label: 'Refresh Preview',
-        icon: RefreshCw,
-        onClick: processTransformation,
+        icon: <RefreshCw className={iconSizes.sm} />,
+        onClick: () => { void processTransformation(); },
         disabled: !transformState.isCalibrated || !dxfScene
       }
     ];
@@ -445,8 +446,8 @@ export function TransformationPreview({
     // Add export action conditionally
     if (transformedGeoJSON) {
       actions.push({
-        action: 'export' as const,
-        variant: 'success' as const,
+        action: 'export',
+        variant: 'success',
         label: '💾 Export GeoJSON',
         onClick: () => {
           // Export GeoJSON
@@ -529,3 +530,4 @@ export function TransformationPreview({
 }
 
 export default TransformationPreview;
+

@@ -284,7 +284,7 @@ export function useGeoCanvasState(initialData?: Partial<GeoCanvasState>) {
       dispatch({ type: 'SET_ERROR', payload: error }),
 
     // Mode management
-    changeMode: (mode: string, saveHistory = true) =>
+    changeMode: (mode: GeoCanvasModeValue, saveHistory = true) =>
       dispatch({ type: 'CHANGE_MODE', payload: { mode, saveHistory } }),
 
     // Map controls

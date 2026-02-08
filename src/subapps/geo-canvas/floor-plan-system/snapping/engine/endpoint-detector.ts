@@ -43,12 +43,12 @@ export function extractEndpoints(parserResult: ParserResult | null): SnapPoint[]
     try {
       switch (geometry.type) {
         case 'LineString':
-          snapPoints.push(...extractLineStringEndpoints(geometry, feature.properties));
+          snapPoints.push(...extractLineStringEndpoints(geometry as GeoJSON.LineString, feature.properties));
           break;
 
         case 'Polygon':
           // Extract polygon corner points
-          snapPoints.push(...extractPolygonEndpoints(geometry, feature.properties));
+          snapPoints.push(...extractPolygonEndpoints(geometry as GeoJSON.Polygon, feature.properties));
           break;
 
         case 'MultiLineString':
@@ -78,14 +78,10 @@ export function extractEndpoints(parserResult: ParserResult | null): SnapPoint[]
  * Extract LineString endpoints from GeoJSON geometry
  */
 function extractLineStringEndpoints(
-  geometry: GeoJSON.Geometry,
+  geometry: GeoJSON.LineString,
   properties?: Record<string, unknown> | null
 ): SnapPoint[] {
   const snapPoints: SnapPoint[] = [];
-
-  if (!geometry.coordinates || !Array.isArray(geometry.coordinates)) {
-    return snapPoints;
-  }
 
   const coords = geometry.coordinates as number[][];
   if (coords.length < 2) return snapPoints;
@@ -117,14 +113,10 @@ function extractLineStringEndpoints(
  * Extract Polygon endpoints from GeoJSON geometry
  */
 function extractPolygonEndpoints(
-  geometry: GeoJSON.Geometry,
+  geometry: GeoJSON.Polygon,
   properties?: Record<string, unknown> | null
 ): SnapPoint[] {
   const snapPoints: SnapPoint[] = [];
-
-  if (!geometry.coordinates || !Array.isArray(geometry.coordinates)) {
-    return snapPoints;
-  }
 
   // Polygon coordinates are [exterior ring, ...holes]
   const exteriorRing = geometry.coordinates[0] as number[][];

@@ -166,7 +166,7 @@ export interface TemplateAttachment {
 export interface TemplateCondition {
   field: string;
   operator: 'equals' | 'contains' | 'greater_than' | 'less_than';
-  value: any;
+  value: unknown;
   template: string; // Template ID to use if condition matches
 }
 
@@ -205,7 +205,7 @@ export interface NotificationMessage {
   errorMessage?: string;
 
   // Context
-  context: Record<string, any>;
+  context: Record<string, unknown>;
 }
 
 export type MessageStatus = 'queued' | 'sending' | 'delivered' | 'failed' | 'cancelled';
@@ -604,7 +604,7 @@ export class NotificationDispatchEngine {
     recipientId: string,
     channelId: string,
     templateId: string,
-    context: Record<string, any>,
+    context: Record<string, unknown>,
     priority: NotificationPriority = 'normal'
   ): Promise<NotificationMessage | null> {
     const recipient = this.recipients.get(recipientId);
@@ -661,7 +661,7 @@ export class NotificationDispatchEngine {
     recipient: NotificationRecipient,
     channel: NotificationChannel,
     template: NotificationTemplate,
-    context: Record<string, any>,
+    context: Record<string, unknown>,
     priority: NotificationPriority
   ): Promise<NotificationMessage> {
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -678,7 +678,7 @@ export class NotificationDispatchEngine {
 
     const message: NotificationMessage = {
       id: messageId,
-      alertId: context.alert?.id || 'custom',
+      alertId: (context.alert as Record<string, unknown> | undefined)?.id as string ?? 'custom',
       channelId: channel.id,
       templateId: template.id,
       recipient,
@@ -984,16 +984,17 @@ export class NotificationDispatchEngine {
     return Math.min(delay, retryPolicy.maxRetryDelay);
   }
 
-  private renderTemplate(template: string, context: Record<string, any>): string {
+  private renderTemplate(template: string, context: Record<string, unknown>): string {
     return template.replace(/\${([^}]+)}/g, (match, path) => {
       const value = this.getNestedValue(context, path);
       return value !== undefined ? String(value) : match;
     });
   }
 
-  private getNestedValue(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => {
-      return current?.[key];
+  private getNestedValue(obj: unknown, path: string): unknown {
+    return path.split('.').reduce<unknown>((current, key) => {
+      if (!current || typeof current !== 'object') return undefined;
+      return (current as Record<string, unknown>)[key];
     }, obj);
   }
 

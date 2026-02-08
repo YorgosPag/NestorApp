@@ -96,8 +96,16 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
       .find(f => f.id === fieldId);
 
     if (field?.type === 'select') {
-      // Type-safe: handleSelectChange expects string
-      handleSelectChange(fieldId, typeof value === 'string' ? value : String(value || ''));
+      // 🏢 ENTERPRISE: Check if filter state uses string or array for this field
+      // TaskFilterState uses strings (status: 'all'), ContactFilterState uses arrays (company: [])
+      const currentValue = (filters as Record<string, unknown>)[fieldId];
+      if (typeof currentValue === 'string') {
+        // String-based filter state (e.g., TaskFilterState) → set directly as string
+        handleFilterChange(fieldId as keyof T, (typeof value === 'string' ? value : String(value || '')) as T[keyof T]);
+      } else {
+        // Array-based filter state (e.g., ContactFilterState) → convert to array
+        handleSelectChange(fieldId, typeof value === 'string' ? value : String(value || ''));
+      }
     } else {
       // Type assertion needed for generic type T
       handleFilterChange(fieldId as keyof T, value as T[keyof T]);

@@ -258,16 +258,17 @@ export function AddressSearchPanel({
 
     try {
       let boundary: GeoJSON.Feature | GeoJSON.FeatureCollection | null = null;
+      const isFeature = (value: GeoJSON.Feature | GeoJSON.FeatureCollection | null): value is GeoJSON.Feature => Boolean(value && value.type === 'Feature');
 
       if (result.adminLevel === 8) { // Municipality
         const municipality = await getMunicipalityBoundary(result.name);
-        if (municipality?.geometry) {
-          boundary = municipality as GeoJSON.Feature;
+        if (isFeature(municipality) && municipality.geometry) {
+          boundary = municipality;
         }
       } else if (result.adminLevel === 4) { // Region
         const region = await getRegionBoundary(result.name);
-        if (region?.geometry) {
-          boundary = region as GeoJSON.Feature;
+        if (isFeature(region) && region.geometry) {
+          boundary = region;
         }
       }
 
@@ -582,3 +583,4 @@ export function AddressSearchPanel({
     </div>
   );
 }
+

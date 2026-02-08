@@ -205,7 +205,7 @@ export interface CustomReportResult {
   reportType: string;
   generatedAt: Date;
   parameters: CustomReportParams;
-  data: any[];
+  data: unknown[];
   summary: {
     totalRecords: number;
     dataQuality: number; // 0-100 score
@@ -778,7 +778,7 @@ export class DatabaseAnalytics {
    */
   async generateCustomReport(params: CustomReportParams): Promise<CustomReportResult> {
     const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    let data: any[] = [];
+    let data: unknown[] = [];
     let totalRecords = 0;
 
     switch (params.reportType) {
@@ -828,7 +828,7 @@ export class DatabaseAnalytics {
   // PRIVATE REPORT GENERATORS
   // ========================================================================
 
-  private async generateProjectSummaryReport(params: CustomReportParams): Promise<any[]> {
+  private async generateProjectSummaryReport(params: CustomReportParams): Promise<unknown[]> {
     let sql = `
       SELECT
         p.id,
@@ -871,7 +871,7 @@ export class DatabaseAnalytics {
     return result.rows;
   }
 
-  private async generateAccuracyAnalysisReport(params: CustomReportParams): Promise<any[]> {
+  private async generateAccuracyAnalysisReport(params: CustomReportParams): Promise<unknown[]> {
     let sql = `
       SELECT
         cp.id,
@@ -911,12 +911,12 @@ export class DatabaseAnalytics {
     return result.rows;
   }
 
-  private async generateSpatialCoverageReport(params: CustomReportParams): Promise<any[]> {
+  private async generateSpatialCoverageReport(params: CustomReportParams): Promise<unknown[]> {
     // Mock implementation - would generate spatial coverage analysis
     return [];
   }
 
-  private async generateUsageReport(params: CustomReportParams): Promise<any[]> {
+  private async generateUsageReport(params: CustomReportParams): Promise<unknown[]> {
     // Mock implementation - would analyze usage patterns
     return [];
   }
@@ -925,7 +925,7 @@ export class DatabaseAnalytics {
   // QUALITY ASSESSMENT METHODS
   // ========================================================================
 
-  private calculateDataQuality(data: any[]): number {
+  private calculateDataQuality(data: unknown[]): number {
     if (data.length === 0) return 0;
 
     let qualityScore = 100;
@@ -942,7 +942,7 @@ export class DatabaseAnalytics {
     return Math.max(qualityScore - qualityPenalty, 0);
   }
 
-  private calculateCompleteness(data: any[]): number {
+  private calculateCompleteness(data: unknown[]): number {
     if (data.length === 0) return 0;
 
     let totalFields = 0;
@@ -960,7 +960,7 @@ export class DatabaseAnalytics {
     return totalFields > 0 ? (filledFields / totalFields) * 100 : 0;
   }
 
-  private generateRecommendations(data: any[], params: CustomReportParams): string[] {
+  private generateRecommendations(data: unknown[], params: CustomReportParams): string[] {
     const recommendations: string[] = [];
 
     if (data.length === 0) {

@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   checkPropertyInRealEstatePolygons,
   checkMultiplePropertiesInRealEstatePolygons,
@@ -55,6 +55,8 @@ interface UseRealEstateMatchingReturn {
     averageConfidence: number;
     topPolygons: Array<{ polygonId: string; matchCount: number }>;
   };
+  startPeriodicCheck: (intervalMinutes: number) => void;
+  stopPeriodicCheck: () => void;
 
   // Utilities
   exportResults: (format: 'json' | 'csv') => string;
@@ -83,6 +85,7 @@ export function useRealEstateMatching(
   const [results, setResults] = useState<PropertyMatchResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [realEstatePolygons, setRealEstatePolygons] = useState<RealEstatePolygon[]>([]);
+  const periodicCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Derived state
   const alertableProperties = getAlertableProperties(results);
@@ -91,6 +94,22 @@ export function useRealEstateMatching(
   // ============================================================================
   // ACTIONS
   // ============================================================================
+
+  const startPeriodicCheck = useCallback((intervalMinutes: number) => {
+    if (periodicCheckRef.current) return;
+    const intervalMs = Math.max(intervalMinutes, 1) * 60 * 1000;
+    periodicCheckRef.current = setInterval(() => {
+      if (!autoAlert || !onAlert) return;
+      const alertable = getAlertableProperties(results);
+      alertable.forEach(result => onAlert(result));
+    }, intervalMs);
+  }, [autoAlert, onAlert, results]);
+
+  const stopPeriodicCheck = useCallback(() => {
+    if (!periodicCheckRef.current) return;
+    clearInterval(periodicCheckRef.current);
+    periodicCheckRef.current = null;
+  }, []);
 
   /**
    * Check single property against polygons
@@ -201,6 +220,15 @@ export function useRealEstateMatching(
       // Debug logging removed //('🗑️ Removed real estate polygon from monitoring:', polygonId);
       return filtered;
     });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (periodicCheckRef.current) {
+        clearInterval(periodicCheckRef.current);
+        periodicCheckRef.current = null;
+      }
+    };
   }, []);
 
   /**
@@ -347,6 +375,8 @@ export function useRealEstateMatching(
     getRealEstateAlerts,
     clearResults,
     getStatistics,
+    startPeriodicCheck,
+    stopPeriodicCheck,
 
     // Utilities
     exportResults,

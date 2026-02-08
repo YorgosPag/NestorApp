@@ -265,7 +265,7 @@ export function CitizenDrawingInterface({
   } = {
     addRealEstatePolygon: (_polygon: RealEstatePolygon) => {},
     getRealEstateAlerts: () => [] as RealEstatePolygon[],
-    getStatistics: () => ({ totalPolygons: 0, totalAlerts: 0, activeAlerts: 0 })
+    getStatistics: (): RealEstateStats => ({ totalPolygons: 0, totalAlerts: 0, activeAlerts: 0, totalMatches: 0 })
   }; // TODO: Import real estate matching service when available
 
   // ✅ ENTERPRISE FIX: Get statistics as object, not function

@@ -412,7 +412,7 @@ export class SpatialQueryService {
           country: 'Ελλάδα',
           region: getStringProp(props, 'region') ?? 'Unknown'
         },
-        geometry: feature.geometry,
+        geometry: feature.geometry ?? undefined,
         bounds,
         confidence: 0.8 // Base confidence for spatial results
       };
