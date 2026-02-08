@@ -359,9 +359,10 @@ async function sendReplyViaMailgun(params: {
     };
   }
 
-  // Derive "from" address: noreply@baseDomain (strip mg. prefix)
+  // Derive "from" address: use Mailgun domain directly (mg.nestorconstruct.gr)
+  // The Mailgun sending domain IS the authorized sender — do NOT strip mg. prefix
   const fromEmail = process.env.MAILGUN_FROM_EMAIL?.trim()
-    ?? `noreply@${domain.startsWith('mg.') ? domain.slice(3) : domain}`;
+    ?? `noreply@${domain}`;
 
   const region = process.env.MAILGUN_REGION === 'eu'
     ? 'api.eu.mailgun.net'
@@ -627,21 +628,36 @@ export class PropertySearchModule implements IUCModule {
         .add(leadInquiry);
 
       if (!mailgunResult.success) {
-        logger.warn('UC-003 EXECUTE: Email send failed, recorded in audit', {
+        logger.error('UC-003 EXECUTE: Email send FAILED', {
           requestId: ctx.requestId,
           auditId: docRef.id,
           error: mailgunResult.error,
+          to: senderEmail,
         });
+
+        return {
+          success: false,
+          sideEffects: [
+            `lead_inquiry_recorded:${docRef.id}`,
+            `email_failed:${mailgunResult.error ?? 'unknown'}`,
+          ],
+          error: `Αποτυχία αποστολής email: ${mailgunResult.error ?? 'Άγνωστο σφάλμα'}`,
+        };
       }
+
+      logger.info('UC-003 EXECUTE: Email sent successfully', {
+        requestId: ctx.requestId,
+        auditId: docRef.id,
+        messageId: mailgunResult.messageId,
+        to: senderEmail,
+      });
 
       return {
         success: true,
         sideEffects: [
           `lead_inquiry_recorded:${docRef.id}`,
           `matching_units:${params.matchingUnitsCount ?? 0}`,
-          mailgunResult.success
-            ? `email_sent:${mailgunResult.messageId ?? 'unknown'}`
-            : `email_failed:${mailgunResult.error ?? 'unknown'}`,
+          `email_sent:${mailgunResult.messageId ?? 'unknown'}`,
         ],
       };
     } catch (error) {
