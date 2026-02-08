@@ -763,6 +763,10 @@
         "title": "Identity & Tax",
         "description": "Identity and tax information"
       },
+      "personas": {
+        "title": "Roles",
+        "description": "Select the roles/personas of this person"
+      },
       "professional": {
         "title": "Professional Info",
         "description": "Work and profession information"
@@ -852,6 +856,169 @@
       "street": "e.g. Athens Avenue",
       "streetNumber": "e.g. 123",
       "city": "e.g. Athens"
+    }
+  },
+  "persona": {
+    "selector": {
+      "title": "Roles",
+      "legend": "Select contact roles",
+      "description": "Each role activates additional fields specific to that role",
+      "empty": "No roles selected"
+    },
+    "types": {
+      "constructionWorker": "Construction Worker",
+      "engineer": "Engineer",
+      "accountant": "Accountant",
+      "lawyer": "Lawyer",
+      "propertyOwner": "Property Owner",
+      "client": "Client",
+      "supplier": "Supplier",
+      "notary": "Notary",
+      "realEstateAgent": "Real Estate Agent"
+    },
+    "sections": {
+      "constructionWorker": {
+        "title": "Construction Worker Details",
+        "description": "EFKA/IKA information for construction site workers"
+      },
+      "engineer": {
+        "title": "Engineer Details",
+        "description": "TEE registry, specialty and license class"
+      },
+      "accountant": {
+        "title": "Accountant Details",
+        "description": "OEE registry and accounting class"
+      },
+      "lawyer": {
+        "title": "Lawyer Details",
+        "description": "Bar Association registry"
+      },
+      "propertyOwner": {
+        "title": "Property Owner Details",
+        "description": "Property ownership information"
+      },
+      "client": {
+        "title": "Client Details",
+        "description": "Client category and communication preferences"
+      },
+      "supplier": {
+        "title": "Supplier Details",
+        "description": "Supplier category and payment terms"
+      },
+      "notary": {
+        "title": "Notary Details",
+        "description": "Notary Association registry"
+      },
+      "realEstateAgent": {
+        "title": "Real Estate Agent Details",
+        "description": "License and agency information"
+      }
+    },
+    "fields": {
+      "ikaNumber": "IKA Registry Number",
+      "insuranceClass": "Insurance Class",
+      "triennia": "Triennia",
+      "dailyWage": "Daily Wage (€)",
+      "specialtyCode": "EFKA Specialty Code",
+      "efkaRegistrationDate": "EFKA Registration Date",
+      "teeRegistryNumber": "TEE Registry Number",
+      "engineerSpecialty": "Engineer Specialty",
+      "licenseClass": "License Class",
+      "ptdeNumber": "PTDE Number",
+      "oeeNumber": "OEE Registry Number",
+      "accountingClass": "Accounting Class",
+      "barAssociationNumber": "Bar Association Number",
+      "barAssociation": "Bar Association",
+      "propertyCount": "Property Count",
+      "ownershipNotes": "Ownership Notes",
+      "clientSince": "Client Since",
+      "clientCategory": "Client Category",
+      "preferredContactMethod": "Preferred Contact Method",
+      "supplierCategory": "Supplier Category",
+      "paymentTermsDays": "Payment Terms (Days)",
+      "notaryRegistryNumber": "Notary Registry Number",
+      "notaryDistrict": "Notary District",
+      "reLicenseNumber": "License Number",
+      "reAgency": "Agency"
+    },
+    "helpTexts": {
+      "ikaNumber": "IKA/EFKA registry number of the employee",
+      "insuranceClass": "Insurance class 1-28 per EFKA (KPK 781)",
+      "triennia": "Number of triennia of work experience",
+      "dailyWage": "Employee daily wage in euros",
+      "specialtyCode": "EFKA specialty code",
+      "efkaRegistrationDate": "Date of registration with EFKA",
+      "teeRegistryNumber": "Registry number at the Technical Chamber of Greece",
+      "engineerSpecialty": "Engineering specialty per TEE",
+      "licenseClass": "Study license class (A, B, C, D)",
+      "ptdeNumber": "National Contractor Database number",
+      "oeeNumber": "Registry number at the Economic Chamber of Greece",
+      "accountingClass": "Accountant/tax consultant class",
+      "barAssociationNumber": "Registry number at the Bar Association",
+      "barAssociation": "Bar Association of registration",
+      "propertyCount": "Total number of properties owned",
+      "ownershipNotes": "Notes regarding property ownership",
+      "clientSince": "Date of client relationship start",
+      "clientCategory": "Client category (residential, commercial, etc.)",
+      "preferredContactMethod": "Preferred method of communication",
+      "supplierCategory": "Supplier category (materials, equipment, etc.)",
+      "paymentTermsDays": "Payment terms in days",
+      "notaryRegistryNumber": "Registry number at the Notary Association",
+      "notaryDistrict": "Notary Association district",
+      "reLicenseNumber": "Real estate agent license number",
+      "reAgency": "Real estate agency name"
+    },
+    "placeholders": {
+      "ikaNumber": "e.g. 12345678901",
+      "specialtyCode": "e.g. SKY",
+      "teeRegistryNumber": "e.g. 98765",
+      "ptdeNumber": "e.g. 12345",
+      "oeeNumber": "e.g. 12345",
+      "accountingClass": "e.g. A",
+      "barAssociationNumber": "e.g. 12345",
+      "barAssociation": "e.g. Athens Bar",
+      "ownershipNotes": "Notes about properties...",
+      "notaryRegistryNumber": "e.g. 12345",
+      "notaryDistrict": "e.g. Athens",
+      "reLicenseNumber": "e.g. 12345",
+      "reAgency": "e.g. ABC Real Estate"
+    },
+    "options": {
+      "engineerSpecialty": {
+        "civil": "Civil Engineer",
+        "architect": "Architect Engineer",
+        "mechanical": "Mechanical Engineer",
+        "electrical": "Electrical Engineer",
+        "surveyor": "Surveyor Engineer",
+        "chemical": "Chemical Engineer",
+        "mining": "Mining Engineer"
+      },
+      "licenseClass": {
+        "A": "Class A (Large Projects)",
+        "B": "Class B",
+        "C": "Class C",
+        "D": "Class D (Small Projects)"
+      },
+      "clientCategory": {
+        "residential": "Residential",
+        "commercial": "Commercial",
+        "industrial": "Industrial",
+        "publicSector": "Public Sector",
+        "other": "Other"
+      },
+      "contactMethod": {
+        "phone": "Phone",
+        "email": "Email",
+        "inPerson": "In Person",
+        "messaging": "Messaging"
+      },
+      "supplierCategory": {
+        "materials": "Construction Materials",
+        "equipment": "Equipment",
+        "subcontractor": "Subcontractor",
+        "services": "Services",
+        "other": "Other"
+      }
     }
   }
 }

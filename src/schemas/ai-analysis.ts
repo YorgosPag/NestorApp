@@ -143,6 +143,54 @@ export const MessageIntentAnalysisSchema = AnalysisBaseSchema.extend({
 export type MessageIntentAnalysis = z.infer<typeof MessageIntentAnalysisSchema>;
 
 // ============================================================================
+// DETECTED INTENT (Sub-schema for Multi-Intent)
+// ============================================================================
+
+/**
+ * A single detected intent with confidence and rationale
+ * @enterprise Used in multi-intent analysis for primary + secondary intents
+ * @see ADR-131 (Multi-Intent Pipeline)
+ */
+export const DetectedIntentSchema = z.object({
+  intentType: IntentType,
+  confidence: z.number().min(0).max(1),
+  rationale: z.string(),
+});
+
+export type DetectedIntentResult = z.infer<typeof DetectedIntentSchema>;
+
+// ============================================================================
+// MULTI-INTENT ANALYSIS (Discriminated Union Member)
+// ============================================================================
+
+/**
+ * Multi-intent analysis result — detects primary + secondary intents
+ * @enterprise For messages with multiple requests (e.g., appointment + property search)
+ * @see ADR-131 (Multi-Intent Pipeline)
+ */
+export const MultiIntentAnalysisSchema = AnalysisBaseSchema.extend({
+  /** Discriminator field */
+  kind: z.literal('multi_intent'),
+
+  /** Primary intent — highest confidence */
+  primaryIntent: DetectedIntentSchema,
+
+  /** Secondary intents — additional intents detected in the same message */
+  secondaryIntents: z.array(DetectedIntentSchema),
+
+  /** Original message text */
+  rawMessage: z.string(),
+
+  /** Event date extracted from message (ISO 8601 datetime string) */
+  eventDate: z.string().datetime().optional(),
+
+  /** Due date extracted from message (ISO 8601 datetime string) */
+  dueDate: z.string().datetime().optional(),
+});
+
+export type MultiIntentAnalysis = z.infer<typeof MultiIntentAnalysisSchema>;
+
+// ============================================================================
 // DOCUMENT CLASSIFICATION (Discriminated Union Member)
 // ============================================================================
 
@@ -182,6 +230,7 @@ export type DocumentClassifyAnalysis = z.infer<typeof DocumentClassifyAnalysisSc
  */
 export const AIAnalysisResultSchema = z.discriminatedUnion('kind', [
   MessageIntentAnalysisSchema,
+  MultiIntentAnalysisSchema,
   DocumentClassifyAnalysisSchema,
 ]);
 
@@ -217,6 +266,16 @@ export function isMessageIntentAnalysis(
   result: AIAnalysisResult
 ): result is MessageIntentAnalysis {
   return result.kind === 'message_intent';
+}
+
+/**
+ * Type guard for multi-intent analysis
+ * @see ADR-131 (Multi-Intent Pipeline)
+ */
+export function isMultiIntentAnalysis(
+  result: AIAnalysisResult
+): result is MultiIntentAnalysis {
+  return result.kind === 'multi_intent';
 }
 
 /**

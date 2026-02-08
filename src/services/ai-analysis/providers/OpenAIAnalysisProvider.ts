@@ -10,7 +10,7 @@ import 'server-only';
 
 import {
   AI_ANALYSIS_DEFAULTS,
-  AI_MESSAGE_INTENT_SCHEMA,
+  AI_MULTI_INTENT_SCHEMA,
   AI_DOCUMENT_CLASSIFY_SCHEMA,
   AI_ANALYSIS_PROMPTS,
 } from '@/config/ai-analysis-config';
@@ -220,7 +220,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
 
     const systemPrompt = input.kind === 'document_classify'
       ? AI_ANALYSIS_PROMPTS.DOCUMENT_CLASSIFY_SYSTEM
-      : AI_ANALYSIS_PROMPTS.MESSAGE_INTENT_SYSTEM;
+      : AI_ANALYSIS_PROMPTS.MULTI_INTENT_SYSTEM;
 
     const content: OpenAIRequestContent[] = [
       { type: 'input_text', text: prompt },
@@ -244,7 +244,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
     // Select the correct schema based on analysis kind (no oneOf needed)
     const jsonSchema = input.kind === 'document_classify'
       ? AI_DOCUMENT_CLASSIFY_SCHEMA
-      : AI_MESSAGE_INTENT_SCHEMA;
+      : AI_MULTI_INTENT_SCHEMA;
 
     // Responses API: name/strict/schema go directly in format (NOT nested in json_schema)
     const request: OpenAIRequestBody = {

@@ -20,6 +20,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { ProjectWorker } from '../contracts';
 import type { IndividualContact } from '@/types/contacts/contracts';
 import type { ContactRelationship } from '@/types/contacts/relationships/interfaces/relationship';
+// 🎭 ENTERPRISE: Contact Persona System (ADR-121) — enrich workers from persona data
+import { isConstructionWorkerPersona } from '@/types/contacts/personas';
 
 interface UseProjectWorkersReturn {
   workers: ProjectWorker[];
@@ -124,13 +126,23 @@ export function useProjectWorkers(projectId: string | undefined): UseProjectWork
             const firstName = contactData.firstName ?? '';
             const lastName = contactData.lastName ?? '';
 
+            // 🎭 ENTERPRISE: Enrich from construction_worker persona if available (ADR-121)
+            const workerPersona = contactData.personas
+              ?.find(p => p.status === 'active' && isConstructionWorkerPersona(p));
+            const personaInsuranceClassId = workerPersona && isConstructionWorkerPersona(workerPersona)
+              ? workerPersona.insuranceClassId
+              : null;
+            const personaSpecialty = workerPersona && isConstructionWorkerPersona(workerPersona)
+              ? workerPersona.specialtyCode
+              : null;
+
             enrichedWorkers.push({
               contactId: link.sourceContactId,
               name: `${firstName} ${lastName}`.trim() || 'Χωρίς Όνομα',
-              specialty: contactData.specialty ?? null,
+              specialty: personaSpecialty ?? contactData.specialty ?? null,
               company: companyName,
               companyContactId,
-              insuranceClassId: null, // Will be set in Phase 3
+              insuranceClassId: personaInsuranceClassId != null ? String(personaInsuranceClassId) : null,
               amka: contactData.amka ?? null,
               afm: contactData.vatNumber ?? null,
               employmentStatus: relationship?.employmentStatus ?? null,

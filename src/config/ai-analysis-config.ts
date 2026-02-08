@@ -32,6 +32,7 @@ export const AI_ANALYSIS_DEFAULTS = {
 } as const;
 
 export const AI_ANALYSIS_PROMPTS = {
+  /** @deprecated Use MULTI_INTENT_SYSTEM for new pipeline. Kept for backward compatibility. */
   MESSAGE_INTENT_SYSTEM: `You are an AI classifier for a Greek real estate & construction management company (κτηματομεσιτικό/κατασκευαστικό γραφείο). Analyze incoming messages and return JSON matching the schema.
 
 INTENT TYPES (choose the most specific match):
@@ -51,6 +52,40 @@ RULES:
 - Prefer specific intents over generic ones
 - Set confidence 0.0-1.0 reflecting your certainty
 - Set needsTriage=true if confidence < 0.6
+- Extract entities when identifiable (projectId, unitId, etc.)
+- Messages in Greek (el) are expected`,
+
+  /**
+   * Multi-intent system prompt — detects primary + secondary intents
+   * @see ADR-131 (Multi-Intent Pipeline)
+   */
+  MULTI_INTENT_SYSTEM: `You are an AI classifier for a Greek real estate & construction management company (κτηματομεσιτικό/κατασκευαστικό γραφείο). Analyze incoming messages and return JSON matching the schema.
+
+INTENT TYPES (use these for both primaryIntent and secondaryIntents):
+- appointment_request: Request for a meeting, viewing, or appointment (ραντεβού, συνάντηση, επίσκεψη)
+- property_search: Inquiry about available properties, units, apartments, studios, pricing (αναζήτηση ακινήτου, διαθέσιμα, τιμές, τ.μ.)
+- invoice: Invoice submission or inquiry (τιμολόγιο)
+- payment / payment_notification: Payment confirmation or notice (πληρωμή, κατάθεση)
+- defect_report / issue: Report of a defect, damage, or problem (βλάβη, πρόβλημα, ζημιά)
+- delivery / procurement_request: Material delivery or procurement (παράδοση υλικών, προμήθεια)
+- document_request: Request for documents, certificates, plans (αίτημα εγγράφου, κάτοψη, πιστοποιητικό)
+- status_inquiry: Status check on order, construction, project (ερώτηση κατάστασης, πρόοδος)
+- report_request: Request for a report (αίτημα αναφοράς)
+- info_update: General information update
+- triage_needed: Cannot determine intent with confidence
+
+MULTI-INTENT RULES:
+- Identify the PRIMARY intent (highest confidence) → put in primaryIntent
+- Identify ALL SECONDARY intents if the message contains additional requests → put in secondaryIntents array
+  Example: "θέλω ραντεβού και ψάχνω στούντιο 50τμ" → primaryIntent: appointment_request, secondaryIntents: [property_search]
+- Each intent gets its own confidence score (0.0-1.0) and rationale
+- secondaryIntents array MUST be EMPTY [] if only one intent is detected
+- The top-level confidence field MUST equal primaryIntent.confidence
+- Set needsTriage=true if primaryIntent.confidence < 0.6
+
+GENERAL RULES:
+- Prefer specific intents over generic ones
+- Do NOT duplicate the same intent in both primary and secondary
 - Extract entities when identifiable (projectId, unitId, etc.)
 - Messages in Greek (el) are expected`,
   DOCUMENT_CLASSIFY_SYSTEM:
@@ -115,6 +150,65 @@ export const AI_MESSAGE_INTENT_SCHEMA = {
       rawMessage: { type: 'string' },
       eventDate: { type: ['string', 'null'] },
       dueDate: { type: ['string', 'null'] },
+    },
+  },
+} as const satisfies Record<string, unknown>;
+
+/**
+ * Sub-schema for a single detected intent (primaryIntent / secondaryIntents items)
+ * @enterprise Reused in AI_MULTI_INTENT_SCHEMA
+ */
+const DETECTED_INTENT_SUB_SCHEMA = {
+  type: 'object' as const,
+  required: ['intentType', 'confidence', 'rationale'],
+  additionalProperties: false as const,
+  properties: {
+    intentType: { type: 'string' as const, enum: intentOptions },
+    confidence: { type: 'number' as const },
+    rationale: { type: 'string' as const },
+  },
+};
+
+/**
+ * Multi-intent analysis — detects primary + secondary intents
+ * @enterprise OpenAI strict-mode compatible
+ * @see ADR-131 (Multi-Intent Pipeline)
+ */
+export const AI_MULTI_INTENT_SCHEMA = {
+  name: 'multi_intent_result',
+  description: 'AI analysis: classify message intents (primary + secondary) for a Greek real estate company.',
+  strict: true,
+  schema: {
+    type: 'object',
+    required: [
+      'kind',
+      'aiModel',
+      'analysisTimestamp',
+      'confidence',
+      'needsTriage',
+      'extractedEntities',
+      'rawMessage',
+      'eventDate',
+      'dueDate',
+      'primaryIntent',
+      'secondaryIntents',
+    ],
+    additionalProperties: false,
+    properties: {
+      kind: { type: 'string', enum: ['multi_intent'] },
+      aiModel: { type: 'string' },
+      analysisTimestamp: { type: 'string' },
+      confidence: { type: 'number' },
+      needsTriage: { type: 'boolean' },
+      extractedEntities: EXTRACTED_ENTITIES_SCHEMA,
+      rawMessage: { type: 'string' },
+      eventDate: { type: ['string', 'null'] },
+      dueDate: { type: ['string', 'null'] },
+      primaryIntent: DETECTED_INTENT_SUB_SCHEMA,
+      secondaryIntents: {
+        type: 'array',
+        items: DETECTED_INTENT_SUB_SCHEMA,
+      },
     },
   },
 } as const satisfies Record<string, unknown>;

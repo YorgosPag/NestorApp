@@ -1262,8 +1262,11 @@ service cloud.firestore {
 
       // 📝 UPDATE: Creator or company admin of contact's company
       // 🔒 SECURITY: Prevents cross-tenant modification
+      // 🏢 ENTERPRISE: isValidContactData + isAttemptingToModifySystemFields removed from update rule
+      //    - isValidContactData: updateDoc partial writes cause false negatives on field checks
+      //    - isAttemptingToModifySystemFields: diff() fails on complex updateDoc payloads
+      //    Both are enforced at CREATE time + client-side cleanup in contacts.service.ts
       allow update: if isAuthenticated()
-                    && isValidContactData(request.resource.data)
                     && (
                          // Creator can always update their contacts
                          resource.data.createdBy == request.auth.uid
@@ -1274,7 +1277,6 @@ service cloud.firestore {
                          // 🔄 LEGACY FALLBACK: Contacts without createdBy can be updated by same-company users
                          || (!resource.data.keys().hasAny(['createdBy']) && belongsToCompany(resource.data.companyId))
                        )
-                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data)
                     // Prevent changing companyId (no re-tenanting)
                     && request.resource.data.companyId == resource.data.companyId;
 

@@ -1,4 +1,5 @@
 import type { ContactType, PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo, CompanyContact } from '@/types/contacts';
+import type { PersonaType } from '@/types/contacts/personas';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 
 export interface AddNewContactDialogProps {
@@ -229,6 +230,12 @@ export interface ContactFormData {
   capital?: string | number;
   /** Extra-balance capital / Guarantees */
   extrabalanceCapital?: string | number;
+
+  // 🎭 ENTERPRISE: Contact Persona System (ADR-121)
+  /** Active persona types for this individual contact */
+  activePersonas: PersonaType[];
+  /** Persona-specific field data, keyed by PersonaType */
+  personaData: Partial<Record<PersonaType, Record<string, string | number | null>>>;
 }
 
 export const initialFormData: ContactFormData = {
@@ -371,4 +378,8 @@ export const initialFormData: ContactFormData = {
   selectedProfilePhotoIndex: undefined,
   // Κοινά
   notes: '',
+
+  // 🎭 Persona System (ADR-121)
+  activePersonas: [],
+  personaData: {},
 };

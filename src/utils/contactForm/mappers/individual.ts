@@ -13,6 +13,10 @@ import type { AddressInfo, EmailInfo, PhoneInfo, SocialMediaInfo, WebsiteInfo } 
 import { extractPhotoURL, extractMultiplePhotoURLs } from '../extractors/photo-urls';
 import { createEmailsArray, createPhonesArray } from '../extractors/arrays';
 import EnterpriseContactSaver from '@/utils/contacts/EnterpriseContactSaver';
+// 🎭 ENTERPRISE: Contact Persona System (ADR-121)
+import type { PersonaData, PersonaType } from '@/types/contacts/personas';
+import { createDefaultPersonaData } from '@/types/contacts/personas';
+import { getPersonaFields } from '@/config/persona-config';
 
 /** Mapped individual contact data (partial, without timestamps) */
 interface MappedIndividualContactData {
@@ -48,6 +52,38 @@ interface MappedIndividualContactData {
   isFavorite: boolean;
   status: 'active' | 'inactive' | 'archived';
   notes?: string;
+  // 🎭 ENTERPRISE: Contact Persona System (ADR-121)
+  personas?: PersonaData[];
+}
+
+// ============================================================================
+// 🎭 PERSONA MAPPING HELPER
+// ============================================================================
+
+/**
+ * Map active persona form data to PersonaData[] for Firestore persistence.
+ * Uses createDefaultPersonaData as base, then overlays form field values.
+ * All optional fields use ?? null (ΚΡΙΣΙΜΟ — Firestore rejects undefined).
+ */
+export function mapActivePersonas(formData: ContactFormData): PersonaData[] {
+  const activePersonas = formData.activePersonas ?? [];
+  if (activePersonas.length === 0) return [];
+
+  return activePersonas.map(personaType => {
+    const base = createDefaultPersonaData(personaType);
+    const formValues = formData.personaData?.[personaType] ?? {};
+
+    // Overlay form values onto typed defaults using persona field config as SSoT
+    const fieldConfigs = getPersonaFields(personaType);
+    const merged = { ...base };
+    const mergedRecord = merged as Record<string, string | number | null>;
+
+    for (const config of fieldConfigs) {
+      mergedRecord[config.id] = formValues[config.id] ?? null;
+    }
+
+    return merged;
+  });
 }
 
 /**
@@ -113,5 +149,9 @@ export function mapIndividualFormData(formData: ContactFormData): MappedIndividu
     isFavorite: false,
     status: 'active',
     notes: formData.notes,
+    // 🎭 ENTERPRISE: Persona data (ADR-121) — only include if any personas are active
+    ...(formData.activePersonas && formData.activePersonas.length > 0
+      ? { personas: mapActivePersonas(formData) }
+      : {}),
   };
 }

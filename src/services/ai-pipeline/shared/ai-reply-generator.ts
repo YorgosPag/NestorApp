@@ -23,6 +23,7 @@ import 'server-only';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { PIPELINE_REPLY_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import type { SenderHistoryEntry } from './sender-history';
 
 const logger = createModuleLogger('ai-reply-generator');
 
@@ -44,6 +45,10 @@ export interface AIReplyContext {
   originalSubject: string;
   /** Module-specific context — injected into the prompt */
   moduleContext: Record<string, string | null>;
+  /** Previous emails from same sender (privacy-safe: subject + date + intent only) */
+  senderHistory?: SenderHistoryEntry[];
+  /** Whether this sender has contacted before */
+  isReturningContact?: boolean;
 }
 
 /** Result from the AI reply generation */
@@ -112,7 +117,7 @@ const SYSTEM_PROMPTS: Record<AIReplyContext['useCase'], string> = {
 // ============================================================================
 
 function buildUserPrompt(context: AIReplyContext): string {
-  const { senderName, originalSubject, originalMessage, moduleContext } = context;
+  const { senderName, originalSubject, originalMessage, moduleContext, senderHistory, isReturningContact } = context;
 
   const trimmedMessage = originalMessage.slice(0, PIPELINE_REPLY_CONFIG.MAX_ORIGINAL_MESSAGE_CHARS);
 
@@ -128,10 +133,22 @@ function buildUserPrompt(context: AIReplyContext): string {
     ? `\nΠληροφορίες:\n${contextLines.join('\n')}`
     : '';
 
+  // Build sender history block (if available)
+  let historyBlock = '';
+  if (isReturningContact && senderHistory && senderHistory.length > 0) {
+    const historyLines = senderHistory.map((entry) => {
+      const dateFormatted = entry.date.slice(0, 10); // YYYY-MM-DD
+      const intentLabel = entry.intent ? `, ${entry.intent}` : '';
+      return `  - "${entry.subject}" (${dateFormatted}${intentLabel})`;
+    });
+
+    historyBlock = `\nΙστορικό αποστολέα (ο πελάτης έχει στείλει ${senderHistory.length} προηγούμενα emails):\n${historyLines.join('\n')}`;
+  }
+
   return `Ο πελάτης ${senderName} έστειλε:
 Θέμα: ${originalSubject || '(χωρίς θέμα)'}
 Μήνυμα: ${trimmedMessage || '(κενό μήνυμα)'}
-${contextBlock}
+${contextBlock}${historyBlock}
 
 Γράψε την απάντηση.`;
 }

@@ -763,6 +763,10 @@
         "title": "Ταυτότητα & ΑΦΜ",
         "description": "Στοιχεία ταυτότητας και φορολογικά"
       },
+      "personas": {
+        "title": "Ιδιότητες",
+        "description": "Επιλέξτε τους ρόλους/ιδιότητες αυτού του ατόμου"
+      },
       "professional": {
         "title": "Επαγγελματικά Στοιχεία",
         "description": "Πληροφορίες εργασίας και επαγγέλματος"
@@ -852,6 +856,169 @@
       "street": "π.χ. Λεωφόρος Αθηνών",
       "streetNumber": "π.χ. 123",
       "city": "π.χ. Αθήνα"
+    }
+  },
+  "persona": {
+    "selector": {
+      "title": "Ιδιότητες",
+      "legend": "Επιλέξτε ιδιότητες επαφής",
+      "description": "Κάθε ιδιότητα ενεργοποιεί πρόσθετα πεδία σχετικά με αυτόν τον ρόλο",
+      "empty": "Δεν έχει επιλεγεί καμία ιδιότητα"
+    },
+    "types": {
+      "constructionWorker": "Εργάτης Οικοδομής",
+      "engineer": "Μηχανικός",
+      "accountant": "Λογιστής",
+      "lawyer": "Δικηγόρος",
+      "propertyOwner": "Ιδιοκτήτης Ακινήτων",
+      "client": "Πελάτης",
+      "supplier": "Προμηθευτής",
+      "notary": "Συμβολαιογράφος",
+      "realEstateAgent": "Μεσίτης Ακινήτων"
+    },
+    "sections": {
+      "constructionWorker": {
+        "title": "Στοιχεία Εργάτη Οικοδομής",
+        "description": "Πληροφορίες ΕΦΚΑ/ΙΚΑ για εργαζόμενο σε οικοδομικό έργο"
+      },
+      "engineer": {
+        "title": "Στοιχεία Μηχανικού",
+        "description": "Μητρώο ΤΕΕ, ειδικότητα και τάξη πτυχίου"
+      },
+      "accountant": {
+        "title": "Στοιχεία Λογιστή",
+        "description": "Μητρώο ΟΕΕ και τάξη λογιστή"
+      },
+      "lawyer": {
+        "title": "Στοιχεία Δικηγόρου",
+        "description": "Μητρώο Δικηγορικού Συλλόγου"
+      },
+      "propertyOwner": {
+        "title": "Στοιχεία Ιδιοκτήτη",
+        "description": "Πληροφορίες ιδιοκτησίας ακινήτων"
+      },
+      "client": {
+        "title": "Στοιχεία Πελάτη",
+        "description": "Κατηγορία πελάτη και προτιμήσεις επικοινωνίας"
+      },
+      "supplier": {
+        "title": "Στοιχεία Προμηθευτή",
+        "description": "Κατηγορία προμηθευτή και όροι πληρωμής"
+      },
+      "notary": {
+        "title": "Στοιχεία Συμβολαιογράφου",
+        "description": "Μητρώο Συμβολαιογραφικού Συλλόγου"
+      },
+      "realEstateAgent": {
+        "title": "Στοιχεία Μεσίτη",
+        "description": "Άδεια μεσίτη και μεσιτικό γραφείο"
+      }
+    },
+    "fields": {
+      "ikaNumber": "ΑΜ ΙΚΑ",
+      "insuranceClass": "Ασφαλιστική Κλάση",
+      "triennia": "Τριετίες",
+      "dailyWage": "Ημερομίσθιο (€)",
+      "specialtyCode": "Κωδικός Ειδικότητας ΕΦΚΑ",
+      "efkaRegistrationDate": "Ημ/νία Εγγραφής ΕΦΚΑ",
+      "teeRegistryNumber": "Αρ. Μητρώου ΤΕΕ",
+      "engineerSpecialty": "Ειδικότητα Μηχανικού",
+      "licenseClass": "Τάξη Πτυχίου",
+      "ptdeNumber": "Αριθμός ΠΤΔΕ",
+      "oeeNumber": "Αρ. Μητρώου ΟΕΕ",
+      "accountingClass": "Τάξη Λογιστή",
+      "barAssociationNumber": "Αρ. Μητρώου Δ.Σ.",
+      "barAssociation": "Δικηγορικός Σύλλογος",
+      "propertyCount": "Αριθμός Ιδιοκτησιών",
+      "ownershipNotes": "Σημειώσεις Ιδιοκτησίας",
+      "clientSince": "Πελάτης Από",
+      "clientCategory": "Κατηγορία Πελάτη",
+      "preferredContactMethod": "Προτιμώμενη Επικοινωνία",
+      "supplierCategory": "Κατηγορία Προμηθευτή",
+      "paymentTermsDays": "Όροι Πληρωμής (Ημέρες)",
+      "notaryRegistryNumber": "Αρ. Μητρώου Συμβ.",
+      "notaryDistrict": "Περιφέρεια Συμβ. Συλλόγου",
+      "reLicenseNumber": "Αρ. Αδείας Μεσίτη",
+      "reAgency": "Μεσιτικό Γραφείο"
+    },
+    "helpTexts": {
+      "ikaNumber": "Αριθμός Μητρώου ΙΚΑ/ΕΦΚΑ του εργαζομένου",
+      "insuranceClass": "Ασφαλιστική κλάση 1-28 κατά ΕΦΚΑ (KPK 781)",
+      "triennia": "Αριθμός τριετιών εργασίας",
+      "dailyWage": "Ημερομίσθιο εργαζομένου σε ευρώ",
+      "specialtyCode": "Κωδικός ειδικότητας ΕΦΚΑ",
+      "efkaRegistrationDate": "Ημερομηνία εγγραφής στον ΕΦΚΑ",
+      "teeRegistryNumber": "Αριθμός Μητρώου στο Τεχνικό Επιμελητήριο Ελλάδος",
+      "engineerSpecialty": "Ειδικότητα μηχανικού κατά ΤΕΕ",
+      "licenseClass": "Τάξη πτυχίου μελετητή (Α, Β, Γ, Δ)",
+      "ptdeNumber": "Αριθμός Πανελλήνιας Τράπεζας Δεδομένων Εργοληπτών",
+      "oeeNumber": "Αριθμός μητρώου στο Οικονομικό Επιμελητήριο Ελλάδος",
+      "accountingClass": "Τάξη λογιστή/φοροτεχνικού",
+      "barAssociationNumber": "Αριθμός μητρώου στον Δικηγορικό Σύλλογο",
+      "barAssociation": "Δικηγορικός Σύλλογος εγγραφής (π.χ. ΔΣΑ)",
+      "propertyCount": "Συνολικός αριθμός ιδιοκτησιών",
+      "ownershipNotes": "Σημειώσεις σχετικά με τις ιδιοκτησίες",
+      "clientSince": "Ημερομηνία έναρξης σχέσης πελάτη",
+      "clientCategory": "Κατηγορία πελάτη (κατοικία, εμπορικό, κλπ)",
+      "preferredContactMethod": "Προτιμώμενος τρόπος επικοινωνίας",
+      "supplierCategory": "Κατηγορία προμηθευτή (υλικά, εξοπλισμός, κλπ)",
+      "paymentTermsDays": "Όροι πληρωμής σε ημέρες",
+      "notaryRegistryNumber": "Αριθμός μητρώου στον Συμβολαιογραφικό Σύλλογο",
+      "notaryDistrict": "Περιφέρεια του Συμβολαιογραφικού Συλλόγου",
+      "reLicenseNumber": "Αριθμός αδείας μεσίτη (ΓΕ.ΜΗ.)",
+      "reAgency": "Όνομα μεσιτικού γραφείου"
+    },
+    "placeholders": {
+      "ikaNumber": "π.χ. 12345678901",
+      "specialtyCode": "π.χ. SKY",
+      "teeRegistryNumber": "π.χ. 98765",
+      "ptdeNumber": "π.χ. 12345",
+      "oeeNumber": "π.χ. 12345",
+      "accountingClass": "π.χ. Α",
+      "barAssociationNumber": "π.χ. 12345",
+      "barAssociation": "π.χ. ΔΣΑ",
+      "ownershipNotes": "Σημειώσεις σχετικά με ιδιοκτησίες...",
+      "notaryRegistryNumber": "π.χ. 12345",
+      "notaryDistrict": "π.χ. Αθηνών",
+      "reLicenseNumber": "π.χ. 12345",
+      "reAgency": "π.χ. ABC Real Estate"
+    },
+    "options": {
+      "engineerSpecialty": {
+        "civil": "Πολιτικός Μηχανικός",
+        "architect": "Αρχιτέκτονας Μηχανικός",
+        "mechanical": "Μηχανολόγος Μηχανικός",
+        "electrical": "Ηλεκτρολόγος Μηχανικός",
+        "surveyor": "Τοπογράφος Μηχανικός",
+        "chemical": "Χημικός Μηχανικός",
+        "mining": "Μεταλλειολόγος Μηχανικός"
+      },
+      "licenseClass": {
+        "A": "Τάξη Α (Μεγάλα Έργα)",
+        "B": "Τάξη Β",
+        "C": "Τάξη Γ",
+        "D": "Τάξη Δ (Μικρά Έργα)"
+      },
+      "clientCategory": {
+        "residential": "Κατοικία",
+        "commercial": "Εμπορικό",
+        "industrial": "Βιομηχανικό",
+        "publicSector": "Δημόσιος Τομέας",
+        "other": "Άλλο"
+      },
+      "contactMethod": {
+        "phone": "Τηλέφωνο",
+        "email": "Email",
+        "inPerson": "Αυτοπρόσωπα",
+        "messaging": "Μήνυμα"
+      },
+      "supplierCategory": {
+        "materials": "Υλικά Κατασκευής",
+        "equipment": "Εξοπλισμός",
+        "subcontractor": "Υπεργολάβος",
+        "services": "Υπηρεσίες",
+        "other": "Άλλο"
+      }
     }
   }
 }

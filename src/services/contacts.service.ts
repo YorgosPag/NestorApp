@@ -20,6 +20,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Unit } from '@/types/unit';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+// 🎭 ENTERPRISE: Contact Persona System (ADR-121) — persona form→Firestore mapping
+import { mapActivePersonas } from '@/utils/contactForm/mappers/individual';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions for Firestore Operations
@@ -427,56 +429,12 @@ export class ContactsService {
 
   // 🏢 ENTERPRISE Update: For form data with automatic conversion to arrays
   static async updateContactFromForm(id: string, formData: Partial<ContactFormData>): Promise<void> {
-    // 🔍 DEBUG: Ποιος καλεί αυτή τη function;
-    console.log('🚨 UPDATECONTACTFROMFORM CALLED! ID:', id);
-    console.log('🚨 CALL LOCATION:', new Error('DEBUG').stack?.split('\n')?.[2] || 'UNKNOWN');
-
     try {
       // Get existing contact for merge
       const existingContact = await this.getContact(id);
       if (!existingContact) {
         throw new Error('Contact not found');
       }
-
-      // 🔍 DIAGNOSTIC STEP 1: Force refresh token and log claims
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        const tokenResult = await currentUser.getIdTokenResult(true); // Force refresh!
-        console.log('🔐 DIAGNOSTIC - CLAIMS (force refreshed):');
-        console.log('   globalRole:', tokenResult.claims.globalRole);
-        console.log('   globalRole type:', typeof tokenResult.claims.globalRole);
-        console.log('   globalRole === "super_admin":', tokenResult.claims.globalRole === 'super_admin');
-        console.log('   companyId:', tokenResult.claims.companyId);
-        console.log('   companyId type:', typeof tokenResult.claims.companyId);
-        console.log('   uid:', currentUser.uid);
-        console.log('   ALL CLAIMS:', JSON.stringify(tokenResult.claims, null, 2));
-      } else {
-        console.log('🔐 DIAGNOSTIC - NO CURRENT USER!');
-      }
-
-      // 🔍 DIAGNOSTIC STEP 2: Log raw document fields (each on separate line)
-      const ec = existingContact as unknown as Record<string, unknown>;
-
-      // 🔍 LOG ALL KEYS in existing document
-      console.log('📄 DIAGNOSTIC - ALL DOCUMENT KEYS:', Object.keys(ec).join(', '));
-
-      // Check for emails array (where email might be stored)
-      console.log('📄 DIAGNOSTIC - emails array:', ec.emails);
-      console.log('📄 DIAGNOSTIC - emails type:', typeof ec.emails);
-      console.log('📄 DIAGNOSTIC - emails isArray:', Array.isArray(ec.emails));
-
-      console.log('📄 DIAGNOSTIC - RAW DOCUMENT FIELDS:');
-      console.log('   hasCreatedByKey:', 'createdBy' in ec);
-      console.log('   createdByValue:', ec.createdBy);
-      console.log('   hasStatusKey:', 'status' in ec);
-      console.log('   statusValue:', ec.status);
-      console.log('   statusValid:', ['active', 'inactive', 'archived'].includes(ec.status as string));
-      console.log('   hasEmailKey:', 'email' in ec);
-      console.log('   emailValue:', ec.email);
-      console.log('   hasCompanyIdKey:', 'companyId' in ec);
-      console.log('   companyIdValue:', ec.companyId);
-      console.log('   hasTypeKey:', 'type' in ec);
-      console.log('   typeValue:', ec.type);
 
       // Convert form data to enterprise structure
       const enterpriseData = EnterpriseContactSaver.updateExistingContact(existingContact, formData);
@@ -487,11 +445,8 @@ export class ContactsService {
         enterpriseData.companyId = existingContact.companyId;
       }
 
-      console.log('🔍 UPDATE DEBUG - enterpriseData companyId:', enterpriseData.companyId);
-
       // Save using standard method
       await this.updateContact(id, enterpriseData);
-      console.log('✅ ENTERPRISE UPDATE: Successfully saved contact with arrays structure');
 
     } catch (error) {
       console.error('❌ ENTERPRISE UPDATE: Failed to update contact:', error);
@@ -539,35 +494,35 @@ export class ContactsService {
       delete (updateData as Record<string, unknown>).postalCode;
       delete (updateData as Record<string, unknown>).website;
 
-      // 🔍 DIAGNOSTIC STEP 3: Log final payload fields
-      const ud = updateData as Record<string, unknown>;
-      console.log('📤 DIAGNOSTIC - FINAL UPDATE PAYLOAD:');
-      console.log('   hasStatusInPayload:', 'status' in ud);
-      console.log('   statusInPayload:', ud.status);
-      console.log('   statusTypeInPayload:', typeof ud.status);
-      console.log('   hasEmailInPayload:', 'email' in ud);
-      console.log('   emailInPayload:', ud.email);
-      console.log('   emailTypeInPayload:', typeof ud.email);
-      console.log('   hasCompanyIdInPayload:', 'companyId' in ud);
-      console.log('   companyIdInPayload:', ud.companyId);
-      console.log('   hasTypeInPayload:', 'type' in ud);
-      console.log('   typeInPayload:', ud.type);
-      console.log('   allPayloadKeys:', Object.keys(ud).join(', '));
+      // 🎭 ENTERPRISE: Convert form-level persona fields to Firestore structure (ADR-121)
+      // activePersonas + personaData are form-only → mapped to personas[] for Firestore
+      const udRecord = updateData as Record<string, unknown>;
+      if (udRecord.activePersonas && Array.isArray(udRecord.activePersonas) && (udRecord.activePersonas as string[]).length > 0) {
+        udRecord.personas = mapActivePersonas(updateData as unknown as ContactFormData);
+      }
+      delete udRecord.activePersonas;
+      delete udRecord.personaData;
 
-      // 🧪 TEST: Send ULTRA-MINIMAL payload - ONLY updatedAt with actual Timestamp (not serverTimestamp)
-      // If this fails too, the problem is in authorization rules, not data validation
-      const ultraMinimalPayload = {
-        updatedAt: Timestamp.now(), // Using Timestamp.now() instead of serverTimestamp()
-      };
-      console.log('🧪 TEST - Sending ULTRA-MINIMAL payload:', Object.keys(ultraMinimalPayload));
-      console.log('🧪 TEST - updatedAt type:', typeof ultraMinimalPayload.updatedAt);
-      console.log('🧪 TEST - updatedAt value:', ultraMinimalPayload.updatedAt);
+      // 🛡️ ENTERPRISE: Remove UI-only fields that must NOT reach Firestore
+      // File objects, preview blobs, and form-only UI state
+      const uiOnlyFields = [
+        'logoFile', 'logoPreview', 'photoFile', 'photoPreview',
+        'selectedProfilePhotoIndex', 'socialMediaArray',
+      ] as const;
+      for (const field of uiOnlyFields) {
+        delete udRecord[field];
+      }
 
-      // Also log the document path for debugging
-      console.log('📍 Document path: contacts/' + id);
+      // 🔥 ΚΡΙΣΙΜΟ: Firestore ΑΠΟΡΡΙΠΤΕΙ undefined — αφαίρεση ΟΛΩΝ των undefined τιμών
+      // (Firestore δέχεται null αλλά ΟΧΙ undefined)
+      for (const key of Object.keys(udRecord)) {
+        if (udRecord[key] === undefined) {
+          delete udRecord[key];
+        }
+      }
 
       // Type assertion needed for Firestore updateDoc compatibility
-      await updateDoc(docRef, ultraMinimalPayload as Record<string, unknown>);
+      await updateDoc(docRef, udRecord);
 
       // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
       // Dispatch event for all components to update their local state

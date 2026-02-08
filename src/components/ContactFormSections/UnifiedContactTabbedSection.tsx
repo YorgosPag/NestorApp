@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
@@ -19,6 +19,11 @@ import { useWorkspace } from '@/contexts/WorkspaceContext'; // 🏢 ENTERPRISE: 
 import { getCompanyById } from '@/services/companies.service'; // 🏢 ENTERPRISE: Fetch company name (ADR-031)
 import { getContactFormConfig, getContactFormSections, getContactTypeDisplayName, getContactFormRenderer } from './utils/ContactFormConfigProvider';
 import { getPhotoUploadHandlers, createUnifiedPhotosChangeHandler, buildRendererPropsForContactType, type CanonicalUploadContext } from './utils/PhotoUploadConfiguration';
+// 🎭 ENTERPRISE: Contact Persona System (ADR-121)
+import { PersonaSelector } from '@/components/contacts/personas/PersonaSelector';
+import { getMergedIndividualSections, getPersonaFields } from '@/config/persona-config';
+import type { PersonaType } from '@/types/contacts/personas';
+import { createDefaultPersonaData } from '@/types/contacts/personas';
 
 /** Custom renderer field interface */
 interface CustomRendererField {
@@ -147,7 +152,98 @@ export function UnifiedContactTabbedSection({
 
   // 🏢 ENTERPRISE: Get configuration dynamically based on contact type
   const config = useMemo(() => getContactFormConfig(contactType), [contactType]);
-  const sections = useMemo(() => getContactFormSections(contactType), [contactType]);
+
+  // 🎭 ENTERPRISE: Dynamic sections — merge standard + persona sections for individuals (ADR-121)
+  const sections = useMemo(() => {
+    if (contactType === 'individual') {
+      return getMergedIndividualSections(formData.activePersonas ?? []);
+    }
+    return getContactFormSections(contactType);
+  }, [contactType, formData.activePersonas]);
+
+  // 🎭 ENTERPRISE: Persona field → personaType lookup (ADR-121)
+  // Maps each persona field ID to its owning persona type for routing onChange events
+  const personaFieldLookup = useMemo(() => {
+    if (contactType !== 'individual') return new Map<string, PersonaType>();
+
+    const lookup = new Map<string, PersonaType>();
+    for (const pt of (formData.activePersonas ?? [])) {
+      for (const field of getPersonaFields(pt)) {
+        lookup.set(field.id, pt);
+      }
+    }
+    return lookup;
+  }, [contactType, formData.activePersonas]);
+
+  // 🎭 ENTERPRISE: Enhanced formData with persona fields flattened to top level (ADR-121)
+  // IndividualFormRenderer reads formData[field.id] — persona values must be at top level
+  const enhancedFormData = useMemo((): ContactFormData => {
+    if (contactType !== 'individual' || personaFieldLookup.size === 0) return formData;
+
+    const pd = formData.personaData ?? {};
+    const flat: Record<string, string | number | null> = {};
+
+    for (const pt of (formData.activePersonas ?? [])) {
+      const fields = pd[pt];
+      if (fields) {
+        Object.assign(flat, fields);
+      }
+    }
+
+    // Extra keys are ignored by TS but accessible at runtime via Record<string, ...> cast
+    return { ...formData, ...flat } as ContactFormData;
+  }, [contactType, formData, personaFieldLookup]);
+
+  // 🎭 ENTERPRISE: Wrapped onChange — routes persona field changes to personaData (ADR-121)
+  const wrappedHandleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const fieldId = e.target.name;
+      const pt = personaFieldLookup.get(fieldId);
+
+      if (pt && setFormData) {
+        const currentPD = formData.personaData ?? {};
+        const currentFields = currentPD[pt] ?? {};
+        setFormData({
+          ...formData,
+          personaData: {
+            ...currentPD,
+            [pt]: {
+              ...currentFields,
+              [fieldId]: e.target.value || null,
+            },
+          },
+        });
+      } else {
+        handleChange(e);
+      }
+    },
+    [formData, handleChange, setFormData, personaFieldLookup]
+  );
+
+  // 🎭 ENTERPRISE: Wrapped onSelectChange — routes persona select fields to personaData (ADR-121)
+  const wrappedHandleSelectChange = useCallback(
+    (name: string, value: string) => {
+      const pt = personaFieldLookup.get(name);
+
+      if (pt && setFormData) {
+        const currentPD = formData.personaData ?? {};
+        const currentFields = currentPD[pt] ?? {};
+        setFormData({
+          ...formData,
+          personaData: {
+            ...currentPD,
+            [pt]: {
+              ...currentFields,
+              [name]: value || null,
+            },
+          },
+        });
+      } else {
+        handleSelectChange(name, value);
+      }
+    },
+    [formData, handleSelectChange, setFormData, personaFieldLookup]
+  );
 
   // 🔄 UNIFIED PHOTO HANDLER: Consolidate all photo change handlers (extracted)
   const unifiedPhotosChange = useMemo(() =>
@@ -167,9 +263,9 @@ export function UnifiedContactTabbedSection({
   const rendererProps = useMemo(() => {
     const baseProps = {
       sections,
-      formData,
-      onChange: handleChange,
-      onSelectChange: handleSelectChange,
+      formData: enhancedFormData,
+      onChange: wrappedHandleChange,
+      onSelectChange: wrappedHandleSelectChange,
       disabled,
       onActiveTabChange, // 🏢 ENTERPRISE: Pass tab change callback for hiding header save controls
       customRenderers: {
@@ -340,6 +436,49 @@ export function UnifiedContactTabbedSection({
           );
         },
 
+        // 🎭 ENTERPRISE: Custom renderer for personas tab — ADR-121 Contact Persona System
+        // Toggle chips that activate conditional field sections
+        personas: () => {
+          const handlePersonaToggle = (personaType: PersonaType) => {
+            if (!setFormData) return;
+
+            const currentActive = formData.activePersonas ?? [];
+            const isActive = currentActive.includes(personaType);
+
+            if (isActive) {
+              // Deactivate: remove from activePersonas (data stays in personaData for re-activation)
+              setFormData({
+                ...formData,
+                activePersonas: currentActive.filter(p => p !== personaType),
+              });
+            } else {
+              // Activate: add to activePersonas, init personaData if needed
+              const currentData = formData.personaData ?? {};
+              const existingData = currentData[personaType];
+              const defaultData = createDefaultPersonaData(personaType);
+              // Extract field values from default (all null), use existing if available
+              const { personaType: _pt, status: _s, activatedAt: _a, deactivatedAt: _d, notes: _n, ...defaultFields } = defaultData;
+
+              setFormData({
+                ...formData,
+                activePersonas: [...currentActive, personaType],
+                personaData: {
+                  ...currentData,
+                  [personaType]: existingData ?? (defaultFields as Record<string, string | number | null>),
+                },
+              });
+            }
+          };
+
+          return (
+            <PersonaSelector
+              activePersonas={formData.activePersonas ?? []}
+              onToggle={handlePersonaToggle}
+              disabled={disabled}
+            />
+          );
+        },
+
         // 🏢 ENTERPRISE: Custom renderer for banking tab - ADR-126 Bank Accounts System
         // 🎯 ENTERPRISE PATTERN (Salesforce/SAP/Dynamics): Banking is ALWAYS editable via modals
         // The parent's edit mode does NOT affect banking - subcollections save independently
@@ -374,7 +513,8 @@ export function UnifiedContactTabbedSection({
       onPhotoClick
     });
   }, [
-    sections, formData, handleChange, handleSelectChange, disabled, contactType,
+    sections, formData, enhancedFormData, wrappedHandleChange, wrappedHandleSelectChange,
+    disabled, contactType,
     handleFileChange, unifiedPhotosChange, handleMultiplePhotoUploadComplete,
     handleProfilePhotoSelection, handleLogoChange, handleUploadedLogoURL,
     handleUploadedPhotoURL, setFormData, relationshipsMode, onPhotoClick,

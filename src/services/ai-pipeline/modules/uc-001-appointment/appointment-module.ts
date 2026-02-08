@@ -27,6 +27,7 @@ import { findContactByEmail, type ContactMatch } from '../../shared/contact-look
 import { sendReplyViaMailgun, type MailgunSendResult } from '../../shared/mailgun-sender';
 import { checkAvailability, type AvailabilityResult } from '../../shared/availability-check';
 import { generateAIReply } from '../../shared/ai-reply-generator';
+import { getSenderHistory, type SenderHistoryResult } from '../../shared/sender-history';
 import {
   PipelineIntentType,
   PipelineChannel,
@@ -63,6 +64,8 @@ interface AppointmentLookupData {
   companyId: string;
   /** Calendar availability check result */
   availability: AvailabilityResult | null;
+  /** Previous emails from same sender */
+  senderHistory: SenderHistoryResult | null;
 }
 
 // ============================================================================
@@ -224,6 +227,22 @@ export class AppointmentModule implements IUCModule {
       });
     }
 
+    // Query sender history (previous emails from same sender)
+    let senderHistory: SenderHistoryResult | null = null;
+    try {
+      senderHistory = await getSenderHistory(
+        senderEmail,
+        ctx.companyId,
+        ctx.intake.id,
+      );
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.warn('UC-001 LOOKUP: Sender history query failed (non-fatal)', {
+        requestId: ctx.requestId,
+        error: msg,
+      });
+    }
+
     const lookupData: AppointmentLookupData = {
       senderEmail,
       senderName,
@@ -234,6 +253,7 @@ export class AppointmentModule implements IUCModule {
       originalSubject: ctx.intake.normalized.subject ?? '',
       companyId: ctx.companyId,
       availability,
+      senderHistory,
     };
 
     logger.info('UC-001 LOOKUP: Complete', {
@@ -244,6 +264,8 @@ export class AppointmentModule implements IUCModule {
       requestedTime,
       isDateFree: availability?.isDateFree,
       hasTimeConflict: availability?.hasTimeConflict,
+      isReturningContact: senderHistory?.isReturningContact,
+      previousEmails: senderHistory?.totalPreviousEmails,
     });
 
     return lookupData as unknown as Record<string, unknown>;
@@ -276,6 +298,8 @@ export class AppointmentModule implements IUCModule {
           requestedTime: lookup?.requestedTime ?? null,
           description: description || null,
         },
+        senderHistory: lookup?.senderHistory?.recentEmails,
+        isReturningContact: lookup?.senderHistory?.isReturningContact,
       },
       () => buildAppointmentReply({
         senderName: senderDisplay,

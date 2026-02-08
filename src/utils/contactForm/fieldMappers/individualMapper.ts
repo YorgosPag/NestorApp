@@ -4,6 +4,9 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import { getSafeFieldValue, getSafeArrayValue } from '../contactMapper';
+// 🎭 ENTERPRISE: Contact Persona System (ADR-121)
+import type { PersonaType, PersonaData } from '@/types/contacts/personas';
+import { getPersonaFields } from '@/config/persona-config';
 
 // ============================================================================
 // INDIVIDUAL CONTACT MAPPER
@@ -75,6 +78,27 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
   }
 
 
+  // 🎭 ENTERPRISE: Extract persona data from contact (ADR-121)
+  const rawPersonas = getSafeArrayValue<PersonaData>(individualContact, 'personas');
+  const activePersonas: PersonaType[] = rawPersonas
+    .filter(p => p && p.status === 'active')
+    .map(p => p.personaType);
+
+  const personaData: Partial<Record<PersonaType, Record<string, string | number | null>>> = {};
+  for (const persona of rawPersonas.filter(p => p && p.status === 'active')) {
+    // Use persona field config as SSoT to extract only role-specific fields
+    const fieldConfigs = getPersonaFields(persona.personaType);
+    const fields: Record<string, string | number | null> = {};
+    const personaRecord = persona as unknown as Record<string, unknown>;
+
+    for (const config of fieldConfigs) {
+      const raw = personaRecord[config.id];
+      fields[config.id] = (typeof raw === 'string' || typeof raw === 'number') ? raw : null;
+    }
+
+    personaData[persona.personaType] = fields;
+  }
+
   const formData: ContactFormData = {
     ...initialFormData,
     // Basic info
@@ -142,6 +166,10 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
 
     // 📝 Notes
     notes: getSafeFieldValue(contact, 'notes'),
+
+    // 🎭 ENTERPRISE: Persona System (ADR-121)
+    activePersonas,
+    personaData,
 
     // Company & service fields παραμένουν από initialFormData
   };

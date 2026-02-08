@@ -219,14 +219,28 @@ export interface CompanyDetection {
 }
 
 /**
+ * A single detected intent from AI analysis
+ * @see ADR-131 (Multi-Intent Pipeline)
+ */
+export interface DetectedIntent {
+  intent: PipelineIntentTypeValue;
+  confidence: number; // 0-100
+  rationale: string;
+}
+
+/**
  * Understanding result from AI analysis
  * @see docs/centralized-systems/ai/contracts.md
+ * @see ADR-131 (Multi-Intent Pipeline)
  */
 export interface UnderstandingResult {
   messageId: string;
+  /** Primary intent — backward compatible (same as detectedIntents[0].intent) */
   intent: PipelineIntentTypeValue;
   entities: Record<string, string | undefined>;
+  /** Primary confidence — backward compatible (same as detectedIntents[0].confidence) */
   confidence: number; // 0-100
+  /** Primary rationale — backward compatible (same as detectedIntents[0].rationale) */
   rationale: string;
   language: string;
   urgency: UrgencyValue;
@@ -235,6 +249,8 @@ export interface UnderstandingResult {
   senderType: SenderTypeValue;
   threatLevel: ThreatLevelValue;
   threatReason?: string;
+  /** All detected intents — primary first, then secondaries by descending confidence */
+  detectedIntents: DetectedIntent[];
   schemaVersion: number;
 }
 

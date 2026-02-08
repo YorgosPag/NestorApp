@@ -259,6 +259,26 @@ export const INDIVIDUAL_SECTIONS: IndividualSectionConfig[] = [
   },
 
   // -------------------------------------------------------------------------
+  // 2.5 ΙΔΙΟΤΗΤΕΣ — 🎭 ENTERPRISE: Contact Persona System (ADR-121)
+  // -------------------------------------------------------------------------
+  {
+    id: 'personas',
+    title: 'individual.sections.personas.title',
+    icon: 'user-cog',
+    description: 'individual.sections.personas.description',
+    order: 2.5,
+    fields: [
+      {
+        // 🎯 DUMMY FIELD για custom renderer triggering
+        // Actual UI rendered by PersonaSelector component
+        id: 'personas',
+        label: 'individual.fields.personas',
+        type: 'input',
+      }
+    ],
+  },
+
+  // -------------------------------------------------------------------------
   // 3. ΕΠΑΓΓΕΛΜΑΤΙΚΑ ΣΤΟΙΧΕΙΑ
   // -------------------------------------------------------------------------
   {

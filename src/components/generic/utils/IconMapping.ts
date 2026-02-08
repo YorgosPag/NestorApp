@@ -7,6 +7,8 @@ import {
   AlertTriangle, CheckCircle, XCircle, Star, Search, Edit, Save, Upload, Download,
   Building2, Warehouse, LayoutGrid, FileSignature, ClipboardCheck, PlayCircle,
   BarChart3,
+  // 🎭 ENTERPRISE: Persona System icons (ADR-121)
+  HardHat, UserCog, Calculator, Scale, Key, Euro, Award, Tag,
   LucideIcon
 } from 'lucide-react';
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
@@ -139,6 +141,16 @@ export const ICON_MAPPING = {
   '🚗': Car,
   '🏛️': Landmark,
   '🗺️': Map,
+
+  // 🎭 Contact Persona System icons (ADR-121)
+  'hard-hat': HardHat,
+  'user-cog': UserCog,
+  'calculator': Calculator,
+  'scale': Scale,
+  'key': Key,
+  'euro': Euro,
+  'award': Award,
+  'tag': Tag,
 
   // 🔧 Legacy emoji fallbacks για backward compatibility
   'handshake': UserCheck, // Alias

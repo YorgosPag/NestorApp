@@ -1,8 +1,8 @@
 {
-  "backupId": "backup-2026-02-08-massive-type-safety-full-stack",
-  "timestamp": "2026-02-08T18:30:00+02:00",
+  "backupId": "backup-2026-02-08-safety-checkpoint-type-i18n-dxf",
+  "timestamp": "2026-02-08T22:31:00+02:00",
   "category": "FEATURE",
-  "shortDescription": "Massive full-stack type safety sweep, IKA/EFKA system, CRM calendar, AI pipeline, Gantt export & geo-canvas upgrades",
+  "shortDescription": "Safety checkpoint: type safety, i18n expansion, DXF viewer improvements across 95 files",
   "problem": "Multiple type safety issues across the codebase. New features needed: IKA/EFKA labor compliance, CRM calendar, AI pipeline modules, construction Gantt chart with export capabilities.",
   "cause": "Incremental development required type safety hardening across 300+ files, plus new feature implementations for construction management, labor compliance, and AI-powered email processing.",
   "filesChanged": [

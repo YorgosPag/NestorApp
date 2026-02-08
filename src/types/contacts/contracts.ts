@@ -134,6 +134,11 @@ export interface IndividualContact extends BaseContact {
   // 📷 Φωτογραφίες
   photoURL?: string;
   multiplePhotoURLs?: string[]; // Πολλαπλές φωτογραφίες (έως 5)
+
+  // 🎭 ENTERPRISE: Contact Persona System (ADR-121)
+  // SAP Business Partner pattern: role-based dynamic fields
+  // Each persona activates conditional sections with role-specific fields
+  personas?: import('./personas').PersonaData[];
 }
 
 // Interface για Νομικά Πρόσωπα (Εταιρείες)

@@ -6,3 +6,4 @@ export * from './contracts';
 export * from './helpers';
 export * from './relationships'; // 🏢 ENTERPRISE: Contact Relationship Management Types
 export * from './banking'; // 🏢 ENTERPRISE: Banking Account Types for Contacts (2026-02-01)
+export * from './personas'; // 🎭 ENTERPRISE: Contact Persona System — Role-Based Dynamic Fields (ADR-121)

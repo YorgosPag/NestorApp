@@ -40,7 +40,8 @@ import type { ModuleRegistry } from './module-registry';
 import { IntentRouter } from './intent-router';
 import type { PipelineAuditService } from './audit-service';
 import type { IAIAnalysisProvider } from '@/services/ai-analysis/providers/IAIAnalysisProvider';
-import { isMessageIntentAnalysis } from '@/schemas/ai-analysis';
+import { isMessageIntentAnalysis, isMultiIntentAnalysis } from '@/schemas/ai-analysis';
+import type { DetectedIntent } from '@/types/ai-pipeline';
 import {
   PIPELINE_CONFIDENCE_CONFIG,
   PIPELINE_TIMEOUT_CONFIG,
@@ -431,34 +432,83 @@ export class PipelineOrchestrator {
 
   /**
    * Map existing AI analysis result to pipeline UnderstandingResult
+   * Handles both multi_intent (new) and message_intent (legacy) responses
+   * @see ADR-131 (Multi-Intent Pipeline)
    */
   private mapAIResultToUnderstanding(
     ctx: PipelineContext,
     aiResult: unknown
   ): UnderstandingResult {
-    // Use existing schema validation
     const typedResult = aiResult as Record<string, unknown>;
+    const entities = (typedResult.extractedEntities ?? {}) as Record<string, string | undefined>;
 
-    // Map legacy intent types to pipeline intent types
+    // ── Multi-Intent Response (new schema) ──
+    if (isMultiIntentAnalysis(typedResult as Parameters<typeof isMultiIntentAnalysis>[0])) {
+      const multiResult = typedResult as {
+        primaryIntent: { intentType: string; confidence: number; rationale: string };
+        secondaryIntents: Array<{ intentType: string; confidence: number; rationale: string }>;
+        confidence: number;
+      };
+
+      const primaryIntent = mapLegacyIntentToPipeline(multiResult.primaryIntent.intentType);
+      const primaryConfidence = multiResult.primaryIntent.confidence * 100;
+      const primaryRationale = multiResult.primaryIntent.rationale;
+
+      // Build detectedIntents array: primary first, then secondaries
+      const detectedIntents: DetectedIntent[] = [
+        {
+          intent: primaryIntent,
+          confidence: primaryConfidence,
+          rationale: primaryRationale,
+        },
+        ...multiResult.secondaryIntents.map(si => ({
+          intent: mapLegacyIntentToPipeline(si.intentType),
+          confidence: si.confidence * 100,
+          rationale: si.rationale,
+        })),
+      ];
+
+      return {
+        messageId: ctx.intake.id,
+        intent: primaryIntent,
+        entities,
+        confidence: primaryConfidence,
+        rationale: primaryRationale,
+        language: 'el',
+        urgency: Urgency.NORMAL,
+        policyFlags: [],
+        companyDetection: {
+          companyId: ctx.companyId,
+          signal: 'recipient_email',
+          confidence: 100,
+        },
+        senderType: SenderType.UNKNOWN_LEGITIMATE,
+        threatLevel: ThreatLevel.CLEAN,
+        detectedIntents,
+        schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
+      };
+    }
+
+    // ── Legacy Single-Intent Response (backward compatible) ──
     let intent: import('@/types/ai-pipeline').PipelineIntentTypeValue = PipelineIntentType.UNKNOWN;
     if (isMessageIntentAnalysis(typedResult as Parameters<typeof isMessageIntentAnalysis>[0])) {
-      const analysisResult = typedResult as { intentType?: string; confidence?: number; extractedEntities?: Record<string, string> };
+      const analysisResult = typedResult as { intentType?: string };
       intent = mapLegacyIntentToPipeline(analysisResult.intentType ?? 'triage_needed');
     }
 
     const confidence = typeof typedResult.confidence === 'number'
-      ? typedResult.confidence * 100 // AI provider returns 0-1, pipeline uses 0-100
+      ? typedResult.confidence * 100
       : 0;
 
-    const entities = (typedResult.extractedEntities ?? {}) as Record<string, string | undefined>;
+    const rationale = `AI analysis via ${this.aiProvider.name}`;
 
     return {
       messageId: ctx.intake.id,
       intent,
       entities,
       confidence,
-      rationale: `AI analysis via ${this.aiProvider.name}`,
-      language: 'el', // Default to Greek, can be enhanced later
+      rationale,
+      language: 'el',
       urgency: Urgency.NORMAL,
       policyFlags: [],
       companyDetection: {
@@ -468,6 +518,7 @@ export class PipelineOrchestrator {
       },
       senderType: SenderType.UNKNOWN_LEGITIMATE,
       threatLevel: ThreatLevel.CLEAN,
+      detectedIntents: [{ intent, confidence, rationale }],
       schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
     };
   }

@@ -1930,3 +1930,108 @@ export const BUILDING_TOOLBAR_UI_LABELS = {
   SORT_BY_SIZE: 'filters.sorting.bySize',
   SELECTED_BUILDINGS: 'building.toolbar.ui.selectedBuildings'
 } as const;
+
+// ============================================================================
+// 🎭 CONTACT PERSONA LABELS (ADR-121)
+// ============================================================================
+
+/**
+ * 🎭 Persona Type Labels — Contact Role Classification
+ *
+ * ✅ ENTERPRISE: SAP Business Partner pattern
+ * ✅ ZERO HARDCODED VALUES: Single source of truth
+ * ✅ Domain: Contact persona/role management
+ * @see ADR-121 Contact Persona System
+ */
+export const PERSONA_TYPE_LABELS = {
+  CONSTRUCTION_WORKER: 'persona.types.constructionWorker',
+  ENGINEER: 'persona.types.engineer',
+  ACCOUNTANT: 'persona.types.accountant',
+  LAWYER: 'persona.types.lawyer',
+  PROPERTY_OWNER: 'persona.types.propertyOwner',
+  CLIENT: 'persona.types.client',
+  SUPPLIER: 'persona.types.supplier',
+  NOTARY: 'persona.types.notary',
+  REAL_ESTATE_AGENT: 'persona.types.realEstateAgent',
+} as const;
+
+/**
+ * 🎭 Persona Type Icons — Visual indicators per persona
+ */
+export const PERSONA_TYPE_ICONS = {
+  CONSTRUCTION_WORKER: 'hard-hat',
+  ENGINEER: 'ruler',
+  ACCOUNTANT: 'calculator',
+  LAWYER: 'scale',
+  PROPERTY_OWNER: 'home',
+  CLIENT: 'user-check',
+  SUPPLIER: 'package',
+  NOTARY: 'file-signature',
+  REAL_ESTATE_AGENT: 'key',
+} as const;
+
+/**
+ * 🎭 Persona Field Labels — Per-persona field labels
+ *
+ * ✅ ENTERPRISE: Centralized field labels for all persona-specific fields
+ */
+export const PERSONA_FIELD_LABELS = {
+  // 🏗️ Construction Worker (ΕΦΚΑ/ΙΚΑ)
+  IKA_NUMBER: 'persona.fields.ikaNumber',
+  INSURANCE_CLASS: 'persona.fields.insuranceClass',
+  TRIENNIA: 'persona.fields.triennia',
+  DAILY_WAGE: 'persona.fields.dailyWage',
+  SPECIALTY_CODE: 'persona.fields.specialtyCode',
+  EFKA_REGISTRATION_DATE: 'persona.fields.efkaRegistrationDate',
+  // 📐 Engineer (ΤΕΕ)
+  TEE_REGISTRY_NUMBER: 'persona.fields.teeRegistryNumber',
+  ENGINEER_SPECIALTY: 'persona.fields.engineerSpecialty',
+  LICENSE_CLASS: 'persona.fields.licenseClass',
+  PTDE_NUMBER: 'persona.fields.ptdeNumber',
+  // 📊 Accountant (ΟΕΕ)
+  OEE_NUMBER: 'persona.fields.oeeNumber',
+  ACCOUNTING_CLASS: 'persona.fields.accountingClass',
+  // ⚖️ Lawyer
+  BAR_ASSOCIATION_NUMBER: 'persona.fields.barAssociationNumber',
+  BAR_ASSOCIATION: 'persona.fields.barAssociation',
+  // 🏠 Property Owner
+  PROPERTY_COUNT: 'persona.fields.propertyCount',
+  OWNERSHIP_NOTES: 'persona.fields.ownershipNotes',
+  // 👤 Client
+  CLIENT_SINCE: 'persona.fields.clientSince',
+  CLIENT_CATEGORY: 'persona.fields.clientCategory',
+  PREFERRED_CONTACT_METHOD: 'persona.fields.preferredContactMethod',
+  // 📦 Supplier
+  SUPPLIER_CATEGORY: 'persona.fields.supplierCategory',
+  PAYMENT_TERMS_DAYS: 'persona.fields.paymentTermsDays',
+  // 📜 Notary
+  NOTARY_REGISTRY_NUMBER: 'persona.fields.notaryRegistryNumber',
+  NOTARY_DISTRICT: 'persona.fields.notaryDistrict',
+  // 🏪 Real Estate Agent
+  RE_LICENSE_NUMBER: 'persona.fields.reLicenseNumber',
+  RE_AGENCY: 'persona.fields.reAgency',
+} as const;
+
+/**
+ * 🎭 Persona Section Labels — Tab/Section titles per persona
+ */
+export const PERSONA_SECTION_LABELS = {
+  CONSTRUCTION_WORKER_TITLE: 'persona.sections.constructionWorker.title',
+  CONSTRUCTION_WORKER_DESCRIPTION: 'persona.sections.constructionWorker.description',
+  ENGINEER_TITLE: 'persona.sections.engineer.title',
+  ENGINEER_DESCRIPTION: 'persona.sections.engineer.description',
+  ACCOUNTANT_TITLE: 'persona.sections.accountant.title',
+  ACCOUNTANT_DESCRIPTION: 'persona.sections.accountant.description',
+  LAWYER_TITLE: 'persona.sections.lawyer.title',
+  LAWYER_DESCRIPTION: 'persona.sections.lawyer.description',
+  PROPERTY_OWNER_TITLE: 'persona.sections.propertyOwner.title',
+  PROPERTY_OWNER_DESCRIPTION: 'persona.sections.propertyOwner.description',
+  CLIENT_TITLE: 'persona.sections.client.title',
+  CLIENT_DESCRIPTION: 'persona.sections.client.description',
+  SUPPLIER_TITLE: 'persona.sections.supplier.title',
+  SUPPLIER_DESCRIPTION: 'persona.sections.supplier.description',
+  NOTARY_TITLE: 'persona.sections.notary.title',
+  NOTARY_DESCRIPTION: 'persona.sections.notary.description',
+  REAL_ESTATE_AGENT_TITLE: 'persona.sections.realEstateAgent.title',
+  REAL_ESTATE_AGENT_DESCRIPTION: 'persona.sections.realEstateAgent.description',
+} as const;

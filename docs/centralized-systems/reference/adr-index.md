@@ -146,6 +146,7 @@
 | **ADR-117** | DPI-Aware Pixel Calculations Centralization | ✅ IMPLEMENTED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-117-dpi-aware-pixel-calculations-centralization.md) |
 | **ADR-119** | RAF Consolidation to UnifiedFrameScheduler | ✅ IMPLEMENTED | 2026-02-01 | Performance | [📄](./adrs/ADR-119-raf-consolidation-to-unifiedframescheduler.md) |
 | **ADR-120** | Canvas globalAlpha Opacity Centralization | ✅ APPROVED | 2026-01-01 | Canvas & Rendering | [📄](./adrs/ADR-120-canvas-globalalpha-opacity-centralization.md) |
+| **ADR-121** | Contact Persona System — Role-Based Dynamic Fields | ✅ IMPLEMENTED | 2026-02-08 | Contact Management / CRM | [📄](./adrs/ADR-121-contact-persona-system.md) |
 | **ADR-123** | PreviewRenderer Color Centralization (hex → UI_COLORS) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-123-previewrenderer-color-centralization-hex-ui-colors.md) |
 | **ADR-124** | Renderer Constants Centralization (DOT_RADIUS, TEXT_GAP, CIRCLE_LABEL) | ✅ APPROVED | 2026-02-01 | Canvas & Rendering | [📄](./adrs/ADR-124-renderer-constants-centralization-dot-radius-text-.md) |
 | **ADR-125** | Context Creation Pattern (Provider Colocation) | ✅ APPROVED | 2026-02-01 | Data & State | [📄](./adrs/ADR-125-context-creation-pattern-provider-colocation.md) |
