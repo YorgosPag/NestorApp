@@ -100,6 +100,32 @@ export class ModuleRegistry {
   }
 
   /**
+   * Get UC modules for multiple intents (deduplicated, ordered by input order)
+   * @enterprise Multi-intent pipeline support — one message, multiple modules
+   * @see ADR-131 (Multi-Intent Pipeline)
+   *
+   * @param intents - Array of intent types (primary first)
+   * @returns Array of unique UC modules in order
+   */
+  getModulesForIntents(intents: PipelineIntentTypeValue[]): IUCModule[] {
+    const seen = new Set<string>();
+    const modules: IUCModule[] = [];
+
+    for (const intent of intents) {
+      const moduleId = this.intentToModule.get(intent);
+      if (moduleId && !seen.has(moduleId)) {
+        seen.add(moduleId);
+        const module = this.modules.get(moduleId);
+        if (module) {
+          modules.push(module);
+        }
+      }
+    }
+
+    return modules;
+  }
+
+  /**
    * Get a UC module by its ID
    *
    * @param moduleId - Module identifier (e.g., 'UC-001')

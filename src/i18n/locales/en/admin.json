@@ -215,6 +215,12 @@
     },
     "accessibility": {
       "toggleFilters": "Toggle filters"
-    }
+    },
+    "multiIntent": {
+      "detected": "intents detected",
+      "primary": "Primary",
+      "secondary": "Secondary"
+    },
+    "compositeReply": "Composite Reply"
   }
 }

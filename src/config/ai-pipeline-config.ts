@@ -72,6 +72,12 @@ export const PIPELINE_CONFIDENCE_CONFIG = {
    * Below this threshold → quarantine (suspicious)
    */
   QUARANTINE_THRESHOLD: 30,
+
+  /**
+   * Minimum confidence for a secondary intent to be considered actionable
+   * @see ADR-131 (Multi-Intent Pipeline)
+   */
+  SECONDARY_INTENT_THRESHOLD: 50,
 } as const;
 
 // ============================================================================

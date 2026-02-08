@@ -101,7 +101,7 @@ SOS. SOS. N.5 ΕΛΕΓΧΟΣ ΑΔΕΙΩΝ ΧΡΗΣΗΣ (LICENSE) - ΤΕΡΜΑΤ�
 
 8. **ADR Numbering: ΧΡΗΣΗ ΔΙΑΘΕΣΙΜΩΝ IDs ΠΡΩΤΑ** - **ΚΑΝΟΝΑΣ 2026-02-01**
    - ✅ **ΔΙΑΘΕΣΙΜΑ IDs** (χρησιμοποίησε αυτά ΠΡΩΤΑ πριν το 167+):
-     `131, 132, 134, 145, 156, 161, 164`
+     `132, 134, 145, 156, 161, 164`
    - 📝 **ΓΙΑΤΙ ΚΕΝΑ**: Αυτά τα IDs ενοποιήθηκαν στο ADR-GEOMETRY (consolidation document)
    - 📍 **ADR-GEOMETRY**: Περιέχει 26 geometry-related αποφάσεις → `adrs/ADR-GEOMETRY.md`
    - 📁 **ARCHIVED**: Τα παλιά αρχεία στο `adrs/archived/` για historical reference

@@ -29,6 +29,7 @@ import type {
   PipelineAction,
   PipelineChannelValue,
   PipelineIntentTypeValue,
+  DetectedIntent,
 } from '@/types/ai-pipeline';
 
 // ============================================================================
@@ -411,8 +412,20 @@ export function ProposalReviewCard({
               <h4 className={typography.label.sm}>
                 {t('operatorInbox.sections.aiUnderstanding')}
               </h4>
+              {understanding.detectedIntents && understanding.detectedIntents.length > 1 && (
+                <Badge variant="default" className="text-xs">
+                  {understanding.detectedIntents.length} {t('operatorInbox.multiIntent.detected')}
+                </Badge>
+              )}
             </header>
+
+            {/* Primary Intent */}
             <div className={`${spacing.gap.sm} flex flex-wrap items-center`}>
+              {understanding.detectedIntents && understanding.detectedIntents.length > 1 && (
+                <span className={`${typography.body.sm} font-medium text-muted-foreground`}>
+                  {t('operatorInbox.multiIntent.primary')}:
+                </span>
+              )}
               <Badge variant={getIntentBadgeVariant(understanding.intent)}>
                 {understanding.intent}
               </Badge>
@@ -423,6 +436,26 @@ export function ProposalReviewCard({
                 {understanding.urgency ?? 'normal'}
               </Badge>
             </div>
+
+            {/* Secondary Intents */}
+            {understanding.detectedIntents && understanding.detectedIntents.length > 1 && (
+              <div className={`${spacing.margin.top.xs} ${spacing.gap.sm} flex flex-col`}>
+                {understanding.detectedIntents.slice(1).map((di, idx) => (
+                  <div key={idx} className={`${spacing.gap.sm} flex flex-wrap items-center`}>
+                    <span className={`${typography.body.sm} font-medium text-muted-foreground`}>
+                      {t('operatorInbox.multiIntent.secondary')}:
+                    </span>
+                    <Badge variant={getIntentBadgeVariant(di.intent)}>
+                      {di.intent}
+                    </Badge>
+                    <span className={`${typography.body.sm} ${getConfidenceColor(di.confidence)}`}>
+                      {di.confidence.toFixed(0)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {understanding.rationale && (
               <p className={`${typography.body.sm} ${spacing.margin.top.xs} text-muted-foreground`}>
                 {understanding.rationale}

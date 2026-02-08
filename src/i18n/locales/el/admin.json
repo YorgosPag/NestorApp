@@ -215,6 +215,12 @@
     },
     "accessibility": {
       "toggleFilters": "Εναλλαγή φίλτρων"
-    }
+    },
+    "multiIntent": {
+      "detected": "intents εντοπίστηκαν",
+      "primary": "Κύρια",
+      "secondary": "Δευτερεύουσα"
+    },
+    "compositeReply": "Σύνθετη Απάντηση"
   }
 }

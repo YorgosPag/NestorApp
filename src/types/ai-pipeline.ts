@@ -386,6 +386,14 @@ export interface PipelineContext {
   /** Step 7: Acknowledgment result */
   acknowledgment?: AcknowledgmentResult;
 
+  // ── Multi-Module Support (ADR-131) ──
+
+  /** Lookup results per module (moduleId → data). Used when multiple modules contribute. */
+  multiLookupData?: Record<string, Record<string, unknown>>;
+
+  /** Module IDs that contributed to the proposal */
+  contributingModules?: string[];
+
   /** Pipeline start timestamp (ISO 8601) */
   startedAt: string;
 

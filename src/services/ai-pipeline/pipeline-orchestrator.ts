@@ -27,6 +27,8 @@ import type {
   UnderstandingResult,
   AuditDecision,
   IUCModule,
+  Proposal,
+  DetectedIntent,
 } from '@/types/ai-pipeline';
 import {
   PipelineState,
@@ -38,12 +40,11 @@ import {
 } from '@/types/ai-pipeline';
 import type { ModuleRegistry } from './module-registry';
 import { IntentRouter } from './intent-router';
+import type { MultiRoutingResult } from './intent-router';
 import type { PipelineAuditService } from './audit-service';
 import type { IAIAnalysisProvider } from '@/services/ai-analysis/providers/IAIAnalysisProvider';
 import { isMessageIntentAnalysis, isMultiIntentAnalysis } from '@/schemas/ai-analysis';
-import type { DetectedIntent } from '@/types/ai-pipeline';
 import {
-  PIPELINE_CONFIDENCE_CONFIG,
   PIPELINE_TIMEOUT_CONFIG,
   PIPELINE_PROTOCOL_CONFIG,
 } from '@/config/ai-pipeline-config';
@@ -122,7 +123,11 @@ export class PipelineOrchestrator {
   }
 
   /**
-   * Execute pipeline steps sequentially
+   * Execute pipeline steps sequentially — supports multi-intent routing
+   * @see ADR-131 (Multi-Intent Pipeline)
+   *
+   * Single intent → 1 module (identical to original flow)
+   * Multi intent  → N modules → multi-lookup → multi-propose → compose → approve → multi-execute
    */
   private async executeSteps(ctx: PipelineContext): Promise<PipelineExecutionResult> {
     // ── Step 1: INTAKE (already done — IntakeMessage is in ctx) ──
@@ -146,11 +151,11 @@ export class PipelineOrchestrator {
       };
     }
 
-    // ── Route to UC module ──
-    const routingResult = this.router.route(ctx.understanding!);
+    // ── Multi-Intent Route ──
+    const multiRoute = this.router.routeMultiple(ctx.understanding!);
 
-    // Not routed → manual triage
-    if (!routingResult.routed) {
+    // Primary not routed → manual triage
+    if (!multiRoute.primaryRoute.routed) {
       ctx = this.transitionState(ctx, PipelineState.PROPOSED);
       const auditId = await this.auditService.record(ctx, 'manual_triage');
       return {
@@ -162,8 +167,8 @@ export class PipelineOrchestrator {
       };
     }
 
-    const module = this.registry.getModuleForIntent(ctx.understanding!.intent);
-    if (!module) {
+    // No modules found → manual triage
+    if (multiRoute.allModules.length === 0) {
       ctx = this.transitionState(ctx, PipelineState.PROPOSED);
       const auditId = await this.auditService.record(ctx, 'manual_triage');
       return {
@@ -175,27 +180,30 @@ export class PipelineOrchestrator {
       };
     }
 
-    // ── Step 3: LOOKUP ──
+    const allModules = multiRoute.allModules;
+    const moduleIds = allModules.map(m => m.moduleId).join(',');
+
+    // ── Step 3: MULTI-LOOKUP ──
     const lookupStart = Date.now();
-    ctx = await this.stepLookup(ctx, module);
+    ctx = await this.stepMultiLookup(ctx, allModules);
     ctx.stepDurations['lookup'] = Date.now() - lookupStart;
 
-    // ── Step 4: PROPOSE ──
+    // ── Step 4: MULTI-PROPOSE + COMPOSE ──
     const proposeStart = Date.now();
-    ctx = await this.stepPropose(ctx, module);
+    ctx = await this.stepMultiPropose(ctx, allModules);
     ctx.stepDurations['propose'] = Date.now() - proposeStart;
     ctx = this.transitionState(ctx, PipelineState.PROPOSED);
 
-    // ── Step 5: APPROVE ──
+    // ── Step 5: APPROVE (multi-intent aware) ──
     const approveStart = Date.now();
-    ctx = this.stepApprove(ctx, routingResult);
+    ctx = this.stepApproveMulti(ctx, multiRoute);
     ctx.stepDurations['approve'] = Date.now() - approveStart;
 
     // If not auto-approved, stop here — awaiting human review
     if (ctx.state !== PipelineState.APPROVED) {
       const decision: AuditDecision = ctx.state === PipelineState.REJECTED
         ? 'rejected' : 'manual_triage';
-      const auditId = await this.auditService.record(ctx, decision, module.moduleId);
+      const auditId = await this.auditService.record(ctx, decision, moduleIds);
       return {
         success: true,
         requestId: ctx.requestId,
@@ -205,14 +213,14 @@ export class PipelineOrchestrator {
       };
     }
 
-    // ── Step 6: EXECUTE ──
+    // ── Step 6: MULTI-EXECUTE ──
     const executeStart = Date.now();
-    ctx = await this.stepExecute(ctx, module);
+    ctx = await this.stepMultiExecute(ctx, allModules);
     ctx.stepDurations['execute'] = Date.now() - executeStart;
 
     if (!ctx.executionResult?.success) {
       ctx = this.transitionState(ctx, PipelineState.FAILED);
-      const auditId = await this.auditService.record(ctx, 'failed', module.moduleId);
+      const auditId = await this.auditService.record(ctx, 'failed', moduleIds);
       return {
         success: false,
         requestId: ctx.requestId,
@@ -223,14 +231,14 @@ export class PipelineOrchestrator {
       };
     }
 
-    // ── Step 7: ACKNOWLEDGE ──
+    // ── Step 7: ACKNOWLEDGE (primary module handles acknowledgment) ──
     const ackStart = Date.now();
-    ctx = await this.stepAcknowledge(ctx, module);
+    ctx = await this.stepAcknowledge(ctx, allModules[0]);
     ctx.stepDurations['acknowledge'] = Date.now() - ackStart;
 
     // ── Audit ──
     ctx = this.transitionState(ctx, PipelineState.AUDITED);
-    const auditId = await this.auditService.record(ctx, 'auto_processed', module.moduleId);
+    const auditId = await this.auditService.record(ctx, 'auto_processed', moduleIds);
 
     return {
       success: true,
@@ -284,104 +292,6 @@ export class PipelineOrchestrator {
   }
 
   /**
-   * Step 3: LOOKUP — UC module fetches relevant data
-   */
-  private async stepLookup(ctx: PipelineContext, module: IUCModule): Promise<PipelineContext> {
-    try {
-      ctx.lookupData = await module.lookup(ctx);
-      return ctx;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      ctx.errors.push({
-        step: 'lookup',
-        error: errorMessage,
-        timestamp: new Date().toISOString(),
-        retryable: true,
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Step 4: PROPOSE — UC module generates action proposal
-   */
-  private async stepPropose(ctx: PipelineContext, module: IUCModule): Promise<PipelineContext> {
-    try {
-      ctx.proposal = await module.propose(ctx);
-      return ctx;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      ctx.errors.push({
-        step: 'propose',
-        error: errorMessage,
-        timestamp: new Date().toISOString(),
-        retryable: true,
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Step 5: APPROVE — Auto-approve if confidence is high enough
-   */
-  private stepApprove(
-    ctx: PipelineContext,
-    routingResult: { routed: true; autoApprove: boolean; needsManualReview: boolean }
-  ): PipelineContext {
-    if (!ctx.proposal) return ctx;
-
-    if (
-      ctx.proposal.autoApprovable &&
-      routingResult.autoApprove &&
-      !routingResult.needsManualReview
-    ) {
-      ctx.approval = {
-        decision: 'approved',
-        approvedBy: 'AI-auto',
-        decidedAt: new Date().toISOString(),
-      };
-      ctx = this.transitionState(ctx, PipelineState.APPROVED);
-    }
-    // If not auto-approved, state remains PROPOSED (awaiting human review)
-
-    return ctx;
-  }
-
-  /**
-   * Step 6: EXECUTE — UC module executes approved actions
-   */
-  private async stepExecute(ctx: PipelineContext, module: IUCModule): Promise<PipelineContext> {
-    try {
-      // Build execution plan
-      ctx.executionPlan = {
-        messageId: ctx.intake.id,
-        idempotencyKey: `${ctx.requestId}_execute`,
-        actions: ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [],
-        sideEffects: [],
-        schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
-      };
-
-      ctx.executionResult = await module.execute(ctx);
-      ctx = this.transitionState(ctx, PipelineState.EXECUTED);
-      return ctx;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      ctx.errors.push({
-        step: 'execute',
-        error: errorMessage,
-        timestamp: new Date().toISOString(),
-        retryable: false, // Execution failures may not be safe to retry
-      });
-      ctx.executionResult = {
-        success: false,
-        sideEffects: [],
-        error: errorMessage,
-      };
-      return ctx;
-    }
-  }
-
-  /**
    * Step 7: ACKNOWLEDGE — UC module sends confirmation
    */
   private async stepAcknowledge(ctx: PipelineContext, module: IUCModule): Promise<PipelineContext> {
@@ -403,6 +313,214 @@ export class PipelineOrchestrator {
       };
       return ctx;
     }
+  }
+
+  // ==========================================================================
+  // MULTI-MODULE PIPELINE STEPS (ADR-131)
+  // ==========================================================================
+
+  /**
+   * Step 3 (Multi): Run lookup() on all modules, collect results per module
+   * Primary module failure is fatal; secondary module failures are logged and skipped.
+   */
+  private async stepMultiLookup(
+    ctx: PipelineContext,
+    modules: IUCModule[]
+  ): Promise<PipelineContext> {
+    const multiLookupData: Record<string, Record<string, unknown>> = {};
+
+    for (const module of modules) {
+      try {
+        const lookupData = await module.lookup(ctx);
+        multiLookupData[module.moduleId] = lookupData;
+      } catch (error) {
+        // Primary module (first) failure is fatal
+        if (module === modules[0]) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          ctx.errors.push({
+            step: `lookup_${module.moduleId}`,
+            error: errorMessage,
+            timestamp: new Date().toISOString(),
+            retryable: true,
+          });
+          throw error;
+        }
+        // Secondary module failure is non-fatal — log and continue
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        ctx.errors.push({
+          step: `lookup_${module.moduleId}`,
+          error: `Secondary module lookup failed: ${errorMessage}`,
+          timestamp: new Date().toISOString(),
+          retryable: false,
+        });
+      }
+    }
+
+    ctx.multiLookupData = multiLookupData;
+    // Backward compat: set lookupData to primary module's data
+    ctx.lookupData = multiLookupData[modules[0].moduleId] ?? {};
+
+    return ctx;
+  }
+
+  /**
+   * Step 4 (Multi): Run propose() on all modules, then compose into single Proposal
+   * Each module gets its own lookupData from multiLookupData.
+   */
+  private async stepMultiPropose(
+    ctx: PipelineContext,
+    modules: IUCModule[]
+  ): Promise<PipelineContext> {
+    const proposals: Proposal[] = [];
+    const contributingModules: string[] = [];
+
+    for (const module of modules) {
+      // Set lookupData for this specific module
+      ctx.lookupData = ctx.multiLookupData?.[module.moduleId] ?? {};
+
+      try {
+        const proposal = await module.propose(ctx);
+        proposals.push(proposal);
+        contributingModules.push(module.moduleId);
+      } catch (error) {
+        // Primary module (first) failure is fatal
+        if (module === modules[0]) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          ctx.errors.push({
+            step: `propose_${module.moduleId}`,
+            error: errorMessage,
+            timestamp: new Date().toISOString(),
+            retryable: true,
+          });
+          throw error;
+        }
+        // Secondary module failure — log and skip
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        ctx.errors.push({
+          step: `propose_${module.moduleId}`,
+          error: `Secondary module propose failed: ${errorMessage}`,
+          timestamp: new Date().toISOString(),
+          retryable: false,
+        });
+      }
+    }
+
+    // Compose all proposals into one
+    ctx.proposal = this.composeProposal(proposals, ctx);
+    ctx.contributingModules = contributingModules;
+
+    // Restore primary lookupData for backward compat
+    ctx.lookupData = ctx.multiLookupData?.[modules[0].moduleId] ?? {};
+
+    return ctx;
+  }
+
+  /**
+   * Compose multiple module proposals into a single unified Proposal
+   * Single-module case: returns the proposal as-is (zero overhead).
+   * @see ADR-131 (Multi-Intent Pipeline)
+   */
+  private composeProposal(proposals: Proposal[], ctx: PipelineContext): Proposal {
+    if (proposals.length === 1) {
+      return proposals[0]; // Single module — no composition overhead
+    }
+
+    return {
+      messageId: ctx.intake.id,
+      suggestedActions: proposals.flatMap(p => p.suggestedActions),
+      summary: proposals.map(p => p.summary).join(' | '),
+      autoApprovable: proposals.every(p => p.autoApprovable),
+      requiredApprovals: [...new Set(proposals.flatMap(p => p.requiredApprovals))],
+      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
+    };
+  }
+
+  /**
+   * Step 5 (Multi): Auto-approve using multi-routing aggregate decisions
+   */
+  private stepApproveMulti(
+    ctx: PipelineContext,
+    multiRoute: MultiRoutingResult
+  ): PipelineContext {
+    if (!ctx.proposal) return ctx;
+
+    if (
+      ctx.proposal.autoApprovable &&
+      multiRoute.allAutoApprovable &&
+      !multiRoute.needsManualReview
+    ) {
+      ctx.approval = {
+        decision: 'approved',
+        approvedBy: 'AI-auto',
+        decidedAt: new Date().toISOString(),
+      };
+      ctx = this.transitionState(ctx, PipelineState.APPROVED);
+    }
+    // If not auto-approved, state remains PROPOSED (awaiting human review)
+
+    return ctx;
+  }
+
+  /**
+   * Step 6 (Multi): Execute actions through all contributing modules
+   * Each module gets its own lookupData restored before execution.
+   * First module failure stops execution for remaining modules.
+   */
+  private async stepMultiExecute(
+    ctx: PipelineContext,
+    modules: IUCModule[]
+  ): Promise<PipelineContext> {
+    // Build execution plan with ALL actions
+    ctx.executionPlan = {
+      messageId: ctx.intake.id,
+      idempotencyKey: `${ctx.requestId}_execute`,
+      actions: ctx.approval?.modifiedActions ?? ctx.proposal?.suggestedActions ?? [],
+      sideEffects: [],
+      schemaVersion: PIPELINE_PROTOCOL_CONFIG.SCHEMA_VERSION,
+    };
+
+    const allSideEffects: string[] = [];
+
+    for (const module of modules) {
+      // Set correct lookupData for this module
+      ctx.lookupData = ctx.multiLookupData?.[module.moduleId] ?? {};
+
+      try {
+        const result = await module.execute(ctx);
+        allSideEffects.push(...result.sideEffects);
+
+        if (!result.success) {
+          ctx.executionResult = {
+            success: false,
+            sideEffects: allSideEffects,
+            error: result.error,
+          };
+          return ctx;
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        ctx.errors.push({
+          step: `execute_${module.moduleId}`,
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+          retryable: false,
+        });
+        ctx.executionResult = {
+          success: false,
+          sideEffects: allSideEffects,
+          error: errorMessage,
+        };
+        return ctx;
+      }
+    }
+
+    ctx.executionResult = { success: true, sideEffects: allSideEffects };
+    ctx = this.transitionState(ctx, PipelineState.EXECUTED);
+
+    // Restore primary lookupData
+    ctx.lookupData = ctx.multiLookupData?.[modules[0].moduleId] ?? {};
+
+    return ctx;
   }
 
   // ==========================================================================
@@ -554,12 +672,10 @@ export class PipelineOrchestrator {
         ctx = this.transitionState(ctx, PipelineState.MODIFIED);
       }
 
-      // Resolve UC module from understanding intent
-      const module = ctx.understanding
-        ? this.registry.getModuleForIntent(ctx.understanding.intent)
-        : null;
+      // Resolve UC modules — multi-intent aware
+      const allModules = this.resolveModulesForExecution(ctx);
 
-      if (!module) {
+      if (allModules.length === 0) {
         // No module available — record audit as approved (manual execution needed)
         const auditId = await this.auditService.record(ctx, 'approved');
         return {
@@ -571,14 +687,16 @@ export class PipelineOrchestrator {
         };
       }
 
-      // ── Step 6: EXECUTE ──
+      const moduleIds = allModules.map(m => m.moduleId).join(',');
+
+      // ── Step 6: MULTI-EXECUTE ──
       const executeStart = Date.now();
-      ctx = await this.stepExecute(ctx, module);
+      ctx = await this.stepMultiExecute(ctx, allModules);
       ctx.stepDurations['execute'] = Date.now() - executeStart;
 
       if (!ctx.executionResult?.success) {
         ctx = this.transitionState(ctx, PipelineState.FAILED);
-        const auditId = await this.auditService.record(ctx, 'failed', module.moduleId);
+        const auditId = await this.auditService.record(ctx, 'failed', moduleIds);
         return {
           success: false,
           requestId: ctx.requestId,
@@ -589,9 +707,9 @@ export class PipelineOrchestrator {
         };
       }
 
-      // ── Step 7: ACKNOWLEDGE ──
+      // ── Step 7: ACKNOWLEDGE (primary module) ──
       const ackStart = Date.now();
-      ctx = await this.stepAcknowledge(ctx, module);
+      ctx = await this.stepAcknowledge(ctx, allModules[0]);
       ctx.stepDurations['acknowledge'] = Date.now() - ackStart;
 
       // ── Audit ──
@@ -599,7 +717,7 @@ export class PipelineOrchestrator {
       const decision: AuditDecision = ctx.approval?.decision === 'modified'
         ? 'modified'
         : 'approved';
-      const auditId = await this.auditService.record(ctx, decision, module.moduleId);
+      const auditId = await this.auditService.record(ctx, decision, moduleIds);
 
       return {
         success: true,
@@ -630,6 +748,32 @@ export class PipelineOrchestrator {
         error: errorMessage,
       };
     }
+  }
+
+  /**
+   * Resolve all UC modules needed for execution
+   * Uses contributingModules (if available) or falls back to primary intent module
+   */
+  private resolveModulesForExecution(ctx: PipelineContext): IUCModule[] {
+    // Multi-intent: use contributingModules from proposal phase
+    if (ctx.contributingModules && ctx.contributingModules.length > 0) {
+      const modules: IUCModule[] = [];
+      for (const moduleId of ctx.contributingModules) {
+        const module = this.registry.getModule(moduleId);
+        if (module) {
+          modules.push(module);
+        }
+      }
+      if (modules.length > 0) return modules;
+    }
+
+    // Fallback: single-intent — resolve from primary intent
+    if (ctx.understanding) {
+      const module = this.registry.getModuleForIntent(ctx.understanding.intent);
+      if (module) return [module];
+    }
+
+    return [];
   }
 
   // ==========================================================================

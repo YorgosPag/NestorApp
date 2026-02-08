@@ -320,6 +320,138 @@ function validateReply(text: string): boolean {
 }
 
 // ============================================================================
+// COMPOSITE REPLY — Multi-Intent (ADR-131)
+// ============================================================================
+
+const COMPOSITE_REPLY_SYSTEM_PROMPT = `Είσαι βοηθός κτηματομεσιτικού/κατασκευαστικού γραφείου στην Ελλάδα.
+Σου δίνονται ΠΟΛΛΑΠΛΕΣ μερικές απαντήσεις (κάθε μία για διαφορετικό θέμα) και πρέπει να τις ΣΥΝΘΕΣΕΙΣ σε ΜΙΑ ενιαία, ολοκληρωμένη απάντηση.
+
+ΚΑΝΟΝΕΣ:
+1. Τόνος: Ευγενικός, επαγγελματικός, σύντομος
+2. Γλώσσα: Ελληνικά (πληθυντικός ευγενείας — εσείς/σας)
+3. Μορφή: Plain text μόνο — ΧΩΡΙΣ HTML tags, markdown, αστερίσκους ή formatting
+4. Μήκος: 8-15 γραμμές μέγιστο
+5. Ξεκίνα πάντα με "Αγαπητέ/ή [Ονομα],"
+6. Τέλειωσε πάντα με "Με εκτίμηση," — ΧΩΡΙΣ υπογραφή μετά
+7. ΕΝΟΠΟΙΗΣΕ τα θέματα σε φυσική ροή — ΟΧΙ αριθμημένη λίστα
+8. Αναφέρσου σε ΟΛΑ τα θέματα — μην αγνοήσεις κανένα
+9. ΜΗΝ αναφέρεις εσωτερικές διαδικασίες ή AI`;
+
+/** Input for composite reply generation */
+export interface CompositeReplyInput {
+  /** Draft replies from individual UC modules */
+  moduleReplies: Array<{
+    useCase: string;
+    draftReply: string;
+  }>;
+  /** Sender name for greeting */
+  senderName: string;
+  /** Original email body */
+  originalMessage: string;
+  /** Original email subject */
+  originalSubject: string;
+}
+
+function buildCompositeUserPrompt(input: CompositeReplyInput): string {
+  const trimmedMessage = input.originalMessage.slice(0, PIPELINE_REPLY_CONFIG.MAX_ORIGINAL_MESSAGE_CHARS);
+
+  const repliesBlock = input.moduleReplies
+    .map((r, i) => `--- Μερική Απάντηση ${i + 1} (${r.useCase}) ---\n${r.draftReply}`)
+    .join('\n\n');
+
+  return `Ο πελάτης ${input.senderName} έστειλε:
+Θέμα: ${input.originalSubject || '(χωρίς θέμα)'}
+Μήνυμα: ${trimmedMessage || '(κενό μήνυμα)'}
+
+Μερικές απαντήσεις προς σύνθεση:
+${repliesBlock}
+
+Σύνθεσε ΜΙΑ ενιαία απάντηση που καλύπτει ΟΛΑ τα θέματα.`;
+}
+
+/**
+ * Generate a composite reply by merging multiple module-specific draft replies
+ * into ONE unified, natural-sounding email.
+ *
+ * Single-reply shortcut: if only 1 module reply, returns it directly (zero overhead).
+ *
+ * @see ADR-131 (Multi-Intent Pipeline)
+ */
+export async function generateCompositeReply(
+  input: CompositeReplyInput,
+  requestId: string,
+): Promise<AIReplyResult> {
+  // Single reply — no composition needed
+  if (input.moduleReplies.length <= 1) {
+    return {
+      replyText: input.moduleReplies[0]?.draftReply ?? '',
+      aiGenerated: input.moduleReplies.length > 0,
+      model: null,
+      durationMs: 0,
+    };
+  }
+
+  const startTime = Date.now();
+
+  try {
+    const userPrompt = buildCompositeUserPrompt(input);
+
+    logger.info('Composite reply generation started', {
+      requestId,
+      moduleCount: input.moduleReplies.length,
+      useCases: input.moduleReplies.map(r => r.useCase).join(','),
+    });
+
+    const replyText = await callOpenAI(COMPOSITE_REPLY_SYSTEM_PROMPT, userPrompt, requestId);
+    const durationMs = Date.now() - startTime;
+
+    if (!replyText || !validateReply(replyText)) {
+      logger.warn('Composite reply failed validation — using concatenation fallback', {
+        requestId,
+        durationMs,
+      });
+      // Fallback: join individual replies with separator
+      const fallbackText = input.moduleReplies.map(r => r.draftReply).join('\n\n');
+      return {
+        replyText: fallbackText,
+        aiGenerated: false,
+        model: null,
+        durationMs,
+      };
+    }
+
+    logger.info('Composite reply generation succeeded', {
+      requestId,
+      durationMs,
+      model: AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL,
+      replyLength: replyText.length,
+    });
+
+    return {
+      replyText,
+      aiGenerated: true,
+      model: AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL,
+      durationMs,
+    };
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    logger.error('Composite reply unexpected error — using concatenation fallback', {
+      requestId,
+      error: error instanceof Error ? error.message : String(error),
+      durationMs,
+    });
+
+    const fallbackText = input.moduleReplies.map(r => r.draftReply).join('\n\n');
+    return {
+      replyText: fallbackText,
+      aiGenerated: false,
+      model: null,
+      durationMs,
+    };
+  }
+}
+
+// ============================================================================
 // MAIN EXPORT
 // ============================================================================
 
