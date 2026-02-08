@@ -10,7 +10,8 @@ import 'server-only';
 
 import {
   AI_ANALYSIS_DEFAULTS,
-  AI_ANALYSIS_JSON_SCHEMA,
+  AI_MESSAGE_INTENT_SCHEMA,
+  AI_DOCUMENT_CLASSIFY_SCHEMA,
   AI_ANALYSIS_PROMPTS,
 } from '@/config/ai-analysis-config';
 import {
@@ -164,6 +165,24 @@ function buildFileDataBuffer(buffer: Buffer, mimeType?: string): string {
   return `data:${mimeType};base64,${base64}`;
 }
 
+/**
+ * Strip null values from an object recursively.
+ * OpenAI strict mode returns null for optional fields.
+ * Zod schemas expect those fields to be omitted instead.
+ */
+function stripNullValues(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null) continue;
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      result[key] = stripNullValues(value as Record<string, unknown>);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 function shouldRetryWithoutStructuredOutput(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const message = error.message.toLowerCase();
@@ -217,6 +236,11 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
       }
     }
 
+    // Select the correct schema based on analysis kind (no oneOf needed)
+    const jsonSchema = input.kind === 'document_classify'
+      ? AI_DOCUMENT_CLASSIFY_SCHEMA
+      : AI_MESSAGE_INTENT_SCHEMA;
+
     const request: OpenAIRequestBody = {
       model,
       input: [
@@ -232,7 +256,7 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
       text: {
         format: {
           type: 'json_schema',
-          json_schema: AI_ANALYSIS_JSON_SCHEMA,
+          json_schema: jsonSchema,
         },
       },
     };
@@ -259,8 +283,11 @@ export class OpenAIAnalysisProvider implements IAIAnalysisProvider {
     }
 
     try {
-      const parsed = JSON.parse(outputText) as unknown;
-      const validated = validateAIAnalysisResult(parsed);
+      const parsed = JSON.parse(outputText) as Record<string, unknown>;
+      // OpenAI strict mode returns null for optional fields — strip them
+      // so Zod .optional() validation passes cleanly
+      const normalized = stripNullValues(parsed);
+      const validated = validateAIAnalysisResult(normalized);
       return validated;
     } catch {
       return buildFallbackResult(input, model);

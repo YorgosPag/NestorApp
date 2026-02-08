@@ -60,82 +60,92 @@ RULES:
 const intentOptions = IntentType.options;
 const documentOptions = DocumentType.options;
 
-export const AI_ANALYSIS_JSON_SCHEMA = {
-  name: 'ai_analysis_result',
-  description: 'AI analysis result for message intent or document classification.',
+// ============================================================================
+// OPENAI STRICT-MODE COMPATIBLE SCHEMAS
+// ============================================================================
+// OpenAI strict mode requires:
+// - Root: type 'object' + properties + required + additionalProperties: false
+// - ALL properties in required (nullable fields use type: ['string', 'null'])
+// - NO oneOf/anyOf at root level
+// We split into 2 schemas and select based on input.kind
+// ============================================================================
+
+/** Shared extractedEntities sub-schema (all fields nullable) */
+const EXTRACTED_ENTITIES_SCHEMA = {
+  type: 'object' as const,
+  required: ['companyId', 'projectId', 'buildingId', 'unitId', 'contactId'],
+  additionalProperties: false as const,
+  properties: {
+    companyId: { type: ['string', 'null'] as const },
+    projectId: { type: ['string', 'null'] as const },
+    buildingId: { type: ['string', 'null'] as const },
+    unitId: { type: ['string', 'null'] as const },
+    contactId: { type: ['string', 'null'] as const },
+  },
+};
+
+/** Message intent analysis — OpenAI strict-mode compatible */
+export const AI_MESSAGE_INTENT_SCHEMA = {
+  name: 'message_intent_result',
+  description: 'AI analysis: classify message intent for a Greek real estate company.',
   strict: true,
   schema: {
     type: 'object',
-    oneOf: [
-      {
-        type: 'object',
-        additionalProperties: false,
-        required: [
-          'kind',
-          'aiModel',
-          'analysisTimestamp',
-          'confidence',
-          'needsTriage',
-          'extractedEntities',
-          'intentType',
-          'rawMessage',
-        ],
-        properties: {
-          kind: { type: 'string', enum: ['message_intent'] },
-          aiModel: { type: 'string' },
-          analysisTimestamp: { type: 'string', format: 'date-time' },
-          confidence: { type: 'number' },
-          needsTriage: { type: 'boolean' },
-          extractedEntities: {
-            type: 'object',
-            additionalProperties: false,
-            properties: {
-              companyId: { type: 'string' },
-              projectId: { type: 'string' },
-              buildingId: { type: 'string' },
-              unitId: { type: 'string' },
-              contactId: { type: 'string' },
-            },
-          },
-          intentType: { type: 'string', enum: intentOptions },
-          eventDate: { type: 'string', format: 'date-time' },
-          dueDate: { type: 'string', format: 'date-time' },
-          rawMessage: { type: 'string' },
-        },
-      },
-      {
-        type: 'object',
-        additionalProperties: false,
-        required: [
-          'kind',
-          'aiModel',
-          'analysisTimestamp',
-          'confidence',
-          'needsTriage',
-          'extractedEntities',
-          'documentType',
-        ],
-        properties: {
-          kind: { type: 'string', enum: ['document_classify'] },
-          aiModel: { type: 'string' },
-          analysisTimestamp: { type: 'string', format: 'date-time' },
-          confidence: { type: 'number' },
-          needsTriage: { type: 'boolean' },
-          extractedEntities: {
-            type: 'object',
-            additionalProperties: false,
-            properties: {
-              companyId: { type: 'string' },
-              projectId: { type: 'string' },
-              buildingId: { type: 'string' },
-              unitId: { type: 'string' },
-              contactId: { type: 'string' },
-            },
-          },
-          documentType: { type: 'string', enum: documentOptions },
-          signals: { type: 'array', items: { type: 'string' } },
-        },
-      },
+    required: [
+      'kind',
+      'aiModel',
+      'analysisTimestamp',
+      'confidence',
+      'needsTriage',
+      'extractedEntities',
+      'intentType',
+      'rawMessage',
+      'eventDate',
+      'dueDate',
     ],
+    additionalProperties: false,
+    properties: {
+      kind: { type: 'string', enum: ['message_intent'] },
+      aiModel: { type: 'string' },
+      analysisTimestamp: { type: 'string' },
+      confidence: { type: 'number' },
+      needsTriage: { type: 'boolean' },
+      extractedEntities: EXTRACTED_ENTITIES_SCHEMA,
+      intentType: { type: 'string', enum: intentOptions },
+      rawMessage: { type: 'string' },
+      eventDate: { type: ['string', 'null'] },
+      dueDate: { type: ['string', 'null'] },
+    },
+  },
+} as const satisfies Record<string, unknown>;
+
+/** Document classification — OpenAI strict-mode compatible */
+export const AI_DOCUMENT_CLASSIFY_SCHEMA = {
+  name: 'document_classify_result',
+  description: 'AI analysis: classify document type for a Greek real estate company.',
+  strict: true,
+  schema: {
+    type: 'object',
+    required: [
+      'kind',
+      'aiModel',
+      'analysisTimestamp',
+      'confidence',
+      'needsTriage',
+      'extractedEntities',
+      'documentType',
+      'signals',
+    ],
+    additionalProperties: false,
+    properties: {
+      kind: { type: 'string', enum: ['document_classify'] },
+      aiModel: { type: 'string' },
+      analysisTimestamp: { type: 'string' },
+      confidence: { type: 'number' },
+      needsTriage: { type: 'boolean' },
+      extractedEntities: EXTRACTED_ENTITIES_SCHEMA,
+      documentType: { type: 'string', enum: documentOptions },
+      signals: { type: 'array', items: { type: 'string' } },
+    },
   },
 } as const satisfies Record<string, unknown>;

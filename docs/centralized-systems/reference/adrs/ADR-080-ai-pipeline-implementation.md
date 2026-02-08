@@ -263,6 +263,14 @@ Email "Θέλω ραντεβού" → AI detects appointment_request intent
 - Όταν `failed > 0`, δείχνει: id, pipelineState, retryCount, lastError, retryHistory, intakeSubject, intakeSender
 - Κρίσιμο εργαλείο για debugging production — χωρίς αλλαγές κώδικα βλέπουμε τι αποτυγχάνει
 
+### Fix 5: OpenAI JSON Schema — `oneOf` Incompatible with Strict Mode
+- **Πρόβλημα**: ΟΛΕΣ οι AI ταξινομήσεις επέστρεφαν `unknown` intent με 50% confidence
+- **Αιτία**: Η JSON schema χρησιμοποιούσε `oneOf` discriminated union στο root level, το οποίο ο OpenAI ΔΕΝ υποστηρίζει σε `strict: true` mode. Επίσης, `extractedEntities` δεν είχε `required` array και τα optional fields (`eventDate`, `dueDate`) δεν ήταν nullable
+- **Αλυσίδα αποτυχίας**: Schema rejection → retry χωρίς schema → unstructured JSON → Zod validation fail → `buildFallbackResult()` → `triage_needed` 0.5 → pipeline mapping `triage_needed` → `UNKNOWN` → UI "unknown 50%"
+- **Λύση**: Split σε 2 ξεχωριστά schemas (`AI_MESSAGE_INTENT_SCHEMA` + `AI_DOCUMENT_CLASSIFY_SCHEMA`), select based on `input.kind`, `required` arrays σε κάθε object, nullable types `['string', 'null']` για optional fields, `stripNullValues()` πριν την Zod validation
+- **Αρχεία**: `ai-analysis-config.ts` (schema split), `OpenAIAnalysisProvider.ts` (schema selection + null stripping)
+- **Μάθημα**: OpenAI strict mode απαιτεί: flat object στο root (ΟΧΙ oneOf), όλα τα properties στο `required`, optional = nullable + in required, `additionalProperties: false` σε κάθε object
+
 ### Composite Index
 - Προστέθηκε: `ai_pipeline_queue (status ASC, createdAt DESC)` — απαραίτητο για diagnostic queries
 
@@ -294,3 +302,4 @@ Mailgun webhook ✅
 | 2026-02-08 | Fix: email-channel-adapter storageUrl undefined → conditional spread |
 | 2026-02-08 | Email rendering centralization: SafeHTMLContent + EmailContentWithSignature → shared component |
 | 2026-02-08 | Operator Inbox: smart polling (15s auto-refresh) + toast notifications for new items |
+| 2026-02-08 | **CRITICAL FIX**: OpenAI JSON schema — `oneOf` incompatible with strict mode → split into 2 schemas (message_intent + document_classify), fix missing `required` arrays, nullable fields. Root cause of all emails returning "unknown" 50% |
